@@ -52,7 +52,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if (len == 4) {
         if (!memcmp(cmd, "dump", 4)) {
             dc_dump_state();
-            return NO_ERROR;
+            return MX_OK;
         }
         if (!memcmp(cmd, "help", 4)) {
             dmprintf("dump        - dump device tree\n"
@@ -66,49 +66,49 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
                      "devprops    - dump published devices and their binding properties\n"
                      "drivers     - list discovered drivers and their properties\n"
                      );
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
         devhost_acpi_reboot();
-        return NO_ERROR;
+        return MX_OK;
     }
     if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
         dc_dump_drivers();
-        return NO_ERROR;
+        return MX_OK;
     }
     if (len == 8) {
         if (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8)) {
             devhost_acpi_poweroff();
-            return NO_ERROR;
+            return MX_OK;
         }
         if (!memcmp(cmd, "ktraceon", 8)) {
             mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, NULL);
-            return NO_ERROR;
+            return MX_OK;
         }
         if (!memcmp(cmd, "devprops", 8)) {
             dc_dump_devprops();
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
         mx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
         mx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
-        return NO_ERROR;
+        return MX_OK;
     }
     if ((len > 9) && !memcmp(cmd, "acpi-ps0:", 9)) {
         char arg[len - 8];
         memcpy(arg, cmd + 9, len - 9);
         arg[len - 9] = 0;
         devhost_acpi_ps0(arg);
-        return NO_ERROR;
+        return MX_OK;
     }
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
         return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
     dmprintf("unknown command\n");
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 //TODO: these are copied from devhost.h
@@ -137,12 +137,12 @@ static mx_status_t libname_to_vmo(const char* libname, mx_handle_t* out) {
     driver_t* drv = libname_to_driver(libname);
     if (drv == NULL) {
         log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     int fd = open(libname, O_RDONLY);
     if (fd < 0) {
         log(ERROR, "devcoord: cannot open driver '%s'\n", libname);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     mx_status_t r = mxio_get_vmo(fd, out);
     close(fd);
@@ -369,7 +369,7 @@ static mx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
         const char* name = dev->parent ? dev->name : "dev";
         size_t len = strlen(name) + 1;
         if (len > (max - total)) {
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         }
         memcpy(path - len + 1, name, len - 1);
         path -= len;
@@ -379,7 +379,7 @@ static mx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
     }
 
     memcpy(out, path, total);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t dc_launch_devhost(devhost_t* host,
@@ -423,19 +423,19 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     }
     mx_info_handle_basic_t info;
     if (mx_object_get_info(host->proc, MX_INFO_HANDLE_BASIC, &info,
-                           sizeof(info), NULL, NULL) == NO_ERROR) {
+                           sizeof(info), NULL, NULL) == MX_OK) {
         host->koid = info.koid;
     }
     log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
         name, host->koid);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
     devhost_t* dh = calloc(1, sizeof(devhost_t));
     if (dh == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_handle_t hrpc;
@@ -454,7 +454,7 @@ static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
     list_initialize(&dh->devices);
 
     *out = dh;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void dc_release_devhost(devhost_t* dh) {
@@ -513,17 +513,17 @@ static mx_status_t dc_add_device(device_t* parent,
                                  dc_msg_t* msg, const char* name,
                                  const char* args, const void* data) {
     if (hcount == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (msg->datalen % sizeof(mx_device_prop_t)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     device_t* dev;
     // allocate device struct, followed by space for props, followed
     // by space for bus arguments, followed by space for the name
     size_t sz = sizeof(*dev) + msg->datalen + msg->argslen + msg->namelen + 2;
     if ((dev = calloc(1, sz)) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
@@ -553,7 +553,7 @@ static mx_status_t dc_add_device(device_t* parent,
 
     if (strlen(dev->name) > MX_DEVICE_NAME_MAX) {
         free(dev);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // If we have bus device args or resource handle
@@ -604,7 +604,7 @@ static mx_status_t dc_add_device(device_t* parent,
         dev, dev->name, dev->prop_count, dev->args, dev->parent);
 
     queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Remove device from parent
@@ -618,17 +618,17 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
         // closing), and is now receiving the final remove call
         dev->flags &= (~DEV_CTX_ZOMBIE);
         dc_release_device(dev);
-        return NO_ERROR;
+        return MX_OK;
     }
     if (dev->flags & DEV_CTX_DEAD) {
         // This should not happen
         log(ERROR, "devcoord: cannot remove dev %p name='%s' twice!\n", dev, dev->name);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (dev->flags & DEV_CTX_IMMORTAL) {
         // This too should not happen
         log(ERROR, "devcoord: cannot remove dev %p name='%s' (immortal)\n", dev, dev->name);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name, dev->parent);
@@ -708,7 +708,7 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
         // reference would close the RPC channel.
         dev->flags |= DEV_CTX_ZOMBIE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
@@ -716,7 +716,7 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
 
     // shouldn't be possible to get a bind request for a shadow device
     if (dev->flags & DEV_CTX_SHADOW) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     //TODO: disallow if we're in the middle of enumeration, etc
@@ -733,7 +733,7 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 };
 
 static mx_status_t dc_handle_device_read(device_t* dev) {
@@ -744,7 +744,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     if (dev->flags & DEV_CTX_DEAD) {
         log(ERROR, "devcoord: dev %p already dead (in read)\n", dev);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     mx_status_t r;
@@ -757,7 +757,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     const char* name;
     const char* args;
     if ((r = dc_msg_unpack(&msg, msize, &data, &name, &args)) < 0) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     dc_status_t dcs;
@@ -810,7 +810,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         if (mx_channel_write(virtcon_open, 0, NULL, 0, hin, 1) < 0) {
             mx_handle_close(hin[0]);
         }
-        r = NO_ERROR;
+        r = MX_OK;
         break;
 
     case DC_OP_GET_TOPO_PATH: {
@@ -824,12 +824,12 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         if ((r = dc_get_topo_path(dev, reply.path, DC_PATH_MAX)) < 0) {
             break;
         }
-        reply.rsp.status = NO_ERROR;
+        reply.rsp.status = MX_OK;
         reply.rsp.txid = msg.txid;
         if ((r = mx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), NULL, 0)) < 0) {
             return r;
         }
-        return NO_ERROR;
+        return MX_OK;
     }
     case DC_OP_STATUS: {
         if (hcount != 0) {
@@ -840,11 +840,11 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         pending_t* pending = list_remove_tail_type(&dev->pending, pending_t, node);
         if (pending == NULL) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
-            return NO_ERROR;
+            return MX_OK;
         }
         switch (pending->op) {
         case PENDING_BIND:
-            if (msg.status != NO_ERROR) {
+            if (msg.status != MX_OK) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n",
                     dev->name, msg.status);
             }
@@ -852,12 +852,12 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
             break;
         }
         free(pending);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     default:
         log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
-        r = ERR_NOT_SUPPORTED;
+        r = MX_ERR_NOT_SUPPORTED;
         break;
     }
 
@@ -866,18 +866,18 @@ done:
     if ((r = mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0)) < 0) {
         return r;
     }
-    return NO_ERROR;
+    return MX_OK;
 
 disconnect:
-    dcs.status = NO_ERROR;
+    dcs.status = MX_OK;
     mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0);
-    return ERR_STOP;
+    return MX_ERR_STOP;
 
 fail_hcount:
     while (hcount > 0) {
         mx_handle_close(hin[--hcount]);
     }
-    r = ERR_INVALID_ARGS;
+    r = MX_ERR_INVALID_ARGS;
     goto done;
 }
 
@@ -890,22 +890,22 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, ui
     if (signals & MX_CHANNEL_READABLE) {
         mx_status_t r;
         if ((r = dc_handle_device_read(dev)) < 0) {
-            if (r != ERR_STOP) {
+            if (r != MX_ERR_STOP) {
                 log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
                     dev, dev->name, r);
             }
             dc_remove_device(dev, true);
-            return ERR_STOP;
+            return MX_ERR_STOP;
         }
-        return NO_ERROR;
+        return MX_OK;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
         log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
         dc_remove_device(dev, true);
-        return ERR_STOP;
+        return MX_ERR_STOP;
     }
     log(ERROR, "devcoord: no work? %08x\n", signals);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // send message to devhost, requesting the creation of a device
@@ -966,7 +966,7 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     dev->host = dh;
     dh->refcount++;
     list_add_tail(&dh->devices, &dev->dhnode);
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     while (hcount > 0) {
@@ -979,14 +979,14 @@ fail_watch:
 
 static mx_status_t dc_create_shadow(device_t* parent) {
     if (parent->shadow != NULL) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     size_t namelen = strlen(parent->name);
     size_t liblen = strlen(parent->libname);
     device_t* dev = calloc(1, sizeof(device_t) + namelen + liblen + 2);
     if (dev == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     char* text = (char*) (dev + 1);
     memcpy(text, parent->name, namelen + 1);
@@ -1005,7 +1005,7 @@ static mx_status_t dc_create_shadow(device_t* parent) {
     parent->refcount++;
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (shadow)\n",
         parent, parent->name, parent->refcount);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // send message to devhost, requesting the binding of a driver to a device
@@ -1015,7 +1015,7 @@ static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
 
     pending_t* pending = malloc(sizeof(pending_t));
     if (pending == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t r;
@@ -1042,19 +1042,19 @@ static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     pending->op = PENDING_BIND;
     pending->ctx = NULL;
     list_add_tail(&dev->pending, &pending->node);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     // cannot bind driver to already bound device
     if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (!(dev->flags & DEV_CTX_BUSDEV)) {
         // non-busdev is pretty simple
         if (dev->host == NULL) {
             log(ERROR, "devcoord: can't bind to device without devhost\n");
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         return dh_bind_driver(dev, drv->libname);
     }
@@ -1063,7 +1063,7 @@ static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     const char* arg0 = (dev->flags & DEV_CTX_SHADOW) ? dev->parent->args : dev->args;
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == NULL) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     size_t arg0len = arg1 - arg0;
     arg1++;
@@ -1163,7 +1163,7 @@ device_t* coordinator_init(mx_handle_t root_job) {
 //      For now, we launch it manually here so PCI can work
 static void acpi_init(void) {
     mx_status_t status = devhost_launch_acpisvc(devhost_job);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return;
     }
 
@@ -1207,12 +1207,12 @@ void coordinator(void) {
             status = port_dispatch(&dc_port, MX_TIME_INFINITE, true);
         } else {
             status = port_dispatch(&dc_port, 0, true);
-            if (status == ERR_TIMED_OUT) {
+            if (status == MX_ERR_TIMED_OUT) {
                 process_work(list_remove_head_type(&list_pending_work, work_t, node));
                 continue;
             }
         }
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             log(ERROR, "devcoord: port dispatch ended: %d\n", status);
         }
     }

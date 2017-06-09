@@ -30,7 +30,7 @@ static mx_status_t find_note(const char* name, uint32_t type,
         notehdr* hdr = data;
         uint32_t nsz = (hdr->namesz + 3) & (~3);
         if (nsz > (size - sizeof(notehdr))) {
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         size_t hsz = sizeof(notehdr) + nsz;
         data += hsz;
@@ -38,7 +38,7 @@ static mx_status_t find_note(const char* name, uint32_t type,
 
         uint32_t dsz = (hdr->descsz + 3) & (~3);
         if (dsz > size) {
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
 
         if ((hdr->type == type) &&
@@ -50,7 +50,7 @@ static mx_status_t find_note(const char* name, uint32_t type,
         data += dsz;
         size -= dsz;
     }
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }
 
 static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
@@ -61,22 +61,22 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
     elfhdr eh;
     if (pread(fd, &eh, sizeof(eh), 0) != sizeof(eh)) {
         printf("for_each_note: pread(eh) failed\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     if (memcmp(&eh, ELFMAG, 4) ||
         (eh.e_ehsize != sizeof(elfhdr)) ||
         (eh.e_phentsize != sizeof(elfphdr))) {
         printf("for_each_note: bad elf magic\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     size_t sz = sizeof(elfphdr) * eh.e_phnum;
     if (sz > sizeof(ph)) {
         printf("for_each_note: too many phdrs\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     if ((pread(fd, ph, sz, eh.e_phoff) != (ssize_t)sz)) {
         printf("for_each_note: pread(sz,eh.e_phoff) failed\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     for (int i = 0; i < eh.e_phnum; i++) {
         if ((ph[i].p_type != PT_NOTE) ||
@@ -85,14 +85,14 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
         }
         if ((pread(fd, data, ph[i].p_filesz, ph[i].p_offset) != (ssize_t)ph[i].p_filesz)) {
             printf("for_each_note: pread(ph[i]) failed\n");
-            return ERR_IO;
+            return MX_ERR_IO;
         }
         int r = find_note(name, type, data, ph[i].p_filesz, func, cookie);
-        if (r == NO_ERROR) {
+        if (r == MX_OK) {
             return r;
         }
     }
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }
 
 typedef struct {
@@ -104,15 +104,15 @@ static mx_status_t callback(void* note, size_t sz, void* _ctx) {
     context* ctx = _ctx;
     magenta_driver_note_t* dn = note;
     if (sz < sizeof(magenta_driver_note_t)) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     size_t max = (sz - sizeof(magenta_driver_note_t)) / sizeof(mx_bind_inst_t);
     if (dn->bindcount > max) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     mx_bind_inst_t* bi = (mx_bind_inst_t*) (note + sizeof(magenta_driver_note_t));
     ctx->func(dn, bi, ctx->cookie);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t read_driver_info(int fd, void *cookie,

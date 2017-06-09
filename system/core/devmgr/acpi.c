@@ -50,7 +50,7 @@ mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle) {
     }
 
     acpi_handle_init(&acpi_root, rpc[0]);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // TODO(teisenbe): Instead of doing this as a single function, give the kpci
@@ -62,7 +62,7 @@ mx_status_t devhost_init_pcie(void) {
         acpi_rsp_list_children_t* rsp;
         size_t len;
         mx_status_t status = acpi_list_children(&acpi_root, &rsp, &len);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
 
@@ -75,20 +75,20 @@ mx_status_t devhost_init_pcie(void) {
         free(rsp);
 
         if (name[0] == 0) {
-            return ERR_NOT_FOUND;
+            return MX_ERR_NOT_FOUND;
         }
     }
 
     acpi_handle_t pcie_handle;
     mx_status_t status = acpi_get_child_handle(&acpi_root, name, &pcie_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     acpi_rsp_get_pci_init_arg_t* rsp;
     size_t len;
     status = acpi_get_pci_init_arg(&pcie_handle, &rsp, &len);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         acpi_handle_close(&pcie_handle);
         return status;
     }

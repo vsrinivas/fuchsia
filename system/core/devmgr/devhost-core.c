@@ -57,15 +57,15 @@ mx_device_t* device_create_setup(mx_device_t* parent) {
 }
 
 static mx_status_t default_open(void* ctx, mx_device_t** out, uint32_t flags) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t default_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t default_close(void* ctx, uint32_t flags) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void default_unbind(void* ctx) {
@@ -75,11 +75,11 @@ static void default_release(void* ctx) {
 }
 
 static mx_status_t default_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t default_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_off_t default_get_size(void* ctx) {
@@ -89,15 +89,15 @@ static mx_off_t default_get_size(void* ctx) {
 static mx_status_t default_ioctl(void* ctx, uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t default_suspend(void* ctx, uint32_t flags) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t default_resume(void* ctx, uint32_t flags) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_protocol_device_t device_default_ops = {
@@ -164,12 +164,12 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
 
     if (!drv) {
         printf("devhost: _device_add could not find driver!\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_device_t* dev = malloc(sizeof(mx_device_t));
     if (dev == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     memset(dev, 0, sizeof(mx_device_t));
@@ -196,7 +196,7 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
     dev->name[len] = 0;
     dev->ctx = ctx ? ctx : dev;
     *out = dev;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #define DEFAULT_IF_NULL(ops,method) \
@@ -207,24 +207,24 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
 static mx_status_t device_validate(mx_device_t* dev) {
     if (dev == NULL) {
         printf("INVAL: NULL!\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (dev->flags & DEV_FLAG_ADDED) {
         printf("device already added: %p(%s)\n", dev, dev->name);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (dev->magic != DEV_MAGIC) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (dev->ops == NULL) {
         printf("device add: %p(%s): NULL ops\n", dev, dev->name);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((dev->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
         (dev->protocol_id == MX_PROTOCOL_ROOT)) {
         // These protocols is only allowed for the special
         // singleton misc or root parent devices.
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     // devices which do not declare a primary protocol
     // are implied to be misc devices
@@ -246,7 +246,7 @@ static mx_status_t device_validate(mx_device_t* dev) {
     DEFAULT_IF_NULL(ops, suspend);
     DEFAULT_IF_NULL(ops, resume);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t devhost_device_install(mx_device_t* dev) {
@@ -265,7 +265,7 @@ mx_status_t devhost_device_install(mx_device_t* dev) {
     }
     dev_ref_acquire(dev);
     dev->flags |= DEV_FLAG_ADDED;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
@@ -281,17 +281,17 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         // we don't add more than one shadow device
         // per create() op...
         if (dev_create_device != NULL) {
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
     } else {
         if (parent == NULL) {
             printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
-            status = ERR_NOT_SUPPORTED;
+            status = MX_ERR_NOT_SUPPORTED;
             goto fail;
         }
         if (parent->flags & DEV_FLAG_DEAD) {
             printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-            status = ERR_BAD_STATE;
+            status = MX_ERR_BAD_STATE;
             goto fail;
         }
     }
@@ -319,7 +319,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         dev_create_device = dev;
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     dev_ref_acquire(parent);
@@ -352,7 +352,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
     }
     dev->flags |= DEV_FLAG_ADDED;
     dev->flags &= (~DEV_FLAG_BUSY);
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     if (resource != MX_HANDLE_INVALID) {
@@ -415,7 +415,7 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     if (dev->flags & REMOVAL_BAD_FLAGS) {
         printf("device: %p(%s): cannot be removed (%s)\n",
                dev, dev->name, removal_problem(dev->flags));
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 #if TRACE_ADD_REMOVE
     printf("device: %p(%s): is being removed\n", dev, dev->name);
@@ -448,7 +448,7 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     // this must be last, since it may result in the device structure being destroyed
     dev_ref_release(dev);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t devhost_device_rebind(mx_device_t* dev) {
@@ -474,13 +474,13 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
     }
 
     dev->flags &= ~DEV_FLAG_BUSY;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, dev->name);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     dev_ref_acquire(dev);
     mx_status_t r;
@@ -518,12 +518,12 @@ mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
 
 mx_status_t devhost_device_unbind(mx_device_t* dev) {
     if (!dev->owner) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     dev->owner = NULL;
     dev_ref_release(dev);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void devhost_device_destroy(mx_device_t* dev) {
@@ -582,10 +582,10 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
     int fwfd = devhost_open_firmware(path);
     if (fwfd < 0) {
         switch (errno) {
-        case ENOENT: return ERR_NOT_FOUND;
-        case EACCES: return ERR_ACCESS_DENIED;
-        case ENOMEM: return ERR_NO_MEMORY;
-        default: return ERR_INTERNAL;
+        case ENOENT: return MX_ERR_NOT_FOUND;
+        case EACCES: return MX_ERR_ACCESS_DENIED;
+        case ENOMEM: return MX_ERR_NO_MEMORY;
+        default: return MX_ERR_INTERNAL;
         }
     }
 
@@ -595,22 +595,22 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
         int e = errno;
         close(fwfd);
         switch (e) {
-        case EACCES: return ERR_ACCESS_DENIED;
+        case EACCES: return MX_ERR_ACCESS_DENIED;
         case EBADF:
-        case EFAULT: return ERR_BAD_STATE;
-        default: return ERR_INTERNAL;
+        case EFAULT: return MX_ERR_BAD_STATE;
+        default: return MX_ERR_INTERNAL;
         }
     }
 
     if (fwstat.st_size == 0) {
         close(fwfd);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint64_t vmo_size = (fwstat.st_size + 4095) & ~4095;
     mx_handle_t vmo;
     mx_status_t status = mx_vmo_create(vmo_size, 0, &vmo);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         close(fwfd);
         return status;
     }
@@ -624,7 +624,7 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
             close(fwfd);
             mx_handle_close(vmo);
             // Distinguish other errors?
-            return ERR_IO;
+            return MX_ERR_IO;
         }
         if (r == 0) break;
         size_t actual = 0;
@@ -633,7 +633,7 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
             printf("devhost: BUG: wrote %zu < %zu firmware vmo bytes!\n", actual, r);
             close(fwfd);
             mx_handle_close(vmo);
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         off += actual;
         remaining -= actual;
@@ -646,5 +646,5 @@ mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_
     *size = fwstat.st_size;
     close(fwfd);
 
-    return NO_ERROR;
+    return MX_OK;
 }

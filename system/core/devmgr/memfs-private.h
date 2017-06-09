@@ -103,7 +103,7 @@ private:
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     // Resolves the question, "Can this directory create a child node with the name?"
-    // Returns "NO_ERROR" on success; otherwise explains failure with error message.
+    // Returns "MX_OK" on success; otherwise explains failure with error message.
     mx_status_t CanCreate(const char* name, size_t namelen) const;
 
     // Creates a dnode for the Vnode, attaches vnode to dnode, (if directory) attaches

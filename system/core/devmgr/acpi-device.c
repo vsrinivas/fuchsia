@@ -49,7 +49,7 @@ static mx_status_t acpi_get_child_handle_by_hid(acpi_handle_t* h, const char* hi
         acpi_rsp_list_children_t* rsp;
         size_t len;
         mx_status_t status = acpi_list_children(h, &rsp, &len);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
 
@@ -62,7 +62,7 @@ static mx_status_t acpi_get_child_handle_by_hid(acpi_handle_t* h, const char* hi
         free(rsp);
 
         if (name[0] == 0) {
-            return ERR_NOT_FOUND;
+            return MX_ERR_NOT_FOUND;
         }
     }
     if (child_name) {
@@ -82,12 +82,12 @@ static mx_status_t acpi_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_handle_t hacpi = devhost_get_hacpi();
     if (hacpi <= 0) {
         printf("no acpi root handle\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     acpi_device_t* batt_dev = calloc(1, sizeof(acpi_device_t));
     if (!batt_dev) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     acpi_handle_t acpi_root, pcie_handle;
@@ -95,16 +95,16 @@ static mx_status_t acpi_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     mx_status_t status = acpi_get_child_handle_by_hid(&acpi_root, "PNP0A08", &pcie_handle, NULL);
     acpi_handle_close(&acpi_root);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("no pcie handle\n");
         free(batt_dev);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     const char* hid = ACPI_HID_BATTERY;
     char name[4];
     status = acpi_get_child_handle_by_hid(&pcie_handle, hid, &batt_dev->handle, name);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("error getting battery handle %d\n", status);
         free(batt_dev);
     } else {
@@ -128,7 +128,7 @@ static mx_status_t acpi_bind(void* ctx, mx_device_t* dev, void** cookie) {
         };
 
         status = device_add(dev, &args, &batt_dev->mxdev);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             free(batt_dev);
             goto fail;
         }
@@ -147,7 +147,7 @@ static mx_status_t acpi_root_init(void** out_ctx) {
     snprintf(arg1, sizeof(arg1), "acpi");
     const char* args[2] = { "/boot/bin/devhost", arg1};
     devhost_launch_devhost(driver_get_root_device(), "acpi", MX_PROTOCOL_ACPI_BUS, "devhost:acpi", 2, (char**)args);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t acpi_root_driver_ops = {

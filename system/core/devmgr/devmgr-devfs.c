@@ -127,7 +127,7 @@ static void prepopulate_protocol_dirs(void) {
 static mx_status_t iostate_create(devnode_t* dn, mx_handle_t h) {
     iostate_t* ios = calloc(1, sizeof(iostate_t));
     if (ios == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     ios->ph.handle = h;
@@ -182,7 +182,7 @@ static bool devnode_is_local(devnode_t* dn) {
 static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t* out) {
     watcher_t* watcher = calloc(1, sizeof(watcher_t));
     if (watcher == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mx_status_t r = mx_channel_create(0, &watcher->handle, out);
     if (r < 0) {
@@ -194,7 +194,7 @@ static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t* out) {
     watcher->next = dn->watchers;
     watcher->mask = VFS_WATCH_MASK_ADDED;
     dn->watchers = watcher;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
@@ -235,7 +235,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
 static mx_status_t devfs_watch_v2(devnode_t* dn, mx_handle_t h, uint32_t mask) {
     watcher_t* watcher = calloc(1, sizeof(watcher_t));
     if (watcher == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     watcher->devnode = dn;
@@ -257,7 +257,7 @@ static mx_status_t devfs_watch_v2(devnode_t* dn, mx_handle_t h, uint32_t mask) {
     // Don't send EXISTING or IDLE events from now on...
     watcher->mask &= ~(VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // If namelen is nonzero, it is the null-terminator-inclusive length
@@ -303,12 +303,12 @@ static devnode_t* devfs_lookup(devnode_t* parent, const char* name) {
 
 mx_status_t devfs_publish(device_t* parent, device_t* dev) {
     if ((parent->self == NULL) || (dev->self != NULL) || (dev->link != NULL)) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     devnode_t* dnself = devfs_mknode(dev, dev->name, 0);
     if (dnself == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     if ((dev->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
@@ -340,7 +340,7 @@ mx_status_t devfs_publish(device_t* parent, device_t* dev) {
                 }
             }
             free(dnself);
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
 got_name:
             ;
         }
@@ -348,7 +348,7 @@ got_name:
         devnode_t* dnlink = devfs_mknode(dev, name, namelen);
         if (dnlink == NULL) {
             free(dnself);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
 
         // add link node to class directory
@@ -362,7 +362,7 @@ done:
     list_add_tail(&parent->self->children, &dnself->node);
     dev->self = dnself;
     devfs_notify(parent->self, dnself->name, VFS_WATCH_EVT_ADDED);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void _devfs_remove(devnode_t* dn) {
@@ -425,7 +425,7 @@ static mx_status_t devfs_walk(devnode_t** _dn, char* path, char** pathout) {
 again:
     if ((path == NULL) || (path[0] == 0)) {
         *_dn = dn;
-        return NO_ERROR;
+        return MX_OK;
     }
     char* name = path;
     char* undo = NULL;
@@ -434,7 +434,7 @@ again:
         *path++ = 0;
     }
     if (name[0] == 0) {
-        return ERR_BAD_PATH;
+        return MX_ERR_BAD_PATH;
     }
     devnode_t* child;
     list_for_every_entry(&dn->children, child, devnode_t, node) {
@@ -444,14 +444,14 @@ again:
         }
     }
     if (dn == *_dn) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     if (undo) {
         *undo = '/';
     }
     *_dn = dn;
     *pathout = name;
-    return ERR_NEXT;
+    return MX_ERR_NEXT;
 }
 
 static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t flags) {
@@ -464,16 +464,16 @@ static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t fla
 
     bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
 
-    if (r == ERR_NEXT) {
+    if (r == MX_ERR_NEXT) {
         // we only partially matched -- there's more path to walk
         if ((dn->device == NULL) || (dn->device->hrpc == MX_HANDLE_INVALID)) {
             // no remote to pass this on to
-            r = ERR_NOT_FOUND;
+            r = MX_ERR_NOT_FOUND;
         } else if (flags & (O_NOREMOTE | O_DIRECTORY)) {
             // local requested, but this is remote only
-            r = ERR_NOT_SUPPORTED;
+            r = MX_ERR_NOT_SUPPORTED;
         } else {
-            r = NO_ERROR;
+            r = MX_OK;
         }
     } else {
         path = (char*) ".";
@@ -505,7 +505,7 @@ fail:
         }
         if (!pipeline) {
             mxrio_object_t obj;
-            obj.status = NO_ERROR;
+            obj.status = MX_OK;
             obj.type = MXIO_PROTOCOL_REMOTE;
             mx_channel_write(h, 0, &obj, MXRIO_OBJECT_MINSIZE, NULL, 0);
         }
@@ -536,7 +536,7 @@ static mx_status_t fill_dirent(vdirent_t* de, size_t delen,
     if (sz & 3)
         sz = (sz + 3) & (~3);
     if (sz > delen)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     de->size = sz;
     de->type = type;
     memcpy(de->name, name, len);
@@ -571,12 +571,12 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
     iostate_t* ios = cookie;
     devnode_t* dn = ios->devnode;
     if (dn == NULL) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
     // ensure handle count specified by opcode matches reality
     if (msg->hcount != MXRIO_HC(msg->op)) {
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     msg->hcount = 0;
 
@@ -611,7 +611,7 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
         return msg->datalen;
     case MXRIO_READDIR:
         if (arg > MXIO_CHUNK_SIZE) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (msg->arg2.off == READDIR_CMD_RESET) {
             ios->readdir_ino = 0;
@@ -625,17 +625,17 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
         if (msg->arg2.op == IOCTL_VFS_MOUNT_FS) {
             mx_status_t r;
             if (len != sizeof(mx_handle_t)) {
-                r = ERR_INVALID_ARGS;
+                r = MX_ERR_INVALID_ARGS;
             } else if (dn->device != &socket_device) {
-                r = ERR_NOT_SUPPORTED;
+                r = MX_ERR_NOT_SUPPORTED;
             } else {
                 if (socket_device.hrpc != MX_HANDLE_INVALID) {
                     mx_handle_close(socket_device.hrpc);
                 }
                 socket_device.hrpc = msg->handle[0];
-                r = NO_ERROR;
+                r = MX_OK;
             }
-            if (r != NO_ERROR) {
+            if (r != MX_OK) {
                 mx_handle_close(msg->handle[0]);
             }
             return r;
@@ -645,11 +645,11 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
             if ((len != sizeof(vfs_watch_dir_t)) ||
                 (wd->options != 0) ||
                 (wd->mask & (~VFS_WATCH_MASK_ALL))) {
-                r = ERR_INVALID_ARGS;
+                r = MX_ERR_INVALID_ARGS;
             } else {
                 r = devfs_watch_v2(dn, msg->handle[0], wd->mask);
             }
-            if (r != NO_ERROR) {
+            if (r != MX_OK) {
                 mx_handle_close(msg->handle[0]);
             }
             return r;
@@ -658,7 +658,7 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
     case MXRIO_IOCTL:
         if (msg->arg2.op == IOCTL_VFS_WATCH_DIR) {
             mx_status_t r = devfs_watch(dn, msg->handle);
-            if (r == NO_ERROR) {
+            if (r == MX_OK) {
                 msg->datalen = sizeof(mx_handle_t);
                 msg->hcount = 1;
                 return msg->datalen;
@@ -672,7 +672,7 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
     for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
         mx_handle_close(msg->handle[i]);
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t dc_rio_handler(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
@@ -681,12 +681,12 @@ static mx_status_t dc_rio_handler(port_handler_t* ph, mx_signals_t signals, uint
     mx_status_t r;
     mxrio_msg_t msg;
     if (signals & MX_CHANNEL_READABLE) {
-        if ((r = mxrio_handle_rpc(ph->handle, &msg, devfs_rio_handler, ios)) == NO_ERROR) {
-            return NO_ERROR;
+        if ((r = mxrio_handle_rpc(ph->handle, &msg, devfs_rio_handler, ios)) == MX_OK) {
+            return MX_OK;
         }
     } else if (signals & MX_CHANNEL_PEER_CLOSED) {
         mxrio_handle_close(devfs_rio_handler, ios);
-        r = ERR_STOP;
+        r = MX_ERR_STOP;
     } else {
         printf("dc_rio_handler: invalid signals %x\n", signals);
         exit(0);
@@ -705,9 +705,9 @@ void devmgr_init(mx_handle_t root_job) {
     root_devnode.device->self = &root_devnode;
 
     mx_handle_t h0, h1;
-    if (mx_channel_create(0, &h0, &h1) != NO_ERROR) {
+    if (mx_channel_create(0, &h0, &h1) != MX_OK) {
         return;
-    } else if (iostate_create(&root_devnode, h0) != NO_ERROR) {
+    } else if (iostate_create(&root_devnode, h0) != MX_OK) {
         mx_handle_close(h0);
         mx_handle_close(h1);
         return;

@@ -101,7 +101,7 @@ mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out
         if (out != nullptr) {
             *out = nullptr;
         }
-        return NO_ERROR;
+        return MX_OK;
     }
     if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
         if (out != nullptr) {
@@ -112,20 +112,20 @@ mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out
             *out = parent_;
 #endif
         }
-        return NO_ERROR;
+        return MX_OK;
     }
 
     auto dn = children_.find_if([&name, &len](const Dnode& elem) -> bool {
         return elem.NameMatch(name, len);
     });
     if (dn == children_.end()) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     if (out != nullptr) {
         *out = dn.CopyPointer();
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mxtl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
@@ -135,12 +135,12 @@ mxtl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
 mx_status_t Dnode::CanUnlink() const {
     if (!children_.is_empty()) {
         // Cannot unlink non-empty directory
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     } else if (vnode_->IsRemote()) {
         // Cannot unlink mount points
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 struct dircookie_t {
@@ -157,18 +157,18 @@ mx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
     mx_status_t r;
 
     if (c->order == 0) {
-        if ((r = df->Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+        if ((r = df->Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
             return r;
         }
         c->order++;
     }
     if (c->order == 1) {
-        if ((r = df->Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+        if ((r = df->Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
             return r;
         }
         c->order++;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
@@ -176,7 +176,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
     mx_status_t r = 0;
 
     if (c->order <= 1) {
-        if ((r = Dnode::ReaddirStart(df, cookie)) != NO_ERROR) {
+        if ((r = Dnode::ReaddirStart(df, cookie)) != MX_OK) {
             return;
         }
     }
@@ -186,7 +186,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
             continue;
         }
         uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
-        if ((r = df->Next(dn.name_.get(), dn.NameLen(), VTYPE_TO_DTYPE(vtype))) != NO_ERROR) {
+        if ((r = df->Next(dn.name_.get(), dn.NameLen(), VTYPE_TO_DTYPE(vtype))) != MX_OK) {
             return;
         }
         c->order = dn.ordering_token_ + 1;

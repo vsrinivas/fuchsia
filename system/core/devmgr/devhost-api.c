@@ -24,24 +24,24 @@ static mx_status_t _device_add(mx_driver_t* drv, mx_device_t* parent,
     mx_device_t* dev = NULL;
 
     if (!parent) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (!args || args->version != DEVICE_ADD_ARGS_VERSION) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (!args->ops || args->ops->version != DEVICE_OPS_VERSION) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (args->flags & ~(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_BUSDEV)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((args->flags & DEVICE_ADD_INSTANCE) && (args->flags & DEVICE_ADD_BUSDEV)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     DM_LOCK();
     r = devhost_device_create(drv, parent, args->name, args->ctx, args->ops, &dev);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         DM_UNLOCK();
         return r;
     }
@@ -62,7 +62,7 @@ static mx_status_t _device_add(mx_driver_t* drv, mx_device_t* parent,
     } else {
         r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL, MX_HANDLE_INVALID);
     }
-    if (r == NO_ERROR) {
+    if (r == MX_OK) {
         *out = dev;
     } else {
         devhost_device_destroy(dev);

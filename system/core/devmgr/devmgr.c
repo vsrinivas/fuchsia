@@ -81,9 +81,9 @@ static bool data_mounted = false;
 /*
  * Attempt to mount the device pointed to be the file descriptor at a known
  * location.
- * Returns ERR_ALREADY_BOUND if the device could be mounted, but something
- * is already mounted at that location. Returns ERR_INVALID_ARGS if the
- * GUID of the device does not match a known valid one. Returns NO_ERROR if an
+ * Returns MX_ERR_ALREADY_BOUND if the device could be mounted, but something
+ * is already mounted at that location. Returns MX_ERR_INVALID_ARGS if the
+ * GUID of the device does not match a known valid one. Returns MX_OK if an
  * attempt to mount is made, without checking mount success.
  */
 static mx_status_t mount_minfs(int fd, mount_options_t* options) {
@@ -99,7 +99,7 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
     if (read_sz == GPT_GUID_LEN) {
         if (!memcmp(type_guid, sys_guid, GPT_GUID_LEN)) {
             if (secondary_bootfs_ready()) {
-                return ERR_ALREADY_BOUND;
+                return MX_ERR_ALREADY_BOUND;
             }
 
             options->readonly = true;
@@ -107,30 +107,30 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
             options->create_mountpoint = true;
 
             mx_status_t st = mount(fd, "/system", DISK_FORMAT_MINFS, options, launch_minfs);
-            if (st != NO_ERROR) {
+            if (st != MX_OK) {
                 printf("devmgr: failed to mount /system, retcode = %d\n", st);
             } else {
                 devmgr_start_appmgr(NULL);
             }
 
-            return NO_ERROR;
+            return MX_OK;
         } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
             if (data_mounted) {
-                return ERR_ALREADY_BOUND;
+                return MX_ERR_ALREADY_BOUND;
             }
             data_mounted = true;
             options->wait_until_ready = true;
 
             mx_status_t st = mount(fd, "/data", DISK_FORMAT_MINFS, options, launch_minfs);
-            if (st != NO_ERROR) {
+            if (st != MX_OK) {
                 printf("devmgr: failed to mount /data, retcode = %d\n", st);
             }
 
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_INVALID_ARGS;
+    return MX_ERR_INVALID_ARGS;
 }
 
 #define GPT_DRIVER_LIB "/boot/driver/gpt.so"
@@ -140,13 +140,13 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
 static mx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
         printf("devmgr: block watch waiting...\n");
-        return NO_ERROR;
+        return MX_OK;
     }
 
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     disk_format_t df = detect_disk_format(fd);
@@ -157,29 +157,29 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         // probe for partition table
         ioctl_device_bind(fd, GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
         close(fd);
-        return NO_ERROR;
+        return MX_OK;
     }
     case DISK_FORMAT_MBR: {
         printf("devmgr: /dev/class/block/%s: MBR?\n", name);
         // probe for partition table
         ioctl_device_bind(fd, MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
         close(fd);
-        return NO_ERROR;
+        return MX_OK;
     }
     case DISK_FORMAT_BLOBFS: {
         mount_options_t options = default_mount_options;
         options.create_mountpoint = true;
         mount(fd, "/blobstore", DISK_FORMAT_BLOBFS, &options, launch_blobstore);
-        return NO_ERROR;
+        return MX_OK;
     }
     case DISK_FORMAT_MINFS: {
         mount_options_t options = default_mount_options;
         options.wait_until_ready = false;
         printf("devmgr: minfs\n");
-        if (mount_minfs(fd, &options) != NO_ERROR) {
+        if (mount_minfs(fd, &options) != MX_OK) {
             close(fd);
         }
-        return NO_ERROR;
+        return MX_OK;
     }
     case DISK_FORMAT_FAT: {
         // Use the GUID to avoid auto-mounting the EFI partition as writable
@@ -204,11 +204,11 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         options.wait_until_ready = false;
         printf("devmgr: fatfs\n");
         mount(fd, mountpath, df, &options, launch_fat);
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
         close(fd);
-        return NO_ERROR;
+        return MX_OK;
     }
 }
 
@@ -367,19 +367,19 @@ static void fetch_vdsos(void) {
         size_t size;
         mx_status_t status = mx_object_get_property(vdso_vmo, MX_PROP_NAME,
                                                     name, sizeof(name));
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("devmgr: mx_object_get_property on PA_VMO_VDSO %u: %s\n",
                    i, mx_status_get_string(status));
             continue;
         }
         status = mx_vmo_get_size(vdso_vmo, &size);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("devmgr: mx_vmo_get_size on PA_VMO_VDSO %u: %s\n",
                    i, mx_status_get_string(status));
             continue;
         }
         status = bootfs_add_file(name, vdso_vmo, 0, size);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("devmgr: failed to add PA_VMO_VDSO %u to filesystem: %s\n",
                    i, mx_status_get_string(status));
         }

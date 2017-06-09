@@ -92,7 +92,7 @@ static void find_loadable_drivers(const char* path) {
         close(fd);
 
         if (status) {
-            if (status == ERR_NOT_FOUND) {
+            if (status == MX_ERR_NOT_FOUND) {
                 printf("devcoord: no driver info in '%s'\n", libname);
             } else {
                 printf("devcoord: error reading info from '%s'\n", libname);

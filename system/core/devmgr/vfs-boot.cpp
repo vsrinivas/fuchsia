@@ -26,22 +26,22 @@ static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_han
                             mx_off_t off, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     for (;;) {
         const char* nextpath = strchr(path, '/');
         if (nextpath == nullptr) {
             if (path[0] == 0) {
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
             return vnb->CreateFromVmo(path, strlen(path), vmo, off, len);
         } else {
             if (nextpath == path) {
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
 
             mxtl::RefPtr<fs::Vnode> out;
             r = vnb->Lookup(&out, path, nextpath - path);
-            if (r == ERR_NOT_FOUND) {
+            if (r == MX_ERR_NOT_FOUND) {
                 r = vnb->Create(&out, path, nextpath - path, S_IFDIR);
             }
 
