@@ -19,7 +19,7 @@ namespace print_input {
 class App : public mozart::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
-  App() : reader_(this) { reader_.Start(); }
+  App() : reader_(this, true) { reader_.Start(); }
   ~App() {}
 
   void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {

@@ -20,8 +20,9 @@ namespace mozart {
 namespace input {
 
 class InputReader : mtl::MessageLoopHandler {
-public:
-  InputReader(mozart::InputDeviceRegistry* registry);
+ public:
+  InputReader(mozart::InputDeviceRegistry* registry,
+              bool ignore_console = false);
   ~InputReader();
   void Start();
 
@@ -63,7 +64,8 @@ public:
   std::unique_ptr<mtl::DeviceWatcher> console_watcher_;
   mx_handle_t display_ownership_event_;
   mtl::MessageLoop::HandlerKey display_ownership_handler_key_;
-  bool display_owned_;
+  bool ignore_console_;
+  bool display_owned_ = true;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };

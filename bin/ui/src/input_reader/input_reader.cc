@@ -22,8 +22,9 @@ InputReader::DeviceInfo::DeviceInfo(
 
 InputReader::DeviceInfo::~DeviceInfo() {}
 
-InputReader::InputReader(mozart::InputDeviceRegistry* registry)
-    : registry_(registry), display_owned_{true} {}
+InputReader::InputReader(mozart::InputDeviceRegistry* registry,
+                         bool ignore_console)
+    : registry_(registry), ignore_console_(ignore_console) {}
 
 InputReader::~InputReader() {
   while (!devices_.empty()) {
@@ -99,7 +100,7 @@ void InputReader::OnDeviceHandleReady(mx_handle_t handle,
                                       mx_signals_t pending) {
   InputInterpreter* interpreter = devices_[handle]->interpreter();
   if (pending & MX_USER_SIGNAL_0) {
-    bool ret = interpreter->Read(!display_owned_);
+    bool ret = interpreter->Read(!display_owned_ && !ignore_console_);
     if (!ret) {
       DeviceRemoved(handle);
     }
