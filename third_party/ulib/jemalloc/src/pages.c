@@ -99,7 +99,7 @@ static void* fuchsia_pages_alloc(void* addr, size_t size, bool commit) {
 	 * of existing mappings, and we only want to create new mappings.
 	 */
 	void* ret = fuchsia_pages_map(addr, size, commit, /* fixed */ false);
-	if (addr != NULL && ret != addr) {
+	if (addr != NULL && ret != addr && ret != NULL) {
 		/*
 		 * We succeeded in mapping memory, but not in the right place.
 		 */
