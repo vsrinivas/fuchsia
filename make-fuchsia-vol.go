@@ -38,9 +38,11 @@ var (
 var (
 	bootloader   = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
 	kernel       = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
-	ramdisk      = flag.String("ramdisk", filepath.Join(magentaBuildDir, "bootdata.bin"), "path to bootdata.bin")
+	bootdata     = flag.String("bootdata", filepath.Join(magentaBuildDir, "bootdata.bin"), "path to bootdata.bin")
 	bootmanifest = flag.String("bootmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/boot.bootfs.manifest"), "path to boot manifest")
 	sysmanifest  = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
+	packages     = flag.String("packages", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/packages"), "file containing list of packages to include")
+	packagesDir  = flag.String("packagesDir", filepath.Join(fuchsiaBuildDir, "package"), "path to the build packages directory")
 	cmdline      = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
 
 	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("MAGENTA_PROJECT"), "rpi"), "install rpi3 layout")
@@ -73,7 +75,7 @@ func main() {
 
 	disk := flag.Args()[0]
 
-	for _, path := range []string{*kernel, *ramdisk, *bootmanifest, *sysmanifest, disk} {
+	for _, path := range []string{*kernel, *bootdata, *bootmanifest, *sysmanifest, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
@@ -83,6 +85,40 @@ func main() {
 		if _, err := os.Stat(*bootloader); err != nil {
 			log.Fatalf("cannot read %q: %s\n", *bootloader, err)
 		}
+	}
+
+	bootManifests := []string{*bootmanifest}
+	systemManifests := []string{*sysmanifest}
+
+	b, err := ioutil.ReadFile(*packages)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, packageName := range strings.Split(string(b), "\n") {
+		path := filepath.Join(*packagesDir, packageName, "system_manifest")
+		if _, err := os.Stat(path); err == nil {
+			systemManifests = append(systemManifests, path)
+		}
+		path = filepath.Join(*packagesDir, packageName, "boot_manifest")
+		if _, err := os.Stat(path); err == nil {
+			bootManifests = append(bootManifests, path)
+		}
+	}
+
+	tempDir, err := ioutil.TempDir("", "make-fuchsia-vol")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	ramdisk := filepath.Join(tempDir, "bootdata.bin")
+
+	args := []string{"-o", ramdisk, "--target=boot", *bootdata}
+	cmd := exec.Command("mkbootfs", append(args, bootManifests...)...)
+	b, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("%s\n", b)
+		log.Fatal(err)
 	}
 
 	f, err := os.Open(disk)
@@ -260,7 +296,7 @@ func main() {
 		log.Fatal("Could not find mkfs-msdosfs, you might need to build, or change to $FUCHSIA_ROOT")
 	}
 
-	cmd := exec.Command("mkfs-msdosfs", "-LESP", "-F32",
+	cmd = exec.Command("mkfs-msdosfs", "-LESP", "-F32",
 		fmt.Sprintf("-@%d", efiStart),
 		fmt.Sprintf("-b%d", logical),
 		fmt.Sprintf("-S%d", *efiSize),
@@ -288,7 +324,7 @@ func main() {
 		msCopyIn(*bootloader, root, "EFI/BOOT")
 	}
 	msCopyIn(*kernel, root, "")
-	msCopyIn(*ramdisk, root, "")
+	msCopyIn(ramdisk, root, "")
 	if _, err := os.Stat(*cmdline); err == nil {
 		msCopyIn(*cmdline, root, "")
 	}
@@ -354,7 +390,8 @@ func main() {
 
 	dirs := map[string]struct{}{}
 	minfsimg := fmt.Sprintf("%s@%d", path, *sysSize)
-	for _, manifest := range []string{*bootmanifest, *sysmanifest} {
+
+	for _, manifest := range systemManifests {
 		m, err := os.Open(manifest)
 		if err != nil {
 			log.Fatal(err)
