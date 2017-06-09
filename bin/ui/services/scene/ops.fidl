@@ -49,15 +49,9 @@ struct ReleaseResourceOp {
 // No specific mechanism is provided for transferring a token from an exporter
 // to an importer; collaborators may choose any out-of-band API they wish to do
 // so.
-//
-// If nobody imports the resource within |timeout| seconds, it becomes
-// unavailable; to specify an infinite timeout , use |timeout| == 0.  Note that
-// the exported resource also becomes unavailable if it is destroyed before it
-// is imported.
 struct ExportResourceOp {
   uint32 id;
   handle<eventpair> token;
-  uint32 timeout;
 };
 
 // Import a resource that was exported via ExportResourceOp().  |token| is a

@@ -14,9 +14,9 @@ executable("scene_manager_service") {
   output_name = "scene_manager_service"
 
   sources = [
+    "main.cc",
     "scene_manager_app.cc",
     "scene_manager_app.h",
-    "main.cc",
   ]
 
   deps = [
@@ -60,6 +60,8 @@ source_set("common") {
     "resources/nodes/tag_node.h",
     "resources/resource.cc",
     "resources/resource.h",
+    "resources/resource_linker.cc",
+    "resources/resource_linker.h",
     "resources/resource_map.cc",
     "resources/resource_map.h",
     "resources/resource_type_info.h",
@@ -82,9 +84,9 @@ source_set("common") {
 
   public_deps = [
     "//application/lib/app",
-    "//apps/mozart/services/scene",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
+    "//apps/mozart/services/scene",
     "//apps/tracing/lib/trace:provider",
     "//lib/escher/escher",
     "//lib/fidl/cpp/bindings",
@@ -137,6 +139,7 @@ executable("unittests") {
 
   sources = [
     "tests/node_unittest.cc",
+    "tests/resource_linker_unittest.cc",
     "tests/session_test.cc",
     "tests/session_test.h",
     "tests/session_unittest.cc",

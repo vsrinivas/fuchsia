@@ -23,6 +23,8 @@ class Node : public Resource {
 
   virtual ~Node() override;
 
+  ResourceId resource_id() const { return resource_id_; }
+
   bool AddChild(NodePtr child_node);
   bool AddPart(NodePtr part_node);
 
@@ -53,8 +55,6 @@ class Node : public Resource {
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
-
-  ResourceId resource_id() const { return resource_id_; }
 
   /// Applies the lambda on the descendents of the given node. Returning false
   /// from the lambda indicates that no further iteration is necessary. In that
