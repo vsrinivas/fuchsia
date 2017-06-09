@@ -251,7 +251,7 @@ static uint32_t get_value(const instruction_t* inst) {
 }
 
 static void apply_inst(const instruction_t* inst, uint32_t* value) {
-    if (inst->read) {
+    if (inst->type == INST_MOV_READ) {
         *inst->reg = *value;
     } else {
         *value = get_value(inst);
@@ -264,13 +264,13 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
     mx_vaddr_t offset = mem_trap->guest_paddr - LOCAL_APIC_PHYS_BASE;
     switch (offset) {
     case LOCAL_APIC_REGISTER_ID:
-        if (!inst->read)
+        if (inst->type != INST_MOV_READ)
             return ERR_NOT_SUPPORTED;
         *inst->reg = 0;
         return NO_ERROR;
     case LOCAL_APIC_REGISTER_EOI:
         // TODO(abdulla): Correctly handle EOI.
-        if (inst->read)
+        if (inst->type != INST_MOV_WRITE)
             return ERR_INVALID_ARGS;
         return NO_ERROR;
     case LOCAL_APIC_REGISTER_SVR:
@@ -281,13 +281,16 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
         // ESR, software should first write to it.
         //
         // Therefore, we ignore writes to the ESR.
-        if (!inst->read && offset == LOCAL_APIC_REGISTER_ESR)
+        if (inst->type == INST_MOV_WRITE && offset == LOCAL_APIC_REGISTER_ESR) {
             return NO_ERROR;
-        apply_inst(inst, local_apic_state->apic_addr + offset);
-        return NO_ERROR;
+        } else if (inst->type != INST_TEST) {
+            apply_inst(inst, local_apic_state->apic_addr + offset);
+            return NO_ERROR;
+        }
+        return ERR_NOT_SUPPORTED;
     }
     case LOCAL_APIC_REGISTER_INITIAL_COUNT:
-        if (inst->read || get_value(inst) > 0)
+        if (inst->type != INST_MOV_WRITE || get_value(inst) > 0)
             return ERR_NOT_SUPPORTED;
         return NO_ERROR;
     }
@@ -300,7 +303,7 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
     mx_vaddr_t offset = mem_trap->guest_paddr - IO_APIC_PHYS_BASE;
     switch (offset) {
     case IO_APIC_IOREGSEL:
-        if (inst->read)
+        if (inst->type != INST_MOV_WRITE)
             return ERR_NOT_SUPPORTED;
         io_apic_state->select = get_value(inst);
         return io_apic_state->select > UINT8_MAX ? ERR_INVALID_ARGS : NO_ERROR;
@@ -310,7 +313,7 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
             apply_inst(inst, &io_apic_state->id);
             return NO_ERROR;
         case IO_APIC_REGISTER_VER:
-            if (!inst->read || inst->reg == NULL)
+            if (inst->type != INST_MOV_READ)
                 return ERR_NOT_SUPPORTED;
             // There are two redirect offsets per redirection entry. We return
             // the maximum redirection entry index.
@@ -332,7 +335,7 @@ static mx_status_t handle_tpm(const mx_guest_mem_trap_t* mem_trap, instruction_t
     mx_vaddr_t offset = mem_trap->guest_paddr - TPM_PHYS_BASE;
     switch (offset) {
     case TPM_REGISTER_ACCESS:
-        if (!inst->read)
+        if (inst->type != INST_MOV_READ)
             return ERR_NOT_SUPPORTED;
         if (inst->mem != 1u)
             return ERR_BAD_STATE;
@@ -352,31 +355,33 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     mx_vaddr_t offset = mem_trap->guest_paddr - PCI_PHYS_BASE(0, device, 0);
     switch (offset) {
     case PCI_REGISTER_VENDOR_ID:
-        if (!inst->read || inst->mem != 2u)
+        if (inst->type != INST_MOV_READ || inst->mem != 2u)
             return ERR_NOT_SUPPORTED;
         *inst->reg = vendor_id;
         return NO_ERROR;
     case PCI_REGISTER_DEVICE_ID:
-        if (!inst->read || inst->mem != 2u)
+        if (inst->type != INST_MOV_READ || inst->mem != 2u)
             return ERR_NOT_SUPPORTED;
         *inst->reg = device_id;
         return NO_ERROR;
     case PCI_REGISTER_COMMAND:
         if (inst->mem != 2u)
             return ERR_NOT_SUPPORTED;
-        if (inst->read) {
+        if (inst->type == INST_MOV_READ) {
             *inst->reg = pci_device_state->command;
-        } else {
+            return NO_ERROR;
+        } else if (inst->type == INST_MOV_WRITE) {
             pci_device_state->command = get_value(inst);
+            return NO_ERROR;
         }
-        return NO_ERROR;
+        return ERR_NOT_SUPPORTED;
     case PCI_REGISTER_HEADER_TYPE:
-        if (!inst->read || inst->mem != 1u)
+        if (inst->type != INST_MOV_READ || inst->mem != 1u)
             return ERR_NOT_SUPPORTED;
         *inst->reg = PCI_HEADER_TYPE_STANDARD;
         return NO_ERROR;
     case PCI_REGISTER_INTERRUPT_PIN:
-        if (!inst->read || inst->mem != 1u)
+        if (inst->type != INST_MOV_READ || inst->mem != 1u)
             return ERR_NOT_SUPPORTED;
         *inst->reg = 1;
         return NO_ERROR;
@@ -385,7 +390,7 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     case PCI_REGISTER_BASE_CLASS:
     case PCI_REGISTER_SUB_CLASS:
     case PCI_REGISTER_CAPABILITIES_PTR:
-        if (!inst->read || inst->mem != 1u)
+        if (inst->type != INST_MOV_READ || inst->mem != 1u)
             return ERR_NOT_SUPPORTED;
         *inst->reg = 0;
         return NO_ERROR;
@@ -393,13 +398,15 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
         if (inst->mem != 4u)
             return ERR_NOT_SUPPORTED;
         uint32_t* bar = &pci_device_state->bar[PCI_BAR(offset)];
-        if (inst->read)  {
+        if (inst->type == INST_MOV_READ)  {
             *inst->reg = *bar | PCI_BAR_IO_TYPE_PIO;
-        } else {
+            return NO_ERROR;
+        } else if (inst->type == INST_MOV_WRITE) {
             // We zero bits in the BAR in order to set the size.
             *bar = (get_value(inst) & ~(bar0_size - 1)) | PCI_BAR_IO_TYPE_PIO;
+            return NO_ERROR;
         }
-        return NO_ERROR;
+        return ERR_NOT_SUPPORTED;
     }
     case PCI_REGISTER_BAR_1:
     case PCI_REGISTER_BAR_2:
@@ -408,7 +415,7 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     case PCI_REGISTER_BAR_5:
         if (inst->mem != 4u)
             return ERR_NOT_SUPPORTED;
-        if (inst->read)
+        if (inst->type == INST_MOV_READ)
             *inst->reg = 0;
         return NO_ERROR;
     }
@@ -417,7 +424,7 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
 
 static mx_status_t unhandled_mem_trap(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", mem_trap->guest_paddr);
-    if (inst->read)
+    if (inst->type == INST_MOV_READ)
         *inst->reg = UINT64_MAX;
     return NO_ERROR;
 }
@@ -480,7 +487,7 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
     packet.mem_trap_ret.fault = status != NO_ERROR;
 
     // If there was an attempt to read from memory, update the GPRs.
-    if (status == NO_ERROR && inst.read) {
+    if (status == NO_ERROR && inst.type == INST_MOV_READ) {
         status = mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
                                   &guest_gpr, sizeof(guest_gpr), NULL, 0);
         if (status != NO_ERROR)

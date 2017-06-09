@@ -157,7 +157,7 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
     case 0x89:
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
-        inst->read = false;
+        inst->type = INST_MOV_WRITE;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
@@ -166,7 +166,7 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
     case 0x8b:
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
-        inst->read = true;
+        inst->type = INST_MOV_READ;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
@@ -178,7 +178,7 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
             return ERR_OUT_OF_RANGE;
         if ((mod_rm & kModRMRegMask) != 0)
             return ERR_INVALID_ARGS;
-        inst->read = false;
+        inst->type = INST_MOV_WRITE;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = NULL;
@@ -191,7 +191,7 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
             return ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
             return ERR_OUT_OF_RANGE;
-        inst->read = true;
+        inst->type = INST_MOV_READ;
         inst->mem = 1;
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
@@ -202,11 +202,25 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
             return ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
             return ERR_OUT_OF_RANGE;
-        inst->read = true;
+        inst->type = INST_MOV_READ;
         inst->mem = 2;
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
+    // Logical compare (8-bit) imm with r/m.
+    case 0xf6:
+        if (h66)
+            return ERR_BAD_STATE;
+        if (inst_len != disp_size + 3u)
+            return ERR_OUT_OF_RANGE;
+        if ((mod_rm & kModRMRegMask) != 0)
+            return ERR_INVALID_ARGS;
+        inst->type = INST_TEST;
+        inst->mem = 1;
+        inst->imm = 0;
+        inst->reg = NULL;
+        memcpy(&inst->imm, inst_buf + disp_size + 2, 1);
+        return NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
     }

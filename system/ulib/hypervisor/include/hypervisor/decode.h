@@ -6,13 +6,17 @@
 
 #include <magenta/types.h>
 
+#define INST_MOV_READ   0u
+#define INST_MOV_WRITE  1u
+#define INST_TEST       2u
+
 __BEGIN_CDECLS
 
 typedef struct mx_guest_gpr mx_guest_gpr_t;
 
 /* Stores info from a decoded instruction. */
 typedef struct instruction {
-    bool read;
+    uint8_t type;
     uint8_t mem;
     uint32_t imm;
     uint64_t* reg;
