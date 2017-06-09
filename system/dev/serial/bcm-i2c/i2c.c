@@ -47,7 +47,7 @@ typedef struct {
 static mx_status_t bcm_write_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
 
     if (len > BCM_BSC_FIFO_SIZE)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     ctx->control_regs->dlen = (uint32_t)len;
     ctx->control_regs->control = BCM_BSC_CONTROL_ENABLE | BCM_BSC_CONTROL_START;
@@ -59,24 +59,24 @@ static mx_status_t bcm_write_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
     while( !(ctx->control_regs->status & BCM_BSC_STATUS_DONE) ) {
         if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
             printf("FIFO write timed out\n");
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
         }
     }
 
     if (ctx->control_regs->status & BCM_BSC_STATUS_ERR) {
         ctx->control_regs->status |= (BCM_BSC_STATUS_ERR | BCM_BSC_STATUS_DONE);
-        return ERR_TIMED_OUT;
+        return MX_ERR_TIMED_OUT;
     }
 
     ctx->control_regs->status |= BCM_BSC_STATUS_DONE;   //clear the done status
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
 
     if (len > BCM_BSC_FIFO_SIZE)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     ctx->control_regs->dlen = (uint32_t)len;
     ctx->control_regs->control = BCM_BSC_CONTROL_ENABLE | BCM_BSC_CONTROL_START |
@@ -87,14 +87,14 @@ static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
     while( !(ctx->control_regs->status & BCM_BSC_STATUS_DONE) ){
         if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline){
             printf("FIFO read timed out\n");
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
         }
     }
     if (ctx->control_regs->status & BCM_BSC_STATUS_ERR) {
         for (uint32_t i = 0; i < len; i++)
             data[i] = (uint8_t)0;
         ctx->control_regs->status |= (BCM_BSC_STATUS_ERR | BCM_BSC_STATUS_DONE);
-        return ERR_TIMED_OUT;
+        return MX_ERR_TIMED_OUT;
     }
 
     ctx->control_regs->status |= BCM_BSC_STATUS_DONE;   //clear the done status
@@ -102,14 +102,14 @@ static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
 
     for (uint32_t i = 0; i < len; i++)
         data[i] = (uint8_t)ctx->control_regs->fifo;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bcm_i2c_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
 
     bcm_i2c_t* i2c_ctx = ctx;
     mx_status_t status = bcm_read_fifo(i2c_ctx,(uint8_t*)buf,(uint32_t)count);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *actual = count;
     }
     return status;
@@ -121,9 +121,9 @@ static mx_status_t bcm_i2c_write(void* ctx, const void* buf, size_t count, mx_of
 
     mx_status_t status = bcm_write_fifo(i2c_ctx,(uint8_t*)buf,(uint32_t)count);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *actual = count;
-        return NO_ERROR;
+        return MX_OK;
     } else {
         return -1;
     }
@@ -133,13 +133,13 @@ static mx_status_t bcm_i2c_set_slave_addr(bcm_i2c_t* ctx, uint16_t address){
 
     ctx->control_regs->slave_addr = (uint32_t)address;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bcm_i2c_slave_transfer(bcm_i2c_t* ctx, const void* in_buf, size_t in_len,
     void* out_buf, size_t out_len) {
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     uint32_t num_segments=0;
 
 
@@ -150,7 +150,7 @@ static mx_status_t bcm_i2c_slave_transfer(bcm_i2c_t* ctx, const void* in_buf, si
         num_segments++;
     }
     if (num_segments >= BCM_MAX_SEGMENTS)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     uint8_t* data =(uint8_t*)&segments[num_segments + 1];   // +1 to skip the end marker
     uint32_t num_writes = 0;
@@ -158,18 +158,18 @@ static mx_status_t bcm_i2c_slave_transfer(bcm_i2c_t* ctx, const void* in_buf, si
     for (uint32_t i = 0; i < num_segments; i++ ){
         if (segments[i].type == I2C_SEGMENT_TYPE_WRITE) {
             status = bcm_write_fifo(ctx, &data[num_writes], segments[i].len);
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 return status;
             num_writes += segments[i].len;
         } else if (segments[i].type == I2C_SEGMENT_TYPE_READ) {
             status = bcm_read_fifo(ctx, &((uint8_t*)out_buf)[num_reads], segments[i].len);
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 return status;
             num_reads += segments[i].len;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bcm_i2c_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
@@ -182,17 +182,17 @@ static mx_status_t bcm_i2c_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
 
         const i2c_ioctl_add_slave_args_t* args = in_buf;
         if (in_len < sizeof(*args))
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
 
         if (args->chip_address_width == 7) {
             ret =  bcm_i2c_set_slave_addr(i2c_ctx,args->chip_address);
         } else {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         break;
     }
     case IOCTL_I2C_BUS_REMOVE_SLAVE: {
-        ret = NO_ERROR;
+        ret = MX_OK;
         break;
     }
     case IOCTL_I2C_SLAVE_TRANSFER: {
@@ -200,14 +200,14 @@ static mx_status_t bcm_i2c_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
         break;
     }
     case IOCTL_I2C_BUS_SET_FREQUENCY: {
-        ret = NO_ERROR;
+        ret = MX_OK;
         break;
     }
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
-    if (ret == NO_ERROR && out_len > 0 && out_actual) {
+    if (ret == MX_OK && out_len > 0 && out_actual) {
         *out_actual = out_len;
     }
     return ret;
@@ -232,7 +232,7 @@ static int i2c_bootstrap_thread(void *arg) {
         base_addr, 0x1000,
         MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&i2c_ctx->control_regs);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto i2c_err;
 
     i2c_ctx->control_regs->control = BCM_BSC_CONTROL_ENABLE | BCM_BSC_CONTROL_FIFO_CLEAR;
@@ -251,7 +251,7 @@ static int i2c_bootstrap_thread(void *arg) {
 
     status = device_add(i2c_ctx->parent, &args, &i2c_ctx->mxdev);
 
-    if (status == NO_ERROR) return 0;
+    if (status == MX_OK) return 0;
 
 i2c_err:
     if (i2c_ctx)
@@ -264,7 +264,7 @@ static mx_status_t bootstrap_i2c(mx_device_t* parent, uint32_t dev_id) {
 
     bcm_i2c_t* i2c_ctx = calloc(1, sizeof(*i2c_ctx));
     if (!i2c_ctx)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     i2c_ctx->parent     = parent;
     i2c_ctx->dev_id     = dev_id;
@@ -280,13 +280,13 @@ static mx_status_t bootstrap_i2c(mx_device_t* parent, uint32_t dev_id) {
         return thrd_status_to_mx_status(thrd_rc);
     }
     thrd_detach(bootstrap_thrd);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
 static mx_status_t i2c_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
-    mx_status_t ret = NO_ERROR;
+    mx_status_t ret = MX_OK;
 
     bcm_gpio_ctrl_t* gpio_regs;
     // Carve out some address space for the device -- it's memory mapped.
@@ -295,7 +295,7 @@ static mx_status_t i2c_bind(void* ctx, mx_device_t* parent, void** cookie) {
         GPIO_BASE, 0x1000,
         MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&gpio_regs);
 
-    if (status != NO_ERROR) return ERR_NO_MEMORY;
+    if (status != MX_OK) return MX_ERR_NO_MEMORY;
 
     /* ALT Function 0 is I2C for these pins */
     set_gpio_function(gpio_regs, BCM_SDA1_PIN, FSEL_ALT0);
@@ -306,13 +306,13 @@ static mx_status_t i2c_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
 
     status = bootstrap_i2c(parent, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         ret = status;
         printf("Failed to initialize i2c0\n");
     }
 
     status = bootstrap_i2c(parent, 1);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         ret = status;
         printf("Failed to initialize i2c1\n");
     }

@@ -46,10 +46,10 @@ static mx_status_t intel_serialio_i2c_find_slave(
                           intel_serialio_i2c_slave_device_t,
                           slave_list_node) {
         if ((*slave)->chip_address == address)
-            return NO_ERROR;
+            return MX_OK;
     }
 
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }
 
 static mx_status_t intel_serialio_i2c_add_slave(
@@ -58,7 +58,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
 
     if ((width != I2C_7BIT_ADDRESS && width != I2C_10BIT_ADDRESS) ||
         (address & ~chip_addr_mask(width)) != 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     intel_serialio_i2c_slave_device_t* slave;
@@ -67,17 +67,17 @@ static mx_status_t intel_serialio_i2c_add_slave(
 
     // Make sure a slave with the given address doesn't already exist.
     status = intel_serialio_i2c_find_slave(&slave, device, address);
-    if (status == NO_ERROR) {
-        status = ERR_ALREADY_EXISTS;
+    if (status == MX_OK) {
+        status = MX_ERR_ALREADY_EXISTS;
     }
-    if (status != ERR_NOT_FOUND) {
+    if (status != MX_ERR_NOT_FOUND) {
         mtx_unlock(&device->mutex);
         return status;
     }
 
     slave = calloc(1, sizeof(*slave));
     if (!slave) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         mtx_unlock(&device->mutex);
         return status;
     }
@@ -95,7 +95,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
     // Retrieve pci_config (again)
     pci_protocol_t* pci;
     status = device_op_get_protocol(device->pcidev, MX_PROTOCOL_PCI, (void**)&pci);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail2;
     }
 
@@ -105,7 +105,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
     pci->claim_device(device->pcidev);
     status = pci->map_resource(device->pcidev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                               (void**)&pci_config, &config_size, &config_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail2;
     }
@@ -130,11 +130,11 @@ static mx_status_t intel_serialio_i2c_add_slave(
     };
 
     status = device_add(device->mxdev, &args, &slave->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail1;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail1:
     mx_handle_close(config_handle);
@@ -152,7 +152,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
 
     if ((width != I2C_7BIT_ADDRESS && width != I2C_10BIT_ADDRESS) ||
         (address & ~chip_addr_mask(width)) != 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     intel_serialio_i2c_slave_device_t* slave;
@@ -165,7 +165,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
         goto remove_slave_finish;
     if (slave->chip_address_width != width) {
         xprintf("Chip address width mismatch.\n");
-        status = ERR_NOT_FOUND;
+        status = MX_ERR_NOT_FOUND;
         goto remove_slave_finish;
     }
 
@@ -235,25 +235,25 @@ static mx_status_t intel_serialio_configure_bus_timing(
     // Make sure the counts are within bounds.
     if (fs_hcnt >= (1 << 16) || fs_hcnt < 6 ||
         fs_lcnt >= (1 << 16) || fs_lcnt < 8) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
     if (ss_hcnt >= (1 << 16) || ss_hcnt < 6 ||
         ss_lcnt >= (1 << 16) || ss_lcnt < 8) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
 
     RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, fs_hcnt);
     RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, fs_lcnt);
     RMWREG32(&device->regs->ss_scl_hcnt, 0, 16, ss_hcnt);
     RMWREG32(&device->regs->ss_scl_lcnt, 0, 16, ss_lcnt);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t intel_serialio_i2c_set_bus_frequency(intel_serialio_i2c_device_t* device,
                                                         uint32_t frequency) {
     if (frequency != I2C_MAX_FAST_SPEED_HZ &&
         frequency != I2C_MAX_STANDARD_SPEED_HZ) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mtx_lock(&device->mutex);
@@ -266,7 +266,7 @@ static mx_status_t intel_serialio_i2c_set_bus_frequency(intel_serialio_i2c_devic
     RMWREG32(&device->regs->ctl, CTL_SPEED, 2, speed);
     mtx_unlock(&device->mutex);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t intel_serialio_i2c_ioctl(
@@ -277,7 +277,7 @@ static mx_status_t intel_serialio_i2c_ioctl(
     case IOCTL_I2C_BUS_ADD_SLAVE: {
         const i2c_ioctl_add_slave_args_t* args = in_buf;
         if (in_len < sizeof(*args))
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
 
         return intel_serialio_i2c_add_slave(device, args->chip_address_width,
                                             args->chip_address);
@@ -285,7 +285,7 @@ static mx_status_t intel_serialio_i2c_ioctl(
     case IOCTL_I2C_BUS_REMOVE_SLAVE: {
         const i2c_ioctl_remove_slave_args_t* args = in_buf;
         if (in_len < sizeof(*args))
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
 
         return intel_serialio_i2c_remove_slave(device, args->chip_address_width,
                                               args->chip_address);
@@ -293,12 +293,12 @@ static mx_status_t intel_serialio_i2c_ioctl(
     case IOCTL_I2C_BUS_SET_FREQUENCY: {
         const i2c_ioctl_set_bus_frequency_args_t* args = in_buf;
         if (in_len < sizeof(*args)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         intel_serialio_i2c_set_bus_frequency(device, args->frequency);
     }
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -316,7 +316,7 @@ static mx_protocol_device_t intel_serialio_i2c_device_proto = {
 // The controller lock should already be held when entering this function.
 mx_status_t intel_serialio_i2c_reset_controller(
     intel_serialio_i2c_device_t* device) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     // The register will only return valid values if the ACPI _PS0 has been
     // evaluated.
@@ -332,7 +332,7 @@ mx_status_t intel_serialio_i2c_reset_controller(
         }
         if (!retry) {
             printf("i2c-controller: timed out waiting for device idle\n");
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
         }
     }
 
@@ -416,17 +416,17 @@ static mx_status_t intel_serialio_i2c_device_specific_init(
             device->controller_freq = dev_props[i].controller_clock_frequency;
             device->soft_reset = (void*)device->regs +
                                  dev_props[i].reset_offset;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
     if (status < 0)
@@ -434,7 +434,7 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
 
     intel_serialio_i2c_device_t* device = calloc(1, sizeof(*device));
     if (!device)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     list_initialize(&device->slave_list);
     mtx_init(&device->mutex, mtx_plain);
@@ -445,14 +445,14 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     mx_handle_t config_handle;
     status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                (void**)&pci_config, &config_size, &config_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail;
     }
 
     status = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                (void**)&device->regs, &device->regs_size, &device->regs_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("i2c: failed to mape pci bar 0: %d\n", status);
         goto fail;
     }
@@ -517,7 +517,7 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
         intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x0010);
     }
     mx_handle_close(config_handle);
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     if (device->regs_handle > 0)

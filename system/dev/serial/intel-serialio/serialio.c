@@ -20,14 +20,14 @@ static mx_status_t intel_serialio_bind(void* ctx, mx_device_t* dev, void** cooki
     mx_status_t res;
 
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t config_handle = MX_HANDLE_INVALID;
     res = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,  (void**)&pci_config, &config_size, &config_handle);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         xprintf("serialio: failed to map pci config: %d\n", res);
         return res;
     }
@@ -60,7 +60,7 @@ static mx_status_t intel_serialio_bind(void* ctx, mx_device_t* dev, void** cooki
         res = intel_serialio_bind_uart(dev);
         break;
     default:
-        res = ERR_NOT_SUPPORTED;
+        res = MX_ERR_NOT_SUPPORTED;
         break;
     }
 
