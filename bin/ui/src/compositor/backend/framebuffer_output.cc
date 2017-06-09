@@ -10,6 +10,7 @@
 
 #include "apps/mozart/src/compositor/backend/software_rasterizer.h"
 #include "apps/mozart/src/compositor/backend/vulkan_rasterizer.h"
+#include "apps/mozart/src/compositor/config.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -40,8 +41,9 @@ constexpr bool kAllowSoftwareRasterizerFallback = true;
 
 }  // namespace
 
-FramebufferOutput::FramebufferOutput()
+FramebufferOutput::FramebufferOutput(Config* config)
     : compositor_task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      config_(config),
       weak_ptr_factory_(this) {}
 
 FramebufferOutput::~FramebufferOutput() {
@@ -324,7 +326,7 @@ void FramebufferOutput::OnDisplayReady(mx_display_info_t mx_display_info) {
   display_info->size = mozart::Size::New();
   display_info->size->width = mx_display_info.width;
   display_info->size->height = mx_display_info.height;
-  display_info->device_pixel_ratio = 1.f;  // TODO: don't hardcode this
+  display_info->device_pixel_ratio = config_->device_pixel_ratio();
   compositor_task_runner_->PostTask(ftl::MakeCopyable([
     weak = weak_ptr_factory_.GetWeakPtr(),
     display_info = std::move(display_info)

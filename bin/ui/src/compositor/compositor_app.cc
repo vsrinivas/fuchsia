@@ -10,10 +10,17 @@
 
 namespace compositor {
 
+constexpr char kCompositorConfigFile[] =
+    "/system/data/compositor/compositor.config";
+
 CompositorApp::CompositorApp()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      engine_(new CompositorEngine()) {
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
+
+  if (!config_.ReadFrom(kCompositorConfigFile))
+    FTL_LOG(WARNING) << "Could not parse " << kCompositorConfigFile;
+
+  engine_ = std::make_unique<CompositorEngine>(&config_);
 
   tracing::InitializeTracer(application_context_.get(), {"compositor"});
   tracing::SetDumpCallback([this](std::unique_ptr<tracing::Dump> dump) {

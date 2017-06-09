@@ -24,11 +24,13 @@
 
 namespace compositor {
 
+class Config;
+
 // Core of the compositor.
 // All SceneState and RendererState objects are owned by the engine.
 class CompositorEngine {
  public:
-  explicit CompositorEngine();
+  explicit CompositorEngine(Config* config);
   ~CompositorEngine();
 
   // Callback for receiving display information.
@@ -167,6 +169,8 @@ class CompositorEngine {
   Universe universe_;
 
   mozart::BufferProducer buffer_producer_;
+
+  Config* config_;
 
   ftl::WeakPtrFactory<CompositorEngine> weak_factory_;
 

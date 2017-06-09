@@ -19,6 +19,8 @@ source_set("common") {
     "compositor_engine.h",
     "compositor_impl.cc",
     "compositor_impl.h",
+    "config.cc",
+    "config.h",
     "frame_dispatcher.cc",
     "frame_dispatcher.h",
     "frame_info.h",
@@ -58,6 +60,7 @@ source_set("common") {
 
   public_deps = [
     "//application/lib/app",
+    "//apps/modular/lib/rapidjson",
     "//apps/mozart/lib/skia:type_converters",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/services/composition",

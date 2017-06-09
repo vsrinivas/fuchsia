@@ -10,6 +10,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
+#include "apps/mozart/src/compositor/config.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
@@ -28,6 +29,7 @@ class CompositorApp {
   std::unique_ptr<CompositorEngine> engine_;
   fidl::BindingSet<mozart::Compositor, std::unique_ptr<CompositorImpl>>
       compositor_bindings_;
+  Config config_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CompositorApp);
 };

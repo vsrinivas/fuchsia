@@ -12,6 +12,7 @@
 #include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/src/compositor/backend/framebuffer_output.h"
+#include "apps/mozart/src/compositor/config.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "apps/mozart/src/compositor/renderer_impl.h"
@@ -32,8 +33,9 @@ std::string SanitizeLabel(const fidl::String& label) {
 }
 }  // namespace
 
-CompositorEngine::CompositorEngine()
+CompositorEngine::CompositorEngine(Config* config)
     : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      config_(config),
       weak_factory_(this) {}
 
 CompositorEngine::~CompositorEngine() {}
@@ -138,8 +140,9 @@ void CompositorEngine::CreateRenderer(
   FTL_CHECK(renderer_id);
 
   // Create the state and bind implementation to it.
-  RendererState* renderer_state = new RendererState(
-      renderer_id, SanitizeLabel(label), std::make_unique<FramebufferOutput>());
+  RendererState* renderer_state =
+      new RendererState(renderer_id, SanitizeLabel(label),
+                        std::make_unique<FramebufferOutput>(config_));
   RendererImpl* renderer_impl =
       new RendererImpl(this, renderer_state, std::move(renderer_request));
   renderer_state->set_renderer_impl(renderer_impl);

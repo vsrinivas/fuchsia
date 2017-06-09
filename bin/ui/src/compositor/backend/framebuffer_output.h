@@ -28,6 +28,7 @@ class VulkanWindow;
 namespace compositor {
 
 class Rasterizer;
+class Config;
 
 class FramebufferOutput : public Output {
   enum RasterizerType {
@@ -42,7 +43,7 @@ class FramebufferOutput : public Output {
 #endif
 
  public:
-  FramebufferOutput();
+  FramebufferOutput(Config* config);
   ~FramebufferOutput() override;
 
   void Initialize(ftl::Closure error_callback);
@@ -98,6 +99,7 @@ class FramebufferOutput : public Output {
   std::vector<DisplayCallback> display_callbacks_;
 
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
+  Config* config_;
 
   ftl::WeakPtrFactory<FramebufferOutput> weak_ptr_factory_;
 
