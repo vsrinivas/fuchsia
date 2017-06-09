@@ -28,6 +28,10 @@ mx_status_t port_init(port_t* port);
 // the provided port handler.
 mx_status_t port_wait(port_t* port, port_handler_t* ph);
 
+// Wait for an event on a handle, as specified by
+// the provided port handler, in repeating mode.
+mx_status_t port_wait_repeating(port_t* port, port_handler_t* ph);
+
 // Wait for a packet to arrive of for the port to timeout
 // If the port wait returns and error or timeout, returns that.
 // If once is true, returns NO_ERROR after handling a packet.

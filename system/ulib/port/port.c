@@ -27,12 +27,21 @@ mx_status_t port_init(port_t* port) {
 }
 
 mx_status_t port_wait(port_t* port, port_handler_t* ph) {
-    zprintf("port_watch(%p, %p) obj=%x port=%x\n",
+    zprintf("port_wait(%p, %p) obj=%x port=%x\n",
             port, ph, ph->handle, port->handle);
     return mx_object_wait_async(ph->handle, port->handle,
                                 (uint64_t)(uintptr_t)ph,
                                 ph->waitfor, MX_WAIT_ASYNC_ONCE);
 }
+
+mx_status_t port_wait_repeating(port_t* port, port_handler_t* ph) {
+    zprintf("port_wait_repeating(%p, %p) obj=%x port=%x\n",
+            port, ph, ph->handle, port->handle);
+    return mx_object_wait_async(ph->handle, port->handle,
+                                (uint64_t)(uintptr_t)ph,
+                                ph->waitfor, MX_WAIT_ASYNC_REPEATING);
+}
+
 
 mx_status_t port_cancel(port_t* port, port_handler_t* ph) {
     mx_status_t r = mx_port_cancel(port->handle, ph->handle,
