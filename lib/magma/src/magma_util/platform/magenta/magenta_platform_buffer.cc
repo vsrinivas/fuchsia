@@ -195,7 +195,7 @@ bool MagentaPlatformBuffer::MapCpu(void** addr_out)
         uintptr_t ptr;
         mx_status_t status = mx::vmar::root_self().map(
             0, vmo_, 0, size(), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return DRETF(false, "failed to map vmo");
 
         virt_addr_ = reinterpret_cast<void*>(ptr);
@@ -219,7 +219,7 @@ bool MagentaPlatformBuffer::UnmapCpu()
             mx_status_t status =
                 mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(virt_addr_), size());
             virt_addr_ = nullptr;
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 DRETF(false, "failed to unmap vmo: %d", status);
         }
         return true;
@@ -237,17 +237,17 @@ bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_co
 
     mx_status_t status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
                                        page_count * PAGE_SIZE, nullptr, 0);
-    if (status == ERR_NO_MEMORY)
-        return DRETF(false, "Kernel returned ERR_NO_MEMORY when attempting to commit vmo "
+    if (status == MX_ERR_NO_MEMORY)
+        return DRETF(false, "Kernel returned MX_ERR_NO_MEMORY when attempting to commit vmo "
                             "pages.\nThis means the system has run out of physical memory and "
                             "things will now start going very badly.\nPlease stop using so much "
                             "physical memory :)");
-    else if (status != NO_ERROR)
+    else if (status != MX_OK)
         return DRETF(false, "failed to commit vmo pages: %d", status);
 
     status = vmo_.op_range(MX_VMO_OP_LOCK, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
                            nullptr, 0);
-    if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
+    if (status != MX_OK && status != MX_ERR_NOT_SUPPORTED)
         return DRETF(false, "failed to lock vmo pages: %d", status);
 
     for (uint32_t i = 0; i < page_count; i++) {
@@ -287,7 +287,7 @@ bool MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_
         // Unlock the entire range.
         mx_status_t status = vmo_.op_range(MX_VMO_OP_UNLOCK, start_page_index * PAGE_SIZE,
                                            page_count * PAGE_SIZE, nullptr, 0);
-        if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
+        if (status != MX_OK && status != MX_ERR_NOT_SUPPORTED) {
             return DRETF(false, "failed to unlock full range: %d", status);
         }
 
@@ -298,7 +298,7 @@ bool MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_
             if (pin_count_array_->decr(page_index) == 0) {
                 mx_status_t status =
                     vmo_.op_range(MX_VMO_OP_UNLOCK, page_index * PAGE_SIZE, PAGE_SIZE, nullptr, 0);
-                if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
+                if (status != MX_OK && status != MX_ERR_NOT_SUPPORTED) {
                     return DRETF(false, "failed to unlock page_index %u: %u", page_index, status);
                 }
             }
@@ -313,7 +313,7 @@ void MagentaPlatformBuffer::ReleasePages()
     if (pin_count_array_->total_pin_count()) {
         // Still have some pinned pages, unlock.
         mx_status_t status = vmo_.op_range(MX_VMO_OP_UNLOCK, 0, size(), nullptr, 0);
-        if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
+        if (status != MX_OK && status != MX_ERR_NOT_SUPPORTED)
             DLOG("failed to unlock pages: %d", status);
     }
 
@@ -336,7 +336,7 @@ bool MagentaPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
             0, size_,
             MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
             &paged_vmar_, &addr);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return DRETF(false, "vmar allocate failed: %d", status);
     }
     DASSERT(paged_vmar_.get());
@@ -345,7 +345,7 @@ bool MagentaPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
     mx_status_t status =
         paged_vmar_.map(page_index * PAGE_SIZE, vmo_, page_index * PAGE_SIZE, PAGE_SIZE,
                         MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETF(false, "vmar map failed: %d", status);
 
     *addr_out = reinterpret_cast<void*>(ptr);
@@ -364,7 +364,7 @@ bool MagentaPlatformBuffer::UnmapPageCpu(uint32_t page_index)
     mapped_pages_.erase(iter);
 
     mx_status_t status = paged_vmar_.unmap(addr, PAGE_SIZE);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETF(false, "failed to unmap vmo page %d", page_index);
 
     return true;
@@ -383,7 +383,7 @@ bool MagentaPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t 
     mx_status_t status =
         vmo_.op_range(MX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
                       addr_out, page_count * sizeof(addr_out[0]));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETF(false, "failed to lookup vmo");
 
     return true;
@@ -402,7 +402,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
 
     mx::vmo vmo;
     mx_status_t status = mx::vmo::create(size, 0, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETP(nullptr, "failed to allocate vmo size %" PRId64 ": %d", size, status);
     vmo.set_property(MX_PROP_NAME, name, strlen(name));
 
@@ -418,7 +418,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
     mx::vmo vmo(handle);
     auto status = vmo.get_size(&size);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETP(nullptr, "mx_vmo_get_size failed");
 
     if (!magma::is_page_aligned(size))

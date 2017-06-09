@@ -72,7 +72,7 @@ static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable)
 
 static mx_status_t intel_i915_set_mode(mx_device_t* dev, mx_display_info_t* info)
 {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info)
@@ -80,7 +80,7 @@ static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info
     assert(info);
     intel_i915_device_t* device = get_i915_device(dev->ctx);
     memcpy(info, &device->info, sizeof(mx_display_info_t));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuffer)
@@ -88,7 +88,7 @@ static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuff
     assert(framebuffer);
     intel_i915_device_t* device = get_i915_device(dev->ctx);
     (*framebuffer) = device->framebuffer_addr;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #define CACHELINE_SIZE 64
@@ -170,10 +170,10 @@ static mx_status_t intel_i915_open(void* ctx, mx_device_t** out, uint32_t flags)
 {
     intel_i915_device_t* device = get_i915_device(ctx);
     intel_i915_enable_backlight(device, true);
-    return NO_ERROR;
+    return MX_OK;
 }
 
-static mx_status_t intel_i915_close(void* ctx, uint32_t flags) { return NO_ERROR; }
+static mx_status_t intel_i915_close(void* ctx, uint32_t flags) { return MX_OK; }
 
 static int reset_placeholder(intel_i915_device_t* device)
 {
@@ -186,14 +186,14 @@ static int reset_placeholder(intel_i915_device_t* device)
 
     uint32_t buffer_handle;
     if (!device->placeholder_buffer->duplicate_handle(&buffer_handle))
-        return DRET_MSG(ERR_NO_RESOURCES, "duplicate_handle failed");
+        return DRET_MSG(MX_ERR_NO_RESOURCES, "duplicate_handle failed");
 
     device->placeholder_framebuffer =
         MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
     if (!device->placeholder_framebuffer)
-        return DRET_MSG(ERR_NO_MEMORY, "failed to created magma system buffer");
+        return DRET_MSG(MX_ERR_NO_MEMORY, "failed to created magma system buffer");
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
@@ -203,39 +203,40 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
 
     DASSERT(device->magma_system_device);
 
-    ssize_t result = ERR_NOT_SUPPORTED;
+    ssize_t result = MX_ERR_NOT_SUPPORTED;
 
     switch (op) {
         case IOCTL_MAGMA_QUERY: {
             DLOG("IOCTL_MAGMA_QUERY");
             const uint64_t* param = reinterpret_cast<const uint64_t*>(in_buf);
             if (!in_buf || in_len < sizeof(*param))
-                return DRET_MSG(ERR_INVALID_ARGS, "bad in_buf");
+                return DRET_MSG(MX_ERR_INVALID_ARGS, "bad in_buf");
             uint64_t* value_out = reinterpret_cast<uint64_t*>(out_buf);
             if (!out_buf || out_len < sizeof(*value_out))
-                return DRET_MSG(ERR_INVALID_ARGS, "bad out_buf");
+                return DRET_MSG(MX_ERR_INVALID_ARGS, "bad out_buf");
             switch (*param) {
                 case MAGMA_QUERY_DEVICE_ID:
                     *value_out = device->magma_system_device->GetDeviceId();
                     break;
                 default:
                     if (!device->magma_system_device->Query(*param, value_out))
-                        return DRET_MSG(ERR_INVALID_ARGS, "unhandled param 0x%" PRIx64, *value_out);
+                        return DRET_MSG(MX_ERR_INVALID_ARGS, "unhandled param 0x%" PRIx64,
+                                        *value_out);
             }
             DLOG("query param 0x%" PRIx64 " returning 0x%" PRIx64, *param, *value_out);
             *out_actual = sizeof(*value_out);
-            result = NO_ERROR;
+            result = MX_OK;
             break;
         }
         case IOCTL_MAGMA_CONNECT: {
             DLOG("IOCTL_MAGMA_CONNECT");
             auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
             if (!in_buf || in_len < sizeof(*request))
-                return DRET(ERR_INVALID_ARGS);
+                return DRET(MX_ERR_INVALID_ARGS);
 
             auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
             if (!out_buf || out_len < sizeof(*device_handle_out))
-                return DRET(ERR_INVALID_ARGS);
+                return DRET(MX_ERR_INVALID_ARGS);
 
             // Override console for new display connections
             if (request->capabilities & MAGMA_CAPABILITY_DISPLAY) {
@@ -251,11 +252,11 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             auto connection = MagmaSystemDevice::Open(device->magma_system_device,
                                                       request->client_id, request->capabilities);
             if (!connection)
-                return DRET(ERR_INVALID_ARGS);
+                return DRET(MX_ERR_INVALID_ARGS);
 
             *device_handle_out = connection->GetHandle();
             *out_actual = sizeof(*device_handle_out);
-            result = NO_ERROR;
+            result = MX_OK;
 
             device->magma_system_device->StartConnectionThread(std::move(connection));
 
@@ -268,20 +269,20 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             intel_i915_device_t* device = get_i915_device(ctx);
             if (device->magma_system_device)
                 device->magma_system_device->DumpStatus();
-            result = NO_ERROR;
+            result = MX_OK;
             break;
         }
 
         case IOCTL_DISPLAY_GET_FB: {
             DLOG("MAGMA IOCTL_DISPLAY_GET_FB");
             if (out_len < sizeof(ioctl_display_get_fb_t))
-                return DRET(ERR_INVALID_ARGS);
+                return DRET(MX_ERR_INVALID_ARGS);
             ioctl_display_get_fb_t* description = static_cast<ioctl_display_get_fb_t*>(out_buf);
             device->console_buffer->duplicate_handle(
                 reinterpret_cast<uint32_t*>(&description->vmo));
             description->info = device->info;
             *out_actual = sizeof(ioctl_display_get_fb_t);
-            result = NO_ERROR;
+            result = MX_OK;
             break;
         }
 
@@ -290,7 +291,7 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             DLOG("IOCTL_MAGMA_TEST_RESTART");
             std::unique_lock<std::mutex> lock(device->magma_mutex);
             result = magma_stop(device);
-            if (result != NO_ERROR)
+            if (result != MX_OK)
                 return DRET_MSG(result, "magma_stop failed");
             result = magma_start(device);
             break;
@@ -300,10 +301,10 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         case IOCTL_MAGMA_DISPLAY_GET_SIZE: {
             DLOG("IOCTL_MAGMA_DISPLAY_GET_SIZE");
             if (in_len != 0)
-                return DRET_MSG(ERR_INVALID_ARGS, "bad in_buf");
+                return DRET_MSG(MX_ERR_INVALID_ARGS, "bad in_buf");
             auto* value_out = static_cast<magma_display_size*>(out_buf);
             if (!out_buf || out_len < sizeof(*value_out))
-                return DRET_MSG(ERR_INVALID_ARGS, "bad out_buf");
+                return DRET_MSG(MX_ERR_INVALID_ARGS, "bad out_buf");
 
             std::unique_lock<std::mutex> lock(device->magma_mutex);
             if (device->magma_system_device) {
@@ -352,7 +353,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
 
     pci_protocol_t* pci;
     if (device_op_get_protocol(mx_device, MX_PROTOCOL_PCI, (void**)&pci))
-        return DRET_MSG(ERR_NOT_SUPPORTED, "device_op_get_protocol failed");
+        return DRET_MSG(MX_ERR_NOT_SUPPORTED, "device_op_get_protocol failed");
 
     mx_status_t status = pci->claim_device(mx_device);
     if (status < 0)
@@ -364,7 +365,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
     status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         di->format = format;
         di->width = width;
         di->height = height;
@@ -394,7 +395,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
         magma::PlatformBuffer::Create(device->framebuffer_size, "console-buffer");
 
     if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
-        return DRET_MSG(ERR_NO_MEMORY, "Failed to map framebuffer");
+        return DRET_MSG(MX_ERR_NO_MEMORY, "Failed to map framebuffer");
 
     // Placeholder is in tiled format
     device->placeholder_buffer = magma::PlatformBuffer::Create(
@@ -408,11 +409,11 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
     // writing the log somewhere it can be recovered then triggering a reboot.
     uint32_t handle;
     if (!device->console_buffer->duplicate_handle(&handle))
-        return DRET_MSG(ERR_INTERNAL, "Failed to duplicate framebuffer handle");
+        return DRET_MSG(MX_ERR_INTERNAL, "Failed to duplicate framebuffer handle");
 
     status = mx_set_framebuffer_vmo(get_root_resource(), handle, device->framebuffer_size, format,
                                     width, height, stride);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to magenta: %d", status);
 
     // TODO remove when the gfxconsole moves to user space
@@ -422,7 +423,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
 
     device->magma_driver = MagmaDriver::Create();
     if (!device->magma_driver)
-        return DRET_MSG(ERR_INTERNAL, "MagmaDriver::Create failed");
+        return DRET_MSG(MX_ERR_INTERNAL, "MagmaDriver::Create failed");
 
 #if MAGMA_TEST_DRIVER
     DLOG("running magma indriver test");
@@ -432,7 +433,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
     device->parent_device = mx_device;
 
     status = magma_start(device.get());
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRET_MSG(status, "magma_start failed");
 
     device_add_args_t args = {};
@@ -444,14 +445,14 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
     args.proto_ops = &intel_i915_display_proto;
 
     status = device_add(mx_device, &args, &device->mxdev);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRET_MSG(status, "device_add failed");
 
     device.release();
 
     DLOG("initialized magma intel display driver");
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t intel_gen_gpu_driver_ops = {
@@ -472,7 +473,7 @@ MAGENTA_DRIVER_END(intel_gen_gpu)
 
     device->magma_system_device = device->magma_driver->CreateDevice(device->parent_device);
     if (!device->magma_system_device)
-        return DRET_MSG(ERR_NO_RESOURCES, "Failed to create device");
+        return DRET_MSG(MX_ERR_NO_RESOURCES, "Failed to create device");
 
     DLOG("Created device %p", device->magma_system_device.get());
 
@@ -482,12 +483,12 @@ MAGENTA_DRIVER_END(intel_gen_gpu)
     uint32_t buffer_handle;
 
     if (!device->console_buffer->duplicate_handle(&buffer_handle))
-        return DRET_MSG(ERR_NO_RESOURCES, "duplicate_handle failed");
+        return DRET_MSG(MX_ERR_NO_RESOURCES, "duplicate_handle failed");
 
     device->console_framebuffer =
         MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
     if (!device->console_framebuffer)
-        return DRET_MSG(ERR_NO_MEMORY, "failed to created magma system buffer");
+        return DRET_MSG(MX_ERR_NO_MEMORY, "failed to created magma system buffer");
 
     int result = reset_placeholder(device);
     if (result != 0)
@@ -496,7 +497,7 @@ MAGENTA_DRIVER_END(intel_gen_gpu)
     magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
     device->magma_system_device->PageFlipAndEnable(device->console_framebuffer, &image_desc, false);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int magma_stop(intel_i915_device_t* device)
@@ -509,5 +510,5 @@ static int magma_stop(intel_i915_device_t* device)
     device->magma_system_device->Shutdown();
     device->magma_system_device.reset();
 
-    return NO_ERROR;
+    return MX_OK;
 }

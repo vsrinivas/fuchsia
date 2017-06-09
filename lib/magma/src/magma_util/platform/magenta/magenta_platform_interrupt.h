@@ -26,7 +26,7 @@ public:
     bool Wait() override
     {
         mx_status_t status = mx_interrupt_wait(handle_);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return DRETF(false, "mx_interrupt_wait failed (%d)", status);
         return true;
     }

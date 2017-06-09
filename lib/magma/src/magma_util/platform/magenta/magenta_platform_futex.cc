@@ -12,7 +12,7 @@ static_assert(sizeof(mx_futex_t) == sizeof(uint32_t), "futex type incompatible s
 bool PlatformFutex::Wake(uint32_t* value_ptr, int32_t wake_count)
 {
     mx_status_t status;
-    if ((status = mx_futex_wake(reinterpret_cast<mx_futex_t*>(value_ptr), wake_count)) != NO_ERROR)
+    if ((status = mx_futex_wake(reinterpret_cast<mx_futex_t*>(value_ptr), wake_count)) != MX_OK)
         return DRETF(false, "mx_futex_wake failed: %d", status);
     return true;
 }
@@ -25,13 +25,13 @@ bool PlatformFutex::Wait(uint32_t* value_ptr, int32_t current_value, uint64_t ti
     mx_status_t status =
         mx_futex_wait(reinterpret_cast<mx_futex_t*>(value_ptr), current_value, deadline);
     switch (status) {
-        case NO_ERROR:
+        case MX_OK:
             *result_out = AWOKE;
             break;
-        case ERR_TIMED_OUT:
+        case MX_ERR_TIMED_OUT:
             *result_out = TIMED_OUT;
             break;
-        case ERR_BAD_STATE:
+        case MX_ERR_BAD_STATE:
             *result_out = RETRY;
             break;
         default:

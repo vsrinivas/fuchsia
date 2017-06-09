@@ -26,10 +26,10 @@ bool MagentaPlatformSemaphore::Wait(uint64_t timeout_ms)
     mx_signals_t pending = 0;
     mx_status_t status = event_.wait_one(
         mx_signal(), timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)), &pending);
-    if (status == ERR_TIMED_OUT)
+    if (status == MX_ERR_TIMED_OUT)
         return false;
 
-    DASSERT(status == NO_ERROR);
+    DASSERT(status == MX_OK);
     DASSERT(pending & mx_signal());
 
     Reset();
@@ -40,7 +40,7 @@ bool MagentaPlatformSemaphore::WaitAsync(PlatformPort* platform_port)
 {
     auto port = static_cast<MagentaPlatformPort*>(platform_port);
     mx_status_t status = event_.wait_async(port->mx_port(), id(), mx_signal(), MX_WAIT_ASYNC_ONCE);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETF(false, "wait_async failed: %d", status);
     return true;
 }
@@ -51,7 +51,7 @@ std::unique_ptr<PlatformSemaphore> PlatformSemaphore::Create()
 {
     mx::event event;
     mx_status_t status = mx::event::create(0, &event);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETP(nullptr, "event::create failed: %d", status);
 
     uint64_t koid;

@@ -26,7 +26,7 @@ public:
     void Signal() override
     {
         mx_status_t status = event_.signal(0u, mx_signal());
-        DASSERT(status == NO_ERROR);
+        DASSERT(status == MX_OK);
     }
 
     bool Wait(uint64_t timeout_ms) override;

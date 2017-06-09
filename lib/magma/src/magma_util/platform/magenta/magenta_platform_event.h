@@ -16,7 +16,7 @@ public:
     void Signal() override
     {
         mx_status_t status = mx_event_.signal(0u, mx_signal());
-        DASSERT(status == NO_ERROR);
+        DASSERT(status == MX_OK);
     }
 
     bool Wait(uint64_t timeout_ms) override
@@ -27,7 +27,7 @@ public:
             mx_signal(),
             timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)),
             &pending);
-        DASSERT(status == NO_ERROR || status == ERR_TIMED_OUT);
+        DASSERT(status == MX_OK || status == MX_ERR_TIMED_OUT);
 
         return pending & mx_signal();
     }

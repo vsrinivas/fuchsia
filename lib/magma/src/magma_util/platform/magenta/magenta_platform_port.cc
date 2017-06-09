@@ -17,12 +17,12 @@ Status MagentaPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
 
     mx_status_t status =
         port_.wait(timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)), &packet, 0);
-    if (status == ERR_TIMED_OUT)
+    if (status == MX_ERR_TIMED_OUT)
         return MAGMA_STATUS_TIMED_OUT;
 
     DLOG("port received key 0x%" PRIx64 " status %d", packet.key, status);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "port wait returned error: %d", status);
 
     *key_out = packet.key;
@@ -33,7 +33,7 @@ std::unique_ptr<PlatformPort> PlatformPort::Create()
 {
     mx::port port;
     mx_status_t status = mx::port::create(MX_PORT_OPT_V2, &port);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETP(nullptr, "port::create failed: %d", status);
 
     return std::make_unique<MagentaPlatformPort>(std::move(port));

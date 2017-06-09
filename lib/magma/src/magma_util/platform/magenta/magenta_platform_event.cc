@@ -11,7 +11,7 @@ std::unique_ptr<PlatformEvent> PlatformEvent::Create()
 {
     mx::event event;
     mx_status_t status = mx::event::create(0, &event);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETP(nullptr, "event::create failed: %d", status);
 
     return std::make_unique<MagentaPlatformEvent>(std::move(event));

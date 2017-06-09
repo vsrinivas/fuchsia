@@ -158,7 +158,7 @@ public:
                                       MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, 0};
         wait_items[kIndexShutdown] = {shutdown_event->mx_handle(), shutdown_event->mx_signal(), 0};
 
-        if (mx_object_wait_many(wait_items, wait_item_count, MX_TIME_INFINITE) != NO_ERROR)
+        if (mx_object_wait_many(wait_items, wait_item_count, MX_TIME_INFINITE) != MX_OK)
             return DRETF(false, "wait_many failed");
 
         if (wait_items[kIndexShutdown].pending & shutdown_event->mx_signal())
@@ -170,7 +170,7 @@ public:
         if (wait_items[kIndexChannel].pending & MX_CHANNEL_READABLE) {
             auto status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
                                                kNumHandles, &actual_handles);
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 return DRETF(false, "failed to read from channel");
 
             if (actual_bytes < sizeof(OpCode))
@@ -368,7 +368,7 @@ private:
     {
         DLOG("Writing error %d to channel", error);
         auto status = local_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
-        return DRETF(status == NO_ERROR, "failed to write to channel");
+        return DRETF(status == MX_OK, "failed to write to channel");
     }
 
     std::unique_ptr<Delegate> delegate_;
@@ -555,18 +555,18 @@ public:
         mx_signals_t pending = 0;
 
         mx_status_t status = channel_.wait_one(signals, blocking ? MX_TIME_INFINITE : 0, &pending);
-        if (status == ERR_TIMED_OUT) {
-            DLOG("got ERR_TIMED_OUT, returning true");
+        if (status == MX_ERR_TIMED_OUT) {
+            DLOG("got MX_ERR_TIMED_OUT, returning true");
             return 0;
-        } else if (status == NO_ERROR) {
-            DLOG("got NO_ERROR, blocking: %s, readable: %s, closed %s", blocking ? "true" : "false",
+        } else if (status == MX_OK) {
+            DLOG("got MX_OK, blocking: %s, readable: %s, closed %s", blocking ? "true" : "false",
                  pending & MX_CHANNEL_READABLE ? "true" : "false",
                  pending & MX_CHANNEL_PEER_CLOSED ? "true" : "false");
             if (pending & MX_CHANNEL_READABLE) {
                 uint32_t actual_bytes;
                 mx_status_t status =
                     channel_.read(0, msg_out, msg_size, &actual_bytes, nullptr, 0, nullptr);
-                if (status != NO_ERROR)
+                if (status != MX_OK)
                     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to read from channel");
                 if (actual_bytes != msg_size)
                     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
@@ -586,9 +586,9 @@ private:
     {
         mx_status_t status = channel_.write(0, bytes, num_bytes, handles, num_handles);
         switch (status) {
-            case NO_ERROR:
+            case MX_OK:
                 return MAGMA_STATUS_OK;
-            case ERR_PEER_CLOSED:
+            case MX_ERR_PEER_CLOSED:
                 return MAGMA_STATUS_CONNECTION_LOST;
             default:
                 return MAGMA_STATUS_INTERNAL_ERROR;
@@ -615,7 +615,7 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     mx::channel local_endpoint;
     mx::channel remote_endpoint;
     auto status = mx::channel::create(0, &local_endpoint, &remote_endpoint);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return DRETP(nullptr, "mx::channel::create failed");
 
     auto shutdown_event = magma::PlatformEvent::Create();
