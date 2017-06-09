@@ -22,4 +22,5 @@ source_set("libmagma") {
   ]
 
   libs = [ "mxio" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
