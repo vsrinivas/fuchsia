@@ -37,6 +37,7 @@ of failure, a negative error value is returned.
 
 ## SEE ALSO
 
-[deadline_after](deadline_after.md).
-[handle_close](handle_close.md).
-
+[timer_start](timer_start.md),
+[timer_cancel](timer_cancel.md),
+[deadline_after](deadline_after.md),
+[handle_close](handle_close.md)

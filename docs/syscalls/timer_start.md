@@ -59,4 +59,5 @@ In the event of failure, a negative error value is returned.
 ## SEE ALSO
 
 [timer_create](timer_create.md),
+[timer_cancel](timer_cancel.md),
 [deadline_after](deadline_after.md)
