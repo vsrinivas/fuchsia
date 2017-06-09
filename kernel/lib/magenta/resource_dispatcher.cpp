@@ -432,7 +432,10 @@ mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t 
 
     AutoLock lock(&lock_);
 
-    ResourceRecord* rec = GetNthRecordLocked(index);
+    if (index == 0) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
+    ResourceRecord* rec = GetNthRecordLocked(index - 1);
     if (rec == nullptr) {
         return MX_ERR_NOT_SUPPORTED;
     } else {
