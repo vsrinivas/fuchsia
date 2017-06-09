@@ -67,7 +67,7 @@ static int power_button_thread(void* arg) {
                                                 MX_EVENT_SIGNALED,
                                                 MX_TIME_INFINITE,
                                                 NULL);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             break;
         }
 
@@ -91,7 +91,7 @@ mx_status_t install_powerbtn_handlers(void) {
                                                       power_button_object_handler,
                                                       (void*)(uintptr_t)power_button_event);
     if (status != AE_OK) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     AcpiInstallNotifyHandler(ACPI_ROOT_OBJECT,
@@ -102,8 +102,8 @@ mx_status_t install_powerbtn_handlers(void) {
     thrd_t thread;
     int ret = thrd_create(&thread, power_button_thread, (void*)(uintptr_t)power_button_event);
     if (ret != thrd_success) {
-        return ERR_NO_RESOURCES;
+        return MX_ERR_NO_RESOURCES;
     }
     thrd_detach(thread);
-    return NO_ERROR;
+    return MX_OK;
 }

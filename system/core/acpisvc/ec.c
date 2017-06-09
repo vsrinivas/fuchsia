@@ -36,7 +36,7 @@ static int acpi_ec_thread(void* arg) {
                                                    MX_EVENT_SIGNALED,
                                                    MX_TIME_INFINITE,
                                                    NULL);
-        if (mx_status != NO_ERROR) {
+        if (mx_status != MX_OK) {
             break;
         }
         mx_object_signal(pending_sci_evt, MX_EVENT_SIGNALED, 0);

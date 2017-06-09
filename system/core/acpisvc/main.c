@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     }
 
     ACPI_STATUS status = init();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("Failed to initialize ACPI\n");
         return 3;
     }
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
     mx_handle_t port;
     mx_status_t mx_status = mx_port_create(0, &port);
-    if (mx_status != NO_ERROR) {
+    if (mx_status != MX_OK) {
         printf("Failed to construct resource port\n");
         return 4;
     }
@@ -62,14 +62,14 @@ int main(int argc, char** argv) {
         strncpy(records[0].self.name, "ACPI-BUS", sizeof(records[0].self.name));
         mx_status = mx_resource_create(root_resource_handle, records, countof(records),
                                        &acpi_bus_resource);
-        if (mx_status != NO_ERROR) {
+        if (mx_status != MX_OK) {
             printf("Failed to create ACPI-BUS resource\n");
             return 6;
         }
     }
 
     mx_status = resource_tree_init(port, acpi_bus_resource);
-    if (mx_status != NO_ERROR) {
+    if (mx_status != MX_OK) {
         printf("Failed to initialize resource tree\n");
         return 5;
     }
@@ -77,12 +77,12 @@ int main(int argc, char** argv) {
     ec_init();
 
     mx_status = install_powerbtn_handlers();
-    if (mx_status != NO_ERROR) {
+    if (mx_status != MX_OK) {
         printf("Failed to install powerbtn handler\n");
     }
 
     mx_status = pci_report_current_resources(root_resource_handle);
-    if (mx_status != NO_ERROR) {
+    if (mx_status != MX_OK) {
         printf("WARNING: ACPI failed to report all current resources!\n");
     }
 

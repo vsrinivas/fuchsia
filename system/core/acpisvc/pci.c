@@ -229,7 +229,7 @@ static ACPI_STATUS get_pcie_devices_irq(
  *
  * @param arg The structure to populate
  *
- * @return NO_ERROR on success
+ * @return MX_OK on success
  */
 static mx_status_t find_pcie_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
     unsigned int map_len = sizeof(arg->dev_pin_to_global_irq) / sizeof(uint32_t);
@@ -245,23 +245,23 @@ static mx_status_t find_pcie_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
         arg,
         NULL);
     if (status != AE_OK) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* @brief Find the PCIe config (returns the first one found)
  *
  * @param arg The structure to populate
  *
- * @return NO_ERROR on success.
+ * @return MX_OK on success.
  */
 static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
     ACPI_TABLE_HEADER* raw_table = NULL;
     ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
     if (status != AE_OK) {
         xprintf("could not find MCFG\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
     ACPI_MCFG_ALLOCATION* table_start = ((void*)mcfg) + sizeof(*mcfg);
@@ -269,12 +269,12 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
     uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
     if (table_bytes % sizeof(*table_start) != 0) {
         xprintf("MCFG has unexpected size\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     int num_entries = table_end - table_start;
     if (num_entries == 0) {
         xprintf("MCFG has no entries\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     if (num_entries > 1) {
         xprintf("MCFG has more than one entry, just taking the first\n");
@@ -286,7 +286,7 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
 
     if (table_start->PciSegment != 0) {
         xprintf("Non-zero segment found\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     arg->ecam_windows[0].bus_start = table_start->StartBusNumber;
@@ -305,7 +305,7 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
     // big enough for all of the buses in this config.
     arg->ecam_windows[0].size = size_per_bus * num_buses;
     arg->ecam_window_count = 1;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* @brief Compute PCIe initialization information
@@ -314,7 +314,7 @@ static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
  *
  * @param arg Pointer to store the initialization information into
  *
- * @return NO_ERROR on success
+ * @return MX_OK on success
  */
 mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
     mx_pci_init_arg_t* res = NULL;
@@ -323,22 +323,22 @@ mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
     size_t obj_size = sizeof(*res) + sizeof(res->ecam_windows[0]) * 1;
     res = calloc(1, obj_size);
     if (!res) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t status = find_pcie_config(res);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 
     status = find_pcie_legacy_irq_mapping(res);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 
     *arg = res;
     *size = sizeof(*res) + sizeof(res->ecam_windows[0]) * res->ecam_window_count;
-    return NO_ERROR;
+    return MX_OK;
 fail:
     free(res);
     return status;
@@ -361,7 +361,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     if (resource_is_memory(res)) {
         resource_memory_t mem;
         mx_status_t status = resource_parse_memory(res, &mem);
-        if (status != NO_ERROR || mem.minimum != mem.maximum) {
+        if (status != MX_OK || mem.minimum != mem.maximum) {
             return AE_ERROR;
         }
 
@@ -371,7 +371,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     } else if (resource_is_address(res)) {
         resource_address_t addr;
         mx_status_t status = resource_parse_address(res, &addr);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return AE_ERROR;
         }
 
@@ -402,7 +402,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     } else if (resource_is_io(res)) {
         resource_io_t io;
         mx_status_t status = resource_parse_io(res, &io);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return AE_ERROR;
         }
 
@@ -436,7 +436,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
 
     mx_status_t status = mx_pci_add_subtract_io_range(
             ctx->pci_handle, is_mmio, base, len, add_range);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         if (add_range) {
             xprintf("Failed to add range: %d\n", status);
         } else {
@@ -476,7 +476,7 @@ static ACPI_STATUS report_current_resources_device_cb(
  * @param root_resource_handle The handle to pass to the kernel when talking
  * to the PCI driver.
  *
- * @return NO_ERROR on success
+ * @return MX_OK on success
  */
 mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
     // First we search for resources to add, then we subtract out things that
@@ -493,7 +493,7 @@ mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
     };
     ACPI_STATUS status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     // Removes resources we believe are in use by other parts of the platform
@@ -504,9 +504,9 @@ mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
     };
     status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
 
-    return NO_ERROR;
+    return MX_OK;
 }

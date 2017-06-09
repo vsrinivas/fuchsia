@@ -33,10 +33,10 @@ mx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
             out->address_length = m32->AddressLength;
             break;
         }
-        default: return ERR_INVALID_ARGS;
+        default: return MX_ERR_INVALID_ARGS;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #define EXTRACT_ADDRESS_FIELDS(src, out) do { \
@@ -78,7 +78,7 @@ mx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out) 
             resource_type = a64->ResourceType;
             break;
         }
-        default: return ERR_INVALID_ARGS;
+        default: return MX_ERR_INVALID_ARGS;
     }
 
     switch (resource_type) {
@@ -88,7 +88,7 @@ mx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out) 
         default: out->resource_type = RESOURCE_ADDRESS_UNKNOWN;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out) {
@@ -111,8 +111,8 @@ mx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out) {
             out->maximum = io->Address;
             break;
         }
-        default: return ERR_INVALID_ARGS;
+        default: return MX_ERR_INVALID_ARGS;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }

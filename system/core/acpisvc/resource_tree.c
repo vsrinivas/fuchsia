@@ -36,7 +36,7 @@ mx_status_t resource_tree_init(mx_handle_t port, mx_handle_t acpi_bus_resource) 
 
     resource_tree_context_t* context = malloc(sizeof(*context));
     if (context == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     context->port = port;
@@ -45,7 +45,7 @@ mx_status_t resource_tree_init(mx_handle_t port, mx_handle_t acpi_bus_resource) 
     }
     context->parent_resources[0] = acpi_bus_resource;
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE,
                                                 ACPI_ROOT_OBJECT,
                                                 MAX_NAMESPACE_DEPTH,
@@ -54,7 +54,7 @@ mx_status_t resource_tree_init(mx_handle_t port, mx_handle_t acpi_bus_resource) 
                                                 context,
                                                 (void**)&status);
     // Sanity check our bookkeeping
-    if (acpi_status == AE_OK && status == NO_ERROR) {
+    if (acpi_status == AE_OK && status == MX_OK) {
         for (size_t i = 1; i < countof(context->parent_resources); ++i) {
             assert(context->parent_resources[i] == MX_HANDLE_INVALID);
         }
@@ -62,14 +62,14 @@ mx_status_t resource_tree_init(mx_handle_t port, mx_handle_t acpi_bus_resource) 
     free(context);
 
     if (acpi_status != AE_OK) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto err;
     }
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto err;
     }
-    return NO_ERROR;
+    return MX_OK;
 
 err:
     while (!list_is_empty(&resource_list)) {
@@ -169,7 +169,7 @@ static ACPI_STATUS resource_tree_init_callback(ACPI_HANDLE object,
 
     mx_handle_t resource = MX_HANDLE_INVALID;
     mx_status_t status = mx_resource_create(parent, records, countof(records), &resource);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("ACPI: Failed to create node for %p: %d\n", object, status);
         goto err;
     }
@@ -177,7 +177,7 @@ static ACPI_STATUS resource_tree_init_callback(ACPI_HANDLE object,
 
 #if 0 // Disabled until we support binding to resources with MX_RESOURCE_READABLE
     status = mx_port_bind(ctx->port, (uint64_t)node, resource, MX_RESOURCE_READABLE);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("ACPI: Failed to bind node %p to port: %d\n", object, status);
         mx_handle_close(resource);
         goto err;
