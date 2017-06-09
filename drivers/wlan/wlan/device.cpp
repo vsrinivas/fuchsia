@@ -50,22 +50,22 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     debugfn();
 
     mx_status_t status = mlme_.Init();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         warnf("could not initialize mlme: %d\n", status);
     }
 
     status = mx::port::create(MX_PORT_OPT_V2, &port_);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not create port: %d\n", status);
         return status;
     }
     work_thread_ = std::thread(&Device::MainLoop, this);
 
     status = Add(parent_);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();
-        if (shutdown_status != NO_ERROR) {
+        if (shutdown_status != MX_OK) {
             MX_PANIC("wlan: could not send shutdown loop message: %d\n", shutdown_status);
         }
         if (work_thread_.joinable()) {
@@ -95,7 +95,7 @@ mxtl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length,
 
 mx_status_t Device::QueuePacket(mxtl::unique_ptr<Packet> packet) {
     if (packet == nullptr) {
-        return ERR_NO_RESOURCES;
+        return MX_ERR_NO_RESOURCES;
     }
     std::lock_guard<std::mutex> lock(packet_queue_lock_);
     packet_queue_.push_front(std::move(packet));
@@ -105,12 +105,12 @@ mx_status_t Device::QueuePacket(mxtl::unique_ptr<Packet> packet) {
     pkt.type = MX_PKT_TYPE_USER;
     pkt.user.u64[0] = to_u64(DevicePacket::kPacketQueued);
     mx_status_t status = port_.queue(&pkt, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         warnf("could not send packet queued msg err=%d\n", status);
         packet_queue_.pop_front();
         return status;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::DdkUnbind() {
@@ -122,7 +122,7 @@ void Device::DdkRelease() {
     debugfn();
     if (port_.is_valid()) {
         mx_status_t status = SendShutdown();
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             MX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
         }
         if (work_thread_.joinable()) {
@@ -136,31 +136,31 @@ mx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
                              size_t out_len, size_t* out_actual) {
     debugfn();
     if (op != IOCTL_WLAN_GET_CHANNEL) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     if (out_buf == nullptr || out_actual == nullptr || out_len < sizeof(mx_handle_t)) {
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
 
     mx::channel out;
     mx_status_t status = GetChannel(&out);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     mx_handle_t* outh = static_cast<mx_handle_t*>(out_buf);
     *outh = out.release();
     *out_actual = sizeof(mx_handle_t);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     debugfn();
-    if (info == nullptr) return ERR_INVALID_ARGS;
+    if (info == nullptr) return MX_ERR_INVALID_ARGS;
 
     std::lock_guard<std::mutex> lock(lock_);
     mlme_.GetDeviceInfo(info);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
@@ -182,7 +182,7 @@ void Device::EthmacSend(uint32_t options, void* data, size_t length) {
     // no debugfn() because it's too noisy
     auto packet = PreparePacket(data, length, Packet::Source::kEthernet);
     mx_status_t status = QueuePacket(std::move(packet));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         warnf("could not queue outbound packet err=%d\n", status);
     }
 }
@@ -195,7 +195,7 @@ void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_r
     // no debugfn() because it's too noisy
     auto packet = PreparePacket(data, length, Packet::Source::kWlan, *info);
     mx_status_t status = QueuePacket(std::move(packet));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         warnf("could not queue inbound packet err=%d\n", status);
     }
 }
@@ -208,15 +208,15 @@ void Device::MainLoop() {
     while (running) {
         mx_status_t status = port_.wait(timeout, &pkt, 0);
         std::lock_guard<std::mutex> lock(lock_);
-        if (status == ERR_TIMED_OUT) {
+        if (status == MX_ERR_TIMED_OUT) {
             mx_status_t status = mlme_.HandleTimeout(&timeout);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 errorf("could not handle timeout err=%d\n", status);
                 // TODO: decide whether to continue
             }
             continue;
-        } else if (status != NO_ERROR) {
-            if (status == ERR_BAD_HANDLE) {
+        } else if (status != MX_OK) {
+            if (status == MX_ERR_BAD_HANDLE) {
                 debugf("port closed, exiting\n");
             } else {
                 errorf("error waiting on port: %d\n", status);
@@ -265,7 +265,7 @@ void Device::MainLoop() {
                 MX_DEBUG_ASSERT(packet != nullptr);
             }
             mx_status_t status = mlme_.HandlePacket(packet.get(), &timeout);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 errorf("could not handle packet err=%d\n", status);
             }
         }
@@ -299,7 +299,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         uint32_t read = 0;
         mx_status_t status =
             channel_.read(0, buffer->data, sizeof(buffer->data), &read, nullptr, 0, nullptr);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("could not read channel: %d\n", status);
             ResetChannelLocked();
             return packet_queued;
@@ -339,20 +339,20 @@ mx_status_t Device::GetChannel(mx::channel* out) {
 
     std::lock_guard<std::mutex> lock(lock_);
     if (!port_.is_valid()) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (channel_.is_valid()) {
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
 
     mx_status_t status = mx::channel::create(0, &channel_, out);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not create channel: %d\n", status);
         return status;
     }
 
     status = RegisterChannelWaitLocked();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not wait on channel: %d\n", status);
         out->reset();
         channel_.reset();
@@ -361,7 +361,7 @@ mx_status_t Device::GetChannel(mx::channel* out) {
 
     infof("channel opened\n");
     mlme_.SetServiceChannel(channel_.get());
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::ResetChannelLocked() {

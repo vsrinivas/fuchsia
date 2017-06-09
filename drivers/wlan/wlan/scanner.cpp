@@ -42,20 +42,20 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     resp_->result_code = ResultCodes::NOT_SUPPORTED;
 
     if (IsRunning()) {
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
     MX_DEBUG_ASSERT(req_.is_null());
     MX_DEBUG_ASSERT(channel_index_ == 0);
     MX_DEBUG_ASSERT(channel_start_ == 0);
 
     if (req->channel_list.size() == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (req->max_channel_time < req->min_channel_time) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (!BSSTypes_IsValidValue(req->bss_type) || !ScanTypes_IsValidValue(req->scan_type)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
@@ -70,7 +70,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
         next_timeout_ = channel_start_ + WLAN_TU(req_->probe_delay);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Scanner::Reset() {
@@ -315,7 +315,7 @@ mx_status_t Scanner::FillProbeRequest(ProbeRequest* request, size_t len) const {
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 ScanResponsePtr Scanner::ScanResults() {

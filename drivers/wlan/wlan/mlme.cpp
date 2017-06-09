@@ -40,10 +40,10 @@ mx_status_t Mlme::Init() {
 mx_status_t Mlme::Start(mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac, Device* device) {
     debugfn();
     if (ethmac_proxy_ != nullptr) {
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
     mx_status_t status = wlanmac_proxy_.Start(device);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not start wlanmac: %d\n", status);
     } else {
         ethmac_proxy_.swap(ethmac);
@@ -100,7 +100,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet, mx_time_t* next_timeout) {
         DumpPacket(*packet);
     }
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     switch (packet->src()) {
     case Packet::Source::kService:
         status = HandleSvcPacket(packet);
@@ -123,7 +123,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet, mx_time_t* next_timeout) {
             break;
         default:
             warnf("unknown MAC frame type %u\n", fc->type());
-            status = ERR_NOT_SUPPORTED;
+            status = MX_ERR_NOT_SUPPORTED;
             break;
         }
         break;
@@ -144,17 +144,17 @@ mx_status_t Mlme::HandleTimeout(mx_time_t* next_timeout) {
     HandleScanTimeout(now);
 
     SetNextTimeout(next_timeout);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Mlme::HandleCtrlPacket(const Packet* packet) {
     debugfn();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Mlme::HandleDataPacket(const Packet* packet) {
     debugfn();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
@@ -175,7 +175,7 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     default:
         break;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
@@ -185,17 +185,17 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     debugf("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
            h->txn_id, h->flags, h->ordinal);
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     switch (static_cast<Method>(h->ordinal)) {
     case Method::SCAN_request:
         status = StartScan(packet);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("could not start scan: %d\n", status);
         }
         break;
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
-        status = ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
     }
 
     return status;
@@ -208,7 +208,7 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
         HandleScanStatus(scanner_.HandleBeacon(packet));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
@@ -218,7 +218,7 @@ mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
         HandleScanStatus(scanner_.HandleProbeResponse(packet));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Mlme::StartScan(const Packet* packet) {
@@ -232,17 +232,17 @@ mx_status_t Mlme::StartScan(const Packet* packet) {
     auto reqptr = reinterpret_cast<const void*>(h->payload);
     if (!req->Deserialize(const_cast<void*>(reqptr), packet->len() - h->len)) {
         warnf("could not deserialize ScanRequest\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     mx_status_t status = scanner_.Start(std::move(req), std::move(resp));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         SendScanResponse();
         return status;
     }
 
     auto scan_chan = scanner_.ScanChannel();
     status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
         SendScanResponse();
         scanner_.Reset();
@@ -266,11 +266,11 @@ void Mlme::HandleScanStatus(Scanner::Status status) {
         debugf("scan status: NextChannel\n");
         auto scan_chan = scanner_.ScanChannel();
         mx_status_t status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
             scanner_.Reset();
             auto reset_status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
-            if (reset_status != NO_ERROR) {
+            if (reset_status != MX_OK) {
                 errorf("could not reset to active channel %u: %d\n",
                         active_channel_.channel_num, status);
                 // TODO(tkilbourn): reset hw?
@@ -281,12 +281,12 @@ void Mlme::HandleScanStatus(Scanner::Status status) {
     case Scanner::Status::kFinishScan: {
         debugf("scan status: FinishScan\n");
         mx_status_t status = SendScanResponse();
-        if (status != NO_ERROR && status != ERR_PEER_CLOSED) {
+        if (status != MX_OK && status != MX_ERR_PEER_CLOSED) {
             errorf("could not send scan response: %d\n", status);
         }
         if (active_channel_.channel_num > 0) {
             status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 errorf("could not reset to active channel %u: %d\n",
                         active_channel_.channel_num, status);
                 // TODO(tkilbourn): reset hw?
@@ -309,13 +309,13 @@ mx_status_t Mlme::SendScanResponse() {
     header->txn_id = 1;  // TODO(tkilbourn): txn ids
     header->flags = 0;
     header->ordinal = static_cast<uint32_t>(Method::SCAN_confirm);
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     if (!resp->Serialize(header->payload, buf_len - sizeof(Header))) {
         errorf("could not serialize scan response\n");
-        status = ERR_IO;
+        status = MX_ERR_IO;
     } else {
         status = mx_channel_write(service_, 0u, buf.get(), buf_len, NULL, 0);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("could not send scan response: %d\n", status);
         }
     }

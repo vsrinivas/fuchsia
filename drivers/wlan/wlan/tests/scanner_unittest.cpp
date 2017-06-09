@@ -57,26 +57,26 @@ class ScannerTest : public ::testing::Test {
 
 TEST_F(ScannerTest, Start) {
     EXPECT_FALSE(scanner_.IsRunning());
-    EXPECT_EQ(NO_ERROR, Start());
+    EXPECT_EQ(MX_OK, Start());
     EXPECT_TRUE(scanner_.IsRunning());
 }
 
 TEST_F(ScannerTest, Start_InvalidChannelTimes) {
     req_->min_channel_time = 2;
     req_->max_channel_time = 1;
-    EXPECT_EQ(ERR_INVALID_ARGS, Start());
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, Start());
     EXPECT_FALSE(scanner_.IsRunning());
 }
 
 TEST_F(ScannerTest, Start_NoChannels) {
     SetupMessages();
     req_->channel_list.resize(0);
-    EXPECT_EQ(ERR_INVALID_ARGS, Start());
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, Start());
     EXPECT_FALSE(scanner_.IsRunning());
 }
 
 TEST_F(ScannerTest, Reset) {
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     ASSERT_TRUE(scanner_.IsRunning());
 
     scanner_.Reset();
@@ -86,19 +86,19 @@ TEST_F(ScannerTest, Reset) {
 TEST_F(ScannerTest, PassiveScan) {
     SetPassive();
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     EXPECT_EQ(Scanner::Type::kPassive, scanner_.ScanType());
 }
 
 TEST_F(ScannerTest, ActiveScan) {
     SetActive();
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     EXPECT_EQ(Scanner::Type::kActive, scanner_.ScanType());
 }
 
 TEST_F(ScannerTest, ScanChannel) {
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     auto chan = scanner_.ScanChannel();
     EXPECT_EQ(1u, chan.channel_num);
 }
@@ -108,7 +108,7 @@ TEST_F(ScannerTest, Timeout_MinChannelTime) {
     req_->min_channel_time = 1;
     req_->max_channel_time = 10;
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.NextTimeout());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
@@ -121,7 +121,7 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
     req_->min_channel_time = 1;
     req_->max_channel_time = 10;
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
     ASSERT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout(clock_.Now()));
@@ -136,7 +136,7 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
     req_->max_channel_time = 10;
     req_->channel_list.push_back(2);
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     ASSERT_EQ(1u, scanner_.ScanChannel().channel_num);
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
@@ -154,7 +154,7 @@ TEST_F(ScannerTest, Timeout_ProbeDelay) {
     req_->min_channel_time = 5;
     req_->max_channel_time = 10;
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     EXPECT_EQ(WLAN_TU(req_->probe_delay), scanner_.NextTimeout());
 
     clock_.Set(WLAN_TU(req_->probe_delay));
@@ -165,7 +165,7 @@ TEST_F(ScannerTest, Timeout_ProbeDelay) {
 TEST_F(ScannerTest, ScanResponse) {
     SetPassive();
 
-    ASSERT_EQ(NO_ERROR, Start());
+    ASSERT_EQ(MX_OK, Start());
     auto buf = buffer_alloc_.New();
     ASSERT_NE(nullptr, buf);
 
