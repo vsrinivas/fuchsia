@@ -48,6 +48,27 @@ constexpr char kScanUUIDFormatString[] =
 // (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
 constexpr size_t kBaseOffset = 12;
 
+// Parses the contents of a |uuid_string| and returns the result in |out_bytes|. Returns false if
+// |uuid_string| does not represent a valid UUID.
+// TODO(armansito): After having used UUID in camel-case words all over the place, I've decided that
+// it sucks. I'm explicitly naming this using the "Uuid" style as a reminder to fix style elsewhere.
+bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
+  FTL_DCHECK(out_bytes);
+
+  // This is a 36 character string, including 4 "-" characters and two characters for each of the
+  // 16-octets that form the 128-bit UUID.
+  if (uuid_string.length() != 36) return false;
+
+  int result = std::sscanf(uuid_string.c_str(), kScanUUIDFormatString, out_bytes->data() + 15,
+                           out_bytes->data() + 14, out_bytes->data() + 13, out_bytes->data() + 12,
+                           out_bytes->data() + 11, out_bytes->data() + 10, out_bytes->data() + 9,
+                           out_bytes->data() + 8, out_bytes->data() + 7, out_bytes->data() + 6,
+                           out_bytes->data() + 5, out_bytes->data() + 4, out_bytes->data() + 3,
+                           out_bytes->data() + 2, out_bytes->data() + 1, out_bytes->data());
+
+  return (result > 0) && (static_cast<size_t>(result) == out_bytes->size());
+}
+
 }  // namespace
 
 // static
@@ -141,22 +162,18 @@ uint32_t UUID::ValueAs32Bit() const {
   return le32toh(*reinterpret_cast<const uint32_t*>(value_.data() + kBaseOffset));
 }
 
+bool IsStringValidUUID(const std::string& uuid_string) {
+  UInt128 bytes;
+  return ParseUuidString(uuid_string, &bytes);
+}
+
 bool StringToUUID(const std::string& uuid_string, UUID* out_uuid) {
   FTL_DCHECK(out_uuid);
 
-  // This is a 36 character string, including 4 "-" characters and two characters for each of the
-  // 16-octets that form the 128-bit UUID.
-  if (uuid_string.length() != 36) return false;
+  UInt128 bytes;
+  if (!ParseUuidString(uuid_string, &bytes)) return false;
 
-  UInt128 value;
-  int result =
-      std::sscanf(uuid_string.c_str(), kScanUUIDFormatString, &value[15], &value[14], &value[13],
-                  &value[12], &value[11], &value[10], &value[9], &value[8], &value[7], &value[6],
-                  &value[5], &value[4], &value[3], &value[2], &value[1], &value[0]);
-
-  if (result != value.size()) return false;
-
-  *out_uuid = UUID(value);
+  *out_uuid = UUID(bytes);
   return true;
 }
 

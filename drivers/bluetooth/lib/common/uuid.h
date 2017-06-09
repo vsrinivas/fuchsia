@@ -73,6 +73,13 @@ class UUID final {
   UInt128 value_;
 };
 
+// Returns true if the given |uuid_string| contains a valid UUID in the following format:
+//
+//   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+//
+// where x is one of the alphanumeric characters in the string 0123456789abcdefABCDEF.
+bool IsStringValidUUID(const std::string& uuid_string);
+
 // Constructs a 128-bit UUID from a string representation in the following formats:
 //
 //   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
