@@ -20,7 +20,7 @@ class FDWaiter : public MessageLoopHandler {
   FDWaiter();
   ~FDWaiter() override;
 
-  // If the wait was successful, the first argument will be NO_ERROR and the
+  // If the wait was successful, the first argument will be MX_OK and the
   // second argument will be the pending events on the file descriptor. If the
   // wait failed (e.g., because the file descriptor was closed during the wait),
   // the first argument will be the error code and the second argument will be

@@ -23,8 +23,8 @@ TEST(ObjectInfo, GetKoidOfInvalidHandle) {
 
 TEST(ObjectInfo, GetKoidOfDistinctObjects) {
   mx::event event1, event2;
-  ASSERT_EQ(NO_ERROR, mx::event::create(0u, &event1));
-  ASSERT_EQ(NO_ERROR, mx::event::create(0u, &event2));
+  ASSERT_EQ(MX_OK, mx::event::create(0u, &event1));
+  ASSERT_EQ(MX_OK, mx::event::create(0u, &event2));
 
   EXPECT_NE(MX_KOID_INVALID, GetKoid(event1.get()));
   EXPECT_NE(MX_KOID_INVALID, GetKoid(event2.get()));
@@ -33,8 +33,8 @@ TEST(ObjectInfo, GetKoidOfDistinctObjects) {
 
 TEST(ObjectInfo, GetKoidOfDuplicates) {
   mx::event event1, event2;
-  ASSERT_EQ(NO_ERROR, mx::event::create(0u, &event1));
-  ASSERT_EQ(NO_ERROR, event1.duplicate(MX_RIGHT_SAME_RIGHTS, &event2));
+  ASSERT_EQ(MX_OK, mx::event::create(0u, &event1));
+  ASSERT_EQ(MX_OK, event1.duplicate(MX_RIGHT_SAME_RIGHTS, &event2));
 
   EXPECT_NE(MX_KOID_INVALID, GetKoid(event1.get()));
   EXPECT_EQ(GetKoid(event1.get()), GetKoid(event2.get()));
@@ -42,7 +42,7 @@ TEST(ObjectInfo, GetKoidOfDuplicates) {
 
 TEST(ObjectInfo, GetRelatedKoidOfChannel) {
   mx::channel channel1, channel2;
-  ASSERT_EQ(NO_ERROR, mx::channel::create(0u, &channel1, &channel2));
+  ASSERT_EQ(MX_OK, mx::channel::create(0u, &channel1, &channel2));
   EXPECT_NE(MX_KOID_INVALID, GetKoid(channel1.get()));
   EXPECT_NE(MX_KOID_INVALID, GetKoid(channel2.get()));
 
@@ -52,7 +52,7 @@ TEST(ObjectInfo, GetRelatedKoidOfChannel) {
 
 TEST(ObjectInfo, GetRelatedKoidOfEvent) {
   mx::event event1;
-  ASSERT_EQ(NO_ERROR, mx::event::create(0u, &event1));
+  ASSERT_EQ(MX_OK, mx::event::create(0u, &event1));
   EXPECT_NE(MX_KOID_INVALID, GetKoid(event1.get()));
   EXPECT_EQ(MX_KOID_INVALID, GetRelatedKoid(event1.get()));
 }
@@ -62,7 +62,7 @@ TEST(ObjectInfo, GetNameOfInvalidHandle) {
 }
 
 TEST(ObjectInfo, SetNameOfInvalidHandle) {
-  EXPECT_EQ(ERR_BAD_HANDLE, SetObjectName(MX_HANDLE_INVALID, "foo"));
+  EXPECT_EQ(MX_ERR_BAD_HANDLE, SetObjectName(MX_HANDLE_INVALID, "foo"));
 }
 
 TEST(ObjectInfo, GetCurrentProcessKoid) {
@@ -74,7 +74,7 @@ TEST(ObjectInfo, GetAndSetNameOfCurrentProcess) {
   std::string old_name = GetObjectName(process_handle);
   std::string new_name = "set-process-name-test";
 
-  EXPECT_EQ(NO_ERROR, SetObjectName(process_handle, new_name));
+  EXPECT_EQ(MX_OK, SetObjectName(process_handle, new_name));
   EXPECT_EQ(new_name, GetObjectName(process_handle));
   EXPECT_EQ(new_name, GetCurrentProcessName());
 
@@ -97,7 +97,7 @@ TEST(ObjectInfo, GetAndSetNameOfCurrentThread) {
   std::string old_name = GetCurrentThreadName();
   std::string new_name = "set-thread-name-test";
 
-  EXPECT_EQ(NO_ERROR, SetCurrentThreadName(new_name));
+  EXPECT_EQ(MX_OK, SetCurrentThreadName(new_name));
   EXPECT_EQ(new_name, GetCurrentThreadName());
 
   SetCurrentThreadName(old_name);

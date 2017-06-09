@@ -23,7 +23,7 @@ mx_status_t VFSDispatcher::AddVFSHandler(mx_handle_t channel,
   VFSHandler* handler = new VFSHandler(this);
   handler->Start(mx::channel(channel), callback, iostate);
   handlers_.insert(handler);
-  return NO_ERROR;
+  return MX_OK;
 }
 
 void VFSDispatcher::Stop(VFSHandler* handler) {

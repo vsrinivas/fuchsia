@@ -69,7 +69,7 @@ void FDWaiter::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   Cancel();
 
   // Last to prevent re-entrancy from the callback.
-  callback(NO_ERROR, events);
+  callback(MX_OK, events);
 }
 
 void FDWaiter::OnHandleError(mx_handle_t handle, mx_status_t error) {

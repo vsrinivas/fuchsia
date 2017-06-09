@@ -28,21 +28,21 @@ bool BlockingCopyFromString(ftl::StringView source,
   for (;;) {
     size_t written;
     mx_status_t result = destination.write(0, ptr, to_write, &written);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
       if (written == to_write)
         return true;
       to_write -= written;
       ptr += written;
-    } else if (result == ERR_SHOULD_WAIT) {
+    } else if (result == MX_ERR_SHOULD_WAIT) {
       result = destination.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                     MX_TIME_INFINITE, nullptr);
-      if (result != NO_ERROR) {
+      if (result != MX_OK) {
         // If the socket was closed, then treat as EOF.
-        return result == ERR_PEER_CLOSED;
+        return result == MX_ERR_PEER_CLOSED;
       }
     } else {
       // If the socket was closed, then treat as EOF.
-      return result == ERR_PEER_CLOSED;
+      return result == MX_ERR_PEER_CLOSED;
     }
   }
 }

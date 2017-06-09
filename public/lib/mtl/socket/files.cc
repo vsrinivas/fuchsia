@@ -58,7 +58,7 @@ CopyToFileHandler::CopyToFileHandler(
       callback_(callback),
       waiter_(fidl::GetDefaultAsyncWaiter()),
       wait_id_(0) {
-  task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
+  task_runner_->PostTask([this]() { OnHandleReady(MX_OK); });
 }
 
 CopyToFileHandler::~CopyToFileHandler() {}
@@ -72,26 +72,26 @@ void CopyToFileHandler::SendCallback(bool value) {
 }
 
 void CopyToFileHandler::OnHandleReady(mx_status_t result) {
-  if (result == NO_ERROR) {
+  if (result == MX_OK) {
     std::vector<char> buffer(64 * 1024);
     size_t size = 0;
     result = source_.read(0u, buffer.data(), buffer.size(), &size);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
       bool write_success =
           ftl::WriteFileDescriptor(destination_.get(), buffer.data(), size);
       if (!write_success) {
         SendCallback(false);
       } else {
-        task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
+        task_runner_->PostTask([this]() { OnHandleReady(MX_OK); });
       }
       return;
     }
   }
-  if (result == ERR_PEER_CLOSED) {
+  if (result == MX_ERR_PEER_CLOSED) {
     SendCallback(true);
     return;
   }
-  if (result == ERR_SHOULD_WAIT) {
+  if (result == MX_ERR_SHOULD_WAIT) {
     wait_id_ = waiter_->AsyncWait(source_.get(),
                                   MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                   MX_TIME_INFINITE, &WaitComplete, this);
@@ -174,25 +174,25 @@ void CopyFromFileHandler::FillBuffer() {
   }
   buffer_offset_ = 0;
   buffer_end_ = bytes_read;
-  OnHandleReady(NO_ERROR);
+  OnHandleReady(MX_OK);
 }
 
 void CopyFromFileHandler::OnHandleReady(mx_status_t result) {
-  if (result == NO_ERROR) {
+  if (result == MX_OK) {
     size_t bytes_written = 0;
     result = destination_.write(0u, buffer_.data() + buffer_offset_,
                                 buffer_end_ - buffer_offset_, &bytes_written);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
       buffer_offset_ += bytes_written;
       if (buffer_offset_ == buffer_end_) {
         task_runner_->PostTask([this]() { FillBuffer(); });
       } else {
-        task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
+        task_runner_->PostTask([this]() { OnHandleReady(MX_OK); });
       }
       return;
     }
   }
-  if (result == ERR_SHOULD_WAIT) {
+  if (result == MX_ERR_SHOULD_WAIT) {
     wait_id_ = waiter_->AsyncWait(destination_.get(),
                                   MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                   MX_TIME_INFINITE, &WaitComplete, this);

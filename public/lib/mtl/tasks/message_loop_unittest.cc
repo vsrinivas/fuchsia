@@ -231,7 +231,7 @@ class TestMessageLoopHandler : public MessageLoopHandler {
  private:
   int ready_count_ = 0;
   int error_count_ = 0;
-  mx_status_t last_error_result_ = NO_ERROR;
+  mx_status_t last_error_result_ = MX_OK;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestMessageLoopHandler);
 };
@@ -263,7 +263,7 @@ TEST(MessageLoop, QuitFromReady) {
   mx::channel endpoint1;
   mx::channel::create(0, &endpoint0, &endpoint1);
   mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
-  EXPECT_EQ(NO_ERROR, rv);
+  EXPECT_EQ(MX_OK, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
@@ -306,7 +306,7 @@ TEST(MessageLoop, HandleReady) {
   mx::channel endpoint1;
   mx::channel::create(0, &endpoint0, &endpoint1);
   mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
-  EXPECT_EQ(NO_ERROR, rv);
+  EXPECT_EQ(MX_OK, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
@@ -325,7 +325,7 @@ TEST(MessageLoop, AfterHandleReadyCallback) {
   mx::channel endpoint1;
   mx::channel::create(0, &endpoint0, &endpoint1);
   mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
-  EXPECT_EQ(NO_ERROR, rv);
+  EXPECT_EQ(MX_OK, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
@@ -397,7 +397,7 @@ TEST(MessageLoop, QuitWhenDeadlineExpired) {
   message_loop.Run();
   EXPECT_EQ(0, handler.ready_count());
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(ERR_TIMED_OUT, handler.last_error_result());
+  EXPECT_EQ(MX_ERR_TIMED_OUT, handler.last_error_result());
   EXPECT_FALSE(message_loop.HasHandler(key));
 }
 
@@ -413,7 +413,7 @@ TEST(MessageLoop, Destruction) {
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(ERR_BAD_STATE, handler.last_error_result());
+  EXPECT_EQ(MX_ERR_BAD_STATE, handler.last_error_result());
 }
 
 class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
@@ -469,8 +469,8 @@ TEST(MessageLoop, MultipleHandleDestruction) {
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
-  EXPECT_EQ(ERR_BAD_STATE, odd_handler.last_error_result());
-  EXPECT_EQ(ERR_BAD_STATE, even_handler.last_error_result());
+  EXPECT_EQ(MX_ERR_BAD_STATE, odd_handler.last_error_result());
+  EXPECT_EQ(MX_ERR_BAD_STATE, even_handler.last_error_result());
 }
 
 class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -509,7 +509,7 @@ TEST(MessageLoop, AddHandlerOnError) {
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(ERR_BAD_STATE, handler.last_error_result());
+  EXPECT_EQ(MX_ERR_BAD_STATE, handler.last_error_result());
 }
 
 // Tests that waiting on files in a MessageLoop works.
@@ -517,7 +517,7 @@ TEST(MessageLoop, FDWaiter) {
   // Create an event and an FD that reflects that event. The fd
   // shares ownership of the event.
   mx::event fdevent;
-  EXPECT_EQ(mx::event::create(0u, &fdevent), NO_ERROR);
+  EXPECT_EQ(mx::event::create(0u, &fdevent), MX_OK);
   ftl::UniqueFD fd(mxio_handle_fd(fdevent.get(), MX_USER_SIGNAL_0, 0, /*shared=*/true));
   EXPECT_TRUE(fd.is_valid());
 
@@ -527,10 +527,10 @@ TEST(MessageLoop, FDWaiter) {
     MessageLoop message_loop;
     std::thread thread([&fdevent]() {
         // Poke the fdevent, which pokes the fd.
-        EXPECT_EQ(fdevent.signal(0u, MX_USER_SIGNAL_0), NO_ERROR);
+        EXPECT_EQ(fdevent.signal(0u, MX_USER_SIGNAL_0), MX_OK);
       });
     auto callback = [&callback_ran, &message_loop](mx_status_t success, uint32_t events) {
-      EXPECT_EQ(success, NO_ERROR);
+      EXPECT_EQ(success, MX_OK);
       EXPECT_EQ(events, static_cast<uint32_t>(POLLIN));
       callback_ran = true;
       message_loop.QuitNow();

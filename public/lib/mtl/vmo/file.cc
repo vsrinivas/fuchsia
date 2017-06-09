@@ -17,7 +17,7 @@ bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr) {
 
   mx_handle_t result = MX_HANDLE_INVALID;
   mx_status_t status = mxio_get_vmo(fd.get(), &result);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return false;
   handle_ptr->reset(result);
   return true;

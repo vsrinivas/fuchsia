@@ -36,7 +36,7 @@ void SocketDrainer::ReadData() {
   std::vector<char> buffer(64 * 1024);
   size_t num_bytes = 0;
   mx_status_t rv = source_.read(0, buffer.data(), buffer.size(), &num_bytes);
-  if (rv == NO_ERROR) {
+  if (rv == MX_OK) {
     // Calling the user callback, and exiting early if this objects is
     // destroyed.
     bool is_destroyed = false;
@@ -47,9 +47,9 @@ void SocketDrainer::ReadData() {
     destruction_sentinel_ = nullptr;
 
     WaitForData();
-  } else if (rv == ERR_SHOULD_WAIT) {
+  } else if (rv == MX_ERR_SHOULD_WAIT) {
     WaitForData();
-  } else if (rv == ERR_PEER_CLOSED) {
+  } else if (rv == MX_ERR_PEER_CLOSED) {
     client_->OnDataComplete();
   } else {
     FTL_DCHECK(false) << "Unhandled mx_status_t: " << rv;

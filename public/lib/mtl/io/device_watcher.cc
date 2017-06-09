@@ -94,7 +94,7 @@ void DeviceWatcher::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     uint8_t msg[VFS_WATCH_NAME_MAX + 2];
     mx_status_t status =
         dir_watch_.read(0, msg, sizeof(msg), &size, nullptr, 0, nullptr);
-    FTL_CHECK(status == NO_ERROR)
+    FTL_CHECK(status == MX_OK)
         << "Failed to read from directory watch channel";
 
     if ((size < 2) || (size != (msg[1] + 2u))) {

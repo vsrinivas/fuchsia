@@ -28,7 +28,7 @@ MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : task_runner_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
-  FTL_CHECK(mx::port::create(MX_PORT_OPT_V2, &port_) == NO_ERROR);
+  FTL_CHECK(mx::port::create(MX_PORT_OPT_V2, &port_) == MX_OK);
   MessageLoop::incoming_tasks()->InitDelegate(this);
   g_current = this;
 }
@@ -43,7 +43,7 @@ MessageLoop::~MessageLoop() {
   // if we changed the ownership model instead.  For example, handlers could
   // be represented as closures which we would simply delete when no longer
   // needed.  (We could still get into loops but it would be less tempting.)
-  CancelAllHandlers(ERR_BAD_STATE);
+  CancelAllHandlers(MX_ERR_BAD_STATE);
   if (!handler_data_.empty()) {
     FTL_DLOG(WARNING)
         << "MessageLoopHandlers added while destroying the message loop; "
@@ -181,7 +181,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   now = ftl::TimePoint::Now();
 
   // Handle errors which indicate bugs in "our" code (e.g. race conditions)
-  if (wait_status != NO_ERROR && wait_status != ERR_TIMED_OUT) {
+  if (wait_status != MX_OK && wait_status != MX_ERR_TIMED_OUT) {
     FTL_DCHECK(false) << "Unexpected wait status: " << wait_status;
     return now;
   }
@@ -189,14 +189,14 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   // Deliver timeouts.
   // FIXME(jeffbrown): If the port is always busy, we might never deliver
   // timeouts to handlers which have already passed their deadline.
-  if (wait_status == ERR_TIMED_OUT) {
+  if (wait_status == MX_ERR_TIMED_OUT) {
     // TODO(abarth): Use a priority queue to track the nearest deadlines.
     std::vector<HandlerKey> keys;
     for (const auto& entry : handler_data_) {
       if (entry.second.deadline <= now)
         keys.push_back(entry.first);
     }
-    CancelHandlers(std::move(keys), ERR_TIMED_OUT);
+    CancelHandlers(std::move(keys), MX_ERR_TIMED_OUT);
     return now;
   }
 
@@ -209,7 +209,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   // Deliver pending signals.
   FTL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE)
       << "Received unexpected packet type: " << packet.type;
-  FTL_DCHECK(packet.status == NO_ERROR);
+  FTL_DCHECK(packet.status == MX_OK);
   auto it = handler_data_.find(packet.key);
   if (it == handler_data_.end()) {
     // We can currently get packets for a key after we've canceled, but that's
@@ -248,7 +248,7 @@ void MessageLoop::PostQuitTask() {
 
 void MessageLoop::ScheduleDrainIncomingTasks() {
   mx_port_packet_t packet{.key = kDrainKey};
-  FTL_CHECK(port_.queue(&packet, 0u) == NO_ERROR);
+  FTL_CHECK(port_.queue(&packet, 0u) == MX_OK);
 }
 
 bool MessageLoop::RunsTasksOnCurrentThread() {

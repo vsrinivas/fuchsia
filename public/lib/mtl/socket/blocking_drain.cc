@@ -19,7 +19,7 @@ bool BlockingDrainFrom(
     size_t bytes_read;
     mx_status_t result =
         source.read(0, buffer.data(), buffer.size(), &bytes_read);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
       size_t bytes_written = write_bytes(buffer.data(), bytes_read);
       if (bytes_written < bytes_read) {
         FTL_LOG(ERROR) << "write_bytes callback wrote fewer bytes ("
@@ -28,14 +28,14 @@ bool BlockingDrainFrom(
                           "space?)";
         return false;
       }
-    } else if (result == ERR_SHOULD_WAIT) {
+    } else if (result == MX_ERR_SHOULD_WAIT) {
       result = source.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                MX_TIME_INFINITE, nullptr);
-      if (result != NO_ERROR) {
+      if (result != MX_OK) {
         // If the socket was closed, then treat as EOF.
-        return result == ERR_PEER_CLOSED;
+        return result == MX_ERR_PEER_CLOSED;
       }
-    } else if (result == ERR_PEER_CLOSED) {
+    } else if (result == MX_ERR_PEER_CLOSED) {
       // If the socket was closed, then treat as EOF.
       return true;
     } else {

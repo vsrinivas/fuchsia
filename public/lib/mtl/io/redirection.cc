@@ -16,13 +16,13 @@ mx_status_t CreateRedirectedSocket(int startup_fd,
   mx::socket local_socket;
   mx::socket remote_socket;
   mx_status_t status = mx::socket::create(0u, &local_socket, &remote_socket);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return status;
 
   *out_socket = std::move(local_socket);
   out_startup_handle->id = MX_HND_INFO(MX_HND_TYPE_MXIO_PIPE, startup_fd);
   out_startup_handle->handle = std::move(remote_socket);
-  return NO_ERROR;
+  return MX_OK;
 }
 
 }  // namespace mtl

@@ -17,13 +17,13 @@ SharedVmo::SharedVmo(mx::vmo vmo, uint32_t map_flags)
   FTL_DCHECK(vmo_);
 
   mx_status_t status = vmo_.get_size(&vmo_size_);
-  FTL_CHECK(status == NO_ERROR);
+  FTL_CHECK(status == MX_OK);
 }
 
 SharedVmo::~SharedVmo() {
   if (mapping_) {
     mx_status_t status = mx::vmar::root_self().unmap(mapping_, vmo_size_);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
   }
 }
 
@@ -33,7 +33,7 @@ void* SharedVmo::Map() {
       // If an error occurs, then |mapping_| will remain 0.
       mx_status_t status = mx::vmar::root_self().map(0, vmo_, 0u, vmo_size_,
                                                      map_flags_, &mapping_);
-      if (status != NO_ERROR) {
+      if (status != MX_OK) {
         FTL_LOG(ERROR) << "Failed to map vmo: vmo_size=" << vmo_size_
                        << ", map_flags=" << map_flags_ << ", status=" << status;
       }

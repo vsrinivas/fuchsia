@@ -49,7 +49,7 @@ bool ContainerFromVmo(const mx::vmo& buffer, Container* container_ptr) {
 
   uint64_t num_bytes;
   mx_status_t status = buffer.get_size(&num_bytes);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(WARNING) << "mx::vmo::get_size failed: " << status;
     return false;
   }

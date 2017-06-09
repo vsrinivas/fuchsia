@@ -54,7 +54,7 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
   EXPECT_TRUE(source.is_valid());
 
   mx::socket socket1, socket2;
-  EXPECT_EQ(NO_ERROR, mx::socket::create(0u, &socket1, &socket2));
+  EXPECT_EQ(MX_OK, mx::socket::create(0u, &socket1, &socket2));
 
   bool success;
   CopyFromFileDescriptor(

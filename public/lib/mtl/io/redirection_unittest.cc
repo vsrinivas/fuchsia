@@ -17,7 +17,7 @@ TEST(Redirection, CreateRedirectedSocket) {
   StartupHandle startup_handle;
   mx_status_t status = CreateRedirectedSocket(2, &socket, &startup_handle);
 
-  ASSERT_EQ(NO_ERROR, status);
+  ASSERT_EQ(MX_OK, status);
   EXPECT_TRUE(socket);
   EXPECT_EQ(static_cast<uint32_t>(MX_HND_INFO(MX_HND_TYPE_MXIO_PIPE, 2)),
             startup_handle.id);

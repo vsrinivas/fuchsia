@@ -35,7 +35,7 @@ void VFSHandler::Start(mx::channel channel, void* callback, void* iostate) {
 void VFSHandler::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   if (pending & MX_CHANNEL_READABLE) {
     mx_status_t status = mxrio_handler(channel_.get(), callback_, iostate_);
-    if (status == NO_ERROR)
+    if (status == MX_OK)
       return;
     Stop(status < 0);
   } else {

@@ -36,7 +36,7 @@ class HandleWatcher : public MessageLoopHandler {
  protected:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
     FTL_DCHECK(handle_ == handle);
-    CallCallback(NO_ERROR, pending);
+    CallCallback(MX_OK, pending);
   }
 
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
