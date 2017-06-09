@@ -17,6 +17,9 @@
 struct mxio_watcher {
     mx_handle_t h;
     uint32_t flags;
+    watchdir_func_t func;
+    void* cookie;
+    int fd;
 };
 
 #define FLAG_NEED_DIR_SCAN    1
@@ -58,26 +61,70 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     return NO_ERROR;
 }
 
-static mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, uint8_t msg[VFS_WATCH_NAME_MAX + 2]) {
-    for (;;) {
+// watcher process expects the msg buffer to be len + 1 in length
+// as it drops temporary nuls in it while dispatching
+static mx_status_t mxio_watcher_process(mxio_watcher_t* w, uint8_t* msg, size_t len) {
+    // Message Format: { OP, LEN, DATA[LEN] }
+    while (len > 2) {
+        unsigned event = *msg++;
+        unsigned namelen = *msg++;
+
+        if (len < (namelen + 2u)) {
+            break;
+        }
+
+        switch (event) {
+        case VFS_WATCH_EVT_ADDED:
+        case VFS_WATCH_EVT_EXISTING:
+            event = WATCH_EVENT_ADD_FILE;
+            break;
+        case VFS_WATCH_EVT_REMOVED:
+            event = WATCH_EVENT_REMOVE_FILE;
+            break;
+        case VFS_WATCH_EVT_IDLE:
+            event = WATCH_EVENT_IDLE;
+            break;
+        default:
+            // unsupported event
+            continue;
+        }
+
+        uint8_t tmp = msg[namelen];
+        msg[namelen] = 0;
+
         mx_status_t status;
-        uint32_t sz = VFS_WATCH_NAME_MAX + 2;
-        if ((status = mx_channel_read(watcher->h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
+        if ((status = w->func(w->fd, event, (char*) msg, w->cookie)) != NO_ERROR) {
+            return status;
+        }
+        msg[namelen] = tmp;
+        len -= (namelen + 2);
+        msg += namelen;
+    }
+
+    return NO_ERROR;
+}
+
+static mx_status_t mxio_watcher_loop(mxio_watcher_t* w) {
+    for (;;) {
+        // extra byte for watcher process use
+        uint8_t msg[VFS_WATCH_MSG_MAX + 1];
+        uint32_t sz = VFS_WATCH_MSG_MAX;
+        mx_status_t status;
+        if ((status = mx_channel_read(w->h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
             if (status != ERR_SHOULD_WAIT) {
                 return status;
             }
-            if ((status = mx_object_wait_one(watcher->h, MX_CHANNEL_READABLE |
+            if ((status = mx_object_wait_one(w->h, MX_CHANNEL_READABLE |
                                              MX_CHANNEL_PEER_CLOSED,
                                              MX_TIME_INFINITE, NULL)) < 0) {
                 return status;
             }
             continue;
         }
-        if ((sz < 2) || (sz != (msg[1] + 2u))) {
-            // malformed message
-            return ERR_INTERNAL;
+
+        if ((status = mxio_watcher_process(w, msg, sz)) != NO_ERROR) {
+            return status;
         }
-        return NO_ERROR;
     }
 }
 
@@ -135,33 +182,10 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
         }
     }
 
-    do {
-        // Message Format: { OP, LEN, DATA[LEN] }
-        uint8_t msg[VFS_WATCH_NAME_MAX + 3];
-        if ((status = mxio_watcher_wait(watcher, msg)) != NO_ERROR) {
-            break;
-        }
-
-        uint32_t evt;
-        msg[msg[1] + 2] = 0;
-        switch (msg[0]) {
-        case VFS_WATCH_EVT_ADDED:
-        case VFS_WATCH_EVT_EXISTING:
-            evt = WATCH_EVENT_ADD_FILE;
-            break;
-        case VFS_WATCH_EVT_REMOVED:
-            evt = WATCH_EVENT_REMOVE_FILE;
-            break;
-        case VFS_WATCH_EVT_IDLE:
-            evt = WATCH_EVENT_IDLE;
-            break;
-        default:
-            // unsupported event
-            continue;
-        }
-
-        status = cb(dirfd, evt, (char*) (msg + 2), cookie);
-    } while (status == NO_ERROR);
+    watcher->func = cb;
+    watcher->cookie = cookie;
+    watcher->fd = dirfd;
+    status = mxio_watcher_loop(watcher);
 
 done:
     mxio_watcher_destroy(watcher);

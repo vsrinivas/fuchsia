@@ -82,6 +82,7 @@ typedef struct {
 #define VFS_WATCH_MASK_ALL      (0x1Fu)
 
 #define VFS_WATCH_NAME_MAX 255
+#define VFS_WATCH_MSG_MAX 8192
 
 // ssize_t ioctl_vfs_mount_fs(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_vfs_mount_fs, IOCTL_VFS_MOUNT_FS, mx_handle_t);
