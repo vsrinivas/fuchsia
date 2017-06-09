@@ -23,10 +23,15 @@ constexpr char kDefaultCloudPrefix[] = "__default__";
 // when we redo the encoding in LE-118.
 std::string GetGcsPrefixForApp(ftl::StringView user_id,
                                ftl::StringView app_id) {
+  // TODO(ppi): remove the fallback to encoded user id once we drop support for
+  // non authenticated sync.
+  std::string encoded_user_id = firebase::CanKeyBeVerbatim(user_id)
+                                    ? user_id.ToString()
+                                    : firebase::EncodeKey(user_id);
   return ftl::Concatenate({firebase::EncodeKey(kDefaultCloudPrefix),
-                           kGcsSeparator, firebase::EncodeKey(user_id),
-                           kGcsSeparator, storage::kSerializationVersion,
-                           kGcsSeparator, firebase::EncodeKey(app_id)});
+                           kGcsSeparator, encoded_user_id, kGcsSeparator,
+                           storage::kSerializationVersion, kGcsSeparator,
+                           firebase::EncodeKey(app_id)});
 }
 
 std::string GetGcsPrefixForPage(ftl::StringView app_path,
@@ -36,8 +41,13 @@ std::string GetGcsPrefixForPage(ftl::StringView app_path,
 }
 
 std::string GetFirebasePathForUser(ftl::StringView user_id) {
+  // TODO(ppi): remove the fallback to encoded user id once we drop support for
+  // non authenticated sync.
+  std::string encoded_user_id = firebase::CanKeyBeVerbatim(user_id)
+                                    ? user_id.ToString()
+                                    : firebase::EncodeKey(user_id);
   return ftl::Concatenate({firebase::EncodeKey(kDefaultCloudPrefix),
-                           kFirebaseSeparator, firebase::EncodeKey(user_id),
+                           kFirebaseSeparator, encoded_user_id,
                            kFirebaseSeparator, storage::kSerializationVersion});
 }
 

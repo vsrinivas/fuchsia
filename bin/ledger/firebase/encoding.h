@@ -11,6 +11,10 @@
 
 namespace firebase {
 
+// Returns true iff the given value can be put in Firebase as a key name without
+// encoding.
+bool CanKeyBeVerbatim(ftl::StringView bytes);
+
 // Warning: this is a naive solution which needs multiple passes and copies of
 // the data each time. To be optimized if we are going to use this in the target
 // implementation - see LE-118.

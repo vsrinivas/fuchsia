@@ -16,7 +16,7 @@ namespace {
 // control characters in strings. We disallow backslash and double quote to
 // avoid reasoning about escaping. Note: this is a stop-gap solution, see
 // LE-118.
-bool CanValueBeVerbatim(const std::string& bytes) {
+bool CanValueBeVerbatim(ftl::StringView bytes) {
   // Once encryption is in place this won't be useful. Until then, storing valid
   // utf8 strings verbatim simplifies debugging.
   if (!ftl::IsStringUTF8(bytes)) {
@@ -38,26 +38,12 @@ bool CanValueBeVerbatim(const std::string& bytes) {
 // https://firebase.google.com/docs/database/rest/structure-data.
 const char kIllegalKeyChars[] = ".$#[]/+";
 
-// Returns true if the given value can be used as a Firebase key without
-// encoding.
-bool CanKeyBeVerbatim(const std::string& bytes) {
-  if (!CanValueBeVerbatim(bytes)) {
-    return false;
-  }
-
-  if (bytes.find_first_of(std::string(kIllegalKeyChars)) != std::string::npos) {
-    return false;
-  }
-
-  return true;
-}
-
 // Encodes the given bytes for storage in Firebase. We use the same encoding
 // function for both values and keys for simplicity, yielding values that can be
 // always safely used as either. Note: this is a stop-gap solution, see LE-118.
-std::string Encode(const std::string& s, bool verbatim) {
+std::string Encode(ftl::StringView s, bool verbatim) {
   if (verbatim) {
-    return s + "V";
+    return s.ToString() + "V";
   }
 
   std::string encoded;
@@ -69,14 +55,26 @@ std::string Encode(const std::string& s, bool verbatim) {
 
 }  // namespace
 
+// Returns true if the given value can be used as a Firebase key without
+// encoding.
+bool CanKeyBeVerbatim(ftl::StringView bytes) {
+  if (!CanValueBeVerbatim(bytes)) {
+    return false;
+  }
+
+  if (bytes.find_first_of(std::string(kIllegalKeyChars)) != std::string::npos) {
+    return false;
+  }
+
+  return true;
+}
+
 std::string EncodeKey(convert::ExtendedStringView bytes) {
-  std::string s(bytes.data(), bytes.size());
-  return Encode(s, CanKeyBeVerbatim(s));
+  return Encode(bytes, CanKeyBeVerbatim(bytes));
 }
 
 std::string EncodeValue(convert::ExtendedStringView bytes) {
-  std::string s(bytes.data(), bytes.size());
-  return Encode(s, CanValueBeVerbatim(s));
+  return Encode(bytes, CanValueBeVerbatim(bytes));
 }
 
 bool Decode(const std::string& input, std::string* output) {
