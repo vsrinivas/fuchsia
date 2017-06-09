@@ -32,6 +32,7 @@ This page is a non-comprehensive index of the magenta documentation.
 + [Contributing Patches](docs/contributing.md)
 + [Testing](docs/testing.md)
 + [Hacking notes](docs/hacking.md)
++ [Memory usage analysis tools](docs/memory.md)
 + [Relationship with LK](docs/mg_and_lk.md)
 + [Kernel Objects](docs/kernel_objects.md)
 + [Process Objects](docs/objects/process.md)

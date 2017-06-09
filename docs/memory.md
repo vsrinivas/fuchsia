@@ -76,9 +76,8 @@ parsed by the `treemap.py` script.
 ### Dump a process's detailed memory maps
 
 If you want to see why a specific process uses so much memory, you can run the
-`vmaps` tool on its koid (koid is the ID that shows up when running ps) and peer
-into the tea leaves. (The memory ranges don't have good names yet, but if you
-squint you can see dynamic libraries, heap, stack etc.)
+`vmaps` tool on its koid (koid is the ID that shows up when running ps) to see
+what it has mapped into memory.
 
 ```
 $ vmaps help
