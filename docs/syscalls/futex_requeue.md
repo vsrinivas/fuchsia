@@ -19,7 +19,7 @@ mx_status_t mx_futex_requeue(mx_futex_t* value_ptr, uint32_t wake_count,
 
 Requeuing is a generalization of waking. First, the kernel verifies
 that the value in wake_count matches the value of the futex at
-`value_ptr`, and if not reports *ERR_ALREADY_BOUND*. After waking `wake_count`
+`value_ptr`, and if not reports *MX_ERR_ALREADY_BOUND*. After waking `wake_count`
 threads, `requeue_count` threads are moved from the original futex's
 wait queue to the wait queue corresponding to `requeue_ptr`, another
 futex.
@@ -28,16 +28,16 @@ This requeueing behavior may be used to avoid thundering herds on wake.
 
 ## RETURN VALUE
 
-**futex_requeue**() returns **NO_ERROR** on success.
+**futex_requeue**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer, or
+**MX_ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer, or
 *value_ptr* is the same futex as *requeue_ptr*, or
 *value_ptr* or *requeue_ptr* is not aligned, or
 *requeue_ptr* is NULL but *requeue_count* is positive.
 
-**ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
+**MX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO
 

@@ -28,25 +28,25 @@ elements in the fifo to fulfill the entire request.
 
 ## RETURN VALUE
 
-**fifo_read**() returns **NO_ERROR** on success, and returns
+**fifo_read**() returns **MX_OK** on success, and returns
 the number of elements read (at least one) via *num_entries_read*.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a fifo handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a fifo handle.
 
-**ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_read*
+**MX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_read*
 is an invalid pointer.
 
-**ERR_OUT_OF_RANGE**  *size* was smaller than the size of a single element.
+**MX_ERR_OUT_OF_RANGE**  *size* was smaller than the size of a single element.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
-**ERR_PEER_CLOSED**  The other side of the fifo is closed.
+**MX_ERR_PEER_CLOSED**  The other side of the fifo is closed.
 
-**ERR_SHOULD_WAIT**  The fifo is empty.
+**MX_ERR_SHOULD_WAIT**  The fifo is empty.
 
 
 ## SEE ALSO

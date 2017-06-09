@@ -23,18 +23,18 @@ to specify no rights by using 0.
 
 ## RETURN VALUE
 
-**handle_duplicate**() returns NO_ERROR and the duplicate handle via *out* on success.
+**handle_duplicate**() returns MX_OK and the duplicate handle via *out* on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* isn't a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
-**ERR_INVALID_ARGS**  The *rights* requested are not a subset of *handle* rights or
+**MX_ERR_INVALID_ARGS**  The *rights* requested are not a subset of *handle* rights or
 *out* is an invalid pointer.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_DUPLICATE** and may not be duplicated.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_DUPLICATE** and may not be duplicated.
 
-**ERR_NO_MEMORY**  (Temporary) out of memory situation.
+**MX_ERR_NO_MEMORY**  (Temporary) out of memory situation.
 
 ## SEE ALSO
 

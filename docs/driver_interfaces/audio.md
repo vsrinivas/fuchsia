@@ -124,7 +124,7 @@ mx_handle_t OpenStream(const char* dev_node_path) {
                              &ret, sizeof(ret));
     close(fd);
 
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         printf("Failed to obtain channel (res %zd)\n", res);
 
     return ret;
@@ -256,7 +256,7 @@ Success or failure, drivers **must** respond to a request to set format using a
 `audio2_stream_cmd_set_format_resp_t`.
 
 In the case of success, drivers **must** set the `result` field of the response
-to `NO_ERROR` and **must** return a new ring buffer channel over which streaming
+to `MX_OK` and **must** return a new ring buffer channel over which streaming
 operations will be conducted.  If a previous ring buffer channel had been
 established and was still active, the driver **must** close this channel and
 make every attempt to gracefully quiesce any on-going streaming operations in
@@ -317,7 +317,7 @@ Three valid flags are currently defined.
  * `AUDIO2_SGF_MUTE`.  Indicates the application's desired mute/un-mute state
    for the stream.  Significant only if `AUDIO2_SGF_MUTE_VALID` is also set.
 
-Drivers **must** fail the request with an `ERR_INVALID_ARGS` result if the
+Drivers **must** fail the request with an `MX_ERR_INVALID_ARGS` result if the
 application's request is incompatible with the stream's capabilities.
 Incompatible requests include.
  * The requested gain is less than the minimum support gain for the stream.

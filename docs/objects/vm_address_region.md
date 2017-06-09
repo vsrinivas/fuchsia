@@ -65,20 +65,20 @@ mx_status_t map_with_guard(mx_handle_t vmar, size_t before, size_t after,
     mx_status_t status = mx_vmar_allocate(vmar, 0, child_vmar_size,
                                           child_vmar_flags, &child_vmar,
                                           &child_vmar_addr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     status = mx_vmar_map(child_vmar, before, vmo, vmo_offset, mapping_len,
                          mapping_flags, mapped_addr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mx_vmar_destroy(child_vmar);
         mx_handle_close(child_vmar);
         return status;
     }
 
     *wrapping_vmar = child_vmar;
-    return NO_ERROR;
+    return MX_OK;
 }
 ```
 

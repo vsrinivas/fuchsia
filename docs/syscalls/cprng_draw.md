@@ -20,12 +20,12 @@ suitable for cryptographic applications.  It will return at most
 
 ## RETURN VALUE
 
-**mx_cprng_draw**() returns NO_ERROR and the number of random bytes
+**mx_cprng_draw**() returns MX_OK and the number of random bytes
 drawn into *buffer* (via *actual) on success.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS** *len* is too large, or *buffer* or *actual* is
+**MX_ERR_INVALID_ARGS** *len* is too large, or *buffer* or *actual* is
 not a valid userspace pointer.
 
 ## NOTES

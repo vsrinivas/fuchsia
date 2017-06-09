@@ -15,7 +15,7 @@ The handle associated with a pending [object_wait_one](syscalls/object_wait_one.
 to be aborted.
 
 This signal can only be obtained as a result of the above two wait calls when the wait itself
-returns with **ERR_CANCELED**.
+returns with **MX_ERR_CANCELED**.
 
 ## MX_SIGNAL_LAST_HANDLE
 

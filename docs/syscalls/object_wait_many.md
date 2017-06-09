@@ -40,33 +40,33 @@ once the last message in its queue is read).
 
 ## RETURN VALUE
 
-**object_wait_many**() returns **NO_ERROR** if any of *waitfor* signals were
+**object_wait_many**() returns **MX_OK** if any of *waitfor* signals were
 observed on their respective object before *deadline* passed.
 
-In the event of **ERR_TIMED_OUT**, *items* may reflect state changes
+In the event of **MX_ERR_TIMED_OUT**, *items* may reflect state changes
 that occurred after the deadline pased, but before the syscall returned.
 
 For any other return value, the *pending* fields of *items* are undefined.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *items* isn't a valid pointer or if *count* is too large.
+**MX_ERR_INVALID_ARGS**  *items* isn't a valid pointer or if *count* is too large.
 
-**ERR_BAD_HANDLE**  one of *items* contains an invalid handle.
+**MX_ERR_BAD_HANDLE**  one of *items* contains an invalid handle.
 
-**ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
+**MX_ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
 have **MX_RIGHT_READ** and may not be waited upon.
 
-**ERR_CANCELED**  One or more of the provided *handles* was invalidated
+**MX_ERR_CANCELED**  One or more of the provided *handles* was invalidated
 (e.g., closed) during the wait.
 
-**ERR_TIMED_OUT**  The specified deadline passed before any of the specified signals are
+**MX_ERR_TIMED_OUT**  The specified deadline passed before any of the specified signals are
 observed on any of the specified handles.
 
-**ERR_NOT_SUPPORTED**  One of the *items* contains a handle that cannot
+**MX_ERR_NOT_SUPPORTED**  One of the *items* contains a handle that cannot
 be waited one (for example, a Port handle).
 
-**ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
+**MX_ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
 
 ## BUGS
 

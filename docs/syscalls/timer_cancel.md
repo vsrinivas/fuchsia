@@ -25,14 +25,14 @@ with the new deadline.
 
 ## RETURN VALUE
 
-**mx_timer_cancel**() returns **NO_ERROR** on success.
+**mx_timer_cancel**() returns **MX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
+**MX_ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
 
 ## NOTE
 

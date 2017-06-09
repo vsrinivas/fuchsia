@@ -25,21 +25,21 @@ packets that match *source* and *key* are removed from the port.
 
 ## RETURN VALUE
 
-**mx_port_cancel**() returns **NO_ERROR** if cancellation succeeded and
+**mx_port_cancel**() returns **MX_OK** if cancellation succeeded and
 either queued packets were removed or pending **object_wait_async**() were
 canceled.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* or *port* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* or *port* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *port* is not a port handle.
+**MX_ERR_WRONG_TYPE**  *port* is not a port handle.
 
-**ERR_ACCESS_DENIED**  *handle* or *port* does not have **MX_RIGHT_WRITE**.
+**MX_ERR_ACCESS_DENIED**  *handle* or *port* does not have **MX_RIGHT_WRITE**.
 
-**ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
+**MX_ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
 
-**ERR_NOT_FOUND** if either no pending packets or pending
+**MX_ERR_NOT_FOUND** if either no pending packets or pending
 **object_wait_async** calls with *source* and *key* were found.
 
 ## SEE ALSO

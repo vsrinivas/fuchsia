@@ -80,31 +80,31 @@ implies **MX_POL_ACTION_DENY**.
 
 ## RETURN VALUE
 
-**mx_job_set_policy**() returns **NO_ERROR** on success.  In the event of failure,
+**mx_job_set_policy**() returns **MX_OK** on success.  In the event of failure,
 a negative error value is returned.
 
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *policy* was not a valid pointer, or *count* was 0,
+**MX_ERR_INVALID_ARGS**  *policy* was not a valid pointer, or *count* was 0,
 or *policy* was not **MX_JOB_POL_RELATIVE** or **MX_JOB_POL_ABSOLUTE**, or
 *topic* was not **MX_JOB_POL_BASIC**.
 
-**ERR_BAD_HANDLE**  *job_handle* is not valid handle.
+**MX_ERR_BAD_HANDLE**  *job_handle* is not valid handle.
 
 **ERR_WRONG_HANDLE**  *job_handle* is not a job handle.
 
-**ERR_ACCESS_DENIED**  *job_handle* does not have MX_POL_RIGHT_SET right.
+**MX_ERR_ACCESS_DENIED**  *job_handle* does not have MX_POL_RIGHT_SET right.
 
-**ERR_BAD_STATE**  the job has existing jobs or processes alive.
+**MX_ERR_BAD_STATE**  the job has existing jobs or processes alive.
 
-**ERR_OUT_OF_RANGE** *count* is bigger than MX_MAX_POLICY.
+**MX_ERR_OUT_OF_RANGE** *count* is bigger than MX_MAX_POLICY.
 
-**ERR_ALREADY_EXISTS** existing policy conflicts with the new policy.
+**MX_ERR_ALREADY_EXISTS** existing policy conflicts with the new policy.
 
-**ERR_NOT_SUPPORTED** an entry in *policy* has an invalid value.
+**MX_ERR_NOT_SUPPORTED** an entry in *policy* has an invalid value.
 
-**ERR_NO_MEMORY**  (Temporary) Out of memory condition.
+**MX_ERR_NO_MEMORY**  (Temporary) Out of memory condition.
 
 ## SEE ALSO
 

@@ -113,7 +113,7 @@ A job has a *MAX_HEIGHT* value equal to one less than its parent's *MAX_HEIGHT*
 value.
 
 A job with *MAX_HEIGHT* equal to zero may not have any child jobs, and calling
-**mx_job_create()** on such a job will fail with **ERR_OUT_OF_RANGE**.
+**mx_job_create()** on such a job will fail with **MX_ERR_OUT_OF_RANGE**.
 *MAX_HEIGHT* does not affect the creation of processes.
 
 See also:
@@ -122,25 +122,25 @@ See also:
 
 ## RETURN VALUE
 
-**mx_object_get_property**() returns **NO_ERROR** on success. In the event of
+**mx_object_get_property**() returns **MX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**: *handle* is not a valid handle
+**MX_ERR_BAD_HANDLE**: *handle* is not a valid handle
 
-**ERR_WRONG_TYPE**: *handle* is not an appropriate type for *property*
+**MX_ERR_WRONG_TYPE**: *handle* is not an appropriate type for *property*
 
-**ERR_ACCESS_DENIED**: *handle* does not have the necessary rights for the
+**MX_ERR_ACCESS_DENIED**: *handle* does not have the necessary rights for the
 operation
 
-**ERR_INVALID_ARGS**: *value* is an invalid pointer
+**MX_ERR_INVALID_ARGS**: *value* is an invalid pointer
 
-**ERR_NO_MEMORY**: Temporary out of memory failure
+**MX_ERR_NO_MEMORY**: Temporary out of memory failure
 
-**ERR_BUFFER_TOO_SMALL**: *size* is too small for *property*
+**MX_ERR_BUFFER_TOO_SMALL**: *size* is too small for *property*
 
-**ERR_NOT_SUPPORTED**: *property* does not exist
+**MX_ERR_NOT_SUPPORTED**: *property* does not exist
 
 ## SEE ALSO
 

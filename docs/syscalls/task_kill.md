@@ -19,6 +19,6 @@ mx_status_t mx_task_kill(mx_handle_t handle);
 
 ## ERRORS
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_DESTROY**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_DESTROY**.
 
 ## SEE ALSO

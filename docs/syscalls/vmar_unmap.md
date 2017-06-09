@@ -26,20 +26,20 @@ If *len* is not page-aligned, it will be rounded up the next page boundary.
 
 ## RETURN VALUE
 
-**vmar_unmap**() returns **NO_ERROR** on success.
+**vmar_unmap**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**MX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0, or the
+**MX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0, or the
 requested range partially overlaps a sub-region.
 
-**ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
+**MX_ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
 
-**ERR_NOT_FOUND**  Could not find the requested mapping.
+**MX_ERR_NOT_FOUND**  Could not find the requested mapping.
 
 ## NOTES
 

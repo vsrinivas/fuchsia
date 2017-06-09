@@ -25,11 +25,11 @@ object will assert the **MX_SIGNAL_LAST_HANDLE** signal.
 
 ## RETURN VALUE
 
-**handle_close**() returns **NO_ERROR** on success.
+**handle_close**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* isn't a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
 ## SEE ALSO
 

@@ -21,19 +21,19 @@ added using **waitset_add**()).
 
 ## RETURN VALUE
 
-**waitset_remove**() returns **NO_ERROR** (which is zero) on success. On
+**waitset_remove**() returns **MX_OK** (which is zero) on success. On
 failure, a (strictly) negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *waitset_handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *waitset_handle* is not a valid handle.
 
-**ERR_INVALID_ARGS**  *waitset_handle* is not a handle to a wait set.
+**MX_ERR_INVALID_ARGS**  *waitset_handle* is not a handle to a wait set.
 
-**ERR_ACCESS_DENIED**  *waitset_handle* does not have the **MX_RIGHT_WRITE**
+**MX_ERR_ACCESS_DENIED**  *waitset_handle* does not have the **MX_RIGHT_WRITE**
 right.
 
-**ERR_NOT_FOUND**  The wait set does not currently have an entry with the
+**MX_ERR_NOT_FOUND**  The wait set does not currently have an entry with the
 specified cookie.
 
 ## SEE ALSO

@@ -4,7 +4,7 @@ This describes the set of userspace-exposed errors used in Magenta. The first se
 canonical names and description of each error code. The second section provides the concrete values.
 
 Within the kernel, errors are typically resulted as variables of type `status_t` and errors are
-defined by macros of the form `ERR_CANONICAL_NAME` e.g. `ERR_INTERNAL`. All error cases are negative
+defined by macros of the form `MX_ERR_CANONICAL_NAME` e.g. `MX_ERR_INTERNAL`. All error cases are negative
 values and success is represented by a non-negative value.
 
 In userspace the syscall dispatch layer (libmagenta) exposes the result values as variables of type
@@ -29,7 +29,7 @@ unambiguously identify a resource used in the operation.
 ## Categories
 
 ### Success
-**NO\_ERROR**
+**MX\_OK**
  Operation succeeded.
 
 ### General errors

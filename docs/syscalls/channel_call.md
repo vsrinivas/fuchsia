@@ -53,61 +53,61 @@ If such a reply arrives after *deadline* has passed, it will arrive in the gener
 inbound message queue, cause **MX_CHANNEL_READABLE** to be signaled, etc.
 
 Inbound messages that are too large to fit in *rd_num_bytes* and *rd_num_handles*
-are discarded and **ERR_BUFFER_TOO_SMALL** is returned in that case.
+are discarded and **MX_ERR_BUFFER_TOO_SMALL** is returned in that case.
 
 
 ## RETURN VALUE
 
-**channel_write**() returns **NO_ERROR** on success and the number of bytes and
+**channel_write**() returns **MX_OK** on success and the number of bytes and
 count of handles in the reply message are returned via *actual_bytes* and
 *actual_handles*, respectively.
 
-The special return value **ERR_CALL_FAILED** indicates that the message was
+The special return value **MX_ERR_CALL_FAILED** indicates that the message was
 sent, but an error occured while waiting for a response.  This is necessary
-to disambiguate errors like **ERR_PEER_CLOSED** which could have occurred
+to disambiguate errors like **MX_ERR_PEER_CLOSED** which could have occurred
 while attempting the write (in which case the caller would still own any handles
 passed via *handles*) or while waiting (in which case the caller would no longer
 own any of the handles).  The return parameter *read_status* is used to indicate
-the specific error that occurred during the wait or read phase when **ERR_CALL_FAILED**
+the specific error that occurred during the wait or read phase when **MX_ERR_CALL_FAILED**
 is returned.
 
-In the event of **NO_ERROR**, **ERR_TIMED_OUT**, or **ERR_CALL_FAILED**, the
+In the event of **MX_OK**, **MX_ERR_TIMED_OUT**, or **MX_ERR_CALL_FAILED**, the
 handles in *handles* have been sent in a message to the other endpoint of the
 Channel and no longer exist in the calling process.  In the event of any other
 return values, the handles in *handles* remain in the calling process, unchanged.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle or any of *handles*
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any of *handles*
 are not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a channel handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
-**ERR_INVALID_ARGS**  any of the provided pointers are invalid or null,
+**MX_ERR_INVALID_ARGS**  any of the provided pointers are invalid or null,
 or there are duplicates among the handles in the *handles* array,
 or *options* is nonzero.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
-**ERR_PEER_CLOSED**  The other side of the channel was closed or became
+**MX_ERR_PEER_CLOSED**  The other side of the channel was closed or became
 closed while waiting for the reply.
 
-**ERR_CANCELED**  *handle* was closed while waiting for a reply.
+**MX_ERR_CANCELED**  *handle* was closed while waiting for a reply.
 
-**ERR_CALL_FAILED**  The write phase of the call succeeded, but an error occured
+**MX_ERR_CALL_FAILED**  The write phase of the call succeeded, but an error occured
 while or after waiting for the response.  The specific error is returned via
 *read_status* if it is non-null.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_OUT_OF_RANGE**  *wr_num_bytes* or *wr_num_handles* are larger than the
+**MX_ERR_OUT_OF_RANGE**  *wr_num_bytes* or *wr_num_handles* are larger than the
 largest allowable size for channel messages.
 
-**ERR_BUFFER_TOO_SMALL**  *rd_num_bytes* or *rd_num_handles* are too small
+**MX_ERR_BUFFER_TOO_SMALL**  *rd_num_bytes* or *rd_num_handles* are too small
 to contain the reply message.
 
-**ERR_NOT_SUPPORTED**  one of the handles in *handles* was *handle*
+**MX_ERR_NOT_SUPPORTED**  one of the handles in *handles* was *handle*
 (the handle to the channel being written to).
 
 ## SEE ALSO

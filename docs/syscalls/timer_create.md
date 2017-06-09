@@ -25,15 +25,15 @@ MX_RIGHT_READ and MX_RIGHT_WRITE right.
 
 ## RETURN VALUE
 
-**timer_create**() returns **NO_ERROR** on success. In the event
+**timer_create**() returns **MX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or
+**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or
 *options* or *clock_id* is any value other than MX_CLOCK_MONOTONIC.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## SEE ALSO
 

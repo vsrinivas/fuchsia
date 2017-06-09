@@ -54,21 +54,21 @@ If *options* is *MX_VMO_CLONE_COPY_ON_WRITE* the following rights are added:
 
 ## RETURN VALUE
 
-**vmo_clone**() returns **NO_ERROR** on success. In the event
+**vmo_clone**() returns **MX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
 **ERR_BAD_TYPE**  Input handle is not a VMO.
 
-**ERR_ACCESS_DENIED**  Input handle does not have sufficient rights.
+**MX_ERR_ACCESS_DENIED**  Input handle does not have sufficient rights.
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL
+**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL
 or the offset is not page aligned.
 
-**ERR_OUT_OF_RANGE**  *offset* + *size* is too large.
+**MX_ERR_OUT_OF_RANGE**  *offset* + *size* is too large.
 
-**ERR_NO_MEMORY**  Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  Failure due to lack of memory.
 
 ## SEE ALSO
 

@@ -53,23 +53,23 @@ the offset, not the actual physical address corresponding to the offset.
 
 ## RETURN VALUE
 
-**vmo_op_range**() returns **NO_ERROR** on success. In the event of failure, a negative error
+**vmo_op_range**() returns **MX_OK** on success. In the event of failure, a negative error
 value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_OUT_OF_RANGE**  An invalid memory range specified by *offset* and *size*.
+**MX_ERR_OUT_OF_RANGE**  An invalid memory range specified by *offset* and *size*.
 
-**ERR_NO_MEMORY**  Allocations to commit pages for *MX_VMO_OP_COMMIT* failed.
+**MX_ERR_NO_MEMORY**  Allocations to commit pages for *MX_VMO_OP_COMMIT* failed.
 
-**ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid operation, *op* is
+**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid operation, *op* is
 *MX_VMO_LOOPUP* and *buffer* is an invalid pointer, or *size* is zero and *op* is a cache operation.
 
-**ERR_NOT_SUPPORTED**  *op* was *MX_VMO_OP_LOCK* or *MX_VMO_OP_UNLOCK*.
+**MX_ERR_NOT_SUPPORTED**  *op* was *MX_VMO_OP_LOCK* or *MX_VMO_OP_UNLOCK*.
 
 ## SEE ALSO
 

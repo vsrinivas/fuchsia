@@ -19,16 +19,16 @@ mx_status_t mx_vmo_get_size(mx_handle_t handle, uint64_t* size);
 
 ## RETURN VALUE
 
-**vmo_get_size**() returns **NO_ERROR** on success. In the event
+**vmo_get_size**() returns **MX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**ERR_INVALID_ARGS**  *size* is an invalid pointer or NULL.
+**MX_ERR_INVALID_ARGS**  *size* is an invalid pointer or NULL.
 
 ## SEE ALSO
 

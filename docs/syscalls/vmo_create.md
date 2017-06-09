@@ -46,15 +46,15 @@ The *options* field is currently unused and must be set to 0.
 
 ## RETURN VALUE
 
-**vmo_create**() returns **NO_ERROR** on success. In the event
+**vmo_create**() returns **MX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or *options* is
+**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or *options* is
 any value other than 0.
 
-**ERR_NO_MEMORY**  Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  Failure due to lack of memory.
 
 ## SEE ALSO
 

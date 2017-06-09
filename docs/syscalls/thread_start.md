@@ -29,18 +29,18 @@ Thread handles may be waited on and will assert the signal
 
 ## RETURN VALUE
 
-**thread_start**() returns NO_ERROR on success.
+**thread_start**() returns MX_OK on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *thread* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *thread* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *thread* is not a thread handle.
+**MX_ERR_WRONG_TYPE**  *thread* is not a thread handle.
 
-**ERR_ACCESS_DENIED**  The handle *thread* lacks *MX_RIGHT_WRITE*.
+**MX_ERR_ACCESS_DENIED**  The handle *thread* lacks *MX_RIGHT_WRITE*.
 
-**ERR_BAD_STATE**  *thread* is not ready to run or the process *thread*
+**MX_ERR_BAD_STATE**  *thread* is not ready to run or the process *thread*
 is part of is no longer alive.
 
 ## SEE ALSO

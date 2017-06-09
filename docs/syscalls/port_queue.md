@@ -68,27 +68,27 @@ have the type set to MX_PORT_PKT_TYPE_IOSN.
 
 ## RETURN VALUE
 
-**port_queue**() returns **NO_ERROR** on successful queue of a packet.
+**port_queue**() returns **MX_OK** on successful queue of a packet.
 
 ## ERRORS Ports V2
 
-**ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
+**MX_ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
 *packet* is an invalid pointer.
 
-**ERR_WRONG_TYPE** *size* is not zero or *handle* is not a port V2
+**MX_ERR_WRONG_TYPE** *size* is not zero or *handle* is not a port V2
 handle.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
 ## ERRORS Ports V1
 
-**ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
+**MX_ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
 *packet* is an invalid pointer, or *size* is less than the size
 of **mx_packet_header_t**.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_BUFFER_TOO_SMALL**  If the packet is too big.
+**MX_ERR_BUFFER_TOO_SMALL**  If the packet is too big.
 
 ## NOTES
 

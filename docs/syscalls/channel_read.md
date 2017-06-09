@@ -32,28 +32,28 @@ will overwrite the portion of *bytes* it overlaps.
 
 ## RETURN VALUE
 
-**channel_read**() returns **NO_ERROR** on success, if *actual_bytes*
+**channel_read**() returns **MX_OK** on success, if *actual_bytes*
 and *actual_handles* (if non-NULL), contain the exact number of bytes
 and count of handles read.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a channel handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
-**ERR_INVALID_ARGS**  If any of *bytes*, *handles*, *actual_bytes*, or
+**MX_ERR_INVALID_ARGS**  If any of *bytes*, *handles*, *actual_bytes*, or
 *actual_handles* are non-NULL and an invalid pointer.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
-**ERR_SHOULD_WAIT**  The channel contained no messages to read.
+**MX_ERR_SHOULD_WAIT**  The channel contained no messages to read.
 
-**ERR_PEER_CLOSED**  The other side of the channel is closed.
+**MX_ERR_PEER_CLOSED**  The other side of the channel is closed.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_BUFFER_TOO_SMALL**  The provided *bytes* or *handles* buffers
+**MX_ERR_BUFFER_TOO_SMALL**  The provided *bytes* or *handles* buffers
 are too small (in which case, the minimum sizes necessary to receive
 the message will be written to *actual_bytes* and *actual_handles*,
 provided they are non-NULL). If *options* has **MX_CHANNEL_READ_MAY_DISCARD**

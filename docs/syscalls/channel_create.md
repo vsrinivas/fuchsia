@@ -32,15 +32,15 @@ to be read from them).
 
 ## RETURN VALUE
 
-**channel_create**() returns **NO_ERROR** on success. In the event
+**channel_create**() returns **MX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
+**MX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
 *options* is any value other than 0.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## SEE ALSO
 

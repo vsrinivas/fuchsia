@@ -37,23 +37,23 @@ dependent and may be equivalent to *MX_CACHE_POLICY_UNCACHED*.
 
 ## RETURN VALUE
 
-**vmo_set_cache_policy()** returns **NO_ERROR** on success. In the event of
+**vmo_set_cache_policy()** returns **MX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_ACCESS_DENIED** Cache policy has been configured for this VMO already and
+**MX_ERR_ACCESS_DENIED** Cache policy has been configured for this VMO already and
 may not be changed, or *handle* lacks the MX_RIGHT_MAP right.
 
-**ERR_BAD_HANDLE** *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**ERR_INVALID_ARGS** *cache_policy* contains flags outside of the ones listed
+**MX_ERR_INVALID_ARGS** *cache_policy* contains flags outside of the ones listed
 above, or *cache_policy* contains an invalid mix of cache policy flags.
 
-**ERR_NOT_SUPPORTED** The VMO *handle* corresponds to is not one holding
+**MX_ERR_NOT_SUPPORTED** The VMO *handle* corresponds to is not one holding
 physical memory.
 
-**ERR_BAD_STATE** Cache policy cannot be changed because the VMO is presently
+**MX_ERR_BAD_STATE** Cache policy cannot be changed because the VMO is presently
 mapped.
 
 ## SEE ALSO

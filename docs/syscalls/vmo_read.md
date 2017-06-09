@@ -26,24 +26,24 @@ many bytes.
 
 *actual* returns the actual number of bytes read, which may be anywhere from 0 to *len*. If
 a read extends beyond the size of the VMO, the actual bytes read will be trimmed. If the
-read starts at or beyond the size of the VMO, **ERR_OUT_OF_RANGE** will be returned.
+read starts at or beyond the size of the VMO, **MX_ERR_OUT_OF_RANGE** will be returned.
 
 ## RETURN VALUE
 
-**mx_vmo_read**() returns **NO_ERROR** on success. In the event of failure, a negative error
+**mx_vmo_read**() returns **MX_OK** on success. In the event of failure, a negative error
 value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_READ** right.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_READ** right.
 
-**ERR_INVALID_ARGS**  *actual* or *data* is an invalid pointer or NULL.
+**MX_ERR_INVALID_ARGS**  *actual* or *data* is an invalid pointer or NULL.
 
-**ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO.
+**MX_ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO.
 
 ## SEE ALSO
 

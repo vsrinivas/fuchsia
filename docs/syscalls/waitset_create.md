@@ -26,14 +26,14 @@ rights. Note that it is neither duplicatable nor transferrable.
 
 ## RETURN VALUE
 
-**waitset_create**() returns NO_ERROR and a valid wait set handle via *out*.
+**waitset_create**() returns MX_OK and a valid wait set handle via *out*.
 On failure, an error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer.
+**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## SEE ALSO
 

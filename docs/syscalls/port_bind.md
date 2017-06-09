@@ -24,14 +24,14 @@ To unbind a *source* from an IO port, simply close the *source* handle.
 
 ## RETURN VALUE
 
-**io_port_bind**() returns **NO_ERROR** on successful IO port bind.
+**io_port_bind**() returns **MX_OK** on successful IO port bind.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handle* isn't a valid IO port handle, or *source* is an
+**MX_ERR_INVALID_ARGS**  *handle* isn't a valid IO port handle, or *source* is an
 invalid handle or *source* is not a waitable handle or *signals* is zero.
 
-**ERR_ACCESS_DENIED** *handle* does not have **MX_RIGHT_WRITE**, or *source*
+**MX_ERR_ACCESS_DENIED** *handle* does not have **MX_RIGHT_WRITE**, or *source*
 does not have **MX_RIGHT_READ** right.
 
 ## SEE ALSO

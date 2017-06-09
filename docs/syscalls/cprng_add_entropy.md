@@ -20,11 +20,11 @@ bytes of entropy at a time.
 
 ## RETURN VALUE
 
-**mx_cprng_add_entropy**() returns **NO_ERROR** on success.
+**mx_cprng_add_entropy**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS** *len* is too large, or *buffer* is not a valid
+**MX_ERR_INVALID_ARGS** *len* is too large, or *buffer* is not a valid
 userspace pointer.
 
 ## BUGS

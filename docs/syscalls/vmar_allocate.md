@@ -40,27 +40,27 @@ Creates a new VMAR within the one specified by *parent_vmar_handle*.
 
 ## RETURN VALUE
 
-**vmar_allocate**() returns **NO_ERROR**, the absolute base address of the
+**vmar_allocate**() returns **MX_OK**, the absolute base address of the
 subregion (via *child_addr*), and a handle to the new subregion (via
 *child_vmar*) on success.  In the event of failure, a negative error value is
 returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *parent_vmar_handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *parent_vmar_handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *parent_vmar_handle* is not a VMAR handle.
+**MX_ERR_WRONG_TYPE**  *parent_vmar_handle* is not a VMAR handle.
 
-**ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR.
+**MX_ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR.
 
-**ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
+**MX_ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
 non-zero when *MX_VM_FLAG_SPECIFIC* is not given, *offset* and *size* describe
 an unsatisfiable allocation due to exceeding the region bounds, *offset*
 or *size* is not page-aligned, or *size* is 0.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_ACCESS_DENIED**  Insufficient privileges to make the requested allocation.
+**MX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested allocation.
 
 ## NOTES
 

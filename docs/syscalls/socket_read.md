@@ -32,28 +32,28 @@ and any remaining bytes in the packet are discarded.
 
 ## RETURN VALUE
 
-**socket_read**() returns **NO_ERROR** on success, and writes into
+**socket_read**() returns **MX_OK** on success, and writes into
 *actual* (if non-NULL) the exact number of bytes read.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a socket handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
-**ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
+**MX_ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
 but invalid pointers, or if *buffer* is NULL but *size* is positive,
 or if *options* is nonzero.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
-**ERR_SHOULD_WAIT**  The socket contained no data to read.
+**MX_ERR_SHOULD_WAIT**  The socket contained no data to read.
 
-**ERR_PEER_CLOSED**  The other side of the socket is closed, or this
+**MX_ERR_PEER_CLOSED**  The other side of the socket is closed, or this
 side of the socket has been previously closed via a write with the
 **MX_SOCKET_HALF_CLOSE** flag.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## SEE ALSO
 

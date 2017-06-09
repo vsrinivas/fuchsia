@@ -111,24 +111,24 @@ in magenta/syscalls/exception.h.
 
 ## RETURN VALUE
 
-**task_bind_exception_port**() returns **NO_ERROR** on success.
+**task_bind_exception_port**() returns **MX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE** *object* is not a valid handle,
+**MX_ERR_BAD_HANDLE** *object* is not a valid handle,
 or *eport* is not a valid handle. Note that when binding/unbinding
 to the system exception port *object* is **MX_HANDLE_INVALID**.
 Also note that when unbinding from an exception port *eport* is
 **MX_HANDLE_INVALID**.
 
-**ERR_WRONG_TYPE**  *object* is not that of a thread or process,
+**MX_ERR_WRONG_TYPE**  *object* is not that of a thread or process,
 and is not **MX_HANDLE_INVALID**,
 or *eport* is not that of a port and is not **MX_HANDLE_INVALID**.
 
-**ERR_INVALID_ARGS** A bad value has been passed in *options*.
+**MX_ERR_INVALID_ARGS** A bad value has been passed in *options*.
 
-**ERR_NO_MEMORY**  (temporary) out of memory failure.
+**MX_ERR_NO_MEMORY**  (temporary) out of memory failure.
 
 ## SEE ALSO
 

@@ -36,21 +36,21 @@ If *len* is not page-aligned, it will be rounded up the next page boundary.
 
 ## RETURN VALUE
 
-**vmar_protect**() returns **NO_ERROR** on success.
+**vmar_protect**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**MX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
+**MX_ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
 (e.g., **PROT_WRITE** but not **PROT_READ**), *addr* is not page-aligned,
 *len* is 0, or some subrange of the requested range is occupied by a subregion.
 
-**ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
+**MX_ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
 
-**ERR_ACCESS_DENIED**  *vmar_handle* does not have the proper rights for the
+**MX_ERR_ACCESS_DENIED**  *vmar_handle* does not have the proper rights for the
 requested change, the original VMO handle used to create the mapping did not
 have the rights for the requested change, or the VMAR itself does not allow
 the requested change.

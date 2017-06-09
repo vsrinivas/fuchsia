@@ -37,20 +37,20 @@ is no longer available, the cookie may no longer be modified or obtained.
 
 ## RETURN VALUE
 
-**mx_object_get_cookie**() returns **NO_ERROR** and the *cookie* value on success.
+**mx_object_get_cookie**() returns **MX_OK** and the *cookie* value on success.
 In the event of failure, a negative error value is returned.
 
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* or *scope* are not valid handles.
+**MX_ERR_BAD_HANDLE**  *handle* or *scope* are not valid handles.
 
-**ERR_NOT_SUPPORTED**  *handle* is not a handle to an object that may have a cookie set.
+**MX_ERR_NOT_SUPPORTED**  *handle* is not a handle to an object that may have a cookie set.
 
-**ERR_ACCESS_DENIED**  The cookie has not been set, or *scope* is not the correct scope
+**MX_ERR_ACCESS_DENIED**  The cookie has not been set, or *scope* is not the correct scope
 to obtain the set cookie.
 
-**ERR_INVALID_ARGS**  *cookie* is an invalid pointer.
+**MX_ERR_INVALID_ARGS**  *cookie* is an invalid pointer.
 
 ## SEE ALSO
 

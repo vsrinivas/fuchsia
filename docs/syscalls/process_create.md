@@ -36,25 +36,25 @@ process, which will become a child of that job.
 
 ## RETURN VALUE
 
-On success, **process_create**() returns **NO_ERROR**, a handle to the new process
+On success, **process_create**() returns **MX_OK**, a handle to the new process
 (via *proc_handle*), and a handle to the root of its address space (via
 *vmar_handle*).  In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *job* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *job* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *job* is not a job handle.
+**MX_ERR_WRONG_TYPE**  *job* is not a job handle.
 
-**ERR_ACCESS_DENIED**  *job* does not have the **MX_WRITE_RIGHT** right
+**MX_ERR_ACCESS_DENIED**  *job* does not have the **MX_WRITE_RIGHT** right
 (only when not **MX_HANDLE_INVALID**).
 
-**ERR_INVALID_ARGS**  *name*, *proc_handle*, or *vmar_handle*  was an invalid pointer,
+**MX_ERR_INVALID_ARGS**  *name*, *proc_handle*, or *vmar_handle*  was an invalid pointer,
 or *options* was non-zero.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
+**MX_ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
 middle of a *mx_task_kill()* operation.
 
 ## SEE ALSO

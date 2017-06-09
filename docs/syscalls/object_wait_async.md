@@ -41,22 +41,22 @@ of packet and their semantics.
 
 ## RETURN VALUE
 
-**object_wait_async**() returns **NO_ERROR** if the subscription succeeded.
+**object_wait_async**() returns **MX_OK** if the subscription succeeded.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *options* is not **MX_WAIT_ASYNC_ONCE** or **MX_WAIT_ASYNC_REPEATING**.
+**MX_ERR_INVALID_ARGS**  *options* is not **MX_WAIT_ASYNC_ONCE** or **MX_WAIT_ASYNC_REPEATING**.
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle or *port* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or *port* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *port* is not a Port handle.
+**MX_ERR_WRONG_TYPE**  *port* is not a Port handle.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** or *port*
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** or *port*
 does not have **MX_RIGHT_WRITE**.
 
-**ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
+**MX_ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
 
-**ERR_NO_MEMORY**  Temporary out of memory condition.
+**MX_ERR_NO_MEMORY**  Temporary out of memory condition.
 
 ## SEE ALSO
 

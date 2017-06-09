@@ -26,7 +26,7 @@ least ```sizeof(mx_port_packet_t)``` bytes.
 
 The *deadline* indicates when to stop waiting for a packet (with respect to
 **MX_CLOCK_MONOTONIC**).  If no packet has arrived by the deadline,
-**ERR_TIMED_OUT** is returned.  The value **MX_TIME_INFINITE** will
+**MX_ERR_TIMED_OUT** is returned.  The value **MX_TIME_INFINITE** will
 result in waiting forever.  A value in the past will result in an immediate
 timeout, unless a packet is already available for reading.
 
@@ -85,19 +85,19 @@ See [object_wait_async](object_wait_async.md) for more details.
 
 ## RETURN VALUE
 
-**port_wait**() returns **NO_ERROR** on successful packet dequeuing .
+**port_wait**() returns **MX_OK** on successful packet dequeuing .
 
 ## ERRORS
 
-**ERR_BAD_HANDLE** *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**ERR_INVALID_ARGS** *handle* isn't a valid handle or *packet* isn't a valid
+**MX_ERR_INVALID_ARGS** *handle* isn't a valid handle or *packet* isn't a valid
 pointer or *size* is an invalid packet size.
 
-**ERR_ACCESS_DENIED** *handle* does not have **MX_RIGHT_WRITE** and may
+**MX_ERR_ACCESS_DENIED** *handle* does not have **MX_RIGHT_WRITE** and may
 not be waited upon.
 
-**ERR_TIMED_OUT** *deadline* passed and no packet was available.
+**MX_ERR_TIMED_OUT** *deadline* passed and no packet was available.
 
 ## SEE ALSO
 

@@ -24,17 +24,17 @@ a subset of original handle's rights.
 
 ## RETURN VALUE
 
-**handle_replace**() returns NO_ERROR and the replacement handle (via *out)
+**handle_replace**() returns MX_OK and the replacement handle (via *out)
 on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* isn't a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
-**ERR_INVALID_ARGS**  The *rights* requested are not a subset of
+**MX_ERR_INVALID_ARGS**  The *rights* requested are not a subset of
 *handle*'s rights or *out* is an invalid pointer.
 
-**ERR_NO_MEMORY**  (Temporary) out of memory situation.
+**MX_ERR_NO_MEMORY**  (Temporary) out of memory situation.
 
 ## SEE ALSO
 

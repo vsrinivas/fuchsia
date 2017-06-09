@@ -34,18 +34,18 @@ The *options* argument must be 0.
 
 ## RETURN VALUE
 
-**fifo_create**() returns **NO_ERROR** on success. In the event of
+**fifo_create**() returns **MX_OK** on success. In the event of
 failure, one of the following values is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
+**MX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
 *options* is any value other than 0.
 
-**ERR_OUT_OF_RANGE**  *elem_count* or *elem_size* is zero, or *elem_count*
+**MX_ERR_OUT_OF_RANGE**  *elem_count* or *elem_size* is zero, or *elem_count*
 is not a power of two, or *elem_count* * *elem_size* is greater than 4096.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 
 ## SEE ALSO

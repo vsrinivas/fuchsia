@@ -37,19 +37,19 @@ The *slack* parameter should be set to zero.
 
 ## RETURN VALUE
 
-**mx_timer_start**() returns **NO_ERROR** on success.
+**mx_timer_start**() returns **MX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
+**MX_ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
 
-**ERR_INVALID_ARGS**  *deadline* is less than *MX_TIMER_MIN_DEADLINE*
+**MX_ERR_INVALID_ARGS**  *deadline* is less than *MX_TIMER_MIN_DEADLINE*
 
-**ERR_NOT_SUPPORTED**  *period* is less than *MX_TIMER_MIN_PERIOD*.
+**MX_ERR_NOT_SUPPORTED**  *period* is less than *MX_TIMER_MIN_PERIOD*.
 
 ## NOTE
 

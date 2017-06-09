@@ -49,28 +49,28 @@ closing the VMO handle does not remove the mapping added by this function.
 
 ## RETURN VALUE
 
-**vmar_map**() returns **NO_ERROR** and the absolute base address of the
+**vmar_map**() returns **MX_OK** and the absolute base address of the
 mapping (via *mapped_addr*) on success.  In the event of failure, a negative
 error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *vmar* or *vmo* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *vmar* or *vmo* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *vmar* or *vmo* is not a VMAR or VMO handle, respectively.
+**MX_ERR_WRONG_TYPE**  *vmar* or *vmo* is not a VMAR or VMO handle, respectively.
 
-**ERR_BAD_STATE**  *vmar* refers to a destroyed VMAR.
+**MX_ERR_BAD_STATE**  *vmar* refers to a destroyed VMAR.
 
-**ERR_INVALID_ARGS** *mapped_addr* or *map_flags* are not valid, *vmar_offset* is
+**MX_ERR_INVALID_ARGS** *mapped_addr* or *map_flags* are not valid, *vmar_offset* is
 non-zero when neither **MX_VM_FLAG_SPECIFIC** nor
 **MX_VM_FLAG_SPECIFIC_OVERWRITE** are given, *vmar_offset* and *len*
 describe an unsatisfiable allocation due to exceeding the region bounds,
 *vmar_offset* or *vmo_offset* are not page-aligned,
 *vmo_offset* + ROUNDUP(*len*, PAGE_SIZE) overflows, or *len* is 0.
 
-**ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
+**MX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## NOTES
 

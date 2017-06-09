@@ -28,24 +28,24 @@ the **MX_RIGHT_READ** write.
 
 ## RETURN VALUE
 
-**waitset_add**() returns **NO_ERROR** (which is zero) on success. On failure,
+**waitset_add**() returns **MX_OK** (which is zero) on success. On failure,
 a (strictly) negative error value is returned.
 
 ## ERRORS
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_BAD_HANDLE**  *waitset_handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *waitset_handle* is not a valid handle.
 
-**ERR_INVALID_ARGS**  *waitset_handle* is not a handle to a wait set or
+**MX_ERR_INVALID_ARGS**  *waitset_handle* is not a handle to a wait set or
 *handle* is not a valid handle.
 
-**ERR_ACCESS_DENIED**  *waitset_handle* does not have the **MX_RIGHT_WRITE**
+**MX_ERR_ACCESS_DENIED**  *waitset_handle* does not have the **MX_RIGHT_WRITE**
 right or *handle* does not have the **MX_RIGHT_READ** right.
 
-**ERR_NOT_SUPPORTED**  *handle* does not refer to a waitable object.
+**MX_ERR_NOT_SUPPORTED**  *handle* does not refer to a waitable object.
 
-**ERR_ALREADY_EXISTS**  The wait set already has an entry with the same cookie
+**MX_ERR_ALREADY_EXISTS**  The wait set already has an entry with the same cookie
 as *cookie*.
 
 ## SEE ALSO

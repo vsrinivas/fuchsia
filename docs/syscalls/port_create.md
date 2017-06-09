@@ -29,15 +29,15 @@ MX_RIGHT_DUPLICATE (allowing them to be duplicated).
 
 ## RETURN VALUE
 
-**port_create**() returns NO_ERROR and a valid IO port handle via *out* on
+**port_create**() returns MX_OK and a valid IO port handle via *out* on
 success. In the event of failure, an error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS** *options* has an invalid value, or *out* is an
+**MX_ERR_INVALID_ARGS** *options* has an invalid value, or *out* is an
 invalid pointer or NULL.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## NOTES
 Differences between ports version 1 and version 2:

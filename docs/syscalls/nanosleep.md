@@ -32,4 +32,4 @@ mx_nanosleep(mx_deadline_after(MX_MSEC(50)));
 
 ## RETURN VALUE
 
-**nanosleep**() always returns **NO_ERROR**.
+**nanosleep**() always returns **MX_OK**.

@@ -34,17 +34,17 @@ Currently, no options are supported, so *options* must be set to 0.
 
 ## RETURN VALUE
 
-**eventpair_create**() returns **NO_ERROR** on success. On failure, a (negative)
+**eventpair_create**() returns **MX_OK** on success. On failure, a (negative)
 error code is returned.
 
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL.
+**MX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL.
 
-**ERR_NOT_SUPPORTED**  *options* has an unsupported flag set (i.e., is not 0).
+**MX_ERR_NOT_SUPPORTED**  *options* has an unsupported flag set (i.e., is not 0).
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 
 ## NOTES

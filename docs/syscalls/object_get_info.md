@@ -40,7 +40,7 @@ If the buffer is insufficiently large, *avail* will be larger than *actual*.
 
 *buffer* type: **n/a**
 
-Returns **NO_ERROR** if *handle* is valid, a negative status otherwise. No
+Returns **MX_OK** if *handle* is valid, a negative status otherwise. No
 records are returned and *buffer* may be NULL.
 
 ### MX_INFO_HANDLE_BASIC
@@ -163,9 +163,9 @@ The **MX_EXCEPTION_PORT_TYPE_\*** values are defined by
 
 If the thread is currently in an exception and is waiting for an exception
 response, then this returns the exception report as a single
-*mx_exception_report_t*, with status NO_ERROR.
+*mx_exception_report_t*, with status MX_OK.
 
-Returns **ERR_BAD_STATE** if the thread is not in an exception and waiting for
+Returns **MX_ERR_BAD_STATE** if the thread is not in an exception and waiting for
 an exception response.
 
 ### MX_INFO_VMAR
@@ -240,7 +240,7 @@ typedef struct mx_info_task_stats {
 
 Additional errors:
 
-*   **ERR_BAD_STATE**: If the target process is not currently running.
+*   **MX_ERR_BAD_STATE**: If the target process is not currently running.
 
 ### MX_INFO_PROCESS_MAPS
 
@@ -282,12 +282,12 @@ the maps of arbitrary processes by koid.
 
 Additional errors:
 
-*   **ERR_ACCESS_DENIED**: If the appropriate rights are missing, or if a
+*   **MX_ERR_ACCESS_DENIED**: If the appropriate rights are missing, or if a
     process attempts to call this on a handle to itself. It's not safe to
     examine yourself: *buffer* will live inside the Aspace being examined, and
     the kernel can't safely fault in pages of the buffer while walking the
     Aspace.
-*   **ERR_BAD_STATE**: If the target process is not currently running, or if
+*   **MX_ERR_BAD_STATE**: If the target process is not currently running, or if
     its address space has been destroyed.
 
 ### MX_INFO_KMEM_STATS
@@ -337,39 +337,39 @@ typedef struct mx_info_kmem_stats {
 
 ## RETURN VALUE
 
-**mx_object_get_info**() returns **NO_ERROR** on success. In the event of
+**mx_object_get_info**() returns **MX_OK** on success. In the event of
 failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE** *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE** *handle* is not an appropriate type for *topic*
+**MX_ERR_WRONG_TYPE** *handle* is not an appropriate type for *topic*
 
-**ERR_ACCESS_DENIED**: If *handle* does not have the necessary rights for the
+**MX_ERR_ACCESS_DENIED**: If *handle* does not have the necessary rights for the
 operation.
 
-**ERR_INVALID_ARGS** *buffer*, *actual*, or *avail* are invalid pointers.
+**MX_ERR_INVALID_ARGS** *buffer*, *actual*, or *avail* are invalid pointers.
 
-**ERR_NO_MEMORY** Temporary out of memory failure.
+**MX_ERR_NO_MEMORY** Temporary out of memory failure.
 
-**ERR_BUFFER_TOO_SMALL** The *topic* returns a fixed number of records, but the
+**MX_ERR_BUFFER_TOO_SMALL** The *topic* returns a fixed number of records, but the
 provided buffer is not large enough for these records.
 
-**ERR_NOT_SUPPORTED** *topic* does not exist.
+**MX_ERR_NOT_SUPPORTED** *topic* does not exist.
 
 ## EXAMPLES
 
 ```
 bool is_handle_valid(mx_handle_t handle) {
     return mx_object_get_info(
-        handle, MX_INFO_HANDLE_VALID, NULL, 0, NULL, NULL) == NO_ERROR;
+        handle, MX_INFO_HANDLE_VALID, NULL, 0, NULL, NULL) == MX_OK;
 }
 
 mx_koid_t get_object_koid(mx_handle_t handle) {
     mx_info_handle_basic_t info;
     if (mx_object_get_info(handle, MX_INFO_HANDLE_BASIC,
-                           &info, sizeof(info), NULL, NULL) != NO_ERROR) {
+                           &info, sizeof(info), NULL, NULL) != MX_OK) {
         return 0;
     }
     return info.koid;
@@ -380,7 +380,7 @@ void examine_threads(mx_handle_t proc) {
     size_t count, avail;
 
     if (mx_object_get_info(proc, MX_INFO_PROCESS_THREADS, threads,
-                           sizeof(threads), &count, &avail) != NO_ERROR) {
+                           sizeof(threads), &count, &avail) != MX_OK) {
         // Error!
     } else {
         if (avail > count) {

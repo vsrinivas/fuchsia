@@ -22,15 +22,15 @@ VMAR will remain valid handles, but all VMAR operations on them will fail.
 
 ## RETURN VALUE
 
-**vmar_destroy**() returns **NO_ERROR** on success.
+**vmar_destroy**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+**MX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**ERR_BAD_STATE**  This region is already destroyed.
+**MX_ERR_BAD_STATE**  This region is already destroyed.
 
 ## NOTES
 

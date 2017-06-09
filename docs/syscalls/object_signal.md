@@ -37,21 +37,21 @@ is used to set any bits indicated.
 
 ## RETURN VALUE
 
-**mx_object_signal**() and **mx_object_signal_peer**() return **NO_ERROR** on success.
+**mx_object_signal**() and **mx_object_signal_peer**() return **MX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
+**MX_ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
 
-**ERR_INVALID_ARGS**  *clear_mask* or *set_mask* contain bits that are not allowed.
+**MX_ERR_INVALID_ARGS**  *clear_mask* or *set_mask* contain bits that are not allowed.
 
-**ERR_NOT_SUPPORTED**  **mx_object_signal_peer**() used on an object lacking a peer.
+**MX_ERR_NOT_SUPPORTED**  **mx_object_signal_peer**() used on an object lacking a peer.
 
-**ERR_PEER_CLOSED**  **mx_object_signal_peer**() called on an object with a closed peer.
+**MX_ERR_PEER_CLOSED**  **mx_object_signal_peer**() called on an object with a closed peer.
 
 ## NOTE
 

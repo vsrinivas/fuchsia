@@ -27,15 +27,15 @@ The *options* must currently be either **MX_SOCKET_STREAM** or
 
 ## RETURN VALUE
 
-**socket_create**() returns **NO_ERROR** on success. In the event of
+**socket_create**() returns **MX_OK** on success. In the event of
 failure, one of the following values is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
+**MX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
 *options* is any value other than 0.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## LIMITATIONS
 

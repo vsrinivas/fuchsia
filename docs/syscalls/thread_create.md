@@ -34,20 +34,20 @@ new thread, which will become a child of that process.
 
 ## RETURN VALUE
 
-On success, **thread_create**() returns **NO_ERROR** and a handle (via *out*)
+On success, **thread_create**() returns **MX_OK** and a handle (via *out*)
 to the new thread.  In the event of failure, a negative error value is
 returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *process* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *process* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *process* is not a process handle.
+**MX_ERR_WRONG_TYPE**  *process* is not a process handle.
 
-**ERR_INVALID_ARGS**  *name* or *out* was an invalid pointer, or *options* was
+**MX_ERR_INVALID_ARGS**  *name* or *out* was an invalid pointer, or *options* was
 non-zero.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## SEE ALSO
 

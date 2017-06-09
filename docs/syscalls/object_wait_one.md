@@ -34,29 +34,29 @@ The *deadline* parameter specifies a deadline with respect to
 
 ## RETURN VALUE
 
-**object_wait_one**() returns **NO_ERROR** if any of *signals* were observed
+**object_wait_one**() returns **MX_OK** if any of *signals* were observed
 on the object before *deadline* passes.
 
-In the event of **ERR_TIMED_OUT**, *observed* may reflect state changes
+In the event of **MX_ERR_TIMED_OUT**, *observed* may reflect state changes
 that occurred after the deadline passed, but before the syscall returned.
 
 For any other return value, *observed* is undefined.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *observed* is an invalid pointer.
+**MX_ERR_INVALID_ARGS**  *observed* is an invalid pointer.
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
 
-**ERR_CANCELED**  *handle* was invalidated (e.g., closed) during the wait.
+**MX_ERR_CANCELED**  *handle* was invalidated (e.g., closed) during the wait.
 
-**ERR_TIMED_OUT**  The specified deadline passed before any of the specified
+**MX_ERR_TIMED_OUT**  The specified deadline passed before any of the specified
 *signals* are observed on *handle*.
 
-**ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on
+**MX_ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on
 (for example, a Port handle).
 
 ## SEE ALSO

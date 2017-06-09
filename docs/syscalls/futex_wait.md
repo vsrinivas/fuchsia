@@ -22,16 +22,16 @@ to **MX_CLOCK_MONOTONIC**) passes.
 
 ## RETURN VALUE
 
-**futex_wait**() returns **NO_ERROR** on success.
+**futex_wait**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer, or
+**MX_ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer, or
 *value_ptr* is not aligned.
 
-**ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
+**MX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
-**ERR_TIMED_OUT**  The thread was not woken before *deadline* passed.
+**MX_ERR_TIMED_OUT**  The thread was not woken before *deadline* passed.
 
 ## SEE ALSO
 

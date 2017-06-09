@@ -22,11 +22,11 @@ including its null terminator.
 
 ## RETURN VALUE
 
-**system_get_version**() returns **NO_ERROR** on success.
+**system_get_version**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_BUFFER_TOO_SMALL**  *version_len* is too short.
+**MX_ERR_BUFFER_TOO_SMALL**  *version_len* is too short.
 
 ## NOTES
 

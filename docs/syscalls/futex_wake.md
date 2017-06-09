@@ -21,11 +21,11 @@ Waking up zero threads is not an error condition.
 
 ## RETURN VALUE
 
-**futex_wake**() returns **NO_ERROR** on success.
+**futex_wake**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *value_ptr* is not aligned.
+**MX_ERR_INVALID_ARGS**  *value_ptr* is not aligned.
 
 ## SEE ALSO
 

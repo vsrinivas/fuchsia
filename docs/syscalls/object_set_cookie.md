@@ -39,17 +39,17 @@ is no longer available, the cookie may no longer be modified or obtained.
 
 ## RETURN VALUE
 
-**mx_object_set_cookie**() returns **NO_ERROR** on success.  In the event of failure,
+**mx_object_set_cookie**() returns **MX_OK** on success.  In the event of failure,
 a negative error value is returned.
 
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* or *scope* are not valid handles.
+**MX_ERR_BAD_HANDLE**  *handle* or *scope* are not valid handles.
 
-**ERR_NOT_SUPPORTED**  *handle* is not a handle to an object that may have a cookie set.
+**MX_ERR_NOT_SUPPORTED**  *handle* is not a handle to an object that may have a cookie set.
 
-**ERR_ACCESS_DENIED**  **mx_object_set_cookie**() was called previously with a different
+**MX_ERR_ACCESS_DENIED**  **mx_object_set_cookie**() was called previously with a different
 object as the *scope*, or the cookie has not been set.
 
 

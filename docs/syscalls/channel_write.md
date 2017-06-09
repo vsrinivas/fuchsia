@@ -39,31 +39,31 @@ The maximum number of bytes which may be sent in a message is
 
 ## RETURN VALUE
 
-**channel_write**() returns **NO_ERROR** on success.
+**channel_write**() returns **MX_OK** on success.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle or any of *handles*
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any of *handles*
 are not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a channel handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
-**ERR_INVALID_ARGS**  *bytes* is an invalid pointer, or *handles*
+**MX_ERR_INVALID_ARGS**  *bytes* is an invalid pointer, or *handles*
 is an invalid pointer, or if there are duplicates among the handles
 in the *handles* array, or *options* is nonzero.
 
-**ERR_NOT_SUPPORTED** *handle* was found in the *handles* array, or
+**MX_ERR_NOT_SUPPORTED** *handle* was found in the *handles* array, or
 one of the handles in *handles* was *handle* (the handle to the
 channel being written to).
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
-**ERR_PEER_CLOSED**  The other side of the channel is closed.
+**MX_ERR_PEER_CLOSED**  The other side of the channel is closed.
 
-**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_OUT_OF_RANGE**  *num_bytes* or *num_handles* are larger than the
+**MX_ERR_OUT_OF_RANGE**  *num_bytes* or *num_handles* are larger than the
 largest allowable size for channel messages.
 
 ## NOTES

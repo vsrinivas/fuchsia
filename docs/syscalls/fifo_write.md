@@ -27,25 +27,25 @@ room in the fifo to contain all of them.
 
 ## RETURN VALUE
 
-**fifo_write**() returns **NO_ERROR** on success, and returns
+**fifo_write**() returns **MX_OK** on success, and returns
 the number of elements written (at least one) via *num_entries_written*.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a fifo handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a fifo handle.
 
-**ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_written*
+**MX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_written*
 is an invalid pointer.
 
-**ERR_OUT_OF_RANGE**  *size* was smaller than the size of a single element.
+**MX_ERR_OUT_OF_RANGE**  *size* was smaller than the size of a single element.
 
-**ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_PEER_CLOSED**  The other side of the fifo is closed.
+**MX_ERR_PEER_CLOSED**  The other side of the fifo is closed.
 
-**ERR_SHOULD_WAIT**  The fifo is full.
+**MX_ERR_SHOULD_WAIT**  The fifo is full.
 
 
 ## SEE ALSO

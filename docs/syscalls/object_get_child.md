@@ -38,23 +38,23 @@ obtained by this call.
 
 ## RETURN VALUE
 
-On success, **NO_ERROR** is returned and a handle to the desired child object is returned via *out*.
+On success, **MX_OK** is returned and a handle to the desired child object is returned via *out*.
 
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a *Process*, *Job*, or *Resource*.
+**MX_ERR_WRONG_TYPE**  *handle* is not a *Process*, *Job*, or *Resource*.
 
-**ERR_ACCESS_DENIED**   *handle* lacks the right **MX_RIGHT_ENUMERATE** or *rights* specifies
+**MX_ERR_ACCESS_DENIED**   *handle* lacks the right **MX_RIGHT_ENUMERATE** or *rights* specifies
 rights that are not present on *handle*.
 
-**ERR_NOT_FOUND**  *handle* does not have a child with the kernel object id *koid*.
+**MX_ERR_NOT_FOUND**  *handle* does not have a child with the kernel object id *koid*.
 
-**ERR_NO_MEMORY**  (temporary) out of memory failure.
+**MX_ERR_NO_MEMORY**  (temporary) out of memory failure.
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer.
+**MX_ERR_INVALID_ARGS**  *out* is an invalid pointer.
 
 
 ## SEE ALSO

@@ -19,20 +19,20 @@ mx_status_t mx_vmo_set_size(mx_handle_t handle, uint64_t size);
 
 ## RETURN VALUE
 
-**vmo_set_size**() returns **NO_ERROR** on success. In the event
+**vmo_set_size**() returns **MX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+**MX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_WRITE** right.
+**MX_ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_WRITE** right.
 
-**ERR_OUT_OF_RANGE**  Requested size is too large.
+**MX_ERR_OUT_OF_RANGE**  Requested size is too large.
 
-**ERR_NO_MEMORY**  Failure due to lack of system memory.
+**MX_ERR_NO_MEMORY**  Failure due to lack of system memory.
 
 ## SEE ALSO
 

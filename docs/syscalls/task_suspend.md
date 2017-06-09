@@ -28,16 +28,16 @@ the task.
 
 ## RETURN VALUE
 
-**task_suspend**() returns **NO_ERROR** on success.
+**task_suspend**() returns **MX_OK** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE** *handle* is not a valid handle.
+**MX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE** *handle* is not a thread handle.
+**MX_ERR_WRONG_TYPE** *handle* is not a thread handle.
 
-**ERR_BAD_STATE**  The task is not in a state where suspending is possible.
+**MX_ERR_BAD_STATE**  The task is not in a state where suspending is possible.
 
 ## LIMITATIONS
 
