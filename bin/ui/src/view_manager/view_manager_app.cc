@@ -11,7 +11,7 @@
 
 namespace view_manager {
 
-ViewManagerApp::ViewManagerApp(Params* params)
+ViewManagerApp::ViewManagerApp()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
 

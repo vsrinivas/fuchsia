@@ -16,10 +16,6 @@ executable("view_manager") {
 
 source_set("lib") {
   sources = [
-    "config.cc",
-    "config.h",
-    "params.cc",
-    "params.h",
     "view_container_state.cc",
     "view_container_state.h",
     "view_impl.cc",

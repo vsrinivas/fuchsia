@@ -10,7 +10,6 @@
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/src/view_manager/params.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -22,7 +21,7 @@ class ViewManagerImpl;
 // View manager application entry point.
 class ViewManagerApp {
  public:
-  explicit ViewManagerApp(Params* params);
+  explicit ViewManagerApp();
   ~ViewManagerApp();
 
  private:
