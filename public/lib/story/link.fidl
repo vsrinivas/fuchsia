@@ -60,8 +60,8 @@ interface Link {
 
   // Gets the value at the given |path|, which is represented using the
   // JSON Pointer specification (https://tools.ietf.org/html/rfc6901).
-  // Returns a NULL fidl string if |path| does not exist.
-  // Returns the entire JSON as a string if |path| is either NULL or an empty
+  // Returns a null fidl string if |path| does not exist.
+  // Returns the entire JSON as a string if |path| is either null or an empty
   // array. Returns the string "null" if the link was empty.
   // It's illegal to pass an empty string ("") as an element of the array at
   // |path|.
@@ -69,7 +69,7 @@ interface Link {
 
   // Set() overwrites the value/object/array at the given |path|. Set also
   // overwrites any values or arrays as necessary to ensure that |path| exists.
-  // To replace the root, pass "" for |path|.
+  // To replace the root, pass null for |path|.
   // This call notifies Watchers.
   Set(array<string>? path, string json);
 
