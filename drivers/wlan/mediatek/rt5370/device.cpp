@@ -25,7 +25,7 @@
 
 #define CHECK_REG(reg, op, status) \
     do { \
-        if (status != NO_ERROR) { \
+        if (status != MX_OK) { \
             errorf("" #op "Register error for " #reg ": %d\n", status); \
             return status; \
         } \
@@ -110,7 +110,7 @@ mx_status_t Device::Bind() {
 
     bool autorun = false;
     status = DetectAutoRun(&autorun);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -123,13 +123,13 @@ mx_status_t Device::Bind() {
     debugf("efuse present: %s\n", efuse_present ? "Y" : "N");
 
     status = ReadEeprom();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed to read eeprom\n");
         return status;
     }
 
     status = ValidateEeprom();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed to validate eeprom\n");
         return status;
     }
@@ -153,7 +153,7 @@ mx_status_t Device::Bind() {
 
     if (rt_type_ == RT5390) {
         status = ReadEepromField(EEPROM_CHIP_ID, &rf_type_);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("could not read chip id err=%d\n", status);
             return status;
         }
@@ -161,7 +161,7 @@ mx_status_t Device::Bind() {
     } else {
         // TODO(tkilbourn): support other RF chipsets
         errorf("RF chipset %#x not supported!\n", rf_type_);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // TODO(tkilbourn): default antenna configs
@@ -194,20 +194,20 @@ mx_status_t Device::Bind() {
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
     status = Add(usb_device_);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {
         infof("device added\n");
     }
 
-    // TODO(tkilbourn): if status != NO_ERROR, reset the hw
+    // TODO(tkilbourn): if status != MX_OK, reset the hw
     return status;
 }
 
 mx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
     auto ret = usb_control(usb_device_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0,
             offset, value, sizeof(*value));
-    return ret < 0 ? ret : NO_ERROR;
+    return ret < 0 ? ret : MX_OK;
 }
 
 template <uint16_t A> mx_status_t Device::ReadRegister(Register<A>* reg) {
@@ -217,7 +217,7 @@ template <uint16_t A> mx_status_t Device::ReadRegister(Register<A>* reg) {
 mx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
     auto ret = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
             offset, &value, sizeof(value));
-    return ret < 0 ? ret : NO_ERROR;
+    return ret < 0 ? ret : MX_OK;
 }
 
 template <uint16_t A> mx_status_t Device::WriteRegister(const Register<A>& reg) {
@@ -243,8 +243,8 @@ mx_status_t Device::ReadEeprom() {
 
         // Wait until the registers are ready for reading.
         status = BusyWait(&ec, [&ec]() { return !ec.efsrom_kick(); });
-        if (status != NO_ERROR) {
-            if (status == ERR_TIMED_OUT) {
+        if (status != MX_OK) {
+            if (status == MX_ERR_TIMED_OUT) {
                 errorf("rt5370 busy wait for EFUSE_CTRL failed\n");
             }
             return status;
@@ -289,15 +289,15 @@ mx_status_t Device::ReadEeprom() {
     std::printf("\n");
 #endif
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::ReadEepromField(uint16_t addr, uint16_t* value) {
     if (addr >= eeprom_.size()) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     *value = letoh16(eeprom_[addr]);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <uint16_t A> mx_status_t Device::ReadEepromField(EepromField<A>* field) {
@@ -306,10 +306,10 @@ template <uint16_t A> mx_status_t Device::ReadEepromField(EepromField<A>* field)
 
 template <uint16_t A> mx_status_t Device::WriteEepromField(const EepromField<A>& field) {
     if (field.addr() > kEepromSize) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     eeprom_[field.addr()] = field.val();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::ValidateEeprom() {
@@ -324,14 +324,14 @@ mx_status_t Device::ValidateEeprom() {
     if (enc0.val() == 0xffff || enc0.val() == 0x2860 || enc0.val() == 0x2872) {
         // These values need some eeprom patching; not supported yet.
         errorf("unsupported value for EEPROM_NIC_CONF0=%#x\n", enc0.val());
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     EepromNicConf1 enc1;
     ReadEepromField(&enc1);
     if (enc1.val() == 0xffff) {
         errorf("unsupported value for EEPROM_NIC_CONF1=%#x\n", enc1.val());
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     EepromFreq ef;
@@ -372,7 +372,7 @@ mx_status_t Device::ValidateEeprom() {
 
     // TODO(tkilbourn): check and set RSSI for A
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::LoadFirmware() {
@@ -380,13 +380,13 @@ mx_status_t Device::LoadFirmware() {
     mx_handle_t fw_handle;
     size_t fw_size = 0;
     auto status = load_firmware(mxdev(), kFirmwareFile, &fw_handle, &fw_size);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed to load firmware '%s': err=%d\n", kFirmwareFile, status);
         return status;
     }
     if (fw_size < 4) {
         errorf("FW: bad length (%zu)\n", fw_size);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     infof("opened firmware '%s' (%zd bytes)\n", kFirmwareFile, fw_size);
 
@@ -394,16 +394,16 @@ mx_status_t Device::LoadFirmware() {
     uint8_t fwversion[2];
     size_t actual = 0;
     status = fw.read(fwversion, fw_size - 4, 2, &actual);
-    if (status != NO_ERROR || actual != sizeof(fwversion)) {
+    if (status != MX_OK || actual != sizeof(fwversion)) {
         errorf("error reading fw version\n");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     infof("FW version %u.%u\n", fwversion[0], fwversion[1]);
     // Linux rt2x00 driver has more intricate size checking for different
     // chipsets. We just care that it's 8kB for the rt5370.
     if (fw_size != 8192) {
         errorf("FW: bad length (%zu)\n", fw_size);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     // TODO(tkilbourn): check crc, 4kB at a time
@@ -416,25 +416,25 @@ mx_status_t Device::LoadFirmware() {
 
     // Wait for hardware to stabilize
     status = WaitForMacCsr();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("unstable hardware\n");
         return status;
     }
     debugf("hardware stabilized\n");
 
     status = DisableWpdma();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     bool autorun = false;
     status = DetectAutoRun(&autorun);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     if (autorun) {
         infof("not loading firmware, NIC is in autorun mode\n");
-        return NO_ERROR;
+        return MX_OK;
     }
     debugf("autorun not enabled\n");
 
@@ -448,15 +448,15 @@ mx_status_t Device::LoadFirmware() {
     while (remaining) {
         size_t to_send = std::min(remaining, sizeof(buf));
         status = fw.read(buf, offset, to_send, &actual);
-        if (status != NO_ERROR || actual != to_send) {
+        if (status != MX_OK || actual != to_send) {
             errorf("error reading firmware\n");
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
                              0, addr, buf, to_send);
         if (status < (ssize_t)to_send) {
             errorf("failed to send firmware\n");
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         remaining -= to_send;
         offset += to_send;
@@ -477,7 +477,7 @@ mx_status_t Device::LoadFirmware() {
     // Tell the device to load the firmware
     status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
                          kFirmware, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed to send load firmware command\n");
         return status;
     }
@@ -489,8 +489,8 @@ mx_status_t Device::LoadFirmware() {
 
     SysCtrl sc;
     status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, MX_MSEC(1));
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("system MCU not ready\n");
         }
         return status;
@@ -498,7 +498,7 @@ mx_status_t Device::LoadFirmware() {
 
     // Disable WPDMA again
     status = DisableWpdma();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -515,13 +515,13 @@ mx_status_t Device::LoadFirmware() {
     CHECK_WRITE(H2M_INT_SRC, status);
 
     status = McuCommand(MCU_BOOT_SIGNAL, 0, 0, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error booting MCU err=%d\n", status);
         return status;
     }
     sleep_for(MX_MSEC(1));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::EnableRadio() {
@@ -529,7 +529,7 @@ mx_status_t Device::EnableRadio() {
 
     // Wakeup the MCU
     auto status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error waking MCU err=%d\n", status);
         return status;
     }
@@ -539,8 +539,8 @@ mx_status_t Device::EnableRadio() {
     WpdmaGloCfg wgc;
     auto wpdma_pred = [&wgc]() { return !wgc.tx_dma_busy() && !wgc.rx_dma_busy(); };
     status = BusyWait(&wgc, wpdma_pred, MX_MSEC(10));
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("WPDMA busy\n");
         }
         return status;
@@ -565,15 +565,15 @@ mx_status_t Device::EnableRadio() {
 
     // Wait for WPDMA again
     status = BusyWait(&wgc, wpdma_pred, MX_MSEC(10));
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("WPDMA busy\n");
         }
         return status;
     }
 
     status = InitRegisters();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed to initialize registers\n");
         return status;
     }
@@ -581,8 +581,8 @@ mx_status_t Device::EnableRadio() {
     // Wait for MAC status ready
     MacStatusReg msr;
     status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, MX_MSEC(10));
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("BBP busy\n");
         }
         return status;
@@ -602,26 +602,26 @@ mx_status_t Device::EnableRadio() {
     CHECK_WRITE(H2M_INT_SRC, status);
 
     status = McuCommand(MCU_BOOT_SIGNAL, 0, 0, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error booting MCU err=%d\n", status);
         return status;
     }
     sleep_for(MX_MSEC(1));
 
     status = WaitForBbp();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error waiting for BBP=%d\n", status);
         return status;
     }
 
     status = InitBbp();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error initializing BBP=%d\n", status);
         return status;
     }
 
     status = InitRfcsr();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error initializing RF=%d\n", status);
         return status;
     }
@@ -655,19 +655,19 @@ mx_status_t Device::EnableRadio() {
 
     // TODO(tkilbourn): LED control stuff
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::InitRegisters() {
     debugfn();
 
     auto status = DisableWpdma();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     status = WaitForMacCsr();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("hardware unstable\n");
         return status;
     }
@@ -691,7 +691,7 @@ mx_status_t Device::InitRegisters() {
 
     status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
             kReset, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed reset\n");
         return status;
     }
@@ -733,7 +733,7 @@ mx_status_t Device::InitRegisters() {
     CHECK_WRITE(BCN_TIME_CFG, status);
 
     status = SetRxFilter();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -1024,7 +1024,7 @@ mx_status_t Device::InitRegisters() {
                              0, addr, &rwe, sizeof(rwe));
         if (status < (ssize_t)sizeof(rwe)) {
             errorf("failed to set RX WCID search entry\n");
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
 
         status = WriteRegister(WCID_ATTR_BASE + i * sizeof(uint32_t), 0);
@@ -1137,7 +1137,7 @@ mx_status_t Device::InitRegisters() {
     status = WriteRegister(ctc);
     CHECK_WRITE(CH_TIME_CFG, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 namespace {
@@ -1184,7 +1184,7 @@ mx_status_t Device::InitBbp() {
 
     for (const auto& breg : BBP_REGS) {
         status = WriteBbp(breg.addr, breg.val);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("WriteRegister error for BBP reg %u: %d\n", breg.addr, status);
             return status;
         }
@@ -1240,13 +1240,13 @@ mx_status_t Device::InitBbp() {
         CHECK_READ(EEPROM_BBP, status);
         if (val != 0xffff && val != 0x0000) {
             status = WriteBbp(val >> 8, val & 0xff);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 errorf("WriteRegister error for BBP reg %u: %d\n", val >> 8, status);
                 return status;
             }
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 namespace {
@@ -1347,27 +1347,27 @@ mx_status_t Device::InitRfcsr() {
         } else {
             status = WriteRfcsr(entry.addr, entry.val);
         }
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("WriteRegister error for RFCSR %u: %d\n", entry.addr, status);
             return status;
         }
     }
 
     status = NormalModeSetup();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     // TODO(tkilbourn): led open drain enable ??? (doesn't appear in vendor driver?)
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1) {
     debugf("McuCommand %u\n", command);
     H2mMailboxCsr hmc;
     auto status = BusyWait(&hmc, [&hmc]() { return !hmc.owner(); });
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -1392,8 +1392,8 @@ mx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     auto pred = [&bcc]() { return !bcc.bbp_csr_kick(); };
 
     auto status = BusyWait(&bcc, pred);
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
         }
         return status;
@@ -1408,8 +1408,8 @@ mx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     CHECK_WRITE(BBP_CSR_CFG, status);
 
     status = BusyWait(&bcc, pred);
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
             *val = 0xff;
         }
@@ -1417,7 +1417,7 @@ mx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     }
 
     *val = bcc.bbp_data();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <uint8_t A> mx_status_t Device::ReadBbp(BbpRegister<A>* reg) {
@@ -1427,8 +1427,8 @@ template <uint8_t A> mx_status_t Device::ReadBbp(BbpRegister<A>* reg) {
 mx_status_t Device::WriteBbp(uint8_t addr, uint8_t val) {
     BbpCsrCfg bcc;
     auto status = BusyWait(&bcc, [&bcc]() { return !bcc.bbp_csr_kick(); });
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
         }
         return status;
@@ -1464,12 +1464,12 @@ mx_status_t Device::WaitForBbp() {
         status = ReadBbp(0, &val);
         CHECK_READ(BBP0, status);
         if ((val != 0xff) && (val != 0x00)) {
-            return NO_ERROR;
+            return MX_OK;
         }
         sleep_for(kDefaultBusyWait);
     }
     errorf("timed out waiting for BBP ready\n");
-    return ERR_TIMED_OUT;
+    return MX_ERR_TIMED_OUT;
 }
 
 mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
@@ -1477,8 +1477,8 @@ mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     auto pred = [&rcc]() { return !rcc.rf_csr_kick(); };
 
     auto status = BusyWait(&rcc, pred);
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
         }
         return status;
@@ -1492,8 +1492,8 @@ mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     CHECK_WRITE(RF_CSR_CFG, status);
 
     status = BusyWait(&rcc, pred);
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
             *val = 0xff;
         }
@@ -1501,7 +1501,7 @@ mx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     }
 
     *val = rcc.rf_csr_data();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <uint8_t A> mx_status_t Device::ReadRfcsr(RfcsrRegister<A>* reg) {
@@ -1511,8 +1511,8 @@ template <uint8_t A> mx_status_t Device::ReadRfcsr(RfcsrRegister<A>* reg) {
 mx_status_t Device::WriteRfcsr(uint8_t addr, uint8_t val) {
     RfCsrCfg rcc;
     auto status = BusyWait(&rcc, [&rcc]() { return !rcc.rf_csr_kick(); });
-    if (status != NO_ERROR) {
-        if (status == ERR_TIMED_OUT) {
+    if (status != MX_OK) {
+        if (status == MX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
         }
         return status;
@@ -1544,7 +1544,7 @@ mx_status_t Device::DisableWpdma() {
     status = WriteRegister(wgc);
     CHECK_WRITE(WPDMA_GLO_CFG, status);
     debugf("disabled WPDMA\n");
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::DetectAutoRun(bool* autorun) {
@@ -1563,7 +1563,7 @@ mx_status_t Device::DetectAutoRun(bool* autorun) {
     } else {
         *autorun = false;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::WaitForMacCsr() {
@@ -1595,7 +1595,7 @@ mx_status_t Device::SetRxFilter() {
     status = WriteRegister(rfc);
     CHECK_WRITE(RX_FILTR_CFG, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::NormalModeSetup() {
@@ -1646,7 +1646,7 @@ mx_status_t Device::NormalModeSetup() {
     status = WriteRfcsr(r30);
     CHECK_WRITE(RF30, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::StartQueues() {
@@ -1672,7 +1672,7 @@ mx_status_t Device::StartQueues() {
 
     // kick the rx queue???
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::StopRxQueue() {
@@ -1683,7 +1683,7 @@ mx_status_t Device::StopRxQueue() {
     status = WriteRegister(msc);
     CHECK_WRITE(MAC_SYS_CTRL, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::SetupInterface() {
@@ -1718,7 +1718,7 @@ mx_status_t Device::SetupInterface() {
     status = WriteRegister(mac1);
     CHECK_WRITE(MAC_ADDR_DW1, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 constexpr uint8_t kRfPowerBound = 0x27;
@@ -1772,7 +1772,7 @@ mx_status_t Device::ConfigureChannel(const Channel& channel) {
 
     if (r17.freq_offset() != ef.offset()) {
         status = McuCommand(MCU_FREQ_OFFSET, 0xff, freq_offset, prev_freq_off);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errorf("could not set frequency offset\n");
             return status;
         }
@@ -1867,7 +1867,7 @@ mx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = ReadRegister(&ecbs);
     CHECK_READ(EXT_CH_BUSY_STA, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 namespace {
@@ -1984,7 +1984,7 @@ mx_status_t Device::ConfigureTxPower(const Channel& channel) {
     status = WriteRegister(tpc4);
     CHECK_WRITE(TX_PWR_CFG_4, status);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename R, typename Predicate>
@@ -1993,7 +1993,7 @@ mx_status_t Device::BusyWait(R* reg, Predicate pred, mx_duration_t delay) {
     unsigned int busy;
     for (busy = 0; busy < kMaxBusyReads; busy++) {
         status = ReadRegister(reg);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
         if (pred()) {
@@ -2002,9 +2002,9 @@ mx_status_t Device::BusyWait(R* reg, Predicate pred, mx_duration_t delay) {
         sleep_for(delay);
     }
     if (busy == kMaxBusyReads) {
-        return ERR_TIMED_OUT;
+        return MX_ERR_TIMED_OUT;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void dump_rx(iotxn_t* request, RxInfo rx_info, RxDesc rx_desc,
@@ -2130,7 +2130,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
 }
 
 void Device::HandleRxComplete(iotxn_t* request) {
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -2138,7 +2138,7 @@ void Device::HandleRxComplete(iotxn_t* request) {
     std::lock_guard<std::mutex> guard(lock_);
     auto ac = mxtl::MakeAutoCall([&]() { iotxn_queue(usb_device_, request); });
 
-    if (request->status == NO_ERROR) {
+    if (request->status == MX_OK) {
         // Handle completed rx
         if (request->actual < 24) {
             errorf("short read\n");
@@ -2175,7 +2175,7 @@ void Device::HandleRxComplete(iotxn_t* request) {
 }
 
 void Device::HandleTxComplete(iotxn_t* request) {
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -2199,7 +2199,7 @@ mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     info->mtu = 1500;
     std::memcpy(info->mac, mac_addr_, ETH_MAC_SIZE);
     info->features |= ETHMAC_FEATURE_WLAN;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
@@ -2207,11 +2207,11 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::lock_guard<std::mutex> guard(lock_);
 
     if (wlanmac_proxy_ != nullptr) {
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
 
     auto status = LoadFirmware();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("failed to load firmware\n");
         return status;
     }
@@ -2222,7 +2222,7 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         auto* req = usb_alloc_iotxn(rx_endpt_, kReadBufSize);
         if (req == nullptr) {
             errorf("failed to allocate rx iotxn\n");
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         req->length = kReadBufSize;
         req->complete_cb = &Device::ReadIotxnComplete;
@@ -2235,7 +2235,7 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         auto* req = usb_alloc_iotxn(tx_endpt, kWriteBufSize);
         if (req == nullptr) {
             errorf("failed to allocate tx iotxn\n");
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         req->length = kWriteBufSize;
         req->complete_cb = &Device::WriteIotxnComplete;
@@ -2244,19 +2244,19 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     }
 
     status = EnableRadio();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not enable radio\n");
         return status;
     }
 
     status = StartQueues();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not start queues\n");
         return status;
     }
 
     status = SetupInterface();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not setup interface\n");
         return status;
     }
@@ -2284,7 +2284,7 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     CHECK_WRITE(AUTO_WAKEUP_CFG, status);
 
     status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("error waking MCU err=%d\n", status);
         return status;
     }
@@ -2307,7 +2307,7 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     CHECK_WRITE(BBP66, status);
 
     status = SetRxFilter();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -2318,12 +2318,12 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     wlan_channel_t chan;
     chan.channel_num = 1;
     status = WlanmacSetChannel(0, &chan);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         warnf("could not set channel err=%d\n", status);
     }
 
     infof("wlan started\n");
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::WlanmacStop() {
@@ -2386,33 +2386,33 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
 
 mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     if (options != 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     auto channel = channels_.find(chan->channel_num);
     if (channel == channels_.end()) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     auto status = StopRxQueue();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not stop rx queue\n");
         return status;
     }
     status = ConfigureChannel(channel->second);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     status = ConfigureTxPower(channel->second);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     status = StartQueues();
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         errorf("could not start queues\n");
         return status;
     }
 
     current_channel_ = chan->channel_num;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::ReadIotxnComplete(iotxn_t* request, void* cookie) {

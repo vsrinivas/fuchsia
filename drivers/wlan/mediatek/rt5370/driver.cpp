@@ -24,7 +24,7 @@ extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints < 3) {
         usb_desc_iter_release(&iter);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t blkin_endpt = 0;
@@ -43,15 +43,15 @@ extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie
 
     if (!blkin_endpt || blkout_endpts.empty()) {
         std::printf("%s could not find endpoints\n", __func__);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     auto rtdev = new rt5370::Device(device, blkin_endpt, std::move(blkout_endpts));
     auto f = std::async(std::launch::async, [rtdev]() {
                 auto status = rtdev->Bind();
-                if (status != NO_ERROR) {
+                if (status != MX_OK) {
                     delete rtdev;
                 }
             });
-    return NO_ERROR;
+    return MX_OK;
 }
