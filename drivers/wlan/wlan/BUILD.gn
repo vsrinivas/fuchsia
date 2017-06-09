@@ -40,6 +40,8 @@ source_set("mlme") {
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]
+
+  public_configs = [ ":wlan_config" ]
 }
 
 driver_module("wlan") {
@@ -51,13 +53,6 @@ driver_module("wlan") {
     "logging.h",
   ]
 
-  defines = [
-    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
-    "MX_DEBUGLEVEL=2",
-  ]
-
-  cflags = [ "-Wthread-safety" ]
-
   deps = [
     ":mlme(//build/toolchain/fuchsia:${target_cpu}-shared)",
     "//magenta/system/ulib/mx",
@@ -65,7 +60,4 @@ driver_module("wlan") {
   ]
 
   libs = [ "driver" ]
-
-  # TODO(tkilbourn): use :wlan_config when driver_module supports configs
-  #configs += [ ":wlan_config" ]
 }
