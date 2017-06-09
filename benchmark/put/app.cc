@@ -15,13 +15,19 @@ constexpr ftl::StringView kEntryCountFlag = "entry-count";
 constexpr ftl::StringView kTransactionSizeFlag = "transaction-size";
 constexpr ftl::StringView kKeySizeFlag = "key-size";
 constexpr ftl::StringView kValueSizeFlag = "value-size";
+constexpr ftl::StringView kRefsFlag = "refs";
 constexpr ftl::StringView kUpdateFlag = "update";
+
+constexpr ftl::StringView kRefsOnFlag = "on";
+constexpr ftl::StringView kRefsOffFlag = "off";
+constexpr ftl::StringView kRefsAutoFlag = "auto";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
             << "=<int> --" << kTransactionSizeFlag << "=<int> --"
-            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int> ["
-            << kUpdateFlag << "]" << std::endl;
+            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int>"
+            << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << "|"
+            << kRefsAutoFlag << ") [" << kUpdateFlag << "]" << std::endl;
 }
 
 bool GetPositiveIntValue(const ftl::CommandLine& command_line,
@@ -57,9 +63,28 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
+  std::string ref_strategy_str;
+  if (!command_line.GetOptionValue(kRefsFlag.ToString(), &ref_strategy_str)) {
+    PrintUsage(argv[0]);
+    return -1;
+  }
+  benchmark::PutBenchmark::ReferenceStrategy ref_strategy;
+  if (ref_strategy_str == kRefsOnFlag) {
+    ref_strategy = benchmark::PutBenchmark::ReferenceStrategy::ON;
+  } else if (ref_strategy_str == kRefsOffFlag) {
+    ref_strategy = benchmark::PutBenchmark::ReferenceStrategy::OFF;
+  } else if (ref_strategy_str == kRefsAutoFlag) {
+    ref_strategy = benchmark::PutBenchmark::ReferenceStrategy::AUTO;
+  } else {
+    std::cout << "Unknown option " << ref_strategy_str << " for "
+              << kRefsFlag.ToString() << std::endl;
+    PrintUsage(argv[0]);
+    return -1;
+  }
+
   mtl::MessageLoop loop;
   benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
-                              value_size, update);
+                              value_size, update, std::move(ref_strategy));
   // TODO(nellyv): A delayed task is necessary because of US-257.
   loop.task_runner()->PostDelayedTask([&app] { app.Run(); },
                                       ftl::TimeDelta::FromSeconds(1));
