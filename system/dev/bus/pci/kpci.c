@@ -49,7 +49,7 @@ static mx_status_t kpci_init_child(mx_device_t* parent, uint32_t index, bool sav
     kpci_device_t* device = calloc(1, sizeof(kpci_device_t));
     if (!device) {
         mx_handle_close(handle);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     memcpy(&device->info, &info, sizeof(info));
     if (save_handle) {
@@ -104,10 +104,10 @@ static mx_status_t kpci_init_child(mx_device_t* parent, uint32_t index, bool sav
 
         status = device_add(parent, &args, &device->mxdev);
     } else {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *out = device->mxdev;
     } else {
         if (handle != MX_HANDLE_INVALID) {
@@ -136,11 +136,11 @@ static mx_status_t kpci_drv_bind(void* ctx, mx_device_t* parent, void** cookie) 
     for (uint32_t index = 0;; index++) {
         mx_device_t* dev;
         // don't hang onto the PCI handle - we don't need it any more
-        if (kpci_init_child(pcidev, index, false, &dev) != NO_ERROR) {
+        if (kpci_init_child(pcidev, index, false, &dev) != MX_OK) {
             break;
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t kpci_drv_create(void* ctx, mx_device_t* parent,

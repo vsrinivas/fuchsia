@@ -65,14 +65,14 @@ static mx_status_t platform_dev_find_protocol(mx_device_t* dev, uint32_t proto_i
         // search children of our platform device nodes for the protocol
         mx_device_t* child;
         list_for_every_entry(&pdev->mxdev->children, child, mx_device_t, node) {
-            if (device_op_get_protocol(child, proto_id, out_proto) == NO_ERROR) {
+            if (device_op_get_protocol(child, proto_id, out_proto) == MX_OK) {
                 *out_dev = child;
-                return NO_ERROR;
+                return MX_OK;
             }
         }
     }
 
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }
 
 static platform_device_protocol_t platform_dev_proto_ops = {
@@ -117,7 +117,7 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
 
         platform_dev_t* dev = calloc(1, sizeof(platform_dev_t));
         if (!dev) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         dev->bus = bus;
         memcpy(&dev->mdi_node, &device_node, sizeof(dev->mdi_node));
@@ -148,7 +148,7 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
         };
 
         mx_status_t status = device_add(bus->mxdev, &args, &dev->mxdev);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("platform_bus_publish_devices: failed to create device for %u:%u:%u\n",
                    vid, pid, did);
             return status;
@@ -156,7 +156,7 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
         list_add_tail(&bus->children, &dev->node);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
@@ -164,39 +164,39 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     mx_handle_t mdi_handle = device_get_resource(parent);
     if (mdi_handle == MX_HANDLE_INVALID) {
         printf("platform_bus_bind: mdi_handle invalid\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     void* addr = NULL;
     size_t size;
     mx_status_t status = mx_vmo_get_size(mdi_handle, &size);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("platform_bus_bind: mx_vmo_get_size failed %d\n", status);
         goto fail;
     }
     status = mx_vmar_map(mx_vmar_root_self(), 0, mdi_handle, 0, size, MX_VM_FLAG_PERM_READ,
                          (uintptr_t *)&addr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("platform_bus_bind: mx_vmar_map failed %d\n", status);
         goto fail;
     }
 
     mdi_node_ref_t root_node;
     status = mdi_init(addr, size, &root_node);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("platform_bus_bind: mdi_init failed %d\n", status);
         goto fail;
     }
 
     mdi_node_ref_t  bus_node;
-    if (mdi_find_node(&root_node, MDI_PLATFORM, &bus_node) != NO_ERROR) {
+    if (mdi_find_node(&root_node, MDI_PLATFORM, &bus_node) != MX_OK) {
         printf("platform_bus_bind: couldn't find MDI_PLATFORM\n");
         goto fail;
     }
 
     platform_bus_t* bus = calloc(1, sizeof(platform_bus_t));
     if (!bus) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto fail;
     }
     list_initialize(&bus->children);
@@ -209,7 +209,7 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     };
 
     status = device_add(parent, &add_args, &bus->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 

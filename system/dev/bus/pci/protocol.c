@@ -41,7 +41,7 @@ static mx_status_t do_resource_bookkeeping(mx_pci_resource_t* res) {
     mx_status_t status;
 
     if (!res) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     switch(res->type) {
@@ -50,26 +50,26 @@ static mx_status_t do_resource_bookkeeping(mx_pci_resource_t* res) {
             // x86 PIO space access requires permission in the I/O bitmap
             status = mx_mmap_device_io(get_root_resource(), res->pio_addr, res->size);
 #else
-            status = ERR_NOT_SUPPORTED;
+            status = MX_ERR_NOT_SUPPORTED;
 #endif
             break;
         default:
-            status = NO_ERROR;
+            status = MX_OK;
     }
 
     return status;
 }
 
 static mx_status_t pci_get_resource(mx_device_t* dev, uint32_t res_id, mx_pci_resource_t* out_res) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     if (!dev || !out_res || res_id >= PCI_RESOURCE_COUNT) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     kpci_device_t* device = dev->ctx;
     if (device->handle == MX_HANDLE_INVALID) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
 
     switch (res_id) {
@@ -86,7 +86,7 @@ static mx_status_t pci_get_resource(mx_device_t* dev, uint32_t res_id, mx_pci_re
             break;
     }
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -106,18 +106,18 @@ static mx_status_t pci_map_resource(mx_device_t* dev,
                                     size_t* size,
                                     mx_handle_t* out_handle) {
     if (!dev || !vaddr || !size || !out_handle) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_pci_resource_t resource;
     mx_status_t status = pci_get_resource(dev, res_id, &resource);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     // TODO(cja): PIO may be mappable on non-x86 architectures
     if (resource.type == PCI_RESOURCE_TYPE_PIO) {
-        return ERR_WRONG_TYPE;
+        return MX_ERR_WRONG_TYPE;
     }
 
     uint32_t map_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_MAP_RANGE;
@@ -127,7 +127,7 @@ static mx_status_t pci_map_resource(mx_device_t* dev,
 
         // Bar cache policy can be controlled by the driver.
         status = mx_vmo_set_cache_policy(resource.mmio_handle, cache_policy);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             mx_handle_close(resource.mmio_handle);
             return status;
         }
@@ -140,7 +140,7 @@ static mx_status_t pci_map_resource(mx_device_t* dev,
                             ROUNDUP(resource.size, PAGE_SIZE),
                             map_flags, (uintptr_t*)&vaddr_tmp);
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mx_handle_close(resource.mmio_handle);
         return status;
     }
@@ -153,24 +153,24 @@ static mx_status_t pci_map_resource(mx_device_t* dev,
 }
 
 static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_t* out_handle) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     if (!dev || !out_handle) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     kpci_device_t* device = dev->ctx;
     if (device->handle == MX_HANDLE_INVALID) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
 
     status = mx_pci_map_interrupt(device->handle, which_irq, out_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         *out_handle = MX_HANDLE_INVALID;
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
@@ -191,13 +191,13 @@ static mx_status_t pci_set_irq_mode(mx_device_t* dev,
 
 static mx_status_t pci_get_device_info(mx_device_t* dev, mx_pcie_device_info_t* out_info) {
     if ((dev == NULL) || (out_info == NULL))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     kpci_device_t* device = dev->ctx;
     assert(device != NULL);
 
     *out_info = device->info;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static pci_protocol_t _pci_protocol = {
