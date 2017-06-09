@@ -39,11 +39,15 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     if (attr._a_stackaddr != NULL)
         return ENOTSUP;
 
-    pthread_t new = __allocate_thread(&attr);
+    char thread_name[MX_MAX_NAME_LEN];
+    pthread_t new = __allocate_thread(&attr,
+                                      attr.__name != NULL ? attr.__name :
+                                      attr.__c11 ? "thrd_t" : "pthread_t",
+                                      thread_name);
     if (new == NULL)
         return EAGAIN;
 
-    const char* name = attr.__name ? attr.__name : "";
+    const char* name = attr.__name != NULL ? attr.__name : thread_name;
     mx_status_t status =
         mxr_thread_create(_mx_process_self(), name, attr._a_detach,
                           &new->mxr_thread);

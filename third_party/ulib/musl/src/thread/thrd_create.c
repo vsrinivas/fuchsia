@@ -3,11 +3,7 @@
 
 #include "pthread_impl.h"
 
-int thrd_create(thrd_t* thr, thrd_start_t func, void* arg) {
-    return thrd_create_with_name(thr, func, arg, "musl-c11");
-}
-
-int thrd_create_with_name(thrd_t* thr, thrd_start_t func, void* arg, const char* name) {
+static int thrd_create_internal(thrd_t* thr, thrd_start_t func, void* arg, const char* name) {
     pthread_attr_t attrs = DEFAULT_PTHREAD_ATTR;
     attrs.__name = name;
     attrs.__c11 = 1;
@@ -21,3 +17,10 @@ int thrd_create_with_name(thrd_t* thr, thrd_start_t func, void* arg, const char*
         return thrd_error;
     }
 }
+
+int thrd_create(thrd_t* thr, thrd_start_t func, void* arg) {
+    return thrd_create_internal(thr, func, arg, NULL);
+}
+
+__typeof(thrd_create_with_name) thrd_create_with_name
+    __attribute__((alias("thrd_create_internal")));

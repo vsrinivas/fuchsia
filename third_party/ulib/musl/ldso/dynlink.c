@@ -1318,7 +1318,11 @@ __NO_SAFESTACK struct pthread* __init_main_thread(mx_handle_t thread_self) {
     pthread_attr_t attr = DEFAULT_PTHREAD_ATTR;
     attr._a_stacksize = libc.stack_size;
 
-    pthread_t td = __allocate_thread(&attr);
+    char thread_self_name[MX_MAX_NAME_LEN];
+    if (_mx_object_get_property(thread_self, MX_PROP_NAME, thread_self_name,
+                                sizeof(thread_self_name)) != MX_OK)
+        strcpy(thread_self_name, "(initial-thread)");
+    pthread_t td = __allocate_thread(&attr, thread_self_name, NULL);
     if (td == NULL) {
         debugmsg("No memory for %zu bytes thread-local storage.\n",
                  libc.tls_size);

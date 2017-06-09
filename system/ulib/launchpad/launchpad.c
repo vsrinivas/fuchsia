@@ -1206,7 +1206,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
 
     mx_handle_t thread;
     uintptr_t sp;
-    status = prepare_start(lp, "main", to_child, &thread, &sp);
+    status = prepare_start(lp, "initial-thread", to_child, &thread, &sp);
     mx_handle_close(to_child);
     if (status != NO_ERROR) {
         lp_error(lp, status, "start: prepare_start() failed");
