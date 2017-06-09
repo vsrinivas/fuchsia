@@ -36,7 +36,7 @@ static mx_status_t fifo_read(uint8_t* out) {
     }
     *out = fifo.data[fifo.tail];
     fifo.tail = (fifo.tail + 1) & FIFOMASK;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void fifo_write(uint8_t x) {
@@ -79,17 +79,17 @@ static mx_status_t console_read(void* ctx, void* buf, size_t count, mx_off_t off
     mtx_unlock(&fifo.lock);
     ssize_t length = data - (uint8_t*)buf;
     if (length == 0) {
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
     }
     *actual = length;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #define MAX_WRITE_SIZE 256
 
 static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
     const void* ptr = buf;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     while (count > 0) {
         size_t xfer = (count > MAX_WRITE_SIZE) ? MAX_WRITE_SIZE : count;
         if ((status = mx_debug_write(ptr, xfer)) < 0) {
@@ -100,7 +100,7 @@ static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_of
     }
     if (status >= 0) {
         *actual = status;
-        status = NO_ERROR;
+        status = MX_OK;
      }
      return status;
 }
@@ -120,7 +120,7 @@ static mx_protocol_device_t console_device_proto = {
 static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
     console_device_t* console = calloc(1, sizeof(console_device_t));
     if (!console) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -130,7 +130,7 @@ static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     mx_status_t status = device_add(parent, &args, &console->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("console: device_add() failed\n");
         free(console);
         return status;
@@ -139,7 +139,7 @@ static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
     thrd_t t;
     thrd_create_with_name(&t, debug_reader, console->mxdev, "debug-reader");
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t console_driver_ops = {

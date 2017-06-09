@@ -66,7 +66,7 @@ void pty_server_init(pty_server_t* ps);
 // if atomic is true ^c, etc processing is not done
 mx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic, size_t* actual);
 
-// If the recv callback returns ERR_SHOULD_WAIT, pty_server_resume()
+// If the recv callback returns MX_ERR_SHOULD_WAIT, pty_server_resume()
 // must be called when it is possible to call it successfully again.
 // ps->lock must be held.
 void pty_server_resume_locked(pty_server_t* ps);

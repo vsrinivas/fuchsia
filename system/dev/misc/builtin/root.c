@@ -12,7 +12,7 @@ mx_status_t zero_bind(void* ctx, mx_device_t* parent, void** cookie);
 mx_status_t root_bind(void* ctx, mx_device_t* parent, void** cookie) {
     null_bind(ctx, parent, cookie);
     zero_bind(ctx, parent, cookie);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t root_driver_ops = {

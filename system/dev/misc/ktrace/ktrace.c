@@ -20,7 +20,7 @@
 static mx_status_t ktrace_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
     uint32_t length;
     mx_status_t status = mx_ktrace_read(get_root_resource(), buf, off, count, &length);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *actual = length;
     }
     return status;
@@ -29,7 +29,7 @@ static mx_status_t ktrace_read(void* ctx, void* buf, size_t count, mx_off_t off,
 static mx_off_t ktrace_get_size(void* ctx) {
     uint32_t size;
     mx_status_t status = mx_ktrace_read(get_root_resource(), NULL, 0, 0, &size);
-    return status != NO_ERROR ? (mx_off_t)status : (mx_off_t)size;
+    return status != MX_OK ? (mx_off_t)status : (mx_off_t)size;
 }
 
 static mx_status_t ktrace_ioctl(void* ctx, uint32_t op,
@@ -38,7 +38,7 @@ static mx_status_t ktrace_ioctl(void* ctx, uint32_t op,
     switch (op) {
     case IOCTL_KTRACE_GET_HANDLE: {
         if (max < sizeof(mx_handle_t)) {
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         }
         //TODO: ktrace-only handle once resources are further along
         mx_handle_t h;
@@ -48,12 +48,12 @@ static mx_status_t ktrace_ioctl(void* ctx, uint32_t op,
         }
         *((mx_handle_t*) reply) = h;
         *out_actual = sizeof(mx_handle_t);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_KTRACE_ADD_PROBE: {
         char name[MX_MAX_NAME_LEN];
         if ((cmdlen >= MX_MAX_NAME_LEN) || (cmdlen < 1) || (max != sizeof(uint32_t))) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         memcpy(name, cmd, cmdlen);
         name[cmdlen] = 0;
@@ -63,10 +63,10 @@ static mx_status_t ktrace_ioctl(void* ctx, uint32_t op,
         }
         *((uint32_t*) reply) = status;
         *out_actual = sizeof(uint32_t);
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 

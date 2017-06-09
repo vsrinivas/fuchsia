@@ -27,7 +27,7 @@ static mx_handle_t get_sysinfo_job_root(void) {
 
     mx_handle_t h;
     if ((sysinfo_job_root != MX_HANDLE_INVALID) &&
-        (mx_handle_duplicate(sysinfo_job_root, MX_RIGHT_SAME_RIGHTS, &h) == NO_ERROR)) {
+        (mx_handle_duplicate(sysinfo_job_root, MX_RIGHT_SAME_RIGHTS, &h) == MX_OK)) {
         return h;
     }
 
@@ -39,24 +39,24 @@ static mx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
     switch (op) {
     case IOCTL_SYSINFO_GET_ROOT_JOB: {
         if ((cmdlen != 0) || (max < sizeof(mx_handle_t))) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t h = get_sysinfo_job_root();
         if (h == MX_HANDLE_INVALID) {
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         } else {
             memcpy(reply, &h, sizeof(mx_handle_t));
             *out_actual = sizeof(mx_handle_t);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     case IOCTL_SYSINFO_GET_ROOT_RESOURCE: {
         if ((cmdlen != 0) || (max < sizeof(mx_handle_t))) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t h = get_root_resource();
         if (h == MX_HANDLE_INVALID) {
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         }
         mx_status_t status = mx_handle_duplicate(h, MX_RIGHT_ENUMERATE | MX_RIGHT_TRANSFER, &h);
         if (status < 0) {
@@ -64,10 +64,10 @@ static mx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         }
         memcpy(reply, &h, sizeof(mx_handle_t));
         *out_actual = sizeof(mx_handle_t);
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 

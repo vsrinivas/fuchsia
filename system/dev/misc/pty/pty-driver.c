@@ -41,9 +41,9 @@ static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
     }
 
     if (*actual == 0) {
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
     } else {
-        return NO_ERROR;
+        return MX_OK;
     }
 }
 
@@ -69,12 +69,12 @@ static mx_status_t psd_read(void* ctx, void* buf, size_t count, mx_off_t off, si
 
     if (length > 0) {
         *actual = length;
-        return NO_ERROR;
+        return MX_OK;
     } else if (eof) {
         *actual = 0;
-        return NO_ERROR;
+        return MX_OK;
     } else {
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
     }
 }
 
@@ -88,7 +88,7 @@ static mx_status_t psd_write(void* ctx, const void* buf, size_t count, mx_off_t 
         return status;
     } else {
         *actual = length;
-        return NO_ERROR;
+        return MX_OK;
     }
 }
 
@@ -101,13 +101,13 @@ static mx_status_t psd_ioctl(void* ctx, uint32_t op,
     case IOCTL_PTY_SET_WINDOW_SIZE: {
         const pty_window_size_t* wsz = in_buf;
         if (in_len != sizeof(pty_window_size_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         pty_server_set_window_size(&psd->srv, wsz->width, wsz->height);
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -130,7 +130,7 @@ static mx_protocol_device_t psd_ops = {
 static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
     pty_server_dev_t* psd;
     if ((psd = calloc(1, sizeof(pty_server_dev_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     pty_server_init(&psd->srv);
@@ -155,7 +155,7 @@ static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
     }
 
     *out = psd->srv.mxdev;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_protocol_device_t ptmx_ops = {

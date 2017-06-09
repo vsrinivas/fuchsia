@@ -61,7 +61,7 @@ static mx_status_t test_device_run_tests(mx_device_t* dev, test_report_t* report
     if (device->test_func != NULL) {
         return device->test_func(device->cookie, report, arg, arglen);
     } else {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -85,21 +85,21 @@ static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
     switch (op) {
     case IOCTL_TEST_SET_OUTPUT_SOCKET:
         if (inlen != sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         test_device_set_output_socket(dev->mxdev, *(mx_handle_t*)in);
-        return NO_ERROR;
+        return MX_OK;
 
     case IOCTL_TEST_SET_CONTROL_CHANNEL:
         if (inlen != sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         test_device_set_control_channel(dev->mxdev, *(mx_handle_t*)in);
-        return NO_ERROR;
+        return MX_OK;
 
     case IOCTL_TEST_RUN_TESTS:
         if (outlen != sizeof(test_report_t)) {
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         }
         mx_status_t status = test_device_run_tests(dev->mxdev, (test_report_t*)out, in, inlen);
         *out_actual = sizeof(test_report_t);
@@ -110,7 +110,7 @@ static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         return 0;
 
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -139,7 +139,7 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     test_root_t* root = ctx;
 
     if (op != IOCTL_TEST_CREATE_DEVICE) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     char devname[MX_DEVICE_NAME_MAX + 1];
@@ -150,12 +150,12 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     }
 
     if (outlen < strlen(devname) + sizeof(DEV_TEST) + 1) {
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
 
     test_device_t* device = calloc(1, sizeof(test_device_t));
     if (device == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     device_add_args_t args = {
@@ -168,14 +168,14 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     };
 
     mx_status_t status;
-    if ((status = device_add(root->mxdev, &args, &device->mxdev)) != NO_ERROR) {
+    if ((status = device_add(root->mxdev, &args, &device->mxdev)) != MX_OK) {
         free(device);
         return status;
     }
 
     int length = snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
     *out_actual = length;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_protocol_device_t test_root_proto = {
@@ -186,7 +186,7 @@ static mx_protocol_device_t test_root_proto = {
 static mx_status_t test_bind(void* ctx, mx_device_t* dev, void** cookie) {
     test_root_t* root = calloc(1, sizeof(test_root_t));
     if (!root) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     device_add_args_t args = {
        .version = DEVICE_ADD_ARGS_VERSION,

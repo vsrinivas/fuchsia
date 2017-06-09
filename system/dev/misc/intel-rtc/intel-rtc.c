@@ -81,7 +81,7 @@ static void set_utc_offset(rtc_t* rtc) {
     int64_t offset = rtc_nanoseconds - monotonic_nanoseconds;
 
     mx_status_t status = mx_clock_adjust(get_root_resource(), MX_CLOCK_UTC, offset);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "The RTC driver was unable to set the UTC clock!\n");
     }
 }
@@ -250,7 +250,7 @@ static void write_time(const rtc_t* rtc) {
 
 static ssize_t intel_rtc_get(void* buf, size_t count) {
     if (count < sizeof(rtc_t)) {
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
 
     // Ensure we have a consistent time.
@@ -277,14 +277,14 @@ static bool rtc_is_invalid(const rtc_t* rtc) {
 
 static ssize_t intel_rtc_set(const void* buf, size_t count) {
     if (count < sizeof(rtc_t)) {
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
     rtc_t rtc;
     memcpy(&rtc, buf, sizeof(rtc_t));
 
     // An invalid time was supplied.
     if (rtc_is_invalid(&rtc)) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
 
     write_time(&rtc);
@@ -321,12 +321,12 @@ static mx_status_t intel_rtc_ioctl(void* ctx, uint32_t op,
             return ret;
         }
         *out_actual = ret;
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_RTC_SET:
         return intel_rtc_set(in_buf, in_len);
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
@@ -341,7 +341,7 @@ static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie)
     // exists.
 
     mx_status_t status = mx_mmap_device_io(get_root_resource(), RTC_IO_BASE, RTC_NUM_IO_REGISTERS);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -353,7 +353,7 @@ static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie)
 
     mx_device_t* dev;
     status = device_add(parent, &args, &dev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -361,9 +361,9 @@ static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie)
     sanitize_rtc(&rtc);
     set_utc_offset(&rtc);
 
-    return NO_ERROR;
+    return MX_OK;
 #else
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif
 }
 

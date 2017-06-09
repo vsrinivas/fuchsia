@@ -49,13 +49,13 @@ static ssize_t tpm_get_random(mx_device_t* dev, void* buf, size_t count) {
     uint32_t resp_len = tpm_init_getrandom(&cmd, count);
     struct tpm_getrandom_resp *resp = malloc(resp_len);
     if (!resp) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mtx_lock(&tpm_lock);
 
     mx_status_t status = tpm_send_cmd(LOCALITY0, (uint8_t*)&cmd, sizeof(cmd));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup;
     }
     status = tpm_recv_resp(LOCALITY0, (uint8_t*)resp, resp_len);
@@ -65,7 +65,7 @@ static ssize_t tpm_get_random(mx_device_t* dev, void* buf, size_t count) {
     if ((uint32_t)status < sizeof(*resp) ||
         (uint32_t)status != betoh32(resp->hdr.total_len)) {
 
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup;
     }
     uint32_t bytes_returned = betoh32(resp->bytes_returned);
@@ -74,7 +74,7 @@ static ssize_t tpm_get_random(mx_device_t* dev, void* buf, size_t count) {
         bytes_returned > count ||
         resp->hdr.return_code != htobe32(TPM_SUCCESS)) {
 
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup;
     }
     memcpy(buf, resp->bytes, bytes_returned);
@@ -94,7 +94,7 @@ static mx_status_t tpm_save_state(void) {
     mtx_lock(&tpm_lock);
 
     mx_status_t status = tpm_send_cmd(LOCALITY0, (uint8_t*)&cmd, sizeof(cmd));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup;
     }
     status = tpm_recv_resp(LOCALITY0, (uint8_t*)&resp, resp_len);
@@ -106,10 +106,10 @@ static mx_status_t tpm_save_state(void) {
         resp.hdr.tag != htobe16(TPM_TAG_RSP_COMMAND) ||
         resp.hdr.return_code != htobe32(TPM_SUCCESS)) {
 
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup;
     }
-    status = NO_ERROR;
+    status = MX_OK;
 cleanup:
     mtx_unlock(&tpm_lock);
     return status;
@@ -121,7 +121,7 @@ static mx_status_t tpm_device_ioctl(void* ctx, uint32_t op,
     switch (op) {
         case IOCTL_TPM_SAVE_STATE: return tpm_save_state();
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 // implement device protocol:
@@ -139,7 +139,7 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
             get_root_resource(),
             TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
             MX_CACHE_POLICY_UNCACHED, &tmp);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     tpm_base = (void*)(tmp);
@@ -153,7 +153,7 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     mx_device_t* dev;
     status =  device_add(parent, &args, &dev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -162,18 +162,18 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
     // is 30 ms past.  If we're on systems where we need to do init,
     // we need to wait up to 30ms for the TPM_ACCESS register to be valid.
     status = tpm_request_use(LOCALITY0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup_device;
     }
 
     status = tpm_wait_for_locality(LOCALITY0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup_device;
     }
 
     // Configure interupts
     status = tpm_set_irq(LOCALITY0, 10);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup_device;
     }
 
@@ -201,7 +201,7 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
         memset(buf, 0, sizeof(buf));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 
 cleanup_device:
     if (irq_handle > 0) {
@@ -210,7 +210,7 @@ cleanup_device:
     device_remove(dev);
     return status;
 #else
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif
 }
 

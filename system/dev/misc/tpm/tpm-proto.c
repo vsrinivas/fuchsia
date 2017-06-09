@@ -60,7 +60,7 @@
 
 mx_status_t tpm_set_irq(enum locality loc, uint8_t vector) {
     if (vector < 1 || vector > 15) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
     *TPM_INT_VECTOR(loc) = vector;
     // Enable TPM interrupts (top-level mask bit)
@@ -69,74 +69,74 @@ mx_status_t tpm_set_irq(enum locality loc, uint8_t vector) {
     // This is not doable yet, since our interrupt syscalls do not allow
     // configuring signaling modes yet.
     *TPM_INT_ENABLE(loc) |= TPM_INT_ENABLE_RISING_EDGE;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t tpm_request_use(enum locality loc) {
     uint8_t val;
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     if (val & TPM_ACCESS_REQUEST_USE) {
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
 
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
         // We're already the active locality
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     mx_status_t status = tpm_enable_irq_type(loc, IRQ_LOCALITY_CHANGE);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     *TPM_ACCESS(loc) = TPM_ACCESS_REQUEST_USE;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t tpm_wait_for_locality(enum locality loc) {
     uint8_t val;
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
-        return NO_ERROR;
+        return MX_OK;
     }
     if (!(val & TPM_ACCESS_REQUEST_USE)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     // We assume we're the only one using the TPM, so we need to wait at most
     // TIMEOUT_A
     mx_nanosleep(mx_deadline_after(TIMEOUT_A));
 
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (val & TPM_ACCESS_ACTIVE_LOCALITY) {
-        return NO_ERROR;
+        return MX_OK;
     }
     if (val & TPM_ACCESS_REQUEST_USE) {
-        return ERR_TIMED_OUT;
+        return MX_ERR_TIMED_OUT;
     }
-    return ERR_BAD_STATE;
+    return MX_ERR_BAD_STATE;
 }
 
 mx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type) {
     if (!(*TPM_INTF_CAP(loc) & type)) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     *TPM_INT_ENABLE(loc) |= (uint32_t)type;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type) {
     if (!(*TPM_INTF_CAP(loc) & type)) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     *TPM_INT_ENABLE(loc) &= ~(uint32_t)type;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t get_status_field(enum locality loc, uint32_t *val) {
@@ -148,11 +148,11 @@ static mx_status_t get_status_field(enum locality loc, uint32_t *val) {
         uint32_t status = *TPM_STS(loc);
         if (status & TPM_STS_VALID) {
             *val = status;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_TIMED_OUT;
+    return MX_ERR_TIMED_OUT;
 }
 
 static mx_status_t get_burst_count(enum locality loc, uint16_t *val) {
@@ -165,33 +165,33 @@ static mx_status_t get_burst_count(enum locality loc, uint16_t *val) {
         uint16_t burst = TPM_STS_EXTRACT_BURST_COUNT(status);
         if (burst > 0) {
             *val = burst;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_TIMED_OUT;
+    return MX_ERR_TIMED_OUT;
 }
 
 // Returns the true/false value of the the STS.EXPECT bit, or < 0 on error
 static mx_status_t get_status_expect(enum locality loc, bool* expect) {
     uint32_t status_field;
     mx_status_t status = get_status_field(loc, &status_field);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     *expect = !!(status_field & TPM_STS_EXPECT);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Returns the true/false value of the the STS.DATA_AVAIL bit, or < 0 on error
 static mx_status_t get_status_data_avail(enum locality loc, bool* data_avail) {
     uint32_t status_field;
     mx_status_t status = get_status_field(loc, &status_field);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     *data_avail = !!(status_field & TPM_STS_DATA_AVAIL);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t wait_for_data_avail(enum locality loc) {
@@ -203,7 +203,7 @@ static mx_status_t wait_for_data_avail(enum locality loc) {
             return st;
         }
         if (data_avail) {
-            return NO_ERROR;
+            return MX_OK;
         }
 
         st = mx_interrupt_wait(irq_handle);
@@ -219,7 +219,7 @@ static mx_status_t wait_for_data_avail(enum locality loc) {
             // If locality changed, whatever operation we're in the middle of
             // is no longer valid..
             mx_interrupt_complete(irq_handle);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         mx_interrupt_complete(irq_handle);
     }
@@ -233,10 +233,10 @@ static void abort_command(enum locality loc) {
 static mx_status_t get_active_locality(enum locality loc, bool* active) {
     uint8_t val;
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     *active = !!(val & TPM_ACCESS_ACTIVE_LOCALITY);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t check_expected_state(
@@ -245,9 +245,9 @@ static mx_status_t check_expected_state(
         return status;
     }
     if (actual != expected) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
@@ -259,7 +259,7 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     }
 
     if (!(*TPM_STS(loc) & TPM_STS_CMD_RDY)) {
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
 
     // This procedure is described in section 5.5.2.2.1 of the TCG PC Client
@@ -272,7 +272,7 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     while (bytes_sent < len) {
         uint16_t burst_count;
         st = get_burst_count(loc, &burst_count);
-        if (st != NO_ERROR) {
+        if (st != MX_OK) {
             abort_command(loc);
             return st;
         }
@@ -310,7 +310,7 @@ mx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
 
     // Run the command
     *TPM_STS(loc) = TPM_STS_TPM_GO;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
@@ -327,7 +327,7 @@ ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
 
     // Wait for data to be available
     st = wait_for_data_avail(loc);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         abort_command(loc);
         return st;
     }
@@ -337,7 +337,7 @@ ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
     while (more_data) {
         uint16_t burst_count;
         st = get_burst_count(loc, &burst_count);
-        if (st != NO_ERROR) {
+        if (st != MX_OK) {
             abort_command(loc);
             return st;
         }

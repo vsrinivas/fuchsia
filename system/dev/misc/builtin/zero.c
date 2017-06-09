@@ -14,12 +14,12 @@
 static mx_status_t zero_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
     memset(buf, 0, count);
     *actual = count;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t zero_write(void* ctx, const void* buf, size_t count, mx_off_t off,
                               size_t* actual) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t zero_device_proto = {
