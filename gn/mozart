@@ -121,6 +121,11 @@
       {
           "file": "apps/mozart/src/root_presenter/resources/cursor32.png",
           "bootfs_path": "data/root_presenter/cursor32.png"
+      },
+      {
+          "file": "apps/mozart/src/compositor/compositor.config",
+          "bootfs_path": "data/compositor/compositor.config"
       }
+
     ]
 }
