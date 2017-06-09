@@ -24,7 +24,7 @@ Services& Services::operator=(Services&& other) {
 
 mx::channel Services::NewRequest() {
   mx::channel request;
-  FTL_CHECK(mx::channel::create(0, &request, &directory_) == NO_ERROR);
+  FTL_CHECK(mx::channel::create(0, &request, &directory_) == MX_OK);
   return request;
 }
 

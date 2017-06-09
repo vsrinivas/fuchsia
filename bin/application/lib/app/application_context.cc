@@ -17,11 +17,11 @@ constexpr char kServiceRootPath[] = "/svc";
 
 mx::channel GetServiceRoot() {
   mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) != NO_ERROR)
+  if (mx::channel::create(0, &h1, &h2) != MX_OK)
     return mx::channel();
 
   // TODO(abarth): Use kServiceRootPath once that actually works.
-  if (mxio_service_connect("/svc/.", h1.release()) != NO_ERROR)
+  if (mxio_service_connect("/svc/.", h1.release()) != MX_OK)
     return mx::channel();
 
   return h2;

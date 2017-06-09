@@ -91,7 +91,7 @@ void LeaveDirectory(fs::Dispatcher* dispatcher, ftl::StringView name,
 FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()) {
   uint64_t num_bytes = 0;
   mx_status_t status = vmo.get_size(&num_bytes);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return;
   ftl::UniqueFD fd(mxio_vmo_fd(vmo.release(), 0, num_bytes));
   if (!fd.is_valid())

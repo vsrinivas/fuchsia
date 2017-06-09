@@ -65,7 +65,7 @@ mx_handle_t GetMxioRoot() {
         MX_HANDLE_INVALID, MX_HANDLE_INVALID, MX_HANDLE_INVALID};
     uint32_t types[MXIO_MAX_HANDLES] = {0, 0, 0};
     mx_status_t status = mxio_clone_root(handles, types);
-    if (status < NO_ERROR)
+    if (status < MX_OK)
       return MX_HANDLE_INVALID;
     FTL_CHECK(status == 1);
     FTL_CHECK(types[0] == PA_MXIO_ROOT);
@@ -143,7 +143,7 @@ mx::process Launch(const mx::job& job,
   mx_handle_t proc;
   const char* errmsg;
   auto status = launchpad_go(lp, &proc, &errmsg);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
                    << status << " (" << mx_status_get_string(status)
                    << "): " << errmsg;
@@ -182,7 +182,7 @@ LaunchType Classify(const mx::vmo& data, std::string* runner) {
   std::string hint(kMaxShebangLength, '\0');
   size_t count;
   mx_status_t status = data.read(&hint[0], 0, hint.length(), &count);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return LaunchType::kProcess;
   if (memcmp(hint.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
     return LaunchType::kArchive;
@@ -211,8 +211,8 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
   // derive from the application manager's job.
   mx_handle_t parent_job =
       parent_ != nullptr ? parent_->job_.get() : mx_job_default();
-  FTL_CHECK(mx::job::create(parent_job, 0u, &job_) == NO_ERROR);
-  FTL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == NO_ERROR);
+  FTL_CHECK(mx::job::create(parent_job, 0u, &job_) == MX_OK);
+  FTL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == MX_OK);
 
   // Get the ApplicationLoader service up front.
   ServiceProviderPtr service_provider;
