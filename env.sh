@@ -753,7 +753,7 @@ function fcmd() {
   local host="$(netaddr --fuchsia)"
   fssh -q "${host}" $*
   if [ $? -ne 0 ]; then
-      echo "fssh exited with a non-zero status. Perhaps ssh isn't running on the target?"
+    echo "fssh exited with a non-zero status."
   fi
 }
 
