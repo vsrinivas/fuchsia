@@ -196,11 +196,9 @@ private:
 
     RefPtr(T* ptr, AdoptTag)
         : ptr_(ptr) {
-#if MX_DEBUG_ASSERT_IMPLEMENTED
         if (ptr_) {
             ptr_->Adopt();
         }
-#endif
     }
 
     RefPtr(T* ptr, NoAdoptTag)

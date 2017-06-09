@@ -338,6 +338,7 @@ struct SlabOriginSetter {
         ptr->slab_origin_ = origin;
     }
 };
+
 // Slab allocated objects from STATIC and MANUAL_DELETE slab allocators do not
 // have (or need) a slab_origin.  Their "origin setter" is a no-op.
 template <typename SATraits>
@@ -424,7 +425,7 @@ public:
 
         // Make sure that everything which was ever allocated had been returned
         // to the free list before we were destroyed.
-        MX_DEBUG_ASSERT_COND(free_list_size_ == allocated_count);
+        MX_DEBUG_ASSERT_COND(this->free_list_.size_slow() == allocated_count);
 
         // null out the free list so that it does not assert that we left
         // unmanaged pointers on it as we destruct.
@@ -437,7 +438,6 @@ protected:
     void* AllocateLocked() {
         // If we can alloc from the free list, do so.
         if (!free_list_.is_empty()) {
-            dec_free_list_size();
             return free_list_.pop_front();
         }
 
@@ -468,7 +468,6 @@ protected:
 
     void ReturnToFreeListLocked(void* ptr) {
         FreeListEntry* free_obj = new (ptr) FreeListEntry;
-        inc_free_list_size();
         free_list_.push_front(free_obj);
     }
 
@@ -485,15 +484,6 @@ private:
     SinglyLinkedList<FreeListEntry*> free_list_;
     SinglyLinkedList<Slab*>          slab_list_;
     size_t                           slab_count_ = 0;
-
-#if MX_DEBUG_ASSERT_IMPLEMENTED
-    inline void inc_free_list_size() { ++free_list_size_; }
-    inline void dec_free_list_size() { --free_list_size_; }
-    size_t free_list_size_ = 0;
-#else
-    inline void inc_free_list_size() { }
-    inline void dec_free_list_size() { }
-#endif
 };
 
 template <typename SATraits>

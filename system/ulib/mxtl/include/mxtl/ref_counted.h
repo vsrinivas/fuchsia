@@ -29,17 +29,16 @@ namespace mxtl {
 // not possible via internal::RefCountedBase since the ctor and dtor are
 // protected.
 //
-template <typename T>
-class RefCounted : public internal::RefCountedBase {
+template <typename T,
+          bool EnableAdoptionValidator = MX_DEBUG_ASSERT_IMPLEMENTED>
+class RefCounted : public internal::RefCountedBase<EnableAdoptionValidator> {
 public:
     RefCounted() {}
     ~RefCounted() {}
 
-    using internal::RefCountedBase::AddRef;
-    using internal::RefCountedBase::Release;
-#if MX_DEBUG_ASSERT_IMPLEMENTED
-    using internal::RefCountedBase::Adopt;
-#endif
+    using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
+    using internal::RefCountedBase<EnableAdoptionValidator>::Release;
+    using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
 
     // RefCounted<> instances may not be copied, assigned or moved.
     DISALLOW_COPY_ASSIGN_AND_MOVE(RefCounted);
