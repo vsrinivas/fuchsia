@@ -312,6 +312,9 @@ ALLUSER_LIBS :=
 # host apps to build
 ALLHOST_APPS :=
 
+# host libs to build
+ALLHOST_LIBS :=
+
 # sysroot (exported libraries and headers)
 SYSROOT_DEPS :=
 
@@ -469,9 +472,9 @@ EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 
 # and all host tools
-all:: $(ALLHOST_APPS)
+all:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
-tools:: $(ALLHOST_APPS)
+tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
 # add some automatic configuration defines
 KERNEL_DEFINES += \

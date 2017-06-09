@@ -26,6 +26,8 @@
 # MODULE_LIBS : shared libraries for a userapp or userlib to depend on
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
 # MODULE_SO_NAME : linkage name for the shared library
+# MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
+# MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
 
 # the minimum module rules.mk file is as follows:
 #
@@ -53,7 +55,8 @@ endif
 DUPMODULES += $(MODULE)
 
 # all library deps go on the deps list
-_MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
+_MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
+                $(MODULE_HOST_LIBS)
 
 # Catch the depends on nonexistant module error case
 # here where we can tell you what module has the bad deps
@@ -80,9 +83,10 @@ endif
 
 # Introduce local, libc and dependency include paths
 ifneq ($(MODULE_TYPE),)
-ifeq ($(MODULE_TYPE),hostapp)
-# host app
+ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hostlib))
+# host module
 MODULE_SRCDEPS += $(HOST_CONFIG_HEADER)
+MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
 else
 # user module
 MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
@@ -145,7 +149,7 @@ MODULE_SRCDEPS += $(MODULE_CONFIG)
 ifeq ($(MODULE_TYPE),)
 include make/compile.mk
 else
-ifeq ($(MODULE_TYPE),hostapp)
+ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hostlib))
 include make/hcompile.mk
 else
 include make/ucompile.mk
@@ -161,12 +165,12 @@ ALLSRCS += $(MODULE_SRCS)
 # track all the objects built
 ALLOBJS += $(MODULE_OBJS)
 
-ifneq ($(MODULE_TYPE),hostapp)
+ifeq (,$(filter $(MODULE_TYPE),hostapp hostlib))
 ALL_TARGET_OBJS += $(MODULE_OBJS)
 endif
 
 # generate an input linker script for all kernel and user modules
-ifneq ($(MODULE_TYPE),hostapp)
+ifeq (,$(filter $(MODULE_TYPE),hostapp hostlib))
 MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
 $(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
@@ -220,3 +224,4 @@ MODULE_SO_NAME :=
 MODULE_INSTALL_PATH :=
 MODULE_SO_INSTALL_NAME :=
 MODULE_HOST_LIBS :=
+MODULE_HOST_SYSLIBS :=

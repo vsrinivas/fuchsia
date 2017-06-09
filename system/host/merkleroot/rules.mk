@@ -26,7 +26,7 @@ MODULE_SRCS += \
 
 ifneq (,$(wildcard $(OPENSSL_DIR)/sha.h))
 MODULE_DEFINES += USE_LIBCRYPTO=1
-MODULE_HOST_LIBS := -lcrypto
+MODULE_HOST_SYSLIBS := -lcrypto
 else
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/cryptolib/include
 MODULE_SRCS += third_party/ulib/cryptolib/cryptolib.c

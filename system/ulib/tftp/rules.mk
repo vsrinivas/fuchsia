@@ -42,3 +42,13 @@ MODULE_NAME := tftp-example
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include -std=c11
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_NAME := tftp
+
+MODULE_TYPE := hostlib
+
+MODULE_SRCS := $(LOCAL_DIR)/tftp.c
+
+include make/module.mk
