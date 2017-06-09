@@ -65,7 +65,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     if (slot->sc)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     slot->hub_address = hub_address;
     slot->port = port;
     slot->rh_port = (hub_address == 0 ? port : xhci->slots[hub_address].rh_port);
@@ -73,7 +73,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
 
     // allocate DMA memory for device context
     mx_status_t status = io_buffer_init(&slot->buffer, xhci->context_size * XHCI_NUM_EPS, IO_BUFFER_RW);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("failed to allocate io_buffer for slot\n");
         return status;
     }
@@ -84,7 +84,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     if (status < 0) return status;
     ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
     if (!ep->transfer_state) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
@@ -152,10 +152,10 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
 
     if (cc == TRB_CC_SUCCESS) {
         ep->enabled = true;
-        return NO_ERROR;
+        return MX_OK;
     } else {
         printf("xhci_address_device failed cc: %d\n", cc);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 }
 
@@ -217,7 +217,7 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
 static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
                                                 usb_speed_t speed) {
     xprintf("xhci_handle_enumerate_device\n");
-    mx_status_t result = NO_ERROR;
+    mx_status_t result = MX_OK;
     uint32_t slot_id = 0;
 
     xhci_sync_command_t command;
@@ -228,13 +228,13 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
         slot_id = xhci_sync_command_slot_id(&command);
     } else {
         printf("unable to get a slot\n");
-        return ERR_NO_RESOURCES;
+        return MX_ERR_NO_RESOURCES;
     }
     xhci_slot_t* slot = &xhci->slots[slot_id];
     memset(slot, 0, sizeof(*slot));
 
     result = xhci_address_device(xhci, slot_id, hub_address, port, speed);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         goto disable_slot_exit;
     }
 
@@ -287,12 +287,12 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     mtx_unlock(&xhci->input_context_lock);
     if (cc != TRB_CC_SUCCESS) {
         printf("TRB_CMD_EVAL_CONTEXT failed\n");
-        result = ERR_INTERNAL;
+        result = MX_ERR_INTERNAL;
         goto disable_slot_exit;
     }
 
     xhci_add_device(xhci, slot_id, hub_address, speed);
-    return NO_ERROR;
+    return MX_OK;
 
 disable_slot_exit:
     xhci_disable_slot(xhci, slot_id);
@@ -345,10 +345,10 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     iotxn_t* txn;
     iotxn_t* temp;
     list_for_every_entry_safe(&pending_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, ERR_PEER_CLOSED, 0);
+        iotxn_complete(txn, MX_ERR_PEER_CLOSED, 0);
     }
     list_for_every_entry_safe(&queued_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, ERR_PEER_CLOSED, 0);
+        iotxn_complete(txn, MX_ERR_PEER_CLOSED, 0);
     }
     xhci_transfer_ring_free(transfer_ring);
 
@@ -377,7 +377,7 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
     }
     if (!slot) {
         printf("slot not found in xhci_handle_disconnect_device\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     uint32_t drop_flags = 0;
@@ -407,7 +407,7 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
     xhci_disable_slot(xhci, slot_id);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int xhci_device_thread(void* arg) {
@@ -455,7 +455,7 @@ static mx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_ad
     xhci_device_command_t* device_command = calloc(1, sizeof(xhci_device_command_t));
     if (!device_command) {
         printf("out of memory\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     device_command->command = command;
     device_command->hub_address = hub_address;
@@ -467,7 +467,7 @@ static mx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_ad
     completion_signal(&xhci->command_queue_completion);
     mtx_unlock(&xhci->command_queue_mutex);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
@@ -486,7 +486,7 @@ mx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_
             xprintf("found on pending list\n");
             list_delete(&command->node);
             mtx_unlock(&xhci->command_queue_mutex);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     mtx_unlock(&xhci->command_queue_mutex);
@@ -502,7 +502,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
-        return NO_ERROR;
+        return MX_OK;
     }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
@@ -592,12 +592,12 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     if (enable) {
         ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
         if (!ep->transfer_state) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         ep->enabled = true;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
@@ -605,9 +605,9 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     xprintf("xhci_configure_hub slot_id: %d speed: %d\n", slot_id, speed);
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
-        return NO_ERROR;
+        return MX_OK;
     }
-    if (slot_id > xhci->max_slots) return ERR_INVALID_ARGS;
+    if (slot_id > xhci->max_slots) return MX_ERR_INVALID_ARGS;
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     uint32_t num_ports = descriptor->bNbrPorts;
@@ -660,5 +660,5 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }

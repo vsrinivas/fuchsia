@@ -114,7 +114,7 @@ static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t*
 static mx_status_t xhci_claim_ownership(xhci_t* xhci) {
     xhci_usb_legacy_support_cap_t* cap = xhci->usb_legacy_support_cap;
     if (cap == NULL) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // The XHCI spec defines this handoff protocol.  We need to wait at most one
@@ -134,9 +134,9 @@ static mx_status_t xhci_claim_ownership(xhci_t* xhci) {
 
     if (cap->bios_owned_sem & 1) {
         cap->os_owned_sem &= ~1;
-        return ERR_TIMED_OUT;
+        return MX_ERR_TIMED_OUT;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_t* out_virt,
@@ -149,7 +149,7 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
     } else {
         status = mx_vmo_create(size, 0, &handle);
     }
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("xhci_vmo_init: vmo_create failed: %d\n", status);
         return status;
     }
@@ -157,7 +157,7 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
     if (!contiguous) {
         // needs to be done before MX_VMO_OP_LOOKUP for non-contiguous VMOs
         status = mx_vmo_op_range(handle, MX_VMO_OP_COMMIT, 0, size, NULL, 0);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("xhci_vmo_init: mx_vmo_op_range(MX_VMO_OP_COMMIT) failed %d\n", status);
             mx_handle_close(handle);
             return status;
@@ -166,14 +166,14 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
 
     status = mx_vmar_map(mx_vmar_root_self(), 0, handle, 0, size,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, out_virt);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("xhci_vmo_init: mx_vmar_map failed: %d\n", status);
         mx_handle_close(handle);
         return status;
     }
 
     *out_handle = handle;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void xhci_vmo_release(mx_handle_t handle, mx_vaddr_t virt) {
@@ -184,7 +184,7 @@ static void xhci_vmo_release(mx_handle_t handle, mx_vaddr_t virt) {
 }
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
-    mx_status_t result = NO_ERROR;
+    mx_status_t result = MX_OK;
     mx_paddr_t* phys_addrs = NULL;
 
     list_initialize(&xhci->command_queue);
@@ -223,18 +223,18 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // add 1 to allow 1-based indexing of slots
     xhci->slots = (xhci_slot_t*)calloc(xhci->max_slots + 1, sizeof(xhci_slot_t));
     if (!xhci->slots) {
-        result = ERR_NO_MEMORY;
+        result = MX_ERR_NO_MEMORY;
         goto fail;
     }
 
     xhci->rh_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
     if (!xhci->rh_map) {
-        result = ERR_NO_MEMORY;
+        result = MX_ERR_NO_MEMORY;
         goto fail;
     }
     xhci->rh_port_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
     if (!xhci->rh_port_map) {
-        result = ERR_NO_MEMORY;
+        result = MX_ERR_NO_MEMORY;
         goto fail;
     }
     xhci_read_extended_caps(xhci, mmio, hccparams1);
@@ -242,19 +242,19 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // We need to claim before we write to any other registers on the
     // controller, but after we've read the extended capabilities.
     result = xhci_claim_ownership(xhci);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("xhci_claim_ownership failed\n");
         goto fail;
     }
 
     // Allocate DMA memory for various things
     result = xhci_vmo_init(PAGE_SIZE, &xhci->dcbaa_erst_handle, &xhci->dcbaa_erst_virt, false);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("xhci_vmo_init failed for xhci->dcbaa_erst_handle\n");
         goto fail;
     }
     result = xhci_vmo_init(PAGE_SIZE, &xhci->input_context_handle, &xhci->input_context_virt, false);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("xhci_vmo_init failed for xhci->input_context_handle\n");
         goto fail;
     }
@@ -263,14 +263,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         size_t scratch_pad_pages_size = scratch_pad_bufs * xhci->page_size;
         result = xhci_vmo_init(scratch_pad_pages_size, &xhci->scratch_pad_pages_handle,
                                &xhci->scratch_pad_pages_virt, xhci->page_size > PAGE_SIZE);
-        if (result != NO_ERROR) {
+        if (result != MX_OK) {
             printf("xhci_vmo_init failed for xhci->scratch_pad_pages_handle\n");
             goto fail;
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
         result = xhci_vmo_init(scratch_pad_index_size, &xhci->scratch_pad_index_handle,
                                &xhci->scratch_pad_index_virt, scratch_pad_index_size > PAGE_SIZE);
-        if (result != NO_ERROR) {
+        if (result != MX_OK) {
             printf("xhci_vmo_init failed for xhci->scratch_pad_index_handle\n");
             goto fail;
         }
@@ -280,14 +280,14 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     xhci->dcbaa = (uint64_t *)xhci->dcbaa_erst_virt;
     result = mx_vmo_op_range(xhci->dcbaa_erst_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                              &xhci->dcbaa_phys, sizeof(xhci->dcbaa_phys));
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("mx_vmo_op_range failed for xhci->dcbaa_erst_handle\n");
         goto fail;
     }
     xhci->input_context = (uint8_t *)xhci->input_context_virt;
     result = mx_vmo_op_range(xhci->input_context_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                              &xhci->input_context_phys, sizeof(xhci->input_context_phys));
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("mx_vmo_op_range failed for xhci->input_context_handle\n");
         goto fail;
     }
@@ -304,7 +304,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
             mx_paddr_t scratch_pad_phys;
             result = mx_vmo_op_range(xhci->scratch_pad_pages_handle, MX_VMO_OP_LOOKUP, offset,
                                      PAGE_SIZE, &scratch_pad_phys, sizeof(scratch_pad_phys));
-            if (result != NO_ERROR) {
+            if (result != MX_OK) {
                 printf("mx_vmo_op_range failed for xhci->scratch_pad_pages_handle\n");
                 goto fail;
             }
@@ -315,7 +315,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         mx_paddr_t scratch_pad_index_phys;
         result = mx_vmo_op_range(xhci->scratch_pad_index_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE,
                                   &scratch_pad_index_phys, sizeof(scratch_pad_index_phys));
-        if (result != NO_ERROR) {
+        if (result != MX_OK) {
             printf("mx_vmo_op_range failed for xhci->scratch_pad_index_handle\n");
             goto fail;
         }
@@ -326,13 +326,13 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     }
 
     result = xhci_transfer_ring_init(&xhci->command_ring, COMMAND_RING_SIZE);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("xhci_command_ring_init failed\n");
         goto fail;
     }
 
     result = xhci_event_ring_init(xhci, 0, EVENT_RING_SIZE);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("xhci_event_ring_init failed\n");
         goto fail;
     }
@@ -340,12 +340,12 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     // initialize virtual root hub devices
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         result = xhci_root_hub_init(xhci, i);
-        if (result != NO_ERROR) goto fail;
+        if (result != MX_OK) goto fail;
     }
 
     free(phys_addrs);
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
@@ -366,13 +366,13 @@ fail:
 
 mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count) {
     mx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, ring_count);
-    if (status != NO_ERROR) return status;
+    if (status != MX_OK) return status;
 
     mtx_init(&ep->lock, mtx_plain);
     list_initialize(&ep->queued_txns);
     list_initialize(&ep->pending_txns);
     ep->current_txn = NULL;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void xhci_endpoint_free(xhci_endpoint_t* ep) {

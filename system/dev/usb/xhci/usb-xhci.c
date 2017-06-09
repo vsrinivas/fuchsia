@@ -30,7 +30,7 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 
     if (!xhci->bus_mxdev || !xhci->bus_protocol) {
         printf("no bus device in xhci_add_device\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     return xhci->bus_protocol->add_device(xhci->bus_mxdev, slot_id, hub_address, speed);
@@ -92,7 +92,7 @@ mx_status_t xhci_hub_device_added(mx_device_t* device, uint32_t hub_address, int
 mx_status_t xhci_hub_device_removed(mx_device_t* device, uint32_t hub_address, int port) {
     xhci_t* xhci = device->ctx;
     xhci_device_disconnected(xhci, hub_address, port);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t xhci_reset_ep(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
@@ -132,12 +132,12 @@ static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {
     mx_status_t status;
 
     if (txn->length > xhci_get_max_transfer_size(xhci->mxdev, data->device_id, data->ep_address)) {
-        status = ERR_INVALID_ARGS;
+        status = MX_ERR_INVALID_ARGS;
     } else {
         status = xhci_queue_transfer(xhci, txn);
     }
 
-    if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
+    if (status != MX_OK && status != MX_ERR_BUFFER_TOO_SMALL) {
         iotxn_complete(txn, status, 0);
     }
 }
@@ -182,7 +182,7 @@ static int xhci_irq_thread(void* arg) {
     };
 
     mx_status_t status = device_add(xhci->parent, &args, &xhci->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         free(xhci);
         return status;
     }
@@ -191,8 +191,8 @@ static int xhci_irq_thread(void* arg) {
         mx_status_t wait_res;
 
         wait_res = mx_interrupt_wait(xhci->irq_handle);
-        if (wait_res != NO_ERROR) {
-            if (wait_res != ERR_CANCELED) {
+        if (wait_res != MX_OK) {
+            if (wait_res != MX_ERR_CANCELED) {
                 printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
             }
             mx_interrupt_complete(xhci->irq_handle);
@@ -215,13 +215,13 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     pci_protocol_t* pci_proto;
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci_proto)) {
-        status = ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
         goto error_return;
     }
 
     xhci = calloc(1, sizeof(xhci_t));
     if (!xhci) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto error_return;
     }
 
@@ -239,9 +239,9 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
      */
     status = pci_proto->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                      &mmio, &mmio_len, &mmio_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("usb_xhci_bind could not find bar\n");
-        status = ERR_INTERNAL;
+        status = MX_ERR_INTERNAL;
         goto error_return;
     }
 
@@ -269,7 +269,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     // register for interrupts
     status = pci_proto->map_interrupt(dev, 0, &irq_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("usb_xhci_bind map_interrupt failed %d\n", status);
         goto error_return;
     }
@@ -283,7 +283,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     xhci->parent = dev;
 
     status = xhci_init(xhci, mmio);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto error_return;
     }
 
@@ -291,7 +291,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     thrd_create_with_name(&thread, xhci_irq_thread, xhci, "xhci_irq_thread");
     thrd_detach(thread);
 
-    return NO_ERROR;
+    return MX_OK;
 
 error_return:
     if (xhci) {

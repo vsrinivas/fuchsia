@@ -85,7 +85,7 @@ static void usb_interface_iotxn_queue(void* ctx, iotxn_t* txn) {
     // clone the txn and pass it down to the HCI driver
     iotxn_t* clone = NULL;
     mx_status_t status = iotxn_clone(txn, &clone);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         iotxn_complete(txn, status, 0);
         return;
     }
@@ -107,25 +107,25 @@ static mx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_bu
     switch (op) {
     case IOCTL_USB_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = USB_DEVICE_TYPE_INTERFACE;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = intf->descriptor_length;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DESCRIPTORS: {
         void* descriptors = intf->descriptor;
         size_t desc_length = intf->descriptor_length;
-        if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < desc_length) return MX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptors, desc_length);
         *out_actual = desc_length;
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
         // other ioctls are handled by top level device
@@ -157,7 +157,7 @@ static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
                                                  bool enable) {
     mx_status_t status = intf->hci_protocol->enable_endpoint(intf->hci_mxdev, intf->device_id, ep,
                                                              ss_comp_desc, enable);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("usb_interface_enable_endpoint failed\n");
     }
     return status;
@@ -167,7 +167,7 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
                                                      uint8_t alt_setting) {
     usb_endpoint_descriptor_t* new_endpoints[USB_MAX_EPS];
     memset(new_endpoints, 0, sizeof(new_endpoints));
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     // iterate through our descriptors to find which endpoints should be active
     usb_descriptor_header_t* header = intf->descriptor;
@@ -193,7 +193,7 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
         if (old_ep != new_ep) {
             if (old_ep) {
                 mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, NULL, false);
-                if (ret != NO_ERROR) status = ret;
+                if (ret != MX_OK) status = ret;
             }
             if (new_ep) {
                 usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
@@ -204,7 +204,7 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
                     ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)next;
                 }
                 mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, ss_comp_desc, true);
-                if (ret != NO_ERROR) status = ret;
+                if (ret != MX_OK) status = ret;
             }
             intf->active_endpoints[i] = new_ep;
         }
@@ -233,7 +233,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
                                      size_t interface_desc_length) {
     usb_interface_t* intf = calloc(1, sizeof(usb_interface_t));
     if (!intf)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mtx_init(&intf->callback_lock, mtx_plain);
     completion_reset(&intf->callback_thread_completion);
@@ -267,7 +267,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, usb_protocol };
 
     mx_status_t status = usb_interface_configure_endpoints(intf, interface_desc->bInterfaceNumber, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         free(intf);
         return status;
     }
@@ -294,7 +294,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     };
 
     status = device_add(device->mxdev, &args, &intf->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
         free(interface_desc);
@@ -309,7 +309,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
                                                  size_t assoc_desc_length) {
     usb_interface_t* intf = calloc(1, sizeof(usb_interface_t));
     if (!intf)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     intf->hci_mxdev = device->hci_mxdev;
     intf->hci_protocol = device->hci_protocol;
@@ -344,7 +344,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
             usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
             if (intf_desc->bAlternateSetting == 0) {
                 mx_status_t status = usb_interface_configure_endpoints(intf, intf_desc->bInterfaceNumber, 0);
-                if (status != NO_ERROR) return status;
+                if (status != MX_OK) return status;
             }
         }
         header = NEXT_DESCRIPTOR(header);
@@ -372,7 +372,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     };
 
     mx_status_t status = device_add(device->mxdev, &args, &intf->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
         free(assoc_desc);
@@ -413,7 +413,7 @@ bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_i
 mx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interface_id,
                                           uint8_t alt_setting) {
     mx_status_t status = usb_interface_configure_endpoints(intf, interface_id, alt_setting);
-    if (status != NO_ERROR) return status;
+    if (status != MX_OK) return status;
 
     return usb_device_control(intf->hci_mxdev, intf->device_id,
                               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,

@@ -22,7 +22,7 @@ static mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interf
             return usb_interface_set_alt_setting(intf, interface_id, alt_setting);
         }
     }
-    return ERR_INVALID_ARGS;
+    return MX_ERR_INVALID_ARGS;
 }
 
 static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int config) {
@@ -50,7 +50,7 @@ static mx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
             break;
         }
     }
-    if (!config_desc) return ERR_INVALID_ARGS;
+    if (!config_desc) return MX_ERR_INVALID_ARGS;
 
     // set configuration
     mx_status_t status = usb_device_control(dev->hci_mxdev, dev->device_id,
@@ -76,69 +76,69 @@ static mx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
     switch (op) {
     case IOCTL_USB_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = USB_DEVICE_TYPE_DEVICE;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DEVICE_SPEED: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = dev->speed;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DEVICE_DESC: {
         usb_device_descriptor_t* descriptor = &dev->device_desc;
-        if (out_len < sizeof(*descriptor)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*descriptor)) return MX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, sizeof(*descriptor));
         *out_actual = sizeof(*descriptor);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_CONFIG_DESC_SIZE: {
-        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        if (in_len != sizeof(int)) return MX_ERR_INVALID_ARGS;
         int config = *((int *)in_buf);
         int* reply = out_buf;
         usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
         if (!descriptor) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         *reply = le16toh(descriptor->wTotalLength);
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
         usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = le16toh(descriptor->wTotalLength);
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_CONFIG_DESC: {
-        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        if (in_len != sizeof(int)) return MX_ERR_INVALID_ARGS;
         int config = *((int *)in_buf);
         usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
         if (!descriptor) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         size_t desc_length = le16toh(descriptor->wTotalLength);
-        if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < desc_length) return MX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, desc_length);
         return desc_length;
         *out_actual = desc_length;
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DESCRIPTORS: {
         usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
         size_t desc_length = le16toh(descriptor->wTotalLength);
-        if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < desc_length) return MX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, desc_length);
         *out_actual = desc_length;
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_STRING_DESC: {
-        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        if (in_len != sizeof(int)) return MX_ERR_INVALID_ARGS;
         if (out_len == 0) return 0;
         int id = *((int *)in_buf);
         char string[MAX_USB_STRING_LEN];
@@ -155,50 +155,50 @@ static mx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             memcpy(out_buf, string, length);
         }
         *out_actual = length;
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_SET_INTERFACE: {
-        if (in_len != 2 * sizeof(int)) return ERR_INVALID_ARGS;
+        if (in_len != 2 * sizeof(int)) return MX_ERR_INVALID_ARGS;
         int* args = (int *)in_buf;
         return usb_device_set_interface(dev, args[0], args[1]);
     }
     case IOCTL_USB_GET_CURRENT_FRAME: {
         uint64_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = dev->hci_protocol->get_current_frame(dev->hci_mxdev);
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DEVICE_ID: {
         uint64_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = dev->device_id;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_DEVICE_HUB_ID: {
         uint64_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = dev->hub_id;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_GET_CONFIGURATION: {
         int* reply = out_buf;
-        if (out_len != sizeof(*reply)) return ERR_INVALID_ARGS;
+        if (out_len != sizeof(*reply)) return MX_ERR_INVALID_ARGS;
         usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
         *reply = descriptor->bConfigurationValue;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_USB_SET_CONFIGURATION: {
-        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        if (in_len != sizeof(int)) return MX_ERR_INVALID_ARGS;
         int config = *((int *)in_buf);
         printf("IOCTL_USB_SET_CONFIGURATION %d\n", config);
         return usb_device_set_configuration(dev, config);
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -231,7 +231,7 @@ static mx_protocol_device_t usb_device_proto = {
 static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
                                              usb_configuration_descriptor_t* config) {
     usb_device_descriptor_t* device_desc = &parent->device_desc;
-    mx_status_t result = NO_ERROR;
+    mx_status_t result = MX_OK;
 
     // Iterate through interfaces in first configuration and create devices for them
     usb_descriptor_header_t* header = NEXT_DESCRIPTOR(config);
@@ -262,11 +262,11 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
 
             size_t length = (void *)next - (void *)assoc_desc;
             usb_interface_assoc_descriptor_t* assoc_copy = malloc(length);
-            if (!assoc_copy) return ERR_NO_MEMORY;
+            if (!assoc_copy) return MX_ERR_NO_MEMORY;
             memcpy(assoc_copy, assoc_desc, length);
 
             mx_status_t status = usb_device_add_interface_association(parent, device_desc, assoc_copy, length);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 result = status;
             }
 
@@ -296,11 +296,11 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
 
             size_t length = (void *)next - (void *)intf_desc;
             usb_interface_descriptor_t* intf_copy = malloc(length);
-            if (!intf_copy) return ERR_NO_MEMORY;
+            if (!intf_copy) return MX_ERR_NO_MEMORY;
             memcpy(intf_copy, intf_desc, length);
 
             mx_status_t status = usb_device_add_interface(parent, device_desc, intf_copy, length);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 result = status;
             }
 
@@ -319,7 +319,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
 
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));
     if (!dev)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // read device descriptor
     usb_device_descriptor_t* device_desc = &dev->device_desc;
@@ -335,7 +335,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     usb_configuration_descriptor_t** configs = calloc(num_configurations,
                                                       sizeof(usb_configuration_descriptor_t*));
     if (!configs) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto error_exit;
     }
 
@@ -351,7 +351,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
         usb_configuration_descriptor_t* config_desc = malloc(config_desc_size);
         if (!config_desc) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto error_exit;
         }
         configs[config] = config_desc;
@@ -402,7 +402,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     };
 
     status = device_add(parent, &args, &dev->mxdev);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *out_device = dev;
     } else {
         goto error_exit;

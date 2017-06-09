@@ -50,7 +50,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 
     if (cc != TRB_CC_SUCCESS) {
         mtx_unlock(&ep->lock);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     // then move transfer ring's dequeue pointer passed the failed transaction
@@ -66,14 +66,14 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 
     mtx_unlock(&ep->lock);
 
-    return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
+    return (cc == TRB_CC_SUCCESS ? MX_OK : MX_ERR_INTERNAL);
 }
 
 // locked on ep->lock
 static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (!ep->enabled)
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
 
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_transfer_state_t* state = ep->transfer_state;
@@ -81,7 +81,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
 
     if (txn->length > 0) {
         mx_status_t status = iotxn_physmap(txn);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("%s: iotxn_physmap failed: %d\n", __FUNCTION__, status);
             return status;
         }
@@ -114,7 +114,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
 
 
     if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
-        return ERR_IO_REFUSED;
+        return MX_ERR_IO_REFUSED;
     }
 
     uint32_t interruptor_target = 0;
@@ -143,11 +143,11 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
         xhci_increment_ring(ring);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
-// returns NO_ERROR if txn has been successfully queued,
-// ERR_SHOULD_WAIT if we ran out of TRBs and need to try again later,
+// returns MX_OK if txn has been successfully queued,
+// MX_ERR_SHOULD_WAIT if we ran out of TRBs and need to try again later,
 // or other error for a hard failure.
 static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
@@ -164,22 +164,22 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     uint32_t interruptor_target = 0;
 
     if (isochronous) {
-        if (length == 0) return ERR_INVALID_ARGS;
+        if (length == 0) return MX_ERR_INVALID_ARGS;
     }
     if (frame != 0) {
         if (!isochronous) {
             printf("frame scheduling only supported for isochronous transfers\n");
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         uint64_t current_frame = xhci_get_current_frame(xhci);
         if (frame < current_frame) {
             printf("can't schedule transfer into the past\n");
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (frame - current_frame >= 895) {
             // See XHCI spec, section 4.11.2.5
             printf("can't schedule transfer more than 895ms into the future\n");
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
     }
 
@@ -213,7 +213,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
             // are always close to the beginning of a page, this shouldn't be necessary.
             if (transfer_size != txn->length) {
                 printf("isoch buffer spans page boundary in xhci_queue_transfer\n");
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
 
             if (frame == 0) {
@@ -238,14 +238,14 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     if (state->phys_iter.offset < txn->length) {
         // still more data to queue, but we are out of TRBs.
         // come back and finish later.
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
     }
 
     // if data length is zero, we queue event data after the status TRB
     if (state->needs_data_event && txn->length > 0) {
         if (free_trbs == 0) {
             // will need to do this later
-            return ERR_SHOULD_WAIT;
+            return MX_ERR_SHOULD_WAIT;
         }
 
         // Queue event data TRB
@@ -265,7 +265,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     if (state->needs_status) {
         if (free_trbs == 0) {
             // will need to do this later
-            return ERR_SHOULD_WAIT;
+            return MX_ERR_SHOULD_WAIT;
         }
 
         // Status Stage
@@ -289,7 +289,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     if (state->needs_data_event && txn->length == 0) {
         if (free_trbs == 0) {
             // will need to do this later
-            return ERR_SHOULD_WAIT;
+            return MX_ERR_SHOULD_WAIT;
         }
 
         // Queue event data TRB
@@ -311,7 +311,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
 
     XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
@@ -332,7 +332,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
             }
 
             mx_status_t status = xhci_start_transfer_locked(xhci, ep, txn);
-            if (status == NO_ERROR) {
+            if (status == MX_OK) {
                 list_add_tail(&ep->pending_txns, &txn->node);
                 ep->current_txn = txn;
             } else {
@@ -345,11 +345,11 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
         if (ep->current_txn) {
             iotxn_t* txn = ep->current_txn;
             mx_status_t status = xhci_continue_transfer_locked(xhci, ep, txn);
-            if (status == ERR_SHOULD_WAIT) {
+            if (status == MX_ERR_SHOULD_WAIT) {
                 // no available TRBs - need to wait for some complete
                 return;
             } else {
-                if (status != NO_ERROR) {
+                if (status != MX_OK) {
                     txn->status = status;
                     txn->actual = 0;
                     list_add_tail(completed_txns, &txn->node);
@@ -375,10 +375,10 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     }
 
     if (slot_id < 1 || slot_id >= xhci->max_slots) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (ep_index >= XHCI_NUM_EPS) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
@@ -387,7 +387,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     mtx_lock(&ep->lock);
     if (!ep->enabled) {
         mtx_unlock(&ep->lock);
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
     list_add_tail(&ep->queued_txns, &txn->node);
@@ -403,7 +403,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
         iotxn_complete(txn, txn->status, txn->actual);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void xhci_control_complete(iotxn_t* txn, void* cookie) {
@@ -421,7 +421,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
     // xhci_control_request is only used for reading first 8 bytes of the device descriptor,
     // so using IOTXN_ALLOC_POOL makes sense here.
     mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_POOL, length);
-    if (status != NO_ERROR) return status;
+    if (status != MX_OK) return status;
     txn->protocol = MX_PROTOCOL_USB;
 
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
@@ -450,7 +450,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
     completion_wait(&completion, MX_TIME_INFINITE);
 
     status = txn->status;
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         status = txn->actual;
 
         if (length > 0 && !out) {
@@ -513,7 +513,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             result = length;
             break;
         case TRB_CC_STALL_ERROR:
-            result = ERR_IO_REFUSED;
+            result = MX_ERR_IO_REFUSED;
             break;
         case TRB_CC_RING_UNDERRUN:
             // non-fatal error that happens when no transfers are available for isochronous endpoint
@@ -532,7 +532,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             return;
         default:
             xprintf("Unhandled transfer event condition code, closing peer connection: %d\n", cc);
-            result = ERR_PEER_CLOSED;
+            result = MX_ERR_PEER_CLOSED;
             break;
     }
 

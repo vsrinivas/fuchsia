@@ -28,12 +28,12 @@ static mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, u
                                       usb_speed_t speed) {
     usb_bus_t* bus = device->ctx;
 
-    if (device_id >= bus->max_device_count) return ERR_INVALID_ARGS;
+    if (device_id >= bus->max_device_count) return MX_ERR_INVALID_ARGS;
 
     usb_device_t* usb_device;
     mx_status_t result = usb_device_add(bus->hci_mxdev, bus->hci_protocol, bus->mxdev, device_id,
                                         hub_id, speed, &usb_device);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
         bus->devices[device_id] = usb_device;
     }
     return result;
@@ -107,13 +107,13 @@ static mx_protocol_device_t usb_bus_device_proto = {
 static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_hci_protocol_t* hci_protocol;
     if (device_op_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     usb_bus_t* bus = calloc(1, sizeof(usb_bus_t));
     if (!bus) {
         printf("Not enough memory for usb_bus_t.\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     bus->hci_mxdev = device;
@@ -125,7 +125,7 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
         printf("Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
                bus->max_device_count);
         free(bus);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     device_add_args_t args = {
@@ -139,7 +139,7 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
     };
 
     mx_status_t status = device_add(device, &args, &bus->mxdev);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         hci_protocol->set_bus_device(device, bus->mxdev);
     } else {
         free(bus->devices);

@@ -290,7 +290,7 @@ static void complete_request(
 
     // Invalidate caches over this region since the DMA engine may have moved
     // data below us.
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, txn->offset, length);
     }
 
@@ -321,7 +321,7 @@ static void dwc_complete_root_port_status_txn(dwc_usb_t* dwc) {
             iotxn_t* txn = dwc->rh_intr_req->txn;
             uint16_t val = 0x2;
             iotxn_copyto(txn, (void*)&val, sizeof(val), 0);
-            complete_request(dwc->rh_intr_req, NO_ERROR, sizeof(val), dwc);
+            complete_request(dwc->rh_intr_req, MX_OK, sizeof(val), dwc);
             dwc->rh_intr_req = NULL;
         }
     }
@@ -365,7 +365,7 @@ static mx_status_t usb_dwc_softreset_core(void) {
     while (regs->core_reset & DWC_SOFT_RESET)
         ;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t usb_dwc_setupcontroller(void) {
@@ -391,7 +391,7 @@ static mx_status_t usb_dwc_setupcontroller(void) {
 
     regs->ahb_configuration |= DWC_AHB_INTERRUPT_ENABLE;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Queue a transaction on the DWC root hub.
@@ -490,7 +490,7 @@ static void do_dwc_iotxn_queue(dwc_usb_t* dwc, iotxn_t* txn) {
     if (!req) {
         // If we can't allocate memory for the request, complete the iotxn with
         // a failure.
-        iotxn_complete(txn, ERR_NO_MEMORY, 0);
+        iotxn_complete(txn, MX_ERR_NO_MEMORY, 0);
         return;
     }
 
@@ -516,7 +516,7 @@ static void dwc_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
 
     if (txn->length > dwc_get_max_transfer_size(usb_dwc->mxdev, data->device_id, data->ep_address)) {
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
     } else {
         dwc_usb_t* dwc = ctx;
         do_dwc_iotxn_queue(dwc, txn);
@@ -566,7 +566,7 @@ static mx_status_t dwc_enable_ep(mx_device_t* hci_device, uint32_t device_id,
 
     if (device_id == ROOT_HUB_DEVICE_ID) {
         // Nothing to be done for root hub.
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Disabling endpoints not supported at this time.
@@ -595,18 +595,18 @@ static mx_status_t dwc_enable_ep(mx_device_t* hci_device, uint32_t device_id,
     list_add_tail(&dev->endpoints, &ep->node);
     mtx_unlock(&dev->devmtx);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static uint64_t dwc_get_frame(mx_device_t* hci_device) {
     printf("usb dwc_get_frame not implemented\n");
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t dwc_config_hub(mx_device_t* hci_device, uint32_t device_id, usb_speed_t speed,
                            usb_hub_descriptor_t* descriptor) {
     // Not sure if DWC controller has to take any specific action here.
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void usb_control_complete(iotxn_t* txn, void* cookie) {
@@ -649,7 +649,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
 
     iotxn_t* get_desc;
     mx_status_t status = iotxn_alloc(&get_desc, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, 64);
-    assert(status == NO_ERROR);
+    assert(status == MX_OK);
 
     completion_t completion = COMPLETION_INIT;
 
@@ -681,7 +681,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     // Set the Device ID of the newly added device.
     iotxn_t* set_addr;
     status = iotxn_alloc(&set_addr, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, 64);
-    assert(status == NO_ERROR);
+    assert(status == MX_OK);
 
     completion_reset(&completion);
 
@@ -746,16 +746,16 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
 
     dwc->next_device_address++;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 mx_status_t dwc_hub_device_removed(mx_device_t* hci_device,
                                    uint32_t hub_address, int port) {
     printf("usb dwc_hub_device_removed not implemented\n");
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t dwc_reset_endpoint(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static usb_hci_protocol_t dwc_hci_protocol = {
@@ -856,7 +856,7 @@ static int dwc_irq_thread(void* arg) {
         mx_status_t wait_res;
 
         wait_res = mx_interrupt_wait(dwc->irq_handle);
-        if (wait_res != NO_ERROR)
+        if (wait_res != MX_OK)
             printf("dwc_irq_thread::mx_interrupt_wait(irq_handle) returned "
                    "error code = %d\n",
                    wait_res);
@@ -873,13 +873,13 @@ static int dwc_irq_thread(void* arg) {
 static mx_status_t dwc_host_port_set_feature(uint16_t feature) {
     if (feature == USB_FEATURE_PORT_POWER) {
         dwc_host_port_power_on();
-        return NO_ERROR;
+        return MX_OK;
     } else if (feature == USB_FEATURE_PORT_RESET) {
         dwc_reset_host_port();
-        return NO_ERROR;
+        return MX_OK;
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
@@ -897,7 +897,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
         if (length > sizeof(usb_device_descriptor_t))
             length = sizeof(usb_device_descriptor_t);
         iotxn_copyto(txn, &dwc_rh_descriptor, length, 0);
-        complete_request(req, NO_ERROR, length, dwc);
+        complete_request(req, MX_OK, length, dwc);
     } else if (desc_type == USB_DT_CONFIG && index == 0) {
         usb_configuration_descriptor_t* config_desc =
             (usb_configuration_descriptor_t*)&dwc_rh_config_descriptor;
@@ -905,7 +905,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
         if (length > desc_length)
             length = desc_length;
         iotxn_copyto(txn, &dwc_rh_config_descriptor, length, 0);
-        complete_request(req, NO_ERROR, length, dwc);
+        complete_request(req, MX_OK, length, dwc);
     } else if (value >> 8 == USB_DT_STRING) {
         uint8_t string_index = value & 0xFF;
         if (string_index < countof(dwc_rh_string_table)) {
@@ -914,9 +914,9 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
                 length = string[0];
 
             iotxn_copyto(txn, string, length, 0);
-            complete_request(req, NO_ERROR, length, dwc);
+            complete_request(req, MX_OK, length, dwc);
         } else {
-            complete_request(req, ERR_NOT_SUPPORTED, 0, dwc);
+            complete_request(req, MX_ERR_NOT_SUPPORTED, 0, dwc);
         }
     }
 }
@@ -930,13 +930,13 @@ static void dwc_process_root_hub_std_req(dwc_usb_transfer_request_t* req,
     uint8_t request = setup->bRequest;
 
     if (request == USB_REQ_SET_ADDRESS) {
-        complete_request(req, NO_ERROR, 0, dwc);
+        complete_request(req, MX_OK, 0, dwc);
     } else if (request == USB_REQ_GET_DESCRIPTOR) {
         dwc_root_hub_get_descriptor(req, dwc);
     } else if (request == USB_REQ_SET_CONFIGURATION) {
-        complete_request(req, NO_ERROR, 0, dwc);
+        complete_request(req, MX_OK, 0, dwc);
     } else {
-        complete_request(req, ERR_NOT_SUPPORTED, 0, dwc);
+        complete_request(req, MX_ERR_NOT_SUPPORTED, 0, dwc);
     }
 }
 
@@ -963,7 +963,7 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
             if (length > sizeof(desc))
                 length = sizeof(desc);
             iotxn_copyto(txn, &desc, length, 0);
-            complete_request(req, NO_ERROR, length, dwc);
+            complete_request(req, MX_OK, length, dwc);
             return;
         }
     } else if (request == USB_REQ_SET_FEATURE) {
@@ -990,7 +990,7 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
             break;
         }
         mtx_unlock(&dwc->rh_status_mtx);
-        complete_request(req, NO_ERROR, 0, dwc);
+        complete_request(req, MX_OK, 0, dwc);
     } else if (request == USB_REQ_GET_STATUS) {
         size_t length = txn->length;
         if (length > sizeof(dwc->root_port_status)) {
@@ -1001,9 +1001,9 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
         iotxn_copyto(txn, &dwc->root_port_status, length, 0);
         mtx_unlock(&dwc->rh_status_mtx);
 
-        complete_request(req, NO_ERROR, length, dwc);
+        complete_request(req, MX_OK, length, dwc);
     } else {
-        complete_request(req, ERR_NOT_SUPPORTED, 0, dwc);
+        complete_request(req, MX_ERR_NOT_SUPPORTED, 0, dwc);
     }
 }
 
@@ -1369,7 +1369,7 @@ static bool handle_normal_channel_halted(uint channel,
 
                 release_channel(channel, dwc);
 
-                complete_request(req, ERR_IO, 0, dwc);
+                complete_request(req, MX_ERR_IO, 0, dwc);
 
                 return true;
             }
@@ -1414,7 +1414,7 @@ static bool handle_normal_channel_halted(uint channel,
             }
 
             release_channel(channel, dwc);
-            complete_request(req, NO_ERROR, req->bytes_transferred, dwc);
+            complete_request(req, MX_OK, req->bytes_transferred, dwc);
             return true;
         } else {
             if (chanptr->split_control.split_enable) {
@@ -1433,7 +1433,7 @@ static bool handle_normal_channel_halted(uint channel,
             return false;
         } else {
             release_channel(channel, dwc);
-            complete_request(req, ERR_IO, 0, dwc);
+            complete_request(req, MX_ERR_IO, 0, dwc);
             return true;
         }
     }
@@ -1463,7 +1463,7 @@ static bool handle_channel_halted_interrupt(uint channel,
         release_channel(channel, dwc);
 
         // Complete the request with a failure.
-        complete_request(req, ERR_IO, 0, dwc);
+        complete_request(req, MX_ERR_IO, 0, dwc);
 
         return true;
     } else if (interrupts.frame_overrun) {
@@ -1558,7 +1558,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
     while (true) {
         mx_status_t res =
             completion_wait(&self->request_pending_completion, MX_TIME_INFINITE);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("[DWC] Completion wait failed with retcode = %d. "
                    "device_id = %u, ep_address = %u.\n",
                    res,
@@ -1591,7 +1591,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                 // Allocate an iotxn for the SETUP packet.
                 mx_status_t status =
                     iotxn_alloc(&req->setuptxn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, sizeof(usb_setup_t));
-                assert(status == NO_ERROR);
+                assert(status == MX_OK);
 
                 usb_protocol_data_t* pdata =
                     iotxn_pdata(req->txn, usb_protocol_data_t);
@@ -1645,7 +1645,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
 }
 
 static mx_status_t create_default_device(dwc_usb_t* dwc) {
-    mx_status_t retval = NO_ERROR;
+    mx_status_t retval = MX_OK;
 
     dwc_usb_device_t* default_device = &dwc->usb_devices[0];
 
@@ -1662,7 +1662,7 @@ static mx_status_t create_default_device(dwc_usb_t* dwc) {
     // Create a control endpoint for the default device.
     dwc_usb_endpoint_t* ep0 = calloc(1, sizeof(*ep0));
     if (!ep0) {
-        retval = ERR_NO_MEMORY;
+        retval = MX_ERR_NO_MEMORY;
     }
 
     ep0->ep_address = 0;
@@ -1703,13 +1703,13 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     dwc_usb_t* usb_dwc = NULL;
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
-    mx_status_t st = ERR_INTERNAL;
+    mx_status_t st = MX_ERR_INTERNAL;
 
     // Allocate a new device object for the bus.
     usb_dwc = calloc(1, sizeof(*usb_dwc));
     if (!usb_dwc) {
         xprintf("usb_dwc_bind failed to allocated usb_dwc struct.\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     usb_dwc->free_channel_completion = COMPLETION_INIT;
@@ -1721,7 +1721,7 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     st = mx_mmap_device_memory(
         get_root_resource(), USB_PAGE_START, (uint32_t)USB_PAGE_SIZE,
         MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)(&regs));
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         xprintf("usb_dwc_bind failed to mx_mmap_device_memory.\n");
         goto error_return;
     }
@@ -1731,7 +1731,7 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
                                      MX_FLAG_REMAP_IRQ);
     if (irq_handle < 0) {
         xprintf("usb_dwc_bind failed to map usb irq.\n");
-        st = ERR_NO_RESOURCES;
+        st = MX_ERR_NO_RESOURCES;
         goto error_return;
     }
 
@@ -1748,12 +1748,12 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     // The BCM Mailbox Driver currently turns on USB power but it should be
     // done here instead.
 
-    if ((st = usb_dwc_softreset_core()) != NO_ERROR) {
+    if ((st = usb_dwc_softreset_core()) != MX_OK) {
         xprintf("usb_dwc_bind failed to reset core.\n");
         goto error_return;
     }
 
-    if ((st = usb_dwc_setupcontroller()) != NO_ERROR) {
+    if ((st = usb_dwc_setupcontroller()) != MX_OK) {
         xprintf("usb_dwc_bind failed setup controller.\n");
         goto error_return;
     }
@@ -1767,7 +1767,7 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     // We create a mock device at device_id = 0 for enumeration purposes.
     // Any new device that connects to the bus is assigned this ID until we
     // set its address.
-    if ((st = create_default_device(usb_dwc)) != NO_ERROR) {
+    if ((st = create_default_device(usb_dwc)) != MX_OK) {
         xprintf("usb_dwc_bind failed to create default device. retcode = %d\n",
                 st);
         goto error_return;
@@ -1782,7 +1782,7 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .proto_ops = &dwc_hci_protocol,
     };
 
-    if ((st = device_add(dev, &args, &usb_dwc->mxdev)) != NO_ERROR) {
+    if ((st = device_add(dev, &args, &usb_dwc->mxdev)) != MX_OK) {
         free(usb_dwc);
         return st;
     }
@@ -1799,7 +1799,7 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     thrd_detach(irq_thread);
 
     xprintf("usb_dwc_bind success!\n");
-    return NO_ERROR;
+    return MX_OK;
 
 error_return:
     if (usb_dwc)
