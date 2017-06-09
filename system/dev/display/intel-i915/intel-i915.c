@@ -68,21 +68,21 @@ static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable) {
 // implement display protocol
 
 static mx_status_t intel_i915_set_mode(mx_device_t* dev, mx_display_info_t* info) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info) {
     assert(info);
     intel_i915_device_t* device = dev->ctx;
     memcpy(info, &device->info, sizeof(mx_display_info_t));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuffer) {
     assert(framebuffer);
     intel_i915_device_t* device = dev->ctx;
     (*framebuffer) = device->framebuffer;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_display_protocol_t intel_i915_display_proto = {
@@ -96,11 +96,11 @@ static mx_display_protocol_t intel_i915_display_proto = {
 static mx_status_t intel_i915_open(void* ctx, mx_device_t** out, uint32_t flags) {
     intel_i915_device_t* device = ctx;
     intel_i915_enable_backlight(device, true);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t intel_i915_close(void* ctx, uint32_t flags) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void intel_i915_release(void* ctx) {
@@ -132,7 +132,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
     if (status < 0)
@@ -141,14 +141,14 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     // map resources and initialize the device
     intel_i915_device_t* device = calloc(1, sizeof(intel_i915_device_t));
     if (!device)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;
     status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                (void**)&pci_config, &config_size, &cfg_handle);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
             // TODO: this should be based on the specific target
             device->flags |= FLAGS_BACKLIGHT;
@@ -159,7 +159,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     // map register window
     status = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
                            &device->regs, &device->regs_size, &device->regs_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("i915: failed to map bar 0: %d\n", status);
         goto fail;
     }
@@ -169,7 +169,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
                            &device->framebuffer,
                            &device->framebuffer_size,
                            &device->framebuffer_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("i915: failed to map bar 2: %d\n", status);
         goto fail;
     }
@@ -177,7 +177,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
     status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         di->format = format;
         di->width = width;
         di->height = height;
@@ -206,14 +206,14 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     };
 
     status = device_add(dev, &args, &device->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 
     xprintf("initialized intel i915 display driver, reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     free(device);

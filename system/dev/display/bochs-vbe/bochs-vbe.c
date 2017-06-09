@@ -135,21 +135,21 @@ static mx_status_t bochs_vbe_set_mode(mx_device_t* dev, mx_display_info_t* info)
     bochs_vbe_device_t* vdev = dev->ctx;
     memcpy(&vdev->info, info, sizeof(mx_display_info_t));
     set_hw_mode(vdev);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bochs_vbe_get_mode(mx_device_t* dev, mx_display_info_t* info) {
     assert(info);
     bochs_vbe_device_t* vdev = dev->ctx;
     memcpy(info, &vdev->info, sizeof(mx_display_info_t));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bochs_vbe_get_framebuffer(mx_device_t* dev, void** framebuffer) {
     assert(framebuffer);
     bochs_vbe_device_t* vdev = dev->ctx;
     (*framebuffer) = vdev->framebuffer;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_display_protocol_t bochs_vbe_display_proto = {
@@ -188,22 +188,22 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_status_t status;
 
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     status = pci->claim_device(dev);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // map resources and initialize the device
     bochs_vbe_device_t* device = calloc(1, sizeof(bochs_vbe_device_t));
     if (!device)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // map register window
     status = pci->map_resource(dev, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_UNCACHED_DEVICE,
                            &device->regs, &device->regs_size,
                            &device->regs_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
@@ -213,7 +213,7 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
                            &device->framebuffer,
                            &device->framebuffer_size,
                            &device->framebuffer_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
@@ -235,14 +235,14 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
     };
 
     status = device_add(dev, &args, &device->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 
     xprintf("initialized bochs_vbe display driver, reg=0x%x regsize=0x%x fb=0x%x fbsize=0x%x\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     free(device);

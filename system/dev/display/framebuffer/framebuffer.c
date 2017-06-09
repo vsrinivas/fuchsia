@@ -78,7 +78,7 @@ static mx_status_t fbi_get_vmo(fbi_t* fbi, mx_handle_t* vmo) {
     mtx_lock(&fbi->fb->lock);
     mx_status_t r;
     if (fbi->vmo != MX_HANDLE_INVALID) {
-        r = NO_ERROR;
+        r = MX_OK;
         goto done;
     }
     if ((r = mx_vmo_create(fbi->fb->bufsz, 0, &fbi->vmo)) < 0) {
@@ -109,22 +109,22 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
     switch (op) {
     case IOCTL_DISPLAY_SET_FULLSCREEN:
         //TODO: remove compat stub once no longer needed
-        return NO_ERROR;
+        return MX_OK;
 
     case IOCTL_CONSOLE_SET_ACTIVE_VC:
         //TODO: remove compat stub once no longer needed
-        return NO_ERROR;
+        return MX_OK;
 
     case IOCTL_DISPLAY_FLUSH_FB_REGION: {
         if (in_len != sizeof(ioctl_display_region_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         const ioctl_display_region_t* r = in_buf;
         uint32_t y = r->y;
         uint32_t h = r->height;
         if ((y >= fb->info.height) ||
             (h > (fb->info.height - y))) {
-            return ERR_OUT_OF_RANGE;
+            return MX_ERR_OUT_OF_RANGE;
         }
         uint32_t linesize = fb->info.stride * fb->info.pixelsize;
         mtx_lock(&fb->lock);
@@ -133,7 +133,7 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             FB_FLUSH(fb);
         }
         mtx_unlock(&fb->lock);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_DISPLAY_FLUSH_FB:
         mtx_lock(&fb->lock);
@@ -142,16 +142,16 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             FB_FLUSH(fb);
         }
         mtx_unlock(&fb->lock);
-        return NO_ERROR;
+        return MX_OK;
 
     case IOCTL_DISPLAY_GET_FB: {
         if ((fbi->group == GROUP_FULLSCREEN) && FB_HAS_GPU(fb)) {
             printf("fb: fullscreen soft framebuffer not supported (GPU)\n");
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         }
 
         if (out_len < sizeof(ioctl_display_get_fb_t)) {
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         }
         ioctl_display_get_fb_t* out = out_buf;
         memcpy(&out->info, &fb->info, sizeof(mx_display_info_t));
@@ -165,15 +165,15 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             return r;
         } else {
             *out_actual = sizeof(ioctl_display_get_fb_t);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     case IOCTL_DISPLAY_SET_OWNER: {
         if (in_len != sizeof(uint32_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (fbi->group != GROUP_VIRTCON) {
-            return ERR_ACCESS_DENIED;
+            return MX_ERR_ACCESS_DENIED;
         }
         const uint32_t* n = (const uint32_t*) in_buf;
         if (FB_HAS_GPU(fb)) {
@@ -184,7 +184,7 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
                     FB_RELEASE(fb);
                 }
             }
-            return NO_ERROR;
+            return MX_OK;
         }
         mtx_lock(&fb->lock);
         if ((*n == GROUP_VIRTCON) || (fb->fullscreen == NULL)) {
@@ -201,23 +201,23 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             FB_FLUSH(fb);
         }
         mtx_unlock(&fb->lock);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT: {
         if (out_len != sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t* out = (mx_handle_t*) out_buf;
         if ((r = mx_handle_duplicate(fb->event, MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE, out)) < 0) {
             return r;
         } else {
             *out_actual = sizeof(mx_handle_t);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -265,7 +265,7 @@ static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, ui
 
     fbi_t* fbi;
     if ((fbi = calloc(1, sizeof(fbi_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     fbi->fb = fb;
     fbi->group = group;
@@ -288,7 +288,7 @@ static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, ui
             if (fb->fullscreen != NULL) {
                 mtx_unlock(&fb->lock);
                 free(fbi);
-                return ERR_ALREADY_BOUND;
+                return MX_ERR_ALREADY_BOUND;
             }
             fb->fullscreen = fbi;
             fb->active = GROUP_FULLSCREEN;
@@ -304,7 +304,7 @@ static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, ui
     }
 
     *out = fbi->mxdev;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t fb_open(void* ctx, mx_device_t** out, uint32_t flags) {
@@ -327,7 +327,7 @@ static mx_protocol_device_t fb_ops = {
 static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
     fb_t* fb;
     if ((fb = calloc(1, sizeof(fb_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t r;
@@ -369,7 +369,7 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
         break;
     default:
         printf("fb: unknown format %u\n", fb->info.format);
-        r = ERR_NOT_SUPPORTED;
+        r = MX_ERR_NOT_SUPPORTED;
         goto fail;
     }
 
@@ -399,7 +399,7 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
         fb->dpy->set_ownership_change_callback(fb->dpydev, fb_callback, fb);
         FB_ACQUIRE(fb);
     }
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     mx_handle_close(fb->event);

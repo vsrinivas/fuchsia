@@ -38,7 +38,7 @@ typedef struct kaveri_disp_device {
 
 // implement display protocol
 static mx_status_t kaveri_disp_set_mode(mx_device_t* dev, mx_display_info_t* info) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t kaveri_disp_get_mode(mx_device_t* dev, mx_display_info_t* info) {
@@ -46,7 +46,7 @@ static mx_status_t kaveri_disp_get_mode(mx_device_t* dev, mx_display_info_t* inf
     kaveri_disp_device_t* device = dev->ctx;
 
     memcpy(info, &device->info, sizeof(mx_display_info_t));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t kaveri_disp_get_framebuffer(mx_device_t* dev, void** framebuffer) {
@@ -54,7 +54,7 @@ static mx_status_t kaveri_disp_get_framebuffer(mx_device_t* dev, void** framebuf
     kaveri_disp_device_t* device = dev->ctx;
 
     (*framebuffer) = device->framebuffer;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_display_protocol_t kaveri_disp_display_proto = {
@@ -93,7 +93,7 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
     mx_status_t status;
 
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     status = pci->claim_device(dev);
     if (status < 0)
@@ -102,13 +102,13 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
     // map resources and initialize the device
     kaveri_disp_device_t* device = calloc(1, sizeof(kaveri_disp_device_t));
     if (!device)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // map register window
     // seems to be bar 5
     status = pci->map_resource(dev, PCI_RESOURCE_BAR_5, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                &device->regs, &device->regs_size, &device->regs_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("kaveri: failed to map pci bar 5: %d\n", status);
         goto fail;
     }
@@ -119,7 +119,7 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
                            &device->framebuffer,
                            &device->framebuffer_size,
                            &device->framebuffer_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("kaveri-disp: failed to map pci bar 0: %d\n", status);
         goto fail;
     }
@@ -127,13 +127,13 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
     status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         di->format = format;
         di->width = width;
         di->height = height;
         di->stride = stride;
     } else {
-        status = ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
         goto fail;
     }
     di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
@@ -153,7 +153,7 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
     };
 
     status = device_add(dev, &args, &device->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 
@@ -162,7 +162,7 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
     printf("\twidth %u height %u stride %u format %u\n",
            device->info.width, device->info.height, device->info.stride, device->info.format);
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     free(device);

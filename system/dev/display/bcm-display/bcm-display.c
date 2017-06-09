@@ -44,21 +44,21 @@ typedef struct {
 } bcm_display_t;
 
 static mx_status_t vc_set_mode(mx_device_t* dev, mx_display_info_t* info) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t vc_get_mode(mx_device_t* dev, mx_display_info_t* info) {
-    if (!info) return ERR_INVALID_ARGS;
+    if (!info) return MX_ERR_INVALID_ARGS;
     bcm_display_t* display = dev->ctx;
     memcpy(info, &display->disp_info, sizeof(mx_display_info_t));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t vc_get_framebuffer(mx_device_t* dev, void** framebuffer) {
-    if (!framebuffer) return ERR_INVALID_ARGS;
+    if (!framebuffer) return MX_ERR_INVALID_ARGS;
     bcm_display_t* display = dev->ctx;
     (*framebuffer) = display->framebuffer;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void vc_flush_framebuffer(mx_device_t* dev) {
@@ -78,7 +78,7 @@ static mx_protocol_device_t empty_device_proto = {
 };
 
 static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t* fb_desc) {
-    mx_status_t ret = NO_ERROR;
+    mx_status_t ret = MX_OK;
     iotxn_t* txn;
 
     if (!display->framebuffer) {
@@ -99,7 +99,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
         ret = display->bus_proto->set_framebuffer(display->busdev, phys + offset);
-        if (ret != NO_ERROR)
+        if (ret != MX_OK)
             return ret;
 
         iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
@@ -124,12 +124,12 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
 mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
     bcm_display_t* display = calloc(1, sizeof(bcm_display_t));
     if (!display) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t status = platform_device_find_protocol(parent, MX_PROTOCOL_BCM_BUS, &display->busdev,
                                                        (void**)&display->bus_proto);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("bcm_display_bind can't find MX_PROTOCOL_BCM_BUS\n");
         free(display);
         return status;
@@ -172,7 +172,7 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     status = device_add(parent, &vc_fbuff_args, &display->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         free(display);
     }
     return status;
