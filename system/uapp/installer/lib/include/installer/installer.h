@@ -50,7 +50,7 @@ void find_available_space(gpt_device_t *device, size_t blocks_req,
 /*
  * Given a directory, dir, which contains a group of devices, examine each
  * device to determine if any has a GPT whose header GUID matches the supplied
- * disk_guid. If successful we return NO_ERROR. install_dev_out will be set to
+ * disk_guid. If successful we return MX_OK. install_dev_out will be set to
  * point to a gpt_device_t which has been opened read-only and whose underlying
  * fd is closed. To modify the device's GPT, use disk_path_out to open the GPT
  * read/write.

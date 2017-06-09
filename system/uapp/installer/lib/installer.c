@@ -22,10 +22,10 @@
  * with the matching type GUID. The table_size argument tells this function how
  * many entries there are in the array.
  * Returns
- *   * ERR_INVALID_ARGS if any pointers are null
- *   * ERR_BAD_STATE if the GPT data reports itself as invalid
- *   * ERR_NOT_FOUND if the requested partition is not present
- *   * NO_ERROR if the partition is found, in which case the index is assigned
+ *   * MX_ERR_INVALID_ARGS if any pointers are null
+ *   * MX_ERR_BAD_STATE if the GPT data reports itself as invalid
+ *   * MX_ERR_NOT_FOUND if the requested partition is not present
+ *   * MX_OK if the partition is found, in which case the index is assigned
  *     to part_id_out
  */
 mx_status_t find_partition_entries(gpt_partition_t **gpt_table,
@@ -39,11 +39,11 @@ mx_status_t find_partition_entries(gpt_partition_t **gpt_table,
     uint8_t *type_ptr = gpt_table[idx]->type;
     if (!memcmp(type_ptr, guid, 16)) {
       *part_id_out = idx;
-      return NO_ERROR;
+      return MX_OK;
     }
   }
 
-  return ERR_NOT_FOUND;
+  return MX_ERR_NOT_FOUND;
 }
 
 /*
@@ -80,7 +80,7 @@ bool check_partition_size(const gpt_partition_t *partition,
  * the array passes this test, the first match will be provided. The length of
  * the partition information array should be passed in table_size.
  *
- * If NO_ERROR is returned, part_index_out will contain the index in the GPT for
+ * If MX_OK is returned, part_index_out will contain the index in the GPT for
  * the requested partition. Additionally, the pointer at *part_info_out will
  * point at the gpt_partition_t with information for the requested partition.
  */
@@ -95,24 +95,24 @@ mx_status_t find_partition(gpt_partition_t **gpt_table,
   // tracks our overall progress in the table
   uint16_t part_offset = 0;
 
-  mx_status_t rc = NO_ERROR;
-  while (rc == NO_ERROR) {
+  mx_status_t rc = MX_OK;
+  while (rc == MX_OK) {
     // reduce table_size by the number of entries we've examined
     rc = find_partition_entries(gpt_table, part_guid, table_size - part_offset,
                                 part_index_out);
 
     gpt_partition_t *partition;
     switch (rc) {
-    case ERR_NOT_FOUND:
+    case MX_ERR_NOT_FOUND:
       fprintf(stderr, "No %s partition found.\n", part_name);
       break;
-    case ERR_INVALID_ARGS:
+    case MX_ERR_INVALID_ARGS:
       fprintf(stderr, "Arguments are invalid for %s partition.\n", part_name);
       break;
-    case ERR_BAD_STATE:
+    case MX_ERR_BAD_STATE:
       printf("GPT descriptor is invalid.\n");
       break;
-    case NO_ERROR:
+    case MX_OK:
       partition = gpt_table[*part_index_out];
       assert(partition->last >= partition->first);
 
@@ -120,7 +120,7 @@ mx_status_t find_partition(gpt_partition_t **gpt_table,
         *part_info_out = partition;
         // adjust the output index by part_offset
         *part_index_out = part_offset + *part_index_out;
-        return NO_ERROR;
+        return MX_OK;
       } else {
         // if the size doesn't check out, keep looking for
         // partitions later in the table
@@ -138,7 +138,7 @@ mx_status_t find_partition(gpt_partition_t **gpt_table,
   }
 
   // we didn't find a suitable partition
-  return ERR_NOT_FOUND;
+  return MX_ERR_NOT_FOUND;
 }
 
 static int compare(const void *ls, const void *rs) {
@@ -411,12 +411,12 @@ mx_status_t find_disk_by_guid(DIR *dir, const char *dir_path,
       gpt_device_get_header_guid(install_dev, &guid_targ);
       if (!memcmp(guid_targ, disk_guid, GPT_GUID_LEN)) {
         *install_dev_out = install_dev;
-        return NO_ERROR;
+        return MX_OK;
       }
       gpt_device_release(install_dev);
     }
   }
 
   strcpy(disk_path_out, "");
-  return ERR_NOT_FOUND;
+  return MX_ERR_NOT_FOUND;
 }

@@ -120,7 +120,7 @@ static gpt_device_t *init_gpt(const char *dev, bool warn, int *out_fd) {
 #define check_outputs(rc, dev, path, guid_targ, dir, success)                  \
   ({                                                                           \
     if (success) {                                                             \
-      ASSERT_EQ(rc, NO_ERROR, "Disk not found when it was expected");          \
+      ASSERT_EQ(rc, MX_OK, "Disk not found when it was expected");          \
       ASSERT_NEQ(dev, NULL, "Disk found, but gpt_device_t not set.");          \
       ASSERT_NEQ(strcmp(path, ""), 0, "Disk found, but path not set");         \
       uint8_t guid_actual[GPT_GUID_LEN];                                       \
@@ -130,7 +130,7 @@ static gpt_device_t *init_gpt(const char *dev, bool warn, int *out_fd) {
       gpt_device_release(dev);                                                 \
       dev = NULL;                                                              \
     } else {                                                                   \
-      ASSERT_EQ(rc, ERR_NOT_FOUND, "Disk found, but was not expected");        \
+      ASSERT_EQ(rc, MX_ERR_NOT_FOUND, "Disk found, but was not expected");        \
       ASSERT_EQ(dev, NULL, "Disk not found, but gpt_device_t is set.");        \
       ASSERT_EQ(strcmp(path, ""), 0, "Disk not found, but path is set");       \
     }                                                                          \
@@ -277,7 +277,7 @@ bool test_find_partition_entries(void) {
     uint16_t targ_idx = test_indices[idx];
     mx_status_t rc = find_partition_entries(
         part_entry_ptrs, &part_entries[targ_idx].type, TABLE_SIZE, &found_idx);
-    ASSERT_EQ(rc, NO_ERROR, "");
+    ASSERT_EQ(rc, MX_OK, "");
   }
 
   uint8_t random_guid[16];
@@ -285,7 +285,7 @@ bool test_find_partition_entries(void) {
   uint16_t found_idx = TABLE_SIZE;
   mx_status_t rc = find_partition_entries(part_entry_ptrs, &random_guid,
                                           TABLE_SIZE, &found_idx);
-  ASSERT_EQ(rc, ERR_NOT_FOUND, "");
+  ASSERT_EQ(rc, MX_ERR_NOT_FOUND, "");
   END_TEST;
 }
 
@@ -311,7 +311,7 @@ bool test_find_partition(void) {
     mx_status_t rc = find_partition(
         part_entry_ptrs, &part_entry_ptrs[targ_idx]->type, part_size,
         block_size, "TEST", TABLE_SIZE, &found_idx, &part_info);
-    ASSERT_EQ(rc, NO_ERROR, "");
+    ASSERT_EQ(rc, MX_OK, "");
     ASSERT_EQ(targ_idx, found_idx, "");
     ASSERT_BYTES_EQ((uint8_t *)part_entry_ptrs[targ_idx], (uint8_t *)part_info,
                     sizeof(gpt_partition_t), "");
@@ -324,7 +324,7 @@ bool test_find_partition(void) {
       find_partition(part_entry_ptrs, &part_entry_ptrs[0]->type, part_size + 1,
                      block_size, "TEST", TABLE_SIZE, &found_idx, &part_info);
 
-  ASSERT_EQ(rc, ERR_NOT_FOUND, "");
+  ASSERT_EQ(rc, MX_ERR_NOT_FOUND, "");
   END_TEST;
 }
 
