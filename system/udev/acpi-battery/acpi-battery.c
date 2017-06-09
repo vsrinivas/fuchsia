@@ -65,7 +65,7 @@ static mx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, mx_off_
         return rc;
     }
     *actual = rc;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_protocol_device_t acpi_battery_device_proto = {
@@ -79,13 +79,13 @@ static int acpi_battery_poll_thread(void* arg) {
     for (;;) {
         acpi_rsp_bst_t* bst;
         mx_status_t status = acpi_bst(&dev->acpi_handle, &bst);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             continue;
         }
 
         acpi_rsp_bif_t* bif;
         status = acpi_bif(&dev->acpi_handle, &bif);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             free(bst);
             continue;
         }
@@ -107,7 +107,7 @@ static int acpi_battery_poll_thread(void* arg) {
 static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_acpi_protocol_t* acpi;
     if (device_op_get_protocol(dev, MX_PROTOCOL_ACPI, (void**)&acpi)) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     mx_handle_t handle = acpi->clone_handle(dev);
@@ -119,7 +119,7 @@ static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie)
     acpi_battery_device_t* device = calloc(1, sizeof(acpi_battery_device_t));
     if (!device) {
         mx_handle_close(handle);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     acpi_handle_init(&device->acpi_handle, handle);
 
@@ -137,13 +137,13 @@ static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie)
     };
 
     mx_status_t status = device_add(dev, &args, &device->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("acpi-battery: could not add device! err=%d\n", status);
         free(device);
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t acpi_battery_driver_ops = {
