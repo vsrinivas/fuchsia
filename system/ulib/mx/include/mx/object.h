@@ -58,7 +58,7 @@ public:
         mx_status_t status = mx_handle_replace(value_, rights, &h);
         // We store MX_HANDLE_INVALID to value_ before calling reset on result
         // in case result == this.
-        if (status == NO_ERROR)
+        if (status == MX_OK)
             value_ = MX_HANDLE_INVALID;
         result->reset(h);
         return status;
