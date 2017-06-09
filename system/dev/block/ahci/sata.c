@@ -59,7 +59,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     // send IDENTIFY DEVICE
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 512);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("%s: error %d allocating iotxn\n", name, status);
         return status;
     }
@@ -78,7 +78,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     iotxn_queue(controller, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
 
-    if (txn->status != NO_ERROR) {
+    if (txn->status != MX_OK) {
         xprintf("%s: error %d in device identify\n", name, txn->status);
         return txn->status;
     }
@@ -149,7 +149,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     }
     dev->flags = flags;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // implement device protocol:
@@ -161,7 +161,7 @@ static void sata_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -198,10 +198,10 @@ static mx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         sata_get_info(device, info);
         *out_actual = sizeof(*info);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
@@ -210,7 +210,7 @@ static mx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
     case IOCTL_DEVICE_SYNC: {
         iotxn_t* txn;
         mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 0);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
         completion_t completion = COMPLETION_INIT;
@@ -227,7 +227,7 @@ static mx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cm
         return status;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -271,17 +271,17 @@ static void sata_block_txn(sata_device_t* dev, uint32_t opcode, mx_handle_t vmo,
                            uint64_t length, uint64_t vmo_offset, uint64_t dev_offset,
                            void* cookie) {
     if ((dev_offset % dev->sector_sz) || (length % dev->sector_sz)) {
-        dev->callbacks->complete(cookie, ERR_INVALID_ARGS);
+        dev->callbacks->complete(cookie, MX_ERR_INVALID_ARGS);
         return;
     }
     if ((dev_offset >= dev->capacity) || (length >= (dev->capacity - dev_offset))) {
-        dev->callbacks->complete(cookie, ERR_OUT_OF_RANGE);
+        dev->callbacks->complete(cookie, MX_ERR_OUT_OF_RANGE);
         return;
     }
 
     mx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != MX_OK) {
         dev->callbacks->complete(cookie, status);
         return;
     }
@@ -316,7 +316,7 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
     sata_device_t* device = calloc(1, sizeof(sata_device_t));
     if (!device) {
         xprintf("sata: out of memory\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     device->parent = dev;
 
@@ -348,5 +348,5 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }

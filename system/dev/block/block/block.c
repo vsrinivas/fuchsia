@@ -51,17 +51,17 @@ static int blockserver_thread(void* arg) {
 
 static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
     if (out_len < sizeof(mx_handle_t)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     mx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs != NULL) {
-        status = ERR_ALREADY_BOUND;
+        status = MX_ERR_ALREADY_BOUND;
         goto done;
     }
 
     BlockServer* bs;
-    if ((status = blockserver_create(out_buf, &bs)) != NO_ERROR) {
+    if ((status = blockserver_create(out_buf, &bs)) != MX_OK) {
         goto done;
     }
 
@@ -72,7 +72,7 @@ static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     if (thrd_create(&thread, blockserver_thread, bdev) != thrd_success) {
         blockserver_free(bs);
         bdev->bs = NULL;
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto done;
     }
     thrd_detach(thread);
@@ -88,18 +88,18 @@ static mx_status_t blkdev_attach_vmo(blkdev_t* bdev,
                                  const void* in_buf, size_t in_len,
                                  void* out_buf, size_t out_len, size_t* out_actual) {
     if ((in_len < sizeof(mx_handle_t)) || (out_len < sizeof(vmoid_t))) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs == NULL) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto done;
     }
 
     mx_handle_t h = *(mx_handle_t*)in_buf;
-    if ((status = blockserver_attach_vmo(bdev->bs, h, out_buf)) != NO_ERROR) {
+    if ((status = blockserver_attach_vmo(bdev->bs, h, out_buf)) != MX_OK) {
         goto done;
     }
     *out_actual = sizeof(vmoid_t);
@@ -113,17 +113,17 @@ static mx_status_t blkdev_alloc_txn(blkdev_t* bdev,
                                 const void* in_buf, size_t in_len,
                                 void* out_buf, size_t out_len, size_t* out_actual) {
     if ((in_len != 0) || (out_len < sizeof(txnid_t))) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs == NULL) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto done;
     }
 
-    if ((status = blockserver_allocate_txn(bdev->bs, out_buf)) != NO_ERROR) {
+    if ((status = blockserver_allocate_txn(bdev->bs, out_buf)) != MX_OK) {
         goto done;
     }
     *out_actual = sizeof(vmoid_t);
@@ -136,19 +136,19 @@ done:
 static mx_status_t blkdev_free_txn(blkdev_t* bdev, const void* in_buf,
                                    size_t in_len) {
     if (in_len != sizeof(txnid_t)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_status_t status;
     mtx_lock(&bdev->lock);
     if (bdev->bs == NULL) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto done;
     }
 
     txnid_t txnid = *(txnid_t*)in_buf;
     blockserver_free_txn(bdev->bs, txnid);
-    status = NO_ERROR;
+    status = MX_OK;
 done:
     mtx_unlock(&bdev->lock);
     return status;
@@ -164,7 +164,7 @@ static mx_status_t blkdev_fifo_close(blkdev_t* bdev) {
     }
     mtx_unlock(&bdev->lock);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // implement device protocol:
@@ -221,14 +221,14 @@ static mx_protocol_device_t blkdev_ops = {
 static mx_status_t block_driver_bind(void* ctx, mx_device_t* dev, void** cookie) {
     blkdev_t* bdev;
     if ((bdev = calloc(1, sizeof(blkdev_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
     mx_status_t status;
     if (device_op_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, (void**)&bdev->blockops)) {
-        status = ERR_INTERNAL;
+        status = MX_ERR_INTERNAL;
         goto fail;
     }
 
@@ -241,11 +241,11 @@ static mx_status_t block_driver_bind(void* ctx, mx_device_t* dev, void** cookie)
     };
 
     status = device_add(dev, &args, &bdev->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto fail;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     free(bdev);

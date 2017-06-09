@@ -21,14 +21,14 @@ static mx_status_t do_read(mx_handle_t fifo, block_fifo_request_t* requests, uin
     mx_status_t status;
     while (true) {
         status = mx_fifo_read(fifo, requests, sizeof(block_fifo_request_t), count);
-        if (status == ERR_SHOULD_WAIT) {
+        if (status == MX_ERR_SHOULD_WAIT) {
             mx_signals_t signals;
             if ((status = mx_object_wait_one(fifo,
                                              MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                             MX_TIME_INFINITE, &signals)) != NO_ERROR) {
+                                             MX_TIME_INFINITE, &signals)) != MX_OK) {
                 return status;
             } else if (signals & MX_FIFO_PEER_CLOSED) {
-                return ERR_PEER_CLOSED;
+                return MX_ERR_PEER_CLOSED;
             }
             // Try reading again...
         } else {
@@ -45,7 +45,7 @@ static void OutOfBandErrorRespond(mx_handle_t fifo, mx_status_t status, txnid_t 
 
     uint32_t actual;
     status = mx_fifo_write(fifo, &response, sizeof(block_fifo_response_t), &actual);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Block Server I/O error: Could not write response\n");
     }
 }
@@ -73,12 +73,12 @@ mx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
     MX_DEBUG_ASSERT(goal_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
     *msg_out = &msgs_[goal_++];
     flags_ |= do_respond ? kTxnFlagRespond : 0;
-    return NO_ERROR;
+    return MX_OK;
 fail:
     if (do_respond) {
-        OutOfBandErrorRespond(fifo_, ERR_IO, response_.txnid);
+        OutOfBandErrorRespond(fifo_, MX_ERR_IO, response_.txnid);
     }
-    return ERR_IO;
+    return MX_ERR_IO;
 }
 
 void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
@@ -87,7 +87,7 @@ void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
     MX_DEBUG_ASSERT(goal_ != 0);
     MX_DEBUG_ASSERT(response_.count <= goal_);
 
-    if ((status != NO_ERROR) && (response_.status == NO_ERROR)) {
+    if ((status != MX_OK) && (response_.status == MX_OK)) {
         response_.status = status;
     }
 
@@ -97,11 +97,11 @@ void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
         uint32_t actual;
         mx_status_t status = mx_fifo_write(fifo_, &response_,
                                            sizeof(block_fifo_response_t), &actual);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             fprintf(stderr, "Block Server I/O error: Could not write response\n");
         }
         response_.count = 0;
-        response_.status = NO_ERROR;
+        response_.status = MX_OK;
         goal_ = 0;
         flags_ &= ~kTxnFlagRespond;
     }
@@ -116,12 +116,12 @@ IoBuffer::~IoBuffer() {}
 mx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
     uint64_t vmo_size;
     mx_status_t status;
-    if ((status = io_vmo_.get_size(&vmo_size)) != NO_ERROR) {
+    if ((status = io_vmo_.get_size(&vmo_size)) != MX_OK) {
         return status;
     } else if (length + vmo_offset > vmo_size) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
@@ -129,35 +129,35 @@ mx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
             last_id = static_cast<vmoid_t>(i + 1);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     for (vmoid_t i = 0; i < last_id; i++) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
             last_id = static_cast<vmoid_t>(i + 1);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
-    return ERR_NO_RESOURCES;
+    return MX_ERR_NO_RESOURCES;
 }
 
 mx_status_t BlockServer::AttachVmo(mx::vmo vmo, vmoid_t* out) {
     mx_status_t status;
     vmoid_t id;
     mxtl::AutoLock server_lock(&server_lock_);
-    if ((status = FindVmoIDLocked(&id)) != NO_ERROR) {
+    if ((status = FindVmoIDLocked(&id)) != MX_OK) {
         return status;
     }
 
     AllocChecker ac;
     mxtl::RefPtr<IoBuffer> ibuf = mxtl::AdoptRef(new (&ac) IoBuffer(mxtl::move(vmo), id));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     tree_.insert(mxtl::move(ibuf));
     *out = id;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
@@ -168,13 +168,13 @@ mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
             AllocChecker ac;
             txns_[i] = mxtl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
             if (!ac.check()) {
-                return ERR_NO_MEMORY;
+                return MX_ERR_NO_MEMORY;
             }
             *out = txnid;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
-    return ERR_NO_RESOURCES;
+    return MX_ERR_NO_RESOURCES;
 }
 
 void BlockServer::FreeTxn(txnid_t txnid) {
@@ -190,18 +190,18 @@ mx_status_t BlockServer::Create(mx::fifo* fifo_out, BlockServer** out) {
     AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer();
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t status;
     if ((status = mx::fifo::create(BLOCK_FIFO_MAX_DEPTH, BLOCK_FIFO_ESIZE, 0,
-                                   fifo_out, &bs->fifo_)) != NO_ERROR) {
+                                   fifo_out, &bs->fifo_)) != MX_OK) {
         delete bs;
         return status;
     }
 
     *out = bs;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void blockserver_fifo_complete(void* cookie, mx_status_t status) {
@@ -236,7 +236,7 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
         fifo = fifo_.get();
     }
     while (true) {
-        if ((status = do_read(fifo, &requests[0], &count)) != NO_ERROR) {
+        if ((status = do_read(fifo, &requests[0], &count)) != MX_OK) {
             return status;
         }
 
@@ -250,14 +250,14 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
             if (!iobuf.IsValid()) {
                 // Operation which is not accessing a valid vmo
                 if (wants_reply) {
-                    OutOfBandErrorRespond(fifo, ERR_IO, txnid);
+                    OutOfBandErrorRespond(fifo, MX_ERR_IO, txnid);
                 }
                 continue;
             }
             if (txnid >= MAX_TXN_COUNT || txns_[txnid] == nullptr) {
                 // Operation which is not accessing a valid txn
                 if (wants_reply) {
-                    OutOfBandErrorRespond(fifo, ERR_IO, txnid);
+                    OutOfBandErrorRespond(fifo, MX_ERR_IO, txnid);
                 }
                 continue;
             }
@@ -267,7 +267,7 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
             case BLOCKIO_WRITE: {
                 block_msg_t* msg;
                 status = txns_[txnid]->Enqueue(wants_reply, &msg);
-                if (status != NO_ERROR) {
+                if (status != MX_OK) {
                     break;
                 }
                 MX_DEBUG_ASSERT(msg->txn == nullptr);
@@ -279,7 +279,7 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
                 // In the future, this code will be responsible for pinning VMO pages,
                 // and the completion will be responsible for un-pinning those same pages.
                 status = iobuf->ValidateVmoHack(requests[i].length, requests[i].vmo_offset);
-                if (status != NO_ERROR) {
+                if (status != MX_OK) {
                     cb.complete(msg, status);
                     break;
                 }
@@ -301,7 +301,7 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
             case BLOCKIO_CLOSE_VMO: {
                 tree_.erase(*iobuf);
                 if (wants_reply) {
-                    OutOfBandErrorRespond(fifo, NO_ERROR, txnid);
+                    OutOfBandErrorRespond(fifo, MX_OK, txnid);
                 }
                 break;
             }

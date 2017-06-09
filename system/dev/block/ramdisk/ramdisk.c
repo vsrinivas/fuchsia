@@ -42,7 +42,7 @@ static mx_status_t constrain_args(ramdisk_device_t* ramdev,
                                   mx_off_t* offset, mx_off_t* length) {
     // Offset must be aligned
     if (*offset % ramdev->blk_size != 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Constrain to device capacity
@@ -50,10 +50,10 @@ static mx_status_t constrain_args(ramdisk_device_t* ramdev,
 
     // Length must be aligned
     if (*length % ramdev->blk_size != 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void ramdisk_get_info(mx_device_t* dev, block_info_t* info) {
@@ -73,7 +73,7 @@ static void ramdisk_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length
     ramdisk_device_t* rdev = dev->ctx;
     mx_off_t len = length;
     mx_status_t status = constrain_args(rdev, &dev_offset, &len);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         rdev->cb->complete(cookie, status);
         return;
     }
@@ -89,7 +89,7 @@ static void ramdisk_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t lengt
     ramdisk_device_t* rdev = dev->ctx;
     mx_off_t len = length;
     mx_status_t status = constrain_args(rdev, &dev_offset, &len);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         rdev->cb->complete(cookie, status);
         return;
     }
@@ -116,7 +116,7 @@ static mx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
     switch (op) {
     case IOCTL_RAMDISK_UNLINK: {
         device_remove(ramdev->mxdev);
-        return NO_ERROR;
+        return MX_OK;
     }
     // Block Protocol
     case IOCTL_BLOCK_GET_NAME: {
@@ -124,25 +124,25 @@ static mx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
         memset(name, 0, max);
         strncpy(name, ramdev->name, max);
         *out_actual = strnlen(name, max);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         ramdisk_get_info(ramdev->mxdev, info);
         *out_actual = sizeof(*info);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_BLOCK_RR_PART: {
         return device_rebind(ramdev->mxdev);
     }
     case IOCTL_DEVICE_SYNC: {
         // Wow, we sync so quickly!
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -150,7 +150,7 @@ static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
     ramdisk_device_t* ramdev = ctx;
 
     mx_status_t status = constrain_args(ramdev, &txn->offset, &txn->length);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         iotxn_complete(txn, status, 0);
         return;
     }
@@ -158,16 +158,16 @@ static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
     switch (txn->opcode) {
         case IOTXN_OP_READ: {
             iotxn_copyto(txn, (void*) ramdev->mapped_addr + txn->offset, txn->length, 0);
-            iotxn_complete(txn, NO_ERROR, txn->length);
+            iotxn_complete(txn, MX_OK, txn->length);
             return;
         }
         case IOTXN_OP_WRITE: {
             iotxn_copyfrom(txn, (void*) ramdev->mapped_addr + txn->offset, txn->length, 0);
-            iotxn_complete(txn, NO_ERROR, txn->length);
+            iotxn_complete(txn, MX_OK, txn->length);
             return;
         }
         default: {
-            iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
             return;
         }
     }
@@ -207,29 +207,29 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
     switch (op) {
     case IOCTL_RAMDISK_CONFIG: {
         if (cmdlen != sizeof(ramdisk_ioctl_config_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
         config->name[NAME_MAX - 1] = '\0';
         if ((strlen(config->name) == 0) || (strchr(config->name, '/') != NULL)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         ramdisk_device_t* ramdev = calloc(1, sizeof(ramdisk_device_t));
         if (!ramdev) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         ramdev->blk_size = config->blk_size;
         ramdev->blk_count = config->blk_count;
         strcpy(ramdev->name, config->name);
         mx_status_t status;
-        if ((status = mx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != NO_ERROR) {
+        if ((status = mx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != MX_OK) {
             free(ramdev);
             return status;
         }
         if ((status = mx_vmar_map(mx_vmar_root_self(), 0, ramdev->vmo, 0, sizebytes(ramdev),
                                   MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                                  &ramdev->mapped_addr)) != NO_ERROR) {
+                                  &ramdev->mapped_addr)) != MX_OK) {
             mx_handle_close(ramdev->vmo);
             free(ramdev);
             return status;
@@ -244,16 +244,16 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             .proto_ops = &ramdisk_block_ops,
         };
 
-        if ((status = device_add(ramdisk_ctl_dev, &args, &ramdev->mxdev)) != NO_ERROR) {
+        if ((status = device_add(ramdisk_ctl_dev, &args, &ramdev->mxdev)) != MX_OK) {
             mx_vmar_unmap(mx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
             mx_handle_close(ramdev->vmo);
             free(ramdev);
             return status;
         }
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 

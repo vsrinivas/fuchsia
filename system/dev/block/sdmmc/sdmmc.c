@@ -95,19 +95,19 @@ static mx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         sdmmc_get_info(info, ctx);
         *out_actual = sizeof(*info);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_BLOCK_GET_NAME: {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     case IOCTL_DEVICE_SYNC: {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     return 0;
 }
@@ -127,7 +127,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         xprintf("sdmmc: iotxn offset not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->offset, SDHC_BLOCK_SIZE);
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -135,7 +135,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         xprintf("sdmmc: iotxn length not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->length, SDHC_BLOCK_SIZE);
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -162,13 +162,13 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
             break;
         default:
             // Invalid opcode?
-            iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
             return;
     }
 
-    if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != NO_ERROR) {
+    if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != MX_OK) {
         xprintf("sdmmc: error allocating emmc iotxn\n");
-        iotxn_complete(txn, ERR_INTERNAL, 0);
+        iotxn_complete(txn, MX_ERR_INTERNAL, 0);
         return;
     }
     emmc_txn->opcode = txn->opcode;
@@ -184,7 +184,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     for (; attempt <= max_attempts; attempt++) {
         mx_status_t rc = sdmmc_do_command(sdmmc_mxdev, SDMMC_SEND_STATUS,
                                           sdmmc->rca << 16, emmc_txn);
-        if (rc != NO_ERROR) {
+        if (rc != MX_OK) {
             iotxn_complete(txn, rc, 0);
             goto out;
         }
@@ -203,7 +203,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     if (attempt == max_attempts) {
         // Too many retries, fail.
-        iotxn_complete(txn, ERR_BAD_STATE, 0);
+        iotxn_complete(txn, MX_ERR_BAD_STATE, 0);
         goto out;
     }
 
@@ -222,7 +222,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     }
 
     mx_status_t rc = sdmmc_do_command(sdmmc_mxdev, cmd, blkid, emmc_txn);
-    if (rc != NO_ERROR) {
+    if (rc != MX_OK) {
         iotxn_complete(txn, rc, 0);
     }
 
@@ -232,7 +232,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         iotxn_copyto(txn, buffer, bytes_processed, 0);
     }
 
-    iotxn_complete(txn, NO_ERROR, bytes_processed);
+    iotxn_complete(txn, MX_OK, bytes_processed);
 
 out:
     if (emmc_txn)
@@ -271,18 +271,18 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_
     sdmmc_get_info(&info, dev);
 
     if ((dev_offset % info.block_size) || (length % info.block_size)) {
-        dev->callbacks->complete(cookie, ERR_INVALID_ARGS);
+        dev->callbacks->complete(cookie, MX_ERR_INVALID_ARGS);
         return;
     }
     uint64_t size = info.block_size * info.block_count;
     if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dev->callbacks->complete(cookie, ERR_OUT_OF_RANGE);
+        dev->callbacks->complete(cookie, MX_ERR_OUT_OF_RANGE);
         return;
     }
 
     mx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != MX_OK) {
         dev->callbacks->complete(cookie, status);
         return;
     }
@@ -327,7 +327,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
     }
 
     // Allocate a single iotxn that we use to bootstrap the card with.
-    if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != NO_ERROR) {
+    if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != MX_OK) {
         xprintf("sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
         goto err;
     }
@@ -339,7 +339,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
 
     // Reset the card. No matter what state the card is in, issuing the
     // GO_IDLE_STATE command will put the card into the idle state.
-    if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
         goto err;
     }
@@ -347,7 +347,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
     // Issue the SEND_IF_COND command, this will tell us that we can talk to
     // the card correctly and it will also tell us if the voltage range that we
     // have supplied has been accepted.
-    if ((st = sdmmc_do_command(dev, SDMMC_SEND_IF_COND, 0x1aa, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_SEND_IF_COND, 0x1aa, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SDMMC_SEND_IF_COND failed, retcode = %d\n", st);
         goto err;
     }
@@ -359,11 +359,11 @@ static int sdmmc_bootstrap_thread(void* arg) {
     }
 
     // Get the operating conditions from the card.
-    if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, 0, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, 0, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SDMMC_APP_CMD failed, retcode = %d\n", st);
         goto err;
     }
-    if ((sdmmc_do_command(dev, SDMMC_SD_SEND_OP_COND, 0, setup_txn)) != NO_ERROR) {
+    if ((sdmmc_do_command(dev, SDMMC_SD_SEND_OP_COND, 0, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SDMMC_SD_SEND_OP_COND failed, retcode = %d\n", st);
         goto err;
     }
@@ -374,11 +374,11 @@ static int sdmmc_bootstrap_thread(void* arg) {
     while (true) {
         // Ask for high speed.
         const uint32_t flags = (1 << 30)  | 0x00ff8000 | (1 << 24);
-        if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, 0, setup_txn)) != NO_ERROR) {
+        if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, 0, setup_txn)) != MX_OK) {
             xprintf("sdmmc: APP_CMD failed with retcode = %d\n", st);
             goto err;
         }
-        if ((st = sdmmc_do_command(dev, SDMMC_SD_SEND_OP_COND, flags, setup_txn)) != NO_ERROR) {
+        if ((st = sdmmc_do_command(dev, SDMMC_SD_SEND_OP_COND, flags, setup_txn)) != MX_OK) {
             xprintf("sdmmc: SD_SEND_OP_COND failed with retcode = %d\n", st);
             goto err;
         }
@@ -405,14 +405,14 @@ static int sdmmc_bootstrap_thread(void* arg) {
     uint32_t new_bus_frequency = 25000000;
     st = device_op_ioctl(dev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
                          sizeof(new_bus_frequency), NULL, 0, NULL);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         // This is non-fatal but the card will run slowly.
         xprintf("sdmmc: failed to increase bus frequency.\n");
     }
 
     // Try to switch the bus voltage to 1.8v
     if (card_supports_18v_signalling) {
-        if ((st = sdmmc_do_command(dev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn)) != NO_ERROR) {
+        if ((st = sdmmc_do_command(dev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn)) != MX_OK) {
             xprintf("sdmmc: failed to send switch voltage command to card, "
                     "retcode = %d\n", st);
             goto err;
@@ -421,19 +421,19 @@ static int sdmmc_bootstrap_thread(void* arg) {
         const uint32_t new_voltage = SDMMC_VOLTAGE_18;
         st = device_op_ioctl(dev, IOCTL_SDMMC_SET_VOLTAGE, &new_voltage,
                              sizeof(new_voltage), NULL, 0, NULL);
-        if (st != NO_ERROR) {
+        if (st != MX_OK) {
             xprintf("sdmmc: Card supports 1.8v signalling but was unable to "
                     "switch to 1.8v mode, retcode = %d\n", st);
             goto err;
         }
     }
 
-    if ((st = sdmmc_do_command(dev, SDMMC_ALL_SEND_CID, 0, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_ALL_SEND_CID, 0, setup_txn)) != MX_OK) {
         xprintf("sdmmc: ALL_SEND_CID failed with retcode = %d\n", st);
         goto err;
     }
 
-    if ((st = sdmmc_do_command(dev, SDMMC_SEND_RELATIVE_ADDR, 0, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_SEND_RELATIVE_ADDR, 0, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SEND_RELATIVE_ADDR failed with retcode = %d\n", st);
         goto err;
     }
@@ -442,17 +442,17 @@ static int sdmmc_bootstrap_thread(void* arg) {
     if (pdata->response[0] & 0xe000) {
         xprintf("sdmmc: SEND_RELATIVE_ADDR failed with resp = %d\n",
                 (pdata->response[0] & 0xe000));
-        st = ERR_INTERNAL;
+        st = MX_ERR_INTERNAL;
         goto err;
     }
     if ((pdata->response[0] & (1u << 8)) == 0) {
         xprintf("sdmmc: SEND_RELATIVE_ADDR failed. Card not ready.\n");
-        st = ERR_INTERNAL;
+        st = MX_ERR_INTERNAL;
         goto err;
     }
 
     // Determine the size of the card.
-    if ((st = sdmmc_do_command(dev, SDMMC_SEND_CSD, sdmmc->rca << 16, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_SEND_CSD, sdmmc->rca << 16, setup_txn)) != MX_OK) {
         xprintf("sdmmc: failed to send app cmd, retcode = %d\n", st);
         goto err;
     }
@@ -471,18 +471,18 @@ static int sdmmc_bootstrap_thread(void* arg) {
     sdmmc->capacity = (c_size + 1ul) * 512ul * 1024ul;
     xprintf("sdmmc: found card with capacity = %"PRIu64"B\n", sdmmc->capacity);
 
-    if ((st = sdmmc_do_command(dev, SDMMC_SELECT_CARD, sdmmc->rca << 16, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_SELECT_CARD, sdmmc->rca << 16, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SELECT_CARD failed with retcode = %d\n", st);
         goto err;
     }
 
     pdata->blockcount = 1;
     pdata->blocksize = 8;
-    if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != MX_OK) {
         xprintf("sdmmc: APP_CMD failed with retcode = %d\n", st);
         goto err;
     }
-    if ((st = sdmmc_do_command(dev, SDMMC_SEND_SCR, 0, setup_txn)) != NO_ERROR) {
+    if ((st = sdmmc_do_command(dev, SDMMC_SEND_SCR, 0, setup_txn)) != MX_OK) {
         xprintf("sdmmc: SEND_SCR failed with retcode = %d\n", st);
         goto err;
     }
@@ -499,18 +499,18 @@ static int sdmmc_bootstrap_thread(void* arg) {
 
         do {
             // First tell the card to go into four bit mode:
-            if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != NO_ERROR) {
+            if ((st = sdmmc_do_command(dev, SDMMC_APP_CMD, sdmmc->rca << 16, setup_txn)) != MX_OK) {
                 xprintf("sdmmc: failed to send app cmd, retcode = %d\n", st);
                 break;
             }
-            if ((st = sdmmc_do_command(dev, SDMMC_SET_BUS_WIDTH, 2, setup_txn)) != NO_ERROR) {
+            if ((st = sdmmc_do_command(dev, SDMMC_SET_BUS_WIDTH, 2, setup_txn)) != MX_OK) {
                 xprintf("sdmmc: failed to set card bus width, retcode = %d\n", st);
                 break;
             }
             const uint32_t new_bus_width = 4;
             st = device_op_ioctl(dev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width,
                                  sizeof(new_bus_width), NULL, 0, NULL);
-            if (st != NO_ERROR) {
+            if (st != MX_OK) {
                 xprintf("sdmmc: failed to set host bus width, retcode = %d\n", st);
             }
         } while (false);
@@ -528,7 +528,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
     };
 
     st = device_add(dev, &args, &sdmmc->mxdev);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
          goto err;
     }
 
@@ -557,7 +557,7 @@ static mx_status_t sdmmc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     thrd_detach(bootstrap_thrd);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t sdmmc_driver_ops = {

@@ -94,22 +94,22 @@ static inline mx_status_t ahci_wait_for_clear(const volatile uint32_t* reg, uint
     int i = 0;
     mx_time_t start_time = mx_time_get(MX_CLOCK_MONOTONIC);
     do {
-        if (!(ahci_read(reg) & mask)) return NO_ERROR;
+        if (!(ahci_read(reg) & mask)) return MX_OK;
         usleep(10 * 1000);
         i++;
     } while (mx_time_get(MX_CLOCK_MONOTONIC) - start_time < timeout);
-    return ERR_TIMED_OUT;
+    return MX_ERR_TIMED_OUT;
 }
 
 static inline mx_status_t ahci_wait_for_set(const volatile uint32_t* reg, uint32_t mask, mx_time_t timeout) {
     int i = 0;
     mx_time_t start_time = mx_time_get(MX_CLOCK_MONOTONIC);
     do {
-        if (ahci_read(reg) & mask) return NO_ERROR;
+        if (ahci_read(reg) & mask) return MX_OK;
         usleep(10 * 1000);
         i++;
     } while (mx_time_get(MX_CLOCK_MONOTONIC) - start_time < timeout);
-    return ERR_TIMED_OUT;
+    return MX_ERR_TIMED_OUT;
 }
 
 static void ahci_port_disable(ahci_port_t* port) {
@@ -221,7 +221,7 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
     mx_status_t status = iotxn_physmap(txn);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         iotxn_complete(txn, status, 0);
         completion_signal(&dev->worker_completion);
         return status;
@@ -286,13 +286,13 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
             break;
         } else if (length > AHCI_PRD_MAX_SIZE) {
             printf("ahci.%d: chunk size > %zu is unsupported\n", port->nr, length);
-            status = ERR_NOT_SUPPORTED;
+            status = MX_ERR_NOT_SUPPORTED;
             iotxn_complete(txn, status, 0);
             completion_signal(&dev->worker_completion);
             return status;
         } else if (cl->prdtl == AHCI_MAX_PRDS) {
             printf("ahci.%d: txn with more than %d chunks is unsupported\n", port->nr, cl->prdtl);
-            status = ERR_NOT_SUPPORTED;
+            status = MX_ERR_NOT_SUPPORTED;
             iotxn_complete(txn, status, 0);
             completion_signal(&dev->worker_completion);
             return status;
@@ -318,14 +318,14 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     // TODO: general timeout mechanism
     pdata->timeout = mx_time_get(MX_CLOCK_MONOTONIC) + MX_SEC(1);
     completion_signal(&dev->watchdog_completion);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     uint32_t cmd = ahci_read(&port->regs->cmd);
     if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
         xprintf("ahci.%d: port busy\n", port->nr);
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
 
     // allocate memory for the command list, FIS receive area, command table and PRDT
@@ -387,7 +387,7 @@ static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     cmd |= AHCI_PORT_CMD_FRE;
     ahci_write(&port->regs->cmd, cmd);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void ahci_enable_ahci(ahci_device_t* dev) {
@@ -426,7 +426,7 @@ static void ahci_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     // complete empty txns immediately
     if (txn->length == 0) {
-        iotxn_complete(txn, NO_ERROR, txn->length);
+        iotxn_complete(txn, MX_OK, txn->length);
         return;
     }
 
@@ -468,7 +468,7 @@ static int ahci_worker_thread(void* arg) {
                     xprintf("ahci.%d: illegal state, completing slot %d but txn == NULL\n", port->nr, slot);
                 } else {
                     mtx_unlock(&port->lock);
-                    iotxn_complete(txn, NO_ERROR, txn->length);
+                    iotxn_complete(txn, MX_OK, txn->length);
                     mtx_lock(&port->lock);
                 }
                 port->completed &= ~(1 << slot);
@@ -550,7 +550,7 @@ static int ahci_watchdog_thread(void* arg) {
                         port->running &= ~(1 << slot);
                         port->commands[slot] = NULL;
                         mtx_unlock(&port->lock);
-                        iotxn_complete(txn, ERR_TIMED_OUT, 0);
+                        iotxn_complete(txn, MX_ERR_TIMED_OUT, 0);
                         mtx_lock(&port->lock);
                     }
                 }
@@ -580,9 +580,9 @@ static void ahci_port_irq(ahci_device_t* dev, int nr) {
     }
     if (is & AHCI_PORT_INT_ERROR) { // error
         xprintf("ahci.%d: error is=0x%08x\n", nr, is);
-        ahci_port_complete_txn(dev, port, ERR_INTERNAL);
+        ahci_port_complete_txn(dev, port, MX_ERR_INTERNAL);
     } else if (is) {
-        ahci_port_complete_txn(dev, port, NO_ERROR);
+        ahci_port_complete_txn(dev, port, MX_OK);
     }
 }
 
@@ -689,7 +689,7 @@ static int ahci_init_thread(void* arg) {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 fail:
     free(dev->ports);
     return status;
@@ -699,7 +699,7 @@ fail:
 
 static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return MX_ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
     if (status < 0) {
@@ -711,13 +711,13 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     ahci_device_t* device = calloc(1, sizeof(ahci_device_t));
     if (!device) {
         xprintf("ahci: out of memory\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // map register window
     status = pci->map_resource(dev, PCI_RESOURCE_BAR_5, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                (void**)&device->regs, &device->regs_size, &device->regs_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("ahci: error %d mapping register window\n", status);
         goto fail;
     }
@@ -727,13 +727,13 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_handle_t config_handle;
     status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                (void**)&config, &config_size, &config_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("ahci: error %d getting pci config\n", status);
         goto fail;
     }
 
     if (config->sub_class != 0x06 && config->base_class == 0x01) { // SATA
-        status = ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
         xprintf("ahci: device class 0x%x unsupported!\n", config->sub_class);
         mx_handle_close(config_handle);
         goto fail;
@@ -760,7 +760,7 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     // get irq handle
     status = pci->map_interrupt(dev, 0, &device->irq_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("ahci: error %d getting irq handle\n", status);
         goto fail;
     }
@@ -794,7 +794,7 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     };
 
     status = device_add(dev, &args, &device->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("ahci: error %d in device_add\n", status);
         goto fail;
     }
@@ -807,7 +807,7 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 fail:
     // FIXME unmap, and join any threads created above
     free(device);

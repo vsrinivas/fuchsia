@@ -11,11 +11,11 @@ static void ums_block_queue(void* ctx, iotxn_t* txn) {
     ums_block_t* dev = ctx;
 
     if (txn->offset % dev->block_size) {
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
     if (txn->length % dev->block_size) {
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
     txn->context = dev;
@@ -44,10 +44,10 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         ums_get_info(dev->mxdev, info);
         *out_actual = sizeof(*info);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
@@ -64,7 +64,7 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
         }
         if (!txn) {
             mtx_unlock(&ums->iotxn_lock);
-            return NO_ERROR;
+            return MX_OK;
         }
         // queue a stack allocated sync node on ums_t.sync_nodes
         node.iotxn = txn;
@@ -75,7 +75,7 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
         return completion_wait(&node.completion, MX_TIME_INFINITE);
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -108,7 +108,7 @@ static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         dev->cb->complete(cookie, status);
         return;
     }
@@ -126,7 +126,7 @@ static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t lengt
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         dev->cb->complete(cookie, status);
         return;
     }
