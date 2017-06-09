@@ -23,9 +23,7 @@
 * Author: Tony Barbour <tony@LunarG.com>
 */
 
-extern "C" {
-#include "vkcube.h"
-}
+#include "cube.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,16 +54,6 @@ extern "C" {
 #include "lib/mtl/tasks/message_loop.h"
 #include <thread>
 #endif
-
-//#include <vulkan/vk_sdk_platform.h>
-#include "linmath.h"
-
-#define DEMO_TEXTURE_COUNT 1
-#define APP_SHORT_NAME "cube"
-#define APP_LONG_NAME "The Vulkan Cube Demo Program"
-
-// Allow a maximum of two outstanding presentation operations.
-#define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -112,21 +100,6 @@ static PFN_vkGetDeviceProcAddr g_gdpa = NULL;
                      "vkGetDeviceProcAddr Failure");                           \
         }                                                                      \
     }
-
-/*
- * structure to track all objects related to a texture.
- */
-struct texture_object {
-    VkSampler sampler;
-
-    VkImage image;
-    VkImageLayout imageLayout;
-
-    VkMemoryAllocateInfo mem_alloc;
-    VkDeviceMemory mem;
-    VkImageView view;
-    uint32_t tex_width, tex_height;
-};
 
 static const char* tex_files[] = {"lunarg.ppm"};
 
@@ -266,133 +239,6 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 
     return false;
 }
-
-typedef struct {
-    VkImage image;
-    VkCommandBuffer cmd;
-    VkCommandBuffer graphics_to_present_cmd;
-    VkImageView view;
-} SwapchainBuffers;
-
-struct demo {
-#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
-    Display* display;
-    Window xlib_window;
-    Atom xlib_wm_delete_window;
-
-    xcb_connection_t *connection;
-    xcb_screen_t *screen;
-    xcb_window_t xcb_window;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif
-    VkSurfaceKHR surface;
-    bool prepared;
-    bool use_staging_buffer;
-    bool use_xlib;
-    bool separate_present_queue;
-
-    VkInstance inst;
-    VkPhysicalDevice gpu;
-    VkDevice device;
-    VkQueue graphics_queue;
-    VkQueue present_queue;
-    uint32_t graphics_queue_family_index;
-    uint32_t present_queue_family_index;
-    VkSemaphore image_acquired_semaphores[FRAME_LAG];
-    VkSemaphore draw_complete_semaphores[FRAME_LAG];
-    VkSemaphore image_ownership_semaphores[FRAME_LAG];
-    VkPhysicalDeviceProperties gpu_props;
-    VkQueueFamilyProperties *queue_props;
-    VkPhysicalDeviceMemoryProperties memory_properties;
-
-    uint32_t enabled_extension_count;
-    uint32_t enabled_layer_count;
-    const char* extension_names[64];
-    const char* enabled_layers[64];
-
-    uint32_t width, height;
-    VkFormat format;
-    VkColorSpaceKHR color_space;
-
-    PFN_vkGetPhysicalDeviceSurfaceSupportKHR
-        fpGetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR
-        fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
-    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR
-        fpGetPhysicalDeviceSurfaceFormatsKHR;
-    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR
-        fpGetPhysicalDeviceSurfacePresentModesKHR;
-    PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
-    PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
-    PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
-    PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
-    PFN_vkQueuePresentKHR fpQueuePresentKHR;
-    uint32_t swapchainImageCount;
-    VkSwapchainKHR swapchain;
-    SwapchainBuffers *buffers;
-    VkPresentModeKHR presentMode;
-    VkFence fences[FRAME_LAG];
-    int frame_index;
-
-    VkCommandPool cmd_pool;
-    VkCommandPool present_cmd_pool;
-
-    struct {
-        VkFormat format;
-
-        VkImage image;
-        VkMemoryAllocateInfo mem_alloc;
-        VkDeviceMemory mem;
-        VkImageView view;
-    } depth;
-
-    struct texture_object textures[DEMO_TEXTURE_COUNT];
-    struct texture_object staging_texture;
-
-    struct {
-        VkBuffer buf;
-        VkMemoryAllocateInfo mem_alloc;
-        VkDeviceMemory mem;
-        VkDescriptorBufferInfo buffer_info;
-    } uniform_data;
-
-    VkCommandBuffer cmd; // Buffer for initialization commands
-    VkPipelineLayout pipeline_layout;
-    VkDescriptorSetLayout desc_layout;
-    VkPipelineCache pipelineCache;
-    VkRenderPass render_pass;
-    VkPipeline pipeline;
-
-    mat4x4 projection_matrix;
-    mat4x4 view_matrix;
-    mat4x4 model_matrix;
-
-    float spin_angle;
-    float spin_increment;
-    bool pause;
-
-    VkShaderModule vert_shader_module;
-    VkShaderModule frag_shader_module;
-
-    VkDescriptorPool desc_pool;
-    VkDescriptorSet desc_set;
-
-    VkFramebuffer *framebuffers;
-
-    bool quit;
-    int32_t curFrame;
-    int32_t frameCount;
-    bool validate;
-    bool use_break;
-    bool suppress_popups;
-    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
-    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
-    VkDebugReportCallbackEXT msg_callback;
-    PFN_vkDebugReportMessageEXT DebugReportMessage;
-
-    uint32_t current_buffer;
-    uint32_t queue_family_count;
-};
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
@@ -701,7 +547,7 @@ void demo_update_data_buffer(struct demo *demo) {
     vkUnmapMemory(demo->device, demo->uniform_data.mem);
 }
 
-static void demo_draw(struct demo *demo) {
+void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
     // Ensure no more than FRAME_LAG renderings are outstanding
@@ -805,7 +651,7 @@ static void demo_draw(struct demo *demo) {
     }
 }
 
-static void demo_prepare_buffers(struct demo *demo) {
+void demo_prepare_buffers(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
     VkSwapchainKHR oldSwapchain = demo->swapchain;
 
@@ -1009,7 +855,7 @@ static void demo_prepare_buffers(struct demo *demo) {
     }
 }
 
-static void demo_prepare_depth(struct demo *demo) {
+void demo_prepare_depth(struct demo *demo) {
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     const VkImageCreateInfo image = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -1783,7 +1629,7 @@ static void demo_prepare_framebuffers(struct demo *demo) {
     }
 }
 
-static void demo_prepare(struct demo *demo) {
+void demo_prepare(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
     const VkCommandPoolCreateInfo cmd_pool_info = {
@@ -1877,7 +1723,7 @@ static void demo_prepare(struct demo *demo) {
     demo->prepared = true;
 }
 
-static void demo_cleanup(struct demo *demo) {
+void demo_cleanup(struct demo *demo) {
     uint32_t i;
 
     demo->prepared = false;
@@ -2224,7 +2070,7 @@ static void demo_create_xcb_window(struct demo *demo) {
 #endif
 
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
-static void demo_run_magma(struct demo *demo) 
+static void demo_run_magma(struct demo *demo)
 {
     uint32_t num_frames = 60;
     uint32_t elapsed_frames = 0;
@@ -2679,7 +2525,7 @@ static void demo_create_device(struct demo *demo) {
     assert(!err);
 }
 
-static void demo_init_vk_swapchain(struct demo *demo) {
+void demo_init_vk_swapchain(struct demo *demo) {
     VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     uint32_t i;
 
@@ -2869,7 +2715,7 @@ static void demo_init_connection(struct demo *demo) {
 #endif
 }
 
-static void demo_init(struct demo *demo, int argc, char **argv) {
+void demo_init(struct demo *demo, int argc, char **argv) {
     vec3 eye = {0.0f, 3.0f, 5.0f};
     vec3 origin = {0, 0, 0};
     vec3 up = {0.0f, 1.0f, 0.0};
