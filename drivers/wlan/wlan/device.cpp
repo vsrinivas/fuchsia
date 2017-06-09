@@ -26,8 +26,7 @@ namespace wlan {
 
 Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
   : WlanBaseDevice(device, "wlan"),
-    mlme_(this, ddk::WlanmacProtocolProxy(wlanmac_proto)),
-    buffer_alloc_(kNumSlabs, true) {
+    mlme_(this, ddk::WlanmacProtocolProxy(wlanmac_proto)) {
     debugfn();
 }
 
@@ -74,17 +73,34 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 mxtl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length,
-                                               Packet::Source src) {
-    if (length > kBufferSize) {
+                                               Packet::Peer peer) {
+    if (length > kLargeBufferSize) {
         return nullptr;
     }
-    auto buffer = buffer_alloc_.New();
+
+    mxtl::unique_ptr<Buffer> buffer;
+    if (length > kSmallBufferSize) {
+        buffer = LargeBufferAllocator::New();
+    } else {
+        buffer = SmallBufferAllocator::New();
+        if (buffer == nullptr) {
+            // Fall back to the large buffers if we're out of small buffers.
+            buffer = LargeBufferAllocator::New();
+        }
+    }
+
+    // If we haven't gotten a buffer by this point, we are out of memory and things are about to go
+    // horribly wrong.
     if (buffer == nullptr) {
         return nullptr;
     }
     auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
-    packet->set_src(src);
-    packet->CopyFrom(data, length, 0);
+    packet->set_peer(peer);
+    mx_status_t status = packet->CopyFrom(data, length, 0);
+    if (status != MX_OK) {
+        errorf("could not copy to packet: %d\n", status);
+        return nullptr;
+    }
     return packet;
 }
 
@@ -171,7 +187,7 @@ void Device::EthmacStop() {
 
 void Device::EthmacSend(uint32_t options, void* data, size_t length) {
     // no debugfn() because it's too noisy
-    auto packet = PreparePacket(data, length, Packet::Source::kEthernet);
+    auto packet = PreparePacket(data, length, Packet::Peer::kEthernet);
     mx_status_t status = QueuePacket(std::move(packet));
     if (status != MX_OK) {
         warnf("could not queue outbound packet err=%d\n", status);
@@ -184,7 +200,7 @@ void Device::WlanmacStatus(uint32_t status) {
 
 void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
     // no debugfn() because it's too noisy
-    auto packet = PreparePacket(data, length, Packet::Source::kWlan, *info);
+    auto packet = PreparePacket(data, length, Packet::Peer::kWlan, *info);
     mx_status_t status = QueuePacket(std::move(packet));
     if (status != MX_OK) {
         warnf("could not queue inbound packet err=%d\n", status);
@@ -292,7 +308,7 @@ void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         infof("channel closed\n");
         ResetChannelLocked();
     } else if (sig.observed & MX_CHANNEL_READABLE) {
-        auto buffer = buffer_alloc_.New();
+        auto buffer = LargeBufferAllocator::New();
         if (buffer == nullptr) {
             errorf("no free buffers available!\n");
             // TODO: reply on the channel
@@ -300,7 +316,7 @@ void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         }
         uint32_t read = 0;
         mx_status_t status =
-            channel_.read(0, buffer->data, sizeof(buffer->data), &read, nullptr, 0, nullptr);
+            channel_.read(0, buffer->data(), buffer->capacity(), &read, nullptr, 0, nullptr);
         if (status != MX_OK) {
             errorf("could not read channel: %d\n", status);
             ResetChannelLocked();
@@ -309,7 +325,7 @@ void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         debugf("read %u bytes from channel_\n", read);
 
         auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
-        packet->set_src(Packet::Source::kService);
+        packet->set_peer(Packet::Peer::kService);
         {
             std::lock_guard<std::mutex> lock(packet_queue_lock_);
             packet_queue_.push_front(std::move(packet));

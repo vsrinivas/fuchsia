@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "mac_frame.h"
+#include "wlan.h"
 
 #include <gtest/gtest.h>
 

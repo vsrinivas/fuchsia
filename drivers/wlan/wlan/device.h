@@ -68,11 +68,11 @@ class Device : public WlanBaseDevice,
         kPacketQueued,
     };
 
-    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Source src);
+    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
     template <typename T>
-    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Source src,
+    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
                                            const T& ctrl_data) {
-        auto packet = PreparePacket(data, length, src);
+        auto packet = PreparePacket(data, length, peer);
         if (packet != nullptr) {
             packet->CopyCtrlFrom(ctrl_data);
         }
@@ -96,10 +96,6 @@ class Device : public WlanBaseDevice,
     Mlme mlme_ __TA_GUARDED(lock_);
 
     mx::channel channel_ __TA_GUARDED(lock_);
-
-    // TODO(tkilbourn): evaluate whether an instance or a static slab allocator makes more sense
-    static constexpr size_t kNumSlabs = 2;
-    mxtl::SlabAllocator<BufferAllocatorTraits> buffer_alloc_;
 
     std::mutex packet_queue_lock_;
     mxtl::DoublyLinkedList<mxtl::unique_ptr<Packet>> packet_queue_

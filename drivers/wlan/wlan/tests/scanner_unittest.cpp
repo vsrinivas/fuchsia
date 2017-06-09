@@ -26,7 +26,7 @@ const uint8_t kBeacon[] = {
 class ScannerTest : public ::testing::Test {
   public:
     ScannerTest()
-      : scanner_(mxtl::unique_ptr<Timer>(new TestTimer(1u, &clock_))), buffer_alloc_(1, true) {
+      : scanner_(mxtl::unique_ptr<Timer>(new TestTimer(1u, &clock_))) {
         SetupMessages();
     }
 
@@ -53,7 +53,6 @@ class ScannerTest : public ::testing::Test {
     ScanResponsePtr resp_;
     TestClock clock_;
     Scanner scanner_;
-    mxtl::SlabAllocator<BufferAllocatorTraits> buffer_alloc_;
 };
 
 TEST_F(ScannerTest, Start) {
@@ -167,7 +166,7 @@ TEST_F(ScannerTest, ScanResponse) {
     SetPassive();
 
     ASSERT_EQ(MX_OK, Start());
-    auto buf = buffer_alloc_.New();
+    auto buf = LargeBufferAllocator::New();
     ASSERT_NE(nullptr, buf);
 
     Packet p(std::move(buf), sizeof(kBeacon));

@@ -14,17 +14,6 @@
 
 namespace wlan {
 
-template <typename T>
-T* FromBytes(uint8_t* buf, size_t len) {
-    if (len < sizeof(T)) return nullptr;
-    return reinterpret_cast<T*>(buf);
-}
-template <typename T>
-const T* FromBytes(const uint8_t* buf, size_t len) {
-    if (len < sizeof(T)) return nullptr;
-    return reinterpret_cast<const T*>(buf);
-}
-
 // IEEE Std 802.11-2016, 9.4.2.1
 struct ElementHeader {
     uint8_t id;

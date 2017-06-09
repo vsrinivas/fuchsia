@@ -130,26 +130,26 @@ void DumpPacket(const Packet& packet) {
 mx_status_t Mlme::HandlePacket(const Packet* packet) {
     debugfn();
     MX_DEBUG_ASSERT(packet != nullptr);
-    MX_DEBUG_ASSERT(packet->src() != Packet::Source::kUnknown);
-    debugf("packet data=%p len=%zu src=%s\n",
+    MX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
+    debugf("packet data=%p len=%zu peer=%s\n",
             packet->data(), packet->len(),
-            packet->src() == Packet::Source::kWlan ? "Wlan" :
-            packet->src() == Packet::Source::kEthernet ? "Ethernet" :
-            packet->src() == Packet::Source::kService ? "Service" : "Unknown");
+            packet->peer() == Packet::Peer::kWlan ? "Wlan" :
+            packet->peer() == Packet::Peer::kEthernet ? "Ethernet" :
+            packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
     if (kLogLevel >= kLogDebug) {
         DumpPacket(*packet);
     }
 
     mx_status_t status = MX_OK;
-    switch (packet->src()) {
-    case Packet::Source::kService:
+    switch (packet->peer()) {
+    case Packet::Peer::kService:
         status = HandleSvcPacket(packet);
         break;
-    case Packet::Source::kEthernet:
+    case Packet::Peer::kEthernet:
         status = HandleDataPacket(packet);
         break;
-    case Packet::Source::kWlan: {
+    case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
         debugf("FrameControl type: %u subtype: %u\n", fc->type(), fc->subtype());
         switch (fc->type()) {

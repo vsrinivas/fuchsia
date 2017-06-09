@@ -14,13 +14,22 @@ namespace wlan {
 Packet::Packet(mxtl::unique_ptr<Buffer> buffer, size_t len)
   : buffer_(std::move(buffer)), len_(len) {
     MX_ASSERT(buffer_.get());
-    MX_DEBUG_ASSERT(len <= kBufferSize);
+    MX_DEBUG_ASSERT(len <= buffer_->capacity());
 }
 
-void Packet::CopyFrom(const void* src, size_t len, size_t offset) {
-    MX_ASSERT(offset + len <= kBufferSize);
-    std::memcpy(buffer_->data + offset, src, len);
+mx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
+    if (offset + len > buffer_->capacity()) {
+        return MX_ERR_BUFFER_TOO_SMALL;
+    }
+    std::memcpy(buffer_->data() + offset, src, len);
     len_ = std::max(len_, offset + len);
+    return MX_OK;
 }
 
 }  // namespace wlan
+
+// Definition of static slab allocators.
+// TODO(tkilbourn): tune how many slabs we are willing to grow up to. Reasonably large limits chosen
+// for now.
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::wlan::LargeBufferTraits, 20, true);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::wlan::SmallBufferTraits, 80, true);
