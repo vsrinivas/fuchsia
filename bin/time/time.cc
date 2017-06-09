@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
   mx_handle_t proc = MX_HANDLE_INVALID;
   const char* errmsg = NULL;
   mx_status_t status = launchpad_go(lp, &proc, &errmsg);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr, "Failed to launch %s: %d: %s\n", argv[1], status, errmsg);
     return 1;
   }
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
   gettimeofday(&endtimeval, NULL);
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr, "Failed to wait for process exiting %s: %d\n", argv[1],
            status);
     return 1;
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
                               sizeof(proc_info), nullptr, nullptr);
   mx_handle_close(proc);
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr, "Failed to get process return code %s: %d\n", argv[1],
            status);
     return 1;
