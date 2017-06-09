@@ -28,6 +28,14 @@
 
 #define LOCAL_TRACE 0
 
+static mx_status_t channel_call_epilogue(ProcessDispatcher* up,
+                                         mxtl::unique_ptr<MessagePacket> reply,
+                                         mx_channel_call_args_t* args,
+                                         mx_status_t call_status,
+                                         user_ptr<uint32_t> actual_bytes,
+                                         user_ptr<uint32_t> actual_handles,
+                                         user_ptr<mx_status_t> read_status);
+
 mx_status_t sys_channel_create(
     uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
     LTRACEF("out_handles %p,%p\n", _out0.get(), _out1.get());
@@ -238,12 +246,13 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
     return result;
 }
 
-mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
-                             mx_time_t deadline, user_ptr<const mx_channel_call_args_t> _args,
-                             user_ptr<uint32_t> actual_bytes, user_ptr<uint32_t> actual_handles,
-                             user_ptr<mx_status_t> read_status) {
+mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
+                                     mx_time_t deadline,
+                                     user_ptr<const mx_channel_call_args_t> _args,
+                                     user_ptr<uint32_t> actual_bytes,
+                                     user_ptr<uint32_t> actual_handles,
+                                     user_ptr<mx_status_t> read_status) {
     mx_channel_call_args_t args;
-
 
     if (_args.copy_from_user(&args) != MX_OK)
         return MX_ERR_INVALID_ARGS;
@@ -292,64 +301,90 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
             for (size_t ix = 0; ix != num_handles; ++ix) {
                 up->UndoRemoveHandleLocked(handles[ix]);
             }
-            // 2. Return error directly.  Note that if err is
-            // ERR_SUSPEND_PENDING, the syscall glue will fully retry the Call
-            // on resume.
+            // 2. Return error directly.  Note that the write phase cannot fail
+            // with ERR_SUSPEND_PENDING.
             return result;
         }
+    }
+    return channel_call_epilogue(up, mxtl::move(reply), &args, result,
+                                 actual_bytes, actual_handles, read_status);
+}
 
-        // Check if we have a pending suspend after the write phase and handle
-        // it.  Then retry the wait-and-read after resuming.
-        // TODO(teisenbe): Get rid of this check when we move retries to the
-        // VDSO.
-        while (result == MX_ERR_INTERRUPTED_RETRY) {
-            thread_process_pending_signals();
-            result = channel->ResumeInterruptedCall(deadline, &reply);
-        }
+mx_status_t sys_channel_call_finish(mx_handle_t handle_value, mx_time_t deadline,
+                                    user_ptr<const mx_channel_call_args_t> _args,
+                                    user_ptr<uint32_t> actual_bytes,
+                                    user_ptr<uint32_t> actual_handles,
+                                    user_ptr<mx_status_t> read_status) {
 
-        // Timeout is always returned directly.
-        if (result == MX_ERR_TIMED_OUT) {
-            return result;
-        } else if (result != MX_OK) {
-            // Read phase failed:
-            // Return error via read_status
-            goto read_failed;
-        }
+    mx_channel_call_args_t args;
+    if (_args.copy_from_user(&args) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<ChannelDispatcher> channel;
+    mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
+    if (result != MX_OK)
+        return result;
+
+    mxtl::unique_ptr<MessagePacket> reply;
+    result = channel->ResumeInterruptedCall(deadline, &reply);
+    return channel_call_epilogue(up, mxtl::move(reply), &args, result,
+                                 actual_bytes, actual_handles, read_status);
+
+}
+
+// Handles generating the final results for call successes and read-half failures.
+mx_status_t channel_call_epilogue(ProcessDispatcher* up,
+                                  mxtl::unique_ptr<MessagePacket> reply,
+                                  mx_channel_call_args_t* args,
+                                  mx_status_t call_status,
+                                  user_ptr<uint32_t> actual_bytes,
+                                  user_ptr<uint32_t> actual_handles,
+                                  user_ptr<mx_status_t> read_status) {
+
+    uint32_t num_bytes;
+    uint32_t num_handles;
+
+    // Timeout is always returned directly.
+    if (call_status == MX_ERR_TIMED_OUT) {
+        return call_status;
+    } else if (call_status != MX_OK) {
+        goto read_failed;
     }
 
     // Return inbound message to userspace
     num_bytes = reply->data_size();
     num_handles = reply->num_handles();
 
-    if ((args.rd_num_bytes < num_bytes) || (args.rd_num_handles < num_handles)) {
-        result = MX_ERR_BUFFER_TOO_SMALL;
+    if ((args->rd_num_bytes < num_bytes) || (args->rd_num_handles < num_handles)) {
+        call_status = MX_ERR_BUFFER_TOO_SMALL;
         goto read_failed;
     }
 
-    if (actual_bytes.copy_to_user(num_bytes) != MX_OK) {
-        result = MX_ERR_INVALID_ARGS;
+    if (actual_bytes.copy_to_user(num_bytes) != NO_ERROR) {
+        call_status = MX_ERR_INVALID_ARGS;
         goto read_failed;
     }
-    if (actual_handles.copy_to_user(num_handles) != MX_OK) {
-        result = MX_ERR_INVALID_ARGS;
+    if (actual_handles.copy_to_user(num_handles) != NO_ERROR) {
+        call_status = MX_ERR_INVALID_ARGS;
         goto read_failed;
     }
 
     if (num_bytes > 0u) {
-        if (make_user_ptr(args.rd_bytes).copy_array_to_user(reply->data(), num_bytes) != MX_OK) {
-            result = MX_ERR_INVALID_ARGS;
+        if (make_user_ptr(args->rd_bytes).copy_array_to_user(reply->data(), num_bytes) != MX_OK) {
+            call_status = MX_ERR_INVALID_ARGS;
             goto read_failed;
         }
     }
 
     if (num_handles > 0u) {
-        msg_get_handles(up, reply.get(), make_user_ptr(args.rd_handles), num_handles);
+        msg_get_handles(up, reply.get(), make_user_ptr(args->rd_handles), num_handles);
     }
     return MX_OK;
 
 read_failed:
-    DEBUG_ASSERT(result != MX_ERR_INTERRUPTED_RETRY);
     if (read_status)
-        read_status.copy_to_user(result);
+        read_status.copy_to_user(call_status);
     return MX_ERR_CALL_FAILED;
 }

@@ -9,13 +9,14 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 # This library should not depend on libc.
-MODULE_COMPILEFLAGS := -ffreestanding
+MODULE_COMPILEFLAGS := -ffreestanding $(NO_SAFESTACK)
 
 MODULE_HEADER_DEPS := kernel/lib/vdso
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/data.S \
     $(LOCAL_DIR)/mx_cache_flush.cpp \
+    $(LOCAL_DIR)/mx_channel_call.cpp \
     $(LOCAL_DIR)/mx_deadline_after.cpp \
     $(LOCAL_DIR)/mx_status_get_string.cpp \
     $(LOCAL_DIR)/mx_system_get_num_cpus.cpp \

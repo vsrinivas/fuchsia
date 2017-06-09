@@ -103,13 +103,17 @@ public:
         mx_txid_t get_txid() const { return txid_; }
 
         mx_status_t Wait(lk_time_t deadline) {
-            DEBUG_ASSERT(armed());
+            if (unlikely(!armed())) {
+                return ERR_BAD_STATE;
+            }
             return event_.Wait(deadline);
         }
 
         // Returns any delivered message via out and the status.
         mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out) {
-            DEBUG_ASSERT(armed());
+            if (unlikely(!armed())) {
+                return ERR_BAD_STATE;
+            }
             *out = mxtl::move(msg_);
             channel_ = nullptr;
             return status_;

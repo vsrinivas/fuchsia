@@ -766,6 +766,40 @@ static bool channel_call2(void) {
     END_TEST;
 }
 
+static bool bad_channel_call_finish(void) {
+    BEGIN_TEST;
+
+    mx_handle_t cli, srv;
+    ASSERT_EQ(mx_channel_create(0, &cli, &srv), NO_ERROR, "");
+
+    char msg[8] = { 0, };
+    mx_channel_call_args_t args = {
+        .wr_bytes = msg,
+        .wr_handles = NULL,
+        .wr_num_bytes = sizeof(msg),
+        .wr_num_handles = 0,
+        .rd_bytes = NULL,
+        .rd_handles = NULL,
+        .rd_num_bytes = 0,
+        .rd_num_handles = 0,
+    };
+
+    uint32_t act_bytes = 0xffffffff;
+    uint32_t act_handles = 0xffffffff;
+
+    // Call channel_call_finish without having had a channel call interrupted
+    mx_status_t rs = NO_ERROR;
+    mx_status_t r = mx_channel_call_finish(cli, mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
+                                           &act_handles, &rs);
+
+    mx_handle_close(cli);
+
+    EXPECT_EQ(r, ERR_CALL_FAILED, "");
+    EXPECT_EQ(rs, ERR_BAD_STATE, "");
+
+    END_TEST;
+}
+
 static bool channel_nest(void) {
     BEGIN_TEST;
     mx_handle_t channel[2];
@@ -795,6 +829,7 @@ RUN_TEST(channel_multithread_read)
 RUN_TEST(channel_may_discard)
 RUN_TEST(channel_call)
 RUN_TEST(channel_call2)
+RUN_TEST(bad_channel_call_finish)
 RUN_TEST(channel_nest)
 END_TEST_CASE(channel_tests)
 
