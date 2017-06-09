@@ -36,6 +36,9 @@
 
 static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
+#define STACK_VMO_NAME "userboot-initial-stack"
+#define RAMDISK_VMO_NAME "userboot-raw-ramdisk"
+
 extern char __kernel_cmdline[CMDLINE_MAX];
 extern unsigned __kernel_cmdline_size;
 extern unsigned __kernel_cmdline_count;
@@ -253,7 +256,9 @@ static int attempt_userboot() {
         dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
     auto stack_vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size);
+    stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
     auto rootfs_vmo = VmObjectPaged::CreateFromROData(rbase, rsize);
+    rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
 
     // Prepare the bootstrap message packet.  This puts its data (the
     // kernel command line) in place, and allocates space for its handles.

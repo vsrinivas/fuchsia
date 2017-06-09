@@ -24,6 +24,7 @@
 #pragma GCC visibility pop
 
 #define SHUTDOWN_COMMAND "poweroff"
+#define STACK_VMO_NAME "userboot-child-initial-stack"
 
 static noreturn void do_shutdown(mx_handle_t log, mx_handle_t rroot) {
     print(log, "Process exited.  Executing \"", SHUTDOWN_COMMAND, "\".\n",
@@ -254,6 +255,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_vmo_create(stack_size, 0, &stack_vmo);
     if (status < 0)
         fail(log, status, "mx_vmo_create failed for child stack\n");
+    mx_object_set_property(stack_vmo, MX_PROP_NAME,
+                           STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
     mx_vaddr_t stack_base;
     status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
