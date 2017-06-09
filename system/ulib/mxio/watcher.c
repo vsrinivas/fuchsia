@@ -65,7 +65,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
 // as it drops temporary nuls in it while dispatching
 static mx_status_t mxio_watcher_process(mxio_watcher_t* w, uint8_t* msg, size_t len) {
     // Message Format: { OP, LEN, DATA[LEN] }
-    while (len > 2) {
+    while (len >= 2) {
         unsigned event = *msg++;
         unsigned namelen = *msg++;
 
