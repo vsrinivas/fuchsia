@@ -85,9 +85,9 @@ mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len) {
     }
     if (len != actual) {
         printf("read_mem @%p FAILED, short read %zd\n", (void*) vaddr, len);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max) {
@@ -102,7 +102,7 @@ mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max)
         max--;
     }
     *ptr = 0;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #if UINT_MAX == ULONG_MAX
@@ -144,28 +144,28 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
     mx_status_t status;
 
     if (buf_size < MAX_BUILDID_SIZE * 2 + 1)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     status = read_mem(h, vaddr, tmp, 4);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     if (memcmp(tmp, ELFMAG, SELFMAG))
-        return ERR_WRONG_TYPE;
+        return MX_ERR_WRONG_TYPE;
 
     elf_off_t phoff;
     elf_half_t num;
     status = read_mem(h, vaddr + ehdr_off_phoff, &phoff, sizeof(phoff));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     status = read_mem(h, vaddr + ehdr_off_phnum, &num, sizeof(num));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     for (unsigned n = 0; n < num; n++) {
         mx_vaddr_t phaddr = vaddr + phoff + (n * sizeof(elf_phdr_t));
         elf_word_t type;
         status = read_mem(h, phaddr + phdr_off_type, &type, sizeof(type));
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         if (type != PT_NOTE)
             continue;
@@ -173,10 +173,10 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
         elf_off_t off;
         elf_native_word_t size;
         status = read_mem(h, phaddr + phdr_off_offset, &off, sizeof(off));
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         status = read_mem(h, phaddr + phdr_off_filesz, &size, sizeof(size));
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         struct {
@@ -185,7 +185,7 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
         } hdr;
         while (size > sizeof(hdr)) {
             status = read_mem(h, vaddr + off, &hdr, sizeof(hdr));
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 return status;
             size_t header_size =
                 sizeof(Elf32_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
@@ -206,15 +206,15 @@ mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf
             } else {
                 uint8_t buildid[MAX_BUILDID_SIZE];
                 status = read_mem(h, payload_vaddr, buildid, hdr.hdr.n_descsz);
-                if (status != NO_ERROR)
+                if (status != MX_OK)
                     return status;
                 for (uint32_t i = 0; i < hdr.hdr.n_descsz; ++i) {
                     snprintf(&buf[i * 2], 3, "%02x", buildid[i]);
                 }
             }
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }

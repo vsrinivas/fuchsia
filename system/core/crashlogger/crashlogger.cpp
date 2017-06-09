@@ -197,7 +197,7 @@ void resume_thread(mx_handle_t thread, bool handled) {
     if (!handled)
         options |= MX_RESUME_TRY_NEXT;
     auto status = mx_task_resume(thread, options);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         print_mx_error("unable to \"resume\" thread", status);
         // This shouldn't ever happen. The task is now effectively hung.
         // TODO: Try to forcefully kill it?
@@ -378,7 +378,7 @@ int self_dump_func(void* arg) {
     // terminate until the original crashing thread is "resumed".
     // This could be an assert, but we don't want the check disabled in
     // release builds.
-    if (unbind_status != NO_ERROR) {
+    if (unbind_status != MX_OK) {
         print_mx_error("WARNING: unable to unbind system exception port", unbind_status);
         // This "shouldn't happen", safer to just terminate.
         exit(1);
@@ -472,7 +472,7 @@ int main(int argc, char** argv) {
     // an existing crashlogger with this one.
     if (force) {
         status = unbind_system_exception_port();
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             print_mx_error("unable to unbind system exception port", status);
             return 1;
         }

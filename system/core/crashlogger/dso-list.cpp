@@ -40,7 +40,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
     memset(dso->buildid, 'x', sizeof(dso->buildid) - 1);
     dso->base = base;
     dso->debug_file_tried = false;
-    dso->debug_file_status = ERR_BAD_STATE;
+    dso->debug_file_status = MX_ERR_BAD_STATE;
     while (*list != nullptr) {
         if ((*list)->base < dso->base) {
             dso->next = *list;
@@ -58,7 +58,7 @@ dsoinfo_t* dso_fetch_list(mx_handle_t h, const char* name) {
     uintptr_t lmap, debug_addr;
     mx_status_t status = mx_object_get_property(h, MX_PROP_PROCESS_DEBUG_ADDR,
                                                 &debug_addr, sizeof(debug_addr));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         print_mx_error("mx_object_get_property(MX_PROP_PROCESS_DEBUG_ADDR), unable to fetch dso list", status);
         return nullptr;
     }
@@ -126,7 +126,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     // messages twice.
     if (dso->debug_file_tried) {
         switch (dso->debug_file_status) {
-        case NO_ERROR:
+        case MX_OK:
             MX_DEBUG_ASSERT(dso->debug_file != nullptr);
             *out_debug_file = dso->debug_file;
             // fall through
@@ -142,7 +142,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     char* path;
     if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) < 0) {
         debugf(1, "OOM building debug file path for dso %s\n", dso->name);
-        dso->debug_file_status = ERR_NO_MEMORY;
+        dso->debug_file_status = MX_ERR_NO_MEMORY;
         return dso->debug_file_status;
     }
 
@@ -152,13 +152,13 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     if (fd < 0) {
         debugf(1, "debug file for dso %s not found: %s\n", dso->name, path);
         free(path);
-        dso->debug_file_status = ERR_NOT_FOUND;
+        dso->debug_file_status = MX_ERR_NOT_FOUND;
     } else {
         debugf(1, "found debug file for dso %s: %s\n", dso->name, path);
         close(fd);
         dso->debug_file = path;
         *out_debug_file = path;
-        dso->debug_file_status = NO_ERROR;
+        dso->debug_file_status = MX_OK;
     }
 
     return dso->debug_file_status;

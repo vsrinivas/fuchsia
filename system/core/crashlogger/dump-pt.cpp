@@ -67,37 +67,37 @@ static mx_status_t crashlogger_run(const char* name, int argc, const char* const
     mx_handle_t child;
     const char* errmsg;
     mx_status_t status = launchpad_go(lp, &child, &errmsg);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_signals_t signals;
     status = mx_object_wait_one(child, MX_TASK_TERMINATED, mx_deadline_after(run_timeout),
                                 &signals);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         // Leave reporting the error to the caller.
     } else {
         if (signals & MX_TASK_TERMINATED) {
             mx_info_process_t info;
             status = mx_object_get_info(child, MX_INFO_PROCESS, &info,
                                         sizeof(info), nullptr, nullptr);
-            if (status == NO_ERROR && info.exited) {
+            if (status == MX_OK && info.exited) {
                 if (info.return_code != 0) {
                     // The child should have already printed its own error
                     // message, we just need to return some error code to the
                     // caller
-                    status = ERR_IO;
+                    status = MX_ERR_IO;
                 }
             } else {
                 // This shouldn't happen, but we don't want to kill crashlogger
                 // because of it. Return some indicative error code and let the
                 // caller report it.
-                status = ERR_BAD_STATE;
+                status = MX_ERR_BAD_STATE;
             }
         } else {
             // This shouldn't happen, but we don't want to kill crashlogger
             // because of it. Return some indicative error code and let the
             // caller report it.
-            status = ERR_BAD_STATE;
+            status = MX_ERR_BAD_STATE;
         }
     }
 
@@ -140,7 +140,7 @@ void try_dump_pt_data() {
     };
     mx_status_t status = crashlogger_run("ipt-dump",
                                          countof(argv_pt_dump), argv_pt_dump);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         printf("PT output written to " PT_PATH_FORMAT ".*\n",
                pt_path_prefix, seq_num);
     } else {
