@@ -52,6 +52,7 @@ source_set("unittests") {
   deps = [
     ":impl",
     "//apps/ledger/src/cloud_provider/test",
+    "//apps/ledger/src/cloud_sync/test",
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
