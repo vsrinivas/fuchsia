@@ -109,7 +109,7 @@ static void SetNullReturn(Dart_NativeArguments arguments) {
 }
 
 static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(ERR_INVALID_ARGS));
+  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(MX_ERR_INVALID_ARGS));
 }
 
 #define CHECK_INTEGER_ARGUMENT(args, num, result, failure)       \
@@ -156,7 +156,7 @@ void MxHandle_RegisterFinalizer(Dart_NativeArguments arguments) {
   peer->handle = handle;
   peer->weak = Dart_NewWeakPersistentHandle(wrapper, peer, sizeof(HandlePeer),
                                             HandleFinalizer);
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(NO_ERROR));
+  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(MX_OK));
 }
 
 void MxHandle_UnregisterFinalizer(Dart_NativeArguments arguments) {
@@ -174,7 +174,7 @@ void MxHandle_UnregisterFinalizer(Dart_NativeArguments arguments) {
   Dart_DeleteWeakPersistentHandle(Dart_CurrentIsolate(), peer->weak);
   delete peer;
 
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(NO_ERROR));
+  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(MX_OK));
 }
 
 void MxTime_Get(Dart_NativeArguments arguments) {
@@ -380,7 +380,7 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   mx_status_t rv = mx_channel_read(static_cast<mx_handle_t>(dart_handle), 0,
                                    nullptr, nullptr, 0, 0, &blen, &hlen);
 
-  if ((rv != NO_ERROR) && (rv != ERR_BUFFER_TOO_SMALL)) {
+  if ((rv != MX_OK) && (rv != MX_ERR_BUFFER_TOO_SMALL)) {
     Dart_ListSetAt(result, 0, Dart_NewInteger(rv));
     Dart_ListSetAt(result, 1, data);
     Dart_ListSetAt(result, 2, dart_handles);
