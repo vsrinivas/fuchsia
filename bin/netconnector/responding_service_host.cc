@@ -26,14 +26,13 @@ void RespondingServiceHost::RegisterSingleton(
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
       ](mx::channel client_handle) mutable {
-        FTL_VLOG(2) << "Servicing singleton service request for "
-                    << service_name;
+        FTL_VLOG(2) << "Handling request for service " << service_name;
 
         auto iter = service_providers_by_name_.find(service_name);
 
         if (iter == service_providers_by_name_.end()) {
-          FTL_VLOG(1) << "Starting singleton " << launch_info->url
-                      << " for service " << service_name;
+          FTL_VLOG(1) << "Launching " << launch_info->url << " for service "
+                      << service_name;
 
           // TODO(dalesat): Create application-specific environment.
           // We're launching this application in the environment supplied to
@@ -51,7 +50,8 @@ void RespondingServiceHost::RegisterSingleton(
 
           service_provider.set_connection_error_handler(
               [this, service_name, &controller] {
-                FTL_LOG(ERROR) << "Singleton " << service_name << " died";
+                FTL_LOG(INFO)
+                    << "Service " << service_name << " provider disconnected";
                 controller.reset();  // kills the singleton application
                 service_providers_by_name_.erase(service_name);
               });
@@ -72,7 +72,7 @@ void RespondingServiceHost::RegisterProvider(
       app::ServiceProviderPtr::Create(std::move(handle));
 
   service_provider.set_connection_error_handler([this, service_name] {
-    FTL_LOG(ERROR) << "Singleton " << service_name << " provider died";
+    FTL_LOG(INFO) << "Service " << service_name << " provider disconnected";
     service_providers_by_name_.erase(service_name);
   });
 
