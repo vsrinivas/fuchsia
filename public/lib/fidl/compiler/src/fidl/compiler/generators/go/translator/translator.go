@@ -173,11 +173,20 @@ func (t *translator) translateMojomStruct(typeKey string) (m *StructTemplate) {
 	m.PrivateName = privateName(m.Name)
 	m.TypeKey = typeKey
 
-	if mojomStruct.DeclData != nil && mojomStruct.DeclData.ContainedDeclarations != nil && mojomStruct.DeclData.ContainedDeclarations.Enums != nil {
-		nestedEnumTypeKeys := *mojomStruct.DeclData.ContainedDeclarations.Enums
-		m.NestedEnums = make([]*EnumTemplate, len(nestedEnumTypeKeys))
-		for i, typeKey := range *mojomStruct.DeclData.ContainedDeclarations.Enums {
-			m.NestedEnums[i] = t.translateMojomEnum(typeKey)
+	if mojomStruct.DeclData != nil && mojomStruct.DeclData.ContainedDeclarations != nil {
+		if mojomStruct.DeclData.ContainedDeclarations.Enums != nil {
+			nestedEnumTypeKeys := *mojomStruct.DeclData.ContainedDeclarations.Enums
+			m.NestedEnums = make([]*EnumTemplate, len(nestedEnumTypeKeys))
+			for i, typeKey := range *mojomStruct.DeclData.ContainedDeclarations.Enums {
+				m.NestedEnums[i] = t.translateMojomEnum(typeKey)
+			}
+		}
+		if mojomStruct.DeclData.ContainedDeclarations.Constants != nil {
+			for _, typeKey := range *mojomStruct.DeclData.ContainedDeclarations.Constants {
+				if c := t.translateDeclaredConstant(typeKey); c != nil {
+					m.NestedConstants = append(m.NestedConstants, c)
+				}
+			}
 		}
 	}
 
@@ -286,11 +295,20 @@ func (t *translator) translateMojomInterface(typeKey string) (m *InterfaceTempla
 		m.Methods = append(m.Methods, *t.translateMojomMethod(mojomMethod, m))
 	}
 
-	if mojomInterface.DeclData != nil && mojomInterface.DeclData.ContainedDeclarations != nil && mojomInterface.DeclData.ContainedDeclarations.Enums != nil {
-		nestedEnumTypeKeys := *mojomInterface.DeclData.ContainedDeclarations.Enums
-		m.NestedEnums = make([]*EnumTemplate, len(nestedEnumTypeKeys))
-		for i, typeKey := range *mojomInterface.DeclData.ContainedDeclarations.Enums {
-			m.NestedEnums[i] = t.translateMojomEnum(typeKey)
+	if mojomInterface.DeclData != nil && mojomInterface.DeclData.ContainedDeclarations != nil {
+		if mojomInterface.DeclData.ContainedDeclarations.Enums != nil {
+			nestedEnumTypeKeys := *mojomInterface.DeclData.ContainedDeclarations.Enums
+			m.NestedEnums = make([]*EnumTemplate, len(nestedEnumTypeKeys))
+			for i, typeKey := range *mojomInterface.DeclData.ContainedDeclarations.Enums {
+				m.NestedEnums[i] = t.translateMojomEnum(typeKey)
+			}
+		}
+		if mojomInterface.DeclData.ContainedDeclarations.Constants != nil {
+			for _, typeKey := range *mojomInterface.DeclData.ContainedDeclarations.Constants {
+				if c := t.translateDeclaredConstant(typeKey); c != nil {
+					m.NestedConstants = append(m.NestedConstants, c)
+				}
+			}
 		}
 	}
 

@@ -11,6 +11,9 @@ import (
 const structTmplText = `
 {{- define "Struct" -}}
 {{$struct := . -}}
+
+{{ template "StructConstantsDecl" $struct }}
+
 {{ template "StructDecl" $struct }}
 
 {{ template "RuntimeTypeAccessors" $struct }}
@@ -24,6 +27,16 @@ const structTmplText = `
 {{- range $enum := $struct.NestedEnums }}
 {{ template "EnumDecl" $enum }}
 {{- end}}
+
+{{- end -}}
+`
+
+const structConstantsDecl = `
+{{- define "StructConstantsDecl" -}}
+{{$struct := . -}}
+{{- range $constant := $struct.NestedConstants }}
+const {{$constant.Name}} {{$constant.Type}} = {{$constant.Value}}
+{{- end -}}
 {{- end -}}
 `
 
@@ -110,4 +123,5 @@ func initStructTemplates() {
 	template.Must(goFileTmpl.Parse(structVersions))
 	template.Must(goFileTmpl.Parse(structDecodingTmplText))
 	template.Must(goFileTmpl.Parse(structTmplText))
+	template.Must(goFileTmpl.Parse(structConstantsDecl))
 }

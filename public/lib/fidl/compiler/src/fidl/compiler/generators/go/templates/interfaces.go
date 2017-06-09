@@ -29,11 +29,25 @@ const interfaceTmplText = `
 const interfaceDeclTmplText = `
 {{- define "InterfaceDecl" -}}
 {{- $interface := . -}}
+{{ template "InterfaceConstantsDecl" $interface }}
+
+{{- range $enum := $interface.NestedEnums }}
+{{ template "EnumDecl" $enum }}
+{{- end}}
+
 {{ template "InterfaceInterfaceDecl" $interface }}
 
 {{ template "InterfaceOtherDecl" $interface }}
 
 {{ template "MethodOrdinals" $interface }}
+{{- end -}}
+`
+const interfaceConstantsDeclTmplText = `
+{{- define "InterfaceConstantsDecl" -}}
+{{- $interface := . -}}
+{{- range $constant := $interface.NestedConstants }}
+const {{$constant.Name}} {{$constant.Type}} = {{$constant.Value}}
+{{- end -}}
 {{- end -}}
 `
 
@@ -294,6 +308,7 @@ func (f *{{$interface.Name}}_ServiceFactory) Name() string {
 func initInterfaceTemplates() {
 	template.Must(goFileTmpl.Parse(interfaceTmplText))
 	template.Must(goFileTmpl.Parse(interfaceDeclTmplText))
+	template.Must(goFileTmpl.Parse(interfaceConstantsDeclTmplText))
 	template.Must(goFileTmpl.Parse(interfaceInterfaceDeclTmplText))
 	template.Must(goFileTmpl.Parse(interfaceOtherDeclTmplText))
 	template.Must(goFileTmpl.Parse(serviceDeclTmplText))

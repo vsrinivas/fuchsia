@@ -68,6 +68,8 @@ type StructTemplate struct {
 	// NestedEnums contains the enums nested in the struct.
 	NestedEnums []*EnumTemplate
 
+	NestedConstants []*ConstantTemplate
+
 	TypeKey string
 }
 
@@ -189,6 +191,9 @@ type InterfaceTemplate struct {
 
 	// NestedEnums contains the enums nested in the interface.
 	NestedEnums []*EnumTemplate
+
+	// NestedEnums contains the enums nested in the interface.
+	NestedConstants []*ConstantTemplate
 
 	TypeKey string
 }
