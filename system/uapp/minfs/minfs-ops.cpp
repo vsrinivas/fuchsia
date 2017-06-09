@@ -184,7 +184,7 @@ mx_status_t VnodeMinfs::InitIndirectVmo() {
 
     constexpr size_t size = kMinfsBlockSize * kMinfsIndirect;
     mx_status_t status;
-    if ((status = MappedVmo::Create(size, &vmo_indirect_)) != NO_ERROR) {
+    if ((status = MappedVmo::Create(size, "minfs-indirect", &vmo_indirect_)) != NO_ERROR) {
         return status;
     }
     if ((status = fs_->bc_->AttachVmo(vmo_indirect_->GetVmo(),
@@ -222,6 +222,8 @@ mx_status_t VnodeMinfs::InitVmo() {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
+
+    mx_object_set_property(vmo_.get(), MX_PROP_NAME, "minfs-inode", 11);
 
     if ((status = fs_->bc_->AttachVmo(vmo_.get(), &vmoid_)) != NO_ERROR) {
         vmo_.reset();

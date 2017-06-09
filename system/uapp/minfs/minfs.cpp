@@ -368,7 +368,7 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
 
     // Create the inode table.
     uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-    if ((status = MappedVmo::Create(inoblks * kMinfsBlockSize,
+    if ((status = MappedVmo::Create(inoblks * kMinfsBlockSize, "minfs-inode-table",
                                     &fs->inode_table_)) != NO_ERROR) {
         return status;
     }

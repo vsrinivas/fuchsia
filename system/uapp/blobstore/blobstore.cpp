@@ -189,7 +189,7 @@ mx_status_t VnodeBlob::InitVmos() {
     uint64_t data_vmo_size = BlobDataBlocks(*inode) * kBlobstoreBlockSize;
 
     if (merkle_vmo_size != 0) {
-        if ((status = MappedVmo::Create(merkle_vmo_size, &merkle_tree_)) != NO_ERROR) {
+        if ((status = MappedVmo::Create(merkle_vmo_size, "merkle-tree", &merkle_tree_)) != NO_ERROR) {
             FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
             goto fail;
         }
@@ -203,7 +203,7 @@ mx_status_t VnodeBlob::InitVmos() {
         }
     }
 
-    if ((status = MappedVmo::Create(data_vmo_size, &blob_)) != NO_ERROR) {
+    if ((status = MappedVmo::Create(data_vmo_size, "blob", &blob_)) != NO_ERROR) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         goto fail;
     }
@@ -272,11 +272,11 @@ mx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     // Open VMOs, so we can begin writing after allocate succeeds.
     uint64_t size_merkle = merkle::Tree::GetTreeLength(size_data);
     if (size_merkle != 0) {
-        if ((status = MappedVmo::Create(size_merkle, &merkle_tree_)) != NO_ERROR) {
+        if ((status = MappedVmo::Create(size_merkle, "merkle-tree", &merkle_tree_)) != NO_ERROR) {
             goto fail;
         }
     }
-    if ((status = MappedVmo::Create(size_data, &blob_)) != NO_ERROR) {
+    if ((status = MappedVmo::Create(size_data, "blob", &blob_)) != NO_ERROR) {
         goto fail;
     }
 

@@ -17,7 +17,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MappedVmo);
     virtual ~MappedVmo();
 
-    static mx_status_t Create(size_t size, mxtl::unique_ptr<MappedVmo>* out);
+    static mx_status_t Create(size_t size, const char* name, mxtl::unique_ptr<MappedVmo>* out);
     mx_handle_t GetVmo(void) const;
     void* GetData(void) const;
 private:

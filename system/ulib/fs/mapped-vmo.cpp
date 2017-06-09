@@ -13,7 +13,7 @@
 #include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
-mx_status_t MappedVmo::Create(size_t size, mxtl::unique_ptr<MappedVmo>* out) {
+mx_status_t MappedVmo::Create(size_t size, const char* name, mxtl::unique_ptr<MappedVmo>* out) {
     mx_handle_t vmo;
     uintptr_t addr;
     mx_status_t status;
@@ -25,6 +25,8 @@ mx_status_t MappedVmo::Create(size_t size, mxtl::unique_ptr<MappedVmo>* out) {
         mx_handle_close(vmo);
         return status;
     }
+
+    mx_object_set_property(vmo, MX_PROP_NAME, name, strlen(name));
 
     AllocChecker ac;
     mxtl::unique_ptr<MappedVmo> mvmo(new (&ac) MappedVmo(vmo, addr, size));
