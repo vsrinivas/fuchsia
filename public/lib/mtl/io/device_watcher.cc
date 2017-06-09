@@ -26,12 +26,6 @@ DeviceWatcher::DeviceWatcher(ftl::UniqueFD dir_fd,
 
   handler_key_ = message_loop->AddHandler(
       this, dir_watch_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-
-  message_loop->task_runner()->PostTask(
-      [weak = weak_ptr_factory_.GetWeakPtr()] {
-        if (weak)
-          ListDevices(weak, weak->dir_fd_.get());
-      });
 }
 
 DeviceWatcher::~DeviceWatcher() {
@@ -50,10 +44,17 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
   ftl::UniqueFD dir_fd(open_result);  // take ownership of fd here
 
   // Create the directory watch channel.
+  vfs_watch_dir_t wd;
+  wd.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING;
+  wd.options = 0;
   mx_handle_t dir_watch_handle;
-  ssize_t ioctl_result =
-      ioctl_vfs_watch_dir(dir_fd.get(), &dir_watch_handle);
+  if (mx_channel_create(0, &wd.channel, &dir_watch_handle) < 0) {
+    return nullptr;
+  }
+  ssize_t ioctl_result = ioctl_vfs_watch_dir_v2(dir_fd.get(), &wd);
   if (ioctl_result < 0) {
+    mx_handle_close(wd.channel);
+    mx_handle_close(dir_watch_handle);
     FTL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", result=" << ioctl_result;
     return nullptr;
@@ -64,47 +65,32 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
       std::move(dir_fd), std::move(dir_watch), std::move(callback)));
 }
 
-void DeviceWatcher::ListDevices(ftl::WeakPtr<DeviceWatcher> weak, int dir_fd) {
-  FTL_DCHECK(weak);
-  DIR* dir = fdopendir(dup(dir_fd));
-  if (!dir)
-    return;
-
-  struct dirent* entry;
-  while ((entry = readdir(dir)) != NULL) {
-    if (entry->d_name[0] == '.') {
-      if (entry->d_name[1] == 0)
-        continue;
-      if ((entry->d_name[1] == '.') && (entry->d_name[2] == 0))
-        continue;
-    }
-
-    // Note: Callback may destroy DeviceWatcher before returning.
-    weak->callback_(dir_fd, entry->d_name);
-    if (!weak)
-      break;
-  }
-
-  closedir(dir);
-}
-
 void DeviceWatcher::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   if (pending & MX_CHANNEL_READABLE) {
     uint32_t size;
-    uint8_t msg[VFS_WATCH_NAME_MAX + 2];
+    uint8_t buf[VFS_WATCH_MSG_MAX];
     mx_status_t status =
-        dir_watch_.read(0, msg, sizeof(msg), &size, nullptr, 0, nullptr);
+        dir_watch_.read(0, buf, sizeof(buf), &size, nullptr, 0, nullptr);
     FTL_CHECK(status == MX_OK)
         << "Failed to read from directory watch channel";
 
-    if ((size < 2) || (size != (msg[1] + 2u))) {
-        // invalid message
-        return;
-    }
-
-    // Note: Callback may destroy DeviceWatcher before returning.
-    if (msg[0] == VFS_WATCH_EVT_ADDED) {
-        callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg) + 2, size - 2));
+    auto weak = weak_ptr_factory_.GetWeakPtr();
+    uint8_t* msg = buf;
+    while (size >= 2) {
+        unsigned event = *msg++;
+        unsigned namelen = *msg++;
+        if (size < (namelen + 2u)) {
+            break;
+        }
+        if ((event == VFS_WATCH_EVT_ADDED) || (event == VFS_WATCH_EVT_EXISTING)) {
+            callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg), namelen));
+            // Note: Callback may have destroyed the DeviceWatcher before returning.
+            if (!weak) {
+                break;
+            }
+        }
+        msg += namelen;
+        size -= namelen;
     }
     return;
   }
