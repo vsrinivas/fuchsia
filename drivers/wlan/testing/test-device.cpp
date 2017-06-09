@@ -17,7 +17,7 @@ mx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
 
     auto status = Add(test_proxy_.device());
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         std::printf("wlan-test: could not add test device: %d\n", status);
     }
     return status;
@@ -36,7 +36,7 @@ void Device::DdkRelease() {
 
 mx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                              size_t out_len, size_t* out_actual) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
@@ -45,7 +45,7 @@ mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     info->features = ETHMAC_FEATURE_WLAN;
     info->mtu = 1500;
     std::memcpy(info->mac, mac, ETH_MAC_SIZE);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::WlanmacStop() {
@@ -60,11 +60,11 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::lock_guard<std::mutex> lock(lock_);
     SetState(DEV_STATE_READABLE | DEV_STATE_WRITABLE);
     if (wlanmac_proxy_ != nullptr) {
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     } else {
         wlanmac_proxy_.swap(proxy);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {
@@ -73,7 +73,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {
 
 mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     std::printf("wlan::testing::Device::WlanmacSetChannel()  chan=%u\n", chan->channel_num);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 }  // namespace testing
