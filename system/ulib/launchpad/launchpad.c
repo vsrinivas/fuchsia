@@ -74,8 +74,6 @@ static launchpad_t invalid_launchpad = {
     .error = ERR_NO_MEMORY,
 };
 
-static const char stack_name[] = "initial-stack";
-
 static mx_status_t lp_error(launchpad_t* lp, mx_status_t error, const char* msg) {
     if (lp->error == NO_ERROR) {
         lp->error = error;
@@ -1060,6 +1058,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         }
     }
 
+    bool sent_loader_message = lp->loader_message;
     if (lp->loader_message) {
         status = send_loader_message(lp, *thread, to_child);
         if (status != NO_ERROR) {
@@ -1086,16 +1085,21 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         *next_handle = PA_VMO_STACK;
 
     // Figure out how big an initial thread to allocate.
+    char stack_vmo_name[MX_MAX_NAME_LEN];
     size_t stack_size;
-    if (lp->loader_message && !lp->set_stack_size) {
+    if (sent_loader_message && !lp->set_stack_size) {
         // The initial stack will be used just for startup work and to
         // contain the bootstrap messages.  Make it only as big as needed.
         stack_size = size + PTHREAD_STACK_MIN;
         stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+        snprintf(stack_vmo_name, sizeof(stack_vmo_name),
+                 "stack: msg of %#zx", size);
     } else {
         // Use the requested or default size.
         stack_size =
             lp->set_stack_size ? lp->stack_size : MAGENTA_DEFAULT_STACK_SIZE;
+        snprintf(stack_vmo_name, sizeof(stack_vmo_name), "stack: %s %#zx",
+                 lp->set_stack_size ? "explicit" : "default", stack_size);
 
         // Assume the process will read the bootstrap message onto its
         // initial thread's stack.  If it would need more than half its
@@ -1120,7 +1124,8 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             mx_handle_close(*thread);
             return lp_error(lp, status, "cannot create stack vmo");
         }
-        mx_object_set_property(stack_vmo, MX_PROP_NAME, stack_name, strlen(stack_name));
+        mx_object_set_property(stack_vmo, MX_PROP_NAME,
+                               stack_vmo_name, strlen(stack_vmo_name));
         mx_vaddr_t stack_base;
         status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, stack_size,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
