@@ -212,14 +212,14 @@ static const uint32_t normal_interrupts = (
 // watching.
 static mx_status_t mailbox_open_cb(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     const char bcm_vc_rpc[] = "bcm-vc-rpc";
     if (strncmp(fn, bcm_vc_rpc, sizeof(bcm_vc_rpc)) == 0) {
         return 1; // stop polling.
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static uint32_t get_clock_divider(const uint32_t base_clock,
@@ -248,7 +248,7 @@ static int emmc_irq_thread(void *arg) {
 
     while (true) {
         wait_res = mx_interrupt_wait(irq_handle);
-        if (wait_res != NO_ERROR) {
+        if (wait_res != MX_OK) {
             xprintf("emmc: interrupt wait failed with retcode = %d\n", wait_res);
         }
 
@@ -276,23 +276,23 @@ static int emmc_irq_thread(void *arg) {
 }
 
 // Helper function that awaits an IRQ.
-// Returns NO_ERROR if no error condition was detected, otherwise returns
-// ERR_IO.
+// Returns MX_OK if no error condition was detected, otherwise returns
+// MX_ERR_IO.
 static mx_status_t emmc_await_irq(emmc_t* emmc) {
     mx_status_t st = completion_wait(&emmc->irq_completion, MX_TIME_INFINITE);
     completion_reset(&emmc->irq_completion);
 
     // Did completion wait return some kind of error?
-    if (st != NO_ERROR)
+    if (st != MX_OK)
         return st;
 
     // Was the IRQ triggered by an error interrupt?
     if (emmc->irq & error_interrupts) {
         xprintf("emmc: interrupt error = 0x%08x\n", (emmc->irq & error_interrupts));
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
@@ -301,7 +301,7 @@ static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     if (txn->offset % SDHC_BLOCK_SIZE) {
         xprintf("sdmmc: iotxn offset not aligned to block boundary, "
                "offset =%" PRIu64", block size = %d\n", txn->offset, SDHC_BLOCK_SIZE);
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -309,7 +309,7 @@ static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     if (txn->length % SDHC_BLOCK_SIZE) {
         xprintf("sdmmc: iotxn length not aligned to block boundary, "
                "offset =%" PRIu64", block size = %d\n", txn->length, SDHC_BLOCK_SIZE);
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -365,8 +365,8 @@ static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     // And we're off to the races!
     regs->cmd = cmd;
 
-    if ((st = emmc_await_irq(emmc)) != NO_ERROR) {
-        iotxn_complete(txn, ERR_IO, 0);
+    if ((st = emmc_await_irq(emmc)) != MX_OK) {
+        iotxn_complete(txn, MX_ERR_IO, 0);
         goto exit;
     }
 
@@ -407,7 +407,7 @@ static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         // support either, we just use PIO.
         for (size_t blkid = 0; blkid < blkcnt; blkid++) {
             mx_status_t st;
-            if ((st = emmc_await_irq(emmc)) != NO_ERROR) {
+            if ((st = emmc_await_irq(emmc)) != MX_OK) {
                 iotxn_complete(txn, st, bytes_copied);
                 goto exit;
             }
@@ -431,7 +431,7 @@ static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
         }
     }
 
-    iotxn_complete(txn, NO_ERROR, bytes_copied);
+    iotxn_complete(txn, MX_OK, bytes_copied);
 
 exit:
     mtx_unlock(&emmc->mtx);
@@ -447,7 +447,7 @@ static mx_status_t emmc_set_bus_frequency(emmc_t* emmc, uint32_t target_freq) {
     uint32_t iterations = 0;
     while (regs->state & (EMMC_STATE_CMD_INHIBIT | EMMC_STATE_DAT_INHIBIT)) {
         if (++iterations > 1000)
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
 
         mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
     }
@@ -467,7 +467,7 @@ static mx_status_t emmc_set_bus_frequency(emmc_t* emmc, uint32_t target_freq) {
     regs->ctrl1 |= EMMC_SD_CLOCK_ENABLE;
     mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t emmc_set_bus_width(emmc_t* emmc, const uint32_t new_bus_width) {
@@ -479,10 +479,10 @@ static mx_status_t emmc_set_bus_width(emmc_t* emmc, const uint32_t new_bus_width
             emmc->regs->ctrl0 |= EMMC_HOSTCTRL_FOUR_BIT_BUS_WIDTH;
             break;
         default:
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
@@ -493,7 +493,7 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
         case SDMMC_VOLTAGE_18:
             break;
         default:
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 
     volatile struct emmc_regs* regs = emmc->regs;
@@ -507,7 +507,7 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
     while (true) {
         printf("Waiting for dat lines to go to 0\n");
         if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
         }
 
         uint8_t dat_lines = ((regs->state) >> 20) & 0xf;
@@ -526,13 +526,13 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
 
     // Make sure our changes are acknolwedged.
     const uint32_t expected_mask = (EMMC_PWRCTRL_SD_BUS_POWER) | (new_voltage);
-    if ((regs->ctrl0 & expected_mask) != expected_mask) return ERR_INTERNAL;
+    if ((regs->ctrl0 & expected_mask) != expected_mask) return MX_ERR_INTERNAL;
 
     // Turn the clock back on
     regs->ctrl1 |= EMMC_SD_CLOCK_ENABLE;
     mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t emmc_ioctl(void* ctx, uint32_t op,
@@ -542,21 +542,21 @@ static mx_status_t emmc_ioctl(void* ctx, uint32_t op,
     uint32_t* arg;
     arg = (uint32_t*)in_buf;
     if (in_len < sizeof(*arg))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     switch (op) {
     case IOCTL_SDMMC_SET_VOLTAGE:
         return emmc_set_voltage(emmc, *arg);
     case IOCTL_SDMMC_SET_BUS_WIDTH:
         if ((*arg != 4) && (*arg != 1))
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         return emmc_set_bus_width(emmc, *arg);
     case IOCTL_SDMMC_SET_BUS_FREQ:
         xprintf("emmc: ioctl set bus frequency to %u\n", *arg);
         return emmc_set_bus_frequency(emmc, *arg);
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static void emmc_unbind(void* ctx) {
@@ -579,7 +579,7 @@ static mx_protocol_device_t emmc_device_proto = {
 
 // Async thread that binds the device.
 static int emmc_bootstrap_thread(void *arg) {
-    mx_status_t st = NO_ERROR;
+    mx_status_t st = MX_OK;
     emmc_t* emmc = NULL;
 
     // Extract all context from our context argument then free the context
@@ -595,7 +595,7 @@ static int emmc_bootstrap_thread(void *arg) {
                                (uint32_t)SDMMC_PAGE_SIZE,
                                MX_CACHE_POLICY_UNCACHED_DEVICE,
                                (uintptr_t*)(&regs));
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         xprintf("emmc: failed to mmap device memory, retcode = %d\n", st);
         goto out;
     }
@@ -617,14 +617,14 @@ static int emmc_bootstrap_thread(void *arg) {
     emmc = calloc(1, sizeof(*emmc));
     if (!emmc) {
         xprintf("emmc: failed to allocate device, no memory!\n");
-        st = ERR_NO_MEMORY;
+        st = MX_ERR_NO_MEMORY;
         goto out;
     }
 
     mx_device_t* bus_dev;
     bcm_bus_protocol_t* bus_proto;
     st = platform_device_find_protocol(dev, MX_PROTOCOL_BCM_BUS, &bus_dev, (void**)&bus_proto);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         printf("emmc_bootstrap_thread could not find MX_PROTOCOL_BCM_BUS\n");
         goto out;
     }
@@ -640,7 +640,7 @@ static int emmc_bootstrap_thread(void *arg) {
     if (vrsn < SDHCI_VERSION_3) {
         xprintf("emmc: SD version is %u, only version %u and above are "
                 "supported\n", vrsn, SDHCI_VERSION_3);
-        st = ERR_NOT_SUPPORTED;
+        st = MX_ERR_NOT_SUPPORTED;
         goto out;
     }
 
@@ -670,7 +670,7 @@ static int emmc_bootstrap_thread(void *arg) {
 
         if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
             xprintf("emmc: timed out while waiting for reset\n");
-            st = ERR_TIMED_OUT;
+            st = MX_ERR_TIMED_OUT;
             goto out;
         }
     }
@@ -714,7 +714,7 @@ static int emmc_bootstrap_thread(void *arg) {
 
         if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
             xprintf("emmc: Clock did not stabilize in time\n");
-            st = ERR_TIMED_OUT;
+            st = MX_ERR_TIMED_OUT;
             goto out;
         }
     }
@@ -750,7 +750,7 @@ static int emmc_bootstrap_thread(void *arg) {
     };
 
     st = device_add(emmc->parent, &args, &emmc->mxdev);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         goto out;
     }
 
@@ -764,7 +764,7 @@ out:
     device_unbind(dev);
 
     // If we're in the error path, make sure the error retcode is set.
-    assert(st != NO_ERROR);
+    assert(st != MX_OK);
 
     xprintf("emmc: there was an error while trying to bind the emmc device. "
             "Error retcode = %d\n", st);
@@ -775,7 +775,7 @@ static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
     // Create a context to pass bind variables to the bootstrap thread.
     emmc_setup_context_t* ctx = calloc(1, sizeof(*ctx));
     if (!ctx)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     ctx->dev = dev;
 
     // Create a bootstrap thread.
@@ -789,7 +789,7 @@ static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
     }
 
     thrd_detach(bootstrap_thrd);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t emmc_dwc_driver_ops = {

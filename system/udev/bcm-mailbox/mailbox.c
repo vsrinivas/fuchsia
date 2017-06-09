@@ -121,13 +121,13 @@ static mx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) 
     mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
     while (mailbox_regs[MAILBOX_STATUS] & MAILBOX_FULL) {
         if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline)
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
     }
 
     // Write the value to the mailbox.
     mailbox_regs[MAILBOX_WRITE] = value;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
@@ -139,7 +139,7 @@ static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
         mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
         while (mailbox_regs[MAILBOX_STATUS] & MAILBOX_EMPTY) {
             if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline)
-                return ERR_TIMED_OUT;
+                return MX_ERR_TIMED_OUT;
         }
 
         local_result = mailbox_regs[MAILBOX_READ];
@@ -152,42 +152,42 @@ static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
     // result into the ret parameter.
     *result = (local_result >> 4);
 
-    return attempts < MAX_MAILBOX_READ_ATTEMPTS ? NO_ERROR : ERR_IO;
+    return attempts < MAX_MAILBOX_READ_ATTEMPTS ? MX_OK : MX_ERR_IO;
 }
 
 // Use the Videocore to power on/off devices.
 static mx_status_t bcm_vc_poweron(enum bcm_device dev) {
     const uint32_t bit = 1 << dev;
-    mx_status_t ret = NO_ERROR;
+    mx_status_t ret = MX_OK;
     uint32_t new_power_state = power_state | bit;
 
     if (new_power_state == power_state) {
         // The VideoCore won't return an ACK if we try to enable a device that's
         // already enabled, so we should terminate the control flow here.
-        return NO_ERROR;
+        return MX_OK;
     }
 
     ret = mailbox_write(ch_power, new_power_state << 4);
-    if (ret != NO_ERROR)
+    if (ret != MX_OK)
         return ret;
 
     // The Videocore must acknowledge a successful power on.
     uint32_t ack = 0x0;
     ret = mailbox_read(ch_power, &ack);
-    if (ret != NO_ERROR)
+    if (ret != MX_OK)
         return ret;
 
     // Preserve the power state of the peripherals.
     power_state = ack;
 
     if (ack != new_power_state)
-        return ERR_IO;
+        return MX_ERR_IO;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
-    mx_status_t ret = NO_ERROR;
+    mx_status_t ret = MX_OK;
     iotxn_t* txn;
 
     property_tag_header_t header;
@@ -216,13 +216,13 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
     iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
 
     ret = mailbox_write(ch_propertytags_tovc, (phys + BCM_SDRAM_BUS_ADDR_BASE));
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         goto cleanup_and_exit;
     }
 
     uint32_t ack = 0x0;
     ret = mailbox_read(ch_propertytags_tovc, &ack);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         goto cleanup_and_exit;
     }
 
@@ -235,7 +235,7 @@ cleanup_and_exit:
 }
 
 static mx_status_t bcm_get_macid(uint8_t* mac) {
-    mx_status_t ret = NO_ERROR;
+    mx_status_t ret = MX_OK;
     property_tag_get_macid_t tag = BCM_MAILBOX_TAG_GET_MACID;
 
     ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
@@ -246,7 +246,7 @@ static mx_status_t bcm_get_macid(uint8_t* mac) {
 }
 
 static mx_status_t bcm_get_clock_rate(const uint32_t clockid, uint32_t* res) {
-    mx_status_t ret = NO_ERROR;
+    mx_status_t ret = MX_OK;
     property_tag_get_clock_rate_t tag = BCM_MAILBOX_TAG_GET_CLOCKRATE;
 
     tag.clockid = clockid;
@@ -255,7 +255,7 @@ static mx_status_t bcm_get_clock_rate(const uint32_t clockid, uint32_t* res) {
 
     // Make sure that we're getting data back for the clock that we requested.
     if (tag.clockid != clockid) {
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
     // Fill in the return parameter;
@@ -271,7 +271,7 @@ static mx_status_t mailbox_device_ioctl(void* ctx, uint32_t op,
     case IOCTL_BCM_POWER_ON_USB:
         return bcm_vc_poweron(bcm_dev_usb);
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -282,19 +282,19 @@ static mx_protocol_device_t mailbox_device_protocol = {
 };
 
 static mx_status_t bcm_bus_get_macid(mx_device_t* device, uint8_t* out_mac) {
-    if (!out_mac) return ERR_INVALID_ARGS;
+    if (!out_mac) return MX_ERR_INVALID_ARGS;
     bcm_get_macid(out_mac);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t bcm_bus_get_clock_rate(mx_device_t* device, uint32_t id, uint32_t* out_clock) {
-    if (!out_clock) return ERR_INVALID_ARGS;
+    if (!out_clock) return MX_ERR_INVALID_ARGS;
     return bcm_get_clock_rate(id, out_clock);
 }
 
 static mx_status_t bcm_bus_set_framebuffer(mx_device_t* device, mx_paddr_t addr) {
     mx_status_t ret = mailbox_write(ch_framebuffer, addr + BCM_SDRAM_BUS_ADDR_BASE);
-    if (ret != NO_ERROR)
+    if (ret != MX_OK)
         return ret;
 
     uint32_t ack = 0x0;
@@ -316,7 +316,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
         MAILBOX_PAGE_ADDRESS, MAILBOX_REGS_LENGTH,
         MX_CACHE_POLICY_UNCACHED_DEVICE, &page_base);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // The device is actually mapped at some offset into the page.
@@ -332,7 +332,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     status = device_add(parent, &vc_rpc_args, &rpc_mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -340,7 +340,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     bcm_vc_poweron(bcm_dev_usb);
     bcm_vc_poweron(bcm_dev_i2c1);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t bcm_mailbox_driver_ops = {

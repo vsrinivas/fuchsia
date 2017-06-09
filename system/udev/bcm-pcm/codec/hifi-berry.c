@@ -34,24 +34,24 @@ static hifiberry_t* hfb = NULL;
 static mx_status_t hifiberry_LED_ctl(bool state) {
 
     if (!hfb)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (hfb->i2c_fd < 0)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (hfb->state == HIFIBERRY_STATE_SHUTDOWN)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     // Not using any other GPIO pins, so don't worry about state of other
     //  pins.
     pcm5122_write_reg(hfb->i2c_fd, PCM5122_REG_GPIO_CONTROL,
                      (state) ? (PCM5122_GPIO_HIGH << PCM5122_GPIO4) :
                                (PCM5122_GPIO_LOW  << PCM5122_GPIO4));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t hifiberry_release(void) {
 
     if (!hfb)
-        return NO_ERROR;
+        return MX_OK;
     hifiberry_LED_ctl(false);
 
     if (hfb->i2c_fd >= 0) {
@@ -61,7 +61,7 @@ mx_status_t hifiberry_release(void) {
     free(hfb);
     hfb = NULL;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t hifiberry_start(void) {
@@ -76,18 +76,18 @@ mx_status_t hifiberry_init(void) {
 
     // Check to see if already initialized
     if ((hfb) && (hfb->state != HIFIBERRY_STATE_SHUTDOWN))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (hfb == NULL) {
         hfb = calloc(1, sizeof(hifiberry_t));
         if (!hfb)
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
     }
 
     hfb->i2c_fd = open(DEVNAME, O_RDWR);
     if (hfb->i2c_fd < 0) {
         printf("HIFIBERRY: Control channel not found\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     i2c_ioctl_add_slave_args_t add_slave_args = {
@@ -97,7 +97,7 @@ mx_status_t hifiberry_init(void) {
 
     ssize_t ret = ioctl_i2c_bus_add_slave(hfb->i2c_fd, &add_slave_args);
     if (ret < 0) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     // configure LED GPIO
     pcm5122_write_reg(hfb->i2c_fd, PCM5122_REG_GPIO_ENABLE,
@@ -138,7 +138,7 @@ mx_status_t hifiberry_init(void) {
 
     hfb->state |= HIFIBERRY_STATE_INITIALIZED;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool hifiberry_is_valid_mode(audio2_stream_cmd_set_format_req_t req) {
