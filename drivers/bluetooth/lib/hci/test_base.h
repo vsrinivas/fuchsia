@@ -46,10 +46,10 @@ class TestBase : public ::testing::Test {
     mx::channel acl0, acl1;
 
     mx_status_t status = mx::channel::create(0, &cmd0, &cmd1);
-    FTL_DCHECK(NO_ERROR == status);
+    FTL_DCHECK(MX_OK == status);
 
     status = mx::channel::create(0, &acl0, &acl1);
-    FTL_DCHECK(NO_ERROR == status);
+    FTL_DCHECK(MX_OK == status);
 
     auto hci_dev = std::make_unique<DummyDeviceWrapper>(std::move(cmd0), std::move(acl0));
     test_device_ = std::make_unique<FakeControllerType>(std::move(cmd1), std::move(acl1));

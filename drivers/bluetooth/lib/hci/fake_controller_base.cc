@@ -76,13 +76,13 @@ void FakeControllerBase::Stop() {
 void FakeControllerBase::SendCommandChannelPacket(const common::ByteBuffer& packet) {
   FTL_DCHECK(IsStarted());
   mx_status_t status = cmd_channel_.write(0, packet.GetData(), packet.GetSize(), nullptr, 0);
-  FTL_DCHECK(NO_ERROR == status);
+  FTL_DCHECK(MX_OK == status);
 }
 
 void FakeControllerBase::SendACLDataChannelPacket(const common::ByteBuffer& packet) {
   FTL_DCHECK(IsStarted());
   mx_status_t status = acl_channel_.write(0, packet.GetData(), packet.GetSize(), nullptr, 0);
-  FTL_DCHECK(NO_ERROR == status);
+  FTL_DCHECK(MX_OK == status);
 }
 
 void FakeControllerBase::CloseCommandChannel() {
@@ -106,9 +106,9 @@ void FakeControllerBase::HandleCommandPacket() {
   uint32_t read_size;
   mx_status_t status = cmd_channel_.read(0u, buffer.GetMutableData(), kMaxCommandPacketPayloadSize,
                                          &read_size, nullptr, 0, nullptr);
-  FTL_DCHECK(status == NO_ERROR || status == ERR_PEER_CLOSED);
+  FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
-    if (status == ERR_PEER_CLOSED)
+    if (status == MX_ERR_PEER_CLOSED)
       FTL_LOG(INFO) << "Command channel was closed";
     else
       FTL_LOG(ERROR) << "Failed to read on cmd channel: " << mx_status_get_string(status);
@@ -132,9 +132,9 @@ void FakeControllerBase::HandleACLPacket() {
   uint32_t read_size;
   mx_status_t status = acl_channel_.read(0u, buffer.GetMutableData(), buffer.GetSize(), &read_size,
                                          nullptr, 0, nullptr);
-  FTL_DCHECK(status == NO_ERROR || status == ERR_PEER_CLOSED);
+  FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
-    if (status == ERR_PEER_CLOSED)
+    if (status == MX_ERR_PEER_CLOSED)
       FTL_LOG(INFO) << "ACL channel was closed";
     else
       FTL_LOG(ERROR) << "Failed to read on ACL channel: " << mx_status_get_string(status);

@@ -66,7 +66,7 @@ void TestController::OnCommandPacketReceived(const CommandPacket& command_packet
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();
     mx_status_t status = command_channel().write(0, reply.GetData(), reply.GetSize(), nullptr, 0);
-    ASSERT_EQ(NO_ERROR, status) << "Failed to send reply: " << mx_status_get_string(status);
+    ASSERT_EQ(MX_OK, status) << "Failed to send reply: " << mx_status_get_string(status);
     current.replies_.pop();
   }
 
