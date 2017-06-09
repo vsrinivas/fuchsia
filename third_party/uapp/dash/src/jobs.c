@@ -1037,7 +1037,7 @@ dowait(int block, struct job *job)
 				break;
 			}
 			status = process_await_termination (sp->pid, false);
-			if (status != ERR_TIMED_OUT) {
+			if (status != MX_ERR_TIMED_OUT) {
 				// Convert status to something that looks
 				// like a wait()-generated status.
 				status = (status & 0xff) << 8;

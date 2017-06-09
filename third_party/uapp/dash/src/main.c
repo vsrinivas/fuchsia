@@ -206,7 +206,7 @@ evalifsubshell(mx_handle_t ast_vmo)
 
 	uint64_t size;
 	mx_status_t status = mx_vmo_get_size(ast_vmo, &size);
-	if (status != NO_ERROR)
+	if (status != MX_OK)
 		exit(status);
 
 	char buffer[size];

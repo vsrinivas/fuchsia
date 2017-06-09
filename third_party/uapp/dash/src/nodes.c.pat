@@ -368,7 +368,7 @@ codec_encode(struct nodelist *nlist, mx_handle_t *vmo)
 
 	// And VMO-ify the whole thing
 	mx_status_t status = mx_vmo_create(total_size, 0, vmo);
-	if (status != NO_ERROR)
+	if (status != MX_OK)
 		return status;
 	size_t actual;
 	return mx_vmo_write(*vmo, buffer, 0, total_size, &actual);

@@ -488,7 +488,7 @@ static int send_dmctl(const char* command, size_t length) {
         char buf[32768];
         size_t actual;
         if ((status = mx_socket_read(h, 0, buf, sizeof(buf), &actual)) < 0) {
-            if (status == ERR_SHOULD_WAIT) {
+            if (status == MX_ERR_SHOULD_WAIT) {
                 mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, NULL);
                 continue;

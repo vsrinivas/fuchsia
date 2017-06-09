@@ -33,7 +33,7 @@ void controller_init() {
   // Initialize the shell history.
   mx_status_t status = mx_channel_write(ctrl_channel, 0, kGetHistoryCommand,
                                         kGetHistoryCommandLen, NULL, 0);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr,
             "Failed to write the get_history command to the ctrl channel.\n");
     return;
@@ -42,7 +42,7 @@ void controller_init() {
   status = mx_object_wait_one(ctrl_channel,
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               mx_deadline_after(MX_SEC(5)), NULL);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr, "Failed to wait on the ctrl channel.\n");
     return;
   }
@@ -52,7 +52,7 @@ void controller_init() {
   uint32_t read_handles = 0;
   status = mx_channel_read(ctrl_channel, 0, NULL, &history_vmo, 0,
                            1, &read_bytes, &read_handles);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr,
             "Failed to read the ctrl response to the get_history command.\n");
     return;
@@ -60,7 +60,7 @@ void controller_init() {
 
   uint64_t history_vmo_size = 0;
   status = mx_vmo_get_size(history_vmo, &history_vmo_size);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr, "Failed to get the size of the history vmo.\n");
     return;
   }
@@ -71,7 +71,7 @@ void controller_init() {
     size_t actually_read = 0;
     status = mx_vmo_read(history_vmo, &buffer, history_vmo_offset,
                          sizeof(buffer), &actually_read);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       fprintf(stderr, "Failed to read from the history vmo.\n");
       return;
     }
@@ -109,7 +109,7 @@ void controller_add_local_entry(const char* entry, size_t length) {
   mx_status_t status = mx_channel_write(ctrl_channel, 0,
                                         buffer, kAddLocalEntryCommandLen + length,
                                         NULL, 0);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     fprintf(stderr,
             "Failed to write the add_to_history command to the ctrl channel\n");
     mx_handle_close(ctrl_channel);
@@ -131,7 +131,7 @@ void controller_pull_remote_entries() {
     uint32_t read_bytes = 0;
     mx_status_t status = mx_channel_read(ctrl_channel, 0, buffer, NULL,
                                          sizeof(buffer) - 1, 0, &read_bytes, NULL);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
       if (strncmp(buffer, kAddRemoteEntryCommand, kAddRemoteEntryCommandLen) != 0) {
         fprintf(stderr, "Unrecognized shell controller command.\n");
         continue;
@@ -139,7 +139,7 @@ void controller_pull_remote_entries() {
       buffer[read_bytes] = '\0';
       const char* start = buffer + kAddRemoteEntryCommandLen;
       linenoiseHistoryAdd(start);
-    } else if (status == ERR_SHOULD_WAIT) {
+    } else if (status == MX_ERR_SHOULD_WAIT) {
       return;
     } else {
       fprintf(stderr, "Failed to read the command from the ctrl channel, status: %u.\n", status);

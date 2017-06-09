@@ -65,7 +65,7 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
                              const char** errmsg)
 {
     if (!orig_arg0)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     launchpad_t* lp = NULL;
 
@@ -91,7 +91,7 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
         nlist = next;
     }
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     launchpad_create(0, orig_arg0, &lp);
@@ -112,19 +112,19 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
 
 int process_launch(int argc, const char* const* argv, const char* path, int index, mx_handle_t* process,
                    const char** errmsg) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     // All exported variables
     const char* const* envp = (const char* const*)environment();
 
     if (strchr(argv[0], '/') != NULL) {
         status = launch(argv[0], argc, argv, envp, process, errmsg);
-        if (status == NO_ERROR)
+        if (status == MX_OK)
             return 0;
     } else {
-        status = ERR_NOT_FOUND;
+        status = MX_ERR_NOT_FOUND;
         const char* filename = NULL;
-        while (status != NO_ERROR && (filename = padvance(&path, argv[0])) != NULL) {
+        while (status != MX_OK && (filename = padvance(&path, argv[0])) != NULL) {
             if (--index < 0 && pathopt == NULL)
                 status = launch(filename, argc, argv, envp, process, errmsg);
             stunalloc(filename);
@@ -132,11 +132,11 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
     }
 
     switch (status) {
-    case NO_ERROR:
+    case MX_OK:
         return 0;
-    case ERR_ACCESS_DENIED:
+    case MX_ERR_ACCESS_DENIED:
         return 126;
-    case ERR_NOT_FOUND:
+    case MX_ERR_NOT_FOUND:
         return 127;
     default:
         return 2;
@@ -144,19 +144,19 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
 }
 
 /* Check for process termination (block if requested). When not blocking,
-   returns ERR_TIMED_OUT if process hasn't exited yet.  */
+   returns MX_ERR_TIMED_OUT if process hasn't exited yet.  */
 int process_await_termination(mx_handle_t process, bool blocking) {
     mx_time_t timeout = blocking ? MX_TIME_INFINITE : 0;
     mx_signals_t signals_observed;
     mx_status_t status = mx_object_wait_one(process, MX_TASK_TERMINATED, timeout, &signals_observed);
-    if (status != NO_ERROR && status != ERR_TIMED_OUT)
+    if (status != MX_OK && status != MX_ERR_TIMED_OUT)
         return status;
-    if (!blocking && status == ERR_TIMED_OUT && !signals_observed)
-        return ERR_TIMED_OUT;
+    if (!blocking && status == MX_ERR_TIMED_OUT && !signals_observed)
+        return MX_ERR_TIMED_OUT;
 
     mx_info_process_t proc_info;
     status = mx_object_get_info(process, MX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return proc_info.return_code;

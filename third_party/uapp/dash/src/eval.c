@@ -486,7 +486,7 @@ evalsubshell(union node *n, int flags)
 
 	const char* errmsg = NULL;
 	mx_status_t exec_result = process_subshell(n, envp, &process, NULL, &errmsg);
-        if (exec_result == NO_ERROR) {
+        if (exec_result == MX_OK) {
 		/* Process-tracking management */
 		forkparent(jp, n, backgnd, process);
         } else {
@@ -581,7 +581,7 @@ evalpipe(union node *n, int flags)
 			close(fds[0]);
 		if (fds[1] != STDOUT_FILENO)
 			close(fds[1]);
-		if (status == NO_ERROR) {
+		if (status == MX_OK) {
 			/* Process-tracking management */
 			forkparent(jp, lp->n, FORK_NOJOB, process);
 		} else {
@@ -631,7 +631,7 @@ evalbackcmd(union node *n, struct backcmd *result)
 	int fds[3] = { STDIN_FILENO, pip[1], STDERR_FILENO };
 	mx_status_t status = process_subshell(n, envp, &process, &fds[0], &errmsg);
         close(pip[1]);
-	if (status != NO_ERROR) {
+	if (status != MX_OK) {
 		freejob(jp);
 		sh_error("Failed to create subshell: %s: %s", mx_status_get_string(status), errmsg);
 	} else {
