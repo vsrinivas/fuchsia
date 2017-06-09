@@ -130,6 +130,8 @@ __NO_SAFESTACK pthread_t __allocate_thread(const pthread_attr_t* attr) {
         __thread_allocation_release();
         return NULL;
     }
+    static const char stacks_name[] = "pthread-stack-and-shadow-stack";
+    _mx_object_set_property(vmo, MX_PROP_NAME, stacks_name, strlen(stacks_name));
 
     struct iovec tcb, tcb_region;
     if (map_block(_mx_vmar_root_self(), vmo, 0, tcb_size, PAGE_SIZE, PAGE_SIZE,
