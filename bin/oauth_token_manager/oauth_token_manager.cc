@@ -208,7 +208,8 @@ void Post(const std::string& request_body,
       rapidjson::Document doc;
       doc.Parse(response_body);
       FTL_DCHECK(!doc.HasParseError());
-      FTL_DCHECK(set_token_callback(std::move(doc)));
+      auto result = set_token_callback(std::move(doc));
+      FTL_DCHECK(result);
       success_callback();
     }
   });
