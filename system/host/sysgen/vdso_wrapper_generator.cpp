@@ -98,11 +98,11 @@ bool TestWrapper::applies(const Syscall& sc) const {
 }
 
 void TestWrapper::preCall(ofstream& os, const Syscall& sc) const {
-    os << in << "if (a < 0 || b < 0 || c < 0) return ERR_INVALID_ARGS;\n";
+    os << in << "if (a < 0 || b < 0 || c < 0) return MX_ERR_INVALID_ARGS;\n";
 }
 
 void TestWrapper::postCall(ofstream& os, const Syscall& sc, string return_var) const {
-    os << in << "if (" << return_var << " > 50) return ERR_OUT_OF_RANGE;\n";
+    os << in << "if (" << return_var << " > 50) return MX_ERR_OUT_OF_RANGE;\n";
 }
 
 bool BlockingRetryWrapper::applies(const Syscall& sc) const {
@@ -115,5 +115,5 @@ void BlockingRetryWrapper::preCall(ofstream& os, const Syscall& sc) const {
 
 void BlockingRetryWrapper::postCall(
     ofstream& os, const Syscall& sc, string return_var) const {
-    os << in << "} while (unlikely(" << return_var << " == ERR_INTERRUPTED_RETRY));\n";
+    os << in << "} while (unlikely(" << return_var << " == MX_ERR_INTERRUPTED_RETRY));\n";
 }

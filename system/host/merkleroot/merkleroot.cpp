@@ -72,12 +72,12 @@ int main(int argc, char** argv) {
             fprintf(stderr, "[-] Failed to munmap '%s.\n", arg);
             return 1;
         }
-        if (rc != NO_ERROR) {
+        if (rc != MX_OK) {
             fprintf(stderr, "[-] Merkle tree creation failed: %d\n", rc);
             return 1;
         }
         rc = digest.ToString(strbuf, sizeof(strbuf));
-        if (rc != NO_ERROR) {
+        if (rc != MX_OK) {
             fprintf(stderr, "[-] Unable to print Merkle tree root: %d\n", rc);
             return 1;
         }
