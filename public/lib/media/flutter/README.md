@@ -21,7 +21,7 @@ methods. It also exposes properties that let the application know what's going
 on. The controller implements `Listenable`, so applications can know when
 its properties have changed.
 
-## MediaPlayerController
+## MediaPlayer (the widget)
 
 `MediaPlayer` is a stateful widget that shows video and provides some UI such
 as play/pause buttons and a touchable progress bar. It can also be used for
