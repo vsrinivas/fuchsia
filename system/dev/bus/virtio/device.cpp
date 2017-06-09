@@ -13,11 +13,35 @@
 #include <hw/inout.h>
 #include <mxtl/auto_lock.h>
 #include <pretty/hexdump.h>
+#include <virtio/virtio.h>
 
 #include "trace.h"
-#include "virtio_priv.h"
 
 #define LOCAL_TRACE 0
+
+// cfg_type:
+// Common configuration
+#define VIRTIO_PCI_CAP_COMMON_CFG   1
+// Notifications
+#define VIRTIO_PCI_CAP_NOTIFY_CFG   2
+// ISR Status
+#define VIRTIO_PCI_CAP_ISR_CFG      3
+// Device specific configuration
+#define VIRTIO_PCI_CAP_DEVICE_CFG   4
+// PCI configuration access
+#define VIRTIO_PCI_CAP_PCI_CFG      5
+
+// virtio pci capability
+struct virtio_pci_cap {
+    uint8_t type;
+    uint8_t next;
+    uint8_t len;
+    uint8_t cfg_type;
+    uint8_t bar;
+    uint8_t pad[3];
+    uint32_t offset;
+    uint32_t length;
+} __PACKED;
 
 namespace virtio {
 

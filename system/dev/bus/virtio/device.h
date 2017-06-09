@@ -12,7 +12,28 @@
 #include <mxtl/mutex.h>
 #include <threads.h>
 
-#include "virtio_priv.h"
+// non transitional common configuration
+struct virtio_pci_common_cfg {
+    // device info
+    uint32_t device_feature_select;
+    uint32_t device_feature;
+    uint32_t driver_feature_select;
+    uint32_t driver_feature;
+    uint16_t msix_config;
+    uint16_t num_queues;
+    uint8_t  device_status;
+    uint8_t  config_generation;
+
+    // about specific queue
+    uint16_t queue_select;
+    uint16_t queue_size;
+    uint16_t queue_msix_vector;
+    uint16_t queue_enable;
+    uint16_t queue_notify_off;
+    uint64_t queue_desc;
+    uint64_t queue_avail;
+    uint64_t queue_used;
+};
 
 namespace virtio {
 

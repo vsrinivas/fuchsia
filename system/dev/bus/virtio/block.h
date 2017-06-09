@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 #include <ddk/protocol/block.h>
+#include <virtio/block.h>
 
 namespace virtio {
 
@@ -59,17 +60,7 @@ private:
     static const uint16_t ring_size = 128; // 128 matches legacy pci
 
     // saved block device configuration out of the pci config BAR
-    struct virtio_blk_config {
-        uint64_t capacity;
-        uint32_t size_max;
-        uint32_t seg_max;
-        struct virtio_blk_geometry {
-            uint16_t cylinders;
-            uint8_t heads;
-            uint8_t sectors;
-        } geometry;
-        uint32_t blk_size;
-    } config_ __PACKED = {};
+    virtio_blk_config_t config_ = {};
 
     struct virtio_blk_req {
         uint32_t type;

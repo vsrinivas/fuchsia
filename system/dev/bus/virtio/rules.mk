@@ -24,6 +24,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
+    system/ulib/virtio \
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
