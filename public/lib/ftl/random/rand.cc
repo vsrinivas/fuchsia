@@ -57,7 +57,7 @@ bool RandBytes(unsigned char* output, size_t output_length) {
         remaining > MX_CPRNG_DRAW_MAX_LEN ? MX_CPRNG_DRAW_MAX_LEN : remaining;
 
     mx_status_t status = mx_cprng_draw(offset, read_len, &actual);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
 
     // decrement the remainder and update the pointer offset in the buffer
     remaining -= actual;
