@@ -175,7 +175,10 @@
 
 
 
+
 // Deprecated older names for the error codes.
+#ifndef USE_MX_ERRORS
+
 #define NO_ERROR MX_OK
 #define ERR_INTERNAL (MX_ERR_INTERNAL)
 #define ERR_NOT_SUPPORTED (MX_ERR_NOT_SUPPORTED)
@@ -210,3 +213,5 @@
 #define ERR_NO_SPACE (MX_ERR_NO_SPACE)
 #define ERR_STOP (MX_ERR_STOP)
 #define ERR_NEXT (MX_ERR_NEXT)
+
+#endif  // USE_MX_ERRORS
