@@ -87,7 +87,8 @@ PaperRenderer::~PaperRenderer() {
 void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
                                      const ImagePtr& dummy_color_image,
                                      const Stage& stage,
-                                     const Model& model) {
+                                     const Model& model,
+                                     const Camera& camera) {
   auto command_buffer = current_frame();
 
   FramebufferPtr framebuffer = ftl::MakeRefCounted<Framebuffer>(
@@ -95,12 +96,12 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
       std::vector<ImagePtr>{dummy_color_image, depth_image},
       model_renderer_->depth_prepass());
 
-  float scale_x =
+  float scale =
       static_cast<float>(depth_image->width()) / stage.physical_size().width();
-  float scale_y = static_cast<float>(depth_image->height()) /
-                  stage.physical_size().height();
+  FTL_DCHECK(scale == static_cast<float>(depth_image->height()) /
+                          stage.physical_size().height());
   impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, vec2(scale_x, scale_y), sort_by_pipeline_, true, true, 1,
+      stage, model, camera, scale, sort_by_pipeline_, true, true, 1,
       TexturePtr(), command_buffer);
 
   command_buffer->KeepAlive(framebuffer);
@@ -254,13 +255,14 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                                      const FramebufferPtr& framebuffer,
                                      const TexturePtr& illumination_texture,
                                      const Stage& stage,
-                                     const Model& model) {
+                                     const Model& model,
+                                     const Camera& camera) {
   auto command_buffer = current_frame();
   command_buffer->KeepAlive(framebuffer);
 
   impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, vec2(1.f, 1.f), sort_by_pipeline_, false, true,
-      sample_count, illumination_texture, command_buffer);
+      stage, model, camera, 1.f, sort_by_pipeline_, false, true, sample_count,
+      illumination_texture, command_buffer);
   command_buffer->KeepAlive(display_list);
 
   // Update the clear color from the stage
@@ -354,6 +356,7 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
 
 void PaperRenderer::DrawFrame(const Stage& stage,
                               const Model& model,
+                              const Camera& camera,
                               const ImagePtr& color_image_out,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
@@ -386,7 +389,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
          vk::ImageUsageFlagBits::eColorAttachment});
 
     DrawDepthPrePass(ssdo_accel_depth_image, ssdo_accel_dummy_color_image,
-                     stage, model);
+                     stage, model, camera);
     SubmitPartialFrame();
 
     AddTimestamp("finished SSDO acceleration depth pre-pass");
@@ -407,7 +410,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     current_frame()->TakeWaitSemaphore(
         color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
-    DrawDepthPrePass(depth_image, color_image_out, stage, model);
+    DrawDepthPrePass(depth_image, color_image_out, stage, model, camera);
     SubmitPartialFrame();
 
     AddTimestamp("finished depth pre-pass");
@@ -451,7 +454,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     current_frame()->KeepAlive(lighting_fb);
 
     DrawLightingPass(kLightingPassSampleCount, lighting_fb,
-                     illumination_texture, stage, model);
+                     illumination_texture, stage, model, camera);
 
     AddTimestamp("finished lighting pass");
   } else {
@@ -479,7 +482,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     current_frame()->KeepAlive(multisample_fb);
 
     DrawLightingPass(kLightingPassSampleCount, multisample_fb,
-                     illumination_texture, stage, model);
+                     illumination_texture, stage, model, camera);
 
     AddTimestamp("finished lighting pass");
 

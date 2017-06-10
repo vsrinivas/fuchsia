@@ -49,44 +49,63 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
 
   float screen_width = stage->viewing_volume().width();
   float screen_height = stage->viewing_volume().height();
-  float min_height = 5.f;
-  float max_height = 80.f;
-  float elevation_range = max_height - min_height;
+  float min_elevation = 5.f;
+  float max_elevation = 95.f;
+  float mid_elevation = 0.5f * (min_elevation + max_elevation);
+  float elevation_range = max_elevation - min_elevation;
 
   std::vector<Object> objects;
 
   // Orbiting circle1
   float circle1_orbit_radius = 275.f;
-  float circle1_x_pos = sin(current_time_sec * 1.f) * circle1_orbit_radius +
-                        (screen_width * 0.5f);
-  float circle1_y_pos = cos(current_time_sec * 1.f) * circle1_orbit_radius +
-                        (screen_height * 0.5f);
-  Object circle1(
-      Object::NewCircle(vec2(circle1_x_pos, circle1_y_pos), 60.f, 35.f, red_));
+  vec3 circle1_pos(sin(current_time_sec * 1.f) * circle1_orbit_radius +
+                       (screen_width * 0.5f),
+                   cos(current_time_sec * 1.f) * circle1_orbit_radius +
+                       (screen_height * 0.5f),
+                   mid_elevation + 10.f);
+  Object circle1(Object::NewCircle(circle1_pos, 60.f, red_));
   objects.push_back(circle1);
 
-  // Orbiting circle1
+  // Orbiting circle2
   float circle2_orbit_radius = 120.f;
-  float circle2_x_pos =
-      sin(current_time_sec * 2.f) * circle2_orbit_radius + circle1_x_pos;
-  float circle2_y_pos =
-      cos(current_time_sec * 2.f) * circle2_orbit_radius + circle1_y_pos;
+  vec2 circle2_offset(sin(current_time_sec * 2.f) * circle2_orbit_radius,
+                      cos(current_time_sec * 2.f) * circle2_orbit_radius);
+
   float circle2_elevation =
-      (cos(current_time_sec * 1.5f) * 0.5 + 0.5) * elevation_range + min_height;
-  Object circle2(Object::NewCircle(vec2(circle2_x_pos, circle2_y_pos), 30.f,
-                                   circle2_elevation, color1_));
+      (cos(current_time_sec * 1.5f) * 0.5 + 0.5) * elevation_range +
+      min_elevation;
+  vec3 circle2_pos(vec2(circle1_pos) + circle2_offset, circle2_elevation);
+  Object circle2(Object::NewCircle(circle2_pos, 30.f, color1_));
   objects.push_back(circle2);
 
   // Create the ring that will do the fancy trick
-  vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f, 30.f);
+  vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f, mid_elevation);
   Object inner_ring(inner_ring_pos, ring_mesh1_, color2_);
   inner_ring.set_shape_modifiers(ShapeModifier::kWobble);
   objects.push_back(inner_ring);
 
   // Create our background plane
-  Object bg_plane(Object::NewRect(vec2(0.f, 0.f),
-                                  vec2(screen_width, screen_height), 0.f, bg_));
+  Object bg_plane(
+      Object::NewRect(vec3(0, 0, 0), vec2(screen_width, screen_height), bg_));
   objects.push_back(bg_plane);
+
+  Object circle4(Object::NewCircle(vec2(100, 100), 90.f, 35.f, red_));
+  objects.push_back(circle4);
+
+  Object circle5(Object::NewCircle(vec2(100, 100), 80.f, 45.f, color2_));
+  objects.push_back(circle5);
+
+  Object circle6(Object::NewCircle(vec2(100, 100), 70.f, 55.f, color1_));
+  objects.push_back(circle6);
+
+  Object circle7(Object::NewCircle(vec2(100, 100), 60.f, 65.f, red_));
+  objects.push_back(circle7);
+
+  Object circle8(Object::NewCircle(vec2(100, 100), 50.f, 75.f, color2_));
+  objects.push_back(circle8);
+
+  Object circle9(Object::NewCircle(vec2(100, 100), 40.f, 85.f, color1_));
+  objects.push_back(circle9);
 
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));

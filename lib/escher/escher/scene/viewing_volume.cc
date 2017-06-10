@@ -7,21 +7,21 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <utility>
 
+#include "ftl/logging.h"
+
 namespace escher {
 
 ViewingVolume::ViewingVolume() {}
 
-ViewingVolume::ViewingVolume(float width, float height, float near, float far)
-    : width_(width), height_(height), near_(near), far_(far) {}
+ViewingVolume::ViewingVolume(float width, float height, float top, float bottom)
+    : width_(width), height_(height), top_(top), bottom_(bottom) {
+  FTL_DCHECK(top >= bottom);
+}
 
 ViewingVolume::~ViewingVolume() {}
 
 ViewingVolume ViewingVolume::CopyWith(float width, float height) {
-  return ViewingVolume(width, height, near_, far_);
-}
-
-mat4 ViewingVolume::GetProjectionMatrix() const {
-  return glm::ortho<float>(0.0f, width_, height_, 0.0f, -near_, -far_);
+  return ViewingVolume(width, height, top_, bottom_);
 }
 
 }  // namespace escher

@@ -14,7 +14,11 @@ class VulkanSwapchainHelper {
   VulkanSwapchainHelper(VulkanSwapchain swapchain, const RendererPtr& renderer);
   ~VulkanSwapchainHelper();
 
-  void DrawFrame(Stage& stage, Model& model);
+  void DrawFrame(const Stage& stage, const Model& model, const Camera& camera);
+  // This variant creates a default camera looking directly down at the center
+  // of the Stage.
+  // TODO: remove this variant; clients should always specify the Camera.
+  void DrawFrame(const Stage& stage, const Model& model);
 
   const VulkanSwapchain& swapchain() const { return swapchain_; }
 

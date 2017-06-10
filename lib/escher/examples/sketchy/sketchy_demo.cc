@@ -5,6 +5,7 @@
 #include "escher/examples/sketchy/sketchy_demo.h"
 
 #include "escher/renderer/paper_renderer.h"
+#include "escher/scene/camera.h"
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 24.f;
@@ -33,7 +34,8 @@ void SketchyDemo::InitializeEscherStage() {
 
 void SketchyDemo::DrawFrame() {
   escher::Model* model = page_.GetModel(stopwatch_, &stage_);
-  swapchain_helper_.DrawFrame(stage_, *model);
+  escher::Camera camera = escher::Camera::NewOrtho(stage_.viewing_volume());
+  swapchain_helper_.DrawFrame(stage_, *model, camera);
 }
 
 bool SketchyDemo::HandleKeyPress(std::string key) {

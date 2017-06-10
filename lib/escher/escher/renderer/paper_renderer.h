@@ -15,6 +15,7 @@ class PaperRenderer : public Renderer {
  public:
   void DrawFrame(const Stage& stage,
                  const Model& model,
+                 const Camera& camera,
                  const ImagePtr& color_image_out,
                  const SemaphorePtr& frame_done,
                  FrameRetiredCallback frame_retired_callback) override;
@@ -52,7 +53,8 @@ class PaperRenderer : public Renderer {
   void DrawDepthPrePass(const ImagePtr& depth_image,
                         const ImagePtr& dummy_color_image,
                         const Stage& stage,
-                        const Model& model);
+                        const Model& model,
+                        const Camera& camera);
 
   // Multiple render passes.  The first samples the depth buffer to generate
   // per-pixel occlusion information, and subsequent passes filter this noisy
@@ -75,7 +77,8 @@ class PaperRenderer : public Renderer {
                         const FramebufferPtr& framebuffer,
                         const TexturePtr& illumination_texture,
                         const Stage& stage,
-                        const Model& model);
+                        const Model& model,
+                        const Camera& camera);
 
   void DrawDebugOverlays(const ImagePtr& output,
                          const ImagePtr& depth,

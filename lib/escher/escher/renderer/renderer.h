@@ -22,6 +22,7 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
  public:
   virtual void DrawFrame(const Stage& stage,
                          const Model& model,
+                         const Camera& camera,
                          const ImagePtr& color_image_out,
                          const SemaphorePtr& frame_done,
                          FrameRetiredCallback frame_retired_callback) = 0;
@@ -29,6 +30,7 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
   void RunOffscreenBenchmark(const VulkanContext& context,
                              const Stage& stage,
                              const Model& model,
+                             const Camera& camera,
                              vk::Format framebuffer_format,
                              size_t frame_count);
 

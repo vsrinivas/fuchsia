@@ -97,6 +97,7 @@ void Renderer::AddTimestamp(const char* name) {
 void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
                                      const Stage& stage,
                                      const Model& model,
+                                     const Camera& camera,
                                      vk::Format framebuffer_format,
                                      size_t frame_count) {
   constexpr uint64_t kSecondsToNanoseconds = 1000000000;
@@ -122,7 +123,7 @@ void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
       images.push_back(im);
       semaphores.push_back(Semaphore::New(context.device));
 
-      DrawFrame(stage, model, images[i], semaphores[i], nullptr);
+      DrawFrame(stage, model, camera, images[i], semaphores[i], nullptr);
     }
 
     // Prepare all semaphores to be waited-upon, and wait for the throwaway
@@ -161,8 +162,8 @@ void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
       set_enable_profiling(true);
     }
 
-    DrawFrame(stage, model, images[image_index], semaphores[image_index],
-              nullptr);
+    DrawFrame(stage, model, camera, images[image_index],
+              semaphores[image_index], nullptr);
 
     set_enable_profiling(false);
   }

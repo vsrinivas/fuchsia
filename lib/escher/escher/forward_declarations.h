@@ -12,6 +12,7 @@ class RefPtr;
 namespace escher {
 
 class Buffer;
+class Camera;
 class Escher;
 class Framebuffer;
 class GpuAllocator;
@@ -33,6 +34,7 @@ class Shape;
 class Stage;
 class Texture;
 class TimestampProfiler;
+class ViewingVolume;
 struct VulkanContext;
 struct VulkanSwapchain;
 

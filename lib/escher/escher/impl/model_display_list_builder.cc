@@ -9,6 +9,7 @@
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/model_pipeline_cache.h"
 #include "escher/impl/model_renderer.h"
+#include "escher/scene/camera.h"
 
 namespace escher {
 namespace impl {
@@ -17,38 +18,27 @@ namespace {
 // TODO: should be queried from device.
 constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
 
-// Add a small fudge-factor so that we don't clip objects resting on the stage
-// floor.  It can't be much smaller than this (0.00075 is too small for 16-bit
-// depth formats).
-constexpr float kStageFloorFudgeFactor = 0.0008f;
 }  // namespace
 
-static mat4 GenerateStageScaleTransform(const Stage& stage, vec2 scale) {
-  auto& volume = stage.viewing_volume();
+static mat4 AdjustCameraTransform(const Stage& stage,
+                                  const Camera& camera,
+                                  float scale) {
+  // Adjust projection matrix to support downsampled render passes.
+  mat4 scale_adjustment(1.0);
+  scale_adjustment[0][0] = scale;
+  scale_adjustment[1][1] = scale;
+  scale_adjustment[3][0] = scale - 1.f;
+  scale_adjustment[3][1] = scale - 1.f;
 
-  // Convert "height above the stage" into "distance from the camera",
-  // normalized to the range (0,1).  This is passed unaltered through the
-  // vertex shader.  See the note above, where we set the viewport min/max
-  // depth.
-  FTL_DCHECK(volume.far() == 0);
-  vec3 pre_scale(1, 1, -(1 - kStageFloorFudgeFactor));
-  vec3 pre_translate(0, 0, volume.depth_range());
-  mat4 pre_translate_and_scale_mat =
-      glm::translate(pre_translate) * glm::scale(pre_scale);
-
-  mat4 scale_mat = glm::scale(
-      vec3(scale.x * 2.f / volume.width(), scale.y * 2.f / volume.height(),
-           1.f / (volume.depth_range() + kStageFloorFudgeFactor)));
-
-  return glm::translate(vec3(-1, -1, 0)) * scale_mat *
-         pre_translate_and_scale_mat;
+  return scale_adjustment * camera.projection() * camera.transform();
 }
 
 ModelDisplayListBuilder::ModelDisplayListBuilder(
     vk::Device device,
     const Stage& stage,
     const Model& model,
-    vec2 scale,
+    const Camera& camera,
+    float scale,
     bool use_material_textures,
     const TexturePtr& white_texture,
     const TexturePtr& illumination_texture,
@@ -59,7 +49,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     bool use_depth_prepass)
     : device_(device),
       volume_(stage.viewing_volume()),
-      adjusted_camera_transform_(GenerateStageScaleTransform(stage, scale)),
+      camera_transform_(AdjustCameraTransform(stage, camera, scale)),
       use_material_textures_(use_material_textures),
       white_texture_(white_texture),
       illumination_texture_(illumination_texture ? illumination_texture
@@ -200,7 +190,7 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
   *per_object = ModelData::PerObject();  // initialize with default values
 
   // Push uniforms for scale/translation and color.
-  per_object->transform = adjusted_camera_transform_ * object.transform();
+  per_object->transform = camera_transform_ * object.transform();
   per_object->color = vec4(object.material()->color(), 1.f);  // always opaque
 
   // Find the texture to use, either the object's material's texture, or
@@ -289,8 +279,8 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
   uniform_buffers_.clear();
 
   auto display_list = ftl::MakeRefCounted<ModelDisplayList>(
-      renderer_->resource_recycler(), per_model_descriptor_set_, std::move(items_),
-      std::move(textures_), std::move(resources_));
+      renderer_->resource_recycler(), per_model_descriptor_set_,
+      std::move(items_), std::move(textures_), std::move(resources_));
   command_buffer->KeepAlive(display_list);
   return display_list;
 }

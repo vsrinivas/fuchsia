@@ -7,6 +7,8 @@
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/renderer.h"
+#include "escher/scene/camera.h"
+#include "escher/scene/stage.h"
 
 namespace escher {
 
@@ -22,7 +24,13 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
 
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 
-void VulkanSwapchainHelper::DrawFrame(Stage& stage, Model& model) {
+void VulkanSwapchainHelper::DrawFrame(const Stage& stage, const Model& model) {
+  DrawFrame(stage, model, Camera::NewOrtho(stage.viewing_volume()));
+}
+
+void VulkanSwapchainHelper::DrawFrame(const Stage& stage,
+                                      const Model& model,
+                                      const Camera& camera) {
   auto result =
       device_.acquireNextImageKHR(swapchain_.swapchain, UINT64_MAX,
                                   image_available_semaphore_->value(), nullptr);
@@ -40,7 +48,7 @@ void VulkanSwapchainHelper::DrawFrame(Stage& stage, Model& model) {
   // signal the semaphore.
   auto& image = swapchain_.images[swapchain_index];
   image->SetWaitSemaphore(image_available_semaphore_);
-  renderer_->DrawFrame(stage, model, image, render_finished_semaphore_,
+  renderer_->DrawFrame(stage, model, camera, image, render_finished_semaphore_,
                        nullptr);
 
   // When the image is completely rendered, present it.

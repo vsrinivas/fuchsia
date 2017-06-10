@@ -57,6 +57,12 @@ class WaterfallDemo : public Demo {
   // Run an offscreen benchmark.
   bool run_offscreen_benchmark_ = false;
 
+  // 3 camera projection modes:
+  // - orthogonal full-screen
+  // - perspective where floor plane is full-screen, and parallel to screen
+  // - perspective from diagonal viewpoint.
+  int camera_projection_mode_ = 0;
+
   std::vector<std::unique_ptr<Scene>> scenes_;
   escher::PaperRendererPtr renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;

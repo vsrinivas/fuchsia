@@ -10,6 +10,7 @@
 #include "escher/geometry/transform.h"
 #include "escher/impl/model_pipeline_spec.h"
 #include "escher/renderer/image.h"
+#include "escher/scene/viewing_volume.h"
 
 namespace escher {
 
@@ -144,6 +145,11 @@ std::ostream& operator<<(std::ostream& str, const ImageInfo& info) {
   return str << "ImageInfo[" << info.width << "x" << info.height << " "
              << vk::to_string(info.format) << "  samples: " << info.sample_count
              << "]";
+}
+
+std::ostream& operator<<(std::ostream& str, const ViewingVolume& volume) {
+  return str << "ViewingVolume[w:" << volume.width() << " h:" << volume.height()
+             << " t:" << volume.top() << " b:" << volume.bottom() << "]";
 }
 
 }  // namespace escher

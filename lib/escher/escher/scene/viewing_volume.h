@@ -7,31 +7,37 @@
 #include <math.h>
 
 #include "escher/geometry/size_i.h"
+#include "escher/util/debug_print.h"
 
 namespace escher {
 
 class ViewingVolume {
  public:
   ViewingVolume();
-  ViewingVolume(float width, float height, float near, float far);
+  ViewingVolume(float width, float height, float top, float bottom);
   ~ViewingVolume();
 
   ViewingVolume CopyWith(float width, float height);
 
   float width() const { return width_; }
   float height() const { return height_; }
-  float near() const { return near_; }
-  float far() const { return far_; }
+  float top() const { return top_; }
+  float bottom() const { return bottom_; }
+  float depth() const { return top_ - bottom_; }
 
-  float depth_range() const { return std::abs(near_ - far_); }
-
-  mat4 GetProjectionMatrix() const;
+  // TODO: These are deprecated, now that Escher supports fully 3D scenes.
+  float near() const { return top_; }
+  float far() const { return bottom_; }
+  float depth_range() const { return std::abs(top_ - bottom_); }
 
  private:
   float width_ = 0.0f;
   float height_ = 0.0f;
-  float near_ = 0.0f;
-  float far_ = 0.0f;
+  float top_ = 0.0f;
+  float bottom_ = 0.0f;
 };
+
+// Debugging.
+ESCHER_DEBUG_PRINTABLE(ViewingVolume);
 
 }  // namespace escher

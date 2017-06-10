@@ -13,6 +13,7 @@
 #include "escher/examples/waterfall/scenes/uber_scene3.h"
 #include "escher/examples/waterfall/scenes/wobbly_ocean_scene.h"
 #include "escher/examples/waterfall/scenes/wobbly_rings_scene.h"
+#include "escher/scene/camera.h"
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 100.f;
@@ -131,6 +132,10 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case 'B':
         run_offscreen_benchmark_ = true;
         return true;
+      case 'C':
+        camera_projection_mode_ = (camera_projection_mode_ + 1) % 3;
+        FTL_LOG(INFO) << "Camera projection mode: " << camera_projection_mode_;
+        return true;
       case 'D':
         show_debug_info_ = !show_debug_info_;
         return true;
@@ -181,6 +186,31 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
   }
 }
 
+static escher::Camera GenerateCamera(int camera_projection_mode,
+                                     const escher::ViewingVolume& volume) {
+  switch (camera_projection_mode) {
+    case 0:
+      return escher::Camera::NewOrtho(volume);
+    case 1:
+      return escher::Camera::NewPerspective(
+          volume,
+          glm::translate(
+              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
+          glm::radians(8.f));
+    case 2: {
+      vec3 eye(volume.width() / 3, 6000, 3000);
+      vec3 target(volume.width() / 2, volume.height() / 3, 0);
+      vec3 up(0, 1, 0);
+      return escher::Camera::NewPerspective(
+          volume, glm::lookAt(eye, target, up), glm::radians(15.f));
+    } break;
+    default:
+      // Should not happen.
+      FTL_DCHECK(false);
+      return escher::Camera::NewOrtho(volume);
+  }
+}
+
 void WaterfallDemo::DrawFrame() {
   current_scene_ = current_scene_ % scenes_.size();
   auto& scene = scenes_.at(current_scene_);
@@ -193,11 +223,14 @@ void WaterfallDemo::DrawFrame() {
   renderer_->set_enable_ssdo_acceleration(enable_ssdo_acceleration_);
   profile_one_frame_ = false;
 
+  escher::Camera camera =
+      GenerateCamera(camera_projection_mode_, stage_.viewing_volume());
+
   if (run_offscreen_benchmark_) {
     run_offscreen_benchmark_ = false;
     stopwatch_.Stop();
     renderer_->set_show_debug_info(false);
-    renderer_->RunOffscreenBenchmark(vulkan_context(), stage_, *model,
+    renderer_->RunOffscreenBenchmark(vulkan_context(), stage_, *model, camera,
                                      swapchain_helper_.swapchain().format,
                                      kOffscreenBenchmarkFrameCount);
     renderer_->set_show_debug_info(show_debug_info_);
@@ -212,7 +245,7 @@ void WaterfallDemo::DrawFrame() {
     stopwatch_.Start();
   }
 
-  swapchain_helper_.DrawFrame(stage_, *model);
+  swapchain_helper_.DrawFrame(stage_, *model, camera);
 
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();

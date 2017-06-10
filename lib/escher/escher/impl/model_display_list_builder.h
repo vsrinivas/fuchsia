@@ -20,11 +20,11 @@ class ModelDisplayListBuilder {
  public:
   // OK to pass null |illumination_texture|; in that case, |white_texture| will
   // be used instead.
-  // Must not outlive |stage|.   TODO: is this true?
   ModelDisplayListBuilder(vk::Device device,
                           const Stage& stage,
                           const Model& model,
-                          vec2 scale,
+                          const Camera& camera,
+                          float scale,
                           bool use_material_textures,
                           const TexturePtr& white_texture,
                           const TexturePtr& illumination_texture,
@@ -50,9 +50,9 @@ class ModelDisplayListBuilder {
 
   const ViewingVolume volume_;
 
-  // Global camera projection matrix, adjusted to meet the needs of this
+  // Global camera view/projection matrix, adjusted to meet the needs of this
   // particular display list.
-  const mat4 adjusted_camera_transform_;
+  const mat4 camera_transform_;
 
   // If this is false, use |default_white_texture_| instead of a material's
   // existing texture (e.g. to save bandwidth during depth-only passes).
