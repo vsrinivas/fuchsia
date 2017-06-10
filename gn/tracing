@@ -4,5 +4,10 @@
         "ktrace_provider": "//apps/tracing:ktrace_provider",
         "trace_tests": "//apps/tracing:trace_tests",
         "trace": "//apps/tracing:trace"
-    }
+    },
+    "gopaths": [
+        { "apps/tracing/lib/go" : "apps/tracing/lib" },
+        { "application/lib/app/go/src/app" : "application/lib/app" },
+        { "lib/fidl/go/src/fidl": "fidl" }
+    ]
 }
