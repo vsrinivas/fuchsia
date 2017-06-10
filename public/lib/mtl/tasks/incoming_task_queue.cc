@@ -4,8 +4,6 @@
 
 #include "lib/mtl/tasks/incoming_task_queue.h"
 
-#include <utility>
-
 namespace mtl {
 namespace internal {
 
@@ -36,16 +34,10 @@ void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimePoint target_time) {
 
   if (drop_incoming_tasks_)
     return;
-
-  const bool was_empty = incoming_queue_.empty();
-  incoming_queue_.emplace_back(std::move(task), target_time,
-                               next_sequence_number_++);
-
-  if (was_empty && delegate_) {
-    // Notice that we're still holding mutex here. Chromium uses a reader/writer
-    // lock to avoid having to hold the queue mutex when calling back into the
-    // delegate.
-    delegate_->ScheduleDrainIncomingTasks();
+  if (delegate_) {
+    delegate_->PostTask(std::move(task), target_time);
+  } else {
+    incoming_queue_.emplace_back(std::move(task), target_time);
   }
 }
 
@@ -54,30 +46,21 @@ bool IncomingTaskQueue::RunsTasksOnCurrentThread() {
   return delegate_ && delegate_->RunsTasksOnCurrentThread();
 }
 
-TaskQueue IncomingTaskQueue::TakeTaskQueue() {
-  TaskQueue result;
-  {
-    ftl::MutexLocker locker(&mutex_);
-    incoming_queue_.swap(result);
-  }
-  return result;
-}
-
 void IncomingTaskQueue::InitDelegate(TaskQueueDelegate* delegate) {
+  FTL_DCHECK(delegate);
+
   ftl::MutexLocker locker(&mutex_);
   FTL_DCHECK(!drop_incoming_tasks_);
-  delegate_ = delegate;
 
-  if (!incoming_queue_.empty() && delegate_) {
-    // Notice that we're still holding mutex here. Chromium uses a reader/writer
-    // lock to avoid having to hold the queue mutex when calling back into the
-    // delegate.
-    delegate_->ScheduleDrainIncomingTasks();
-  }
+  delegate_ = delegate;
+  for (auto& task : incoming_queue_)
+    delegate_->PostTask(std::move(task.first), task.second);
+  incoming_queue_.clear();
 }
 
 void IncomingTaskQueue::ClearDelegate() {
   ftl::MutexLocker locker(&mutex_);
+
   FTL_DCHECK(!drop_incoming_tasks_);
   drop_incoming_tasks_ = true;
   delegate_ = nullptr;

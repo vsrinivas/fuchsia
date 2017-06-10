@@ -14,11 +14,10 @@ source_set("tasks") {
     "message_loop.h",
     "message_loop_handler.cc",
     "message_loop_handler.h",
-    "pending_task.cc",
-    "pending_task.h",
   ]
   libs = [
     "magenta",
+    "async",
   ]
   public_deps = [
     "//lib/ftl",

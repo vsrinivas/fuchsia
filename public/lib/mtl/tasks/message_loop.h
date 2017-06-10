@@ -5,25 +5,21 @@
 #ifndef LIB_MTL_TASKS_MESSAGE_LOOP_H_
 #define LIB_MTL_TASKS_MESSAGE_LOOP_H_
 
-#include <magenta/types.h>
-#include <mx/port.h>
-
 #include <map>
-#include <memory>
-#include <queue>
+
+#include <async/loop.h>
+#include <async/timeouts.h>
 
 #include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/mtl/tasks/incoming_task_queue.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
-#include "lib/mtl/tasks/pending_task.h"
 
 namespace mtl {
 
-class FTL_EXPORT MessageLoop : public internal::TaskQueueDelegate {
+class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
  public:
   using HandlerKey = uint64_t;
 
@@ -51,6 +47,9 @@ class FTL_EXPORT MessageLoop : public internal::TaskQueueDelegate {
   //
   // The returned key can be used to remove the callback. The returned key will
   // always be non-zero.
+  //
+  // TODO(jeffbrown): Bring the handler API in line with |AsyncDispatcher|
+  // and manage timeouts through cancelable tasks instead.
   HandlerKey AddHandler(MessageLoopHandler* handler,
                         mx_handle_t handle,
                         mx_signals_t trigger,
@@ -89,48 +88,34 @@ class FTL_EXPORT MessageLoop : public internal::TaskQueueDelegate {
   void PostQuitTask();
 
  private:
-  // Contains the data needed to track a request to AddHandler().
-  struct HandlerData {
-    MessageLoopHandler* handler = nullptr;
-    mx_handle_t handle = MX_HANDLE_INVALID;
-    mx_signals_t trigger = MX_SIGNAL_NONE;
-    ftl::TimePoint deadline;
-  };
-
   // |internal::TaskQueueDelegate| implementation:
-  void ScheduleDrainIncomingTasks() override;
+  void PostTask(ftl::Closure task, ftl::TimePoint target_time) override;
   bool RunsTasksOnCurrentThread() override;
 
-  void ReloadQueue();
-  ftl::TimePoint RunReadyTasks(ftl::TimePoint now);
-  ftl::TimePoint Wait(ftl::TimePoint now, ftl::TimePoint next_run_time);
-  void RunTask(const internal::PendingTask& pending_task);
-  void CancelAllHandlers(mx_status_t error);
-  void CancelHandlers(std::vector<HandlerKey> keys, mx_status_t error);
-  void CallAfterTaskCallback();
+  static void Epilogue(async_t* async, void* data);
 
   internal::IncomingTaskQueue* incoming_tasks() {
     return static_cast<internal::IncomingTaskQueue*>(task_runner_.get());
   }
 
+  class TaskRecord;
+  class HandlerRecord;
+
+  async_loop_config_t loop_config_;
+  async::Loop loop_;
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
-
   ftl::Closure after_task_callback_;
-
-  bool should_quit_ = false;
   bool is_running_ = false;
-  std::priority_queue<internal::PendingTask> queue_;
-  mx::port port_;
 
-  // An ever increasing value assigned to each HandlerData::id. Used to detect
-  // uniqueness while notifying. That is, while notifying expired timers we
-  // copy |handler_data_| and only notify handlers whose id match. If the id
-  // does not match it means the handler was removed then added so that we
-  // shouldn't notify it.
   HandlerKey next_handler_key_ = 1u;
+  std::map<HandlerKey, HandlerRecord*> handlers_;
 
-  using HandleToHandlerData = std::map<HandlerKey, HandlerData>;
-  HandleToHandlerData handler_data_;
+  // Set while the handler is running.
+  HandlerRecord* current_handler_ = nullptr;
+
+  // Set to true if the current handler needs to be destroyed once it returns.
+  bool current_handler_removed_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
