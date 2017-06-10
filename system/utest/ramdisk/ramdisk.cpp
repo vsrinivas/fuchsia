@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
+#include <fs-management/ramdisk.h>
 #include <magenta/device/block.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/syscalls.h>
@@ -28,30 +29,13 @@
 
 namespace tests {
 
-static int get_ramdisk(const char* name, uint64_t blk_size, uint64_t blk_count) {
-    // Open the "ramdisk controller", and ask it to create a ramdisk for us.
-    int fd = open(RAMCTL_PATH, O_RDWR);
-    ASSERT_GE(fd, 0, "Could not open ramctl device");
-    ramdisk_ioctl_config_t config;
-    config.blk_size = blk_size;
-    config.blk_count = blk_count;
-    strcpy(config.name, name);
-    ssize_t r = ioctl_ramdisk_config(fd, &config);
-    ASSERT_EQ(r, NO_ERROR, "Failed to create ramdisk");
-    ASSERT_EQ(close(fd), 0, "Failed to close ramctl");
-
-    // TODO(smklein): This "sleep" prevents a bug from triggering:
-    // - 'ioctl_ramdisk_config' --> 'device_add' --> 'open' *should* work, but sometimes
-    //   fails, as the ramdisk does not exist in the FS heirarchy yet. (MG-468)
-    usleep(100000);
-
-    // At this point, our ramdisk is accessible from filesystem hierarchy
+static int get_ramdisk(uint64_t blk_size, uint64_t blk_count) {
     char ramdisk_path[PATH_MAX];
-    snprintf(ramdisk_path, sizeof(ramdisk_path), "%s/%s/block", RAMCTL_PATH, name);
-    fd = open(ramdisk_path, O_RDWR);
-    if (fd < 0) {
-        printf("OPENING RAMDISK FAILURE. Errno: %d\n", errno);
+    if (create_ramdisk(blk_size, blk_count, ramdisk_path)) {
+        return -1;
     }
+
+    int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GE(fd, 0, "Could not open ramdisk device");
     return fd;
 }
@@ -61,7 +45,7 @@ static bool ramdisk_test_simple(void) {
     uint8_t out[PAGE_SIZE];
 
     BEGIN_TEST;
-    int fd = get_ramdisk("ramdisk-test-simple", PAGE_SIZE / 2, 512);
+    int fd = get_ramdisk(PAGE_SIZE / 2, 512);
     memset(buf, 'a', sizeof(buf));
     memset(out, 0, sizeof(out));
 
@@ -86,8 +70,22 @@ static bool ramdisk_test_filesystem(void) {
     BEGIN_TEST;
 
     // Make a ramdisk
-    constexpr char name[] = "disk-test-name";
-    int fd = get_ramdisk(name, PAGE_SIZE / 2, 512);
+    char ramdisk_path[PATH_MAX];
+    if (create_ramdisk(PAGE_SIZE / 2, 512, ramdisk_path)) {
+        return -1;
+    }
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GE(fd, 0, "Could not open ramdisk device");
+
+    // Ramdisk name is of the form: ".../NAME/block"
+    // Extract "NAME".
+    const char* name_end = strrchr(ramdisk_path, '/');
+    const char* name_start = name_end - 1;
+    while (*(name_start - 1) != '/') name_start--;
+    char name[NAME_MAX];
+    memcpy(name, name_start, name_end - name_start);
+    name[name_end - name_start] = 0;
 
     // Verify the ramdisk name
     char out[sizeof(name)];
@@ -143,7 +141,7 @@ bool ramdisk_test_bad_requests(void) {
     uint8_t buf[PAGE_SIZE];
 
     BEGIN_TEST;
-    int fd = get_ramdisk("ramdisk-test-bad-requests", PAGE_SIZE, 512);
+    int fd = get_ramdisk(PAGE_SIZE, 512);
     memset(buf, 'a', sizeof(buf));
 
     // Read / write non-multiples of the block size
@@ -179,8 +177,8 @@ bool ramdisk_test_multiple(void) {
     uint8_t out[PAGE_SIZE];
 
     BEGIN_TEST;
-    int fd1 = get_ramdisk("ramdisk-test-A", PAGE_SIZE, 512);
-    int fd2 = get_ramdisk("ramdisk-test-B", PAGE_SIZE, 512);
+    int fd1 = get_ramdisk(PAGE_SIZE, 512);
+    int fd2 = get_ramdisk(PAGE_SIZE, 512);
 
     // Write 'a' to fd1, write 'b', to fd2
     memset(buf, 'a', sizeof(buf));
@@ -209,7 +207,7 @@ bool ramdisk_test_multiple(void) {
 bool ramdisk_test_fifo_no_op(void) {
     // Get a FIFO connection to a ramdisk and immediately close it
     BEGIN_TEST;
-    int fd = get_ramdisk("ramdisk-test-fifo-no-op", PAGE_SIZE / 2, 512);
+    int fd = get_ramdisk(PAGE_SIZE / 2, 512);
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
@@ -230,7 +228,7 @@ static void fill_random(uint8_t* buf, uint64_t size) {
 bool ramdisk_test_fifo_basic(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
-    int fd = get_ramdisk("ramdisk-test-fifo-basic", PAGE_SIZE, 512);
+    int fd = get_ramdisk(PAGE_SIZE, 512);
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
@@ -406,7 +404,7 @@ bool ramdisk_test_fifo_multiple_vmo(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
@@ -476,7 +474,7 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
@@ -525,7 +523,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;
@@ -594,7 +592,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;
@@ -640,7 +638,7 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;
@@ -716,7 +714,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;
@@ -754,7 +752,7 @@ bool ramdisk_test_fifo_bad_client_txnid(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;
@@ -788,7 +786,7 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;
@@ -846,7 +844,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     BEGIN_TEST;
     // Set up the ramdisk
     const size_t kBlockSize = 512;
-    int fd = get_ramdisk("ramdisk-test-fifo", kBlockSize, 1 << 18);
+    int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
     mx_handle_t fifo;

@@ -77,7 +77,7 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
         close(dirfd);
     }
 
-    if (create_ramdisk("blobstore", ramdisk_path_out, blk_size, blk_count)) {
+    if (create_ramdisk(blk_size, blk_count, ramdisk_path_out)) {
         fprintf(stderr, "Blobstore: Could not create ramdisk\n");
         return -1;
     }

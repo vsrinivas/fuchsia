@@ -40,7 +40,7 @@ void setup_fs_test(void) {
     }
 
     if (!use_real_disk) {
-        if (create_ramdisk("fs-test", test_disk_path, 512, (1 << 23))) {
+        if (create_ramdisk(512, (1 << 23), test_disk_path)) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }

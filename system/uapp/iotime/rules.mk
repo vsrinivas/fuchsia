@@ -15,6 +15,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync
 
 MODULE_LIBS := \
+    system/ulib/fs-management \
     system/ulib/mxio \
     system/ulib/magenta \
     system/ulib/c

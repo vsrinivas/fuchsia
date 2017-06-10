@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fs-management/ramdisk.h>
 #include <magenta/syscalls.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/block.h>
@@ -96,30 +97,12 @@ int iotime_lread(int argc, char** argv) {
 
 
 int make_ramdisk(size_t blocks) {
-    int fd = open("/dev/misc/ramctl", O_RDWR);
-    if (fd < 0) {
+    char ramdisk_path[PATH_MAX];
+    if (create_ramdisk(512, blocks / 512, ramdisk_path)) {
         return -1;
     }
 
-    ramdisk_ioctl_config_t cfg = {
-        .blk_size = 512,
-        .blk_count = blocks / 512,
-        .name = "iotime",
-    };
-
-    if (ioctl_ramdisk_config(fd, &cfg) != NO_ERROR) {
-        close(fd);
-        return -1;
-    }
-
-    close(fd);
-    for (unsigned n = 0; n < 10; n++) {
-        if ((fd = open("/dev/misc/ramctl/iotime/block", O_RDWR)) >= 0) {
-            return fd;
-        }
-        mx_nanosleep(100000);
-    }
-    return -1;
+    return open(ramdisk_path, O_RDWR);
 }
 
 int iotime_bread(int argc, char** argv) {

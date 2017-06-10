@@ -202,6 +202,8 @@ static mx_protocol_device_t ramdisk_instance_proto = {
 
 // implement device protocol:
 
+static uint64_t ramdisk_count = 0;
+
 static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     switch (op) {
@@ -209,11 +211,10 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         if (cmdlen != sizeof(ramdisk_ioctl_config_t)) {
             return MX_ERR_INVALID_ARGS;
         }
-        ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
-        config->name[NAME_MAX - 1] = '\0';
-        if ((strlen(config->name) == 0) || (strchr(config->name, '/') != NULL)) {
+        if (max < 32) {
             return MX_ERR_INVALID_ARGS;
         }
+        ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
 
         ramdisk_device_t* ramdev = calloc(1, sizeof(ramdisk_device_t));
         if (!ramdev) {
@@ -221,7 +222,7 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         }
         ramdev->blk_size = config->blk_size;
         ramdev->blk_count = config->blk_count;
-        strcpy(ramdev->name, config->name);
+        sprintf(ramdev->name, "ramdisk-%lu", ramdisk_count++);
         mx_status_t status;
         if ((status = mx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != MX_OK) {
             free(ramdev);
@@ -237,7 +238,7 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
-            .name = config->name,
+            .name = ramdev->name,
             .ctx = ramdev,
             .ops = &ramdisk_instance_proto,
             .proto_id = MX_PROTOCOL_BLOCK_CORE,
@@ -250,6 +251,8 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             free(ramdev);
             return status;
         }
+        strcpy(reply, ramdev->name);
+        *out_actual = strlen(reply);
         return MX_OK;
     }
     default:
