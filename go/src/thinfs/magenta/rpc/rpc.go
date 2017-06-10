@@ -483,7 +483,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		return errorToRIO(dir.Sync())
 	case rio.OpIoctl:
 		switch msg.IoctlOp() {
-		case mxio.IoctlDevmgrGetTokenFS:
+		case mxio.IoctlVFSGetTokenFS:
 			vfs.Lock()
 			defer vfs.Unlock()
 			h, err := dw.GetToken(cookie)
@@ -493,7 +493,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			msg.Handle[0] = h
 			msg.Hcount = 1
 			return mx.ErrOk
-		case mxio.IoctlDevmgrUnmountFS:
+		case mxio.IoctlVFSUnmountFS:
 			// Shut down filesystem
 			err := vfs.fs.Close()
 			if err != nil {
