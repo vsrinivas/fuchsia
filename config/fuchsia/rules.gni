@@ -59,28 +59,14 @@ template("driver_module") {
     loadable_module(_target_module) {
       output_name = _output_name
       output_extension = _output_extension
+      # Any new variables accepted by driver_module in its invoker that aren't
+      # things accepted by loadable_module will need to be added to the list.
       forward_variables_from(invoker,
+                             "*",
                              [
-                               "cflags",
-                               "cflags_c",
-                               "cflags_cc",
-                               "asmflags",
-                               "defines",
-                               "include_dirs",
-                               "ldflags",
-                               "lib_dirs",
-                               "libs",
-                               "data_deps",
-                               "deps",
-                               "public_deps",
-                               "all_dependent_configs",
-                               "public_configs",
-                               "configs",
-                               "data",
-                               "inputs",
-                               "public",
-                               "sources",
-                               "testonly",
+                               "output_extension",
+                               "output_name",
+                               "visibility",
                              ])
       visibility = [ ":$_target_name" ]
     }
@@ -99,4 +85,10 @@ template("driver_module") {
       target,
     ]
   }
+}
+
+set_defaults("driver_module") {
+  # Sets the default configs for driver_module, which can be modified later
+  # by the invoker. This overrides the loadable_module default.
+  configs = default_shared_library_configs
 }

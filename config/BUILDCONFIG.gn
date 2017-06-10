@@ -46,7 +46,6 @@ if (magenta_project == "") {
 }
 assert(magenta_project != "", "unable to set default magenta build project")
 
-
 is_android = false
 is_fuchsia = false
 is_fuchsia_host = false
@@ -69,7 +68,7 @@ if (current_os == "fuchsia") {
 }
 
 # All binary targets will get this list of configs by default.
-_shared_binary_target_configs = [
+default_shared_binary_configs = [
   "//build/config:compiler",
   "//build/config:debug_prefix_map",
   "//build/config:default_include_dirs",
@@ -80,13 +79,13 @@ _shared_binary_target_configs = [
 ]
 
 if (is_debug) {
-  _shared_binary_target_configs += [ "//build/config:debug" ]
+  default_shared_binary_configs += [ "//build/config:debug" ]
 } else {
-  _shared_binary_target_configs += [ "//build/config:release" ]
+  default_shared_binary_configs += [ "//build/config:release" ]
 }
 
 if (is_fuchsia) {
-  _shared_binary_target_configs += [
+  default_shared_binary_configs += [
     "//build/config/fuchsia:icf",
     "//build/config/fuchsia:safestack",
     "//build/config/fuchsia:thread_safety_annotations",
@@ -95,37 +94,37 @@ if (is_fuchsia) {
 }
 
 if (use_lto) {
-  _shared_binary_target_configs += [ "//build/config:lto" ]
+  default_shared_binary_configs += [ "//build/config:lto" ]
 }
 
-_shared_library_target_configs = _shared_binary_target_configs + [
+default_shared_library_configs = default_shared_binary_configs + [
                                    "//build/config:shared_library_config",
                                    "//build/config:symbol_no_undefined",
                                  ]
-_executable_target_configs = _shared_binary_target_configs + [
+default_executable_configs = default_shared_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
                              ]
 
 if (is_pic_default) {
-  _shared_binary_target_configs += [ "//build/config:shared_library_config" ]
+  default_shared_binary_configs += [ "//build/config:shared_library_config" ]
 }
 
 # Apply that default list to the binary target types.
 set_defaults("source_set") {
-  configs = _shared_binary_target_configs
+  configs = default_shared_binary_configs
 }
 set_defaults("static_library") {
-  configs = _shared_binary_target_configs
+  configs = default_shared_binary_configs
 }
 set_defaults("shared_library") {
-  configs = _shared_library_target_configs
+  configs = default_shared_library_configs
 }
 set_defaults("loadable_module") {
-  configs = _shared_library_target_configs
+  configs = default_shared_library_configs
 }
 set_defaults("executable") {
-  configs = _executable_target_configs
+  configs = default_executable_configs
 }
 
 # Some targets we share with Chromium declare themselves to be components,
@@ -154,7 +153,7 @@ template("component") {
 }
 
 set_defaults("component") {
-  configs = _shared_binary_target_configs
+  configs = default_shared_binary_configs
 }
 
 if (target_os == "fuchsia") {
