@@ -9,8 +9,7 @@ group("scene") {
 
   public_deps = [
     ":scene_manager_service",
-    ":apptests",
-    ":unittests",
+    "tests",
   ]
 }
 
@@ -106,62 +105,5 @@ source_set("common") {
 
   deps = [
     "//magma:vulkan",
-  ]
-}
-
-source_set("testing_common") {
-  testonly = true
-
-  public_deps = [
-    ":common",
-    "//apps/mozart/lib/scene:session_helpers",
-    "//apps/mozart/lib/tests",
-    "//apps/mozart/src/tests:main",
-    "//third_party/gtest",
-  ]
-}
-
-executable("apptests") {
-  output_name = "scene_manager_apptests"
-
-  testonly = true
-
-  sources = [
-    "tests/scene_manager_apptest.cc",
-    "tests/scene_manager_test.cc",
-    "tests/scene_manager_test.h",
-  ]
-
-  deps = [
-    ":testing_common",
-  ]
-}
-
-executable("unittests") {
-  output_name = "scene_manager_unittests"
-
-  testonly = true
-
-  sources = [
-    "tests/node_unittest.cc",
-    "tests/resource_linker_unittest.cc",
-    "tests/session_test.cc",
-    "tests/session_test.h",
-    "tests/session_unittest.cc",
-    "tests/shape_unittest.cc",
-    "tests/tag_unittest.cc",
-  ]
-
-  deps = [
-    ":testing_common",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  public_deps = [
-    ":apptests",
-    ":unittests",
   ]
 }

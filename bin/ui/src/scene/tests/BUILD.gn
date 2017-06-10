@@ -1,0 +1,84 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":apptests",
+    ":unittests",
+    ":unittests_using_escher",
+  ]
+}
+
+source_set("testing_deps") {
+  testonly = true
+  public_deps = [
+    "//apps/mozart/lib/scene:session_helpers",
+    "//apps/mozart/lib/tests",
+    "//apps/mozart/src/scene:common",
+    "//third_party/gtest",
+  ]
+}
+
+executable("apptests") {
+  output_name = "scene_manager_apptests"
+
+  testonly = true
+
+  sources = [
+    "scene_manager_apptest.cc",
+    "scene_manager_test.cc",
+    "scene_manager_test.h",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/mozart/src/tests:main",
+  ]
+}
+
+executable("unittests") {
+  output_name = "scene_manager_unittests"
+
+  testonly = true
+
+  sources = [
+    "node_unittest.cc",
+    "resource_linker_unittest.cc",
+    "session_test.cc",
+    "session_test.h",
+    "session_unittest.cc",
+    "shape_unittest.cc",
+    "tag_unittest.cc",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/mozart/src/tests:main",
+  ]
+}
+
+executable("unittests_using_escher") {
+  output_name = "scene_manager_unittests_using_escher"
+
+  testonly = true
+
+  sources = [
+    "escher_test_environment.cc",
+    "escher_test_environment.h",
+    "session_test.cc",
+    "session_test.h",
+    "session_unittest_using_escher.cc",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/test_runner/lib/reporting",
+    "//lib/escher/escher",
+    "//lib/escher/examples/common",
+  ]
+}

@@ -9,11 +9,6 @@
 namespace mozart {
 namespace test {
 
-int RunTestsWithMessageLoop(std::function<int()> run_tests) {
-  mtl::MessageLoop message_loop;
-  return run_tests();
-}
-
 bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
   auto canceled = std::make_unique<bool>(false);
   bool* canceled_ptr = canceled.get();

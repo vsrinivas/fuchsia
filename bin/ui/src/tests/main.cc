@@ -23,15 +23,15 @@ int main(int argc, char** argv) {
       app::ApplicationContext::CreateFromStartupInfoNotChecked();
 
   reporting_thread.Run();
-  reporting_thread.TaskRunner()->PostTask([&reporter] {
-    reporter.Start(g_application_context.get());
-  });
+  reporting_thread.TaskRunner()->PostTask(
+      [&reporter] { reporter.Start(g_application_context.get()); });
 
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);
-  int status = mozart::test::RunTestsWithMessageLoop([] {
-    return RUN_ALL_TESTS();
-  });
+
+  mtl::MessageLoop message_loop;
+  int status = RUN_ALL_TESTS();
+
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
 
   reporting_thread.Join();

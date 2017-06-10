@@ -31,7 +31,7 @@ package("mozart_tests") {
     "services/composition/cpp:apptests",
     "services/geometry/cpp:apptests",
     "src/input_reader/tests",
-    "src/scene:tests",
+    "src/scene/tests",
     "src/view_manager/tests",
   ]
 
