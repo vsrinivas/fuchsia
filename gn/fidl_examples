@@ -4,8 +4,16 @@
     ],
     "binaries": [
         {
+            "binary": "echo_client_cpp",
+            "bootfs_path": "apps/echo_client_cpp"
+        },
+        {
             "binary": "echo_client_go",
             "bootfs_path": "apps/echo_client_go"
+        },
+        {
+            "binary": "echo_server_cpp",
+            "bootfs_path": "apps/echo_server_cpp"
         },
         {
             "binary": "echo_server_go",
