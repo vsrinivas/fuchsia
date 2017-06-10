@@ -1166,6 +1166,7 @@ mx_vmar_destroy failed on low address space reservation VMAR");
             return lp_error(lp, status, "\
 mx_handle_close failed on low address space reservation VMAR");
         }
+        lp->reserve_vmar = MX_HANDLE_INVALID;
     }
 
     status = mx_channel_write(to_child, 0, msg, size,
