@@ -77,7 +77,7 @@ ProposalPtr MkProposal(const std::string& label,
   if (data.size() > 0) {
     // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
     rapidjson::Document doc;
-    std::vector<std::string> segments{"init", label, "color"};
+    std::vector<std::string> segments{"color"};
     auto pointer =
         modular::CreatePointer(doc, segments.begin(), segments.end());
     pointer.Set(doc, data);
