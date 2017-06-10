@@ -59,7 +59,8 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ipt_fd) {
     ipt_fd = open(ipt_device_path, O_RDONLY);
     if (ipt_fd < 0) {
-      FTL_LOG(ERROR) << "open intel-pt" << ", " << util::ErrnoString(errno);
+      FTL_LOG(ERROR) << "open intel-pt"
+                     << ", " << util::ErrnoString(errno);
       return false;
     }
   }
@@ -67,7 +68,8 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ktrace_fd || out_ktrace_handle) {
     ktrace_fd = open(ktrace_device_path, O_RDONLY);
     if (ktrace_fd < 0) {
-      FTL_LOG(ERROR) << "open ktrace" << ", " << util::ErrnoString(errno);
+      FTL_LOG(ERROR) << "open ktrace"
+                     << ", " << util::ErrnoString(errno);
       close(ipt_fd);
       return false;
     }
@@ -109,7 +111,7 @@ bool SetPerfMode(const IptConfig& config) {
   uint32_t mode = config.mode;
   ssize_t ssize = ioctl_ipt_set_mode(ipt_fd.get(), &mode);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("set perf mode", ssize);
+    FTL_LOG(ERROR) << "set perf mode: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -150,7 +152,7 @@ bool InitCpuPerf(const IptConfig& config) {
     uint32_t descriptor;
     ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
     if (ssize < 0) {
-      util::LogErrorWithMxStatus("init cpu perf", ssize);
+      FTL_LOG(ERROR) << "init cpu perf: " << util::MxErrorString(ssize);
       goto Fail;
     }
     // Buffers are automagically assigned to cpus, descriptor == cpu#,
@@ -159,7 +161,7 @@ bool InitCpuPerf(const IptConfig& config) {
 
   ssize = ioctl_ipt_cpu_mode_alloc(ipt_fd.get());
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("init perf", ssize);
+    FTL_LOG(ERROR) << "init perf: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -184,7 +186,7 @@ bool InitThreadPerf(Thread* thread, const IptConfig& config) {
   ssize_t ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config,
                                          &descriptor);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("init thread perf", ssize);
+    FTL_LOG(ERROR) << "init thread perf: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -224,13 +226,13 @@ bool InitPerfPreProcess(const IptConfig& config) {
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0,
                              nullptr);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("ktrace stop", status);
+    FTL_LOG(ERROR) << "ktrace stop: " << util::MxErrorString(status);
     goto Fail;
   }
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_REWIND, 0,
                              nullptr);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("ktrace rewind", status);
+    FTL_LOG(ERROR) << "ktrace rewind: " << util::MxErrorString(status);
     goto Fail;
   }
 #endif
@@ -249,7 +251,7 @@ bool InitPerfPreProcess(const IptConfig& config) {
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
                              kKtraceGroupMask, nullptr);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("ktrace start", status);
+    FTL_LOG(ERROR) << "ktrace start: " << util::MxErrorString(status);
     goto Fail;
   }
 
@@ -276,7 +278,7 @@ bool StartCpuPerf(const IptConfig& config) {
 
   ssize_t ssize = ioctl_ipt_cpu_mode_start(ipt_fd.get());
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("start cpu perf", ssize);
+    FTL_LOG(ERROR) << "start cpu perf: " << util::MxErrorString(ssize);
     ioctl_ipt_cpu_mode_free(ipt_fd.get());
     goto Fail;
   }
@@ -309,13 +311,15 @@ bool StartThreadPerf(Thread* thread, const IptConfig& config) {
   status = mx_handle_duplicate(thread->handle(), MX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("duplicating thread handle", status);
+    FTL_LOG(ERROR) << "duplicating thread handle: "
+                   << util::MxErrorString(status);
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
   ssize = ioctl_ipt_assign_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("assigning ipt buffer to thread", ssize);
+    FTL_LOG(ERROR) << "assigning ipt buffer to thread: "
+                   << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -336,7 +340,7 @@ void StopCpuPerf(const IptConfig& config) {
   ssize_t ssize = ioctl_ipt_cpu_mode_stop(ipt_fd.get());
   if (ssize < 0) {
     // TODO(dje): This is really bad, this shouldn't fail.
-    util::LogErrorWithMxStatus("stop cpu perf", ssize);
+    FTL_LOG(ERROR) << "stop cpu perf: " << util::MxErrorString(ssize);
   }
 }
 
@@ -361,13 +365,15 @@ void StopThreadPerf(Thread* thread, const IptConfig& config) {
   status = mx_handle_duplicate(thread->handle(), MX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("duplicating thread handle", status);
+    FTL_LOG(ERROR) << "duplicating thread handle: "
+                   << util::MxErrorString(status);
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
   ssize = ioctl_ipt_release_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("releasing ipt buffer from thread", ssize);
+    FTL_LOG(ERROR) << "releasing ipt buffer from thread: "
+                   << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -388,7 +394,7 @@ void StopPerf(const IptConfig& config) {
     mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
   if (status != NO_ERROR) {
     // TODO(dje): This shouldn't fail either, should it?
-    util::LogErrorWithMxStatus("stop ktrace", status);
+    FTL_LOG(ERROR) << "stop ktrace: " << util::MxErrorString(status);
   }
 }
 
@@ -429,18 +435,19 @@ static mx_status_t WriteBufferData(const IptConfig& config,
   ssize_t ssize = ioctl_ipt_get_buffer_config(ipt_fd.get(), &descriptor,
                                               &buffer_config);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus(
-      ftl::StringPrintf("ioctl_ipt_get_buffer_config: buffer %u", descriptor),
-      ssize);
+    FTL_LOG(ERROR) << ftl::StringPrintf(
+                          "ioctl_ipt_get_buffer_config: buffer %u: ",
+                          descriptor)
+                   << util::MxErrorString(ssize);
     return ssize;
   }
 
   ioctl_ipt_buffer_info_t info;
   ssize = ioctl_ipt_get_buffer_info(ipt_fd.get(), &descriptor, &info);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus(
-      ftl::StringPrintf("ioctl_ipt_get_buffer_info: buffer %u", descriptor),
-      ssize);
+    FTL_LOG(ERROR) << ftl::StringPrintf(
+                          "ioctl_ipt_get_buffer_info: buffer %u: ", descriptor)
+                   << util::MxErrorString(ssize);
     return ssize;
   }
 
@@ -473,10 +480,11 @@ static mx_status_t WriteBufferData(const IptConfig& config,
     ssize = ioctl_ipt_get_buffer_handle(ipt_fd.get(), &handle_rqst,
                                         &vmo_handle);
     if (ssize < 0) {
-      util::LogErrorWithMxStatus(
-        ftl::StringPrintf("ioctl_ipt_get_buffer_handle: buffer %u, buffer %u",
-                          descriptor, i),
-        ssize);
+      FTL_LOG(ERROR)
+          << ftl::StringPrintf(
+                 "ioctl_ipt_get_buffer_handle: buffer %u, buffer %u: ",
+                 descriptor, i)
+          << util::MxErrorString(ssize);
       goto Fail;
     }
     mx::vmo vmo(vmo_handle);
@@ -494,10 +502,10 @@ static mx_status_t WriteBufferData(const IptConfig& config,
       // left for another day.
       status = vmo.read(buf, offset, to_write, &actual);
       if (status != NO_ERROR) {
-        util::LogErrorWithMxStatus(
-          ftl::StringPrintf("mx_vmo_read: buffer %u, buffer %u, offset %zu",
-                            descriptor, i, offset),
-          status);
+        FTL_LOG(ERROR) << ftl::StringPrintf(
+                              "mx_vmo_read: buffer %u, buffer %u, offset %zu: ",
+                              descriptor, i, offset)
+                       << util::MxErrorString(status);
         goto Fail;
       }
       if (write(fd.get(), buf, to_write) != (ssize_t) to_write) {
@@ -536,8 +544,8 @@ void DumpCpuPerf(const IptConfig& config) {
     // Buffer descriptors for cpus is the cpu number.
     auto status = WriteBufferData(config, ipt_fd, cpu, cpu);
     if (status != NO_ERROR) {
-      util::LogErrorWithMxStatus(ftl::StringPrintf("dump perf of cpu %u", cpu),
-                                 status);
+      FTL_LOG(ERROR) << ftl::StringPrintf("dump perf of cpu %u: ", cpu)
+                     << util::MxErrorString(status);
       // Keep trying to dump other cpu's data.
     }
   }
@@ -564,9 +572,8 @@ void DumpThreadPerf(Thread* thread, const IptConfig& config) {
 
   auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(), id);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus(
-      ftl::StringPrintf("dump perf of thread %" PRIu64, id),
-      status);
+    FTL_LOG(ERROR) << ftl::StringPrintf("dump perf of thread %" PRIu64 ": ", id)
+                   << util::MxErrorString(status);
   }
 }
 
@@ -658,7 +665,7 @@ void ResetCpuPerf(const IptConfig& config) {
 
   ssize_t ssize = ioctl_ipt_cpu_mode_free(ipt_fd.get());
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("end perf", ssize);
+    FTL_LOG(ERROR) << "end perf: " << util::MxErrorString(ssize);
   }
 }
 
@@ -679,7 +686,7 @@ void ResetThreadPerf(Thread* thread, const IptConfig& config) {
   uint32_t descriptor = thread->ipt_buffer();
   ssize_t ssize = ioctl_ipt_free_buffer(ipt_fd.get(), &descriptor);
   if (ssize < 0) {
-    util::LogErrorWithMxStatus("freeing ipt buffer", ssize);
+    FTL_LOG(ERROR) << "freeing ipt buffer: " << util::MxErrorString(ssize);
     goto Fail;
   }
 
@@ -703,8 +710,9 @@ void ResetPerf(const IptConfig& config) {
   // xrstors gets a gpf -> panic.
   uint32_t mode = IPT_MODE_CPUS;
   ssize_t ssize = ioctl_ipt_set_mode(ipt_fd.get(), &mode);
-  if (ssize < 0)
-    util::LogErrorWithMxStatus("reset perf mode", ssize);
+  if (ssize < 0) {
+    FTL_LOG(ERROR) << "reset perf mode: " << util::MxErrorString(ssize);
+  }
 
   // TODO(dje): Resume original ktracing? Need ability to get old value.
   // For now set the values to what we need: A later run might still need

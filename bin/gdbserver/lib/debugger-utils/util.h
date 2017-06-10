@@ -55,10 +55,6 @@ std::string EscapeNonPrintableString(const ftl::StringView& data);
 std::string ErrnoString(int err);
 
 #ifdef __Fuchsia__
-// Logs the given |message| using the string representation of |status| in a
-// nicely formatted way.
-void LogErrorWithMxStatus(const std::string& message, mx_status_t status);
-
 // Return a string representation of |status|.
 // This includes both the numeric and text values.
 std::string MxErrorString(mx_status_t status);

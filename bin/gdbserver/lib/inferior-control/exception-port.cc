@@ -63,7 +63,8 @@ bool ExceptionPort::Run() {
   // Create an I/O port.
   mx_status_t status = mx::port::create(0u, &eport_handle_);
   if (status < 0) {
-    util::LogErrorWithMxStatus("Failed to create the exception port", status);
+    FTL_LOG(ERROR) << "Failed to create the exception port: "
+                   << util::MxErrorString(status);
     return false;
   }
 
@@ -119,7 +120,8 @@ ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
       mx_task_bind_exception_port(process_handle, eport_handle_.get(),
                                     next_key, MX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
-    util::LogErrorWithMxStatus("Failed to bind exception port", status);
+    FTL_LOG(ERROR) << "Failed to bind exception port: "
+                   << util::MxErrorString(status);
     return 0;
   }
 
@@ -168,8 +170,10 @@ void ExceptionPort::Worker() {
     mx_exception_packet_t packet;
     mx_status_t status =
         mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet));
-    if (status < 0)
-      util::LogErrorWithMxStatus("mx_port_wait returned error: ", status);
+    if (status < 0) {
+      FTL_LOG(ERROR) << "mx_port_wait returned error: "
+                     << util::MxErrorString(status);
+    }
 
     FTL_VLOG(2) << "IO port packet received - key: " << packet.hdr.key
                 << " type: " << IOPortPacketTypeToString(packet.hdr);

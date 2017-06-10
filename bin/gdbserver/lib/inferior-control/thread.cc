@@ -144,7 +144,8 @@ bool Thread::Resume() {
 
   mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
-    util::LogErrorWithMxStatus("Failed to resume thread", status);
+    FTL_LOG(ERROR) << "Failed to resume thread: "
+                   << util::MxErrorString(status);
     return false;
   }
 
@@ -174,12 +175,15 @@ void Thread::ResumeForExit() {
     auto info_status = mx_object_get_info(process()->handle(),
                                           MX_INFO_PROCESS, &info,
                                           sizeof(info), nullptr, nullptr);
-    if (info_status != NO_ERROR)
-      util::LogErrorWithMxStatus("error getting process info", info_status);
+    if (info_status != NO_ERROR) {
+      FTL_LOG(ERROR) << "error getting process info: "
+                     << util::MxErrorString(info_status);
+    }
     if (info_status == NO_ERROR && info.exited) {
       FTL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
-      util::LogErrorWithMxStatus("Failed to resume thread for exit", status);
+      FTL_LOG(ERROR) << "Failed to resume thread for exit: "
+                     << util::MxErrorString(status);
     }
   }
 
@@ -211,7 +215,8 @@ bool Thread::Step() {
   mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
-    util::LogErrorWithMxStatus("Failed to resume thread for step", status);
+    FTL_LOG(ERROR) << "Failed to resume thread for step: "
+                   << util::MxErrorString(status);
     return false;
   }
 

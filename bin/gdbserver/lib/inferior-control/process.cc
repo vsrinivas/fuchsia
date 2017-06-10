@@ -54,7 +54,7 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
   return true;
 
 fail:
-  util::LogErrorWithMxStatus("Process setup failed", status);
+  FTL_LOG(ERROR) << "Process setup failed: " << util::MxErrorString(status);
   if (lp)
     launchpad_destroy(lp);
   return false;
@@ -66,13 +66,13 @@ bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
   mx_status_t status =
       launchpad_elf_load(lp, launchpad_vmo_from_file(binary_path.c_str()));
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Could not load binary", status);
+    FTL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
     return false;
   }
 
   status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Could not load vDSO", status);
+    FTL_LOG(ERROR) << "Could not load vDSO: " << util::MxErrorString(status);
     return false;
   }
 
@@ -93,7 +93,8 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
       mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC, &info,
                          sizeof(info), nullptr, nullptr);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("mx_object_get_info_failed", status);
+    FTL_LOG(ERROR) << "mx_object_get_info_failed: "
+                   << util::MxErrorString(status);
     return MX_KOID_INVALID;
   }
 
@@ -107,7 +108,8 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, pid,
                                            MX_RIGHT_SAME_RIGHTS, &handle);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("mx_object_get_child failed", status);
+    FTL_LOG(ERROR) << "mx_object_get_child failed: "
+                   << util::MxErrorString(status);
     return MX_HANDLE_INVALID;
   }
 
@@ -214,16 +216,17 @@ bool Process::Initialize() {
 
   status = launchpad_get_base_address(launchpad_, &base_address_);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus(
-        "Failed to obtain the dynamic linker base address for process", status);
+    FTL_LOG(ERROR)
+        << "Failed to obtain the dynamic linker base address for process: "
+        << util::MxErrorString(status);
     goto fail;
   }
 
   status = launchpad_get_entry_address(launchpad_, &entry_address_);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus(
-        "Failed to obtain the dynamic linker entry address for process",
-        status);
+    FTL_LOG(ERROR)
+        << "Failed to obtain the dynamic linker entry address for process: "
+        << util::MxErrorString(status);
     goto fail;
   }
 
@@ -368,7 +371,8 @@ bool Process::Start() {
   launchpad_ = nullptr;
 
   if (dup_handle < 0) {
-    util::LogErrorWithMxStatus("Failed to start inferior process", dup_handle);
+    FTL_LOG(ERROR) << "Failed to start inferior process: "
+                   << util::MxErrorString(dup_handle);
     return false;
   }
   mx_handle_close(dup_handle);
@@ -402,7 +406,7 @@ bool Process::Kill() {
   FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
   auto status = mx_task_kill(handle_);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Failed to kill process", status);
+    FTL_LOG(ERROR) << "Failed to kill process: " << util::MxErrorString(status);
     return false;
   }
 
@@ -413,8 +417,8 @@ bool Process::Kill() {
   status = mx_object_wait_one(handle_, MX_TASK_TERMINATED,
                               mx_deadline_after(kill_timeout), &signals);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Error waiting for process to die, ignoring",
-                               status);
+    FTL_LOG(ERROR) << "Error waiting for process to die, ignoring: "
+                   << util::MxErrorString(status);
   } else {
     FTL_DCHECK(signals & MX_TASK_TERMINATED);
   }
@@ -514,8 +518,8 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   mx_status_t status = mx_object_get_child(
       handle_, thread_id, MX_RIGHT_SAME_RIGHTS, &thread_handle);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
-                               status);
+    FTL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
+                   << util::MxErrorString(status);
     return nullptr;
   }
 
@@ -544,7 +548,8 @@ bool Process::RefreshAllThreads() {
       mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
                          nullptr, &num_threads);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Failed to get process thread info (#threads)", status);
+    FTL_LOG(ERROR) << "Failed to get process thread info (#threads): "
+                   << util::MxErrorString(status);
     return false;
   }
 
@@ -554,7 +559,8 @@ bool Process::RefreshAllThreads() {
   status = mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS,
                               koids.get(), buffer_size, &records_read, nullptr);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Failed to get process thread info", status);
+    FTL_LOG(ERROR) << "Failed to get process thread info: "
+                   << util::MxErrorString(status);
     return false;
   }
 
@@ -567,8 +573,8 @@ bool Process::RefreshAllThreads() {
     status = mx_object_get_child(handle_, thread_id, MX_RIGHT_SAME_RIGHTS,
                                  &thread_handle);
     if (status != NO_ERROR) {
-      util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
-                                 status);
+      FTL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
+                     << util::MxErrorString(status);
       continue;
     }
     new_threads[thread_id] =
@@ -734,7 +740,8 @@ int Process::ExitCode() {
     FTL_LOG(INFO) << "Process exited with code " << info.return_code;
     return info.return_code;
   } else {
-    util::LogErrorWithMxStatus("Error getting process exit code", status);
+    FTL_LOG(ERROR) << "Error getting process exit code: "
+                   << util::MxErrorString(status);
     return -1;
   }
 }
