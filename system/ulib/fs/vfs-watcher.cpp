@@ -15,26 +15,50 @@
 #endif
 
 #include <fs/vfs.h>
+#include <mx/channel.h>
 #include <mxalloc/new.h>
 
 namespace fs {
 
-VnodeWatcher::VnodeWatcher() : h(MX_HANDLE_INVALID) {}
+VnodeWatcher::VnodeWatcher(mx::channel h, uint32_t mask) : h(mxtl::move(h)), mask(mask) {}
 
-VnodeWatcher::~VnodeWatcher() {
-    if (h != MX_HANDLE_INVALID) {
-        mx_handle_close(h);
-    }
-}
+VnodeWatcher::~VnodeWatcher() {}
 
 mx_status_t WatcherContainer::WatchDir(mx_handle_t* out) {
     AllocChecker ac;
-    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher);
+    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
+                                                                  VFS_WATCH_MASK_ADDED));
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
-    if (mx_channel_create(0, out, &watcher->h) < 0) {
+    mx::channel out_channel;
+    if (mx::channel::create(0, &out_channel, &watcher->h) != MX_OK) {
         return ERR_NO_RESOURCES;
+    }
+    mxtl::AutoLock lock(&lock_);
+    watch_list_.push_back(mxtl::move(watcher));
+    *out = out_channel.release();
+    return NO_ERROR;
+}
+
+constexpr uint32_t kSupportedMasks = VFS_WATCH_MASK_ADDED;
+
+mx_status_t WatcherContainer::WatchDirV2(const vfs_watch_dir_t* cmd) {
+    mx::channel c = mx::channel(cmd->channel);
+    if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
+        // No events to watch
+        return ERR_INVALID_ARGS;
+    }
+    if (cmd->mask & ~kSupportedMasks) {
+        // Asking for an unsupported event
+        // TODO(smklein): Add more supported events
+        return ERR_NOT_SUPPORTED;
+    }
+
+    AllocChecker ac;
+    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mxtl::move(c), cmd->mask));
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
     }
     mxtl::AutoLock lock(&lock_);
     watch_list_.push_back(mxtl::move(watcher));
@@ -52,15 +76,18 @@ void WatcherContainer::NotifyAdd(const char* name, size_t len) {
         return;
     }
 
-    uint8_t msg[len + 2];
-    msg[0] = VFS_WATCH_EVT_ADDED;
-    msg[1] = static_cast<uint8_t>(len);
-    memcpy(msg + 2, name, len);
+    uint8_t msg[sizeof(vfs_watch_msg_t) + len];
+    vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
+    vmsg->event = VFS_WATCH_EVT_ADDED;
+    vmsg->len = static_cast<uint8_t>(len);
+    memcpy(vmsg->name, name, len);
 
     for (auto it = watch_list_.begin(); it != watch_list_.end();) {
-        mx_status_t status = mx_channel_write(it->h, 0, msg,
-                                              static_cast<uint32_t>(len + 2),
-                                              nullptr, 0);
+        if (!(it->mask & VFS_WATCH_MASK_ADDED)) {
+            continue;
+        }
+
+        mx_status_t status = it->h.write(0, msg, static_cast<uint32_t>(sizeof(msg)), nullptr, 0);
         if (status < 0) {
             // Lazily remove watchers when their handles cannot accept incoming
             // watch messages.

@@ -14,6 +14,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
+#include <magenta/device/vfs.h>
 #include <magenta/types.h>
 
 #include <mxio/dispatcher.h>
@@ -46,6 +47,7 @@ __END_CDECLS
 
 #ifdef __Fuchsia__
 #include <fs/dispatcher.h>
+#include <mx/channel.h>
 #include <mxtl/mutex.h>
 #endif  // __Fuchsia__
 
@@ -75,16 +77,18 @@ private:
 
 struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
 public:
-    VnodeWatcher();
+    VnodeWatcher(mx::channel h, uint32_t mask);
     ~VnodeWatcher();
 
-    mx_handle_t h;
+    mx::channel h;
+    uint32_t mask;
 };
 
 class WatcherContainer {
 public:
-    virtual mx_status_t WatchDir(mx_handle_t* out) final;
-    virtual void NotifyAdd(const char* name, size_t len) final;
+    mx_status_t WatchDir(mx_handle_t* out);
+    mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd);
+    void NotifyAdd(const char* name, size_t len);
 private:
     mxtl::Mutex lock_;
     mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
@@ -142,6 +146,9 @@ public:
 #endif
 
     virtual mx_status_t WatchDir(mx_handle_t* out) { return ERR_NOT_SUPPORTED; }
+    virtual mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) {
+        return ERR_NOT_SUPPORTED;
+    }
     virtual void NotifyAdd(const char* name, size_t len) {}
 
     // Ensure that it is valid to open vn.

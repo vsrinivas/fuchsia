@@ -129,6 +129,7 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
 
 void VnodeDir::NotifyAdd(const char* name, size_t len) { watcher_.NotifyAdd(name, len); }
 mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
+mx_status_t VnodeDir::WatchDirV2(const vfs_watch_dir_t* cmd) { return watcher_.WatchDirV2(cmd); }
 
 mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);

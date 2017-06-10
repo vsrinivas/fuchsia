@@ -245,6 +245,14 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         }
         return sizeof(mx_handle_t);
     }
+    case IOCTL_VFS_WATCH_DIR_V2: {
+        if (in_len != sizeof(vfs_watch_dir_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
+        return vn->WatchDirV2(request);
+
+    }
     case IOCTL_VFS_MOUNT_FS: {
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
             return ERR_INVALID_ARGS;

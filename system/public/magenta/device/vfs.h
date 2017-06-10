@@ -62,7 +62,7 @@ typedef struct {
 #define VFS_WATCH_EVT_ADDED       1
 
 // Indication of a file that has been removed (deleted or moved
-// out) from the directoru
+// out) from the directory
 #define VFS_WATCH_EVT_REMOVED     2
 
 // Indication of file already in directory when watch started
@@ -73,6 +73,11 @@ typedef struct {
 // namelen will be 0
 #define VFS_WATCH_EVT_IDLE        4
 
+typedef struct {
+    uint8_t event;
+    uint8_t len;
+    char name[];
+} vfs_watch_msg_t;
 
 #define VFS_WATCH_MASK_DELETED  (1u << VFS_WATCH_EVT_DELETED)
 #define VFS_WATCH_MASK_ADDED    (1u << VFS_WATCH_EVT_ADDED)

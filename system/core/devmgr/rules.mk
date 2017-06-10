@@ -38,6 +38,7 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/fs \
+    system/ulib/mx \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
     system/ulib/mxalloc \

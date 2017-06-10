@@ -83,6 +83,7 @@ public:
 
     void NotifyAdd(const char* name, size_t len) final;
     mx_status_t WatchDir(mx_handle_t* out) final;
+    mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) final;
 
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
