@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <gfx/gfx.h>
-#include <mxtl/auto_lock.h>
 #include <mxtl/unique_ptr.h>
 #include <sys/param.h>
 #include <unittest/unittest.h>

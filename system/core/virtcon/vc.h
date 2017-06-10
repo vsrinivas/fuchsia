@@ -148,5 +148,16 @@ static inline uint32_t palette_to_color(vc_t* vc, uint8_t color) {
     return vc->palette[color];
 }
 
-// Used for all io muxing
+
 extern port_t port;
+extern bool g_vc_owns_display;
+extern vc_t* g_active_vc;
+extern int g_status_width;
+
+void handle_key_press(uint8_t keycode, int modifiers);
+void vc_toggle_framebuffer();
+
+mx_status_t vc_create(vc_t** out);
+void vc_destroy(vc_t* vc);
+ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off);
+mx_status_t vc_set_active(int num, vc_t* vc);

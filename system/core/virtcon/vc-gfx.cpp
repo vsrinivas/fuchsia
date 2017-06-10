@@ -4,14 +4,11 @@
 
 #include <gfx/gfx.h>
 
-#define VCDEBUG 1
-
-#include "vc.h"
-#include "vcdebug.h"
-
 #include <magenta/device/display.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+
+#include "vc.h"
 
 gfx_surface* vc_gfx;
 gfx_surface* vc_tb_gfx;

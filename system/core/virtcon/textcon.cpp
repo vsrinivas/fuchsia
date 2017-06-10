@@ -4,9 +4,6 @@
 
 #include "textcon.h"
 
-#define VCDEBUG 1
-#include "vcdebug.h"
-
 #include <assert.h>
 #include <string.h>
 

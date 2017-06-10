@@ -14,10 +14,7 @@
 
 #include <mxtl/auto_lock.h>
 
-#define VCDEBUG 0
-
 #include "vc.h"
-#include "vcdebug.h"
 
 static uint32_t default_palette[] = {
     // 0-7 Normal/dark versions of colors
@@ -471,3 +468,4 @@ void vc_free(vc_t* vc) {
     free(vc->scrollback_buf);
     free(vc);
 }
+

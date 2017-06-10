@@ -7,21 +7,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 
-//#include <ddk/protocol/hidbus.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
+
 #include <magenta/device/input.h>
 #include <magenta/syscalls.h>
-#include <mxio/io.h>
-#include <mxio/watcher.h>
+
 #include <port/port.h>
 
-#define VCDEBUG 1
-
 #include "keyboard.h"
-#include "vcdebug.h"
 
 #define LOW_REPEAT_KEY_FREQ 250000000
 #define HIGH_REPEAT_KEY_FREQ 50000000
