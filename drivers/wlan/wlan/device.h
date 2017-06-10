@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "device_interface.h"
 #include "mlme.h"
 #include "packet.h"
 
@@ -27,13 +28,6 @@ namespace wlan {
 
 class Timer;
 
-class DeviceInterface {
-  public:
-    virtual ~DeviceInterface() {}
-
-    virtual mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) = 0;
-};
-
 class Device;
 using WlanBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
@@ -47,20 +41,29 @@ class Device : public WlanBaseDevice,
 
     mx_status_t Bind();
 
+    // ddk::Device methods
     void DdkUnbind();
     void DdkRelease();
     mx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 
+    // ddk::WlanmacIfc methods
     void WlanmacStatus(uint32_t status);
     void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
 
+    // ddk::EthmacProtocol methods
     mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
     void EthmacSend(uint32_t options, void* data, size_t length);
 
+    // DeviceInterface methods
     mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) override final;
+    mx_status_t SendEthernet(mxtl::unique_ptr<Packet> packet) override final;
+    mx_status_t SendWlan(mxtl::unique_ptr<Packet> packet) override final;
+    mx_status_t SendService(mxtl::unique_ptr<Packet> packet) override final;
+    mx_status_t SetChannel(wlan_channel_t chan) override final;
+    mx_status_t GetCurrentChannel(wlan_channel_t* chan) override final;
 
   private:
     enum class DevicePacket : uint64_t {
@@ -87,7 +90,12 @@ class Device : public WlanBaseDevice,
     mx_status_t QueueDevicePortPacket(DevicePacket id);
 
     mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
-    void ResetChannelLocked() __TA_REQUIRES(lock_);
+
+    ddk::WlanmacProtocolProxy wlanmac_proxy_;
+    mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
+
+    ethmac_info_t ethmac_info_ = {};
+    wlan_channel_t active_channel_ = { 0 };
 
     std::mutex lock_;
     std::thread work_thread_;
@@ -98,8 +106,7 @@ class Device : public WlanBaseDevice,
     mx::channel channel_ __TA_GUARDED(lock_);
 
     std::mutex packet_queue_lock_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<Packet>> packet_queue_
-        __TA_GUARDED(packet_queue_lock_);
+    PacketQueue packet_queue_ __TA_GUARDED(packet_queue_lock_);
 };
 
 }  // namespace wlan

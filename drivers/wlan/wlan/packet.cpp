@@ -26,6 +26,20 @@ mx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
     return MX_OK;
 }
 
+mxtl::unique_ptr<Buffer> GetBuffer(size_t len) {
+    mxtl::unique_ptr<Buffer> buffer;
+    if (len > kSmallBufferSize) {
+        buffer = LargeBufferAllocator::New();
+    } else {
+        buffer = SmallBufferAllocator::New();
+        if (buffer == nullptr) {
+            // Fall back to the large buffers if we're out of small buffers.
+            buffer = LargeBufferAllocator::New();
+        }
+    }
+    return buffer;
+}
+
 }  // namespace wlan
 
 // Definition of static slab allocators.

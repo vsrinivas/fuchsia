@@ -4,34 +4,29 @@
 
 #pragma once
 
-#include "clock.h"
 #include "scanner.h"
 
-#include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/wlan.h>
 #include <magenta/types.h>
 #include <mxtl/unique_ptr.h>
 
 namespace wlan {
 
-class Device;
 class DeviceInterface;
 class Packet;
 
 // Mlme is the Mac sub-Layer Management Entity for the wlan driver. It is not thread-safe.
 class Mlme {
   public:
-    Mlme(DeviceInterface* device, ddk::WlanmacProtocolProxy wlanmac_proxy);
+    explicit Mlme(DeviceInterface* device);
 
     mx_status_t Init();
-    mx_status_t Start(mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac, Device* device);
-    void Stop();
-    void SetServiceChannel(mx_handle_t h);
-
-    void GetDeviceInfo(ethmac_info_t* info);
 
     mx_status_t HandlePacket(const Packet* packet);
     mx_status_t HandlePortPacket(uint64_t key);
+
+    // Called before and after a channel change happens
+    mx_status_t PreChannelChange(wlan_channel_t chan);
+    mx_status_t PostChannelChange(wlan_channel_t chan);
 
   private:
     // MAC frame handlers
@@ -44,20 +39,7 @@ class Mlme {
     mx_status_t HandleBeacon(const Packet* packet);
     mx_status_t HandleProbeResponse(const Packet* packet);
 
-    // Scan handlers
-    mx_status_t StartScan(const Packet* packet);
-    void HandleScanStatus(Scanner::Status status);
-    mx_status_t SendScanResponse();
-
-    DeviceInterface* device_;
-    ddk::WlanmacProtocolProxy wlanmac_proxy_;
-    mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
-
-    ethmac_info_t ethmac_info_ = {};
-
-    mx_handle_t service_ = MX_HANDLE_INVALID;
-
-    wlan_channel_t active_channel_ = { 0 };
+    DeviceInterface* const device_;
 
     mxtl::unique_ptr<Scanner> scanner_;
 };

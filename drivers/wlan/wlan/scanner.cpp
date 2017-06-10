@@ -4,10 +4,13 @@
 
 #include "scanner.h"
 
+#include "device_interface.h"
 #include "element.h"
+#include "interface.h"
 #include "logging.h"
 #include "mac_frame.h"
 #include "packet.h"
+#include "serialize.h"
 #include "timer.h"
 #include "wlan.h"
 
@@ -19,8 +22,8 @@
 
 namespace wlan {
 
-Scanner::Scanner(mxtl::unique_ptr<Timer> timer)
-  : timer_(std::move(timer)) {
+Scanner::Scanner(DeviceInterface* device, mxtl::unique_ptr<Timer> timer)
+  : device_(device), timer_(std::move(timer)) {
     MX_DEBUG_ASSERT(timer_.get());
 }
 
@@ -67,6 +70,56 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     return status;
 }
 
+mx_status_t Scanner::Start(ScanRequestPtr req) {
+    debugfn();
+    if (IsRunning()) {
+        return MX_ERR_UNAVAILABLE;
+    }
+    MX_DEBUG_ASSERT(req_.is_null());
+    MX_DEBUG_ASSERT(channel_index_ == 0);
+    MX_DEBUG_ASSERT(channel_start_ == 0);
+
+    resp_ = ScanResponse::New();
+    resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
+    resp_->result_code = ResultCodes::NOT_SUPPORTED;
+
+    if (req->channel_list.size() == 0) {
+        return SendScanResponse();
+    }
+    if (req->max_channel_time < req->min_channel_time) {
+        return SendScanResponse();
+    }
+    if (!BSSTypes_IsValidValue(req->bss_type) || !ScanTypes_IsValidValue(req->scan_type)) {
+        return SendScanResponse();
+    }
+
+    // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
+    // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
+    resp_->result_code = ResultCodes::SUCCESS;
+    req_ = std::move(req);
+
+    channel_start_ = timer_->Now();
+    mx_time_t timeout = InitialTimeout();
+    mx_status_t status = device_->SetChannel(ScanChannel());
+    if (status != MX_OK) {
+        errorf("could not queue set channel: %d\n", status);
+        SendScanResponse();
+        Reset();
+        return status;
+    }
+
+    status = timer_->StartTimer(timeout);
+    if (status != MX_OK) {
+        errorf("could not start scan timer: %d\n", status);
+        resp_->result_code = ResultCodes::NOT_SUPPORTED;
+        SendScanResponse();
+        Reset();
+        return status;
+    }
+
+    return MX_OK;
+}
+
 void Scanner::Reset() {
     debugfn();
     req_.reset();
@@ -99,7 +152,7 @@ wlan_channel_t Scanner::ScanChannel() const {
     return wlan_channel_t{req_->channel_list[channel_index_]};
 }
 
-Scanner::Status Scanner::HandleBeacon(const Packet* packet) {
+mx_status_t Scanner::HandleBeacon(const Packet* packet) {
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
 
@@ -196,10 +249,10 @@ Scanner::Status Scanner::HandleBeacon(const Packet* packet) {
     }
 done_iter:
 
-    return Status::kContinueScan;
+    return MX_OK;
 }
 
-Scanner::Status Scanner::HandleProbeResponse(const Packet* packet) {
+mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
     // TODO(tkilbourn): consolidate with HandleBeacon
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
@@ -253,10 +306,10 @@ Scanner::Status Scanner::HandleProbeResponse(const Packet* packet) {
     }
 done_iter:
 
-    return Status::kContinueScan;
+    return MX_OK;
 }
 
-Scanner::Status Scanner::HandleTimeout() {
+mx_status_t Scanner::HandleTimeout() {
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
 
@@ -268,20 +321,16 @@ Scanner::Status Scanner::HandleTimeout() {
         debugf("reached max channel time\n");
         if (++channel_index_ >= req_->channel_list.size()) {
             timer_->CancelTimer();
-            return Status::kFinishScan;
+            status = SendScanResponse();
+            Reset();
+            return status;
         } else {
             channel_start_ = timer_->Now();
-            mx_time_t timeout;
-            if (req_->scan_type == ScanTypes::PASSIVE) {
-                timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
-            } else {
-                timeout = channel_start_ + WLAN_TU(req_->probe_delay);
-            }
-            status = timer_->StartTimer(timeout);
+            status = timer_->StartTimer(InitialTimeout());
             if (status != MX_OK) {
                 goto timer_fail;
             }
-            return Status::kNextChannel;
+            return device_->SetChannel(ScanChannel());
         }
     }
 
@@ -298,7 +347,7 @@ Scanner::Status Scanner::HandleTimeout() {
         if (status != MX_OK) {
             goto timer_fail;
         }
-        return Status::kContinueScan;
+        return MX_OK;
     }
 
     // Reached probe delay for an active scan
@@ -310,31 +359,59 @@ Scanner::Status Scanner::HandleTimeout() {
         if (status != MX_OK) {
             goto timer_fail;
         }
-        return Status::kStartActiveScan;
+        // TODO(tkilbourn): send probe requests
+        return MX_OK;
     }
 
     // Haven't reached a timeout yet; continue scanning
-    return Status::kContinueScan;
+    return MX_OK;
 
 timer_fail:
     errorf("could not set scan timer: %d\n", status);
+    status = SendScanResponse();
     Reset();
-    return Status::kFinishScan;
+    return status;
 }
 
-mx_status_t Scanner::FillProbeRequest(ProbeRequest* request, size_t len) const {
+mx_status_t Scanner::HandleError(mx_status_t error_code) {
     debugfn();
-    MX_DEBUG_ASSERT(IsRunning());
-
-    return MX_ERR_NOT_SUPPORTED;
+    resp_ = ScanResponse::New();
+    // TODO(tkilbourn): report the error code somehow
+    resp_->result_code = ResultCodes::NOT_SUPPORTED;
+    return SendScanResponse();
 }
 
-ScanResponsePtr Scanner::ScanResults() {
+mx_time_t Scanner::InitialTimeout() const {
+    if (req_->scan_type == ScanTypes::PASSIVE) {
+        return channel_start_ + WLAN_TU(req_->min_channel_time);
+    } else {
+        return channel_start_ + WLAN_TU(req_->probe_delay);
+    }
+}
+
+mx_status_t Scanner::SendScanResponse() {
+    debugfn();
     for (auto& bss : bss_descriptors_) {
         resp_->bss_description_set.push_back(std::move(bss.second));
     }
+
+    size_t buf_len = sizeof(Header) + resp_->GetSerializedSize();
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::SCAN_confirm, resp_);
+    if (status != MX_OK) {
+        errorf("could not serialize ScanResponse: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
     bss_descriptors_.clear();
-    return std::move(resp_);
+    return status;
 }
 
 }  // namespace wlan

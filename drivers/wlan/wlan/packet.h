@@ -74,12 +74,16 @@ using SmallBufferTraits = SlabBufferTraits<kSmallBuffers, kSmallBufferSize>;
 using LargeBufferAllocator = mxtl::SlabAllocator<LargeBufferTraits>;
 using SmallBufferAllocator = mxtl::SlabAllocator<SmallBufferTraits>;
 
+// Gets a (slab allocated) Buffer with at least |len| bytes capacity.
+mxtl::unique_ptr<Buffer> GetBuffer(size_t len);
+
 // A Packet wraps a buffer with information about the recipient/sender and length of the data
 // within the buffer.
 class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
   public:
     enum class Peer {
         kUnknown,
+        kDevice,
         kWlan,
         kEthernet,
         kService,
@@ -129,6 +133,39 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
     size_t len_ = 0;
     size_t ctrl_len_ = 0;
     Peer peer_ = Peer::kUnknown;
+};
+
+class PacketQueue {
+  public:
+    using PacketPtr = mxtl::unique_ptr<Packet>;
+
+    bool is_empty() const { return queue_.is_empty(); }
+    size_t size() const { return size_; }
+    void clear() {
+        queue_.clear();
+        size_ = 0;
+    }
+
+    void Enqueue(PacketPtr packet) {
+        MX_DEBUG_ASSERT(packet.get() != nullptr);
+        queue_.push_front(std::move(packet));
+        size_++;
+    }
+    void UndoEnqueue() {
+        MX_DEBUG_ASSERT(!is_empty());
+        queue_.pop_front();
+        size_--;
+    }
+
+    PacketPtr Dequeue() {
+        auto packet = queue_.pop_back();
+        if (packet.get()) size_--;
+        return packet;
+    }
+
+  private:
+    mxtl::DoublyLinkedList<PacketPtr> queue_;
+    size_t size_ = 0;
 };
 
 }  // namespace wlan

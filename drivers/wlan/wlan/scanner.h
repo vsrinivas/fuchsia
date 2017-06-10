@@ -14,20 +14,14 @@
 namespace wlan {
 
 class Clock;
+class DeviceInterface;
 class Packet;
 struct ProbeRequest;
 class Timer;
 
 class Scanner {
   public:
-    explicit Scanner(mxtl::unique_ptr<Timer> timer);
-
-    enum class Status {
-        kStartActiveScan,
-        kContinueScan,
-        kNextChannel,
-        kFinishScan,
-    };
+    Scanner(DeviceInterface* device, mxtl::unique_ptr<Timer> timer);
 
     enum class Type {
         kPassive,
@@ -41,16 +35,19 @@ class Scanner {
     Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
-    Status HandleBeacon(const Packet* packet);
-    Status HandleProbeResponse(const Packet* packet);
-    Status HandleTimeout();
-
-    mx_status_t FillProbeRequest(ProbeRequest* request, size_t len) const;
-    ScanResponsePtr ScanResults();
+    mx_status_t Start(ScanRequestPtr req);
+    mx_status_t HandleBeacon(const Packet* packet);
+    mx_status_t HandleProbeResponse(const Packet* packet);
+    mx_status_t HandleTimeout();
+    mx_status_t HandleError(mx_status_t error_code);
 
     const Timer& timer() const { return *timer_; }
 
   private:
+    mx_time_t InitialTimeout() const;
+    mx_status_t SendScanResponse();
+
+    DeviceInterface* device_;
     mxtl::unique_ptr<Timer> timer_;
     ScanRequestPtr req_ = nullptr;
     ScanResponsePtr resp_ = nullptr;

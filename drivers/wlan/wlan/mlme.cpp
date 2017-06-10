@@ -9,6 +9,7 @@
 #include "logging.h"
 #include "mac_frame.h"
 #include "packet.h"
+#include "serialize.h"
 #include "timer.h"
 #include "wlan.h"
 
@@ -28,10 +29,6 @@
 namespace wlan {
 
 namespace {
-#define BIT_FIELD(name, offset, len) \
-    void set_##name(uint32_t val) { this->template set_bits<offset, len>(val); } \
-    uint32_t name() const { return this->template get_bits<offset, len>(); }
-
 enum class ObjectSubtype : uint8_t {
     kTimer = 0,
 };
@@ -47,20 +44,17 @@ class ObjectId : public common::BitField<uint64_t> {
     constexpr ObjectId() = default;
 
     // ObjectSubtype
-    BIT_FIELD(subtype, 0, 4);
+    WLAN_BIT_FIELD(subtype, 0, 4);
     // ObjectTarget
-    BIT_FIELD(target, 4, 4);
+    WLAN_BIT_FIELD(target, 4, 4);
 
     // For objects with a MAC address
-    BIT_FIELD(mac, 8, 48);
+    WLAN_BIT_FIELD(mac, 8, 48);
 };
-
-#undef BIT_FIELD
 }  // namespace
 
-Mlme::Mlme(DeviceInterface* device, ddk::WlanmacProtocolProxy wlanmac_proxy)
-  : device_(device),
-    wlanmac_proxy_(wlanmac_proxy) {
+Mlme::Mlme(DeviceInterface* device)
+  : device_(device) {
     debugfn();
 }
 
@@ -75,43 +69,8 @@ mx_status_t Mlme::Init() {
         errorf("could not create scan timer: %d\n", status);
         return status;
     }
-    scanner_.reset(new Scanner(std::move(timer)));
-    return wlanmac_proxy_.Query(0, &ethmac_info_);
-}
-
-mx_status_t Mlme::Start(mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac, Device* device) {
-    debugfn();
-    if (ethmac_proxy_ != nullptr) {
-        return MX_ERR_ALREADY_BOUND;
-    }
-    mx_status_t status = wlanmac_proxy_.Start(device);
-    if (status != MX_OK) {
-        errorf("could not start wlanmac: %d\n", status);
-    } else {
-        ethmac_proxy_.swap(ethmac);
-    }
+    scanner_.reset(new Scanner(device_, std::move(timer)));
     return status;
-}
-
-void Mlme::Stop() {
-    debugfn();
-    service_ = MX_HANDLE_INVALID;
-    if (ethmac_proxy_ == nullptr) {
-        warnf("ethmac not started\n");
-    }
-    ethmac_proxy_.reset();
-}
-
-void Mlme::SetServiceChannel(mx_handle_t h) {
-    debugfn();
-    service_ = h;
-}
-
-void Mlme::GetDeviceInfo(ethmac_info_t* info) {
-    debugfn();
-    *info = ethmac_info_;
-    // Make sure this device is reported as a wlan device
-    info->features |= ETHMAC_FEATURE_WLAN;
 }
 
 namespace {
@@ -185,7 +144,7 @@ mx_status_t Mlme::HandlePortPacket(uint64_t key) {
     case to_enum_type(ObjectSubtype::kTimer):
         switch (id.target()) {
         case to_enum_type(ObjectTarget::kScanner):
-            HandleScanStatus(scanner_->HandleTimeout());
+            scanner_->HandleTimeout();
             break;
         default:
             warnf("unknown MLME timer target: %u\n", id.target());
@@ -238,12 +197,17 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
 
     mx_status_t status = MX_OK;
     switch (static_cast<Method>(h->ordinal)) {
-    case Method::SCAN_request:
-        status = StartScan(packet);
+    case Method::SCAN_request: {
+        ScanRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::SCAN_request, &req);
         if (status != MX_OK) {
-            errorf("could not start scan: %d\n", status);
+            errorf("could not deserialize ScanRequest: %d\n", status);
+            break;
         }
+
+        status = scanner_->Start(std::move(req));
         break;
+    }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
         status = MX_ERR_NOT_SUPPORTED;
@@ -256,7 +220,7 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) {
-        HandleScanStatus(scanner_->HandleBeacon(packet));
+        scanner_->HandleBeacon(packet);
     }
 
     return MX_OK;
@@ -266,104 +230,20 @@ mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) {
-        HandleScanStatus(scanner_->HandleProbeResponse(packet));
+        scanner_->HandleProbeResponse(packet);
     }
 
     return MX_OK;
 }
 
-mx_status_t Mlme::StartScan(const Packet* packet) {
+mx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
-    const uint8_t* p = packet->data();
-    auto h = FromBytes<Header>(p, packet->len());
-    MX_DEBUG_ASSERT(static_cast<Method>(h->ordinal) == Method::SCAN_request);
-
-    auto req = ScanRequest::New();
-    auto resp = ScanResponse::New();
-    auto reqptr = reinterpret_cast<const void*>(h->payload);
-    if (!req->Deserialize(const_cast<void*>(reqptr), packet->len() - h->len)) {
-        warnf("could not deserialize ScanRequest\n");
-        return MX_ERR_IO;
-    }
-    mx_status_t status = scanner_->Start(std::move(req), std::move(resp));
-    if (status != MX_OK) {
-        SendScanResponse();
-        return status;
-    }
-
-    auto scan_chan = scanner_->ScanChannel();
-    status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
-    if (status != MX_OK) {
-        errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
-        SendScanResponse();
-        scanner_->Reset();
-    }
-    return status;
+    return MX_OK;
 }
 
-void Mlme::HandleScanStatus(Scanner::Status status) {
-    switch (status) {
-    case Scanner::Status::kStartActiveScan:
-        // TODO(tkilbourn): start sending probe requests
-        break;
-    case Scanner::Status::kNextChannel: {
-        debugf("scan status: NextChannel\n");
-        auto scan_chan = scanner_->ScanChannel();
-        mx_status_t status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
-        if (status != MX_OK) {
-            errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
-            scanner_->Reset();
-            auto reset_status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
-            if (reset_status != MX_OK) {
-                errorf("could not reset to active channel %u: %d\n",
-                        active_channel_.channel_num, status);
-                // TODO(tkilbourn): reset hw?
-            }
-        }
-        break;
-    }
-    case Scanner::Status::kFinishScan: {
-        debugf("scan status: FinishScan\n");
-        mx_status_t status = SendScanResponse();
-        if (status != MX_OK && status != MX_ERR_PEER_CLOSED) {
-            errorf("could not send scan response: %d\n", status);
-        }
-        if (active_channel_.channel_num > 0) {
-            status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
-            if (status != MX_OK) {
-                errorf("could not reset to active channel %u: %d\n",
-                        active_channel_.channel_num, status);
-                // TODO(tkilbourn): reset hw?
-            }
-        }
-        scanner_->Reset();
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-mx_status_t Mlme::SendScanResponse() {
-    auto resp = scanner_->ScanResults();
-    size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
-    mxtl::unique_ptr<uint8_t[]> buf(new uint8_t[buf_len]);
-    auto header = FromBytes<Header>(buf.get(), buf_len);
-    header->len = sizeof(Header);
-    header->txn_id = 1;  // TODO(tkilbourn): txn ids
-    header->flags = 0;
-    header->ordinal = static_cast<uint32_t>(Method::SCAN_confirm);
-    mx_status_t status = MX_OK;
-    if (!resp->Serialize(header->payload, buf_len - sizeof(Header))) {
-        errorf("could not serialize scan response\n");
-        status = MX_ERR_IO;
-    } else {
-        status = mx_channel_write(service_, 0u, buf.get(), buf_len, NULL, 0);
-        if (status != MX_OK) {
-            errorf("could not send scan response: %d\n", status);
-        }
-    }
-    return status;
+mx_status_t Mlme::PostChannelChange(wlan_channel_t chan) {
+    debugfn();
+    return MX_OK;
 }
 
 }  // namespace wlan
