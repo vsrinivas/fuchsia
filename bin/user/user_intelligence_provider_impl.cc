@@ -76,9 +76,16 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
       suggestion_services_.get());
 
+  // Generate a ContextPublisher to pass to the SuggestionEngine.
+  fidl::InterfaceHandle<ContextPublisher> context_publisher;
+  auto scope = ComponentScope::New();
+  scope->set_global_scope(GlobalScope::New());
+  context_engine_->GetPublisher(std::move(scope), context_publisher.NewRequest());
+
   // Initialize the SuggestionEngine.
   suggestion_engine_->Initialize(Duplicate(story_provider),
-                                 Duplicate(focus_provider));
+                                 Duplicate(focus_provider),
+                                 std::move(context_publisher));
 
   StartActionLog(suggestion_engine_.get());
 

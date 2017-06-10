@@ -17,6 +17,7 @@ fidl("suggestion") {
   ]
 
   deps = [
+    "//apps/maxwell/services/context",
     "//apps/modular/services/story",
     "//apps/modular/services/user:focus",
   ]

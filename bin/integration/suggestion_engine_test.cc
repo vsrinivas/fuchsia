@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/src/agents/ideas.h"
@@ -136,8 +137,15 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     // Hack to get an unbound FocusController for Initialize().
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
     focus_provider_handle.NewRequest();
+
+    fidl::InterfaceHandle<maxwell::ContextPublisher> context_publisher_handle;
+    auto scope = ComponentScope::New();
+    scope->set_global_scope(GlobalScope::New());
+    context_engine()->GetPublisher(std::move(scope), context_publisher_handle.NewRequest());
+
     suggestion_engine()->Initialize(std::move(story_provider_handle),
-                                    std::move(focus_provider_handle));
+                                    std::move(focus_provider_handle),
+                                    std::move(context_publisher_handle));
   }
 
  protected:

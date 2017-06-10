@@ -37,6 +37,8 @@ class ContextEngineImpl : public ContextEngine {
   fidl::BindingSet<ContextProvider, std::unique_ptr<ContextProvider>>
       provider_bindings_;
 
+  fidl::BindingSet<ContextEngine> bindings_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextEngineImpl);
 };
 

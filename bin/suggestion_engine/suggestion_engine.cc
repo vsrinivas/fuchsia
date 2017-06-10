@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
@@ -84,9 +85,13 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void Initialize(
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusProvider> focus_provider) override {
+      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<ContextPublisher> context_publisher) override {
     story_provider_.Bind(std::move(story_provider));
     focus_provider_ptr_.Bind(std::move(focus_provider));
+
+    ContextPublisherPtr context_publisher_ptr;
+    context_publisher_ptr.Bind(std::move(context_publisher));
 
     timeline_stories_watcher_.reset(
         new TimelineStoriesWatcher(&story_provider_));
@@ -94,7 +99,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     //     []() { FTL_LOG(INFO) << "Something changed."; });
 
     repo_.reset(
-        new Repo(TimelineStoriesFilter(timeline_stories_watcher_.get())));
+        new Repo(TimelineStoriesFilter(timeline_stories_watcher_.get()),
+                 std::move(context_publisher_ptr)));
   }
 
   // end SuggestionEngine
@@ -206,6 +212,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   modular::StoryProviderPtr story_provider_;
   fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
+
+  ContextPublisherPtr context_publisher_;
 
   // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
   // for Proposals on all channels, and notifies when there are changes so that

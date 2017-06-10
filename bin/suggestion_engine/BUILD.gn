@@ -32,6 +32,7 @@ executable("suggestion_engine") {
     ":timeline_stories_watcher",
     "//application/lib/app",
     "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
     "//apps/modular/services/module",
     "//apps/modular/services/story",

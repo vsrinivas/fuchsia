@@ -11,14 +11,20 @@
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
 namespace maxwell {
 
+const std::string kQueryContextKey = "/suggestion_engine/current_query";
+
 class Repo {
  public:
-  Repo(ProposalFilter filter) : next_channel_(filter), filter_(filter) {}
+  Repo(ProposalFilter filter, ContextPublisherPtr publisher)
+      : next_channel_(filter),
+        filter_(filter),
+        publisher_(std::move(publisher)) {}
 
   ProposalPublisherImpl* GetOrCreateSourceClient(
       const std::string& component_url);
@@ -59,6 +65,7 @@ class Repo {
   }
 
   void DispatchAsk(UserInputPtr query, AskChannel* channel) {
+    publisher_->Publish(kQueryContextKey, query->get_text());
     for (const std::unique_ptr<AskPublisher>& ask : ask_handlers_) {
       ask->handler->Ask(
           query.Clone(), [&ask, channel](fidl::Array<ProposalPtr> proposals) {
@@ -115,6 +122,8 @@ class Repo {
       ask_handlers_;
 
   ProposalFilter filter_;
+
+  ContextPublisherPtr publisher_;
 };
 
 }  // namespace maxwell
