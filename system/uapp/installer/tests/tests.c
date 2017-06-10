@@ -21,28 +21,17 @@
 #include <installer/installer.h>
 
 #define TABLE_SIZE 6
-#define RAMCTL_PATH "/dev/misc/ramctl"
-#define RAMDISK_STEM "install"
 #define BLOCK_SIZE (uint64_t)512
 #define DEV_DIR_PATH (PATH_BLOCKDEVS "/")
 
-static uint16_t disk_count = 1;
-
 static int create_test_ramdisk(uint64_t size, char **disk_path_out) {
-  char name[PATH_MAX];
   char *disk_path = malloc(sizeof(char) * PATH_MAX);
   if (disk_path == NULL) {
     fprintf(stderr, "No memory to store disk path\n");
     return -1;
   }
 
-  if (sprintf(name, "%s%u", RAMDISK_STEM, disk_count++) < 0) {
-    fprintf(stderr, "Error creating RAM disk name\n");
-    free(disk_path);
-    return -1;
-  }
-
-  if (create_ramdisk(name, disk_path, BLOCK_SIZE, size / BLOCK_SIZE) < 0) {
+  if (create_ramdisk(BLOCK_SIZE, size / BLOCK_SIZE, disk_path) < 0) {
     fprintf(stderr, "RAM disk could not be created.\n");
     free(disk_path);
     return -1;
