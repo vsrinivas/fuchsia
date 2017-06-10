@@ -121,6 +121,10 @@ class LowEnergyDiscoverySession final {
   // Stop().
   bool active() const { return active_; }
 
+  // Resets the filter values to its defaults, which will match all connectable and limited &
+  // general discoverable devices.
+  void ResetToDefault();
+
  private:
   friend class LowEnergyDiscoveryManager;
 
@@ -129,6 +133,11 @@ class LowEnergyDiscoverySession final {
 
   // Called by LowEnergyDiscoveryManager on newly discovered scan results.
   void NotifyDiscoveryResult(const RemoteDevice& device) const;
+
+  inline void SetGeneralDiscoverableFlags() {
+    filter_.set_flags(static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode) |
+                      static_cast<uint8_t>(AdvFlag::kLEGeneralDiscoverableMode));
+  }
 
   bool active_;
   ftl::WeakPtr<LowEnergyDiscoveryManager> manager_;

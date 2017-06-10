@@ -16,6 +16,8 @@ executable("service") {
     "src/app.h",
     "src/fidl_helpers.cc",
     "src/fidl_helpers.h",
+    "src/low_energy_central_fidl_impl.cc",
+    "src/low_energy_central_fidl_impl.h",
     "src/main.cc",
   ]
 

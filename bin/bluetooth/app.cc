@@ -18,6 +18,8 @@ App::App(std::unique_ptr<app::ApplicationContext> application_context)
   adapter_manager_.AddObserver(this);
   application_context_->outgoing_services()->AddService<::bluetooth::control::AdapterManager>(
       std::bind(&App::OnAdapterManagerRequest, this, _1));
+  application_context_->outgoing_services()->AddService<::bluetooth::low_energy::Central>(
+      std::bind(&App::OnLowEnergyCentralRequest, this, _1));
 }
 
 App::~App() {
@@ -46,6 +48,14 @@ void App::OnAdapterManagerRequest(
   adapter_manager_fidl_impls_.push_back(std::move(impl));
 }
 
+void App::OnLowEnergyCentralRequest(
+    ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request) {
+  auto impl = std::make_unique<LowEnergyCentralFidlImpl>(
+      &adapter_manager_, std::move(request),
+      std::bind(&App::OnLowEnergyCentralFidlImplDisconnected, this, _1));
+  low_energy_central_fidl_impls_.push_back(std::move(impl));
+}
+
 void App::OnAdapterManagerFidlImplDisconnected(AdapterManagerFidlImpl* adapter_manager_fidl_impl) {
   FTL_DCHECK(adapter_manager_fidl_impl);
 
@@ -59,6 +69,22 @@ void App::OnAdapterManagerFidlImplDisconnected(AdapterManagerFidlImpl* adapter_m
   // An entry MUST be in the list.
   FTL_DCHECK(iter != adapter_manager_fidl_impls_.end());
   adapter_manager_fidl_impls_.erase(iter);
+}
+
+void App::OnLowEnergyCentralFidlImplDisconnected(
+    LowEnergyCentralFidlImpl* low_energy_central_fidl_impl) {
+  FTL_CHECK(low_energy_central_fidl_impl);
+
+  FTL_LOG(INFO) << "LowEnergyCentralFidlImpl disconnected";
+
+  auto iter = low_energy_central_fidl_impls_.begin();
+  for (; iter != low_energy_central_fidl_impls_.end(); ++iter) {
+    if (iter->get() == low_energy_central_fidl_impl) break;
+  }
+
+  // An entry MUST be in the list.
+  FTL_DCHECK(iter != low_energy_central_fidl_impls_.end());
+  low_energy_central_fidl_impls_.erase(iter);
 }
 
 }  // namespace bluetooth_service

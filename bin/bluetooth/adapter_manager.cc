@@ -19,6 +19,10 @@ const char kBluetoothDeviceDir[] = "/dev/class/bt-hci";
 
 }  // namespace
 
+// Default no-op implementations for optional Observer methods.
+void AdapterManager::Observer::OnAdapterCreated(bluetooth::gap::Adapter* adapter) {}
+void AdapterManager::Observer::OnAdapterRemoved(bluetooth::gap::Adapter* adapter) {}
+
 AdapterManager::AdapterManager() : weak_ptr_factory_(this) {
   device_watcher_ = mtl::DeviceWatcher::Create(
       kBluetoothDeviceDir, std::bind(&AdapterManager::OnDeviceFound, this, std::placeholders::_1,

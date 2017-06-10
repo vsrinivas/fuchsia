@@ -11,6 +11,7 @@
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
 #include "apps/bluetooth/service/src/adapter_manager.h"
 #include "apps/bluetooth/service/src/adapter_manager_fidl_impl.h"
+#include "apps/bluetooth/service/src/low_energy_central_fidl_impl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -36,8 +37,16 @@ class App final : public AdapterManager::Observer {
   void OnAdapterManagerRequest(
       ::fidl::InterfaceRequest<::bluetooth::control::AdapterManager> request);
 
+  // Called when there is an interface request for the low_energy::Central FIDL service.
+  void OnLowEnergyCentralRequest(
+      ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request);
+
   // Called when a AdapterManagerFidlImpl that we own notifies a connection error handler.
   void OnAdapterManagerFidlImplDisconnected(AdapterManagerFidlImpl* adapter_manager_fidl_impl);
+
+  // Called when a LowEnergyCentralFidlImpl that we own notifies its connection error handler.
+  void OnLowEnergyCentralFidlImplDisconnected(
+      LowEnergyCentralFidlImpl* low_energy_central_fidl_impl);
 
   // Provides access to the environment. This is used to publish outgoing services.
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -47,6 +56,9 @@ class App final : public AdapterManager::Observer {
 
   // The list of AdapterManager FIDL interface handles that have been vended out.
   std::vector<std::unique_ptr<AdapterManagerFidlImpl>> adapter_manager_fidl_impls_;
+
+  // The list of low_energy::Central FIDL interface handles that have been vended out.
+  std::vector<std::unique_ptr<LowEnergyCentralFidlImpl>> low_energy_central_fidl_impls_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

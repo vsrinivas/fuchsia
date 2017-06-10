@@ -34,7 +34,10 @@ enum class DataType : uint8_t {
   kClassOfDevice                = 0x0D,
   kSSPOOBHash                   = 0x0E,
   kSSPOOBRandomizer             = 0x0F,
+  kServiceData16Bit             = 0x16,
   kAppearance                   = 0x19,
+  kServiceData32Bit             = 0x20,
+  kServiceData128Bit            = 0x21,
   kManufacturerSpecificData     = 0xFF,
 
   // TODO(armansito): Complete this list.
@@ -47,10 +50,12 @@ enum class DataType : uint8_t {
 //
 //  * If a constants contains the word "ElemSize", then the data field is expected to contain a
 //    contiguous array of elements of the specified size.
+constexpr size_t kAppearanceSize = 2;
+constexpr size_t kManufacturerIdSize = 2;
 constexpr size_t kTxPowerLevelSize = 1;
 
 constexpr size_t kFlagsSizeMin = 1;
-constexpr size_t kManufacturerSpecificDataSizeMin = 2;
+constexpr size_t kManufacturerSpecificDataSizeMin = kManufacturerIdSize;
 
 constexpr size_t k16BitUUIDElemSize = 2;
 constexpr size_t k32BitUUIDElemSize = 4;

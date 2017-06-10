@@ -18,9 +18,9 @@ LowEnergyDiscoverySession::LowEnergyDiscoverySession(
     ftl::WeakPtr<LowEnergyDiscoveryManager> manager)
     : active_(true), manager_(manager) {
   FTL_DCHECK(manager_);
+
   // Configured by default for the GAP General Discovery procedure.
-  filter_.set_flags(static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode) |
-                    static_cast<uint8_t>(AdvFlag::kLEGeneralDiscoverableMode));
+  SetGeneralDiscoverableFlags();
 }
 
 LowEnergyDiscoverySession::~LowEnergyDiscoverySession() {
@@ -43,6 +43,13 @@ void LowEnergyDiscoverySession::Stop() {
   FTL_DCHECK(active_);
   if (manager_) manager_->RemoveSession(this);
   active_ = false;
+}
+
+void LowEnergyDiscoverySession::ResetToDefault() {
+  filter_.Reset();
+
+  // Configured by default for the GAP General Discovery procedure.
+  SetGeneralDiscoverableFlags();
 }
 
 void LowEnergyDiscoverySession::NotifyDiscoveryResult(const RemoteDevice& device) const {

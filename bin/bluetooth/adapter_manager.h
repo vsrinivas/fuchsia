@@ -38,12 +38,12 @@ class AdapterManager final {
 
     // Called when a new Bluetooth HCI device is found. This will be called with a fully initialized
     // Adapter instance.
-    virtual void OnAdapterCreated(bluetooth::gap::Adapter* adapter) = 0;
+    virtual void OnAdapterCreated(bluetooth::gap::Adapter* adapter);
 
     // Called when a Bluetooth HCI device has been removed from the system or any of the transport
     // channels was shut down for an unknown reason. The returned adapter will have been completely
     // shut down and is ready for removal.
-    virtual void OnAdapterRemoved(bluetooth::gap::Adapter* adapter) = 0;
+    virtual void OnAdapterRemoved(bluetooth::gap::Adapter* adapter);
   };
 
   AdapterManager();
