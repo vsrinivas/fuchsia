@@ -42,7 +42,7 @@ static status_t vmxon(paddr_t pa) {
         : [pa] "m"(pa)
         : "cc", "memory");
 
-    return err ? ERR_INTERNAL : NO_ERROR;
+    return err ? MX_ERR_INTERNAL : MX_OK;
 }
 
 static status_t vmxoff() {
@@ -55,7 +55,7 @@ static status_t vmxoff() {
         :
         : "cc");
 
-    return err ? ERR_INTERNAL : NO_ERROR;
+    return err ? MX_ERR_INTERNAL : MX_OK;
 }
 
 static status_t vmptrld(paddr_t pa) {
@@ -68,7 +68,7 @@ static status_t vmptrld(paddr_t pa) {
         : [pa] "m"(pa)
         : "cc", "memory");
 
-    return err ? ERR_INTERNAL : NO_ERROR;
+    return err ? MX_ERR_INTERNAL : MX_OK;
 }
 
 static status_t vmclear(paddr_t pa) {
@@ -81,7 +81,7 @@ static status_t vmclear(paddr_t pa) {
         : [pa] "m"(pa)
         : "cc", "memory");
 
-    return err ? ERR_INTERNAL : NO_ERROR;
+    return err ? MX_ERR_INTERNAL : MX_OK;
 }
 
 static uint64_t vmread(uint64_t field) {
@@ -95,7 +95,7 @@ static uint64_t vmread(uint64_t field) {
         : [field] "r"(field)
         : "cc");
 
-    DEBUG_ASSERT(err == NO_ERROR);
+    DEBUG_ASSERT(err == MX_OK);
     return val;
 }
 
@@ -125,7 +125,7 @@ static void vmwrite(uint64_t field, uint64_t val) {
         : [val] "r"(val), [field] "r"(field)
         : "cc");
 
-    DEBUG_ASSERT(err == NO_ERROR);
+    DEBUG_ASSERT(err == MX_OK);
 }
 
 void vmcs_write(VmcsField16 field, uint16_t val) {
@@ -149,26 +149,26 @@ void vmcs_write(VmcsFieldXX field, uint64_t val) {
 static status_t percpu_exec(thread_start_routine entry, void* arg) {
     thread_t *t = thread_create("vmx", entry, arg, HIGH_PRIORITY, DEFAULT_STACK_SIZE);
     if (!t)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     thread_set_pinned_cpu(t, 0);
     status_t status = thread_resume(t);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     int retcode;
     status = thread_join(t, &retcode, INFINITE_TIME);
-    return status != NO_ERROR ? status : retcode;
+    return status != MX_OK ? status : retcode;
 }
 
 template<typename T>
 static status_t InitPerCpus(const VmxInfo& vmx_info, mxtl::Array<T>* ctxs) {
     for (size_t i = 0; i < ctxs->size(); i++) {
         status_t status = (*ctxs)[i].Init(vmx_info);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmxInfo::VmxInfo() {
@@ -218,20 +218,20 @@ status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     // a value greater than 0 and at most 4096 (bit 44 is set if and only if
     // bits 43:32 are clear).
     if (vmx_info.region_size > PAGE_SIZE)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check use of write-back memory for VMX regions is supported.
     if (!vmx_info.write_back)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // The maximum size for a VMXON or VMCS region is 4096, therefore
     // unconditionally allocating a page is adequate.
     if (pmm_alloc_page(0, &pa_) == nullptr)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(pa_));
     memset(VirtualAddress(), fill, PAGE_SIZE);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 paddr_t VmxPage::PhysicalAddress() {
@@ -246,12 +246,12 @@ void* VmxPage::VirtualAddress() {
 
 status_t PerCpu::Init(const VmxInfo& info) {
     status_t status = page_.Alloc(info, 0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     VmxRegion* region = page_.VirtualAddress<VmxRegion>();
     region->revision_id = info.revision_id;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 AutoVmcsLoad::AutoVmcsLoad(VmxPage* page)
@@ -259,7 +259,7 @@ AutoVmcsLoad::AutoVmcsLoad(VmxPage* page)
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
     __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 }
 
 AutoVmcsLoad::~AutoVmcsLoad() {
@@ -275,17 +275,17 @@ void AutoVmcsLoad::reload() {
     arch_enable_ints();
     arch_disable_ints();
     __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 }
 
 status_t VmxonPerCpu::VmxOn() {
     status_t status = vmxon(page_.PhysicalAddress());
-    is_on_ = status == NO_ERROR;
+    is_on_ = status == MX_OK;
     return status;
 }
 
 status_t VmxonPerCpu::VmxOff() {
-    return is_on_ ? vmxoff() : NO_ERROR;
+    return is_on_ ? vmxoff() : MX_OK;
 }
 
 static bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr) {
@@ -301,33 +301,33 @@ static int vmx_enable(void* arg) {
     // Check that we have instruction information when we VM exit on IO.
     VmxInfo vmx_info;
     if (!vmx_info.io_exit_info)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that full VMX controls are supported.
     if (!vmx_info.vmx_controls)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that a page-walk length of 4 is supported.
     EptInfo ept_info;
     if (!ept_info.page_walk_4)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check use write-back memory for EPT is supported.
     if (!ept_info.write_back)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that accessed and dirty flags for EPT are supported.
     if (!ept_info.ept_flags)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that the INVEPT instruction is supported.
     if (!ept_info.invept)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Check that wait for startup IPI is a supported activity state.
     MiscInfo misc_info;
     if (!misc_info.wait_for_sipi)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Enable VMXON, if required.
     uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
@@ -335,7 +335,7 @@ static int vmx_enable(void* arg) {
         !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
         if ((feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) &&
             !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         }
         feature_control |= X86_MSR_IA32_FEATURE_CONTROL_LOCK;
         feature_control |= X86_MSR_IA32_FEATURE_CONTROL_VMXON;
@@ -346,11 +346,11 @@ static int vmx_enable(void* arg) {
     // Check control registers are in a VMX-friendly state.
     uint64_t cr0 = x86_get_cr0();
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
     if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     // Enable VMX using the VMXE bit.
@@ -367,24 +367,24 @@ status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     AllocChecker ac;
     VmxonPerCpu* ctxs = new (&ac) VmxonPerCpu[num_cpus];
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mxtl::Array<VmxonPerCpu> cpu_ctxs(ctxs, num_cpus);
     mxtl::unique_ptr<VmxonContext> ctx(new (&ac) VmxonContext(mxtl::move(cpu_ctxs)));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     VmxInfo vmx_info;
     status_t status = InitPerCpus(vmx_info, &ctx->per_cpus_);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = percpu_exec(vmx_enable, ctx.get());
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     *context = mxtl::move(ctx);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmxonContext::VmxonContext(mxtl::Array<VmxonPerCpu> per_cpus)
@@ -396,17 +396,17 @@ static int vmx_disable(void* arg) {
 
     // Execute VMXOFF.
     status_t status = per_cpu->VmxOff();
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Disable VMX.
     x86_set_cr4(x86_get_cr4() & ~X86_CR4_VMXE);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmxonContext::~VmxonContext() {
     __UNUSED status_t status = percpu_exec(vmx_disable, this);
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 }
 
 VmxonPerCpu* VmxonContext::PerCpu() {
@@ -415,15 +415,15 @@ VmxonPerCpu* VmxonContext::PerCpu() {
 
 status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     status_t status = PerCpu::Init(vmx_info);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = host_msr_page_.Alloc(vmx_info, 0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = guest_msr_page_.Alloc(vmx_info, 0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     memset(&vmx_state_, 0, sizeof(vmx_state_));
@@ -432,11 +432,11 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     local_apic_state_.active_interrupt = kInvalidInterrupt;
     local_apic_state_.tsc_deadline = 0;
     local_apic_state_.apic_addr = nullptr;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmcsPerCpu::Clear() {
-    return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : NO_ERROR;
+    return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : MX_OK;
 }
 
 static status_t set_vmcs_control(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
@@ -445,16 +445,16 @@ static status_t set_vmcs_control(VmcsField32 controls, uint64_t true_msr, uint64
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {
         dprintf(SPEW, "can not set vmcs controls %#x\n", static_cast<uint>(controls));
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     if ((~allowed_0 & clear) != clear) {
         dprintf(SPEW, "can not clear vmcs controls %#x\n", static_cast<uint>(controls));
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     if ((set & clear) != 0) {
         dprintf(SPEW, "can not set and clear the same vmcs controls %#x\n",
                 static_cast<uint>(controls));
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Reference Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control
@@ -464,7 +464,7 @@ static status_t set_vmcs_control(VmcsField32 controls, uint64_t true_msr, uint64
     uint32_t unknown = flexible & ~(set | clear);
     uint32_t defaults = unknown & BITS(old_msr, 31, 0);
     vmcs_write(controls, allowed_0 | defaults | set);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static uint64_t ept_pointer(paddr_t pml4_address) {
@@ -525,7 +525,7 @@ static void edit_msr_list(VmxPage* msr_list_page, uint index, uint32_t msr, uint
 status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                            paddr_t msr_bitmaps_address) {
     status_t status = Clear();
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     AutoVmcsLoad vmcs_load(&page_);
@@ -544,7 +544,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               // addresses with a virtual processor ID.
                               PROCBASED_CTLS2_VPID,
                               0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup pin-based VMCS controls.
@@ -556,7 +556,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               // Non-maskable interrupts cause a VM exit.
                               PINBASED_CTLS_NMI_EXITING,
                               0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup primary processor-based VMCS controls.
@@ -583,7 +583,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               PROCBASED_CTLS_CR8_LOAD_EXITING |
                               // Disable VM exit on CR8 store.
                               PROCBASED_CTLS_CR8_STORE_EXITING);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // We only enable interrupt-window exiting above to ensure that the
@@ -607,7 +607,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               // Load the host IA32_EFER MSR on exit.
                               EXIT_CTLS_LOAD_IA32_EFER,
                               0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup VM-entry VMCS controls.
@@ -622,7 +622,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               // Load the guest IA32_EFER MSR on entry.
                               ENTRY_CTLS_LOAD_IA32_EFER,
                               0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field
@@ -721,14 +721,14 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                    X86_CR0_PG | // Enable paging
                    X86_CR0_NE;  // Enable internal x87 exception handling
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     vmcs_write(VmcsFieldXX::GUEST_CR0, cr0);
 
     uint64_t cr4 = X86_CR4_PAE |  // Enable PAE paging
                    X86_CR4_VMXE;  // Enable VMX
     if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     vmcs_write(VmcsFieldXX::GUEST_CR4, cr4);
 
@@ -793,7 +793,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
         vmx_state_.guest_state.xcr0 = X86_XSAVE_STATE_X87;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void vmx_exit(VmxState* vmx_state) {
@@ -841,7 +841,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
     }
 
     status_t status = vmx_enter(&vmx_state_);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         uint64_t error = vmcs_read(VmcsField32::INSTRUCTION_ERROR);
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
@@ -873,18 +873,18 @@ void gpr_copy(Out* out, const In& in) {
 
 status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t& guest_gpr) {
     gpr_copy(&vmx_state_.guest_state, guest_gpr);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmcsPerCpu::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     gpr_copy(guest_gpr, vmx_state_.guest_state);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmcsPerCpu::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {
     auto get_page = [](void* context, size_t offset, size_t index, paddr_t pa) -> status_t {
         *static_cast<void**>(context) = paddr_to_kvaddr(pa);
-        return NO_ERROR;
+        return MX_OK;
     };
     local_apic_state_.apic_mem = apic_mem;
     return local_apic_state_.apic_mem->Lookup(0, PAGE_SIZE, kPfFlags, get_page,
@@ -907,21 +907,21 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
     AllocChecker ac;
     VmcsPerCpu* ctxs = new (&ac) VmcsPerCpu[num_cpus];
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mxtl::Array<VmcsPerCpu> cpu_ctxs(ctxs, num_cpus);
     mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(ctl_fifo, mxtl::move(cpu_ctxs)));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     status_t status = GuestPhysicalAddressSpace::Create(phys_mem, &ctx->gpas_);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup common MSR bitmaps.
     VmxInfo vmx_info;
     status = ctx->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_PAT);
@@ -936,30 +936,30 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
 
     // Setup common APIC access.
     status = ctx->apic_address_page_.Alloc(vmx_info, 0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = ctx->gpas_->MapApicPage(APIC_PHYS_BASE, ctx->apic_address_page_.PhysicalAddress());
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // We ensure the page containing the IO APIC address is not mapped so that
     // we VM exit with an EPT violation when the guest accesses the page.
     status = ctx->gpas_->UnmapRange(kIoApicPhysBase, PAGE_SIZE);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup per-CPU structures.
     status = InitPerCpus(vmx_info, &ctx->per_cpus_);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = percpu_exec(vmcs_setup, ctx.get());
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     *context = mxtl::move(ctx);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmcsContext::VmcsContext(mxtl::RefPtr<FifoDispatcher> ctl_fifo, mxtl::Array<VmcsPerCpu> per_cpus)
@@ -973,9 +973,9 @@ static int vmcs_clear(void* arg) {
 
 VmcsContext::~VmcsContext() {
     __UNUSED status_t status = percpu_exec(vmcs_clear, this);
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
     status = gpas_->UnmapRange(APIC_PHYS_BASE, PAGE_SIZE);
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 }
 
 paddr_t VmcsContext::Pml4Address() {
@@ -998,21 +998,21 @@ static int vmcs_enter(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
     if (per_cpu->ShouldResume())
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     if (!per_cpu->HasApicMem())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     status_t status;
     do {
         status = per_cpu->Enter(*context, context->gpas(), context->ctl_fifo());
-    } while (status == NO_ERROR);
+    } while (status == MX_OK);
     return status;
 }
 
 status_t VmcsContext::Enter() {
     if (ip_ == UINTPTR_MAX)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (cr3_ == UINTPTR_MAX)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     return percpu_exec(vmcs_enter, this);
 }
 
@@ -1037,22 +1037,22 @@ status_t VmcsContext::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {
 
 status_t VmcsContext::set_ip(uintptr_t guest_ip) {
     if (guest_ip >= gpas_->size())
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     ip_ = guest_ip;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
     if (guest_cr3 >= gpas_->size() - PAGE_SIZE)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     cr3_ = guest_cr3;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
     // Check that the CPU supports VMX.
     if (!x86_feature_test(X86_FEATURE_VMX))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     return VmxonContext::Create(context);
 }

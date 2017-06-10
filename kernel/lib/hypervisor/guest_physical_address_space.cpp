@@ -21,19 +21,19 @@ status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas(
         new (&ac) GuestPhysicalAddressSpace(guest_phys_mem));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     status_t status = guest_mmu_init_paspace(&gpas->paspace_, kAddressSpaceSize);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // TODO(abdulla): Figure out how to do this on-demand.
     status = gpas->MapRange(0, guest_phys_mem->size());
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     *_gpas = mxtl::move(gpas);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 GuestPhysicalAddressSpace::GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> guest_phys_mem)
@@ -41,16 +41,16 @@ GuestPhysicalAddressSpace::GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> gues
 
 GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
     __UNUSED status_t status = guest_mmu_destroy_paspace(&paspace_);
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 }
 
 static status_t map_page(guest_paspace_t* paspace, vaddr_t guest_paddr, paddr_t host_paddr,
                          uint mmu_flags) {
     size_t mapped;
     status_t status = guest_mmu_map(paspace, guest_paddr, host_paddr, 1, mmu_flags, &mapped);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
-    return mapped != 1 ? ERR_NO_MEMORY : NO_ERROR;
+    return mapped != 1 ? MX_ERR_NO_MEMORY : MX_OK;
 }
 
 status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
@@ -69,9 +69,9 @@ status_t GuestPhysicalAddressSpace::UnmapRange(vaddr_t guest_paddr, size_t size)
     size_t num_pages = size / PAGE_SIZE;
     size_t unmapped;
     status_t status = guest_mmu_unmap(&paspace_, guest_paddr, num_pages, &unmapped);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
-    return unmapped != num_pages ? ERR_BAD_STATE : NO_ERROR;
+    return unmapped != num_pages ? MX_ERR_BAD_STATE : MX_OK;
 }
 
 status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* host_paddr) {

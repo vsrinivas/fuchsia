@@ -39,7 +39,7 @@ static bool page_table_x86_64(void) {
 
     // Test 1GB page.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), MX_OK, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 2u, "");
 
     memset(expected, 0, size);
@@ -55,7 +55,7 @@ static bool page_table_x86_64(void) {
 
     // Test 2MB page.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), MX_OK, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 3u, "");
 
     memset(expected, 0, size);
@@ -71,7 +71,7 @@ static bool page_table_x86_64(void) {
 
     // Test 4KB page.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), MX_OK, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     memset(expected, 0, size);
@@ -91,7 +91,7 @@ static bool page_table_x86_64(void) {
 
     // Test mixed pages.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20)  + (4 << 10), &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20)  + (4 << 10), &pte_off), MX_OK, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     memset(expected, 0, size);

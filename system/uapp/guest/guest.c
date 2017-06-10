@@ -26,7 +26,7 @@ static const uint32_t kMapFlags __UNUSED = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PER
 
 static int vcpu_thread(void* arg) {
     // TODO(abdulla): Correctly terminate the VCPU prior to return.
-    return vcpu_loop((vcpu_context_t*)arg) != NO_ERROR ? thrd_error : thrd_success;
+    return vcpu_loop((vcpu_context_t*)arg) != MX_OK ? thrd_error : thrd_success;
 }
 
 static int is_elf(const int fd, bool* result) {
@@ -35,7 +35,7 @@ static int is_elf(const int fd, bool* result) {
     int ret = read(fd, &e_header, sizeof(e_header));
     if (ret != sizeof(e_header)) {
         fprintf(stderr, "Failed to read header\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
     // Check ELF magic
@@ -46,36 +46,36 @@ static int is_elf(const int fd, bool* result) {
 
     if (lseek(fd, 0, SEEK_SET) < -1) {
         fprintf(stderr, "Failed seeking back to start\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: %s kernel.bin [ramdisk.bin]\n", basename(argv[0]));
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     int fd = open(argv[1], O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[1]);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
     // For simplicity, we just assume that all elf files are linux
     // and anything else is magenta.
     bool is_linux = false;
     mx_status_t status = is_elf(fd, &is_linux);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to determine kernel image type\n");
         return status;
     }
 
     mx_handle_t hypervisor;
     status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to create hypervisor\n");
         return status;
     }
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     uintptr_t addr;
     mx_handle_t phys_mem;
     status = guest_create_phys_mem(&addr, kVmoSize, &phys_mem);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to create guest physical memory\n");
         return status;
     }
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     int ret = mtx_init(&guest_state.mutex, mtx_plain);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to initialize guest state mutex\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
@@ -107,20 +107,20 @@ int main(int argc, char** argv) {
     context.guest_state = &guest_state;
 
     status = guest_create(hypervisor, phys_mem, &context.vcpu_fifo, &context.guest);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to create guest\n");
         return status;
     }
 
     uintptr_t pt_end_off;
     status = guest_create_page_table(addr, kVmoSize, &pt_end_off);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to create page table\n");
         return status;
     }
 
     status = guest_create_acpi_table(addr, kVmoSize, pt_end_off);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to create ACPI table\n");
         return status;
     }
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
                                argc >= 3 ? argv[2] : NULL,
                                &guest_ip,
                                &bootdata_offset);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             fprintf(stderr, "Failed to setup magenta\n");
             return status;
         }
@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
         status = setup_linux(addr,
                              fd,
                              &guest_ip);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             fprintf(stderr, "Failed to setup linux\n");
             return status;
         }
@@ -158,14 +158,14 @@ int main(int argc, char** argv) {
 #endif // __x86_64__
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
                               &guest_gpr, sizeof(guest_gpr), NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to set guest ESI\n");
         return status;
     }
 
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
                               &guest_ip, sizeof(guest_ip), NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to set guest RIP\n");
         return status;
     }
@@ -174,27 +174,27 @@ int main(int argc, char** argv) {
     uintptr_t guest_cr3 = 0;
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
                               &guest_cr3, sizeof(guest_cr3), NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to set guest CR3\n");
         return status;
     }
 
     status = mx_vmo_create(PAGE_SIZE, 0, &context.local_apic_state.apic_mem);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to create guest local APIC memory\n");
         return status;
     }
 
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
                               &context.local_apic_state.apic_mem, sizeof(mx_handle_t), NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to set guest local APIC memory\n");
         return status;
     }
 
     status = mx_vmar_map(mx_vmar_root_self(), 0, context.local_apic_state.apic_mem, 0, PAGE_SIZE,
                          kMapFlags, (uintptr_t*)&context.local_apic_state.apic_addr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to map local APIC memory\n");
         return status;
     }
@@ -204,16 +204,16 @@ int main(int argc, char** argv) {
     ret = thrd_create(&thread, vcpu_thread, &context);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create control thread\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     ret = thrd_detach(thread);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to detach control thread\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         fprintf(stderr, "Failed to enter guest %d\n", status);
     return status;
 }

@@ -20,46 +20,46 @@ static bool guest_enter(void) {
     mx_handle_t hypervisor;
     mx_status_t status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
     // The hypervisor isn't supported, so don't run the test.
-    if (status == ERR_NOT_SUPPORTED)
+    if (status == MX_ERR_NOT_SUPPORTED)
         return true;
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     uintptr_t addr;
     mx_handle_t guest_phys_mem;
-    ASSERT_EQ(guest_create_phys_mem(&addr, kVmoSize, &guest_phys_mem), NO_ERROR, "");
+    ASSERT_EQ(guest_create_phys_mem(&addr, kVmoSize, &guest_phys_mem), MX_OK, "");
 
     mx_handle_t guest_ctl_fifo;
     mx_handle_t guest;
-    ASSERT_EQ(guest_create(hypervisor, guest_phys_mem, &guest_ctl_fifo, &guest), NO_ERROR, "");
+    ASSERT_EQ(guest_create(hypervisor, guest_phys_mem, &guest_ctl_fifo, &guest), MX_OK, "");
 
     // Setup the guest.
     uintptr_t guest_ip = 0;
-    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_ip), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_ip), MX_OK, "");
 
 #if __x86_64__
     memcpy((void*)(addr + guest_ip), guest_start, guest_end - guest_start);
     uintptr_t guest_cr3 = 0;
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
                                &guest_cr3, sizeof(guest_cr3), NULL, 0),
-              NO_ERROR, "");
+              MX_OK, "");
 
     mx_handle_t guest_apic_mem;
-    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &guest_apic_mem), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &guest_apic_mem), MX_OK, "");
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
                                &guest_apic_mem, sizeof(guest_apic_mem), NULL, 0),
-              NO_ERROR, "");
+              MX_OK, "");
 #endif // __x86_64__
 
     // Enter the guest.
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
                                &guest_ip, sizeof(guest_ip), NULL, 0),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
-              ERR_STOP, "");
+              MX_ERR_STOP, "");
 
     mx_guest_packet_t packet[2];
     uint32_t num_packets;
-    ASSERT_EQ(mx_fifo_read(guest_ctl_fifo, packet, sizeof(packet), &num_packets), NO_ERROR, "");
+    ASSERT_EQ(mx_fifo_read(guest_ctl_fifo, packet, sizeof(packet), &num_packets), MX_OK, "");
     ASSERT_EQ(num_packets, 2u, "");
     ASSERT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
     ASSERT_EQ(packet[0].port_out.access_size, 1u, "");
@@ -68,13 +68,13 @@ static bool guest_enter(void) {
     ASSERT_EQ(packet[1].port_out.access_size, 1u, "");
     ASSERT_EQ(packet[1].port_out.data[0], 'x', "");
 
-    ASSERT_EQ(mx_handle_close(guest), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(guest_ctl_fifo), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(guest_phys_mem), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(hypervisor), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(guest), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(guest_ctl_fifo), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(guest_phys_mem), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(hypervisor), MX_OK, "");
 
 #if __x86_64__
-    ASSERT_EQ(mx_handle_close(guest_apic_mem), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(guest_apic_mem), MX_OK, "");
 #endif // __x86_64__
 
     END_TEST;

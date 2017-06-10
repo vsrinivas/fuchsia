@@ -17,7 +17,7 @@ mx_status_t setup_linux(const uintptr_t addr, const int fd, uintptr_t* guest_ip)
     int ret = read(fd, &e_header, sizeof(e_header));
     if (ret != sizeof(e_header)) {
         fprintf(stderr, "Failed to read linux kernel elf header\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
     // Load the program headers
@@ -26,7 +26,7 @@ mx_status_t setup_linux(const uintptr_t addr, const int fd, uintptr_t* guest_ip)
     ret = read(fd, p_headers, p_headers_size);
     if ((size_t)ret != p_headers_size) {
         fprintf(stderr, "Failed reading linux program headers\n");
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
     // Load the program segments
@@ -39,16 +39,16 @@ mx_status_t setup_linux(const uintptr_t addr, const int fd, uintptr_t* guest_ip)
         // Seek to the program segment
         if (lseek(fd, p_header->p_offset, SEEK_SET) < -1) {
             fprintf(stderr, "Failed seeking to linux program segment\n");
-            return ERR_IO;
+            return MX_ERR_IO;
         }
         ret = read(fd, (void*)(addr + p_header->p_paddr), p_header->p_filesz);
         if ((size_t)ret != p_header->p_filesz) {
             fprintf(stderr, "Failed reading linux program segment\n");
-            return ERR_IO;
+            return MX_ERR_IO;
         }
     }
     free(p_headers);
     *guest_ip = e_header.e_entry;
-    return NO_ERROR;
+    return MX_OK;
 }
 

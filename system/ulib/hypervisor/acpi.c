@@ -34,32 +34,32 @@ static mx_status_t load_file(const char* path, uintptr_t addr, size_t size, uint
     int fd = open(path, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "Failed to open ACPI table \"%s\"\n", path);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     struct stat stat;
     int ret = fstat(fd, &stat);
     if (ret < 0) {
         fprintf(stderr, "Failed to stat ACPI table \"%s\"\n", path);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     if ((size_t)stat.st_size > size) {
         fprintf(stderr, "Not enough space for ACPI table \"%s\"\n", path);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     ret = read(fd, (void*)addr, stat.st_size);
     if (ret < 0 || ret != stat.st_size) {
         fprintf(stderr, "Failed to read ACPI table \"%s\"\n", path);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     *actual = stat.st_size;
-    return NO_ERROR;
+    return MX_OK;
 }
 #endif // __x86_64__
 
 mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off) {
 #if __x86_64__
     if (size < acpi_off + PAGE_SIZE)
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     const uint32_t rsdt_entries = 3;
     const uint32_t rsdt_length = sizeof(ACPI_TABLE_RSDT) + (rsdt_entries - 1) * sizeof(uint32_t);
@@ -85,19 +85,19 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     // DSDT.
     uint32_t actual;
     mx_status_t status = load_file(kDsdtPath, addr + dsdt_off, size - dsdt_off, &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // MADT.
     const uintptr_t madt_off = dsdt_off + actual;
     status = load_file(kMadtPath, addr + madt_off, size - madt_off, &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // MCFG.
     const uintptr_t mcfg_off = madt_off + actual;
     status = load_file(kMcfgPath, addr + mcfg_off, size - mcfg_off, &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // RSDT.
@@ -106,8 +106,8 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     rsdt->TableOffsetEntry[1] = madt_off;
     rsdt->TableOffsetEntry[2] = mcfg_off;
     acpi_header(&rsdt->Header, ACPI_SIG_RSDT, rsdt_length);
-    return NO_ERROR;
+    return MX_OK;
 #else // __x86_64__
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }

@@ -76,8 +76,8 @@ failure:
     // Set up the return address.
     pushq HS_RIP(%rdi)
 
-    // Return ERR_INTERNAL.
-    mov $ERR_INTERNAL, %eax
+    // Return MX_ERR_INTERNAL.
+    mov $MX_ERR_INTERNAL, %eax
     ret
 
 /* This is effectively the second-half of vmx_enter. When we return from a
@@ -135,6 +135,6 @@ FUNCTION(vmx_exit_entry)
     call vmx_exit
     add $8, %rsp
 
-    // Return NO_ERROR, using the return address of vmx_enter pushed above.
-    mov $NO_ERROR, %eax
+    // Return MX_OK, using the return address of vmx_enter pushed above.
+    mov $MX_OK, %eax
     ret

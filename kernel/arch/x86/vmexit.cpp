@@ -112,14 +112,14 @@ static status_t handle_external_interrupt(const ExitInfo& exit_info, AutoVmcsLoa
         // If interrupts are disabled, we set VM exit on interrupt enable.
         interrupt_window_exiting(true);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t handle_interrupt_window(const ExitInfo& exit_info,
                                         LocalApicState* local_apic_state) {
     interrupt_window_exiting(false);
     set_local_apic_interrupt(local_apic_state);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
@@ -133,7 +133,7 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
         cpuid((uint32_t)guest_state->rax,
               (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
               (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
-        return NO_ERROR;
+        return MX_OK;
     case X86_CPUID_BASE + 1 ... MAX_SUPPORTED_CPUID:
     case X86_CPUID_EXT_BASE + 1 ... MAX_SUPPORTED_CPUID_EXT:
         next_rip(exit_info);
@@ -152,9 +152,9 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             // Disable the XSAVES bit.
             guest_state->rax &= ~(1u << 3);
         }
-        return NO_ERROR;
+        return MX_OK;
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -165,7 +165,7 @@ static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic
     event_wait(&local_apic_state->event);
     set_local_apic_interrupt(local_apic_state);
     next_rip(exit_info);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #if WITH_LIB_MAGENTA
@@ -199,37 +199,37 @@ private:
 
 static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals) {
     if (state_tracker->GetSignalsState() & signals)
-        return NO_ERROR;
+        return MX_OK;
     // TODO(abdulla): Add stats to keep track of waits.
     FifoStateObserver state_observer(signals | MX_FIFO_PEER_CLOSED);
     status_t status = state_observer.Wait(state_tracker);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
-    return state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED ? ERR_PEER_CLOSED : NO_ERROR;
+    return state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED ? MX_ERR_PEER_CLOSED : MX_OK;
 }
 
 static status_t packet_write(FifoDispatcher* ctl_fifo, const mx_guest_packet_t& packet) {
     status_t status = packet_wait(ctl_fifo->get_state_tracker(), MX_FIFO_WRITABLE);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     const uint8_t* data = reinterpret_cast<const uint8_t*>(&packet);
     uint32_t actual;
     status = ctl_fifo->Write(data, sizeof(mx_guest_packet_t), &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
-    return actual != 1 ? ERR_IO_DATA_INTEGRITY : NO_ERROR;
+    return actual != 1 ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
 }
 
 static status_t packet_read(FifoDispatcher* ctl_fifo, mx_guest_packet_t* packet) {
     status_t status = packet_wait(ctl_fifo->get_state_tracker(), MX_FIFO_READABLE);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     uint8_t* data = reinterpret_cast<uint8_t*>(packet);
     uint32_t actual;
     status = ctl_fifo->Read(data, sizeof(mx_guest_packet_t), &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
-    return actual != 1 ? ERR_IO_DATA_INTEGRITY : NO_ERROR;
+    return actual != 1 ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
 }
 #endif // WITH_LIB_MAGENTA
 
@@ -239,7 +239,7 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
 #if WITH_LIB_MAGENTA
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.string || io_info.repeat)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     mx_guest_packet_t packet;
     memset(&packet, 0, sizeof(packet));
     if (!io_info.input) {
@@ -253,22 +253,22 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
     packet.port_in.port = io_info.port;
     packet.port_in.access_size = io_info.access_size;
     mx_status_t status = packet_write(ctl_fifo, packet);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     status = packet_read(ctl_fifo, &packet);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     if (packet.type != MX_GUEST_PKT_TYPE_PORT_IN)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     // From Volume 1, Section 3.4.1.1: 32-bit operands generate a 32-bit result,
     // zero-extended to a 64-bit result in the destination general-purpose
     // register.
     if (io_info.access_size == 4)
         guest_state->rax = 0;
     memcpy(&guest_state->rax, packet.port_in_ret.data, io_info.access_size);
-    return NO_ERROR;
+    return MX_OK;
 #else // WITH_LIB_MAGENTA
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
 }
 
@@ -278,7 +278,7 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
         next_rip(exit_info);
         guest_state->rax = kLocalApicPhysBase;
         guest_state->rdx = 0;
-        return NO_ERROR;
+        return MX_OK;
     // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
     // type used for an access to a guest-physical address.
     case X86_MSR_IA32_MTRRCAP:
@@ -298,9 +298,9 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
         next_rip(exit_info);
         guest_state->rax = 0;
         guest_state->rdx = 0;
-        return NO_ERROR;
+        return MX_OK;
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -325,9 +325,9 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rax != kLocalApicPhysBase || guest_state->rdx != 0)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         next_rip(exit_info);
-        return NO_ERROR;
+        return MX_OK;
     // See note in handle_rdmsr.
     case X86_MSR_IA32_MTRRCAP:
     case X86_MSR_IA32_MTRR_DEF_TYPE:
@@ -337,11 +337,11 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
     case X86_MSR_IA32_BIOS_SIGN_ID:
         next_rip(exit_info);
-        return NO_ERROR;
+        return MX_OK;
     case X86_MSR_IA32_TSC_DEADLINE: {
         uint32_t* reg = apic_reg(local_apic_state, kLocalApicLvtTimer);
         if ((*reg & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         next_rip(exit_info);
         timer_cancel(&local_apic_state->timer);
         local_apic_state->active_interrupt = kInvalidInterrupt;
@@ -350,10 +350,10 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
             lk_time_t deadline = ticks_to_nanos(local_apic_state->tsc_deadline);
             timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback, local_apic_state);
         }
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -369,30 +369,30 @@ static status_t get_page(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
     paddr_t pa;
     for (size_t i = 0; i <= X86_PAGING_LEVELS; i++) {
         status_t status = gpas->GetPage(pt_addr & X86_PG_FRAME, &pa);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         if (i == X86_PAGING_LEVELS)
             break;
         pt_entry_t* pt = static_cast<pt_entry_t*>(paddr_to_kvaddr(pa));
         pt_addr = pt[indices[i]];
         if (!IS_PAGE_PRESENT(pt_addr))
-            return ERR_NOT_FOUND;
+            return MX_ERR_NOT_FOUND;
         if (IS_LARGE_PAGE(pt_addr))
             break;
     }
     *host_paddr = pa;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr, uint8_t* data,
                            size_t size) {
     // TODO(abdulla): Make this handle a fetch that crosses more than two pages.
     if (size > PAGE_SIZE)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     paddr_t pa;
     status_t status = get_page(gpas, guest_vaddr, &pa);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     size_t page_offset = guest_vaddr & PAGE_OFFSET_MASK_4KB;
@@ -403,15 +403,15 @@ static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
 
     // If the fetch is not split across pages, return.
     if (from_page == size)
-        return NO_ERROR;
+        return MX_OK;
 
     status = get_page(gpas, guest_vaddr + size, &pa);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     page = static_cast<uint8_t*>(paddr_to_kvaddr(pa));
     memcpy(data + from_page, page, size - from_page);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #if WITH_LIB_MAGENTA
@@ -424,23 +424,23 @@ static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
     packet.mem_trap.instruction_length = exit_info.instruction_length & UINT8_MAX;
     status_t status = fetch_data(gpas, exit_info.guest_rip, packet.mem_trap.instruction_buffer,
                                  packet.mem_trap.instruction_length);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     status = packet_write(ctl_fifo, packet);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     status = packet_read(ctl_fifo, &packet);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (packet.mem_trap_ret.fault) {
         // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
         set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
     } else {
         next_rip(exit_info);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 #endif // WITH_LIB_MAGENTA
 
@@ -451,7 +451,7 @@ static status_t handle_apic_access(const ExitInfo& exit_info, GuestPhysicalAddre
     vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
     return handle_mem_trap(exit_info, guest_paddr, gpas, ctl_fifo);
 #else // WITH_LIB_MAGENTA
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
 }
 
@@ -461,22 +461,22 @@ static status_t handle_ept_violation(const ExitInfo& exit_info, GuestPhysicalAdd
     vaddr_t guest_paddr = exit_info.guest_physical_address;
     return handle_mem_trap(exit_info, guest_paddr, gpas, ctl_fifo);
 #else // WITH_LIB_MAGENTA
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
 }
 
 static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
     uint64_t guest_cr4 = vmcs_read(VmcsFieldXX::GUEST_CR4);
     if (!(guest_cr4 & X86_CR4_OSXSAVE))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // We only support XCR0.
     if (guest_state->rcx != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     cpuid_leaf leaf;
     if (!x86_get_cpuid_subleaf(X86_CPUID_XSAVE, 0, &leaf))
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
 
     // Check that XCR0 is valid.
     uint64_t xcr0_bitmap = ((uint64_t)leaf.d << 32) | leaf.a;
@@ -486,11 +486,11 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
         (xcr0 & X86_XSAVE_STATE_X87) != X86_XSAVE_STATE_X87 ||
         // If AVX state is enabled, SSE state must be enabled.
         (xcr0 & (X86_XSAVE_STATE_AVX | X86_XSAVE_STATE_SSE)) == X86_XSAVE_STATE_AVX)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     guest_state->xcr0 = xcr0;
     next_rip(exit_info);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
@@ -512,7 +512,7 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return handle_hlt(exit_info, local_apic_state);
     case ExitReason::VMCALL:
         dprintf(SPEW, "handling VMCALL instruction\n\n");
-        return ERR_STOP;
+        return MX_ERR_STOP;
     case ExitReason::IO_INSTRUCTION:
         return handle_io_instruction(exit_info, guest_state, ctl_fifo);
     case ExitReason::RDMSR:
@@ -524,7 +524,7 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         dprintf(SPEW, "handling VM entry failure\n\n");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     case ExitReason::APIC_ACCESS:
         dprintf(SPEW, "handling APIC access\n\n");
         return handle_apic_access(exit_info, gpas, ctl_fifo);
@@ -536,6 +536,6 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return handle_xsetbv(exit_info, guest_state);
     default:
         dprintf(SPEW, "unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }

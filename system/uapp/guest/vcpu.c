@@ -126,7 +126,7 @@ mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     time_t now = time(NULL);
     struct tm tm;
     if (localtime_r(&now, &tm) == NULL)
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     switch (rtc_index) {
     case RTC_REGISTER_SECONDS:
         *value = tm.tm_sec;
@@ -153,9 +153,9 @@ mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
             *value |= RTC_REGISTER_B_DAYLIGHT_SAVINGS;
         break;
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_in_t* port_in) {
@@ -168,7 +168,7 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     switch (port_in->port) {
     default:
         fprintf(stderr, "Unhandled port in %#x\n", port_in->port);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     case UART_RECEIVE_IO_PORT + 4:
         packet.port_in_ret.u8 = 0;
         break;
@@ -177,7 +177,7 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         break;
     case RTC_DATA_PORT: {
         mx_status_t status = handle_rtc(io_port_state->rtc_index, &packet.port_in_ret.u8);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         break;
     }
@@ -200,7 +200,7 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     }
 
     if (port_in->access_size != input_size)
-        return ERR_IO_DATA_INTEGRITY;
+        return MX_ERR_IO_DATA_INTEGRITY;
     uint32_t num_packets;
     return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
 }
@@ -210,13 +210,13 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     switch (port_out->port) {
     default:
         fprintf(stderr, "Unhandled port out %#x\n", port_out->port);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     case PIC1_PORT ... PIC1_PORT + 1:
     case PIC2_PORT ... PIC2_PORT + 2:
     case I8253_CONTROL_PORT:
     case I8042_DATA_PORT:
     case UART_RECEIVE_IO_PORT + 1 ... UART_RECEIVE_IO_PORT + 5:
-        return NO_ERROR;
+        return MX_OK;
     case UART_RECEIVE_IO_PORT:
         for (int i = 0; i < port_out->access_size; i++) {
             io_port_state->buffer[io_port_state->offset++] = port_out->data[i];
@@ -225,23 +225,23 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
                 io_port_state->offset = 0;
             }
         }
-        return NO_ERROR;
+        return MX_OK;
     case RTC_INDEX_PORT:
         if (port_out->access_size != 1)
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         io_port_state->rtc_index = port_out->u8;
-        return NO_ERROR;
+        return MX_OK;
     case I8042_COMMAND_PORT:
         if (port_out->access_size != 1)
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         io_port_state->i8042_command = port_out->u8;
-        return NO_ERROR;
+        return MX_OK;
 #if __x86_64__
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         if (port_out->access_size != 2)
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         io_port_state->pm1_enable = port_out->u16;
-        return NO_ERROR;
+        return MX_OK;
 #endif // __x86_64__
     }
 }
@@ -265,14 +265,14 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
     switch (offset) {
     case LOCAL_APIC_REGISTER_ID:
         if (inst->type != INST_MOV_READ)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         *inst->reg = 0;
-        return NO_ERROR;
+        return MX_OK;
     case LOCAL_APIC_REGISTER_EOI:
         // TODO(abdulla): Correctly handle EOI.
         if (inst->type != INST_MOV_WRITE)
-            return ERR_INVALID_ARGS;
-        return NO_ERROR;
+            return MX_ERR_INVALID_ARGS;
+        return MX_OK;
     case LOCAL_APIC_REGISTER_SVR:
     case LOCAL_APIC_REGISTER_ESR:
     case LOCAL_APIC_REGISTER_LVT_TIMER:
@@ -282,19 +282,19 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
         //
         // Therefore, we ignore writes to the ESR.
         if (inst->type == INST_MOV_WRITE && offset == LOCAL_APIC_REGISTER_ESR) {
-            return NO_ERROR;
+            return MX_OK;
         } else if (inst->type != INST_TEST) {
             apply_inst(inst, local_apic_state->apic_addr + offset);
-            return NO_ERROR;
+            return MX_OK;
         }
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     case LOCAL_APIC_REGISTER_INITIAL_COUNT:
         if (inst->type != INST_MOV_WRITE || get_value(inst) > 0)
-            return ERR_NOT_SUPPORTED;
-        return NO_ERROR;
+            return MX_ERR_NOT_SUPPORTED;
+        return MX_OK;
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
@@ -304,30 +304,30 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
     switch (offset) {
     case IO_APIC_IOREGSEL:
         if (inst->type != INST_MOV_WRITE)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         io_apic_state->select = get_value(inst);
-        return io_apic_state->select > UINT8_MAX ? ERR_INVALID_ARGS : NO_ERROR;
+        return io_apic_state->select > UINT8_MAX ? MX_ERR_INVALID_ARGS : MX_OK;
     case IO_APIC_IOWIN:
         switch (io_apic_state->select) {
         case IO_APIC_REGISTER_ID:
             apply_inst(inst, &io_apic_state->id);
-            return NO_ERROR;
+            return MX_OK;
         case IO_APIC_REGISTER_VER:
             if (inst->type != INST_MOV_READ)
-                return ERR_NOT_SUPPORTED;
+                return MX_ERR_NOT_SUPPORTED;
             // There are two redirect offsets per redirection entry. We return
             // the maximum redirection entry index.
             //
             // From Intel 82093AA, Section 3.2.2.
             *inst->reg = (IO_APIC_REDIRECT_OFFSETS / 2 - 1) << 16 | IO_APIC_VERSION;
-            return NO_ERROR;
+            return MX_OK;
         case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
             uint32_t i = io_apic_state->select - FIRST_REDIRECT_OFFSET;
             apply_inst(inst, io_apic_state->redirect + i);
-            return NO_ERROR;
+            return MX_OK;
         }}
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t handle_tpm(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
@@ -336,15 +336,15 @@ static mx_status_t handle_tpm(const mx_guest_mem_trap_t* mem_trap, instruction_t
     switch (offset) {
     case TPM_REGISTER_ACCESS:
         if (inst->type != INST_MOV_READ)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         if (inst->mem != 1u)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         // Respond with all ones to signal an invalid access to device memory.
         // This should effectively disable any TPM driver.
         *inst->reg = UINT8_MAX;
-        return NO_ERROR;
+        return MX_OK;
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
@@ -356,57 +356,57 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     switch (offset) {
     case PCI_REGISTER_VENDOR_ID:
         if (inst->type != INST_MOV_READ || inst->mem != 2u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         *inst->reg = vendor_id;
-        return NO_ERROR;
+        return MX_OK;
     case PCI_REGISTER_DEVICE_ID:
         if (inst->type != INST_MOV_READ || inst->mem != 2u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         *inst->reg = device_id;
-        return NO_ERROR;
+        return MX_OK;
     case PCI_REGISTER_COMMAND:
         if (inst->mem != 2u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         if (inst->type == INST_MOV_READ) {
             *inst->reg = pci_device_state->command;
-            return NO_ERROR;
+            return MX_OK;
         } else if (inst->type == INST_MOV_WRITE) {
             pci_device_state->command = get_value(inst);
-            return NO_ERROR;
+            return MX_OK;
         }
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     case PCI_REGISTER_HEADER_TYPE:
         if (inst->type != INST_MOV_READ || inst->mem != 1u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         *inst->reg = PCI_HEADER_TYPE_STANDARD;
-        return NO_ERROR;
+        return MX_OK;
     case PCI_REGISTER_INTERRUPT_PIN:
         if (inst->type != INST_MOV_READ || inst->mem != 1u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         *inst->reg = 1;
-        return NO_ERROR;
+        return MX_OK;
     case PCI_REGISTER_REVISION_ID:
     case PCI_REGISTER_PROGRAM_INTERFACE:
     case PCI_REGISTER_BASE_CLASS:
     case PCI_REGISTER_SUB_CLASS:
     case PCI_REGISTER_CAPABILITIES_PTR:
         if (inst->type != INST_MOV_READ || inst->mem != 1u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         *inst->reg = 0;
-        return NO_ERROR;
+        return MX_OK;
     case PCI_REGISTER_BAR_0: {
         if (inst->mem != 4u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         uint32_t* bar = &pci_device_state->bar[PCI_BAR(offset)];
         if (inst->type == INST_MOV_READ)  {
             *inst->reg = *bar | PCI_BAR_IO_TYPE_PIO;
-            return NO_ERROR;
+            return MX_OK;
         } else if (inst->type == INST_MOV_WRITE) {
             // We zero bits in the BAR in order to set the size.
             *bar = (get_value(inst) & ~(bar0_size - 1)) | PCI_BAR_IO_TYPE_PIO;
-            return NO_ERROR;
+            return MX_OK;
         }
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     case PCI_REGISTER_BAR_1:
     case PCI_REGISTER_BAR_2:
@@ -414,31 +414,31 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     case PCI_REGISTER_BAR_4:
     case PCI_REGISTER_BAR_5:
         if (inst->mem != 4u)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         if (inst->type == INST_MOV_READ)
             *inst->reg = 0;
-        return NO_ERROR;
+        return MX_OK;
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t unhandled_mem_trap(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", mem_trap->guest_paddr);
     if (inst->type == INST_MOV_READ)
         *inst->reg = UINT64_MAX;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_trap_t* mem_trap) {
     mx_guest_gpr_t guest_gpr;
     mx_status_t status = mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_GET_GPR,
                                           NULL, 0, &guest_gpr, sizeof(guest_gpr));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     instruction_t inst;
 #if __aarch64__
-    status = ERR_NOT_SUPPORTED;
+    status = MX_ERR_NOT_SUPPORTED;
 #elif __x86_64__
     status = decode_instruction(mem_trap->instruction_buffer, mem_trap->instruction_length,
                                 &guest_gpr, &inst);
@@ -446,10 +446,10 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
 #error Unsupported architecture
 #endif
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Unsupported instruction\n");
     } else {
-        status = ERR_UNAVAILABLE;
+        status = MX_ERR_UNAVAILABLE;
         switch (mem_trap->guest_paddr) {
         case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
             status = handle_local_apic(&context->local_apic_state, mem_trap, &inst);
@@ -484,13 +484,13 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
 
     mx_guest_packet_t packet;
     packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
-    packet.mem_trap_ret.fault = status != NO_ERROR;
+    packet.mem_trap_ret.fault = status != MX_OK;
 
     // If there was an attempt to read from memory, update the GPRs.
-    if (status == NO_ERROR && inst.type == INST_MOV_READ) {
+    if (status == MX_OK && inst.type == INST_MOV_READ) {
         status = mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
                                   &guest_gpr, sizeof(guest_gpr), NULL, 0);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
     }
     uint32_t num_packets;
@@ -502,26 +502,26 @@ static mx_status_t vcpu_wait(mx_handle_t vcpu_fifo, mx_signals_t signals) {
     while (!(observed & signals)) {
         mx_status_t status = mx_object_wait_one(vcpu_fifo, signals | MX_FIFO_PEER_CLOSED,
                                                 MX_TIME_INFINITE, &observed);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         if (observed & MX_FIFO_PEER_CLOSED)
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t vcpu_loop(vcpu_context_t* context) {
     mx_guest_packet_t packet[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
     while (true) {
         mx_status_t status = vcpu_wait(context->vcpu_fifo, MX_FIFO_READABLE);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             fprintf(stderr, "Failed to wait for readable on the VCPU: %d\n", status);
             return status;
         }
 
         uint32_t num_packets;
         status = mx_fifo_read(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         for (uint32_t i = 0; i < num_packets; i++) {
@@ -542,9 +542,9 @@ mx_status_t vcpu_loop(vcpu_context_t* context) {
                 break;
             default:
                 fprintf(stderr, "Unhandled guest packet %d\n", packet[i].type);
-                return ERR_NOT_SUPPORTED;
+                return MX_ERR_NOT_SUPPORTED;
             }
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet[i].type, status);
                 return status;
             }

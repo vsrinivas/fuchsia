@@ -76,28 +76,28 @@ static uintptr_t page_table(uintptr_t addr, size_t size, size_t l1_page_size, ui
 
 mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phys_mem) {
     if (size % PAGE_SIZE != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (size > kMaxSize || size < kMinSize)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     mx_status_t status = mx_vmo_create(size, 0, phys_mem);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = mx_vmar_map(mx_vmar_root_self(), 0, *phys_mem, 0, size, kMapFlags, addr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mx_handle_close(*phys_mem);
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off) {
     if (size % PAGE_SIZE != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (size > kMaxSize || size < kMinSize)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
 #if __x86_64__
     uint64_t aspace_off = 0;
@@ -106,20 +106,20 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
     *end_off = page_table(addr, size - aspace_off, kPdpPageSize, *end_off, &aspace_off, true);
     *end_off = page_table(addr, size - aspace_off, kPdPageSize, *end_off, &aspace_off, true);
     *end_off = page_table(addr, size - aspace_off, kPtPageSize, *end_off, &aspace_off, true);
-    return NO_ERROR;
+    return MX_OK;
 #else // __x86_64__
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
 mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
                                   uintptr_t bootdata_off) {
     if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     const uint32_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
                                   sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(e820entry_t) * 3);
     if (bootdata_off + bootdata_len > size)
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     // Bootdata container.
     bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
@@ -165,7 +165,7 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
         bootdata->length -= BOOTDATA_ALIGN(sizeof(e820entry_t));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
@@ -174,7 +174,7 @@ mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle
     const uint32_t size = sizeof(mx_guest_packet_t);
     mx_handle_t kernel_ctl_fifo;
     mx_status_t status = mx_fifo_create(count, size, 0, &kernel_ctl_fifo, ctl_fifo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_handle_t create_args[2] = { phys_mem, kernel_ctl_fifo };
