@@ -284,17 +284,6 @@ typedef struct mx_info_kmem_stats {
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
 #define MX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
 
-// Argument is the number of descendant generations that a job is allowed to
-// have, as a uint32_t.
-//
-// A job has a MAX_HEIGHT value equal to one less than its parent's MAX_HEIGHT
-// value.
-//
-// A job with MAX_HEIGHT equal to zero may not have any child jobs, and calling
-// mx_job_create() on such a job will fail with ERR_OUT_OF_RANGE. MAX_HEIGHT
-// does not affect the creation of processes.
-#define MX_PROP_JOB_MAX_HEIGHT              7u
-
 // Values for mx_info_thread_t.state.
 #define MX_THREAD_STATE_NEW                 0u
 #define MX_THREAD_STATE_RUNNING             1u

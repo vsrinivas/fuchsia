@@ -20,9 +20,10 @@ parent job.
 
 Upon success a handle for the new job is returned.
 
-It is illegal to create a job under a parent whose **MX_PROP_JOB_MAX_HEIGHT**
-property is zero. (It is, however, legal to create a process under a parent with
-*MAX_HEIGHT* zero.) See [object_get_property()](object_get_property.md).
+The kernel keeps track of and restricts the "height" of a job, which is its
+distance from the root job. It is illegal to create a job under a parent whose
+height exceeds an internal "max height" value. (It is, however, legal to create
+a process under such a job.)
 
 Job handles may be waited on (TODO(cpu): expand this)
 
@@ -42,8 +43,7 @@ is returned.
 
 **MX_ERR_ACCESS_DENIED**  *job* does not have the **MX_RIGHT_WRITE** right.
 
-**MX_ERR_OUT_OF_RANGE**  *job* has a **MX_PROP_JOB_MAX_HEIGHT** property value
-of zero.
+**MX_ERR_OUT_OF_RANGE**  The height of *job* is too large to create a child job.
 
 **MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

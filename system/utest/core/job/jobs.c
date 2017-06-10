@@ -164,48 +164,32 @@ static bool info_task_stats_fails(void) {
     END_TEST;
 }
 
-// Returns the job's MX_PROP_JOB_MAX_HEIGHT property value.
-static uint32_t get_job_max_height(mx_handle_t job) {
-    uint32_t value;
-    mx_status_t s = mx_object_get_property(
-        job, MX_PROP_JOB_MAX_HEIGHT, &value, sizeof(value));
-    if (s != MX_OK) {
-        // Poison the test and return an unlikely value.
-        EXPECT_EQ(MX_OK, s, "");
-        return 0xffffffffu;
-    }
-    return value;
-}
-
-// Show that max height decreases by generation, and that jobs with
-// a max height of zero cannot have child jobs.
+// Show that there is a max job height.
 static bool max_height_smoke(void) {
     BEGIN_TEST;
 
-    // Get our parent job and its max height value.
+    // Get our parent job.
     mx_handle_t parent_job = mx_job_default();
-    uint32_t parent_job_mh = get_job_max_height(parent_job);
-    // Make sure it's a not-too-big positive value
-    ASSERT_GT(parent_job_mh, 0u, "");
-    ASSERT_LT(parent_job_mh, 64u, "");
 
     // Stack of handles that we need to close.
-    mx_handle_t *handles = calloc(parent_job_mh, sizeof(*handles));
+    static const int kNumJobs = 128;
+    mx_handle_t *handles = calloc(kNumJobs, sizeof(*handles));
     ASSERT_NONNULL(handles, "");
     mx_handle_t *htop = handles;
 
-    // Eat up our max height, demonstrating that the value decreases for
-    // each generation.
-    while (parent_job_mh > 0) {
+    // Eat up our max height.
+    while (true) {
         mx_handle_t child_job;
-        ASSERT_EQ(mx_job_create(parent_job, 0u, &child_job), MX_OK, "");
-        uint32_t child_job_mh = get_job_max_height(child_job);
-        // ASSERT rather than EXPECT so we don't sit in this loop forever.
-        ASSERT_EQ(parent_job_mh - 1, child_job_mh, "");
-
+        mx_status_t s = mx_job_create(parent_job, 0u, &child_job);
+        if (s != MX_OK) {
+            break;
+        }
+        // We should hit the max before running out of entries;
+        // this is the core check of this test.
+        ASSERT_LT(htop - handles, kNumJobs,
+                  "Should have seen the max job height");
         *htop++ = child_job;
         parent_job = child_job;
-        parent_job_mh = child_job_mh;
     }
 
     // We've hit the bottom. Creating a child under this job should fail.
@@ -230,26 +214,6 @@ static bool max_height_smoke(void) {
     END_TEST;
 }
 
-static bool set_max_height_fails(void) {
-    BEGIN_TEST;
-
-    mx_handle_t job;
-    ASSERT_EQ(mx_job_create(mx_job_default(), 0u, &job), MX_OK, "");
-    uint32_t mh = get_job_max_height(job);
-
-    // Setting the max height should fail.
-    uint32_t new_mh = mh - 1;
-    EXPECT_NEQ(mx_object_set_property(
-        job, MX_PROP_JOB_MAX_HEIGHT, &new_mh, sizeof(new_mh)), MX_OK, "");
-
-    // The max height value should not have changed.
-    EXPECT_EQ(mh, get_job_max_height(job), "");
-
-    mx_handle_close(job);
-
-    END_TEST;
-}
-
 BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
 RUN_TEST(policy_basic_test)
@@ -258,5 +222,4 @@ RUN_TEST(kill_test)
 RUN_TEST(wait_test)
 RUN_TEST(info_task_stats_fails)
 RUN_TEST(max_height_smoke)
-RUN_TEST(set_max_height_fails)
 END_TEST_CASE(job_tests)

@@ -99,27 +99,6 @@ Allowed operations: **get**
 
 The base address of the vDSO mapping, or zero.
 
-### MX_PROP_JOB_MAX_HEIGHT
-
-*handle* type: **Job**
-
-*value* type: **uint32_t**
-
-Allowed operations: **get**
-
-The number of descendant generations that a job is allowed to have.
-
-A job has a *MAX_HEIGHT* value equal to one less than its parent's *MAX_HEIGHT*
-value.
-
-A job with *MAX_HEIGHT* equal to zero may not have any child jobs, and calling
-**mx_job_create()** on such a job will fail with **MX_ERR_OUT_OF_RANGE**.
-*MAX_HEIGHT* does not affect the creation of processes.
-
-See also:
-
-[job_create](job_create.md)
-
 ## RETURN VALUE
 
 **mx_object_get_property**() returns **MX_OK** on success. In the event of
