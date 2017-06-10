@@ -68,7 +68,7 @@ func devmgrConnect() (mx.Handle, error) {
 		log.Printf("could not create socket fs channel: %v", err)
 		return 0, err
 	}
-	err = syscall.IoctlSetHandle(int(f.Fd()), mxio.IoctlDevmgrMountFS, c1.Handle)
+	err = syscall.IoctlSetHandle(int(f.Fd()), mxio.IoctlVFSMountFS, c1.Handle)
 	if err != nil {
 		c0.Close()
 		c1.Close()

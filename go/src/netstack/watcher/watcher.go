@@ -7,6 +7,7 @@ package watcher
 import (
 	"errors"
 	"os"
+	"unsafe"
 
 	"syscall"
 	"syscall/mx"
@@ -29,7 +30,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	h, err := ioctlDeviceWatchDir(m)
+	h, err := ioctlVFSWatchDir(m)
 	if err != nil {
 		return nil, err
 	}
@@ -86,9 +87,14 @@ func (w *Watcher) wait() (string, uint, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if (n < 2) || (n != uint32(msg[1]+2)) {
+	if (n <= 2) || (n != uint32(msg[1]+2)) {
 		// malformed message
-		return "", 256, errors.New("watcher: malformed message")
+		return "", 0, errors.New("watcher: malformed message")
+	}
+
+	if msg[0] != mxio.VFSWatchEventAdded {
+		// TODO(smklein): Support other watch events
+		return "", 0, errors.New("watcher: Invalid event")
 	}
 	return string(msg[2 : 2+msg[1]]), uint(msg[0]), nil
 }
@@ -97,16 +103,16 @@ type errorString string
 
 func (e errorString) Error() string { return string(e) }
 
-func ioctlDeviceWatchDir(m mxio.MXIO) (h mx.Handle, err error) {
-	const ioctlFamilyVFS = 0x02
-	const op = 7 // IOCTL_VFS_WATCH_DIR
-	num := mxio.IoctlNum(mxio.IoctlKindGetHandle, ioctlFamilyVFS, op)
-	hs, err := m.Ioctl(num, nil, nil)
+func ioctlVFSWatchDir(m mxio.MXIO) (h mx.Handle, err error) {
+
+	c1, c2, err := mx.NewChannel(0)
 	if err != nil {
 		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
 	}
-	if len(hs) != 1 {
-		return 0, errorString("IOCTL_VFS_WATCH_DIR: bad number of handles")
+	msg := mxio.VFSWatchDirRequest{H: c1.Handle, Mask: mxio.VFSWatchMaskAdded, Options: 0}
+	_, err = m.Ioctl(mxio.IoctlVFSWatchDir, (*[unsafe.Sizeof(mxio.VFSWatchDirRequest{})]byte)(unsafe.Pointer(&msg))[:], nil)
+	if err != nil {
+		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
 	}
-	return hs[0], nil
+	return c2.Handle, nil
 }
