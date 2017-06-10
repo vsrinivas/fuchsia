@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"application/lib/app/context"
 	"fidl/bindings"
@@ -20,12 +21,12 @@ import (
 
 type EchoClientApp struct{}
 
-func (client *EchoClientApp) Start() {
+func (client *EchoClientApp) Start(serverURL string) {
 	context := context.CreateFromStartupInfo()
 
 	echoProviderRequest, echoProviderPointer := sp.CreateChannelForServiceProvider()
 	launchInfo := al.ApplicationLaunchInfo{
-		Url:      "file:///system/apps/echo_server_go",
+		Url:      serverURL,
 		Services: &echoProviderRequest}
 	applicationControllerRequest, applicationControllerPointer :=
 		ac.CreateChannelForApplicationController()
@@ -49,6 +50,10 @@ func (client *EchoClientApp) Start() {
 }
 
 func main() {
+	serverURL := "file:///system/apps/echo_server_go"
+	if len(os.Args) == 2 {
+		serverURL = os.Args[1]
+	}
 	client := &EchoClientApp{}
-	client.Start()
+	client.Start(serverURL)
 }
