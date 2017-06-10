@@ -6,13 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 
 config("wlan_config") {
   include_dirs = [ "." ]
-
-  defines = [
-    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
-    "MX_DEBUGLEVEL=2",
-  ]
-
-  cflags = [ "-Wthread-safety" ]
+  defines = [ "MX_DEBUGLEVEL=2" ]
 }
 
 source_set("mlme") {
@@ -54,7 +48,7 @@ driver_module("wlan") {
   ]
 
   deps = [
-    ":mlme(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    ":mlme",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]
