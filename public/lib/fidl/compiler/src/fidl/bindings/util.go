@@ -6,8 +6,6 @@ package bindings
 
 import (
 	"sync/atomic"
-
-	"fidl/system"
 )
 
 func align(size, alignment int) int {
@@ -18,15 +16,6 @@ func align(size, alignment int) int {
 // number of bits.
 func bytesForBits(bits uint64) int {
 	return int((bits + 7) / 8)
-}
-
-// WriteMessage writes a message to a message pipe.
-func WriteMessage(handle system.ChannelHandle, message *Message) error {
-	result := handle.WriteMessage(message.Bytes, message.Handles, system.MOJO_WRITE_MESSAGE_FLAG_NONE)
-	if result != system.MOJO_RESULT_OK {
-		return &ConnectionError{result}
-	}
-	return nil
 }
 
 // StringPointer converts provided string to *string.
