@@ -23,6 +23,7 @@ ComponentScopePtr MakeModuleScope(const std::string& module_url,
   auto module_scope = ModuleScope::New();
   module_scope->url = module_url;
   module_scope->story_id = story_id;
+  module_scope->module_path = fidl::Array<fidl::String>::New(0);
   scope->set_module_scope(std::move(module_scope));
   return scope;
 }
