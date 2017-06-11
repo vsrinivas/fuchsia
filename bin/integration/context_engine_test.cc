@@ -90,8 +90,8 @@ TEST_F(ContextEngineTest, PublishAndSubscribe) {
   // Show that we can publish to a topic and that we can subscribe to that
   // topic. Querying behavior and other Listener dynamics are tested elsewhere.
   InitAllGlobalScope();
-  publisher_->Publish("topic", "foobar");
-  publisher_->Publish("a_different_topic", "baz");
+  publisher_->Publish("topic", "1");
+  publisher_->Publish("a_different_topic", "2");
 
   TestListener listener;
   provider_->Subscribe(CreateQuery("topic"), listener.GetHandle());
@@ -100,7 +100,11 @@ TEST_F(ContextEngineTest, PublishAndSubscribe) {
   ContextUpdatePtr update;
   ASSERT_TRUE((update = listener.PopLast()));
   EXPECT_EQ(1ul, update->values.size());
-  EXPECT_EQ(update->values["topic"], "foobar");
+  EXPECT_EQ(update->values["topic"], "1");
+
+  // Show that if we try to publish invalid JSON, it doesn't go through.
+  publisher_->Publish("topic", "not valid JSON");
+  ASYNC_CHECK(!listener.PeekLast());
 }
 
 TEST_F(ContextEngineTest, MultipleSubscribers) {
@@ -111,7 +115,7 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
   provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
 
-  publisher_->Publish("topic", "flkjsd");
+  publisher_->Publish("topic", "1");
   WAIT_UNTIL(listener1.PopLast());
   WAIT_UNTIL(listener2.PopLast());
 }
@@ -125,7 +129,7 @@ TEST_F(ContextEngineTest, CloseListener) {
     provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
   }
 
-  publisher_->Publish("topic", "don't crash");
+  publisher_->Publish("topic", "\"don't crash\"");
   WAIT_UNTIL(listener2.PopLast());
 }
 
@@ -137,7 +141,7 @@ TEST_F(ContextEngineTest, CloseProvider) {
   // Close the provider and open a new one to ensure we're still running.
   InitProvider(MakeGlobalScope());
 
-  publisher_->Publish("topic", "please don't crash");
+  publisher_->Publish("topic", "\"please don't crash\"");
   TestListener listener2;
   provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
 

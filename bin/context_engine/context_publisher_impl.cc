@@ -6,10 +6,19 @@
 
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/scope_utils.h"
+#include "rapidjson/document.h"
 
 namespace maxwell {
 
-namespace {}  // namespace
+namespace {
+
+bool ValidateJson(const fidl::String& value) {
+  rapidjson::Document doc;
+  doc.Parse(value);
+  return !doc.HasParseError();
+}
+
+}  // namespace
 
 ContextPublisherImpl::ContextPublisherImpl(ComponentScopePtr scope,
                                            ContextRepository* repository)
@@ -18,6 +27,11 @@ ContextPublisherImpl::~ContextPublisherImpl() = default;
 
 void ContextPublisherImpl::Publish(const fidl::String& topic,
                                    const fidl::String& json_data) {
+  if (!ValidateJson(json_data)) {
+    FTL_LOG(WARNING) << "Invalid JSON for " << topic << ": " << json_data;
+    return;
+  }
+
   // Rewrite the topic to be within the scope specified at construction time.
   std::string local_topic = topic;
   if (scope_->is_module_scope()) {
