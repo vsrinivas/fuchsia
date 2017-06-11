@@ -29,9 +29,11 @@ class TestListener : public ContextListener {
   void reset() { last_update.reset(); }
 };
 
-ContextQueryPtr CreateQuery(const std::string& topic) {
+ContextQueryPtr CreateQuery(const std::vector<std::string>& topics) {
   auto query = ContextQuery::New();
-  query->topics.push_back(topic);
+  for (const auto& topic : topics) {
+    query->topics.push_back(topic);
+  }
   return query;
 }
 
@@ -66,7 +68,7 @@ TEST_F(ContextRepositoryTest, Listener_Basic) {
   // Show that a subscription made before a value is published will cause the
   // subscriber's callback to be called the moment a value is published.
   TestListener listener;
-  auto id = repository_.AddSubscription(CreateQuery("topic"), &listener);
+  auto id = repository_.AddSubscription(CreateQuery({"topic"}), &listener);
   // No update because "topic" doesn't exist.
   EXPECT_FALSE(listener.last_update);
 
@@ -104,7 +106,7 @@ TEST_F(ContextRepositoryTest, Listener_SubscribeToExistingTopic) {
   // the listener gets a notification immediately.
   repository_.Set("toppik", "hoi");
   TestListener listener;
-  repository_.AddSubscription(CreateQuery("toppik"), &listener);
+  repository_.AddSubscription(CreateQuery({"toppik"}), &listener);
   ASSERT_TRUE(listener.last_update);
   EXPECT_EQ("hoi", listener.last_update->values["toppik"]);
 }
@@ -114,8 +116,8 @@ TEST_F(ContextRepositoryTest, MultipleSubscribers) {
   // should be notified of new values.
   TestListener listener1;
   TestListener listener2;
-  repository_.AddSubscription(CreateQuery("topic"), &listener1);
-  repository_.AddSubscription(CreateQuery("topic"), &listener2);
+  repository_.AddSubscription(CreateQuery({"topic"}), &listener1);
+  repository_.AddSubscription(CreateQuery({"topic"}), &listener2);
 
   repository_.Set("topic", "1234");
   EXPECT_TRUE(listener1.last_update);
@@ -134,6 +136,119 @@ TEST_F(ContextRepositoryTest, WildcardQuery) {
   ASSERT_TRUE(listener.last_update);
   EXPECT_EQ("1", listener.last_update->values["topic1"]);
   EXPECT_EQ("2", listener.last_update->values["topic2"]);
+}
+
+TEST_F(ContextRepositoryTest, ContextFilter_PartialEq) {
+  repository_.Set("number", "1");
+  repository_.Set("boolean", "true");
+  repository_.Set("string", "\"hello\"");
+  repository_.Set("object", R"(
+{
+  "number": 2,
+  "boolean": false,
+  "string": "world!",
+  "object": { "a": 1, "b": 2 }
+}
+)");
+
+  TestListener listener;
+
+  // First a basic case: ask for two topics and set a filter on one of them.
+  auto query = CreateQuery({"number", "boolean"});
+  query->filters["number"] = ContextFilter::New();
+  query->filters["number"]->set_partial_eq("2");
+  auto id = repository_.AddSubscription(std::move(query), &listener);
+
+  EXPECT_FALSE(listener.last_update);
+  repository_.Set("number", "2");
+  EXPECT_TRUE(listener.last_update);
+  listener.reset();
+  repository_.RemoveSubscription(id);
+
+  // Both filters must match for an update to be sent.
+  query = CreateQuery({"number", "boolean"});
+  query->filters["number"] = ContextFilter::New();
+  query->filters["number"]->set_partial_eq("2");
+  query->filters["boolean"] = ContextFilter::New();
+  query->filters["boolean"]->set_partial_eq("false");
+  id = repository_.AddSubscription(std::move(query), &listener);
+
+  EXPECT_FALSE(listener.last_update);
+  listener.reset();
+  repository_.RemoveSubscription(id);
+
+  // This time have the filter match immediately when we create the
+  // subscription.
+  query = CreateQuery({"boolean", "string"});
+  query->filters["boolean"] = ContextFilter::New();
+  query->filters["boolean"]->set_partial_eq("true");
+  id = repository_.AddSubscription(std::move(query), &listener);
+  EXPECT_TRUE(listener.last_update);
+
+  // Change the value of 'boolean' so it doesn't match, and we shouldn't
+  // see an update.
+  listener.reset();
+  repository_.Set("boolean", "false");
+  EXPECT_FALSE(listener.last_update);
+  listener.reset();
+  repository_.RemoveSubscription(id);
+
+  // Now test correct partial equality on objects.
+  query = CreateQuery({"object"});
+  query->filters["object"] = ContextFilter::New();
+  query->filters["object"]->set_partial_eq(R"({"no_exist": 1})");
+  id = repository_.AddSubscription(std::move(query), &listener);
+  EXPECT_FALSE(listener.last_update);
+  listener.reset();
+  repository_.RemoveSubscription(id);
+
+  query = CreateQuery({"object"});
+  query->filters["object"] = ContextFilter::New();
+  query->filters["object"]->set_partial_eq(
+      R"({"number": 2, "object": {"a":1}})");
+  id = repository_.AddSubscription(std::move(query), &listener);
+  EXPECT_TRUE(listener.last_update);
+  listener.reset();
+  // And this object would no longer match.
+  repository_.Set("object", R"(
+{
+  "number": 2,
+  "object": { "a": 5, "b": 2 }
+}
+)");
+  EXPECT_FALSE(listener.last_update);
+  listener.reset();
+  repository_.RemoveSubscription(id);
+}
+
+TEST_F(ContextRepositoryTest, Filter_FilterArray) {
+  TestListener listener;
+  // filter_array should return only elements that match another
+  // ContextFilter we specify.
+  repository_.Set("array", "[ 1, 2, 3, 4, 4 ]");
+
+  // If no elements match, we should not get an update.
+  auto query = CreateQuery({"array"});
+  query->filters["array"] = ContextFilter::New();
+  auto partial_eq_filter = ContextFilter::New();
+  partial_eq_filter->set_partial_eq("10");
+  query->filters["array"]->set_filter_array(std::move(partial_eq_filter));
+  auto id = repository_.AddSubscription(std::move(query), &listener);
+  EXPECT_FALSE(listener.last_update);
+  listener.reset();
+  repository_.RemoveSubscription(id);
+
+  // If at least one matches, we should get an update.
+  query = CreateQuery({"array"});
+  query->filters["array"] = ContextFilter::New();
+  partial_eq_filter = ContextFilter::New();
+  partial_eq_filter->set_partial_eq("4");
+  query->filters["array"]->set_filter_array(std::move(partial_eq_filter));
+  id = repository_.AddSubscription(std::move(query), &listener);
+  ASSERT_TRUE(listener.last_update);
+  EXPECT_EQ(1lu, listener.last_update->values.size());
+  EXPECT_EQ("[4,4]", listener.last_update->values["array"]);
+  listener.reset();
 }
 
 class TestCoprocessor : public ContextCoprocessor {
@@ -205,7 +320,7 @@ TEST_F(ContextRepositoryTest, Coprocessor_Basic) {
   // Before setting "topic1", we want to show that a listener for "topic2" (set
   // by a coprocessor above) correctly gets notified of changes.
   TestListener listener;
-  repository_.AddSubscription(CreateQuery("topic2"), &listener);
+  repository_.AddSubscription(CreateQuery({"topic2"}), &listener);
   repository_.Set("topic1", "hello");
 
   // Make sure all expectations were processed.
