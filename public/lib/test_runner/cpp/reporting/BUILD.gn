@@ -2,20 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("lib") {
+source_set("reporting") {
+  testonly = true
+
   sources = [
-    "scope.h",
-    "test_runner.cc",
-    "test_runner.h",
-    "test_runner_store_impl.cc",
-    "test_runner_store_impl.h",
+    "reporter.h",
+    "reporter.cc",
+    "results_queue.cc",
+    "results_queue.h",
+    "gtest_listener.cc",
+    "gtest_listener.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/test_runner/services:test_runner",
+    "//apps/tracing/lib/trace:provider",
+    "//lib/ftl",
   ]
 
   public_deps = [
-    "//application/lib/app",
-    "//apps/test_runner/services:test_runner",
-    "//lib/ftl",
     "//lib/mtl",
-    "//third_party/rapidjson",
+    "//third_party/gtest",
   ]
 }
