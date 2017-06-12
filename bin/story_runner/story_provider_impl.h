@@ -155,8 +155,13 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
-  std::unordered_map<std::string, std::unique_ptr<StoryImpl>>
-      story_controllers_;
+  struct StoryImplContainer {
+    std::unique_ptr<StoryImpl> impl;
+    // We keep a cached version of the StoryInfo for every story. We send this
+    // copy to newly registered story provider watchers.
+    StoryInfoPtr current_info;
+  };
+  std::unordered_map<std::string, StoryImplContainer> story_impls_;
 
   const ComponentContextInfo component_context_info_;
 

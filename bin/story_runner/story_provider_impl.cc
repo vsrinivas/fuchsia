@@ -297,21 +297,21 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
 
 class StoryProviderImpl::DeleteStoryCall : Operation<> {
  public:
-  using ControllerMap =
-      std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
+  using StoryImplMap =
+      std::unordered_map<std::string, struct StoryImplContainer>;
   using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
   DeleteStoryCall(OperationContainer* const container,
                   ledger::Page* const page,
                   const fidl::String& story_id,
-                  ControllerMap* const story_controllers,
+                  StoryImplMap* const story_impls,
                   MessageQueueManager* const message_queue_manager,
                   const bool already_deleted,
                   ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
         story_id_(story_id),
-        story_controllers_(story_controllers),
+        story_impls_(story_impls),
         message_queue_manager_(message_queue_manager),
         already_deleted_(already_deleted) {
     Ready();
@@ -344,13 +344,13 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
   }
 
   void Teardown(FlowToken flow) {
-    auto i = story_controllers_->find(story_id_);
-    if (i == story_controllers_->end()) {
+    auto i = story_impls_->find(story_id_);
+    if (i == story_impls_->end()) {
       return;
     }
 
-    FTL_DCHECK(i->second.get() != nullptr);
-    i->second->StopForDelete([this, flow] { Erase(flow); });
+    FTL_DCHECK(i->second.impl.get() != nullptr);
+    i->second.impl->StopForDelete([this, flow] { Erase(flow); });
   }
 
   void Erase(FlowToken flow) {
@@ -363,7 +363,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
     // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this, flow] {
-      story_controllers_->erase(story_id_);
+      story_impls_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
     });
@@ -372,7 +372,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
  private:
   ledger::Page* const page_;  // not owned
   const fidl::String story_id_;
-  ControllerMap* const story_controllers_;
+  StoryImplMap* const story_impls_;
   MessageQueueManager* const message_queue_manager_;
   const bool already_deleted_;  // True if called from OnChange();
 
@@ -384,21 +384,21 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
 // 3. Return a controller for this story that contains the page pointer.
 class StoryProviderImpl::GetControllerCall : Operation<> {
  public:
-  using ControllerMap =
-      std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
+  using StoryImplMap =
+      std::unordered_map<std::string, struct StoryImplContainer>;
 
   GetControllerCall(OperationContainer* const container,
                     ledger::Ledger* const ledger,
                     ledger::Page* const page,
                     StoryProviderImpl* const story_provider_impl,
-                    ControllerMap* const story_controllers,
+                    StoryImplMap* const story_impls,
                     const fidl::String& story_id,
                     fidl::InterfaceRequest<StoryController> request)
       : Operation(container, [] {}),
         ledger_(ledger),
         page_(page),
         story_provider_impl_(story_provider_impl),
-        story_controllers_(story_controllers),
+        story_impls_(story_impls),
         story_id_(story_id),
         request_(std::move(request)) {
     Ready();
@@ -409,9 +409,9 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
     FlowToken flow{this};
 
     // Use the existing controller, if possible.
-    auto i = story_controllers_->find(story_id_);
-    if (i != story_controllers_->end()) {
-      i->second->Connect(std::move(request_));
+    auto i = story_impls_->find(story_id_);
+    if (i != story_impls_->end()) {
+      i->second.impl->Connect(std::move(request_));
       return;
     }
 
@@ -432,17 +432,19 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
             FTL_LOG(ERROR) << "GetControllerCall() " << story_id_
                            << " Ledger.GetPage() " << status;
           }
-          StoryImpl* const controller = new StoryImpl(
+          struct StoryImplContainer container;
+          container.impl = std::make_unique<StoryImpl>(
               story_id_, std::move(story_page_), story_provider_impl_);
-          controller->Connect(std::move(request_));
-          story_controllers_->emplace(story_id_, controller);
+          container.impl->Connect(std::move(request_));
+          container.current_info = story_data_->story_info.Clone();
+          story_impls_->emplace(story_id_, std::move(container));
         });
   }
 
   ledger::Ledger* const ledger_;                  // not owned
   ledger::Page* const page_;                      // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
-  ControllerMap* const story_controllers_;
+  StoryImplMap* const story_impls_;
   const fidl::String story_id_;
   fidl::InterfaceRequest<StoryController> request_;
 
@@ -545,13 +547,13 @@ class StoryProviderImpl::TeardownCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    for (auto& it : story_provider_impl_->story_controllers_) {
+    for (auto& it : story_provider_impl_->story_impls_) {
       // Each callback has a copy of |flow| which only goes out-of-scope once
       // the story corresponding to |it| stops.
-      it.second->StopForTeardown([ this, story_id = it.first, flow ] {
+      it.second.impl->StopForTeardown([ this, story_id = it.first, flow ] {
         // It is okay to erase story_id because story provider binding has been
         // closed and this callback cannot be invoked asynchronously.
-        story_provider_impl_->story_controllers_.erase(story_id);
+        story_provider_impl_->story_impls_.erase(story_id);
       });
     }
   }
@@ -575,8 +577,8 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
   void Run() override {
     FlowToken flow{this, &importance_};
 
-    for (auto& story : story_provider_impl_->story_controllers_) {
-      story.second->GetImportance(
+    for (auto& story : story_provider_impl_->story_impls_) {
+      story.second.impl->GetImportance(
           story_provider_impl_->context_handler_.values(),
           [ this, id = story.first, flow ](float importance) {
             importance_[id] = importance;
@@ -631,6 +633,24 @@ void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   new TeardownCall(&operation_queue_, this, callback);
 }
 
+// |StoryProvider|
+void StoryProviderImpl::Watch(
+    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
+  auto watcher_ptr = StoryProviderWatcherPtr::Create(std::move(watcher));
+  for (const auto& item : story_impls_) {
+    const auto& container = item.second;
+    watcher_ptr->OnChange(container.current_info.Clone(),
+                          container.impl->GetStoryState());
+  }
+  watchers_.AddInterfacePtr(std::move(watcher_ptr));
+}
+
+// |StoryProvider|
+void StoryProviderImpl::Duplicate(
+    fidl::InterfaceRequest<StoryProvider> request) {
+  Connect(std::move(request));
+}
+
 void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
                                           const fidl::String& name,
                                           const fidl::String& value,
@@ -667,7 +687,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
   new DeleteStoryCall(&operation_queue_, root_page_, story_id,
-                      &story_controllers_,
+                      &story_impls_,
                       component_context_info_.message_queue_manager,
                       false /* already_deleted */, callback);
 }
@@ -687,7 +707,7 @@ void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> request) {
   new GetControllerCall(&operation_queue_, ledger_, root_page_, this,
-                        &story_controllers_, story_id, std::move(request));
+                        &story_impls_, story_id, std::move(request));
 }
 
 // |StoryProvider|
@@ -699,19 +719,12 @@ void StoryProviderImpl::PreviousStories(
 // |StoryProvider|
 void StoryProviderImpl::RunningStories(const RunningStoriesCallback& callback) {
   auto stories = fidl::Array<fidl::String>::New(0);
-  for (const auto& controller : story_controllers_) {
-    if (controller.second->IsRunning()) {
-      stories.push_back(controller.second->GetStoryId());
+  for (const auto& impl_container : story_impls_) {
+    if (impl_container.second.impl->IsRunning()) {
+      stories.push_back(impl_container.second.impl->GetStoryId());
     }
   }
   callback(std::move(stories));
-}
-
-// |StoryProvider|
-void StoryProviderImpl::Watch(
-    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
-  watchers_.AddInterfacePtr(
-      StoryProviderWatcherPtr::Create(std::move(watcher)));
 }
 
 // |StoryProvider|
@@ -732,12 +745,6 @@ void StoryProviderImpl::WatchImportance(
       StoryImportanceWatcherPtr::Create(std::move(watcher)));
 }
 
-// |StoryProvider|
-void StoryProviderImpl::Duplicate(
-    fidl::InterfaceRequest<StoryProvider> request) {
-  Connect(std::move(request));
-}
-
 // |PageClient|
 void StoryProviderImpl::OnChange(const std::string& key,
                                  const std::string& value) {
@@ -749,10 +756,12 @@ void StoryProviderImpl::OnChange(const std::string& key,
   // HACK(jimbe) We don't have the page and it's expensive to get it, so just
   // mark it as STOPPED. We know it's not running or we'd have a
   // StoryController.
+  // If we have a StoryImpl for this story id, update our cached StoryInfo.
   StoryState state = StoryState::STOPPED;
-  auto i = story_controllers_.find(story_data->story_info->id);
-  if (i != story_controllers_.end()) {
-    state = i->second->GetStoryState();
+  auto i = story_impls_.find(story_data->story_info->id);
+  if (i != story_impls_.end()) {
+    state = i->second.impl->GetStoryState();
+    i->second.current_info = story_data->story_info.Clone();
   }
 
   watchers_.ForAllPtrs(
@@ -771,7 +780,7 @@ void StoryProviderImpl::OnDelete(const std::string& key) {
   });
 
   new DeleteStoryCall(&operation_queue_, root_page_, story_id,
-                      &story_controllers_,
+                      &story_impls_,
                       component_context_info_.message_queue_manager,
                       true /* already_deleted */, [] {});
 }
@@ -786,14 +795,14 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
     return;
   }
 
-  auto i = story_controllers_.find(info->focused_story_id.get());
-  if (i == story_controllers_.end()) {
+  auto i = story_impls_.find(info->focused_story_id.get());
+  if (i == story_impls_.end()) {
     FTL_LOG(ERROR) << "Story controller not found for focused story "
                    << info->focused_story_id;
     return;
   }
 
-  i->second->Log(MakeLogEntry(StorySignal::FOCUSED));
+  i->second.impl->Log(MakeLogEntry(StorySignal::FOCUSED));
 }
 
 void StoryProviderImpl::OnContextChange() {

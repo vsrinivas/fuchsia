@@ -74,12 +74,15 @@ interface StoryProvider {
 
 // This interface is implemented by clients of StoryProvider.
 //
-// OnChange() is called when a change to StoryInfo or StoryState is
-// applied on the CURRENT device. The cause of the change to StoryInfo could
-// have been ANY device, although the id of the device that caused the change is
-// not part of the notification. StoryState changes are only sent for the
-// CURRENT device. Notifications are not sent for changes to StoryState on other
-// devices.
+// OnChange() is called when:
+//  * a new watcher is registered; one OnChange() for each known story on the
+//    CURRENT device is sent.
+//  * a change to StoryInfo or StoryState is applied on the CURRENT device.
+//
+// The source of the change to StoryInfo could have been from ANY device,
+// although the id of the device that caused the change is not part of the
+// notification. StoryState changes are only sent for the CURRENT device.
+// Notifications are not sent for changes to StoryState on other devices.
 //
 // OnDelete() is called when a story deletion operation is applied to the
 // CURRENT device. The cause of the deletion could have been ANY device.
