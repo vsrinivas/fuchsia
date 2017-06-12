@@ -5,13 +5,11 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 
 #include <magenta/syscalls.h>
-#include <openssl/rand.h>
-#include <sys/time.h>
 
 #include <atomic>
 
-#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/random/rand.h"
 
 namespace glue {
 
@@ -37,7 +35,7 @@ void EnsureInitEntropy() {
 
 void RandBytes(void* buffer, size_t size) {
   EnsureInitEntropy();
-  FTL_CHECK(RAND_bytes(static_cast<uint8_t*>(buffer), size) == 1);
+  FTL_CHECK(ftl::RandBytes(static_cast<uint8_t*>(buffer), size));
 }
 
 uint64_t RandUint64() {
