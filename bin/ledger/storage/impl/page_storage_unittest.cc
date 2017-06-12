@@ -1163,7 +1163,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
   EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
 
   std::unique_ptr<Journal> journal;
-  storage_->StartCommit(heads[0],  JournalType::EXPLICIT, &journal);
+  storage_->StartCommit(heads[0], JournalType::EXPLICIT, &journal);
 
   // Create a key, and delete it.
   EXPECT_EQ(Status::OK,
@@ -1173,8 +1173,8 @@ TEST_F(PageStorageTest, NoOpCommit) {
   // Commit the journal.
   Status status;
   std::unique_ptr<const Commit> commit;
-  journal->Commit(callback::Capture(
-              [this] { message_loop_.PostQuitTask(); }, &status, &commit));
+  journal->Commit(callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &commit));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(Status::OK, status);

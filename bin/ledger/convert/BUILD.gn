@@ -54,8 +54,8 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":convert",
     ":byte_storage_test",
+    ":convert",
     "//third_party/gtest",
   ]
 

@@ -133,12 +133,12 @@ TEST(Coroutine, DroppedAsyncCall) {
   bool called = false;
   coroutine_service.StartCoroutine(
       [&received_value, &called](CoroutineHandler* handler) {
-        EXPECT_TRUE(SyncCall(
-            handler, [&called](std::function<void(size_t)> callback) {
-              // |callback| is dropped here.
-              called = true;
-            },
-            &received_value));
+        EXPECT_TRUE(SyncCall(handler,
+                             [&called](std::function<void(size_t)> callback) {
+                               // |callback| is dropped here.
+                               called = true;
+                             },
+                             &received_value));
       });
   EXPECT_EQ(0u, received_value);
   EXPECT_TRUE(called);

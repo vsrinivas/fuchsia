@@ -75,8 +75,10 @@ bool SyncCall(CoroutineHandler* handler,
     }
     handler->Continue(true);
   });
-  async_call(callback::Capture(ftl::MakeCopyable(
-      [&sync_state, &callback_called, handler, unblocker = std::move(unblocker)] () mutable {
+  async_call(callback::Capture(
+      ftl::MakeCopyable([
+        &sync_state, &callback_called, handler, unblocker = std::move(unblocker)
+      ]() mutable {
         unblocker.cancel();
         callback_called = true;
         if (sync_state) {
