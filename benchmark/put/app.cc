@@ -6,6 +6,7 @@
 
 #include "apps/ledger/benchmark/put/put.h"
 #include "lib/ftl/command_line.h"
+#include "lib/ftl/random/rand.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -17,6 +18,7 @@ constexpr ftl::StringView kKeySizeFlag = "key-size";
 constexpr ftl::StringView kValueSizeFlag = "value-size";
 constexpr ftl::StringView kRefsFlag = "refs";
 constexpr ftl::StringView kUpdateFlag = "update";
+constexpr ftl::StringView kSeedFlag = "seed";
 
 constexpr ftl::StringView kRefsOnFlag = "on";
 constexpr ftl::StringView kRefsOffFlag = "off";
@@ -27,7 +29,8 @@ void PrintUsage(const char* executable_name) {
             << "=<int> --" << kTransactionSizeFlag << "=<int> --"
             << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int>"
             << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << "|"
-            << kRefsAutoFlag << ") [" << kUpdateFlag << "]" << std::endl;
+            << kRefsAutoFlag << ") [" << kSeedFlag << "=<int>] [" << kUpdateFlag
+            << "]" << std::endl;
 }
 
 bool GetPositiveIntValue(const ftl::CommandLine& command_line,
@@ -82,9 +85,21 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
+  int seed;
+  std::string seed_str;
+  if (command_line.GetOptionValue(kSeedFlag.ToString(), &seed_str)) {
+    if (!ftl::StringToNumberWithError(seed_str, &seed)) {
+      PrintUsage(argv[0]);
+      return -1;
+    }
+  } else {
+    seed = ftl::RandUint64();
+  }
+
   mtl::MessageLoop loop;
   benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
-                              value_size, update, std::move(ref_strategy));
+                              value_size, update, std::move(ref_strategy),
+                              seed);
   // TODO(nellyv): A delayed task is necessary because of US-257.
   loop.task_runner()->PostDelayedTask([&app] { app.Run(); },
                                       ftl::TimeDelta::FromSeconds(1));

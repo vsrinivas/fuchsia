@@ -7,7 +7,6 @@
 #include <iostream>
 
 #include "apps/ledger/benchmark/lib/convert.h"
-#include "apps/ledger/benchmark/lib/data.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/src/callback/waiter.h"
@@ -108,25 +107,25 @@ void ConvergenceBenchmark::Start(int step) {
   }
 
   {
-    fidl::Array<uint8_t> key = benchmark::MakeKey(2 * step, kKeySize);
+    fidl::Array<uint8_t> key = generator_.MakeKey(2 * step, kKeySize);
     // Insert each key twice, as we will receive two notifications - one on the
     // sender side (each page client sees their own changes), and one on the
     // receiving side.
     remaining_keys_.insert(benchmark::ToString(key));
     remaining_keys_.insert(benchmark::ToString(key));
-    fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
+    fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
     alpha_page_->Put(std::move(key), std::move(value),
                      benchmark::QuitOnErrorCallback("Put"));
   }
 
   {
-    fidl::Array<uint8_t> key = benchmark::MakeKey(2 * step + 1, kKeySize);
+    fidl::Array<uint8_t> key = generator_.MakeKey(2 * step + 1, kKeySize);
     // Insert each key twice, as we will receive two notifications - one on the
     // sender side (each page client sees their own changes), and one on the
     // receiving side.
     remaining_keys_.insert(benchmark::ToString(key));
     remaining_keys_.insert(benchmark::ToString(key));
-    fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
+    fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
     beta_page_->Put(std::move(key), std::move(value),
                     benchmark::QuitOnErrorCallback("Put"));
   }

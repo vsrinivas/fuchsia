@@ -5,7 +5,6 @@
 #include "apps/ledger/benchmark/put/put.h"
 
 #include "apps/ledger/benchmark/lib/convert.h"
-#include "apps/ledger/benchmark/lib/data.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -30,8 +29,10 @@ PutBenchmark::PutBenchmark(int entry_count,
                            int key_size,
                            int value_size,
                            bool update,
-                           ReferenceStrategy reference_strategy)
-    : tmp_dir_(kStoragePath),
+                           ReferenceStrategy reference_strategy,
+                           uint64_t seed)
+    : generator_(seed),
+      tmp_dir_(kStoragePath),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
@@ -96,7 +97,7 @@ void PutBenchmark::InitializeKeys(
     std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done) {
   std::vector<fidl::Array<uint8_t>> keys;
   for (int i = 0; i < entry_count_; ++i) {
-    keys.push_back(benchmark::MakeKey(i, key_size_));
+    keys.push_back(generator_.MakeKey(i, key_size_));
   }
   if (!update_) {
     on_done(std::move(keys));
@@ -134,7 +135,7 @@ void PutBenchmark::AddInitialEntries(
     on_done(std::move(keys));
     return;
   }
-  fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
+  fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   PutEntry(keys[i].Clone(), std::move(value), ftl::MakeCopyable([
              this, i, keys = std::move(keys), on_done = std::move(on_done)
            ](ledger::Status status) mutable {
@@ -155,7 +156,7 @@ void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
     return;
   }
 
-  fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
+  fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
   PutEntry(std::move(keys[i]), std::move(value),
            ftl::MakeCopyable([ this, i, keys = std::move(keys) ](

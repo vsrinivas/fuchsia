@@ -7,7 +7,6 @@
 #include <iostream>
 
 #include "apps/ledger/benchmark/lib/convert.h"
-#include "apps/ledger/benchmark/lib/data.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -108,8 +107,8 @@ void SyncBenchmark::RunSingle(int i) {
     return;
   }
 
-  fidl::Array<uint8_t> key = benchmark::MakeKey(i, kKeySize);
-  fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
+  fidl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
+  fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
   alpha_page_->Put(std::move(key), std::move(value),
                    benchmark::QuitOnErrorCallback("Put"));

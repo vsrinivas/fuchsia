@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/benchmark/lib/data.h"
+#include "apps/ledger/benchmark/lib/data_generator.h"
 
+#include <algorithm>
+#include <functional>
 #include <string>
 
 #include "apps/ledger/benchmark/lib/convert.h"
@@ -14,7 +16,13 @@
 
 namespace benchmark {
 
-fidl::Array<uint8_t> MakeKey(int i, size_t size) {
+DataGenerator::DataGenerator() : generator_(ftl::RandUint64()) {}
+
+DataGenerator::DataGenerator(uint64_t seed) : generator_(seed) {}
+
+DataGenerator::~DataGenerator() {}
+
+fidl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);
   FTL_DCHECK(i_str.size() + 1 <= size);
   auto rand_bytes = MakeValue(size - i_str.size() - 1);
@@ -23,11 +31,9 @@ fidl::Array<uint8_t> MakeKey(int i, size_t size) {
       ftl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
 }
 
-// Builds a random value of the given length.
-fidl::Array<uint8_t> MakeValue(size_t size) {
+fidl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {
   auto data = fidl::Array<uint8_t>::New(size);
-  auto ret = ftl::RandBytes(data.data(), size);
-  FTL_DCHECK(ret);
+  std::generate(data.begin(), data.end(), std::ref(generator_));
   return data;
 }
 

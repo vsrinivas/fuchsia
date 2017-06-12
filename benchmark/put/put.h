@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "application/lib/app/application_context.h"
+#include "apps/ledger/benchmark/lib/data_generator.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 
@@ -28,6 +29,7 @@ namespace benchmark {
 //     message as an array or not
 //   --update whether operations will update existing entries (put with existing
 //     keys and new values)
+//   --seed=<int> (optional) the seed for key and value generation
 class PutBenchmark {
  public:
   enum class ReferenceStrategy {
@@ -41,7 +43,8 @@ class PutBenchmark {
                int key_size,
                int value_size,
                bool update,
-               ReferenceStrategy reference_strategy);
+               ReferenceStrategy reference_strategy,
+               uint64_t seed);
 
   void Run();
 
@@ -68,6 +71,8 @@ class PutBenchmark {
 
   void CommitAndShutDown();
   void ShutDown();
+
+  DataGenerator generator_;
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<app::ApplicationContext> application_context_;
