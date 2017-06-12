@@ -23,7 +23,7 @@ public:
                            mx_rights_t* rights);
 
     ~VmObjectDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMEM; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMO; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     status_t set_name(const char* name, size_t len) final;

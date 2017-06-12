@@ -77,7 +77,7 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
     switch (type) {
         case MX_OBJ_TYPE_PROCESS: return "process";
         case MX_OBJ_TYPE_THREAD: return "thread";
-        case MX_OBJ_TYPE_VMEM: return "vmo";
+        case MX_OBJ_TYPE_VMO: return "vmo";
         case MX_OBJ_TYPE_CHANNEL: return "channel";
         case MX_OBJ_TYPE_EVENT: return "event";
         case MX_OBJ_TYPE_IOPORT: return "io-port";
@@ -134,7 +134,7 @@ static char* DumpHandleTypeCountLocked(const ProcessDispatcher& pd) {
              types[MX_OBJ_TYPE_JOB],
              types[MX_OBJ_TYPE_PROCESS],
              types[MX_OBJ_TYPE_THREAD],
-             types[MX_OBJ_TYPE_VMEM],
+             types[MX_OBJ_TYPE_VMO],
              types[MX_OBJ_TYPE_VMAR],
              types[MX_OBJ_TYPE_CHANNEL],
              // Events and event pairs:

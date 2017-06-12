@@ -29,7 +29,7 @@ template <> struct DispatchTag<T> {         \
 
 DECLARE_DISPTAG(ProcessDispatcher, MX_OBJ_TYPE_PROCESS)
 DECLARE_DISPTAG(ThreadDispatcher, MX_OBJ_TYPE_THREAD)
-DECLARE_DISPTAG(VmObjectDispatcher, MX_OBJ_TYPE_VMEM)
+DECLARE_DISPTAG(VmObjectDispatcher, MX_OBJ_TYPE_VMO)
 DECLARE_DISPTAG(ChannelDispatcher, MX_OBJ_TYPE_CHANNEL)
 DECLARE_DISPTAG(EventDispatcher, MX_OBJ_TYPE_EVENT)
 DECLARE_DISPTAG(PortDispatcher, MX_OBJ_TYPE_IOPORT)

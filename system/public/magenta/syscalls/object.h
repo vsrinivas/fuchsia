@@ -37,7 +37,7 @@ typedef enum {
     MX_OBJ_TYPE_NONE                = 0,
     MX_OBJ_TYPE_PROCESS             = 1,
     MX_OBJ_TYPE_THREAD              = 2,
-    MX_OBJ_TYPE_VMEM                = 3,
+    MX_OBJ_TYPE_VMO                 = 3,
     MX_OBJ_TYPE_CHANNEL             = 4,
     MX_OBJ_TYPE_EVENT               = 5,
     MX_OBJ_TYPE_IOPORT              = 6,
