@@ -17,7 +17,7 @@ uint64_t SizeOf(const mx::vmo& vmo) {
   uint64_t size;
   mx_status_t status = vmo.get_size(&size);
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
     return 0;
   }
@@ -171,7 +171,7 @@ void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
        AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
   mx_status_t status = counter_->buffer_set().AddBuffer(
       payload_buffer_id, std::move(payload_buffer));
-  RCHECK(status == NO_ERROR, "failed to map buffer");
+  RCHECK(status == MX_OK, "failed to map buffer");
 }
 
 void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {

@@ -18,16 +18,16 @@ uint32_t CreateNewBuffer(SharedBufferSet* under_test, uint64_t size) {
       size, &buffer_id, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ |
                             MX_RIGHT_WRITE | MX_RIGHT_MAP,
       &vmo);
-  EXPECT_EQ(NO_ERROR, status);
+  EXPECT_EQ(MX_OK, status);
   return buffer_id;
 }
 
 void AddBuffer(SharedBufferSet* under_test, uint64_t size, uint32_t buffer_id) {
   mx::vmo vmo;
   mx_status_t status = mx::vmo::create(size, 0, &vmo);
-  EXPECT_EQ(NO_ERROR, status);
+  EXPECT_EQ(MX_OK, status);
   status = under_test->AddBuffer(buffer_id, std::move(vmo));
-  EXPECT_EQ(NO_ERROR, status);
+  EXPECT_EQ(MX_OK, status);
 }
 
 void VerifyBuffer(const SharedBufferSet& under_test,

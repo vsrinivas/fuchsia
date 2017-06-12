@@ -117,7 +117,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
       // Step #4
       mx_status_t mx_res;
       mx_res = dispatcher->Activate(mxtl::WrapRefPtr(this), std::move(watcher));
-      if (mx_res != NO_ERROR) {
+      if (mx_res != MX_OK) {
         FTL_LOG(ERROR)
             << "AudioPlugDetector failed to activate watcher channel for \""
             << target.node_dir
@@ -181,7 +181,7 @@ mx_status_t AudioPlugDetector::ProcessChannel(::audio::DispatcherChannel* channe
   // If we are shutting down, let the dispatcher framework know that it should
   // close this channel.  We are no longer interested in it.
   if (manager_ == nullptr)
-    return ERR_BAD_STATE;
+    return MX_ERR_BAD_STATE;
 
   // Read the message from the watched channel.  It should contain the name of
   // a newly added device.  If we fail to read the channel, propagate the
@@ -192,7 +192,7 @@ mx_status_t AudioPlugDetector::ProcessChannel(::audio::DispatcherChannel* channe
   uint32_t bytes;
 
   mx_status_t res = channel->Read(name, sizeof(name), &bytes);
-  if (res == NO_ERROR) {
+  if (res == MX_OK) {
     FTL_DCHECK(channel->owner_ctx() != 0);
     const auto& watch_target =
         *(reinterpret_cast<WatchTarget*>(channel->owner_ctx()));

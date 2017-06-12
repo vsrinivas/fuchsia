@@ -80,7 +80,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 
   mx::socket other_socket;
   mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     // TODO(dalesat): More specific error code.
     FTL_LOG(ERROR) << "mx::socket::create failed, status " << status;
     result_ = MediaResult::UNKNOWN_ERROR;
@@ -110,13 +110,13 @@ void FileReaderImpl::WriteToSocketStatic(mx_status_t status,
                                          void* closure) {
   FileReaderImpl* reader = reinterpret_cast<FileReaderImpl*>(closure);
   reader->wait_id_ = 0;
-  if (status == ERR_BAD_STATE) {
+  if (status == MX_ERR_BAD_STATE) {
     // Run loop has aborted...the app is shutting down.
     reader->socket_.reset();
     return;
   }
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::socket::write failed, status " << status;
     reader->socket_.reset();
     return;
@@ -142,21 +142,21 @@ void FileReaderImpl::WriteToSocket() {
         socket_.write(0u, remaining_buffer_bytes_,
                       remaining_buffer_bytes_count_, &byte_count);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
       FTL_DCHECK(byte_count != 0);
       remaining_buffer_bytes_ += byte_count;
       remaining_buffer_bytes_count_ -= byte_count;
       continue;
     }
 
-    if (status == ERR_SHOULD_WAIT) {
+    if (status == MX_ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
           MX_TIME_INFINITE, FileReaderImpl::WriteToSocketStatic, this);
       return;
     }
 
-    if (status == ERR_PEER_CLOSED) {
+    if (status == MX_ERR_PEER_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       socket_.reset();

@@ -26,7 +26,7 @@ mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
   mx_status_t status =
       mapped_shared_buffer->InitFromVmo(std::move(vmo), local_map_flags_);
 
-  if (status == NO_ERROR) {
+  if (status == MX_OK) {
     AddBuffer(buffer_id, mapped_shared_buffer);
   }
 
@@ -46,7 +46,7 @@ mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
   mx_status_t status = mapped_shared_buffer->InitNew(size, local_map_flags_);
 
-  if (status == NO_ERROR) {
+  if (status == MX_OK) {
     *buffer_id_out = buffer_id;
     *out_vmo = mapped_shared_buffer->GetDuplicateVmo(vmo_rights);
     AddBuffer(buffer_id, mapped_shared_buffer);

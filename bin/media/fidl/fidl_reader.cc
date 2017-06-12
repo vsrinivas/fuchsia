@@ -116,14 +116,14 @@ void FidlReader::ReadFromSocket() {
     mx_status_t status = socket_.read(0u, read_at_buffer_,
                                       read_at_bytes_remaining_, &byte_count);
 
-    if (status == ERR_SHOULD_WAIT) {
+    if (status == MX_ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
           MX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
       break;
     }
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << "mx::socket::read failed, status " << status;
       FailReadAt(status);
       break;
@@ -149,7 +149,7 @@ void FidlReader::CompleteReadAt(Result result, size_t bytes_read) {
 
 void FidlReader::FailReadAt(mx_status_t status) {
   switch (status) {
-    case ERR_PEER_CLOSED:
+    case MX_ERR_PEER_CLOSED:
       result_ = Result::kInternalError;
       break;
     // TODO(dalesat): Expect more statuses here.
@@ -172,7 +172,7 @@ void FidlReader::ReadFromSocketStatic(mx_status_t status,
 
   reader->wait_id_ = 0;
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "AsyncWait failed, status " << status;
     reader->FailReadAt(status);
     return;

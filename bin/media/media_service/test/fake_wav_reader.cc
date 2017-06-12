@@ -63,7 +63,7 @@ void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 
   mx::socket other_socket;
   mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
-  FTL_DCHECK(status == NO_ERROR);
+  FTL_DCHECK(status == MX_OK);
   callback(MediaResult::OK, std::move(other_socket));
 
   position_ = position;
@@ -77,20 +77,20 @@ void FakeWavReader::WriteToSocket() {
     size_t byte_count;
 
     mx_status_t status = socket_.write(0u, &byte, 1u, &byte_count);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
       FTL_DCHECK(byte_count == 1);
       ++position_;
       continue;
     }
 
-    if (status == ERR_SHOULD_WAIT) {
+    if (status == MX_ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
           MX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
       return;
     }
 
-    if (status == ERR_PEER_CLOSED) {
+    if (status == MX_ERR_PEER_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       socket_.reset();
@@ -137,12 +137,12 @@ void FakeWavReader::WriteToSocketStatic(mx_status_t status,
                                         void* closure) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
   reader->wait_id_ = 0;
-  if (status == ERR_BAD_STATE) {
+  if (status == MX_ERR_BAD_STATE) {
     // Run loop has aborted...the app is shutting down.
     return;
   }
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "AsyncWait failed " << status;
     reader->socket_.reset();
     return;

@@ -26,14 +26,14 @@ mx_status_t MappedSharedBuffer::InitNew(uint64_t size, uint32_t map_flags) {
   mx::vmo vmo;
 
   mx_status_t status = mx::vmo::create(size, 0, &vmo);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::vmo::create failed, status " << status;
     return status;
   }
 
   // Allocate physical memory for the buffer.
   status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::vmo::op_range failed, status " << status;
     return status;
   }
@@ -50,14 +50,14 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
 
   uint64_t size;
   mx_status_t status = vmo.get_size(&size);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
     return status;
   }
 
   if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
     FTL_LOG(ERROR) << "mx::vmo::get_size returned invalid size " << size;
-    return ERR_OUT_OF_RANGE;
+    return MX_ERR_OUT_OF_RANGE;
   }
 
   size_ = size;
@@ -66,7 +66,7 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
   uintptr_t mapped_buffer = 0u;
   status =
       mx::vmar::root_self().map(0, vmo, 0u, size, map_flags, &mapped_buffer);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::vmar::map failed, status " << status;
     return status;
   }
@@ -77,7 +77,7 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
 
   OnInit();
 
-  return NO_ERROR;
+  return MX_OK;
 }
 
 bool MappedSharedBuffer::initialized() const {
@@ -89,7 +89,7 @@ void MappedSharedBuffer::Reset() {
     FTL_DCHECK(size_ != 0);
     mx_status_t status = mx::vmar::root_self().unmap(
         reinterpret_cast<uintptr_t>(buffer_ptr_), size_);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
     buffer_ptr_ = nullptr;
   }
 
@@ -105,7 +105,7 @@ mx::vmo MappedSharedBuffer::GetDuplicateVmo(mx_rights_t rights) const {
   FTL_DCHECK(initialized());
   mx::vmo vmo;
   mx_status_t status = vmo_.duplicate(rights, &vmo);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx::handle::duplicate failed, status " << status;
   }
 

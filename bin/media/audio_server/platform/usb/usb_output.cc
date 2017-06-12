@@ -31,7 +31,7 @@ UsbOutput::~UsbOutput() {}
 MediaResult UsbOutput::Init() {
   uint32_t frames_per_second = kFramesPerSecond;
   int result = ioctl_audio_set_sample_rate(fd_.get(), &frames_per_second);
-  if (result != NO_ERROR) {
+  if (result != MX_OK) {
     FTL_LOG(ERROR) << "Sample rate (" << kFramesPerSecond
                    << "fps) not supported";
     return MediaResult::UNSUPPORTED_CONFIG;

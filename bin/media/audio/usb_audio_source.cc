@@ -173,7 +173,7 @@ bool UsbAudioSource::SetFrameRate(uint32_t frames_per_second) {
 
 void UsbAudioSource::Worker() {
   ssize_t result = ioctl_audio_start(fd_.get());
-  if (result != NO_ERROR) {
+  if (result != MX_OK) {
     FTL_LOG(ERROR) << "Failed to start device, result " << result << ", errno "
                    << errno;
   }
@@ -236,7 +236,7 @@ void UsbAudioSource::Worker() {
   }
 
   result = ioctl_audio_stop(fd_.get());
-  if (result != NO_ERROR) {
+  if (result != MX_OK) {
     FTL_LOG(ERROR) << "Failed to stop device, result " << result << ", errno "
                    << errno;
   }

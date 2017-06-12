@@ -170,7 +170,7 @@ uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
   uint32_t buffer_id;
   mx::vmo vmo;
   mx_status_t status = CreateNewBuffer(size, &buffer_id, remote_rights_, &vmo);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     return kNullBufferId;
   }
 

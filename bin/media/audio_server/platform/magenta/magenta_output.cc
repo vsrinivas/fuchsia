@@ -76,8 +76,8 @@ mx_status_t MagentaOutput::SyncDriverCall(const mx::channel& channel,
   write_status = channel.call(0, mx_deadline_after(CALL_TIMEOUT),
                               &args, &bytes, &handles, &read_status);
 
-  if (write_status != NO_ERROR) {
-    if (write_status == ERR_CALL_FAILED) {
+  if (write_status != MX_OK) {
+    if (write_status == MX_ERR_CALL_FAILED) {
       FTL_LOG(WARNING) << "Cmd read failure (cmd 0x" << std::hex
                        << std::setfill('0') << std::setw(4) << req.hdr.cmd
                        << ", res " << std::dec << std::setfill(' ')
@@ -95,7 +95,7 @@ mx_status_t MagentaOutput::SyncDriverCall(const mx::channel& channel,
   if (bytes != sizeof(RespType)) {
     FTL_LOG(WARNING) << "Unexpected response size (got " << bytes
                      << ", expected " << sizeof(RespType) << ")";
-    return ERR_INTERNAL;
+    return MX_ERR_INTERNAL;
   }
 
   return resp->result;
@@ -124,7 +124,7 @@ MediaResult MagentaOutput::Init() {
 
     res =
         SyncDriverCall(stream_channel_, req, &resp, rb_channel_.get_address());
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to set format " << req.frames_per_second
                      << "Hz " << req.channels << "-Ch 0x" << std::hex
                      << req.sample_format << "(res " << std::dec << res << ")";
@@ -142,7 +142,7 @@ MediaResult MagentaOutput::Init() {
     req.flags = AUDIO2_PDF_ENABLE_NOTIFICATIONS;
 
     res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to request initial plug state (res "
                      << res << ")";
       return MediaResult::INTERNAL_ERROR;
@@ -153,7 +153,7 @@ MediaResult MagentaOutput::Init() {
     FTL_DCHECK(reflector_ != nullptr);
 
     res = reflector_->Activate(mxtl::move(stream_channel_));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to activate event reflector (res "
                      << res << ")";
       return MediaResult::INTERNAL_ERROR;
@@ -171,7 +171,7 @@ MediaResult MagentaOutput::Init() {
     req.hdr.transaction_id = TXID;
 
     res = SyncDriverCall(rb_channel_, req, &resp);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to fetch ring buffer fifo depth (res " << res
                      << ")";
       return MediaResult::INTERNAL_ERROR;
@@ -210,7 +210,7 @@ MediaResult MagentaOutput::Init() {
     res = SyncDriverCall(rb_channel_, req, &resp, rb_vmo_.get_address());
 
     // TODO(johngro): Do a better job of translating errors.
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to get ring buffer VMO (res " << res << ")";
       return MediaResult::INSUFFICIENT_RESOURCES;
     }
@@ -219,7 +219,7 @@ MediaResult MagentaOutput::Init() {
   // Fetch and sanity check the size of the VMO we got back from the ring buffer
   // channel.
   res = rb_vmo_.get_size(&rb_size_);
-  if (res != NO_ERROR) {
+  if (res != MX_OK) {
     FTL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
@@ -244,7 +244,7 @@ MediaResult MagentaOutput::Init() {
   res = mx_vmar_map(mx_vmar_root_self(), 0u, rb_vmo_.get(), 0u, rb_size_,
                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                     reinterpret_cast<uintptr_t*>(&rb_virt_));
-  if (res != NO_ERROR) {
+  if (res != MX_OK) {
     FTL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
@@ -298,7 +298,7 @@ bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     req.hdr.transaction_id = TXID;
 
     mx_status_t res = SyncDriverCall(rb_channel_, req, &resp);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
       // TODO(johngro): Ugh... if we cannot start the ring buffer, return
       // without scheduling a callback.  The StandardOutputBase implementation
       // will interpret this as a fatal error and should shut this output down.
@@ -487,7 +487,7 @@ mx_status_t MagentaOutput::EventReflector::Activate(
   auto ch = ::audio::DispatcherChannelAllocator::New();
 
   if (ch == nullptr)
-    return ERR_NO_MEMORY;
+    return MX_ERR_NO_MEMORY;
 
   // Simply activate the channel and get out.  The dispatcher pool will hold a
   // reference to it while it is active.  There is no (current) reason for us
@@ -508,7 +508,7 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
 
   uint32_t bytes;
   mx_status_t res = channel->Read(&msg, sizeof(msg), &bytes);
-  if (res != NO_ERROR) {
+  if (res != MX_OK) {
     FTL_LOG(ERROR) << "Failed to read message from driver (res " << res << ")";
     return res;
   }
@@ -521,7 +521,7 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
         FTL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_resp)
                        << " Got " << bytes;
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
       }
 
       // TODO(johngro) : If this stream supports plug detection, but requires
@@ -529,7 +529,7 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
 
       const auto& m = msg.pd_resp;
       HandlePlugStateChange(m.flags & AUDIO2_PDNF_PLUGGED, m.plug_state_time);
-      return NO_ERROR;
+      return MX_OK;
     }
 
     case AUDIO2_STREAM_PLUG_DETECT_NOTIFY: {
@@ -537,17 +537,17 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
         FTL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_notify) << " Got "
                        << bytes;
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
       }
 
       const auto& m = msg.pd_notify;
       HandlePlugStateChange(m.flags & AUDIO2_PDNF_PLUGGED, m.plug_state_time);
-      return NO_ERROR;
+      return MX_OK;
     }
 
     default:
       FTL_LOG(ERROR) << "Unexpected message type 0x" << std::hex << msg.hdr.cmd;
-      return ERR_INVALID_ARGS;
+      return MX_ERR_INVALID_ARGS;
   }
 }
 
