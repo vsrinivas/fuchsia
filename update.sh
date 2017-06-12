@@ -68,6 +68,12 @@ function download_qemu() {
   download_host_tarball qemu "qemu/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 }
 
+if [[ "${HOST_PLATFORM}" == "linux64" ]]; then
+  function download_sysroot() {
+    download_host_tarball sysroot "sysroot/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+  }
+fi
+
 function download_gdb() {
   download_host_tarball gdb "gdb/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 }
@@ -83,6 +89,9 @@ function download_all_default() {
   download_go
   download_godepfile
   download_qemu
+  if [[ "${HOST_PLATFORM}" == "linux64" ]]; then
+    download_sysroot
+  fi
   # See IN-29. Need to distinguish bots from humans.
   download_gdb
 }
@@ -127,6 +136,13 @@ case ${i} in
     ;;
   --qemu)
     download_qemu
+    has_arguments="true"
+    shift
+    ;;
+  --sysroot)
+    if [[ "${HOST_PLATFORM}" == "linux64" ]]; then
+      download_sysroot
+    fi
     has_arguments="true"
     shift
     ;;

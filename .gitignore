@@ -24,6 +24,7 @@
 /linux64/qemu
 /linux64/qemu.stamp
 /linux64/rust.stamp
+/linux64/sysroot.stamp
 /linux64/toolchain.stamp
 /mac64/bootserver
 /mac64/bootserver.stamp
@@ -48,5 +49,6 @@
 /mac/toolchain.stamp
 /qemu
 /rust
+/sysroot
 /toolchain
 /win/gn.exe
