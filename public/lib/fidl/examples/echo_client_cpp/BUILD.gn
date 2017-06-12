@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("echo_client") {
-  output_name = "echo_client"
+executable("echo_client_cpp") {
+  output_name = "echo_client_cpp"
 
   sources = [
     "echo_client.cc",

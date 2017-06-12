@@ -4,9 +4,9 @@
 
 group("examples") {
   deps = [
-    "echo_client",
+    "echo_client_cpp",
     "echo_client_go",
-    "echo_server",
+    "echo_server_cpp",
     "echo_server_go",
     "hello_fidl",
     "hello_fidl_dart"
