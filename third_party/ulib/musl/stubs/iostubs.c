@@ -132,6 +132,12 @@ static ssize_t stub_readlinkat(int fd, const char* restrict path, char* restrict
 }
 weak_alias(stub_readlinkat, readlinkat);
 
+static char* stub_realpath(const char* restrict filename, char* restrict resolved) {
+    errno = ENOSYS;
+    return NULL;
+}
+weak_alias(stub_realpath, realpath);
+
 static int stub_mkdir(const char* path, mode_t mode) {
     errno = ENOSYS;
     return -1;

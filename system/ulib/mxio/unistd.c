@@ -205,9 +205,9 @@ static mxio_t* mxio_iodir(const char** path, int dirfd) {
 // Checks that if we increment this index forward, we'll
 // still have enough space for a null terminator within
 // PATH_MAX bytes.
-#define CHECK_CAN_INCREMENT(i)               \
-    if (unlikely((i) + 1 >= PATH_MAX - 1)) { \
-        return ERR_BAD_PATH;                 \
+#define CHECK_CAN_INCREMENT(i)           \
+    if (unlikely((i) + 1 >= PATH_MAX)) { \
+        return ERR_BAD_PATH;             \
     }
 
 // Cleans an input path, transforming it to out, according to the
@@ -1348,6 +1348,54 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
 
 int stat(const char* fn, struct stat* s) {
     return fstatat(AT_FDCWD, fn, s, 0);
+}
+
+char* realpath(const char* restrict filename, char* restrict resolved) {
+    ssize_t r;
+    struct stat st;
+    char tmp[PATH_MAX];
+    size_t outlen;
+    bool is_dir;
+
+    if (!filename) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (filename[0] != '/') {
+        // Convert 'filename' from a relative path to an absolute path.
+        size_t file_len = strlen(filename);
+        mtx_lock(&mxio_cwd_lock);
+        size_t cwd_len = strlen(mxio_cwd_path);
+        if (cwd_len + 1 + file_len >= PATH_MAX) {
+            mtx_unlock(&mxio_cwd_lock);
+            errno = ENAMETOOLONG;
+            return NULL;
+        }
+        char tmp2[PATH_MAX];
+        memcpy(tmp2, mxio_cwd_path, cwd_len);
+        mtx_unlock(&mxio_cwd_lock);
+        tmp2[cwd_len] = '/';
+        strcpy(tmp2 + cwd_len + 1, filename);
+        mx_status_t status = __mxio_cleanpath(tmp2, tmp, &outlen, &is_dir);
+        if (status != NO_ERROR) {
+            errno = EINVAL;
+            return NULL;
+        }
+    } else {
+        // Clean the provided absolute path
+        mx_status_t status = __mxio_cleanpath(filename, tmp, &outlen, &is_dir);
+        if (status != NO_ERROR) {
+            errno = EINVAL;
+            return NULL;
+        }
+
+        r = stat(tmp, &st);
+        if (r < 0) {
+            return NULL;
+        }
+    }
+    return resolved ? strcpy(resolved, tmp) : strdup(tmp);
 }
 
 static int mx_utimens(mxio_t* io, const struct timespec times[2], int flags) {

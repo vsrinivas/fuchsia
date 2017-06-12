@@ -26,6 +26,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-maxfile.c \
     $(LOCAL_DIR)/test-overflow.c \
     $(LOCAL_DIR)/test-persist.cpp \
+    $(LOCAL_DIR)/test-realpath.cpp \
     $(LOCAL_DIR)/test-rw-workers.c \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-random-op.c \
@@ -38,7 +39,7 @@ MODULE_SRCS := \
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
-MODULE_LDFLAGS += --wrap chdir --wrap renameat
+MODULE_LDFLAGS += --wrap chdir --wrap renameat --wrap realpath
 
 MODULE_STATIC_LIBS := \
     system/ulib/mxalloc \

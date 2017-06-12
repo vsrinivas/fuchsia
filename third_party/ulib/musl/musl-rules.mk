@@ -470,7 +470,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/openpty.c \
     $(LOCAL_DIR)/src/misc/ptsname.c \
     $(LOCAL_DIR)/src/misc/pty.c \
-    $(LOCAL_DIR)/src/misc/realpath.c \
     $(LOCAL_DIR)/src/misc/setdomainname.c \
     $(LOCAL_DIR)/src/misc/setpriority.c \
     $(LOCAL_DIR)/src/misc/setrlimit.c \
