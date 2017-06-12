@@ -6,6 +6,7 @@
 
 #include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/app/erase_repository_operation.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -241,6 +242,39 @@ void LedgerRepositoryFactoryImpl::GetRepository(
                      std::move(user_config));
 
   }));
+}
+
+void LedgerRepositoryFactoryImpl::EraseRepository(
+    const fidl::String& repository_path,
+    const fidl::String& server_id,
+    fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+    const EraseRepositoryCallback& callback) {
+  std::string sanitized_path =
+      files::SimplifyPath(std::move(repository_path.get()));
+  auto find_repository = repositories_.find(sanitized_path);
+  if (find_repository != repositories_.end()) {
+    FTL_LOG(WARNING) << "The repository to be erased is running, "
+                     << "shutting it down before erasing.";
+    repositories_.erase(find_repository);
+  }
+
+  auto token_provider_ptr =
+      modular::auth::TokenProviderPtr::Create(std::move(token_provider));
+
+  auto handler = pending_operation_manager_.Manage(EraseRepositoryOperation(
+      environment_->main_runner(), environment_->network_service(),
+      std::move(sanitized_path), server_id.get(),
+      std::move(token_provider_ptr)));
+  handler.first->Start([
+    cleanup = std::move(handler.second), callback = std::move(callback)
+  ](bool succeeded) {
+    cleanup();
+    if (!succeeded) {
+      callback(ledger::Status::INTERNAL_ERROR);
+      return;
+    }
+    callback(ledger::Status::OK);
+  });
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(
