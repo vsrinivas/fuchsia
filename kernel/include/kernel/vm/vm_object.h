@@ -172,6 +172,21 @@ public:
     void RemoveChildLocked(VmObject* r) TA_REQ(lock_);
     uint32_t num_children() const;
 
+    // Calls the provided |func(const VmObject&)| on every VMO in the system,
+    // from oldest to newest. Stops if |func| returns an error, returning the
+    // error value.
+    template <typename T>
+    static status_t ForEach(T func) {
+        AutoLock a(&all_vmos_lock_);
+        for (const auto& iter : all_vmos_) {
+            status_t s = func(iter);
+            if (s != MX_OK) {
+                return s;
+            }
+        }
+        return MX_OK;
+    }
+
 protected:
     // private constructor (use Create())
     explicit VmObject(mxtl::RefPtr<VmObject> parent);
@@ -223,4 +238,19 @@ protected:
     // The user-friendly VMO name. For debug purposes only. That
     // is, there is no mechanism to get access to a VMO via this name.
     mxtl::Name<MX_MAX_NAME_LEN> name_;
+
+private:
+    // Per-node state for the global VMO list.
+    using NodeState = mxtl::DoublyLinkedListNodeState<VmObject*>;
+    NodeState global_list_state_;
+
+    // The global VMO list.
+    struct GlobalListTraits {
+        static NodeState& node_state(VmObject& vmo) {
+            return vmo.global_list_state_;
+        }
+    };
+    using GlobalList = mxtl::DoublyLinkedList<VmObject*, GlobalListTraits>;
+    static Mutex all_vmos_lock_;
+    static GlobalList all_vmos_ TA_GUARDED(all_vmos_lock_);
 };

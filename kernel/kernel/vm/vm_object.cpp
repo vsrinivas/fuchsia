@@ -23,10 +23,19 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
+Mutex VmObject::all_vmos_lock_ = {};
+VmObject::GlobalList VmObject::all_vmos_ = {};
+
 VmObject::VmObject(mxtl::RefPtr<VmObject> parent)
     : lock_(parent ? parent->lock_ref() : local_lock_),
       parent_(mxtl::move(parent)) {
     LTRACEF("%p\n", this);
+
+    // Add ourself to the global VMO list, newer VMOs at the end.
+    {
+        AutoLock a(&all_vmos_lock_);
+        all_vmos_.push_back(this);
+    }
 }
 
 VmObject::~VmObject() {
@@ -50,6 +59,13 @@ VmObject::~VmObject() {
 
     DEBUG_ASSERT(mapping_list_.is_empty());
     DEBUG_ASSERT(children_list_.is_empty());
+
+    // Remove ourself from the global VMO list.
+    {
+        AutoLock a(&all_vmos_lock_);
+        DEBUG_ASSERT(global_list_state_.InContainer() == true);
+        all_vmos_.erase(*this);
+    }
 }
 
 void VmObject::get_name(char *out_name, size_t len) const {
