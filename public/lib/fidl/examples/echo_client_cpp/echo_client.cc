@@ -57,7 +57,7 @@ class EchoClientApp {
 }  // namespace echo
 
 int main(int argc, const char** argv) {
-  std::string server_url = "file:///system/apps/echo_server";
+  std::string server_url = "file:///system/apps/echo_server_cpp";
   if (argc == 2) {
     server_url = argv[1];
   }
