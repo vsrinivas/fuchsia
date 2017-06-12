@@ -22,30 +22,26 @@ static inline constexpr mx_duration_t WLAN_TU(T n) {
     return TimeUnit * n;
 }
 
-#define BIT_FIELD(name, offset, len) \
-    void set_##name(uint32_t val) { this->template set_bits<offset, len>(val); } \
-    uint32_t name() const { return this->template get_bits<offset, len>(); }
-
 // IEEE Std 802.11-2016, 9.2,4,1.1
 class FrameControl : public common::BitField<uint16_t> {
   public:
     constexpr explicit FrameControl(uint16_t fc) : common::BitField<uint16_t>(fc) {}
     constexpr FrameControl() = default;
 
-    BIT_FIELD(protocol_version, 0, 2);
-    BIT_FIELD(type, 2, 2);
-    BIT_FIELD(subtype, 4, 4);
-    BIT_FIELD(to_ds, 8, 1);
-    BIT_FIELD(from_ds, 9, 1);
-    BIT_FIELD(more_frag, 10, 1);
-    BIT_FIELD(retry, 11, 1);
-    BIT_FIELD(pwr_mgmt, 12, 1);
-    BIT_FIELD(more_data, 13, 1);
-    BIT_FIELD(protected_frame, 14, 1);
-    BIT_FIELD(htc_order, 15, 1);
+    WLAN_BIT_FIELD(protocol_version, 0, 2);
+    WLAN_BIT_FIELD(type, 2, 2);
+    WLAN_BIT_FIELD(subtype, 4, 4);
+    WLAN_BIT_FIELD(to_ds, 8, 1);
+    WLAN_BIT_FIELD(from_ds, 9, 1);
+    WLAN_BIT_FIELD(more_frag, 10, 1);
+    WLAN_BIT_FIELD(retry, 11, 1);
+    WLAN_BIT_FIELD(pwr_mgmt, 12, 1);
+    WLAN_BIT_FIELD(more_data, 13, 1);
+    WLAN_BIT_FIELD(protected_frame, 14, 1);
+    WLAN_BIT_FIELD(htc_order, 15, 1);
 
     // For type == Control and subtype == Control Frame Extension
-    BIT_FIELD(cf_extension, 8, 4);
+    WLAN_BIT_FIELD(cf_extension, 8, 4);
 };
 
 // Frame types and subtypes
@@ -102,38 +98,38 @@ enum DataSubtype : uint8_t {
 // IEEE Std 802.11-2016, 9.2.4.4
 class SequenceControl : public common::BitField<uint16_t> {
   public:
-    BIT_FIELD(frag, 0, 4);
-    BIT_FIELD(seq, 4, 12);
+    WLAN_BIT_FIELD(frag, 0, 4);
+    WLAN_BIT_FIELD(seq, 4, 12);
 };
 
 // IEEE Std 802.11-2016, 9.2.4.6
 class HtControl : public common::BitField<uint32_t> {
   public:
-    BIT_FIELD(vht, 0, 1);
+    WLAN_BIT_FIELD(vht, 0, 1);
 
     // Structure of this middle section is defined in 9.2.4.6.2 for HT, and 9.2.4.6.3 for VHT.
     // TODO(tkilbourn): define bitfield structures for each of these variants
-    BIT_FIELD(middle, 1, 29);
-    BIT_FIELD(ac_constraint, 30, 1);
-    BIT_FIELD(rdg_more_ppdu, 31, 1);
+    WLAN_BIT_FIELD(middle, 1, 29);
+    WLAN_BIT_FIELD(ac_constraint, 30, 1);
+    WLAN_BIT_FIELD(rdg_more_ppdu, 31, 1);
 };
 
 // IEEE Std 802.11-2016, 9.4.1.4
 class CapabilityInfo : public common::BitField<uint16_t> {
   public:
-    BIT_FIELD(ess, 0, 1);
-    BIT_FIELD(ibss, 1, 1);
-    BIT_FIELD(cf_pollable, 2, 1);
-    BIT_FIELD(cf_poll_req, 3, 1);
-    BIT_FIELD(privacy, 4, 1);
-    BIT_FIELD(short_preamble, 5, 1);
-    BIT_FIELD(spectrum_mgmt, 8, 1);
-    BIT_FIELD(qos, 9, 1);
-    BIT_FIELD(short_slot_time, 10, 1);
-    BIT_FIELD(apsd, 11, 1);
-    BIT_FIELD(radio_msmt, 12, 1);
-    BIT_FIELD(delayed_block_ack, 14, 1);
-    BIT_FIELD(immediate_block_ack, 15, 1);
+    WLAN_BIT_FIELD(ess, 0, 1);
+    WLAN_BIT_FIELD(ibss, 1, 1);
+    WLAN_BIT_FIELD(cf_pollable, 2, 1);
+    WLAN_BIT_FIELD(cf_poll_req, 3, 1);
+    WLAN_BIT_FIELD(privacy, 4, 1);
+    WLAN_BIT_FIELD(short_preamble, 5, 1);
+    WLAN_BIT_FIELD(spectrum_mgmt, 8, 1);
+    WLAN_BIT_FIELD(qos, 9, 1);
+    WLAN_BIT_FIELD(short_slot_time, 10, 1);
+    WLAN_BIT_FIELD(apsd, 11, 1);
+    WLAN_BIT_FIELD(radio_msmt, 12, 1);
+    WLAN_BIT_FIELD(delayed_block_ack, 14, 1);
+    WLAN_BIT_FIELD(immediate_block_ack, 15, 1);
 };
 
 // IEEE Std 802.11-2016, 9.3.3.2
@@ -184,7 +180,5 @@ struct ProbeResponse {
 
     uint8_t elements[];
 } __PACKED;
-
-#undef BIT_FIELD
 
 }  // namespace wlan

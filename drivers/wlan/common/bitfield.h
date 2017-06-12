@@ -58,5 +58,35 @@ class AddressableBitField : public BitField<ValueType> {
     constexpr AddressableBitField() = default;
 };
 
+namespace internal {
+// Due to the way printf format specifiers work, we don't want to require all bitfield getters and
+// setters to use uint64_t. The following type traits allow selecting the smallest uintN_t type that
+// will hold the length of the bitfield.
+constexpr size_t next_bitsize(size_t n) {
+    return n < 8  ?  8 :
+           n < 16 ? 16 :
+           n < 32 ? 32 : 64;
+}
+
+template <size_t N>
+struct IntegerType;
+
+template<> struct IntegerType<8>  { using type = uint8_t;  };
+template<> struct IntegerType<16> { using type = uint16_t; };
+template<> struct IntegerType<32> { using type = uint32_t; };
+template<> struct IntegerType<64> { using type = uint64_t; };
+
+template <size_t N>
+struct Integer : IntegerType<next_bitsize(N)> {};
+}  // namespace internal
+
+#define WLAN_BIT_FIELD(name, offset, len) \
+    void set_##name(::wlan::common::internal::Integer<len>::type val) { \
+        this->template set_bits<offset, len>(val); \
+    } \
+    ::wlan::common::internal::Integer<len>::type name() const { \
+        return this->template get_bits<offset, len>(); \
+    }
+
 }  // namespace common
 }  // namespace wlan
