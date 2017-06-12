@@ -298,7 +298,7 @@ static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t e
         input_dir_event(event, (char*) msg);
         msg[namelen] = tmp;
         msg += namelen;
-        len -= namelen;
+        len -= (namelen + 2u);
     }
     return NO_ERROR;
 }
