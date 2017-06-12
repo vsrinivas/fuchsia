@@ -261,6 +261,10 @@ mx_status_t Device::SendService(mxtl::unique_ptr<Packet> packet) __TA_NO_THREAD_
 
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing mlme_.
 mx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
+    if (chan.channel_num == active_channel_.channel_num) {
+        return MX_OK;
+    }
+
     mx_status_t status = mlme_.PreChannelChange(chan);
     if (status != MX_OK) {
         return status;
@@ -269,7 +273,7 @@ mx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
     if (status == MX_OK) {
         active_channel_ = chan;
     }
-    mx_status_t post_status = mlme_.PostChannelChange(chan);
+    mx_status_t post_status = mlme_.PostChannelChange(active_channel_);
     if (status != MX_OK) {
         return status;
     }

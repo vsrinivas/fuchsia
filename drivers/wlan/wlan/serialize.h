@@ -6,6 +6,8 @@
 
 #include "interface.h"
 
+#include <apps/wlan/services/wlan_mlme.fidl-common.h>
+
 namespace wlan {
 
 template <typename T>
@@ -25,7 +27,7 @@ mx_status_t DeserializeServiceMsg(const Packet& packet, Method m, ::fidl::Struct
 }
 
 template <typename T>
-mx_status_t SerializeServiceMsg(Packet* packet, Method m, const ::fidl::StructPtr<T>& msg) {
+mx_status_t SerializeServiceMsg(Packet* packet, Method m, const T& msg) {
     size_t buf_len = sizeof(Header) + msg->GetSerializedSize();
     auto header = FromBytes<Header>(packet->mut_data(), buf_len);
     if (header == nullptr) {

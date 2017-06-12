@@ -25,6 +25,8 @@ source_set("mlme") {
     "scanner.cpp",
     "scanner.h",
     "serialize.h",
+    "station.cpp",
+    "station.h",
     "timer.cpp",
     "timer.h",
     "wlan.h",

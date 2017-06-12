@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 
 namespace wlan {
@@ -16,6 +17,10 @@ static inline uint64_t MacToUint64(const uint8_t mac[6]) {
         m |= mac[i];
     }
     return m;
+}
+
+static inline bool MacEquals(const uint8_t lhs[6], const uint8_t rhs[6]) {
+    return !std::memcmp(lhs, rhs, 6);
 }
 
 template <typename T>

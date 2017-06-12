@@ -31,7 +31,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     debugfn();
     resp_ = std::move(resp);
     resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
-    resp_->result_code = ResultCodes::NOT_SUPPORTED;
+    resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
 
     if (IsRunning()) {
         return MX_ERR_UNAVAILABLE;
@@ -52,7 +52,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
     // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
-    resp_->result_code = ResultCodes::SUCCESS;
+    resp_->result_code = ScanResultCodes::SUCCESS;
     req_ = std::move(req);
 
     channel_start_ = timer_->Now();
@@ -81,7 +81,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
 
     resp_ = ScanResponse::New();
     resp_->bss_description_set = fidl::Array<BSSDescriptionPtr>::New(0);
-    resp_->result_code = ResultCodes::NOT_SUPPORTED;
+    resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
 
     if (req->channel_list.size() == 0) {
         return SendScanResponse();
@@ -95,7 +95,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
     // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
-    resp_->result_code = ResultCodes::SUCCESS;
+    resp_->result_code = ScanResultCodes::SUCCESS;
     req_ = std::move(req);
 
     channel_start_ = timer_->Now();
@@ -111,7 +111,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
     status = timer_->StartTimer(timeout);
     if (status != MX_OK) {
         errorf("could not start scan timer: %d\n", status);
-        resp_->result_code = ResultCodes::NOT_SUPPORTED;
+        resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
         SendScanResponse();
         Reset();
         return status;
@@ -377,7 +377,7 @@ mx_status_t Scanner::HandleError(mx_status_t error_code) {
     debugfn();
     resp_ = ScanResponse::New();
     // TODO(tkilbourn): report the error code somehow
-    resp_->result_code = ResultCodes::NOT_SUPPORTED;
+    resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
     return SendScanResponse();
 }
 

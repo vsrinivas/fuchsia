@@ -9,7 +9,9 @@
 #include "logging.h"
 #include "mac_frame.h"
 #include "packet.h"
+#include "scanner.h"
 #include "serialize.h"
+#include "station.h"
 #include "timer.h"
 #include "wlan.h"
 
@@ -35,6 +37,7 @@ enum class ObjectSubtype : uint8_t {
 
 enum class ObjectTarget : uint8_t {
     kScanner = 0,
+    kStation = 1,
 };
 
 // An ObjectId is used as an id in a PortKey. Therefore, only the lower 56 bits may be used.
@@ -57,6 +60,8 @@ Mlme::Mlme(DeviceInterface* device)
   : device_(device) {
     debugfn();
 }
+
+Mlme::~Mlme() {}
 
 mx_status_t Mlme::Init() {
     debugfn();
@@ -146,6 +151,14 @@ mx_status_t Mlme::HandlePortPacket(uint64_t key) {
         case to_enum_type(ObjectTarget::kScanner):
             scanner_->HandleTimeout();
             break;
+        case to_enum_type(ObjectTarget::kStation):
+            MX_DEBUG_ASSERT(sta_ != nullptr);
+            if (id.mac() != MacToUint64(sta_->bssid())) {
+                warnf("timeout for unknown bssid: %" PRIu64 "\n", id.mac());
+                break;
+            }
+            sta_->HandleTimeout();
+            break;
         default:
             warnf("unknown MLME timer target: %u\n", id.target());
             break;
@@ -208,6 +221,28 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         status = scanner_->Start(std::move(req));
         break;
     }
+    case Method::JOIN_request: {
+        JoinRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::JOIN_request, &req);
+        if (status != MX_OK) {
+            errorf("could not deserialize JoinRequest: %d\n", status);
+            break;
+        }
+
+        mxtl::unique_ptr<Timer> timer;
+        ObjectId timer_id;
+        timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+        timer_id.set_target(to_enum_type(ObjectTarget::kStation));
+        timer_id.set_mac(MacToUint64(req->selected_bss->bssid.data()));
+        status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+        if (status != MX_OK) {
+            errorf("could not create station timer: %d\n", status);
+            return status;
+        }
+        sta_.reset(new Station(device_, std::move(timer)));
+        status = sta_->Join(std::move(req));
+        break;
+    }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
         status = MX_ERR_NOT_SUPPORTED;
@@ -221,6 +256,13 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
 
     if (scanner_->IsRunning()) {
         scanner_->HandleBeacon(packet);
+    }
+
+    if (sta_ != nullptr) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (MacEquals(sta_->bssid(), hdr->addr3)) {
+            sta_->HandleBeacon(packet);
+        }
     }
 
     return MX_OK;

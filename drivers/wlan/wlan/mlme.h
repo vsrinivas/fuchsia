@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "scanner.h"
-
+#include <ddk/protocol/wlan.h>
 #include <magenta/types.h>
 #include <mxtl/unique_ptr.h>
 
@@ -13,11 +12,14 @@ namespace wlan {
 
 class DeviceInterface;
 class Packet;
+class Scanner;
+class Station;
 
 // Mlme is the Mac sub-Layer Management Entity for the wlan driver. It is not thread-safe.
 class Mlme {
   public:
     explicit Mlme(DeviceInterface* device);
+    ~Mlme();
 
     mx_status_t Init();
 
@@ -42,6 +44,8 @@ class Mlme {
     DeviceInterface* const device_;
 
     mxtl::unique_ptr<Scanner> scanner_;
+    // TODO(tkilbourn): track other STAs
+    mxtl::unique_ptr<Station> sta_;
 };
 
 }  // namespace wlan
