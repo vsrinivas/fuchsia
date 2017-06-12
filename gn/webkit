@@ -1,6 +1,5 @@
 {
     "imports": [
-        "cairo",
         "curl",
         "libxml2",
         "sqlite",
