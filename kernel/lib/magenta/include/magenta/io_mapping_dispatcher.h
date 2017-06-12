@@ -35,7 +35,6 @@ public:
     const mxtl::RefPtr<VmAspace>& aspace() { return aspace_; }
 
 protected:
-    static constexpr mx_rights_t kDefaultRights = MX_RIGHT_READ;
     IoMappingDispatcher() { }
     void Cleanup();
 

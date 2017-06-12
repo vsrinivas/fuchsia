@@ -5,10 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/hypervisor_dispatcher.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
 #include <mxtl/auto_lock.h>
-
-constexpr mx_rights_t kDefaultHypervisorRights = MX_RIGHT_EXECUTE;
 
 static Mutex mutex;
 mxtl::RefPtr<HypervisorDispatcher> hypervisor TA_GUARDED(mutex);
@@ -34,7 +33,7 @@ mx_status_t HypervisorDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,
             return MX_ERR_NO_MEMORY;
     }
 
-    *rights = kDefaultHypervisorRights;
+    *rights = MX_DEFAULT_HYPERVISOR_RIGHTS;
     *dispatcher = mxtl::RefPtr<Dispatcher>(hypervisor);
     return MX_OK;
 }

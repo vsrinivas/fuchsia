@@ -30,6 +30,7 @@
 #include <magenta/handle_reaper.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
+#include <magenta/rights.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/vm_address_region_dispatcher.h>
@@ -38,11 +39,6 @@
 #include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
-
-static constexpr mx_rights_t kDefaultProcessRights =
-        MX_RIGHT_READ  | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-        MX_RIGHT_ENUMERATE | MX_RIGHT_DESTROY | MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
-
 
 static mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero, and make sure
@@ -79,7 +75,7 @@ mx_status_t ProcessDispatcher::Create(
 
     mxtl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
 
-    *rights = kDefaultProcessRights;
+    *rights = MX_DEFAULT_PROCESS_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(process.release());
 
     // Create a dispatcher for the root VMAR.

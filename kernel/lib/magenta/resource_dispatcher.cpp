@@ -13,6 +13,7 @@
 #include <magenta/handle_owner.h>
 #include <magenta/channel_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
+#include <magenta/rights.h>
 #include <magenta/vm_object_dispatcher.h>
 #include <mxalloc/new.h>
 #include <string.h>
@@ -37,14 +38,6 @@ private:
     friend class ResourceDispatcher;
 };
 
-// WRITE: ability to add child resources to a resource
-// EXECUTE: ability to get_handle() and do_action()
-// ENUMERATE: ability to list children, list records, and get children
-
-constexpr mx_rights_t kDefaultResourceRights =
-    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_DESTROY |
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_ENUMERATE;
-
 mx_status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
                                     mx_rights_t* rights, const char* name, uint16_t subtype) {
     AllocChecker ac;
@@ -52,7 +45,7 @@ mx_status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatc
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = kDefaultResourceRights;
+    *rights = MX_DEFAULT_RESOURCE_RIGHTS;
     *dispatcher = mxtl::AdoptRef<ResourceDispatcher>(disp);
     return MX_OK;
 }

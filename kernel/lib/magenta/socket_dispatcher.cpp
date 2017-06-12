@@ -22,12 +22,10 @@
 
 #include <magenta/handle.h>
 #include <magenta/port_client.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
-
-constexpr mx_rights_t kDefaultSocketRights =
-    MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 constexpr mx_signals_t kValidSignalMask =
     MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_USER_SIGNAL_ALL;
@@ -66,7 +64,7 @@ status_t SocketDispatcher::Create(uint32_t flags,
     if ((status = socket1->Init(socket0)) != MX_OK)
         return status;
 
-    *rights = kDefaultSocketRights;
+    *rights = MX_DEFAULT_SOCKET_RIGHTS;
     *dispatcher0 = mxtl::RefPtr<Dispatcher>(socket0.get());
     *dispatcher1 = mxtl::RefPtr<Dispatcher>(socket1.get());
     return MX_OK;

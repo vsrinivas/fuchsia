@@ -15,6 +15,7 @@
 
 #include <magenta/handle.h>
 #include <magenta/magenta.h>
+#include <magenta/rights.h>
 #include <magenta/state_tracker.h>
 
 #include <sys/types.h>
@@ -179,8 +180,6 @@ bool WaitSetDispatcher::Entry::TriggerLocked() {
 
 // WaitSetDispatcher -------------------------------------------------------------------------------
 
-constexpr mx_rights_t kDefaultWaitSetRights = MX_RIGHT_READ | MX_RIGHT_WRITE;
-
 // static
 status_t WaitSetDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
     AllocChecker ac;
@@ -189,7 +188,7 @@ status_t WaitSetDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_righ
         return MX_ERR_NO_MEMORY;
 
     *dispatcher = mxtl::AdoptRef(d);
-    *rights = kDefaultWaitSetRights;
+    *rights = MX_DEFAULT_WAIT_SET_RIGHTS;
     return MX_OK;
 }
 

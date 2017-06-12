@@ -8,11 +8,9 @@
 
 #include <err.h>
 
+#include <magenta/rights.h>
 #include <magenta/state_tracker.h>
 #include <mxalloc/new.h>
-
-constexpr mx_rights_t kDefaultEventRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
@@ -23,7 +21,7 @@ status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dis
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = kDefaultEventRights;
+    *rights = MX_DEFAULT_EVENT_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }

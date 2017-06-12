@@ -5,14 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/log_dispatcher.h>
+#include <magenta/rights.h>
 #include <magenta/syscalls/log.h>
 
 #include <err.h>
 
 #include <mxalloc/new.h>
-
-constexpr mx_rights_t kDefaultEventRights =
-    MX_RIGHT_TRANSFER | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE;
 
 status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights) {
@@ -24,7 +22,7 @@ status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatc
         dlog_reader_init(&disp->reader_, &LogDispatcher::Notify, disp);
     }
 
-    *rights = kDefaultEventRights;
+    *rights = MX_DEFAULT_LOG_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }

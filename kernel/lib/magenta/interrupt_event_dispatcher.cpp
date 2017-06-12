@@ -7,12 +7,10 @@
 #include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
 #include <magenta/interrupt_event_dispatcher.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
 
 #include <err.h>
-
-constexpr mx_rights_t kDefaultInterruptRights =
-    MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // Static storage
 Mutex InterruptEventDispatcher::vectors_lock_;
@@ -55,7 +53,7 @@ status_t InterruptEventDispatcher::Create(uint32_t vector,
     unmask_interrupt(vector);
 
     // Transfer control of the new dispatcher to the creator and we are done.
-    *rights     = kDefaultInterruptRights;
+    *rights     = MX_DEFAULT_INTERRUPT_RIGHTS;
     *dispatcher = mxtl::move(disp_ref);
 
     return MX_OK;

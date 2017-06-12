@@ -8,9 +8,8 @@
 
 #include <kernel/vm/vm_object_physical.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
-
-constexpr mx_rights_t IoMappingDispatcher::kDefaultRights;
 
 status_t IoMappingDispatcher::Create(const char* dbg_name,
                                      paddr_t paddr, size_t size,
@@ -31,7 +30,7 @@ status_t IoMappingDispatcher::Create(const char* dbg_name,
         delete disp;
     } else {
         *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-        *out_rights     = kDefaultRights;
+        *out_rights     = MX_DEFAULT_IO_MAPPING_RIGHTS;
     }
 
     return status;

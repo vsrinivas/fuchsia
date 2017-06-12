@@ -12,15 +12,13 @@
 #include <pow2.h>
 
 #include <magenta/compiler.h>
+#include <magenta/rights.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/port.h>
 
 #include <mxalloc/new.h>
 
 #include <kernel/auto_lock.h>
-
-constexpr mx_rights_t kDefaultIOPortRightsV2 =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 PortPacket::PortPacket() : packet{}, observer(nullptr) {
     // Note that packet is initialized to zeros.
@@ -105,7 +103,7 @@ mx_status_t PortDispatcherV2::Create(uint32_t options,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = kDefaultIOPortRightsV2;
+    *rights = MX_DEFAULT_IO_PORT_V2_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }

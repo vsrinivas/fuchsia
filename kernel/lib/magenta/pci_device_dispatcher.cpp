@@ -11,15 +11,13 @@
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/rights.h>
 
 #include <mxalloc/new.h>
 
 #include <assert.h>
 #include <err.h>
 #include <trace.h>
-
-constexpr mx_rights_t kDefaultPciDeviceRights =
-    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
 
 status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                      mx_pcie_device_info_t*    out_info,
@@ -39,7 +37,7 @@ status_t PciDeviceDispatcher::Create(uint32_t                  index,
         return MX_ERR_NO_MEMORY;
 
     *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    *out_rights     = kDefaultPciDeviceRights;
+    *out_rights     = MX_DEFAULT_PCI_DEVICE_RIGHTS;
     return MX_OK;
 }
 

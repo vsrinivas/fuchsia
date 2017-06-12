@@ -8,9 +8,8 @@
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/guest_dispatcher.h>
 #include <magenta/hypervisor_dispatcher.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
-
-constexpr mx_rights_t kDefaultGuestRights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
 
 // static
 mx_status_t GuestDispatcher::Create(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
@@ -28,7 +27,7 @@ mx_status_t GuestDispatcher::Create(mxtl::RefPtr<HypervisorDispatcher> hyperviso
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = kDefaultGuestRights;
+    *rights = MX_DEFAULT_GUEST_RIGHTS;
     *dispatcher = mxtl::RefPtr<Dispatcher>(guest.get());
     return MX_OK;
 }

@@ -10,6 +10,8 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 
+#include <magenta/rights.h>
+
 #include <mxalloc/new.h>
 
 #include <assert.h>
@@ -84,15 +86,12 @@ status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mm
 
 } // namespace
 
-constexpr mx_rights_t kDefaultVmarRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
-
 status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
 
     // The initial rights should match the VMAR's creation permissions
-    mx_rights_t vmar_rights = kDefaultVmarRights;
+    mx_rights_t vmar_rights = MX_DEFAULT_VMAR_RIGHTS;
     uint32_t vmar_flags = vmar->flags();
     if (vmar_flags & VMAR_FLAG_CAN_MAP_READ) {
         vmar_rights |= MX_RIGHT_READ;

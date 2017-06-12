@@ -11,16 +11,12 @@
 #include <kernel/auto_lock.h>
 
 #include <magenta/process_dispatcher.h>
+#include <magenta/rights.h>
 #include <magenta/syscalls/policy.h>
 #include <mxalloc/new.h>
 
 // The starting max_height value of the root job.
 static const uint32_t kRootJobMaxHeight = 32;
-
-constexpr mx_rights_t kDefaultJobRights =
-    MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE |
-    MX_RIGHT_ENUMERATE | MX_RIGHT_DESTROY | MX_RIGHT_GET_PROPERTY |
-    MX_RIGHT_SET_PROPERTY | MX_RIGHT_SET_POLICY | MX_RIGHT_GET_POLICY;
 
 mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     AllocChecker ac;
@@ -47,7 +43,7 @@ status_t JobDispatcher::Create(uint32_t flags,
         return MX_ERR_BAD_STATE;
     }
 
-    *rights = kDefaultJobRights;
+    *rights = MX_DEFAULT_JOB_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(job);
     return MX_OK;
 }

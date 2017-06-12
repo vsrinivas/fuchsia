@@ -10,11 +10,8 @@
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/handle.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
-
-
-constexpr mx_rights_t kDefaultFifoRights =
-    MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // static
 status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t options,
@@ -44,7 +41,7 @@ status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t opti
     if ((status = fifo1->Init(fifo0)) != MX_OK)
         return status;
 
-    *rights = kDefaultFifoRights;
+    *rights = MX_DEFAULT_FIFO_RIGHTS;
     *dispatcher0 = mxtl::RefPtr<Dispatcher>(fifo0.get());
     *dispatcher1 = mxtl::RefPtr<Dispatcher>(fifo1.get());
     return MX_OK;

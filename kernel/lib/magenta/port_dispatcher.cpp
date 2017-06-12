@@ -17,14 +17,12 @@
 #include <platform.h>
 
 #include <magenta/excp_port.h>
+#include <magenta/rights.h>
 #include <magenta/state_tracker.h>
 #include <magenta/user_copy.h>
 
 #include <mxalloc/new.h>
 #include <mxcpp/new.h>
-
-constexpr mx_rights_t kDefaultIOPortRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 IOP_Packet* IOP_Packet::Alloc(size_t size) {
     AllocChecker ac;
@@ -85,7 +83,7 @@ mx_status_t PortDispatcher::Create(uint32_t options,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = kDefaultIOPortRights;
+    *rights = MX_DEFAULT_IO_PORT_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }

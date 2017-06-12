@@ -9,6 +9,8 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 
+#include <magenta/rights.h>
+
 #include <mxalloc/new.h>
 
 #include <assert.h>
@@ -17,16 +19,6 @@
 #include <trace.h>
 
 #define LOCAL_TRACE 0
-
-constexpr mx_rights_t kDefaultVmoRights =
-    MX_RIGHT_DUPLICATE |
-    MX_RIGHT_TRANSFER |
-    MX_RIGHT_READ |
-    MX_RIGHT_WRITE |
-    MX_RIGHT_EXECUTE |
-    MX_RIGHT_MAP |
-    MX_RIGHT_GET_PROPERTY |
-    MX_RIGHT_SET_PROPERTY;
 
 status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
@@ -37,7 +29,7 @@ status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
         return MX_ERR_NO_MEMORY;
 
     disp->vmo()->set_user_id(disp->get_koid());
-    *rights = kDefaultVmoRights;
+    *rights = MX_DEFAULT_VMO_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }

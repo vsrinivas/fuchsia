@@ -14,12 +14,10 @@
 #include <kernel/thread.h>
 
 #include <magenta/compiler.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
 
 #include <safeint/safe_math.h>
-
-constexpr mx_rights_t kDefaultTimersRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 constexpr mx_duration_t kMinTimerPeriod = MX_TIMER_MIN_PERIOD;
 constexpr mx_time_t     kMinTimerDeadline = MX_TIMER_MIN_DEADLINE;
@@ -44,7 +42,7 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = kDefaultTimersRights;
+    *rights = MX_DEFAULT_TIMERS_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }

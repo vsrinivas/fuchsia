@@ -9,11 +9,8 @@
 #include <kernel/auto_lock.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
+#include <magenta/rights.h>
 #include <mxalloc/new.h>
-
-constexpr mx_rights_t kDefaultPciInterruptRights = MX_RIGHT_READ |
-                                                   MX_RIGHT_WRITE |
-                                                   MX_RIGHT_TRANSFER;
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
@@ -78,7 +75,7 @@ status_t PciInterruptDispatcher::Create(
         device->UnmaskIrq(irq_id);
     }
     *out_interrupt = mxtl::move(dispatcher);
-    *out_rights    = kDefaultPciInterruptRights;
+    *out_rights    = MX_DEFAULT_PCI_INTERRUPT_RIGHTS;
     return MX_OK;
 }
 

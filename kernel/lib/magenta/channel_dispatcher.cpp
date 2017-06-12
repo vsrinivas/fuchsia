@@ -19,14 +19,13 @@
 #include <magenta/message_packet.h>
 #include <magenta/port_client.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/rights.h>
 #include <magenta/user_thread.h>
 
 #include <mxalloc/new.h>
 #include <mxtl/type_support.h>
 
 #define LOCAL_TRACE 0
-
-constexpr mx_rights_t kDefaultChannelRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
 // static
 status_t ChannelDispatcher::Create(uint32_t flags,
@@ -45,7 +44,7 @@ status_t ChannelDispatcher::Create(uint32_t flags,
     ch0->Init(ch1);
     ch1->Init(ch0);
 
-    *rights = kDefaultChannelRights;
+    *rights = MX_DEFAULT_CHANNEL_RIGHTS;
     *dispatcher0 = mxtl::move(ch0);
     *dispatcher1 = mxtl::move(ch1);
     return MX_OK;
