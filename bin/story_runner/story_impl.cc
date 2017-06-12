@@ -210,8 +210,6 @@ class StoryImpl::StartCall : Operation<> {
 
     story_impl_->StartStoryShell(std::move(request_));
 
-    // Start the root module and then show it in the story shell.
-    //
     // Start *all* the root modules, not just the first one, with their
     // respective links.
     story_impl_->story_storage_impl_->ReadAllModuleData(
@@ -222,13 +220,13 @@ class StoryImpl::StartCall : Operation<> {
                          0)
                   << "root module should not be started with a module-owned "
                      "link";
-              // TODO(vardhan): We should be able to supply a module_path for
-              // the link, not just the name, so we can start a module on any
-              // link in the story. The story crafting API in StoryController
-              // would use this.
+
+              auto parent_path = module_data->module_path.Clone();
+              parent_path.resize(parent_path.size() - 1);
               story_impl_->StartModuleInShell(
-                  fidl::Array<fidl::String>::New(0),
-                  module_data->module_path[0], module_data->url,
+                  std::move(parent_path),
+                  module_data->module_path[module_data->module_path.size() - 1],
+                  module_data->url,
                   module_data->default_link_path->link_name, nullptr, nullptr,
                   nullptr, nullptr);
             }
