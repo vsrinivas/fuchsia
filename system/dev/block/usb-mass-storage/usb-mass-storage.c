@@ -69,8 +69,11 @@ static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint
 
     // copy command_len bytes from the command passed in into the command_len
     memcpy(cbw->CBWCB, command, command_len);
-    txn->cookie = NULL;
+
+    completion_t completion = COMPLETION_INIT;
+    txn->cookie = &completion;
     ums_queue_request(ums, txn);
+    completion_wait(&completion, MX_TIME_INFINITE);
 }
 
 static mx_status_t ums_read_csw(ums_t* ums, uint32_t* out_residue) {
