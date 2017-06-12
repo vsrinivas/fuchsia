@@ -11,6 +11,7 @@
 namespace wlan {
 
 class DeviceInterface;
+struct MgmtFrameHeader;
 class Packet;
 class Scanner;
 class Station;
@@ -26,9 +27,11 @@ class Mlme {
     mx_status_t HandlePacket(const Packet* packet);
     mx_status_t HandlePortPacket(uint64_t key);
 
-    // Called before and after a channel change happens
+    // Called before a channel change happens.
     mx_status_t PreChannelChange(wlan_channel_t chan);
-    mx_status_t PostChannelChange(wlan_channel_t chan);
+    // Called after a channel change is complete. The DeviceState channel will reflect the channel,
+    // whether it changed or not.
+    mx_status_t PostChannelChange();
 
   private:
     // MAC frame handlers
@@ -40,6 +43,7 @@ class Mlme {
     // Management frame handlers
     mx_status_t HandleBeacon(const Packet* packet);
     mx_status_t HandleProbeResponse(const Packet* packet);
+    mx_status_t HandleAuthentication(const Packet* packet);
 
     DeviceInterface* const device_;
 

@@ -10,19 +10,6 @@
 
 namespace wlan {
 
-static inline uint64_t MacToUint64(const uint8_t mac[6]) {
-    uint64_t m = mac[0];
-    for (int i = 1; i < 6; i++) {
-        m <<= 8;
-        m |= mac[i];
-    }
-    return m;
-}
-
-static inline bool MacEquals(const uint8_t lhs[6], const uint8_t rhs[6]) {
-    return !std::memcmp(lhs, rhs, 6);
-}
-
 template <typename T>
 T* FromBytes(uint8_t* buf, size_t len) {
     if (len < sizeof(T)) return nullptr;

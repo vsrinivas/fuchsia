@@ -31,6 +31,7 @@ Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
     wlanmac_proxy_(wlanmac_proto),
     mlme_(this) {
     debugfn();
+    state_ = mxtl::AdoptRef(new DeviceState);
 }
 
 Device::~Device() {
@@ -61,6 +62,7 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         errorf("could not query wlanmac device: %d\n", status);
         return status;
     }
+    state_->set_address(DeviceAddress(ethmac_info_.mac));
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
@@ -261,7 +263,8 @@ mx_status_t Device::SendService(mxtl::unique_ptr<Packet> packet) __TA_NO_THREAD_
 
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing mlme_.
 mx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    if (chan.channel_num == active_channel_.channel_num) {
+    debugf("%s chan=%u\n", __PRETTY_FUNCTION__, chan.channel_num);
+    if (chan.channel_num == state_->channel().channel_num) {
         return MX_OK;
     }
 
@@ -271,21 +274,17 @@ mx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
     }
     status = wlanmac_proxy_.SetChannel(0u, &chan);
     if (status == MX_OK) {
-        active_channel_ = chan;
+        state_->set_channel(chan);
     }
-    mx_status_t post_status = mlme_.PostChannelChange(active_channel_);
+    mx_status_t post_status = mlme_.PostChannelChange();
     if (status != MX_OK) {
         return status;
     }
     return post_status;
 }
 
-mx_status_t Device::GetCurrentChannel(wlan_channel_t* chan) {
-    if (chan == nullptr) {
-        return MX_ERR_INVALID_ARGS;
-    }
-    *chan = active_channel_;
-    return MX_OK;
+mxtl::RefPtr<DeviceState> Device::GetState() {
+    return state_;
 }
 
 void Device::MainLoop() {

@@ -164,7 +164,7 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
             bcn->timestamp, bcn->beacon_interval, bcn->cap.val());
 
     BSSDescription* bss;
-    uint64_t sender = MacToUint64(hdr->addr2);
+    uint64_t sender = DeviceAddress(hdr->addr2).to_u64();
     auto entry = bss_descriptors_.find(sender);
     if (entry == bss_descriptors_.end()) {
         auto bssptr = BSSDescription::New();
@@ -210,13 +210,13 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
         if (hdr == nullptr) break;
 
         switch (hdr->id) {
-        case ElementId::kSsid: {
+        case element_id::kSsid: {
             auto ssid = reader.read<SsidElement>();
             debugf("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
             bss->ssid = fidl::String(ssid->ssid, ssid->hdr.len);
             break;
         }
-        case ElementId::kSuppRates: {
+        case element_id::kSuppRates: {
             auto supprates = reader.read<SupportedRatesElement>();
             if (supprates == nullptr) goto done_iter;
             char buf[256];
@@ -229,13 +229,13 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
             debugf("supported rates:%s\n", buf);
             break;
         }
-        case ElementId::kDsssParamSet: {
+        case element_id::kDsssParamSet: {
             auto dsss_params = reader.read<DsssParamSetElement>();
             if (dsss_params == nullptr) goto done_iter;
             debugf("current channel: %u\n", dsss_params->current_chan);
             break;
         }
-        case ElementId::kCountry: {
+        case element_id::kCountry: {
             auto country = reader.read<CountryElement>();
             if (country == nullptr) goto done_iter;
             debugf("country: %.*s\n", 3, country->country);
@@ -270,12 +270,12 @@ mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
         if (hdr == nullptr) break;
 
         switch (hdr->id) {
-        case ElementId::kSsid: {
+        case element_id::kSsid: {
             auto ssid = reader.read<SsidElement>();
             debugf("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
             break;
         }
-        case ElementId::kSuppRates: {
+        case element_id::kSuppRates: {
             auto supprates = reader.read<SupportedRatesElement>();
             if (supprates == nullptr) goto done_iter;
             char buf[256];
@@ -286,13 +286,13 @@ mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
             debugf("supported rates:%s\n", buf);
             break;
         }
-        case ElementId::kDsssParamSet: {
+        case element_id::kDsssParamSet: {
             auto dsss_params = reader.read<DsssParamSetElement>();
             if (dsss_params == nullptr) goto done_iter;
             debugf("current channel: %u\n", dsss_params->current_chan);
             break;
         }
-        case ElementId::kCountry: {
+        case element_id::kCountry: {
             auto country = reader.read<CountryElement>();
             if (country == nullptr) goto done_iter;
             debugf("country: %.*s\n", 3, country->country);

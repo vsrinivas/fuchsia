@@ -22,7 +22,7 @@ static inline constexpr mx_duration_t WLAN_TU(T n) {
     return TimeUnit * n;
 }
 
-// IEEE Std 802.11-2016, 9.2,4,1.1
+// IEEE Std 802.11-2016, 9.2.4.1.1
 class FrameControl : public common::BitField<uint16_t> {
   public:
     constexpr explicit FrameControl(uint16_t fc) : common::BitField<uint16_t>(fc) {}
@@ -102,6 +102,8 @@ class SequenceControl : public common::BitField<uint16_t> {
     WLAN_BIT_FIELD(seq, 4, 12);
 };
 
+constexpr uint16_t kMaxSequenceNumber = (1 << 12) - 1;
+
 // IEEE Std 802.11-2016, 9.2.4.6
 class HtControl : public common::BitField<uint32_t> {
   public:
@@ -131,6 +133,117 @@ class CapabilityInfo : public common::BitField<uint16_t> {
     WLAN_BIT_FIELD(delayed_block_ack, 14, 1);
     WLAN_BIT_FIELD(immediate_block_ack, 15, 1);
 };
+
+// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
+namespace status_code {
+enum StatusCode : uint16_t {
+    kSuccess = 0,
+    kRefused = 1,
+    kRefusedReasonUnspecified = 1,
+    kTdlsRejectedAlternativeProvided = 2,
+    kTdlsRejected = 3,
+    // 4 Reserved
+    kSecurityDisabled = 5,
+    kUnacceptableLifetime = 6,
+    kNotInSameBss = 7,
+    // 8-9 Reserved
+    kRefusedCapabilitiesMismatch = 10,
+    kDeniedNoAssociationExists = 11,
+    kDeniedOtherReason = 12,
+    kUnsupportedAuthAlgorithm = 13,
+    kTransactionSequenceError = 14,
+    kChallengeFailure = 15,
+    kRejectedSequenceTimeout = 16,
+    kDeniedNoMoreStas = 17,
+    kRefusedBasicRatesMismatch = 18,
+    kDeniedNoShortPreambleSupport = 19,
+    // 20-21 Reserved
+    kRejectedSpectrumManagementRequired = 22,
+    kRejectedBadPowerCapability = 23,
+    kRejectedBadSupportedChannels = 24,
+    kDeniedNoShortSlotTimeSupport = 25,
+    // 26 Reserved
+    kDeniedNoHtSupport = 27,
+    kR0khUnreachable = 28,
+    kDeniedPcoTimeNotSupported = 29,
+    kRefusedTemporarily = 30,
+    kRobustManagementPolicyViolation = 31,
+    kUnspecifiedQosFailure = 32,
+    kDeniedInsufficientBandwidth = 33,
+    kDeniedPoorChannelConditions = 34,
+    kDeniedQosNotSupported = 35,
+    // 36 Reserved
+    kRequestDeclined = 37,
+    kInvalidParameters = 38,
+    kRejectedWithSuggestedChanges = 39,
+    kStatusInvalidElement = 40,
+    kStatusInvalidGroupCipher = 41,
+    kStatusInvalidPairwiseCipher = 42,
+    kStatusInvalidAkmp = 43,
+    kUnsupportedRsneVersion = 44,
+    kInvalidRsneCapabilities = 45,
+    kStatusCipherOutOfPolicy = 46,
+    kRejectedForDelayPeriod = 47,
+    kDlsNotAllowed = 48,
+    kNotPresent = 49,
+    kNotQosSta = 50,
+    kDeniedListenIntervalTooLarge = 51,
+    kStatusInvalidFtActionFrameCount = 52,
+    kStatusInvalidPmkid = 53,
+    kStatusInvalidMde = 54,
+    kStatusInvalidFte = 55,
+    kRequestedTclasNotSupported_56 = 56,  // see kRequestedTclasNotSupported_80 below
+    kInsufficientTclasProcessingResources = 57,
+    kTryAnotherBss = 58,
+    kGasAdvertisementProtocolNotSupported = 59,
+    kNoOutstandingGasRequest = 60,
+    kGasResponseNotReceivedFromServer = 61,
+    kGasQueryTimeout = 62,
+    kGasQueryResponseTooLarge = 63,
+    kRejectedHomeWithSuggestedChanges = 64,
+    kServerUnreachable = 65,
+    // 66 Reserved
+    kRejectedForSspPermissions = 67,
+    kRefusedUnauthenticatedAccessNotSupported = 68,
+    // 69-71 Reserved
+    kInvalidRsne = 72,
+    kUApsdCoexistanceNotSupported = 73,
+    kUApsdCoexModeNotSupported = 74,
+    kBadIntervalWithUApsdCoex = 75,
+    kAntiCloggingTokenRequired = 76,
+    kUnsupportedFiniteCyclicGroup = 77,
+    kCannotFindAlternativeTbtt = 78,
+    kTransmissionFailure = 79,
+    kRequestedTclasNotSupported_80 = 80,  // see kRequestedTclasNotSupported_56 above
+    kTclasResourcesExhausted = 81,
+    kRejectedWithSuggestedBssTransition = 82,
+    kRejectWithSchedule = 83,
+    kRejectNoWakeupSpecified = 84,
+    kSuccessPowerSaveMode = 85,
+    kPendingAdmittingFstSession = 86,
+    kPerformingFstNow = 87,
+    kPendingGapInBaWindow = 88,
+    kRejectUPidSetting = 89,
+    // 90-91 Reserved
+    kRefusedExternalReason = 92,
+    kRefusedApOutOfMemory = 93,
+    kRejectedEmergencyServicesNotSupported = 94,
+    kQueryResponseOutstanding = 95,
+    kRejectDseBand = 96,
+    kTclasProcessingTerminated = 97,
+    kTsScheduleConflict = 98,
+    kDeniedWithSuggestedBandAndChannel = 99,
+    kMccaopReservationConflict = 100,
+    kMafLimitExceeded = 101,
+    kMccaTrackLimitExceeded = 102,
+    kDeniedDueToSpectrumManagement = 103,
+    kDeniedVhtNotSupported = 104,
+    kEnablementDenied = 105,
+    kRestrictionFromAuthorizedGdb = 106,
+    kAuthorizationDeenabled = 107,
+    // 108-65535 Reserved
+};
+}  // namespace status_code
 
 // IEEE Std 802.11-2016, 9.3.3.2
 struct MgmtFrameHeader {
@@ -177,6 +290,28 @@ struct ProbeResponse {
     uint16_t beacon_interval;
     // 9.4.1.4
     CapabilityInfo cap;
+
+    uint8_t elements[];
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.1.1
+enum AuthAlgorithm : uint16_t {
+    kOpenSystem = 0,
+    kSharedKey = 1,
+    kFastBssTransition = 2,
+    kSae = 3,
+    // 4-65534 Reserved
+    kVendorSpecific = 65535,
+};
+
+// IEEE Std 802.11-2016, 9.3.3.12
+struct Authentication {
+    // 9.4.1.1
+    uint16_t auth_algorithm_number;
+    // 9.4.1.2
+    uint16_t auth_txn_seq_number;
+    // 9.4.1.9
+    uint16_t status_code;
 
     uint8_t elements[];
 } __PACKED;

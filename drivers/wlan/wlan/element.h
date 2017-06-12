@@ -93,6 +93,7 @@ class ElementWriter {
 };
 
 // IEEE Std 802.11-2016, 9.4.2.1 Table 9-77
+namespace element_id {
 enum ElementId : uint8_t {
     kSsid = 0,
     kSuppRates = 1,
@@ -283,6 +284,7 @@ enum ElementId : uint8_t {
     // 222-254 Reserved
     kElementWithExtension = 255,
 };
+}  // namespace element_id
 
 enum ElementIdExtension : uint8_t {
     // 0-8 Reserved
@@ -294,7 +296,7 @@ enum ElementIdExtension : uint8_t {
     // 15-255 Reserved
 };
 
-struct SsidElement : public Element<SsidElement, kSsid> {
+struct SsidElement : public Element<SsidElement, element_id::kSsid> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* ssid);
     static const size_t kMaxLen = 32;
 
@@ -302,7 +304,7 @@ struct SsidElement : public Element<SsidElement, kSsid> {
     char ssid[];
 } __PACKED;
 
-struct SupportedRatesElement : public Element<SupportedRatesElement, kSuppRates> {
+struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual,
                        const std::vector<uint8_t>& rates);
     static const size_t kMaxLen = 8;
@@ -311,14 +313,14 @@ struct SupportedRatesElement : public Element<SupportedRatesElement, kSuppRates>
     uint8_t rates[];
 } __PACKED;
 
-struct DsssParamSetElement : public Element<DsssParamSetElement, kDsssParamSet> {
+struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDsssParamSet> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t chan);
 
     ElementHeader hdr;
     uint8_t current_chan;
 } __PACKED;
 
-struct CfParamSetElement : public Element<CfParamSetElement, kCfParamSet> {
+struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count,
                                           uint8_t period, uint16_t max_duration,
                                           uint16_t dur_remaining);
@@ -330,7 +332,7 @@ struct CfParamSetElement : public Element<CfParamSetElement, kCfParamSet> {
     uint16_t dur_remaining;
 } __PACKED;
 
-struct CountryElement : public Element<CountryElement, kCountry> {
+struct CountryElement : public Element<CountryElement, element_id::kCountry> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* country);
 
     ElementHeader hdr;

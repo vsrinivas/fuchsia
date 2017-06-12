@@ -12,6 +12,7 @@ config("wlan_config") {
 source_set("mlme") {
   sources = [
     "clock.h",
+    "device_interface.cpp",
     "device_interface.h",
     "element.cpp",
     "element.h",

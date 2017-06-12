@@ -10,26 +10,26 @@ namespace wlan {
 
 namespace {
 // IEEE Std 802.11-2016, 9.3.3.10
-ElementId kValidProbeRequestIds[] = {
-    kSsid,
-    kSuppRates,
-    kRequest,
-    kExtSuppRates,
-    kDsssParamSet,
-    kSuppOperatingClasses,
-    kHtCapabilities,
-    k2040BssCoex,
-    kExtCapabilities,
-    kSsidList,
-    kChannelUsage,
-    kInternetworking,
-    kMeshId,
-    kMultiband,
-    kDmgCapabilities,
-    kMultipleMacSublayers,
-    kVhtCapabilities,
-    kElementWithExtension,
-    kVendorSpecific,
+element_id::ElementId kValidProbeRequestIds[] = {
+    element_id::kSsid,
+    element_id::kSuppRates,
+    element_id::kRequest,
+    element_id::kExtSuppRates,
+    element_id::kDsssParamSet,
+    element_id::kSuppOperatingClasses,
+    element_id::kHtCapabilities,
+    element_id::k2040BssCoex,
+    element_id::kExtCapabilities,
+    element_id::kSsidList,
+    element_id::kChannelUsage,
+    element_id::kInternetworking,
+    element_id::kMeshId,
+    element_id::kMultiband,
+    element_id::kDmgCapabilities,
+    element_id::kMultipleMacSublayers,
+    element_id::kVhtCapabilities,
+    element_id::kElementWithExtension,
+    element_id::kVendorSpecific,
 };
 }  // namespace
 

@@ -105,6 +105,11 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
     }
 
     template <typename T>
+    T* mut_field(size_t offset) const {
+        return FromBytes<T>(buffer_->data() + offset, len_ - offset);
+    }
+
+    template <typename T>
     bool has_ctrl_data() const {
         return ctrl_len_ == sizeof(T);
     }

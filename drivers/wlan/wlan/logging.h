@@ -12,6 +12,7 @@ constexpr int kLogError = 0;
 constexpr int kLogWarning = 1;
 constexpr int kLogInfo = 2;
 constexpr int kLogDebug = 3;
+constexpr int kLogVerbose = 4;
 
 // Set this to tune log output
 constexpr int kLogLevel = kLogInfo;
@@ -26,5 +27,6 @@ constexpr int kLogLevel = kLogInfo;
 #define warnf(args...) wlogf(kLogWarning, "[W] ", args)
 #define infof(args...) wlogf(kLogInfo, "[I] ", args)
 #define debugf(args...) wlogf(kLogDebug, "[D] ", args)
+#define verbosef(args...) wlogf(kLogVerbose, "[V] ", args)
 #define debugfn() debugf("%s\n", __PRETTY_FUNCTION__)
 }  // namespace wlan

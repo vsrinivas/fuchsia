@@ -65,6 +65,7 @@ Mlme::~Mlme() {}
 
 mx_status_t Mlme::Init() {
     debugfn();
+
     mxtl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
@@ -101,7 +102,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
             packet->peer() == Packet::Peer::kEthernet ? "Ethernet" :
             packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
-    if (kLogLevel >= kLogDebug) {
+    if (kLogLevel >= kLogVerbose) {
         DumpPacket(*packet);
     }
 
@@ -153,7 +154,7 @@ mx_status_t Mlme::HandlePortPacket(uint64_t key) {
             break;
         case to_enum_type(ObjectTarget::kStation):
             MX_DEBUG_ASSERT(sta_ != nullptr);
-            if (id.mac() != MacToUint64(sta_->bssid())) {
+            if (id.mac() != sta_->bssid()->to_u64()) {
                 warnf("timeout for unknown bssid: %" PRIu64 "\n", id.mac());
                 break;
             }
@@ -195,6 +196,8 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
         return HandleBeacon(packet);
     case ManagementSubtype::kProbeResponse:
         return HandleProbeResponse(packet);
+    case ManagementSubtype::kAuthentication:
+        return HandleAuthentication(packet);
     default:
         break;
     }
@@ -233,7 +236,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         ObjectId timer_id;
         timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
         timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-        timer_id.set_mac(MacToUint64(req->selected_bss->bssid.data()));
+        timer_id.set_mac(DeviceAddress(req->selected_bss->bssid.data()).to_u64());
         status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
         if (status != MX_OK) {
             errorf("could not create station timer: %d\n", status);
@@ -241,6 +244,17 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         }
         sta_.reset(new Station(device_, std::move(timer)));
         status = sta_->Join(std::move(req));
+        break;
+    }
+    case Method::AUTHENTICATE_request: {
+        AuthenticateRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::AUTHENTICATE_request, &req);
+        if (status != MX_OK) {
+            errorf("could not deserialize AuthenticateRequest: %d\n", status);
+            break;
+        }
+
+        status = sta_->Authenticate(std::move(req));
         break;
     }
     default:
@@ -258,9 +272,9 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
         scanner_->HandleBeacon(packet);
     }
 
-    if (sta_ != nullptr) {
+    if (sta_ != nullptr && sta_->bssid() != nullptr) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
-        if (MacEquals(sta_->bssid(), hdr->addr3)) {
+        if (*sta_->bssid() == hdr->addr3) {
             sta_->HandleBeacon(packet);
         }
     }
@@ -278,12 +292,23 @@ mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     return MX_OK;
 }
 
+mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
+    debugfn();
+
+    auto hdr = packet->field<MgmtFrameHeader>(0);
+    if (sta_ != nullptr && sta_->bssid() != nullptr &&
+            DeviceAddress(hdr->addr3) == *sta_->bssid()) {
+        sta_->HandleAuthentication(packet);
+    }
+    return MX_OK;
+}
+
 mx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     return MX_OK;
 }
 
-mx_status_t Mlme::PostChannelChange(wlan_channel_t chan) {
+mx_status_t Mlme::PostChannelChange() {
     debugfn();
     return MX_OK;
 }

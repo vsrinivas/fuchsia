@@ -14,6 +14,7 @@
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <cstring>
 #include <gtest/gtest.h>
+#include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
 namespace wlan {
@@ -27,6 +28,10 @@ const uint8_t kBeacon[] = {
 
 struct MockDevice : public DeviceInterface {
   public:
+    MockDevice() {
+        state = mxtl::AdoptRef(new DeviceState);
+    }
+
     mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) override final {
         // Should not be used by Scanner at this time.
         return MX_ERR_NOT_SUPPORTED;
@@ -48,16 +53,15 @@ struct MockDevice : public DeviceInterface {
     }
 
     mx_status_t SetChannel(wlan_channel_t chan) override final {
-        current_channel = chan;
+        state->set_channel(chan);
         return MX_OK;
     }
 
-    mx_status_t GetCurrentChannel(wlan_channel_t* chan) override final {
-        *chan = current_channel;
-        return MX_OK;
+    mxtl::RefPtr<DeviceState> GetState() override final {
+        return state;
     }
 
-    wlan_channel_t current_channel = {};
+    mxtl::RefPtr<DeviceState> state;
     PacketQueue eth_queue;
     PacketQueue wlan_queue;
     PacketQueue svc_queue;
@@ -90,9 +94,7 @@ class ScannerTest : public ::testing::Test {
     }
 
     uint16_t CurrentChannel() {
-        wlan_channel_t chan;
-        mock_dev_.GetCurrentChannel(&chan);
-        return chan.channel_num;
+        return mock_dev_.GetState()->channel().channel_num;
     }
 
     mx_status_t DeserializeResponse() {

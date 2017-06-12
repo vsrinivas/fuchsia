@@ -36,7 +36,7 @@ bool SsidElement::Create(uint8_t* buf, size_t len, size_t* actual, const char* s
     if (elem_size > len) return false;
 
     auto elem = reinterpret_cast<SsidElement*>(buf);
-    elem->hdr.id = kSsid;
+    elem->hdr.id = element_id::kSsid;
     elem->hdr.len = ssidlen;
     std::memcpy(elem->ssid, ssid, ssidlen);
     *actual = elem_size;
@@ -52,7 +52,7 @@ bool SupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* actual,
     if (elem_size > len) return false;
 
     auto elem = reinterpret_cast<SupportedRatesElement*>(buf);
-    elem->hdr.id = kSuppRates;
+    elem->hdr.id = element_id::kSuppRates;
     elem->hdr.len = rates.size();
     std::copy(rates.begin(), rates.end(), elem->rates);
     *actual = elem_size;
@@ -64,7 +64,7 @@ bool DsssParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8
     if (elem_size > len) return false;
 
     auto elem = reinterpret_cast<DsssParamSetElement*>(buf);
-    elem->hdr.id = kDsssParamSet;
+    elem->hdr.id = element_id::kDsssParamSet;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     elem->current_chan = chan;
     *actual = elem_size;
@@ -77,7 +77,7 @@ bool CfParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t
     if (elem_size > len) return false;
 
     auto elem = reinterpret_cast<CfParamSetElement*>(buf);
-    elem->hdr.id = kCfParamSet;
+    elem->hdr.id = element_id::kCfParamSet;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     elem->count = count;
     elem->period = period;
@@ -92,7 +92,7 @@ bool CountryElement::Create(uint8_t* buf, size_t len, size_t* actual, const char
     if (elem_size > len) return false;
 
     auto elem = reinterpret_cast<CountryElement*>(buf);
-    elem->hdr.id = kCountry;
+    elem->hdr.id = element_id::kCountry;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     std::strncpy(elem->country, country, sizeof(elem->country));
     *actual = elem_size;

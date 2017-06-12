@@ -71,7 +71,7 @@ TEST(ElementReader, ReadElements) {
 
     const ElementHeader* hdr = r.peek();
     ASSERT_NE(nullptr, hdr);
-    ASSERT_EQ(ElementId::kSsid, hdr->id);
+    ASSERT_EQ(element_id::kSsid, hdr->id);
     auto ssid_elem = r.read<SsidElement>();
     ASSERT_NE(nullptr, ssid_elem);
     EXPECT_EQ(0, std::memcmp(ssid_elem->ssid, buf + 2, 4));
@@ -80,7 +80,7 @@ TEST(ElementReader, ReadElements) {
     EXPECT_EQ(6u, r.offset());
     hdr = r.peek();
     ASSERT_NE(nullptr, hdr);
-    ASSERT_EQ(ElementId::kDsssParamSet, hdr->id);
+    ASSERT_EQ(element_id::kDsssParamSet, hdr->id);
     auto dsss_elem = r.read<DsssParamSetElement>();
     ASSERT_NE(nullptr, dsss_elem);
     EXPECT_EQ(11, dsss_elem->current_chan);
@@ -89,14 +89,14 @@ TEST(ElementReader, ReadElements) {
     EXPECT_EQ(9u, r.offset());
     hdr = r.peek();
     ASSERT_NE(nullptr, hdr);
-    EXPECT_EQ(ElementId::kVendorSpecific, hdr->id);
+    EXPECT_EQ(element_id::kVendorSpecific, hdr->id);
     r.skip(*hdr);
 
     ASSERT_TRUE(r.is_valid());
     EXPECT_EQ(16u, r.offset());
     hdr = r.peek();
     ASSERT_NE(nullptr, hdr);
-    ASSERT_EQ(ElementId::kCountry, hdr->id);
+    ASSERT_EQ(element_id::kCountry, hdr->id);
     auto country_elem = r.read<CountryElement>();
     ASSERT_NE(nullptr, country_elem);
     EXPECT_EQ(0, std::memcmp(country_elem->country, buf + 18, 3));

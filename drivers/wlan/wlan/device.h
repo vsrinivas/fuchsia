@@ -16,6 +16,7 @@
 #include <mx/channel.h>
 #include <mx/port.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_ptr.h>
 #include <mxtl/slab_allocator.h>
 #include <mxtl/unique_ptr.h>
 
@@ -63,7 +64,7 @@ class Device : public WlanBaseDevice,
     mx_status_t SendWlan(mxtl::unique_ptr<Packet> packet) override final;
     mx_status_t SendService(mxtl::unique_ptr<Packet> packet) override final;
     mx_status_t SetChannel(wlan_channel_t chan) override final;
-    mx_status_t GetCurrentChannel(wlan_channel_t* chan) override final;
+    mxtl::RefPtr<DeviceState> GetState() override final;
 
   private:
     enum class DevicePacket : uint64_t {
@@ -95,7 +96,7 @@ class Device : public WlanBaseDevice,
     mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
     ethmac_info_t ethmac_info_ = {};
-    wlan_channel_t active_channel_ = { 0 };
+    mxtl::RefPtr<DeviceState> state_;
 
     std::mutex lock_;
     std::thread work_thread_;
