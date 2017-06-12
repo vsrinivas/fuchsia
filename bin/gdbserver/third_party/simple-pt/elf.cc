@@ -31,6 +31,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -202,7 +203,7 @@ static void AddProgbits(elf::Reader* elf,
       if (err == -pte_bad_image)
         continue;
       if (err < 0) {
-        fprintf(stderr, "reading prog code at %llx:%llx from %s: %s (%s): %d\n",
+        fprintf(stderr, "reading prog code at %" PRIx64 ":%" PRIx64 " from %s: %s (%s): %d\n",
                 phdr.p_vaddr, phdr.p_filesz, file_name,
                 pt_errstr(pt_errcode(err)), errno ? strerror(errno) : "", err);
         return;
