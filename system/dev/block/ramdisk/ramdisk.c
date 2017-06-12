@@ -22,7 +22,9 @@
 #include <limits.h>
 #include <threads.h>
 
-static mx_device_t* ramdisk_ctl_dev;
+typedef struct {
+    mx_device_t* mxdev;
+} ramctl_device_t;
 
 typedef struct ramdisk_device {
     mx_device_t* mxdev;
@@ -205,7 +207,9 @@ static mx_protocol_device_t ramdisk_instance_proto = {
 static uint64_t ramdisk_count = 0;
 
 static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
-                            size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    ramctl_device_t* ramctl = ctx;
+
     switch (op) {
     case IOCTL_RAMDISK_CONFIG: {
         if (cmdlen != sizeof(ramdisk_ioctl_config_t)) {
@@ -245,7 +249,7 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             .proto_ops = &ramdisk_block_ops,
         };
 
-        if ((status = device_add(ramdisk_ctl_dev, &args, &ramdev->mxdev)) != MX_OK) {
+        if ((status = device_add(ramctl->mxdev, &args, &ramdev->mxdev)) != MX_OK) {
             mx_vmar_unmap(mx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
             mx_handle_close(ramdev->vmo);
             free(ramdev);
@@ -260,35 +264,25 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
 }
 
-static mx_protocol_device_t ramctl_instance_proto = {
+static mx_protocol_device_t ramdisk_ctl_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = ramctl_ioctl,
 };
 
-static mx_status_t ramctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ramctl-instance",
-        .ops = &ramctl_instance_proto,
-        .flags = DEVICE_ADD_INSTANCE,
-    };
-
-    return device_add(ramdisk_ctl_dev, &args, dev_out);
-}
-
-static mx_protocol_device_t ramdisk_ctl_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = ramctl_open,
-};
-
 static mx_status_t ramdisk_driver_bind(void* ctx, mx_device_t* parent, void** cookie) {
+    ramctl_device_t* ramctl = calloc(1, sizeof(ramctl_device_t));
+    if (ramctl == NULL) {
+        return ERR_NO_MEMORY;
+    }
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ramctl",
         .ops = &ramdisk_ctl_proto,
+        .ctx = ramctl,
     };
 
-    return device_add(parent, &args, &ramdisk_ctl_dev);
+    return device_add(parent, &args, &ramctl->mxdev);
 }
 
 static mx_driver_ops_t ramdisk_driver_ops = {
