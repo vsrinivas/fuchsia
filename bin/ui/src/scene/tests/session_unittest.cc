@@ -53,7 +53,7 @@ TEST_F(SessionTest, CreateLink) {
   EXPECT_FALSE(Apply(NewCreateLinkOp(1, mx::eventpair())));
 
   mx::eventpair e1a, e1b;
-  EXPECT_EQ(NO_ERROR, mx::eventpair::create(0, &e1a, &e1b));
+  EXPECT_EQ(MX_OK, mx::eventpair::create(0, &e1a, &e1b));
   EXPECT_TRUE(Apply(NewCreateLinkOp(2, std::move(e1a))));
   // TODO: test attaching things to the link.
   // TODO: test that we can only look up a link via a pre-registered eventpair.

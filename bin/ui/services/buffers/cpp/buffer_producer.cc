@@ -88,7 +88,7 @@ std::unique_ptr<ProducedBufferHolder> BufferProducer::ProduceBuffer(
   mx::eventpair consumption_fence;
   mx_status_t status =
       mx::eventpair::create(0u, production_fence.get(), &consumption_fence);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create eventpair for fence: status=" << status;
     TracePooledBufferCount();
     return nullptr;
@@ -139,7 +139,7 @@ ftl::RefPtr<mtl::SharedVmo> BufferProducer::GetSharedVmo(size_t size) {
 ftl::RefPtr<mtl::SharedVmo> BufferProducer::CreateSharedVmo(size_t size) {
   mx::vmo vmo;
   mx_status_t status = mx::vmo::create(size, 0u, &vmo);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create vmo: status=" << status
                    << ", size=" << size;
     return nullptr;
@@ -148,7 +148,7 @@ ftl::RefPtr<mtl::SharedVmo> BufferProducer::CreateSharedVmo(size_t size) {
   // Optimization: We will be writing to every page of the buffer, so
   // allocate physical memory for it eagerly.
   status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status
                    << ", size=" << size;
     return nullptr;
@@ -156,7 +156,7 @@ ftl::RefPtr<mtl::SharedVmo> BufferProducer::CreateSharedVmo(size_t size) {
 
   mx::eventpair retainer, retention;
   status = mx::eventpair::create(0u, &retainer, &retention);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create eventpair for vmo retention: status="
                    << status;
     return nullptr;
@@ -209,23 +209,23 @@ void ProducedBufferHolder::SetReadySignal() {
     return;
 
   mx_status_t status = production_fence_->signal_peer(0u, MX_EPAIR_SIGNALED);
-  FTL_DCHECK(status == NO_ERROR);
+  FTL_DCHECK(status == MX_OK);
   ready_ = true;
 }
 
 BufferPtr ProducedBufferHolder::GetBuffer(uint32_t vmo_rights) {
   auto buffer = Buffer::New();
-  if (shared_vmo_->vmo().duplicate(vmo_rights, &buffer->vmo) != NO_ERROR)
+  if (shared_vmo_->vmo().duplicate(vmo_rights, &buffer->vmo) != MX_OK)
     return nullptr;
   if (consumption_fence_.duplicate(
           MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ,
-          &buffer->fence) != NO_ERROR)
+          &buffer->fence) != MX_OK)
     return nullptr;
   const mx::eventpair& retention =
       static_cast<ProducedVmo*>(shared_vmo_.get())->retention();
   if (retention.duplicate(
           MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ,
-          &buffer->retention) != NO_ERROR)
+          &buffer->retention) != MX_OK)
     return nullptr;
   return buffer;
 }

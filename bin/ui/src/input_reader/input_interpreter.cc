@@ -117,7 +117,7 @@ bool InputInterpreter::Initialize() {
 
     if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
       mx_status_t setup_res = setup_acer12_touch(fd_);
-      if (setup_res != NO_ERROR) {
+      if (setup_res != MX_OK) {
         FTL_LOG(ERROR) << "Failed to setup Acer12 touch (res " << setup_res
                        << ")";
         return false;
@@ -169,7 +169,7 @@ bool InputInterpreter::Initialize() {
       touch_device_type_ = TouchDeviceType::ACER12;
     } else if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
       mx_status_t setup_res = setup_samsung_touch(fd_);
-      if (setup_res != NO_ERROR) {
+      if (setup_res != MX_OK) {
         FTL_LOG(ERROR) << "Failed to setup Samsung touch (res " << setup_res
                        << ")";
         return false;

@@ -28,7 +28,7 @@ void UnmapMemory(const void* buffer, void* context) {
   const uint64_t size = reinterpret_cast<uint64_t>(context);
   mx_status_t status =
       mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(buffer), size);
-  FTL_CHECK(status == NO_ERROR);
+  FTL_CHECK(status == MX_OK);
   TraceCount(-1);
 }
 
@@ -37,13 +37,13 @@ void UnmapMemory(const void* buffer, void* context) {
 sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
   uint64_t size = 0u;
   mx_status_t status = vmo.get_size(&size);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return nullptr;
 
   uintptr_t buffer = 0u;
   status =
       mx::vmar::root_self().map(0, vmo, 0u, size, MX_VM_FLAG_PERM_READ, &buffer);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return nullptr;
 
   sk_sp<SkData> data = SkData::MakeWithProc(reinterpret_cast<void*>(buffer),
@@ -52,7 +52,7 @@ sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
   if (!data) {
     FTL_LOG(ERROR) << "Could not create SkData";
     status = mx::vmar::root_self().unmap(buffer, size);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
     return nullptr;
   }
 

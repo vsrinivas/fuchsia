@@ -35,7 +35,7 @@ bool BufferFence::WaitReady(ftl::TimeDelta timeout) {
   while (!ready_) {
     mx_status_t status =
         fence_.wait_one(kSignaledOrClosed, mx_deadline, &pending);
-    FTL_DCHECK(status == NO_ERROR || status == ERR_TIMED_OUT);
+    FTL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
     if (pending & kSignaledOrClosed)
       ready_ = true;
     if (mx_deadline != MX_TIME_INFINITE)

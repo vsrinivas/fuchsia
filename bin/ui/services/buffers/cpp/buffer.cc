@@ -14,14 +14,14 @@ BufferPtr Duplicate(const Buffer* buffer) {
 
   auto dup = Buffer::New();
   if (buffer->vmo &&
-      buffer->vmo.duplicate(MX_RIGHT_SAME_RIGHTS, &dup->vmo) != NO_ERROR)
+      buffer->vmo.duplicate(MX_RIGHT_SAME_RIGHTS, &dup->vmo) != MX_OK)
     return nullptr;
   if (buffer->fence &&
-      buffer->fence.duplicate(MX_RIGHT_SAME_RIGHTS, &dup->fence) != NO_ERROR)
+      buffer->fence.duplicate(MX_RIGHT_SAME_RIGHTS, &dup->fence) != MX_OK)
     return nullptr;
   if (buffer->retention &&
       buffer->retention.duplicate(MX_RIGHT_SAME_RIGHTS, &dup->retention) !=
-          NO_ERROR)
+          MX_OK)
     return nullptr;
   return dup;
 }

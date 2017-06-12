@@ -33,7 +33,7 @@ void UnmapMemory(void* pixels, void* context) {
   const size_t size = reinterpret_cast<size_t>(context);
   mx_status_t status =
       mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(pixels), size);
-  FTL_CHECK(status == NO_ERROR);
+  FTL_CHECK(status == MX_OK);
   TraceCount(-1);
 }
 
@@ -162,7 +162,7 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
 
   uint64_t total_bytes = 0u;
   mx_status_t status = vmo.get_size(&total_bytes);
-  FTL_CHECK(status == NO_ERROR);
+  FTL_CHECK(status == MX_OK);
 
   size_t needed_bytes = info.height() * row_bytes;
   if (!info.validRowBytes(row_bytes) || total_bytes < needed_bytes) {
@@ -176,7 +176,7 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
       mx::vmar::root_self().map(0, vmo, 0u, needed_bytes,
                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                                 &buffer);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Could not map surface: status=" << status;
     return nullptr;
   }
@@ -187,7 +187,7 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
   if (!surface) {
     FTL_LOG(ERROR) << "Could not create SkSurface";
     status = mx::vmar::root_self().unmap(buffer, needed_bytes);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
     return nullptr;
   }
 

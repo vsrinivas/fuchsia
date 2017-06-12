@@ -46,7 +46,7 @@ class HelloSceneManagerApp {
   static ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size) {
     mx::vmo vmo;
     mx_status_t status = mx::vmo::create(size, 0u, &vmo);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << "Failed to create vmo: status=" << status
                      << ", size=" << size;
       return nullptr;
@@ -55,7 +55,7 @@ class HelloSceneManagerApp {
     // Optimization: We will be writing to every page of the buffer, so
     // allocate physical memory for it eagerly.
     status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status
                      << ", size=" << size;
       return nullptr;
