@@ -45,10 +45,6 @@ package("netstack_tests") {
     },
 
     {
-      name = "epolltest"
-    },
-
-    {
       name = "mctest"
     },
 
