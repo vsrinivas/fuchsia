@@ -9,7 +9,7 @@
 import re
 import sys
 
-status_re = re.compile('#define\s+(\w+)\s+\((\-?\d+)\)$')
+status_re = re.compile('#define\s+(MX_\w+)\s+\((\-?\d+)\)$')
 
 def parse(in_filename):
     result = []
@@ -34,14 +34,14 @@ def out(style, l):
     if style == 'enum':
         print('pub enum Status {')
         for (name, num) in l:
-            print('    %s = %d,' % (to_snake_case(name), num))
+            print('    %s = %d,' % (to_snake_case(name[3:]), num))
         print('');
         print('    /// Any mx_status_t not in the set above will map to the following:')
         print('    UnknownOther = -32768,')
         print('}')
     if style == 'match':
         for (name, num) in l:
-            print('            sys::%s => Status::%s,' % (name, to_snake_case(name)))
+            print('            sys::%s => Status::%s,' % (name, to_snake_case(name[3:])))
         print('            _ => Status::UnknownOther,')
 
 

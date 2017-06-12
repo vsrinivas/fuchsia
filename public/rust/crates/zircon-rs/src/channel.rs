@@ -64,7 +64,7 @@ impl Channel {
             let status = sys::mx_channel_read(raw_handle, opts,
                 buf.bytes.as_mut_ptr(), buf.handles.as_mut_ptr(),
                 num_bytes, num_handles, &mut num_bytes, &mut num_handles);
-            if status == sys::ERR_BUFFER_TOO_SMALL {
+            if status == sys::MX_ERR_BUFFER_TOO_SMALL {
                 Err((num_bytes as usize, num_handles as usize))
             } else {
                 Ok(into_result(status, || {
@@ -146,12 +146,12 @@ impl Channel {
         };
         let mut actual_read_bytes: u32 = 0;
         let mut actual_read_handles: u32 = 0;
-        let mut read_status = sys::NO_ERROR;
+        let mut read_status = sys::MX_OK;
         let status = unsafe {
             sys::mx_channel_call(self.raw_handle(), options, timeout, &args, &mut actual_read_bytes,
                 &mut actual_read_handles, &mut read_status)
         };
-        if status == sys::NO_ERROR || status == sys::ERR_TIMED_OUT || status == sys::ERR_CALL_FAILED
+        if status == sys::MX_OK || status == sys::MX_ERR_TIMED_OUT || status == sys::MX_ERR_CALL_FAILED
         {
             // Handles were successfully transferred, even if we didn't get a response, so forget
             // them on the sender side.
@@ -161,7 +161,7 @@ impl Channel {
             buf.bytes.set_len(actual_read_bytes as usize);
             buf.handles.set_len(actual_read_handles as usize);
         }
-        if status == sys::NO_ERROR {
+        if status == sys::MX_OK {
             Ok(())
         } else {
             Err((Status::from_raw(status), Status::from_raw(read_status)))

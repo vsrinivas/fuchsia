@@ -110,7 +110,7 @@ impl Socket {
             sys::mx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(),
                 bytes.len(), &mut actual)
         };
-        if status != sys::NO_ERROR {
+        if status != sys::MX_OK {
             // If an error is returned then actual is undefined, so to be safe we set it to 0 and
             // ignore any data that is set in bytes.
             actual = 0;
