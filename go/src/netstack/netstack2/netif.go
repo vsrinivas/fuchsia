@@ -46,9 +46,10 @@ type netif struct {
 	dhcp   *dhcp.Client
 
 	// guarded by ns.mu
-	addr    tcpip.Address
-	netmask tcpip.AddressMask
-	routes  []tcpip.Route
+	addr       tcpip.Address
+	netmask    tcpip.AddressMask
+	routes     []tcpip.Route
+	dnsServers []tcpip.Address
 }
 
 func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
@@ -64,15 +65,18 @@ func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Confi
 		return
 	}
 	log.Printf("NIC %d: DHCP acquired IP %s for %s", nif.nicid, newAddr, config.LeaseLength)
+	log.Printf("NIC %d: DNS servers: %v", nif.nicid, config.DNS)
 
 	// Update default route with new gateway.
 	nif.ns.mu.Lock()
 	nif.routes = defaultRouteTable(nif.nicid, config.Gateway)
 	nif.netmask = config.SubnetMask
 	nif.addr = newAddr
+	nif.dnsServers = config.DNS
 	nif.ns.mu.Unlock()
 
 	nif.ns.stack.SetRouteTable(nif.ns.flattenRouteTables())
+	nif.ns.dispatcher.dnsClient.SetRuntimeServers(nif.ns.flattenDNSServers())
 }
 
 func (nif *netif) stateChange(s eth.State) {
@@ -91,9 +95,11 @@ func (nif *netif) stateChange(s eth.State) {
 
 	nif.ns.mu.Lock()
 	nif.routes = nil
+	nif.dnsServers = nil
 	nif.ns.mu.Unlock()
 
 	nif.ns.stack.SetRouteTable(nif.ns.flattenRouteTables())
+	nif.ns.dispatcher.dnsClient.SetRuntimeServers(nif.ns.flattenDNSServers())
 }
 
 func (ns *netstack) flattenRouteTables() []tcpip.Route {
@@ -105,6 +111,23 @@ func (ns *netstack) flattenRouteTables() []tcpip.Route {
 		routeTable = append(routeTable, netif.routes...)
 	}
 	return routeTable
+}
+
+func (ns *netstack) flattenDNSServers() []tcpip.Address {
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+
+	uniqServers := make(map[tcpip.Address]struct{})
+	for _, netif := range ns.netifs {
+		for _, server := range netif.dnsServers {
+			uniqServers[server] = struct{}{}
+		}
+	}
+	servers := []tcpip.Address{}
+	for server := range uniqServers {
+		servers = append(servers, server)
+	}
+	return servers
 }
 
 func (ns *netstack) addLoopback() error {
