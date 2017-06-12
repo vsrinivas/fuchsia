@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include "device-internal.h"
 #include "devcoordinator.h"
 
 #include <magenta/device/dmctl.h>

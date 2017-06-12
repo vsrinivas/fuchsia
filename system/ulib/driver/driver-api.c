@@ -16,39 +16,72 @@ __EXPORT void driver_api_init(driver_api_t* api) {
     }
 }
 
-__EXPORT void device_unbind(mx_device_t* dev) {
-    API->device_unbind(dev);
-}
+// Device Interfaces
 
 __EXPORT mx_status_t device_add_from_driver(mx_driver_t* driver, mx_device_t* parent,
                                             device_add_args_t* args, mx_device_t** out) {
-    return API->device_add(driver, parent, args, out);
-}
-
-__EXPORT mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,
-                                                 void** protocol) {
-    if (dev->ops->get_protocol) {
-        return dev->ops->get_protocol(dev->ctx, proto_id, protocol);
-    }
-
-    if (proto_id == MX_PROTOCOL_DEVICE) {
-        *protocol = dev->ops;
-        return NO_ERROR;
-    }
-    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
-        *protocol = dev->protocol_ops;
-        return NO_ERROR;
-    }
-    return ERR_NOT_SUPPORTED;
+    return API->add(driver, parent, args, out);
 }
 
 __EXPORT mx_status_t device_remove(mx_device_t* dev) {
-    return API->device_remove(dev);
+    return API->remove(dev);
+}
+
+__EXPORT void device_unbind(mx_device_t* dev) {
+    API->unbind(dev);
 }
 
 __EXPORT mx_status_t device_rebind(mx_device_t* dev) {
-    return API->device_rebind(dev);
+    return API->rebind(dev);
 }
+
+__EXPORT const char* device_get_name(mx_device_t* dev) {
+    return API->get_name(dev);
+}
+
+__EXPORT mx_device_t* device_get_parent(mx_device_t* dev) {
+    return API->get_parent(dev);
+}
+
+__EXPORT mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,
+                                            void** protocol) {
+    return API->get_protocol(dev, proto_id, protocol);
+}
+
+__EXPORT mx_handle_t device_get_resource(mx_device_t* dev) {
+    return API->get_resource(dev);
+}
+
+__EXPORT mx_off_t device_op_get_size(mx_device_t* dev) {
+    return API->op_get_size(dev);
+}
+
+__EXPORT mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,
+                                    mx_off_t off, size_t* actual) {
+    return API->op_read(dev, buf, count, off, actual);
+}
+
+__EXPORT mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
+                                     mx_off_t off, size_t* actual) {
+    return API->op_write(dev, buf, count, off, actual);
+}
+
+__EXPORT mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
+                                     const void* in_buf, size_t in_len,
+                                     void* out_buf, size_t out_len, size_t* out_actual) {
+    return API->op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, out_actual);
+}
+
+__EXPORT mx_status_t device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    return API->op_iotxn_queue(dev, txn);
+}
+
+__EXPORT void device_state_clr_set(mx_device_t* dev, mx_signals_t clearflag, mx_signals_t setflag) {
+    API->state_clr_set(dev, clearflag, setflag);
+}
+
+
+// Misc Interfaces
 
 __EXPORT mx_handle_t get_root_resource(void) {
     return API->get_root_resource();

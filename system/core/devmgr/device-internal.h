@@ -48,3 +48,23 @@ static inline mx_status_t device_op_suspend(mx_device_t* dev, uint32_t flags) {
 static inline mx_status_t device_op_resume(mx_device_t* dev, uint32_t flags) {
     return dev->ops->resume(dev->ctx, flags);
 }
+
+static inline mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off,
+                                         size_t* actual) {
+    return dev->ops->read(dev->ctx, buf, count, off, actual);
+}
+
+static inline mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
+                                          mx_off_t off, size_t* actual) {
+    return dev->ops->write(dev->ctx, buf, count, off, actual);
+}
+
+static inline mx_off_t device_op_get_size(mx_device_t* dev) {
+    return dev->ops->get_size(dev->ctx);
+}
+
+static inline mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
+                                      const void* in_buf, size_t in_len,
+                                      void* out_buf, size_t out_len, size_t* out_actual) {
+    return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+}

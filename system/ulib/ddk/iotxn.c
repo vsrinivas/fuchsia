@@ -444,9 +444,9 @@ void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // don't assert not queued here, since iotxns are allowed to be requeued
     txn->pflags |= IOTXN_PFLAG_QUEUED;
 
-    if (dev->ops->iotxn_queue) {
-        dev->ops->iotxn_queue(dev->ctx, txn);
-    } else {
+    // This can only fail if iotxn_queue() is not implemented by the
+    // device, in which case we fall back to calling the read or write op
+    if (device_op_iotxn_queue(dev, txn) != MX_OK) {
         mx_status_t status;
         size_t actual = 0;
         void* buf;

@@ -19,10 +19,7 @@ typedef struct mx_device_prop mx_device_prop_t;
 
 typedef struct mx_protocol_device mx_protocol_device_t;
 
-typedef struct vnode vnode_t;
-
 #define MX_DEVICE_NAME_MAX 31
-
 // DO NOT DEFINE DDK_INTERNAL!
 // These macros make it harder for drivers to use fields
 // that they shouldn't.  If you work around them, your
@@ -84,6 +81,8 @@ struct mx_device {
 // fields in the mx_device_t, except for the protocol_id and protocol_ops
 // fields which it may fill out after init and before device_add() is called,
 // and the ctx field which may be used to store driver-specific data.
+
+
 
 // echo -n "mx_device_ops_v0.5" | sha256sum | cut -c1-16
 #define DEVICE_OPS_VERSION 0Xc9410d2a24f57424
@@ -162,63 +161,61 @@ typedef struct mx_protocol_device {
     mx_status_t (*resume)(void* ctx, uint32_t flags);
 } mx_protocol_device_t;
 
-// Device Convenience Wrappers
-static inline const char* device_get_name(mx_device_t* dev) {
-    return dev->DDK_PRIVATE(name);
-}
 
-static inline mx_device_t* device_get_parent(mx_device_t* dev) {
-    return dev->DDK_PRIVATE(parent);
-}
+// Device Accessors
+const char* device_get_name(mx_device_t* dev);
 
-static inline mx_handle_t device_get_resource(mx_device_t* dev) {
-    // the resource handle is read once and consumed immediately
-    mx_handle_t result = dev->DDK_PRIVATE(resource);
-    dev->DDK_PRIVATE(resource) = MX_HANDLE_INVALID;
-    return result;
-}
+mx_device_t* device_get_parent(mx_device_t* dev);
 
+mx_handle_t device_get_resource(mx_device_t* dev);
+
+//TODO: rename to device_get_protocol()
 mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id, void** protocol);
 
-static inline mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off,
-                                         size_t* actual) {
-    return dev->ops->read(dev->ctx, buf, count, off, actual);
-}
 
-static inline mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
-                                          mx_off_t off, size_t* actual) {
-    return dev->ops->write(dev->ctx, buf, count, off, actual);
-}
+#ifndef DDK_INTERNAL
 
-static inline mx_off_t device_op_get_size(mx_device_t* dev) {
-    return dev->ops->get_size(dev->ctx);
-}
+// Direct Device Ops Functions
+mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,
+                           mx_off_t off, size_t* actual);
 
-static inline mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
-                                      const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
-    return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
-}
+mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
+                            mx_off_t off, size_t* actual);
 
-// State change functions
+mx_off_t device_op_get_size(mx_device_t* dev);
 
+mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
+                            const void* in_buf, size_t in_len,
+                            void* out_buf, size_t out_len, size_t* out_actual);
+
+// return MX_ERR_NOT_SUPPORTED if this device does not support the iotxn_queue op
+// otherwise returns MX_OK aftering queuing the iotxn
+mx_status_t device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn);
+
+
+// Device State Change Functions
 #define DEV_STATE_READABLE DEVICE_SIGNAL_READABLE
 #define DEV_STATE_WRITABLE DEVICE_SIGNAL_WRITABLE
 #define DEV_STATE_ERROR DEVICE_SIGNAL_ERROR
 #define DEV_STATE_HANGUP DEVICE_SIGNAL_HANGUP
 #define DEV_STATE_OOB DEVICE_SIGNAL_OOB
 
+void device_state_clr_set(mx_device_t* dev, mx_signals_t clearflag, mx_signals_t setflag);
+
 static inline void device_state_set(mx_device_t* dev, mx_signals_t stateflag) {
-    mx_object_signal(dev->DDK_PRIVATE(event), 0, stateflag);
+    device_state_clr_set(dev, 0, stateflag);
 }
-
 static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
-    mx_object_signal(dev->DDK_PRIVATE(event), stateflag, 0);
+    device_state_clr_set(dev, stateflag, 0);
 }
 
+//TODO: deprecate and remove this version
+//      (it does not reflect that the clear is applied and then the set)
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
-    mx_object_signal(dev->DDK_PRIVATE(event), clearflag, setflag);
+    device_state_clr_set(dev, clearflag, setflag);
 }
+
+#endif
 
 #undef DDK_PRIVATE
 
