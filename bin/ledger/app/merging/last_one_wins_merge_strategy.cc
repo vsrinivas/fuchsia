@@ -109,11 +109,9 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
           if (s != storage::Status::OK) {
             FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
           }
-          if (!weak_this) {
-            return;
+          if (weak_this) {
+            weak_this->Done();
           }
-          weak_this->journal_.reset();
-          weak_this->Done();
         });
   };
   storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next),

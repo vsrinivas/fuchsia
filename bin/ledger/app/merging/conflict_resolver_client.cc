@@ -268,7 +268,6 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
     }
     callback(PageUtils::ConvertStatus(status));
     if (weak_this) {
-      weak_this->journal_.reset();
       weak_this->Finalize();
     }
   });

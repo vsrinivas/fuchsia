@@ -50,7 +50,6 @@ class AutoMergeStrategy::AutoMerger {
 
   ftl::Closure on_done_;
 
-  std::unique_ptr<storage::Journal> journal_;
   bool cancelled_ = false;
 
   // This must be the last member of the class.
@@ -76,11 +75,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(
   FTL_DCHECK(on_done_);
 }
 
-AutoMergeStrategy::AutoMerger::~AutoMerger() {
-  if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
-  }
-}
+AutoMergeStrategy::AutoMerger::~AutoMerger() {}
 
 void AutoMergeStrategy::AutoMerger::Start() {
   std::unique_ptr<std::vector<storage::EntryChange>> changes(
@@ -213,8 +208,9 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   // Here, we reuse the diff we computed before to create the merge commit. As
   // StartMergeCommit uses the left commit (first parameter) as its base, we
   // only have to apply the right diff to it and we are done.
+  std::unique_ptr<storage::Journal> journal;
   storage::Status s =
-      storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal_);
+      storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal);
   if (s != storage::Status::OK) {
     FTL_LOG(ERROR) << "Unable to start merge commit: " << s;
     Done();
@@ -222,21 +218,20 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   }
   for (const storage::EntryChange& change : *right_changes) {
     if (change.deleted) {
-      journal_->Delete(change.entry.key);
+      journal->Delete(change.entry.key);
     } else {
-      journal_->Put(change.entry.key, change.entry.object_id,
-                    change.entry.priority);
+      journal->Put(change.entry.key, change.entry.object_id,
+                   change.entry.priority);
     }
   }
   storage_->CommitJournal(
-      std::move(journal_), [weak_this = weak_factory_.GetWeakPtr()](
-                               storage::Status status,
-                               std::unique_ptr<const storage::Commit>) {
+      std::move(journal), [weak_this = weak_factory_.GetWeakPtr()](
+                              storage::Status status,
+                              std::unique_ptr<const storage::Commit>) {
         if (status != storage::Status::OK) {
           FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
         }
         if (weak_this) {
-          weak_this->journal_.reset();
           weak_this->Done();
         }
       });
@@ -248,10 +243,6 @@ void AutoMergeStrategy::AutoMerger::Cancel() {
 }
 
 void AutoMergeStrategy::AutoMerger::Done() {
-  if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
-    journal_.reset();
-  }
   delegated_merge_.reset();
   auto on_done = std::move(on_done_);
   on_done_ = nullptr;
