@@ -34,11 +34,11 @@ std::string ObjectFilePathFor(const std::string& path, ObjectIdView id) {
   return path + '/' + base64;
 }
 
-class ObjectTest : public ::testing::Test {
+class ObjectImplTest : public ::testing::Test {
  public:
-  ObjectTest() {}
+  ObjectImplTest() {}
 
-  ~ObjectTest() override {}
+  ~ObjectImplTest() override {}
 
   // Test:
   void SetUp() override {
@@ -55,10 +55,10 @@ class ObjectTest : public ::testing::Test {
  private:
   files::ScopedTempDir object_dir_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ObjectTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ObjectImplTest);
 };
 
-TEST_F(ObjectTest, Object) {
+TEST_F(ObjectImplTest, Object) {
   std::string data = RandomString(kFileSize);
   EXPECT_TRUE(files::WriteFile(object_file_path_, data.data(), kFileSize));
 

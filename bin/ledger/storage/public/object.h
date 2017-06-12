@@ -10,6 +10,7 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
+#include "mx/vmo.h"
 
 namespace storage {
 
@@ -21,8 +22,12 @@ class Object {
   // Returns the id of this storage object.
   virtual ObjectId GetId() const = 0;
 
-  // Returns the data of this object.
+  // Returns the data of this object. The return view is valid as long as this
+  // object is not deleted.
   virtual Status GetData(ftl::StringView* data) const = 0;
+
+  // Returns a vmo containing the data.
+  virtual Status GetVmo(mx::vmo* vmo) const;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Object);

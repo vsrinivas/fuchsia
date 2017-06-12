@@ -125,15 +125,15 @@ const ObjectId& TreeNode::GetId() const {
 Status TreeNode::FromObject(PageStorage* page_storage,
                             std::unique_ptr<const Object> object,
                             std::unique_ptr<const TreeNode>* node) {
-  ftl::StringView json;
-  Status status = object->GetData(&json);
+  ftl::StringView data;
+  Status status = object->GetData(&data);
   if (status != Status::OK) {
     return status;
   }
   uint8_t level;
   std::vector<Entry> entries;
   std::vector<ObjectId> children;
-  if (!DecodeNode(json, &level, &entries, &children)) {
+  if (!DecodeNode(data, &level, &entries, &children)) {
     return Status::FORMAT_ERROR;
   }
   node->reset(new TreeNode(page_storage, object->GetId(), level,

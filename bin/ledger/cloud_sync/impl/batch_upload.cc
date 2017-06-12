@@ -95,15 +95,10 @@ void BatchUpload::UploadNextObject() {
 }
 
 void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
-  ftl::StringView data_view;
-  auto status = object->GetData(&data_view);
-  FTL_DCHECK(status == storage::Status::OK);
-
-  // TODO(ppi): get the virtual memory object directly from storage::Object,
-  // once it can give us one.
   mx::vmo data;
-  auto result = mtl::VmoFromString(data_view, &data);
-  FTL_DCHECK(result);
+  auto status = object->GetVmo(&data);
+  // TODO(ppi): LE-225 Handle disk IO errors.
+  FTL_DCHECK (status == storage::Status::OK);
 
   storage::ObjectId id = object->GetId();
   cloud_provider_->AddObject(

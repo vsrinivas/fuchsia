@@ -13,6 +13,7 @@ source_set("public") {
     "iterator.h",
     "journal.h",
     "ledger_storage.h",
+    "object.cc",
     "object.h",
     "page_storage.cc",
     "page_storage.h",
@@ -26,6 +27,7 @@ source_set("public") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+    "//magenta/system/ulib/mx",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -36,6 +38,7 @@ source_set("unittests") {
 
   sources = [
     "data_source_unittest.cc",
+    "object_unittest.cc",
   ]
 
   deps = [

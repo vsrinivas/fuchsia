@@ -137,16 +137,13 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
               // Here, we just leave the value part of the entry null.
               continue;
             }
-            ftl::StringView object_contents;
-            storage::Status read_status = results[i]->GetData(&object_contents);
-            if (read_status != storage::Status::OK) {
-              callback(Status::IO_ERROR, nullptr, nullptr);
-              return;
-            }
 
             EntryPtr& entry_ptr = context->entries[i];
-            if (!mtl::VmoFromString(object_contents, &entry_ptr->value)) {
-              callback(Status::INTERNAL_ERROR, nullptr, nullptr);
+            storage::Status read_status = results[i]->GetVmo(&entry_ptr->value);
+            if (read_status != storage::Status::OK) {
+              callback(
+                  PageUtils::ConvertStatus(read_status, Status::INTERNAL_ERROR),
+                  nullptr, nullptr);
               return;
             }
           }
