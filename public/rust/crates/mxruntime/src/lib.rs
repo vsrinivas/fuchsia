@@ -10,7 +10,7 @@ extern crate mxruntime_sys;
 
 use magenta::{Handle, HandleBase, Channel, ChannelOpts, Status};
 
-use magenta_sys::{mx_handle_t, NO_ERROR};
+use magenta_sys::{mx_handle_t, MX_OK};
 
 use mxruntime_sys::{mxio_service_connect, mxio_service_connect_at};
 
@@ -49,7 +49,7 @@ pub fn get_service_root() -> Result<Channel, Status> {
     let connect_status = unsafe {
         mxio_service_connect(svc.as_ptr(), h1.raw_handle())
     };
-    if connect_status == NO_ERROR {
+    if connect_status == MX_OK {
         Ok(h2)
     } else {
         Err(Status::from_raw(connect_status))
@@ -62,7 +62,7 @@ pub fn connect_to_environment_service(service_root: Channel, path: &str) -> Resu
     let connect_status = unsafe {
         mxio_service_connect_at(service_root.raw_handle(), path_str.as_ptr(), h1.raw_handle())
     };
-    if connect_status == NO_ERROR {
+    if connect_status == MX_OK {
         Ok(h2)
     } else {
         Err(Status::from_raw(connect_status))
