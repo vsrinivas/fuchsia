@@ -9,6 +9,8 @@
 
 namespace escher {
 
+class DepthToColor;
+
 class PaperRenderer : public Renderer {
  public:
   void DrawFrame(const Stage& stage,
@@ -74,7 +76,8 @@ class PaperRenderer : public Renderer {
   void DrawDebugOverlays(const ImagePtr& output,
                          const ImagePtr& depth,
                          const ImagePtr& illumination,
-                         const TexturePtr& ssdo_acceleration);
+                         const TexturePtr& ssdo_accel,
+                         const TexturePtr& ssdo_accel_depth);
 
   // Configure the renderer to use the specified output formats.
   void UpdateModelRenderer(vk::Format pre_pass_color_format,
@@ -87,6 +90,7 @@ class PaperRenderer : public Renderer {
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
   std::unique_ptr<impl::SsdoSampler> ssdo_;
   std::unique_ptr<impl::SsdoAccelerator> ssdo_accelerator_;
+  std::unique_ptr<DepthToColor> depth_to_color_;
   std::vector<vk::ClearValue> clear_values_;
   bool show_debug_info_ = false;
   bool enable_lighting_ = true;
