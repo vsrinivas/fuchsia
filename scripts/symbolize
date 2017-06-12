@@ -321,7 +321,14 @@ def main():
 
 
             prefix = "bt#%s: %s => " % (frame_num, addr)
-            a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path, addr)
+            # Subtract 1 to convert from a return address to a call site
+            # address.  (To be more exact, this converts to an address that
+            # is within the call site instruction.)  This adjustment gives
+            # more correct results in the presence of inlining and
+            # 'noreturn' functions.  (See MG-842.)
+            call_addr = "0x%x" % (int(addr, 16) - 1)
+            a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path,
+                               call_addr)
             # In the case of inlined methods it is more readable if the inlined lines are
             # aligned to be to the irght of =>
             processed_lines.append(prefix +
