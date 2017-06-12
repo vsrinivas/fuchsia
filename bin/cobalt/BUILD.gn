@@ -4,7 +4,8 @@
 
 import("//third_party/protobuf/proto_library.gni")
 
-group("src") {}
+group("src") {
+}
 
 group("tests") {
   testonly = true
@@ -34,6 +35,7 @@ source_set("unittests") {
     ":hello_proto",
     "//lib/ftl",
     "//lib/mtl",
+    "//third_party/grpc:grpc++",
     "//third_party/gtest",
   ]
 }
@@ -41,5 +43,11 @@ source_set("unittests") {
 proto_library("hello_proto") {
   sources = [
     "hello.proto",
+  ]
+  generate_python = false
+  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+  generator_plugin_suffix = ".grpc.pb"
+  deps = [
+    "//third_party/grpc:grpc++",
   ]
 }
