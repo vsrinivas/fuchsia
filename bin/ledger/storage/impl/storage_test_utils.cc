@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/test/storage_test_utils.h"
+#include "apps/ledger/src/storage/impl/storage_test_utils.h"
 
 #include <inttypes.h>
 
@@ -10,6 +10,9 @@
 
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/impl/constants.h"
+#include "apps/ledger/src/storage/impl/object_id.h"
+#include "apps/ledger/src/storage/impl/split.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/strings/string_printf.h"
 
@@ -24,19 +27,63 @@ std::vector<size_t> GetEnumeration(size_t size) {
 
   return values;
 }
-}  // namespace
 
-std::string RandomId(size_t size) {
+std::string ResizeForBehavior(std::string value,
+                              InlineBehavior inline_behavior) {
+  if (inline_behavior == InlineBehavior::PREVENT &&
+      value.size() <= kStorageHashSize) {
+    value.resize(kStorageHashSize + 1);
+  }
+  return value;
+}
+
+std::string GetObjectId(std::string value) {
   std::string result;
-  result.resize(size);
-  glue::RandBytes(&result[0], size);
+  auto data_source = DataSource::Create(std::move(value));
+  SplitDataSource(data_source.get(),
+                  [&result](IterationStatus status, ObjectId object_id,
+                            std::unique_ptr<DataSource::DataChunk> chunk) {
+                    if (status == IterationStatus::DONE) {
+                      result = object_id;
+                    }
+                  });
   return result;
 }
 
-ObjectId MakeObjectId(std::string str) {
-  // Resize id to the required size, adding trailing underscores if needed.
-  str.resize(kObjectIdSize, '_');
-  return str;
+}  // namespace
+
+ObjectData::ObjectData(std::string value, InlineBehavior inline_behavior)
+    : value(ResizeForBehavior(std::move(value), inline_behavior)),
+      size(this->value.size()),
+      object_id(GetObjectId(this->value)) {}
+
+std::unique_ptr<DataSource> ObjectData::ToDataSource() {
+  return DataSource::Create(value);
+}
+
+std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
+  return DataSource::DataChunk::Create(value);
+}
+
+ObjectId MakeObjectId(std::string str, InlineBehavior inline_behavior) {
+  ObjectData data(std::move(str), inline_behavior);
+  return data.object_id;
+}
+
+std::string RandomString(size_t size) {
+  std::string value;
+  value.resize(size);
+  glue::RandBytes(&value[0], value.size());
+  return value;
+}
+
+CommitId RandomCommitId() {
+  return RandomString(kCommitIdSize);
+}
+
+ObjectId RandomObjectId() {
+  ObjectData data(RandomString(16), InlineBehavior::PREVENT);
+  return data.object_id;
 }
 
 EntryChange NewEntryChange(std::string key,

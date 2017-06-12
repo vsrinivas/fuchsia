@@ -9,51 +9,30 @@
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
+#include "apps/ledger/src/app/merging/test_utils.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
 namespace {
-std::string MakeObjectId(std::string str) {
-  // Resize id to the required size, adding trailing underscores if needed.
-  str.resize(storage::kObjectIdSize, '_');
-  return str;
-}
-
-std::function<void(storage::Journal*)> AddKeyValueToJournal(
-    const std::string& key,
-    const storage::ObjectId& object_id) {
-  return [key, object_id](storage::Journal* journal) {
-    EXPECT_EQ(storage::Status::OK, journal->Put(key, MakeObjectId(object_id),
-                                                storage::KeyPriority::EAGER));
-  };
-}
-
-class CommonAncestorTest : public test::TestWithMessageLoop {
+class CommonAncestorTest : public test::TestWithPageStorage {
  public:
   CommonAncestorTest() {}
   ~CommonAncestorTest() override {}
 
  protected:
+  storage::PageStorage* page_storage() override { return storage_.get(); }
+
   void SetUp() override {
     ::testing::Test::SetUp();
-    storage_.reset(new storage::PageStorageImpl(
-        message_loop_.task_runner(), message_loop_.task_runner(),
-        &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString()));
-    storage::Status status;
-    storage_->Init(callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(storage::Status::OK, status);
+    ASSERT_TRUE(CreatePageStorage(&storage_));
   }
 
   std::unique_ptr<const storage::Commit> CreateCommit(
@@ -103,12 +82,9 @@ class CommonAncestorTest : public test::TestWithMessageLoop {
     return root;
   }
 
-  coroutine::CoroutineServiceImpl coroutine_service_;
-  std::unique_ptr<storage::PageStorageImpl> storage_;
+  std::unique_ptr<storage::PageStorage> storage_;
 
  private:
-  files::ScopedTempDir tmp_dir_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(CommonAncestorTest);
 };
 

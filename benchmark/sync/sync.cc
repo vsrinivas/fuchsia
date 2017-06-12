@@ -17,30 +17,41 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace {
 constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/sync";
 constexpr ftl::StringView kEntryCountFlag = "entry-count";
 constexpr ftl::StringView kValueSizeFlag = "value-size";
+constexpr ftl::StringView kRefsFlag = "refs";
 constexpr ftl::StringView kServerIdFlag = "server-id";
+
+constexpr ftl::StringView kRefsOnFlag = "on";
+constexpr ftl::StringView kRefsOffFlag = "off";
+constexpr ftl::StringView kRefsAutoFlag = "auto";
+
 constexpr size_t kKeySize = 100;
+constexpr size_t kMaxInlineDataSize = MX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --" << kServerIdFlag
-            << "=<string>" << std::endl;
+            << "=<int> --" << kValueSizeFlag << "=<int> --" << kRefsFlag << "=("
+            << kRefsOnFlag << "|" << kRefsOffFlag << "|" << kRefsAutoFlag
+            << ") --" << kServerIdFlag << "=<string>" << std::endl;
 }
 
 }  // namespace
 
 namespace benchmark {
 
-SyncBenchmark::SyncBenchmark(int entry_count,
-                             int value_size,
+SyncBenchmark::SyncBenchmark(size_t entry_count,
+                             size_t value_size,
+                             ReferenceStrategy reference_strategy,
                              std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       value_size_(value_size),
+      reference_strategy_(reference_strategy),
       server_id_(std::move(server_id)),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
@@ -95,13 +106,13 @@ void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              const OnChangeCallback& callback) {
   FTL_DCHECK(page_change->changes.size() == 1);
   FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
-  int i = std::stoi(convert::ToString(page_change->changes[0]->key));
+  size_t i = std::stoul(convert::ToString(page_change->changes[0]->key));
   TRACE_ASYNC_END("benchmark", "sync latency", i);
   RunSingle(i + 1);
   callback(nullptr);
 }
 
-void SyncBenchmark::RunSingle(int i) {
+void SyncBenchmark::RunSingle(size_t i) {
   if (i == entry_count_) {
     Backlog();
     return;
@@ -110,6 +121,27 @@ void SyncBenchmark::RunSingle(int i) {
   fidl::Array<uint8_t> key = generator_.MakeKey(i, kKeySize);
   fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
+  if (reference_strategy_ != ReferenceStrategy::OFF &&
+      (reference_strategy_ == ReferenceStrategy::ON ||
+       value_size_ > kMaxInlineDataSize)) {
+    mx::vmo vmo;
+    if (!mtl::VmoFromString(convert::ToStringView(value), &vmo)) {
+      benchmark::QuitOnError(ledger::Status::IO_ERROR, "mtl::VmoFromString");
+      return;
+    }
+    alpha_page_->CreateReferenceFromVmo(
+        std::move(vmo),
+        ftl::MakeCopyable([ this, key = std::move(key) ](
+            ledger::Status status, ledger::ReferencePtr reference) mutable {
+          if (benchmark::QuitOnError(status, "Page::CreateReferenceFromVmo")) {
+            return;
+          }
+          alpha_page_->PutReference(
+              std::move(key), std::move(reference), ledger::Priority::EAGER,
+              benchmark::QuitOnErrorCallback("PutReference"));
+        }));
+    return;
+  }
   alpha_page_->Put(std::move(key), std::move(value),
                    benchmark::QuitOnErrorCallback("Put"));
 }
@@ -171,9 +203,10 @@ int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
 
   std::string entry_count_str;
-  int entry_count;
+  size_t entry_count;
   std::string value_size_str;
-  int value_size;
+  size_t value_size;
+  std::string reference_strategy_str;
   std::string server_id;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
@@ -183,13 +216,30 @@ int main(int argc, const char** argv) {
                                    &value_size_str) ||
       !ftl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size <= 0 ||
+      !command_line.GetOptionValue(kRefsFlag.ToString(),
+                                   &reference_strategy_str) ||
       !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }
 
+  benchmark::SyncBenchmark::ReferenceStrategy reference_strategy;
+  if (reference_strategy_str == kRefsOnFlag) {
+    reference_strategy = benchmark::SyncBenchmark::ReferenceStrategy::ON;
+  } else if (reference_strategy_str == kRefsOffFlag) {
+    reference_strategy = benchmark::SyncBenchmark::ReferenceStrategy::OFF;
+  } else if (reference_strategy_str == kRefsAutoFlag) {
+    reference_strategy = benchmark::SyncBenchmark::ReferenceStrategy::AUTO;
+  } else {
+    std::cerr << "Unknown option " << reference_strategy_str << " for "
+              << kRefsFlag.ToString() << std::endl;
+    PrintUsage(argv[0]);
+    return -1;
+  }
+
   mtl::MessageLoop loop;
-  benchmark::SyncBenchmark app(entry_count, value_size, server_id);
+  benchmark::SyncBenchmark app(entry_count, value_size, reference_strategy,
+                               server_id);
   loop.task_runner()->PostTask([&app] { app.Run(); });
   loop.Run();
   return 0;

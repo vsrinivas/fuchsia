@@ -63,10 +63,10 @@ class PageStorageEmptyImpl : public PageStorage {
   Status GetDeltaObjects(const CommitId& commit_id,
                          std::vector<ObjectId>* objects) override;
 
-  void GetAllUnsyncedObjectIds(
+  void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
 
-  Status MarkObjectSynced(ObjectIdView object_id) override;
+  Status MarkPieceSynced(ObjectIdView object_id) override;
 
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
@@ -75,6 +75,11 @@ class PageStorageEmptyImpl : public PageStorage {
   void GetObject(
       ObjectIdView object_id,
       Location location,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback) override;
+
+  void GetPiece(
+      ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
 

@@ -8,12 +8,8 @@ source_set("test") {
   sources = [
     "commit_empty_impl.cc",
     "commit_empty_impl.h",
-    "commit_random_impl.cc",
-    "commit_random_impl.h",
     "page_storage_empty_impl.cc",
     "page_storage_empty_impl.h",
-    "storage_test_utils.cc",
-    "storage_test_utils.h",
   ]
 
   public_deps = [

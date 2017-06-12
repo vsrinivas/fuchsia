@@ -7,16 +7,19 @@
 
 #include <utility>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/db.h"
-
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
+
+#include "apps/ledger/src/coroutine/coroutine.h"
+#include "apps/ledger/src/storage/impl/db.h"
+#include "lib/ftl/functional/auto_call.h"
 
 namespace storage {
 
 class PageStorageImpl;
 
+// TODO(qsr): LE-250 There must be a mechanism to clean the database from
+// TRANSIENT objects.
 class DbImpl : public DB {
  public:
   DbImpl(coroutine::CoroutineService* coroutine_service,
@@ -65,19 +68,27 @@ class DbImpl : public DB {
   Status GetJournalEntries(
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;
+  Status WriteObject(ObjectIdView object_id,
+                     std::unique_ptr<DataSource::DataChunk> content,
+                     ObjectStatus object_status) override;
+  Status ReadObject(ObjectId object_id,
+                    std::unique_ptr<const Object>* object) override;
+  Status DeleteObject(ObjectIdView object_id) override;
   Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(const CommitId& commit_id,
                               int64_t timestamp) override;
   Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
-  Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) override;
-  Status MarkObjectIdSynced(ObjectIdView object_id) override;
-  Status MarkObjectIdUnsynced(ObjectIdView object_id) override;
-  Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) override;
+  Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
+  Status SetObjectStatus(ObjectIdView object_id,
+                         ObjectStatus object_status) override;
+  Status GetObjectStatus(ObjectIdView object_id,
+                         ObjectStatus* object_status) override;
   Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
   Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
 
  private:
+  std::unique_ptr<Batch> StartLocalBatch();
   Status GetByPrefix(const leveldb::Slice& prefix,
                      std::vector<std::string>* key_suffixes);
   Status GetEntriesByPrefix(
@@ -87,6 +98,10 @@ class DbImpl : public DB {
   Status Get(convert::ExtendedStringView key, std::string* value);
   Status Put(convert::ExtendedStringView key, ftl::StringView value);
   Status Delete(convert::ExtendedStringView key);
+  Status GetIteratorAt(convert::ExtendedStringView key,
+                       std::unique_ptr<leveldb::Iterator>* iterator);
+  Status HasKey(convert::ExtendedStringView key, bool* has_key);
+  bool CheckHasKey(convert::ExtendedStringView key);
 
   coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;

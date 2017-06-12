@@ -85,6 +85,7 @@ source_set("unittests") {
     "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/fake:lib",
+    "//apps/ledger/src/storage/impl:test_utils",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",

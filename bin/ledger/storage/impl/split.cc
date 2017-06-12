@@ -7,12 +7,15 @@
 #include <limits>
 #include <sstream>
 
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/constants.h"
+#include "apps/ledger/src/storage/impl/file_index.h"
 #include "apps/ledger/src/storage/impl/file_index_generated.h"
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/third_party/bup/bupsplit.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 
@@ -26,10 +29,7 @@ constexpr size_t kBitsPerLevel = 4;
 // size is less than |kMaxChunkSize|.
 constexpr size_t kMaxIdentifiersPerIndex = kMaxChunkSize / 61;
 
-struct ObjectIdAndSize {
-  ObjectId id;
-  uint64_t size;
-};
+using ObjectIdAndSize = FileIndexSerialization::ObjectIdAndSize;
 
 struct ChunkAndSize {
   std::unique_ptr<DataSource::DataChunk> chunk;
@@ -57,7 +57,7 @@ struct ChunkAndSize {
 class SplitContext {
  public:
   SplitContext(
-      std::function<void(SplitStatus,
+      std::function<void(IterationStatus,
                          ObjectId,
                          std::unique_ptr<DataSource::DataChunk>)> callback)
       : callback_(std::move(callback)),
@@ -68,7 +68,7 @@ class SplitContext {
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk,
                 DataSource::Status status) {
     if (status == DataSource::Status::ERROR) {
-      callback_(SplitStatus::ERROR, "", nullptr);
+      callback_(IterationStatus::ERROR, "", nullptr);
       return;
     }
 
@@ -105,7 +105,7 @@ class SplitContext {
       // finished. The top-level object_id is the unique element.
       if (i == current_identifiers_per_level_.size() - 1 &&
           current_identifiers_per_level_[i].size() == 1) {
-        callback_(SplitStatus::DONE,
+        callback_(IterationStatus::DONE,
                   std::move(current_identifiers_per_level_[i][0].id), nullptr);
         return;
       }
@@ -155,7 +155,7 @@ class SplitContext {
     auto data_view = data->Get();
     size_t size = data_view.size();
     ObjectId object_id = ComputeObjectId(ObjectType::VALUE, data_view);
-    callback_(SplitStatus::IN_PROGRESS, object_id, std::move(data));
+    callback_(IterationStatus::IN_PROGRESS, object_id, std::move(data));
     AddIdentifierAtLevel(0, {std::move(object_id), size});
   }
 
@@ -194,25 +194,13 @@ class SplitContext {
     FTL_DCHECK(ids.size() > 1);
     FTL_DCHECK(ids.size() <= kMaxIdentifiersPerIndex);
 
-    auto builder = std::make_unique<flatbuffers::FlatBufferBuilder>();
-    size_t total_size = 0u;
+    std::unique_ptr<DataSource::DataChunk> chunk;
+    size_t total_size;
+    FileIndexSerialization::BuildFileIndex(ids, &chunk, &total_size);
 
-    std::vector<flatbuffers::Offset<ObjectChild>> children;
-    for (const auto& id : ids) {
-      total_size += id.size;
-      children.push_back(
-          CreateObjectChild(*builder, id.size,
-                            convert::ToFlatBufferVector(builder.get(), id.id)));
-    }
-    FinishFileIndexBuffer(
-        *builder, CreateFileIndex(
-                      *builder, total_size,
-                      builder->CreateVector(children.data(), children.size())));
-
-    auto chunk = DataSource::DataChunk::Create(std::move(builder));
     FTL_DCHECK(chunk->Get().size() <= kMaxChunkSize) << chunk->Get().size();
     ObjectId object_id = ComputeObjectId(ObjectType::INDEX, chunk->Get());
-    callback_(SplitStatus::IN_PROGRESS, object_id, std::move(chunk));
+    callback_(IterationStatus::IN_PROGRESS, object_id, std::move(chunk));
     return {std::move(object_id), total_size};
   }
 
@@ -266,7 +254,7 @@ class SplitContext {
   }
 
   std::function<
-      void(SplitStatus, ObjectId, std::unique_ptr<DataSource::DataChunk>)>
+      void(IterationStatus, ObjectId, std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   bup::RollSumSplit roll_sum_split_;
   // The list of chunks from the initial source that are not yet entiretly
@@ -281,11 +269,63 @@ class SplitContext {
   FTL_DISALLOW_COPY_AND_ASSIGN(SplitContext);
 };
 
+class CollectPiecesState
+    : public ftl::RefCountedThreadSafe<CollectPiecesState> {
+ public:
+  std::function<void(ObjectIdView,
+                     std::function<void(Status, ftl::StringView)>)>
+      data_accessor;
+  std::function<bool(IterationStatus, ObjectIdView)> callback;
+  bool running = true;
+};
+
+void CollectPiecesInternal(ObjectIdView root,
+                           ftl::RefPtr<CollectPiecesState> state,
+                           ftl::Closure on_done) {
+  if (!state->callback(IterationStatus::IN_PROGRESS, root)) {
+    on_done();
+    return;
+  }
+
+  if (GetObjectIdType(root) != ObjectIdType::INDEX_HASH) {
+    on_done();
+    return;
+  }
+
+  state->data_accessor(root, [ state, on_done = std::move(on_done) ](
+                                 Status status, ftl::StringView data) mutable {
+    if (!state->running) {
+      on_done();
+      return;
+    }
+
+    if (status != Status::OK) {
+      FTL_LOG(WARNING) << "Unable to read object content.";
+      state->running = false;
+      on_done();
+      return;
+    }
+
+    auto waiter = callback::CompletionWaiter::Create();
+    status = ForEachPiece(data, [&](ObjectIdView id) {
+      CollectPiecesInternal(id, state, waiter->NewCallback());
+      return Status::OK;
+    });
+    if (status != Status::OK) {
+      state->running = false;
+      on_done();
+      return;
+    }
+
+    waiter->Finalize(std::move(on_done));
+  });
+}
+
 }  // namespace
 
 void SplitDataSource(
     DataSource* source,
-    std::function<void(SplitStatus,
+    std::function<void(IterationStatus,
                        ObjectId,
                        std::unique_ptr<DataSource::DataChunk>)> callback) {
   SplitContext context(std::move(callback));
@@ -294,6 +334,42 @@ void SplitDataSource(
       DataSource::Status status) mutable {
     context.AddChunk(std::move(chunk), status);
   }));
+}
+
+Status ForEachPiece(ftl::StringView index_content,
+                    std::function<Status(ObjectIdView)> callback) {
+  const FileIndex* file_index;
+  Status status =
+      FileIndexSerialization::ParseFileIndex(index_content, &file_index);
+  if (status != Status::OK) {
+    return status;
+  }
+
+  for (const auto* child : *file_index->children()) {
+    Status status = callback(child->object_id());
+    if (status != Status::OK) {
+      return status;
+    }
+  }
+
+  return Status::OK;
+}
+
+void CollectPieces(
+    ObjectIdView root,
+    std::function<void(ObjectIdView,
+                       std::function<void(Status, ftl::StringView)>)>
+        data_accessor,
+    std::function<bool(IterationStatus, ObjectIdView)> callback) {
+  auto state = ftl::AdoptRef(new CollectPiecesState());
+  state->data_accessor = std::move(data_accessor);
+  state->callback = std::move(callback);
+
+  CollectPiecesInternal(root, state, [state] {
+    IterationStatus final_status =
+        state->running ? IterationStatus::DONE : IterationStatus::ERROR;
+    state->callback(final_status, "");
+  });
 }
 
 }  // namespace storage

@@ -10,9 +10,18 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/strings/concatenate.h"
+
+#define RETURN_ON_ERROR(expr)   \
+  do {                          \
+    Status status = (expr);     \
+    if (status != Status::OK) { \
+      return status;            \
+    }                           \
+  } while (0)
 
 namespace storage {
 
@@ -20,6 +29,7 @@ namespace {
 
 constexpr ftl::StringView kHeadPrefix = "heads/";
 constexpr ftl::StringView kCommitPrefix = "commits/";
+constexpr ftl::StringView kObjectPrefix = "objects/";
 
 // Journal keys
 const size_t kJournalIdSize = 16;
@@ -39,7 +49,8 @@ const char kJournalEagerEntry = 'E';
 const size_t kJournalEntryAddPrefixSize = 2;
 
 constexpr ftl::StringView kUnsyncedCommitPrefix = "unsynced/commits/";
-constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
+constexpr ftl::StringView kTransientObjectPrefix = "transient/object_ids/";
+constexpr ftl::StringView kLocalObjectPrefix = "local/object_ids/";
 
 constexpr ftl::StringView kSyncMetadataPrefix = "sync-metadata/";
 
@@ -82,12 +93,20 @@ std::string GetCommitKeyFor(CommitIdView commit_id) {
   return ftl::Concatenate({kCommitPrefix, commit_id});
 }
 
+std::string GetObjectKeyFor(ObjectIdView object_id) {
+  return ftl::Concatenate({kObjectPrefix, object_id});
+}
+
 std::string GetUnsyncedCommitKeyFor(const CommitId& commit_id) {
   return ftl::Concatenate({kUnsyncedCommitPrefix, commit_id});
 }
 
-std::string GetUnsyncedObjectKeyFor(ObjectIdView object_id) {
-  return ftl::Concatenate({kUnsyncedObjectPrefix, object_id});
+std::string GetTransientObjectKeyFor(ObjectIdView object_id) {
+  return ftl::Concatenate({kTransientObjectPrefix, object_id});
+}
+
+std::string GetLocalObjectKeyFor(ObjectIdView object_id) {
+  return ftl::Concatenate({kLocalObjectPrefix, object_id});
 }
 
 std::string GetImplicitJournalMetaKeyFor(const JournalId& journal_id) {
@@ -230,6 +249,15 @@ class BatchImpl : public DB::Batch {
   bool executed_;
 };
 
+class EmptyBatch : public DB::Batch {
+ public:
+  EmptyBatch() {}
+
+  ~EmptyBatch() override {}
+
+  Status Execute() override { return Status::OK; }
+};
+
 }  // namespace
 
 DbImpl::DbImpl(coroutine::CoroutineService* coroutine_service,
@@ -282,12 +310,9 @@ std::unique_ptr<DB::Batch> DbImpl::StartBatch() {
 
 Status DbImpl::GetHeads(std::vector<CommitId>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
-  Status status = GetEntriesByPrefix(convert::ToSlice(kHeadPrefix), &entries);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(GetEntriesByPrefix(convert::ToSlice(kHeadPrefix), &entries));
   ExtractSortedCommitsIds(&entries, heads);
-  return status;
+  return Status::OK;
 }
 
 Status DbImpl::AddHead(CommitIdView head, int64_t timestamp) {
@@ -342,12 +367,10 @@ Status DbImpl::GetImplicitJournal(const JournalId& journal_id,
   FTL_DCHECK(journal_id.size() == kJournalIdSize);
   FTL_DCHECK(journal_id[0] == kImplicitJournalIdPrefix);
   CommitId base;
-  Status s = Get(GetImplicitJournalMetaKeyFor(journal_id), &base);
-  if (s == Status::OK) {
-    *journal = JournalDBImpl::Simple(JournalType::IMPLICIT, coroutine_service_,
-                                     page_storage_, this, journal_id, base);
-  }
-  return s;
+  RETURN_ON_ERROR(Get(GetImplicitJournalMetaKeyFor(journal_id), &base));
+  *journal = JournalDBImpl::Simple(JournalType::IMPLICIT, coroutine_service_,
+                                   page_storage_, this, journal_id, base);
+  return Status::OK;
 }
 
 Status DbImpl::RemoveExplicitJournals() {
@@ -358,10 +381,7 @@ Status DbImpl::RemoveExplicitJournals() {
 
 Status DbImpl::RemoveJournal(const JournalId& journal_id) {
   if (journal_id[0] == kImplicitJournalIdPrefix) {
-    Status s = Delete(GetImplicitJournalMetaKeyFor(journal_id));
-    if (s != Status::OK) {
-      return s;
-    }
+    RETURN_ON_ERROR(Delete(GetImplicitJournalMetaKeyFor(journal_id)));
   }
   return DeleteByPrefix(GetJournalEntryPrefixFor(journal_id));
 }
@@ -383,10 +403,7 @@ Status DbImpl::GetJournalValue(const JournalId& journal_id,
                                ftl::StringView key,
                                std::string* value) {
   std::string db_value;
-  Status s = Get(GetJournalEntryKeyFor(journal_id, key), &db_value);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(Get(GetJournalEntryKeyFor(journal_id, key), &db_value));
   return ExtractObjectId(db_value, value);
 }
 
@@ -401,17 +418,68 @@ Status DbImpl::GetJournalEntries(
   return Status::OK;
 }
 
+Status DbImpl::WriteObject(ObjectIdView object_id,
+                           std::unique_ptr<DataSource::DataChunk> content,
+                           ObjectStatus object_status) {
+  FTL_DCHECK(object_status > ObjectStatus::UNKNOWN);
+
+  auto object_key = GetObjectKeyFor(object_id);
+  bool has_key;
+  RETURN_ON_ERROR(HasKey(object_key, &has_key));
+  if (has_key && object_status > ObjectStatus::TRANSIENT) {
+    return SetObjectStatus(object_id, object_status);
+  }
+
+  auto batch = StartLocalBatch();
+
+  Put(object_key, content->Get());
+  switch (object_status) {
+    case ObjectStatus::UNKNOWN:
+      FTL_NOTREACHED();
+      break;
+    case ObjectStatus::TRANSIENT:
+      Put(GetTransientObjectKeyFor(object_id), "");
+      break;
+    case ObjectStatus::LOCAL:
+      Put(GetLocalObjectKeyFor(object_id), "");
+      break;
+    case ObjectStatus::SYNCED:
+      // Nothing to do.
+      break;
+  }
+  return batch->Execute();
+}
+
+Status DbImpl::ReadObject(ObjectId object_id,
+                          std::unique_ptr<const Object>* object) {
+  std::unique_ptr<leveldb::Iterator> iterator;
+  RETURN_ON_ERROR(GetIteratorAt(GetObjectKeyFor(object_id), &iterator));
+  if (object) {
+    *object = std::make_unique<LevelDBObject>(std::move(object_id),
+                                              std::move(iterator));
+  }
+  return Status::OK;
+}
+
+Status DbImpl::DeleteObject(ObjectIdView object_id) {
+  auto batch = StartLocalBatch();
+  Delete(GetObjectKeyFor(object_id));
+  Delete(GetTransientObjectKeyFor(object_id));
+  Delete(GetLocalObjectKeyFor(object_id));
+  return batch->Execute();
+}
+
 Status DbImpl::GetJournalValueCounter(const JournalId& journal_id,
                                       ftl::StringView value,
                                       int64_t* counter) {
   std::string counter_str;
-  Status s = Get(GetJournalCounterKeyFor(journal_id, value), &counter_str);
-  if (s == Status::NOT_FOUND) {
+  Status status = Get(GetJournalCounterKeyFor(journal_id, value), &counter_str);
+  if (status == Status::NOT_FOUND) {
     *counter = 0;
     return Status::OK;
   }
-  if (s != Status::OK) {
-    return s;
+  if (status != Status::OK) {
+    return status;
   }
   *counter = DeserializeNumber<int64_t>(counter_str);
   return Status::OK;
@@ -434,11 +502,8 @@ Status DbImpl::GetJournalValues(const JournalId& journal_id,
 
 Status DbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
-  Status s =
-      GetEntriesByPrefix(convert::ToSlice(kUnsyncedCommitPrefix), &entries);
-  if (s != Status::OK) {
-    return s;
-  }
+  RETURN_ON_ERROR(
+      GetEntriesByPrefix(convert::ToSlice(kUnsyncedCommitPrefix), &entries));
   ExtractSortedCommitsIds(&entries, commit_ids);
   return Status::OK;
 }
@@ -453,34 +518,72 @@ Status DbImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
 }
 
 Status DbImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
-  std::string value;
-  Status s = Get(GetUnsyncedCommitKeyFor(commit_id), &value);
-  if (s == Status::INTERNAL_IO_ERROR) {
-    return s;
-  }
-  *is_synced = (s == Status::NOT_FOUND);
+  bool has_key;
+  RETURN_ON_ERROR(HasKey(GetUnsyncedCommitKeyFor(commit_id), &has_key));
+  *is_synced = !has_key;
   return Status::OK;
 }
 
-Status DbImpl::GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) {
-  return GetByPrefix(convert::ToSlice(kUnsyncedObjectPrefix), object_ids);
+Status DbImpl::GetUnsyncedPieces(std::vector<ObjectId>* object_ids) {
+  return GetByPrefix(convert::ToSlice(kLocalObjectPrefix), object_ids);
 }
 
-Status DbImpl::MarkObjectIdSynced(ObjectIdView object_id) {
-  return Delete(GetUnsyncedObjectKeyFor(object_id));
-}
+Status DbImpl::SetObjectStatus(ObjectIdView object_id,
+                               ObjectStatus object_status) {
+  FTL_DCHECK(object_status >= ObjectStatus::LOCAL);
+  FTL_DCHECK(CheckHasKey(GetObjectKeyFor(object_id)))
+      << "Unknown object: " << convert::ToHex(object_id);
 
-Status DbImpl::MarkObjectIdUnsynced(ObjectIdView object_id) {
-  return Put(GetUnsyncedObjectKeyFor(object_id), "");
-}
+  auto transient_key = GetTransientObjectKeyFor(object_id);
+  auto local_key = GetLocalObjectKeyFor(object_id);
 
-Status DbImpl::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
-  std::string value;
-  Status s = Get(GetUnsyncedObjectKeyFor(object_id), &value);
-  if (s == Status::INTERNAL_IO_ERROR) {
-    return s;
+  auto batch = StartLocalBatch();
+  bool has_key;
+
+  switch (object_status) {
+    case ObjectStatus::UNKNOWN:
+    case ObjectStatus::TRANSIENT:
+      FTL_NOTREACHED();
+      break;
+    case ObjectStatus::LOCAL:
+      RETURN_ON_ERROR(HasKey(transient_key, &has_key));
+      if (has_key) {
+        Delete(transient_key);
+        Put(local_key, "");
+      }
+      break;
+    case ObjectStatus::SYNCED:
+      Delete(local_key);
+      Delete(transient_key);
+      break;
   }
-  *is_synced = (s == Status::NOT_FOUND);
+
+  return batch->Execute();
+}
+
+Status DbImpl::GetObjectStatus(ObjectIdView object_id,
+                               ObjectStatus* object_status) {
+  bool has_key;
+
+  RETURN_ON_ERROR(HasKey(GetLocalObjectKeyFor(object_id), &has_key));
+  if (has_key) {
+    *object_status = ObjectStatus::LOCAL;
+    return Status::OK;
+  }
+
+  RETURN_ON_ERROR(HasKey(GetTransientObjectKeyFor(object_id), &has_key));
+  if (has_key) {
+    *object_status = ObjectStatus::TRANSIENT;
+    return Status::OK;
+  }
+
+  RETURN_ON_ERROR(HasKey(GetObjectKeyFor(object_id), &has_key));
+  if (!has_key) {
+    *object_status = ObjectStatus::UNKNOWN;
+    return Status::OK;
+  }
+
+  *object_status = ObjectStatus::SYNCED;
   return Status::OK;
 }
 
@@ -490,6 +593,13 @@ Status DbImpl::SetSyncMetadata(ftl::StringView key, ftl::StringView value) {
 
 Status DbImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
   return Get(GetSyncMetadataKeyFor(key), value);
+}
+
+std::unique_ptr<DB::Batch> DbImpl::StartLocalBatch() {
+  if (batch_) {
+    return std::make_unique<EmptyBatch>();
+  }
+  return StartBatch();
 }
 
 Status DbImpl::GetByPrefix(const leveldb::Slice& prefix,
@@ -555,6 +665,40 @@ Status DbImpl::Delete(convert::ExtendedStringView key) {
     return Status::OK;
   }
   return ConvertStatus(db_->Delete(write_options_, key));
+}
+
+Status DbImpl::GetIteratorAt(convert::ExtendedStringView key,
+                             std::unique_ptr<leveldb::Iterator>* iterator) {
+  std::unique_ptr<leveldb::Iterator> local_iterator(
+      db_->NewIterator(read_options_));
+  local_iterator->Seek(key);
+
+  if (!local_iterator->Valid() || local_iterator->key() != key) {
+    return Status::NOT_FOUND;
+  }
+
+  if (iterator) {
+    iterator->swap(local_iterator);
+  }
+  return Status::OK;
+}
+
+Status DbImpl::HasKey(convert::ExtendedStringView key, bool* has_key) {
+  Status status = GetIteratorAt(key, nullptr);
+  if (status == Status::OK || status == Status::NOT_FOUND) {
+    *has_key = (status == Status::OK);
+    return Status::OK;
+  }
+  return status;
+}
+
+bool DbImpl::CheckHasKey(convert::ExtendedStringView key) {
+  bool result;
+  Status status = HasKey(key, &result);
+  if (status != Status::OK) {
+    return false;
+  }
+  return result;
 }
 
 }  // namespace storage

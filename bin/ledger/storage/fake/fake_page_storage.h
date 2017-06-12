@@ -49,6 +49,10 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
       Location location,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
+  void GetPiece(
+      ObjectIdView object_id,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback) override;
   void GetCommitContents(const Commit& commit,
                          std::string min_key,
                          std::function<bool(Entry)> on_next,

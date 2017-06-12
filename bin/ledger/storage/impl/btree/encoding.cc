@@ -47,6 +47,10 @@ bool CheckValidTreeNodeSerialization(ftl::StringView data) {
   const TreeNodeStorage* tree_node =
       GetTreeNodeStorage(reinterpret_cast<const unsigned char*>(data.data()));
 
+  if (!tree_node->children() || !tree_node->entries()) {
+    return false;
+  }
+
   if (tree_node->children()->size() > tree_node->entries()->size() + 1) {
     return false;
   }
@@ -102,17 +106,18 @@ std::string EncodeNode(uint8_t level,
     }
   }
   size_t current_index = 0;
-  auto children_offsets = builder.CreateVectorOfStructs(
+  auto children_offsets = builder.CreateVector(
       children_count,
-      static_cast<std::function<void(size_t, ChildStorage*)>>(
-          [&children, &current_index](size_t i, ChildStorage* child_storage) {
+      static_cast<std::function<flatbuffers::Offset<ChildStorage>(size_t)>>(
+          [&builder, &children, &current_index](size_t i) {
             while (children[current_index].empty()) {
               ++current_index;
             }
-            child_storage->mutate_index(current_index);
-            child_storage->mutable_object_id() =
-                *convert::ToIdStorage(children[current_index]);
+            size_t index = current_index;
             ++current_index;
+            return CreateChildStorage(
+                builder, index,
+                convert::ToFlatBufferVector(&builder, children[index]));
           }));
 
   builder.Finish(
@@ -141,7 +146,7 @@ bool DecodeNode(ftl::StringView data,
   res_children->reserve(tree_node->entries()->size() + 1);
   for (const auto* child_storage : *(tree_node->children())) {
     res_children->resize(child_storage->index());
-    res_children->push_back(convert::ToString(&child_storage->object_id()));
+    res_children->push_back(convert::ToString(child_storage->object_id()));
   }
   res_children->resize(tree_node->entries()->size() + 1);
 

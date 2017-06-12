@@ -15,37 +15,51 @@ namespace {
 
 class DataSourceTest : public test::TestWithMessageLoop {
  protected:
-  void TestDataSource(std::string expected,
-                      std::unique_ptr<DataSource> source) {
-    EXPECT_EQ(expected.size(), source->GetSize());
-
+  ::testing::AssertionResult TestDataSource(
+      std::string expected,
+      std::unique_ptr<DataSource> source) {
     std::string result;
+    DataSource::Status status;
 
-    source->Get([this, &result](std::unique_ptr<DataSource::DataChunk> data,
-                                DataSource::Status status) {
-      if (status == DataSource::Status::ERROR) {
-        message_loop_.PostQuitTask();
-        FAIL() << "callback received an error.";
-        return;
-      }
+    source->Get(
+        [this, &result, &status](std::unique_ptr<DataSource::DataChunk> data,
+                                 DataSource::Status received_status) {
+          status = received_status;
+          if (received_status == DataSource::Status::ERROR) {
+            message_loop_.PostQuitTask();
+            return;
+          }
 
-      result += data->Get().ToString();
+          result += data->Get().ToString();
 
-      if (status == DataSource::Status::DONE) {
-        message_loop_.PostQuitTask();
-      }
-    });
+          if (received_status == DataSource::Status::DONE) {
+            message_loop_.PostQuitTask();
+          }
+        });
 
-    EXPECT_FALSE(RunLoopWithTimeout());
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure() << "Timed out.";
+    }
 
-    EXPECT_EQ(expected, result);
+    if (status != DataSource::Status::DONE) {
+      return ::testing::AssertionFailure()
+             << "Expected: " << DataSource::Status::DONE
+             << ", but got: " << status;
+    }
+
+    if (expected != result) {
+      return ::testing::AssertionFailure()
+             << "Expected: " << expected << ", but got: " << result;
+    }
+
+    return ::testing::AssertionSuccess();
   }
 };
 
 TEST_F(DataSourceTest, String) {
   std::string value = "Hello World";
 
-  TestDataSource(value, DataSource::Create(value));
+  EXPECT_TRUE(TestDataSource(value, DataSource::Create(value)));
 }
 
 TEST_F(DataSourceTest, Array) {
@@ -55,7 +69,7 @@ TEST_F(DataSourceTest, Array) {
   array.resize(value.size());
   memcpy(&array[0], value.data(), value.size());
 
-  TestDataSource(value, DataSource::Create(std::move(array)));
+  EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(array))));
 }
 
 TEST_F(DataSourceTest, Vmo) {
@@ -64,14 +78,26 @@ TEST_F(DataSourceTest, Vmo) {
   mx::vmo vmo;
   EXPECT_TRUE(mtl::VmoFromString(value, &vmo));
 
-  TestDataSource(value, DataSource::Create(std::move(vmo)));
+  EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(vmo))));
 }
 
 TEST_F(DataSourceTest, Socket) {
   std::string value = "Hello World";
 
-  TestDataSource(
-      value, DataSource::Create(mtl::WriteStringToSocket(value), value.size()));
+  EXPECT_TRUE(TestDataSource(
+      value,
+      DataSource::Create(mtl::WriteStringToSocket(value), value.size())));
+}
+
+TEST_F(DataSourceTest, SocketWrongSize) {
+  std::string value = "Hello World";
+
+  EXPECT_FALSE(TestDataSource(
+      value,
+      DataSource::Create(mtl::WriteStringToSocket(value), value.size() - 1)));
+  EXPECT_FALSE(TestDataSource(
+      value,
+      DataSource::Create(mtl::WriteStringToSocket(value), value.size() + 1)));
 }
 
 TEST_F(DataSourceTest, SocketMultipleChunk) {

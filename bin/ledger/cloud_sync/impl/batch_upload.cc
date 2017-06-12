@@ -46,7 +46,7 @@ void BatchUpload::Start() {
   FTL_DCHECK(!errored_);
   started_ = true;
   RefreshAuthToken([this] {
-    storage_->GetAllUnsyncedObjectIds(
+    storage_->GetUnsyncedPieces(
         [this](storage::Status status,
                std::vector<storage::ObjectId> object_ids) {
           FTL_DCHECK(status == storage::Status::OK);
@@ -83,15 +83,15 @@ void BatchUpload::UploadNextObject() {
   FTL_DCHECK(!remaining_object_ids_.empty());
   FTL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
-  storage_->GetObject(remaining_object_ids_.front(),
-                      storage::PageStorage::Location::LOCAL,
-                      [this](storage::Status storage_status,
-                             std::unique_ptr<const storage::Object> object) {
-                        FTL_DCHECK(storage_status == storage::Status::OK);
-                        UploadObject(std::move(object));
-                      });
+  auto object_id_to_send = std::move(remaining_object_ids_.front());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_ids_.pop();
+  storage_->GetPiece(std::move(object_id_to_send),
+                     [this](storage::Status storage_status,
+                            std::unique_ptr<const storage::Object> object) {
+                       FTL_DCHECK(storage_status == storage::Status::OK);
+                       UploadObject(std::move(object));
+                     });
 }
 
 void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
@@ -119,7 +119,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
         }
 
         // Uploading the object succeeded.
-        auto result = storage_->MarkObjectSynced(id);
+        auto result = storage_->MarkPieceSynced(id);
         FTL_DCHECK(result == storage::Status::OK);
 
         // Notify the user about the error once all pending uploads of the

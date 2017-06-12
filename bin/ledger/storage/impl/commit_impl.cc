@@ -52,8 +52,9 @@ std::string SerializeCommit(
             *child_storage = *convert::ToIdStorage(parent_commits[i]->GetId());
           }));
 
-  auto storage = CreateCommitStorage(builder, timestamp, generation,
-                                     root_node_id, parents_id);
+  auto storage = CreateCommitStorage(
+      builder, timestamp, generation,
+      convert::ToFlatBufferVector(&builder, root_node_id), parents_id);
   builder.Finish(storage);
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
                      builder.GetSize());

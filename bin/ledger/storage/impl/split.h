@@ -5,13 +5,15 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_SPLIT_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_SPLIT_H_
 
+#include <unordered_set>
+
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/types.h"
 
 namespace storage {
 
-// Status for the |SplitDataSource| callback.
-enum class SplitStatus {
+// Status for the |SplitDataSource| and |CollectXXXPieces| callbacks.
+enum class IterationStatus {
   DONE,
   IN_PROGRESS,
   ERROR,
@@ -26,9 +28,24 @@ enum class SplitStatus {
 // deleted.
 void SplitDataSource(
     DataSource* source,
-    std::function<void(SplitStatus,
+    std::function<void(IterationStatus,
                        ObjectId,
                        std::unique_ptr<DataSource::DataChunk>)> callback);
+
+// Recurse over all pieces of an index object.
+Status ForEachPiece(ftl::StringView index_content,
+                    std::function<Status(ObjectIdView)> callback);
+
+// Collects all pieces ids needed to build the object with id |root|. This
+// returns the id of the object itself, and recurse inside any index if the
+// |callback| returned true for the given id.
+void CollectPieces(
+    ObjectIdView root,
+    std::function<void(ObjectIdView,
+                       std::function<void(Status, ftl::StringView)>)>
+        data_accessor,
+    std::function<bool(IterationStatus, ObjectIdView)> callback);
+
 }  // namespace storage
 
 #endif  // APPS_LEDGER_SRC_STORAGE_IMPL_SPLIT_H_

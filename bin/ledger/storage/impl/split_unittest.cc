@@ -9,6 +9,7 @@
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/constants.h"
+#include "apps/ledger/src/storage/impl/file_index.h"
 #include "apps/ledger/src/storage/impl/file_index_generated.h"
 #include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/public/data_source.h"
@@ -67,7 +68,7 @@ std::string NewString(size_t size) {
 }
 
 struct Call {
-  SplitStatus status;
+  IterationStatus status;
   ObjectId id;
 };
 
@@ -80,10 +81,10 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
   auto result = std::make_unique<SplitResult>();
   SplitDataSource(source, ftl::MakeCopyable([
                     result = std::move(result), callback = std::move(callback)
-                  ](SplitStatus status, ObjectId id,
+                  ](IterationStatus status, ObjectId id,
                           std::unique_ptr<DataSource::DataChunk> data) mutable {
                     ASSERT_TRUE(result);
-                    if (status == SplitStatus::IN_PROGRESS) {
+                    if (status == IterationStatus::IN_PROGRESS) {
                       EXPECT_LE(data->Get().size(), kMaxChunkSize);
                       if (result->data.count(id) != 0) {
                         EXPECT_EQ(result->data[id]->Get(), data->Get());
@@ -92,7 +93,7 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
                       }
                     }
                     result->calls.push_back({status, std::move(id)});
-                    if (status != SplitStatus::IN_PROGRESS) {
+                    if (status != IterationStatus::IN_PROGRESS) {
                       auto to_send = std::move(*result);
                       result.reset();
                       callback(std::move(to_send));
@@ -154,7 +155,7 @@ TEST_P(SplitSmallValueTest, SmallValue) {
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(2u, split_result.calls.size());
-  EXPECT_EQ(SplitStatus::DONE, split_result.calls[1].status);
+  EXPECT_EQ(IterationStatus::DONE, split_result.calls[1].status);
   ASSERT_EQ(1u, split_result.data.size());
   EXPECT_EQ(content, split_result.data.begin()->second->Get());
   EXPECT_EQ(split_result.calls[1].id,
@@ -173,7 +174,7 @@ TEST_P(SplitBigValueTest, BigValues) {
   DoSplit(source.get(),
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  EXPECT_EQ(SplitStatus::DONE, split_result.calls.back().status);
+  EXPECT_EQ(IterationStatus::DONE, split_result.calls.back().status);
   // There is at least 4 calls:
   // 1 index
   // 2 contents
@@ -182,7 +183,7 @@ TEST_P(SplitBigValueTest, BigValues) {
 
   ftl::StringView current = content;
   for (const auto& call : split_result.calls) {
-    if (call.status == SplitStatus::IN_PROGRESS &&
+    if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectIdType(call.id) == ObjectIdType::VALUE_HASH) {
       EXPECT_EQ(current.substr(0, split_result.data[call.id]->Get().size()),
                 split_result.data[call.id]->Get());
@@ -202,8 +203,8 @@ INSTANTIATE_TEST_CASE_P(SplitTest,
                         SplitSmallValueTest,
                         ::testing::Values(0,
                                           12,
-                                          kObjectHashSize,
-                                          kObjectHashSize + 1,
+                                          kStorageHashSize,
+                                          kStorageHashSize + 1,
                                           100,
                                           1024,
                                           kMinChunkSize));
@@ -221,11 +222,11 @@ TEST(SplitTest, PathologicalCase) {
   DoSplit(source.get(),
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
-  ASSERT_EQ(SplitStatus::DONE, split_result.calls.back().status);
+  ASSERT_EQ(IterationStatus::DONE, split_result.calls.back().status);
 
   size_t total_size = 0u;
   for (const auto& call : split_result.calls) {
-    if (call.status == SplitStatus::IN_PROGRESS &&
+    if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectIdType(call.id) == ObjectIdType::VALUE_HASH) {
       total_size += split_result.data[call.id]->Get().size();
       EXPECT_EQ(std::string(split_result.data[call.id]->Get().size(), '\0'),
@@ -243,7 +244,105 @@ TEST(SplitTest, Error) {
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(1u, split_result.calls.size());
-  ASSERT_EQ(SplitStatus::ERROR, split_result.calls.back().status);
+  ASSERT_EQ(IterationStatus::ERROR, split_result.calls.back().status);
+}
+
+std::string MakeIndexId(size_t i) {
+  std::string value;
+  value.resize(sizeof(i));
+  memcpy(&value[0], &i, sizeof(i));
+  return ComputeObjectId(ObjectType::INDEX, value);
+}
+
+TEST(SplitTest, CollectPieces) {
+  // Define indexed files. Each index represents an index file. The content is
+  // itself a of index in |parts| that represent the children of the entry.
+  std::vector<std::vector<size_t>> parts = {
+      // clang-format off
+      {1, 2, 3},
+      {4, 5},
+      {4, 6, 7},
+      {7, 8, 9},
+      {10, 11},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+      // clang-format on
+  };
+
+  for (const auto& children : parts) {
+    for (size_t child : children) {
+      EXPECT_LT(child, parts.size());
+    }
+  }
+
+  std::map<std::string, std::unique_ptr<DataSource::DataChunk>> objects;
+
+  for (size_t i = 0; i < parts.size(); ++i) {
+    std::vector<FileIndexSerialization::ObjectIdAndSize> children;
+    for (size_t child : parts[i]) {
+      children.push_back({MakeIndexId(child), 1});
+    }
+    size_t total_size;
+    FileIndexSerialization::BuildFileIndex(
+        std::move(children), &objects[MakeIndexId(i)], &total_size);
+  }
+  IterationStatus status;
+  std::unordered_set<ObjectId> ids;
+  CollectPieces(
+      MakeIndexId(0),
+      [&objects](ObjectIdView id,
+                 std::function<void(Status, ftl::StringView)> callback) {
+        callback(Status::OK, objects[id.ToString()]->Get());
+      },
+      [&status, &ids](IterationStatus received_status, ObjectIdView id) {
+        status = received_status;
+        if (status == IterationStatus::IN_PROGRESS) {
+          ids.insert(id.ToString());
+        }
+        return true;
+      });
+
+  ASSERT_EQ(IterationStatus::DONE, status);
+  ASSERT_EQ(objects.size(), ids.size());
+  for (const auto& id : ids) {
+    EXPECT_EQ(1u, objects.count(id)) << "Unknown id: " << convert::ToHex(id);
+  }
+}
+
+// Test behavior of CollectPieces when the data accessor function returns an
+// error in the middle of the iteration.
+TEST(SplitTest, CollectPiecesError) {
+  const size_t nb_successfull_called = 128;
+  IterationStatus status;
+  size_t called = 0;
+  CollectPieces(
+      MakeIndexId(0),
+      [&called](ObjectIdView id,
+                std::function<void(Status, ftl::StringView)> callback) {
+        if (called >= nb_successfull_called) {
+          callback(Status::INTERNAL_IO_ERROR, "");
+          return;
+        }
+        ++called;
+        std::vector<FileIndexSerialization::ObjectIdAndSize> children;
+        children.push_back({MakeIndexId(2 * called), 1});
+        children.push_back({MakeIndexId(2 * called + 1), 1});
+        std::unique_ptr<DataSource::DataChunk> data;
+        size_t total_size;
+        FileIndexSerialization::BuildFileIndex(children, &data, &total_size);
+        callback(Status::OK, data->Get());
+      },
+      [&status](IterationStatus received_status, ObjectIdView id) {
+        status = received_status;
+        return true;
+      });
+  EXPECT_GE(called, nb_successfull_called);
+  ASSERT_EQ(IterationStatus::ERROR, status);
 }
 
 }  // namespace

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_TEST_STORAGE_TEST_UTILS_H_
-#define APPS_LEDGER_SRC_STORAGE_TEST_STORAGE_TEST_UTILS_H_
+#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_STORAGE_IMPL_UTILS_H_
+#define APPS_LEDGER_SRC_STORAGE_IMPL_STORAGE_IMPL_UTILS_H_
 
 #include <string>
 
@@ -16,12 +16,38 @@
 
 namespace storage {
 
-// Creates a random id given its size.
-std::string RandomId(size_t size);
+// Enum describing the expected behavior for identifier, allowing or preventing
+// to be inlined values.
+enum class InlineBehavior {
+  ALLOW,
+  PREVENT,
+};
 
-// Creates the object id for testing from the given str, by resizing it as
-// necessary.
-ObjectId MakeObjectId(std::string str);
+class ObjectData {
+ public:
+  ObjectData(std::string value,
+             InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+  std::unique_ptr<DataSource> ToDataSource();
+  std::unique_ptr<DataSource::DataChunk> ToChunk();
+
+  const std::string value;
+  const size_t size;
+  const std::string object_id;
+};
+
+// Builder the object id for the given content. If |inline_behavior| is
+// InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
+ObjectId MakeObjectId(std::string content,
+                      InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+
+// Returns a random string of the given length.
+std::string RandomString(size_t size);
+
+// Create a new random commit id.
+CommitId RandomCommitId();
+
+// Create a new random object id.
+ObjectId RandomObjectId();
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.
@@ -104,4 +130,4 @@ class StorageTest : public ::test::TestWithMessageLoop {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_TEST_STORAGE_TEST_UTILS_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_STORAGE_IMPL_UTILS_H_

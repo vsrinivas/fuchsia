@@ -5,9 +5,10 @@
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 
 #include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
+#include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace storage {
 namespace {
@@ -101,11 +102,17 @@ std::string ToString(flatbuffers::FlatBufferBuilder* builder) {
 TEST(EncodingTest, Errors) {
   flatbuffers::FlatBufferBuilder builder;
 
-  ChildStorage children[2];
-  children[0].mutate_index(1);
-  children[0].mutable_object_id() = *convert::ToIdStorage(MakeObjectId("c1"));
-  children[1].mutate_index(1);
-  children[1].mutable_object_id() = *convert::ToIdStorage(MakeObjectId("c2"));
+  auto create_children = [&builder](size_t size) {
+    std::vector<flatbuffers::Offset<ChildStorage>> children;
+
+    for (size_t i = 0; i < size; ++i) {
+      children.push_back(CreateChildStorage(
+          builder, 1,
+          convert::ToFlatBufferVector(
+              &builder, MakeObjectId(ftl::StringPrintf("c%lu", i)))));
+    }
+    return builder.CreateVector(children);
+  };
 
   // An empty string is not a valid serialization.
   EXPECT_FALSE(CheckValidTreeNodeSerialization(""));
@@ -114,7 +121,7 @@ TEST(EncodingTest, Errors) {
   builder.Finish(CreateTreeNodeStorage(
       builder,
       builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
-      builder.CreateVectorOfStructs(children, 2)));
+      create_children(2)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 
   // A single child with index 1 is not a valid serialization.
@@ -122,7 +129,7 @@ TEST(EncodingTest, Errors) {
   builder.Finish(CreateTreeNodeStorage(
       builder,
       builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
-      builder.CreateVectorOfStructs(children, 1)));
+      create_children(1)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 
   // 2 children with the same index is not a valid serialization.
@@ -139,7 +146,7 @@ TEST(EncodingTest, Errors) {
                                                 MakeObjectId("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
-      builder.CreateVectorOfStructs(children, 2)));
+      create_children(2)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 
   // 2 entries not sorted.
@@ -156,7 +163,7 @@ TEST(EncodingTest, Errors) {
                                                 MakeObjectId("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
-      builder.CreateVectorOfStructs(children, 0)));
+      create_children(0)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 }
 

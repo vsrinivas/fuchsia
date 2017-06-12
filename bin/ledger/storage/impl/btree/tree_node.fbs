@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-include "apps/ledger/src/convert/bytes.fbs";
-
 namespace storage;
 
 enum KeyPriorityStorage : byte { EAGER = 0, LAZY = 1 }
@@ -14,9 +12,9 @@ table EntryStorage {
   priority: KeyPriorityStorage;
 }
 
-struct ChildStorage {
+table ChildStorage {
   index:  ushort (key);
-  object_id: convert.IdStorage;
+  object_id: [ubyte];
 }
 
 table TreeNodeStorage {

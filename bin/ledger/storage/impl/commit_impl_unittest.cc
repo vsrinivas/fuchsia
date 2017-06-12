@@ -6,9 +6,9 @@
 
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
+#include "apps/ledger/src/storage/impl/commit_random_impl.h"
+#include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/storage/test/commit_random_impl.h"
-#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 
@@ -17,7 +17,7 @@ namespace {
 
 class CommitImplTest : public StorageTest {
  public:
-  CommitImplTest() : page_storage_(ObjectId(kObjectIdSize, 'a')) {}
+  CommitImplTest() : page_storage_("page_id") {}
 
   ~CommitImplTest() override {}
 
@@ -45,7 +45,7 @@ class CommitImplTest : public StorageTest {
 };
 
 TEST_F(CommitImplTest, CommitStorageBytes) {
-  ObjectId root_node_id = RandomId(kObjectIdSize);
+  ObjectId root_node_id = RandomObjectId();
 
   std::vector<std::unique_ptr<const Commit>> parents;
 
@@ -65,7 +65,7 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
 }
 
 TEST_F(CommitImplTest, CloneCommit) {
-  ObjectId root_node_id = RandomId(kObjectIdSize);
+  ObjectId root_node_id = RandomObjectId();
 
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new test::CommitRandomImpl());
@@ -78,7 +78,7 @@ TEST_F(CommitImplTest, CloneCommit) {
 }
 
 TEST_F(CommitImplTest, MergeCommitTimestamp) {
-  ObjectId root_node_id = RandomId(kObjectIdSize);
+  ObjectId root_node_id = RandomObjectId();
 
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new test::CommitRandomImpl());

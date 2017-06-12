@@ -142,6 +142,13 @@ void FakePageStorage::GetObject(
     Location location,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
+  GetPiece(object_id, std::move(callback));
+}
+
+void FakePageStorage::GetPiece(
+    ObjectIdView object_id,
+    const std::function<void(Status, std::unique_ptr<const Object>)>&
+        callback) {
   object_requests_.push_back([
     this, object_id = object_id.ToString(), callback = std::move(callback)
   ] {

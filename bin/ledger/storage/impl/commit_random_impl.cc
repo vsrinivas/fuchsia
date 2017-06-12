@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/test/commit_random_impl.h"
+#include "apps/ledger/src/storage/impl/commit_random_impl.h"
 
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "lib/ftl/logging.h"
 
 namespace storage {
 namespace test {
 
 CommitRandomImpl::CommitRandomImpl()
-    : id_(RandomId(kCommitIdSize)),
+    : id_(RandomCommitId()),
       timestamp_(glue::RandUint64()),
       generation_(glue::RandUint64()),
-      root_node_id_(RandomId(kObjectIdSize)),
-      parent_ids_{RandomId(kObjectIdSize)},
+      root_node_id_(RandomObjectId()),
+      parent_ids_{RandomObjectId()},
       parent_ids_views_{parent_ids_[0]},
-      storage_bytes_(RandomId(64)) {}
+      storage_bytes_(RandomString(64)) {}
 
 CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other)
     : id_(other.id_),

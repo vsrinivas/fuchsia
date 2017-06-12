@@ -12,7 +12,7 @@ namespace storage {
 namespace fake {
 namespace {
 
-storage::CommitId RandomId() {
+storage::CommitId RandomCommitId() {
   std::string result;
   result.resize(kCommitIdSize);
   glue::RandBytes(&result[0], kCommitIdSize);
@@ -23,7 +23,7 @@ storage::CommitId RandomId() {
 
 FakeJournalDelegate::FakeJournalDelegate(const CommitId& parent_id,
                                          bool autocommit)
-    : autocommit_(autocommit), id_(RandomId()), parent_id_(parent_id) {}
+    : autocommit_(autocommit), id_(RandomCommitId()), parent_id_(parent_id) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 

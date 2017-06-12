@@ -123,7 +123,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     message_loop_->task_runner()->PostTask(confirm);
   }
 
-  void GetAllUnsyncedObjectIds(
+  void GetUnsyncedPieces(
       std::function<void(storage::Status, std::vector<storage::ObjectId>)>
           callback) override {
     callback(storage::Status::OK, std::vector<storage::ObjectId>());

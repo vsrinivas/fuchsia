@@ -9,8 +9,10 @@
 #include <string>
 #include <vector>
 
+#include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/iterator.h"
 #include "apps/ledger/src/storage/public/journal.h"
+#include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_view.h"
@@ -33,6 +35,18 @@ class DB {
 
    private:
     FTL_DISALLOW_COPY_AND_ASSIGN(Batch);
+  };
+
+  // Status of an object in the database.
+  enum class ObjectStatus {
+    // The object is not in the database.
+    UNKNOWN,
+    // The object is in the database, but not in any commit.
+    TRANSIENT,
+    // The object is associated to a commit, but not yet synced.
+    LOCAL,
+    // The object is synced.
+    SYNCED,
   };
 
   DB() {}
@@ -141,6 +155,19 @@ class DB {
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) = 0;
 
+  // Object data
+  // Writes the content of the given object.
+  virtual Status WriteObject(ObjectIdView object_id,
+                             std::unique_ptr<DataSource::DataChunk> content,
+                             ObjectStatus object_status) = 0;
+  // Reads the content of the given object. To check whether an object is stored
+  // in the DB without retrieving its value, |nullptr| can be given for the
+  // |object| argument.
+  virtual Status ReadObject(ObjectId object_id,
+                            std::unique_ptr<const Object>* object) = 0;
+  // Deletes the object with the given identifier.
+  virtual Status DeleteObject(ObjectIdView object_id) = 0;
+
   // Commit sync metadata.
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|
   // with their ids. The result is ordered by the timestamps given when calling
@@ -158,18 +185,17 @@ class DB {
   virtual Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) = 0;
 
   // Object sync metadata.
-  // Finds the set of unsynced objects and replaces the contents of |object_ids|
+  // Finds the set of unsynced pieces and replaces the contents of |object_ids|
   // with their ids. |object_ids| will be lexicographically sorted.
-  virtual Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) = 0;
+  virtual Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) = 0;
 
-  // Marks the given |object_id| as synced.
-  virtual Status MarkObjectIdSynced(ObjectIdView object_id) = 0;
+  // Sets the status of the object with the given id.
+  virtual Status SetObjectStatus(ObjectIdView object_id,
+                                 ObjectStatus object_status) = 0;
 
-  // Marks the given |object_id| as unsynced.
-  virtual Status MarkObjectIdUnsynced(ObjectIdView object_id) = 0;
-
-  // Checks if the object with the given |object_id| is synced.
-  virtual Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) = 0;
+  // Returns the status of the object with the given id.
+  virtual Status GetObjectStatus(ObjectIdView object_id,
+                                 ObjectStatus* object_status) = 0;
 
   // Sets the opaque sync metadata associated with this page for the given key.
   virtual Status SetSyncMetadata(ftl::StringView key,

@@ -7,7 +7,7 @@
 
 namespace storage {
 
-constexpr size_t kObjectHashSize = 32;
+constexpr size_t kStorageHashSize = 32;
 
 }  // namespace storage
 

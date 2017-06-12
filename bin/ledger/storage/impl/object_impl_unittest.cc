@@ -4,21 +4,15 @@
 
 #include "apps/ledger/src/storage/impl/object_impl.h"
 
-#include <algorithm>
-#include <memory>
-
-#include "apps/ledger/src/glue/crypto/base64.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/impl/constants.h"
+#include "apps/ledger/src/storage/impl/object_id.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
-#include "lib/ftl/logging.h"
+#include "lib/mtl/vmo/strings.h"
+#include "third_party/leveldb/include/leveldb/db.h"
 
 namespace storage {
 namespace {
-
-const size_t kFileSize = 256;
 
 std::string RandomString(size_t size) {
   std::string result;
@@ -27,47 +21,103 @@ std::string RandomString(size_t size) {
   return result;
 }
 
-std::string ObjectFilePathFor(const std::string& path, ObjectIdView id) {
-  std::string base64;
-  glue::Base64Encode(id, &base64);
-  std::replace(base64.begin(), base64.end(), '/', '-');
-  return path + '/' + base64;
-}
-
-class ObjectImplTest : public ::testing::Test {
- public:
-  ObjectImplTest() {}
-
-  ~ObjectImplTest() override {}
-
-  // Test:
-  void SetUp() override {
-    std::srand(0);
-
-    object_id_ = RandomString(kObjectHashSize);
-    object_file_path_ = ObjectFilePathFor(object_dir_.path(), object_id_);
+::testing::AssertionResult CheckObjectValue(const Object& object,
+                                            ftl::StringView id,
+                                            ftl::StringView data) {
+  if (object.GetId() != id) {
+    return ::testing::AssertionFailure()
+           << "Expected id: " << convert::ToHex(id)
+           << ", but got: " << convert::ToHex(object.GetId());
   }
 
- protected:
-  std::string object_file_path_;
-  ObjectId object_id_;
-
- private:
-  files::ScopedTempDir object_dir_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(ObjectImplTest);
-};
-
-TEST_F(ObjectImplTest, Object) {
-  std::string data = RandomString(kFileSize);
-  EXPECT_TRUE(files::WriteFile(object_file_path_, data.data(), kFileSize));
-
-  ObjectImpl object((std::string(object_id_)), std::string(object_file_path_));
-  EXPECT_EQ(object_id_, object.GetId());
   ftl::StringView found_data;
-  EXPECT_EQ(Status::OK, object.GetData(&found_data));
-  EXPECT_EQ(kFileSize, found_data.size());
-  EXPECT_EQ(0, memcmp(data.data(), found_data.data(), kFileSize));
+  Status status = object.GetData(&found_data);
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "Unable to call GetData on object, status: " << status;
+  }
+
+  if (data != found_data) {
+    return ::testing::AssertionFailure()
+           << "Expected data: " << convert::ToHex(data)
+           << ", but got: " << convert::ToHex(found_data);
+  }
+
+  mx::vmo vmo;
+  status = object.GetVmo(&vmo);
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "Unable to call GetVmo on object, status: " << status;
+  }
+
+  std::string found_data_in_vmo;
+  if (!mtl::StringFromVmo(vmo, &found_data_in_vmo)) {
+    return ::testing::AssertionFailure() << "Unable to read from VMO.";
+  }
+
+  if (data != found_data_in_vmo) {
+    return ::testing::AssertionFailure()
+           << "Expected data in vmo: " << convert::ToHex(data)
+           << ", but got: " << convert::ToHex(found_data_in_vmo);
+  }
+
+  return ::testing::AssertionSuccess();
+}
+
+TEST(ObjectImplTest, InlinedObject) {
+  std::string data = RandomString(12);
+  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+
+  InlinedObject object(id);
+  EXPECT_TRUE(CheckObjectValue(object, id, data));
+}
+
+TEST(ObjectImplTest, StringObject) {
+  std::string data = RandomString(256);
+  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+
+  StringObject object(id, data);
+  EXPECT_TRUE(CheckObjectValue(object, id, data));
+}
+
+TEST(ObjectImplTest, LevelDBObject) {
+  files::ScopedTempDir temp_dir;
+
+  leveldb::DB* db = nullptr;
+  leveldb::Options options;
+  options.create_if_missing = true;
+  leveldb::Status status =
+      leveldb::DB::Open(options, temp_dir.path() + "/db", &db);
+  ASSERT_TRUE(status.ok());
+  std::unique_ptr<leveldb::DB> db_ptr(db);
+
+  leveldb::WriteOptions write_options_;
+  leveldb::ReadOptions read_options_;
+
+  std::string data = RandomString(256);
+  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+
+  status = db_ptr->Put(write_options_, "", data);
+  ASSERT_TRUE(status.ok());
+  std::unique_ptr<leveldb::Iterator> iterator(
+      db_ptr->NewIterator(read_options_));
+  iterator->Seek("");
+  ASSERT_TRUE(iterator->Valid());
+  ASSERT_TRUE(iterator->key() == "");
+
+  LevelDBObject object(id, std::move(iterator));
+  EXPECT_TRUE(CheckObjectValue(object, id, data));
+}
+
+TEST(ObjectImplTest, VmoObject) {
+  std::string data = RandomString(256);
+  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+
+  mx::vmo vmo;
+  ASSERT_TRUE(mtl::VmoFromString(data, &vmo));
+
+  VmoObject object(id, std::move(vmo));
+  EXPECT_TRUE(CheckObjectValue(object, id, data));
 }
 
 }  // namespace

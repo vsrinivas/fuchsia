@@ -8,8 +8,8 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
+#include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
@@ -71,7 +71,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
-  TreeNode::FromId(&fake_storage_, RandomId(kObjectIdSize),
+  TreeNode::FromId(&fake_storage_, RandomObjectId(),
                    callback::Capture(MakeQuitTask(), &status, &found_node));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::NOT_FOUND, status);

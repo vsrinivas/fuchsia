@@ -80,8 +80,6 @@ class JournalDBImpl : public Journal {
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback);
 
-  Status ClearCommittedJournal(std::unordered_set<ObjectId> new_nodes);
-
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;

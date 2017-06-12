@@ -48,6 +48,12 @@ class DbEmptyImpl : public DB {
   Status GetJournalEntries(
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;
+  Status WriteObject(ObjectIdView object_id,
+                     std::unique_ptr<DataSource::DataChunk> content,
+                     ObjectStatus object_status) override;
+  Status ReadObject(ObjectId object_id,
+                    std::unique_ptr<const Object>* object) override;
+  Status DeleteObject(ObjectIdView object_id) override;
   Status GetJournalValueCounter(const JournalId& journal_id,
                                 ftl::StringView value,
                                 int64_t* counter) override;
@@ -61,10 +67,11 @@ class DbEmptyImpl : public DB {
   Status MarkCommitIdUnsynced(const CommitId& commit_id,
                               int64_t timestamp) override;
   Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
-  Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) override;
-  Status MarkObjectIdSynced(ObjectIdView object_id) override;
-  Status MarkObjectIdUnsynced(ObjectIdView object_id) override;
-  Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) override;
+  Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
+  Status SetObjectStatus(ObjectIdView object_id,
+                         ObjectStatus object_status) override;
+  Status GetObjectStatus(ObjectIdView object_id,
+                         ObjectStatus* object_status) override;
   Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
   Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
 };

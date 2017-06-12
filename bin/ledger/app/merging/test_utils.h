@@ -9,11 +9,16 @@
 #include <memory>
 
 #include "apps/ledger/src/backoff/backoff.h"
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/storage/public/journal.h"
+#include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "gtest/gtest.h"
+#include "lib/ftl/files/scoped_temp_dir.h"
 
 namespace ledger {
-namespace testing {
+namespace test {
 // Dummy implementation of a backoff policy, which always returns zero backoff
 // time..
 class TestBackoff : public backoff::Backoff {
@@ -28,19 +33,37 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-// Resize id to the required size, adding trailing underscores if needed.
-std::string MakeObjectId(std::string str);
+class TestWithPageStorage : public ::test::TestWithMessageLoop {
+ public:
+  TestWithPageStorage();
+  virtual ~TestWithPageStorage();
 
-// Returns a function that, when executed, adds the provided key and object to a
-// journal.
-std::function<void(storage::Journal*)> AddKeyValueToJournal(
-    const std::string& key,
-    const storage::ObjectId& object_id);
+ protected:
+  virtual storage::PageStorage* page_storage() = 0;
 
-std::function<void(storage::Journal*)> DeleteKeyFromJournal(
-    const std::string& key);
+  // Returns a function that, when executed, adds the provided key and object to
+  // a journal.
+  std::function<void(storage::Journal*)> AddKeyValueToJournal(
+      const std::string& key,
+      std::string value);
 
-}  // namespace testing
+  // Returns a function that, when executed, deleted the provided key from a
+  // journal.
+  std::function<void(storage::Journal*)> DeleteKeyFromJournal(
+      const std::string& key);
+
+  ::testing::AssertionResult GetValue(storage::ObjectIdView id,
+                                      std::string* value);
+
+  ::testing::AssertionResult CreatePageStorage(
+      std::unique_ptr<storage::PageStorage>* page_storage);
+
+ private:
+  files::ScopedTempDir tmp_dir_;
+  coroutine::CoroutineServiceImpl coroutine_service_;
+};
+
+}  // namespace test
 }  // namespace ledger
 
 #endif  // APPS_LEDGER_SRC_APP_MERGING_TEST_UTILS_H_

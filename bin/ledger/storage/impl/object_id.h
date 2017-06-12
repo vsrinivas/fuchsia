@@ -25,6 +25,9 @@ enum class ObjectIdType {
 // Returns the type of |object_id|.
 ObjectIdType GetObjectIdType(ObjectIdView object_id);
 
+// Returns the object type associated to an object id type.
+ObjectType GetObjectType(ObjectIdType id_type);
+
 // Extracts the data from |object_id|. If |object_id| type is |INLINE|, the
 // returned data is the content of the object, otherwise, it is the hash of the
 // object.

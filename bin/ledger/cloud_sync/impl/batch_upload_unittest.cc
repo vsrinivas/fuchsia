@@ -85,7 +85,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK, std::move(results));
   }
 
-  void GetAllUnsyncedObjectIds(
+  void GetUnsyncedPieces(
       std::function<void(storage::Status, std::vector<storage::ObjectId>)>
           callback) override {
     std::vector<storage::ObjectId> object_ids;
@@ -101,11 +101,19 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       const std::function<void(storage::Status,
                                std::unique_ptr<const storage::Object>)>&
           callback) override {
+    GetPiece(object_id, callback);
+  }
+
+  void GetPiece(
+      storage::ObjectIdView object_id,
+      const std::function<void(storage::Status,
+                               std::unique_ptr<const storage::Object>)>&
+          callback) override {
     callback(storage::Status::OK,
              std::move(unsynced_objects_to_return[object_id.ToString()]));
   }
 
-  storage::Status MarkObjectSynced(storage::ObjectIdView object_id) override {
+  storage::Status MarkPieceSynced(storage::ObjectIdView object_id) override {
     objects_marked_as_synced.insert(object_id.ToString());
     return storage::Status::OK;
   }

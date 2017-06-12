@@ -19,13 +19,14 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/tasks/task_runner.h"
 
+#include <unordered_set>
+#include <vector>
+
 namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
-                  ftl::RefPtr<ftl::TaskRunner> io_runner,
-                  coroutine::CoroutineService* coroutine_service,
+  PageStorageImpl(coroutine::CoroutineService* coroutine_service,
                   std::string page_dir,
                   PageId page_id);
   ~PageStorageImpl() override;
@@ -37,15 +38,13 @@ class PageStorageImpl : public PageStorage {
 
   // Adds the given locally created |commit| in this |PageStorage|.
   void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
+                          std::vector<ObjectId> new_objects,
                           std::function<void(Status)> callback);
 
   // Returns true if the given |object_id| is untracked, i.e. has been created
   // using |AddObjectFromLocal()|, but is not yet part of any commit. Untracked
   // objects are invalid after the PageStorageImpl object is destroyed.
   bool ObjectIsUntracked(ObjectIdView object_id);
-
-  // Marks the given object as tracked.
-  void MarkObjectTracked(ObjectIdView object_id);
 
   // PageStorage:
   PageId GetId() override;
@@ -75,15 +74,19 @@ class PageStorageImpl : public PageStorage {
   Status MarkCommitSynced(const CommitId& commit_id) override;
   Status GetDeltaObjects(const CommitId& commit_id,
                          std::vector<ObjectId>* objects) override;
-  void GetAllUnsyncedObjectIds(
+  void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
-  Status MarkObjectSynced(ObjectIdView object_id) override;
+  Status MarkPieceSynced(ObjectIdView object_id) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(
       ObjectIdView object_id,
       Location location,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback) override;
+  void GetPiece(
+      ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
   Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
@@ -106,38 +109,46 @@ class PageStorageImpl : public PageStorage {
  private:
   friend class PageStorageImplAccessorForTest;
 
+  // Marks all pieces needed for the given objects as local.
+  Status MarkAllPiecesLocal(std::vector<ObjectId> object_ids);
+
   void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,
                   ChangeSource source,
+                  std::vector<ObjectId> new_objects,
                   std::function<void(Status)> callback);
   Status ContainsCommit(CommitIdView id);
   bool IsFirstCommit(CommitIdView id);
   // Adds the given synced object. |object_id| will be validated against the
   // expected one based on the |data| and an |OBJECT_ID_MISSMATCH| error will be
   // returned in case of missmatch.
-  void AddObjectFromSync(ObjectIdView object_id,
-                         std::unique_ptr<DataSource> data_source,
-                         std::function<void(Status)> callback);
-  void AddObject(std::unique_ptr<DataSource> data_source,
-                 const std::function<void(Status, ObjectId)>& callback);
+  void AddPiece(ObjectId object_id,
+                std::unique_ptr<DataSource::DataChunk> data,
+                ChangeSource source,
+                std::function<void(Status)> callback);
+  // Download all the chunks of the object with the given id.
+  void DownloadFullObject(ObjectIdView object_id,
+                          std::function<void(Status)> callback);
   void GetObjectFromSync(
       ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback);
-  std::string GetFilePath(ObjectIdView object_id) const;
+  void FillBufferWithObjectContent(ObjectIdView object_id,
+                                   mx::vmo vmo,
+                                   size_t offset,
+                                   size_t size,
+                                   std::function<void(Status)> callback);
+  void ReadDataSource(
+      std::unique_ptr<DataSource> data_source,
+      std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
+          callback);
 
   // Notifies the registered watchers with the |commits| in commit_to_send_.
   void NotifyWatchers();
 
-  const ftl::RefPtr<ftl::TaskRunner> main_runner_;
-  const ftl::RefPtr<ftl::TaskRunner> io_runner_;
   coroutine::CoroutineService* const coroutine_service_;
-  const std::string page_dir_;
   const PageId page_id_;
   DbImpl db_;
   std::vector<CommitWatcher*> watchers_;
-  std::set<ObjectId, convert::StringViewComparator> untracked_objects_;
-  std::string objects_dir_;
-  std::string staging_dir_;
   callback::PendingOperationManager pending_operation_manager_;
   PageSyncDelegate* page_sync_;
   std::queue<

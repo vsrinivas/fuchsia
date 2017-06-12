@@ -10,7 +10,5 @@ namespace storage {
 
 static_assert(sizeof(convert::IdStorage) == kCommitIdSize,
               "storage size for id is incorrect");
-static_assert(sizeof(convert::IdStorage) == kObjectIdSize,
-              "storage size for id is incorrect");
 
 }  // namespace storage

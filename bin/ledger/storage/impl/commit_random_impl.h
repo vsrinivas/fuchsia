@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_RANDOM_IMPL_H_
-#define APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_RANDOM_IMPL_H_
+#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_COMMIT_RANDOM_IMPL_H_
+#define APPS_LEDGER_SRC_STORAGE_IMPL_COMMIT_RANDOM_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -50,4 +50,4 @@ class CommitRandomImpl : public Commit {
 }  // namespace test
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_RANDOM_IMPL_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_COMMIT_RANDOM_IMPL_H_

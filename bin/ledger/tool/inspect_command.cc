@@ -343,9 +343,7 @@ void InspectCommand::PrintHelp(ftl::Closure on_done) {
 
 std::unique_ptr<storage::LedgerStorageImpl> InspectCommand::GetLedgerStorage() {
   return std::make_unique<storage::LedgerStorageImpl>(
-      mtl::MessageLoop::GetCurrent()->task_runner(),
-      mtl::MessageLoop::GetCurrent()->task_runner(), &coroutine_service_,
-      user_repository_path_, app_id_);
+      &coroutine_service_, user_repository_path_, app_id_);
 }
 
 }  // namespace tool

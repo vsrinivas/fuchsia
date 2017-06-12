@@ -15,9 +15,7 @@ namespace storage {
 
 class LedgerStorageImpl : public LedgerStorage {
  public:
-  LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
-                    ftl::RefPtr<ftl::TaskRunner> io_runner,
-                    coroutine::CoroutineService* coroutine_service,
+  LedgerStorageImpl(coroutine::CoroutineService* coroutine_service,
                     const std::string& base_storage_dir,
                     const std::string& ledger_name);
   ~LedgerStorageImpl() override;
@@ -41,7 +39,6 @@ class LedgerStorageImpl : public LedgerStorage {
   std::string GetPathFor(PageIdView page_id);
 
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
-  ftl::RefPtr<ftl::TaskRunner> io_runner_;
   coroutine::CoroutineService* const coroutine_service_;
   std::string storage_dir_;
 };

@@ -109,22 +109,27 @@ void JournalDBImpl::Commit(
           std::unique_ptr<storage::Commit> commit =
               CommitImpl::FromContentAndParents(page_storage_, object_id,
                                                 std::move(parents));
+          std::vector<ObjectId> objects_to_sync;
+          status = db_->GetJournalValues(id_, &objects_to_sync);
+          if (status != Status::OK) {
+            callback(status, nullptr);
+            return;
+          }
+          objects_to_sync.reserve(objects_to_sync.size() + new_nodes.size());
+          // TODO(qsr): When using C++17, move data out of the set using
+          // extract.
+          objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
+                                 new_nodes.end());
           page_storage_->AddCommitFromLocal(
-              commit->Clone(), ftl::MakeCopyable([
-                this, commit = std::move(commit),
-                new_nodes = std::move(new_nodes), callback
-              ](Status status) mutable {
+              commit->Clone(), std::move(objects_to_sync),
+              ftl::MakeCopyable([ this, commit = std::move(commit),
+                                  callback ](Status status) mutable {
                 valid_ = false;
                 if (status != Status::OK) {
                   callback(status, nullptr);
                   return;
                 }
-                status = ClearCommittedJournal(std::move(new_nodes));
-                if (status != Status::OK) {
-                  callback(status, nullptr);
-                } else {
-                  callback(Status::OK, std::move(commit));
-                }
+                callback(db_->RemoveJournal(id_), std::move(commit));
               }));
         }));
   });
@@ -133,7 +138,7 @@ void JournalDBImpl::Commit(
 Status JournalDBImpl::UpdateValueCounter(
     ObjectIdView object_id,
     const std::function<int64_t(int64_t)>& operation) {
-  // Update the counter fo untracked objects only.
+  // Update the counter for untracked objects only.
   if (!page_storage_->ObjectIsUntracked(object_id)) {
     return Status::OK;
   }
@@ -204,39 +209,6 @@ void JournalDBImpl::GetParents(
     page_storage_->GetCommit(*other_, waiter->NewCallback());
   }
   waiter->Finalize(std::move(callback));
-}
-
-Status JournalDBImpl::ClearCommittedJournal(
-    std::unordered_set<ObjectId> new_nodes) {
-  // Mark objects as unsynced in a single batch.
-  std::vector<ObjectId> objects_to_sync;
-  Status status = db_->GetJournalValues(id_, &objects_to_sync);
-  if (status != Status::OK) {
-    return status;
-  }
-  std::unique_ptr<DB::Batch> batch = db_->StartBatch();
-  for (const ObjectId& tree_node_id : new_nodes) {
-    status = db_->MarkObjectIdUnsynced(tree_node_id);
-    if (status != Status::OK) {
-      return status;
-    }
-  }
-  for (const ObjectId& object_id : objects_to_sync) {
-    status = db_->MarkObjectIdUnsynced(object_id);
-    if (status != Status::OK) {
-      return status;
-    }
-  }
-  status = batch->Execute();
-  if (status != Status::OK) {
-    return status;
-  }
-  // Notify PageStorage that the objects are now tracked.
-  for (const ObjectId& object_id : objects_to_sync) {
-    page_storage_->MarkObjectTracked(object_id);
-  }
-  db_->RemoveJournal(id_);
-  return Status::OK;
 }
 
 Status JournalDBImpl::Rollback() {

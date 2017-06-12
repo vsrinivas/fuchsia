@@ -26,7 +26,7 @@ std::string AddPrefix(char c, convert::ExtendedStringView data) {
 }  // namespace
 
 ObjectIdType GetObjectIdType(ObjectIdView object_id) {
-  if (object_id.size() <= kObjectHashSize) {
+  if (object_id.size() <= kStorageHashSize) {
     return ObjectIdType::INLINE;
   }
 
@@ -41,8 +41,18 @@ ObjectIdType GetObjectIdType(ObjectIdView object_id) {
   return ObjectIdType::VALUE_HASH;
 }
 
+ObjectType GetObjectType(ObjectIdType id_type) {
+  switch (id_type) {
+    case ObjectIdType::INLINE:
+    case ObjectIdType::VALUE_HASH:
+      return ObjectType::VALUE;
+    case ObjectIdType::INDEX_HASH:
+      return ObjectType::INDEX;
+  }
+}
+
 ftl::StringView ExtractObjectIdData(ObjectIdView object_id) {
-  if (object_id.size() <= kObjectHashSize) {
+  if (object_id.size() <= kStorageHashSize) {
     return object_id;
   }
 
@@ -55,7 +65,7 @@ ftl::StringView ExtractObjectIdData(ObjectIdView object_id) {
 ObjectId ComputeObjectId(ObjectType type, convert::ExtendedStringView content) {
   switch (type) {
     case ObjectType::VALUE:
-      if (content.size() <= kObjectHashSize) {
+      if (content.size() <= kStorageHashSize) {
         return content.ToString();
       }
       return AddPrefix(kValueHashPrefix, glue::SHA256Hash(content));

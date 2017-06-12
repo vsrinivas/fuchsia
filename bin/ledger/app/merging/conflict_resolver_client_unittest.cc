@@ -24,7 +24,7 @@
 
 namespace ledger {
 namespace {
-class ConflictResolverClientTest : public test::TestWithMessageLoop {
+class ConflictResolverClientTest : public test::TestWithPageStorage {
  public:
   ConflictResolverClientTest()
       : environment_(message_loop_.task_runner(),
@@ -33,21 +33,17 @@ class ConflictResolverClientTest : public test::TestWithMessageLoop {
   ~ConflictResolverClientTest() override {}
 
  protected:
+  storage::PageStorage* page_storage() override { return page_storage_; }
+
   void SetUp() override {
     ::testing::Test::SetUp();
-    std::unique_ptr<storage::PageStorageImpl> page_storage =
-        std::make_unique<storage::PageStorageImpl>(
-            environment_.main_runner(), environment_.main_runner(),
-            &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString());
-    storage::Status status;
-    page_storage->Init(callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(storage::Status::OK, status);
+    std::unique_ptr<storage::PageStorage> page_storage;
+    ASSERT_TRUE(CreatePageStorage(&page_storage));
     page_storage_ = page_storage.get();
 
     std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, page_storage_,
-        std::make_unique<testing::TestBackoff>(nullptr));
+        std::make_unique<test::TestBackoff>(nullptr));
     resolver->SetMergeStrategy(nullptr);
     resolver->set_on_empty(MakeQuitTask());
     merge_resolver_ = resolver.get();
@@ -75,13 +71,11 @@ class ConflictResolverClientTest : public test::TestWithMessageLoop {
     return actual_commit->GetId();
   }
 
-  coroutine::CoroutineServiceImpl coroutine_service_;
-  storage::PageStorageImpl* page_storage_;
+  storage::PageStorage* page_storage_;
   MergeResolver* merge_resolver_;
 
  private:
   Environment environment_;
-  files::ScopedTempDir tmp_dir_;
   std::unique_ptr<PageManager> page_manager_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClientTest);
@@ -140,9 +134,9 @@ class ConflictResolverImpl : public ConflictResolver {
 TEST_F(ConflictResolverClientTest, Error) {
   // Set up conflict.
   CreateCommit(storage::kFirstPageCommitId,
-               testing::AddKeyValueToJournal("key1", "value1"));
+               AddKeyValueToJournal("key1", "value1"));
   CreateCommit(storage::kFirstPageCommitId,
-               testing::AddKeyValueToJournal("key2", "value2"));
+               AddKeyValueToJournal("key2", "value2"));
 
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;

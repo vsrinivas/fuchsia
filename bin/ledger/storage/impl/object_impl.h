@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,13 +6,23 @@
 #define APPS_LEDGER_SRC_STORAGE_IMPL_OBJECT_IMPL_H_
 
 #include "apps/ledger/src/storage/public/object.h"
+#include "apps/ledger/src/storage/public/page_storage.h"
+
+#include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/storage/impl/db.h"
+#include "apps/ledger/src/storage/public/types.h"
+#include "mx/vmar.h"
+#include "third_party/leveldb/include/leveldb/iterator.h"
+
+#include <memory>
 
 namespace storage {
 
-class ObjectImpl : public Object {
+// Object whose data is equal to its id.
+class InlinedObject : public Object {
  public:
-  ObjectImpl(ObjectId id, std::string file_path);
-  ~ObjectImpl() override;
+  InlinedObject(ObjectId id);
+  ~InlinedObject() override;
 
   // Object:
   ObjectId GetId() const override;
@@ -20,9 +30,57 @@ class ObjectImpl : public Object {
 
  private:
   const ObjectId id_;
-  const std::string file_path_;
+};
 
-  mutable std::string data_;
+// Object whose data is backed by a string.
+class StringObject : public Object {
+ public:
+  StringObject(ObjectId id, std::string content);
+  ~StringObject() override;
+
+  // Object:
+  ObjectId GetId() const override;
+  Status GetData(ftl::StringView* data) const override;
+
+ private:
+  const ObjectId id_;
+  std::string content_;
+};
+
+// Object whose data is backed by a value in LevelDB.
+class LevelDBObject : public Object {
+ public:
+  LevelDBObject(ObjectId id, std::unique_ptr<leveldb::Iterator> iterator);
+  ~LevelDBObject() override;
+
+  // Object:
+  ObjectId GetId() const override;
+  Status GetData(ftl::StringView* data) const override;
+
+ private:
+  const ObjectId id_;
+  std::unique_ptr<leveldb::Iterator> iterator_;
+};
+
+// Object whose data is backed by a VMO.
+class VmoObject : public Object {
+ public:
+  VmoObject(ObjectId id, mx::vmo vmo);
+  ~VmoObject() override;
+
+  // Object:
+  ObjectId GetId() const override;
+  Status GetData(ftl::StringView* data) const override;
+  Status GetVmo(mx::vmo* vmo) const override;
+
+ private:
+  Status Initialize() const;
+
+  mutable bool initialized_ = false;
+  const ObjectId id_;
+  mx::vmo vmo_;
+  mutable mx::vmar vmar_;
+  mutable ftl::StringView data_;
 };
 
 }  // namespace storage

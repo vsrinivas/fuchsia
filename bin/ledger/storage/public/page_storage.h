@@ -113,10 +113,10 @@ class PageStorage {
   // Finds all objects in the storage that are not yet synced, and calls
   // |callback| with the operation status and the corresponding |ObjectId|s
   // vector.
-  virtual void GetAllUnsyncedObjectIds(
+  virtual void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
   // Marks the object with the given |object_id| as synced.
-  virtual Status MarkObjectSynced(ObjectIdView object_id) = 0;
+  virtual Status MarkPieceSynced(ObjectIdView object_id) = 0;
   // Adds the given local object and passes the new object's id to the callback.
   // If |size| is not negative, the content size must be equal to |size|,
   // otherwise the call will fail and return |IO_ERROR| in the callback. If
@@ -132,6 +132,14 @@ class PageStorage {
   virtual void GetObject(
       ObjectIdView object_id,
       Location location,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback) = 0;
+  // Finds the piece associated with the given |object_id|. The result or an an
+  // error will be returned through the given |callback|. Only local storage is
+  // checked, and if the object is an index, is it returned as is, and not
+  // expanded.
+  virtual void GetPiece(
+      ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) = 0;
 

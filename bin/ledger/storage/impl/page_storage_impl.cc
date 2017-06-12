@@ -24,9 +24,12 @@
 #include "apps/ledger/src/storage/impl/btree/iterator.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/constants.h"
-#include "apps/ledger/src/storage/impl/inlined_object_impl.h"
+#include "apps/ledger/src/storage/impl/file_index.h"
+#include "apps/ledger/src/storage/impl/file_index_generated.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/object_id.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
+#include "apps/ledger/src/storage/impl/split.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/arraysize.h"
@@ -39,6 +42,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/concatenate.h"
+#include "mx/vmar.h"
+#include "mx/vmo.h"
 
 namespace storage {
 
@@ -47,11 +52,9 @@ namespace {
 using StreamingHash = glue::SHA256StreamingHash;
 
 const char kLevelDbDir[] = "/leveldb";
-const char kObjectDir[] = "/objects";
-const char kStagingDir[] = "/staging";
 
-static_assert(kObjectHashSize == StreamingHash::kHashSize,
-              "Unexpected kObjectHashSize value");
+static_assert(kStorageHashSize == StreamingHash::kHashSize,
+              "Unexpected kStorageHashSize value");
 
 struct StringPointerComparator {
   using is_transparent = std::true_type;
@@ -69,292 +72,18 @@ struct StringPointerComparator {
   }
 };
 
-std::string GetFilePath(ftl::StringView objects_dir,
-                        convert::ExtendedStringView object_id) {
-  std::string hex = convert::ToHex(object_id);
-
-  FTL_DCHECK(hex.size() > 2);
-  ftl::StringView hex_view = hex;
-  return ftl::Concatenate(
-      {objects_dir, "/", hex_view.substr(0, 2), "/", hex_view.substr(2)});
-}
-
-Status StagingToDestination(size_t expected_size,
-                            std::string source_path,
-                            std::string destination_path) {
-  TRACE_DURATION("ledger", "page_storage_staging_to_destination");
-  // Check if file already exists.
-  size_t size = 0;
-  if (files::GetFileSize(destination_path, &size)) {
-    if (size != expected_size) {
-      // If size is not the correct one, something is really wrong.
-      FTL_LOG(ERROR) << "Internal error. Path \"" << destination_path
-                     << "\" has wrong size. Expected: " << expected_size
-                     << ", but found: " << size;
-
-      return Status::INTERNAL_IO_ERROR;
-    }
-    // Source path already existed at destination. Clear the source.
-    files::DeletePath(source_path, false);
-    return Status::OK;
-  }
-
-  std::string destination_dir = files::GetDirectoryName(destination_path);
-  if (!files::IsDirectory(destination_dir) &&
-      !files::CreateDirectory(destination_dir)) {
-    return Status::INTERNAL_IO_ERROR;
-  }
-
-  if (rename(source_path.c_str(), destination_path.c_str()) != 0) {
-    // If rename failed, the file might have been saved by another call.
-    if (!files::GetFileSize(destination_path, &size) || size != expected_size) {
-      FTL_LOG(ERROR) << "Internal error. Failed to rename \n\"" << source_path
-                     << "\" to \n\"" << destination_path << "\"";
-      return Status::INTERNAL_IO_ERROR;
-    }
-    // Source path already existed at destination. Clear the source.
-    files::DeletePath(source_path, false);
-  }
-  return Status::OK;
-}
-
-class FileWriterOnIOThread {
- public:
-  FileWriterOnIOThread(const std::string& staging_dir,
-                       const std::string& object_dir)
-      : staging_dir_(staging_dir), object_dir_(object_dir) {}
-
-  ~FileWriterOnIOThread() {
-    // Cleanup staging file.
-    if (!file_path_.empty()) {
-      fd_.reset();
-      unlink(file_path_.c_str());
-    }
-  }
-
-  void Start(std::unique_ptr<DataSource> data_source,
-             std::function<void(Status, ObjectId)> callback) {
-    callback_ = std::move(callback);
-    // Using mkstemp to create an unique file. XXXXXX will be replaced.
-    file_path_ = staging_dir_ + "/XXXXXX";
-    fd_.reset(mkstemp(&file_path_[0]));
-    if (!fd_.is_valid()) {
-      FTL_LOG(ERROR) << "Unable to create file in staging directory ("
-                     << staging_dir_ << ")";
-      callback_(Status::INTERNAL_IO_ERROR, "");
-      return;
-    }
-    data_source_ = std::move(data_source);
-    data_source_->Get([this](std::unique_ptr<DataSource::DataChunk> chunk,
-                             DataSource::Status status) {
-      if (status == DataSource::Status::ERROR) {
-        callback_(Status::IO_ERROR, "");
-        return;
-      }
-      OnDataAvailable(chunk->Get());
-      if (status == DataSource::Status::DONE) {
-        OnDataComplete();
-      }
-    });
-  }
-
- private:
-  void OnDataAvailable(ftl::StringView data) {
-    hash_.Update(data);
-    if (!ftl::WriteFileDescriptor(fd_.get(), data.data(), data.size())) {
-      FTL_LOG(ERROR) << "Error writing data to disk: " << strerror(errno);
-      callback_(Status::INTERNAL_IO_ERROR, "");
-      return;
-    }
-  }
-
-  void OnDataComplete() {
-    if (fsync(fd_.get()) != 0) {
-      FTL_LOG(ERROR) << "Unable to save to disk.";
-      callback_(Status::INTERNAL_IO_ERROR, "");
-      return;
-    }
-    fd_.reset();
-
-    std::string object_id;
-    hash_.Finish(&object_id);
-
-    std::string final_path = storage::GetFilePath(object_dir_, object_id);
-    Status status = StagingToDestination(data_source_->GetSize(), file_path_,
-                                         std::move(final_path));
-    if (status != Status::OK) {
-      callback_(Status::INTERNAL_IO_ERROR, "");
-      return;
-    }
-
-    callback_(Status::OK, std::move(object_id));
-  }
-
-  const std::string& staging_dir_;
-  const std::string& object_dir_;
-  std::function<void(Status, ObjectId)> callback_;
-  std::unique_ptr<DataSource> data_source_;
-  std::string file_path_;
-  ftl::UniqueFD fd_;
-  StreamingHash hash_;
-};
-
-// Drains a data source into a storage object.
-class ObjectSourceHandler {
- public:
-  ObjectSourceHandler() {}
-  virtual ~ObjectSourceHandler() {}
-
-  virtual void Start(std::function<void(Status, ObjectId)> callback) = 0;
-
-  static std::unique_ptr<ObjectSourceHandler> Create(
-      std::unique_ptr<DataSource> data_source,
-      ftl::RefPtr<ftl::TaskRunner> main_runner,
-      ftl::RefPtr<ftl::TaskRunner> io_runner,
-      const std::string& staging_dir,
-      const std::string& object_dir);
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ObjectSourceHandler);
-};
-
-class SmallObjectObjectSourceHandler : public ObjectSourceHandler {
- public:
-  SmallObjectObjectSourceHandler(std::unique_ptr<DataSource> data_source)
-      : data_source_(std::move(data_source)) {}
-
-  void Start(std::function<void(Status, ObjectId)> callback) override {
-    callback_ = std::move(callback);
-
-    data_source_->Get([this](std::unique_ptr<DataSource::DataChunk> chunk,
-                             DataSource::Status status) {
-      if (status == DataSource::Status::ERROR) {
-        callback_(Status::IO_ERROR, "");
-        return;
-      }
-      auto view = chunk->Get();
-      content_.append(view.data(), view.size());
-      if (status == DataSource::Status::DONE) {
-        callback_(Status::OK, std::move(content_));
-      }
-    });
-  }
-
- private:
-  std::unique_ptr<DataSource> data_source_;
-  std::string content_;
-  std::function<void(Status, ObjectId)> callback_;
-};
-
-class FileWriter : public ObjectSourceHandler {
- public:
-  FileWriter(std::unique_ptr<DataSource> data_source,
-             ftl::RefPtr<ftl::TaskRunner> main_runner,
-             ftl::RefPtr<ftl::TaskRunner> io_runner,
-             const std::string& staging_dir,
-             const std::string& object_dir)
-      : data_source_(std::move(data_source)),
-        main_runner_(std::move(main_runner)),
-        io_runner_(std::move(io_runner)),
-        file_writer_on_io_thread_(
-            std::make_unique<FileWriterOnIOThread>(staging_dir, object_dir)),
-        weak_ptr_factory_(this) {
-    FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
-  }
-
-  ~FileWriter() {
-    FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
-
-    if (!io_runner_->RunsTasksOnCurrentThread()) {
-      io_runner_->PostTask(ftl::MakeCopyable([
-        this,
-        guard = std::make_unique<std::lock_guard<std::mutex>>(deletion_mutex_)
-      ] { file_writer_on_io_thread_.reset(); }));
-      std::lock_guard<std::mutex> wait_for_deletion(deletion_mutex_);
-    }
-  }
-
-  void Start(std::function<void(Status, ObjectId)> callback) override {
-    FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
-
-    if (io_runner_->RunsTasksOnCurrentThread()) {
-      file_writer_on_io_thread_->Start(std::move(data_source_),
-                                       std::move(callback));
-      return;
-    }
-    callback_ = std::move(callback);
-    io_runner_->PostTask(ftl::MakeCopyable(
-        [ this, weak_this = weak_ptr_factory_.GetWeakPtr() ]() mutable {
-          // Called on the io runner.
-
-          // |this| cannot be deleted here, because if the destructor of
-          // FileWriter has been called after Start and before this has been
-          // run, it is still waiting on the lock to be released as the posts
-          // are run in-order.
-          file_writer_on_io_thread_->Start(std::move(data_source_), [
-            weak_this, main_runner = main_runner_
-          ](Status status, ObjectId object_id) {
-            // Called on the io runner.
-
-            main_runner->PostTask(
-                [ weak_this, status, object_id = std::move(object_id) ]() {
-                  // Called on the main runner.
-
-                  if (weak_this) {
-                    weak_this->callback_(status, std::move(object_id));
-                  }
-                });
-          });
-        }));
-  }
-
- private:
-  std::mutex deletion_mutex_;
-  std::unique_ptr<DataSource> data_source_;
-  ftl::RefPtr<ftl::TaskRunner> main_runner_;
-  ftl::RefPtr<ftl::TaskRunner> io_runner_;
-
-  std::function<void(Status, ObjectId)> callback_;
-
-  std::unique_ptr<FileWriterOnIOThread> file_writer_on_io_thread_;
-
-  ftl::WeakPtrFactory<FileWriter> weak_ptr_factory_;
-};
-
-std::unique_ptr<ObjectSourceHandler> ObjectSourceHandler::Create(
-    std::unique_ptr<DataSource> data_source,
-    ftl::RefPtr<ftl::TaskRunner> main_runner,
-    ftl::RefPtr<ftl::TaskRunner> io_runner,
-    const std::string& staging_dir,
-    const std::string& object_dir) {
-  if (data_source->GetSize() < kObjectHashSize) {
-    return std::make_unique<SmallObjectObjectSourceHandler>(
-        std::move(data_source));
-  }
-  return std::make_unique<FileWriter>(
-      std::move(data_source), std::move(main_runner), std::move(io_runner),
-      staging_dir, object_dir);
-}
-
 Status RollbackJournalInternal(std::unique_ptr<Journal> journal) {
   return static_cast<JournalDBImpl*>(journal.get())->Rollback();
 }
 
 }  // namespace
 
-PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                                 ftl::RefPtr<ftl::TaskRunner> io_runner,
-                                 coroutine::CoroutineService* coroutine_service,
+PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
                                  std::string page_dir,
                                  PageId page_id)
-    : main_runner_(task_runner),
-      io_runner_(io_runner),
-      coroutine_service_(coroutine_service),
-      page_dir_(page_dir),
+    : coroutine_service_(coroutine_service),
       page_id_(std::move(page_id)),
-      db_(coroutine_service, this, page_dir_ + kLevelDbDir),
-      objects_dir_(page_dir_ + kObjectDir),
-      staging_dir_(page_dir_ + kStagingDir),
+      db_(coroutine_service, this, page_dir + kLevelDbDir),
       page_sync_(nullptr) {}
 
 PageStorageImpl::~PageStorageImpl() {}
@@ -364,14 +93,6 @@ void PageStorageImpl::Init(std::function<void(Status)> callback) {
   Status s = db_.Init();
   if (s != Status::OK) {
     callback(s);
-    return;
-  }
-
-  // Initialize paths.
-  if (!files::CreateDirectory(objects_dir_) ||
-      !files::CreateDirectory(staging_dir_)) {
-    FTL_LOG(ERROR) << "Unable to create directories for PageStorageImpl.";
-    callback(Status::INTERNAL_IO_ERROR);
     return;
   }
 
@@ -460,6 +181,7 @@ void PageStorageImpl::GetCommit(
 }
 
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
+                                         std::vector<ObjectId> new_objects,
                                          std::function<void(Status)> callback) {
   // If the commit is already present, do nothing.
   if (ContainsCommit(commit->GetId()) == Status::OK) {
@@ -469,7 +191,8 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
   commits.push_back(std::move(commit));
-  AddCommits(std::move(commits), ChangeSource::LOCAL, callback);
+  AddCommits(std::move(commits), ChangeSource::LOCAL, std::move(new_objects),
+             callback);
 }
 
 void PageStorageImpl::AddCommitsFromSync(
@@ -527,7 +250,8 @@ void PageStorageImpl::AddCommitsFromSync(
       return;
     }
 
-    AddCommits(std::move(commits), ChangeSource::SYNC, callback);
+    AddCommits(std::move(commits), ChangeSource::SYNC, std::vector<ObjectId>(),
+               callback);
   }));
 }
 
@@ -615,25 +339,51 @@ Status PageStorageImpl::GetDeltaObjects(const CommitId& commit_id,
   return Status::NOT_IMPLEMENTED;
 }
 
-void PageStorageImpl::GetAllUnsyncedObjectIds(
+void PageStorageImpl::GetUnsyncedPieces(
     std::function<void(Status, std::vector<ObjectId>)> callback) {
   std::vector<ObjectId> unsynced_object_ids;
-  Status s = db_.GetUnsyncedObjectIds(&unsynced_object_ids);
+  Status s = db_.GetUnsyncedPieces(&unsynced_object_ids);
   callback(s, unsynced_object_ids);
 }
 
-Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
-  return db_.MarkObjectIdSynced(object_id);
+Status PageStorageImpl::MarkPieceSynced(ObjectIdView object_id) {
+  return db_.SetObjectStatus(object_id, DB::ObjectStatus::SYNCED);
 }
 
 void PageStorageImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {
-  AddObject(std::move(data_source), [ this, callback = std::move(callback) ](
-                                        Status status, ObjectId object_id) {
-    untracked_objects_.insert(object_id);
-    callback(status, std::move(object_id));
-  });
+  auto traced_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
+
+  auto handler = pending_operation_manager_.Manage(std::move(data_source));
+  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  SplitDataSource(
+      handler.first->get(),
+      ftl::MakeCopyable([
+        this, waiter, cleanup = std::move(handler.second),
+        callback = std::move(traced_callback)
+      ](IterationStatus status, ObjectId object_id,
+        std::unique_ptr<DataSource::DataChunk> chunk) mutable {
+        if (status == IterationStatus::ERROR) {
+          callback(Status::IO_ERROR, "");
+          return;
+        }
+        if (chunk) {
+          FTL_DCHECK(status == IterationStatus::IN_PROGRESS);
+
+          if (GetObjectIdType(object_id) != ObjectIdType::INLINE) {
+            AddPiece(std::move(object_id), std::move(chunk),
+                     ChangeSource::LOCAL, waiter->NewCallback());
+          }
+          return;
+        }
+
+        FTL_DCHECK(status == IterationStatus::DONE);
+        waiter->Finalize([
+          object_id = std::move(object_id), callback = std::move(callback)
+        ](Status status) mutable { callback(status, std::move(object_id)); });
+      }));
 }
 
 void PageStorageImpl::GetObject(
@@ -641,22 +391,102 @@ void PageStorageImpl::GetObject(
     Location location,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
-  if (object_id.size() < kObjectHashSize) {
-    callback(Status::OK,
-             std::make_unique<InlinedObjectImpl>(object_id.ToString()));
-    return;
-  }
-  std::string file_path = GetFilePath(object_id);
-  if (!files::IsFile(file_path)) {
-    if (location == Location::NETWORK) {
-      GetObjectFromSync(object_id, callback);
-    } else {
-      callback(Status::NOT_FOUND, nullptr);
+  GetPiece(object_id, [
+    this, object_id = object_id.ToString(), location,
+    callback = std::move(callback)
+  ](Status status, std::unique_ptr<const Object> object) {
+    if (status == Status::NOT_FOUND) {
+      if (location == Location::NETWORK) {
+        GetObjectFromSync(object_id, std::move(callback));
+      } else {
+        callback(Status::NOT_FOUND, nullptr);
+      }
+      return;
     }
+
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+
+    FTL_DCHECK(object);
+    ObjectIdType id_type = GetObjectIdType(object_id);
+
+    if (id_type == ObjectIdType::INLINE ||
+        id_type == ObjectIdType::VALUE_HASH) {
+      callback(status, std::move(object));
+      return;
+    }
+
+    FTL_DCHECK(id_type == ObjectIdType::INDEX_HASH);
+
+    ftl::StringView content;
+    status = object->GetData(&content);
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+    const FileIndex* file_index;
+    status = FileIndexSerialization::ParseFileIndex(content, &file_index);
+    if (status != Status::OK) {
+      callback(Status::FORMAT_ERROR, nullptr);
+      return;
+    }
+
+    mx::vmo vmo;
+    mx_status_t mx_status = mx::vmo::create(file_index->size(), 0, &vmo);
+    if (mx_status != MX_OK) {
+      callback(Status::INTERNAL_IO_ERROR, nullptr);
+      return;
+    }
+
+    size_t offset = 0;
+    auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+    for (const auto* child : *file_index->children()) {
+      if (offset + child->size() > file_index->size()) {
+        callback(Status::FORMAT_ERROR, nullptr);
+        return;
+      }
+      mx::vmo vmo_copy;
+      mx_status_t mx_status =
+          vmo.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_WRITE, &vmo_copy);
+      if (mx_status != MX_OK) {
+        FTL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << mx_status;
+        callback(Status::INTERNAL_IO_ERROR, nullptr);
+        return;
+      }
+      FillBufferWithObjectContent(child->object_id(), std::move(vmo_copy),
+                                  offset, child->size(), waiter->NewCallback());
+      offset += child->size();
+    }
+    if (offset != file_index->size()) {
+      FTL_LOG(ERROR) << "Built file size doesn't add up.";
+      callback(Status::FORMAT_ERROR, nullptr);
+      return;
+    }
+
+    auto final_object =
+        std::make_unique<VmoObject>(std::move(object_id), std::move(vmo));
+
+    waiter->Finalize(ftl::MakeCopyable([
+      object = std::move(final_object), callback = std::move(callback)
+    ](Status status) mutable { callback(status, std::move(object)); }));
+  });
+}
+
+void PageStorageImpl::GetPiece(
+    ObjectIdView object_id,
+    const std::function<void(Status, std::unique_ptr<const Object>)>&
+        callback) {
+  ObjectIdType id_type = GetObjectIdType(object_id);
+  if (id_type == ObjectIdType::INLINE) {
+    callback(Status::OK, std::make_unique<InlinedObject>(object_id.ToString()));
     return;
   }
-  callback(Status::OK, std::make_unique<ObjectImpl>(object_id.ToString(),
-                                                    std::move(file_path)));
+
+  std::unique_ptr<const Object> object;
+  Status status = db_.ReadObject(object_id.ToString(), &object);
+  callback(status, std::move(object));
 }
 
 Status PageStorageImpl::SetSyncMetadata(ftl::StringView key,
@@ -732,10 +562,55 @@ void PageStorageImpl::NotifyWatchers() {
   }
 }
 
+Status PageStorageImpl::MarkAllPiecesLocal(std::vector<ObjectId> object_ids) {
+  std::unordered_set<ObjectId> seen_ids;
+  while (!object_ids.empty()) {
+    auto it = seen_ids.insert(std::move(object_ids.back()));
+    object_ids.pop_back();
+    const ObjectId& object_id = *(it.first);
+    FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+    db_.SetObjectStatus(object_id, DB::ObjectStatus::LOCAL);
+    if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
+      std::unique_ptr<const Object> object;
+      Status status = db_.ReadObject(object_id, &object);
+      if (status != Status::OK) {
+        return status;
+      }
+
+      ftl::StringView content;
+      status = object->GetData(&content);
+      if (status != Status::OK) {
+        return status;
+      }
+
+      const FileIndex* file_index;
+      status = FileIndexSerialization::ParseFileIndex(content, &file_index);
+      if (status != Status::OK) {
+        return status;
+      }
+
+      object_ids.reserve(object_ids.size() + file_index->children()->size());
+      for (const auto* child : *file_index->children()) {
+        if (GetObjectIdType(child->object_id()) != ObjectIdType::INLINE) {
+          std::string new_object_id = convert::ToString(child->object_id());
+          if (!seen_ids.count(new_object_id)) {
+            object_ids.push_back(std::move(new_object_id));
+          }
+        }
+      }
+    }
+  }
+  return Status::OK;
+}
+
 void PageStorageImpl::AddCommits(
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
+    std::vector<ObjectId> new_objects,
     std::function<void(Status)> callback) {
+  FTL_DCHECK(new_objects.empty() || source == ChangeSource::LOCAL)
+      << "New objects must only be used when adding local commit.";
+
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
   std::set<const CommitId*, StringPointerComparator> added_commits;
@@ -764,8 +639,8 @@ void PageStorageImpl::AddCommits(
             FTL_LOG(ERROR) << "Failed to find parent commit \""
                            << ToHex(parent_id) << "\" of commit \""
                            << convert::ToHex(commit->GetId())
-                           << "\". Temporarly skipping in case the commits are "
-                              "out of order.";
+                           << "\". Temporarily skipping in case the commits "
+                              "are out of order.";
             if (s == Status::NOT_FOUND) {
               remaining_commits.push_back(std::move(commit));
               commit.reset();
@@ -822,12 +697,19 @@ void PageStorageImpl::AddCommits(
     return;
   }
 
-  Status s = batch->Execute();
+  // If adding local commits, mark all new pieces as local.
+  Status status = MarkAllPiecesLocal(std::move(new_objects));
+  if (status != Status::OK) {
+    callback(status);
+    return;
+  }
+
+  status = batch->Execute();
   bool notify_watchers = commits_to_send_.empty();
   commits_to_send_.emplace(source, std::move(commits_to_send));
-  callback(s);
+  callback(status);
 
-  if (s == Status::OK && notify_watchers) {
+  if (status == Status::OK && notify_watchers) {
     NotifyWatchers();
   }
 }
@@ -844,41 +726,96 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
   return id == kFirstPageCommitId;
 }
 
-void PageStorageImpl::AddObjectFromSync(ObjectIdView object_id,
-                                        std::unique_ptr<DataSource> data_source,
-                                        std::function<void(Status)> callback) {
-  AddObject(std::move(data_source), [
-    this, object_id = object_id.ToString(), callback = std::move(callback)
-  ](Status status, ObjectId found_id) {
-    if (status != Status::OK) {
-      callback(status);
-    } else if (found_id != object_id) {
-      FTL_LOG(ERROR) << "Object ID mismatch. Given ID: "
-                     << convert::ToHex(object_id)
-                     << ". Found: " << convert::ToHex(found_id);
-      files::DeletePath(GetFilePath(found_id), false);
-      callback(Status::OBJECT_ID_MISMATCH);
-    } else {
-      callback(Status::OK);
-    }
-  });
+void PageStorageImpl::AddPiece(ObjectId object_id,
+                               std::unique_ptr<DataSource::DataChunk> data,
+                               ChangeSource source,
+                               std::function<void(Status)> callback) {
+  FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+  FTL_DCHECK(
+      object_id ==
+      ComputeObjectId(GetObjectType(GetObjectIdType(object_id)), data->Get()));
+
+  std::unique_ptr<const Object> object;
+  Status status = db_.ReadObject(object_id, &object);
+  if (status == Status::NOT_FOUND) {
+    DB::ObjectStatus object_status =
+        (source == ChangeSource::LOCAL ? DB::ObjectStatus::TRANSIENT
+                                       : DB::ObjectStatus::SYNCED);
+    callback(db_.WriteObject(object_id, std::move(data), object_status));
+    return;
+  }
+  callback(status);
 }
 
-void PageStorageImpl::AddObject(
-    std::unique_ptr<DataSource> data_source,
-    const std::function<void(Status, ObjectId)>& callback) {
-  auto traced_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
+void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
+                                         std::function<void(Status)> callback) {
+  FTL_DCHECK(page_sync_);
+  FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
 
-  auto handler = pending_operation_manager_.Manage(
-      ObjectSourceHandler::Create(std::move(data_source), main_runner_,
-                                  io_runner_, staging_dir_, objects_dir_));
+  page_sync_->GetObject(object_id, [
+    this, callback = std::move(callback), object_id = object_id.ToString()
+  ](Status status, uint64_t size, mx::socket data) {
+    if (status != Status::OK) {
+      callback(status);
+      return;
+    }
+    ReadDataSource(DataSource::Create(std::move(data), size), [
+      this, callback = std::move(callback), object_id = std::move(object_id)
+    ](Status status, std::unique_ptr<DataSource::DataChunk> chunk) {
+      if (status != Status::OK) {
+        callback(status);
+        return;
+      }
 
-  (*handler.first)->Start([
-    cleanup = std::move(handler.second), callback = std::move(traced_callback)
-  ](Status status, ObjectId object_id) {
-    callback(status, std::move(object_id));
-    cleanup();
+      auto object_id_type = GetObjectIdType(object_id);
+      FTL_DCHECK(object_id_type == ObjectIdType::VALUE_HASH ||
+                 object_id_type == ObjectIdType::INDEX_HASH);
+
+      if (object_id !=
+          ComputeObjectId(GetObjectType(object_id_type), chunk->Get())) {
+        callback(Status::OBJECT_ID_MISMATCH);
+        return;
+      }
+
+      if (object_id_type == ObjectIdType::VALUE_HASH) {
+        AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
+                 std::move(callback));
+        return;
+      }
+
+      auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+      status = ForEachPiece(chunk->Get(), [&](ObjectIdView id) {
+        if (GetObjectIdType(id) == ObjectIdType::INLINE) {
+          return Status::OK;
+        }
+
+        auto id_string = id.ToString();
+        Status status = db_.ReadObject(id_string, nullptr);
+        if (status == Status::NOT_FOUND) {
+          DownloadFullObject(std::move(id_string), waiter->NewCallback());
+          return Status::OK;
+        }
+        return status;
+      });
+      if (status != Status::OK) {
+        callback(status);
+        return;
+      }
+
+      waiter->Finalize(ftl::MakeCopyable([
+        this, object_id = std::move(object_id), chunk = std::move(chunk),
+        callback = std::move(callback)
+      ](Status status) mutable {
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+
+        AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
+                 std::move(callback));
+      }));
+    });
+
   });
 }
 
@@ -890,41 +827,177 @@ void PageStorageImpl::GetObjectFromSync(
     callback(Status::NOT_CONNECTED_ERROR, nullptr);
     return;
   }
-  page_sync_->GetObject(object_id, [
-    this, callback = std::move(callback), object_id = object_id.ToString()
-  ](Status status, uint64_t size, mx::socket data) {
+
+  DownloadFullObject(object_id, [
+    this, object_id = object_id.ToString(), callback = std::move(callback)
+  ](Status status) {
     if (status != Status::OK) {
       callback(status, nullptr);
       return;
     }
-    AddObjectFromSync(object_id, DataSource::Create(std::move(data), size), [
-      this, callback = std::move(callback), object_id
-    ](Status status) mutable {
-      if (status != Status::OK) {
-        callback(status, nullptr);
-        return;
-      }
-      std::string file_path = GetFilePath(object_id);
-      FTL_DCHECK(files::IsFile(file_path));
-      callback(Status::OK, std::make_unique<ObjectImpl>(std::move(object_id),
-                                                        std::move(file_path)));
-    });
+
+    GetObject(object_id, Location::LOCAL, std::move(callback));
   });
 }
 
-std::string PageStorageImpl::GetFilePath(ObjectIdView object_id) const {
-  return storage::GetFilePath(objects_dir_, object_id);
-}
-
 bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
-  return untracked_objects_.find(object_id) != untracked_objects_.end();
+  // TODO(qsr): Remove usage of this API, or makes it asynchronous.
+  if (GetObjectIdType(object_id) == ObjectIdType::INLINE) {
+    return false;
+  }
+
+  DB::ObjectStatus object_status;
+  Status status = db_.GetObjectStatus(object_id, &object_status);
+  FTL_DCHECK(status == Status::OK);
+  return object_status == DB::ObjectStatus::TRANSIENT;
 }
 
-void PageStorageImpl::MarkObjectTracked(ObjectIdView object_id) {
-  auto it = untracked_objects_.find(object_id);
-  if (it != untracked_objects_.end()) {
-    untracked_objects_.erase(it);
-  }
+void PageStorageImpl::FillBufferWithObjectContent(
+    ObjectIdView object_id,
+    mx::vmo vmo,
+    size_t offset,
+    size_t size,
+    std::function<void(Status)> callback) {
+  GetPiece(object_id, ftl::MakeCopyable([
+             this, vmo = std::move(vmo), offset, size,
+             callback = std::move(callback)
+           ](Status status, std::unique_ptr<const Object> object) {
+             if (status != Status::OK) {
+               callback(status);
+               return;
+             }
+
+             FTL_DCHECK(object);
+             ftl::StringView content;
+             status = object->GetData(&content);
+             if (status != Status::OK) {
+               callback(status);
+               return;
+             }
+
+             ObjectIdType id_type = GetObjectIdType(object->GetId());
+             if (id_type == ObjectIdType::INLINE ||
+                 id_type == ObjectIdType::VALUE_HASH) {
+               if (size != content.size()) {
+                 FTL_LOG(ERROR)
+                     << "Error in serialization format. Expecting object: "
+                     << convert::ToHex(object->GetId())
+                     << " to have size: " << size
+                     << ", but found an object of size: " << content.size();
+                 callback(Status::FORMAT_ERROR);
+                 return;
+               }
+               size_t written_size;
+               mx_status_t mx_status =
+                   vmo.write(content.data(), offset, size, &written_size);
+               if (mx_status != MX_OK) {
+                 FTL_LOG(ERROR)
+                     << "Unable to write to vmo. Status: " << mx_status;
+                 callback(Status::INTERNAL_IO_ERROR);
+                 return;
+               }
+               if (written_size != size) {
+                 FTL_LOG(ERROR)
+                     << "Error when writing content to vmo. Expected to write:"
+                     << size << " but only wrote: " << written_size;
+                 callback(Status::INTERNAL_IO_ERROR);
+                 return;
+               }
+               callback(Status::OK);
+               return;
+             }
+
+             const FileIndex* file_index;
+             status =
+                 FileIndexSerialization::ParseFileIndex(content, &file_index);
+             if (status != Status::OK) {
+               callback(Status::FORMAT_ERROR);
+               return;
+             }
+             if (file_index->size() != size) {
+               FTL_LOG(ERROR)
+                   << "Error in serialization format. Expecting object: "
+                   << convert::ToHex(object->GetId())
+                   << " to have size: " << size
+                   << ", but found an index object of size: "
+                   << file_index->size();
+               callback(Status::FORMAT_ERROR);
+               return;
+             }
+
+             size_t sub_offset = 0;
+             auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+             for (const auto* child : *file_index->children()) {
+               if (sub_offset + child->size() > file_index->size()) {
+                 callback(Status::FORMAT_ERROR);
+                 return;
+               }
+               mx::vmo vmo_copy;
+               mx_status_t mx_status = vmo.duplicate(
+                   MX_RIGHT_DUPLICATE | MX_RIGHT_WRITE, &vmo_copy);
+               if (mx_status != MX_OK) {
+                 FTL_LOG(ERROR)
+                     << "Unable to duplicate vmo. Status: " << mx_status;
+                 callback(Status::INTERNAL_IO_ERROR);
+                 return;
+               }
+               FillBufferWithObjectContent(
+                   child->object_id(), std::move(vmo_copy), offset + sub_offset,
+                   child->size(), waiter->NewCallback());
+               sub_offset += child->size();
+             }
+             waiter->Finalize(std::move(callback));
+           }));
+}
+
+void PageStorageImpl::ReadDataSource(
+    std::unique_ptr<DataSource> data_source,
+    std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
+        callback) {
+  auto handler = pending_operation_manager_.Manage(std::move(data_source));
+  auto chunks = std::vector<std::unique_ptr<DataSource::DataChunk>>();
+  (*handler.first)
+      ->Get(ftl::MakeCopyable([
+        cleanup = std::move(handler.second), chunks = std::move(chunks),
+        callback = std::move(callback)
+      ](std::unique_ptr<DataSource::DataChunk> chunk,
+        DataSource::Status status) mutable {
+        if (status == DataSource::Status::ERROR) {
+          callback(Status::INTERNAL_IO_ERROR, nullptr);
+          return;
+        }
+
+        if (chunk) {
+          chunks.push_back(std::move(chunk));
+        }
+
+        if (status == DataSource::Status::TO_BE_CONTINUED) {
+          return;
+        }
+
+        FTL_DCHECK(status == DataSource::Status::DONE);
+
+        if (chunks.size() == 0) {
+          callback(Status::OK, DataSource::DataChunk::Create(""));
+          return;
+        }
+
+        if (chunks.size() == 1) {
+          callback(Status::OK, std::move(chunks.front()));
+          return;
+        }
+
+        size_t final_size = 0;
+        for (const auto& chunk : chunks) {
+          final_size += chunk->Get().size();
+        }
+        std::string final_content;
+        final_content.reserve(final_size);
+        for (const auto& chunk : chunks) {
+          final_content.append(chunk->Get().data(), chunk->Get().size());
+        }
+        callback(Status::OK, DataSource::DataChunk::Create(final_content));
+      }));
 }
 
 }  // namespace storage

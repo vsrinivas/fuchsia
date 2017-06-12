@@ -76,6 +76,18 @@ Status DbEmptyImpl::GetJournalEntries(
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
   return Status::NOT_IMPLEMENTED;
 }
+Status DbEmptyImpl::WriteObject(ObjectIdView object_id,
+                                std::unique_ptr<DataSource::DataChunk> content,
+                                ObjectStatus object_status) {
+  return Status::NOT_IMPLEMENTED;
+}
+Status DbEmptyImpl::ReadObject(ObjectId object_id,
+                               std::unique_ptr<const Object>* object) {
+  return Status::NOT_IMPLEMENTED;
+}
+Status DbEmptyImpl::DeleteObject(ObjectIdView object_id) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status DbEmptyImpl::GetJournalValueCounter(const JournalId& journal_id,
                                            ftl::StringView value,
                                            int64_t* counter) {
@@ -103,16 +115,15 @@ Status DbEmptyImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
 Status DbEmptyImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) {
+Status DbEmptyImpl::GetUnsyncedPieces(std::vector<ObjectId>* object_ids) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::MarkObjectIdSynced(ObjectIdView object_id) {
+Status DbEmptyImpl::SetObjectStatus(ObjectIdView object_id,
+                                    ObjectStatus object_status) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::MarkObjectIdUnsynced(ObjectIdView object_id) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status DbEmptyImpl::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
+Status DbEmptyImpl::GetObjectStatus(ObjectIdView object_id,
+                                    ObjectStatus* object_status) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::SetSyncMetadata(ftl::StringView key,
@@ -122,4 +133,5 @@ Status DbEmptyImpl::SetSyncMetadata(ftl::StringView key,
 Status DbEmptyImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
   return Status::NOT_IMPLEMENTED;
 }
+
 }  // namespace storage

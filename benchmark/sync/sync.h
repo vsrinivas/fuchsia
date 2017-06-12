@@ -27,7 +27,16 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firebase instance ot use for syncing
 class SyncBenchmark : public ledger::PageWatcher {
  public:
-  SyncBenchmark(int entry_count, int value_size, std::string server_id);
+  enum class ReferenceStrategy {
+    ON,
+    OFF,
+    AUTO,
+  };
+
+  SyncBenchmark(size_t entry_count,
+                size_t value_size,
+                ReferenceStrategy reference_strategy,
+                std::string server_id);
 
   void Run();
 
@@ -37,7 +46,7 @@ class SyncBenchmark : public ledger::PageWatcher {
                 const OnChangeCallback& callback) override;
 
  private:
-  void RunSingle(int i);
+  void RunSingle(size_t i);
 
   void Backlog();
 
@@ -47,8 +56,9 @@ class SyncBenchmark : public ledger::PageWatcher {
 
   DataGenerator generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  const int entry_count_;
-  const int value_size_;
+  const size_t entry_count_;
+  const size_t value_size_;
+  ReferenceStrategy reference_strategy_;
   std::string server_id_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
