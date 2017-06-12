@@ -171,6 +171,8 @@ static_library("escher") {
     "shape/modifier_wobble.cc",
     "shape/modifier_wobble.h",
     "status.h",
+    "util/depth_to_color.cc",
+    "util/depth_to_color.h",
     "util/image_utils.cc",
     "util/image_utils.h",
     "util/need.h",
