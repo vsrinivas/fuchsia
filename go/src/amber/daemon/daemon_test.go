@@ -72,26 +72,15 @@ func (t *testSrc) Equals(o Source) bool {
 	}
 }
 
-func processPackage(pkg *Package, src Source) error {
-	_, err := src.FetchPkg(pkg)
-	return err
-}
-
-var (
-	tickers     = []testTicker{}
-	muTickers   sync.Mutex
-	tickerGroup sync.WaitGroup
-)
-
 type testTicker struct {
 	i    time.Duration
 	last time.Time
 	C    chan time.Time
 }
 
-func testBuildTicker(d time.Duration) *time.Ticker {
-	muTickers.Lock()
-	defer muTickers.Unlock()
+func testBuildTicker(d time.Duration, tickerGroup *sync.WaitGroup, mu *sync.Mutex) (*time.Ticker, testTicker) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer tickerGroup.Done()
 
 	c := make(chan time.Time)
@@ -99,8 +88,7 @@ func testBuildTicker(d time.Duration) *time.Ticker {
 	t.C = c
 
 	tt := testTicker{i: d, last: time.Now(), C: c}
-	tickers = append(tickers, tt)
-	return t
+	return t, tt
 }
 
 func (t *testTicker) makeTick() {
@@ -108,23 +96,29 @@ func (t *testTicker) makeTick() {
 	t.C <- t.last
 }
 
+func processPackage(update *Package, orig *Package, src Source, pkgs *PackageSet) error {
+	pkgs.Replace(orig, update, false)
+	_, err := src.FetchPkg(update)
+	return err
+}
+
 // TestDaemon tests daemon.go with a fake package source. The test runs for ~30
 // seconds.
 func TestDaemon(t *testing.T) {
-	newTicker = testBuildTicker
+	tickers := []testTicker{}
+	muTickers := sync.Mutex{}
+	tickerGroup := sync.WaitGroup{}
+
+	newTicker = func(d time.Duration) *time.Ticker {
+		t, tt := testBuildTicker(d, &tickerGroup, &muTickers)
+		tickers = append(tickers, tt)
+		return t
+	}
+
 	tickerGroup.Add(2)
 
-	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[Package]*struct{}),
-		interval: time.Second * 3}
-	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[Package]*struct{}),
-		interval: time.Second * 5}
-	sources := []*testSrc{&tSrc, &tSrc2}
-	pkgSet := NewPackageSet()
-	pkgSet.Add(&Package{Name: "email", Version: "23af90ee"})
-	pkgSet.Add(&Package{Name: "video", Version: "f2b8006c"})
-	pkgSet.Add(&Package{Name: "search", Version: "fa08207e"})
+	sources := createTestSrcs()
+	pkgSet := createMonitorPkgs()
 
 	d := NewDaemon(pkgSet, processPackage)
 	for _, src := range sources {
@@ -165,6 +159,89 @@ func TestDaemon(t *testing.T) {
 	for _, src := range sources {
 		verify(t, src, pkgSet, sepRuns+simulRuns+1)
 	}
+}
+
+func TestOneShot(t *testing.T) {
+	// run the test a good number of times to try to catch rac-y failures
+	for i := 0; i < 25; i++ {
+		testDaemonOneShot(t)
+	}
+}
+
+func testDaemonOneShot(t *testing.T) {
+	tickers := []testTicker{}
+	muTickers := sync.Mutex{}
+	tickerGroup := sync.WaitGroup{}
+
+	newTicker = func(d time.Duration) *time.Ticker {
+		t, tt := testBuildTicker(d, &tickerGroup, &muTickers)
+		tickers = append(tickers, tt)
+		return t
+	}
+
+	tSrc := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: time.Second * 3}
+	tickerGroup.Add(1)
+	monitoredPkgs := createMonitorPkgs()
+	oneShotPkgsA := createOneShotPkgsA()
+	oneShotPkgsB := createOneShotPkgsB()
+
+	d := NewDaemon(monitoredPkgs, processPackage)
+	d.AddSource(&tSrc)
+	tickerGroup.Wait()
+	// protect against improper test rewrites
+	if len(tickers) != 1 {
+		t.Errorf("Unexpected number of tickers!", len(tickers))
+	}
+
+	d.GetUpdates(oneShotPkgsA)
+	tickers[0].makeTick()
+	d.GetUpdates(oneShotPkgsB)
+	// allow a brief pause for requests to start before we shut down
+	// otherwise the stop request beats the GetUpdates request
+	time.Sleep(5 * time.Millisecond)
+
+	d.CancelAll()
+	// verify a single request for the one-shot pkgs and a single
+	// request for the monitored pkgs
+	verify(t, &tSrc, oneShotPkgsA, 1)
+	verify(t, &tSrc, oneShotPkgsB, 1)
+	verify(t, &tSrc, monitoredPkgs, 2)
+}
+
+func createOneShotPkgsA() *PackageSet {
+	pkgSet := NewPackageSet()
+	pkgSet.Add(&Package{Name: "one", Version: "18facd43"})
+	pkgSet.Add(&Package{Name: "two", Version: "2ade0092"})
+	pkgSet.Add(&Package{Name: "three", Version: "34a077fe"})
+	return pkgSet
+}
+
+func createOneShotPkgsB() *PackageSet {
+	pkgSet := NewPackageSet()
+	pkgSet.Add(&Package{Name: "four", Version: "18facd43"})
+	pkgSet.Add(&Package{Name: "five", Version: "2ade0092"})
+	pkgSet.Add(&Package{Name: "six", Version: "34a077fe"})
+	return pkgSet
+}
+
+func createMonitorPkgs() *PackageSet {
+	pkgSet := NewPackageSet()
+	pkgSet.Add(&Package{Name: "email", Version: "23af90ee"})
+	pkgSet.Add(&Package{Name: "video", Version: "f2b8006c"})
+	pkgSet.Add(&Package{Name: "search", Version: "fa08207e"})
+	return pkgSet
+}
+
+func createTestSrcs() []*testSrc {
+	tSrc := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: time.Second * 3}
+	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: time.Second * 5}
+	return []*testSrc{&tSrc, &tSrc2}
 }
 
 func verify(t *testing.T, src *testSrc, pkgs *PackageSet, runs int) {
