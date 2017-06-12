@@ -186,15 +186,17 @@ Columns:
     -   `m`: `MX_RIGHT_MAP`
     -   `d`: `MX_RIGHT_DUPLICATE`
     -   `t`: `MX_RIGHT_TRANSFER`
--   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO
-    without a koid was created by the kernel, and has never had a userspace
-    handle.
+-   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO without a
+    koid was created by the kernel, and has never had a userspace handle.
 -   `parent`: The koid of the VMO's parent, if it's a clone.
 -   `#chld`: The number of active clones (children) of the VMO.
 -   `#map`: The number of times the VMO is currently mapped into VMARs.
 -   `#shr`: The number of processes that map (share) the VMO.
 -   `size`: The VMO's current size, in bytes.
 -   `alloc`: The amount of physical memory allocated to the VMO, in bytes.
+    -   **NOTE**: If this column contains the value `phys`, it means that the
+        VMO points to a raw physical address range like a memory-mapped device.
+        `phys` VMOs do not consume RAM.
 -   `name`: The name of the VMO, or `-` if its name is empty.
 
 To relate this back to `ps`: each VMO contributes, for its mapped portions
@@ -205,6 +207,16 @@ PRIVATE =  #shr == 1 ? alloc : 0
 SHARED  =  #shr  > 1 ? alloc : 0
 PSS     =  PRIVATE + (SHARED / #shr)
 ```
+
+### Dump all VMOs in the system (userspace and kernel)
+
+```
+k mx vmos all
+```
+
+Just like `k mx vmos <pid>`, but dumps all VMOs across all processes and the
+kernel. A `koid` value of zero means that only the kernel has a reference to
+that VMO.
 
 ### Limitations
 

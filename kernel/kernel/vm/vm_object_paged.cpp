@@ -113,6 +113,9 @@ status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
 void VmObjectPaged::Dump(uint depth, bool verbose) {
     canary_.Assert();
 
+    // This can grab our lock.
+    uint64_t parent_id = parent_user_id();
+
     AutoLock a(&lock_);
 
     size_t count = 0;
@@ -121,7 +124,9 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("object %p size %#" PRIx64 " pages %zu ref %d\n", this, size_, count, ref_count_debug());
+    printf("vmo %p/k%" PRIu64 " size %#" PRIx64
+           " pages %zu ref %d parent k%" PRIu64 "\n",
+           this, user_id_, size_, count, ref_count_debug(), parent_id);
 
     if (verbose) {
         auto f = [depth](const auto p, uint64_t offset) {

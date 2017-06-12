@@ -231,7 +231,12 @@ static void DumpVmObject(
     format_size(size_str, sizeof(size_str), vmo.size());
 
     char alloc_str[MAX_FORMAT_SIZE_LEN];
-    format_size(alloc_str, sizeof(alloc_str), vmo.AllocatedPages() * PAGE_SIZE);
+    if (vmo.is_paged()) {
+        format_size(alloc_str, sizeof(alloc_str),
+                    vmo.AllocatedPages() * PAGE_SIZE);
+    } else {
+        strlcpy(alloc_str, "phys", sizeof(alloc_str));
+    }
 
     char clone_str[21];
     if (vmo.is_cow_clone()) {
@@ -269,6 +274,23 @@ static void DumpVmObject(
            size_str,
            alloc_str,
            name);
+}
+
+static void DumpAllVmObjects() {
+    printf("All VMOs, oldest to newest:\n");
+    PrintVmoDumpHeader(/* handles */ false);
+    VmObject::ForEach([](const VmObject& vmo) {
+        DumpVmObject(
+            vmo,
+            MX_HANDLE_INVALID,
+            /* rights */ 0u,
+            /* koid */ vmo.user_id());
+        // TODO(dbort): Dump the VmAspaces (processes) that map the VMO.
+        // TODO(dbort): Dump the processes that hold handles to the VMO.
+        //     This will be a lot harder to gather.
+        return MX_OK;
+    });
+    PrintVmoDumpHeader(/* handles */ false);
 }
 
 namespace {
@@ -653,7 +675,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s mwd  <mb>         : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid>        : dump process handles\n", argv[0].str);
         printf("%s hwd  <count>      : handle watchdog\n", argv[0].str);
-        printf("%s vmos <pid>        : dump process VMOs\n", argv[0].str);
+        printf("%s vmos <pid>|all    : dump process/all VMOs\n", argv[0].str);
         printf("%s jb   <pid>        : list job tree\n", argv[0].str);
         printf("%s kill <pid>        : kill process\n", argv[0].str);
         printf("%s asd  <pid>|kernel : dump process/kernel address space\n",
@@ -697,7 +719,11 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     } else if (strcmp(argv[1].str, "vmos") == 0) {
         if (argc < 3)
             goto usage;
-        DumpProcessVmObjects(argv[2].u);
+        if (strcmp(argv[2].str, "all") == 0) {
+            DumpAllVmObjects();
+        } else {
+            DumpProcessVmObjects(argv[2].u);
+        }
     } else if (strcmp(argv[1].str, "jb") == 0) {
         if (argc < 3)
             goto usage;
