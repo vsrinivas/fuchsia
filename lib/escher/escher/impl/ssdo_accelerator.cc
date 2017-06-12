@@ -588,8 +588,7 @@ void main() {
 SsdoAccelerator::SsdoAccelerator(GlslToSpirvCompiler* compiler,
                                  ImageCache* image_cache,
                                  ResourceLifePreserver* life_preserver)
-    : device_(life_preserver->vulkan_context().device),
-      compiler_(compiler),
+    : compiler_(compiler),
       image_cache_(image_cache),
       life_preserver_(life_preserver) {}
 

@@ -71,8 +71,6 @@ class SsdoAccelerator {
                                      vk::ImageUsageFlags image_flags,
                                      Timestamper* timestamper);
 
-  vk::Device device_;
-
   // Temporary, so that we can lazily initialize ComputeShaders as needed.
   // Eventually, we'll know exactly which we need, and eagerly initialize them.
   GlslToSpirvCompiler* compiler_;
