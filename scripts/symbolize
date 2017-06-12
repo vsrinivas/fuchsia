@@ -330,7 +330,7 @@ def main():
             a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path,
                                call_addr)
             # In the case of inlined methods it is more readable if the inlined lines are
-            # aligned to be to the irght of =>
+            # aligned to be to the right of =>
             processed_lines.append(prefix +
                     a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
             continue
