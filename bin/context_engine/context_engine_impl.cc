@@ -16,6 +16,9 @@ namespace maxwell {
 ContextEngineImpl::ContextEngineImpl() {
   repository_.AddCoprocessor(
       new AggregateCoprocessor("explicit/focal_entities"));
+  repository_.AddCoprocessor(new AggregateCoprocessor("explicit/raw/text"));
+  repository_.AddCoprocessor(
+      new AggregateCoprocessor("explicit/raw/text_selection"));
   repository_.AddCoprocessor(new FocusedStoryCoprocessor());
 }
 
