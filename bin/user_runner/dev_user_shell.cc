@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -68,6 +69,10 @@ class DevUserShellApp : modular::StoryWatcher,
     user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
     user_shell_context_ptr->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
+    user_shell_context_ptr->GetFocusController(
+        focus_controller_.NewRequest());
+    user_shell_context_ptr->GetVisibleStoriesController(
+        visible_stories_controller_.NewRequest());
 
     suggestion_provider_->SubscribeToInterruptions(
         suggestion_listener_bindings_.AddBinding(this));
@@ -122,6 +127,10 @@ class DevUserShellApp : modular::StoryWatcher,
     fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
+    focus_controller_->Set(story_id);
+    auto visible_stories = fidl::Array<fidl::String>::New(0);
+    visible_stories.push_back(story_id);
+    visible_stories_controller_->Set(std::move(visible_stories));
 
     if (!settings_.root_link.empty()) {
       modular::LinkPtr root;
@@ -177,6 +186,9 @@ class DevUserShellApp : modular::StoryWatcher,
   modular::UserContextPtr user_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
+  modular::FocusControllerPtr focus_controller_;
+  modular::VisibleStoriesControllerPtr visible_stories_controller_;
+
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;

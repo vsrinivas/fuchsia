@@ -94,6 +94,7 @@ source_set("focus") {
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/ledger:storage",
     "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/user:focus",
     "//apps/modular/services/user:private",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
