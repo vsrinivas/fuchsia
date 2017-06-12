@@ -93,7 +93,7 @@ if [[ -z "${ZSH_VERSION}" ]]; then
     local cur
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=($(ls -dp1 ${MAGENTA_DIR}/${cur}* 2>/dev/null | \
+    COMPREPLY=($(ls -dp1 --color=never ${MAGENTA_DIR}/${cur}* 2>/dev/null | \
       sed -n "s|^${MAGENTA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
   }
   complete -o nospace -F _mgo mgo
@@ -273,7 +273,7 @@ if [[ -z "${ZSH_VERSION}" ]]; then
     local cur
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=($(ls -dp1 ${FUCHSIA_DIR}/${cur}* 2>/dev/null | \
+    COMPREPLY=($(ls -dp1 --color=never ${FUCHSIA_DIR}/${cur}* 2>/dev/null | \
       sed -n "s|^${FUCHSIA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
   }
   complete -o nospace -F _fgo fgo
