@@ -122,6 +122,11 @@ static inline bool device_is_bound(mx_device_t* dev) {
 }
 
 void dev_ref_release(mx_device_t* dev) {
+    if (dev->refcount < 1) {
+        printf("device: %p: REFCOUNT GOING NEGATIVE\n", dev);
+        //TODO: probably should assert, but to start with let's
+        //      see if this is happening in normal use
+    }
     dev->refcount--;
     if (dev->refcount == 0) {
         if (dev->flags & DEV_FLAG_INSTANCE) {

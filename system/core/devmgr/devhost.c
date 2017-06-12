@@ -311,16 +311,32 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         if ((r = dh_find_driver(name, hin[0], &drv)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
+            void* cookie = NULL;
             if (drv->ops->bind) {
-                r = drv->ops->bind(drv->ctx, ios->dev, &ios->dev->owner_cookie);
+                r = drv->ops->bind(drv->ctx, ios->dev, &cookie);
             } else {
                 r = MX_ERR_NOT_SUPPORTED;
             }
             if (r < 0) {
                 log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
             } else {
-                //TODO: best behaviour for multibind? maybe retire "owner"?
-                ios->dev->owner = drv;
+                //TODO: Best behaviour for multibind? maybe retire "owner"?
+                //      For now this is extermely rare, so we mostly can ignore
+                //      it.
+                if (drv->ops->unbind || cookie) {
+                    log(INFO, "devhost[%s] driver '%s' unbind=%p, cookie=%p\n",
+                        path, name, drv->ops->unbind, cookie);
+
+                    DM_LOCK();
+                    if (ios->dev->owner) {
+                        log(ERROR, "devhost[%s] driver '%s' device already owned!\n", path, name);
+                    } else {
+                        ios->dev->owner = drv;
+                        ios->dev->owner_cookie = cookie;
+                        ios->dev->refcount++;
+                    }
+                    DM_UNLOCK();
+                }
             }
         }
         dc_msg_t reply = {
