@@ -162,3 +162,15 @@ source_set("view_host") {
     "//third_party/skia",
   ]
 }
+
+source_set("message_receiver_client") {
+  sources = [
+    "message_receiver_client.h",
+    "message_receiver_client.cc",
+  ]
+
+  deps = [
+    "//lib/fidl/cpp/bindings",
+    "//apps/modular/services/component",
+  ]
+}

@@ -8,6 +8,8 @@
 #include <deque>
 #include <string>
 
+#include "lib/ftl/logging.h"
+
 namespace modular {
 
 /* Implements a FIFO queue of strings that is persisted to local storage as
@@ -18,6 +20,11 @@ class PersistentQueue {
  public:
   PersistentQueue(const std::string& file_name);
   bool IsEmpty() const { return queue_.empty(); }
+
+  std::string Peek() const {
+    FTL_DCHECK(!queue_.empty());
+    return queue_.front();
+  }
 
   std::string Dequeue() {
     std::string value = queue_.front();

@@ -34,7 +34,7 @@ class MessageQueueConnection : public MessageQueue {
 
  private:
   // |MessageQueue|
-  void Receive(const MessageQueue::ReceiveCallback& callback) override;
+  void RegisterReceiver(fidl::InterfaceHandle<MessageReader> receiver) override;
 
   // |MessageQueue|
   void GetToken(const GetTokenCallback& callback) override;
@@ -47,21 +47,35 @@ class MessageQueueConnection : public MessageQueue {
 // manipulate the message queue. Owned by |MessageQueueManager|.
 class MessageQueueStorage : MessageSender {
  public:
-  MessageQueueStorage(const std::string& queue_token,
+  MessageQueueStorage(const std::string& queue_name,
+                      const std::string& queue_token,
                       const std::string& file_name_)
-      : queue_token_(queue_token), queue_data_(file_name_) {}
+      : queue_name_(queue_name),
+        queue_token_(queue_token),
+        queue_data_(file_name_) {}
 
   ~MessageQueueStorage() override = default;
 
-  // We store |Receive()| callbacks if the queue is empty. We drop these
-  // callbacks if the relevant |MessageQueue| interface dies.
-  void Receive(const MessageQueueConnection* const conn,
-               const MessageQueue::ReceiveCallback& callback) {
-    if (!queue_data_.IsEmpty()) {
-      callback(queue_data_.Dequeue());
-    } else {
-      receive_callback_queue_.push_back(make_pair(conn, callback));
+  void RegisterReceiver(fidl::InterfaceHandle<MessageReader> receiver) {
+    if (message_receiver_) {
+      FTL_DLOG(WARNING) << "Existing MessageReader is being replaced for "
+                           "message queue. queue name="
+                        << queue_name_;
     }
+
+    message_receiver_.Bind(std::move(receiver));
+    message_receiver_.set_connection_error_handler(
+        [this] {
+          if (receive_ack_pending_) {
+            FTL_DLOG(WARNING)
+                << "MessageReceiver closed, but OnReceive acknowledgement still"
+                   " pending.";
+          }
+          message_receiver_.reset();
+          receive_ack_pending_ = false;
+        });
+
+    MaybeSendNextMessage();
   }
 
   const std::string& queue_token() const { return queue_token_; }
@@ -75,17 +89,6 @@ class MessageQueueStorage : MessageSender {
         std::make_unique<MessageQueueConnection>(this), std::move(request));
   }
 
-  // |MessageQueueConnection| calls this method in its destructor so that we can
-  // drop any pending receive callbacks.
-  void RemoveMessageQueueConnection(const MessageQueueConnection* const conn) {
-    auto i = std::remove_if(receive_callback_queue_.begin(),
-                            receive_callback_queue_.end(),
-                            [conn](const ReceiveCallbackQueueItem& item) {
-                              return conn == item.first;
-                            });
-    receive_callback_queue_.erase(i, receive_callback_queue_.end());
-  }
-
   void RegisterWatcher(const std::function<void()>& watcher) {
     watcher_ = watcher;
     if (watcher_ && !queue_data_.IsEmpty()) {
@@ -96,35 +99,40 @@ class MessageQueueStorage : MessageSender {
   void DropWatcher() { watcher_ = nullptr; }
 
  private:
-  // |MessageSender|
-  void Send(const fidl::String& message) override {
-    if (!receive_callback_queue_.empty()) {
-      auto& receive_item = receive_callback_queue_.front();
-      receive_item.second(message);
-      receive_callback_queue_.pop_front();
-    } else {
-      queue_data_.Enqueue(message);
+  void MaybeSendNextMessage() {
+    if (!message_receiver_ || receive_ack_pending_ || queue_data_.IsEmpty()) {
+      return;
     }
 
+    receive_ack_pending_ = true;
+    message_receiver_->OnReceive(queue_data_.Peek(), [this] {
+      receive_ack_pending_ = false;
+      queue_data_.Dequeue();
+      MaybeSendNextMessage();
+    });
+  }
+
+  // |MessageSender|
+  void Send(const fidl::String& message) override {
+    queue_data_.Enqueue(message);
+    MaybeSendNextMessage();
     if (watcher_) {
       watcher_();
     }
   }
 
+  const std::string queue_name_;
   const std::string queue_token_;
 
   std::function<void()> watcher_;
 
   PersistentQueue queue_data_;
 
-  using ReceiveCallbackQueueItem =
-      std::pair<const MessageQueueConnection*, MessageQueue::ReceiveCallback>;
-  std::deque<ReceiveCallbackQueueItem> receive_callback_queue_;
+  bool receive_ack_pending_ = false;
+  MessageReaderPtr message_receiver_;
 
   // When a |MessageQueue| connection closes, the corresponding
-  // MessageQueueConnection instance gets removed (and destroyed due
-  // to unique_ptr semantics), which in turn will notify our
-  // RemoveMessageQueueConnection method.
+  // MessageQueueConnection instance gets removed.
   fidl::BindingSet<MessageQueue, std::unique_ptr<MessageQueueConnection>>
       message_queue_bindings_;
 
@@ -137,13 +145,11 @@ MessageQueueConnection::MessageQueueConnection(
     MessageQueueStorage* const queue_storage)
     : queue_storage_(queue_storage) {}
 
-MessageQueueConnection::~MessageQueueConnection() {
-  queue_storage_->RemoveMessageQueueConnection(this);
-}
+MessageQueueConnection::~MessageQueueConnection() = default;
 
-void MessageQueueConnection::Receive(
-    const MessageQueue::ReceiveCallback& callback) {
-  queue_storage_->Receive(this, callback);
+void MessageQueueConnection::RegisterReceiver(
+    fidl::InterfaceHandle<MessageReader> receiver) {
+  queue_storage_->RegisterReceiver(std::move(receiver));
 }
 
 void MessageQueueConnection::GetToken(const GetTokenCallback& callback) {
@@ -665,7 +671,8 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
     path.push_back('/');
     path.append(info.queue_token);
     path.append(".json");
-    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_token,
+    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_name,
+                                                           info.queue_token,
                                                            std::move(path));
     std::tie(it, inserted) = message_queues_.insert(
         std::make_pair(info.queue_token, std::move(new_queue)));

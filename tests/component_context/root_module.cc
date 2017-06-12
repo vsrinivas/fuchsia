@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/connect.h"
+#include "apps/modular/lib/fidl/message_receiver_client.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/services/component/message_queue.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/component_context/test_agent1_interface.fidl.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -91,13 +93,19 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     component_context_->ObtainMessageQueue("root_msg_queue",
                                            msg_queue_.NewRequest());
 
-    // This should queue the receive callback in the MessageQueueManager, since
-    // no one sent anything to it yet.
-    msg_queue_->Receive([this, done_cb, kTestMessage](const fidl::String& msg) {
-      if (msg == kTestMessage)
-        msg_queue_communicated_.Pass();
-      done_cb();
-    });
+    // MessageQueueManager shouldn't send us anything just yet.
+    msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
+        msg_queue_.get(),
+        [this, done_cb, kTestMessage](const fidl::String& msg,
+                                      std::function<void()> ack) {
+          ack();
+          // We only want one message.
+          msg_receiver_.reset();
+
+          if (msg == kTestMessage)
+            msg_queue_communicated_.Pass();
+          done_cb();
+        });
 
     msg_queue_->GetToken([this, kTestMessage](const fidl::String& token) {
       agent1_interface_->SendToMessageQueue(token, kTestMessage);
@@ -129,6 +137,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   modular::MessageQueuePtr msg_queue_;
 
   modular::AgentControllerPtr unstoppable_agent_controller_;
+
+  std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint stopped_{"Root module stopped"};

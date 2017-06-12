@@ -23,6 +23,7 @@ executable("component_context_test") {
   ]
   deps = [
     ":test_agent1_interface",
+    "//apps/modular/lib/fidl:message_receiver_client",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/component",

@@ -38,9 +38,11 @@ executable("queue_persistence_test_agent") {
   ]
   deps = [
     ":queue_persistence_test_agent_interface",
+    "//apps/modular/lib/fidl:message_receiver_client",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
+    "//apps/modular/services/component",
     "//lib/mtl",
   ]
 }
