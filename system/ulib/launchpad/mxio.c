@@ -19,10 +19,10 @@ static mx_status_t add_mxio(launchpad_t* lp,
                             mx_handle_t handles[MXIO_MAX_HANDLES],
                             uint32_t types[MXIO_MAX_HANDLES],
                             mx_status_t status) {
-    if (status == ERR_BAD_HANDLE)
-        return NO_ERROR;
-    if (status == ERR_NOT_SUPPORTED)
-        return NO_ERROR;
+    if (status == MX_ERR_BAD_HANDLE)
+        return MX_OK;
+    if (status == MX_ERR_NOT_SUPPORTED)
+        return MX_OK;
     if (status > 0) {
         return launchpad_add_handles(lp, status, handles, types);
     } else {
@@ -39,12 +39,12 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     if (what & LP_CLONE_MXIO_ROOT) {
         mxio_flat_namespace_t* flat;
         status = mxio_ns_export_root(&flat);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             launchpad_set_nametable(lp, flat->count, flat->path);
             launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
             free(flat);
         } else {
-            if (status == ERR_NOT_FOUND) {
+            if (status == MX_ERR_NOT_FOUND) {
                 // if there's no root namespace, fail back to the legacy handles
                 add_mxio(lp, handles, types, mxio_clone_root(handles, types));
                 if ((status = mxio_clone_svcroot(handles, types)) > 0) {
@@ -69,7 +69,7 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     }
     if (what & LP_CLONE_DEFAULT_JOB) {
         mx_handle_t job;
-        if (mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job) == NO_ERROR) {
+        if (mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job) == MX_OK) {
             launchpad_add_handle(lp, job, PA_HND(PA_JOB_DEFAULT, 0));
         }
     }

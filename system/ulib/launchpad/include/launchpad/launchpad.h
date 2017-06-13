@@ -108,7 +108,7 @@ void launchpad_destroy(launchpad_t* lp);
 // any calls to launchpad_go() will fail.
 // If it is not already in an error state, the error state is
 // set to status, and errmsg is set to msg.
-// If status is non-negative, it is interpreted as ERR_INTERNAL.
+// If status is non-negative, it is interpreted as MX_ERR_INTERNAL.
 void launchpad_abort(launchpad_t* lp, mx_status_t status, const char* msg);
 
 // If any launchpad_*() call against this lp has failed, this returns
@@ -194,14 +194,14 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
 
 
 // Attempt to duplicate local descriptor fd into target_fd in the
-// new process.  Returns ERR_BAD_HANDLE if fd is not a valid fd, or
-// ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
+// new process.  Returns MX_ERR_BAD_HANDLE if fd is not a valid fd, or
+// MX_ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
 mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 
 // Attempt to transfer local descriptor fd into target_fd in the
-// new process.  Returns ERR_BAD_HANDLE if fd is not a valid fd,
+// new process.  Returns MX_ERR_BAD_HANDLE if fd is not a valid fd,
 // ERR_UNAVILABLE if fd has been duplicated or is in use in an
-// io operation, or ERR_NOT_SUPPORTED if it's not possible to transfer
+// io operation, or MX_ERR_NOT_SUPPORTED if it's not possible to transfer
 // this fd.
 // Upon success, from the point of view of the calling process, the fd
 // will appear to have been closed.  The underlying "file" will continue
@@ -272,8 +272,8 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
 // as the first argument to the interpreter, followed by all of the
 // original argv arguments (which includes the script name in argv[0]).
 // The length of the first line of an interpreted script may not exceed
-// 127 characters, or ERR_NOT_FOUND will be returned. If an invalid vmo
-// handle is passed, ERR_INVALID_ARGS will be returned.
+// 127 characters, or MX_ERR_NOT_FOUND will be returned. If an invalid vmo
+// handle is passed, MX_ERR_INVALID_ARGS will be returned.
 mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo);
 
 // The maximum length of the first line of a file that specifies an

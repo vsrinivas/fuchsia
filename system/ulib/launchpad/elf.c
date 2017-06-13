@@ -24,14 +24,14 @@ mx_status_t elf_load_start(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
     elf_load_header_t header;
     uintptr_t phoff;
     mx_status_t status = elf_load_prepare(vmo, hdr_buf, buf_sz, &header, &phoff);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         // Now allocate the data structure and read in the phdrs.
         size_t phdrs_size = (size_t)header.e_phnum * sizeof(elf_phdr_t);
         elf_load_info_t* info = malloc(sizeof(*info) + phdrs_size);
         if (info == NULL)
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         status = elf_load_read_phdrs(vmo, info->phdrs, phoff, header.e_phnum);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             info->header = header;
             *infop = info;
         } else {
@@ -49,7 +49,7 @@ mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
                              &offset, interp_len)) {
         buffer = malloc(*interp_len + 1);
         if (buffer == NULL)
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         size_t n;
         mx_status_t status = mx_vmo_read(vmo, buffer, offset, *interp_len, &n);
         if (status < 0) {
@@ -63,7 +63,7 @@ mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
         buffer[*interp_len] = '\0';
     }
     *interp = buffer;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t elf_load_finish(mx_handle_t vmar, elf_load_info_t* info,

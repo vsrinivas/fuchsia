@@ -71,11 +71,11 @@ struct launchpad {
 // which will discard the handles, etc, etc.
 static launchpad_t invalid_launchpad = {
     .errmsg = "create: could not allocate launchpad_t",
-    .error = ERR_NO_MEMORY,
+    .error = MX_ERR_NO_MEMORY,
 };
 
 static mx_status_t lp_error(launchpad_t* lp, mx_status_t error, const char* msg) {
-    if (lp->error == NO_ERROR) {
+    if (lp->error == MX_OK) {
         lp->error = error;
         lp->errmsg = msg;
     }
@@ -87,7 +87,7 @@ mx_status_t launchpad_get_status(launchpad_t* lp) {
 }
 
 void launchpad_abort(launchpad_t* lp, mx_status_t error, const char* msg) {
-    lp_error(lp, (error < 0) ? error : ERR_INTERNAL, msg);
+    lp_error(lp, (error < 0) ? error : MX_ERR_INTERNAL, msg);
 }
 
 const char* launchpad_error_message(launchpad_t* lp) {
@@ -132,13 +132,13 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
         lp->errmsg = "no error";
     }
 
-    if (launchpad_add_handle(lp, proc, PA_PROC_SELF) == NO_ERROR) {
+    if (launchpad_add_handle(lp, proc, PA_PROC_SELF) == MX_OK) {
         // If the process has an existing vDSO mapping, record it for
         // use by launchpad_start_extra.
         mx_status_t status = mx_object_get_property(
             proc, MX_PROP_PROCESS_VDSO_BASE_ADDRESS,
             &lp->vdso_base, sizeof(lp->vdso_base));
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             lp_error(lp, status,
                      "create: cannot get MX_PROP_PROCESS_VDSO_BASE_ADDRESS");
     }
@@ -158,7 +158,7 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
     mx_status_t status = mx_process_create(creation_job, name, name_len, 0, &proc, &vmar);
 
     launchpad_t* lp;
-    if (launchpad_create_with_process(proc, vmar, &lp) == NO_ERROR)
+    if (launchpad_create_with_process(proc, vmar, &lp) == MX_OK)
         lp->fresh_process = true;
 
     if (status < 0)
@@ -195,7 +195,7 @@ static mx_status_t build_stringtable(launchpad_t* lp,
     if (lp->error)
         return lp->error;
     if (count < 0)
-        return lp_error(lp, ERR_INVALID_ARGS, "negative string array count");
+        return lp_error(lp, MX_ERR_INVALID_ARGS, "negative string array count");
 
     size_t total = 0;
     for (int i = 0; i < count; ++i)
@@ -205,7 +205,7 @@ static mx_status_t build_stringtable(launchpad_t* lp,
     if (total > 0) {
         buffer = malloc(total);
         if (buffer == NULL)
-            return lp_error(lp, ERR_NO_MEMORY, "out of memory for string array");
+            return lp_error(lp, MX_ERR_NO_MEMORY, "out of memory for string array");
 
         char* p = buffer;
         for (int i = 0; i < count; ++i)
@@ -214,13 +214,13 @@ static mx_status_t build_stringtable(launchpad_t* lp,
         if ((size_t) (p - buffer) != total) {
             // The strings changed in parallel.  Not kosher!
             free(buffer);
-            return lp_error(lp, ERR_INVALID_ARGS, "string array modified during use");
+            return lp_error(lp, MX_ERR_INVALID_ARGS, "string array modified during use");
         }
     }
 
     *total_out = total;
     *out = buffer;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launchpad_set_args(launchpad_t* lp,
@@ -235,7 +235,7 @@ mx_status_t launchpad_set_args(launchpad_t* lp,
     lp->argc = argc;
     lp->args = buffer;
     lp->args_len = total;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launchpad_set_nametable(launchpad_t* lp,
@@ -250,7 +250,7 @@ mx_status_t launchpad_set_nametable(launchpad_t* lp,
     lp->namec = count;
     lp->names = buffer;
     lp->names_len = total;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp) {
@@ -271,7 +271,7 @@ mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp) {
     lp->envc = count;
     lp->env = buffer;
     lp->env_len = total;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t more_handles(launchpad_t* lp, size_t n) {
@@ -283,22 +283,22 @@ static mx_status_t more_handles(launchpad_t* lp, size_t n) {
         mx_handle_t* handles = realloc(lp->handles,
                                        alloc * sizeof(handles[0]));
         if (handles == NULL)
-            return lp_error(lp, ERR_NO_MEMORY, "out of memory for handle table");
+            return lp_error(lp, MX_ERR_NO_MEMORY, "out of memory for handle table");
         lp->handles = handles;
         uint32_t* info = realloc(lp->handles_info, alloc * sizeof(info[0]));
         if (info == NULL)
-            return lp_error(lp, ERR_NO_MEMORY, "out of memory for handle table");
+            return lp_error(lp, MX_ERR_NO_MEMORY, "out of memory for handle table");
         lp->handles_info = info;
         lp->handle_alloc = alloc;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id) {
     if (h == MX_HANDLE_INVALID)
-        return lp_error(lp, ERR_BAD_HANDLE, "added invalid handle");
+        return lp_error(lp, MX_ERR_BAD_HANDLE, "added invalid handle");
     mx_status_t status = more_handles(lp, 1);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         lp->handles[lp->handle_count] = h;
         lp->handles_info[lp->handle_count] = id;
         ++lp->handle_count;
@@ -312,13 +312,13 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
                                   const mx_handle_t h[],
                                   const uint32_t id[]) {
     mx_status_t status = more_handles(lp, n);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         memcpy(&lp->handles[lp->handle_count], h, n * sizeof(h[0]));
         memcpy(&lp->handles_info[lp->handle_count], id, n * sizeof(id[0]));
         lp->handle_count += n;
         for (size_t i = 0; i < n; i++) {
             if (h[i] == MX_HANDLE_INVALID) {
-                return lp_error(lp, ERR_BAD_HANDLE, "added invalid handle");
+                return lp_error(lp, MX_ERR_BAD_HANDLE, "added invalid handle");
             }
         }
     } else {
@@ -338,7 +338,7 @@ mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
     if (lp->error)
         return lp->error;
     if ((target_fd < 0) || (target_fd >= MAX_MXIO_FD)) {
-        return lp_error(lp, ERR_INVALID_ARGS, "add_pipe: invalid target fd");
+        return lp_error(lp, MX_ERR_INVALID_ARGS, "add_pipe: invalid target fd");
     }
     mx_status_t status;
     if ((status = mxio_pipe_half(&handle, &id)) < 0) {
@@ -351,7 +351,7 @@ mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
         return status;
     }
     *fd_out = fd;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void check_elf_stack_size(launchpad_t* lp, elf_load_info_t* elf) {
@@ -364,7 +364,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     if (vmo < 0)
         return lp_error(lp, vmo, "elf_load: negative vmo");
     if (vmo == MX_HANDLE_INVALID)
-        return lp_error(lp, ERR_INVALID_ARGS, "elf_load: invalid vmo");
+        return lp_error(lp, MX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
     if (lp->error)
         goto done;
 
@@ -379,7 +379,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     check_elf_stack_size(lp, elf);
     elf_load_destroy(elf);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         lp->loader_message = false;
         launchpad_add_handle(lp, segments_vmar,
                              PA_HND(PA_VMAR_LOADED, 0));
@@ -397,7 +397,7 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
     if (vmo < 0)
         return lp_error(lp, vmo, "elf_load_extra: negative vmo");
     if (vmo == MX_HANDLE_INVALID)
-        return lp_error(lp, ERR_INVALID_ARGS, "elf_load_extra: invalid vmo");
+        return lp_error(lp, MX_ERR_INVALID_ARGS, "elf_load_extra: invalid vmo");
 
     elf_load_info_t* elf;
     mx_status_t status;
@@ -422,7 +422,7 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     } msg;
 
     if (len >= sizeof(msg.data))
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     memset(&msg.header, 0, sizeof(msg.header));
     msg.header.txid = atomic_fetch_add(&next_txid, 1);
@@ -441,24 +441,24 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     };
     uint32_t reply_size;
     uint32_t handle_count;
-    mx_status_t read_status = NO_ERROR;
+    mx_status_t read_status = MX_OK;
     mx_status_t status = mx_channel_call(loader_svc, 0, MX_TIME_INFINITE,
                                          &call, &reply_size, &handle_count,
                                          &read_status);
-    if (status != NO_ERROR) {
-        return status == ERR_CALL_FAILED ? read_status : status;
+    if (status != MX_OK) {
+        return status == MX_ERR_CALL_FAILED ? read_status : status;
     }
 
     // Check for protocol violations.
     if (reply_size != sizeof(msg.header)) {
     protocol_violation:
         mx_handle_close(handle);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (msg.header.opcode != LOADER_SVC_OP_STATUS)
         goto protocol_violation;
 
-    if (msg.header.arg != NO_ERROR) {
+    if (msg.header.arg != MX_OK) {
         if (handle != MX_HANDLE_INVALID)
             goto protocol_violation;
         if (msg.header.arg > 0)
@@ -471,14 +471,14 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
 
 static mx_status_t setup_loader_svc(launchpad_t* lp) {
     if (lp->special_handles[HND_LOADER_SVC] != MX_HANDLE_INVALID)
-        return NO_ERROR;
+        return MX_OK;
 
     mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
     if (loader_svc < 0)
         return loader_svc;
 
     lp->special_handles[HND_LOADER_SVC] = loader_svc;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Reserve roughly the low half of the address space, so the new
@@ -490,12 +490,12 @@ static mx_status_t setup_loader_svc(launchpad_t* lp) {
 // it's using a sanitizer, it will set up its shadow memory first thing.
 static mx_status_t reserve_low_address_space(launchpad_t* lp) {
     if (lp->reserve_vmar != MX_HANDLE_INVALID)
-        return NO_ERROR;
+        return MX_OK;
 
     mx_info_vmar_t info;
     mx_status_t status = mx_object_get_info(lp_vmar(lp), MX_INFO_VMAR,
                                             &info, sizeof(info), NULL, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return lp_error(lp, status,
                         "mx_object_get_info failed on child root VMAR handle");
     }
@@ -505,25 +505,25 @@ static mx_status_t reserve_low_address_space(launchpad_t* lp) {
         (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
     status = mx_vmar_allocate(lp_vmar(lp), 0, reserve_size - info.base,
                               MX_VM_FLAG_SPECIFIC, &lp->reserve_vmar, &addr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return lp_error(
             lp, status,
             "mx_vmar_allocate failed for low address space reservation");
     }
 
     if (addr != info.base) {
-        return lp_error(lp, ERR_BAD_STATE,
+        return lp_error(lp, MX_ERR_BAD_STATE,
                         "mx_vmar_allocate gave wrong address?!?");
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Consumes 'vmo' on success, not on failure.
 static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
                                  const char* interp, size_t interp_len) {
     mx_status_t status = setup_loader_svc(lp);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_handle_t interp_vmo = loader_svc_rpc(
@@ -537,21 +537,21 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
         // supports sanitizers, so in that case (the most common case)
         // keep the mappings launchpad makes out of the low address region.
         status = reserve_low_address_space(lp);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
     }
 
     elf_load_info_t* elf;
     mx_handle_t segments_vmar;
     status = elf_load_start(interp_vmo, NULL, 0, &elf);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         status = elf_load_finish(lp_vmar(lp), elf, interp_vmo,
                                  &segments_vmar, &lp->base, &lp->entry);
         elf_load_destroy(elf);
     }
     mx_handle_close(interp_vmo);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         if (lp->special_handles[HND_EXEC_VMO] != MX_HANDLE_INVALID)
             mx_handle_close(lp->special_handles[HND_EXEC_VMO]);
         lp->special_handles[HND_EXEC_VMO] = vmo;
@@ -571,20 +571,20 @@ static mx_status_t launchpad_elf_load_body(launchpad_t* lp, const char* hdr_buf,
 
     if (lp->error)
         goto done;
-    if ((status = elf_load_start(vmo, hdr_buf, buf_sz, &elf)) != NO_ERROR) {
+    if ((status = elf_load_start(vmo, hdr_buf, buf_sz, &elf)) != MX_OK) {
         lp_error(lp, status, "elf_load: elf_load_start() failed");
     } else {
         char* interp;
         size_t interp_len;
         status = elf_load_get_interp(elf, vmo, &interp, &interp_len);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             lp_error(lp, status, "elf_load: get_interp() failed");
         } else {
             if (interp == NULL) {
                 mx_handle_t segments_vmar;
                 status = elf_load_finish(lp_vmar(lp), elf, vmo, &segments_vmar,
                                          &lp->base, &lp->entry);
-                if (status != NO_ERROR) {
+                if (status != MX_OK) {
                     lp_error(lp, status, "elf_load: elf_load_finish() failed");
                 } else {
                     // With no PT_INTERP, we obey PT_GNU_STACK.p_memsz for
@@ -630,7 +630,7 @@ static mx_status_t parse_interp_spec(char *line, char **interp_start,
 
     // No interpreter specified
     if (*next_char == '\0')
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     *interp_start = next_char;
 
@@ -639,7 +639,7 @@ static mx_status_t parse_interp_spec(char *line, char **interp_start,
     *interp_len = next_char - *interp_start;
 
     if (*next_char == '\0')
-        return NO_ERROR;
+        return MX_OK;
 
     *next_char++ = '\0';
 
@@ -647,17 +647,17 @@ static mx_status_t parse_interp_spec(char *line, char **interp_start,
     next_char += strspn(next_char, " \t");
 
     if (*next_char == '\0')
-        return NO_ERROR;
+        return MX_OK;
 
     *args_start = next_char;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
     if (vmo < 0)
         return lp_error(lp, vmo, "file_load: negative vmo");
     if (vmo == MX_HANDLE_INVALID)
-        return lp_error(lp, ERR_INVALID_ARGS, "file_load: invalid vmo");
+        return lp_error(lp, MX_ERR_INVALID_ARGS, "file_load: invalid vmo");
 
     if (lp->script_args != NULL) {
         free(lp->script_args);
@@ -677,20 +677,20 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
                              &chars_read);
 
         // This is not a script -- load as an ELF file
-        if ((status == NO_ERROR)
+        if ((status == MX_OK)
             && (chars_read < 2 || first_line[0] != '#' || first_line[1] != '!'))
             break;
 
         mx_handle_close(vmo);
 
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return lp_error(lp, status, "file_load: mx_vmo_read() failed");
 
         script_nest_level++;
 
         // No point trying to read an interpreter we're not going to consider
         if (script_nest_level > LP_MAX_SCRIPT_NEST_LEVEL)
-            return lp_error(lp, ERR_NOT_SUPPORTED,
+            return lp_error(lp, MX_ERR_NOT_SUPPORTED,
                             "file_load: too many levels of script indirection");
 
         // Normalize the line so that it is NULL-terminated
@@ -698,7 +698,7 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
         if (newline_pos)
             *newline_pos = '\0';
         else if (chars_read == sizeof(first_line))
-            return lp_error(lp, ERR_OUT_OF_RANGE,
+            return lp_error(lp, MX_ERR_OUT_OF_RANGE,
                             "file_load: first line of script too long");
         else
             first_line[chars_read] = '\0';
@@ -708,7 +708,7 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
         char* args_start;
         status = parse_interp_spec(first_line, &interp_start, &interp_len,
                                    &args_start);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return lp_error(lp, status,
                             "file_load: failed to parse interpreter spec");
 
@@ -720,7 +720,7 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
             new_args_len += args_len + 1;
         char *new_buf = malloc(new_args_len + lp->script_args_len);
         if (new_buf == NULL)
-            return lp_error(lp, ERR_NO_MEMORY, "file_load: out of memory");
+            return lp_error(lp, MX_ERR_NO_MEMORY, "file_load: out of memory");
 
         memcpy(new_buf, interp_start, interp_len + 1);
         lp->num_script_args++;
@@ -741,7 +741,7 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
 
         // Load the interpreter into memory
         status = setup_loader_svc(lp);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return lp_error(lp, status, "file_load: setup_loader_svc() failed");
 
         vmo = loader_svc_rpc(lp->special_handles[HND_LOADER_SVC],
@@ -754,7 +754,7 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
     // Finally, load the interpreter itself
     status = launchpad_elf_load_body(lp, first_line, chars_read, vmo);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         lp_error(lp, status, "file_load: failed to load ELF file");
 
     return status;
@@ -764,7 +764,7 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
     if (vmo < 0)
         return lp_error(lp, vmo, "elf_load: negative vmo");
     if (vmo == MX_HANDLE_INVALID)
-        return lp_error(lp, ERR_INVALID_ARGS, "elf_load: invalid vmo");
+        return lp_error(lp, MX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
 
     return launchpad_elf_load_body(lp, NULL, 0, vmo);
 }
@@ -812,7 +812,7 @@ mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
         return lp_error(lp, vdso, "add_vdso_vmo: get_vdso_vmo failed");
     mx_status_t status = launchpad_add_handle(
         lp, vdso, PA_HND(PA_VMO_VDSO, 0));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         mx_handle_close(vdso);
     return status;
 }
@@ -830,16 +830,16 @@ mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo) {
 
 mx_status_t launchpad_get_entry_address(launchpad_t* lp, mx_vaddr_t* entry) {
     if (lp->entry == 0)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     *entry = lp->entry;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launchpad_get_base_address(launchpad_t* lp, mx_vaddr_t* base) {
     if (lp->base == 0)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     *base = lp->base;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool launchpad_send_loader_message(launchpad_t* lp, bool do_send) {
@@ -878,7 +878,7 @@ static mx_status_t build_message(launchpad_t* lp, size_t num_handles,
     msg_size += lp->names_len;
     void* msg = malloc(msg_size);
     if (msg == NULL)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx_proc_args_t* header = msg;
 
@@ -918,7 +918,7 @@ static mx_status_t build_message(launchpad_t* lp, size_t num_handles,
 
     *msg_buf = msg;
     *buf_size = msg_size;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t send_loader_message(launchpad_t* lp,
@@ -929,7 +929,7 @@ static mx_status_t send_loader_message(launchpad_t* lp,
     size_t num_handles = HND_SPECIAL_COUNT + HND_LOADER_COUNT;
 
     mx_status_t status = build_message(lp, num_handles, &msg, &msg_size, false);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_proc_args_t* header = msg;
@@ -949,20 +949,20 @@ static mx_status_t send_loader_message(launchpad_t* lp,
             // loader message and still have them later.
             mx_handle_t proc;
             status = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS, &proc);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 free(msg);
                 return status;
             }
             mx_handle_t vmar;
             status = mx_handle_duplicate(lp_vmar(lp), MX_RIGHT_SAME_RIGHTS, &vmar);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 mx_handle_close(proc);
                 free(msg);
                 return status;
             }
             mx_handle_t thread;
             status = mx_handle_duplicate(first_thread, MX_RIGHT_SAME_RIGHTS, &thread);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 mx_handle_close(proc);
                 mx_handle_close(vmar);
                 free(msg);
@@ -997,7 +997,7 @@ static mx_status_t send_loader_message(launchpad_t* lp,
     }
 
     status = mx_channel_write(tochannel, 0, msg, msg_size, handles, nhandles);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         // message_write consumed all those handles.
         for (enum special_handles i = 0; i < HND_SPECIAL_COUNT; ++i)
             lp->special_handles[i] = MX_HANDLE_INVALID;
@@ -1024,7 +1024,7 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
         // Round up to page size.
         new_size = (new_size + PAGE_SIZE - 1) & -PAGE_SIZE;
     }
-    if (lp->error == NO_ERROR) {
+    if (lp->error == MX_OK) {
         lp->stack_size = new_size;
         lp->set_stack_size = true;
     }
@@ -1035,7 +1035,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
                                  mx_handle_t to_child,
                                  mx_handle_t* thread, uintptr_t* sp) {
     if (lp->entry == 0)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mx_status_t status = mx_thread_create(lp_proc(lp), thread_name,
                                           strlen(thread_name), 0, thread);
@@ -1052,7 +1052,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             return lp_error(lp, status, "cannot duplicate thread handle");
         }
         status = launchpad_add_handle(lp, thread_copy, PA_THREAD_SELF);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             mx_handle_close(*thread);
             return status;
         }
@@ -1061,7 +1061,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     bool sent_loader_message = lp->loader_message;
     if (lp->loader_message) {
         status = send_loader_message(lp, *thread, to_child);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             mx_handle_close(*thread);
             return lp_error(lp, status, "failed to send loader message");
         }
@@ -1073,9 +1073,9 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     size_t size;
 
     if (build_message(lp, lp->handle_count + (allocate_stack ? 1 : 0),
-                      &msg, &size, true) != NO_ERROR) {
+                      &msg, &size, true) != MX_OK) {
         mx_handle_close(*thread);
-        return lp_error(lp, ERR_NO_MEMORY, "out of memory assembling procargs message");
+        return lp_error(lp, MX_ERR_NO_MEMORY, "out of memory assembling procargs message");
     }
     mx_proc_args_t* header = msg;
     uint32_t* next_handle = mempcpy((uint8_t*)msg + header->handle_info_off,
@@ -1109,7 +1109,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         if (stack_size > 0 && size > stack_size / 2) {
             free(msg);
             mx_handle_close(*thread);
-            return lp_error(lp, ERR_BUFFER_TOO_SMALL,
+            return lp_error(lp, MX_ERR_BUFFER_TOO_SMALL,
                             "procargs message is too large");
         }
     }
@@ -1119,7 +1119,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         // Allocate the initial thread's stack.
         mx_handle_t stack_vmo;
         mx_status_t status = mx_vmo_create(stack_size, 0, &stack_vmo);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             free(msg);
             mx_handle_close(*thread);
             return lp_error(lp, status, "cannot create stack vmo");
@@ -1130,7 +1130,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, stack_size,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                               &stack_base);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             MX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
             *sp = compute_initial_stack_pointer(stack_base, stack_size);
             // Pass the stack VMO to the process.  Our protocol with the
@@ -1146,7 +1146,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             // now this new final handle will correspond to that slot.
             status = launchpad_add_handle(lp, stack_vmo, PA_VMO_STACK);
         }
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             mx_handle_close(stack_vmo);
             mx_handle_close(*thread);
             free(msg);
@@ -1157,12 +1157,12 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     if (lp->reserve_vmar != MX_HANDLE_INVALID) {
         // We're done doing mappings, so clear out the reservation VMAR.
         status = mx_vmar_destroy(lp->reserve_vmar);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return lp_error(lp, status, "\
 mx_vmar_destroy failed on low address space reservation VMAR");
         }
         status = mx_handle_close(lp->reserve_vmar);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return lp_error(lp, status, "\
 mx_handle_close failed on low address space reservation VMAR");
         }
@@ -1172,7 +1172,7 @@ mx_handle_close failed on low address space reservation VMAR");
     status = mx_channel_write(to_child, 0, msg, size,
                               lp->handles, lp->handle_count);
     free(msg);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         // message_write consumed all the handles.
         for (size_t i = 0; i < lp->handle_count; ++i)
             lp->handles[i] = MX_HANDLE_INVALID;
@@ -1182,7 +1182,7 @@ mx_handle_close failed on low address space reservation VMAR");
         return lp_error(lp, status, "failed to write procargs message");
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_handle_t launchpad_start(launchpad_t* lp) {
@@ -1198,7 +1198,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
 
     mx_handle_t channelh[2];
     status = mx_channel_create(0, channelh, channelh + 1);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mx_handle_close(proc);
         return lp_error(lp, status, "start: cannot create channel");
     }
@@ -1209,17 +1209,17 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     uintptr_t sp;
     status = prepare_start(lp, "initial-thread", to_child, &thread, &sp);
     mx_handle_close(to_child);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         lp_error(lp, status, "start: prepare_start() failed");
     } else {
         status = mx_process_start(proc, thread, lp->entry, sp,
                                   child_bootstrap, lp->vdso_base);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             lp_error(lp, status, "start: mx_process_start() failed");
         mx_handle_close(thread);
     }
     // process_start consumed child_bootstrap if successful.
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         return proc;
 
     mx_handle_close(child_bootstrap);
@@ -1236,12 +1236,12 @@ mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
     uintptr_t sp;
     mx_status_t status = prepare_start(lp, thread_name, to_child,
                                        &thread, &sp);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         lp_error(lp, status, "start_injected: prepare_start() failed");
     } else {
         status = mx_thread_start(thread, lp->entry, sp,
                                  bootstrap_handle_in_child, lp->vdso_base);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             lp_error(lp, status, "start_injected: mx_thread_start() failed");
         }
         mx_handle_close(thread);
@@ -1259,7 +1259,7 @@ mx_status_t launchpad_go(launchpad_t* lp, mx_handle_t* proc, const char** errmsg
         } else {
             mx_handle_close(h);
         }
-        h = NO_ERROR;
+        h = MX_OK;
     }
     launchpad_destroy(lp);
     return h;

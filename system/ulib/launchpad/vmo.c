@@ -16,13 +16,13 @@
 mx_handle_t launchpad_vmo_from_fd(int fd) {
     mx_handle_t vmo;
     mx_status_t status = mxio_get_vmo(fd, &vmo);
-    return status == NO_ERROR ? vmo : status;
+    return status == MX_OK ? vmo : status;
 }
 
 mx_handle_t launchpad_vmo_from_file(const char* filename) {
     int fd = open(filename, O_RDONLY);
     if (fd < 0)
-        return ERR_IO;
+        return MX_ERR_IO;
     mx_handle_t vmo = launchpad_vmo_from_fd(fd);
     close(fd);
 

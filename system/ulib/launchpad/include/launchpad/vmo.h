@@ -10,7 +10,7 @@
 
 __BEGIN_CDECLS
 
-// These functions return ERR_IO to indicate an error in the POSIXish
+// These functions return MX_ERR_IO to indicate an error in the POSIXish
 // underlying calls, meaning errno has been set with a POSIX-style error.
 // Other errors are verbatim from the mx_vm_object_* calls.
 mx_handle_t launchpad_vmo_from_fd(int fd);
