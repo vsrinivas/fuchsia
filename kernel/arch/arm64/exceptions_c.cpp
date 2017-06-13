@@ -29,6 +29,8 @@
 
 bool arm64_in_int_handler[SMP_MAX_CPUS];
 
+static void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe);
+
 static void dump_iframe(const struct arm64_iframe_long *iframe)
 {
     printf("iframe %p:\n", iframe);
@@ -365,7 +367,7 @@ extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsign
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe)
+static void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe)
 {
     thread_t *thread = get_current_thread();
     DEBUG_ASSERT(iframe != nullptr);
