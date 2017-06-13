@@ -37,12 +37,15 @@ class UserActionLogImpl : public UserActionLog {
 
   void MaybeProposeSharingVideo(const ActionData& action_data);
 
+  void MaybeRecordEmailRecipient(const ActionData& action_data);
+
   ActionLogData action_log_;
   ProposalPublisherPtr proposal_publisher_;
   fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
       action_log_bindings_;
   fidl::InterfacePtrSet<ActionLogListener> subscribers_;
   fidl::BindingSet<UserActionLog> bindings_;
+  std::string last_email_rcpt_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
 };

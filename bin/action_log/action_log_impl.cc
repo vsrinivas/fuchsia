@@ -23,6 +23,7 @@ UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
     : action_log_([this](const ActionData& action_data) {
         BroadcastToSubscribers(action_data);
         MaybeProposeSharingVideo(action_data);
+        MaybeRecordEmailRecipient(action_data);
       }),
       proposal_publisher_(std::move(proposal_publisher)) {}
 
@@ -83,6 +84,9 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   add_module->link_name = "email-composer-link";
   // TODO(azani): Do something sane.
   std::string initial_data = "{\"email-composer\": {\"message\": {";
+  if (!last_email_rcpt_.empty()) {
+    initial_data += "\"to\": [\"" + last_email_rcpt_ + "\"]";
+  }
   initial_data += "\"subject\": \"Really cool video!!!!1one\",";
   initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
   initial_data += video_id + "\"}}}";
@@ -105,6 +109,25 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   // We clear any existing proposal for this story.
   proposal_publisher_->Remove(proposal_id);
   proposal_publisher_->Propose(std::move(proposal));
+}
+
+void UserActionLogImpl::MaybeRecordEmailRecipient(
+    const ActionData& action_data) {
+  if (action_data.method.compare("SendEmail") != 0) {
+    return;
+  }
+  rapidjson::Document doc_params;
+  if (doc_params.Parse(action_data.params).HasParseError()) {
+    return;
+  }
+  rapidjson::Value* rcpt_value =
+      rapidjson::Pointer("/to/0/address").Get(doc_params);
+
+  if (rcpt_value == nullptr || !rcpt_value->IsString()) {
+    return;
+  }
+
+  last_email_rcpt_ = rcpt_value->GetString();
 }
 
 void UserActionLogImpl::GetComponentActionLog(
