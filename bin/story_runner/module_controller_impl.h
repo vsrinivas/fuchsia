@@ -19,7 +19,7 @@
 
 namespace modular {
 
-class StoryImpl;
+class StoryControllerImpl;
 
 // Implements the ModuleController interface, which is given to the
 // client that called ModuleContext.StartModule(). Exactly one
@@ -28,7 +28,7 @@ class StoryImpl;
 class ModuleControllerImpl : ModuleController {
  public:
   ModuleControllerImpl(
-      StoryImpl* const story_impl,
+      StoryControllerImpl* const story_controller_impl,
       app::ApplicationControllerPtr module_application,
       ModulePtr module,
       const fidl::Array<fidl::String>& module_path,
@@ -57,7 +57,7 @@ class ModuleControllerImpl : ModuleController {
   void OnConnectionError();
 
   // The story this Module instance runs in.
-  StoryImpl* const story_impl_;
+  StoryControllerImpl* const story_controller_impl_;
 
   // The application which implements the Module instance.
   app::ApplicationControllerPtr module_application_;

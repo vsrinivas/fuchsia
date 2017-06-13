@@ -8,7 +8,7 @@
 
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
-#include "apps/modular/src/story_runner/story_impl.h"
+#include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/strings/join_strings.h"
 
@@ -22,15 +22,15 @@ ModuleContextImpl::ModuleContextImpl(
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<ModuleContext> module_context)
     : module_path_(module_path.Clone()),
-      story_impl_(info.story_impl),
+      story_controller_impl_(info.story_controller_impl),
       module_url_(module_url),
       default_link_path_(default_link_path.Clone()),
       module_controller_impl_(module_controller_impl),
-      component_context_impl_(
-          info.component_context_info,
-          EncodeModuleComponentNamespace(info.story_impl->GetStoryId()),
-          EncodeModulePath(module_path_),
-          module_url_),
+      component_context_impl_(info.component_context_info,
+                              EncodeModuleComponentNamespace(
+                                  info.story_controller_impl->GetStoryId()),
+                              EncodeModulePath(module_path_),
+                              module_url_),
       user_intelligence_provider_(info.user_intelligence_provider),
       binding_(this, std::move(module_context)) {}
 
@@ -46,7 +46,7 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
   } else {
     link_path = default_link_path_.Clone();
   }
-  story_impl_->GetLinkPath(std::move(link_path), std::move(link));
+  story_controller_impl_->GetLinkPath(std::move(link_path), std::move(link));
 }
 
 void ModuleContextImpl::StartModule(
@@ -57,7 +57,7 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(
+  story_controller_impl_->StartModule(
       module_path_, name, query, link_name, std::move(outgoing_services),
       std::move(incoming_services), std::move(module_controller),
       std::move(view_owner), ModuleSource::INTERNAL);
@@ -71,7 +71,7 @@ void ModuleContextImpl::StartModuleInShell(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation) {
-  story_impl_->StartModuleInShell(
+  story_controller_impl_->StartModuleInShell(
       module_path_, name, query, link_name, std::move(outgoing_services),
       std::move(incoming_services), std::move(module_controller),
       std::move(surface_relation), ModuleSource::INTERNAL);
@@ -88,7 +88,7 @@ void ModuleContextImpl::GetIntelligenceServices(
   auto module_scope = maxwell::ModuleScope::New();
   module_scope->module_path = module_path_.Clone();
   module_scope->url = module_url_;
-  module_scope->story_id = story_impl_->GetStoryId();
+  module_scope->story_id = story_controller_impl_->GetStoryId();
   auto scope = maxwell::ComponentScope::New();
   scope->set_module_scope(std::move(module_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
@@ -96,7 +96,7 @@ void ModuleContextImpl::GetIntelligenceServices(
 }
 
 void ModuleContextImpl::GetStoryId(const GetStoryIdCallback& callback) {
-  callback(story_impl_->GetStoryId());
+  callback(story_controller_impl_->GetStoryId());
 }
 
 void ModuleContextImpl::Ready() {

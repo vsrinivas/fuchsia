@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/story_impl.h"
+#include "apps/modular/src/story_runner/story_controller_impl.h"
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
@@ -42,7 +42,7 @@ fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
 
 }  // namespace
 
-class StoryImpl::StoryMarkerImpl : StoryMarker {
+class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
  public:
   StoryMarkerImpl() = default;
   ~StoryMarkerImpl() override = default;
@@ -56,17 +56,17 @@ class StoryImpl::StoryMarkerImpl : StoryMarker {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
-class StoryImpl::AddModuleCall : Operation<> {
+class StoryControllerImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
-                StoryImpl* const story_impl,
+                StoryControllerImpl* const story_controller_impl,
                 fidl::Array<fidl::String> parent_module_path,
                 const fidl::String& module_name,
                 const fidl::String& module_url,
                 const fidl::String& link_name,
                 const ResultCall& done)
       : Operation(container, done),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         parent_module_path_(std::move(parent_module_path)),
         module_name_(module_name),
         module_url_(module_url),
@@ -84,11 +84,11 @@ class StoryImpl::AddModuleCall : Operation<> {
     link_path->module_path = parent_module_path_.Clone();
     link_path->link_name = link_name_;
 
-    story_impl_->story_storage_impl_->WriteModuleData(
+    story_controller_impl_->story_storage_impl_->WriteModuleData(
         module_path, module_url_, link_path, ModuleSource::EXTERNAL,
         [this, flow] {
-          if (story_impl_->IsRunning()) {
-            story_impl_->StartModuleInShell(
+          if (story_controller_impl_->IsRunning()) {
+            story_controller_impl_->StartModuleInShell(
                 parent_module_path_, module_name_, module_url_, link_name_,
                 nullptr, nullptr, nullptr, SurfaceRelation::New(),
                 ModuleSource::EXTERNAL);
@@ -96,7 +96,7 @@ class StoryImpl::AddModuleCall : Operation<> {
         });
   };
 
-  StoryImpl* const story_impl_;
+  StoryControllerImpl* const story_controller_impl_;
   const fidl::Array<fidl::String> parent_module_path_;
   const fidl::String module_name_;
   const fidl::String module_url_;
@@ -105,12 +105,14 @@ class StoryImpl::AddModuleCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
 };
 
-class StoryImpl::GetModulesCall : Operation<fidl::Array<ModuleDataPtr>> {
+class StoryControllerImpl::GetModulesCall
+    : Operation<fidl::Array<ModuleDataPtr>> {
  public:
   GetModulesCall(OperationContainer* const container,
-                 StoryImpl* const story_impl,
+                 StoryControllerImpl* const story_controller_impl,
                  const ResultCall& callback)
-      : Operation(container, callback), story_impl_(story_impl) {
+      : Operation(container, callback),
+        story_controller_impl_(story_controller_impl) {
     Ready();
   }
 
@@ -118,27 +120,27 @@ class StoryImpl::GetModulesCall : Operation<fidl::Array<ModuleDataPtr>> {
   void Run() {
     FlowToken flow(this, &result_);
 
-    story_impl_->story_storage_impl_->ReadAllModuleData(
+    story_controller_impl_->story_storage_impl_->ReadAllModuleData(
         [this, flow](fidl::Array<ModuleDataPtr> module_data) {
           result_ = std::move(module_data);
         });
   }
-  StoryImpl* const story_impl_;
+  StoryControllerImpl* const story_controller_impl_;
   fidl::Array<ModuleDataPtr> result_;
   FTL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
 };
 
-class StoryImpl::AddForCreateCall : Operation<> {
+class StoryControllerImpl::AddForCreateCall : Operation<> {
  public:
   AddForCreateCall(OperationContainer* const container,
-                   StoryImpl* const story_impl,
+                   StoryControllerImpl* const story_controller_impl,
                    const fidl::String& module_name,
                    const fidl::String& module_url,
                    const fidl::String& link_name,
                    const fidl::String& link_json,
                    const ResultCall& done)
       : Operation(container, done),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         module_name_(module_name),
         module_url_(module_url),
         link_name_(link_name),
@@ -164,19 +166,19 @@ class StoryImpl::AddForCreateCall : Operation<> {
       auto link_path = LinkPath::New();
       link_path->module_path = fidl::Array<fidl::String>::New(0);
       link_path->link_name = link_name_;
-      story_impl_->GetLinkPath(link_path, link_.NewRequest());
+      story_controller_impl_->GetLinkPath(link_path, link_.NewRequest());
       link_->UpdateObject(nullptr, link_json_);
       link_->Sync([flow] {});
     }
 
     auto module_path = fidl::Array<fidl::String>::New(1);
     module_path[0] = module_name_;
-    new AddModuleCall(&operation_collection_, story_impl_,
+    new AddModuleCall(&operation_collection_, story_controller_impl_,
                       fidl::Array<fidl::String>::New(0), module_name_,
                       module_url_, link_name_, [flow] {});
   }
 
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::String module_name_;
   const fidl::String module_url_;
   const fidl::String link_name_;
@@ -189,13 +191,13 @@ class StoryImpl::AddForCreateCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
 };
 
-class StoryImpl::StartCall : Operation<> {
+class StoryControllerImpl::StartCall : Operation<> {
  public:
   StartCall(OperationContainer* const container,
-            StoryImpl* const story_impl,
+            StoryControllerImpl* const story_controller_impl,
             fidl::InterfaceRequest<mozart::ViewOwner> request)
       : Operation(container, [] {}),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         request_(std::move(request)) {
     Ready();
   }
@@ -205,22 +207,23 @@ class StoryImpl::StartCall : Operation<> {
     FlowToken flow{this};
 
     // If the story is running, we do nothing and close the view owner request.
-    if (story_impl_->IsRunning()) {
-      FTL_LOG(INFO) << "StoryImpl::StartCall() while already running: ignored.";
+    if (story_controller_impl_->IsRunning()) {
+      FTL_LOG(INFO)
+          << "StoryControllerImpl::StartCall() while already running: ignored.";
       return;
     }
 
-    story_impl_->StartStoryShell(std::move(request_));
+    story_controller_impl_->StartStoryShell(std::move(request_));
 
     // Start *all* the root modules, not just the first one, with their
     // respective links.
-    story_impl_->story_storage_impl_->ReadAllModuleData(
+    story_controller_impl_->story_storage_impl_->ReadAllModuleData(
         [this, flow](fidl::Array<ModuleDataPtr> data) {
           for (auto& module_data : data) {
             if (module_data->module_source == ModuleSource::EXTERNAL) {
               auto parent_path = module_data->module_path.Clone();
               parent_path.resize(parent_path.size() - 1);
-              story_impl_->StartModuleInShell(
+              story_controller_impl_->StartModuleInShell(
                   std::move(parent_path),
                   module_data->module_path[module_data->module_path.size() - 1],
                   module_data->url, module_data->default_link_path->link_name,
@@ -229,23 +232,24 @@ class StoryImpl::StartCall : Operation<> {
             }
           }
 
-          story_impl_->state_ = StoryState::STARTING;
-          story_impl_->NotifyStateChange();
+          story_controller_impl_->state_ = StoryState::STARTING;
+          story_controller_impl_->NotifyStateChange();
         });
   };
 
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   fidl::InterfaceRequest<mozart::ViewOwner> request_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
-class StoryImpl::StopCall : Operation<> {
+class StoryControllerImpl::StopCall : Operation<> {
  public:
   StopCall(OperationContainer* const container,
-           StoryImpl* const story_impl,
+           StoryControllerImpl* const story_controller_impl,
            std::function<void()> done)
-      : Operation(container, done), story_impl_(story_impl) {
+      : Operation(container, done),
+        story_controller_impl_(story_controller_impl) {
     Ready();
   }
 
@@ -255,22 +259,22 @@ class StoryImpl::StopCall : Operation<> {
     // At this point, we don't need to monitor the external modules for state
     // changes anymore, because the next state change of the story is triggered
     // by the Stop() call below.
-    story_impl_->external_modules_.clear();
+    story_controller_impl_->external_modules_.clear();
 
     // At this point, we don't need notifications from disconnected
     // Links anymore, as they will all be disposed soon anyway.
-    for (auto& link : story_impl_->links_) {
+    for (auto& link : story_controller_impl_->links_) {
       link->set_orphaned_handler(nullptr);
     }
 
     // Tear down all connections with a ModuleController first, then the
     // links between them.
-    connections_count_ = story_impl_->connections_.size();
+    connections_count_ = story_controller_impl_->connections_.size();
 
     if (connections_count_ == 0) {
       StopStoryShell();
     } else {
-      for (auto& connection : story_impl_->connections_) {
+      for (auto& connection : story_controller_impl_->connections_) {
         connection.module_controller_impl->Teardown(
             [this] { ConnectionDown(); });
       }
@@ -289,25 +293,26 @@ class StoryImpl::StopCall : Operation<> {
 
   void StopStoryShell() {
     // It StopCall runs on a story that's not running, there is no story shell.
-    if (story_impl_->story_shell_) {
-      story_impl_->story_shell_->Terminate([this] { StoryShellDown(); });
+    if (story_controller_impl_->story_shell_) {
+      story_controller_impl_->story_shell_->Terminate(
+          [this] { StoryShellDown(); });
     } else {
       StoryShellDown();
     }
   }
 
   void StoryShellDown() {
-    story_impl_->story_shell_controller_.reset();
-    story_impl_->story_shell_.reset();
-    if (story_impl_->story_context_binding_.is_bound()) {
+    story_controller_impl_->story_shell_controller_.reset();
+    story_controller_impl_->story_shell_.reset();
+    if (story_controller_impl_->story_context_binding_.is_bound()) {
       // Close() dchecks if called while not bound.
-      story_impl_->story_context_binding_.Close();
+      story_controller_impl_->story_context_binding_.Close();
     }
     StopLinks();
   }
 
   void StopLinks() {
-    links_count_ = story_impl_->links_.size();
+    links_count_ = story_controller_impl_->links_.size();
     if (links_count_ == 0) {
       Cleanup();
       return;
@@ -318,7 +323,7 @@ class StoryImpl::StopCall : Operation<> {
     // request to finish, which is done with the Sync() request below.
     //
     // TODO(mesch): We really only need to Sync() on story_storage_impl_.
-    for (auto& link : story_impl_->links_) {
+    for (auto& link : story_controller_impl_->links_) {
       link->Sync([this] { LinkDown(); });
     }
   }
@@ -336,30 +341,30 @@ class StoryImpl::StopCall : Operation<> {
   void Cleanup() {
     // Clear the remaining links and connections in case there are some left. At
     // this point, no DisposeLink() calls can arrive anymore.
-    story_impl_->links_.clear();
-    story_impl_->connections_.clear();
+    story_controller_impl_->links_.clear();
+    story_controller_impl_->connections_.clear();
 
-    story_impl_->state_ = StoryState::STOPPED;
+    story_controller_impl_->state_ = StoryState::STOPPED;
 
-    story_impl_->NotifyStateChange();
+    story_controller_impl_->NotifyStateChange();
 
     Done();
   };
 
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   int connections_count_{};
   int links_count_{};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
-class StoryImpl::DeleteCall : Operation<> {
+class StoryControllerImpl::DeleteCall : Operation<> {
  public:
   DeleteCall(OperationContainer* const container,
-             StoryImpl* const story_impl,
+             StoryControllerImpl* const story_controller_impl,
              std::function<void()> done)
       : Operation(container, [] {}),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         done_(std::move(done)) {
     Ready();
   }
@@ -368,10 +373,10 @@ class StoryImpl::DeleteCall : Operation<> {
   void Run() {
     // No call to Done(), in order to block all further operations on the queue
     // until the instance is deleted.
-    new StopCall(&operation_queue_, story_impl_, done_);
+    new StopCall(&operation_queue_, story_controller_impl_, done_);
   }
 
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
 
   // Not the result call of the Operation, because it's invoked without
   // unblocking the operation queue, to prevent subsequent operations from
@@ -383,11 +388,11 @@ class StoryImpl::DeleteCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
-class StoryImpl::StartModuleCall : Operation<> {
+class StoryControllerImpl::StartModuleCall : Operation<> {
  public:
   StartModuleCall(
       OperationContainer* const container,
-      StoryImpl* const story_impl,
+      StoryControllerImpl* const story_controller_impl,
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::Array<fidl::String>& module_path,
       const fidl::String& query,
@@ -399,7 +404,7 @@ class StoryImpl::StartModuleCall : Operation<> {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ResultCall done)
       : Operation(container, std::move(done)),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         parent_module_path_(parent_module_path.Clone()),
         module_path_(module_path.Clone()),
         query_(query),
@@ -429,16 +434,16 @@ class StoryImpl::StartModuleCall : Operation<> {
       link_path_->module_path = parent_module_path_.Clone();
       link_path_->link_name = link_name_;
 
-      story_impl_->story_storage_impl_->WriteModuleData(
+      story_controller_impl_->story_storage_impl_->WriteModuleData(
           module_path_, query_, link_path_, module_source_, [this] { Cont(); });
     } else {
       // If we are not given a link name, this module borrows its parent's
       // default link.
-      story_impl_->story_storage_impl_->ReadModuleData(
+      story_controller_impl_->story_storage_impl_->ReadModuleData(
           parent_module_path_, [this](ModuleDataPtr module_data) {
             FTL_DCHECK(module_data);
             link_path_ = module_data->default_link_path.Clone();
-            story_impl_->story_storage_impl_->WriteModuleData(
+            story_controller_impl_->story_storage_impl_->WriteModuleData(
                 module_path_, query_, link_path_, module_source_,
                 [this]() { Cont(); });
           });
@@ -450,7 +455,7 @@ class StoryImpl::StartModuleCall : Operation<> {
     module_data->url = query_;
     module_data->module_path = module_path_.Clone();
     module_data->default_link_path = link_path_.Clone();
-    story_impl_->watchers_.ForAllPtrs(
+    story_controller_impl_->watchers_.ForAllPtrs(
         [&module_data](StoryWatcher* const watcher) {
           watcher->OnModuleAdded(module_data.Clone());
         });
@@ -463,10 +468,10 @@ class StoryImpl::StartModuleCall : Operation<> {
     launch_info->services = app_services.NewRequest();
     launch_info->url = query_;
 
-    FTL_LOG(INFO) << "StoryImpl::StartModule() " << query_;
+    FTL_LOG(INFO) << "StoryControllerImpl::StartModule() " << query_;
 
     app::ApplicationControllerPtr application_controller;
-    story_impl_->story_scope_.GetLauncher()->CreateApplication(
+    story_controller_impl_->story_scope_.GetLauncher()->CreateApplication(
         std::move(launch_info), application_controller.NewRequest());
 
     mozart::ViewProviderPtr view_provider;
@@ -485,19 +490,21 @@ class StoryImpl::StartModuleCall : Operation<> {
     Connection connection;
 
     connection.module_controller_impl.reset(new ModuleControllerImpl(
-        story_impl_, std::move(application_controller), std::move(module),
-        module_path_, std::move(module_controller_request_)));
+        story_controller_impl_, std::move(application_controller),
+        std::move(module), module_path_,
+        std::move(module_controller_request_)));
 
     ModuleContextInfo module_context_info = {
-        story_impl_->story_provider_impl_->component_context_info(),
-        story_impl_,
-        story_impl_->story_provider_impl_->user_intelligence_provider()};
+        story_controller_impl_->story_provider_impl_->component_context_info(),
+        story_controller_impl_,
+        story_controller_impl_->story_provider_impl_
+            ->user_intelligence_provider()};
 
     connection.module_context_impl.reset(new ModuleContextImpl(
         module_path_, module_context_info, query_, link_path_,
         connection.module_controller_impl.get(), std::move(self_request)));
 
-    story_impl_->connections_.emplace_back(std::move(connection));
+    story_controller_impl_->connections_.emplace_back(std::move(connection));
 
     NotifyWatchers();
 
@@ -505,7 +512,7 @@ class StoryImpl::StartModuleCall : Operation<> {
   }
 
   // Passed in:
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> parent_module_path_;
   const fidl::Array<fidl::String> module_path_;
   const fidl::String query_;
@@ -521,14 +528,14 @@ class StoryImpl::StartModuleCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
 };
 
-class StoryImpl::GetImportanceCall : Operation<float> {
+class StoryControllerImpl::GetImportanceCall : Operation<float> {
  public:
   GetImportanceCall(OperationContainer* const container,
-                    StoryImpl* const story_impl,
+                    StoryControllerImpl* const story_controller_impl,
                     const ContextState& context_state,
                     ResultCall result_call)
       : Operation(container, std::move(result_call)),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         context_state_(context_state.Clone()) {
     Ready();
   }
@@ -537,7 +544,7 @@ class StoryImpl::GetImportanceCall : Operation<float> {
   void Run() {
     FlowToken flow{this, &result_};
 
-    story_impl_->story_storage_impl_->ReadLog(
+    story_controller_impl_->story_storage_impl_->ReadLog(
         [this, flow](fidl::Array<StoryContextLogPtr> log) {
           log_ = std::move(log);
           Cont(flow);
@@ -589,7 +596,7 @@ class StoryImpl::GetImportanceCall : Operation<float> {
     }
   }
 
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   const ContextState context_state_;
   fidl::Array<StoryContextLogPtr> log_;
 
@@ -598,49 +605,50 @@ class StoryImpl::GetImportanceCall : Operation<float> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
 
-class StoryImpl::ModuleWatcherImpl : ModuleWatcher {
+class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
  public:
   ModuleWatcherImpl(fidl::InterfaceRequest<ModuleWatcher> request,
-                    StoryImpl* const story_impl,
+                    StoryControllerImpl* const story_controller_impl,
                     fidl::String module_id)
       : binding_(this, std::move(request)),
-        story_impl_(story_impl),
+        story_controller_impl_(story_controller_impl),
         module_id_(std::move(module_id)) {}
 
  private:
   // |ModuleWatcher|
   void OnStateChange(ModuleState state) override {
     if (module_id_ == kRootModuleName) {
-      story_impl_->OnRootStateChange(state);
+      story_controller_impl_->OnRootStateChange(state);
     }
 
     if (state == ModuleState::DONE) {
-      if (story_impl_->story_shell_) {
-        story_impl_->story_shell_->DefocusView(module_id_);
+      if (story_controller_impl_->story_shell_) {
+        story_controller_impl_->story_shell_->DefocusView(module_id_);
       }
-      auto it = std::find_if(story_impl_->external_modules_.begin(),
-                             story_impl_->external_modules_.end(),
+      auto it = std::find_if(story_controller_impl_->external_modules_.begin(),
+                             story_controller_impl_->external_modules_.end(),
                              [this](const ExternalModule& m) {
                                return m.module_watcher_impl.get() == this;
                              });
       auto module_controller = std::move(it->module_controller);
-      story_impl_->external_modules_.erase(it);
+      story_controller_impl_->external_modules_.erase(it);
 
       // We don't actually stop the modules because of SY-205 and SY-204.
-      //module_controller->Stop([] {});
+      // module_controller->Stop([] {});
     }
   }
 
   fidl::Binding<ModuleWatcher> binding_;
-  StoryImpl* const story_impl_;  // not owned
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::String module_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
 };
 
-StoryImpl::StoryImpl(const fidl::String& story_id,
-                     ledger::PagePtr story_page,
-                     StoryProviderImpl* const story_provider_impl)
+StoryControllerImpl::StoryControllerImpl(
+    const fidl::String& story_id,
+    ledger::PagePtr story_page,
+    StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       story_page_(std::move(story_page)),
@@ -655,23 +663,24 @@ StoryImpl::StoryImpl(const fidl::String& story_id,
       });
 }
 
-StoryImpl::~StoryImpl() = default;
+StoryControllerImpl::~StoryControllerImpl() = default;
 
-void StoryImpl::Connect(fidl::InterfaceRequest<StoryController> request) {
+void StoryControllerImpl::Connect(
+    fidl::InterfaceRequest<StoryController> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 // |StoryController|
-void StoryImpl::GetInfo(const GetInfoCallback& callback) {
+void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
   // Synced such that if GetInfo() is called after Start() or Stop(), the state
   // after the previously invoked operation is returned.
   //
   // If this call enters a race with a StoryProvider.DeleteStory() call, it may
   // silently not return or return null, or return the story info before it was
   // deleted, depending on where it gets sequenced in the operation queues of
-  // StoryImpl and StoryProviderImpl. The queues do not block each other,
-  // however, because the call on the second queue is made in the done callback
-  // of the operation on the first queue.
+  // StoryControllerImpl and StoryProviderImpl. The queues do not block each
+  // other, however, because the call on the second queue is made in the done
+  // callback of the operation on the first queue.
   //
   // This race is normal fidl concurrency behavior.
   new SyncCall(&operation_queue_, [this, callback] {
@@ -684,41 +693,42 @@ void StoryImpl::GetInfo(const GetInfoCallback& callback) {
 }
 
 // |StoryController|
-void StoryImpl::SetInfoExtra(const fidl::String& name,
-                             const fidl::String& value,
-                             const SetInfoExtraCallback& callback) {
+void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
+                                       const fidl::String& value,
+                                       const SetInfoExtraCallback& callback) {
   story_provider_impl_->SetStoryInfoExtra(story_id_, name, value, callback);
 }
 
-void StoryImpl::AddForCreate(const fidl::String& module_name,
-                             const fidl::String& module_url,
-                             const fidl::String& link_name,
-                             const fidl::String& link_json,
-                             const std::function<void()>& done) {
+void StoryControllerImpl::AddForCreate(const fidl::String& module_name,
+                                       const fidl::String& module_url,
+                                       const fidl::String& link_name,
+                                       const fidl::String& link_json,
+                                       const std::function<void()>& done) {
   new AddForCreateCall(&operation_queue_, this, module_name, module_url,
                        link_name, link_json, done);
 }
 
 // |StoryController|
-void StoryImpl::AddModule(fidl::Array<fidl::String> module_path,
-                          const fidl::String& module_name,
-                          const fidl::String& module_url,
-                          const fidl::String& link_name) {
+void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
+                                    const fidl::String& module_name,
+                                    const fidl::String& module_url,
+                                    const fidl::String& link_name) {
   new AddModuleCall(&operation_queue_, this, std::move(module_path),
                     module_name, module_url, link_name, [] {});
 }
 
 // |StoryController|
-void StoryImpl::GetModules(const GetModulesCallback& callback) {
+void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
   new GetModulesCall(&operation_queue_, this, callback);
 }
 
 // |StoryController|
-void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
+void StoryControllerImpl::Start(
+    fidl::InterfaceRequest<mozart::ViewOwner> request) {
   new StartCall(&operation_queue_, this, std::move(request));
 }
 
-void StoryImpl::StartStoryShell(
+void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<mozart::ViewOwner> request) {
   app::ServiceProviderPtr story_shell_services;
   auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
@@ -745,13 +755,13 @@ void StoryImpl::StartStoryShell(
 }
 
 // |StoryController|
-void StoryImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
+void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
   auto ptr = StoryWatcherPtr::Create(std::move(watcher));
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
-void StoryImpl::OnRootStateChange(const ModuleState state) {
+void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
   switch (state) {
     case ModuleState::STARTING:
       state_ = StoryState::STARTING;
@@ -774,19 +784,20 @@ void StoryImpl::OnRootStateChange(const ModuleState state) {
   NotifyStateChange();
 }
 
-void StoryImpl::NotifyStateChange() {
+void StoryControllerImpl::NotifyStateChange() {
   watchers_.ForAllPtrs(
       [this](StoryWatcher* const watcher) { watcher->OnStateChange(state_); });
 
   // NOTE(mesch): This gets scheduled on the StoryProviderImpl Operation
-  // queue. If the current StoryImpl Operation is part of a DeleteStory
-  // Operation of the StoryProviderImpl, then the SetStoryState Operation gets
-  // scheduled after the delete of the story is completed, and it will not write
-  // anything. The Operation on the other queue is not part of this Operation,
-  // so not subject to locking if it travels in wrong direction of the hierarchy
-  // (the principle we follow is that an Operation in one container may sync on
-  // the operation queue of something inside the container, but not something
-  // outside the container; this way we prevent lock cycles).
+  // queue. If the current StoryControllerImpl Operation is part of a
+  // DeleteStory Operation of the StoryProviderImpl, then the SetStoryState
+  // Operation gets scheduled after the delete of the story is completed, and it
+  // will not write anything. The Operation on the other queue is not part of
+  // this Operation, so not subject to locking if it travels in wrong direction
+  // of the hierarchy (the principle we follow is that an Operation in one
+  // container may sync on the operation queue of something inside the
+  // container, but not something outside the container; this way we prevent
+  // lock cycles).
   //
   // TODO(mesch): It would still be nicer if we could complete the State writing
   // while this Operation is executing so that it stays on our queue and there's
@@ -796,16 +807,16 @@ void StoryImpl::NotifyStateChange() {
       story_id_, story_provider_impl_->device_id(), state_, [] {});
 }
 
-void StoryImpl::GetLink(fidl::Array<fidl::String> module_path,
-                        const fidl::String& name,
-                        fidl::InterfaceRequest<Link> request) {
+void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
+                                  const fidl::String& name,
+                                  fidl::InterfaceRequest<Link> request) {
   auto link_path = LinkPath::New();
   link_path->module_path = std::move(module_path);
   link_path->link_name = name;
   GetLinkPath(std::move(link_path), std::move(request));
 }
 
-void StoryImpl::ReleaseModule(
+void StoryControllerImpl::ReleaseModule(
     ModuleControllerImpl* const module_controller_impl) {
   auto f = std::find_if(connections_.begin(), connections_.end(),
                         [module_controller_impl](const Connection& c) {
@@ -819,8 +830,8 @@ void StoryImpl::ReleaseModule(
 
 // TODO(vardhan): Should this operation be queued here, or in |LinkImpl|?
 // Currently it is neither.
-void StoryImpl::GetLinkPath(const LinkPathPtr& link_path,
-                            fidl::InterfaceRequest<Link> request) {
+void StoryControllerImpl::GetLinkPath(const LinkPathPtr& link_path,
+                                      fidl::InterfaceRequest<Link> request) {
   auto i = std::find_if(links_.begin(), links_.end(),
                         [&link_path](const std::unique_ptr<LinkImpl>& l) {
                           return l->link_path().Equals(link_path);
@@ -837,7 +848,7 @@ void StoryImpl::GetLinkPath(const LinkPathPtr& link_path,
       [this, link_impl] { DisposeLink(link_impl); });
 }
 
-void StoryImpl::DisposeLink(LinkImpl* const link) {
+void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
   auto f = std::find_if(
       links_.begin(), links_.end(),
       [link](const std::unique_ptr<LinkImpl>& l) { return l.get() == link; });
@@ -845,7 +856,7 @@ void StoryImpl::DisposeLink(LinkImpl* const link) {
   links_.erase(f);
 }
 
-bool StoryImpl::IsRunning() {
+bool StoryControllerImpl::IsRunning() {
   switch (state_) {
     case StoryState::STARTING:
     case StoryState::RUNNING:
@@ -858,8 +869,8 @@ bool StoryImpl::IsRunning() {
   }
 }
 
-void StoryImpl::TakeOwnership(ModuleControllerPtr module_controller,
-                              fidl::String id) {
+void StoryControllerImpl::TakeOwnership(ModuleControllerPtr module_controller,
+                                        fidl::String id) {
   ModuleWatcherPtr watcher;
   auto module_watcher_impl = std::make_unique<ModuleWatcherImpl>(
       watcher.NewRequest(), this, std::move(id));
@@ -868,7 +879,7 @@ void StoryImpl::TakeOwnership(ModuleControllerPtr module_controller,
                                                 std::move(module_controller)});
 }
 
-fidl::String StoryImpl::StartModule(
+fidl::String StoryControllerImpl::StartModule(
     const fidl::Array<fidl::String>& parent_module_path,
     const fidl::String& module_name,
     const fidl::String& module_url,
@@ -888,7 +899,7 @@ fidl::String StoryImpl::StartModule(
   return PathString(module_path);
 }
 
-void StoryImpl::StartModuleInShell(
+void StoryControllerImpl::StartModuleInShell(
     const fidl::Array<fidl::String>& parent_module_path,
     const fidl::String& module_name,
     const fidl::String& module_url,
@@ -927,7 +938,8 @@ void StoryImpl::StartModuleInShell(
   }
 }
 
-void StoryImpl::FocusModule(const fidl::Array<fidl::String>& module_path) {
+void StoryControllerImpl::FocusModule(
+    const fidl::Array<fidl::String>& module_path) {
   if (story_shell_) {
     if (module_path.size() > 0) {
       // Focus modules relative to their parent modules.
@@ -942,42 +954,44 @@ void StoryImpl::FocusModule(const fidl::Array<fidl::String>& module_path) {
   }
 }
 
-void StoryImpl::DefocusModule(const fidl::Array<fidl::String>& module_path) {
+void StoryControllerImpl::DefocusModule(
+    const fidl::Array<fidl::String>& module_path) {
   if (story_shell_) {
     story_shell_->DefocusView(PathString(module_path));
   }
 }
 
-const fidl::String& StoryImpl::GetStoryId() const {
+const fidl::String& StoryControllerImpl::GetStoryId() const {
   return story_id_;
 }
 
-StoryState StoryImpl::GetStoryState() const {
+StoryState StoryControllerImpl::GetStoryState() const {
   return state_;
 }
 
-void StoryImpl::Log(StoryContextLogPtr log_entry) {
+void StoryControllerImpl::Log(StoryContextLogPtr log_entry) {
   story_storage_impl_->Log(std::move(log_entry));
 }
 
-void StoryImpl::Sync(const std::function<void()>& done) {
+void StoryControllerImpl::Sync(const std::function<void()>& done) {
   story_storage_impl_->Sync(done);
 }
 
-void StoryImpl::GetImportance(const ContextState& context_state,
-                              const std::function<void(float)>& result) {
+void StoryControllerImpl::GetImportance(
+    const ContextState& context_state,
+    const std::function<void(float)>& result) {
   new GetImportanceCall(&operation_queue_, this, context_state, result);
 }
 
-void StoryImpl::StopForDelete(const StopCallback& done) {
+void StoryControllerImpl::StopForDelete(const StopCallback& done) {
   new DeleteCall(&operation_queue_, this, done);
 }
 
-void StoryImpl::StopForTeardown(const StopCallback& done) {
+void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
   new StopCall(&operation_queue_, this, done);
 }
 
-void StoryImpl::Stop(const StopCallback& done) {
+void StoryControllerImpl::Stop(const StopCallback& done) {
   new StopCall(&operation_queue_, this, done);
 }
 

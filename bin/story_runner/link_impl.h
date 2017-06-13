@@ -74,7 +74,7 @@ class LinkImpl {
   const CrtJsonDoc& doc() const { return doc_; }
   void Sync(const std::function<void()>& callback);
 
-  // Used by StoryImpl.
+  // Used by StoryControllerImpl.
   const LinkPathPtr& link_path() const { return link_path_; }
   void set_orphaned_handler(const std::function<void()>& fn) {
     orphaned_handler_ = fn;

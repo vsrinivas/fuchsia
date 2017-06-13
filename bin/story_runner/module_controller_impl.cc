@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 
-#include "apps/modular/src/story_runner/story_impl.h"
+#include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -18,12 +18,12 @@ namespace modular {
 constexpr ftl::TimeDelta kStoryTeardownTimeout = ftl::TimeDelta::FromSeconds(1);
 
 ModuleControllerImpl::ModuleControllerImpl(
-    StoryImpl* const story_impl,
+    StoryControllerImpl* const story_controller_impl,
     app::ApplicationControllerPtr module_application,
     ModulePtr module,
     const fidl::Array<fidl::String>& module_path,
     fidl::InterfaceRequest<ModuleController> module_controller)
-    : story_impl_(story_impl),
+    : story_controller_impl_(story_controller_impl),
       module_application_(std::move(module_application)),
       module_(std::move(module)),
       module_path_(module_path.Clone()),
@@ -77,9 +77,9 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     SetState(ModuleState::STOPPED);
 
     // ReleaseModule() must be called before the callbacks, because
-    // StoryImpl::Stop() relies on being called back *after* the
+    // StoryControllerImpl::Stop() relies on being called back *after* the
     // module controller was disposed.
-    story_impl_->ReleaseModule(this);
+    story_controller_impl_->ReleaseModule(this);
 
     for (auto& done : teardown_) {
       done();
@@ -116,11 +116,11 @@ void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
 }
 
 void ModuleControllerImpl::Focus() {
-  story_impl_->FocusModule(module_path_);
+  story_controller_impl_->FocusModule(module_path_);
 }
 
 void ModuleControllerImpl::Defocus() {
-  story_impl_->DefocusModule(module_path_);
+  story_controller_impl_->DefocusModule(module_path_);
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {

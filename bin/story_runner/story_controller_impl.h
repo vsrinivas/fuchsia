@@ -7,8 +7,8 @@
 // can start more modules. It also serves as the factory for Link
 // instances, which are used to share data between modules.
 
-#ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_
-#define APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_
+#ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#define APPS_MODULAR_SRC_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -57,12 +57,12 @@ constexpr char kStoryImportanceContext[] = "/location/home_work";
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
 // clients control over the story.
-class StoryImpl : StoryController, StoryContext {
+class StoryControllerImpl : StoryController, StoryContext {
  public:
-  StoryImpl(const fidl::String& story_id,
-            ledger::PagePtr story_page,
-            StoryProviderImpl* story_provider_impl);
-  ~StoryImpl() override;
+  StoryControllerImpl(const fidl::String& story_id,
+                      ledger::PagePtr story_page,
+                      StoryProviderImpl* story_provider_impl);
+  ~StoryControllerImpl() override;
 
   // Called by ModuleContextImpl.
   void GetLinkPath(const LinkPathPtr& link_path,
@@ -125,8 +125,9 @@ class StoryImpl : StoryController, StoryContext {
   // Called by StoryProviderImpl.
   //
   // A variant of Stop() that stops the story because the story is being
-  // deleted. The StoryImpl instance is deleted by StoryProviderImpl and the
-  // story data are deleted from the ledger once the done callback is invoked.
+  // deleted. The StoryControllerImpl instance is deleted by StoryProviderImpl
+  // and the story data are deleted from the ledger once the done callback is
+  // invoked.
   //
   // No further operations invoked after this one are executed. (The Operation
   // accomplishes this by not calling Done() and instead invoking its callback
@@ -237,9 +238,9 @@ class StoryImpl : StoryController, StoryContext {
   class GetModulesCall;
   class GetImportanceCall;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_
+#endif  // APPS_MODULAR_SRC_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_

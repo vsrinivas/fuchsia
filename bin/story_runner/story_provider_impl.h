@@ -32,7 +32,7 @@
 
 namespace modular {
 class Resolver;
-class StoryImpl;
+class StoryControllerImpl;
 
 class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
@@ -53,32 +53,32 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   void Teardown(const std::function<void()>& callback);
 
-  // Called by StoryImpl.
+  // Called by StoryControllerImpl.
   const Scope* user_scope() const { return user_scope_; }
 
   // The device ID for this user/device.
   const std::string device_id() const { return device_id_; }
 
-  // Called by StoryImpl.
+  // Called by StoryControllerImpl.
   const ComponentContextInfo& component_context_info() {
     return component_context_info_;
   }
 
-  // Called by StoryImpl.
+  // Called by StoryControllerImpl.
   maxwell::UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
   }
 
-  // Called by StoryImpl.
+  // Called by StoryControllerImpl.
   const AppConfig& story_shell() const { return *story_shell_; }
 
-  // Called by StoryImpl.
+  // Called by StoryControllerImpl.
   void SetStoryInfoExtra(const fidl::String& story_id,
                          const fidl::String& name,
                          const fidl::String& value,
                          const std::function<void()>& callback);
 
-  // |StoryProvider|, also used by StoryImpl.
+  // |StoryProvider|, also used by StoryControllerImpl.
   void GetStoryInfo(const fidl::String& story_id,
                     const GetStoryInfoCallback& callback) override;
 
@@ -155,13 +155,14 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
-  struct StoryImplContainer {
-    std::unique_ptr<StoryImpl> impl;
+  struct StoryControllerImplContainer {
+    std::unique_ptr<StoryControllerImpl> impl;
     // We keep a cached version of the StoryInfo for every story. We send this
     // copy to newly registered story provider watchers.
     StoryInfoPtr current_info;
   };
-  std::unordered_map<std::string, StoryImplContainer> story_impls_;
+  std::unordered_map<std::string, StoryControllerImplContainer>
+      story_controller_impls_;
 
   const ComponentContextInfo component_context_info_;
 

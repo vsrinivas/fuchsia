@@ -22,17 +22,17 @@
 namespace modular {
 
 class ModuleControllerImpl;
-class StoryImpl;
+class StoryControllerImpl;
 
 // The parameters of module context that do not vary by instance.
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
-  StoryImpl* const story_impl;
+  StoryControllerImpl* const story_controller_impl;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider;
 };
 
 // ModuleContextImpl keeps a single connection from a module instance in
-// the story to a StoryImpl. This way, requests that the module makes
+// the story to a StoryControllerImpl. This way, requests that the module makes
 // on its Story handle can be associated with the Module instance.
 class ModuleContextImpl : ModuleContext {
  public:
@@ -90,9 +90,9 @@ class ModuleContextImpl : ModuleContext {
   // related).
   const fidl::Array<fidl::String> module_path_;
 
-  // Not owned. The StoryImpl instance this ModuleContextImpl instance
+  // Not owned. The StoryControllerImpl instance this ModuleContextImpl instance
   // connects to.
-  StoryImpl* const story_impl_;
+  StoryControllerImpl* const story_controller_impl_;
 
   // This ID is used to namespace a module's ledger.
   const std::string module_url_;
@@ -109,7 +109,7 @@ class ModuleContextImpl : ModuleContext {
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
-  // The one connection to the StoryImpl instance that this
+  // The one connection to the StoryControllerImpl instance that this
   // ModuleContextImpl instance represents.
   fidl::Binding<ModuleContext> binding_;
 
