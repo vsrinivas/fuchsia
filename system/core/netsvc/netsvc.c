@@ -31,7 +31,7 @@
 
 static mx_handle_t loghandle;
 
-static bool netbootloader = false;
+bool netbootloader = false;
 
 int get_log_line(char* out) {
     char buf[MX_LOG_RECORD_MAX + 1];
@@ -74,7 +74,7 @@ static void run_program(const char *progname, int argc, const char** argv, mx_ha
     }
 }
 
-static void run_command(const char* cmd) {
+void netboot_run_cmd(const char* cmd) {
     const char* args[] = {
         "/boot/bin/sh", "-c", cmd
     };
@@ -86,7 +86,7 @@ static void run_server(const char* progname, const char* bin, mx_handle_t h) {
     run_program(progname, 1, &bin, h);
 }
 
-static const char* nodename = "magenta";
+const char* nodename = "magenta";
 
 void udp6_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
@@ -95,61 +95,7 @@ void udp6_recv(void* data, size_t len,
     bool mcast = (memcmp(daddr, &ip6_ll_all_nodes, sizeof(ip6_addr_t)) == 0);
 
     if (dport == NB_SERVER_PORT) {
-        nbmsg* msg = data;
-        // Not enough bytes to be a message
-        if ((len < sizeof(*msg)) ||
-            (msg->magic != NB_MAGIC)) {
-            return;
-        }
-        len -= sizeof(*msg);
-
-        if (len && msg->cmd != NB_DATA && msg->cmd != NB_LAST_DATA) {
-            msg->data[len - 1] = '\0';
-        }
-
-        switch (msg->cmd) {
-        case NB_QUERY:
-            if (strcmp((char*)msg->data, "*") &&
-                strcmp((char*)msg->data, nodename)) {
-                break;
-            }
-            size_t dlen = strlen(nodename) + 1;
-            char buf[1024 + sizeof(nbmsg)];
-            if ((dlen + sizeof(nbmsg)) > sizeof(buf)) {
-                return;
-            }
-            msg->cmd = NB_ACK;
-            memcpy(buf, msg, sizeof(nbmsg));
-            memcpy(buf + sizeof(nbmsg), nodename, dlen);
-            udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport);
-            break;
-        case NB_SHELL_CMD:
-            if (!mcast) {
-                run_command((char*) msg->data);
-                return;
-            }
-            break;
-        case NB_OPEN:
-            netfile_open((char*)msg->data, msg->cookie, msg->arg, saddr, sport, dport);
-            break;
-        case NB_READ:
-            netfile_read(msg->cookie, msg->arg, saddr, sport, dport);
-            break;
-        case NB_WRITE:
-            len--; // NB NUL-terminator is not part of the data
-            netfile_write((char*)msg->data, len, msg->cookie, msg->arg, saddr, sport, dport);
-            break;
-        case NB_CLOSE:
-            netfile_close(msg->cookie, saddr, sport, dport);
-            break;
-        default:
-            // If the bootloader is enabled, then let it have a crack at the
-            // incoming packets as well.
-            if (netbootloader) {
-                netboot_recv(data, len + sizeof(nbmsg), daddr, dport, saddr, sport);
-            }
-        }
-        return;
+        return netboot_recv(data, len, mcast, daddr, dport, saddr, sport);
     }
 
     if (dport == DEBUGLOG_ACK_PORT) {

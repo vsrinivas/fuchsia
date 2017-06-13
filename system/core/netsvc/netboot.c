@@ -135,9 +135,80 @@ void netboot_advertise(const char* nodename) {
               NB_ADVERT_PORT, NB_SERVER_PORT);
 }
 
-void netboot_recv(void* data, size_t len,
-                  const ip6_addr_t* daddr, uint16_t dport,
-                  const ip6_addr_t* saddr, uint16_t sport) {
+static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
+                    const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+    nbmsg m;
+    m.magic = NB_MAGIC;
+    m.cookie = cookie;
+    m.cmd = NB_ACK;
+    m.arg = netfile_open(filename, arg);
+    udp6_send(&m, sizeof(m), saddr, sport, dport);
+}
+
+static void nb_read(uint32_t cookie, uint32_t arg,
+                    const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+    static netfilemsg m = { .hdr.magic = NB_MAGIC, .hdr.cmd = NB_ACK};
+    static size_t msg_size = 0;
+    static uint32_t blocknum = (uint32_t) -1;
+    if (arg == blocknum) {
+        // Request to resend last message, verify that the cookie is unchanged
+        if (cookie != m.hdr.cookie) {
+            m.hdr.arg = -EIO;
+            m.hdr.cookie = cookie;
+            msg_size = sizeof(m.hdr);
+        }
+    } else if (arg == 0 || arg == blocknum + 1) {
+        int result = netfile_read(&m.data, sizeof(m.data));
+        if (result < 0) {
+            m.hdr.arg = result;
+            msg_size = sizeof(m.hdr);
+        } else {
+            // Note that the response does not use actual size as the argument,
+            // it matches the *requested* size. Actual size can be determined by
+            // the packet size.
+            m.hdr.arg = arg;
+            msg_size = sizeof(m.hdr) + result;
+        }
+        m.hdr.cookie = cookie;
+        blocknum = arg;
+    } else {
+        // Ignore bogus read requests -- host will timeout if they're confused
+        return;
+    }
+    udp6_send(&m, msg_size, saddr, sport, dport);
+}
+
+static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg,
+                     const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+    static nbmsg m =  {.magic = NB_MAGIC, .cmd = NB_ACK};
+    static uint32_t blocknum = (uint32_t) -1;
+    if (arg == blocknum) {
+        // Request to repeat last write, verify that cookie is unchanged
+        if (cookie != m.cookie) {
+            m.arg = -EIO;
+        }
+    } else if (arg == 0 || arg == blocknum + 1) {
+        int result = netfile_write(data, len);
+        m.arg = result > 0 ? 0 : result;
+        blocknum = arg;
+    }
+    m.cookie = cookie;
+    udp6_send(&m, sizeof(m), saddr, sport, dport);
+}
+
+static void nb_close(uint32_t cookie,
+                     const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+    nbmsg m;
+    m.magic = NB_MAGIC;
+    m.cookie = cookie;
+    m.cmd = NB_ACK;
+    m.arg = netfile_close();
+    udp6_send(&m, sizeof(m), saddr, sport, dport);
+}
+
+static void bootloader_recv(void* data, size_t len,
+                            const ip6_addr_t* daddr, uint16_t dport,
+                            const ip6_addr_t* saddr, uint16_t sport) {
     nbmsg* msg = data;
     nbmsg ack;
 
@@ -240,5 +311,64 @@ transmit:
 
     if (do_boot) {
         mx_system_mexec(nbkernel.data, nbbootdata.data);
+    }
+}
+
+void netboot_recv(void *data, size_t len, bool is_mcast,
+                  const ip6_addr_t* daddr, uint16_t dport,
+                  const ip6_addr_t* saddr, uint16_t sport) {
+    nbmsg* msg = data;
+    // Not enough bytes to be a message
+    if ((len < sizeof(*msg)) ||
+        (msg->magic != NB_MAGIC)) {
+        return;
+    }
+    len -= sizeof(*msg);
+
+    if (len && msg->cmd != NB_DATA && msg->cmd != NB_LAST_DATA) {
+        msg->data[len - 1] = '\0';
+    }
+
+    switch (msg->cmd) {
+    case NB_QUERY:
+        if (strcmp((char*)msg->data, "*") &&
+            strcmp((char*)msg->data, nodename)) {
+            break;
+        }
+        size_t dlen = strlen(nodename) + 1;
+        char buf[1024 + sizeof(nbmsg)];
+        if ((dlen + sizeof(nbmsg)) > sizeof(buf)) {
+            return;
+        }
+        msg->cmd = NB_ACK;
+        memcpy(buf, msg, sizeof(nbmsg));
+        memcpy(buf + sizeof(nbmsg), nodename, dlen);
+        udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport);
+        break;
+    case NB_SHELL_CMD:
+        if (!is_mcast) {
+            netboot_run_cmd((char*) msg->data);
+            return;
+        }
+        break;
+    case NB_OPEN:
+        nb_open((char*)msg->data, msg->cookie, msg->arg, saddr, sport, dport);
+        break;
+    case NB_READ:
+        nb_read(msg->cookie, msg->arg, saddr, sport, dport);
+        break;
+    case NB_WRITE:
+        len--; // NB NUL-terminator is not part of the data
+        nb_write((char*)msg->data, len, msg->cookie, msg->arg, saddr, sport, dport);
+        break;
+    case NB_CLOSE:
+        nb_close(msg->cookie, saddr, sport, dport);
+        break;
+    default:
+        // If the bootloader is enabled, then let it have a crack at the
+        // incoming packets as well.
+        if (netbootloader) {
+            bootloader_recv(data, len + sizeof(nbmsg), daddr, dport, saddr, sport);
+        }
     }
 }

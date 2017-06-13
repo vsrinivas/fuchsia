@@ -21,7 +21,7 @@
 
 #define NB_COMMAND           1   // arg=0, data=command
 #define NB_SEND_FILE         2   // arg=size, data=filename
-#define NB_DATA              3   // arg=blocknum, data=data
+#define NB_DATA              3   // arg=offset, data=data
 #define NB_BOOT              4   // arg=0
 #define NB_QUERY             5   // arg=0, data=hostname (or "*")
 #define NB_SHELL_CMD         6   // arg=0, data=command string
@@ -29,7 +29,7 @@
 #define NB_READ              8   // arg=blocknum
 #define NB_WRITE             9   // arg=blocknum, data=data
 #define NB_CLOSE             10  // arg=0
-#define NB_LAST_DATA         11  // arg=blocknum, data=data
+#define NB_LAST_DATA         11  // arg=offset, data=data
 
 #define NB_ACK                0 // arg=0 or -err, NB_READ: data=data
 #define NB_FILE_RECEIVED      0x70000001 // arg=size
