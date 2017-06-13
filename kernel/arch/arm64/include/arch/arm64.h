@@ -71,8 +71,8 @@ struct arm64_iframe_long {
 };
 
 struct arm64_iframe_short {
-    uint64_t pad;
     uint64_t r[19];
+    uint64_t pad;
     uint64_t lr;
     uint64_t usp;
     uint64_t elr;
