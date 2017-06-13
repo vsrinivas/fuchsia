@@ -143,7 +143,7 @@ bool blkdev_test_fifo_no_op(void) {
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -170,21 +170,21 @@ bool blkdev_test_fifo_basic(void) {
     //uint64_t vmo_size = blk_size * 3;
     uint64_t vmo_size = PAGE_SIZE * 3;
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), NO_ERROR, "Failed to create VMO");
+    ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), MX_OK, "Failed to create VMO");
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
     ASSERT_TRUE(ac.check(), "");
     fill_random(buf.get(), vmo_size);
 
     size_t actual;
-    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), MX_OK, "");
     ASSERT_EQ(actual, vmo_size, "");
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
     vmoid_t vmoid;
     expected = sizeof(vmoid_t);
     mx_handle_t xfer_vmo;
-    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK, "");
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
               "Failed to attach vmo");
 
@@ -206,27 +206,27 @@ bool blkdev_test_fifo_basic(void) {
     requests[1].dev_offset = blk_size * 100;
 
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], countof(requests)), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], countof(requests)), MX_OK, "");
 
     // Empty the vmo, then read the info we just wrote to the disk
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
     ASSERT_TRUE(ac.check(), "");
 
-    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
     requests[0].opcode = BLOCKIO_READ;
     requests[1].opcode = BLOCKIO_READ;
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], countof(requests)), NO_ERROR, "");
-    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], countof(requests)), MX_OK, "");
+    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
     ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 
     // Close the current vmo
     requests[0].opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], 1), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], 1), MX_OK, "");
 
-    ASSERT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(vmo), MX_OK, "");
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -246,21 +246,21 @@ bool blkdev_test_fifo_whole_disk(void) {
     // Create an arbitrary VMO, fill it with some stuff
     uint64_t vmo_size = blk_size * blk_count;
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), NO_ERROR, "Failed to create VMO");
+    ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), MX_OK, "Failed to create VMO");
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
     ASSERT_TRUE(ac.check(), "");
     fill_random(buf.get(), vmo_size);
 
     size_t actual;
-    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), MX_OK, "");
     ASSERT_EQ(actual, vmo_size, "");
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
     vmoid_t vmoid;
     expected = sizeof(vmoid_t);
     mx_handle_t xfer_vmo;
-    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK, "");
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
               "Failed to attach vmo");
 
@@ -274,26 +274,26 @@ bool blkdev_test_fifo_whole_disk(void) {
     request.dev_offset = 0;
 
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
 
     // Empty the vmo, then read the info we just wrote to the disk
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
     ASSERT_TRUE(ac.check(), "");
 
-    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
     request.opcode = BLOCKIO_READ;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
-    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
+    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
     ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 
     // Close the current vmo
     request.opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
 
-    ASSERT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(vmo), MX_OK, "");
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -308,7 +308,7 @@ typedef struct {
 // Creates a VMO, fills it with data, and gives it to the block device.
 bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
     obj->vmo_size = kBlockSize + (rand() % 5) * kBlockSize;
-    ASSERT_EQ(mx_vmo_create(obj->vmo_size, 0, &obj->vmo), NO_ERROR,
+    ASSERT_EQ(mx_vmo_create(obj->vmo_size, 0, &obj->vmo), MX_OK,
               "Failed to create vmo");
     AllocChecker ac;
     obj->buf.reset(new (&ac) uint8_t[obj->vmo_size]);
@@ -316,12 +316,12 @@ bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
     fill_random(obj->buf.get(), obj->vmo_size);
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj->vmo, obj->buf.get(), 0, obj->vmo_size, &actual),
-              NO_ERROR, "Failed to write to vmo");
+              MX_OK, "Failed to write to vmo");
     ASSERT_EQ(obj->vmo_size, actual, "Could not write entire VMO");
 
     ssize_t expected = sizeof(vmoid_t);
     mx_handle_t xfer_vmo;
-    ASSERT_EQ(mx_handle_duplicate(obj->vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), NO_ERROR,
+    ASSERT_EQ(mx_handle_duplicate(obj->vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK,
               "Failed to duplicate vmo");
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &obj->vmoid), expected,
               "Failed to attach vmo");
@@ -348,7 +348,7 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
         requests[b].dev_offset = i * kBlockSize + b * (kBlockSize * objs);
     }
     // Write entire vmos at once
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK, "");
     return true;
 }
 
@@ -361,7 +361,7 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
     ASSERT_TRUE(ac.check(), "");
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
-              NO_ERROR, "");
+              MX_OK, "");
 
     // Next, read to the vmo from the disk
     size_t blocks = obj->vmo_size / kBlockSize;
@@ -376,12 +376,12 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
         requests[b].dev_offset = i * kBlockSize + b * (kBlockSize * objs);
     }
     // Read entire vmos at once
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK, "");
 
     // Finally, write from the vmo to an out buffer, where we can compare
     // the results with the input buffer.
     ASSERT_EQ(mx_vmo_read(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_EQ(memcmp(obj->buf.get(), out.get(), obj->vmo_size), 0,
               "Read data not equal to written data");
     return true;
@@ -393,8 +393,8 @@ bool close_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, txnid_t txn
     request.txnid = txnid;
     request.vmoid = obj->vmoid;
     request.opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(obj->vmo), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(obj->vmo), MX_OK, "");
     return true;
 }
 
@@ -410,7 +410,7 @@ bool blkdev_test_fifo_multiple_vmo(void) {
     expected = sizeof(txnid);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
 
     // Create multiple VMOs
     AllocChecker ac;
@@ -433,7 +433,7 @@ bool blkdev_test_fifo_multiple_vmo(void) {
     }
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -477,7 +477,7 @@ bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
 
     // Create multiple VMOs
     size_t num_threads = 10;
@@ -512,7 +512,7 @@ bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
     }
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -527,10 +527,10 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
-    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), ERR_ALREADY_BOUND,
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), MX_ERR_ALREADY_BOUND,
               "Expected fifo to already be bound");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -544,14 +544,14 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
     }
 
     // Now that we've set up the connection for a few VMOs, shut down the fifo
-    ASSERT_EQ(mx_handle_close(fifo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(fifo), MX_OK, "");
 
     // Attempting to batch any operations to the fifo should fail
     block_fifo_request_t request;
     request.txnid = txnid;
     request.vmoid = objs[0].vmoid;
     request.opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_NEQ(block_fifo_txn(client, &request, 1), NO_ERROR,
+    ASSERT_NEQ(block_fifo_txn(client, &request, 1), MX_OK,
                "Expected operation to fail after closing FIFO");
 
     // Free the dead client
@@ -563,7 +563,7 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
     // The block server should still be functioning. We should be able to re-bind to it
     expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
     expected = sizeof(txnid);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
@@ -581,7 +581,7 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
     }
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -597,7 +597,7 @@ bool blkdev_test_fifo_large_ops_count(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
 
     // Create a vmo
     test_vmo_object_t obj;
@@ -622,12 +622,12 @@ bool blkdev_test_fifo_large_ops_count(void) {
             requests[b].dev_offset = 0;
         }
 
-        ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), NO_ERROR, "");
-        ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), NO_ERROR, "Failed to free txn");
+        ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK, "");
+        ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), MX_OK, "Failed to free txn");
     }
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -643,7 +643,7 @@ bool blkdev_test_fifo_too_many_ops(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
     test_vmo_object_t obj;
     ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
 
@@ -668,7 +668,7 @@ bool blkdev_test_fifo_too_many_ops(void) {
     }
 
     // This should be caught locally by the client library
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_ERR_INVALID_ARGS, "");
 
     // Since the client-side automatically appends the "TXN_END" flag, we avoid using it here.
     for (size_t i = 0; i < requests.size(); i++) {
@@ -676,14 +676,14 @@ bool blkdev_test_fifo_too_many_ops(void) {
 retry_write:
         mx_status_t status = mx_fifo_write(fifo, &requests[i], sizeof(block_fifo_request_t),
                                            &actual);
-        if (status == ERR_SHOULD_WAIT) {
+        if (status == MX_ERR_SHOULD_WAIT) {
             mx_signals_t signals;
             ASSERT_EQ(mx_object_wait_one(fifo, MX_FIFO_WRITABLE, MX_TIME_INFINITE, &signals),
-                      NO_ERROR, "");
+                      MX_OK, "");
             ASSERT_EQ(signals & MX_FIFO_WRITABLE, MX_FIFO_WRITABLE, "");
             goto retry_write;
         } else {
-            ASSERT_EQ(status, NO_ERROR, "");
+            ASSERT_EQ(status, MX_OK, "");
         }
     }
 
@@ -691,18 +691,18 @@ retry_write:
     // we filled our txn to the brim.
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(fifo, MX_FIFO_READABLE, MX_TIME_INFINITE, &signals),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_EQ(signals & MX_FIFO_READABLE, MX_FIFO_READABLE, "");
     block_fifo_response_t response;
     uint32_t count;
-    ASSERT_EQ(mx_fifo_read(fifo, &response, sizeof(block_fifo_response_t), &count), NO_ERROR, "");
-    ASSERT_EQ(response.status, NO_ERROR, "");
+    ASSERT_EQ(mx_fifo_read(fifo, &response, sizeof(block_fifo_response_t), &count), MX_OK, "");
+    ASSERT_EQ(response.status, MX_OK, "");
     ASSERT_EQ(response.txnid, txnid, "");
 
     // The txn should still be usable! We should still be able to send a close request.
-    ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), NO_ERROR, "Failed to free txn");
+    ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), MX_OK, "Failed to free txn");
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -719,7 +719,7 @@ bool blkdev_test_fifo_bad_client_vmoid(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -736,11 +736,11 @@ bool blkdev_test_fifo_bad_client_vmoid(void) {
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_IO, "Expected IO error with bad vmoid");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_IO, "Expected IO error with bad vmoid");
 
-    ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), NO_ERROR, "Failed to free txn");
+    ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), MX_OK, "Failed to free txn");
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -757,7 +757,7 @@ bool blkdev_test_fifo_bad_client_txnid(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
 
     // Create a vmo
     test_vmo_object_t obj;
@@ -771,10 +771,10 @@ bool blkdev_test_fifo_bad_client_txnid(void) {
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_IO, "Expected IO error with bad txnid");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_IO, "Expected IO error with bad txnid");
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -791,7 +791,7 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -811,28 +811,28 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
     request.length     = static_cast<uint32_t>(kBlockSize - 1);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
 
     // Send a request that has a non-block aligned length (+1)
     request.length     = static_cast<uint32_t>(kBlockSize + 1);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
 
     // Send a request that has a non-block aligned device offset
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 0;
     request.dev_offset = 1;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
 
     // Actually, we don't care about aligning VMO offsets, so this request should be fine
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 1;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
@@ -849,7 +849,7 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -857,7 +857,7 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     // Create a vmo which is not block aligned
     test_vmo_object_t obj;
     obj.vmo_size = kBlockSize - 1;
-    ASSERT_EQ(mx_vmo_create(obj.vmo_size, 0, &obj.vmo), NO_ERROR,
+    ASSERT_EQ(mx_vmo_create(obj.vmo_size, 0, &obj.vmo), MX_OK,
               "Failed to create vmo");
     AllocChecker ac;
     obj.buf.reset(new (&ac) uint8_t[obj.vmo_size]);
@@ -865,10 +865,10 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     fill_random(obj.buf.get(), obj.vmo_size);
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj.vmo, obj.buf.get(), 0, obj.vmo_size, &actual),
-              NO_ERROR, "Failed to write to vmo");
+              MX_OK, "Failed to write to vmo");
     ASSERT_EQ(obj.vmo_size, actual, "Could not write entire VMO");
     mx_handle_t xfer_vmo;
-    ASSERT_EQ(mx_handle_duplicate(obj.vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), NO_ERROR,
+    ASSERT_EQ(mx_handle_duplicate(obj.vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK,
               "Failed to duplicate vmo");
     expected = sizeof(vmoid_t);
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &obj.vmoid), expected,
@@ -882,13 +882,13 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
     // Do the same thing, but for reading
     request.opcode     = BLOCKIO_READ;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
 
     block_fifo_release_client(client);
-    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), MX_OK, "Failed to close fifo");
     close(fd);
     END_TEST;
 }
