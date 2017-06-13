@@ -5,69 +5,116 @@
 -->
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="mdc-typography">
 <head>
-  <title>MI Dashboard</title>
+  <title>Fuchsia Intelligence Dashboard</title>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- jQuery CDN -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <!-- Bootstrap CDN -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-  <!-- Dashboard Javascript & CSS -->
-  <script src="dashboard.js"></script>
+  <!-- Material Components CDN -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+  <!-- Dashboard CSS -->
   <link rel="stylesheet" href="dashboard.css"/>
 </head>
 <body>
-  <div class="container-fluid mi-header">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="mi-title navbar-brand" href="#">Fuchsia Intelligence Dashboard</a>
-    </div>
-    <div class="collapse navbar-collapse">
-      <ul class="nav navbar-nav navbar-right">
-        <li id="connectedLabel" class="navbar-text">Disconnected</li>
-      </ul>
-    </div>
-  </div>
-  <div class="container spacing">
-    <h3>Context topics</h3>
-    <p>
-      This section displays all of the context parameters currently recorded
-      in the system.
-    </p>
-    <table class="table table-striped table-bordered table-hover table-responsive">
-      <thead><tr><th>Topic</th><th>Value</th></tr></thead>
-      <tbody id="context">
-      </tbody>
-    </table>
+  <header class="mdc-toolbar">
+      <div class="mdc-toolbar__row">
+        <section class="mdc-toolbar__section mdc-toolbar__section--align-start">
+          <span class="mdc-toolbar__title"> <img src="logo.png" height="44" width="44"/></span>
+          <span class="mdc-toolbar__title">Fuchsia Intelligence Dashboard</span>
+        </section>
+        <section class="mdc-toolbar__section mdc-toolbar__section--align-end">
+          <p id="connectedLabel" class="mdc-typography" style="margin-right:24px">
+            Connected
+          </p>
+        </section>
+      </div>
+      <div class="mdc-toolbar__row">
+        <section>
+          <nav id="dashboard-tab-bar" class="mdc-tab-bar">
+            <a class="mdc-tab mdc-tab--active" href="#overview-panel">OVERVIEW</a>
+            <a class="mdc-tab" href="#context-panel">CONTEXT STORE</a>
+            <a class="mdc-tab" href="#action-log-panel">ACTION LOG</a>
+            <!-- <a class="mdc-tab" href="#three">SUGGESTIONS</a> -->
+            <span class="mdc-tab-bar__indicator"></span>
+          </nav>
+        </section>
+      </div>
+  </header>
 
-    <h3>Context subscriptions</h3>
-    <p>
-      This section displays registered subscribers and topics they're
-      subscribed to.
-    </p>
-    <table class="table table-striped table-bordered table-hover table-responsive">
-      <thead><tr><th>Subscriber</th><th>Queries</th></tr></thead>
-      <tbody id="contextSubscriptions">
-      </tbody>
-    </table>
-
-    <h3>Action Log</h3>
-    <p>
-      This section displays the current contents of the Action Log.
-    </p>
-    <table class="table table-striped table-bordered table-hover table-responsive">
-      <thead><tr><th>Method</th><th>Component URL</th><th>Parameters</th></tr></thead>
-      <tbody id="actionLog">
-      </tbody>
-    </table>
-  </div>
+  <main>
+    <section class="panels">
+      <div id="overview-panel" class="panel active" role="tabpanel">
+        <h3>Overview</h3>
+      </div>
+      <div id="context-panel" class="panel grid mdc-layout-grid" role="tabpanel">
+        <div class="mdc-layout-grid__inner">
+          <div class="cell mdc-layout-grid__cell">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Context Topics</h1>
+              </section>
+              <section class="mdc-card__supporting-text">
+                All of the context parameters currently recorded
+                in the system.
+              </section>
+              <section class="mdc-card__supporting-text">
+                <table>
+                  <thead><tr><th>Topic</th><th>Value</th></tr></thead>
+                  <tbody id="context">
+                  </tbody>
+                </table>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+          <div class="cell mdc-layout-grid__cell">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Context Subscriptions</h1>
+              </section>
+              <section class="mdc-card__supporting-text">
+                Registered subscribers and topics they're
+                subscribed to.
+              </section>
+              <section class="mdc-card__supporting-text">
+                <table>
+                  <thead><tr><th>Subscriber</th><th>Queries</th></tr></thead>
+                  <tbody id="contextSubscriptions">
+                  </tbody>
+                </table>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+        </div> <!-- grid__inner -->
+      </div> <!-- context-panel -->
+      <div id="action-log-panel" class="panel" role="tabpanel">
+        <div class="mdc-layout-grid__inner">
+          <div class="cell mdc-layout-grid__cell">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Action Log</h1>
+              </section>
+              <section class="mdc-card__supporting-text">
+                The current content of the Action Log, which is
+                populated by the explicit reporting of modules.
+              </section>
+              <section class="mdc-card__supporting-text">
+                <table>
+                  <thead><tr><th>Method</th><th>Component URL</th><th>Parameters</th></tr></thead>
+                  <tbody id="actionLog">
+                  </tbody>
+                </table>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+        </div> <!-- grid__inner -->
+      </div> <!-- action-log-panel -->
+    </section>
+  </main>
+  <!-- Material Components and Dashboard JS -->
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>

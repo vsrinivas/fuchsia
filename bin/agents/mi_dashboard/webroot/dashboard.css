@@ -1,12 +1,26 @@
-.mi-header {
-  background-color: rgb(50,50,50);
-  color: rgb(225,225,225);
+:root {
+  --mdc-theme-primary: #00AAC0;
 }
 
-.spacing {
-  padding-top: 2em;
+body {
+  background-color: #EEEEEE;
+  display: block;
+  margin: 0px;
 }
 
-div.navbar-header > a.navbar-brand {
-  color: rgb(225,225,225);
+.mdc-card {
+  background-color:white;
+}
+
+.mdc-tab-bar {
+  padding-left: 24px;
+}
+
+.panel {
+  display: none;
+  padding: 24px;
+}
+
+.panel.active {
+  display: block;
 }
