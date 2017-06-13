@@ -10,6 +10,8 @@ source_set("common") {
     "backend/framebuffer.h",
     "backend/framebuffer_output.cc",
     "backend/framebuffer_output.h",
+    "backend/headless_rasterizer.cc",
+    "backend/headless_rasterizer.h",
     "backend/output.h",
     "backend/software_rasterizer.cc",
     "backend/software_rasterizer.h",

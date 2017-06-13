@@ -8,6 +8,7 @@
 #include <memory>
 #include <utility>
 
+#include "apps/mozart/src/compositor/backend/headless_rasterizer.h"
 #include "apps/mozart/src/compositor/backend/software_rasterizer.h"
 #include "apps/mozart/src/compositor/backend/vulkan_rasterizer.h"
 #include "apps/mozart/src/compositor/config.h"
@@ -68,6 +69,12 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
   rasterizer_thread_->Run();
   rasterizer_task_runner_ = rasterizer_thread_->TaskRunner();
 
+#ifdef MOZART_HEADLESS
+  mx_display_info_t display_info = {};
+  if (InitializeRasterizer(RasterizerType::kHeadless, &display_info)) {
+    OnDisplayReady(display_info);
+  }
+#else
   // Safe to post "this" because we wait for this task to complete.
   ftl::ManualResetWaitableEvent wait;
   rasterizer_task_runner_->PostTask([this, &wait] {
@@ -83,6 +90,7 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
     wait.Signal();
   });
   wait.Wait();
+#endif
 }
 
 void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {
@@ -233,6 +241,9 @@ bool FramebufferOutput::InitializeRasterizer(RasterizerType rasterizer_type,
 
   std::unique_ptr<Rasterizer> rasterizer;
   switch (rasterizer_type) {
+    case RasterizerType::kHeadless:
+      rasterizer = std::make_unique<HeadlessRasterizer>(callback);
+      break;
     case RasterizerType::kSoftware:
       rasterizer = std::make_unique<SoftwareRasterizer>(callback);
       break;
@@ -248,6 +259,9 @@ bool FramebufferOutput::InitializeRasterizer(RasterizerType rasterizer_type,
     rasterizer_ = std::move(rasterizer);
 
     switch (rasterizer_type) {
+      case RasterizerType::kHeadless:
+        FTL_LOG(INFO) << "Mozart: Using headless rasterizer.";
+        break;
       case RasterizerType::kSoftware:
         FTL_LOG(INFO) << "Mozart: Using software rasterizer.";
         break;

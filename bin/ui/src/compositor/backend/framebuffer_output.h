@@ -32,6 +32,7 @@ class Config;
 
 class FramebufferOutput : public Output {
   enum RasterizerType {
+    kHeadless,
     kSoftware,
 #ifdef MOZART_USE_VULKAN
     kVulkan
