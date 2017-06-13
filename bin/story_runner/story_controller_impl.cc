@@ -735,9 +735,9 @@ void StoryControllerImpl::Start(
 
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<mozart::ViewOwner> request) {
-  story_provider_impl_->StartStoryShell(
-      story_context_binding_.NewBinding(), story_shell_controller_.NewRequest(),
-      story_shell_.NewRequest(), std::move(request));
+  story_shell_controller_ = story_provider_impl_->StartStoryShell(
+      story_context_binding_.NewBinding(), story_shell_.NewRequest(),
+      std::move(request));
 }
 
 // |StoryController|

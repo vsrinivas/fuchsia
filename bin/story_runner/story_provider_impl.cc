@@ -40,6 +40,26 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
 
 }  // namespace
 
+// Helper class to proxy the StoryShell ViewOwner, so that we can preload it
+class StoryProviderImpl::ViewOwnerProxy {
+ public:
+  ViewOwnerProxy(mozart::ViewOwnerPtr view,
+                 fidl::InterfaceRequest<mozart::ViewOwner> view_request,
+                 const std::function<void(ViewOwnerProxy*)>& error_handler)
+      : view_(std::move(view)), binding_(view_.get(), std::move(view_request)) {
+    binding_.set_connection_error_handler(
+        [this, error_handler] { error_handler(this); });
+    view_.set_connection_error_handler(
+        [this, error_handler] { error_handler(this); });
+  }
+
+ private:
+  mozart::ViewOwnerPtr view_;
+  fidl::Binding<mozart::ViewOwner> binding_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewOwnerProxy);
+};
+
 // Below are helper classes that encapsulate a chain of asynchronous
 // operations on the Ledger. Because the operations all return
 // something, the handles on which they are invoked need to be kept
@@ -616,6 +636,7 @@ StoryProviderImpl::StoryProviderImpl(
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
   context_handler_.Watch([this] { OnContextChange(); });
   context_handler_.Select(kStoryImportanceContext);
+  LoadStoryShell();
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -651,31 +672,54 @@ void StoryProviderImpl::Duplicate(
   Connect(std::move(request));
 }
 
-void StoryProviderImpl::StartStoryShell(
+app::ApplicationControllerPtr StoryProviderImpl::StartStoryShell(
     fidl::InterfaceHandle<StoryContext> story_context,
-    fidl::InterfaceRequest<app::ApplicationController> app_controller_request,
     fidl::InterfaceRequest<StoryShell> story_shell_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_request) {
-  app::ServiceProviderPtr story_shell_services;
-  auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
-  story_shell_launch_info->services = story_shell_services.NewRequest();
-  story_shell_launch_info->url = story_shell_->url;
-  story_shell_launch_info->arguments = story_shell_->args.Clone();
+  if (!story_shell_services_) {
+    FTL_LOG(WARNING) << "StoryShell Did NOT Preload. Loading...";
+    LoadStoryShell();
+  }
 
-  user_scope_->GetLauncher()->CreateApplication(
-      std::move(story_shell_launch_info), std::move(app_controller_request));
+  app::ApplicationControllerPtr controller = std::move(story_shell_controller_);
+  app::ServiceProviderPtr services = std::move(story_shell_services_);
 
-  mozart::ViewProviderPtr view_provider;
-  ConnectToService(story_shell_services.get(), view_provider.NewRequest());
+  std::unique_ptr<ViewOwnerProxy> view_proxy(new ViewOwnerProxy(
+      std::move(story_shell_view_), std::move(view_request),
+      [this](ViewOwnerProxy* const that) {
+        auto i = std::remove_if(story_shell_view_proxies_.begin(),
+                                story_shell_view_proxies_.end(),
+                                [that](std::unique_ptr<ViewOwnerProxy>& p) {
+                                  return that == p.get();
+                                });
+        FTL_DCHECK(i != story_shell_view_proxies_.end());
+        story_shell_view_proxies_.erase(i, story_shell_view_proxies_.end());
+      }));
+  story_shell_view_proxies_.push_back(std::move(view_proxy));
 
   StoryShellFactoryPtr story_shell_factory;
-  ConnectToService(story_shell_services.get(),
-                   story_shell_factory.NewRequest());
-
-  view_provider->CreateView(std::move(view_request), nullptr);
+  ConnectToService(services.get(), story_shell_factory.NewRequest());
 
   story_shell_factory->Create(std::move(story_context),
                               std::move(story_shell_request));
+
+  // Kick off another StoryShell, to make it faster for next story
+  LoadStoryShell();
+
+  return controller;
+}
+
+void StoryProviderImpl::LoadStoryShell() {
+  auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
+  story_shell_launch_info->services = story_shell_services_.NewRequest();
+  story_shell_launch_info->url = story_shell_->url;
+  story_shell_launch_info->arguments = story_shell_->args.Clone();
+  user_scope_->GetLauncher()->CreateApplication(
+      std::move(story_shell_launch_info), story_shell_controller_.NewRequest());
+  mozart::ViewProviderPtr view_provider;
+  ConnectToService(story_shell_services_.get(), view_provider.NewRequest());
+  // CreateView must be called in order to get the Flutter application to run
+  view_provider->CreateView(story_shell_view_.NewRequest(), nullptr);
 }
 
 void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,

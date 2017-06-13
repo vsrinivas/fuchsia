@@ -24,6 +24,7 @@
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/context_handler.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -74,9 +75,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   const AppConfig& story_shell() const { return *story_shell_; }
 
   // Called by StoryImpl.
-  void StartStoryShell(
+  // Returns a ApplicationControllerPtr rather than taking an interface request
+  // as an argument because the we preload the application.
+  app::ApplicationControllerPtr StartStoryShell(
       fidl::InterfaceHandle<StoryContext> story_context,
-      fidl::InterfaceRequest<app::ApplicationController> app_controller_request,
       fidl::InterfaceRequest<StoryShell> story_shell_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_request);
 
@@ -148,6 +150,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   StoryContextLogPtr MakeLogEntry(const StorySignal signal);
 
+  void LoadStoryShell();
+
   Scope* const user_scope_;
 
   // Unique ID generated for this user/device combination.
@@ -161,7 +165,15 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // The bindings for this instance.
   fidl::BindingSet<StoryProvider> bindings_;
 
+  // Used to preload story shell before it is requested.
   AppConfigPtr story_shell_;
+  app::ApplicationControllerPtr story_shell_controller_;
+  app::ServiceProviderPtr story_shell_services_;
+  mozart::ViewOwnerPtr story_shell_view_;
+
+  // The story shell view proxies for running story shells.
+  class ViewOwnerProxy;
+  std::vector<std::unique_ptr<ViewOwnerProxy>> story_shell_view_proxies_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
