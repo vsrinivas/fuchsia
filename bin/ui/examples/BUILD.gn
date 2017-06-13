@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("examples") {
-  deps = [
+  public_deps = [
     "basic_wm",
     "hello_compositor",
     "hello_material",

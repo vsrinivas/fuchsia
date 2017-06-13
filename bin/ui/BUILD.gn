@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
 import("config.gni")
 
 config("vulkan_config") {
@@ -10,8 +11,8 @@ config("vulkan_config") {
   }
 }
 
-group("mozart") {
-  deps = [
+group("all") {
+  public_deps = [
     ":tests",
     "examples",
     "lib/input",
@@ -27,11 +28,118 @@ group("mozart") {
 group("tests") {
   testonly = true
 
-  deps = [
+  public_deps = [
     "services/composition/cpp:apptests",
     "services/geometry/cpp:apptests",
     "src/input_reader/tests",
     "src/view_manager/tests",
     "src/scene:tests",
+  ]
+}
+
+package("mozart") {
+  testonly = true
+  app = true
+
+  deps = [
+    ":all",
+  ]
+
+  binaries = [
+    {
+      name = "compositor_service"
+    },
+    {
+      name = "scene_manager_service"
+    },
+    {
+      name = "hello_scene_manager"
+    },
+    {
+      name = "vkcube_mozart"
+    },
+    {
+      name = "hello_scene_manager_service"
+    },
+    {
+      name = "hello_compositor"
+    },
+    {
+      name = "gen/apps/mozart/examples/hello_material/hello_material.flx"
+    },
+    {
+      name = "ime_service"
+    },
+    {
+      name = "input"
+    },
+    {
+      name = "gen/apps/mozart/examples/basic_wm/basic_wm.flx"
+    },
+    {
+      name = "jank_view"
+    },
+    {
+      name = "launch"
+    },
+    {
+      name = "noodles_view"
+    },
+    {
+      name = "paint_view"
+    },
+    {
+      name = "print_input"
+    },
+    {
+      name = "root_presenter"
+    },
+    {
+      name = "screencap"
+    },
+    {
+      name = "shapes_view"
+    },
+    {
+      name = "spinning_square_view"
+    },
+    {
+      name = "tile_view"
+    },
+    {
+      name = "view_manager_service"
+    },
+  ]
+
+  tests = [
+    {
+      name = "compositor_services_apptests"
+    },
+    {
+      name = "scene_manager_apptests"
+    },
+    {
+      name = "scene_manager_unittests"
+    },
+    {
+      name = "geometry_util_unittests"
+    },
+    {
+      name = "input_apptests"
+    },
+    {
+      name = "view_manager_apptests"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("src/root_presenter/resources/cursor32.png")
+      dest = "root_presenter/cursor32.png"
+    },
+    {
+      path = rebase_path("src/compositor/compositor.config")
+      dest = "compositor/compositor.config"
+    },
   ]
 }

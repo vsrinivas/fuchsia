@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 group("src") {
-  deps = [
+  testonly = true
+
+  public_deps = [
     "compositor",
     "ime",
     "input",

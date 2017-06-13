@@ -5,7 +5,7 @@
 group("tests") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":view_manager_apptests",
   ]
 }

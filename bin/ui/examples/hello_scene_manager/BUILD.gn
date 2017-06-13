@@ -2,13 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("hello_scene_manager") {
+group("hello_scene_manager") {
+  public_deps = [
+    ":manager",
+    ":service",
+  ]
+}
+
+executable("manager") {
+  output_name = "hello_scene_manager"
+
   sources = [
     "app.cc",
   ]
 
   deps = [
-    ":hello_scene_manager_service",
     "//application/lib/app",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
@@ -20,7 +28,9 @@ executable("hello_scene_manager") {
   ]
 }
 
-executable("hello_scene_manager_service") {
+executable("service") {
+  output_name = "hello_scene_manager_service"
+
   sources = [
     "service.cc",
   ]

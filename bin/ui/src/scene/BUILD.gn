@@ -5,8 +5,12 @@
 import("//apps/mozart/config.gni")
 
 group("scene") {
-  deps = [
+  testonly = true
+
+  public_deps = [
     ":scene_manager_service",
+    ":apptests",
+    ":unittests",
   ]
 }
 
