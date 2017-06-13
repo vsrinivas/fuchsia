@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
 
   status =
       mx_object_wait_one(handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     reporter.Finish(true, "Failed to wait for exit");
     return 1;
   }
