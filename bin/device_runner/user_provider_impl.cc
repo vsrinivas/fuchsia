@@ -94,7 +94,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     size_t random_size;
     mx_status_t status =
         mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
     FTL_CHECK(sizeof random_number == random_size);
 
     auto random_id = std::to_string(random_number);
@@ -134,7 +134,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     size_t random_size;
     mx_status_t status =
         mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
     FTL_CHECK(sizeof random_number == random_size);
 
     ledger_repository_path +=

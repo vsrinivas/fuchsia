@@ -701,7 +701,7 @@ std::string OAuthTokenManagerApp::GenerateAccountId() {
   size_t random_size;
   mx_status_t status =
       mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-  FTL_CHECK(status == NO_ERROR);
+  FTL_CHECK(status == MX_OK);
   FTL_CHECK(sizeof random_number == random_size);
   return std::to_string(random_number);
 }
