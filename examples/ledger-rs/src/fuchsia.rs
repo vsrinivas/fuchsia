@@ -3,11 +3,13 @@ use mxruntime::{get_service_root, connect_to_environment_service};
 use magenta::{Channel, ChannelOpts, HandleBase};
 use application_services_service_provider::*;
 use application_services::*;
+#[cfg(target_arch = "x86_64")]
 use std::panic;
 
 /// Produces a proper backtrace on panic by triggering a software breakpoint
 /// with a special value in a register that causes it to print a backtrace and
 /// then resume execution, which then runs the old panic handler.
+#[cfg(target_arch = "x86_64")]
 pub fn install_panic_backtrace_hook() {
     let old_hook = panic::take_hook();
     panic::set_hook(Box::new(move |arg| {
@@ -18,6 +20,9 @@ pub fn install_panic_backtrace_hook() {
         old_hook(arg)
     }));
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+pub fn install_panic_backtrace_hook() {}
 
 pub struct ApplicationContext {
     pub environment: ApplicationEnvironment_Proxy,
