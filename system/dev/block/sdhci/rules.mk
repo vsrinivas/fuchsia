@@ -8,11 +8,11 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/emmc.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/sdhci.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/bcm
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
-MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta
+MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c system/ulib/mxio
 
 include make/module.mk

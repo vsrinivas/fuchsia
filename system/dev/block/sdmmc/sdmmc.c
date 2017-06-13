@@ -312,6 +312,7 @@ static block_protocol_ops_t sdmmc_block_ops = {
 };
 
 static int sdmmc_bootstrap_thread(void* arg) {
+    xprintf("sdmmc: bootstrap\n");
     mx_device_t* dev = arg;
 
     mx_status_t st;
