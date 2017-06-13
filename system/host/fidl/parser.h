@@ -51,6 +51,7 @@ private:
     bool MaybeConsumeToken(Token::Kind kind) {
         if (Peek() == kind) {
             auto token = Consume();
+            static_cast<void>(token);
             assert(token.kind() == kind);
             return true;
         } else {
