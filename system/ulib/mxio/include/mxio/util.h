@@ -81,4 +81,14 @@ mx_status_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle
 // or MX_HANDLE_INVALID.
 mx_handle_t mxio_service_clone(mx_handle_t h);
 
+// Attempt to connect to a service that speaks MXIO_PROTOCOL_REMOTE and return
+// the result as a file descriptor. Useful, for example, for connecting to a
+// remote directory.
+mx_status_t mxio_remote_connect(const char* path, int* fd);
+
+// Attempt to connect to a service that speaks MXIO_PROTOCOL_REMOTE relative to
+// a direcotry and return the result as a file descriptor. Useful, for example,
+// for connecting to a remote directory.
+mx_status_t mxio_remote_connect_at(mx_handle_t dir, const char* path, int* fd);
+
 __END_CDECLS
