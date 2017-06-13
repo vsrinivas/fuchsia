@@ -19,11 +19,11 @@ Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
                                            const mx::socket& socket) {
   size_t offset = 0;
   while (offset < len) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     size_t actual = 0;
     if ((status = socket.write(0u, buffer + offset, len - offset, &actual)) <
         0) {
-      if (status == ERR_SHOULD_WAIT) {
+      if (status == MX_ERR_SHOULD_WAIT) {
         mx_signals_t pending = 0;
         status = socket.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending);
@@ -75,7 +75,7 @@ bool Tracee::Start(size_t buffer_size,
 
   mx::vmo buffer_vmo;
   mx_status_t status = mx::vmo::create(buffer_size, 0u, &buffer_vmo);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create trace buffer: status=" << status;
     return false;
   }
@@ -85,7 +85,7 @@ bool Tracee::Start(size_t buffer_size,
       buffer_vmo.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                                MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP,
                            &buffer_vmo_for_provider);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to duplicate trace buffer for provider: status="
                    << status;
     return false;
@@ -93,7 +93,7 @@ bool Tracee::Start(size_t buffer_size,
 
   mx::eventpair fence, fence_for_provider;
   status = mx::eventpair::create(0u, &fence, &fence_for_provider);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create trace buffer fence: status=" << status;
     return false;
   }
@@ -158,7 +158,7 @@ void Tracee::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(error == ERR_BAD_STATE);
+  FTL_DCHECK(error == MX_ERR_BAD_STATE);
   FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
              state_ == State::kStopping);
   TransitionToState(State::kStopped);
@@ -180,7 +180,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
 
   size_t actual = 0;
   if ((buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_, &actual) !=
-       NO_ERROR) ||
+       MX_OK) ||
       (actual != buffer_vmo_size_)) {
     FTL_LOG(WARNING) << "Failed to read data from buffer_vmo: "
                      << "actual size=" << actual

@@ -19,7 +19,7 @@ LogImporter::~LogImporter() {
 void LogImporter::Start() {
   FTL_DCHECK(!is_running());
   mx::log log_handle;
-  if (mx::log::create(&log_handle, 0) != NO_ERROR) {
+  if (mx::log::create(&log_handle, 0) != MX_OK) {
     FTL_LOG(ERROR) << "Failed to open kernel log";
     return;
   }
@@ -38,12 +38,12 @@ void LogImporter::Start() {
     for (;;) {
       mx_status_t status =
           mx_log_read(log_handle.get(), MX_LOG_RECORD_MAX, log_record, 0);
-      if (status == ERR_SHOULD_WAIT) {
+      if (status == MX_ERR_SHOULD_WAIT) {
         mx_object_wait_one(log_handle.get(), MX_LOG_READABLE, MX_TIME_INFINITE,
                            nullptr);
         continue;
       }
-      if (status != NO_ERROR) {
+      if (status != MX_OK) {
         break;
       }
       if (log_record->timestamp < start_timestamp)

@@ -348,7 +348,7 @@ TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
   mx_info_handle_basic_t info;
   mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
                                           sizeof(info), nullptr, nullptr);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return Payload(nullptr);
 
   return WriteKernelObjectRecordBase(
@@ -449,7 +449,7 @@ void TraceEngine::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void TraceEngine::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(error == ERR_BAD_STATE);
+  FTL_DCHECK(error == MX_ERR_BAD_STATE);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }

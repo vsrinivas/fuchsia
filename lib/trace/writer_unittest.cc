@@ -28,8 +28,8 @@ struct WriterTest : public ::testing::Test {
   WriterTest() {
     mx::vmo buffer;
     mx::eventpair fence;
-    assert(NO_ERROR == mx::vmo::create(100000, 0u, &buffer));
-    assert(NO_ERROR == mx::eventpair::create(0u, &fence, &control_));
+    assert(MX_OK == mx::vmo::create(100000, 0u, &buffer));
+    assert(MX_OK == mx::eventpair::create(0u, &fence, &control_));
     StartTracing(std::move(buffer), std::move(fence), {"cat"},
                  [this](TraceDisposition disposition) { loop_.QuitNow(); });
   }

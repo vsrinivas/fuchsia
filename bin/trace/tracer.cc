@@ -42,7 +42,7 @@ void Tracer::Start(TraceOptionsPtr options,
 
   mx::socket outgoing_socket;
   mx_status_t status = mx::socket::create(0u, &socket_, &outgoing_socket);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create socket: status=" << status;
     Done();
     return;
@@ -84,11 +84,11 @@ void Tracer::DrainSocket() {
     mx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
                      buffer_.capacity() - buffer_end_, &actual);
-    if (status == ERR_SHOULD_WAIT)
+    if (status == MX_ERR_SHOULD_WAIT)
       return;
 
     if (status || actual == 0) {
-      if (status != ERR_PEER_CLOSED) {
+      if (status != MX_ERR_PEER_CLOSED) {
         FTL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
       }
       Done();

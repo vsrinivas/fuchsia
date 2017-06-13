@@ -49,7 +49,7 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
 
   mx::socket incoming, outgoing;
   mx_status_t status = mx::socket::create(0u, &incoming, &outgoing);
-  FTL_CHECK(status == NO_ERROR);
+  FTL_CHECK(status == MX_OK);
 
   trace_controller()->DumpProvider(provider_id, std::move(outgoing));
 
@@ -59,19 +59,19 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
     status = incoming.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                mx::deadline_after(kReadTimeout.ToNanoseconds()),
                                &pending);
-    if (status == ERR_TIMED_OUT) {
+    if (status == MX_ERR_TIMED_OUT) {
       err() << "Timed out after " << kReadTimeout.ToSecondsF()
             << " seconds waiting for provider to write data" << std::endl;
       break;
     }
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
 
     if (!(pending & MX_SOCKET_READABLE))
       break;  // done reading
 
     size_t actual;
     status = incoming.read(0u, buffer.data(), buffer.size(), &actual);
-    FTL_CHECK(status == NO_ERROR);
+    FTL_CHECK(status == MX_OK);
 
     out().write(reinterpret_cast<const char*>(buffer.data()), actual);
     if (out().bad())

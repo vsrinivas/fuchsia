@@ -15,12 +15,12 @@ Dump::~Dump() {
   // to copy to a string just to interoperate with iostreams.  Should also
   // write in chunks if the output is too big for the socket's buffer.
   std::string content = out_.str();
-  mx_status_t status = NO_ERROR;
+  mx_status_t status = MX_OK;
   for (size_t offset = 0u; offset < content.size();) {
     size_t actual;
     mx_status_t status = socket_.write(0u, content.data() + offset,
                                        content.size() - offset, &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
       break;
 
     offset += actual;
@@ -28,11 +28,11 @@ Dump::~Dump() {
     mx_signals_t pending;
     status = socket_.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                               MX_TIME_INFINITE, &pending);
-    if (status != NO_ERROR || !(pending & MX_SOCKET_WRITABLE))
+    if (status != MX_OK || !(pending & MX_SOCKET_WRITABLE))
       break;
   }
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(WARNING) << "Failed to write entire dump to socket: status="
                      << status;
   }
