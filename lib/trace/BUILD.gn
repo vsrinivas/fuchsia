@@ -46,6 +46,7 @@ source_set("trace") {
 
   public_deps = [
     ":types",
+    "//application/lib/app",
     "//magenta/system/ulib/mx",
   ]
 }
