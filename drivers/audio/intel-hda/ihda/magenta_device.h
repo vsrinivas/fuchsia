@@ -40,10 +40,10 @@ protected:
     template <typename ReqType, typename RespType>
     mx_status_t CallDevice(const ReqType& req, RespType* resp, uint64_t timeout_msec = 100) {
         if (!resp)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
 
         mx_status_t res = Connect();
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
 
         mx_channel_call_args_t args;

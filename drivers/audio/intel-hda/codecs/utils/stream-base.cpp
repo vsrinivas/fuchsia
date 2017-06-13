@@ -59,7 +59,7 @@ mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&&
 
     mxtl::AutoLock obj_lock(&obj_lock_);
     if (is_active() || (codec_channel_ != nullptr))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(parent_codec_ == nullptr);
 
@@ -80,7 +80,7 @@ mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&&
     // Allow our implementation to send its initial stream setup commands to the
     // codec.
     mx_status_t res = OnActivateLocked();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Request a DMA context
@@ -91,11 +91,11 @@ mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&&
     req.input  = is_input();
 
     res = codec_channel_->Write(&req, sizeof(req));
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     cleanup.cancel();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void IntelHDAStreamBase::Deactivate() {
@@ -160,7 +160,7 @@ void IntelHDAStreamBase::Deactivate() {
 }
 
 mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
-    if (!is_active() || (parent_device_ != nullptr)) return ERR_BAD_STATE;
+    if (!is_active() || (parent_device_ != nullptr)) return MX_ERR_BAD_STATE;
     MX_DEBUG_ASSERT(parent_codec_ != nullptr);
 
     // Initialize our device and fill out the protocol hooks
@@ -173,7 +173,7 @@ mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
 
     // Publish the device.
     mx_status_t res = device_add(parent_codec_->codec_device(), &args, &stream_device_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
         return res;
     }
@@ -181,7 +181,7 @@ mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
     // Record our parent.
     parent_device_ = parent_codec_->codec_device();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAStreamBase::ProcessResponse(const CodecResponse& resp) {
@@ -190,7 +190,7 @@ mx_status_t IntelHDAStreamBase::ProcessResponse(const CodecResponse& resp) {
     if (!is_active()) {
         DEBUG_LOG("Ignoring codec response (0x%08x, 0x%08x) for inactive stream id %u\n",
                 resp.data, resp.data_ex, id());
-        return NO_ERROR;
+        return MX_OK;
     }
 
     return resp.unsolicited()
@@ -202,10 +202,10 @@ mx_status_t IntelHDAStreamBase::ProcessRequestStream(const ihda_proto::RequestSt
     mxtl::AutoLock obj_lock(&obj_lock_);
     mx_status_t res;
 
-    if (!is_active()) return ERR_BAD_STATE;
+    if (!is_active()) return MX_ERR_BAD_STATE;
 
     res = SetDMAStreamLocked(resp.stream_id, resp.stream_tag);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         // TODO(johngro) : If we failed to set the DMA info because this stream
         // is in the process of shutting down, we really should return the
         // stream to the controller.
@@ -229,10 +229,10 @@ mx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
 
     mxtl::AutoLock obj_lock(&obj_lock_);
     audio2_proto::StreamSetFmtResp resp;
-    mx_status_t res = NO_ERROR;
+    mx_status_t res = MX_OK;
 
     // Are we shutting down?
-    if (!is_active()) return ERR_BAD_STATE;
+    if (!is_active()) return MX_ERR_BAD_STATE;
 
     // If we don't have a set format operation in flight, or the stream channel
     // has been closed, this set format operation has been canceled.  Do not
@@ -245,7 +245,7 @@ mx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     // Let the implementation send the commands required to finish changing the
     // stream format.
     res = FinishChangeStreamFormatLocked(encoded_fmt_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Failed to finish set format (enc fmt 0x%04hx res %d)\n", encoded_fmt_, res);
         goto finished;
     }
@@ -253,13 +253,13 @@ mx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     // Respond to the caller, transferring the DMA handle back in the process.
     resp.hdr.cmd = AUDIO2_STREAM_CMD_SET_FORMAT;
     resp.hdr.transaction_id = set_format_tid_;
-    resp.result = NO_ERROR;
+    resp.result = MX_OK;
     res = stream_channel_->Write(&resp, sizeof(resp), mxtl::move(ring_buffer_channel));
 
 finished:
     // Something went fatally wrong when trying to send the result back to the
     // caller.  Close the stream channel.
-    if ((res != NO_ERROR) && (stream_channel_ != nullptr)) {
+    if ((res != MX_OK) && (stream_channel_ != nullptr)) {
         OnChannelDeactivateLocked(*stream_channel_);
         stream_channel_->Deactivate(false);
         stream_channel_ = nullptr;
@@ -269,7 +269,7 @@ finished:
     // the in-flight transaction ID
     set_format_tid_ = AUDIO2_INVALID_TRANSACTION_ID;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // TODO(johngro) : Refactor this; this sample_format of parameters is 95% the same
@@ -277,7 +277,7 @@ finished:
 mx_status_t IntelHDAStreamBase::SendCodecCommandLocked(uint16_t  nid,
                                                        CodecVerb verb,
                                                        Ack       do_ack) {
-    if (codec_channel_ == nullptr) return ERR_BAD_STATE;
+    if (codec_channel_ == nullptr) return MX_ERR_BAD_STATE;
 
     ihda_codec_send_corb_cmd_req_t cmd;
 
@@ -291,18 +291,18 @@ mx_status_t IntelHDAStreamBase::SendCodecCommandLocked(uint16_t  nid,
 
 mx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
     if ((id == IHDA_INVALID_STREAM_ID) || (tag == IHDA_INVALID_STREAM_TAG))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     MX_DEBUG_ASSERT((dma_stream_id_  == IHDA_INVALID_STREAM_ID) ==
                  (dma_stream_tag_ == IHDA_INVALID_STREAM_TAG));
 
     if (dma_stream_id_ != IHDA_INVALID_STREAM_ID)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     dma_stream_id_  = id;
     dma_stream_tag_ = tag;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
@@ -313,19 +313,19 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
                                             size_t* out_actual) {
     // The only IOCTL we support is get channel.
     if (op != AUDIO2_IOCTL_GET_CHANNEL) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     if ((out_buf == nullptr) ||
         (out_actual == nullptr) ||
         (out_len != sizeof(mx_handle_t))) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mxtl::AutoLock obj_lock(&obj_lock_);
 
     // Do not allow any new connections if we are in the process of shutting down
     if (!is_active())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // For now, block new connections if we currently have no privileged
     // connection, but there is a SetFormat request in flight to the codec
@@ -347,7 +347,7 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     // portion is used for requests like this.
     uintptr_t ctx = (stream_channel_ == nullptr) ? PRIVILEGED_CONNECTION_CTX : 0;
     if (ctx && (set_format_tid_ != AUDIO2_INVALID_TRANSACTION_ID))
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     // Attempt to allocate a new driver channel and bind it to us.  If we don't
     // already have a stream_channel_, flag this channel is the privileged
@@ -355,11 +355,11 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     // formats).
     auto channel = DispatcherChannelAllocator::New(ctx);
     if (channel == nullptr)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx::channel client_endpoint;
     mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &client_endpoint);
-    if (res == NO_ERROR) {
+    if (res == MX_OK) {
         if (ctx) {
             MX_DEBUG_ASSERT(stream_channel_ == nullptr);
             stream_channel_ = channel;
@@ -381,7 +381,7 @@ mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
 
     // Check to make sure that this channel is permitted to change formats.
     if (!channel->owner_ctx()) {
-        res = ERR_ACCESS_DENIED;
+        res = MX_ERR_ACCESS_DENIED;
         goto send_fail_response;
     }
 
@@ -389,13 +389,13 @@ mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
     // format operation in flight, we cannot proceed.
     if ((dma_stream_id_  == IHDA_INVALID_STREAM_ID) ||
         (set_format_tid_ != AUDIO2_INVALID_TRANSACTION_ID)) {
-        res = ERR_BAD_STATE;
+        res = MX_ERR_BAD_STATE;
         goto send_fail_response;
     }
 
     // If we cannot encode this stream format, then we definitely do not support it.
     res = EncodeStreamFormat(fmt, &encoded_fmt);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Failed to encode stream format %u:%hu:%s (res %d)\n",
                   fmt.frames_per_second,
                   fmt.channels,
@@ -408,7 +408,7 @@ mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
     // it a chance to check the format for compatibility, and send commands to
     // quiesce the converters and amplifiers if it approves of the format.
     res = BeginChangeStreamFormatLocked(fmt);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Stream impl rejected stream format %u:%hu:%s (res %d)\n",
                   fmt.frames_per_second,
                   fmt.channels,
@@ -428,7 +428,7 @@ mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
     req.stream_id = dma_stream_id_;
     req.format = encoded_fmt;
     res = codec_channel_->Write(&req, sizeof(req));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Failed to write set stream format %u:%hu:%s to codec channel (res %d)\n",
                   fmt.frames_per_second,
                   fmt.channels,
@@ -442,7 +442,7 @@ mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
     // response back to the caller.
     set_format_tid_ = fmt.hdr.transaction_id;
     encoded_fmt_    = encoded_fmt;
-    return NO_ERROR;
+    return MX_OK;
 
 send_fail_response:
     audio2_proto::StreamSetFmtResp resp;
@@ -451,7 +451,7 @@ send_fail_response:
 
     MX_DEBUG_ASSERT(channel != nullptr);
     res = channel->Write(&resp, sizeof(resp));
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         DEBUG_LOG("Failing to write %zu bytes in response (res %d)\n", sizeof(resp), res);
     return res;
 }
@@ -472,7 +472,7 @@ mx_status_t IntelHDAStreamBase::DoSetGainLocked(DispatcherChannel* channel,
                                                 const audio2_proto::SetGainReq& req) {
     if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK) {
         OnSetGainLocked(req, nullptr);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Fill out the response header, then let the stream implementation fill out
@@ -489,7 +489,7 @@ mx_status_t IntelHDAStreamBase::DoPlugDetectLocked(DispatcherChannel* channel,
                                                    const audio2_proto::PlugDetectReq& req) {
     if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK) {
         OnPlugDetectLocked(channel, req, nullptr);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Fill out the response header, then let the stream implementation fill out
@@ -508,11 +508,11 @@ case _ioctl:                                                    \
         DEBUG_LOG("Bad " #_ioctl                                \
                   " response length (%u != %zu)\n",             \
                   req_size, sizeof(req._payload));              \
-        return ERR_INVALID_ARGS;                                \
+        return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
     if (!_allow_noack && (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)) {  \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
-        return ERR_INVALID_ARGS;                                \
+        return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
     return _handler(channel, req._payload);
 mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
@@ -523,7 +523,7 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     // of shutting down, there is nothing further we can do.  Fail the request
     // and close the connection to the caller.
     if (!is_active() || (codec_channel_ == nullptr))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     union {
         audio2_proto::CmdHdr          hdr;
@@ -539,12 +539,12 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
 
     uint32_t req_size;
     mx_status_t res = channel->Read(&req, sizeof(req), &req_size);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     if ((req_size < sizeof(req.hdr) ||
         (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
@@ -555,7 +555,7 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
         HANDLE_REQ(AUDIO2_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked,      true);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
     }
 }
 #undef HANDLE_REQ
@@ -575,10 +575,10 @@ void IntelHDAStreamBase::NotifyChannelDeactivated(const DispatcherChannel& chann
 
 mx_status_t IntelHDAStreamBase::AllocateUnsolTagLocked(uint8_t* out_tag) {
     if (!parent_codec_)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mx_status_t res = parent_codec_->AllocateUnsolTag(*this, out_tag);
-    if (res == NO_ERROR)
+    if (res == MX_OK)
         unsol_tag_count_++;
 
     return res;
@@ -603,7 +603,7 @@ mx_status_t IntelHDAStreamBase::EncodeStreamFormat(const audio2_proto::StreamSet
     // and 16 channels.
     uint32_t channels = fmt.channels - 1;
     if ((fmt.channels < 1) || (fmt.channels > 16))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Next determine the bit sample_format format
     uint32_t bits;
@@ -614,7 +614,7 @@ mx_status_t IntelHDAStreamBase::EncodeStreamFormat(const audio2_proto::StreamSet
     case AUDIO2_SAMPLE_FORMAT_24BIT_IN32:  bits = 3; break;
     case AUDIO2_SAMPLE_FORMAT_32BIT:
     case AUDIO2_SAMPLE_FORMAT_32BIT_FLOAT: bits = 4; break;
-    default: return ERR_NOT_SUPPORTED;
+    default: return MX_ERR_NOT_SUPPORTED;
     }
 
     // Finally, determine the base frame rate, as well as the multiplier and
@@ -645,11 +645,11 @@ mx_status_t IntelHDAStreamBase::EncodeStreamFormat(const audio2_proto::StreamSet
     for (const auto& r : RATE_ENCODINGS) {
         if (r.rate == fmt.frames_per_second) {
             *encoded_fmt_out = static_cast<uint16_t>(r.encoded | channels | (bits << 4));
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 #undef MAKE_RATE
 
@@ -659,7 +659,7 @@ mx_status_t IntelHDAStreamBase::EncodeStreamFormat(const audio2_proto::StreamSet
 //
 /////////////////////////////////////////////////////////////////////
 mx_status_t IntelHDAStreamBase::OnActivateLocked() {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void IntelHDAStreamBase::OnDeactivateLocked() { }
@@ -670,20 +670,20 @@ mx_status_t IntelHDAStreamBase::OnDMAAssignedLocked() {
 }
 
 mx_status_t IntelHDAStreamBase::OnSolicitedResponseLocked(const CodecResponse& resp) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAStreamBase::OnUnsolicitedResponseLocked(const CodecResponse& resp) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAStreamBase::BeginChangeStreamFormatLocked(
         const audio2_proto::StreamSetFmtReq& fmt) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t IntelHDAStreamBase::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
-    return ERR_INTERNAL;
+    return MX_ERR_INTERNAL;
 }
 
 void IntelHDAStreamBase::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
@@ -713,8 +713,8 @@ void IntelHDAStreamBase::OnSetGainLocked(const audio2_proto::SetGainReq& req,
     out_resp->cur_mute = false;
     out_resp->cur_gain = 0.0;
     out_resp->result   = (illegal_mute || illegal_gain)
-                       ? ERR_INVALID_ARGS
-                       : NO_ERROR;
+                       ? MX_ERR_INVALID_ARGS
+                       : MX_OK;
 }
 
 void IntelHDAStreamBase::OnPlugDetectLocked(DispatcherChannel* response_channel,

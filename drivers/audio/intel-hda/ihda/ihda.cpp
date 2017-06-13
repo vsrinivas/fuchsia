@@ -52,13 +52,13 @@ int main(int argc, const char** argv) {
         goto usage;
 
     res = IntelHDAController::Enumerate();
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to enumerate controller devices (%d)\n", res);
         return res;
     }
 
     res = IntelHDACodec::Enumerate();
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to enumerate codec devices (%d)\n", res);
         return res;
     }
@@ -68,7 +68,7 @@ int main(int argc, const char** argv) {
         for (auto& controller : IntelHDAController::controllers()) {
             res = controller.Probe();
 
-            if (res != NO_ERROR) {
+            if (res != MX_OK) {
                 printf("Failed to probe controller at \"%s\" (res %d)\n",
                         controller.dev_name(), res);
                 return res;
@@ -89,7 +89,7 @@ int main(int argc, const char** argv) {
         for (auto& codec : IntelHDACodec::codecs()) {
             res = codec.Probe();
 
-            if (res != NO_ERROR) {
+            if (res != MX_OK) {
                 printf("Failed to probe codec at \"%s\" (res %d)\n",
                         codec.dev_name(), res);
                 return res;
@@ -122,7 +122,7 @@ int main(int argc, const char** argv) {
 
         if (!iter.IsValid()) {
             printf("Intel HDA controller not found!\n");
-            return ERR_NOT_FOUND;
+            return MX_ERR_NOT_FOUND;
         }
 
         arg++;
@@ -144,7 +144,7 @@ int main(int argc, const char** argv) {
 
         if (!iter.IsValid()) {
             printf("Intel HDA codec not found!\n");
-            return ERR_NOT_FOUND;
+            return MX_ERR_NOT_FOUND;
         }
 
         arg++;

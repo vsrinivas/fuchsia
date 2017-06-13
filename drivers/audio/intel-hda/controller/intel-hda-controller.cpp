@@ -208,7 +208,7 @@ mx_status_t IntelHDAController::DeviceRelease() {
     MX_DEBUG_ASSERT(GetState() == State::SHUT_DOWN);
     thiz.reset();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
@@ -220,14 +220,14 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     VERBOSE_LOG("Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
 
     if (rxed_handle.is_valid()) {
         DEBUG_LOG("Unexpected handle in client request 0x%04x\n", req.hdr.cmd);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     switch (req.hdr.cmd) {
@@ -235,7 +235,7 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
         if (req_size != sizeof(req.get_ids)) {
             DEBUG_LOG("Bad GET_IDS request length (%u != %zu)\n",
                     req_size, sizeof(req.get_ids));
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         MX_DEBUG_ASSERT(pci_dev_ != nullptr);
@@ -257,13 +257,13 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
         if (req_size != sizeof(req.snapshot_regs)) {
             DEBUG_LOG("Bad SNAPSHOT_REGS request length (%u != %zu)\n",
                     req_size, sizeof(req.snapshot_regs));
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         return SnapshotRegs(*channel, req.snapshot_regs);
 
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -272,20 +272,20 @@ mx_status_t IntelHDAController::DriverInit(void** out_ctx) {
     // pci_dev manager.  If this assumption ever needs to be relaxed, explicit
     // serialization will need to be added here.
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::DriverBind(void* ctx,
                                            mx_device_t* device,
                                            void** cookie) {
-    if (cookie == nullptr) return ERR_INVALID_ARGS;
+    if (cookie == nullptr) return MX_ERR_INVALID_ARGS;
 
     mxtl::RefPtr<IntelHDAController> controller(mxtl::AdoptRef(new IntelHDAController()));
 
     // If we successfully initialize, transfer our reference into the unmanaged
     // world.  We will re-claim it later when unbind is called.
     mx_status_t ret = controller->Init(device);
-    if (ret == NO_ERROR)
+    if (ret == MX_OK)
         *cookie = controller.leak_ref();
 
     return ret;

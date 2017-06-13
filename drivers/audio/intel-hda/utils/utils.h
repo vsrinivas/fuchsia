@@ -23,13 +23,13 @@ mx_status_t ConvertHandle(mx::handle* abstract_handle, T* concrete_handle) {
     if ((abstract_handle == nullptr) ||
         (concrete_handle == nullptr) ||
         !abstract_handle->is_valid())
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (GetHandleType(*abstract_handle) != T::TYPE)
-        return ERR_WRONG_TYPE;
+        return MX_ERR_WRONG_TYPE;
 
     concrete_handle->reset(abstract_handle->release());
-    return NO_ERROR;
+    return MX_OK;
 }
 
 }  // namespace intel_hda

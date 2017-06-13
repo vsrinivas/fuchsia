@@ -19,10 +19,10 @@ uint32_t MagentaDevice::transaction_id_ = 0;
 
 mx_status_t MagentaDevice::Connect() {
     if (dev_channel_ != MX_HANDLE_INVALID)
-        return NO_ERROR;
+        return MX_OK;
 
     if (!dev_name_)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     int fd = ::open(dev_name_, O_RDONLY);
     if (fd < 0)
@@ -38,7 +38,7 @@ mx_status_t MagentaDevice::Connect() {
         return static_cast<mx_status_t>(res);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void MagentaDevice::Disconnect() {
@@ -58,7 +58,7 @@ mx_status_t MagentaDevice::CallDevice(const mx_channel_call_args_t& args, uint64
     if (timeout_msec == MX_TIME_INFINITE) {
         deadline = MX_TIME_INFINITE;
     } else if (timeout_msec >= mxtl::numeric_limits<mx_time_t>::max() / MX_MSEC(1)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     } else {
         deadline = mx_deadline_after(MX_MSEC(timeout_msec));
     }
@@ -66,7 +66,7 @@ mx_status_t MagentaDevice::CallDevice(const mx_channel_call_args_t& args, uint64
     res = mx_channel_call(dev_channel_, 0, deadline,
                           &args, &resp_size, &resp_handles, &read_status);
 
-    return (res == ERR_CALL_FAILED) ? read_status : res;
+    return (res == MX_ERR_CALL_FAILED) ? read_status : res;
 }
 
 mx_status_t MagentaDevice::Enumerate(
@@ -78,11 +78,11 @@ mx_status_t MagentaDevice::Enumerate(
 
     struct dirent* de;
     DIR* dir = opendir(dev_path);
-    mx_status_t res = NO_ERROR;
+    mx_status_t res = MX_OK;
     char buf[FILENAME_SIZE];
 
     if (!dir)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     while ((de = readdir(dir)) != NULL) {
         uint32_t id;
@@ -93,7 +93,7 @@ mx_status_t MagentaDevice::Enumerate(
             total += snprintf(buf + total, sizeof(buf) - total, dev_fmt, id);
 
             mx_status_t res = cbk(ctx, id, buf);
-            if (res != NO_ERROR)
+            if (res != MX_OK)
                 goto done;
         }
     }

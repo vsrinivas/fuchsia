@@ -106,21 +106,21 @@ mx_status_t IntelHDAController::Enumerate() {
         mxtl::unique_ptr<IntelHDAController> dev(new IntelHDAController(id, dev_name));
 
         if (!controllers_.insert_or_find(mxtl::move(dev)))
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
 
-        return NO_ERROR;
+        return MX_OK;
     });
 
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
     mx_status_t res = Connect();
 
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     ihda_controller_snapshot_regs_req_t req;
@@ -128,7 +128,7 @@ mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
 
     InitRequest(&req, IHDA_CONTROLLER_CMD_SNAPSHOT_REGS);
     res = CallDevice(req, &resp);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     const auto  regs_ptr = reinterpret_cast<hda_registers_t*>(resp.snapshot);
@@ -181,7 +181,7 @@ mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
     ihda_dump_stream_regs("Output Stream", output_stream_cnt, sregs); sregs += output_stream_cnt;
     ihda_dump_stream_regs("Bi-dir Stream", bidir_stream_cnt,  sregs);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 }  // namespace audio

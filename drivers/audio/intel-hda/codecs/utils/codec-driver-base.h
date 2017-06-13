@@ -54,9 +54,9 @@ protected:
     // Send a codec command to our codec device.
     mx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
 
-    virtual mx_status_t Start() { return NO_ERROR; }
-    virtual mx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) { return NO_ERROR; }
-    virtual mx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) { return NO_ERROR; }
+    virtual mx_status_t Start() { return MX_OK; }
+    virtual mx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) { return MX_OK; }
+    virtual mx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) { return MX_OK; }
 
     // DispatcherChannel::Owner implementation
     mx_status_t ProcessChannel(DispatcherChannel* channel) final;

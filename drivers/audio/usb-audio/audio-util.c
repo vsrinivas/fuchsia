@@ -45,7 +45,7 @@ mx_status_t usb_audio_set_sample_rate(mx_device_t* usb_device, uint8_t ep_addr,
     if (result < 0) {
         return result;
     } else {
-        return NO_ERROR;
+        return MX_OK;
     }
 }
 
@@ -64,7 +64,7 @@ mx_status_t usb_audio_set_volume(mx_device_t* device, uint8_t interface_number, 
                          USB_AUDIO_GET_MAX, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
                          fu_id << 8, &volume_max, sizeof(volume_max));
     if (status != sizeof(volume_min)) return status;
-    if (volume_min >= volume_max) return ERR_INTERNAL;
+    if (volume_min >= volume_max) return MX_ERR_INTERNAL;
 
     // TODO (voydanoff) - maybe this should be logarithmic?
     uint16_t volume16 = volume_min + ((volume_max - volume_min) * volume) / 100;

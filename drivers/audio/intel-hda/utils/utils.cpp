@@ -19,7 +19,7 @@ mx_obj_type_t GetHandleType(const mx::handle& handle) {
                                       &basic_info, sizeof(basic_info),
                                       nullptr, nullptr);
 
-    return (res == NO_ERROR) ? static_cast<mx_obj_type_t>(basic_info.type) : MX_OBJ_TYPE_NONE;
+    return (res == MX_OK) ? static_cast<mx_obj_type_t>(basic_info.type) : MX_OBJ_TYPE_NONE;
 }
 
 }  // namespace intel_hda
