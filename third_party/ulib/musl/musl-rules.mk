@@ -267,7 +267,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/internal/floatscan.c \
     $(LOCAL_DIR)/src/internal/intscan.c \
     $(LOCAL_DIR)/src/internal/libc.c \
-    $(LOCAL_DIR)/src/internal/procfdname.c \
     $(LOCAL_DIR)/src/internal/shgetc.c \
     $(LOCAL_DIR)/src/ipc/ftok.c \
     $(LOCAL_DIR)/src/ipc/msgctl.c \
