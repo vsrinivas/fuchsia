@@ -21,4 +21,8 @@ source_set("svc") {
     "//magenta/system/ulib/mxtl",
     "//magenta/system/ulib/svcfs",
   ]
+
+  deps = [
+    "//lib/mtl",
+  ]
 }
