@@ -1,6 +1,5 @@
 {
     "imports": [
-        "cairo",
         "curl",
         "fonts",
         "libxml2",
