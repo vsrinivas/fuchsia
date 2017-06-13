@@ -8,6 +8,7 @@
 
 #include <cctype>
 #include <iostream>
+#include <queue>
 #include <string>
 #include <unordered_set>
 #include <vector>
