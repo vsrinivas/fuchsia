@@ -26,8 +26,6 @@
 #define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
 #define IO_APIC_PHYS_BASE                       0xfec00000
 #define IO_APIC_PHYS_TOP                        (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
-#define TPM_PHYS_BASE                           0xfed40000
-#define TPM_PHYS_TOP                            (TPM_PHYS_BASE + 0x5000 - 1)
 #define PCI_PHYS_BASE(bus, device, function)    (0xd0000000 + (((bus) << 20) | ((device) << 15) | ((function) << 12)))
 #define PCI_PHYS_TOP(bus, device, function)     (PCI_PHYS_BASE(bus, device, function) + 4095)
 
@@ -52,9 +50,6 @@
 #define IO_APIC_VERSION                         0x11
 #define FIRST_REDIRECT_OFFSET                   0x10
 #define LAST_REDIRECT_OFFSET                    (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
-
-/* TPM register addresses. */
-#define TPM_REGISTER_ACCESS                     0x00
 
 /* UART configuration flags. */
 #define UART_STATUS_IDLE                        (1u << 6)
@@ -330,23 +325,6 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t handle_tpm(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
-    MX_ASSERT(mem_trap->guest_paddr >= TPM_PHYS_BASE);
-    mx_vaddr_t offset = mem_trap->guest_paddr - TPM_PHYS_BASE;
-    switch (offset) {
-    case TPM_REGISTER_ACCESS:
-        if (inst->type != INST_MOV_READ)
-            return MX_ERR_NOT_SUPPORTED;
-        if (inst->mem != 1u)
-            return MX_ERR_BAD_STATE;
-        // Respond with all ones to signal an invalid access to device memory.
-        // This should effectively disable any TPM driver.
-        *inst->reg = UINT8_MAX;
-        return MX_OK;
-    }
-    return MX_ERR_NOT_SUPPORTED;
-}
-
 static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
                                      const mx_guest_mem_trap_t* mem_trap, instruction_t* inst,
                                      uint8_t device, uint16_t vendor_id, uint16_t device_id,
@@ -458,9 +436,6 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
             mtx_lock(&context->guest_state->mutex);
             status = handle_io_apic(&context->guest_state->io_apic_state, mem_trap, &inst);
             mtx_unlock(&context->guest_state->mutex);
-            break;
-        case TPM_PHYS_BASE ... TPM_PHYS_TOP:
-            status = handle_tpm(mem_trap, &inst);
             break;
         case PCI_PHYS_BASE(0, 0, 0) ... PCI_PHYS_TOP(0, 0, 0):
             mtx_lock(&context->guest_state->mutex);
