@@ -245,7 +245,7 @@ class AudioPlayerController {
     }
 
     int positionNanoseconds =
-        (position.inMicroseconds * 1000).round().clamp(0, _durationNanoseconds);
+        (position.inMicroseconds * 1000).round();
 
     _netMediaPlayer.seek(positionNanoseconds);
 
