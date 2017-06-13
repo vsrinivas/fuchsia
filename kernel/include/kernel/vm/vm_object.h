@@ -39,6 +39,9 @@ public:
 
     virtual uint64_t size() const { return 0; }
 
+    // Returns true if the object is backed by RAM.
+    virtual bool is_paged() const { return false; }
+
     // Returns the number of physical pages currently allocated to the
     // object where (offset <= page_offset < offset+len).
     // |offset| and |len| are in bytes.

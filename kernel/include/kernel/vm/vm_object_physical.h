@@ -26,6 +26,11 @@ class VmObjectPhysical final : public VmObject {
 public:
     static mxtl::RefPtr<VmObject> Create(paddr_t base, uint64_t size);
 
+    uint64_t size() const override
+        // TODO: Figure out whether it's safe to lock here without causing
+        // any deadlocks.
+        TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
+
     status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
                         size_t buffer_size) override;
 

@@ -36,6 +36,7 @@ public:
         // TODO: Figure out whether it's safe to lock here without causing
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
+    bool is_paged() const override { return true; }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
