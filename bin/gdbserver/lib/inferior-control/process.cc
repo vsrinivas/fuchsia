@@ -36,15 +36,15 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
 
   launchpad_t* lp = nullptr;
   mx_status_t status = launchpad_create(0u, name, &lp);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     goto fail;
 
   status = launchpad_set_args(lp, argv.size(), c_args);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     goto fail;
 
   status = launchpad_add_vdso_vmo(lp);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     goto fail;
 
   // Clone root, cwd, stdio, and environ.
@@ -65,13 +65,13 @@ bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
 
   mx_status_t status =
       launchpad_elf_load(lp, launchpad_vmo_from_file(binary_path.c_str()));
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
     return false;
   }
 
   status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Could not load vDSO: " << util::MxErrorString(status);
     return false;
   }
@@ -92,7 +92,7 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
   mx_status_t status =
       mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC, &info,
                          sizeof(info), nullptr, nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx_object_get_info_failed: "
                    << util::MxErrorString(status);
     return MX_KOID_INVALID;
@@ -107,7 +107,7 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   mx_handle_t handle = MX_HANDLE_INVALID;
   mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, pid,
                                            MX_RIGHT_SAME_RIGHTS, &handle);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx_object_get_child failed: "
                    << util::MxErrorString(status);
     return MX_HANDLE_INVALID;
@@ -116,7 +116,7 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   // TODO(armansito): Check that |handle| has MX_RIGHT_DEBUG (this seems
   // not to be set by anything at the moment but eventully we should check)?
 
-  // Syscalls shouldn't return MX_HANDLE_INVALID in the case of NO_ERROR.
+  // Syscalls shouldn't return MX_HANDLE_INVALID in the case of MX_OK.
   FTL_DCHECK(handle != MX_HANDLE_INVALID);
 
   FTL_VLOG(1) << "Handle " << handle << " obtained for process " << pid;
@@ -215,7 +215,7 @@ bool Process::Initialize() {
   FTL_DCHECK(id_ != MX_KOID_INVALID);
 
   status = launchpad_get_base_address(launchpad_, &base_address_);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR)
         << "Failed to obtain the dynamic linker base address for process: "
         << util::MxErrorString(status);
@@ -223,7 +223,7 @@ bool Process::Initialize() {
   }
 
   status = launchpad_get_entry_address(launchpad_, &entry_address_);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR)
         << "Failed to obtain the dynamic linker entry address for process: "
         << util::MxErrorString(status);
@@ -405,7 +405,7 @@ bool Process::Kill() {
 
   FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
   auto status = mx_task_kill(handle_);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to kill process: " << util::MxErrorString(status);
     return false;
   }
@@ -416,7 +416,7 @@ bool Process::Kill() {
   // If something goes wrong we don't want to wait forever.
   status = mx_object_wait_one(handle_, MX_TASK_TERMINATED,
                               mx_deadline_after(kill_timeout), &signals);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Error waiting for process to die, ignoring: "
                    << util::MxErrorString(status);
   } else {
@@ -517,7 +517,7 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   mx_handle_t thread_handle;
   mx_status_t status = mx_object_get_child(
       handle_, thread_id, MX_RIGHT_SAME_RIGHTS, &thread_handle);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
                    << util::MxErrorString(status);
     return nullptr;
@@ -547,7 +547,7 @@ bool Process::RefreshAllThreads() {
   mx_status_t status =
       mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
                          nullptr, &num_threads);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to get process thread info (#threads): "
                    << util::MxErrorString(status);
     return false;
@@ -558,7 +558,7 @@ bool Process::RefreshAllThreads() {
   size_t records_read;
   status = mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS,
                               koids.get(), buffer_size, &records_read, nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to get process thread info: "
                    << util::MxErrorString(status);
     return false;
@@ -572,7 +572,7 @@ bool Process::RefreshAllThreads() {
     mx_handle_t thread_handle = MX_HANDLE_INVALID;
     status = mx_object_get_child(handle_, thread_id, MX_RIGHT_SAME_RIGHTS,
                                  &thread_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
                      << util::MxErrorString(status);
       continue;
@@ -623,7 +623,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   mx_status_t status = mx_object_get_property(process_handle,
                                               MX_PROP_PROCESS_DEBUG_ADDR,
                                               &debug_addr, sizeof(debug_addr));
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "mx_object_get_property failed, unable to fetch dso list: "
 		   << util::MxErrorString(status);
     return;
@@ -736,7 +736,7 @@ int Process::ExitCode() {
   mx_info_process_t info;
   auto status = mx_object_get_info(handle(), MX_INFO_PROCESS, &info,
                                    sizeof(info), NULL, NULL);
-  if (status == NO_ERROR) {
+  if (status == MX_OK) {
     FTL_LOG(INFO) << "Process exited with code " << info.return_code;
     return info.return_code;
   } else {

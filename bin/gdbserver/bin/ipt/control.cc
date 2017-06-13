@@ -225,13 +225,13 @@ bool InitPerfPreProcess(const IptConfig& config) {
   if (config.mode == IPT_MODE_THREADS) {
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0,
                              nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "ktrace stop: " << util::MxErrorString(status);
     goto Fail;
   }
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_REWIND, 0,
                              nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "ktrace rewind: " << util::MxErrorString(status);
     goto Fail;
   }
@@ -250,7 +250,7 @@ bool InitPerfPreProcess(const IptConfig& config) {
   // for this, but that's a last resort kind of thing.
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
                              kKtraceGroupMask, nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "ktrace start: " << util::MxErrorString(status);
     goto Fail;
   }
@@ -310,7 +310,7 @@ bool StartThreadPerf(Thread* thread, const IptConfig& config) {
 
   status = mx_handle_duplicate(thread->handle(), MX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "duplicating thread handle: "
                    << util::MxErrorString(status);
     goto Fail;
@@ -364,7 +364,7 @@ void StopThreadPerf(Thread* thread, const IptConfig& config) {
 
   status = mx_handle_duplicate(thread->handle(), MX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "duplicating thread handle: "
                    << util::MxErrorString(status);
     goto Fail;
@@ -392,7 +392,7 @@ void StopPerf(const IptConfig& config) {
   // stopping ktrace here. It will get turned back on by "reset".
   mx_status_t status =
     mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     // TODO(dje): This shouldn't fail either, should it?
     FTL_LOG(ERROR) << "stop ktrace: " << util::MxErrorString(status);
   }
@@ -426,7 +426,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
     output_path = GetThreadPtFileName(config.output_path_prefix, id);
   const char* c_path = output_path.c_str();
 
-  mx_status_t status = NO_ERROR;
+  mx_status_t status = MX_OK;
 
   // Refetch the buffer config as we can be invoked in a separate process,
   // after tracing has started, and shouldn't rely on what the user thinks
@@ -455,7 +455,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
   if (!fd.is_valid()) {
     FTL_LOG(ERROR) << ftl::StringPrintf("unable to write file: %s", c_path)
                    << ", " << util::ErrnoString(errno);
-    return ERR_BAD_PATH;
+    return MX_ERR_BAD_PATH;
   }
 
   // TODO(dje): Fetch from vmo?
@@ -501,7 +501,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
       // TODO(dje): Mapping into process and reading directly from that
       // left for another day.
       status = vmo.read(buf, offset, to_write, &actual);
-      if (status != NO_ERROR) {
+      if (status != MX_OK) {
         FTL_LOG(ERROR) << ftl::StringPrintf(
                               "mx_vmo_read: buffer %u, buffer %u, offset %zu: ",
                               descriptor, i, offset)
@@ -510,7 +510,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
       }
       if (write(fd.get(), buf, to_write) != (ssize_t) to_write) {
         FTL_LOG(ERROR) << ftl::StringPrintf("short write, file: %s\n", c_path);
-        status = ERR_IO;
+        status = MX_ERR_IO;
         goto Fail;
       }
       offset += to_write;
@@ -520,7 +520,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
   }
 
   assert(bytes_left == 0);
-  status = NO_ERROR;
+  status = MX_OK;
   // fallthrough
 
  Fail:
@@ -543,7 +543,7 @@ void DumpCpuPerf(const IptConfig& config) {
   for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
     // Buffer descriptors for cpus is the cpu number.
     auto status = WriteBufferData(config, ipt_fd, cpu, cpu);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << ftl::StringPrintf("dump perf of cpu %u: ", cpu)
                      << util::MxErrorString(status);
       // Keep trying to dump other cpu's data.
@@ -571,7 +571,7 @@ void DumpThreadPerf(Thread* thread, const IptConfig& config) {
     return;
 
   auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(), id);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << ftl::StringPrintf("dump perf of thread %" PRIu64 ": ", id)
                    << util::MxErrorString(status);
   }

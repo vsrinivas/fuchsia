@@ -42,7 +42,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list,
   memset(dso->buildid, 'x', sizeof(dso->buildid) - 1);
   dso->base = base;
   dso->debug_file_tried = false;
-  dso->debug_file_status = ERR_BAD_STATE;
+  dso->debug_file_status = MX_ERR_BAD_STATE;
   while (*list != nullptr) {
     if ((*list)->base < dso->base) {
       dso->next = *list;
@@ -191,7 +191,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   // messages twice.
   if (dso->debug_file_tried) {
     switch (dso->debug_file_status) {
-      case NO_ERROR:
+      case MX_OK:
         FTL_DCHECK(dso->debug_file != nullptr);
         *out_debug_file = dso->debug_file;
       // fall through
@@ -208,7 +208,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) <
       0) {
     FTL_VLOG(1) << "OOM building debug file path for dso " << dso->name;
-    dso->debug_file_status = ERR_NO_MEMORY;
+    dso->debug_file_status = MX_ERR_NO_MEMORY;
     return dso->debug_file_status;
   }
 
@@ -218,13 +218,13 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   if (fd < 0) {
     FTL_VLOG(1) << "debug file for dso " << dso->name << " not found: " << path;
     free(path);
-    dso->debug_file_status = ERR_NOT_FOUND;
+    dso->debug_file_status = MX_ERR_NOT_FOUND;
   } else {
     FTL_VLOG(1) << "found debug file for dso " << dso->name << ": " << path;
     close(fd);
     dso->debug_file = path;
     *out_debug_file = path;
-    dso->debug_file_status = NO_ERROR;
+    dso->debug_file_status = MX_OK;
   }
 
   return dso->debug_file_status;

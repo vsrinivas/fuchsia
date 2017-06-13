@@ -29,7 +29,7 @@ bool ProcessMemory::Read(uintptr_t address,
   size_t bytes_read;
   mx_status_t status =
       mx_process_read_memory(handle, address, out_buffer, length, &bytes_read);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << ftl::StringPrintf(
                           "Failed to read memory at addr: %" PRIxPTR ": ",
                           address)
@@ -67,7 +67,7 @@ bool ProcessMemory::Write(uintptr_t address,
   size_t bytes_written;
   mx_status_t status =
       mx_process_write_memory(handle, address, buffer, length, &bytes_written);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << ftl::StringPrintf(
                           "Failed to write memory at addr: %" PRIxPTR ": ",
                           address)

@@ -175,11 +175,11 @@ void Thread::ResumeForExit() {
     auto info_status = mx_object_get_info(process()->handle(),
                                           MX_INFO_PROCESS, &info,
                                           sizeof(info), nullptr, nullptr);
-    if (info_status != NO_ERROR) {
+    if (info_status != MX_OK) {
       FTL_LOG(ERROR) << "error getting process info: "
                      << util::MxErrorString(info_status);
     }
-    if (info_status == NO_ERROR && info.exited) {
+    if (info_status == MX_OK && info.exited) {
       FTL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
       FTL_LOG(ERROR) << "Failed to resume thread for exit: "
