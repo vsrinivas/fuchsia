@@ -63,9 +63,9 @@ read_mem (mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len)
   {
     // TODO: Use %zd when MG-164 is fixed.
     Debug (3, "read_mem @0x%" PRIxPTR " FAILED, short read %zd\n", vaddr, actual);
-    return ERR_IO;
+    return MX_ERR_IO;
   }
-  return NO_ERROR;
+  return MX_OK;
 }
 
 static mx_status_t
@@ -74,9 +74,9 @@ get_inferior_greg_buf_size (mx_handle_t thread, uint32_t* regset_size)
   // The general regs are defined to be in regset zero.
   mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0,
                                              NULL, 0, regset_size);
-  assert (status != NO_ERROR);
-  if (status == ERR_BUFFER_TOO_SMALL)
-    status = NO_ERROR;
+  assert (status != MX_OK);
+  if (status == MX_ERR_BUFFER_TOO_SMALL)
+    status = MX_OK;
   return status;
 }
 
@@ -295,7 +295,7 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
   }
   uint32_t regset_size;
   mx_status_t status = get_inferior_greg_buf_size (thread, &regset_size);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
   {
     Debug (3, "unable to get greg buf size: %d\n", status);
     return -UNW_EUNSPEC;
