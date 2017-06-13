@@ -60,17 +60,19 @@ CommandBufferPool::~CommandBufferPool() {
     Cleanup();
   }
   FTL_DCHECK(pending_buffers_.empty());
-  std::vector<vk::CommandBuffer> buffers_to_free;
-  buffers_to_free.reserve(free_buffers_.size());
-  while (!free_buffers_.empty()) {
-    auto& buf = free_buffers_.front();
-    buffers_to_free.push_back(buf->get());
-    device_.destroyFence(buf->fence());
-    free_buffers_.pop();
+  if (free_buffers_.size() > 0) {
+    std::vector<vk::CommandBuffer> buffers_to_free;
+    buffers_to_free.reserve(free_buffers_.size());
+    while (!free_buffers_.empty()) {
+      auto& buf = free_buffers_.front();
+      buffers_to_free.push_back(buf->get());
+      device_.destroyFence(buf->fence());
+      free_buffers_.pop();
+    }
+    device_.freeCommandBuffers(pool_,
+                               static_cast<uint32_t>(buffers_to_free.size()),
+                               buffers_to_free.data());
   }
-  device_.freeCommandBuffers(pool_,
-                             static_cast<uint32_t>(buffers_to_free.size()),
-                             buffers_to_free.data());
   device_.destroyCommandPool(pool_);
 }
 
