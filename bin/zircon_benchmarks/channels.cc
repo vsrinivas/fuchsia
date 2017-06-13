@@ -17,7 +17,7 @@ constexpr int MULTI_PROCESS_WRITE_BATCH_SIZE = 10000;
 class Channel : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
-    if (mx_channel_create(0, &in, &out) != NO_ERROR) {
+    if (mx_channel_create(0, &in, &out) != MX_OK) {
       state.SkipWithError("Failed to create channel");
     }
   }
@@ -38,7 +38,7 @@ BENCHMARK_F(Channel, Create)(benchmark::State& state) {
     mx_handle_close(in);
     mx_handle_close(out);
     state.ResumeTiming();
-    if (mx_channel_create(0, &in, &out) != NO_ERROR) {
+    if (mx_channel_create(0, &in, &out) != MX_OK) {
       state.SkipWithError("Failed to create channel");
       return;
     }
@@ -50,7 +50,7 @@ BENCHMARK_DEFINE_F(Channel, Write)(benchmark::State& state) {
   mx_status_t status;
   while (state.KeepRunning()) {
     status = mx_channel_write(in, 0, buffer.data(), buffer.size(), nullptr, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to write to channel");
       return;
     }
@@ -59,7 +59,7 @@ BENCHMARK_DEFINE_F(Channel, Write)(benchmark::State& state) {
     state.PauseTiming();
     status = mx_channel_read(out, 0, buffer.data(), nullptr,
                              buffer.size(), 0, nullptr, nullptr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to read from channel");
       return;
     }
@@ -81,7 +81,7 @@ BENCHMARK_DEFINE_F(Channel, Read)(benchmark::State& state) {
     // Write the data to read into the channel.
     state.PauseTiming();
     status = mx_channel_write(in, 0, buffer.data(), buffer.size(), nullptr, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to write to channel");
       return;
     }
@@ -90,7 +90,7 @@ BENCHMARK_DEFINE_F(Channel, Read)(benchmark::State& state) {
     uint32_t bytes_read;
     status = mx_channel_read(out, 0, buffer.data(), nullptr,
                              buffer.size(), 0, &bytes_read, nullptr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to read from channel");
       return;
     }
@@ -118,7 +118,7 @@ static bool Launch(const char* arg, int range, mx_handle_t* channel,
   const char* errmsg;
   auto status = launchpad_go(lp, process, &errmsg);
   *channel = MX_HANDLE_INVALID;
-  return status == NO_ERROR;
+  return status == MX_OK;
 }
 
 int channel_read(uint32_t num_bytes) {
@@ -135,14 +135,14 @@ int channel_read(uint32_t num_bytes) {
     status = mx_object_wait_one(channel,
                                 MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &signals);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       return -1;
     } else if (signals & MX_CHANNEL_PEER_CLOSED) {
       return 0;
     }
     status = mx_channel_read(channel, 0, buffer.data(), nullptr,
                              buffer.size(), 0, &bytes_read, nullptr);
-  } while(status == NO_ERROR && bytes_read == num_bytes);
+  } while(status == MX_OK && bytes_read == num_bytes);
   return -1;
 }
 
@@ -159,27 +159,27 @@ int channel_write(uint32_t num_bytes) {
     for (int i = 0; i < MULTI_PROCESS_WRITE_BATCH_SIZE; i++) {
       status = mx_channel_write(channel, 0, buffer.data(), buffer.size(),
                                 nullptr, 0);
-      if (status != NO_ERROR) {
+      if (status != MX_OK) {
         return -1;
       }
     }
     status = mx_object_wait_one(channel,
                                 MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &signals);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       return -1;
     } else if (signals & MX_CHANNEL_PEER_CLOSED) {
       return 0;
     }
     status = mx_object_signal(channel, MX_USER_SIGNAL_0, 0);
-  } while(status == NO_ERROR);
+  } while(status == MX_OK);
   return -1;
 }
 
 class ChannelMultiProcess : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
-    if (mx_channel_create(0, &channel, &channel_for_process) != NO_ERROR) {
+    if (mx_channel_create(0, &channel, &channel_for_process) != MX_OK) {
       state.SkipWithError("Failed to create channel");
     }
   }
@@ -194,7 +194,7 @@ class ChannelMultiProcess : public benchmark::Fixture {
     }
     mx_status_t status = mx_object_wait_one(process, MX_PROCESS_SIGNALED,
                                             MX_TIME_INFINITE, nullptr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to wait for process termination");
     }
   }
@@ -216,7 +216,7 @@ BENCHMARK_DEFINE_F(ChannelMultiProcess, Write)(benchmark::State& state) {
   while (state.KeepRunning()) {
     status = mx_channel_write(channel, 0, buffer.data(), buffer.size(), nullptr,
                               0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to write to channel");
       return;
     }
@@ -247,7 +247,7 @@ BENCHMARK_DEFINE_F(ChannelMultiProcess, Read)(benchmark::State& state) {
     }
     status = mx_object_wait_one(channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE,
                                 nullptr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to wait for channel to be readable");
       return;
     }
@@ -256,7 +256,7 @@ BENCHMARK_DEFINE_F(ChannelMultiProcess, Read)(benchmark::State& state) {
     uint32_t bytes_read;
     status = mx_channel_read(channel, 0, buffer.data(), nullptr,
                              buffer.size(), 0, &bytes_read, nullptr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to read from channel");
       return;
     }

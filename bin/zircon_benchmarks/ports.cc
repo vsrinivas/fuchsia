@@ -11,7 +11,7 @@ class Port : public benchmark::Fixture {};
 BENCHMARK_DEFINE_F(Port, Create)(benchmark::State& state) {
   mx_handle_t out;
   while (state.KeepRunning()) {
-    if (mx_port_create(state.range(0), &out) != NO_ERROR) {
+    if (mx_port_create(state.range(0), &out) != MX_OK) {
       state.SkipWithError("Failed to create port");
       return;
     }

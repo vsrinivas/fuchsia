@@ -8,7 +8,7 @@
 class Socket : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
-    if (mx_socket_create(0, &in, &out) != NO_ERROR) {
+    if (mx_socket_create(0, &in, &out) != MX_OK) {
       state.SkipWithError("Failed to create socket");
     }
   }
@@ -31,7 +31,7 @@ BENCHMARK_DEFINE_F(Socket, Write)(benchmark::State& state) {
     size_t bytes_written;
     status = mx_socket_write(
         in, 0, buffer.data(), buffer.size(), &bytes_written);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to write to socket");
       return;
     }
@@ -41,7 +41,7 @@ BENCHMARK_DEFINE_F(Socket, Write)(benchmark::State& state) {
     state.PauseTiming();
     size_t bytes_read;
     status = mx_socket_read(out, 0, buffer.data(), buffer.size(), &bytes_read);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to read from socket");
       return;
     }
@@ -69,7 +69,7 @@ BENCHMARK_DEFINE_F(Socket, Read)(benchmark::State& state) {
     size_t bytes_written;
     status = mx_socket_write(
         in, 0, buffer.data(), buffer.size(), &bytes_written);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to write to socket");
       return;
     }
@@ -77,7 +77,7 @@ BENCHMARK_DEFINE_F(Socket, Read)(benchmark::State& state) {
 
     size_t bytes_read;
     status = mx_socket_read(out, 0, buffer.data(), buffer.size(), &bytes_read);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to read from socket");
       return;
     }

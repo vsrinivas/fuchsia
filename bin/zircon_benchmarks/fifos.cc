@@ -13,7 +13,7 @@ BENCHMARK_F(Fifo, Create)(benchmark::State& state) {
   mx_status_t status;
   while (state.KeepRunning()) {
     status = mx_fifo_create(2, 2048, 0, &out0, &out1);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to create fifo");
       return;
     }

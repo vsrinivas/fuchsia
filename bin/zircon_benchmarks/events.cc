@@ -8,7 +8,7 @@
 class Event : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
-    if (mx_event_create(0, &event) != NO_ERROR) {
+    if (mx_event_create(0, &event) != MX_OK) {
       state.SkipWithError("Failed to create channel");
     }
   }
@@ -26,7 +26,7 @@ BENCHMARK_F(Event, Create)(benchmark::State& state) {
     state.PauseTiming();
     mx_handle_close(event);
     state.ResumeTiming();
-    if (mx_event_create(0, &event) != NO_ERROR) {
+    if (mx_event_create(0, &event) != MX_OK) {
       state.SkipWithError("Failed to create event");
       return;
     }
@@ -35,12 +35,12 @@ BENCHMARK_F(Event, Create)(benchmark::State& state) {
 
 BENCHMARK_F(Event, Close)(benchmark::State& state) {
   while (state.KeepRunning()) {
-    if (mx_handle_close(event) != NO_ERROR) {
+    if (mx_handle_close(event) != MX_OK) {
       state.SkipWithError("Failed to close event");
       return;
     }
     state.PauseTiming();
-    if (mx_event_create(0, &event) != NO_ERROR) {
+    if (mx_event_create(0, &event) != MX_OK) {
       state.SkipWithError("Failed to create event");
     }
     state.ResumeTiming();
@@ -62,7 +62,7 @@ BENCHMARK_F(EventPair, Create)(benchmark::State& state) {
   mx_handle_t out0;
   mx_handle_t out1;
   while (state.KeepRunning()) {
-    if (mx_eventpair_create(0, &out0, &out1) != NO_ERROR) {
+    if (mx_eventpair_create(0, &out0, &out1) != MX_OK) {
       state.SkipWithError("Failed to create event pair");
       return;
     }

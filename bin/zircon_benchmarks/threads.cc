@@ -12,7 +12,7 @@ class Thread : public benchmark::Fixture {
     static const char pname[] = "test process";
     mx_status_t status = mx_process_create(mx_job_default(), pname,
                          sizeof(pname), 0, &proc, &vmar);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       state.SkipWithError("Failed to create process");
     }
   }
@@ -32,7 +32,7 @@ BENCHMARK_F(Thread, Create)(benchmark::State& state) {
   mx_handle_t out;
   static const char tname[] = "test thread";
   while (state.KeepRunning()) {
-    if (mx_thread_create(proc, tname, sizeof(tname), 0, &out) != NO_ERROR) {
+    if (mx_thread_create(proc, tname, sizeof(tname), 0, &out) != MX_OK) {
       state.SkipWithError("Failed to create thread");
       return;
     }
