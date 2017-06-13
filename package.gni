@@ -43,6 +43,16 @@ declare_args() {
 #       dest (path, optional)
 #         Location the binary will be placed within "bin/"
 #
+#   tests (optional)
+#     List of scopes defining the test binaries in the package. A test is
+#     typically produced by the build system and is placed in the "test/"
+#     directory of the assembled package.
+#
+#     Entries in a scope in the tests list:
+#
+#       name (string, required)
+#         Name of the test
+#
 #   drivers (optional)
 #     List of scopes defining the drivers in the package. A driver is typically
 #     produced by the build system and is placed in the "driver" directory
@@ -89,6 +99,7 @@ declare_args() {
 template("package") {
   if (current_toolchain == target_toolchain) {
     binaries = []
+    tests = []
     libraries = []
     resources = []
     package_name = target_name
@@ -97,6 +108,9 @@ template("package") {
     }
     if (defined(invoker.binaries)) {
       binaries = invoker.binaries
+    }
+    if (defined(invoker.tests)) {
+      tests = invoker.tests
     }
     if (defined(invoker.drivers)) {
       drivers = invoker.drivers
@@ -115,8 +129,8 @@ template("package") {
     mkfs_target = target_name + "_mkfs"
     extract_buildids_target = target_name + "_extract_buildids"
 
-    # This action assembles an image containing all binaries, drivers, libraries,
-    # and resources defined in the package.
+    # This action assembles an image containing all binaries, tests, drivers,
+    # libraries, and resources defined in the package.
     action(mkfs_target) {
       forward_variables_from(invoker,
                              [
@@ -149,6 +163,13 @@ template("package") {
             dest = "bin/" + binary.name
           }
         }
+        package_manifest_empty = false
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+      foreach(test, tests) {
+        source = rebase_path(root_build_dir + "/" + test.name)
+        sources += [ root_build_dir + "/" + test.name ]
+        dest = "test/" + test.name
         package_manifest_empty = false
         package_manifest_contents += [ "$dest=$source" ]
       }
@@ -252,6 +273,9 @@ template("package") {
       foreach(binary, binaries) {
         args += [ rebase_path(root_build_dir + "/" + binary.name) ]
       }
+      foreach(test, tests) {
+        args += [ rebase_path(root_build_dir + "/" + test.name) ]
+      }
       foreach(driver, drivers) {
         args += [ rebase_path(root_build_dir + "/" + driver.name) ]
       }
@@ -280,6 +304,7 @@ template("package") {
     # Suppress unused variable warnings
     assert(!defined(invoker.package_name) || invoker.package_name != "")
     assert(!defined(invoker.binaries) || invoker.binaries != [])
+    assert(!defined(invoker.tests) || invoker.tests != [])
     assert(!defined(invoker.libraries) || invoker.libraries != [])
     assert(!defined(invoker.resources) || invoker.resources != [])
   }
