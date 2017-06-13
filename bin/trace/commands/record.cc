@@ -344,14 +344,20 @@ void Record::ProcessMeasurements(ftl::Closure on_done) {
 
   // Fail and quit if any of the measurements has empty results. This is so that
   // we can notice when benchmarks break (e.g. in CQ or on perfbots).
+  bool errored = false;
   for (auto& result : results) {
     if (result.samples.empty()) {
-      err() << "No results for measurement \"" << result.label << "\", quitting"
+      err() << "No results for measurement \"" << result.label << "\"."
             << std::endl;
-      exit(1);
+      errored = true;
     }
   }
   OutputResults(out(), results);
+  if (errored) {
+    err() << "One or more measurements had empty results. Quitting."
+          << std::endl;
+    exit(1);
+  }
 
   if (options_.upload_results) {
     network::NetworkServicePtr network_service =
