@@ -136,7 +136,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     const std::vector<std::unique_ptr<UploadElementReader>>& element_readers) {
   if (!IsMethodAllowed(method)) {
     FTL_VLOG(1) << "Method " << method << " is not allowed";
-    return ERR_INVALID_ARGS;
+    return MX_ERR_INVALID_ARGS;
   }
 
   std::ostream request_header_stream(&request_header_buf_);
@@ -159,7 +159,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
 
   for (auto it = element_readers.begin(); it != element_readers.end(); ++it) {
     mx_status_t result = (*it)->ReadAll(&request_body_stream);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
       return result;
   }
 
@@ -173,7 +173,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
   request_bufs_.push_back(request_header_buf_.data());
   request_bufs_.push_back(request_body_buf_.data());
 
-  return NO_ERROR;
+  return MX_OK;
 }
 
 template <typename T>
@@ -352,24 +352,24 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
       size_t written;
       mx_status_t result =
           response_body_stream_.write(0, buffer, todo, &written);
-      if (result == ERR_SHOULD_WAIT) {
+      if (result == MX_ERR_SHOULD_WAIT) {
         result = response_body_stream_.wait_one(
             MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, MX_TIME_INFINITE,
             nullptr);
-        if (result == NO_ERROR)
+        if (result == MX_OK)
           continue;  // retry now that the socket is ready
       }
-      if (result != NO_ERROR) {
-        // If the other end closes the socket, ERR_PEER_CLOSED
+      if (result != MX_OK) {
+        // If the other end closes the socket, MX_ERR_PEER_CLOSED
         // can happen.
-        if (result != ERR_PEER_CLOSED)
+        if (result != MX_ERR_PEER_CLOSED)
           FTL_VLOG(1) << "SendStreamedBody: result=" << result;
         return result;
       }
       done += written;
     } while (done < size);
   }
-  return NO_ERROR;
+  return MX_OK;
 }
 
 template <typename T>
@@ -384,7 +384,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
     // VMO virtualization.
     mx::vmo vmo;
     mx_status_t result = mx::vmo::create(size, 0u, &vmo);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
       FTL_VLOG(1) << "SendBufferedBody: Unable to create vmo: " << result;
       return result;
     }
@@ -398,7 +398,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       response_stream.read(buffer, todo);
       size_t written;
       result = vmo.write(buffer, done, todo, &written);
-      if (result != NO_ERROR) {
+      if (result != MX_OK) {
         FTL_VLOG(1) << "SendBufferedBody: result=" << result;
         return result;
       }
@@ -412,7 +412,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
 
     response_->body->set_buffer(std::move(vmo));
   }
-  return NO_ERROR;
+  return MX_OK;
 }
 
 template <typename T>
@@ -476,7 +476,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         mx::socket consumer;
         mx::socket producer;
         mx_status_t status = mx::socket::create(0u, &producer, &consumer);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
           FTL_VLOG(1) << "Unable to create socket:"
                       << mx_status_get_string(status);
           return;
@@ -486,7 +486,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
 
         loader_->SendResponse(std::move(response));
 
-        if (SendStreamedBody() != NO_ERROR) {
+        if (SendStreamedBody() != MX_OK) {
           response_body_stream_.reset();
           return;
         }
@@ -515,7 +515,7 @@ void URLLoaderImpl::HTTPClient<T>::OnBufferBody(const asio::error_code& err) {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnStreamBody(const asio::error_code& err) {
-  if (!err && SendStreamedBody() == NO_ERROR) {
+  if (!err && SendStreamedBody() == MX_OK) {
     asio::async_read(
         socket_, response_buf_, asio::transfer_at_least(1),
         std::bind(&HTTPClient<T>::OnStreamBody, this, std::placeholders::_1));
