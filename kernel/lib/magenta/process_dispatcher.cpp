@@ -143,8 +143,10 @@ status_t ProcessDispatcher::Initialize() {
 
     DEBUG_ASSERT(state_ == State::INITIAL);
 
-    // create an address space for this process.
-    aspace_ = VmAspace::Create(VmAspace::TYPE_USER, nullptr);
+    // create an address space for this process, named after the process's koid.
+    char aspace_name[MX_MAX_NAME_LEN];
+    snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
+    aspace_ = VmAspace::Create(VmAspace::TYPE_USER, aspace_name);
     if (!aspace_) {
         TRACEF("error creating address space\n");
         return MX_ERR_NO_MEMORY;

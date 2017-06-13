@@ -105,7 +105,7 @@ Column tags:
 
 ```
 $ vmaps 2470
-/A ________01000000-00007ffffffff000    128.0T:sz                    'unnamed'
+/A ________01000000-00007ffffffff000    128.0T:sz                    'proc:2470'
 /R ________01000000-00007ffffffff000    128.0T:sz                    'root'
 ...
 # This 'R' region is a dynamic library. The r-x section is .text, the r--
