@@ -2,44 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <regex>
+#include <vector>
+
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/rapidjson/writer.h"
 
 namespace maxwell {
 
-// Subscribe to ApplicationContext and Publish any entities found back to
-// ApplicationContext.
+const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
+const std::string kRawTextTopic = "/story/focused/explicit/raw/text";
+
+// Subscribe to the Context Engine and Publish any entities found back to
+// the Context Engine.
 class BasicTextListener : ContextListener {
  public:
   BasicTextListener()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        publisher_(
+            app_context_->ConnectToEnvironmentService<ContextPublisher>()),
+        topics_({kRawTextTopic}),
         binding_(this) {
-    FTL_LOG(INFO) << "Initializing";
     auto query = ContextQuery::New();
-    query->topics.push_back("raw/text");
+    for (const std::string& s : topics_) {
+      query->topics.push_back(s);
+    }
     provider_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
+  // Return a JSON representation of an array of entities.
+  std::string GetEntitiesFromText(const std::string& raw_text) {
+    const std::regex entity_regex(kEmailRegex);
+    const auto entities_begin =
+        std::sregex_iterator(raw_text.begin(), raw_text.end(), entity_regex);
+    const auto entities_end = std::sregex_iterator();
+
+    rapidjson::StringBuffer s;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+    writer.StartObject();
+    writer.StartArray();
+    for (std::sregex_iterator i = entities_begin; i != entities_end; ++i) {
+      const std::smatch match = *i;
+      const std::string entity = match.str();
+      const int start = match.position();
+      const int end = start + match.length();
+      writer.String(EntitySpan(entity, "email", start, end).GetJsonString());
+    }
+    writer.EndArray();
+    writer.EndObject();
+
+    return s.GetString();
+  }
+
   // |ContextListener|
   void OnUpdate(ContextUpdatePtr result) override {
     rapidjson::Document text_doc;
-    text_doc.Parse(result->values["raw/text"]);
-    if (!text_doc.HasMember("text") || !text_doc["text"].IsString()) {
-      FTL_LOG(ERROR) << "Invalid raw/text entry in ApplicationContext.";
+
+    // TODO(travismart): What to do if there are multiple topics, or if
+    // topics_[0] has more than one entry?
+    text_doc.Parse(result->values[topics_[0]]);
+    if (!text_doc[0].HasMember("text") || !text_doc[0]["text"].IsString()) {
+      FTL_LOG(ERROR) << "Invalid " << kRawTextTopic
+                     << " entry in Context Engine.";
     }
-    const std::string raw_text = text_doc["text"].GetString();
+    const std::string raw_text = text_doc[0]["text"].GetString();
     FTL_LOG(INFO) << "raw/text:" << raw_text;
 
-    // TODO(travismart): Find entities and publish them back to Context, under
-    // "raw/entity".
+    publisher_->Publish("raw/entities", GetEntitiesFromText(raw_text));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
   ContextProviderPtr provider_;
+  ContextPublisherPtr publisher_;
+  const std::vector<std::string> topics_;
   fidl::Binding<ContextListener> binding_;
 };
 
