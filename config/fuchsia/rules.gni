@@ -16,31 +16,6 @@ assert(current_os == "fuchsia")
 # General: check_includes, configs, data, inputs, output_name,
 #          output_extension, public, sources, testonly, visibility
 template("driver_module") {
-  assert((defined(invoker.cflags) && invoker.cflags != []) || true)
-  assert((defined(invoker.cflags_c) && invoker.cflags_c != []) || true)
-  assert((defined(invoker.cflags_cc) && invoker.cflags_cc != []) || true)
-  assert((defined(invoker.cflags_cc) && invoker.cflags_cc != []) || true)
-  assert((defined(invoker.cflags_cc) && invoker.cflags_cc != []) || true)
-  assert((defined(invoker.asmflags) && invoker.asmflags != []) || true)
-  assert((defined(invoker.defines) && invoker.defines != []) || true)
-  assert((defined(invoker.include_dirs) && invoker.include_dirs != []) || true)
-  assert((defined(invoker.ldflags) && invoker.include_dirs != []) || true)
-  assert((defined(invoker.lib_dirs) && invoker.lib_dirs != []) || true)
-  assert((defined(invoker.libs) && invoker.libs != []) || true)
-  assert((defined(invoker.data_deps) && invoker.data_deps != []) || true)
-  assert((defined(invoker.deps) && invoker.deps != []) || true)
-  assert((defined(invoker.public_deps) && invoker.public_deps != []) || true)
-  assert((defined(invoker.all_dependent_configs) &&
-          invoker.all_dependent_configs != []) || true)
-  assert(
-      (defined(invoker.public_configs) && invoker.public_configs != []) || true)
-  assert((defined(invoker.configs) && invoker.configs != []) || true)
-  assert((defined(invoker.data) && invoker.data != []) || true)
-  assert((defined(invoker.inputs) && invoker.inputs != []) || true)
-  assert((defined(invoker.public) && invoker.public != []) || true)
-  assert((defined(invoker.sources) && invoker.sources != []) || true)
-  assert((defined(invoker.testonly) && invoker.testonly != []) || true)
-
   _target_name = target_name
   _target_module = _target_name + "_module"
 
@@ -70,6 +45,8 @@ template("driver_module") {
                              ])
       visibility = [ ":$_target_name" ]
     }
+  } else {
+    not_needed(invoker, "*")
   }
 
   copy(_target_name) {

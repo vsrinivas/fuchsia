@@ -48,12 +48,14 @@ template("go_build") {
 
     script = rebase_path("//build/go/build.py")
     depfile = "${output_path}.d"
-    console = true # only run one gobuild.py at once
 
     go_dependencies = []
     if (defined(invoker.go_dependencies)) {
-      console = false # builds on this code path can be concurrent
+      # builds on this code path can be concurrent
       go_dependencies = invoker.go_dependencies
+    } else {
+      # only run one gobuild.py in parallel
+      pool = "//build/go:go_pool"
     }
 
     args = [
