@@ -82,7 +82,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     mx::channel remote;
     mx_status_t status = mx::channel::create(0u, &local, &remote);
 
-    FTL_CHECK(status == NO_ERROR)
+    FTL_CHECK(status == MX_OK)
         << "mx::channel::create failed, status " << status;
 
     // Give the local end of the channel to the relay.

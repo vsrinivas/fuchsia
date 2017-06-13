@@ -30,7 +30,7 @@ void ServiceAgent::OnServiceNameReceived(const std::string& service_name) {
   mx::channel remote;
   mx_status_t status = mx::channel::create(0u, &local, &remote);
 
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create channel, status " << status;
     CloseConnection();
     return;

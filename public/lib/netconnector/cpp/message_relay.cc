@@ -51,7 +51,7 @@ void MessageRelayBase::ReadChannelMessages() {
     mx_status_t status = channel_.read(0, nullptr, 0, &actual_byte_count,
                                        nullptr, 0, &actual_handle_count);
 
-    if (status == ERR_SHOULD_WAIT) {
+    if (status == MX_ERR_SHOULD_WAIT) {
       // Nothing to read. Wait until there is.
       read_async_wait_.Start(
           channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
@@ -59,13 +59,13 @@ void MessageRelayBase::ReadChannelMessages() {
       return;
     }
 
-    if (status == ERR_PEER_CLOSED) {
+    if (status == MX_ERR_PEER_CLOSED) {
       // Remote end of the channel closed.
       CloseChannel();
       return;
     }
 
-    if (status != ERR_BUFFER_TOO_SMALL) {
+    if (status != MX_ERR_BUFFER_TOO_SMALL) {
       FTL_LOG(ERROR) << "Failed to read (peek) from channel, status " << status;
       CloseChannel();
       return;
@@ -83,7 +83,7 @@ void MessageRelayBase::ReadChannelMessages() {
         channel_.read(0, message.data(), message.size(), &actual_byte_count,
                       nullptr, 0, &actual_handle_count);
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << "Failed to read from channel, status " << status;
       CloseChannel();
       return;
@@ -106,7 +106,7 @@ void MessageRelayBase::WriteChannelMessages() {
     mx_status_t status =
         channel_.write(0, message.data(), message.size(), nullptr, 0);
 
-    if (status == ERR_SHOULD_WAIT) {
+    if (status == MX_ERR_SHOULD_WAIT) {
       // No room for the write. Wait until there is.
       write_async_wait_.Start(
           channel_.get(), MX_CHANNEL_WRITABLE | MX_CHANNEL_PEER_CLOSED,
@@ -114,13 +114,13 @@ void MessageRelayBase::WriteChannelMessages() {
       return;
     }
 
-    if (status == ERR_PEER_CLOSED) {
+    if (status == MX_ERR_PEER_CLOSED) {
       // Remote end of the channel closed.
       CloseChannel();
       return;
     }
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       FTL_LOG(ERROR) << "mx::channel::write failed, status " << status;
       CloseChannel();
       return;

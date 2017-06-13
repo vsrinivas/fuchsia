@@ -26,7 +26,7 @@ void AsyncWait::Start(mx_handle_t handle,
   FTL_DCHECK(!is_waiting());
 
   callback_ = callback;
-  status_ = ERR_SHOULD_WAIT;
+  status_ = MX_ERR_SHOULD_WAIT;
   pending_ = MX_SIGNAL_NONE;
   wait_id_ = waiter_->AsyncWait(handle, signals, timeout,
                                 AsyncWait::CallbackHandler, this);
@@ -36,7 +36,7 @@ void AsyncWait::Cancel() {
   if (is_waiting()) {
     fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
     wait_id_ = 0;
-    status_ = ERR_SHOULD_WAIT;
+    status_ = MX_ERR_SHOULD_WAIT;
     pending_ = MX_SIGNAL_NONE;
     callback_ = nullptr;
   }
