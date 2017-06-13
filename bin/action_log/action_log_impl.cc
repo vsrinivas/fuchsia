@@ -55,7 +55,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
     return;
   }
   std::string video_id = vid_value->GetString();
-  std::string proposal_id = "Share Video " + video_id;
+  std::string proposal_id = "Share Video " + action_data.story_id;
 
   ProposalPtr proposal(Proposal::New());
   proposal->id = proposal_id;
@@ -93,7 +93,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   proposal->on_selected.push_back(std::move(action));
 
   SuggestionDisplayPtr display(SuggestionDisplay::New());
-  display->headline = proposal_id;
+  display->headline = "Share Video via email";
   display->subheadline = "";
   display->details = "";
   display->color = 0xff42ebf4;
@@ -102,6 +102,8 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   display->image_type = SuggestionImageType::OTHER;
   proposal->display = std::move(display);
 
+  // We clear any existing proposal for this story.
+  proposal_publisher_->Remove(proposal_id);
   proposal_publisher_->Propose(std::move(proposal));
 }
 
