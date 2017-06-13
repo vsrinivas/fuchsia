@@ -628,7 +628,7 @@ int spinner(int argc, const cmd_args *argv)
 
     thread_t *t = thread_create("spinner", spinner_thread, NULL, argv[1].u, DEFAULT_STACK_SIZE);
     if (!t)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     if (argc >= 3 && !strcmp(argv[2].str, "rt")) {
         thread_set_real_time(t);

@@ -79,7 +79,7 @@ int sync_ipi_tests(int argc, const cmd_args *argv)
     uint online = mp_get_online_mask();
     if (online != (1U << num_cpus) - 1) {
         printf("Can only run test with all CPUs online\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint runs = TEST_RUNS;
@@ -120,5 +120,5 @@ int sync_ipi_tests(int argc, const cmd_args *argv)
     }
 
     printf("Success\n");
-    return NO_ERROR;
+    return MX_OK;
 }

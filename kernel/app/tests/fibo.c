@@ -73,5 +73,5 @@ int fibo(int argc, const cmd_args *argv)
     printf("fibo %d\n", retcode);
     printf("took %" PRIu64 " msecs to calculate\n", tim);
 
-    return NO_ERROR;
+    return MX_OK;
 }

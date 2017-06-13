@@ -40,11 +40,11 @@ static status_t do_pattern_test(void *ptr, size_t len, uint32_t pat)
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != pat) {
             mem_test_fail((void *)&vbuf32[i], pat, vbuf32[i]);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
@@ -64,7 +64,7 @@ static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != pat) {
             mem_test_fail((void *)&vbuf32[i], pat, vbuf32[i]);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
 
         vbuf32[i] = ~pat;
@@ -75,7 +75,7 @@ static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
     for (i = len / 4; i > 0; i--) {
         if (vbuf32[i-1] != ~pat) {
             mem_test_fail((void *)&vbuf32[i-1], ~pat, vbuf32[i-1]);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
 
         vbuf32[i-1] = pat;
@@ -86,11 +86,11 @@ static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != pat) {
             mem_test_fail((void *)&vbuf32[i], pat, vbuf32[i]);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void do_mem_tests(void *ptr, size_t len)
