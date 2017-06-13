@@ -38,6 +38,9 @@ static void write_x86_syscall_signature_line(ofstream& os, const Syscall& sc, st
 }
 
 bool KernelWrapperGenerator::header(ofstream& os) {
+    if (!Generator::header(os))
+        return false;
+
     os << "extern \"C\" {\n";
     return os.good();
 }

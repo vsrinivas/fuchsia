@@ -18,8 +18,8 @@ bool Generator::header(ofstream& os) {
 
     os << "// Copyright " << ltime->tm_year + 1900
        << " " << kAuthors << ". All rights reserved.\n";
-    os << "// This is a GENERATED file. The license governing this file can be ";
-    os << "found in the LICENSE file.\n\n";
+    os << "// This is a GENERATED file, see //magenta/system/host/sysgen.\n";
+    os << "// The license governing this file can be found in the LICENSE file.\n\n";
 
     return os.good();
 }
@@ -60,6 +60,9 @@ bool Arm64AssemblyGenerator::syscall(ofstream& os, const Syscall& sc) {
 }
 
 bool KernelBranchGenerator::header(ofstream& os) {
+    if (!Generator::header(os))
+        return false;
+
     os << "start_syscall_dispatch\n";
     return os.good();
 }
