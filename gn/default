@@ -1,12 +1,12 @@
 {
     "imports": [
         "amber",
-        "apps",
         "asio",
         "boringssl",
         "cmdutils",
         "curl",
         "dart",
+        "dart_runner",
         "dashboard",
         "drivers",
         "escher",
