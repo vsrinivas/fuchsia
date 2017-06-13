@@ -47,8 +47,8 @@ typedef struct mx_guest_gpr {
     uint64_t r13;
     uint64_t r14;
     uint64_t r15;
-    // Only the lower 8-bits of the flags register.
-    uint8_t flags;
+    // Only the user-controllable lower 16-bits of the flags register.
+    uint16_t flags;
 #else
 #error Unsupported architecture
 #endif

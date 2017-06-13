@@ -877,7 +877,8 @@ status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t& guest_gpr) {
     vmcs_write(VmcsFieldXX::GUEST_RSP, guest_gpr.rsp);
     if (guest_gpr.flags & X86_FLAGS_RESERVED_ONES) {
         const uint64_t rflags = vmcs_read(VmcsFieldXX::GUEST_RFLAGS);
-        vmcs_write(VmcsFieldXX::GUEST_RFLAGS, (rflags & ~UINT8_MAX) | guest_gpr.flags);
+        const uint64_t user_flags = (rflags & ~X86_FLAGS_USER) | (guest_gpr.flags & X86_FLAGS_USER);
+        vmcs_write(VmcsFieldXX::GUEST_RFLAGS, user_flags);
     }
     return MX_OK;
 }
@@ -886,7 +887,7 @@ status_t VmcsPerCpu::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     gpr_copy(guest_gpr, vmx_state_.guest_state);
     AutoVmcsLoad vmcs_load(&page_);
     guest_gpr->rsp = vmcs_read(VmcsFieldXX::GUEST_RSP);
-    guest_gpr->flags = vmcs_read(VmcsFieldXX::GUEST_RFLAGS) & UINT8_MAX;
+    guest_gpr->flags = vmcs_read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
     return MX_OK;
 }
 
