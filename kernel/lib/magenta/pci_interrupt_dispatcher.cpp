@@ -46,8 +46,9 @@ status_t PciInterruptDispatcher::Create(
         mx_rights_t* out_rights,
         mxtl::RefPtr<Dispatcher>* out_interrupt) {
     // Sanity check our args
-    if (!device || !out_rights || !out_interrupt)
+    if (!device || !out_rights || !out_interrupt) {
         return MX_ERR_INVALID_ARGS;
+    }
 
     AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 typedef struct sdhci_regs {
     uint32_t arg2;          // 00h
     uint32_t blkcntsiz;     // 04h
@@ -31,7 +33,10 @@ typedef struct sdhci_regs {
 #define SDHCI_HOSTCTRL_LED_ON              (1 << 0)
 #define SDHCI_HOSTCTRL_FOUR_BIT_BUS_WIDTH  (1 << 1)
 #define SDHCI_HOSTCTRL_HIGHSPEED_ENABLE    (1 << 2)
+#define SDHCI_HOSTCTRL_EXT_DATA_WIDTH      (1 << 5)
 #define SDHCI_PWRCTRL_SD_BUS_POWER         (1 << 8)
+#define SDHCI_PWRCTRL_SD_BUS_VOLTAGE_MASK  (7 << 9)
+#define SDHCI_EMMC_HW_RESET                (1 << 12)
     uint32_t ctrl1;         // 2Ch
 #define SDHCI_INTERNAL_CLOCK_ENABLE        (1 << 0)
 #define SDHCI_INTERNAL_CLOCK_STABLE        (1 << 1)
@@ -62,9 +67,16 @@ typedef struct sdhci_regs {
 #define SDHCI_IRQ_ERR_CMD_CRC       (1 << 17)
 #define SDHCI_IRQ_ERR_CMD_END_BIT   (1 << 18)
 #define SDHCI_IRQ_ERR_CMD_INDEX     (1 << 19)
+#define SDHCI_IRQ_ERR_CMD           (SDHCI_IRQ_ERR_CMD_TIMEOUT | \
+                                     SDHCI_IRQ_ERR_CMD_CRC | \
+                                     SDHCI_IRQ_ERR_CMD_END_BIT | \
+                                     SDHCI_IRQ_ERR_CMD_INDEX)
 #define SDHCI_IRQ_ERR_DAT_TIMEOUT   (1 << 20)
 #define SDHCI_IRQ_ERR_DAT_CRC       (1 << 21)
 #define SDHCI_IRQ_ERR_DAT_ENDBIT    (1 << 22)
+#define SDHCI_IRQ_ERR_DAT           (SDHCI_IRQ_ERR_DAT_TIMEOUT | \
+                                     SDHCI_IRQ_ERR_DAT_CRC | \
+                                     SDHCI_IRQ_ERR_DAT_ENDBIT)
 #define SDHCI_IRQ_ERR_CURRENT_LIMIT (1 << 23)
 #define SDHCI_IRQ_ERR_AUTO_CMD      (1 << 24)
 #define SDHCI_IRQ_ERR_ADMA          (1 << 25)
@@ -74,7 +86,12 @@ typedef struct sdhci_regs {
 #define SDHCI_IRQ_ERR_VS_3          (1 << 30)
 #define SDHCI_IRQ_ERR_VS_4          (1 << 31)
     uint32_t ctrl2;         // 3Ch
+#define SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA (1 << 19)
     uint32_t caps0;         // 40h
+#define SDHCI_CORECFG_8_BIT_SUPPORT    (1 << 18)
+#define SDHCI_CORECFG_3P3_VOLT_SUPPORT (1 << 24)
+#define SDHCI_CORECFG_3P0_VOLT_SUPPORT (1 << 25)
+#define SDHCI_CORECFG_1P8_VOLT_SUPPORT (1 << 26)
     uint32_t caps1;         // 44h
     uint32_t maxcaps0;      // 48h
     uint32_t maxcaps1;      // 4Ch

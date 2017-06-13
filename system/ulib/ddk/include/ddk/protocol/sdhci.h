@@ -21,6 +21,8 @@ typedef struct sdhci_protocol_ops {
 
     // returns device quirks
     uint64_t (*get_quirks)(void* ctx);
+    // platform specific HW reset
+    void (*hw_reset)(void* ctx);
 } sdhci_protocol_ops_t;
 
 // This is a BCM28xx specific quirk. The bottom 8 bits of the 136
