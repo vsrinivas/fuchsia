@@ -168,7 +168,7 @@ static mx_status_t acpi_probe_ecam(void) {
     ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
     if (status != AE_OK) {
         LTRACEF("ACPI: No MCFG table found.\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
@@ -177,13 +177,13 @@ static mx_status_t acpi_probe_ecam(void) {
     uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
     if (table_bytes % sizeof(*table_start) != 0) {
         LTRACEF("PCIe error, MCFG has unexpected size.\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     int num_entries = table_end - table_start;
     if (num_entries == 0) {
         LTRACEF("PCIe error, MCFG has no entries.\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     if (num_entries > 1) {
         LTRACEF("PCIe MCFG has more than one entry, using the first.\n");
@@ -195,13 +195,13 @@ static mx_status_t acpi_probe_ecam(void) {
 
     if (table_start->PciSegment != 0) {
         LTRACEF("PCIe error, non-zero segment found.\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     uint8_t bus_start = table_start->StartBusNumber;
     if (bus_start != 0) {
         LTRACEF("PCIe error, non-zero bus start found.");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     // We need to adjust the physical address we received to align to the proper
@@ -219,15 +219,15 @@ static mx_status_t acpi_probe_ecam(void) {
     mx_status_t ret = mx_mmap_device_memory(root_resource_handle, base, acpi_pci_tbl.ecam_size,
                                             MX_CACHE_POLICY_UNCACHED_DEVICE,
                                             (uintptr_t *)&acpi_pci_tbl.ecam);
-    if (ret == NO_ERROR && LOCAL_TRACE) {
+    if (ret == MX_OK && LOCAL_TRACE) {
         printf("ACPI: Found PCIe and mapped at %p.\n", acpi_pci_tbl.ecam);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t acpi_probe_legacy_pci(void) {
-    mx_status_t status = ERR_NOT_FOUND;
+    mx_status_t status = MX_ERR_NOT_FOUND;
 #if __x86_64__
     // Check for a Legacy PCI root complex at 00:00:0. For now, this assumes we
     // only care about segment 0. We'll cross that segmented bridge when we
@@ -237,7 +237,7 @@ static mx_status_t acpi_probe_legacy_pci(void) {
     if (vendor_id != 0xFFFF) {
         acpi_pci_tbl.has_legacy = true;
         printf("ACPI: Found legacy PCI.\n");
-        status = NO_ERROR;
+        status = MX_OK;
     }
 #endif
 
@@ -464,7 +464,7 @@ void *AcpiOsMapMemory(
     mx_status_t status = mx_mmap_device_memory(root_resource_handle,
                                                aligned_address, end - aligned_address,
                                                MX_CACHE_POLICY_CACHED, &vaddr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return NULL;
     }
 
@@ -806,7 +806,7 @@ static int acpi_irq_thread(void *arg) {
     struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
     while (1) {
         mx_status_t status = mx_interrupt_wait(real_arg->irq_handle);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             continue;
         }
 
@@ -1026,8 +1026,8 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     // idea of the ACPI VM code's init process. For now the goal is simply
     // to provide the engine what it needs to complete its initialization.
     if (!acpi_pci_tbl.pci_probed) {
-        if (acpi_probe_ecam() != NO_ERROR) {
-            if (acpi_probe_legacy_pci() != NO_ERROR) {
+        if (acpi_probe_ecam() != MX_OK) {
+            if (acpi_probe_legacy_pci() != MX_OK) {
                 printf("ACPI: failed to find PCI/PCIe.\n");
             }
         }
