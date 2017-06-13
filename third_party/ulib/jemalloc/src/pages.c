@@ -44,7 +44,7 @@ void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
 	len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
 	size_t offset = 0;
-	mx_status_t status = NO_ERROR;
+	mx_status_t status = MX_OK;
 	if (fixed) {
 		mx_info_vmar_t info;
 		status = _mx_object_get_info(_mx_vmar_root_self(), MX_INFO_VMAR, &info,
@@ -73,20 +73,20 @@ void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
 
 fail:
 	switch (status) {
-	case ERR_BAD_HANDLE:
+	case MX_ERR_BAD_HANDLE:
 		errno = EBADF;
 		break;
-	case ERR_NOT_SUPPORTED:
+	case MX_ERR_NOT_SUPPORTED:
 		errno = ENODEV;
 		break;
-	case ERR_ACCESS_DENIED:
+	case MX_ERR_ACCESS_DENIED:
 		errno = EACCES;
 		break;
-	case ERR_NO_MEMORY:
+	case MX_ERR_NO_MEMORY:
 		errno = ENOMEM;
 		break;
-	case ERR_INVALID_ARGS:
-	case ERR_BAD_STATE:
+	case MX_ERR_INVALID_ARGS:
+	case MX_ERR_BAD_STATE:
 	default:
 		errno = EINVAL;
 	}
