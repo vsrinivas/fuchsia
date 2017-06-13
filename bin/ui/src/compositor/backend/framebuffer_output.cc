@@ -69,7 +69,7 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
   rasterizer_thread_->Run();
   rasterizer_task_runner_ = rasterizer_thread_->TaskRunner();
 
-#ifdef MOZART_HEADLESS
+#ifdef MOZART_COMPOSITOR_HEADLESS
   mx_display_info_t display_info = {};
   if (InitializeRasterizer(RasterizerType::kHeadless, &display_info)) {
     OnDisplayReady(display_info);
@@ -90,7 +90,7 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
     wait.Signal();
   });
   wait.Wait();
-#endif
+#endif  // MOZART_COMPOSITOR_HEADLESS
 }
 
 void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {

@@ -12,8 +12,8 @@ const ResourceTypeInfo HostMemory::kTypeInfo = {
 
 HostMemory::HostMemory(Session* session, mx::vmo vmo, uint64_t vmo_size)
     : Memory(session, HostMemory::kTypeInfo),
-      shared_vmo_(std::make_unique<mtl::SharedVmo>(std::move(vmo),
-                                                   MX_VM_FLAG_PERM_READ)),
+      shared_vmo_(ftl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo),
+                                                      MX_VM_FLAG_PERM_READ)),
       size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session,

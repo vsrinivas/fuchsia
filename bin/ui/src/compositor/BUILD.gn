@@ -5,6 +5,11 @@
 import("//apps/mozart/config.gni")
 
 source_set("common") {
+  defines = []
+  if (mozart_examples_use_scene_manager) {
+    defines += [ "MOZART_COMPOSITOR_HEADLESS" ]
+  }
+
   sources = [
     "backend/framebuffer.cc",
     "backend/framebuffer.h",
@@ -77,7 +82,7 @@ source_set("common") {
   ]
 
   if (mozart_use_vulkan) {
-    defines = [ "MOZART_USE_VULKAN" ]
+    defines += [ "MOZART_USE_VULKAN" ]
     sources += [
       "backend/vulkan_rasterizer.cc",
       "backend/vulkan_rasterizer.h",

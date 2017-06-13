@@ -22,8 +22,6 @@ Renderer::~Renderer() {}
 std::vector<escher::Object> Renderer::CreateDisplayList(
     Node* root_node,
     escher::vec2 screen_dimensions) {
-  FTL_LOG(INFO) << "Renderer::DrawFrame";
-
   // Construct a display list from the tree.
   Visitor v;
   root_node->Accept(&v);

@@ -40,7 +40,7 @@ class HostMemory : public Memory {
   uint64_t size() { return size_; }
 
  private:
-  std::unique_ptr<mtl::SharedVmo> shared_vmo_ = nullptr;
+  ftl::RefPtr<mtl::SharedVmo> shared_vmo_;
   uint64_t size_;
 };
 
