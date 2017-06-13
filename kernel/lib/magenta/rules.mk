@@ -50,6 +50,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/wait_set_dispatcher.cpp \
     $(LOCAL_DIR)/wait_state_observer.cpp \
 
+# Tests
+MODULE_SRCS += \
+    $(LOCAL_DIR)/state_tracker_tests.cpp \
+
 MODULE_DEPS := \
     kernel/lib/dpc \
     kernel/lib/mxtl \

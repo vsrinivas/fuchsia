@@ -57,8 +57,8 @@ public:
     // is safe to delete the observer.
     virtual void OnRemoved() {}
 
-    // Return true to have the observer removed from the state_observer after calling either
-    // OnInitialize() OnStateChange() or OnCancel().
+    // Return true to have the observer removed from the state_observer after calling
+    // OnInitialize(), OnStateChange(), OnCancel(), or OnCancelByKey().
     bool remove() const { return remove_; }
 
 protected:

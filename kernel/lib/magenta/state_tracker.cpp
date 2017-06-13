@@ -45,13 +45,17 @@ void StateTracker::AddObserver(StateObserver* observer, const StateObserver::Cou
     DEBUG_ASSERT(observer != nullptr);
 
     bool awoke_threads = false;
+    bool remove;
     {
         AutoLock lock(&lock_);
 
         awoke_threads = observer->OnInitialize(signals_, cinfo);
-        if (!observer->remove())
+        remove = observer->remove();
+        if (!remove)
             observers_.push_front(observer);
     }
+    if (remove)
+        observer->OnRemoved();
     if (awoke_threads)
         thread_reschedule();
 }
