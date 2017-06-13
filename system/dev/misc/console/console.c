@@ -90,6 +90,7 @@ static mx_status_t console_read(void* ctx, void* buf, size_t count, mx_off_t off
 static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
     const void* ptr = buf;
     mx_status_t status = MX_OK;
+    size_t total = 0;
     while (count > 0) {
         size_t xfer = (count > MAX_WRITE_SIZE) ? MAX_WRITE_SIZE : count;
         if ((status = mx_debug_write(ptr, xfer)) < 0) {
@@ -97,9 +98,10 @@ static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_of
         }
         ptr += xfer;
         count -= xfer;
+        total += xfer;
     }
-    if (status >= 0) {
-        *actual = status;
+    if (total > 0) {
+        *actual = total;
         status = MX_OK;
      }
      return status;
