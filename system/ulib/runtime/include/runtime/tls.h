@@ -65,7 +65,7 @@ __NO_SAFESTACK static inline void* mxr_tp_get(void) {
 __NO_SAFESTACK static inline void mxr_tp_set(mx_handle_t self, void* tp) {
     mx_status_t status = _mx_object_set_property(
         self, MX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 }
 

@@ -34,8 +34,8 @@ static mx_status_t lock_slow_path(mxr_mutex_t* mutex, mx_time_t abstime,
             // TODO(kulakowski) Use MX_CLOCK_UTC when available.
             mx_status_t status = _mx_futex_wait(
                     &mutex->futex, LOCKED_WITH_WAITERS, abstime);
-            if (status == ERR_TIMED_OUT)
-                return ERR_TIMED_OUT;
+            if (status == MX_ERR_TIMED_OUT)
+                return MX_ERR_TIMED_OUT;
         }
 
         // Try again to claim the mutex.  On this try, we must set the
@@ -45,7 +45,7 @@ static mx_status_t lock_slow_path(mxr_mutex_t* mutex, mx_time_t abstime,
         old_state = UNLOCKED;
         if (atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                            LOCKED_WITH_WAITERS)) {
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 }
@@ -54,9 +54,9 @@ mx_status_t mxr_mutex_trylock(mxr_mutex_t* mutex) {
     int old_state = UNLOCKED;
     if (atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                        LOCKED_WITHOUT_WAITERS)) {
-        return NO_ERROR;
+        return MX_OK;
     }
-    return ERR_BAD_STATE;
+    return MX_ERR_BAD_STATE;
 }
 
 mx_status_t __mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t abstime) {
@@ -65,14 +65,14 @@ mx_status_t __mxr_mutex_timedlock(mxr_mutex_t* mutex, mx_time_t abstime) {
     int old_state = UNLOCKED;
     if (atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                        LOCKED_WITHOUT_WAITERS)) {
-        return NO_ERROR;
+        return MX_OK;
     }
     return lock_slow_path(mutex, abstime, old_state);
 }
 
 void mxr_mutex_lock(mxr_mutex_t* mutex) {
     mx_status_t status = __mxr_mutex_timedlock(mutex, MX_TIME_INFINITE);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 }
 
@@ -83,7 +83,7 @@ void mxr_mutex_lock_with_waiter(mxr_mutex_t* mutex) {
         return;
     }
     mx_status_t status = lock_slow_path(mutex, MX_TIME_INFINITE, old_state);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 }
 
@@ -98,7 +98,7 @@ void mxr_mutex_unlock(mxr_mutex_t* mutex) {
 
         case LOCKED_WITH_WAITERS: {
             mx_status_t status = _mx_futex_wake(&mutex->futex, 1);
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 __builtin_trap();
             break;
         }

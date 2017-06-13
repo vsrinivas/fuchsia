@@ -34,7 +34,7 @@ typedef struct {
 // any functions except mxr_thread_create or mxr_thread_adopt.
 // If detached is true, then it's as if mxr_thread_detach were called
 // immediately after this returns (but it's more efficient, and can
-// never fail with ERR_BAD_STATE).
+// never fail with MX_ERR_BAD_STATE).
 mx_status_t mxr_thread_create(mx_handle_t proc_self, const char* name,
                               bool detached, mxr_thread_t* thread);
 
@@ -50,7 +50,7 @@ mx_status_t mxr_thread_adopt(mx_handle_t handle, mxr_thread_t* thread);
 mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, mxr_thread_entry_t entry, void* arg);
 
 // Once started, threads can be either joined or detached. If a thread
-// is joined or detached more than once, ERR_INVALID_ARGS is
+// is joined or detached more than once, MX_ERR_INVALID_ARGS is
 // returned. Some of the resources allocated to a thread are not
 // collected until it returns and it is either joined or detached.
 
@@ -60,7 +60,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread);
 
 // If a thread is detached, instead of waiting to be joined, it will
 // clean up after itself, and the return value of the thread's
-// entrypoint is ignored.  This returns ERR_BAD_STATE if the thread
+// entrypoint is ignored.  This returns MX_ERR_BAD_STATE if the thread
 // had already finished running; it didn't know to clean up after itself
 // and it's gone now, so the caller must do any cleanup it would have
 // done after mxr_thread_join.

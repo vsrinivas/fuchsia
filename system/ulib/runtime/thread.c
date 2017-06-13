@@ -25,7 +25,7 @@ enum {
 mx_status_t mxr_thread_destroy(mxr_thread_t* thread) {
     mx_handle_t handle = thread->handle;
     thread->handle = MX_HANDLE_INVALID;
-    return handle == MX_HANDLE_INVALID ? NO_ERROR : _mx_handle_close(handle);
+    return handle == MX_HANDLE_INVALID ? MX_OK : _mx_handle_close(handle);
 }
 
 // Put the thread into DONE state.  As soon as thread->state has changed to
@@ -41,7 +41,7 @@ static int begin_exit(mxr_thread_t* thread, mx_handle_t* out_handle) {
 
 static _Noreturn void exit_joinable(mx_handle_t handle) {
     // A later mxr_thread_join call will complete immediately.
-    if (_mx_handle_close(handle) != NO_ERROR)
+    if (_mx_handle_close(handle) != MX_OK)
         __builtin_trap();
     // If there were no other handles to the thread, closing the handle
     // killed us right there.  If there are other handles, exit now.
@@ -148,7 +148,7 @@ mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t 
                                           (uintptr_t)thread_trampoline, sp,
                                           (uintptr_t)thread, 0);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         mxr_thread_destroy(thread);
     return status;
 }
@@ -160,8 +160,8 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread) {
             memory_order_acq_rel, memory_order_acquire)) {
         do {
             switch (_mx_futex_wait(&thread->state, JOINED, MX_TIME_INFINITE)) {
-            case ERR_BAD_STATE:   // Never blocked because it had changed.
-            case NO_ERROR:        // Woke up because it might have changed.
+            case MX_ERR_BAD_STATE:   // Never blocked because it had changed.
+            case MX_OK:              // Woke up because it might have changed.
                 old_state = atomic_load_explicit(&thread->state,
                                                  memory_order_acquire);
                 break;
@@ -175,7 +175,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread) {
         switch (old_state) {
         case JOINED:
         case DETACHED:
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         case DONE:
             break;
         default:
@@ -184,7 +184,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread) {
     }
 
     // The thread has already closed its own handle.
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
@@ -195,15 +195,15 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
         switch (old_state) {
         case DETACHED:
         case JOINED:
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         case DONE:
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         default:
             __builtin_trap();
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool mxr_thread_detached(mxr_thread_t* thread) {
@@ -213,7 +213,7 @@ bool mxr_thread_detached(mxr_thread_t* thread) {
 
 mx_status_t mxr_thread_kill(mxr_thread_t* thread) {
     mx_status_t status = _mx_task_kill(thread->handle);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_handle_t handle = thread->handle;
@@ -236,7 +236,7 @@ mx_status_t mxr_thread_kill(mxr_thread_t* thread) {
         // and our futex_wake tickles somebody completely unrelated,
         // well, that's why futex_wait can always have spurious wakeups.
         status = _mx_handle_close(handle);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             (void)_mx_futex_wake(&thread->state, 1);
         return status;
     }
@@ -250,5 +250,5 @@ mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
 
 mx_status_t mxr_thread_adopt(mx_handle_t handle, mxr_thread_t* thread) {
     initialize_thread(thread, handle, false);
-    return handle == MX_HANDLE_INVALID ? ERR_BAD_HANDLE : NO_ERROR;
+    return handle == MX_HANDLE_INVALID ? MX_ERR_BAD_HANDLE : MX_OK;
 }
