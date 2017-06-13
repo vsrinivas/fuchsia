@@ -116,7 +116,7 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
         if (tolud_val) {
             LTRACEF("TOLUD Quirk subtracting region [0x%08x, 0x%08x)\n", 0u, tolud_val);
             status_t res = dev->driver().SubtractBusRegion(0u, tolud_val, PciAddrSpace::MMIO);
-            if (res != NO_ERROR)
+            if (res != MX_OK)
                 TRACEF("WARNING : PCIe TOLUD Quirk failed to subtract region "
                        "[0x%08x, 0x%08x) (res %d)!\n", 0u, tolud_val, res);
         }
@@ -169,7 +169,7 @@ static void pcie_amd_topmem_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
 
     if (top_mem && dev) {
         status_t res = dev->driver().SubtractBusRegion(0u, top_mem, PciAddrSpace::MMIO);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             TRACEF("WARNING : PCIe AMD top_mem quirk failed to subtract region "
                    "[0x0, %#" PRIx64 ") (res %d)!\n", top_mem, res);
         }
@@ -181,7 +181,7 @@ static void pcie_amd_topmem_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
         // TODO: make this subtractive on (0, TOP_MEM2) when we start preloading the
         // upper pci range.
         status_t res = dev->driver().AddBusRegion(top_mem2, max, PciAddrSpace::MMIO);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             TRACEF("WARNING : PCIe AMD top_mem quirk failed to add 64bit region "
                    "[%#" PRIx64 ", %#" PRIx64 ") (res %d)!\n", top_mem2, max, res);
         }

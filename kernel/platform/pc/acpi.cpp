@@ -62,23 +62,23 @@ static status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
     ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_MADT, 1, &table);
     if (status != AE_OK) {
         TRACEF("could not find MADT\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     ACPI_TABLE_MADT *madt = (ACPI_TABLE_MADT *)table;
     uintptr_t records_start = ((uintptr_t)madt) + sizeof(*madt);
     uintptr_t records_end = ((uintptr_t)madt) + madt->Header.Length;
     if (records_start >= records_end) {
         TRACEF("MADT wraps around address space\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     // Shouldn't be too many records
     if (madt->Header.Length > 4096) {
         TRACEF("MADT suspiciously long: %u\n", madt->Header.Length);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     *start = records_start;
     *end = records_end;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* @brief Enumerate all functioning CPUs and their APIC IDs
@@ -90,7 +90,7 @@ static status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
  * @param len Length of apic_ids.
  * @param num_cpus Output for the number of logical processors detected.
  *
- * @return NO_ERROR on success. Note that if len < *num_cpus, not all
+ * @return MX_OK on success. Note that if len < *num_cpus, not all
  *         logical apic_ids will be returned.
  */
 status_t platform_enumerate_cpus(
@@ -99,7 +99,7 @@ status_t platform_enumerate_cpus(
         uint32_t *num_cpus)
 {
     if (num_cpus == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uintptr_t records_start, records_end;
@@ -129,10 +129,10 @@ status_t platform_enumerate_cpus(
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
-      return ERR_INTERNAL;
+      return MX_ERR_INTERNAL;
     }
     *num_cpus = count;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* @brief Enumerate all IO APICs
@@ -144,7 +144,7 @@ status_t platform_enumerate_cpus(
  * @param len Length of io_apics.
  * @param num_io_apics Number of IO apics found
  *
- * @return NO_ERROR on success. Note that if len < *num_io_apics, not all
+ * @return MX_OK on success. Note that if len < *num_io_apics, not all
  *         IO APICs will be returned.
  */
 status_t platform_enumerate_io_apics(
@@ -153,7 +153,7 @@ status_t platform_enumerate_io_apics(
         uint32_t *num_io_apics)
 {
     if (num_io_apics == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uintptr_t records_start, records_end;
@@ -183,10 +183,10 @@ status_t platform_enumerate_io_apics(
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
-      return ERR_INVALID_ARGS;
+      return MX_ERR_INVALID_ARGS;
     }
     *num_io_apics = count;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* @brief Enumerate all interrupt source overrides
@@ -197,7 +197,7 @@ status_t platform_enumerate_io_apics(
  * @param len Length of isos.
  * @param num_isos Number of ISOs found
  *
- * @return NO_ERROR on success. Note that if len < *num_isos, not all
+ * @return MX_OK on success. Note that if len < *num_isos, not all
  *         ISOs will be returned.
  */
 status_t platform_enumerate_interrupt_source_overrides(
@@ -206,7 +206,7 @@ status_t platform_enumerate_interrupt_source_overrides(
         uint32_t *num_isos)
 {
     if (num_isos == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uintptr_t records_start, records_end;
@@ -270,17 +270,17 @@ status_t platform_enumerate_interrupt_source_overrides(
     }
     if (addr != records_end) {
       TRACEF("malformed MADT\n");
-      return ERR_INVALID_ARGS;
+      return MX_ERR_INVALID_ARGS;
     }
     *num_isos = count;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* @brief Return information about the High Precision Event Timer, if present.
  *
  * @param hpet Descriptor to populate
  *
- * @return NO_ERROR on success.
+ * @return MX_OK on success.
  */
 status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
 {
@@ -288,12 +288,12 @@ status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
     ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_HPET, 1, &table);
     if (status != AE_OK) {
         TRACEF("could not find HPET\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     ACPI_TABLE_HPET *hpet_tbl = (ACPI_TABLE_HPET *)table;
     if (hpet_tbl->Header.Length != sizeof(ACPI_TABLE_HPET)) {
         TRACEF("Unexpected HPET table length\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     hpet->minimum_tick = hpet_tbl->MinimumTick;
@@ -302,8 +302,8 @@ status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
     switch (hpet_tbl->Address.SpaceId) {
         case ACPI_ADR_SPACE_SYSTEM_IO: hpet->port_io = true; break;
         case ACPI_ADR_SPACE_SYSTEM_MEMORY: hpet->port_io = false; break;
-        default: return ERR_NOT_SUPPORTED;
+        default: return MX_ERR_NOT_SUPPORTED;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }

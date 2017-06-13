@@ -85,7 +85,7 @@ static status_t mem_arena_init(boot_addr_range_t *range)
     ctx.kernel_size = reinterpret_cast<uintptr_t>(&_end) - ctx.kernel_base;
     ctx.ramdisk_base = reinterpret_cast<uintptr_t>(platform_get_ramdisk(&ctx.ramdisk_size));
 
-    bool have_limit = (mem_limit_init(&ctx) == NO_ERROR);
+    bool have_limit = (mem_limit_init(&ctx) == MX_OK);
 
     // Set up a base arena template to use
     pmm_arena_info_t base_arena;
@@ -115,14 +115,14 @@ static status_t mem_arena_init(boot_addr_range_t *range)
             size -= adjust;
         }
 
-        status_t status = NO_ERROR;
+        status_t status = MX_OK;
         if (have_limit) {
             status = mem_limit_add_arenas_from_range(&ctx, base, size, base_arena);
         }
 
         // If there is no limit, or we failed to add arenas from processing
         // ranges then add the original range.
-        if (!have_limit || status != NO_ERROR) {
+        if (!have_limit || status != MX_OK) {
             auto arena = base_arena;
             arena.base = base;
             arena.size = size;
@@ -131,7 +131,7 @@ static status_t mem_arena_init(boot_addr_range_t *range)
             status = pmm_add_arena(&arena);
             // This will result in subsequent arenas not being added, but this
             // is a fairly fatal event so it's justifiable.
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 TRACEF("Failed to add pmm range at %#" PRIxPTR "\n", arena.base);
                 return status;
             }
@@ -139,7 +139,7 @@ static status_t mem_arena_init(boot_addr_range_t *range)
 
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #define E820_RAM 1
@@ -415,20 +415,20 @@ static status_t platform_mem_range_init(void)
     /* first try the efi memory table */
     efi_range_seq_t efi_seq;
     if (efi_range_init(&range, &efi_seq) &&
-        (mem_arena_init(&range) == NO_ERROR))
-        return NO_ERROR;
+        (mem_arena_init(&range) == MX_OK))
+        return MX_OK;
 
     /* then try getting range info from e820 */
     e820_range_seq_t e820_seq;
     if (e820_range_init(&range, &e820_seq) &&
-        (mem_arena_init(&range) == NO_ERROR))
-        return NO_ERROR;
+        (mem_arena_init(&range) == MX_OK))
+        return MX_OK;
 
     /* if no ranges were found, try multiboot */
     multiboot_range_seq_t multiboot_seq;
     if (multiboot_range_init(&range, &multiboot_seq) &&
-        (mem_arena_init(&range) == NO_ERROR))
-        return NO_ERROR;
+        (mem_arena_init(&range) == MX_OK))
+        return MX_OK;
 
     /* if still no ranges were found, make a safe guess */
     e820_range_init(&range, &e820_seq);
@@ -447,22 +447,22 @@ static struct addr_range cached_e820_entries[64];
 
 status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
     if (callback == NULL)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if(!cached_e820_entry_count)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     DEBUG_ASSERT(cached_e820_entry_count <= countof(cached_e820_entries));
     for (size_t i = 0; i < cached_e820_entry_count; ++i)
         callback(cached_e820_entries[i].base, cached_e820_entries[i].size, ctx);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* Discover the basic memory map */
 void platform_mem_init(void)
 {
-    if (platform_mem_range_init() != NO_ERROR) {
+    if (platform_mem_range_init() != MX_OK) {
         TRACEF("Error adding arenas from provided memory tables.\n");
     }
 

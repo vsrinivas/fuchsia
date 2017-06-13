@@ -59,19 +59,19 @@ static void platform_init_apic(uint level)
     status_t status = platform_enumerate_io_apics(NULL, 0, &num_io_apics);
     // TODO: If we want to support x86 without IO APICs, we should do something
     // better here.
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
     io_apic_descriptor *io_apics =
             static_cast<io_apic_descriptor *>(calloc(num_io_apics, sizeof(*io_apics)));
     ASSERT(io_apics != NULL);
     uint32_t num_found = 0;
     status = platform_enumerate_io_apics(io_apics, num_io_apics, &num_found);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
     ASSERT(num_io_apics == num_found);
 
     // Enumerate the IO APICs
     uint32_t num_isos;
     status = platform_enumerate_interrupt_source_overrides(NULL, 0, &num_isos);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
     io_apic_isa_override *isos = NULL;
     if (num_isos > 0) {
         isos = static_cast<io_apic_isa_override *>(calloc(num_isos, sizeof(*isos)));
@@ -80,7 +80,7 @@ static void platform_init_apic(uint level)
                 isos,
                 num_isos,
                 &num_found);
-        ASSERT(status == NO_ERROR);
+        ASSERT(status == MX_OK);
         ASSERT(num_isos == num_found);
     }
 
@@ -121,12 +121,12 @@ static void platform_init_apic(uint level)
 
     // Initialize the x86 IRQ vector allocator and add the range of vectors to manage.
     status = p2ra_init(&x86_irq_vector_allocator, MAX_IRQ_BLOCK_SIZE);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
 
     status = p2ra_add_range(&x86_irq_vector_allocator,
                             X86_INT_PLATFORM_BASE,
                             X86_INT_PLATFORM_MAX - X86_INT_PLATFORM_BASE + 1);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
 }
 LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2);
 
@@ -139,7 +139,7 @@ status_t mask_interrupt(unsigned int vector)
 
     spin_unlock_irqrestore(&lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t unmask_interrupt(unsigned int vector)
@@ -151,7 +151,7 @@ status_t unmask_interrupt(unsigned int vector)
 
     spin_unlock_irqrestore(&lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t configure_interrupt(unsigned int vector,
@@ -173,7 +173,7 @@ status_t configure_interrupt(unsigned int vector,
 
     spin_unlock_irqrestore(&lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t get_interrupt_config(unsigned int vector,
@@ -242,9 +242,9 @@ void register_int_handler(unsigned int vector, int_handler handler, void *arg)
          * builds, we log a message and then silently ignore the request to
          * register a new handler. */
         result = p2ra_allocate_range(&x86_irq_vector_allocator, 1, &range_start);
-        DEBUG_ASSERT(result == NO_ERROR);
+        DEBUG_ASSERT(result == MX_OK);
 
-        if (result != NO_ERROR) {
+        if (result != MX_OK) {
             TRACEF("Failed to allocate x86 IRQ vector for global IRQ (%u) when "
                    "registering new handler (%p, %p)\n",
                    vector, handler, arg);
@@ -293,20 +293,20 @@ status_t x86_alloc_msi_block(uint requested_irqs,
                              bool is_msix,
                              pcie_msi_block_t* out_block) {
     if (!out_block)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (out_block->allocated)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     status_t res;
     uint alloc_start;
     uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
 
     res = p2ra_allocate_range(&x86_irq_vector_allocator, alloc_size, &alloc_start);
-    if (res == NO_ERROR) {
+    if (res == MX_OK) {
         // Compute the target address.
         // See section 10.11.1 of the Intel 64 and IA-32 Architectures Software
         // Developer's Manual Volume 3A.

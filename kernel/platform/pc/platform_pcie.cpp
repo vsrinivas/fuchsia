@@ -51,16 +51,16 @@ static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
     // release build.
     status_t res;
     res = pcie.SubtractBusRegion(0x0, 0x10000, PciAddrSpace::PIO);
-    ASSERT(res == NO_ERROR);
+    ASSERT(res == MX_OK);
 
     res = pcie.SubtractBusRegion(0x0, mxtl::numeric_limits<uint64_t>::max(), PciAddrSpace::MMIO);
-    ASSERT(res == NO_ERROR);
+    ASSERT(res == MX_OK);
 }
 
 static void x86_pcie_init_hook(uint level) {
     // Initialize the bus driver
     status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         TRACEF("Failed to initialize PCI bus driver (res = %d).  "
                "PCI will be non-functional.\n", res);
         return;
@@ -78,7 +78,7 @@ static void x86_pcie_init_hook(uint level) {
     constexpr uint64_t pcie_pio_size = 0x10000 - pcie_pio_base;
 
     res = pcie->AddBusRegion(pcie_pio_base, pcie_pio_size, PciAddrSpace::PIO);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         TRACEF("WARNING - Failed to add initial PCIe PIO region "
                "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
                 pcie_pio_base, pcie_pio_base + pcie_pio_size, res);
@@ -97,7 +97,7 @@ static void x86_pcie_init_hook(uint level) {
     constexpr uint64_t pcie_mmio_base = 0x0;
     constexpr uint64_t pcie_mmio_size = 0x100000000;
     res = pcie->AddBusRegion(pcie_mmio_base, pcie_mmio_size, PciAddrSpace::MMIO);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         TRACEF("WARNING - Failed to add initial PCIe MMIO region "
                "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
                 pcie_mmio_base, pcie_mmio_base + pcie_mmio_size, res);
@@ -111,7 +111,7 @@ static void x86_pcie_init_hook(uint level) {
         status_t res;
 
         res = pcie->SubtractBusRegion(base, size, PciAddrSpace::MMIO);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
             // driver from using a region of the MMIO bus we are in a pretty
             // dangerous situation.  For now, log a message, then attempt to
@@ -123,7 +123,7 @@ static void x86_pcie_init_hook(uint level) {
         }
     }, pcie.get());
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
         // driver from using a region of the MMIO bus we are in a pretty
         // dangerous situation.  For now, log a message, then attempt to

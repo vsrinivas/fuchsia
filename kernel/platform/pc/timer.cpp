@@ -297,7 +297,7 @@ static uint64_t lookup_core_crystal_freq(void) {
         case X86_MICROARCH_INTEL_HASWELL:
         case X86_MICROARCH_INTEL_BROADWELL: {
             uint64_t platform_info;
-            if (read_msr_safe(MSR_PLATFORM_INFO, &platform_info) == NO_ERROR) {
+            if (read_msr_safe(MSR_PLATFORM_INFO, &platform_info) == MX_OK) {
                 uint64_t bus_freq_mult = (platform_info >> 8) & 0xf;
                 return bus_freq_mult * 100 * 1000 * 1000;
             }
@@ -367,7 +367,7 @@ outer:
                         UINT32_MAX,
                         apic_divisor,
                         true);
-                ASSERT(status == NO_ERROR);
+                ASSERT(status == MX_OK);
 
                 switch (calibration_clock) {
                     case CLOCK_HPET:
@@ -582,14 +582,14 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
 
     if (use_tsc_deadline) {
         if (UINT64_MAX / deadline < (tsc_ticks_per_ms / LK_MSEC(1))) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         // We rounded up to the tick after above.
         const uint64_t tsc_deadline = u64_mul_u64_fp32_64(deadline, tsc_per_ns);
         LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", tsc_deadline);
         apic_timer_set_tsc_deadline(tsc_deadline, false /* unmasked */);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     const lk_time_t now = current_time();
@@ -649,7 +649,7 @@ status_t platform_configure_watchdog(uint32_t frequency) {
         case CLOCK_TSC: {
             /* Use the PIT IRQ number since the PIT isn't running */
             uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-            if (hpet_timer_configure_irq(0, irq) == NO_ERROR) {
+            if (hpet_timer_configure_irq(0, irq) == MX_OK) {
                 apic_io_configure_isa_irq(
                         ISA_IRQ_PIT,
                         DELIVERY_MODE_NMI,
@@ -661,12 +661,12 @@ status_t platform_configure_watchdog(uint32_t frequency) {
                 uint64_t hpet_rate_ms = hpet_ticks_per_ms();
                 hpet_disable();
                 __UNUSED status_t status = hpet_set_value(0);
-                DEBUG_ASSERT(status == NO_ERROR);
+                DEBUG_ASSERT(status == MX_OK);
                 status = hpet_timer_set_periodic(0, hpet_rate_ms * frequency / 1000);
-                DEBUG_ASSERT(status == NO_ERROR);
+                DEBUG_ASSERT(status == MX_OK);
                 hpet_enable();
 
-                return NO_ERROR;
+                return MX_OK;
             }
             /* Fallthrough and use the PIT instead */
         }
@@ -684,8 +684,8 @@ status_t platform_configure_watchdog(uint32_t frequency) {
                     0,
                     0);
             printf("CONFIGURED WATCHDOG\n");
-            return NO_ERROR;
+            return MX_OK;
         }
-        default: return ERR_NOT_SUPPORTED;
+        default: return MX_ERR_NOT_SUPPORTED;
     }
 }

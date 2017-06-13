@@ -296,7 +296,7 @@ static void platform_ensure_display_memtype(uint level)
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
                 ARCH_MMU_FLAG_PERM_WRITE);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         TRACEF("Failed to map boot_fb: %d\n", status);
         return;
     }
@@ -330,7 +330,7 @@ void platform_init_crashlog(void) {
                                                   ARCH_MMU_FLAG_PERM_WRITE |
                                                   ARCH_MMU_FLAG_PERM_EXECUTE);
 
-        if (r != NO_ERROR) {
+        if (r != MX_OK) {
             efi_aspace.reset();
         }
     }
@@ -389,7 +389,7 @@ static void platform_init_smp(void)
     uint32_t num_cpus = 0;
 
     status_t status = platform_enumerate_cpus(NULL, 0, &num_cpus);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         return;
     }
@@ -407,7 +407,7 @@ static void platform_init_smp(void)
     // find the list of all cpu apic ids into a temporary list
     uint32_t real_num_cpus;
     status = platform_enumerate_cpus(apic_ids_temp, num_cpus, &real_num_cpus);
-    if (status != NO_ERROR || num_cpus != real_num_cpus) {
+    if (status != MX_OK || num_cpus != real_num_cpus) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         free(apic_ids);
         return;
