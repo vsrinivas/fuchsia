@@ -233,7 +233,9 @@ static void dc_dump_device(device_t* dev, size_t indent) {
 static void dc_dump_state(void) {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
-    dc_dump_device(&platform_device, 1);
+    if (platform_device.hrsrc != MX_HANDLE_INVALID) {
+        dc_dump_device(&platform_device, 1);
+    }
 }
 
 static void dc_dump_device_props(device_t* dev) {
@@ -292,7 +294,9 @@ static void dc_dump_device_props(device_t* dev) {
 static void dc_dump_devprops(void) {
     dc_dump_device_props(&root_device);
     dc_dump_device_props(&misc_device);
-    dc_dump_device_props(&platform_device);
+    if (platform_device.hrsrc != MX_HANDLE_INVALID) {
+        dc_dump_device_props(&platform_device);
+    }
 }
 
 static void dc_dump_drivers(void) {
