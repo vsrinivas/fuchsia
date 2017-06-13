@@ -7,6 +7,7 @@
 #include <bits.h>
 #include <platform.h>
 #include <string.h>
+#include <trace.h>
 
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
@@ -27,6 +28,8 @@
 #include <magenta/syscalls/hypervisor.h>
 #endif // WITH_LIB_MAGENTA
 
+#define LOCAL_TRACE 0
+
 static const uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
 static const uint16_t kLocalApicLvtTimer = 0x320;
@@ -46,17 +49,15 @@ ExitInfo::ExitInfo() {
         exit_reason == ExitReason::IO_INSTRUCTION)
         return;
 
-    dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
-    dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
-    dprintf(SPEW, "instruction length: %#" PRIx32 "\n", instruction_length);
-    dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", guest_physical_address);
-    dprintf(SPEW, "guest linear address: %#" PRIx64 "\n",
-        vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
-    dprintf(SPEW, "guest activity state: %#" PRIx32 "\n",
-        vmcs_read(VmcsField32::GUEST_ACTIVITY_STATE));
-    dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n",
+    LTRACEF("exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
+    LTRACEF("exit qualification: %#" PRIx64 "\n", exit_qualification);
+    LTRACEF("instruction length: %#" PRIx32 "\n", instruction_length);
+    LTRACEF("guest physical address: %#" PRIx64 "\n", guest_physical_address);
+    LTRACEF("guest linear address: %#" PRIx64 "\n", vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
+    LTRACEF("guest activity state: %#" PRIx32 "\n", vmcs_read(VmcsField32::GUEST_ACTIVITY_STATE));
+    LTRACEF("guest interruptibility state: %#" PRIx32 "\n",
         vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
-    dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
+    LTRACEF("guest rip: %#" PRIx64 "\n", guest_rip);
 }
 
 IoInfo::IoInfo(uint64_t qualification) {
@@ -502,40 +503,40 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
     case ExitReason::EXTERNAL_INTERRUPT:
         return handle_external_interrupt(exit_info, vmcs_load, local_apic_state);
     case ExitReason::INTERRUPT_WINDOW:
-        dprintf(SPEW, "handling interrupt window\n\n");
+        LTRACEF("handling interrupt window\n\n");
         return handle_interrupt_window(exit_info, local_apic_state);
     case ExitReason::CPUID:
-        dprintf(SPEW, "handling CPUID instruction\n\n");
+        LTRACEF("handling CPUID instruction\n\n");
         return handle_cpuid(exit_info, guest_state);
     case ExitReason::HLT:
-        dprintf(SPEW, "handling HLT instruction\n\n");
+        LTRACEF("handling HLT instruction\n\n");
         return handle_hlt(exit_info, local_apic_state);
     case ExitReason::VMCALL:
-        dprintf(SPEW, "handling VMCALL instruction\n\n");
+        LTRACEF("handling VMCALL instruction\n\n");
         return MX_ERR_STOP;
     case ExitReason::IO_INSTRUCTION:
         return handle_io_instruction(exit_info, guest_state, ctl_fifo);
     case ExitReason::RDMSR:
-        dprintf(SPEW, "handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
+        LTRACEF("handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_rdmsr(exit_info, guest_state);
     case ExitReason::WRMSR:
-        dprintf(SPEW, "handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
+        LTRACEF("handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_wrmsr(exit_info, guest_state, local_apic_state);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
-        dprintf(SPEW, "handling VM entry failure\n\n");
+        LTRACEF("handling VM entry failure\n\n");
         return MX_ERR_BAD_STATE;
     case ExitReason::APIC_ACCESS:
-        dprintf(SPEW, "handling APIC access\n\n");
+        LTRACEF("handling APIC access\n\n");
         return handle_apic_access(exit_info, gpas, ctl_fifo);
     case ExitReason::EPT_VIOLATION:
-        dprintf(SPEW, "handling EPT violation\n\n");
+        LTRACEF("handling EPT violation\n\n");
         return handle_ept_violation(exit_info, gpas, ctl_fifo);
     case ExitReason::XSETBV:
-        dprintf(SPEW, "handling XSETBV instruction\n\n");
+        LTRACEF("handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, guest_state);
     default:
-        dprintf(SPEW, "unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
+        LTRACEF("unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
         return MX_ERR_NOT_SUPPORTED;
     }
 }
