@@ -138,7 +138,7 @@ void apic_io_init(
                     0, // vmm flags
                     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
                         ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
-            ASSERT(res == NO_ERROR);
+            ASSERT(res == MX_OK);
             vaddr = (void *)((uintptr_t)vaddr + paddr - paddr_page_base);
         }
 
@@ -350,7 +350,7 @@ status_t apic_io_fetch_irq_config(
     struct io_apic *io_apic = apic_io_resolve_global_irq(global_irq);
 
     if (!io_apic)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);
@@ -361,7 +361,7 @@ status_t apic_io_fetch_irq_config(
 
     spin_unlock_irqrestore(&lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void apic_io_configure_irq_vector(

@@ -27,21 +27,21 @@ status_t x86_bootstrap16_prep(
     // Make sure bootstrap region will be entirely in the first 1MB of physical
     // memory
     if (bootstrap_phys_addr > (1 << 20) - 2 * PAGE_SIZE) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Make sure the entrypoint code is in the bootstrap code that will be
     // loaded
     if (entry64 < (uintptr_t)x86_bootstrap16_start ||
         entry64 >= (uintptr_t)x86_bootstrap16_end) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     VmAspace *kernel_aspace = VmAspace::kernel_aspace();
     mxtl::RefPtr<VmAspace> bootstrap_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL,
                                                                "bootstrap16");
     if (!bootstrap_aspace) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     void *bootstrap_virt_addr = NULL;
 
@@ -86,7 +86,7 @@ status_t x86_bootstrap16_prep(
                 page_mappings[i].start_paddr,
                 VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             TRACEF("Failed to create wakeup bootstrap aspace\n");
             return status;
         }
@@ -102,7 +102,7 @@ status_t x86_bootstrap16_prep(
             bootstrap_phys_addr, // physical address
             0, // vmm flags
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE); // arch mmu flags
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         TRACEF("could not allocate AP bootstrap page: %d\n", status);
         return status;
     }
@@ -127,7 +127,7 @@ status_t x86_bootstrap16_prep(
         // TODO(teisenbe): Once the pmm supports it, we should request that this
         // VmAspace is backed by a low mem PML4, so we can avoid this issue.
         TRACEF("bootstrap PML4 was not allocated out of low mem\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     ASSERT(phys_kernel_pml4 <= UINT32_MAX);
 
@@ -145,5 +145,5 @@ status_t x86_bootstrap16_prep(
     // cancel the cleanup autocall, since we're returning the new aspace and region
     ac.cancel();
 
-    return NO_ERROR;
+    return MX_OK;
 }

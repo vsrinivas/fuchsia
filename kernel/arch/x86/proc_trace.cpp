@@ -162,17 +162,17 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (active)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (ipt_cpu_state)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mp_sync_exec(MP_CPU_ALL, x86_ipt_set_mode_task,
                  reinterpret_cast<void*>(static_cast<uintptr_t>(mode)));
     trace_mode = mode;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Allocate all needed state for tracing.
@@ -181,21 +181,21 @@ status_t x86_ipt_cpu_mode_alloc() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (active)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (ipt_cpu_state)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     uint32_t num_cpus = arch_max_num_cpus();
     ipt_cpu_state =
         reinterpret_cast<ipt_cpu_state_t*>(calloc(num_cpus,
                                                   sizeof(*ipt_cpu_state)));
     if (!ipt_cpu_state)
-        return ERR_NO_MEMORY;
-    return NO_ERROR;
+        return MX_ERR_NO_MEMORY;
+    return MX_OK;
 }
 
 // Free resources obtained by x86_ipt_cpu_mode_alloc().
@@ -206,15 +206,15 @@ status_t x86_ipt_cpu_mode_free() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (active)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     free(ipt_cpu_state);
     ipt_cpu_state = nullptr;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
@@ -247,13 +247,13 @@ status_t x86_ipt_cpu_mode_start() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (active)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (!ipt_cpu_state)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     uint64_t kernel_cr3 = x86_kernel_cr3();
     TRACEF("Enabling processor trace, kernel cr3: 0x%" PRIxPTR "\n",
@@ -273,7 +273,7 @@ status_t x86_ipt_cpu_mode_start() {
            model_info->stepping);
 
     mp_sync_exec(MP_CPU_ALL, x86_ipt_start_cpu_task, ipt_cpu_state);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
@@ -312,34 +312,34 @@ status_t x86_ipt_cpu_mode_stop() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (!ipt_cpu_state)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     TRACEF("Disabling processor trace\n");
 
     mp_sync_exec(MP_CPU_ALL, x86_ipt_stop_cpu_task, ipt_cpu_state);
     ktrace(TAG_IPT_STOP, 0, 0, 0, 0);
     active = false;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t x86_ipt_stage_cpu_data(uint32_t cpu, const mx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (active)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (!ipt_cpu_state)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
     uint32_t num_cpus = arch_max_num_cpus();
     if (cpu >= num_cpus)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     ipt_cpu_state[cpu].ctl = regs->ctl;
     ipt_cpu_state[cpu].status = regs->status;
@@ -349,23 +349,23 @@ status_t x86_ipt_stage_cpu_data(uint32_t cpu, const mx_x86_pt_regs_t* regs) {
     static_assert(sizeof(ipt_cpu_state[cpu].addr_ranges) == sizeof(regs->addr_ranges), "addr_ranges size mismatch");
     memcpy(ipt_cpu_state[cpu].addr_ranges, regs->addr_ranges, sizeof(regs->addr_ranges));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t x86_ipt_get_cpu_data(uint32_t cpu, mx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (active)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     if (!ipt_cpu_state)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     uint32_t num_cpus = arch_max_num_cpus();
     if (cpu >= num_cpus)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     regs->ctl = ipt_cpu_state[cpu].ctl;
     regs->status = ipt_cpu_state[cpu].status;
@@ -375,5 +375,5 @@ status_t x86_ipt_get_cpu_data(uint32_t cpu, mx_x86_pt_regs_t* regs) {
     static_assert(sizeof(regs->addr_ranges) == sizeof(ipt_cpu_state[cpu].addr_ranges), "addr_ranges size mismatch");
     memcpy(regs->addr_ranges, ipt_cpu_state[cpu].addr_ranges, sizeof(regs->addr_ranges));
 
-    return NO_ERROR;
+    return MX_OK;
 }

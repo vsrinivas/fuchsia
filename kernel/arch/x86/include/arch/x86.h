@@ -89,9 +89,9 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus);
  * @param apic_ids A list of all APIC IDs to launch.
  * @param count The number of entries in the apic_ids list.
  *
- * @return ERR_INVALID_ARGS if an unknown APIC ID was provided.
- * @return ERR_BAD_STATE if one of the targets is currently online
- * @return ERR_TIMED_OUT if one of the targets failed to launch
+ * @return MX_ERR_INVALID_ARGS if an unknown APIC ID was provided.
+ * @return MX_ERR_BAD_STATE if one of the targets is currently online
+ * @return MX_ERR_TIMED_OUT if one of the targets failed to launch
  */
 status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count);
 

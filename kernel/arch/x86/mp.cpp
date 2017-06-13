@@ -43,14 +43,14 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
 
     DEBUG_ASSERT(cpu_count >= 1);
     if (cpu_count == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (cpu_count > 1) {
         size_t len = sizeof(*ap_percpus) * (cpu_count - 1);
         ap_percpus = (x86_percpu *)memalign(MAX_CACHE_LINE, len);
         if (ap_percpus == NULL) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         memset(ap_percpus, 0, len);
     }
@@ -65,7 +65,7 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
         DEBUG_ASSERT(apic_idx != (uint)(cpu_count - 1));
         if (apic_idx == (uint)cpu_count - 1) {
             /* Never found bootstrap CPU in apic id list */
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         ap_percpus[apic_idx].cpu_num = apic_idx + 1;
         ap_percpus[apic_idx].apic_id = apic_ids[i];
@@ -74,7 +74,7 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     }
 
     x86_num_cpus = cpu_count;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void x86_init_percpu(uint cpu_num)
@@ -236,10 +236,10 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
 
     if (target == MP_CPU_ALL_BUT_LOCAL) {
         apic_send_broadcast_ipi(vector, DELIVERY_MODE_FIXED);
-        return NO_ERROR;
+        return MX_OK;
     } else if (target == MP_CPU_ALL) {
         apic_send_broadcast_self_ipi(vector, DELIVERY_MODE_FIXED);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     ASSERT(x86_num_cpus <= sizeof(target) * 8);
@@ -268,7 +268,7 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
         cpu_id++;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 enum handler_return x86_ipi_generic_handler(void)
@@ -297,42 +297,42 @@ void x86_ipi_halt_handler(void)
 
 status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
     if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mp_cpu_unplug(uint cpu_id)
 {
     /* we do not allow unplugging the bootstrap processor */
     if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uint32_t dst_apic_id = ap_percpus[cpu_id - 1].apic_id;
     if (dst_apic_id == INVALID_APIC_ID) {
         /* This is a transient state that can occur during CPU onlining */
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
 
     DEBUG_ASSERT(dst_apic_id < UINT8_MAX);
     apic_send_ipi(0, (uint8_t)dst_apic_id, DELIVERY_MODE_INIT);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mp_cpu_hotplug(uint cpu_id)
 {
     if (cpu_id >= x86_num_cpus) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (mp_is_cpu_online(cpu_id)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     DEBUG_ASSERT(cpu_id != 0);
     if (cpu_id == 0) {
         /* We shouldn't be able to shutoff the bootstrap CPU, so
          * no reason to be able to bring it back via this route. */
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     struct x86_percpu *percpu = &ap_percpus[cpu_id - 1];

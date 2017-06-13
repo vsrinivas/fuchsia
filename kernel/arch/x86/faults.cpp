@@ -62,7 +62,7 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     // try to dump the user stack
     if (is_user_address(frame->user_sp)) {
         uint8_t buf[256];
-        if (copy_from_user_unsafe(buf, (void *)frame->user_sp, sizeof(buf)) == NO_ERROR) {
+        if (copy_from_user_unsafe(buf, (void *)frame->user_sp, sizeof(buf)) == MX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)frame->user_sp);
             hexdump_ex(buf, sizeof(buf), frame->user_sp);
         }
@@ -94,7 +94,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
         status_t erc = call_magenta_exception_handler(kind, &context, frame);
         arch_disable_ints();
         arch_set_in_int_handler(true);
-        if (erc == NO_ERROR)
+        if (erc == MX_OK)
             return true;
     }
 
@@ -263,7 +263,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     /* check for flags we're not prepared to handle */
     if (unlikely(error_code & ~(PFEX_I | PFEX_U | PFEX_W | PFEX_P))) {
         printf("x86_pfe_handler: unhandled error code bits set, error code %#" PRIx64 "\n", error_code);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     /* check for a potential SMAP failure */
@@ -275,7 +275,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
          is_user_address(va))) {
         /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */
         printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n", va);
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     /* convert the PF error codes to page fault flags */
@@ -287,8 +287,8 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
 
     /* call the high level page fault handler */
     status_t pf_err = vmm_page_fault_handler(va, flags);
-    if (likely(pf_err == NO_ERROR))
-        return NO_ERROR;
+    if (likely(pf_err == MX_OK))
+        return MX_OK;
 
     /* if the high level page fault handler can't deal with it,
      * resort to trying to recover first, before bailing */
@@ -297,7 +297,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     thread_t *current_thread = get_current_thread();
     if (unlikely(current_thread->arch.page_fault_resume)) {
         frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     /* let high level code deal with this */
@@ -312,7 +312,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
 #endif
 
     /* fall through to fatal path */
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static void x86_iframe_process_pending_signals(x86_iframe_t *frame)
@@ -393,7 +393,7 @@ void x86_exception_handler(x86_iframe_t *frame)
 
         case X86_INT_PAGE_FAULT:
             CPU_STATS_INC(page_faults);
-            if (x86_pfe_handler(frame) != NO_ERROR)
+            if (x86_pfe_handler(frame) != MX_OK)
                 x86_fatal_pfe_handler(frame, x86_get_cr2());
             break;
 
@@ -482,7 +482,7 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (context->frame->cs != CODE_64_SELECTOR && is_user_address(context->frame->user_sp)) {
         uint8_t buf[256];
-        if (copy_from_user_unsafe(buf, (void *)context->frame->user_sp, sizeof(buf)) == NO_ERROR) {
+        if (copy_from_user_unsafe(buf, (void *)context->frame->user_sp, sizeof(buf)) == MX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->user_sp);
             hexdump_ex(buf, sizeof(buf), context->frame->user_sp);
         }

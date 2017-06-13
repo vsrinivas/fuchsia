@@ -204,7 +204,7 @@ usage:
         printf("%s features\n", argv[0].str);
         printf("%s unplug <cpu_id>\n", argv[0].str);
         printf("%s hotplug <cpu_id>\n", argv[0].str);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "features")) {
@@ -228,7 +228,7 @@ usage:
         goto usage;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 STATIC_COMMAND_START

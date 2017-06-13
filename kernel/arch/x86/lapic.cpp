@@ -96,7 +96,7 @@ void apic_vm_init(void)
             0, // vmm flags
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
                 ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         panic("Could not allocate APIC management page: %d\n", res);
     }
     ASSERT(apic_virt_base != NULL);
@@ -220,10 +220,10 @@ static status_t apic_timer_set_divide_value(uint8_t v) {
         case 32: new_value = 0x8; break;
         case 64: new_value = 0x9; break;
         case 128: new_value = 0xa; break;
-        default: return ERR_INVALID_ARGS;
+        default: return MX_ERR_INVALID_ARGS;
     }
     *DIVIDE_CONF_ADDR = new_value;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void apic_timer_init(void) {
@@ -260,7 +260,7 @@ void apic_timer_stop(void) {
 }
 
 status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
-    status_t status = NO_ERROR;
+    status_t status = MX_OK;
     uint32_t timer_config = LVT_VECTOR(X86_INT_APIC_TIMER) |
             LVT_TIMER_MODE_ONESHOT;
     if (masked) {
@@ -271,7 +271,7 @@ status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
     arch_interrupt_save(&state, 0);
 
     status = apic_timer_set_divide_value(divisor);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup;
     }
     *LVT_TIMER_ADDR = timer_config;
@@ -304,12 +304,12 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
 }
 
 status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
-    status_t status = NO_ERROR;
+    status_t status = MX_OK;
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
 
     status = apic_timer_set_divide_value(divisor);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup;
     }
     *LVT_TIMER_ADDR = LVT_VECTOR(X86_INT_APIC_TIMER) | LVT_TIMER_MODE_PERIODIC;
@@ -349,7 +349,7 @@ usage:
         printf("%s dump local\n", argv[0].str);
         printf("%s broadcast <vec>\n", argv[0].str);
         printf("%s self <vec>\n", argv[0].str);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "broadcast")) {
@@ -385,7 +385,7 @@ usage:
         goto usage;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void apic_local_debug(void)

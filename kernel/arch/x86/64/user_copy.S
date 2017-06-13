@@ -61,7 +61,7 @@ FUNCTION(_x86_copy_from_user)
     call _x86_usercopy_can_read
     cmp $0, %rax
     jnz 0f
-    mov $ERR_INVALID_ARGS, %rax
+    mov $MX_ERR_INVALID_ARGS, %rax
     jmp .Lcleanup_copy_from
 0:
     # Setup page fault return
@@ -79,11 +79,11 @@ FUNCTION(_x86_copy_from_user)
     mov %r14, %rcx
     rep movsb
 
-    mov $NO_ERROR, %rax
+    mov $MX_OK, %rax
     jmp .Lcleanup_copy_from
 
 .Lfault_copy_from:
-    mov $ERR_INVALID_ARGS, %rax
+    mov $MX_ERR_INVALID_ARGS, %rax
 .Lcleanup_copy_from:
     # Reset fault return
     movq $0, (%r15)
@@ -101,7 +101,7 @@ FUNCTION(_x86_copy_to_user)
     call _x86_usercopy_can_write
     cmp $0, %rax
     jnz 0f
-    mov $ERR_INVALID_ARGS, %rax
+    mov $MX_ERR_INVALID_ARGS, %rax
     jmp .Lcleanup_copy_to
 0:
     # Setup page fault return
@@ -119,11 +119,11 @@ FUNCTION(_x86_copy_to_user)
     mov %r14, %rcx
     rep movsb
 
-    mov $NO_ERROR, %rax
+    mov $MX_OK, %rax
     jmp .Lcleanup_copy_to
 
 .Lfault_copy_to:
-    mov $ERR_INVALID_ARGS, %rax
+    mov $MX_ERR_INVALID_ARGS, %rax
 .Lcleanup_copy_to:
     # Reset fault return
     movq $0, (%r15)

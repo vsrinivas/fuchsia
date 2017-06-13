@@ -562,7 +562,7 @@ static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, volatile pt_
     DEBUG_ASSERT(IS_PAGE_PRESENT(*pte) && IS_LARGE_PAGE(*pte));
     volatile pt_entry_t* m = _map_alloc_page();
     if (m == nullptr) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     paddr_t paddr_base = PageTable::paddr_from_pte(*pte);
@@ -584,7 +584,7 @@ static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, volatile pt_
 
     flags = PageTable::intermediate_arch_flags();
     update_entry<PageTable>(aspace, vaddr, pte, X86_VIRT_TO_PHYS(m), flags);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /*
@@ -605,8 +605,8 @@ static inline volatile pt_entry_t* get_next_table_from_entry(pt_entry_t entry) {
  * @param ret_level The level of the table that defines the found mapping
  * @param mapping The mapping that was found
  *
- * @return NO_ERROR if mapping is found
- * @return ERR_NOT_FOUND if mapping is not found
+ * @return MX_OK if mapping is found
+ * @return MX_ERR_NOT_FOUND if mapping is not found
  */
 template <typename PageTable>
 static status_t x86_mmu_get_mapping(volatile pt_entry_t* table, vaddr_t vaddr,
@@ -622,13 +622,13 @@ static status_t x86_mmu_get_mapping(volatile pt_entry_t* table, vaddr_t vaddr,
     volatile pt_entry_t* e = table + index;
     pt_entry_t pt_val = *e;
     if (!IS_PAGE_PRESENT(pt_val))
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     /* if this is a large page, stop here */
     if (IS_LARGE_PAGE(pt_val)) {
         *mapping = e;
         *ret_level = PageTable::level;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
@@ -646,11 +646,11 @@ static status_t x86_mmu_get_mapping_l0(volatile pt_entry_t* table, vaddr_t vaddr
     uint index = PageTable::vaddr_to_index(vaddr);
     volatile pt_entry_t* e = table + index;
     if (!IS_PAGE_PRESENT(*e))
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     *mapping = e;
     *ret_level = PageTable::level;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <>
@@ -729,7 +729,7 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, volatile pt_entry_t* t
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
             status_t status = x86_mmu_split<PageTable>(aspace, page_vaddr, e);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 // If split fails, just unmap the whole thing, and let a
                 // subsequent page fault clean it up.
                 unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
@@ -834,9 +834,9 @@ bool x86_mmu_remove_mapping<ExtendedPageTable<PT_L>>(arch_aspace_t* aspace,
  * @param new_cursor A returned cursor describing how much work was not
  * completed.  Must be non-null.
  *
- * @return NO_ERROR if successful
- * @return ERR_ALREADY_EXISTS if the range overlaps an existing mapping
- * @return ERR_NO_MEMORY if intermediate page tables could not be allocated
+ * @return MX_OK if successful
+ * @return MX_ERR_ALREADY_EXISTS if the range overlaps an existing mapping
+ * @return MX_ERR_NO_MEMORY if intermediate page tables could not be allocated
  */
 template <typename PageTable>
 static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, volatile pt_entry_t* table,
@@ -846,7 +846,7 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, volatile pt_entry_t* 
     DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
     DEBUG_ASSERT(x86_mmu_check_paddr(start_cursor.paddr));
 
-    status_t ret = NO_ERROR;
+    status_t ret = MX_OK;
     *new_cursor = start_cursor;
 
     arch_flags_t interm_arch_flags = PageTable::intermediate_arch_flags();
@@ -860,7 +860,7 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, volatile pt_entry_t* 
         pt_entry_t pt_val = *e;
         // See if there's a large page in our way
         if (IS_PAGE_PRESENT(pt_val) && IS_LARGE_PAGE(pt_val)) {
-            ret = ERR_ALREADY_EXISTS;
+            ret = MX_ERR_ALREADY_EXISTS;
             goto err;
         }
 
@@ -882,7 +882,7 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, volatile pt_entry_t* 
             if (!IS_PAGE_PRESENT(pt_val)) {
                 volatile pt_entry_t* m = _map_alloc_page();
                 if (m == nullptr) {
-                    ret = ERR_NO_MEMORY;
+                    ret = MX_ERR_NO_MEMORY;
                     goto err;
                 }
 
@@ -898,12 +898,12 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, volatile pt_entry_t* 
                 aspace, get_next_table_from_entry(pt_val), mmu_flags, *new_cursor, &cursor);
             *new_cursor = cursor;
             DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
-            if (ret != NO_ERROR) {
+            if (ret != MX_OK) {
                 goto err;
             }
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 err:
     if (mxtl::is_same<PageTable, typename PageTable::TopTable>::value) {
         MappingCursor cursor = start_cursor;
@@ -934,7 +934,7 @@ static status_t x86_mmu_add_mapping_l0(arch_aspace_t* aspace, volatile pt_entry_
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
         volatile pt_entry_t* e = table + index;
         if (IS_PAGE_PRESENT(*e)) {
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
         }
 
         update_entry<PageTable>(aspace, new_cursor->vaddr, e, new_cursor->paddr, arch_flags);
@@ -945,7 +945,7 @@ static status_t x86_mmu_add_mapping_l0(arch_aspace_t* aspace, volatile pt_entry_
         DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <>
@@ -988,7 +988,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, volatile pt_entry_
             start_cursor.size);
     DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
 
-    status_t ret = NO_ERROR;
+    status_t ret = MX_OK;
     *new_cursor = start_cursor;
 
     arch_flags_t arch_flags = PageTable::arch_flags(aspace, mmu_flags);
@@ -1029,7 +1029,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, volatile pt_entry_
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
             ret = x86_mmu_split<PageTable>(aspace, page_vaddr, e);
-            if (ret != NO_ERROR) {
+            if (ret != MX_OK) {
                 // If we failed to split the table, just unmap it.  Subsequent
                 // page faults will bring it back in.
                 MappingCursor cursor;
@@ -1051,7 +1051,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, volatile pt_entry_
         ret = x86_mmu_update_mapping<typename PageTable::LowerTable>(aspace, next_table, mmu_flags,
                                                                      *new_cursor, &cursor);
         *new_cursor = cursor;
-        if (ret != NO_ERROR) {
+        if (ret != MX_OK) {
             // Currently this can't happen
             ASSERT(false);
             goto err;
@@ -1060,7 +1060,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, volatile pt_entry_
 
         DEBUG_ASSERT(new_cursor->size == 0 || PageTable::page_aligned(new_cursor->vaddr));
     }
-    return NO_ERROR;
+    return MX_OK;
 err:
     // TODO: Cleanup
     return ret;
@@ -1093,7 +1093,7 @@ static status_t x86_mmu_update_mapping_l0(arch_aspace_t* aspace, volatile pt_ent
         new_cursor->size -= PAGE_SIZE;
         DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <>
@@ -1122,11 +1122,11 @@ static status_t mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t cou
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
     if (!x86_mmu_check_vaddr(vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!is_valid_vaddr(aspace, vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (count == 0)
-        return NO_ERROR;
+        return MX_OK;
 
     DEBUG_ASSERT(aspace->pt_virt);
 
@@ -1141,7 +1141,7 @@ static status_t mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t cou
     if (unmapped)
         *unmapped = count;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count,
@@ -1164,16 +1164,16 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
             aspace, vaddr, paddr, count, mmu_flags);
 
     if ((!x86_mmu_check_paddr(paddr)))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!x86_mmu_check_vaddr(vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!is_valid_vaddr(aspace, vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (count == 0)
-        return NO_ERROR;
+        return MX_OK;
 
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     DEBUG_ASSERT(aspace->pt_virt);
 
@@ -1183,7 +1183,7 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
     MappingCursor result;
     status_t status = x86_mmu_add_mapping<PageTable<MAX_PAGING_LEVEL>>(aspace, aspace->pt_virt,
                                                                        mmu_flags, start, &result);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         dprintf(SPEW, "Add mapping failed with err=%d\n", status);
         return status;
     }
@@ -1192,7 +1192,7 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
     if (mapped)
         *mapped = count;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
@@ -1203,7 +1203,7 @@ status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const
 status_t guest_mmu_map(guest_paspace_t* paspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
                        uint mmu_flags, size_t* mapped) {
     if (mmu_flags & ~kValidEptFlags)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     return mmu_map<ExtendedPageTable>(paspace, vaddr, paddr, count, mmu_flags, mapped);
 }
 
@@ -1216,14 +1216,14 @@ static status_t mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, 
             mmu_flags);
 
     if (!x86_mmu_check_vaddr(vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!is_valid_vaddr(aspace, vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (count == 0)
-        return NO_ERROR;
+        return MX_OK;
 
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     MappingCursor start = {
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
@@ -1231,11 +1231,11 @@ static status_t mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, 
     MappingCursor result;
     status_t status = x86_mmu_update_mapping<PageTable<MAX_PAGING_LEVEL>>(
         aspace, aspace->pt_virt, mmu_flags, start, &result);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     DEBUG_ASSERT(result.size == 0);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint mmu_flags) {
@@ -1244,7 +1244,7 @@ status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, ui
 
 status_t guest_mmu_protect(guest_paspace_t* paspace, vaddr_t vaddr, size_t count, uint mmu_flags) {
     if (mmu_flags & ~kValidEptFlags)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     return mmu_protect<ExtendedPageTable>(paspace, vaddr, count, mmu_flags);
 }
 
@@ -1300,7 +1300,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
         aspace->pt_virt = (pt_entry_t*)pmm_alloc_kpage(&pa, &p);
         if (!aspace->pt_virt) {
             TRACEF("error allocating top level page directory\n");
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         aspace->pt_phys = pa;
 
@@ -1320,7 +1320,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
     aspace->active_cpus = 0;
     spin_lock_init(&aspace->io_bitmap_lock);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t guest_mmu_init_paspace(guest_paspace_t* paspace, size_t size) {
@@ -1332,7 +1332,7 @@ status_t guest_mmu_init_paspace(guest_paspace_t* paspace, size_t size) {
     vm_page_t* p = pmm_alloc_page(0, &paspace->pt_phys);
     if (p == nullptr) {
         TRACEF("error allocating top level page directory\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     p->state = VM_PAGE_STATE_MMU;
     paspace->pt_virt = static_cast<pt_entry_t*>(paddr_to_kvaddr(paspace->pt_phys));
@@ -1346,7 +1346,7 @@ status_t guest_mmu_init_paspace(guest_paspace_t* paspace, size_t size) {
     paspace->io_bitmap = nullptr;
     spin_lock_init(&paspace->io_bitmap_lock);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <template <int> class PageTable>
@@ -1381,7 +1381,7 @@ status_t mmu_destroy_aspace(arch_aspace_t* aspace) {
 
     aspace->magic = 0;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
@@ -1439,12 +1439,12 @@ static status_t mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, 
     DEBUG_ASSERT(aspace);
 
     if (!is_valid_vaddr(aspace, vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     volatile pt_entry_t* last_valid_entry;
     status_t status = x86_mmu_get_mapping<PageTable<MAX_PAGING_LEVEL>>(
         aspace->pt_virt, vaddr, &ret_level, &last_valid_entry);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     DEBUG_ASSERT(last_valid_entry);
@@ -1478,7 +1478,7 @@ static status_t mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, 
         *mmu_flags = arch_to_mmu(*last_valid_entry, ret_level);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {

@@ -51,7 +51,7 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
     if ((port + len < port) || (port + len > IO_BITMAP_BITS))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
     struct arch_aspace* as = &aspace->arch_aspace();
@@ -64,7 +64,7 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
         AllocChecker ac;
         optimistic_bitmap.reset(new (&ac) bitmap::RleBitmap());
         if (!ac.check()) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
     }
 
@@ -77,14 +77,14 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
         AllocChecker ac;
         bitmap_freelist.push_back(mxtl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
         if (!ac.check()) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
     }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
 
-    status_t status = NO_ERROR;
+    status_t status = MX_OK;
     do {
         AutoSpinLock guard(as->io_bitmap_lock);
 
@@ -97,7 +97,7 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
         status = enable ?
                 bitmap->SetNoAlloc(port, port + len, &bitmap_freelist) :
                 bitmap->ClearNoAlloc(port, port + len, &bitmap_freelist);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             break;
         }
 
@@ -111,7 +111,7 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
     } while (0);
 
     // Let all other CPUs know about the update
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         struct ioport_update_context task_context = {.aspace = as};
         mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, ioport_update_task, &task_context);
     }

@@ -259,7 +259,7 @@ usage:
         printf("usage:\n");
         printf("%s mtrr\n", argv[0].str);
         printf("%s pat\n", argv[0].str);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "mtrr")) {
@@ -270,7 +270,7 @@ usage:
             } else {
                 printf("usage: %s mtrr [-f]\n", argv[0].str);
                 printf("  -f    Display fixed registers\n");
-                return ERR_INTERNAL;
+                return MX_ERR_INTERNAL;
             }
         }
         uint64_t default_type = read_msr(X86_MSR_IA32_MTRR_DEF_TYPE);
@@ -308,7 +308,7 @@ usage:
         goto usage;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 STATIC_COMMAND_START

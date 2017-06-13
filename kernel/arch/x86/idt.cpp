@@ -137,7 +137,7 @@ void idt_setup_readonly(void) {
                                          vaddr_to_paddr(&_idt),
                                          0 /* vmm flags */,
                                          ARCH_MMU_FLAG_PERM_READ);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
     idt_load(_idt_ro);
 }
 

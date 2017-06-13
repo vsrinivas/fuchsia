@@ -26,7 +26,7 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {
     DEBUG_ASSERT(num_cpus <= UINT8_MAX);
     status_t status = x86_allocate_ap_structures(apic_ids, (uint8_t)num_cpus);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         TRACEF("Failed to allocate structures for APs");
         return;
     }
@@ -37,17 +37,17 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 {
     volatile int aps_still_booting = 0;
-    status_t status = ERR_INTERNAL;
+    status_t status = MX_ERR_INTERNAL;
 
     // Sanity check the given ids
     for (uint i = 0; i < count; ++i) {
         int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);
         DEBUG_ASSERT(cpu > 0);
         if (cpu <= 0) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (mp_is_cpu_online(cpu)) {
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         aps_still_booting |= 1U << cpu;
     }
@@ -60,7 +60,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
             (uintptr_t)_x86_secondary_cpu_long_mode_entry,
             &bootstrap_aspace,
             (void **)&bootstrap_data);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -78,7 +78,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 #endif
                                     PAGE_SIZE);
         if (!thread) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto cleanup_allocations;
         }
         uintptr_t kstack_base =
@@ -163,7 +163,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         }
         DEBUG_ASSERT(failed_aps == 0);
 
-        status = ERR_TIMED_OUT;
+        status = MX_ERR_TIMED_OUT;
 
         goto finish;
     }
