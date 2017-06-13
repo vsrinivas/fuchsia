@@ -57,10 +57,10 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(module_path_, name, query, link_name,
-                           std::move(outgoing_services),
-                           std::move(incoming_services),
-                           std::move(module_controller), std::move(view_owner));
+  story_impl_->StartModule(
+      module_path_, name, query, link_name, std::move(outgoing_services),
+      std::move(incoming_services), std::move(module_controller),
+      std::move(view_owner), ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartModuleInShell(
@@ -74,7 +74,7 @@ void ModuleContextImpl::StartModuleInShell(
   story_impl_->StartModuleInShell(
       module_path_, name, query, link_name, std::move(outgoing_services),
       std::move(incoming_services), std::move(module_controller),
-      std::move(surface_relation));
+      std::move(surface_relation), ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::GetComponentContext(

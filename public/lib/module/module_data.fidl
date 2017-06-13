@@ -15,6 +15,9 @@ struct ModuleData {
 
   // The name of the link the module was started with.
   LinkPath default_link_path;
+
+  // The way in which this module was first started in the story.
+  ModuleSource module_source;
 };
 
 // Addresses a Link within a story.
@@ -24,3 +27,16 @@ struct LinkPath {
   // Name of the link itself.
   string link_name;
 };
+
+enum ModuleSource {
+  // Module that was started from within the story by another module via
+  // ModuleContext.StartModule() and ModuleContext.StartModuleInShell().
+  INTERNAL,
+
+  // Module that was started from outside the story by TQI / UserShell via
+  // StoryController.AddModule() or StoryController.CreateStory() as first
+  // module.
+  EXTERNAL,
+};
+
+

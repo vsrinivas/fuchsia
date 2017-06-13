@@ -46,6 +46,7 @@ class StoryStorageImpl : public PageClient {
   void WriteModuleData(const fidl::Array<fidl::String>& module_path,
                        const fidl::String& module_url,
                        const LinkPathPtr& link_path,
+                       ModuleSource module_source,
                        const SyncCallback& callback);
 
   void WriteDeviceData(const std::string& story_id,

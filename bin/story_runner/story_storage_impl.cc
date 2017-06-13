@@ -25,6 +25,7 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("default_link_path", &data->default_link_path, XdrLinkPath);
+  xdr->Field("module_source", &data->module_source);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
@@ -278,12 +279,14 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<> {
                       const fidl::Array<fidl::String>& module_path,
                       const fidl::String& module_url,
                       const modular::LinkPathPtr& link_path,
+                      ModuleSource module_source,
                       ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
         module_path_(module_path.Clone()),
         module_url_(module_url),
-        link_path_(link_path.Clone()) {
+        link_path_(link_path.Clone()),
+        module_source_(module_source) {
     Ready();
   }
 
@@ -295,6 +298,7 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<> {
     module_data->url = module_url_;
     module_data->module_path = module_path_.Clone();
     module_data->default_link_path = std::move(link_path_);
+    module_data->module_source = module_source_;
 
     std::string json;
     XdrWrite(&json, &module_data, XdrModuleData);
@@ -313,6 +317,7 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<> {
   const fidl::Array<fidl::String> module_path_;
   const fidl::String module_url_;
   modular::LinkPathPtr link_path_;
+  ModuleSource module_source_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteModuleDataCall);
 };
@@ -501,9 +506,10 @@ void StoryStorageImpl::WriteModuleData(
     const fidl::Array<fidl::String>& module_path,
     const fidl::String& module_url,
     const LinkPathPtr& link_path,
+    ModuleSource module_source,
     const SyncCallback& callback) {
   new WriteModuleDataCall(&operation_queue_, story_page_, module_path,
-                          module_url, link_path, callback);
+                          module_url, link_path, module_source, callback);
 }
 
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,

@@ -57,7 +57,7 @@ constexpr char kStoryImportanceContext[] = "/location/home_work";
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
 // clients control over the story.
-class StoryImpl : StoryController, StoryContext, ModuleWatcher {
+class StoryImpl : StoryController, StoryContext {
  public:
   StoryImpl(const fidl::String& story_id,
             ledger::PagePtr story_page,
@@ -80,9 +80,10 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      ModuleSource module_source);
 
-  // Called by ModuleContextImpl.
+  // Called by ModuleContextImpl and AddModule.
   void StartModuleInShell(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
@@ -91,7 +92,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation);
+      SurfaceRelationPtr surface_relation,
+      ModuleSource module_source);
 
   // Called by ModuleContextImpl.
   const fidl::String& GetStoryId() const;
@@ -163,12 +165,12 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);
 
-  // |ModuleWatcher|
-  void OnStateChange(ModuleState new_state) override;
-
   // Misc internal helpers.
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
+  void TakeOwnership(ModuleControllerPtr module_controller,
+                     fidl::String module_id);
+  void OnRootStateChange(ModuleState new_state);
 
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.
@@ -198,7 +200,12 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   fidl::Binding<StoryContext> story_context_binding_;
 
   // Needed to hold on to a running story. They get reset on Stop().
-  fidl::BindingSet<ModuleWatcher> module_watcher_bindings_;
+  class ModuleWatcherImpl;
+  struct ExternalModule {
+    std::unique_ptr<ModuleWatcherImpl> module_watcher_impl;
+    ModuleControllerPtr module_controller;
+  };
+  std::vector<ExternalModule> external_modules_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
