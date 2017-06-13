@@ -25,4 +25,8 @@ MODULE_LIBS := \
 	system/ulib/magenta \
 	system/ulib/mxio \
 
+MODULE_STATIC_LIBS := \
+	system/ulib/ddk \
+	system/ulib/virtio \
+
 include make/module.mk
