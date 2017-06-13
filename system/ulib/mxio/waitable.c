@@ -36,7 +36,7 @@ static mx_status_t mxwio_close(mxio_t* io) {
     if (!wio->shared_handle) {
         mx_handle_close(h);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void mxwio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,

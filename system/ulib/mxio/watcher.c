@@ -27,7 +27,7 @@ struct mxio_watcher {
 mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     mxio_watcher_t* watcher;
     if ((watcher = malloc(sizeof(mxio_watcher_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // Try V2 Protocol First
@@ -37,7 +37,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     };
     if (mx_channel_create(0, &wd.channel, &watcher->h) < 0) {
         free(watcher);
-        return ERR_NO_RESOURCES;
+        return MX_ERR_NO_RESOURCES;
     }
     ssize_t r;
     if ((r = ioctl_vfs_watch_dir_v2(dirfd, &wd)) < 0) {
@@ -58,7 +58,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     }
 
     *out = watcher;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // watcher process expects the msg buffer to be len + 1 in length
@@ -93,7 +93,7 @@ static mx_status_t mxio_watcher_process(mxio_watcher_t* w, uint8_t* msg, size_t 
         msg[namelen] = 0;
 
         mx_status_t status;
-        if ((status = w->func(w->fd, event, (char*) msg, w->cookie)) != NO_ERROR) {
+        if ((status = w->func(w->fd, event, (char*) msg, w->cookie)) != MX_OK) {
             return status;
         }
         msg[namelen] = tmp;
@@ -101,7 +101,7 @@ static mx_status_t mxio_watcher_process(mxio_watcher_t* w, uint8_t* msg, size_t 
         msg += namelen;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t mxio_watcher_loop(mxio_watcher_t* w) {
@@ -111,7 +111,7 @@ static mx_status_t mxio_watcher_loop(mxio_watcher_t* w) {
         uint32_t sz = VFS_WATCH_MSG_MAX;
         mx_status_t status;
         if ((status = mx_channel_read(w->h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
-            if (status != ERR_SHOULD_WAIT) {
+            if (status != MX_ERR_SHOULD_WAIT) {
                 return status;
             }
             if ((status = mx_object_wait_one(w->h, MX_CHANNEL_READABLE |
@@ -122,7 +122,7 @@ static mx_status_t mxio_watcher_loop(mxio_watcher_t* w) {
             continue;
         }
 
-        if ((status = mxio_watcher_process(w, msg, sz)) != NO_ERROR) {
+        if ((status = mxio_watcher_process(w, msg, sz)) != MX_OK) {
             return status;
         }
     }
@@ -149,12 +149,12 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
             // longer permitted to use it.
             int fd;
             if ((fd = openat(dirfd, ".", O_RDONLY | O_DIRECTORY)) < 0) {
-                status = ERR_IO;
+                status = MX_ERR_IO;
                 goto done;
             }
 
             if ((dir = fdopendir(fd)) == NULL) {
-                status = ERR_NO_MEMORY;
+                status = MX_ERR_NO_MEMORY;
                 close(fd);
                 goto done;
             }
@@ -170,14 +170,14 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
                     continue;
                 }
             }
-            if ((status = cb(dirfd, WATCH_EVENT_ADD_FILE, de->d_name, cookie)) != NO_ERROR) {
+            if ((status = cb(dirfd, WATCH_EVENT_ADD_FILE, de->d_name, cookie)) != MX_OK) {
                 closedir(dir);
                 goto done;
             }
         }
         closedir(dir);
 
-        if ((status = cb(dirfd, WATCH_EVENT_IDLE, NULL, cookie)) != NO_ERROR) {
+        if ((status = cb(dirfd, WATCH_EVENT_IDLE, NULL, cookie)) != MX_OK) {
             goto done;
         }
     }
@@ -191,9 +191,9 @@ done:
     mxio_watcher_destroy(watcher);
 
     // If cb returns a positive value because it wants us to stop polling, then
-    // we translate that to NO_ERROR for the caller.
-    if (status >= NO_ERROR) {
-        return NO_ERROR;
+    // we translate that to MX_OK for the caller.
+    if (status >= MX_OK) {
+        return MX_OK;
     }
 
     return status;

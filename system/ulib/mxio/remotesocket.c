@@ -25,12 +25,12 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
     // TODO: let the generic read() to do this loop
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_read(rio->h2, 0, data, len, &len)) == NO_ERROR) {
+        if ((r = mx_socket_read(rio->h2, 0, data, len, &len)) == MX_OK) {
             return (ssize_t) len;
         }
-        if (r == ERR_PEER_CLOSED) {
+        if (r == MX_ERR_PEER_CLOSED) {
             return 0;
-        } else if (r == ERR_SHOULD_WAIT && !nonblock) {
+        } else if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_object_wait_one(rio->h2,
                                    MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
@@ -45,7 +45,7 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
                 return 0;
             }
             // impossible
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         return r;
     }
@@ -58,10 +58,10 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
     // TODO: let the generic write() to do this loop
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_write(rio->h2, 0, data, len, &len)) == NO_ERROR) {
+        if ((r = mx_socket_write(rio->h2, 0, data, len, &len)) == MX_OK) {
             return (ssize_t) len;
         }
-        if (r == ERR_SHOULD_WAIT && !nonblock) {
+        if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             // No wait for PEER_CLOSED signal. PEER_CLOSED could be signaled
             // even if the socket is only half-closed for read.
             // TODO: how to detect if the write direction is closed?
@@ -76,7 +76,7 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
                 continue;
             }
             // impossible
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         return r;
     }
@@ -85,16 +85,16 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
 static ssize_t mxsio_recvmsg_stream(mxio_t* io, struct msghdr* msg, int flags) {
     if (flags != 0) {
         // TODO: support MSG_OOB
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
         if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
         }
     } else {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     ssize_t total = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
@@ -114,22 +114,22 @@ static ssize_t mxsio_recvmsg_stream(mxio_t* io, struct msghdr* msg, int flags) {
 static ssize_t mxsio_sendmsg_stream(mxio_t* io, const struct msghdr* msg, int flags) {
     if (flags != 0) {
         // TODO: support MSG_OOB
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
         if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
         }
     } else {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     ssize_t total = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec *iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         ssize_t n = mxsio_write_stream(io, iov->iov_base, iov->iov_len);
         if (n < 0) {
@@ -146,7 +146,7 @@ static ssize_t mxsio_sendmsg_stream(mxio_t* io, const struct msghdr* msg, int fl
 static mx_status_t mxsio_clone_stream(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     // TODO: support unconnected sockets
     if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     mxrio_t* rio = (void*)io;
     mxrio_object_t info;
@@ -164,7 +164,7 @@ static mx_status_t mxsio_clone_stream(mxio_t* io, mx_handle_t* handles, uint32_t
 static mx_status_t mxsio_unwrap_stream(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     // TODO: support unconnected sockets
     if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     mxrio_t* rio = (void*)io;
     mx_status_t r;
@@ -191,7 +191,7 @@ static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* ha
         mx_status_t r;
         r = mx_object_wait_one(rio->h2, MXSIO_SIGNAL_CONNECTED, 0u,
                                &observed);
-        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
+        if (r == MX_OK || r == MX_ERR_TIMED_OUT) {
             if (observed & MXSIO_SIGNAL_CONNECTED) {
                 io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
                 io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
@@ -273,10 +273,10 @@ static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, va_list va) {
         }
         int* actual = va_arg(va, int*);
         *actual = avail;
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -287,12 +287,12 @@ static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
         mxrio_t* rio = (mxrio_t*)io;
         // TODO: if mx_socket support dgram mode, we'll switch to it
         if ((r = mx_channel_read(rio->h2, 0, buf, NULL, buflen,
-                                 0, (uint32_t*)&n, NULL)) == NO_ERROR) {
+                                 0, (uint32_t*)&n, NULL)) == MX_OK) {
             return n;
         }
-        if (r == ERR_PEER_CLOSED) {
+        if (r == MX_ERR_PEER_CLOSED) {
             return 0;
-        } else if (r == ERR_SHOULD_WAIT) {
+        } else if (r == MX_ERR_SHOULD_WAIT) {
             if (io->flags & MXIO_FLAG_NONBLOCK) {
                 return r;
             }
@@ -310,7 +310,7 @@ static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
                 return 0;
             }
             // impossible
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         return (ssize_t)n;
     }
@@ -318,7 +318,7 @@ static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
 
 static ssize_t mxsio_tx_dgram(mxio_t* io, const void* buf, size_t buflen) {
     mxrio_t* rio = (mxrio_t*)io;
-    // TODO: mx_channel_write never returns ERR_SHOULD_WAIT, which is a problem.
+    // TODO: mx_channel_write never returns MX_ERR_SHOULD_WAIT, which is a problem.
     // if mx_socket supports dgram mode, we'll switch to it.
     return mx_channel_write(rio->h2, 0, buf, buflen, NULL, 0);
 }
@@ -363,20 +363,20 @@ static ssize_t mxsio_write_dgram(mxio_t* io, const void* data, size_t len) {
 static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
     if (flags != 0) {
         // TODO: support MSG_OOB
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
         if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
         }
     }
     size_t mlen = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec *iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mlen += iov->iov_len;
     }
@@ -391,7 +391,7 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
     }
     if ((size_t)n < MXIO_SOCKET_MSG_HEADER_SIZE) {
         free(m);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     n -= MXIO_SOCKET_MSG_HEADER_SIZE;
     if (msg->msg_name != NULL) {
@@ -420,20 +420,20 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
 static ssize_t mxsio_sendmsg_dgram(mxio_t* io, const struct msghdr* msg, int flags) {
     if (flags != 0) {
         // TODO: MSG_OOB
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
         if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
         }
     }
     ssize_t n = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec *iov = &msg->msg_iov[i];
         if (iov->iov_len <= 0) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         n += iov->iov_len;
     }
@@ -454,7 +454,7 @@ static ssize_t mxsio_sendmsg_dgram(mxio_t* io, const struct msghdr* msg, int fla
     }
     ssize_t r = mxsio_tx_dgram(io, m, mlen);
     free(m);
-    return r == NO_ERROR ? n : r;
+    return r == MX_OK ? n : r;
 }
 
 static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
@@ -561,5 +561,5 @@ mx_status_t mxio_socket_shutdown(mxio_t* io, int how) {
         // TODO: turn on a flag to prevent all write attempts
         mx_object_signal_peer(rio->h2, 0u, MXSIO_SIGNAL_HALFCLOSED);
     }
-    return NO_ERROR;
+    return MX_OK;
 }

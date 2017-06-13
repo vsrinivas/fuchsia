@@ -52,7 +52,7 @@ static ssize_t vmofile_read_at(mxio_t* io, void* data, size_t len, mx_off_t at) 
 
     // make sure we're within the file's bounds
     if (at > (vf->end - vf->off)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // adjust to vmo offset
@@ -72,7 +72,7 @@ static ssize_t vmofile_read_at(mxio_t* io, void* data, size_t len, mx_off_t at) 
 }
 
 static ssize_t vmofile_write_at(mxio_t* io, const void* data, size_t len, mx_off_t at) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static off_t vmofile_seek(mxio_t* io, off_t offset, int whence) {
@@ -91,10 +91,10 @@ static off_t vmofile_seek(mxio_t* io, off_t offset, int whence) {
         break;
     default:
         mtx_unlock(&vf->lock);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (at > (vf->end - vf->off)) {
-        at = ERR_OUT_OF_RANGE;
+        at = MX_ERR_OUT_OF_RANGE;
     } else {
         vf->ptr = vf->off + at;
     }
@@ -125,20 +125,20 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
         attr.size = vf->end - vf->off;
         attr.mode = V_TYPE_FILE | V_IRUSR;
         if (maxreply < sizeof(attr)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         memcpy(ptr, &attr, sizeof(attr));
         return sizeof(attr);
     }
     case MXRIO_MMAP: {
         if (len != sizeof(mxrio_mmap_data_t) || maxreply < sizeof(mxrio_mmap_data_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mxrio_mmap_data_t* data = ptr;
         mx_rights_t rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP |
                              MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY;
         if (data->flags & MXIO_MMAP_FLAG_WRITE) {
-            return ERR_ACCESS_DENIED;
+            return MX_ERR_ACCESS_DENIED;
         }
         rights |= (data->flags & MXIO_MMAP_FLAG_READ) ? MX_RIGHT_READ : 0;
         rights |= (data->flags & MXIO_MMAP_FLAG_EXEC) ? MX_RIGHT_EXECUTE : 0;
@@ -151,19 +151,19 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
         // duplicate "vf->vmo" instead of cloning it.
         mx_status_t status = mx_vmo_clone(vf->vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                                           vf->off, vf->end - vf->off, &h);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
         // Only return this clone with the requested rights
         mx_handle_t out;
-        if ((status = mx_handle_replace(h, rights, &out)) != NO_ERROR) {
+        if ((status = mx_handle_replace(h, rights, &out)) != MX_OK) {
             mx_handle_close(h);
             return status;
         }
         return out;
     }
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -171,7 +171,7 @@ mx_status_t vmofile_get_vmo(mxio_t* io, mx_handle_t* out, size_t* off, size_t* l
     vmofile_t* vf = (vmofile_t*)io;
 
     if ((out == NULL) || (off == NULL) || (len == NULL)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     *off = vf->off;

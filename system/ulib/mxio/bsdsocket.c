@@ -44,7 +44,7 @@ int socket(int domain, int type, int protocol) {
     // if necessary.
     // TODO: move to a better mechanism when available.
     unsigned retry = 0;
-    while ((r = __mxio_open(&io, path, 0, 0)) == ERR_NOT_FOUND) {
+    while ((r = __mxio_open(&io, path, 0, 0)) == MX_ERR_NOT_FOUND) {
         if (retry >= 24) {
             // 10-second timeout
             return ERRNO(EIO);
@@ -82,7 +82,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
     mx_status_t r;
     r = io->ops->misc(io, MXRIO_CONNECT, 0, 0, (void*)addr, len);
-    if (r == ERR_SHOULD_WAIT) {
+    if (r == MX_ERR_SHOULD_WAIT) {
         if (io->flags & MXIO_FLAG_NONBLOCK) {
             io->flags |= MXIO_FLAG_SOCKET_CONNECTING;
             mxio_release(io);
@@ -90,7 +90,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         }
         // going to wait for the completion
     } else {
-        if (r == NO_ERROR) {
+        if (r == MX_OK) {
             io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
         }
         mxio_release(io);
@@ -170,7 +170,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     mx_status_t r;
     for (;;) {
         r = io->ops->open(io, MXRIO_SOCKET_DIR_ACCEPT, 0, 0, &io2);
-        if (r == ERR_SHOULD_WAIT) {
+        if (r == MX_ERR_SHOULD_WAIT) {
             if (io->flags & MXIO_FLAG_NONBLOCK) {
                 mxio_release(io);
                 return EWOULDBLOCK;
@@ -187,7 +187,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
                 return ERRNO(EIO);
             }
             continue;
-        } else if (r == NO_ERROR) {
+        } else if (r == MX_OK) {
             break;
         }
         mxio_release(io);
@@ -241,7 +241,7 @@ int getaddrinfo(const char* __restrict node,
     // TODO: move to a better mechanism when available.
     unsigned retry = 0;
     while ((r = __mxio_open(&io, MXRIO_SOCKET_ROOT "/" MXRIO_SOCKET_DIR_NONE,
-                            0, 0)) == ERR_NOT_FOUND) {
+                            0, 0)) == MX_ERR_NOT_FOUND) {
         if (retry >= 24) {
             // 10-second timeout
             return EAI_AGAIN;
@@ -373,7 +373,7 @@ static mx_status_t mxio_getsockopt(mxio_t* io, int level, int optname,
     memcpy(optval, req_reply.optval,
            (avail < req_reply.optlen) ? avail : req_reply.optlen);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int getsockopt(int fd, int level, int optname, void* restrict optval,
@@ -415,11 +415,11 @@ int setsockopt(int fd, int level, int optname, const void* optval,
 static ssize_t mxio_sendmsg(mxio_t* io, const struct msghdr* msg, int flags) {
     mx_status_t r = io->ops->sendmsg(io, msg, flags);
     // TODO: better error codes?
-    if (r == ERR_WRONG_TYPE)
+    if (r == MX_ERR_WRONG_TYPE)
         return ERRNO(ENOTSOCK);
-    else if (r == ERR_BAD_STATE)
+    else if (r == MX_ERR_BAD_STATE)
         return ERRNO(ENOTCONN);
-    else if (r == ERR_ALREADY_EXISTS)
+    else if (r == MX_ERR_ALREADY_EXISTS)
         return ERRNO(EISCONN);
     return STATUS(r);
 }
@@ -448,11 +448,11 @@ ssize_t mxio_send(mxio_t* io, const void* buf, size_t len, int flags) {
 static ssize_t mxio_recvmsg(mxio_t* io, struct msghdr* msg, int flags) {
     mx_status_t r = io->ops->recvmsg(io, msg, flags);
     // TODO: better error codes?
-    if (r == ERR_WRONG_TYPE)
+    if (r == MX_ERR_WRONG_TYPE)
         return ERRNO(ENOTSOCK);
-    else if (r == ERR_BAD_STATE)
+    else if (r == MX_ERR_BAD_STATE)
         return ERRNO(ENOTCONN);
-    else if (r == ERR_ALREADY_EXISTS)
+    else if (r == MX_ERR_ALREADY_EXISTS)
         return ERRNO(EISCONN);
     return STATUS(r);
 }

@@ -29,12 +29,12 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
     // TODO: let the generic read() to do this loop
     for (;;) {
         ssize_t r = mx_socket_read(h, 0, data, len, &len);
-        if (r == NO_ERROR) {
+        if (r == MX_OK) {
             return (ssize_t) len;
-        } else if (r == ERR_PEER_CLOSED) {
+        } else if (r == MX_ERR_PEER_CLOSED) {
             return 0;
         }
-        if (r == ERR_SHOULD_WAIT && !nonblock) {
+        if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
@@ -48,7 +48,7 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
                 return 0;
             }
             // impossible
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         return r;
     }
@@ -58,10 +58,10 @@ static ssize_t _write(mx_handle_t h, const void* data, size_t len, int nonblock)
     // TODO: let the generic write() to do this loop
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_write(h, 0, data, len, &len)) == NO_ERROR) {
+        if ((r = mx_socket_write(h, 0, data, len, &len)) == MX_OK) {
             return (ssize_t)len;
         }
-        if (r == ERR_SHOULD_WAIT && !nonblock) {
+        if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_object_wait_one(h, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
@@ -72,10 +72,10 @@ static ssize_t _write(mx_handle_t h, const void* data, size_t len, int nonblock)
                 continue;
             }
             if (pending & MX_SOCKET_PEER_CLOSED) {
-                return ERR_PEER_CLOSED;
+                return MX_ERR_PEER_CLOSED;
             }
             // impossible
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         return r;
     }
@@ -95,12 +95,12 @@ static ssize_t mx_pipe_read(mxio_t* io, void* data, size_t len) {
 static mx_status_t mx_pipe_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len) {
     switch (op) {
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     case MXRIO_STAT: {
         vnattr_t attr = {};
         if (maxreply < sizeof(attr)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         attr.mode = V_TYPE_PIPE | V_IRUSR | V_IWUSR;
         vnattr_t* attr_out = data;
@@ -186,10 +186,10 @@ static ssize_t mx_pipe_posix_ioctl(mxio_t* io, int req, va_list va) {
         }
         int* actual = va_arg(va, int*);
         *actual = avail;
-        return NO_ERROR;
+        return MX_OK;
     }
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -234,11 +234,11 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
     }
     if ((a = mxio_pipe_create(h0)) == NULL) {
         mx_handle_close(h1);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     if ((b = mxio_pipe_create(h1)) == NULL) {
         mx_pipe_close(a);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     *_a = a;
     *_b = b;
@@ -264,12 +264,12 @@ mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type) {
         return r;
     }
     if ((io = mxio_pipe_create(h0)) == NULL) {
-        r = ERR_NO_MEMORY;
+        r = MX_ERR_NO_MEMORY;
         goto fail;
     }
     if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
         mxio_release(io);
-        r = ERR_NO_RESOURCES;
+        r = MX_ERR_NO_RESOURCES;
         goto fail;
     }
     *handle = h1;

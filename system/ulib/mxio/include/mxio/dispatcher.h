@@ -42,14 +42,14 @@ mx_status_t mxio_dispatcher_add_etc(mxio_dispatcher_t* md, mx_handle_t h,
                                     void* func, void* cookie);
 
 // dispatcher callback return code that there were no messages to read
-#define ERR_DISPATCHER_NO_WORK ERR_SHOULD_WAIT
+#define ERR_DISPATCHER_NO_WORK MX_ERR_SHOULD_WAIT
 
 // indicates message handed off to another server
 // used by rio remote handler for deferred reply pipe completion
-#define ERR_DISPATCHER_INDIRECT ERR_NEXT
+#define ERR_DISPATCHER_INDIRECT MX_ERR_NEXT
 
 // indicates that this was a close message and that no further
 // callbacks should be made to the dispatcher
-#define ERR_DISPATCHER_DONE ERR_STOP
+#define ERR_DISPATCHER_DONE MX_ERR_STOP
 
 __END_CDECLS

@@ -82,7 +82,7 @@ static mx_status_t mxio_epoll_close(mxio_t* io) {
         free(cookie);
     }
     mtx_unlock(&epio->cookies_lock);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mxio_ops_t mxio_epoll_ops = {
@@ -126,10 +126,10 @@ mx_status_t mxio_epoll(mxio_t** out) {
     }
     mxio_t* io;
     if ((io = mxio_epoll_create(h)) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     *out = io;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int epoll_create1(int flags) {
@@ -154,25 +154,25 @@ int epoll_create(int size) {
 int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
     mxio_t* io = NULL;
     mxio_epoll_t* epio = NULL;
-    mx_status_t r = NO_ERROR;
+    mx_status_t r = MX_OK;
 
     // TODO: cascaded epoll is not implemented, yet.
 
     if ((op != EPOLL_CTL_DEL && ep_event == NULL) || epfd == fd) {
-        r = ERR_INVALID_ARGS;
+        r = MX_ERR_INVALID_ARGS;
         goto fail_no_epio;
     }
     if ((epio = (mxio_epoll_t*)fd_to_io(epfd)) == NULL) {
-        r = ERR_BAD_HANDLE;
+        r = MX_ERR_BAD_HANDLE;
         goto fail_no_epio;
     }
     if (!(epio->io.flags & MXIO_FLAG_EPOLL)) {
-        r = ERR_INVALID_ARGS;
+        r = MX_ERR_INVALID_ARGS;
         goto fail_no_io;
     }
 
     if ((io = fd_to_io(fd)) == NULL) {
-        r = ERR_BAD_HANDLE;
+        r = MX_ERR_BAD_HANDLE;
         goto fail_no_io;
     }
 
@@ -180,13 +180,13 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
     switch (op) {
     case EPOLL_CTL_ADD:
         if (mxio_epoll_cookie_find(epio, fd) != NULL)  {
-            r = ERR_ALREADY_EXISTS;
+            r = MX_ERR_ALREADY_EXISTS;
             goto end;
         }
         // create a new cookie
         cookie = calloc(1, sizeof(mxio_epoll_cookie_t));
         if (cookie == NULL) {
-            r = ERR_NO_MEMORY;
+            r = MX_ERR_NO_MEMORY;
             goto end;
         }
         mxio_acquire(io);
@@ -198,7 +198,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         // or retrieve an existing cookie and remove the current epoll event
         cookie = mxio_epoll_cookie_remove(epio, fd);
         if (cookie == NULL) {
-            r = ERR_NOT_FOUND;
+            r = MX_ERR_NOT_FOUND;
             goto end;
         }
         if ((r = mx_waitset_remove(epio->h, (uint64_t)(uintptr_t)cookie)) < 0) {
@@ -207,7 +207,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         }
         break;
     default:
-        r = ERR_INVALID_ARGS;
+        r = MX_ERR_INVALID_ARGS;
         goto end;
     }
 
@@ -222,7 +222,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         io->ops->wait_begin(io, ep_event->events, &h, &signals);
         if (h == MX_HANDLE_INVALID) {
             // wait operation is not applicable to the handle
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             mxio_release(cookie->io);
             free(cookie);
             goto end;
@@ -257,7 +257,7 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
     }
     mxio_t* io;
     if ((io = fd_to_io(epfd)) == NULL) {
-        return ERROR(ERR_BAD_HANDLE);
+        return ERROR(MX_ERR_BAD_HANDLE);
     }
     if (!(io->flags & MXIO_FLAG_EPOLL)) {
         mxio_release(io);
@@ -272,7 +272,7 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
 
     if ((r = mx_waitset_wait(epio->h, tmo, results, &num_results)) < 0) {
         mxio_release(io);
-        return (r == ERR_TIMED_OUT) ? 0 : ERROR(r);
+        return (r == MX_ERR_TIMED_OUT) ? 0 : ERROR(r);
     }
 
     for (uint32_t i = 0; i < num_results; i++) {
@@ -291,5 +291,5 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
 }
 
 int epoll_pwait(int epfd, struct epoll_event* events, int maxevents, int timeout, const sigset_t* sigmask) {
-    return ERROR(ERR_NOT_SUPPORTED);
+    return ERROR(MX_ERR_NOT_SUPPORTED);
 }

@@ -64,7 +64,7 @@ static mx_status_t log_close(mxio_t* io) {
     mx_handle_t h = log_io->handle;
     log_io->handle = 0;
     mx_handle_close(h);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t log_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {

@@ -39,13 +39,13 @@ void mxio_install_root(mxio_t* root);
 int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd);
 
 // attempt to detach an mxio_t from the fd table
-// returns ERR_INVALID_ARGS if fd is out of range or doesn't exist
-// returns ERR_UNAVAILABLE if the fd is busy or has been dup'd
+// returns MX_ERR_INVALID_ARGS if fd is out of range or doesn't exist
+// returns MX_ERR_UNAVAILABLE if the fd is busy or has been dup'd
 // returns mxio_t via io_out with refcount 1 on success
 mx_status_t mxio_unbind_from_fd(int fd, mxio_t** io_out);
 
 // If this fd represents a "service" (an rpc channel speaking
-// a non-mxio protocol), this call will return NO_ERROR and
+// a non-mxio protocol), this call will return MX_OK and
 // return the underlying handle.
 // On both success and failure, the fd is effectively closed.
 mx_status_t mxio_get_service_handle(int fd, mx_handle_t* out);

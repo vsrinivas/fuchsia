@@ -115,26 +115,26 @@ mx_status_t mxio_unbind_from_fd(int fd, mxio_t** out) {
     mx_status_t status;
     mtx_lock(&mxio_lock);
     if (fd >= MAX_MXIO_FD) {
-        status = ERR_INVALID_ARGS;
+        status = MX_ERR_INVALID_ARGS;
         goto done;
     }
     mxio_t* io = mxio_fdtab[fd];
     if (io == NULL) {
-        status = ERR_INVALID_ARGS;
+        status = MX_ERR_INVALID_ARGS;
         goto done;
     }
     if (io->dupcount > 1) {
-        status = ERR_UNAVAILABLE;
+        status = MX_ERR_UNAVAILABLE;
         goto done;
     }
     if (atomic_load(&io->refcount) > 1) {
-        status = ERR_UNAVAILABLE;
+        status = MX_ERR_UNAVAILABLE;
         goto done;
     }
     io->dupcount = 0;
     mxio_fdtab[fd] = NULL;
     *out = io;
-    status = NO_ERROR;
+    status = MX_OK;
 done:
     mtx_unlock(&mxio_lock);
     return status;
@@ -224,7 +224,7 @@ mx_status_t __mxio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
         strcpy(out, ".");
         *outlen = 1;
         *is_dir = true;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     bool rooted = (in[0] == '/');
@@ -288,32 +288,32 @@ mx_status_t __mxio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
         strcpy(out, ".");
         *outlen = 1;
         *is_dir = true;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Append null character
     *outlen = out_index;
     out[out_index++] = 0;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, uint32_t mode) {
     if (path == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (path[0] == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     mxio_t* iodir = mxio_iodir(&path, dirfd);
     if (iodir == NULL) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
 
     char clean[PATH_MAX];
     size_t outlen;
     bool is_dir;
     mx_status_t status = __mxio_cleanpath(path, clean, &outlen, &is_dir);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     flags |= (is_dir ? O_DIRECTORY : 0);
@@ -398,19 +398,19 @@ wat:
 static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const char* path,
                                                 char* out) {
     if (path == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mxio_t* iodir = mxio_iodir(&path, dirfd);
     if (iodir == NULL) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
 
     char clean[PATH_MAX];
     size_t pathlen;
     bool is_dir;
     mx_status_t status = __mxio_cleanpath(path, clean, &pathlen, &is_dir);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mxio_release(iodir);
         return status;
     }
@@ -429,7 +429,7 @@ static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const ch
     size_t namelen = pathlen - i;
     if (namelen + (is_dir ? 1 : 0) > NAME_MAX) {
         mxio_release(iodir);
-        return ERR_BAD_PATH;
+        return MX_ERR_BAD_PATH;
     }
 
     // Copy the trailing 'name' to out.
@@ -623,7 +623,7 @@ mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* typ
     mx_status_t r;
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
     //TODO: implement/honor close-on-exec flag
     if ((r = io->ops->clone(io, handles, types)) > 0) {
@@ -653,7 +653,7 @@ mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* 
 ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
     ssize_t r = io->ops->ioctl(io, op, in_buf, in_len, out_buf, out_len);
     mxio_release(io);
@@ -667,11 +667,11 @@ mx_status_t mxio_wait(mxio_t* io, uint32_t events, mx_time_t deadline,
     io->ops->wait_begin(io, events, &h, &signals);
     if (h == MX_HANDLE_INVALID)
         // Wait operation is not applicable to the handle.
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     mx_signals_t pending;
     mx_status_t status = mx_object_wait_one(h, signals, deadline, &pending);
-    if (status == NO_ERROR || status == ERR_TIMED_OUT) {
+    if (status == MX_OK || status == MX_ERR_TIMED_OUT) {
         io->ops->wait_end(io, pending, &events);
         if (out_pending != NULL)
             *out_pending = events;
@@ -683,7 +683,7 @@ mx_status_t mxio_wait(mxio_t* io, uint32_t events, mx_time_t deadline,
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t deadline) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL)
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
 
     mx_status_t status = mxio_wait(io, events, deadline, _pending);
 
@@ -695,10 +695,10 @@ int mxio_stat(mxio_t* io, struct stat* s) {
     vnattr_t attr;
     int r = io->ops->misc(io, MXRIO_STAT, 0, sizeof(attr), &attr, 0);
     if (r < 0) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
     if (r < (int)sizeof(attr)) {
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     memset(s, 0, sizeof(struct stat));
     s->st_mode = attr.mode;
@@ -718,7 +718,7 @@ int mxio_stat(mxio_t* io, struct stat* s) {
 mx_status_t mxio_setattr(mxio_t* io, vnattr_t* vn){
     mx_status_t r = io->ops->misc(io, MXRIO_SETATTR, 0, 0, vn, sizeof(*vn));
     if (r < 0) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
 
     return  r;
@@ -728,24 +728,24 @@ mx_status_t mxio_setattr(mxio_t* io, vnattr_t* vn){
 // TODO: determine complete correct mapping
 int mxio_status_to_errno(mx_status_t status) {
     switch (status) {
-    case ERR_NOT_FOUND: return ENOENT;
-    case ERR_NO_MEMORY: return ENOMEM;
-    case ERR_INVALID_ARGS: return EINVAL;
-    case ERR_BUFFER_TOO_SMALL: return EINVAL;
-    case ERR_TIMED_OUT: return ETIMEDOUT;
-    case ERR_ALREADY_EXISTS: return EEXIST;
-    case ERR_PEER_CLOSED: return ENOTCONN;
-    case ERR_BAD_PATH: return ENAMETOOLONG;
-    case ERR_IO: return EIO;
-    case ERR_NOT_DIR: return ENOTDIR;
-    case ERR_NOT_SUPPORTED: return ENOTSUP;
-    case ERR_OUT_OF_RANGE: return EINVAL;
-    case ERR_NO_RESOURCES: return ENOMEM;
-    case ERR_BAD_HANDLE: return EBADF;
-    case ERR_ACCESS_DENIED: return EACCES;
-    case ERR_SHOULD_WAIT: return EAGAIN;
-    case ERR_FILE_BIG: return EFBIG;
-    case ERR_NO_SPACE: return ENOSPC;
+    case MX_ERR_NOT_FOUND: return ENOENT;
+    case MX_ERR_NO_MEMORY: return ENOMEM;
+    case MX_ERR_INVALID_ARGS: return EINVAL;
+    case MX_ERR_BUFFER_TOO_SMALL: return EINVAL;
+    case MX_ERR_TIMED_OUT: return ETIMEDOUT;
+    case MX_ERR_ALREADY_EXISTS: return EEXIST;
+    case MX_ERR_PEER_CLOSED: return ENOTCONN;
+    case MX_ERR_BAD_PATH: return ENAMETOOLONG;
+    case MX_ERR_IO: return EIO;
+    case MX_ERR_NOT_DIR: return ENOTDIR;
+    case MX_ERR_NOT_SUPPORTED: return ENOTSUP;
+    case MX_ERR_OUT_OF_RANGE: return EINVAL;
+    case MX_ERR_NO_RESOURCES: return ENOMEM;
+    case MX_ERR_BAD_HANDLE: return EBADF;
+    case MX_ERR_ACCESS_DENIED: return EACCES;
+    case MX_ERR_SHOULD_WAIT: return EAGAIN;
+    case MX_ERR_FILE_BIG: return EFBIG;
+    case MX_ERR_NO_SPACE: return ENOSPC;
 
     // No specific translation, so return a generic errno value.
     default: return EIO;
@@ -801,11 +801,11 @@ mx_status_t _mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, 
     if (flags & MAP_PRIVATE) {
         // TODO(smklein): Implement by creating a private
         // COW clone of the underlying vmo before mapping it.
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
 
     // At the moment, these parameters are sent to filesystem servers purely
@@ -834,7 +834,7 @@ mx_status_t _mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, 
     }
 
     *out = ptr;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int unlinkat(int dirfd, const char* path, int flags) {
@@ -862,7 +862,7 @@ ssize_t read(int fd, void* buf, size_t count) {
     mx_status_t status;
     for (;;) {
         status = io->ops->read(io, buf, count);
-        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+        if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
         mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
@@ -883,7 +883,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
     mx_status_t status;
     for (;;) {
         status = io->ops->write(io, buf, count);
-        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+        if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
         mxio_wait_fd(fd, MXIO_EVT_WRITABLE, NULL, MX_TIME_INFINITE);
@@ -925,7 +925,7 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
     mx_status_t status;
     for (;;) {
         status = io->ops->read_at(io, buf, size, ofs);
-        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+        if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
         mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
@@ -967,7 +967,7 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
     mx_status_t status;
     for (;;) {
         status = io->ops->write_at(io, buf, size, ofs);
-        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+        if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
         mxio_wait_fd(fd, MXIO_EVT_WRITABLE, NULL, MX_TIME_INFINITE);
@@ -989,7 +989,7 @@ int close(int fd) {
         // still alive in other fdtab slots
         mtx_unlock(&mxio_lock);
         mxio_release(io);
-        return NO_ERROR;
+        return MX_OK;
     } else {
         mtx_unlock(&mxio_lock);
         int r = io->ops->close(io);
@@ -1188,7 +1188,7 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
                           int newdirfd, const char* newpath) {
     char oldname[NAME_MAX + 1];
     mxio_t* io_oldparent;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     if ((status = __mxio_opendir_containing_at(&io_oldparent, olddirfd, oldpath, oldname)) < 0) {
         return ERROR(status);
     }
@@ -1734,7 +1734,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
     mxio_t* ios[n];
     int ios_used_max = -1;
 
-    mx_status_t r = NO_ERROR;
+    mx_status_t r = MX_OK;
     nfds_t nvalid = 0;
 
     mx_wait_item_t items[n];
@@ -1762,7 +1762,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
         io->ops->wait_begin(io, pfd->events, &h, &sigs);
         if (h == MX_HANDLE_INVALID) {
             // wait operation is not applicable to the handle
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         }
         items[nvalid].handle = h;
@@ -1772,11 +1772,11 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
     }
 
     int nfds = 0;
-    if (r == NO_ERROR && nvalid > 0) {
+    if (r == MX_OK && nvalid > 0) {
         mx_time_t tmo = (timeout >= 0) ? mx_deadline_after(MX_MSEC(timeout)) : MX_TIME_INFINITE;
         r = mx_object_wait_many(items, nvalid, tmo);
-        // pending signals could be reported on ERR_TIMED_OUT case as well
-        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
+        // pending signals could be reported on MX_ERR_TIMED_OUT case as well
+        if (r == MX_OK || r == MX_ERR_TIMED_OUT) {
             nfds_t j = 0; // j counts up on a valid entry
 
             for (nfds_t i = 0; i < n; i++) {
@@ -1807,7 +1807,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
         }
     }
 
-    return (r == NO_ERROR || r == ERR_TIMED_OUT) ? nfds : ERROR(r);
+    return (r == MX_OK || r == MX_ERR_TIMED_OUT) ? nfds : ERROR(r);
 }
 
 int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
@@ -1819,7 +1819,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     mxio_t* ios[n];
     int ios_used_max = -1;
 
-    mx_status_t r = NO_ERROR;
+    mx_status_t r = MX_OK;
     int nvalid = 0;
 
     mx_wait_item_t items[n];
@@ -1840,7 +1840,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
 
         mxio_t* io;
         if ((io = fd_to_io(fd)) == NULL) {
-            r = ERR_BAD_HANDLE;
+            r = MX_ERR_BAD_HANDLE;
             break;
         }
         ios[fd] = io;
@@ -1850,7 +1850,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
         mx_signals_t sigs;
         io->ops->wait_begin(io, events, &h, &sigs);
         if (h == MX_HANDLE_INVALID) {
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         }
         items[nvalid].handle = h;
@@ -1860,12 +1860,12 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     }
 
     int nfds = 0;
-    if (r == NO_ERROR && nvalid > 0) {
+    if (r == MX_OK && nvalid > 0) {
         mx_time_t tmo = (tv == NULL) ? MX_TIME_INFINITE :
             mx_deadline_after(MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec));
         r = mx_object_wait_many(items, nvalid, tmo);
-        // pending signals could be reported on ERR_TIMED_OUT case as well
-        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
+        // pending signals could be reported on MX_ERR_TIMED_OUT case as well
+        if (r == MX_OK || r == MX_ERR_TIMED_OUT) {
             int j = 0; // j counts up on a valid entry
 
             for (int fd = 0; fd < n; fd++) {
@@ -1920,7 +1920,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
         }
     }
 
-    return (r == NO_ERROR || r == ERR_TIMED_OUT) ? nfds : ERROR(r);
+    return (r == MX_OK || r == MX_ERR_TIMED_OUT) ? nfds : ERROR(r);
 }
 
 int ioctl(int fd, int req, ...) {

@@ -148,13 +148,13 @@ static int mxio_dispatcher_thread(void* _md) {
 
     xprintf("dispatcher: FATAL ERROR, EXITING\n");
     mxio_dispatcher_destroy(md);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t cb) {
     mxio_dispatcher_t* md;
     if ((md = calloc(1, sizeof(*md))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
@@ -166,7 +166,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     }
     md->default_cb = cb;
     *out = md;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md, const char* name) {
@@ -175,13 +175,13 @@ mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md, const char* name) {
     if (md->t == NULL) {
         if (thrd_create_with_name(&md->t, mxio_dispatcher_thread, md, name) != thrd_success) {
             mxio_dispatcher_destroy(md);
-            r = ERR_NO_RESOURCES;
+            r = MX_ERR_NO_RESOURCES;
         } else {
             thrd_detach(md->t);
-            r = NO_ERROR;
+            r = MX_OK;
         }
     } else {
-        r = ERR_BAD_STATE;
+        r = MX_ERR_BAD_STATE;
     }
     mtx_unlock(&md->lock);
     return r;
@@ -202,7 +202,7 @@ mx_status_t mxio_dispatcher_add_etc(mxio_dispatcher_t* md, mx_handle_t h,
     mx_status_t r;
 
     if ((handler = malloc(sizeof(handler_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     handler->h = h;
     handler->flags = 0;

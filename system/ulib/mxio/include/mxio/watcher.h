@@ -35,6 +35,6 @@ typedef mx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, voi
 // Call cb for each file in directory and each time a
 // new file is added to the directory, and also, first,
 // for each existing file in the directory.  If cb
-// returns non-zero, stop watching and return NO_ERROR.
+// returns non-zero, stop watching and return MX_OK.
 mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void* cookie);
 __END_CDECLS

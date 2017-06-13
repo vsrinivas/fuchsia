@@ -109,7 +109,7 @@ mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_msg_t* msg, mxrio_cb_t cb, voi
 
     if (!is_message_reply_valid(msg, dsz)) {
         discard_handles(msg->handle, msg->hcount);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     bool is_close = (MXRIO_OP(msg->op) == MXRIO_CLOSE);
@@ -120,7 +120,7 @@ mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_msg_t* msg, mxrio_cb_t cb, voi
     if ((msg->arg = cb(msg, cookie)) == ERR_DISPATCHER_INDIRECT) {
         // callback is handling the reply itself
         // and took ownership of the reply handle
-        return NO_ERROR;
+        return MX_OK;
     }
     if ((msg->arg < 0) || !is_message_valid(msg)) {
         // in the event of an error response or bad message
@@ -129,10 +129,10 @@ mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_msg_t* msg, mxrio_cb_t cb, voi
         msg->datalen = 0;
         msg->hcount = 0;
         // specific errors are prioritized over the bad
-        // message case which we represent as ERR_INTERNAL
-        // to differentiate from ERR_IO on the near side
+        // message case which we represent as MX_ERR_INTERNAL
+        // to differentiate from MX_ERR_IO on the near side
         // TODO: consider a better error code
-        msg->arg = (msg->arg < 0) ? msg->arg : ERR_INTERNAL;
+        msg->arg = (msg->arg < 0) ? msg->arg : MX_ERR_INTERNAL;
     }
 
     msg->op = MXRIO_STATUS;
@@ -156,7 +156,7 @@ mx_status_t mxrio_handle_close(mxrio_cb_t cb, void* cookie) {
     msg.datalen = 0;
     msg.hcount = 0;
     cb(&msg, cookie);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
@@ -192,14 +192,14 @@ void mxrio_txn_handoff(mx_handle_t srv, mx_handle_t reply, mxrio_msg_t* msg) {
 // on error there are never any handles
 static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
     if (!is_message_valid(msg)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     msg->txid = atomic_fetch_add(&rio->txid, 1);
     xprintf("txn h=%x txid=%x op=%d len=%u\n", rio->h, msg->txid, msg->op, msg->datalen);
 
     mx_status_t r;
-    mx_status_t rs = ERR_INTERNAL;
+    mx_status_t rs = MX_ERR_INTERNAL;
     uint32_t dsize;
 
     mx_channel_call_args_t args;
@@ -214,7 +214,7 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
 
     r = mx_channel_call(rio->h, 0, MX_TIME_INFINITE, &args, &dsize, &msg->hcount, &rs);
     if (r < 0) {
-        if (r == ERR_CALL_FAILED) {
+        if (r == MX_ERR_CALL_FAILED) {
             // read phase failed, true status is in rs
             msg->hcount = 0;
             return rs;
@@ -227,7 +227,7 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
     // check for protocol errors
     if (!is_message_reply_valid(msg, dsize) ||
         (MXRIO_OP(msg->op) != MXRIO_STATUS)) {
-        r = ERR_IO;
+        r = MX_ERR_IO;
         goto fail_discard_handles;
     }
     // check for remote error
@@ -252,7 +252,7 @@ ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     mxrio_msg_t msg;
 
     if (in_len > MXIO_IOCTL_MAX_INPUT || out_len > MXIO_CHUNK_SIZE) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     memset(&msg, 0, MXRIO_HDR_SZ);
@@ -264,23 +264,23 @@ ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     switch (IOCTL_KIND(op)) {
     case IOCTL_KIND_GET_HANDLE:
         if (out_len < sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         break;
     case IOCTL_KIND_GET_TWO_HANDLES:
         if (out_len < 2 * sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         break;
     case IOCTL_KIND_GET_THREE_HANDLES:
         if (out_len < 3 * sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         break;
     case IOCTL_KIND_SET_HANDLE:
         msg.op = MXRIO_IOCTL_1H;
         if (in_len < sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         msg.hcount = 1;
         msg.handle[0] = *((mx_handle_t*) in_buf);
@@ -358,7 +358,7 @@ static ssize_t write_common(uint32_t op, mxio_t* io, const void* _data, size_t l
         discard_handles(msg.handle, msg.hcount);
 
         if (r > xfer) {
-            r = ERR_IO;
+            r = MX_ERR_IO;
             break;
         }
         count += r;
@@ -405,7 +405,7 @@ static ssize_t read_common(uint32_t op, mxio_t* io, void* _data, size_t len, off
         discard_handles(msg.handle, msg.hcount);
 
         if ((r > (int)msg.datalen) || (r > xfer)) {
-            r = ERR_IO;
+            r = MX_ERR_IO;
             break;
         }
         memcpy(data, msg.data, r);
@@ -506,7 +506,7 @@ static mx_status_t mxrio_reply_channel_call(mx_handle_t rio_h, mxrio_msg_t* msg,
     info->handle[0] = h;
     info->hcount++;
     if (dsize < MXRIO_OBJECT_MINSIZE) {
-        r = ERR_IO;
+        r = MX_ERR_IO;
     } else {
         info->esize = dsize - MXRIO_OBJECT_MINSIZE;
         r = info->status;
@@ -524,7 +524,7 @@ static mx_status_t mxrio_connect(mx_handle_t svc, mx_handle_t cnxn,
     size_t len = strlen(name);
     if (len >= PATH_MAX) {
         mx_handle_close(cnxn);
-        return ERR_BAD_PATH;
+        return MX_ERR_BAD_PATH;
     }
 
     mxrio_msg_t msg;
@@ -543,13 +543,13 @@ static mx_status_t mxrio_connect(mx_handle_t svc, mx_handle_t cnxn,
         return r;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
     if (svcpath == NULL) {
         mx_handle_close(h);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     // If there's an explicit svcroot handle,
     // attempt to connect through that
@@ -566,17 +566,17 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
     // Otherwise we fail
 not_found:
     mx_handle_close(h);
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }
 
 mx_status_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle_t h) {
     if (path == NULL) {
         mx_handle_close(h);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (dir == MX_HANDLE_INVALID) {
         mx_handle_close(h);
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
     return mxrio_connect(dir, h, MXRIO_OPEN, path);
 }
@@ -600,7 +600,7 @@ mx_handle_t mxio_service_clone(mx_handle_t svc) {
 mx_status_t mxio_clone_svcroot(mx_handle_t* handles, uint32_t* types) {
     mx_handle_t svc = mxio_svc_root;
     if (svc == MX_HANDLE_INVALID) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     }
     mx_handle_t cli, srv;
     mx_status_t r;
@@ -623,7 +623,7 @@ mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
     mx_status_t r;
 
     if ((len > MXIO_CHUNK_SIZE) || (maxreply > MXIO_CHUNK_SIZE)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     memset(&msg, 0, MXRIO_HDR_SZ);
@@ -652,7 +652,7 @@ mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
         // Ops which receive single handles:
         if ((msg.hcount != 1) || (msg.datalen > maxreply)) {
             discard_handles(msg.handle, msg.hcount);
-            return ERR_IO;
+            return MX_ERR_IO;
         }
         r = msg.handle[0];
         memcpy(ptr, msg.data, msg.datalen);
@@ -662,7 +662,7 @@ mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
         // Ops which don't receive handles:
         discard_handles(msg.handle, msg.hcount);
         if (msg.datalen > maxreply) {
-            return ERR_IO;
+            return MX_ERR_IO;
         }
         if (ptr && msg.datalen > 0) {
             memcpy(ptr, msg.data, msg.datalen);
@@ -687,47 +687,47 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
             io = mxio_remote_create(handles[0], handles[1]);
             xprintf("rio (%x,%x) -> %p\n", handles[0], handles[1], io);
         } else {
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         }
         if (io == NULL) {
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         } else {
             *out = io;
-            return NO_ERROR;
+            return MX_OK;
         }
         break;
     case MXIO_PROTOCOL_SERVICE:
         if (hcount != 1) {
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         } else if ((*out = mxio_service_create(handles[0])) == NULL) {
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         } else {
-            return NO_ERROR;
+            return MX_OK;
         }
         break;
     case MXIO_PROTOCOL_PIPE:
         if (hcount != 1) {
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         } else if ((*out = mxio_pipe_create(handles[0])) == NULL) {
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         } else {
-            return NO_ERROR;
+            return MX_OK;
         }
     case MXIO_PROTOCOL_VMOFILE: {
         mx_off_t* args = extra;
         if ((hcount != 2) || (esize != (sizeof(mx_off_t) * 2))) {
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         }
         // Currently, VMO Files don't use a client-side control channel.
         mx_handle_close(handles[0]);
         if ((*out = mxio_vmofile_create(handles[1], args[0], args[1])) == NULL) {
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         } else {
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     case MXIO_PROTOCOL_SOCKET: {
@@ -736,18 +736,18 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
         } else if (hcount == 2) {
             io = mxio_socket_create(handles[0], handles[1], 0);
         } else {
-            r = ERR_INVALID_ARGS;
+            r = MX_ERR_INVALID_ARGS;
             break;
         }
         if (io == NULL) {
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         } else {
             *out = io;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
     default:
-        r = ERR_NOT_SUPPORTED;
+        r = MX_ERR_NOT_SUPPORTED;
         break;
     }
     discard_handles(handles, hcount);
@@ -758,12 +758,12 @@ mx_status_t mxrio_getobject(mx_handle_t rio_h, uint32_t op, const char* name,
                             int32_t flags, uint32_t mode,
                             mxrio_object_t* info) {
     if (name == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     size_t len = strlen(name);
     if (len >= PATH_MAX) {
-        return ERR_BAD_PATH;
+        return MX_ERR_BAD_PATH;
     }
 
     mxrio_msg_t msg;
@@ -781,7 +781,7 @@ mx_status_t mxrio_open_handle(mx_handle_t h, const char* path, int32_t flags,
                               uint32_t mode, mxio_t** out) {
     mxrio_object_t info;
     if (flags & MXRIO_OFLAG_MASK) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     mx_status_t r = mxrio_getobject(h, MXRIO_OPEN, path, flags, mode, &info);
     if (r < 0) {
@@ -794,7 +794,7 @@ mx_status_t mxrio_open_handle_raw(mx_handle_t h, const char* path, int32_t flags
                                   uint32_t mode, mx_handle_t *out) {
     mxrio_object_t info;
     if (flags & MXRIO_OFLAG_MASK) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     mx_status_t r = mxrio_getobject(h, MXRIO_OPEN, path, flags, mode, &info);
     if (r < 0) {
@@ -805,19 +805,19 @@ mx_status_t mxrio_open_handle_raw(mx_handle_t h, const char* path, int32_t flags
             mx_handle_close(info.handle[n]);
         }
         *out = info.handle[0];
-        return NO_ERROR;
+        return MX_OK;
     }
     for (unsigned n = 0; n < info.hcount; n++) {
         mx_handle_close(info.handle[n]);
     }
-    return ERR_WRONG_TYPE;
+    return MX_ERR_WRONG_TYPE;
 }
 
 mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
     mxrio_t* rio = (void*)io;
     mxrio_object_t info;
     if (flags & MXRIO_OFLAG_MASK) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     mx_status_t r = mxrio_getobject(rio->h, MXRIO_OPEN, path, flags, mode, &info);
     if (r < 0) {
