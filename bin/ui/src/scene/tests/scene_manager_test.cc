@@ -5,6 +5,7 @@
 #include "apps/mozart/src/scene/tests/scene_manager_test.h"
 
 #include "gtest/gtest.h"
+#include "lib/ftl/synchronization/waitable_event.h"
 
 namespace mozart {
 namespace scene {

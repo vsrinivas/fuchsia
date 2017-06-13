@@ -14,6 +14,7 @@
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 #include "lib/mtl/threading/thread.h"
