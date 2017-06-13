@@ -148,7 +148,7 @@ class FuchsiaTools(object):
     path = os.path.join(self.fuchsia_out_dir, 'build-magenta/tools/netls')
     command = [
       path,
-      '--timeout=3000',
+      '--timeout=500',
       '--nowait',
     ]
     Log.command(command)

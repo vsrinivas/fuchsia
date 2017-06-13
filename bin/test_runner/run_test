@@ -127,7 +127,7 @@ def main(argv):
   for test in tests:
     if args.sync:
       for filename, remote_dir in test['copy']:
-        scp = fuchsia_tools.scp(args.server, filename, remote_dir)
+        scp = fuchsia_tools.scp('[' + host + ']', filename, remote_dir)
         subprocess.check_call(scp)
 
     id_ = str(uuid.uuid4())
