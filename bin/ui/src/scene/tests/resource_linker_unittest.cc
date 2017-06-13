@@ -24,7 +24,7 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   auto resource =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -38,7 +38,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   auto exported =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -76,7 +76,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
   mx::eventpair source_out;
   {
     mx::eventpair source;
-    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
     source_out = mx::eventpair{source.get()};
     // source dies now.
   }
@@ -95,7 +95,7 @@ TEST_F(ResourceLinkerTest, DISABLED_CannotExportWithDeadDestinationHandle) {
   mx::eventpair source;
   {
     mx::eventpair destination;
-    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
     // destination dies now.
   }
 
@@ -108,7 +108,7 @@ TEST_F(ResourceLinkerTest, DISABLED_CannotExportWithDeadDestinationHandle) {
 TEST_F(ResourceLinkerTest,
        DestinationHandleDeathAutomaticallyCleansUpResource) {
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   mtl::Thread thread;
   thread.Run();
@@ -151,7 +151,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   auto exported =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -187,7 +187,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), NO_ERROR);
+  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   auto exported =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -211,7 +211,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     mx::eventpair duplicate_destination;
     ASSERT_EQ(
         destination.duplicate(MX_RIGHT_SAME_RIGHTS, &duplicate_destination),
-        NO_ERROR);
+        MX_OK);
     linker.ImportResource(mozart2::ImportSpec::NODE,         // import spec
                           std::move(duplicate_destination),  // import handle
                           resolution_handler  // import resolution handler
