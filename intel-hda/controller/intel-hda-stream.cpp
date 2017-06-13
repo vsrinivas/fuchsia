@@ -92,7 +92,7 @@ void IntelHDAStream::Reset(hda_stream_desc_regs_t* regs) {
             },
             regs);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         GLOBAL_LOG("Failed to place stream descriptor HW into reset! (res %d)\n", res);
     }
 
@@ -113,7 +113,7 @@ void IntelHDAStream::Reset(hda_stream_desc_regs_t* regs) {
            },
            regs);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         GLOBAL_LOG("Failed to release stream descriptor HW from reset! (res %d)\n", res);
     }
 }
@@ -133,7 +133,7 @@ void IntelHDAStream::Configure(Type type, uint8_t tag) {
 mx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
                                             const mxtl::RefPtr<DispatcherChannel>& channel) {
     if (channel == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // We are being given a new format.  Reset any client connection we may have
     // and stop the hardware.
@@ -153,7 +153,7 @@ mx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
     channel_ = channel;
     bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void IntelHDAStream::Deactivate() {
@@ -179,11 +179,11 @@ case _ioctl:                                                    \
         DEBUG_LOG("Bad " #_ioctl                                \
                   " response length (%u != %zu)\n",             \
                   req_size, sizeof(req._payload));              \
-        return ERR_INVALID_ARGS;                                \
+        return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
     if (!_allow_noack && (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)) {  \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
-        return ERR_INVALID_ARGS;                                \
+        return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
     return _handler(req._payload);
 mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
@@ -198,14 +198,14 @@ mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
 
     if (channel_.get() != channel) {
         channel->Deactivate(false);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Sanity check the request, then dispatch it to the appropriate handler.
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     VERBOSE_LOG("Client Request (cmd 0x%04x tid %u) len %u\n",
@@ -214,7 +214,7 @@ mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
                 req_size);
 
     if (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Strip the NO_ACK flag from the request before deciding the dispatch target.
     auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
@@ -225,7 +225,7 @@ mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
     HANDLE_REQ(AUDIO2_RB_CMD_STOP,           stop,           ProcessStopLocked,         false);
     default:
         DEBUG_LOG("Unrecognized command ID 0x%04x\n", req.hdr.cmd);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 #undef HANDLE_REQ
@@ -302,10 +302,10 @@ mx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
     // been set yet.
     if (bytes_per_frame_ == 0) {
         DEBUG_LOG("Bad state (not configured) while getting fifo depth.\n");
-        resp.result = ERR_BAD_STATE;
+        resp.result = MX_ERR_BAD_STATE;
         resp.fifo_depth = 0;
     } else {
-        resp.result = NO_ERROR;
+        resp.result = MX_OK;
         resp.fifo_depth = fifo_depth_;
     }
 
@@ -323,7 +323,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
 
     memset(&resp, 0, sizeof(resp));
     resp.hdr    = req.hdr;
-    resp.result = ERR_INTERNAL;
+    resp.result = MX_ERR_INTERNAL;
 
     // We cannot change buffers while we are running, and we cannot create a
     // buffer if our format has not been set yet.
@@ -331,7 +331,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
         DEBUG_LOG("Bad state %s%s while setting buffer.",
                   running_ ? "(running)" : "",
                   bytes_per_frame_ == 0 ? "(not configured)" : "");
-        resp.result = ERR_BAD_STATE;
+        resp.result = MX_ERR_BAD_STATE;
         goto finished;
     }
 
@@ -348,7 +348,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
                   "(min frames %u, notif/ring %u)\n",
                   req.min_ring_buffer_frames,
                   req.notifications_per_ring);
-        resp.result = ERR_INVALID_ARGS;
+        resp.result = MX_ERR_INVALID_ARGS;
         goto finished;
     }
     rb_size = static_cast<uint32_t>(tmp);
@@ -358,7 +358,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
 
     // Attempt to allocate a VMO for the ring buffer.
     resp.result = mx::vmo::create(rb_size, 0, &ring_buffer_vmo);
-    if (resp.result != NO_ERROR) {
+    if (resp.result != MX_OK) {
         DEBUG_LOG("Failed to create %u byte VMO for ring buffer (res %d)\n",
                 rb_size, resp.result);
         goto finished;
@@ -379,7 +379,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
             (configured_type() == Type::OUTPUT ? MX_RIGHT_WRITE : 0),
             &client_rb_handle);
 
-    if (resp.result != NO_ERROR) {
+    if (resp.result != MX_OK) {
         DEBUG_LOG("Failed duplicate ring buffer VMO handle! (res %d)\n", resp.result);
         goto finished;
     }
@@ -387,7 +387,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
     // Commit the pages needed for this VMO and lock them so they cannot be
     // moved out from under the HW DMA.
     resp.result = ring_buffer_vmo.op_range(MX_VMO_OP_COMMIT, 0, rb_size, nullptr, 0);
-    if (resp.result != NO_ERROR) {
+    if (resp.result != MX_OK) {
         DEBUG_LOG("Failed to commit pages for %u bytes in ring buffer VMO (res %d)\n",
                 rb_size, resp.result);
         goto finished;
@@ -396,7 +396,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
     // TODO(johngro) : Enable this when the kernel supports locking pages.
 #if 0
     resp.result = ring_buffer_vmo.op_range(MX_VMO_OP_LOCK, 0, rb_size, nullptr, 0);
-    if (resp.result != NO_ERROR) {
+    if (resp.result != MX_OK) {
         DEBUG_LOG("Failed to lock pages for %u bytes in ring buffer VMO (res %d)\n",
                 rb_size, resp.result);
         goto finished;
@@ -409,7 +409,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
 
     num_regions = countof(regions);
     resp.result = GetVMORegionInfo(ring_buffer_vmo, rb_size, regions, &num_regions);
-    if (resp.result != NO_ERROR) {
+    if (resp.result != MX_OK) {
         DEBUG_LOG("Failed to fetch VMO scatter/gather map (res %d)\n", resp.result);
         goto finished;
     }
@@ -438,7 +438,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
 
         if (r.size > mxtl::numeric_limits<uint32_t>::max()) {
             DEBUG_LOG("VMO region too large! (%" PRIu64" bytes)", r.size);
-            resp.result = ERR_INTERNAL;
+            resp.result = MX_ERR_INTERNAL;
             goto finished;
         }
 
@@ -497,7 +497,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
         MX_DEBUG_ASSERT(entry == MAX_BDL_LENGTH);
         DEBUG_LOG("Ran out of BDL entires after %u/%u bytes of ring buffer\n",
                   amt_done, rb_size);
-        resp.result = ERR_INTERNAL;
+        resp.result = MX_ERR_INTERNAL;
         goto finished;
     }
 
@@ -510,12 +510,12 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
     bdl_last_valid_index_ = static_cast<uint16_t>(entry - 1);
 
 finished:
-    if (resp.result == NO_ERROR) {
+    if (resp.result == MX_OK) {
         // Success.  DMA is set up and ready to go.  If we manage to send the
         // client their copy of the VMO handle, keep a hold of our handle.
         // Otherwise, just let it go out of scope and be closed.
         mx_status_t res = channel_->Write(&resp, sizeof(resp), mxtl::move(client_rb_handle));
-        if (res == NO_ERROR)
+        if (res == MX_OK)
             ring_buffer_vmo_ = mxtl::move(ring_buffer_vmo);
         return res;
     } else {
@@ -528,7 +528,7 @@ mx_status_t IntelHDAStream::ProcessStartLocked(const audio2_proto::RingBufStartR
     uint32_t ctl_val;
 
     resp.hdr = req.hdr;
-    resp.result = NO_ERROR;
+    resp.result = MX_OK;
     resp.start_ticks = 0;
 
     // We cannot start unless we have configured the ring buffer and are not already started.
@@ -536,7 +536,7 @@ mx_status_t IntelHDAStream::ProcessStartLocked(const audio2_proto::RingBufStartR
         DEBUG_LOG("Bad state during start request %s%s.\n",
                 !ring_buffer_vmo_.is_valid() ? "(ring buffer not configured)" : "",
                 running_ ? "(already running)" : "");
-        resp.result = ERR_BAD_STATE;
+        resp.result = MX_ERR_BAD_STATE;
         goto finished;
     }
 
@@ -614,9 +614,9 @@ mx_status_t IntelHDAStream::ProcessStopLocked(const audio2_proto::RingBufStopReq
 
         // Make sure that we have been stopped and that all interrupts have been acked.
         EnsureStoppedLocked();
-        resp.result = NO_ERROR;
+        resp.result = MX_OK;
     } else {
-        resp.result = ERR_BAD_STATE;
+        resp.result = MX_ERR_BAD_STATE;
     }
 
     return channel_->Write(&resp, sizeof(resp));

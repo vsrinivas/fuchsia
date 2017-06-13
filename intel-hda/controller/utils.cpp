@@ -36,7 +36,7 @@ mx_status_t WaitCondition(mx_time_t timeout,
     while (!cond(cond_ctx)) {
         now = mx_time_get(MX_CLOCK_MONOTONIC);
         if (now >= timeout)
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
 
         mx_time_t sleep_time = timeout - now;
         if (poll_interval < sleep_time)
@@ -45,7 +45,7 @@ mx_status_t WaitCondition(mx_time_t timeout,
         mx_nanosleep(mx_deadline_after(sleep_time));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
@@ -58,7 +58,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
         (regions_out        == nullptr) ||
         (num_regions_inout  == nullptr) ||
         (*num_regions_inout == 0))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Defaults
     uint32_t num_regions = *num_regions_inout;
@@ -80,13 +80,13 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
         res = vmo.op_range(MX_VMO_OP_LOOKUP,
                            offset, todo,
                            &page_addrs, sizeof(page_addrs[0]) * todo_pages);
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
 
         for (uint32_t i = 0; (i < todo_pages) && (region < num_regions); ++i) {
             // Physical addresses must be page aligned and may not be 0.
             if ((page_addrs[i] & IHDA_PAGE_MASK) || (page_addrs[i] == 0))
-                return ERR_INTERNAL;
+                return MX_ERR_INTERNAL;
 
             bool     merged = false;
             uint64_t region_size = mxtl::min(vmo_size - offset, IHDA_PAGE_SIZE);
@@ -117,11 +117,11 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
     }
 
     if (offset < vmo_size)
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     *num_regions_inout = region;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ContigPhysMem::Allocate(size_t size) {
@@ -129,10 +129,10 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
                   "In what universe is your page size not a power of 2?  Seriously!?");
 
     if (!size)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (vmo_.is_valid())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(!size_);
     MX_DEBUG_ASSERT(!actual_size_);
@@ -147,7 +147,7 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
     mx_status_t res;
 
     res = mx_vmo_create_contiguous(get_root_resource(), actual_size(), 0, vmo.get_address());
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         goto finished;
 
     // Now fetch its physical address, so we can tell hardware about it.
@@ -156,7 +156,7 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
                        &phys_, sizeof(phys_));
 
 finished:
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         phys_ = 0;
         size_ = 0;
         actual_size_ = 0;
@@ -169,7 +169,7 @@ finished:
 
 mx_status_t ContigPhysMem::Map() {
     if (!vmo_.is_valid() || (virt_ != 0))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(size_);
     MX_DEBUG_ASSERT(actual_size_);
@@ -182,7 +182,7 @@ mx_status_t ContigPhysMem::Map() {
                                   MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                                   &virt_);
 
-    MX_DEBUG_ASSERT((res == NO_ERROR) == (virt_ != 0u));
+    MX_DEBUG_ASSERT((res == MX_OK) == (virt_ != 0u));
     return res;
 }
 

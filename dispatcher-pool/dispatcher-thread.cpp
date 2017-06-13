@@ -29,13 +29,13 @@ void DispatcherThread::PrintDebugPrefix() const {
 }
 
 mx_status_t DispatcherThread::AddClientLocked() {
-    mx_status_t res = NO_ERROR;
+    mx_status_t res = MX_OK;
 
     // If we have never added any clients, we will need to start by creating the
     // central port.
     if (!port_.is_valid()) {
         res = mx::port::create(MX_PORT_OPT_V2, &port_);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("Failed to create client therad pool port (res %d)!\n", res);
             return res;
         }
@@ -62,14 +62,14 @@ mx_status_t DispatcherThread::AddClientLocked() {
             printf("Failed to create new client thread (res %d)!\n", c11_res);
             active_client_count_--;
             // TODO(johngro) : translate musl error
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
 
         active_thread_count_++;
         thread_pool_.push_front(mxtl::move(thread));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void DispatcherThread::ShutdownPoolLocked() {
@@ -111,7 +111,7 @@ int DispatcherThread::Main() {
         //
         // TODO(johngro) : consider adding a timeout, JiC
         res = port_.wait(MX_TIME_INFINITE, &pkt, 0);
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             break;
 
         if (pkt.type != MX_PKT_TYPE_SIGNAL_ONE) {
@@ -129,7 +129,7 @@ int DispatcherThread::Main() {
         // doing this O(log) lookup.
         auto channel = DispatcherChannel::GetActiveChannel(pkt.key);
         if (channel != nullptr) {
-            mx_status_t res = NO_ERROR;
+            mx_status_t res = MX_OK;
 
             // Start by processing all of the pending messages a channel has.
             if ((pkt.signal.observed & MX_CHANNEL_READABLE) != 0) {
@@ -140,8 +140,8 @@ int DispatcherThread::Main() {
             // ran into trouble during processing, deactivate the channel.
             // Otherwise, if the channel has not been deactivated, set up the
             // next wait operation.
-            if ((res != NO_ERROR) || (pkt.signal.observed & MX_CHANNEL_PEER_CLOSED) != 0) {
-                if (res != NO_ERROR) {
+            if ((res != MX_OK) || (pkt.signal.observed & MX_CHANNEL_PEER_CLOSED) != 0) {
+                if (res != MX_OK) {
                     DEBUG_LOG("Process error (%d), deactivating channel %" PRIu64 " \n",
                               res, pkt.key);
                 } else {
@@ -151,7 +151,7 @@ int DispatcherThread::Main() {
             } else
             if (channel->InActiveChannelSet()) {
                 res = channel->WaitOnPort(port_);
-                if (res != NO_ERROR) {
+                if (res != MX_OK) {
                     DEBUG_LOG("Failed to re-arm channel wait (error %d), "
                               "deactivating channel %" PRIu64 " \n",
                               res, pkt.key);

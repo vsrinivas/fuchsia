@@ -22,15 +22,15 @@ mx_status_t QemuStream::DisableConverterLocked(bool force_all) {
 mx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all) {
     MX_DEBUG_ASSERT(list);
 
-    mx_status_t total_res = NO_ERROR;
+    mx_status_t total_res = MX_OK;
     for (size_t i = 0; i < count; ++i) {
         const auto& verb = list[i];
 
         mx_status_t res = SendCodecCommandLocked(converter_nid_, verb, Ack::NO);
-        if ((res != NO_ERROR) && !force_all)
+        if ((res != MX_OK) && !force_all)
             return res;
 
-        if (total_res == NO_ERROR)
+        if (total_res == MX_OK)
             total_res = res;
     }
 
@@ -48,10 +48,10 @@ void QemuStream::OnDeactivateLocked() {
 mx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt) {
     // Check the format arguments.
     if ((fmt.channels != 1) && (fmt.channels != 2))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     if (fmt.sample_format != AUDIO2_SAMPLE_FORMAT_16BIT)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     switch (fmt.frames_per_second) {
     case 96000:
@@ -63,7 +63,7 @@ mx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio2_proto::Stream
     case 16000:
         break;
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Looks good, make sure that the converter is muted and not processing any stream tags.

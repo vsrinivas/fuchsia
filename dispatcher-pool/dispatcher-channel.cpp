@@ -24,7 +24,7 @@ static mxtl::atomic_uint64_t driver_channel_id_gen(1u);
 }
 
 DispatcherChannel::DispatcherChannel(uintptr_t owner_ctx)
-    : client_thread_active_(DispatcherThread::AddClient() == NO_ERROR),
+    : client_thread_active_(DispatcherThread::AddClient() == MX_OK),
       bind_id_(driver_channel_id_gen.fetch_add(1u)),
       owner_ctx_(owner_ctx) {
 }
@@ -42,17 +42,17 @@ mx_status_t DispatcherChannel::Activate(mxtl::RefPtr<Owner>&& owner,
                                         mx::channel* client_channel_out) {
     // Arg and constant state checks first
     if ((client_channel_out == nullptr) || client_channel_out->is_valid())
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (owner == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Create the channel endpoints.
     mx::channel channel;
     mx_status_t res;
 
     res = mx::channel::create(0u, &channel, client_channel_out);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Lock and attempt to activate.
@@ -64,7 +64,7 @@ mx_status_t DispatcherChannel::Activate(mxtl::RefPtr<Owner>&& owner,
 
     // If something went wrong, make sure we close the channel endpoint we were
     // going to give back to the caller.
-   if (res != NO_ERROR)
+   if (res != MX_OK)
        client_channel_out->reset();
 
    return res;
@@ -79,19 +79,19 @@ mx_status_t DispatcherChannel::WaitOnPortLocked(const mx::port& port) {
 
 mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::channel&& channel) {
     if (!channel.is_valid())
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if ((client_thread_active_ == false) ||
         (channel_ != MX_HANDLE_INVALID)  ||
         (owner_   != nullptr))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // Add ourselves to the set of active channels so that users can fetch
     // references to us.
     {
         mxtl::AutoLock channels_lock(&active_channels_lock_);
         if (!active_channels_.insert_or_find(mxtl::WrapRefPtr(this)))
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
 
     }
 
@@ -122,7 +122,7 @@ mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::c
 
     // Setup our initial async wait operation on our thread pool's port.
     mx_status_t res = WaitOnPortLocked(DispatcherThread::port());
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Finally, add ourselves to our Owner's list of channels. Note; if this
@@ -130,7 +130,7 @@ mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::c
     // cleanup AutoCall and canceling the async wait operation should occur as a
     // side effect of channel being auto closed as it goes out of scope.
     res = owner->AddChannel(mxtl::WrapRefPtr(this));
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Success, take ownership of our owner reference and cancel our
@@ -180,7 +180,7 @@ void DispatcherChannel::Deactivate(bool do_notify) {
 }
 
 mx_status_t DispatcherChannel::Process(const mx_port_packet_t& port_packet) {
-    mx_status_t res = NO_ERROR;
+    mx_status_t res = MX_OK;
 
     // No one should be calling us if we have no messages to read.
     MX_DEBUG_ASSERT(port_packet.signal.observed & MX_CHANNEL_READABLE);
@@ -196,7 +196,7 @@ mx_status_t DispatcherChannel::Process(const mx_port_packet_t& port_packet) {
     {
         mxtl::AutoLock obj_lock(&obj_lock_);
         if (owner_ == nullptr)
-            return NO_ERROR;
+            return MX_OK;
         owner = owner_;
     }
 
@@ -208,7 +208,7 @@ mx_status_t DispatcherChannel::Process(const mx_port_packet_t& port_packet) {
     // TODO(johngro) : Start to establish some sort of fair scheduler-like
     // behavior.  We do not want to dominate the thread pool processing a single
     // channel for a single client.
-    for (uint64_t i = 0; (i < port_packet.signal.count) && (res == NO_ERROR); ++i) {
+    for (uint64_t i = 0; (i < port_packet.signal.count) && (res == MX_OK); ++i) {
         if (!owner->deactivated()) {
             res = owner->ProcessChannel(this);
         }
@@ -223,7 +223,7 @@ mx_status_t DispatcherChannel::Read(void*       buf,
                                     mx::handle* rxed_handle) const {
     if (!buf || !buf_len || !bytes_read_out ||
        ((rxed_handle != nullptr) && rxed_handle->is_valid()))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     mxtl::AutoLock obj_lock(&obj_lock_);
 
@@ -240,7 +240,7 @@ mx_status_t DispatcherChannel::Write(const void*  buf,
                                      mx::handle&& tx_handle) const {
     mx_status_t res;
     if (!buf || !buf_len)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     mxtl::AutoLock obj_lock(&obj_lock_);
     if (!tx_handle.is_valid())
@@ -248,7 +248,7 @@ mx_status_t DispatcherChannel::Write(const void*  buf,
 
     mx_handle_t h = tx_handle.release();
     res = channel_.write(0, buf, buf_len, &h, 1);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         tx_handle.reset(h);
 
     return res;
@@ -282,7 +282,7 @@ void DispatcherChannel::Owner::ShutdownDispatcherChannels() {
 
 mx_status_t DispatcherChannel::Owner::AddChannel(mxtl::RefPtr<DispatcherChannel>&& channel) {
     if (channel == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // This check is a bit sketchy...  This channel should *never* be in any
     // Owner's channel list at this point in time, however if it is, we don't
@@ -296,12 +296,12 @@ mx_status_t DispatcherChannel::Owner::AddChannel(mxtl::RefPtr<DispatcherChannel>
     // channels.  Fail the request to add this channel.
     mxtl::AutoLock channels_lock(&channels_lock_);
     if (deactivated_)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // We are still active.  Transfer the reference to this channel to our set
     // of channels.
     channels_.push_front(mxtl::move(channel));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void DispatcherChannel::Owner::RemoveChannel(DispatcherChannel* channel) {

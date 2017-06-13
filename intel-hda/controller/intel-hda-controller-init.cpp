@@ -47,7 +47,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
             LOG("Fatal error during reset!  Controller reports more streams (%u) "
                 "than should be possible for IHDA hardware.  (GCAP = 0x%04hx)\n",
                 total_stream_cnt, gcap);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
 
         hda_stream_desc_regs_t* sregs = regs_->stream_desc;
@@ -72,7 +72,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
                         },
                         regs_);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Error attempting to enter reset! (res %d)\n", res);
         return res;
     }
@@ -92,7 +92,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
                         },
                         regs_);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Error attempting to leave reset! (res %d)\n", res);
         return res;
     }
@@ -115,7 +115,7 @@ mx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
                                 auto regs = reinterpret_cast<hda_registers_t*>(r);
                                 return (REG_RD(&regs->corbrp) & HDA_REG_CORBRP_RST) != 0;
                              },
-                             regs_)) != NO_ERROR) {
+                             regs_)) != MX_OK) {
         return res;
     }
 
@@ -129,23 +129,23 @@ mx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
                                 auto regs = reinterpret_cast<hda_registers_t*>(r);
                                 return (REG_RD(&regs->corbrp) & HDA_REG_CORBRP_RST) == 0;
                              },
-                             regs_)) != NO_ERROR) {
+                             regs_)) != MX_OK) {
         return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     mx_status_t res;
 
     if (pci_dev == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Have we already been set up?
     if (pci_dev_ != nullptr) {
         LOG("Device already initialized!\n");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     MX_DEBUG_ASSERT(irq_handle_  == MX_HANDLE_INVALID);
@@ -159,7 +159,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
 
     // The device had better be a PCI device, or we are very confused.
     res = device_op_get_protocol(pci_dev_, MX_PROTOCOL_PCI, reinterpret_cast<void**>(&pci_proto_));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("PCI device does not support PCI protocol! (res %d)\n", res);
         return res;
     }
@@ -168,7 +168,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     // know our BDF address.
     MX_DEBUG_ASSERT(pci_proto_ != nullptr);
     res = pci_proto_->get_device_info(pci_dev_, &pci_dev_info_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to fetch basic PCI device info! (res %d)\n", res);
         return res;
     }
@@ -181,7 +181,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
 
     // Claim the device.
     res = pci_proto_->claim_device(pci_dev_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to claim PCI device! (res %d)\n", res);
         return res;
     }
@@ -197,7 +197,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
                                reinterpret_cast<void**>(&all_regs),
                                &reg_window_size,
                                &regs_handle_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Error attempting to map registers (res %d)\n", res);
         return res;
     }
@@ -205,12 +205,12 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     if (sizeof(*all_regs) != reg_window_size) {
         LOG("Bad register window size (expected 0x%zx got 0x%" PRIx64 ")\n",
             sizeof(*all_regs), reg_window_size);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     regs_ = &all_regs->regs;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::SetupPCIInterrupts() {
@@ -219,9 +219,9 @@ mx_status_t IntelHDAController::SetupPCIInterrupts() {
     // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
     // that fails, fall back on legacy IRQs.
     mx_status_t res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_MSI, 1);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_LEGACY, 1);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             LOG("Failed to set IRQ mode (%d)!\n", res);
             return res;
         } else {
@@ -234,19 +234,19 @@ mx_status_t IntelHDAController::SetupPCIInterrupts() {
 
     MX_DEBUG_ASSERT(irq_handle_ == MX_HANDLE_INVALID);
     res = pci_proto_->map_interrupt(pci_dev_, 0, &irq_handle_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to map IRQ! (res %d)\n", res);
         return res;
     }
 
     // Enable Bus Mastering so we can DMA data and receive MSIs
     res = pci_proto_->enable_bus_master(pci_dev_, true);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to enable PCI bus mastering!\n");
         return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::SetupStreamDescriptors() {
@@ -267,7 +267,7 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
     if (!total_stream_cnt || (total_stream_cnt > countof(regs_->stream_desc))) {
         LOG("Invalid stream counts in GCAP register (In %u Out %u Bidir %u; Max %zu)\n",
             input_stream_cnt, output_stream_cnt, bidir_stream_cnt, countof(regs_->stream_desc));
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     // Allocate and map storage for our buffer descriptor lists.
@@ -281,7 +281,7 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
     total_bdl_size = bdl_size * total_stream_cnt;
 
     mx_status_t res = bdl_mem_.Allocate(total_bdl_size);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to allocate %u bytes of contiguous physical memory for "
             "buffer descriptor lists!  (res %d)\n", total_bdl_size, res);
         return res;
@@ -289,7 +289,7 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
 
     // Map the memory in so that we can access it.
     res = bdl_mem_.Map();
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to map BDL memory!  (res %d)\n", res);
         return res;
     }
@@ -316,7 +316,7 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
         ReturnStreamLocked(mxtl::move(stream));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::SetupCommandBufferSize(uint8_t* size_reg,
@@ -337,11 +337,11 @@ mx_status_t IntelHDAController::SetupCommandBufferSize(uint8_t* size_reg,
         cmd = HDA_REG_CORBSIZE_CFG_2ENT;
     } else {
         LOG("Invalid ring buffer capabilities! (0x%02x)\n", tmp);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     REG_WR(size_reg, cmd);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::SetupCommandBuffer() {
@@ -354,7 +354,7 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
     static_assert(CMD_BUFFER_SIZE >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES),
                   "CMD_BUFFER_SIZE to small to hold CORB and RIRB buffers!");
     res = cmd_buf_mem_.Allocate(CMD_BUFFER_SIZE);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to allocate %zu bytes for CORB/RIRB command buffers! (res %d)\n",
             CMD_BUFFER_SIZE, res);
         return res;
@@ -362,7 +362,7 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
 
     // Now map it so we have access as well.
     res = cmd_buf_mem_.Map();
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to map CORB/RIRB command buffer (res %d)\n", res);
         return res;
     }
@@ -375,7 +375,7 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
     // Reset the read and write pointers for both ring buffers
     REG_WR(&regs_->corbwp, 0u);
     res = ResetCORBRdPtrLocked();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Note; the HW does not expose a Response Input Ring Buffer Read Pointer,
@@ -390,11 +390,11 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
     // Determine the ring buffer sizes.  If there are options, make them as
     // large as possible.
     res = SetupCommandBufferSize(&regs_->corbsize, &corb_entry_count_);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     res = SetupCommandBufferSize(&regs_->rirbsize, &rirb_entry_count_);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Stash these so we don't have to constantly recalculate then
@@ -415,7 +415,7 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
     bool gcap_64bit_ok = HDA_REG_GCAP_64OK(REG_RD(&regs_->gcap));
     if ((cmd_buf_paddr64 >> 32) && !gcap_64bit_ok) {
         LOG("Intel HDA controller does not support 64-bit physical addressing!\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Section 4.4.1.1; corb ring buffer base address must be 128 byte aligned.
@@ -461,14 +461,14 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
     REG_WR(&regs_->rirbctl, OR(OR(HDA_REG_RIRBCTL_INTCTL, HDA_REG_RIRBCTL_DMA_EN),
                                HDA_REG_RIRBCTL_OIC));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     mx_status_t res;
 
     res = SetupPCIDevice(pci_dev);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Check our hardware version
@@ -478,27 +478,27 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
 
     if ((1 != major) || (0 != minor)) {
         LOG("Unexpected HW revision %d.%d!\n", major, minor);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Completely reset the hardware
     res = ResetControllerHW();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Setup interrupts and enable bus mastering.
     res = SetupPCIInterrupts();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Allocate and set up our stream descriptors.
     res = SetupStreamDescriptors();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Allocate and set up the codec communication ring buffers (CORB/RIRB)
     res = SetupCommandBuffer();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Start the IRQ thread.
@@ -520,7 +520,7 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     if (c11_res < 0) {
         LOG("Failed create IRQ thread! (res = %d)\n", c11_res);
         SetState(State::SHUT_DOWN);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     irq_thread_started_ = true;
@@ -560,7 +560,7 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     args.proto_id = MX_PROTOCOL_IHDA;
 
     res = device_add(pci_dev_, &args, &dev_node_);
-    if (res == NO_ERROR) {
+    if (res == MX_OK) {
         this->AddRef();
         SetState(State::OPERATING);
         WakeupIRQThread();
@@ -572,7 +572,7 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
 mx_status_t IntelHDAController::Init(mx_device_t* pci_dev) {
     mx_status_t res = InitInternal(pci_dev);
 
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         DeviceShutdown();
 
     return res;

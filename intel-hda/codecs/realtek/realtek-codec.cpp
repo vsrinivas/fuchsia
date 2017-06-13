@@ -27,16 +27,16 @@ mxtl::RefPtr<RealtekCodec> RealtekCodec::Create() {
 
 mx_status_t RealtekCodec::Init(mx_device_t* codec_dev) {
     mx_status_t res = Bind(codec_dev);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     res = Start();
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         Shutdown();
         return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekCodec::Start() {
@@ -44,7 +44,7 @@ mx_status_t RealtekCodec::Start() {
 
     // Fetch the implementation ID register from the main audio function group
     res = SendCodecCommand(1u, GET_IMPLEMENTATION_ID, false);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         LOG("Failed to send get impl id command (res %d)\n", res);
     return res;
 }
@@ -52,7 +52,7 @@ mx_status_t RealtekCodec::Start() {
 mx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
     if (!waiting_for_impl_id_) {
         LOG("Unexpected solicited codec response %08x\n", resp.data);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     waiting_for_impl_id_ = false;
@@ -78,7 +78,7 @@ mx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
         case 0x1025111e: res = SetupAcer12(); break;
         default:
             LOG("Unrecognized implementation ID %08x!  No streams will be published.\n", resp.data);
-            res = NO_ERROR;
+            res = MX_OK;
             break;
     }
 
@@ -163,7 +163,7 @@ mx_status_t RealtekCodec::SetupCommon() {
 
     mx_status_t res = RunCommandList(START_CMDS, countof(START_CMDS));
 
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         LOG("Failed to send common startup commands (res %d)\n", res);
 
     return res;
@@ -175,7 +175,7 @@ mx_status_t RealtekCodec::SetupAcer12() {
     DEBUG_LOG("Setting up for Acer12\n");
 
     res = SetupCommon();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     static const CommandListEntry START_CMDS[] = {
@@ -199,7 +199,7 @@ mx_status_t RealtekCodec::SetupAcer12() {
     };
 
     res = RunCommandList(START_CMDS, countof(START_CMDS));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to send startup command for Acer12 (res %d)\n", res);
         return res;
     }
@@ -226,12 +226,12 @@ mx_status_t RealtekCodec::SetupAcer12() {
     };
 
     res = CreateAndStartStreams(STREAMS, countof(STREAMS));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to create and publish streams for Acer12 (res %d)\n", res);
         return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekCodec::SetupIntelNUC() {
@@ -240,7 +240,7 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
     DEBUG_LOG("Setting up for Intel NUC\n");
 
     res = SetupCommon();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     static const CommandListEntry START_CMDS[] = {
@@ -260,7 +260,7 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
     };
 
     res = RunCommandList(START_CMDS, countof(START_CMDS));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to send startup command for Intel NUC (res %d)\n", res);
         return res;
     }
@@ -278,32 +278,32 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
     };
 
     res = CreateAndStartStreams(STREAMS, countof(STREAMS));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to create and publish streams for Intel NUC (res %d)\n", res);
         return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekCodec::RunCommandList(const CommandListEntry* cmds, size_t cmd_count) {
     mx_status_t res;
 
     if (cmds == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     for (size_t i = 0; i < cmd_count; ++i) {
         const auto& cmd = cmds[i];
         VERBOSE_LOG("SEND: nid %2hu verb 0x%05x\n", cmd.nid, cmd.verb.val);
         res = SendCodecCommand(cmd.nid, cmd.verb, true);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             LOG("Failed to send codec command %zu/%zu (nid %hu verb 0x%05x) (res %d)\n",
                 i + 1, cmd_count, cmd.nid, cmd.verb.val, res);
             return res;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekCodec::CreateAndStartStreams(const StreamProperties* streams,
@@ -311,28 +311,28 @@ mx_status_t RealtekCodec::CreateAndStartStreams(const StreamProperties* streams,
     mx_status_t res;
 
     if (streams == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     for (size_t i = 0; i < stream_cnt; ++i) {
         const auto& stream_def = streams[i];
         auto stream = mxtl::AdoptRef(new RealtekStream(stream_def));
 
         res = ActivateStream(stream);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             LOG("Failed to activate %s stream id #%u (res %d)!",
                  stream_def.is_input ? "input" : "output", stream_def.stream_id, res);
             return res;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 extern "C" mx_status_t realtek_ihda_codec_bind_hook(void* ctx,
                                                     mx_device_t* codec_dev,
                                                     void** cookie) {
     if (cookie == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto codec = RealtekCodec::Create();
     MX_DEBUG_ASSERT(codec != nullptr);
@@ -340,7 +340,7 @@ extern "C" mx_status_t realtek_ihda_codec_bind_hook(void* ctx,
     // Init our codec.  If we succeed, transfer our reference to the unmanaged
     // world.  We will re-claim it later when unbind is called.
     mx_status_t res = codec->Init(codec_dev);
-    if (res == NO_ERROR)
+    if (res == MX_OK)
         *cookie = codec.leak_ref();
 
     return res;

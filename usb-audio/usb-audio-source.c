@@ -63,7 +63,7 @@ static void update_signals(usb_audio_source_t* source) {
 static void usb_audio_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_audio_source_t* source = (usb_audio_source_t*)cookie;
 
-    if (txn->status == ERR_PEER_CLOSED) {
+    if (txn->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(txn);
         return;
     }
@@ -71,7 +71,7 @@ static void usb_audio_source_read_complete(iotxn_t* txn, void* cookie) {
     mtx_lock(&source->mutex);
     if (!source->open) {
         list_add_tail(&source->free_read_reqs, &txn->node);
-    } else if (txn->status == NO_ERROR && txn->actual > 0) {
+    } else if (txn->status == MX_OK && txn->actual > 0) {
         list_add_tail(&source->completed_reads, &txn->node);
         source->completed_read_count++;
 
@@ -114,11 +114,11 @@ static void usb_audio_source_release(void* ctx) {
 }
 
 static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&source->start_stop_mutex);
     if (source->dead) {
-        status = ERR_PEER_CLOSED;
+        status = MX_ERR_PEER_CLOSED;
         goto out;
     }
     if (source->started) {
@@ -146,11 +146,11 @@ out:
 }
 
 static mx_status_t usb_audio_source_stop(usb_audio_source_t* source) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&source->start_stop_mutex);
     if (source->dead) {
-        status = ERR_PEER_CLOSED;
+        status = MX_ERR_PEER_CLOSED;
         goto out;
     }
     if (!source->started) {
@@ -173,10 +173,10 @@ static mx_status_t usb_audio_source_open(void* ctx, mx_device_t** dev_out, uint3
 
     mtx_lock(&source->mutex);
     if (source->open) {
-        result = ERR_ALREADY_BOUND;
+        result = MX_ERR_ALREADY_BOUND;
     } else {
         source->open = true;
-        result = NO_ERROR;
+        result = MX_OK;
     }
     mtx_unlock(&source->mutex);
 
@@ -191,7 +191,7 @@ static mx_status_t usb_audio_source_close(void* ctx, uint32_t flags) {
     mtx_unlock(&source->mutex);
     usb_audio_source_stop(source);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t usb_audio_source_read(void* ctx, void* data, size_t length, mx_off_t offset,
@@ -199,22 +199,22 @@ static mx_status_t usb_audio_source_read(void* ctx, void* data, size_t length, m
     usb_audio_source_t* source = ctx;
 
     if (source->dead) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&source->mutex);
 
     iotxn_t* txn = list_peek_head_type(&source->completed_reads, iotxn_t, node);
     if (!txn) {
-        status = ERR_SHOULD_WAIT;
+        status = MX_ERR_SHOULD_WAIT;
         goto out;
     }
     // FIXME - for now we assume client reads with a buffer large enough for packet received
     size_t needed_bytes = (source->channels == 2) ? txn->actual : (txn->actual << 1);
     if (needed_bytes > length) {
-        status = ERR_BUFFER_TOO_SMALL;
+        status = MX_ERR_BUFFER_TOO_SMALL;
         goto out;
     }
 
@@ -258,35 +258,35 @@ static mx_status_t usb_audio_source_ioctl(void* ctx, uint32_t op, const void* in
     switch (op) {
     case IOCTL_AUDIO_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = AUDIO_TYPE_SOURCE;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_AUDIO_GET_SAMPLE_RATE_COUNT: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = source->sample_rate_count;
         return sizeof(*reply);
     }
     case IOCTL_AUDIO_GET_SAMPLE_RATES: {
         size_t reply_size = source->sample_rate_count * sizeof(uint32_t);
-        if (out_len < reply_size) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < reply_size) return MX_ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, source->sample_rates, reply_size);
         *out_actual = reply_size;
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_AUDIO_GET_SAMPLE_RATE: {
         uint32_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = source->sample_rate;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     case IOCTL_AUDIO_SET_SAMPLE_RATE: {
-        if (in_len < sizeof(uint32_t))  return ERR_BUFFER_TOO_SMALL;
+        if (in_len < sizeof(uint32_t))  return MX_ERR_BUFFER_TOO_SMALL;
         uint32_t sample_rate = *((uint32_t *)in_buf);
-        if (sample_rate == source->sample_rate) return NO_ERROR;
+        if (sample_rate == source->sample_rate) return MX_OK;
         // validate sample rate
         int i;
         for (i = 0; i < source->sample_rate_count; i++) {
@@ -295,11 +295,11 @@ static mx_status_t usb_audio_source_ioctl(void* ctx, uint32_t op, const void* in
             }
         }
         if (i == source->sample_rate_count) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_status_t status = usb_audio_set_sample_rate(source->usb_mxdev, source->ep_addr,
                                                        sample_rate);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             source->sample_rate = sample_rate;
         }
         return status;
@@ -310,7 +310,7 @@ static mx_status_t usb_audio_source_ioctl(void* ctx, uint32_t op, const void* in
         return usb_audio_source_stop(source);
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t usb_audio_source_device_proto = {
@@ -329,23 +329,23 @@ mx_status_t usb_audio_source_create(mx_device_t* device, int index,
                                     usb_audio_ac_format_type_i_desc* format_desc) {
     if (!format_desc) {
         printf("no audio format descriptor found in usb_audio_source_create\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((format_desc->bNrChannels != 1 && format_desc->bNrChannels != 2) ||
             format_desc->bSubFrameSize != 2 ||format_desc->bBitResolution != 16) {
         printf("unsupported audio format in usb_audio_source_create\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     usb_audio_source_t* source = calloc(1, sizeof(usb_audio_source_t));
     if (!source) {
         printf("Not enough memory for usb_audio_source_t\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     source->sample_rates = usb_audio_parse_sample_rates(format_desc, &source->sample_rate_count);
     if (!source->sample_rates) {
         free(source);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     source->channels = format_desc->bNrChannels;
     
@@ -363,7 +363,7 @@ mx_status_t usb_audio_source_create(mx_device_t* device, int index,
         iotxn_t* txn = usb_alloc_iotxn(source->ep_addr, packet_size);
         if (!txn) {
             usb_audio_source_free(source);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         txn->length = packet_size;
         txn->complete_cb = usb_audio_source_read_complete;
@@ -388,7 +388,7 @@ mx_status_t usb_audio_source_create(mx_device_t* device, int index,
     };
 
     mx_status_t status = device_add(device, &args, &source->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("device_add failed in usb_audio_source_create\n");
         usb_audio_source_free(source);
     }

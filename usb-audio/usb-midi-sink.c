@@ -48,7 +48,7 @@ static void update_signals(usb_midi_sink_t* sink) {
 }
 
 static void usb_midi_sink_write_complete(iotxn_t* txn, void* cookie) {
-    if (txn->status == ERR_PEER_CLOSED) {
+    if (txn->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(txn);
         return;
     }
@@ -89,10 +89,10 @@ static mx_status_t usb_midi_sink_open(void* ctx, mx_device_t** dev_out, uint32_t
 
     mtx_lock(&sink->mutex);
     if (sink->open) {
-        result = ERR_ALREADY_BOUND;
+        result = MX_ERR_ALREADY_BOUND;
     } else {
         sink->open = true;
-        result = NO_ERROR;
+        result = MX_OK;
     }
     mtx_unlock(&sink->mutex);
 
@@ -106,7 +106,7 @@ static mx_status_t usb_midi_sink_close(void* ctx, uint32_t flags) {
     sink->open = false;
     mtx_unlock(&sink->mutex);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t length,
@@ -114,10 +114,10 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
     usb_midi_sink_t* sink = ctx;
 
     if (sink->dead) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     size_t out_actual = length;
 
     const uint8_t* src = (uint8_t *)data;
@@ -125,7 +125,7 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
     while (length > 0) {
         completion_wait(&sink->free_write_completion, MX_TIME_INFINITE);
         if (sink->dead) {
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         }
         mtx_lock(&sink->mutex);
         list_node_t* node = list_remove_head(&sink->free_write_reqs);
@@ -135,13 +135,13 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
         mtx_unlock(&sink->mutex);
         if (!node) {
             // shouldn't happen!
-            status = ERR_INTERNAL;
+            status = MX_ERR_INTERNAL;
             goto out;
         }
         iotxn_t* txn = containerof(node, iotxn_t, node);
 
         size_t message_length = get_midi_message_length(*src);
-        if (message_length < 1 || message_length > length) return ERR_INVALID_ARGS;
+        if (message_length < 1 || message_length > length) return MX_ERR_INVALID_ARGS;
 
         uint8_t buffer[4];
         buffer[0] = (src[0] & 0xF0) >> 4;
@@ -159,7 +159,7 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
 
 out:
     update_signals(sink);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *actual = out_actual;
     }
     return status;
@@ -171,14 +171,14 @@ static mx_status_t usb_midi_sink_ioctl(void* ctx, uint32_t op, const void* in_bu
     switch (op) {
     case IOCTL_MIDI_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = MIDI_TYPE_SINK;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t usb_midi_sink_device_proto = {
@@ -196,7 +196,7 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, int index,
     usb_midi_sink_t* sink = calloc(1, sizeof(usb_midi_sink_t));
     if (!sink) {
         printf("Not enough memory for usb_midi_sink_t\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     list_initialize(&sink->free_write_reqs);
@@ -210,7 +210,7 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, int index,
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep));
         if (!txn) {
             usb_midi_sink_free(sink);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         txn->length = packet_size;
         txn->complete_cb = usb_midi_sink_write_complete;
@@ -231,7 +231,7 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, int index,
     };
 
     mx_status_t status = device_add(device, &args, &sink->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("device_add failed in usb_midi_sink_create\n");
         usb_midi_sink_free(sink);
     }

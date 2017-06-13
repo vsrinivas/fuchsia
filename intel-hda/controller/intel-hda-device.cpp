@@ -21,21 +21,21 @@ mx_status_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
                                                     void* out_buf, size_t out_len,
                                                     size_t* out_actual) {
     if (op != IHDA_IOCTL_GET_CHANNEL) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     if ((out_buf == nullptr) ||
         (out_actual == nullptr) ||
         (out_len != sizeof(mx_handle_t))) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     auto channel = DispatcherChannelAllocator::New();
     if (channel == nullptr)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx::channel out_channel;
     mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &out_channel);
-    if (res == NO_ERROR) {
+    if (res == MX_OK) {
         *(reinterpret_cast<mx_handle_t*>(out_buf)) = out_channel.release();
         *out_actual = sizeof(mx_handle_t);
     }
@@ -76,7 +76,7 @@ mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channe
     mx::handle  handle;
     mx_status_t res = channel->Read(&request_buffer, sizeof(request_buffer), &bytes, &handle);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         MX_DEBUG_ASSERT(handle == MX_HANDLE_INVALID);
         return res;
     }

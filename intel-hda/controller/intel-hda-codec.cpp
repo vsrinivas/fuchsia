@@ -106,17 +106,17 @@ mx_status_t IntelHDACodec::Startup() {
 
         if (job == nullptr) {
             LOG("Failed to allocate job during initial codec probe!\n");
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
 
         mx_status_t res = controller_.QueueCodecCmd(mxtl::move(job));
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             LOG("Failed to queue job (res = %d) during initial codec probe!\n", res);
             return res;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void IntelHDACodec::SendCORBResponse(const mxtl::RefPtr<DispatcherChannel>& channel,
@@ -131,7 +131,7 @@ void IntelHDACodec::SendCORBResponse(const mxtl::RefPtr<DispatcherChannel>& chan
     payload.data_ex = resp.data_ex;
 
     mx_status_t res = channel->Write(&payload, sizeof(payload));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Error writing CORB response (%08x, %08x) res = %d\n",
                   resp.data, resp.data_ex, res);
         channel->Deactivate(true);
@@ -149,7 +149,7 @@ void IntelHDACodec::ProcessSolicitedResponse(const CodecResponse& resp,
         const auto& cmd = PROBE_COMMANDS[probe_rx_ndx_];
 
         mx_status_t res = (this->*cmd.parse)(resp);
-        if (res == NO_ERROR) {
+        if (res == MX_OK) {
             ++probe_rx_ndx_;
         } else {
             LOG("Error parsing solicited response during codec probe! (data %08x)\n",
@@ -236,12 +236,12 @@ mx_status_t IntelHDACodec::PublishDevice() {
 
     // Publish the device.
     mx_status_t res = device_add(controller_.dev_node(), &args, &dev_node_);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         LOG("Failed to add codec device for \"%s\" (res %d)\n", name, res);
         return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t IntelHDACodec::ParseVidDid(const CodecResponse& resp) {
@@ -251,7 +251,7 @@ mx_status_t IntelHDACodec::ParseVidDid(const CodecResponse& resp) {
     SET_DEVICE_PROP(VID, props_.vid);
     SET_DEVICE_PROP(DID, props_.did);
 
-    return (props_.vid != 0) ? NO_ERROR : ERR_INTERNAL;
+    return (props_.vid != 0) ? MX_OK : MX_ERR_INTERNAL;
 }
 
 mx_status_t IntelHDACodec::ParseRevisionId(const CodecResponse& resp) {
@@ -275,13 +275,13 @@ case _ioctl:                                                    \
         DEBUG_LOG("Bad " #_payload                              \
                   " request length (%u != %zu)\n",              \
                   req_size, sizeof(req._payload));        \
-        return ERR_INVALID_ARGS;                                \
+        return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
     if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG))  {   \
         DEBUG_LOG("Cmd " #_payload                              \
                   " requires acknowledgement, but the "         \
                   "NOACK flag was set!\n");                     \
-        return ERR_INVALID_ARGS;                                \
+        return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
     return _handler(channel, req._payload)
 
@@ -302,7 +302,7 @@ mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
                                                 req_size,
                                                 mxtl::move(rxed_handle));
         } else {
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
     }
 
@@ -312,7 +312,7 @@ mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     VERBOSE_LOG("Client Request (cmd 0x%04x tid %u) len %u\n",
@@ -324,12 +324,12 @@ mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
 
     if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
         DEBUG_LOG("Invalid transaction ID in client request 0x%04x\n", cmd_id);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (rxed_handle.is_valid()) {
         DEBUG_LOG("Received unexpected handle in client request 0x%04x\n", cmd_id);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     switch (cmd_id) {
@@ -340,7 +340,7 @@ mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
     PROCESS_CMD(false, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
     default:
         DEBUG_LOG("Unrecognized command ID 0x%04x\n", req.hdr.cmd);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -372,14 +372,14 @@ mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
     if (!CodecCommand::SanityCheck(id(), req.nid, verb)) {
         DEBUG_LOG("Bad SEND_CORB_CMD request values [%u, %hu, 0x%05x]\n",
                 id(), req.nid, verb.val);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Only the dedicated driver channel is permitted to execute set verbs.
     if (verb.is_set() && (channel->owner_ctx() != DRIVER_CHANNEL_ID)) {
         DEBUG_LOG("SET verbs not allowed from unprivledged connections! [%u, %hu, 0x%05x]\n",
                 id(), req.nid, verb.val);
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     mxtl::RefPtr<DispatcherChannel> chan_ref = (req.hdr.cmd & IHDA_NOACK_FLAG)
@@ -391,10 +391,10 @@ mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
                                          CodecCommand(id(), req.nid, verb));
 
     if (job == nullptr)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx_status_t res = controller_.QueueCodecCmd(mxtl::move(job));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Failed to queue CORB command [%u, %hu, 0x%05x] (res %d)\n",
                 id(), req.nid, verb.val, res);
     }
@@ -409,7 +409,7 @@ mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
     // Only the dedicated driver channel is permitted to request DMA streams.
     if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
         DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     ihda_proto::RequestStreamResp resp;
@@ -424,7 +424,7 @@ mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
     if (stream != nullptr) {
         // Success, send its ID and its tag back to the codec and add it to the
         // set of active streams owned by this codec.
-        resp.result     = NO_ERROR;
+        resp.result     = MX_OK;
         resp.stream_id  = stream->id();
         resp.stream_tag = stream->tag();
 
@@ -432,7 +432,7 @@ mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
         active_streams_.insert(mxtl::move(stream));
     } else {
         // Failure; tell the codec that we are out of streams.
-        resp.result     = ERR_NO_MEMORY;
+        resp.result     = MX_ERR_NO_MEMORY;
         resp.stream_id  = 0;
         resp.stream_tag = 0;
     }
@@ -447,7 +447,7 @@ mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
     // Only the dedicated driver channel is permitted to release DMA streams.
     if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
         DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     // Remove the stream from the active set.
@@ -460,7 +460,7 @@ mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
     // If the stream was not active, our codec driver is crazy.  Hang up the
     // phone on it.
     if (stream == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // Give the stream back to the controller and (if an ack was requested) tell
     // our codec driver that things went well.
@@ -468,7 +468,7 @@ mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
     controller_.ReturnStream(mxtl::move(stream));
 
     if (req.hdr.cmd & IHDA_NOACK_FLAG)
-        return NO_ERROR;
+        return MX_OK;
 
     ihda_proto::RequestStreamResp resp;
     resp.hdr = req.hdr;
@@ -482,13 +482,13 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     // Only the dedicated driver channel is permitted to release DMA streams.
     if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
         DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     // Sanity check the requested format.
     if (!StreamFormat(req.format).SanityCheck()) {
         DEBUG_LOG("Invalid encoded stream format 0x%04hx!\n", req.format);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Grab a reference to the stream from the active set.
@@ -503,7 +503,7 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     // If the stream was not active, our codec driver is crazy.  Hang up the
     // phone on it.
     if (stream == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // Create a channel which will be used to configure the stream DMA buffers,
     // start/stop the channel, and send status reports.  Set the owner_ctx of
@@ -511,13 +511,13 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     MX_DEBUG_ASSERT(req.stream_id == stream->id());
     auto stream_channel = DispatcherChannelAllocator::New(stream->id());
     if (stream_channel == nullptr)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // Set the stream format and assign the client channel to the stream.  If
     // this stream is already bound to a client, this will cause that connection
     // to be closed.
     mx_status_t res = stream->SetStreamFormat(req.format, stream_channel);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Failed to set stream format 0x%04hx for stream %hu (res %d)\n",
                   req.format, req.stream_id, res);
         return res;
@@ -528,7 +528,7 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     // or any of the DMA streams it is managing.
     mx::channel client_channel;
     res = stream_channel->Activate(mxtl::WrapRefPtr(this), &client_channel);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         DEBUG_LOG("Failed to activate stream channel (res %d)\n", res);
         stream->Deactivate();
         return res;
@@ -540,7 +540,7 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     resp.hdr = req.hdr;
     res = channel->Write(&resp, sizeof(resp), mxtl::move(client_channel));
 
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         DEBUG_LOG("Failed to send stream channel back to codec driver (res %d)\n", res);
 
     return res;
@@ -583,7 +583,7 @@ void IntelHDACodec::NotifyChannelDeactivated(const DispatcherChannel& channel) {
 
 mx_status_t IntelHDACodec::CodecGetDispatcherChannel(mx_handle_t* channel_out) {
     if (!channel_out)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     *channel_out = MX_HANDLE_INVALID;
 
@@ -595,20 +595,20 @@ mx_status_t IntelHDACodec::CodecGetDispatcherChannel(mx_handle_t* channel_out) {
         mxtl::AutoLock lock(&codec_driver_channel_lock_);
 
         if (codec_driver_channel_ != nullptr)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
 
         // Allocate a new channel.  Use the owner_ctx() to indicate that this is
         // the singleton driver channel, and therefor allowed to perform
         // privledged operations (such as allocate stream dma contexts)
         codec_driver_channel_ = DispatcherChannelAllocator::New(DRIVER_CHANNEL_ID);
         if (codec_driver_channel_ == nullptr)
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
 
         // Now that we have successfully allocated a channel, we can take a
         // local reference to it, leave the codec driver channel lock, and
         // attempt to activate the channel.  Any attempts to create a new driver
         // channel on another thread while we activate this channel will fail
-        // with ERR_BAD_STATE because codec_driver_channel_ is non-null.
+        // with MX_ERR_BAD_STATE because codec_driver_channel_ is non-null.
         activate_me = codec_driver_channel_;
     }
 
@@ -618,7 +618,7 @@ mx_status_t IntelHDACodec::CodecGetDispatcherChannel(mx_handle_t* channel_out) {
 
     // If we failed to activate the channel, release the internal reference we
     // were holding from inside of the codec_driver_channel_lock.
-    if (activate_result != NO_ERROR) {
+    if (activate_result != MX_OK) {
         mxtl::AutoLock lock(&codec_driver_channel_lock_);
         codec_driver_channel_ = nullptr;
     } else {

@@ -8,7 +8,7 @@ namespace intel_hda {
 
 mx_status_t IntelHDADevice::Probe() {
     mx_status_t res = MagentaDevice::Connect();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     ihda_get_ids_req_t req;
@@ -16,7 +16,7 @@ mx_status_t IntelHDADevice::Probe() {
 
     InitRequest(&req, IHDA_CMD_GET_IDS);
     res = CallDevice(req, &resp);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     vid_       = resp.vid;
@@ -26,7 +26,7 @@ mx_status_t IntelHDADevice::Probe() {
     rev_id_    = resp.rev_id;
     step_id_   = resp.step_id;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 }  // namespace audio

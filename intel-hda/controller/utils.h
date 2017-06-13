@@ -34,7 +34,7 @@ mx_status_t WaitCondition(mx_time_t timeout,
 // @param num_regions_inout A pointer to an integer which holds the length of
 //        the regions_out array on input, and hold the number of populated
 //        elements of the array on output.  Only valid on output if the return
-//        code is NO_ERROR.
+//        code is MX_OK.
 // @returns An mx_status_t indicating success or failure of the operation.
 struct VMORegion;
 mx_status_t GetVMORegionInfo(const mx::vmo& vmo,

@@ -49,14 +49,14 @@ static void update_signals(usb_midi_source_t* source) {
 static void usb_midi_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_midi_source_t* source = (usb_midi_source_t*)cookie;
 
-    if (txn->status == ERR_PEER_CLOSED) {
+    if (txn->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(txn);
         return;
     }
 
     mtx_lock(&source->mutex);
 
-    if (txn->status == NO_ERROR && txn->actual > 0) {
+    if (txn->status == MX_OK && txn->actual > 0) {
         list_add_tail(&source->completed_reads, &txn->node);
     } else {
         iotxn_queue(source->usb_mxdev, txn);
@@ -94,10 +94,10 @@ static mx_status_t usb_midi_source_open(void* ctx, mx_device_t** dev_out, uint32
 
     mtx_lock(&source->mutex);
     if (source->open) {
-        result = ERR_ALREADY_BOUND;
+        result = MX_ERR_ALREADY_BOUND;
     } else {
         source->open = true;
-        result = NO_ERROR;
+        result = MX_OK;
     }
 
     // queue up reads, including stale completed reads
@@ -120,7 +120,7 @@ static mx_status_t usb_midi_source_close(void* ctx, uint32_t flags) {
     source->open = false;
     mtx_unlock(&source->mutex);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, mx_off_t off,
@@ -128,17 +128,17 @@ static mx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, mx_of
     usb_midi_source_t* source = ctx;
 
     if (source->dead) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = NO_ERROR;
-    if (len < 3) return ERR_BUFFER_TOO_SMALL;
+    mx_status_t status = MX_OK;
+    if (len < 3) return MX_ERR_BUFFER_TOO_SMALL;
 
     mtx_lock(&source->mutex);
 
     list_node_t* node = list_peek_head(&source->completed_reads);
     if (!node) {
-        status = ERR_SHOULD_WAIT;
+        status = MX_ERR_SHOULD_WAIT;
         goto out;
     }
     iotxn_t* txn = containerof(node, iotxn_t, node);
@@ -165,14 +165,14 @@ static mx_status_t usb_midi_source_ioctl(void* ctx, uint32_t op, const void* in_
     switch (op) {
     case IOCTL_MIDI_GET_DEVICE_TYPE: {
         int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
         *reply = MIDI_TYPE_SOURCE;
         *out_actual = sizeof(*reply);
-        return NO_ERROR;
+        return MX_OK;
     }
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t usb_midi_source_device_proto = {
@@ -190,7 +190,7 @@ mx_status_t usb_midi_source_create(mx_device_t* device, int index,
     usb_midi_source_t* source = calloc(1, sizeof(usb_midi_source_t));
     if (!source) {
         printf("Not enough memory for usb_midi_source_t\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     list_initialize(&source->free_read_reqs);
@@ -205,7 +205,7 @@ mx_status_t usb_midi_source_create(mx_device_t* device, int index,
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, packet_size);
         if (!txn) {
             usb_midi_source_free(source);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         txn->length = packet_size;
         txn->complete_cb = usb_midi_source_read_complete;
@@ -225,7 +225,7 @@ mx_status_t usb_midi_source_create(mx_device_t* device, int index,
     };
 
     mx_status_t status = device_add(device, &args, &source->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("device_add failed in usb_midi_source_create\n");
         usb_midi_source_free(source);
     }

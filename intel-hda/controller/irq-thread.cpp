@@ -238,7 +238,7 @@ mx_status_t IntelHDAController::QueueCodecCmd(mxtl::unique_ptr<CodecCmdJob>&& jo
 
     CommitCORBLocked();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void IntelHDAController::ProcessCORB() {
@@ -344,7 +344,7 @@ void IntelHDAController::ProcessControllerIRQ() {
 
                 // If we successfully created our codec, attempt to start it up.
                 // If it fails to start, release our reference to the codec.
-                if ((codecs_[i] != nullptr) && (codecs_[i]->Startup() != NO_ERROR)) {
+                if ((codecs_[i] != nullptr) && (codecs_[i]->Startup() != MX_OK)) {
                     codecs_[i] = nullptr;
                 }
             } else {

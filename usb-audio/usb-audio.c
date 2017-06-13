@@ -218,7 +218,7 @@ static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie)
     }
     usb_desc_iter_release(&iter);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t usb_audio_driver_ops = {

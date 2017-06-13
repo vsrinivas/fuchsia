@@ -29,10 +29,10 @@ mx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
 
 mx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
     if (!conv_.has_amp)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     if ((target_gain < conv_.min_gain) || (target_gain > conv_.max_gain))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     MX_DEBUG_ASSERT(conv_.gain_step > 0);
 
@@ -40,7 +40,7 @@ mx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
     MX_DEBUG_ASSERT(tmp <= conv_.amp_caps.num_steps());
 
     cur_gain_steps_ = static_cast<uint8_t>(tmp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 float RealtekStream::ComputeCurrentGainLocked() {
@@ -57,7 +57,7 @@ mx_status_t RealtekStream::SendGainUpdatesLocked() {
         res = RunCmdLocked({ props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
                                                                       cur_gain_steps_,
                                                                       is_input(), !is_input()) });
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
     }
 
@@ -66,11 +66,11 @@ mx_status_t RealtekStream::SendGainUpdatesLocked() {
         res = RunCmdLocked({ props_.pc_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
                                                                     pc_.amp_caps.offset(),
                                                                     is_input(), !is_input()) });
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // TODO(johngro) : re: the plug_notify_targets_ list.  In theory, we could put
@@ -112,7 +112,7 @@ mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
     if (want_response) {
         pending_cmd = PendingCommandAllocator::New(cmd);
         if (pending_cmd == nullptr)
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t res = SendCodecCommandLocked(cmd.nid,
@@ -120,7 +120,7 @@ mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
                                              want_response ? Ack::YES : Ack::NO);
     VERBOSE_LOG("SEND: nid %2hu verb 0x%05x%s\n", cmd.nid, cmd.verb.val, want_response ? "*" : "");
 
-    if ((res == NO_ERROR) && want_response)
+    if ((res == MX_OK) && want_response)
         pending_cmds_.push_back(mxtl::move(pending_cmd));
 
     return res;
@@ -129,15 +129,15 @@ mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
 mx_status_t RealtekStream::RunCmdListLocked(const Command* list, size_t count, bool force_all) {
     MX_DEBUG_ASSERT(list);
 
-    mx_status_t total_res = NO_ERROR;
+    mx_status_t total_res = MX_OK;
     for (size_t i = 0; i < count; ++i) {
         mx_status_t res = RunCmdLocked(list[i]);
 
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             if (!force_all)
                 return res;
 
-            if (total_res == NO_ERROR)
+            if (total_res == MX_OK)
                 total_res = res;
         }
     }
@@ -161,7 +161,7 @@ mx_status_t RealtekStream::OnDMAAssignedLocked() {
 mx_status_t RealtekStream::OnSolicitedResponseLocked(const CodecResponse& resp) {
     if (pending_cmds_.is_empty()) {
         LOG("Received solicited response (0x%08x), but no commands are pending!\n", resp.data);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     auto pending_cmd = pending_cmds_.pop_front();
@@ -204,7 +204,7 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
 
                 MX_DEBUG_ASSERT(iter->channel != nullptr);
                 res = iter->channel->Write(&notif, sizeof(notif));
-                if (res != NO_ERROR) {
+                if (res != MX_OK) {
                     // If we have failed to send the notification over our
                     // client channel, something has gone fairly wrong.  Remove
                     // the client from the notification list.
@@ -216,17 +216,17 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt) {
     // Check the format arguments.
     if (!fmt.channels || (fmt.channels > conv_.widget_caps.ch_count()))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     if (!conv_.sample_caps.SupportsRate(fmt.frames_per_second) ||
         !conv_.sample_caps.SupportsFormat(fmt.sample_format))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     // Looks good, make sure that the converter is muted and not processing any stream tags.
     format_set_ = false;
@@ -245,15 +245,15 @@ mx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) 
     };
 
     res = RunCmdListLocked(ENABLE_CONVERTER_VERBS, countof(ENABLE_CONVERTER_VERBS));
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     res = SendGainUpdatesLocked();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     format_set_ = true;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void RealtekStream::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
@@ -277,7 +277,7 @@ void RealtekStream::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
 
 void RealtekStream::OnSetGainLocked(const audio2_proto::SetGainReq& req,
                                     audio2_proto::SetGainResp* out_resp) {
-    mx_status_t res  = NO_ERROR;
+    mx_status_t res  = MX_OK;
     bool mute_target = cur_mute_;
     bool set_mute    = req.flags & AUDIO2_SGF_MUTE_VALID;
     bool set_gain    = req.flags & AUDIO2_SGF_GAIN_VALID;
@@ -285,17 +285,17 @@ void RealtekStream::OnSetGainLocked(const audio2_proto::SetGainReq& req,
     if (set_mute || set_gain) {
         if (set_mute) {
             if (!can_mute()) {
-                res = ERR_INVALID_ARGS;
+                res = MX_ERR_INVALID_ARGS;
             } else {
                 mute_target = req.flags & AUDIO2_SGF_MUTE;
             }
         }
 
-        if ((res == NO_ERROR) && set_gain)
+        if ((res == MX_OK) && set_gain)
             res = UpdateConverterGainLocked(req.gain);
     }
 
-    if (res == NO_ERROR) {
+    if (res == MX_OK) {
         cur_mute_ = mute_target;
 
         // Don't bother sending any update to the converter if the format is not currently set.
@@ -365,7 +365,7 @@ mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
         return PublishDeviceLocked();
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void RealtekStream::DumpStreamPublishedLocked() {
@@ -446,7 +446,7 @@ mx_status_t RealtekStream::OnActivateLocked() {
     // Start by attempting to put our pin complex and converter into a disabled
     // state.
     mx_status_t res = DisableConverterLocked();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Start the setup process by fetching the widget caps for our converter and
@@ -492,7 +492,7 @@ mx_status_t RealtekStream::ProcessPinAmpCaps(const Command& cmd, const CodecResp
 
 mx_status_t RealtekStream::ProcessPinCfgDefaults(const Command& cmd, const CodecResponse& resp) {
     pc_.cfg_defaults.raw_data_ = resp.data;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecResponse& resp) {
@@ -502,7 +502,7 @@ mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
     if ((is_input() ? pc_.pin_caps.can_input() : pc_.pin_caps.can_output()) == false) {
         const char* tag = is_input() ? "input" : "output";
         LOG("ERROR: Stream configured for %s, but pin complex cannot %s\n", tag, tag);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     // Is the Jack Detect Override bit set in our config defaults?  If so,
@@ -535,10 +535,10 @@ mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
     pc_.async_plug_det = pc_.widget_caps.can_send_unsol();
     if (pc_.async_plug_det) {
         mx_status_t res = AllocateUnsolTagLocked(&pc_.unsol_tag);
-        if (res == NO_ERROR) {
+        if (res == MX_OK) {
             mx_status_t res = RunCmdLocked({ props_.pc_nid,
                                              SET_UNSOLICITED_RESP_CTRL(true, pc_.unsol_tag) });
-            if (res != NO_ERROR)
+            if (res != MX_OK)
                 return res;
         } else {
             LOG("WARNING : Failed to allocate unsolicited response tag from "
@@ -573,7 +573,7 @@ mx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
         res = RunCmdLocked({ nid,
                              GET_PARAM(AMP_CAPS(is_input())),
                              THUNK(ProcessConverterAmpCaps) });
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
     }
 
@@ -585,10 +585,10 @@ mx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
     };
 
     res = RunCmdListLocked(FETCH_FORMATS, countof(FETCH_FORMATS));
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const CodecResponse& resp) {
@@ -604,7 +604,7 @@ mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const Cod
 mx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,
                                                           const CodecResponse& resp) {
     conv_.sample_caps.pcm_size_rate_ = resp.data;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RealtekStream::ProcessConverterSampleFormats(const Command& cmd,
