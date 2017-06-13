@@ -45,6 +45,7 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rcx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov %r10d, (%rax)
     uint8_t rex_mov[] = { 0b01000100, 0x89, 0b00010000 };
@@ -53,6 +54,7 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r10, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov %ebx, 0x10(%rax)
     uint8_t mov_disp_1[] = { 0x89, 0b01011000, 0x10 };
@@ -61,6 +63,7 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov %ebx, 0x1000000(%rax)
     uint8_t mov_disp_4[] = { 0x89, 0b10011000, 0, 0, 0, 0x1 };
@@ -69,6 +72,7 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov %r12, 0x11(%rax)
     uint8_t rex_mov_disp[] = { 0b01001100, 0x89, 0b01100000, 0x11 };
@@ -77,6 +81,7 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.mem, 8u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r12, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov %r14w, 0x13(%rax)
     uint8_t h66_mov_disp[] = { 0x66, 0b01000100, 0x89, 0b01110000, 0x13 };
@@ -85,6 +90,7 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r14, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     END_TEST;
 }
@@ -110,6 +116,7 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rcx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov (%rax), %r10d
     uint8_t rex_mov[] = { 0b01000100, 0x8b, 0b00010000 };
@@ -118,6 +125,7 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r10, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov 0x10(%rax), %ebx
     uint8_t mov_disp_1[] = { 0x8b, 0b01011000, 0x10 };
@@ -126,6 +134,7 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov 0x10000000(%rax), %ebx
     uint8_t mov_disp_4[] = { 0x8b, 0b10011000, 0, 0, 0, 0x1 };
@@ -134,6 +143,7 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov 0x11(rax), %r12
     uint8_t rex_mov_disp[] = { 0b01001100, 0x8b, 0b01100000, 0x11 };
@@ -142,6 +152,7 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.mem, 8u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r12, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // mov 0x13(rax), %r14w
     uint8_t h66_mov_disp[] = { 0x66, 0b01000100, 0x8b, 0b01110000, 0x13 };
@@ -150,6 +161,7 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r14, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     END_TEST;
 }
@@ -177,6 +189,7 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0x1u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movq 0x1000000, (%rax)
     uint8_t rex_mov[] = { 0b01001000, 0xc7, 0, 0, 0, 0, 0x1 };
@@ -185,6 +198,7 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst.mem, 8u, "");
     EXPECT_EQ(inst.imm, 0x1000000u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movl 0x10, -0x1(%rbx)
     uint8_t mov_disp_1[] = { 0xc7, 0b01000011, 0xff, 0x10, 0, 0, 0 };
@@ -193,6 +207,7 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0x10u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movl 0x1000000, -0x1000000(%rbx)
     uint8_t mov_disp_4[] = { 0xc7, 0b10000011, 0, 0, 0, 0xff, 0, 0, 0, 0x1 };
@@ -201,6 +216,7 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst.mem, 4u, "");
     EXPECT_EQ(inst.imm, 0x1000000u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movw 0x100, -0x1(%rax)
     uint8_t h66_mov_disp[] = { 0x66, 0b01000100, 0xc7, 0b01000000, 0xff, 0, 0x1 };
@@ -209,6 +225,7 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0x100u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     END_TEST;
 }
@@ -234,6 +251,7 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rcx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzb (%rax), %r10d
     uint8_t rex_movz[] = { 0b01000100, 0x0f, 0xb6, 0b00010000 };
@@ -242,6 +260,7 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r10, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzb 0x10(%rax), %ebx
     uint8_t movz_disp_1[] = { 0x0f, 0xb6, 0b01011000, 0x10 };
@@ -250,6 +269,7 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzb 0x10000000(%rax), %ebx
     uint8_t movz_disp_4[] = { 0x0f, 0xb6, 0b10011000, 0, 0, 0, 0x1 };
@@ -258,6 +278,7 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzb 0x11(rax), %r12
     uint8_t rex_movz_disp[] = { 0b01001100, 0x0f, 0xb6, 0b01100000, 0x11 };
@@ -266,6 +287,7 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r12, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     END_TEST;
 }
@@ -291,6 +313,7 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rcx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzw (%rax), %r10d
     uint8_t rex_movz[] = { 0b01000100, 0x0f, 0xb7, 0b00010000 };
@@ -299,6 +322,7 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r10, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzw 0x10(%rax), %ebx
     uint8_t movz_disp_1[] = { 0x0f, 0xb7, 0b01011000, 0x10 };
@@ -307,6 +331,7 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzw 0x10000000(%rax), %ebx
     uint8_t movz_disp_4[] = { 0x0f, 0xb7, 0b10011000, 0, 0, 0, 0x1 };
@@ -315,6 +340,7 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.rbx, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     // movzw 0x11(rax), %r12
     uint8_t rex_movz_disp[] = { 0b01001100, 0x0f, 0xb7, 0b01100000, 0x11 };
@@ -323,6 +349,7 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(inst.mem, 2u, "");
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r12, "");
+    EXPECT_EQ(inst.flags, NULL, "");
 
     END_TEST;
 }
@@ -350,6 +377,7 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0x1u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, &guest_gpr.flags, "");
 
     // test 0x10, -0x1(%rbx)
     uint8_t test_disp_1[] = { 0xf6, 0b01000011, 0xff, 0x10 };
@@ -358,6 +386,7 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0x10u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, &guest_gpr.flags, "");
 
     // test 0x11, -0x1000000(%rbx)
     uint8_t test_disp_4[] = { 0xf6, 0b10000011, 0, 0, 0, 0xff, 0x11 };
@@ -366,6 +395,7 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst.mem, 1u, "");
     EXPECT_EQ(inst.imm, 0x11u, "");
     EXPECT_EQ(inst.reg, NULL, "");
+    EXPECT_EQ(inst.flags, &guest_gpr.flags, "");
 
     END_TEST;
 }
