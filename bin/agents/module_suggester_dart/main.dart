@@ -135,9 +135,542 @@ class _AskHandlerImpl extends AskHandler {
       );
     }
 
+    if (query.text?.startsWith('test s') ?? false) {
+      proposals.addAll(_kDummyProposals);
+      proposals.addAll(_kDummyInterruptions);
+    }
+
     callback(proposals);
   }
 }
+
+final List<Proposal> _kDummyProposals = <Proposal>[
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline with a longer text string that needs more space plus some',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line just like this',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit by adding a few more words',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line just like this',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines just like this one here',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line just like this',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line just like this',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line just like this',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    imageUrl: 'https://avatars2.githubusercontent.com/u/12826430?v=3&s=200',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string needing more space',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string needing more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    imageUrl: 'https://avatars2.githubusercontent.com/u/12826430?v=3&s=200',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://avatars2.githubusercontent.com/u/12826430?v=3&s=200',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    iconUrl: '/data/test.png',
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    iconUrl: '/data/test.png',
+  ),
+];
+
+final List<Proposal> _kDummyInterruptions = <Proposal>[
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline with a longer text string that needs more space plus some',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line just like this',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit by adding a few more words',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line just like this',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines just like this one here',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line just like this',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line just like this',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line just like this',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    imageUrl: 'https://avatars2.githubusercontent.com/u/12826430?v=3&s=200',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string needing more space',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string needing more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    imageUrl: 'https://avatars2.githubusercontent.com/u/12826430?v=3&s=200',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://avatars2.githubusercontent.com/u/12826430?v=3&s=200',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    imageUrl: 'https://i.redd.it/qh713wbo4r8y.jpg',
+    imageType: SuggestionImageType.person,
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline only',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line and exceeds the three line limit',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a sub-headline',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline: 'With a longer sub-headline that wraps to two lines',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline small',
+    subheadline:
+        'With a longer sub-headline that needs to wrap to multiple lines exceeding the maximum available lines',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline: 'Headline with a longer text string that needs more space',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+  _createUniqueDummyProposal(
+    headline:
+        'Headline using an even longer text string that needs to wrap to a third line',
+    subheadline:
+        'With a longer sub-headline that wraps to two lines and then a third line',
+    iconUrl: '/data/test.png',
+    annoyanceType: AnnoyanceType.interrupt,
+  ),
+];
+int _id = 0;
+Proposal _createUniqueDummyProposal({
+  String headline,
+  String subheadline: '',
+  String iconUrl,
+  String imageUrl: '',
+  SuggestionImageType imageType: SuggestionImageType.other,
+  AnnoyanceType annoyanceType: AnnoyanceType.none,
+}) =>
+    _createProposal(
+      id: 'dummy ${_id++}',
+      appUrl: 'file:///foo/bar',
+      headline: headline,
+      subheadline: subheadline,
+      color: 0xFF000000,
+      iconUrls: iconUrl != null ? <String>[iconUrl] : <String>[],
+      imageType: imageType,
+      imageUrl: imageUrl,
+      annoyanceType: annoyanceType,
+    );
 
 Proposal _createProposal({
   String id,
@@ -146,19 +679,22 @@ Proposal _createProposal({
   String subheadline,
   String imageUrl: '',
   String initialData,
+  SuggestionImageType imageType: SuggestionImageType.other,
+  List<String> iconUrls = const <String>[],
   int color,
+  AnnoyanceType annoyanceType: AnnoyanceType.none,
 }) =>
     new Proposal()
       ..id = id
       ..display = (new SuggestionDisplay()
-        ..headline = headline + (subheadline == null ? '' : '\n$subheadline')
-        ..subheadline = ''
+        ..headline = headline
+        ..subheadline = subheadline ?? ''
         ..details = ''
         ..color = color
-        ..iconUrls = const <String>[]
-        ..imageType = SuggestionImageType.other
+        ..iconUrls = iconUrls
+        ..imageType = imageType
         ..imageUrl = imageUrl
-        ..annoyance = AnnoyanceType.none)
+        ..annoyance = annoyanceType)
       ..onSelected = <Action>[
         new Action()
           ..createStory = (new CreateStory()
