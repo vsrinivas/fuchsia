@@ -33,7 +33,9 @@ endif
 
 $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	$(call BUILDECHO, generating $@)
+	@$(MKDIR)
 	$(NOECHO)cp -f $< $@
+EXTRA_BUILDDEPS += $(OUTLKELF)-gdb.py
 
 # print some information about the build
 #$(BUILDDIR)/srcfiles.txt:

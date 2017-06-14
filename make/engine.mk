@@ -228,11 +228,7 @@ ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
 # top level rule
-all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
-
-ifeq ($(ENABLE_BUILD_LISTFILES),true)
-all:: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
-endif
+all::
 
 # master module object list
 ALLOBJS_MODULE :=
@@ -475,6 +471,17 @@ all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 all:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
 tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
+
+# meta rule for the kernel
+.PHONY: kern
+ifeq ($(ENABLE_BUILD_LISTFILES),true)
+kern: $(OUTLKBIN) $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
+else
+kern: $(OUTLKBIN)
+endif
+
+# add the kernel to the build
+all:: kern
 
 # add some automatic configuration defines
 KERNEL_DEFINES += \
