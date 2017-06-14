@@ -381,6 +381,7 @@ mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {
     acpi_rsp_hdr_t* rsp;
     size_t rsp_len;
     if ((status = run_txn(_h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, h[1], NULL, 0)) < 0) {
+        mx_handle_close(h[0]);
         return status;
     }
     free(rsp);
