@@ -17,6 +17,7 @@
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
+#include "apps/modular/services/story/story_shell.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "apps/modular/src/component/component_context_impl.h"
@@ -37,7 +38,7 @@ class StoryControllerImpl;
 class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
   StoryProviderImpl(
-      const Scope* user_scope,
+      Scope* user_scope,
       const std::string& device_id,
       ledger::Ledger* ledger,
       ledger::Page* root_page,
@@ -71,6 +72,13 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // Called by StoryControllerImpl.
   const AppConfig& story_shell() const { return *story_shell_; }
+
+  // Called by StoryImpl.
+  void StartStoryShell(
+      fidl::InterfaceHandle<StoryContext> story_context,
+      fidl::InterfaceRequest<app::ApplicationController> app_controller_request,
+      fidl::InterfaceRequest<StoryShell> story_shell_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_request);
 
   // Called by StoryControllerImpl.
   void SetStoryInfoExtra(const fidl::String& story_id,
@@ -140,7 +148,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   StoryContextLogPtr MakeLogEntry(const StorySignal signal);
 
-  const Scope* const user_scope_;
+  Scope* const user_scope_;
 
   // Unique ID generated for this user/device combination.
   const std::string device_id_;

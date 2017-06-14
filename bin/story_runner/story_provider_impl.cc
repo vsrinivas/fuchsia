@@ -13,6 +13,7 @@
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -592,7 +593,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
 };
 
 StoryProviderImpl::StoryProviderImpl(
-    const Scope* const user_scope,
+    Scope* const user_scope,
     const std::string& device_id,
     ledger::Ledger* const ledger,
     ledger::Page* const root_page,
@@ -648,6 +649,33 @@ void StoryProviderImpl::Watch(
 void StoryProviderImpl::Duplicate(
     fidl::InterfaceRequest<StoryProvider> request) {
   Connect(std::move(request));
+}
+
+void StoryProviderImpl::StartStoryShell(
+    fidl::InterfaceHandle<StoryContext> story_context,
+    fidl::InterfaceRequest<app::ApplicationController> app_controller_request,
+    fidl::InterfaceRequest<StoryShell> story_shell_request,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_request) {
+  app::ServiceProviderPtr story_shell_services;
+  auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
+  story_shell_launch_info->services = story_shell_services.NewRequest();
+  story_shell_launch_info->url = story_shell_->url;
+  story_shell_launch_info->arguments = story_shell_->args.Clone();
+
+  user_scope_->GetLauncher()->CreateApplication(
+      std::move(story_shell_launch_info), std::move(app_controller_request));
+
+  mozart::ViewProviderPtr view_provider;
+  ConnectToService(story_shell_services.get(), view_provider.NewRequest());
+
+  StoryShellFactoryPtr story_shell_factory;
+  ConnectToService(story_shell_services.get(),
+                   story_shell_factory.NewRequest());
+
+  view_provider->CreateView(std::move(view_request), nullptr);
+
+  story_shell_factory->Create(std::move(story_context),
+                              std::move(story_shell_request));
 }
 
 void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,

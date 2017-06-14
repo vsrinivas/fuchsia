@@ -735,28 +735,9 @@ void StoryControllerImpl::Start(
 
 void StoryControllerImpl::StartStoryShell(
     fidl::InterfaceRequest<mozart::ViewOwner> request) {
-  app::ServiceProviderPtr story_shell_services;
-  auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
-  story_shell_launch_info->services = story_shell_services.NewRequest();
-  story_shell_launch_info->url = story_provider_impl_->story_shell().url;
-  story_shell_launch_info->arguments =
-      story_provider_impl_->story_shell().args.Clone();
-
-  story_scope_.GetLauncher()->CreateApplication(
-      std::move(story_shell_launch_info), story_shell_controller_.NewRequest());
-
-  mozart::ViewProviderPtr story_shell_view_provider;
-  ConnectToService(story_shell_services.get(),
-                   story_shell_view_provider.NewRequest());
-
-  StoryShellFactoryPtr story_shell_factory;
-  ConnectToService(story_shell_services.get(),
-                   story_shell_factory.NewRequest());
-
-  story_shell_view_provider->CreateView(std::move(request), nullptr);
-
-  story_shell_factory->Create(story_context_binding_.NewBinding(),
-                              story_shell_.NewRequest());
+  story_provider_impl_->StartStoryShell(
+      story_context_binding_.NewBinding(), story_shell_controller_.NewRequest(),
+      story_shell_.NewRequest(), std::move(request));
 }
 
 // |StoryController|
