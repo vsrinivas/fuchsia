@@ -63,12 +63,11 @@ class HelloSceneManagerService : public Demo {
 
     // TODO: propagate dirty flags up the tree, and only render if dirty
 
-    // For now, just assume the first Link created is the root of the tree.
-    if (scene_manager_->links().size() > 0) {
-      LinkPtr link = scene_manager_->links()[0];
-
+    // For now, just assume the first Scene created is the root of the tree.
+    const auto& scenes = scene_manager_->session_context().scenes();
+    if (scenes.size() > 0) {
       escher::Model model(renderer->CreateDisplayList(
-          link.get(), escher::vec2(kScreenWidth, kScreenHeight)));
+          scenes[0].get(), escher::vec2(kScreenWidth, kScreenHeight)));
       swapchain_helper_.DrawFrame(stage_, model);
     }
   }

@@ -15,7 +15,7 @@ class Node;
 class ShapeNode;
 class CircleShape;
 class Shape;
-class Link;
+class Scene;
 class Material;
 
 class ResourceVisitor {
@@ -28,7 +28,7 @@ class ResourceVisitor {
   virtual void Visit(ShapeNode* r) = 0;
   virtual void Visit(CircleShape* r) = 0;
   virtual void Visit(Shape* r) = 0;
-  virtual void Visit(Link* r) = 0;
+  virtual void Visit(Scene* r) = 0;
   virtual void Visit(Material* r) = 0;
 };
 

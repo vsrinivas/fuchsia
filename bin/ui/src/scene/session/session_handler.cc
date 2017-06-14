@@ -18,7 +18,7 @@ SessionHandler::SessionHandler(
     : scene_manager_(scene_manager),
       session_(::ftl::MakeRefCounted<scene::Session>(
           session_id,
-          scene_manager,
+          &(scene_manager->session_context()),
           static_cast<ErrorReporter*>(this))) {
   FTL_DCHECK(scene_manager_);
 

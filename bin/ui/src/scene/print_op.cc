@@ -34,8 +34,8 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::BUFFER:
       stream << "Buffer";
       break;
-    case Resource::Tag::LINK:
-      stream << "Link";
+    case Resource::Tag::SCENE:
+      stream << "Scene";
       break;
     case Resource::Tag::RECTANGLE:
       stream << "Rectangle";

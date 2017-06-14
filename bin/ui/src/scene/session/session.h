@@ -89,7 +89,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
   bool ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args);
   bool ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args);
-  bool ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args);
+  bool ApplyCreateScene(ResourceId id, const mozart2::ScenePtr& args);
   bool ApplyCreateRectangle(ResourceId id, const mozart2::RectanglePtr& args);
   bool ApplyCreateRoundedRectangle(ResourceId id,
                                    const mozart2::RoundedRectanglePtr& args);
@@ -106,7 +106,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateImage(ResourceId,
                           MemoryPtr memory,
                           const mozart2::ImagePtr& args);
-  ResourcePtr CreateLink(ResourceId, const mozart2::LinkPtr& args);
+  ResourcePtr CreateScene(ResourceId, const mozart2::ScenePtr& args);
   ResourcePtr CreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
   ResourcePtr CreateEntityNode(ResourceId id,
                                const mozart2::EntityNodePtr& args);

@@ -35,7 +35,7 @@ class Renderer {
     void Visit(ShapeNode* r) override;
     void Visit(CircleShape* r) override;
     void Visit(Shape* r) override;
-    void Visit(Link* r) override;
+    void Visit(Scene* r) override;
     void Visit(Material* r) override;
 
    private:

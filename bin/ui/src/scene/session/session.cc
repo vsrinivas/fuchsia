@@ -75,13 +75,16 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetMaterialOp(op->get_set_material());
     case mozart2::Op::Tag::SET_CLIP:
       return ApplySetClipOp(op->get_set_clip());
-    default:
-      error_reporter_->ERROR()
-          << "scene::Session::ApplyOp(): unimplemented op: " << op;
-      return false;
+    case mozart2::Op::Tag::__UNKNOWN__:
+      // There is no default case for this switch because we want a compile
+      // error when a new Op is added. If the Op is intentionally unimplemented,
+      // it must be mentioned explicitly with a fallthrough that logs the error.
+      break;
   }
 
-  return true;
+  error_reporter_->ERROR() << "scene::Session::ApplyOp(): unimplemented op: "
+                           << op;
+  return false;
 }
 
 bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
@@ -99,8 +102,8 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateImage(id, op->resource->get_image());
     case mozart2::Resource::Tag::BUFFER:
       return ApplyCreateBuffer(id, op->resource->get_buffer());
-    case mozart2::Resource::Tag::LINK:
-      return ApplyCreateLink(id, op->resource->get_link());
+    case mozart2::Resource::Tag::SCENE:
+      return ApplyCreateScene(id, op->resource->get_scene());
     case mozart2::Resource::Tag::RECTANGLE:
       return ApplyCreateRectangle(id, op->resource->get_rectangle());
     case mozart2::Resource::Tag::ROUNDED_RECTANGLE:
@@ -120,12 +123,17 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateShapeNode(id, op->resource->get_shape_node());
     case mozart2::Resource::Tag::TAG_NODE:
       return ApplyCreateTagNode(id, op->resource->get_tag_node());
-    default:
-      error_reporter_->ERROR()
-          << "scene::Session::ApplyCreateResourceOp(): unsupported resource"
-          << op;
-      return false;
+    case mozart2::Resource::Tag::VARIABLE:
+    case mozart2::Resource::Tag::__UNKNOWN__:
+      // There is no default case for this switch because we want a compile
+      // error when a new Op is added. If the Op is intentionally unimplemented,
+      // it must be mentioned explicitly with a fallthrough that logs the error.
+      break;
   }
+
+  error_reporter_->ERROR()
+      << "scene::Session::ApplyCreateResourceOp(): unsupported resource" << op;
+  return false;
 }
 
 bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
@@ -134,14 +142,16 @@ bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
 
 bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
   if (auto resource = resources_.FindResource<Resource>(op->id)) {
-    return context_->ExportResource(std::move(resource), op);
+    return context_->ExportResource(std::move(resource), std::move(op->token));
   }
   return false;
 }
 
 bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
-  auto resource = context_->ImportResource(this, op);
-  return resource ? resources_.AddResource(op->id, std::move(resource)) : false;
+  ProxyResourcePtr proxy =
+      ftl::MakeRefCounted<ProxyResource>(this, op->spec, std::move(op->token));
+  context_->ImportResource(proxy, op->spec, proxy->import_token());
+  return resources_.AddResource(op->id, std::move(proxy));
 }
 
 bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {
@@ -231,9 +241,9 @@ bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
   return false;
 }
 
-bool Session::ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args) {
-  auto link = CreateLink(id, args);
-  return link ? resources_.AddResource(id, std::move(link)) : false;
+bool Session::ApplyCreateScene(ResourceId id, const mozart2::ScenePtr& args) {
+  auto scene = CreateScene(id, args);
+  return scene ? resources_.AddResource(id, std::move(scene)) : false;
 }
 
 bool Session::ApplyCreateRectangle(ResourceId id,
@@ -372,8 +382,8 @@ ResourcePtr Session::CreateImage(ResourceId,
   return Image::New(this, memory, args, error_reporter_);
 }
 
-ResourcePtr Session::CreateLink(ResourceId id, const mozart2::LinkPtr& args) {
-  return context()->CreateLink(this, id, args);
+ResourcePtr Session::CreateScene(ResourceId id, const mozart2::ScenePtr& args) {
+  return context_->CreateScene(this, id, args);
 }
 
 ResourcePtr Session::CreateClipNode(ResourceId id,
@@ -445,11 +455,18 @@ void Session::TearDown() {
     return;
   }
   is_valid_ = false;
-  error_reporter_ = nullptr;
   resources_.Clear();
-
   context()->OnSessionTearDown(this);
-  FTL_DCHECK(resource_count_ == 0);
+  // TODO(MZ-134): Shutting down the session must eagerly collect any exported
+  // resources from the resource linker. Currently, the only way to evict an
+  // exported entry is to shut down its peer. But this does not handle session
+  // shutdown. Fix that bug and turn this log into an assertion.
+  if (resource_count_ != 0) {
+    error_reporter()->ERROR()
+        << "Session::TearDown(): Not all resources have been "
+           "collected. See MZ-134.";
+  }
+  error_reporter_ = nullptr;
 }
 
 ErrorReporter* Session::error_reporter() const {

@@ -18,8 +18,8 @@ union Resource {
   Image image;
   Buffer buffer;
 
-  // Linking to external entities.
-  Link link;
+  // Root of the hierarchy.
+  Scene scene;
 
   // Nodes.
   ClipNode clip_node;
@@ -68,10 +68,8 @@ struct Buffer {
 };
 
 // Represents an external entity which can attach a child |Node| from this
-// |Session|, e.g. the root of a Scene, or a LinkNode from some other session.
-// TODO: deprecated: use Import/ExportResourceOp.
-struct Link {
-  handle<eventpair> token;
+// |Session|, e.g. the root of a Scene.
+struct Scene {
 };
 
 // Simple texture-mapped material.  If no texture is provided (i.e. |texture_id|

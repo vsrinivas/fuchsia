@@ -49,6 +49,7 @@ executable("unittests") {
 
   sources = [
     "node_unittest.cc",
+    "proxy_resource_unittest.cc",
     "resource_linker_unittest.cc",
     "session_test.cc",
     "session_test.h",

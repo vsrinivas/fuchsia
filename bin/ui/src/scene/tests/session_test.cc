@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include "apps/mozart/src/scene/tests/session_test.h"
+#include "lib/ftl/synchronization/waitable_event.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace mozart {
 namespace scene {
 namespace test {
 
 void SessionTest::SetUp() {
-  session_ = ftl::MakeRefCounted<Session>(1, this, this);
+  session_ = ftl::MakeRefCounted<Session>(1, &session_context_, this);
 }
 
 // ::testing::Test virtual method.
@@ -42,33 +44,42 @@ void SessionTest::ReportError(ftl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-bool SessionTest::ExportResource(ResourcePtr resource,
-                                 const mozart2::ExportResourceOpPtr& op) {
-  FTL_LOG(FATAL) << "SessionTest::ExportResource() unimplemented";
-  return false;
+ftl::RefPtr<ftl::TaskRunner> SessionThreadedTest::TaskRunner() const {
+  return thread_.TaskRunner();
 }
 
-ResourcePtr SessionTest::ImportResource(
-    Session* session,
-    const mozart2::ImportResourceOpPtr& op) {
-  FTL_LOG(FATAL) << "SessionTest::ImportResource() unimplemented";
-  return ResourcePtr();
+void SessionThreadedTest::SetUp() {
+  thread_.Run();
+  ftl::AutoResetWaitableEvent setup_latch;
+  TaskRunner()->PostTask([this, &setup_latch]() {
+    SessionTest::SetUp();
+    setup_latch.Signal();
+  });
+  setup_latch.Wait();
 }
 
-LinkPtr SessionTest::CreateLink(Session* session,
-                                ResourceId id,
-                                const mozart2::LinkPtr& args) {
-  if (!args->token) {
-    session->error_reporter()->ERROR() << "Link token is null";
-    return LinkPtr();
-  } else {
-    // TODO: emulate look-up of pre-registered token.
-    FTL_LOG(WARNING) << "SessionTest::CreateLink() always succeeds";
-    return ::ftl::MakeRefCounted<Link>(session, id);
-  }
+void SessionThreadedTest::TearDown() {
+  TaskRunner()->PostTask([this]() {
+    SessionTest::TearDown();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
+  });
+  thread_.Join();
 }
 
-void SessionTest::OnSessionTearDown(Session* session) {}
+void SessionThreadedTest::PostTaskSync(ftl::Closure callback) {
+  ftl::AutoResetWaitableEvent latch;
+  PostTask(latch, callback);
+  latch.Wait();
+}
+
+void SessionThreadedTest::PostTask(ftl::AutoResetWaitableEvent& latch,
+                                   ftl::Closure callback) {
+  FTL_DCHECK(callback);
+  TaskRunner()->PostTask([&latch, callback]() {
+    callback();
+    latch.Signal();
+  });
+}
 
 }  // namespace test
 }  // namespace scene

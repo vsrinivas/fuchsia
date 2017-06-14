@@ -33,8 +33,7 @@ bool ResourceMap::RemoveResource(ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
     error_reporter_->ERROR()
-        << "scene::ResourceMap::RemoveResource(): no resource with ID "
-        << id;
+        << "scene::ResourceMap::RemoveResource(): no resource with ID " << id;
     return false;
   }
   return true;

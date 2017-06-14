@@ -6,47 +6,28 @@
 
 #include "apps/mozart/src/scene/session/session.h"
 #include "apps/mozart/src/scene/session/session_context.h"
-
 #include "gtest/gtest.h"
+#include "lib/mtl/threading/thread.h"
 
 namespace mozart {
 namespace scene {
 namespace test {
 
-class SessionTest : public ::testing::Test,
-                    public scene::SessionContext,
-                    public scene::ErrorReporter {
+class SessionTest : public ::testing::Test, public scene::ErrorReporter {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
+
+  // ::testing::Test virtual method.
   void TearDown() override;
-  vk::Device vk_device() override { return nullptr; }
-  escher::ResourceRecycler* escher_resource_recycler() override {
-    return nullptr;
-  }
-  escher::ImageFactory* escher_image_factory() override { return nullptr; }
-  escher::impl::GpuUploader* escher_gpu_uploader() override { return nullptr; }
-  escher::RoundedRectFactory* escher_rounded_rect_factory() override {
-    return nullptr;
-  }
 
  protected:
   // Implement ErrorReporter.
   void ReportError(ftl::LogSeverity severity,
                    std::string error_string) override;
 
-  // Implement SessionContext.
-  bool ExportResource(ResourcePtr resource,
-                      const mozart2::ExportResourceOpPtr& op) override;
-  ResourcePtr ImportResource(Session* session,
-                             const mozart2::ImportResourceOpPtr& op) override;
-  LinkPtr CreateLink(Session* session,
-                     ResourceId id,
-                     const mozart2::LinkPtr& args) override;
-  void OnSessionTearDown(Session* session) override;
-
   // Apply the specified Op, and verify that it succeeds.
-  bool Apply(const mozart2::OpPtr& op) { return session_->ApplyOp(op); }
+  bool Apply(mozart2::OpPtr op) { return session_->ApplyOp(std::move(op)); }
 
   template <class ResourceT>
   ftl::RefPtr<ResourceT> FindResource(ResourceId id) {
@@ -63,8 +44,28 @@ class SessionTest : public ::testing::Test,
     }
   }
 
+  SessionContext session_context_;
   SessionPtr session_;
   std::vector<std::string> reported_errors_;
+};
+
+class SessionThreadedTest : public SessionTest {
+ public:
+  // ::testing::Test virtual method.
+  void SetUp() override;
+
+  // ::testing::Test virtual method.
+  void TearDown() override;
+
+ protected:
+  ftl::RefPtr<ftl::TaskRunner> TaskRunner() const;
+
+  void PostTaskSync(ftl::Closure callback);
+
+  void PostTask(ftl::AutoResetWaitableEvent& latch, ftl::Closure callback);
+
+ private:
+  mtl::Thread thread_;
 };
 
 }  // namespace test

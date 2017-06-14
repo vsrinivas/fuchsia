@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <type_traits>
+#include <unordered_set>
+
 #include "apps/mozart/lib/scene/types.h"
 #include "apps/mozart/src/scene/resources/resource_type_info.h"
 #include "lib/ftl/memory/ref_counted.h"
@@ -13,6 +16,7 @@ namespace scene {
 
 class ErrorReporter;
 class Session;
+class ProxyResource;
 
 // Resource is the base class for all client-created objects (i.e. those that
 // are created in response to a CreateResourceOp operation).
@@ -57,12 +61,31 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
     return ftl::RefPtr<T>(static_cast<T*>(this));
   }
 
+  /// The list of proxy resource that currently have a binding to this resource.
+  const std::unordered_set<ProxyResource*>& imports() const { return imports_; }
+
+  /// Establish a binding between this resource and a proxy resource (possibly
+  /// in another session).
+  void BindToProxy(ProxyResource* proxy) const;
+
+  /// Clear an existing binding beteen this resource and a proxy resource.
+  void UnbindFromProxy(ProxyResource* proxy) const;
+
  protected:
   Resource(Session* session, const ResourceTypeInfo& type_info);
+
+  friend class ResourceMap;
+  friend class ProxyResource;
+  /// For the given resource type info, returns the resource that will act as
+  /// the target for ops directed at this resource. Subclasses (notably the
+  /// |ProxyResource| since their binding are not mutable) may return alternate
+  /// resources to act as the recipients of ops.
+  virtual Resource* GetOpsDelegate(const ResourceTypeInfo& type_info);
 
  private:
   Session* const session_;
   const ResourceTypeInfo& type_info_;
+  mutable std::unordered_set<ProxyResource*> imports_;
 };
 
 using ResourcePtr = ftl::RefPtr<Resource>;

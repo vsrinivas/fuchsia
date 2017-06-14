@@ -8,11 +8,9 @@
 
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
-#include "apps/mozart/src/scene/resources/link.h"
 #include "apps/mozart/src/scene/session/session.h"
 #include "apps/mozart/src/scene/session/session_handler.h"
 #include "escher/forward_declarations.h"
-#include "escher/renderer/simple_image_factory.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/thread.h"
 
@@ -21,50 +19,25 @@ namespace scene {
 
 class Renderer;
 
-class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
+class SceneManagerImpl : public mozart2::SceneManager {
  public:
-  explicit SceneManagerImpl(escher::Escher* escher);
   SceneManagerImpl();
+
+  SceneManagerImpl(escher::Escher* escher);
+
   ~SceneManagerImpl() override;
+
+  SessionContext& session_context() { return session_context_; }
 
   // mozart2::SceneManager interface methods.
   void CreateSession(
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 
-  // SessionContext interface methods.
-  bool ExportResource(ResourcePtr resource,
-                      const mozart2::ExportResourceOpPtr& op) override;
-  ResourcePtr ImportResource(Session* session,
-                             const mozart2::ImportResourceOpPtr& op) override;
-  LinkPtr CreateLink(Session* session,
-                     ResourceId node_id,
-                     const mozart2::LinkPtr& args) override;
-  void OnSessionTearDown(Session* session) override;
-
   size_t GetSessionCount() { return session_count_; }
 
   // Called before starting to draw a frame.
   void BeginFrame();
-
-  // Gets the VkDevice that is used with the renderer.
-  // TODO: Should this belong in Renderer, or something like a
-  // SessionResourceFactory?
-  vk::Device vk_device() override { return vk_device_; }
-  escher::ResourceRecycler* escher_resource_recycler() override {
-    return resource_recycler_;
-  }
-  escher::ImageFactory* escher_image_factory() override {
-    return image_factory_.get();
-  }
-  escher::impl::GpuUploader* escher_gpu_uploader() override {
-    return gpu_uploader_;
-  }
-  escher::RoundedRectFactory* escher_rounded_rect_factory() override {
-    return rounded_rect_factory_.get();
-  }
-
-  const std::vector<LinkPtr>& links() const { return links_; }
 
   Renderer* renderer() const { return renderer_.get(); }
 
@@ -72,6 +45,7 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
 
  private:
   friend class SessionHandler;
+
   void ApplySessionUpdate(std::unique_ptr<SessionUpdate> update);
 
   void TearDownSession(SessionId id);
@@ -82,21 +56,11 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
 
+  SessionContext session_context_;
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;
   std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
-
-  vk::Device vk_device_;
-  escher::ResourceRecycler* resource_recycler_;
-  std::unique_ptr<escher::SimpleImageFactory> image_factory_;
-  escher::impl::GpuUploader* gpu_uploader_;
-  std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
-
-  // Placeholders for Links and the Renderer. These will be instantiated
-  // differently in the future.
-  std::vector<LinkPtr> links_;
   std::unique_ptr<Renderer> renderer_;
-
   SessionId next_session_id_ = 1;
 };
 

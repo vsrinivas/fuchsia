@@ -39,7 +39,7 @@ class ResourceLinker : private mtl::MessageLoopHandler {
   using OnImportResolvedCallback =
       std::function<void(ResourcePtr, ResolutionResult)>;
   void ImportResource(mozart2::ImportSpec spec,
-                      mx::eventpair import_handle,
+                      const mx::eventpair& import_handle,
                       OnImportResolvedCallback import_resolved_callback);
 
   size_t UnresolvedExports() const;
@@ -61,7 +61,6 @@ class ResourceLinker : private mtl::MessageLoopHandler {
     ResourcePtr resource;
   };
   struct UnresolvedImportEntry {
-    mx::eventpair import_handle;
     OnImportResolvedCallback resolution_callback;
   };
   using HandleKoidMap = std::unordered_map<mx_handle_t, mx_koid_t>;

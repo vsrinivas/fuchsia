@@ -15,27 +15,6 @@
 
 std::unique_ptr<mozart::scene::test::EscherTestEnvironment> g_escher_env;
 
-namespace mozart {
-namespace scene {
-namespace test {
-
-class SessionTestUsingEscher : public SessionTest {
-  vk::Device vk_device() override { return nullptr; };
-  escher::ResourceRecycler* escher_resource_recycler() override {
-    return nullptr;
-  };
-  escher::ImageFactory* escher_image_factory() override { return nullptr; };
-  escher::impl::GpuUploader* escher_gpu_uploader() override { return nullptr; };
-};
-
-TEST_F(SessionTest, EscherCreated) {
-  EXPECT_NE(g_escher_env, nullptr);
-}
-
-}  // namespace test
-}  // namespace scene
-}  // namespace mozart
-
 int main(int argc, char** argv) {
   // Add a global environment which will set up (and tear down) DemoHarness and
   // Escher. This also implicitly creates a message loop.

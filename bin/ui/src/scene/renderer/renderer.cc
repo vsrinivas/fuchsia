@@ -4,10 +4,10 @@
 
 #include "apps/mozart/src/scene/renderer/renderer.h"
 
-#include "apps/mozart/src/scene/resources/link.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
+#include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
@@ -82,7 +82,7 @@ void Renderer::Visitor::Visit(Shape* r) {
   FTL_CHECK(false);
 }
 
-void Renderer::Visitor::Visit(Link* r) {
+void Renderer::Visitor::Visit(Scene* r) {
   Visit(static_cast<Node*>(r));
 }
 

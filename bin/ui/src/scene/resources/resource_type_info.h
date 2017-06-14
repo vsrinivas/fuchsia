@@ -11,15 +11,12 @@ namespace scene {
 
 // All subclasses of Resource are represented here.
 enum ResourceType {
-  kMemory = 1,
+  kMemory = 1 << 0,
   kHostMemory = 1 << 1,
   kGpuMemory = 1 << 2,
-
   kImage = 1 << 3,
   kBuffer = 1 << 4,
-
-  kLink = 1 << 5,
-
+  kScene = 1 << 5,
   kShape = 1 << 6,
   kRectangle = 1 << 7,
   kRoundedRectangle = 1 << 8,
@@ -34,6 +31,7 @@ enum ResourceType {
   kLinkNode = 1 << 15,
   kShapeNode = 1 << 16,
   kTagNode = 1 << 17,
+  kProxy = 1 << 18,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be
@@ -50,6 +48,10 @@ struct ResourceTypeInfo {
   // otherwise.
   bool IsKindOf(const ResourceTypeInfo& base_type) const {
     return base_type.flags == (flags & base_type.flags);
+  }
+
+  bool operator==(const ResourceTypeInfo& type) const {
+    return flags == type.flags;
   }
 };
 

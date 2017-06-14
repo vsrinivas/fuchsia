@@ -77,7 +77,7 @@ bool ResourceLinker::ExportResource(ResourcePtr resource,
 
 void ResourceLinker::ImportResource(
     mozart2::ImportSpec import_spec,
-    mx::eventpair import_handle,
+    const mx::eventpair& import_handle,
     OnImportResolvedCallback import_resolved_callback) {
   // Make sure a callback is present.
   if (!import_resolved_callback) {
@@ -93,7 +93,6 @@ void ResourceLinker::ImportResource(
 
   // Register the import entry.
   UnresolvedImportEntry unresolved_import_entry = {
-      .import_handle = std::move(import_handle),        // owns import handle
       .resolution_callback = import_resolved_callback,  // resolution callback
   };
   unresolved_imports_by_import_koid_[import_koid].emplace_back(
@@ -104,11 +103,12 @@ void ResourceLinker::ImportResource(
   PerformLinkingNow(import_koid);
 }
 
-void ResourceLinker::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void ResourceLinker::OnHandleReady(mx_handle_t export_handle,
+                                   mx_signals_t pending) {
   // This is invoked when all the peers for the registered export handle are
   // closed.
   if (pending & kEventPairDeathSignals) {
-    auto resource = RemoveResourceForExpiredExportHandle(handle);
+    auto resource = RemoveResourceForExpiredExportHandle(export_handle);
     if (expiration_callback_) {
       expiration_callback_(std::move(resource),
                            ExpirationCause::kImportHandleClosed);
@@ -116,10 +116,11 @@ void ResourceLinker::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   }
 }
 
-void ResourceLinker::OnHandleError(mx_handle_t handle, mx_status_t error) {
+void ResourceLinker::OnHandleError(mx_handle_t export_handle,
+                                   mx_status_t error) {
   // Should only happen in case of timeout or loop death.
   if (error & (MX_ERR_TIMED_OUT | MX_ERR_BAD_STATE)) {
-    auto resource = RemoveResourceForExpiredExportHandle(handle);
+    auto resource = RemoveResourceForExpiredExportHandle(export_handle);
     if (expiration_callback_) {
       expiration_callback_(std::move(resource),
                            ExpirationCause::kInternalError);

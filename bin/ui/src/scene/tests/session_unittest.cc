@@ -48,17 +48,6 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_EQ(0U, session_->GetMappedResourceCount());
 }
 
-TEST_F(SessionTest, CreateLink) {
-  // This fails because the eventpair is null.
-  EXPECT_FALSE(Apply(NewCreateLinkOp(1, mx::eventpair())));
-
-  mx::eventpair e1a, e1b;
-  EXPECT_EQ(MX_OK, mx::eventpair::create(0, &e1a, &e1b));
-  EXPECT_TRUE(Apply(NewCreateLinkOp(2, std::move(e1a))));
-  // TODO: test attaching things to the link.
-  // TODO: test that we can only look up a link via a pre-registered eventpair.
-}
-
 // TODO:
 // - test that FindResource() cannot return resources that have the wrong type.
 

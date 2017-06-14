@@ -29,8 +29,7 @@ mozart2::OpPtr NewCreateBufferOp(uint32_t id,
                                  uint32_t memory_id,
                                  uint32_t memory_offset,
                                  uint32_t num_bytes);
-mozart2::OpPtr NewCreateLinkOp(uint32_t id, mx::eventpair epair);
-
+mozart2::OpPtr NewCreateSceneOp(uint32_t id);
 mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius);
 mozart2::OpPtr NewCreateRectangleOp(uint32_t id, float width, float height);
 mozart2::OpPtr NewCreateRoundedRectangleOp(uint32_t id,
@@ -73,6 +72,13 @@ mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, int32_t tag_value);
 mozart2::OpPtr NewCreateVariableFloatOp(uint32_t id, float inital_val);
 
 mozart2::OpPtr NewReleaseResourceOp(uint32_t id);
+
+// Export & Import operations.
+mozart2::OpPtr NewExportResourceOp(uint32_t resource_id,
+                                   mx::eventpair export_token);
+mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
+                                   mozart2::ImportSpec spec,
+                                   mx::eventpair import_token);
 
 // Node operations.
 mozart2::OpPtr NewAddChildOp(uint32_t node_id, uint32_t child_id);

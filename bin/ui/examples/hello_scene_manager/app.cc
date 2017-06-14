@@ -68,12 +68,9 @@ class HelloSceneManagerApp {
   fidl::Array<mozart2::OpPtr> CreateLinkAndSampleScene() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
-    // Create a Link to attach ourselves to.
-    mx::eventpair link_handle1;
-    mx::eventpair link_handle2;
-    mx::eventpair::create(0, &link_handle1, &link_handle2);
-    ResourceId link_id = NewResourceId();
-    ops.push_back(NewCreateLinkOp(link_id, std::move(link_handle1)));
+    // Create a Scene to attach ourselves to.
+    ResourceId scene_id = NewResourceId();
+    ops.push_back(NewCreateSceneOp(scene_id));
 
     // Create an EntityNode to act as the root of our subtree.
     ResourceId entity_node_id = NewResourceId();
@@ -173,8 +170,8 @@ class HelloSceneManagerApp {
                                       ));
     }
 
-    // Attach the root EntityNode to the Link.
-    ops.push_back(NewAddChildOp(link_id, entity_node_id));
+    // Attach the root EntityNode to the Scene.
+    ops.push_back(NewAddChildOp(scene_id, entity_node_id));
 
     return ops;
   }

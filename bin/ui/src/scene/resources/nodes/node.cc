@@ -13,13 +13,12 @@ namespace scene {
 namespace {
 
 constexpr ResourceTypeFlags kHasChildren =
-    ResourceType::kEntityNode | ResourceType::kLink | ResourceType::kTagNode;
+    ResourceType::kEntityNode | ResourceType::kScene | ResourceType::kTagNode;
 constexpr ResourceTypeFlags kHasParts =
     ResourceType::kEntityNode | ResourceType::kClipNode;
-
 constexpr ResourceTypeFlags kHasTransform =
-    ResourceType::kClipNode | ResourceType::kEntityNode |
-    ResourceType::kLinkNode | ResourceType::kShapeNode;
+    ResourceType::kClipNode | ResourceType::kEntityNode | ResourceType::kScene |
+    ResourceType::kShapeNode;
 
 }  // anonymous namespace
 
@@ -35,9 +34,12 @@ Node::Node(Session* session,
 Node::~Node() = default;
 
 bool Node::AddChild(NodePtr child_node) {
+  // TODO(MZ-130): Some node types (e.g. Scenes) cannot be reparented. We must
+  // add verification to reject such operations.
+
   if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR() << "scene::Node::AddChild(): node of type "
-                              << type_name() << " cannot have children.";
+    error_reporter()->ERROR() << "scene::Node::AddChild(): node of type '"
+                              << type_name() << "' cannot have children.";
     return false;
   }
 
@@ -91,9 +93,9 @@ bool Node::AddPart(NodePtr part_node) {
 
 bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
   FTL_DCHECK(node_to_detach_from_parent);
-  if (node_to_detach_from_parent->type_flags() & ResourceType::kLink) {
+  if (node_to_detach_from_parent->type_flags() & ResourceType::kScene) {
     node_to_detach_from_parent->error_reporter()->ERROR()
-        << "A Link cannot be detached.";
+        << "A Scene cannot be detached.";
     return false;
   }
   if (auto parent = node_to_detach_from_parent->parent_) {

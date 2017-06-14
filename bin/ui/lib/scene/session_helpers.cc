@@ -73,6 +73,15 @@ mozart2::OpPtr NewCreateBufferOp(uint32_t id,
   return NewCreateResourceOp(id, std::move(resource));
 }
 
+mozart2::OpPtr NewCreateSceneOp(uint32_t id) {
+  auto scene = mozart2::Scene::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_scene(std::move(scene));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
 mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius) {
   auto radius_value = mozart2::Value::New();
   radius_value->set_vector1(radius);
@@ -216,16 +225,6 @@ mozart2::OpPtr NewCreateVarRoundedRectangleOp(
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateLinkOp(uint32_t id, mx::eventpair epair) {
-  auto link = mozart2::Link::New();
-  link->token = std::move(epair);
-
-  auto resource = mozart2::Resource::New();
-  resource->set_link(std::move(link));
-
-  return NewCreateResourceOp(id, std::move(resource));
-}
-
 mozart2::OpPtr NewCreateMaterialOp(uint32_t id,
                                    uint32_t texture_id,
                                    uint8_t red,
@@ -305,6 +304,32 @@ mozart2::OpPtr NewReleaseResourceOp(uint32_t id) {
 
   auto op = mozart2::Op::New();
   op->set_release_resource(std::move(release_resource));
+
+  return op;
+}
+
+mozart2::OpPtr NewExportResourceOp(uint32_t resource_id,
+                                   mx::eventpair export_token) {
+  auto export_resource = mozart2::ExportResourceOp::New();
+  export_resource->id = resource_id;
+  export_resource->token = std::move(export_token);
+
+  auto op = mozart2::Op::New();
+  op->set_export_resource(std::move(export_resource));
+
+  return op;
+}
+
+mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
+                                   mozart2::ImportSpec spec,
+                                   mx::eventpair import_token) {
+  auto import_resource = mozart2::ImportResourceOp::New();
+  import_resource->id = resource_id;
+  import_resource->token = std::move(import_token);
+  import_resource->spec = spec;
+
+  auto op = mozart2::Op::New();
+  op->set_import_resource(std::move(import_resource));
 
   return op;
 }

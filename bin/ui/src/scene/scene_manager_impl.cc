@@ -17,25 +17,14 @@ constexpr uint64_t kHardcodedPresentationIntervalNanos = 16'666'667;
 namespace mozart {
 namespace scene {
 
-SceneManagerImpl::SceneManagerImpl(escher::Escher* escher)
-    : session_count_(0),
-      vk_device_(escher->vulkan_context().device),
-      resource_recycler_(escher->resource_recycler()),
-      image_factory_(std::make_unique<escher::SimpleImageFactory>(
-          resource_recycler_,
-          escher->gpu_allocator())),
-      gpu_uploader_(escher->gpu_uploader()),
-      rounded_rect_factory_(
-          std::make_unique<escher::RoundedRectFactory>(escher)),
+SceneManagerImpl::SceneManagerImpl()
+    : session_context_(),
+      session_count_(0),
       renderer_(std::make_unique<Renderer>()) {}
 
-SceneManagerImpl::SceneManagerImpl()
-    : session_count_(0),
-      vk_device_(nullptr),
-      resource_recycler_(nullptr),
-      image_factory_(nullptr),
-      gpu_uploader_(nullptr),
-      rounded_rect_factory_(nullptr),
+SceneManagerImpl::SceneManagerImpl(escher::Escher* escher)
+    : session_context_(escher),
+      session_count_(0),
       renderer_(std::make_unique<Renderer>()) {}
 
 SceneManagerImpl::~SceneManagerImpl() {}
@@ -112,45 +101,6 @@ void SceneManagerImpl::BeginFrame() {
     cb(info.Clone());
   }
   pending_present_callbacks_.clear();
-}
-
-bool SceneManagerImpl::ExportResource(ResourcePtr resource,
-                                      const mozart2::ExportResourceOpPtr& op) {
-  FTL_LOG(FATAL) << "SceneManagerImpl::ExportResource() unimplemented";
-  return false;
-}
-
-ResourcePtr SceneManagerImpl::ImportResource(
-    Session* session,
-    const mozart2::ImportResourceOpPtr& op) {
-  FTL_LOG(FATAL) << "SceneManagerImpl::ImportResource() unimplemented";
-  return ResourcePtr();
-}
-
-LinkPtr SceneManagerImpl::CreateLink(Session* session,
-                                     ResourceId node_id,
-                                     const mozart2::LinkPtr& args) {
-  // TODO: Create a LinkHolder class that takes args.token and destroys
-  // links if that gets signalled
-
-  FTL_DCHECK(args);
-
-  // For now, just create a dumb list of sessions.
-  auto link = ftl::MakeRefCounted<Link>(session, node_id);
-
-  FTL_CHECK(link);
-  links_.push_back(link);
-
-  return link;
-}
-
-void SceneManagerImpl::OnSessionTearDown(Session* session) {
-  auto predicate = [session](const LinkPtr& l) {
-    return l->session() == session;
-  };
-  // Remove all links to session.
-  links_.erase(std::remove_if(links_.begin(), links_.end(), predicate),
-               links_.end());
 }
 
 }  // namespace scene

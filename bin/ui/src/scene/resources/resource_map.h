@@ -36,20 +36,23 @@ class ResourceMap {
   template <class ResourceT>
   ftl::RefPtr<ResourceT> FindResource(ResourceId id) {
     auto it = resources_.find(id);
+
     if (it == resources_.end()) {
       error_reporter_->ERROR() << "No resource exists with ID " << id;
       return ftl::RefPtr<ResourceT>();
-    } else if (!it->second->IsKindOf<ResourceT>()) {
+    };
+
+    auto resource_ptr = it->second->GetOpsDelegate(ResourceT::kTypeInfo);
+
+    if (resource_ptr == nullptr) {
       error_reporter_->ERROR()
           << "Type mismatch for resource ID " << id << ": actual type is "
           << it->second->type_info().name << ", expected a sub-type of "
           << ResourceT::kTypeInfo.name;
       return ftl::RefPtr<ResourceT>();
-    } else {
-      // Now that we have verified that the resource is actually a ResourceT,
-      // we can return a RefPtr of the correct type.
-      return ftl::RefPtr<ResourceT>(static_cast<ResourceT*>(it->second.get()));
     }
+
+    return ftl::RefPtr<ResourceT>(static_cast<ResourceT*>(resource_ptr));
   }
 
  private:

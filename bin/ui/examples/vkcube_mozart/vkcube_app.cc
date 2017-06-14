@@ -223,12 +223,9 @@ class VulkanCubeApp {
   fidl::Array<mozart2::OpPtr> PopulateSession() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
-    // Create a Link to attach ourselves to.
-    mx::eventpair link_handle1;
-    mx::eventpair link_handle2;
-    mx::eventpair::create(0, &link_handle1, &link_handle2);
-    ResourceId link_id = NewResourceId();
-    ops.push_back(NewCreateLinkOp(link_id, std::move(link_handle1)));
+    // Create a Scene to attach ourselves to.
+    ResourceId scene_id = NewResourceId();
+    ops.push_back(NewCreateSceneOp(scene_id));
 
     // Create a shape node.
     ResourceId node_id = NewResourceId();
@@ -273,8 +270,8 @@ class VulkanCubeApp {
                                     kZeroesFloat3,      // anchor point
                                     kQuaternionDefault  // rotation
                                     ));
-    // Attach the circle to the Link.
-    ops.push_back(NewAddChildOp(link_id, node_id));
+    // Attach the circle to the Scene.
+    ops.push_back(NewAddChildOp(scene_id, node_id));
 
     return ops;
   }

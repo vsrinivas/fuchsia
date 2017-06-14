@@ -7,10 +7,10 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
-#include "apps/mozart/src/scene/resources/link.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
+#include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
@@ -60,7 +60,7 @@ void Shape::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void Link::Accept(ResourceVisitor* visitor) {
+void Scene::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
