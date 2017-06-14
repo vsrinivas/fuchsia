@@ -321,10 +321,6 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    // TODO(mesch): If the order of StopForDelete() and deletion from ledger is
-    // reversed, we don't need to bother with suppressing writes to the ledger
-    // during StopForDelete(), which could be simpler.
-
     if (already_deleted_) {
       Teardown(flow);
 

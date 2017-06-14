@@ -125,6 +125,7 @@ class StoryControllerImpl::GetModulesCall
           result_ = std::move(module_data);
         });
   }
+
   StoryControllerImpl* const story_controller_impl_;
   fidl::Array<ModuleDataPtr> result_;
   FTL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
@@ -150,15 +151,14 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
 
  private:
   void Run() {
+    FlowToken flow{this};
+
     // This flow branches and then joins on all the branches completing, which
-    // is just fine to track with a flow token.
-    //
-    // A callback like used below:
+    // is just fine to track with a flow token. A callback like used below:
     //
     //  [flow] {}
     //
-    // Just calls Done() when the last copy of it completes.
-    FlowToken flow{this};
+    // just calls Done() when the last copy of it completes.
 
     if (!link_json_.is_null()) {
       // There is no module path; this link exists outside the scope of a
@@ -173,6 +173,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
 
     auto module_path = fidl::Array<fidl::String>::New(1);
     module_path[0] = module_name_;
+
     new AddModuleCall(&operation_collection_, story_controller_impl_,
                       fidl::Array<fidl::String>::New(0), module_name_,
                       module_url_, link_name_, [flow] {});
@@ -421,10 +422,13 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
  private:
   void Run() {
+    FlowToken flow{this};
+
     // We currently require a 1:1 relationship between module
     // application instances and Module service instances, because
     // flutter only allows one ViewOwner per flutter application,
     // and we need one ViewOwner instance per Module instance.
+    //
     // TODO(mesch): If a module instance under this path already exists,
     // update it (or at least discard it) rather than to create a
     // duplicate one.
@@ -435,33 +439,24 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       link_path_->link_name = link_name_;
 
       story_controller_impl_->story_storage_impl_->WriteModuleData(
-          module_path_, query_, link_path_, module_source_, [this] { Cont(); });
+          module_path_, query_, link_path_, module_source_,
+          [this, flow] { Cont(flow); });
+
     } else {
-      // If we are not given a link name, this module borrows its parent's
-      // default link.
+      // If the link name is null, this module receives the default link of its
+      // parent module. We need to retrieve which one it is from story storage.
       story_controller_impl_->story_storage_impl_->ReadModuleData(
-          parent_module_path_, [this](ModuleDataPtr module_data) {
+          parent_module_path_, [this, flow](ModuleDataPtr module_data) {
             FTL_DCHECK(module_data);
             link_path_ = module_data->default_link_path.Clone();
             story_controller_impl_->story_storage_impl_->WriteModuleData(
                 module_path_, query_, link_path_, module_source_,
-                [this]() { Cont(); });
+                [this, flow] { Cont(flow); });
           });
     }
   }
 
-  void NotifyWatchers() {
-    ModuleDataPtr module_data = ModuleData::New();
-    module_data->url = query_;
-    module_data->module_path = module_path_.Clone();
-    module_data->default_link_path = link_path_.Clone();
-    story_controller_impl_->watchers_.ForAllPtrs(
-        [&module_data](StoryWatcher* const watcher) {
-          watcher->OnModuleAdded(module_data.Clone());
-        });
-  }
-
-  void Cont() {
+  void Cont(FlowToken flow) {
     auto launch_info = app::ApplicationLaunchInfo::New();
 
     app::ServiceProviderPtr app_services;
@@ -507,8 +502,18 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     story_controller_impl_->connections_.emplace_back(std::move(connection));
 
     NotifyWatchers();
+  }
 
-    Done();
+  void NotifyWatchers() {
+    ModuleDataPtr module_data = ModuleData::New();
+    module_data->url = query_;
+    module_data->module_path = module_path_.Clone();
+    module_data->default_link_path = link_path_.Clone();
+
+    story_controller_impl_->watchers_.ForAllPtrs(
+        [&module_data](StoryWatcher* const watcher) {
+          watcher->OnModuleAdded(module_data.Clone());
+        });
   }
 
   // Passed in:
@@ -927,7 +932,7 @@ void StoryControllerImpl::StartModuleInShell(
   // fail.
   fidl::String parent_id = PathString(parent_module_path);
   if (story_shell_) {
-    // TODO(alhaad): When this piece of code gets run as a result of stoy
+    // TODO(alhaad): When this piece of code gets run as a result of story
     // re-inflation, it is possible that |id| gets created before |parent_id|
     // which crashes story shell. This does not currently happen by coincidence.
     story_shell_->ConnectView(std::move(view_owner), id, std::move(parent_id),
