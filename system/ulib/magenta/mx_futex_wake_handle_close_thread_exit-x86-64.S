@@ -10,13 +10,16 @@
 
 .cfi_sections .eh_frame, .debug_frame
 
-// (value_ptr: %rdi, count: %esi, handle: %edx)
+// (value_ptr: %rdi, wake_count: %esi, new_value: %edx, handle: %ecx)
 syscall_entry_begin mx_futex_wake_handle_close_thread_exit
 
+    // Store the value into the futex, which should signal that the stack is no longer in use.
+    // atomic_store_explicit(value_ptr, new_value, memory_order_release)
+    mov %edx, (%rdi)
+
     // Save the handle argument in a callee-saves register (%rbx).
-    // Callee-save that register so we can unwind in the error case.
-    push_reg %rbx
-    mov %edx, %ebx
+    // Since this function cannot return, do not bother preserving the old contents.
+    mov %ecx, %ebx
 
     magenta_syscall MX_SYS_futex_wake, mx_futex_wake, mx_futex_wake_handle_close_thread_exit
     test %eax, %eax
@@ -33,12 +36,9 @@ syscall_entry_begin mx_futex_wake_handle_close_thread_exit
 
     // It should be impossible to get here.
 .Lthread_exit_returned:
-    ud2
 
+    // We can't recover in these cases, since our stack may have been freed.
 .Lfutex_wake_fail:
-    pop_reg %rbx
-    ret
-
 .Lhandle_close_fail:
     ud2
 

@@ -427,9 +427,8 @@ syscall vmar_unmap_handle_close_thread_exit vdsocall
     (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t, handle: mx_handle_t)
     returns (mx_status_t);
 
-syscall futex_wake_handle_close_thread_exit vdsocall
-    (value_ptr: mx_futex_t[1] IN, count: uint32_t, handle: mx_handle_t)
-    returns (mx_status_t);
+syscall futex_wake_handle_close_thread_exit vdsocall noreturn
+    (value_ptr: mx_futex_t[1] IN, count: uint32_t, new_value: int, handle: mx_handle_t);
 
 # ---------------------------------------------------------------------------------------
 # Syscalls past this point are non-public

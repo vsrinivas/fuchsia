@@ -49,10 +49,10 @@ mx_status_t mxr_thread_adopt(mx_handle_t handle, mxr_thread_t* thread);
 // entry(arg).
 mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, mxr_thread_entry_t entry, void* arg);
 
-// Once started, threads can be either joined or detached. If a thread
-// is joined or detached more than once, MX_ERR_INVALID_ARGS is
-// returned. Some of the resources allocated to a thread are not
-// collected until it returns and it is either joined or detached.
+// Once started, threads can be either joined or detached. It is undefined
+// behavior to join a thread multiple times or to join a detached thread.
+// Some of the resources allocated to a thread are not collected until
+// it returns and it is either joined or detached.
 
 // If a thread is joined, the caller of mxr_thread_join blocks until
 // the other thread is finished running.
@@ -63,28 +63,29 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread);
 // entrypoint is ignored.  This returns MX_ERR_BAD_STATE if the thread
 // had already finished running; it didn't know to clean up after itself
 // and it's gone now, so the caller must do any cleanup it would have
-// done after mxr_thread_join.
+// done after mxr_thread_join.  It is undefined behavior to detach
+// a thread that has already been joined or to detach an already detached
+// thread.
 mx_status_t mxr_thread_detach(mxr_thread_t* thread)
     __attribute__((warn_unused_result));
 
-// Indicates whether the thread has been detached.
+// Indicates whether the thread has been detached.  The result is undefined
+// if the thread is exiting or has exited.
 bool mxr_thread_detached(mxr_thread_t* thread);
-
-// This does mx_task_kill on the thread, so it's as if that thread
-// just did mxr_thread_exit.  If the thread is not blocked and
-// might reach mxr_thread_exit*, then the behavior is undefined.
-// If the thread is detached, it's destroyed.
-// If not, mxr_thread_join can still be used.
-mx_status_t mxr_thread_kill(mxr_thread_t* thread);
 
 // Exit from the thread.  Equivalent to mxr_thread_exit unless the
 // thread has been detached.  If it has been detached, then this does
 // mx_vmar_unmap(vmar, addr, len) first, but in a way that permits
-// unmapping the caller's own stack.
+// unmapping the caller's own stack.  The state of the mxr_thread_t
+// structure is undefined after this function is entered.
 _Noreturn void mxr_thread_exit_unmap_if_detached(
     mxr_thread_t* thread, mx_handle_t vmar, uintptr_t addr, size_t len);
 
-// Destroy a created but unstarted thread structure.
+// Destroy a thread structure that is either created but unstarted or is
+// known to belong to a thread that has been mx_task_kill'd and has not been
+// joined.  This is only really useful for tests that are intentionally
+// bypassing the normal lifecycle of a thread, for handling tests that can't
+// detach or join.
 // This returns failure if the thread's handle was invalid.
 // Regardless, the mxr_thread_t is destroyed.
 mx_status_t mxr_thread_destroy(mxr_thread_t* thread);
@@ -92,8 +93,10 @@ mx_status_t mxr_thread_destroy(mxr_thread_t* thread);
 // Get the mx_handle_t corresponding to the given thread.
 // WARNING:
 // This is intended for debuggers and so on. Holding this wrong could
-// break internal invariants of mxr_thread_t. It is inherently
-// racy. You probably don't need this.
+// break internal invariants of mxr_thread_t.  It is unsafe to call this
+// function from a different thread once this thread is started.  The
+// returned handle is not a duplicate, and must be duplicated if the caller
+// intends to hold it after mxr_thread_start() is called.
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
 
 #pragma GCC visibility pop
