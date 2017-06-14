@@ -7,7 +7,7 @@
 
 #pragma once
 
-#define ARM64_SAVED_EXIT_FLAGS_OFFSET 24
+#define ARM64_SAVED_EXIT_FLAGS_OFFSET 8
 
 #ifndef ASSEMBLY
 
@@ -66,7 +66,7 @@ static_assert(
     "unsafe_sp field in wrong place");
 
 static_assert(
-    offsetof(struct arch_thread, saved_exit_flags) == ARM64_SAVED_EXIT_FLAGS_OFFSET,
+    thread_pointer_offsetof(saved_exit_flags) == ARM64_SAVED_EXIT_FLAGS_OFFSET,
     "saved_exit_flags field in wrong place");
 
 __END_CDECLS
