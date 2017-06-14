@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 
 struct __locale_map;
@@ -35,6 +36,9 @@ struct __libc {
 #else
 #define ATTR_LIBC_VISIBILITY
 #endif
+
+// Put this on things that are touched only during dynamic linker startup.
+#define ATTR_RELRO __SECTION(".data.rel.ro")
 
 extern struct __libc __libc ATTR_LIBC_VISIBILITY;
 #define libc __libc
