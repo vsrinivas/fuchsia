@@ -5,6 +5,15 @@
         "tracing"
     ],
     "packages": {
-        "mozart": "//apps/mozart"
+        "ime": "//apps/mozart:ime_service",
+        "jank_view": "//apps/mozart:jank_view",
+        "mozart_tests": "//apps/mozart:tests",
+        "mozart": "//apps/mozart",
+        "noodles_view": "//apps/mozart:noodles_view",
+        "paint_view": "//apps/mozart:paint_view",
+        "root_presenter": "//apps/mozart:root_presenter",
+        "shapes_view": "//apps/mozart:shapes_view",
+        "spinning_square_view": "//apps/mozart:spinning_square_view",
+        "tile_view": "//apps/mozart:tile_view"
     }
 }
