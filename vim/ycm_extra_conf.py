@@ -46,7 +46,7 @@ def GetClangCommandFromNinjaForFilename(filename):
   # Header files can't be built. Instead, try to match a header file to its
   # corresponding source file.
   if filename.endswith('.h'):
-    alternates = ['.cc', '.cpp']
+    alternates = ['.cc', '.cpp', '_unittest.cc']
     for alt_extension in alternates:
       alt_name = filename[:-2] + alt_extension
       if os.path.exists(alt_name):
