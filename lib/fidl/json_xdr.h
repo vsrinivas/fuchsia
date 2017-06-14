@@ -481,9 +481,13 @@ bool XdrRead(const std::string& json,
   xdr.Value(data, filter);
 
   if (!error.empty()) {
-    FTL_LOG(ERROR) << "Unable to read data from JSON: " << std::endl
+    FTL_LOG(ERROR) << "XdrRead: Unable to extract data from JSON: " << std::endl
                    << error << std::endl
                    << json << std::endl;
+    // This DCHECK is usually caused by adding a field to an XDR filter function
+    // when there's already existing data in the Ledger.
+    FTL_DCHECK(false) << "This indicates a structure version mismatch in the "
+        "Framework. Please submit a high priority bug in JIRA under FW.";
     return false;
   }
 
