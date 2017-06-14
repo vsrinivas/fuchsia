@@ -79,12 +79,7 @@ static HeaderGenerator kernel_header(
     kernel_attrs,
     true);
 
-static X86AssemblyGenerator x86_generator(
-    "m_syscall", // syscall macro name
-    "mx_",       // syscall name prefix
-    wrappers);
-
-static Arm64AssemblyGenerator arm64_generator(
+static VDsoAsmGenerator vdso_asm_generator(
     "m_syscall", // syscall macro name
     "mx_",       // syscall name prefix
     wrappers);
@@ -115,10 +110,10 @@ const map<string, Generator&> type_to_generator = {
     {"kernel-wrappers", kernel_wrappers},
 
     //  The assembly file for x86-64.
-    {"x86-asm", x86_generator},
+    {"x86-asm", vdso_asm_generator},
 
     //  The assembly include file for ARM64.
-    {"arm-asm", arm64_generator},
+    {"arm-asm", vdso_asm_generator},
 
     // A C header defining MX_SYS_* syscall number macros.
     {"numbers", syscall_num_generator},

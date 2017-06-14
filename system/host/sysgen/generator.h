@@ -32,28 +32,12 @@ protected:
     virtual ~CallWrapper() {}
 };
 
-// Generate the x86_64 userspace functions.
-class X86AssemblyGenerator : public Generator {
+// Generate the vDSO assembly stubs.
+class VDsoAsmGenerator : public Generator {
 public:
-    X86AssemblyGenerator(const std::string& syscall_macro, const std::string& name_prefix,
-                         std::vector<CallWrapper*> call_wrappers)
-        : syscall_macro_(syscall_macro),
-          name_prefix_(name_prefix),
-          wrappers_(call_wrappers) {}
-
-    bool syscall(std::ofstream& os, const Syscall& sc) override;
-
-private:
-    const std::string syscall_macro_;
-    const std::string name_prefix_;
-    const std::vector<CallWrapper*> wrappers_;
-};
-
-// Generate the arm64 userspace functions.
-class Arm64AssemblyGenerator : public Generator {
-public:
-    Arm64AssemblyGenerator(const std::string& syscall_macro, const std::string& name_prefix,
-                           std::vector<CallWrapper*> call_wrappers)
+    VDsoAsmGenerator(const std::string& syscall_macro,
+                     const std::string& name_prefix,
+                     const std::vector<CallWrapper*>& call_wrappers)
         : syscall_macro_(syscall_macro),
           name_prefix_(name_prefix),
           wrappers_(call_wrappers) {}

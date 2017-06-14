@@ -12,12 +12,12 @@ SYSCALL_\name:
 .cfi_startproc
 .endm
 
-.macro syscall_entry_end name with_aliases=1
+.macro syscall_entry_end name public=1
 .cfi_endproc
 .size SYSCALL_\name, . - SYSCALL_\name
 
 // For wrapper functions, aliasing is handled by the generator.
-.if \with_aliases
+.if \public
 .globl _\name
 .type _\name,STT_FUNC
 _\name = SYSCALL_\name

@@ -11,7 +11,7 @@
 
 .cfi_sections .eh_frame, .debug_frame
 
-.macro m_syscall nargs, name, num, with_aliases
+.macro m_syscall name, num, nargs, public
 syscall_entry_begin \name
     .cfi_same_value %r10
     .cfi_same_value %r11
@@ -53,7 +53,7 @@ syscall_entry_begin \name
     pop_reg  %r10
     ret
 .endif
-syscall_entry_end \name \with_aliases
+syscall_entry_end \name \public
 .endm
 
 #include <magenta/syscalls-x86-64.S>

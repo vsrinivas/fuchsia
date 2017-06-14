@@ -11,11 +11,11 @@
 
 .cfi_sections .eh_frame, .debug_frame
 
-.macro m_syscall name, num, with_aliases
+.macro m_syscall name, num, nargs, public
 syscall_entry_begin \name
     magenta_syscall \num, \name, \name
     ret
-syscall_entry_end \name \with_aliases
+syscall_entry_end \name \public
 .endm
 
 #include <magenta/syscalls-arm64.S>

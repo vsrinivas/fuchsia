@@ -29,33 +29,24 @@ bool Generator::footer(ofstream& os) {
     return os.good();
 }
 
-static int alias_arg(const Syscall& sc, const std::vector<CallWrapper*> wrappers) {
-    for (const CallWrapper* wrapper : wrappers) {
-        if (wrapper->applies(sc)) {
-            return 0;
+bool VDsoAsmGenerator::syscall(ofstream& os, const Syscall& sc) {
+    if (!sc.is_vdso()) {
+        bool is_public = true;
+        for (const CallWrapper* wrapper : wrappers_) {
+            if (wrapper->applies(sc)) {
+                is_public = false;
+                break;
+            }
         }
+
+        // m_syscall name, syscall_num, nargs
+        os << syscall_macro_
+           << " " << name_prefix_ << sc.name
+           << " " << sc.index
+           << " " << sc.num_kernel_args()
+           << " " << (is_public ? 1 : 0)
+           << "\n";
     }
-    return 1;
-}
-
-bool X86AssemblyGenerator::syscall(ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
-        return true;
-
-    // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
-    os << syscall_macro_ << " " << sc.num_kernel_args() << " "
-       << name_prefix_ << sc.name << " " << sc.index << " "
-       << alias_arg(sc, wrappers_) << "\n";
-    return os.good();
-}
-
-bool Arm64AssemblyGenerator::syscall(ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
-        return true;
-
-    // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
-    os << syscall_macro_ << " " << name_prefix_ << sc.name << " " << sc.index << " "
-       << alias_arg(sc, wrappers_) << "\n";
     return os.good();
 }
 
