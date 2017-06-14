@@ -99,6 +99,10 @@ func loadKeys(path string) ([]*data.Key, error) {
 }
 
 func amber(client *tuf.Client) error {
+	if err := os.MkdirAll(daemon.UpdateDst, os.ModePerm); err != nil {
+		fmt.Printf("Error creating update destination directory %v\n", err)
+	}
+
 	files := []string{
 		"/system/apps/amber"}
 	reqSet := daemon.NewPackageSet()

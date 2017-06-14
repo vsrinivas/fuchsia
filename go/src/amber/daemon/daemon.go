@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
+
+var UpdateDst = "/data/driver"
 
 var newTicker = time.NewTicker
 
@@ -135,12 +138,13 @@ func ProcessPackage(update *Package, orig *Package, src Source, pkgs *PackageSet
 
 	// take the long way to truncate in case this is a VMO filesystem
 	// which doesn't support truncate
-	e = os.Remove(update.Name)
+	dstPath := filepath.Join(UpdateDst, update.Name)
+	e = os.Remove(dstPath)
 	if e != nil && !os.IsNotExist(e) {
 		return NewErrProcessPackage("couldn't remove old file %v", e)
 	}
 
-	dst, e := os.OpenFile(update.Name, os.O_RDWR|os.O_CREATE, 0666)
+	dst, e := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE, 0666)
 	if e != nil {
 		return NewErrProcessPackage("couldn't open file to replace %v", e)
 	}
