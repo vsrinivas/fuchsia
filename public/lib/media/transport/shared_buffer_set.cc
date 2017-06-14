@@ -96,11 +96,11 @@ void* SharedBufferSet::PtrFromLocator(const Locator& locator) const {
 }
 
 SharedBufferSet::Locator SharedBufferSet::LocatorFromPtr(void* ptr) const {
-  FTL_DCHECK(!buffer_ids_by_base_address_.empty());
-
   if (ptr == nullptr) {
     return Locator::Null();
   }
+
+  FTL_DCHECK(!buffer_ids_by_base_address_.empty());
 
   uint8_t* byte_ptr = reinterpret_cast<uint8_t*>(ptr);
 

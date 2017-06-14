@@ -155,6 +155,12 @@ void VideoFrameSource::OnPacketSupplied(
              TimelineRate::NsPerSecond.reference_delta());
 
   if (supplied_packet->packet()->end_of_stream) {
+    if (prime_callback_) {
+      // We won't get any more packets, so we're as primed as we're going to
+      // get.
+      prime_callback_();
+      prime_callback_ = nullptr;
+    }
     timeline_control_point_.SetEndOfStreamPts(supplied_packet->packet()->pts);
   }
 

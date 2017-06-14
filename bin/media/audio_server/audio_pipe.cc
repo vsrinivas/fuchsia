@@ -122,15 +122,17 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
+  bool end_of_stream = supplied_packet->packet()->end_of_stream;
+
   owner_->OnPacketReceived(AudioPacketRefPtr(
       new AudioPacketRef(std::move(supplied_packet), server_,
                          frame_count << AudioRendererImpl::PTS_FRACTIONAL_BITS,
                          start_pts, next_pts_, frame_count)));
 
-  if (prime_callback_ &&
-      supplied_packets_outstanding() >= kDemandMinPacketsOutstanding) {
-    // Prime was requested. Call the callback to indicate priming is complete.
-    // TODO(dalesat): Don't do this until low water mark is reached.
+  if (prime_callback_ && (end_of_stream || supplied_packets_outstanding() >=
+                                               kDemandMinPacketsOutstanding)) {
+    // Prime was requested, and we've hit end of stream or demand is met. Call
+    // the callback to indicate priming is complete.
     prime_callback_();
     prime_callback_ = nullptr;
   }
