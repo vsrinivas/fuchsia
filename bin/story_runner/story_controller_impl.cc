@@ -927,19 +927,20 @@ void StoryControllerImpl::StartModuleInShell(
                   std::move(module_controller_request), view_owner.NewRequest(),
                   module_source);
 
-  // If this is called during Stop(), story_shell_ might already
-  // have been reset. TODO(mesch): Then the whole operation should
-  // fail.
-  fidl::String parent_id = PathString(parent_module_path);
+  // If this is called during Stop(), story_shell_ might already have been
+  // reset. TODO(mesch): Then the whole operation should fail.
   if (story_shell_) {
     // TODO(alhaad): When this piece of code gets run as a result of story
-    // re-inflation, it is possible that |id| gets created before |parent_id|
-    // which crashes story shell. This does not currently happen by coincidence.
+    // re-inflation, it is possible that module |id| gets connected before
+    // module |parent_id|, which crashes story shell. This does not currently
+    // happen by coincidence.
+    fidl::String parent_id = PathString(parent_module_path);
     story_shell_->ConnectView(std::move(view_owner), id, std::move(parent_id),
                               std::move(surface_relation));
-    if (module_source == ModuleSource::EXTERNAL) {
-      TakeOwnership(std::move(module_controller), std::move(id));
-    }
+  }
+
+  if (module_source == ModuleSource::EXTERNAL) {
+    TakeOwnership(std::move(module_controller), std::move(id));
   }
 }
 
