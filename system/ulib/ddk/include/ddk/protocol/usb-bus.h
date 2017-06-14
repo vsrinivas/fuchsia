@@ -11,16 +11,21 @@
 
 __BEGIN_CDECLS;
 
-typedef struct usb_bus_protocol {
-    mx_status_t (*add_device)(mx_device_t* device, uint32_t device_id, uint32_t hub_id, usb_speed_t speed);
-    void (*remove_device)(mx_device_t* device, uint32_t device_id);
+typedef struct usb_bus_protocol_ops {
+    mx_status_t (*add_device)(void* ctx, uint32_t device_id, uint32_t hub_id, usb_speed_t speed);
+    void (*remove_device)(void* ctx, uint32_t device_id);
 
     // Hub support
-    mx_status_t (*configure_hub)(mx_device_t* dev, mx_device_t* hub_device, usb_speed_t speed,
+    mx_status_t (*configure_hub)(void* ctx, mx_device_t* hub_device, usb_speed_t speed,
                  usb_hub_descriptor_t* descriptor);
-    mx_status_t (*hub_device_added)(mx_device_t* device, mx_device_t* hub_device, int port, usb_speed_t speed);
+    mx_status_t (*hub_device_added)(void* ctx, mx_device_t* hub_device, int port, usb_speed_t speed);
 
-    mx_status_t (*hub_device_removed)(mx_device_t* device, mx_device_t* hub_device, int port);
+    mx_status_t (*hub_device_removed)(void* ctx, mx_device_t* hub_device, int port);
+} usb_bus_protocol_ops_t;
+
+typedef struct usb_bus_protocol {
+    usb_bus_protocol_ops_t* ops;
+    void* ctx;
 } usb_bus_protocol_t;
 
 __END_CDECLS;

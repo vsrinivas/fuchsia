@@ -34,7 +34,7 @@ typedef struct usb_hub {
     mx_device_t* usb_device;
 
     mx_device_t* bus_device;
-    usb_bus_protocol_t* bus_protocol;
+    usb_bus_protocol_t bus;
 
     usb_speed_t hub_speed;
     int num_ports;
@@ -173,7 +173,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     }
 
     xprintf("call hub_device_added for port %d\n", port);
-    hub->bus_protocol->hub_device_added(hub->bus_device, hub->usb_device, port, speed);
+    hub->bus.ops->hub_device_added(hub->bus.ctx, hub->usb_device, port, speed);
     usb_hub_set_port_enabled(hub, port, true);
 }
 
@@ -195,7 +195,7 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     xprintf("port %d usb_hub_port_disconnected\n", port);
-    hub->bus_protocol->hub_device_removed(hub->bus_device, hub->usb_device, port);
+    hub->bus.ops->hub_device_removed(hub->bus.ctx, hub->usb_device, port);
     usb_hub_set_port_enabled(hub, port, false);
 }
 
@@ -264,7 +264,7 @@ static int usb_hub_thread(void* arg) {
         return result;
     }
 
-    result = hub->bus_protocol->configure_hub(hub->bus_device, hub->usb_device, hub->hub_speed, &desc);
+    result = hub->bus.ops->configure_hub(hub->bus.ctx, hub->usb_device, hub->hub_speed, &desc);
     if (result < 0) {
         printf("configure_hub failed: %d\n", result);
         return result;
@@ -344,14 +344,14 @@ static int usb_hub_thread(void* arg) {
 static mx_status_t usb_hub_bind(void* ctx, mx_device_t* device, void** cookie) {
     // search for the bus device
     mx_device_t* bus_device = device_get_parent(device);
-    usb_bus_protocol_t* bus_protocol = NULL;
-    while (bus_device != NULL && bus_protocol == NULL) {
-        if (device_op_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol) == MX_OK) {
+    usb_bus_protocol_t bus = { NULL, NULL };
+    while (bus_device != NULL && bus.ops == NULL) {
+        if (device_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, &bus) == MX_OK) {
             break;
         }
         bus_device = device_get_parent(bus_device);
     }
-    if (!bus_device || !bus_protocol) {
+    if (!bus_device || !bus.ops) {
         printf("usb_hub_bind could not find bus device\n");
         return MX_ERR_NOT_SUPPORTED;
     }
@@ -389,7 +389,7 @@ static mx_status_t usb_hub_bind(void* ctx, mx_device_t* device, void** cookie) {
     hub->usb_device = device;
     hub->hub_speed = usb_get_speed(device);
     hub->bus_device = bus_device;
-    hub->bus_protocol = bus_protocol;
+    memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
     mx_status_t status = MX_OK;
     iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size);

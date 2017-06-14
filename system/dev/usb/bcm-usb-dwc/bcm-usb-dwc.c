@@ -115,7 +115,7 @@ typedef struct dwc_usb_device {
 typedef struct dwc_usb {
     mx_device_t* mxdev;
     mx_device_t* bus_device;
-    usb_bus_protocol_t* bus_protocol;
+    usb_bus_protocol_t bus;
     mx_handle_t irq_handle;
     thrd_t irq_thread;
     mx_device_t* parent;
@@ -542,12 +542,11 @@ static void dwc_set_bus_device(void* ctx, mx_device_t* busdev) {
     dwc_usb_t* dwc = ctx;
     dwc->bus_device = busdev;
     if (busdev) {
-        device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS,
-                            (void**)&dwc->bus_protocol);
-        dwc->bus_protocol->add_device(dwc->bus_device, ROOT_HUB_DEVICE_ID, 0,
+        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, &dwc->bus);
+        dwc->bus.ops->add_device(dwc->bus.ctx, ROOT_HUB_DEVICE_ID, 0,
                                       USB_SPEED_HIGH);
     } else {
-        dwc->bus_protocol = NULL;
+        dwc->bus.ops = NULL;
     }
 }
 
@@ -742,7 +741,7 @@ mx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
 
     mtx_unlock(&dwc->usb_devices[dwc->next_device_address].devmtx);
 
-    dwc->bus_protocol->add_device(dwc->bus_device, dwc->next_device_address, hub_address, speed);
+    dwc->bus.ops->add_device(dwc->bus.ctx, dwc->next_device_address, hub_address, speed);
 
     dwc->next_device_address++;
 

@@ -28,34 +28,34 @@
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
     xprintf("xhci_add_new_device\n");
 
-    if (!xhci->bus_mxdev || !xhci->bus_protocol) {
+    if (!xhci->bus_mxdev || !xhci->bus.ops) {
         printf("no bus device in xhci_add_device\n");
         return MX_ERR_INTERNAL;
     }
 
-    return xhci->bus_protocol->add_device(xhci->bus_mxdev, slot_id, hub_address, speed);
+    return xhci->bus.ops->add_device(xhci->bus.ctx, slot_id, hub_address, speed);
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
     xprintf("xhci_remove_device %d\n", slot_id);
 
-    if (!xhci->bus_mxdev || !xhci->bus_protocol) {
+    if (!xhci->bus_mxdev || !xhci->bus.ops) {
         printf("no bus device in xhci_remove_device\n");
         return;
     }
 
-    xhci->bus_protocol->remove_device(xhci->bus_mxdev, slot_id);
+    xhci->bus.ops->remove_device(xhci->bus.ctx, slot_id);
 }
 
 static void xhci_set_bus_device(void* ctx, mx_device_t* busdev) {
     xhci_t* xhci = ctx;
     xhci->bus_mxdev = busdev;
     if (busdev) {
-        device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&xhci->bus_protocol);
+        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, &xhci->bus);
         // wait until bus driver has started before doing this
         xhci_queue_start_root_hubs(xhci);
     } else {
-        xhci->bus_protocol = NULL;
+        xhci->bus.ops = NULL;
     }
 }
 

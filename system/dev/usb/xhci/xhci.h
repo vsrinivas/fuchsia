@@ -78,7 +78,7 @@ struct xhci {
     // the device we implement
     mx_device_t* mxdev;
     mx_device_t* bus_mxdev;
-    usb_bus_protocol_t* bus_protocol;
+    usb_bus_protocol_t bus;
 
     pci_protocol_t* pci_proto;
     bool legacy_irq_mode;
