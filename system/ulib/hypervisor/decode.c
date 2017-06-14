@@ -111,8 +111,8 @@ mx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
     return MX_OK;
 }
 
-mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
-                               mx_guest_gpr_t* guest_gpr, instruction_t* inst) {
+mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr_t* guest_gpr,
+                        instruction_t* inst) {
     if (inst_len == 0)
         return MX_ERR_BAD_STATE;
     if (inst_len > kMaxInstructionLength)
