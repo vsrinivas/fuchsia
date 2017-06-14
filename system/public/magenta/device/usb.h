@@ -95,8 +95,9 @@ IOCTL_WRAPPER_OUT(ioctl_usb_get_descriptors_size, IOCTL_USB_GET_DESCRIPTORS_SIZE
 IOCTL_WRAPPER_VAROUT(ioctl_usb_get_descriptors, IOCTL_USB_GET_DESCRIPTORS, void);
 IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_string_desc, IOCTL_USB_GET_STRING_DESC, int, void);
 
-static inline ssize_t ioctl_usb_set_interface(int fd, const int in[static 2]) {
-    return mxio_ioctl(fd, IOCTL_USB_SET_INTERFACE, in, 2*sizeof(int), NULL, 0);
+static inline ssize_t ioctl_usb_set_interface(int fd, int interface_number, int alt_setting) {
+    int args[2] = { interface_number, alt_setting };
+    return mxio_ioctl(fd, IOCTL_USB_SET_INTERFACE, args, sizeof(args), NULL, 0);
 }
 
 IOCTL_WRAPPER_OUT(ioctl_usb_get_current_frame, IOCTL_USB_GET_CURRENT_FRAME, uint64_t);
