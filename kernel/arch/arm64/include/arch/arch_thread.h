@@ -7,8 +7,6 @@
 
 #pragma once
 
-#define ARM64_SAVED_EXIT_FLAGS_OFFSET 8
-
 #ifndef ASSEMBLY
 
 #include <assert.h>
@@ -37,10 +35,6 @@ struct arch_thread {
         vaddr_t sp;
     };
 
-    // this is used by arm64_finish_user_irq_wrapper to save the exit flags
-    // when we're switching from the short iframe to the long iframe
-    uint32_t saved_exit_flags;
-
     // Debugger access to userspace general regs while suspended or stopped
     // in an exception.
     // The regs are saved on the stack and then a pointer is stored here.
@@ -64,10 +58,6 @@ static_assert(
 static_assert(
     thread_pointer_offsetof(unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET,
     "unsafe_sp field in wrong place");
-
-static_assert(
-    thread_pointer_offsetof(saved_exit_flags) == ARM64_SAVED_EXIT_FLAGS_OFFSET,
-    "saved_exit_flags field in wrong place");
 
 __END_CDECLS
 

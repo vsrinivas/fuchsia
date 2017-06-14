@@ -9,6 +9,7 @@
 
 #ifndef ASSEMBLY
 
+#include <assert.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <magenta/compiler.h>
@@ -71,13 +72,16 @@ struct arm64_iframe_long {
 };
 
 struct arm64_iframe_short {
-    uint64_t r[19];
-    uint64_t pad;
+    uint64_t r[20];
+    // pad the short frame out so that it has the same general shape and size as a long
+    uint64_t pad[10];
     uint64_t lr;
     uint64_t usp;
     uint64_t elr;
     uint64_t spsr;
 };
+
+static_assert(sizeof(struct arm64_iframe_long) == sizeof(struct arm64_iframe_short), "");
 
 struct arch_exception_context {
     struct arm64_iframe_long *frame;
