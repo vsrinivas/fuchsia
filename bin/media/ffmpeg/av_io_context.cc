@@ -122,30 +122,55 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
 int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
   switch (whence) {
     case SEEK_SET:
+      if (size_ != -1 && offset >= size_) {
+        FTL_DLOG(ERROR) << "Seek out of range: offset " << offset
+                        << ", whence SEEK_SET, size " << size_;
+        return AVERROR(EIO);
+      }
+
       position_ = offset;
       break;
+
     case SEEK_CUR:
+      if (size_ != -1 && position_ + offset >= size_) {
+        FTL_DLOG(ERROR) << "Seek out of range: offset " << offset
+                        << ", whence SEEK_CUR, current position " << position_
+                        << ", size " << size_;
+        return AVERROR(EIO);
+      }
+
       position_ += offset;
       break;
+
     case SEEK_END:
       if (size_ == -1) {
-        FTL_LOG(WARNING) << "whence of SEEK_END, size unknown";
+        FTL_DLOG(ERROR) << "SEEK_END specified, size unknown";
         return AVERROR(EIO);
       }
+
+      if (offset < -size_ || offset >= 0) {
+        FTL_DLOG(ERROR) << "Seek out of range: offset " << offset
+                        << ", whence SEEK_END, size " << size_;
+        return AVERROR(EIO);
+      }
+
       position_ = size_ + offset;
       break;
+
     case AVSEEK_SIZE:
       if (size_ == -1) {
-        FTL_LOG(WARNING) << "whence of AVSEEK_SIZE, size unknown";
+        FTL_DLOG(ERROR) << "AVSEEK_SIZE specified, size unknown";
         return AVERROR(EIO);
       }
+
       return size_;
+
     default:
-      FTL_LOG(ERROR) << "unrecognized whence value " << whence;
+      FTL_DLOG(ERROR) << "unrecognized whence value " << whence;
       return AVERROR(EIO);
   }
 
-  FTL_CHECK(size_ == -1 || position_ < size_) << "position out of range";
+  FTL_DCHECK(size_ == -1 || position_ < size_);
   return position_;
 }
 
