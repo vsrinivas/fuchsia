@@ -34,6 +34,12 @@ typedef struct ramdisk_device {
     uintptr_t mapped_addr;
     block_callbacks_t* cb;
     char name[NAME_MAX];
+
+    // Protect asynchronous operations from acting on a dead ramdisk.
+    // Lock not required for synchronous operations querying the
+    // status of 'dead'.
+    mtx_t lock;
+    bool dead;
 } ramdisk_device_t;
 
 static uint64_t sizebytes(ramdisk_device_t* rdev) {
@@ -80,9 +86,16 @@ static void ramdisk_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length
         return;
     }
 
-    size_t actual;
-    // Reading from disk --> Write to file VMO
-    status = mx_vmo_write(vmo, (void*)rdev->mapped_addr + dev_offset, vmo_offset, len, &actual);
+    mtx_lock(&rdev->lock);
+    if (rdev->dead) {
+        status = MX_ERR_BAD_STATE;
+    } else {
+        size_t actual;
+        // Reading from disk --> Write to file VMO
+        status = mx_vmo_write(vmo, (void*)rdev->mapped_addr + dev_offset,
+                              vmo_offset, len, &actual);
+    }
+    mtx_unlock(&rdev->lock);
     rdev->cb->complete(cookie, status);
 }
 
@@ -96,9 +109,16 @@ static void ramdisk_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t lengt
         return;
     }
 
-    size_t actual = 0;
-    // Writing to disk --> Read from file VMO
-    status = mx_vmo_read(vmo, (void*)rdev->mapped_addr + dev_offset, vmo_offset, len, &actual);
+    mtx_lock(&rdev->lock);
+    if (rdev->dead) {
+        status = MX_ERR_BAD_STATE;
+    } else {
+        size_t actual = 0;
+        // Writing to disk --> Read from file VMO
+        status = mx_vmo_read(vmo, (void*)rdev->mapped_addr + dev_offset,
+                             vmo_offset, len, &actual);
+    }
+    mtx_unlock(&rdev->lock);
     rdev->cb->complete(cookie, status);
 }
 
@@ -111,13 +131,24 @@ static block_ops_t ramdisk_block_ops = {
 
 // implement device protocol:
 
+static void ramdisk_unbind(void* ctx) {
+    ramdisk_device_t* ramdev = ctx;
+    mtx_lock(&ramdev->lock);
+    ramdev->dead = true;
+    mtx_unlock(&ramdev->lock);
+    device_remove(ramdev->mxdev);
+}
+
 static mx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
                              size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     ramdisk_device_t* ramdev = ctx;
+    if (ramdev->dead) {
+        return MX_ERR_BAD_STATE;
+    }
 
     switch (op) {
     case IOCTL_RAMDISK_UNLINK: {
-        device_remove(ramdev->mxdev);
+        ramdisk_unbind(ramdev);
         return MX_OK;
     }
     // Block Protocol
@@ -150,7 +181,10 @@ static mx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
 
 static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
     ramdisk_device_t* ramdev = ctx;
-
+    if (ramdev->dead) {
+        iotxn_complete(txn, MX_ERR_BAD_STATE, 0);
+        return;
+    }
     mx_status_t status = constrain_args(ramdev, &txn->offset, &txn->length);
     if (status != MX_OK) {
         iotxn_complete(txn, status, 0);
@@ -177,11 +211,6 @@ static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
 
 static mx_off_t ramdisk_getsize(void* ctx) {
     return sizebytes(ctx);
-}
-
-static void ramdisk_unbind(void* ctx) {
-    ramdisk_device_t* ramdev = ctx;
-    device_remove(ramdev->mxdev);
 }
 
 static void ramdisk_release(void* ctx) {
@@ -226,6 +255,7 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         }
         ramdev->blk_size = config->blk_size;
         ramdev->blk_count = config->blk_count;
+        mtx_init(&ramdev->lock, mtx_plain);
         sprintf(ramdev->name, "ramdisk-%lu", ramdisk_count++);
         mx_status_t status;
         if ((status = mx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != MX_OK) {

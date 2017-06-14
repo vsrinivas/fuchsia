@@ -172,6 +172,109 @@ bool ramdisk_test_bad_requests(void) {
     END_TEST;
 }
 
+bool ramdisk_test_release_during_access(void) {
+    BEGIN_TEST;
+    int fd = get_ramdisk(PAGE_SIZE, 512);
+
+    // Spin up a background thread to repeatedly access
+    // the first few blocks.
+    auto bg_thread = [](void* arg) {
+        int fd = *reinterpret_cast<int*>(arg);
+        while (true) {
+            uint8_t in[8192];
+            memset(in, 'a', sizeof(in));
+            if (write(fd, in, sizeof(in)) != static_cast<ssize_t>(sizeof(in))) {
+                return 0;
+            }
+            uint8_t out[8192];
+            memset(out, 0, sizeof(out));
+            lseek(fd, 0, SEEK_SET);
+            if (read(fd, out, sizeof(out)) != static_cast<ssize_t>(sizeof(out))) {
+                return 0;
+            }
+            // If we DID manage to read it, then the data should be valid...
+            if (memcmp(in, out, sizeof(in)) != 0) {
+                return -1;
+            }
+        }
+    };
+
+    thrd_t thread;
+    ASSERT_EQ(thrd_create(&thread, bg_thread, &fd), thrd_success, "");
+    // Let the background thread warm up a little bit...
+    usleep(10000);
+    // ... and close the entire ramdisk from undearneath it!
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+
+    int res;
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success, "");
+    ASSERT_EQ(res, 0, "Background thread failed");
+    close(fd);
+    END_TEST;
+}
+
+bool ramdisk_test_release_during_fifo_access(void) {
+    BEGIN_TEST;
+    int fd = get_ramdisk(PAGE_SIZE, 512);
+
+    // Set up fifo, txn, client, vmo...
+    mx_handle_t fifo;
+    ssize_t expected = sizeof(fifo);
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
+    txnid_t txnid;
+    expected = sizeof(txnid_t);
+    ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
+    fifo_client_t* client;
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    uint64_t vmo_size = PAGE_SIZE * 3;
+    mx_handle_t vmo;
+    ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), NO_ERROR, "Failed to create VMO");
+    mx_handle_t xfer_vmo;
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), NO_ERROR, "");
+    vmoid_t vmoid;
+    expected = sizeof(vmoid_t);
+    ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
+              "Failed to attach vmo");
+    block_fifo_request_t request;
+    request.txnid      = txnid;
+    request.vmoid      = vmoid;
+    request.opcode     = BLOCKIO_WRITE;
+    request.length     = PAGE_SIZE;
+    request.vmo_offset = 0;
+    request.dev_offset = 0;
+
+    typedef struct thread_args {
+        block_fifo_request_t* request;
+        fifo_client_t* client;
+    } thread_args_t;
+
+    // Spin up a background thread to repeatedly access
+    // the first few blocks.
+    auto bg_thread = [](void* arg) {
+        thread_args_t* ta = reinterpret_cast<thread_args_t*>(arg);
+        mx_status_t status;
+        while ((status = block_fifo_txn(ta->client, ta->request, 1)) == MX_OK) {}
+        return (status == MX_ERR_BAD_STATE) ? 0 : -1;
+    };
+
+    thread_args_t args;
+    args.request = &request;
+    args.client = client;
+
+    thrd_t thread;
+    ASSERT_EQ(thrd_create(&thread, bg_thread, (void*)&args), thrd_success, "");
+    // Let the background thread warm up a little bit...
+    usleep(10000);
+    // ... and close the entire ramdisk from undearneath it!
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+
+    int res;
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success, "");
+    ASSERT_EQ(res, 0, "Background thread failed");
+    close(fd);
+    END_TEST;
+}
+
 bool ramdisk_test_multiple(void) {
     uint8_t buf[PAGE_SIZE];
     uint8_t out[PAGE_SIZE];
@@ -899,6 +1002,8 @@ BEGIN_TEST_CASE(ramdisk_tests)
 RUN_TEST(ramdisk_test_simple)
 RUN_TEST(ramdisk_test_filesystem)
 RUN_TEST(ramdisk_test_bad_requests)
+RUN_TEST(ramdisk_test_release_during_access)
+RUN_TEST(ramdisk_test_release_during_fifo_access)
 RUN_TEST(ramdisk_test_multiple)
 RUN_TEST(ramdisk_test_fifo_no_op)
 RUN_TEST(ramdisk_test_fifo_basic)
