@@ -4,24 +4,22 @@
 package genkey
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"fuchsia.googlesource.com/pm/build"
 )
 
 func TestRun(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	defer os.RemoveAll(d)
-	if err != nil {
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	if err := Run(cfg); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := Run(d); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := os.Stat(filepath.Join(d, "key")); err != nil {
+	if _, err := os.Stat(cfg.KeyPath); err != nil {
 		t.Errorf("genkey didn't write a key!")
 	}
 }

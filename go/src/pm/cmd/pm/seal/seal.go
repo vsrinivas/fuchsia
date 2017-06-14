@@ -5,10 +5,12 @@
 // Package seal implements the `pm seal` command
 package seal
 
-import "fuchsia.googlesource.com/pm/pkg"
+import (
+	"fuchsia.googlesource.com/pm/build"
+)
 
 // Run first delegates to sign.Run to generate a fresh signature for the
 // package in packageDir, then archives the meta/ directory into meta.far.
-func Run(packageDir string) error {
-	return pkg.Seal(packageDir)
+func Run(cfg *build.Config) error {
+	return build.Seal(cfg)
 }

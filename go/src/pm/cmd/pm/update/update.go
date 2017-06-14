@@ -6,10 +6,10 @@
 package update
 
 import (
-	"fuchsia.googlesource.com/pm/pkg"
+	"fuchsia.googlesource.com/pm/build"
 )
 
 // Run executes the `pm update` command
-func Run(packageDir string) error {
-	return pkg.Update(packageDir)
+func Run(cfg *build.Config) error {
+	return build.Update(cfg)
 }

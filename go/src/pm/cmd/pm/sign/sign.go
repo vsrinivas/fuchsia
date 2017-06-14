@@ -7,8 +7,9 @@
 package sign
 
 import (
-	"fuchsia.googlesource.com/pm/pkg"
-	"golang.org/x/crypto/ed25519"
+	"fmt"
+
+	"fuchsia.googlesource.com/pm/build"
 )
 
 // Run creates a pubkey and signature file in the meta directory of the given
@@ -16,6 +17,9 @@ import (
 // using EdDSA, and includes as a message all files from meta except for any
 // pre-existing signature. The resulting signature is written to
 // packageDir/meta/signature.
-func Run(packageDir string, privateKey ed25519.PrivateKey) error {
-	return pkg.Sign(packageDir, privateKey)
+func Run(cfg *build.Config) error {
+	if cfg.KeyPath == "" {
+		return fmt.Errorf("error: private key flag is required")
+	}
+	return build.Sign(cfg)
 }

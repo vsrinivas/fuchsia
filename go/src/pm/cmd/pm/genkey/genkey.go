@@ -6,17 +6,21 @@
 package genkey
 
 import (
+	"fmt"
 	"os"
-	"path/filepath"
 
+	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/keys"
 )
 
-// Run generates a new keypair and writes it to outdir/key in binary format.
+// Run generates a new keypair and writes it to `key` in binary format.
 // The generated keys are suitable for use with EdDSA, specifically for `pm
 // sign`
-func Run(outdir string) error {
-	f, err := os.Create(filepath.Join(outdir, "key"))
+func Run(cfg *build.Config) error {
+	if cfg.KeyPath == "" {
+		return fmt.Errorf("error: signing key flag is required")
+	}
+	f, err := os.Create(cfg.KeyPath)
 	if err != nil {
 		return err
 	}

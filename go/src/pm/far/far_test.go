@@ -93,7 +93,7 @@ func TestReader(t *testing.T) {
 		// corrupt magic
 		func(b []byte) { b[0] = 0 },
 		// corrupt index length
-		func(b []byte) { binary.LittleEndian.PutUint64(b[8:], 0) },
+		func(b []byte) { binary.LittleEndian.PutUint64(b[8:], 1) },
 		// corrupt dirindex type
 		func(b []byte) { b[IndexLen] = 255 },
 		// TODO(raggi): corrupt index entry offset

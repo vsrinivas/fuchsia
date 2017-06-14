@@ -7,12 +7,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"golang.org/x/crypto/ed25519"
-
+	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
@@ -23,54 +21,64 @@ import (
 
 const usage = `%s [command]
     init    - initialize a package meta directory in the standard form
-    genkey  - generate a new private/public key pair
-    update  - update the merkle roots in meta/contents
-    sign    - sign a package with the given key
-    seal    - seal package metadata into a signed meta.far
+    genkey  - generate a new private key
+
+    build   - perform update, sign and seal in order
+      update  - update the merkle roots in meta/contents
+      sign    - sign a package with the given key
+      seal    - seal package metadata into a signed meta.far
     verify  - verify metadata signature against the embedded public key
+
 TODO:
     archive - construct a single .far representation of the package
     publish - upload the package to a distribution service
 `
 
 func main() {
+	cfg := build.NewConfig()
+	cfg.InitFlags(flag.CommandLine)
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
 		flag.PrintDefaults()
 	}
 
 	flag.Parse()
 
-	d, err := os.Getwd()
-	if err != nil {
-		die(err)
-	}
-
+	var err error
 	switch flag.Arg(0) {
 	case "init":
-		err = initcmd.Run(d)
+		err = initcmd.Run(cfg)
 
 	case "genkey":
-		err = genkey.Run(d)
+		err = genkey.Run(cfg)
 
-	case "update":
-		err = update.Run(d)
-
-	case "sign":
-		if flag.NArg() < 2 {
-			die(fmt.Errorf("sign requires a private key file as an argument"))
-		}
-		buf, err := ioutil.ReadFile(flag.Arg(1))
+	case "build":
+		err = update.Run(cfg)
 		if err != nil {
 			die(err)
 		}
-		err = sign.Run(d, ed25519.PrivateKey(buf))
+		err = sign.Run(cfg)
+		if err != nil {
+			die(err)
+		}
+		err = seal.Run(cfg)
+		if err != nil {
+			die(err)
+		}
+
+	case "update":
+		err = update.Run(cfg)
+
+	case "sign":
+		err = sign.Run(cfg)
 
 	case "seal":
-		err = seal.Run(d)
+		err = seal.Run(cfg)
 
 	case "verify":
-		err = verify.Run(d)
+		err = verify.Run(cfg)
 
 	default:
 		flag.Usage()
