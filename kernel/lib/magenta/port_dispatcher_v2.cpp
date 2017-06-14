@@ -39,8 +39,8 @@ PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispa
     packet.signal.trigger = trigger_;
 }
 
-bool PortObserver::OnInitialize(mx_signals_t initial_state,
-                                const StateObserver::CountInfo* cinfo) {
+StateObserver::Flags PortObserver::OnInitialize(mx_signals_t initial_state,
+                                                const StateObserver::CountInfo* cinfo) {
     uint64_t count = 1u;
 
     if (cinfo) {
@@ -51,29 +51,25 @@ bool PortObserver::OnInitialize(mx_signals_t initial_state,
             }
         }
     }
-    MaybeQueue(initial_state, count);
-    return false;
+    return MaybeQueue(initial_state, count);
 }
 
-bool PortObserver::OnStateChange(mx_signals_t new_state) {
-    MaybeQueue(new_state, 1u);
-    return false;
+StateObserver::Flags PortObserver::OnStateChange(mx_signals_t new_state) {
+    return MaybeQueue(new_state, 1u);
 }
 
-bool PortObserver::OnCancel(Handle* handle) {
+StateObserver::Flags PortObserver::OnCancel(Handle* handle) {
     if (handle_ == handle) {
-        remove_ = true;
-        return true;
+        return kHandled | kNeedRemoval;
     } else {
-        return false;
+        return 0;
     }
 }
 
-bool PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
+StateObserver::Flags PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
     if ((key_ != key) || (handle_ != handle) || (port_.get() != port))
-        return false;
-    remove_ = true;
-    return true;
+        return 0;
+    return kHandled | kNeedRemoval;
 }
 
 void PortObserver::OnRemoved() {
@@ -81,15 +77,17 @@ void PortObserver::OnRemoved() {
         delete this;
 }
 
-void PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t count) {
+StateObserver::Flags PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t count) {
     // Always called with the object state lock being held.
     if ((trigger_ & new_state) == 0u)
-        return;
+        return 0;
 
     auto status = port_->Queue(&packet_, new_state, count);
 
     if ((type_ == MX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
-        remove_ = true;
+        return kNeedRemoval;
+
+    return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

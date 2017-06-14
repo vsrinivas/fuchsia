@@ -12,16 +12,17 @@
 namespace {
 
 template <typename Func>
-bool CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock, Func f) {
-    bool observer_found = false;
+StateObserver::Flags CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock, Func f) {
+    StateObserver::Flags flags = 0;
 
     StateTracker::ObserverList obs_to_remove;
 
     {
         AutoLock lock(observer_lock);
         for (auto it = observers->begin(); it != observers->end();) {
-            observer_found = f(it.CopyPointer()) || observer_found;
-            if (it->remove()) {
+            StateObserver::Flags it_flags = f(it.CopyPointer());
+            flags |= it_flags;
+            if (it_flags & StateObserver::kNeedRemoval) {
                 auto to_remove = it;
                 ++it;
                 obs_to_remove.push_back(observers->erase(to_remove));
@@ -35,7 +36,8 @@ bool CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock,
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    return observer_found;
+    // We've processed the removal flag, so strip it
+    return flags & (~StateObserver::kNeedRemoval);
 }
 
 }  // namespace
@@ -44,19 +46,17 @@ void StateTracker::AddObserver(StateObserver* observer, const StateObserver::Cou
     canary_.Assert();
     DEBUG_ASSERT(observer != nullptr);
 
-    bool awoke_threads = false;
-    bool remove;
+    StateObserver::Flags flags;
     {
         AutoLock lock(&lock_);
 
-        awoke_threads = observer->OnInitialize(signals_, cinfo);
-        remove = observer->remove();
-        if (!remove)
+        flags = observer->OnInitialize(signals_, cinfo);
+        if (!(flags & StateObserver::kNeedRemoval))
             observers_.push_front(observer);
     }
-    if (remove)
+    if (flags & StateObserver::kNeedRemoval)
         observer->OnRemoved();
-    if (awoke_threads)
+    if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
 }
 
@@ -71,24 +71,34 @@ void StateTracker::RemoveObserver(StateObserver* observer) {
 bool StateTracker::Cancel(Handle* handle) {
     canary_.Assert();
 
-    return CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
+    StateObserver::Flags flags = CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
         return obs->OnCancel(handle);
     });
+
+    // We could request a reschedule if kWokeThreads is asserted,
+    // but cancellation is not likely to benefit from aggressive
+    // rescheduling.
+    return flags & StateObserver::kHandled;
 }
 
 bool StateTracker::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     canary_.Assert();
 
-    return CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
+    StateObserver::Flags flags = CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
         return obs->OnCancelByKey(handle, port, key);
     });
+
+    // We could request a reschedule if kWokeThreads is asserted,
+    // but cancellation is not likely to benefit from aggressive
+    // rescheduling.
+    return flags & StateObserver::kHandled;
 }
 
 void StateTracker::UpdateState(mx_signals_t clear_mask,
                                mx_signals_t set_mask) {
     canary_.Assert();
 
-    bool awoke_threads;
+    StateObserver::Flags flags;
     ObserverList obs_to_remove;
 
     {
@@ -100,35 +110,35 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
         if (previous_signals == signals_)
             return;
 
-        awoke_threads = UpdateInternalLocked(&obs_to_remove, signals_);
+        flags = UpdateInternalLocked(&obs_to_remove, signals_);
     }
 
     while (!obs_to_remove.is_empty()) {
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    if (awoke_threads)
+    if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
 }
 
 void StateTracker::StrobeState(mx_signals_t notify_mask) {
     canary_.Assert();
 
-    bool awoke_threads;
+    StateObserver::Flags flags;
     ObserverList obs_to_remove;
 
     {
         AutoLock lock(&lock_);
         // include currently active signals as well
         notify_mask |= signals_;
-        awoke_threads = UpdateInternalLocked(&obs_to_remove, notify_mask);
+        flags = UpdateInternalLocked(&obs_to_remove, notify_mask);
     }
 
     while (!obs_to_remove.is_empty()) {
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    if (awoke_threads)
+    if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
 }
 
@@ -138,7 +148,7 @@ void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
     if (count == nullptr)
         return;
 
-    bool awoke_threads;
+    StateObserver::Flags flags = 0;
     ObserverList obs_to_remove;
 
     {
@@ -154,14 +164,14 @@ void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
         if (previous_signals == signals_)
             return;
 
-        awoke_threads = UpdateInternalLocked(&obs_to_remove, signals_);
+        flags = UpdateInternalLocked(&obs_to_remove, signals_);
     }
 
     while (!obs_to_remove.is_empty()) {
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    if (awoke_threads)
+    if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
 }
 
@@ -209,12 +219,13 @@ mx_status_t StateTracker::InvalidateCookie(CookieJar* cookiejar) {
     return MX_OK;
 }
 
-bool StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) {
-    bool awoke_threads = false;
+StateObserver::Flags StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) {
+    StateObserver::Flags flags = 0;
 
     for (auto it = observers_.begin(); it != observers_.end();) {
-        awoke_threads = it->OnStateChange(signals) || awoke_threads;
-        if (it->remove()) {
+        StateObserver::Flags it_flags = it->OnStateChange(signals);
+        flags |= it_flags;
+        if (it_flags & StateObserver::kNeedRemoval) {
             auto to_remove = it;
             ++it;
             obs_to_remove->push_back(observers_.erase(to_remove));
@@ -222,5 +233,7 @@ bool StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_
             ++it;
         }
     }
-    return awoke_threads;
+
+    // Filter out NeedRemoval flag because we processed that here
+    return flags & (~StateObserver::kNeedRemoval);
 }

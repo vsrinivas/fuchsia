@@ -70,8 +70,8 @@ public:
     mx_status_t InvalidateCookie(CookieJar *cookiejar);
 
 private:
-    // Returns true if one of the observers have been signaled. False otherwise.
-    bool UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) TA_REQ(lock_);
+    // Returns flag kHandled if one of the observers have been signaled.
+    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("STRK")> canary_;
 

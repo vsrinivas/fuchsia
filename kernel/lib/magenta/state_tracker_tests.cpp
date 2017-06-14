@@ -21,14 +21,14 @@ public:
 
 private:
     // No-op overrides of pure virtuals.
-    bool OnInitialize(mx_signals_t initial_state,
-                      const StateObserver::CountInfo* cinfo) override {
-        return false;
+    Flags OnInitialize(mx_signals_t initial_state,
+                       const StateObserver::CountInfo* cinfo) override {
+        return 0;
     }
-    bool OnStateChange(mx_signals_t new_state) override { return false; }
-    bool OnCancel(Handle* handle) override { return false; }
-    bool OnCancelByKey(Handle* handle, const void* port, uint64_t key)
-        override { return false; }
+    Flags OnStateChange(mx_signals_t new_state) override { return 0; }
+    Flags OnCancel(Handle* handle) override { return 0; }
+    Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key)
+        override { return 0; }
 
     void OnRemoved() override { removals_++; }
 
@@ -53,10 +53,9 @@ bool on_initialize(void* context) {
 
     class RmOnInitialize : public RemovableObserver {
     public:
-        bool OnInitialize(mx_signals_t initial_state,
-                          const StateObserver::CountInfo* cinfo) override {
-            remove_ = true;
-            return false;
+        Flags OnInitialize(mx_signals_t initial_state,
+                           const StateObserver::CountInfo* cinfo) override {
+            return kNeedRemoval;
         }
     };
 
@@ -79,9 +78,8 @@ bool on_initialize(void* context) {
 
 class RmOnStateChange : public RemovableObserver {
 public:
-    bool OnStateChange(mx_signals_t new_state) override {
-        remove_ = true;
-        return false;
+    Flags OnStateChange(mx_signals_t new_state) override {
+        return kNeedRemoval;
     }
 };
 
@@ -163,9 +161,8 @@ bool on_cancel(void* context) {
 
     class RmOnCancel : public RemovableObserver {
     public:
-        bool OnCancel(Handle* handle) {
-            remove_ = true;
-            return false;
+        Flags OnCancel(Handle* handle) {
+            return kNeedRemoval;
         }
     };
 
@@ -194,10 +191,9 @@ bool on_cancel_by_key(void* context) {
 
     class RmOnCancelByKey : public RemovableObserver {
     public:
-        bool OnCancelByKey(Handle* handle, const void* port, uint64_t key)
+        Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key)
             override {
-            remove_ = true;
-            return false;
+            return kNeedRemoval;
         }
     };
 

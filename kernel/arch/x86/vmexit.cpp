@@ -185,16 +185,16 @@ public:
 private:
     mx_signals_t watched_signals_;
     event_t event_;
-    virtual bool OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) {
-        return false;
+    virtual Flags OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) {
+        return 0;
     }
-    virtual bool OnStateChange(mx_signals_t new_state) {
+    virtual Flags OnStateChange(mx_signals_t new_state) {
         if (new_state & watched_signals_)
             event_signal(&event_, false);
-        return false;
+        return 0;
     }
-    virtual bool OnCancel(Handle* handle) {
-        return false;
+    virtual Flags OnCancel(Handle* handle) {
+        return 0;
     }
 };
 

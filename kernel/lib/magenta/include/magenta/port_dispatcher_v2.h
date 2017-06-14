@@ -109,15 +109,15 @@ private:
     PortObserver& operator=(const PortObserver&) = delete;
 
     // StateObserver overrides.
-    bool OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
-    bool OnStateChange(mx_signals_t new_state) final;
-    bool OnCancel(Handle* handle) final;
-    bool OnCancelByKey(Handle* handle, const void* port, uint64_t key) final;
+    Flags OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
+    Flags OnStateChange(mx_signals_t new_state) final;
+    Flags OnCancel(Handle* handle) final;
+    Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key) final;
     void OnRemoved() final;
 
     // The following method can only be called from
     // OnInitialize(), OnStateChange() and OnCancel().
-    void MaybeQueue(mx_signals_t new_state, uint64_t count);
+    Flags MaybeQueue(mx_signals_t new_state, uint64_t count);
 
     const uint32_t type_;
     const uint64_t key_;

@@ -52,8 +52,8 @@ mx_signals_t WaitStateObserver::End() {
     return wakeup_reasons_;
 }
 
-bool WaitStateObserver::OnInitialize(mx_signals_t initial_state,
-                                     const StateObserver::CountInfo* cinfo) {
+StateObserver::Flags WaitStateObserver::OnInitialize(mx_signals_t initial_state,
+                                                     const StateObserver::CountInfo* cinfo) {
     canary_.Assert();
 
     // Record the initial state of the state tracker as our wakeup reason.  If
@@ -61,13 +61,16 @@ bool WaitStateObserver::OnInitialize(mx_signals_t initial_state,
     // somewhere in this initial state.
     wakeup_reasons_ = initial_state;
 
-    if (initial_state & watched_signals_)
-        return event_->Signal() > 0;
+    if (initial_state & watched_signals_) {
+        if (event_->Signal() > 0) {
+            return kWokeThreads;
+        }
+    }
 
-    return false;
+    return 0;
 }
 
-bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
+StateObserver::Flags WaitStateObserver::OnStateChange(mx_signals_t new_state) {
     canary_.Assert();
 
     // If we are still on our StateTracker's list of observers, and the
@@ -76,21 +79,27 @@ bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
     // while we were on the list may have been reasons to wake up.
     wakeup_reasons_ |= new_state;
 
-    if (new_state & watched_signals_)
-        return event_->Signal() > 0;
+    if (new_state & watched_signals_) {
+        if (event_->Signal() > 0) {
+            return kWokeThreads;
+        }
+    }
 
-    return false;
+    return 0;
 }
 
-bool WaitStateObserver::OnCancel(Handle* handle) {
+StateObserver::Flags WaitStateObserver::OnCancel(Handle* handle) {
     canary_.Assert();
 
     if (handle == handle_) {
         wakeup_reasons_ |= MX_SIGNAL_HANDLE_CLOSED;
-        event_->Signal(MX_ERR_CANCELED);
-        return true;
+        if (event_->Signal(MX_ERR_CANCELED) > 0) {
+            return kHandled | kWokeThreads;
+        } else {
+            return kHandled;
+        }
     } else {
-        return false;
+        return 0;
     }
 }
 

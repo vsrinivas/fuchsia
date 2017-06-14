@@ -88,14 +88,14 @@ public:
         Entry(const Entry&) = delete;
         Entry& operator=(const Entry&) = delete;
 
-        bool OnInitialize(mx_signals_t initial_state,
-                          const StateObserver::CountInfo* cinfo) final;
-        bool OnStateChange(mx_signals_t new_state) final;
-        bool OnCancel(Handle* handle) final;
+        Flags OnInitialize(mx_signals_t initial_state,
+                           const StateObserver::CountInfo* cinfo) final;
+        Flags OnStateChange(mx_signals_t new_state) final;
+        Flags OnCancel(Handle* handle) final;
 
         // Triggers (including adding to the triggered list). It must not already be triggered
         // (i.e., |is_triggered_| must be false; this will set it to true).
-        bool TriggerLocked();
+        Flags TriggerLocked();
 
         const mx_signals_t watched_signals_;
         const uint64_t cookie_;
@@ -147,9 +147,9 @@ private:
     WaitSetDispatcher& operator=(const WaitSetDispatcher&) = delete;
 
     // StateObserver implementation:
-    bool OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
-    bool OnStateChange(mx_signals_t new_state) final;
-    bool OnCancel(Handle* handle) final;
+    Flags OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
+    Flags OnStateChange(mx_signals_t new_state) final;
+    Flags OnCancel(Handle* handle) final;
 
     mxtl::Canary<mxtl::magic("WTSD")> canary_;
 

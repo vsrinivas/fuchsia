@@ -91,8 +91,8 @@ mx_signals_t WaitSetDispatcher::Entry::GetSignalsStateLocked() const {
 WaitSetDispatcher::Entry::Entry(mx_signals_t watched_signals, uint64_t cookie)
     : StateObserver(), watched_signals_(watched_signals), cookie_(cookie) {}
 
-bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state,
-                                            const StateObserver::CountInfo* cinfo) {
+StateObserver::Flags WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state,
+                                                            const StateObserver::CountInfo* cinfo) {
     AutoLock lock(&wait_set_->mutex_);
 
     DEBUG_ASSERT(state_ == State::ADD_PENDING);
@@ -103,14 +103,14 @@ bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state,
     if (watched_signals_ & signals_)
         return TriggerLocked();
 
-    return false;
+    return 0;
 }
 
-bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
+StateObserver::Flags WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
     AutoLock lock(&wait_set_->mutex_);
 
     if (state_ == State::REMOVED)
-        return false;
+        return 0;
 
     DEBUG_ASSERT(state_ == State::ADDED);
 
@@ -118,7 +118,7 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
 
     if (watched_signals_ & signals_) {
         if (is_triggered_)
-            return false;  // Already triggered.
+            return 0;  // Already triggered.
         return TriggerLocked();
     }
 
@@ -135,33 +135,31 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
             event_unsignal(&wait_set_->event_);
         }
     }
-    return false;
+    return 0;
 }
 
-bool WaitSetDispatcher::Entry::OnCancel(Handle* handle) {
+StateObserver::Flags WaitSetDispatcher::Entry::OnCancel(Handle* handle) {
     AutoLock lock(&wait_set_->mutex_);
 
     if (state_ == State::REMOVED)
-        return false;
+        return 0;
 
     DEBUG_ASSERT(state_ == State::ADDED);
 
     DEBUG_ASSERT(handle_);
     if (handle != handle_)
-        return false;
+        return 0;
     handle_ = nullptr;
     dispatcher_.reset();
 
     // We'll be removed from the state observer list.
-    remove_ = true;
-
     if (!is_triggered_)
-        return TriggerLocked();
+        return TriggerLocked() | kNeedRemoval;
 
-    return false;
+    return kNeedRemoval;
 }
 
-bool WaitSetDispatcher::Entry::TriggerLocked() {
+StateObserver::Flags WaitSetDispatcher::Entry::TriggerLocked() {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
 
     DEBUG_ASSERT(!is_triggered_);
@@ -172,10 +170,10 @@ bool WaitSetDispatcher::Entry::TriggerLocked() {
     wait_set_->triggered_entries_.push_back(this);
     wait_set_->num_triggered_entries_++;
     if (was_empty) {
-        return event_signal(&wait_set_->event_, true) > 0;
+        return (event_signal(&wait_set_->event_, true) > 0) ? StateObserver::kWokeThreads : 0;
     }
 
-    return false;
+    return 0;
 }
 
 // WaitSetDispatcher -------------------------------------------------------------------------------
@@ -350,15 +348,18 @@ WaitSetDispatcher::WaitSetDispatcher()
     state_tracker_.AddObserver(this, nullptr);
 }
 
-bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state,
-                                     const StateObserver::CountInfo* cinfo) { return false; }
+StateObserver::Flags WaitSetDispatcher::OnInitialize(mx_signals_t initial_state,
+                                                     const StateObserver::CountInfo* cinfo) { return 0; }
 
-bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
+StateObserver::Flags WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return 0; }
 
-bool WaitSetDispatcher::OnCancel(Handle* handle) {
+StateObserver::Flags WaitSetDispatcher::OnCancel(Handle* handle) {
     canary_.Assert();
 
     AutoLock lock(&mutex_);
     cancelled_ = true;
-    return event_signal(&event_, false) > 0;
+    if (event_signal(&event_, false) > 0) {
+        return kWokeThreads;
+    }
+    return 0;
 }

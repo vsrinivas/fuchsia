@@ -28,43 +28,49 @@ public:
         } entry[2];
     };
 
-    explicit StateObserver() : remove_(false) { }
+    StateObserver() { }
+
+    typedef unsigned Flags;
+
+    // Bitmask of return values for On...() methods
+    static constexpr Flags kWokeThreads = 1;
+    static constexpr Flags kNeedRemoval = 2;
+    static constexpr Flags kHandled = 4;
 
     // Called when this object is added to a StateTracker, to give it the initial state.
-    // Note that |cinfo| might be null. Returns true if a thread was awoken.
+    // Note that |cinfo| might be null.
+    // May return flags: KWokeThreads, kNeedRemoval
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) = 0;
+    virtual Flags OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) = 0;
 
-    // Called whenever the state changes, to give it the new state. Returns true if a thread was
-    // awoken.
+    // Called whenever the state changes, to give it the new state.
+    // May return flags: kWokeThreads, kNeedRemoval
     // WARNING: This is called under StateTracker's mutex
-    virtual bool OnStateChange(mx_signals_t new_state) = 0;
+    virtual Flags OnStateChange(mx_signals_t new_state) = 0;
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may
-    // also be destroyed shortly afterwards.) Returns true if |this| observer handled the call
-    // which normally means it was bound to |handle|.
+    // also be destroyed shortly afterwards.)
+    // Returns flag kHandled if |this| observer handled the call which normally
+    // means it was bound to |handle|.
+    // May also return flags: kNeedRemoval, kWokeThreads
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnCancel(Handle* handle) = 0;
+    virtual Flags OnCancel(Handle* handle) = 0;
 
     // Called when the client wants to cancel an outstanding object_wait_aysnc(..key..). In this
-    // case the object might not be destroyed. Returns true if |this| observer handled the call
-    // which normally means it was bound to |handle| and |key|.
+    // case the object might not be destroyed.
+    // Returns flag kHandled if |this| observer handled the call which normally
+    // means it was bound to |handle| and |key|.
+    // May also return flags: kNeedRemoval, kWokeThreads
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnCancelByKey(Handle* handle, const void* port, uint64_t key) { return false; }
+    virtual Flags OnCancelByKey(Handle* handle, const void* port, uint64_t key) { return 0; }
 
     // Called after this observer has been removed from the state tracker list. In this callback
     // is safe to delete the observer.
     virtual void OnRemoved() {}
 
-    // Return true to have the observer removed from the state_observer after calling
-    // OnInitialize(), OnStateChange(), OnCancel(), or OnCancelByKey().
-    bool remove() const { return remove_; }
-
 protected:
     ~StateObserver() {}
-    // Warning: |remove_| should only be mutated during the OnXXX callbacks.
-    bool remove_ = false;
 
 private:
     mxtl::Canary<mxtl::magic("SOBS")> canary_;
