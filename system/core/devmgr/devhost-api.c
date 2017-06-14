@@ -113,6 +113,8 @@ static bool is_new_protocol(uint32_t proto_id) {
     switch(proto_id) {
     case MX_PROTOCOL_ETHERMAC:
     case MX_PROTOCOL_WLANMAC:
+    case MX_PROTOCOL_PLATFORM_DEV:
+    case MX_PROTOCOL_BCM_BUS:
         return true;
     default:
         return false;

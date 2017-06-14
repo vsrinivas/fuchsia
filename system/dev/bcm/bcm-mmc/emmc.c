@@ -621,9 +621,8 @@ static int emmc_bootstrap_thread(void *arg) {
         goto out;
     }
 
-    mx_device_t* bus_dev;
-    bcm_bus_protocol_t* bus_proto;
-    st = platform_device_find_protocol(dev, MX_PROTOCOL_BCM_BUS, &bus_dev, (void**)&bus_proto);
+    bcm_bus_protocol_t bus_proto;
+    st = platform_device_find_protocol(dev, MX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
     if (st != MX_OK) {
         printf("emmc_bootstrap_thread could not find MX_PROTOCOL_BCM_BUS\n");
         goto out;
@@ -678,7 +677,7 @@ static int emmc_bootstrap_thread(void *arg) {
     // Configure the clock.
     uint32_t base_clock = 0;
     const uint32_t bcm28xX_core_clock_id = 1;
-    st = bus_proto->get_clock_rate(bus_dev, bcm28xX_core_clock_id, &base_clock);
+    st = bus_proto.ops->get_clock_rate(bus_proto.ctx, bcm28xX_core_clock_id, &base_clock);
      if (st < 0 || base_clock == 0) {
         xprintf("emmc: failed to get base clock rate, retcode = %d\n", st);
         goto out;

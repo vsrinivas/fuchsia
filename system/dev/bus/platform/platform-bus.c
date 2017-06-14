@@ -56,17 +56,15 @@ static mx_protocol_device_t platform_dev_proto = {
     .release = platform_dev_release,
 };
 
-static mx_status_t platform_dev_find_protocol(mx_device_t* dev, uint32_t proto_id,
-                                       mx_device_t** out_dev, void** out_proto) {
-    platform_dev_t* pdev = dev->ctx;
+static mx_status_t platform_dev_find_protocol(void* ctx, uint32_t proto_id, void* out) {
+    platform_dev_t* pdev = ctx;
     platform_bus_t* bus = pdev->bus;
 
     list_for_every_entry(&bus->children, pdev, platform_dev_t, node) {
         // search children of our platform device nodes for the protocol
         mx_device_t* child;
         list_for_every_entry(&pdev->mxdev->children, child, mx_device_t, node) {
-            if (device_op_get_protocol(child, proto_id, out_proto) == MX_OK) {
-                *out_dev = child;
+            if (device_get_protocol(child, proto_id, out) == MX_OK) {
                 return MX_OK;
             }
         }
@@ -75,7 +73,7 @@ static mx_status_t platform_dev_find_protocol(mx_device_t* dev, uint32_t proto_i
     return MX_ERR_NOT_FOUND;
 }
 
-static platform_device_protocol_t platform_dev_proto_ops = {
+static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .find_protocol = platform_dev_find_protocol,
 };
 

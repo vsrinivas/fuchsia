@@ -36,8 +36,7 @@ typedef struct {
 
 typedef struct {
     mx_device_t* mxdev;
-    mx_device_t* busdev;
-    bcm_bus_protocol_t* bus_proto;
+    bcm_bus_protocol_t bus_proto;
     mx_display_info_t disp_info;
     bcm_fb_desc_t fb_desc;
     uint8_t* framebuffer;
@@ -98,7 +97,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
         iotxn_copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
-        ret = display->bus_proto->set_framebuffer(display->busdev, phys + offset);
+        ret = display->bus_proto.ops->set_framebuffer(display->bus_proto.ctx, phys + offset);
         if (ret != MX_OK)
             return ret;
 
@@ -127,8 +126,8 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
         return MX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status = platform_device_find_protocol(parent, MX_PROTOCOL_BCM_BUS, &display->busdev,
-                                                       (void**)&display->bus_proto);
+    mx_status_t status = platform_device_find_protocol(parent, MX_PROTOCOL_BCM_BUS,
+                                                       &display->bus_proto);
     if (status != MX_OK) {
         printf("bcm_display_bind can't find MX_PROTOCOL_BCM_BUS\n");
         free(display);
