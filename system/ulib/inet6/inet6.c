@@ -171,7 +171,7 @@ typedef struct {
     uint8_t data[0];
 } udp_pkt_t;
 
-static unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
+unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
     uint16_t sum;
 
     // length and protocol field for pseudo-header
