@@ -45,6 +45,11 @@ __EXPORT mx_device_t* device_get_parent(mx_device_t* dev) {
 
 __EXPORT mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,
                                             void** protocol) {
+    return API->old_get_protocol(dev, proto_id, protocol);
+}
+
+__EXPORT mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_id,
+                                         void* protocol) {
     return API->get_protocol(dev, proto_id, protocol);
 }
 

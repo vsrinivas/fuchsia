@@ -60,7 +60,6 @@ typedef struct {
     thrd_t thread;
     mtx_t mutex;
 } ax88179_t;
-#define get_ax88179(dev) ((ax88179_t*)dev->ctx)
 
 typedef struct {
     uint16_t num_pkts;
@@ -349,12 +348,12 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88179_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
+static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length) {
     if (length > (AX88179_MTU + MAX_ETH_HDRS)) {
         return;
     }
 
-    ax88179_t* eth = get_ax88179(dev);
+    ax88179_t* eth = ctx;
 
     mtx_lock(&eth->mutex);
     iotxn_t* request = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
@@ -411,8 +410,8 @@ static mx_protocol_device_t ax88179_device_proto = {
 };
 
 
-static mx_status_t ax88179_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-    ax88179_t* eth = get_ax88179(dev);
+static mx_status_t ax88179_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+    ax88179_t* eth = ctx;
 
     if (options) {
         return MX_ERR_INVALID_ARGS;
@@ -425,15 +424,15 @@ static mx_status_t ax88179_query(mx_device_t* dev, uint32_t options, ethmac_info
     return MX_OK;
 }
 
-static void ax88179_stop(mx_device_t* dev) {
-    ax88179_t* eth = get_ax88179(dev);
+static void ax88179_stop(void* ctx) {
+    ax88179_t* eth = ctx;
     mtx_lock(&eth->mutex);
     eth->ifc = NULL;
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t ax88179_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
-    ax88179_t* eth = get_ax88179(dev);
+static mx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+    ax88179_t* eth = ctx;
     mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
@@ -448,7 +447,7 @@ static mx_status_t ax88179_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cook
     return status;
 }
 
-static ethmac_protocol_t ethmac_ops = {
+static ethmac_protocol_ops_t ethmac_ops = {
     .query = ax88179_query,
     .stop = ax88179_stop,
     .start = ax88179_start,

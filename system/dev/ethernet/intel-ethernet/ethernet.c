@@ -70,8 +70,8 @@ static int irq_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t eth_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-    ethernet_device_t* edev = dev->ctx;
+static mx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+    ethernet_device_t* edev = ctx;
 
     if (options) {
         return MX_ERR_INVALID_ARGS;
@@ -84,15 +84,15 @@ static mx_status_t eth_query(mx_device_t* dev, uint32_t options, ethmac_info_t* 
     return MX_OK;
 }
 
-static void eth_stop(mx_device_t* dev) {
-    ethernet_device_t* edev = dev->ctx;
+static void eth_stop(void* ctx) {
+    ethernet_device_t* edev = ctx;
     mtx_lock(&edev->lock);
     edev->ifc = NULL;
     mtx_unlock(&edev->lock);
 }
 
-static mx_status_t eth_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
-    ethernet_device_t* edev = dev->ctx;
+static mx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+    ethernet_device_t* edev = ctx;
     mx_status_t status = MX_OK;
 
     mtx_lock(&edev->lock);
@@ -107,12 +107,12 @@ static mx_status_t eth_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) 
     return status;
 }
 
-static void eth_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
-    ethernet_device_t* edev = dev->ctx;
+static void eth_send(void* ctx, uint32_t options, void* data, size_t length) {
+    ethernet_device_t* edev = ctx;
     eth_tx(&edev->eth, data, length);
 }
 
-static ethmac_protocol_t ethmac_ops = {
+static ethmac_protocol_ops_t ethmac_ops = {
     .query = eth_query,
     .stop = eth_stop,
     .start = eth_start,

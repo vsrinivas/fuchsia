@@ -79,27 +79,31 @@ typedef struct wlanmac_ifc {
                  wlan_rx_info_t* info);
 } wlanmac_ifc_t;
 
-typedef struct wlanmac_protocol {
+typedef struct wlanmac_protocol_ops {
     // Obtain information about the device and supported features
     // Safe to call at any time.
     // TODO: create wlanmac_info_t for wlan-specific info and copy the relevant
     // ethernet fields into ethmac_info_t before passing up the stack
-    mx_status_t (*query)(mx_device_t* dev, uint32_t options, ethmac_info_t* info);
+    mx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
 
     // Start wlanmac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called
-    mx_status_t (*start)(mx_device_t* dev, wlanmac_ifc_t* ifc, void* cookie);
+    mx_status_t (*start)(void* ctx, wlanmac_ifc_t* ifc, void* cookie);
 
     // Shut down a running wlanmac
     // Safe to call if the wlanmac is already stopped.
-    void (*stop)(mx_device_t* dev);
+    void (*stop)(void* ctx);
 
     // Queue the data for transmit
-    void (*tx)(mx_device_t* dev, uint32_t options, const void* data, size_t length);
+    void (*tx)(void* ctx, uint32_t options, const void* data, size_t length);
 
     // Set the radio channel
-    mx_status_t (*set_channel)(mx_device_t* dev, uint32_t options, wlan_channel_t* chan);
-} wlanmac_protocol_t;
+    mx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
+} wlanmac_protocol_ops_t;
 
+typedef struct wlanmac_protocol {
+    wlanmac_protocol_ops_t* ops;
+    void* ctx;
+} wlanmac_protocol_t;
 
 __END_CDECLS;

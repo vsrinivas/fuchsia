@@ -59,8 +59,6 @@ typedef struct {
     mtx_t control_ep_mutex;
 } lan9514_t;
 
-#define get_lan9514(dev) ((lan9514_t*)dev->ctx)
-
 static mx_status_t lan9514_write_register_locked(lan9514_t* eth, uint16_t reg, uint32_t value) {
 
     return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
@@ -354,26 +352,22 @@ static void lan9514_interrupt_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-mx_status_t _lan9514_send(mx_device_t* device, const void* buffer, size_t length) {
-    lan9514_t* eth = get_lan9514(device);
+static void lan9514_send(void* ctx, uint32_t options, void* buffer, size_t length) {
+    lan9514_t* eth = ctx;
 
     if (eth->dead) {
-        return MX_ERR_PEER_CLOSED;
+        return;
     }
-
-    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
-        status = MX_ERR_BUFFER_TOO_SMALL;
         goto out;
     }
     iotxn_t* request = containerof(node, iotxn_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
-        status = MX_ERR_INVALID_ARGS;
         goto out;
     }
 
@@ -397,7 +391,6 @@ mx_status_t _lan9514_send(mx_device_t* device, const void* buffer, size_t length
 
 out:
     mtx_unlock(&eth->mutex);
-    return status;
 }
 
 static mx_status_t lan9514_stop_xcvr(lan9514_t* eth) {
@@ -478,8 +471,8 @@ static mx_protocol_device_t lan9514_device_proto = {
     .release = lan9514_release,
 };
 
-static mx_status_t lan9514_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-    lan9514_t* eth = get_lan9514(dev);
+static mx_status_t lan9514_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+    lan9514_t* eth = ctx;
 
     if (options) {
         return MX_ERR_INVALID_ARGS;
@@ -492,15 +485,15 @@ static mx_status_t lan9514_query(mx_device_t* dev, uint32_t options, ethmac_info
     return MX_OK;
 }
 
-static void lan9514_stop(mx_device_t* dev) {
-    lan9514_t* eth = get_lan9514(dev);
+static void lan9514_stop(void* ctx) {
+    lan9514_t* eth = ctx;
     mtx_lock(&eth->mutex);
     eth->ifc = NULL;
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t lan9514_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
-    lan9514_t* eth = get_lan9514(dev);
+static mx_status_t lan9514_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+    lan9514_t* eth = ctx;
     mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
@@ -515,11 +508,7 @@ static mx_status_t lan9514_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cook
     return status;
 }
 
-static void lan9514_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
-    _lan9514_send(dev, data, length);
-}
-
-static ethmac_protocol_t ethmac_ops = {
+static ethmac_protocol_ops_t ethmac_ops = {
     .query = lan9514_query,
     .stop = lan9514_stop,
     .start = lan9514_start,

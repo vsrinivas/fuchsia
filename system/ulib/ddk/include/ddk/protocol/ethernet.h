@@ -57,30 +57,34 @@ typedef struct ethmac_ifc_virt {
 // methods from multiple threads simultaneously, but it
 // can call send() methods at the same time as non-send
 // methods.
-typedef struct ethmac_protocol {
+typedef struct ethmac_protocol_ops {
     // Obtain information about the ethermac device and supported features
     // Safe to call at any time.
-    mx_status_t (*query)(mx_device_t* dev, uint32_t options, ethmac_info_t* info);
+    mx_status_t (*query)(void* ctx, uint32_t options, ethmac_info_t* info);
 
     // Shut down a running ethermac
     // Safe to call if the ethermac is already stopped.
-    void (*stop)(mx_device_t* dev);
+    void (*stop)(void* ctx);
 
     // Start ethermac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called
-    mx_status_t (*start)(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie);
+    mx_status_t (*start)(void* ctx, ethmac_ifc_t* ifc, void* cookie);
 
     // send() is valid if FEATURE_TX_QUEUE is not present, otherwise it is no-op
     // This may be called at any time, and can be called from multiple
     // threads simultaneously.
-    void (*send)(mx_device_t* dev, uint32_t options, void* data, size_t length);
+    void (*send)(void* ctx, uint32_t options, void* data, size_t length);
 
     // queue_?x() is valid if FEATURE_?X_QUEUE is present, otherwise they are no-op
-    void (*queue_tx)(mx_device_t* dev, uint32_t options,
+    void (*queue_tx)(void* ctx, uint32_t options,
                      uintptr_t pa0, uintptr_t pa1, size_t length);
-    void (*queue_rx)(mx_device_t* dev, uint32_t options,
+    void (*queue_rx)(void* ctx, uint32_t options,
                      uintptr_t pa0, uintptr_t pa1, size_t length);
-} ethmac_protocol_t;
+} ethmac_protocol_ops_t;
 
+typedef struct ethmac_protocol {
+    ethmac_protocol_ops_t* ops;
+    void* ctx;
+} ethmac_protocol_t;
 
 __END_CDECLS;

@@ -27,7 +27,7 @@ class Test##name : public ddk::Device<Test##name, ddk::name> { \
 #define END_SUCCESS_CASE };
 
 BEGIN_SUCCESS_CASE(GetProtocolable)
-    mx_status_t DdkGetProtocol(uint32_t proto_id, void** protocol) { return NO_ERROR; }
+    mx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol) { return NO_ERROR; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Openable)
@@ -101,7 +101,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         return &ddk_device_proto_;
     }
 
-    mx_status_t DdkGetProtocol(uint32_t proto_id, void** protcool) {
+    mx_status_t DdkGetProtocol(uint32_t proto_id, void* protcool) {
         get_protocol_called = true;
         return NO_ERROR;
     }

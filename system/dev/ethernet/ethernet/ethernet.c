@@ -38,8 +38,8 @@ static_assert((FIFO_DEPTH * FIFO_ESIZE) <= 4096, "");
 // ethernet device
 typedef struct ethdev0 {
     // shared state
-    mx_device_t* mac;
-    ethmac_protocol_t* macops;
+    mx_device_t* macdev;
+    ethmac_protocol_t mac;
 
     mtx_t lock;
 
@@ -241,7 +241,7 @@ static int eth_tx_thread(void* arg) {
             if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
                 e->flags = ETH_FIFO_INVALID;
             } else {
-                edev0->macops->send(edev0->mac, 0, edev->io_buf + e->offset, e->length);
+                edev0->mac.ops->send(edev0->mac.ctx, 0, edev->io_buf + e->offset, e->length);
                 e->flags = ETH_FIFO_TX_OK;
                 if (edev->state & ETHDEV_TX_LOOPBACK) {
                     eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
@@ -363,7 +363,7 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
 
     mx_status_t status;
     if (list_is_empty(&edev0->list_active)) {
-        status = edev0->macops->start(edev0->mac, &ethmac_ifc, edev0);
+        status = edev0->mac.ops->start(edev0->mac.ctx, &ethmac_ifc, edev0);
     } else {
         status = MX_OK;
     }
@@ -388,7 +388,7 @@ static mx_status_t eth_stop_locked(ethdev_t* edev) {
         list_add_tail(&edev0->list_idle, &edev->node);
         if (list_is_empty(&edev0->list_active)) {
             if (!(edev->state & ETHDEV_DEAD)) {
-                edev0->macops->stop(edev0->mac);
+                edev0->mac.ops->stop(edev0->mac.ctx);
             }
         }
     }
@@ -457,7 +457,7 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
-        status = device_op_ioctl(edev->edev0->mac, op, in_buf, in_len, out_buf, out_len, out_actual);
+        status = device_op_ioctl(edev->edev0->macdev, op, in_buf, in_len, out_buf, out_len, out_actual);
         break;
     }
 
@@ -607,13 +607,13 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     mx_status_t status;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_ETHERMAC, (void**)&edev0->macops)) {
+    if (device_get_protocol(dev, MX_PROTOCOL_ETHERMAC, &edev0->mac)) {
         printf("eth: bind: no ethermac protocol\n");
         status = MX_ERR_INTERNAL;
         goto fail;
     }
 
-    if ((status = edev0->macops->query(dev, 0, &edev0->info)) < 0) {
+    if ((status = edev0->mac.ops->query(edev0->mac.ctx, 0, &edev0->info)) < 0) {
         printf("eth: bind: ethermac query failed: %d\n", status);
         goto fail;
     }
@@ -629,7 +629,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     list_initialize(&edev0->list_active);
     list_initialize(&edev0->list_idle);
 
-    edev0->mac = dev;
+    edev0->macdev = dev;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

@@ -47,7 +47,6 @@ typedef struct {
 
     mtx_t mutex;
 } ax88772b_t;
-#define get_ax88772b(dev) ((ax88772b_t*)dev->ctx)
 
 static mx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
     return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
@@ -237,8 +236,8 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t _ax88772b_send(mx_device_t* device, const void* buffer, size_t length) {
-    ax88772b_t* eth = get_ax88772b(device);
+static mx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) {
+    ax88772b_t* eth = ctx;
 
     if (eth->dead) {
         return MX_ERR_PEER_CLOSED;
@@ -316,8 +315,8 @@ static mx_protocol_device_t ax88772b_device_proto = {
     .release = ax88772b_release,
 };
 
-static mx_status_t ax88772b_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-    ax88772b_t* eth = get_ax88772b(dev);
+static mx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* info) {
+    ax88772b_t* eth = ctx;
 
     if (options) {
         return MX_ERR_INVALID_ARGS;
@@ -330,15 +329,15 @@ static mx_status_t ax88772b_query(mx_device_t* dev, uint32_t options, ethmac_inf
     return MX_OK;
 }
 
-static void ax88772b_stop(mx_device_t* dev) {
-    ax88772b_t* eth = get_ax88772b(dev);
+static void ax88772b_stop(void* ctx) {
+    ax88772b_t* eth = ctx;
     mtx_lock(&eth->mutex);
     eth->ifc = NULL;
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t ax88772b_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
-    ax88772b_t* eth = get_ax88772b(dev);
+static mx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
+    ax88772b_t* eth = ctx;
     mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
@@ -353,11 +352,11 @@ static mx_status_t ax88772b_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* coo
     return status;
 }
 
-static void ax88772b_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
-    _ax88772b_send(dev, data, length);
+static void ax88772b_send(void* ctx, uint32_t options, void* data, size_t length) {
+    _ax88772b_send(ctx, data, length);
 }
 
-static ethmac_protocol_t ethmac_ops = {
+static ethmac_protocol_ops_t ethmac_ops = {
     .query = ax88772b_query,
     .stop = ax88772b_stop,
     .start = ax88772b_start,

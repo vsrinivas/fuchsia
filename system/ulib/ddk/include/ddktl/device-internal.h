@@ -53,9 +53,9 @@ constexpr void CheckGetProtocolable() {
     static_assert(mxtl::is_base_of<base_device, D>::value,
                   "GetProtocolable classes must be derived from ddk::Device<...>.");
     static_assert(mxtl::is_same<decltype(&D::DdkGetProtocol),
-                                mx_status_t (D::*)(uint32_t, void**)>::value,
+                                mx_status_t (D::*)(uint32_t, void*)>::value,
                   "DdkGetProtocol must be a public non-static member function with signature "
-                  "'mx_status_t DdkGetProtocol(uint32_t, void**)'.");
+                  "'mx_status_t DdkGetProtocol(uint32_t, void*)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_open, DdkOpen);

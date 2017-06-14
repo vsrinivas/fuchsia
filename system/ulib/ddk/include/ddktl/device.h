@@ -31,7 +31,7 @@
 // | Mixin class          | Required function implementation                   |
 // +----------------------+----------------------------------------------------+
 // | ddk::GetProtocolable | mx_status_t DdkGetProtocol(uint32_t proto_id,      |
-// |                      |                            void** protocol)        |
+// |                      |                            void* out)              |
 // |                      |                                                    |
 // | ddk::Openable        | mx_status_t DdkOpen(mx_device_t** dev_out,         |
 // |                      |                     uint32_t flags)                |
@@ -115,6 +115,11 @@
 
 namespace ddk {
 
+struct AnyProtocol {
+    void* ops;
+    void* ctx;
+};
+
 // DDK Device mixins
 
 template <typename D>
@@ -126,8 +131,8 @@ class GetProtocolable : public internal::base_mixin {
     }
 
   private:
-    static mx_status_t GetProtocol(void* ctx, uint32_t proto_id, void** protocol) {
-        return static_cast<D*>(ctx)->DdkGetProtocol(proto_id, protocol);
+    static mx_status_t GetProtocol(void* ctx, uint32_t proto_id, void* out) {
+        return static_cast<D*>(ctx)->DdkGetProtocol(proto_id, out);
     }
 };
 

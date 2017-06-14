@@ -8,6 +8,9 @@
 #include "devhost.h"
 #include <driver/driver-api.h>
 
+#include <stdio.h>
+
+
 // These are the API entry-points from drivers
 // They must take the devhost_api_lock before calling devhost_* internals
 //
@@ -101,17 +104,51 @@ mx_device_t* _device_get_parent(mx_device_t* dev) {
     return dev->parent;
 }
 
-mx_status_t _device_get_protocol(mx_device_t* dev, uint32_t proto_id,
+typedef struct {
+    void* ops;
+    void* ctx;
+} generic_protocol_t;
+
+static bool is_new_protocol(uint32_t proto_id) {
+    switch(proto_id) {
+    case MX_PROTOCOL_ETHERMAC:
+    case MX_PROTOCOL_WLANMAC:
+        return true;
+    default:
+        return false;
+    }
+};
+
+mx_status_t _device_old_get_protocol(mx_device_t* dev, uint32_t proto_id,
                                  void** protocol) {
-    if (dev->ops->get_protocol) {
-        return dev->ops->get_protocol(dev->ctx, proto_id, protocol);
+    // During conversion, catch mis-use of the old api
+    if (is_new_protocol(proto_id)) {
+        printf("ERROR: DEVICE %p(%s) using old_get_protocol() w/ pid %08x\n",
+               dev, dev->name, proto_id);
+        return ERR_INTERNAL;
     }
-    if (proto_id == MX_PROTOCOL_DEVICE) {
-        *protocol = dev->ops;
-        return NO_ERROR;
-    }
+
     if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
         *protocol = dev->protocol_ops;
+        return NO_ERROR;
+    }
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t _device_get_protocol(mx_device_t* dev, uint32_t proto_id, void* out) {
+    // During conversion, catch mis-use of the new api
+    if (!is_new_protocol(proto_id)) {
+        printf("ERROR: DEVICE %p(%s) using get_protocol() w/ pid %08x\n",
+               dev, dev->name, proto_id);
+        return ERR_INTERNAL;
+    }
+    generic_protocol_t* proto = out;
+    if (dev->ops->get_protocol) {
+        return dev->ops->get_protocol(dev->ctx, proto_id, out);
+    }
+    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
+        proto->ops = dev->protocol_ops;
+        proto->ctx = dev->ctx;
         return NO_ERROR;
     }
     return ERR_NOT_SUPPORTED;
@@ -214,6 +251,7 @@ driver_api_t devhost_api = {
     .get_name = _device_get_name,
     .get_parent = _device_get_parent,
     .get_protocol = _device_get_protocol,
+    .old_get_protocol = _device_old_get_protocol,
     .get_resource = _device_get_resource,
     .state_clr_set = _device_state_clr_set,
     .op_get_size = _device_op_get_size,

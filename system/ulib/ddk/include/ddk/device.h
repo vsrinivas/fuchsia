@@ -93,8 +93,8 @@ typedef struct mx_protocol_device {
     uint64_t version;
 
     // Asks if the device supports a specific protocol.
-    // If it does, protocol ops returned via **protocol.
-    mx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void** protocol);
+    // If it does, protocol ops returned via *protocol.
+    mx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
 
     // The optional dev_out parameter allows a device to create a per-instance
     // child device on open and return that (resulting in the opener opening
@@ -171,6 +171,13 @@ mx_handle_t device_get_resource(mx_device_t* dev);
 
 //TODO: rename to device_get_protocol()
 mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id, void** protocol);
+
+// protocols look like:
+// typedef struct {
+//     protocol_xyz_ops_t* ops;
+//     void* ctx;
+// } protocol_xyz_t;
+mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_id, void* protocol);
 
 
 #ifndef DDK_INTERNAL
