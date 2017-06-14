@@ -54,6 +54,11 @@ def main():
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
 
+    # The architecture the Dart JIT/AOT compiler is targeting. Outside of the
+    # Fuchsia tree, this is not always 'target_cpu' for various testing
+    # configurations.
+    gn_args += " dart_target_arch=\"" + cpu_map[args.target_cpu]  + "\""
+
     if args.fuchsia_disable_vulkan:
         gn_args += " fuchsia_use_vulkan=false"
 
