@@ -39,7 +39,8 @@ class Service : private mtl::MessageLoopHandler {
       : port_(port), argc_(argc), argv_(argv) {
     sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     if (sock_ < 0) {
-      FTL_LOG(FATAL) << "Failed to create socket: " << strerror(errno);
+      FTL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
+      exit(1);
     }
 
     struct sockaddr_in6 addr;
@@ -47,12 +48,14 @@ class Service : private mtl::MessageLoopHandler {
     addr.sin6_port = htons(port_);
     addr.sin6_addr = in6addr_any;
     if (bind(sock_, (struct sockaddr*)&addr, sizeof addr) < 0) {
-      FTL_LOG(FATAL) << "Failed to bind to " << port_ << ": "
+      FTL_LOG(ERROR) << "Failed to bind to " << port_ << ": "
                      << strerror(errno);
+      exit(1);
     }
 
     if (listen(sock_, 10) < 0) {
-      FTL_LOG(FATAL) << "Failed to listen:" << strerror(errno);
+      FTL_LOG(ERROR) << "Failed to listen: " << strerror(errno);
+      exit(1);
     }
 
     FTL_CHECK(mx::job::create(mx_job_default(), 0, &job_) == MX_OK);
@@ -81,7 +84,10 @@ class Service : private mtl::MessageLoopHandler {
           socklen_t peer_addr_len = sizeof(peer_addr);
           int conn = accept(sock_, (struct sockaddr*)&peer_addr, &peer_addr_len);
           if (conn < 0) {
-            FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
+            FTL_LOG(ERROR) << "Failed to accept: " << strerror(errno);
+            // Wait for another connection.
+            Wait();
+            return;
           }
           std::string peer_name = "unknown";
           char host[32];
