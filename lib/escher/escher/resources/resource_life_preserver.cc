@@ -16,10 +16,11 @@ ResourceLifePreserver::~ResourceLifePreserver() {
 void ResourceLifePreserver::OnReceiveOwnable(
     std::unique_ptr<Resource> resource) {
   if (resource->sequence_number() <= last_finished_sequence_number_) {
-    // Destroy immediately.
+    // Recycle immediately.
+    RecycleResource(std::move(resource));
   } else {
-    // Defer destruction.
-    unused_resources_.insert(std::move(resource));
+    // Defer recycling.
+    unused_resources_[resource.get()] = std::move(resource);
   }
 }
 
@@ -31,7 +32,8 @@ void ResourceLifePreserver::CommandBufferFinished(uint64_t sequence_number) {
   // longer referenced by a pending command-buffer; destroy these.
   auto it = unused_resources_.begin();
   while (it != unused_resources_.end()) {
-    if ((*it)->sequence_number() <= last_finished_sequence_number_) {
+    if (it->second->sequence_number() <= last_finished_sequence_number_) {
+      RecycleResource(std::move(it->second));
       it = unused_resources_.erase(it);
     } else {
       ++it;

@@ -4,17 +4,19 @@
 
 #pragma once
 
-#include <unordered_set>
+#include <unordered_map>
 
 #include "escher/impl/command_buffer_sequencer.h"
+#include "escher/resources/resource_life_preserver.h"
 #include "escher/resources/resource_manager.h"
 
 namespace escher {
 
 // Simple manager that keeps resources alive until they are no longer referenced
-// by a pending command-buffer, then destroys them.  It does this by comparing
+// by a pending command-buffer, then recycles them.  It does this by comparing
 // the sequence numbers from a CommandBufferSequencer with the sequence numbers
-// of resources that it is keeping alive.
+// of resources that it is keeping alive. The default implementation does not
+// recycle resources, instead destroying them as soon as it is safe.
 class ResourceLifePreserver : public ResourceManager,
                               public impl::CommandBufferSequencerListener {
  public:
@@ -22,17 +24,25 @@ class ResourceLifePreserver : public ResourceManager,
   virtual ~ResourceLifePreserver();
 
  private:
+  // Gives subclasses a chance to recycle the resource. Default implementation
+  // immediately destroys resource.
+  virtual void RecycleResource(std::unique_ptr<Resource> resource) {}
+
   // Implement impl::CommandBufferSequenceListener::CommandBufferFinished().
-  // Checks whether it is safe to destroy any of |unused_resources_|.
+  // Checks whether it is safe to recycle any of |unused_resources_|.
   void CommandBufferFinished(uint64_t sequence_number) override;
 
-  // Implement Owner::OnReceiveOwnable().  Destroys the resource immediately if
+  // Implement Owner::OnReceiveOwnable().  Call RecycleOwnable() immediately if
   // it is safe to do so.  Otherwise, adds the resource to a set of resources
-  // to be destroyed later; see CommandBufferFinished().
+  // to be recycled later; see CommandBufferFinished().
   void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   uint64_t last_finished_sequence_number_ = 0;
-  std::unordered_set<std::unique_ptr<Resource>> unused_resources_;
+
+  // We need to use an unordered_map instead of an unordered_set because you
+  // can't modify elements of an unordered_set, which prevents us from
+  // removing a unique_ptr.
+  std::unordered_map<Resource*, std::unique_ptr<Resource>> unused_resources_;
 };
 
 }  // namespace escher
