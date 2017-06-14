@@ -11,6 +11,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/ledger/src/app/erase_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -41,7 +42,8 @@ constexpr ftl::StringView kNoPersistedConfig = "no_persisted_config";
 // clients to individual Ledger instances. It should not however hold long-lived
 // objects shared between Ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
-class App : public LedgerController {
+class App : public LedgerController,
+            public LedgerRepositoryFactoryImpl::Delegate {
  public:
   App(LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence)
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -61,7 +63,7 @@ class App : public LedgerController {
                                                  network_service_.get());
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        environment_.get(), config_persistence_);
+        this, environment_.get(), config_persistence_);
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(
@@ -81,8 +83,43 @@ class App : public LedgerController {
 
  private:
   // LedgerController implementation.
-  void Terminate() override { loop_.PostQuitTask(); }
+  void Terminate() override {
+    // Wait for pending asynchronous operations on the
+    // LedgerRepositoryFactoryImpl, such as erasing a repository, but do not
+    // allow new requests to be started in the meantime.
+    shutdown_in_progress_ = true;
+    factory_bindings_.CloseAllBindings();
+    application_context_->outgoing_services()->Close();
+    factory_impl_.reset();
 
+    if (pending_operation_manager_.size() == 0u) {
+      // If we still have pending operations, we will post the quit task when
+      // the last one completes.
+      loop_.PostQuitTask();
+    }
+  }
+
+  // LedgerRepositoryFactoryImpl::Delegate:
+  void EraseRepository(EraseRepositoryOperation erase_repository_operation,
+                       std::function<void(bool)> callback) override {
+    auto handler = pending_operation_manager_.Manage(
+        std::move(erase_repository_operation));
+    handler.first->Start([
+      this, cleanup = std::move(handler.second), callback = std::move(callback)
+    ](bool succeeded) {
+      cleanup();
+      callback(succeeded);
+      CheckPendingOperations();
+    });
+  }
+
+  void CheckPendingOperations() {
+    if (shutdown_in_progress_ && pending_operation_manager_.size() == 0u) {
+      loop_.PostQuitTask();
+    }
+  }
+
+  bool shutdown_in_progress_ = false;
   mtl::MessageLoop loop_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;
@@ -91,6 +128,7 @@ class App : public LedgerController {
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
+  callback::PendingOperationManager pending_operation_manager_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };

@@ -34,6 +34,15 @@ interface LedgerRepositoryFactory {
                 string? server_id,
                 modular.auth.TokenProvider? token_provider,
                 LedgerRepository& repository) => (Status status);
+
+  // Erases the data stored in the given repository, both locally and in the
+  // cloud.
+  //
+  // Note that there is no undo and no confirmation step on this level - the
+  // caller needs to ensure that this is only called when intended.
+  EraseRepository(string repository_path,
+                  string server_id,
+                  modular.auth.TokenProvider token_provider) => (Status status);
 };
 
 // Controller interface for the Ledger application lifecycle.

@@ -33,6 +33,8 @@ class PendingOperationManager {
     return std::make_pair(result, std::move(cleanup));
   }
 
+  size_t size() { return pending_operations_.size(); }
+
  private:
   class PendingOperation {
    public:

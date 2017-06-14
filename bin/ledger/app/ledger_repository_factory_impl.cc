@@ -185,9 +185,12 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
+    Delegate* delegate,
     ledger::Environment* environment,
     ConfigPersistence config_persistence)
-    : environment_(environment), config_persistence_(config_persistence) {}
+    : delegate_(delegate),
+      environment_(environment),
+      config_persistence_(config_persistence) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -241,6 +244,37 @@ void LedgerRepositoryFactoryImpl::GetRepository(
                      std::move(user_config));
 
   }));
+}
+
+void LedgerRepositoryFactoryImpl::EraseRepository(
+    const fidl::String& repository_path,
+    const fidl::String& server_id,
+    fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+    const EraseRepositoryCallback& callback) {
+  std::string sanitized_path =
+      files::SimplifyPath(std::move(repository_path.get()));
+  auto find_repository = repositories_.find(sanitized_path);
+  if (find_repository != repositories_.end()) {
+    FTL_LOG(WARNING) << "The repository to be erased is running, "
+                     << "shutting it down before erasing.";
+    repositories_.erase(find_repository);
+  }
+
+  auto token_provider_ptr =
+      modular::auth::TokenProviderPtr::Create(std::move(token_provider));
+
+  delegate_->EraseRepository(
+      EraseRepositoryOperation(environment_->main_runner(),
+                               environment_->network_service(),
+                               std::move(sanitized_path), server_id.get(),
+                               std::move(token_provider_ptr)),
+      [callback = std::move(callback)](bool succeeded) {
+        if (succeeded) {
+          callback(Status::OK);
+        } else {
+          callback(Status::INTERNAL_ERROR);
+        }
+      });
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(

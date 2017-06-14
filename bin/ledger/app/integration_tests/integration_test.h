@@ -5,8 +5,11 @@
 #ifndef APPS_LEDGER_SRC_APP_INTEGRATION_TESTS_INTEGRATION_TEST_H_
 #define APPS_LEDGER_SRC_APP_INTEGRATION_TESTS_INTEGRATION_TEST_H_
 
+#include <functional>
+
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/app/erase_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -43,7 +46,8 @@ class IntegrationTest : public test::TestWithMessageLoop {
   LedgerPtr ledger_;
 
  private:
-  class LedgerRepositoryFactoryContainer {
+  class LedgerRepositoryFactoryContainer
+      : public LedgerRepositoryFactoryImpl::Delegate {
    public:
     LedgerRepositoryFactoryContainer(
         ftl::RefPtr<ftl::TaskRunner> task_runner,
@@ -51,12 +55,20 @@ class IntegrationTest : public test::TestWithMessageLoop {
         fidl::InterfaceRequest<LedgerRepositoryFactory> request)
         : network_service_(task_runner),
           environment_(task_runner, &network_service_),
-          factory_impl_(&environment_,
+          factory_impl_(this,
+                        &environment_,
                         LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
+    // LedgerRepositoryFactoryImpl::Delegate:
+    void EraseRepository(EraseRepositoryOperation erase_repository_operation,
+                         std::function<void(bool)> callback) override {
+      FTL_NOTIMPLEMENTED();
+      callback(false);
+    }
+
     FakeNetworkService network_service_;
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
