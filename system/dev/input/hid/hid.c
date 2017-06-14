@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
-#include <ddk/protocol/input.h>
+#include <magenta/device/input.h>
 
 #include <magenta/assert.h>
 #include <magenta/listnode.h>

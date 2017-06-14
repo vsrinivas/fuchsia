@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/rtc.h>
+#include <magenta/device/rtc.h>
 #include <hw/inout.h>
 
 #include <magenta/syscalls.h>

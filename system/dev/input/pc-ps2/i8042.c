@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
-#include <ddk/protocol/input.h>
+#include <magenta/device/input.h>
 #include <hw/inout.h>
 
 #include <magenta/syscalls.h>

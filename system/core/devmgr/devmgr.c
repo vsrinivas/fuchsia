@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <ddk/protocol/device.h>
+#include <magenta/device/device.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <launchpad/launchpad.h>

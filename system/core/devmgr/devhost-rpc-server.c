@@ -18,7 +18,7 @@
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>
 #include <ddk/iotxn.h>
-#include <ddk/protocol/device.h>
+#include <magenta/device/device.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
