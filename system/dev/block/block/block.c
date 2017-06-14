@@ -23,7 +23,7 @@
 typedef struct blkdev {
     mx_device_t* mxdev;
     mx_device_t* parent;
-    block_ops_t* blockops;
+    block_protocol_t proto;
 
     mtx_t lock;
     BlockServer* bs;
@@ -34,7 +34,7 @@ static int blockserver_thread(void* arg) {
     BlockServer* bs = bdev->bs;
     mtx_unlock(&bdev->lock);
 
-    blockserver_serve(bs, device_get_parent(bdev->mxdev), bdev->blockops);
+    blockserver_serve(bs, &bdev->proto);
 
     mtx_lock(&bdev->lock);
     if (bdev->bs == bs) {
@@ -227,7 +227,7 @@ static mx_status_t block_driver_bind(void* ctx, mx_device_t* dev, void** cookie)
     bdev->parent = dev;
 
     mx_status_t status;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, (void**)&bdev->blockops)) {
+    if (device_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, &bdev->proto)) {
         status = MX_ERR_INTERNAL;
         goto fail;
     }

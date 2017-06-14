@@ -218,13 +218,13 @@ static mx_protocol_device_t gpt_proto = {
     .close = gpt_close,
 };
 
-static void gpt_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
-    gptpart_device_t* device = dev->ctx;
+static void gpt_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
+    gptpart_device_t* device = ctx;
     device->callbacks = cb;
 }
 
-static void gpt_block_get_info(mx_device_t* dev, block_info_t* info) {
-    gptpart_device_t* device = dev->ctx;
+static void gpt_block_get_info(void* ctx, block_info_t* info) {
+    gptpart_device_t* device = ctx;
     memcpy(info, &device->info, sizeof(*info));
 }
 
@@ -262,15 +262,15 @@ static void block_do_txn(gptpart_device_t* dev, uint32_t opcode, mx_handle_t vmo
     iotxn_queue(dev->parent, txn);
 }
 
-static void gpt_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn((gptpart_device_t*)dev->ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+static void gpt_block_read(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void gpt_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    block_do_txn((gptpart_device_t*)dev->ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+static void gpt_block_write(void* ctx, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static block_ops_t gpt_block_ops = {
+static block_protocol_ops_t gpt_block_ops = {
     .set_callbacks = gpt_block_set_callbacks,
     .get_info = gpt_block_get_info,
     .read = gpt_block_read,

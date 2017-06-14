@@ -37,13 +37,13 @@ private:
     static mx_status_t virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                       void* out_buf, size_t out_len, size_t* out_actual);
 
-    static void virtio_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb);
-    static void virtio_block_get_info(mx_device_t* dev, block_info_t* info);
+    static void virtio_block_set_callbacks(void* ctx, block_callbacks_t* cb);
+    static void virtio_block_get_info(void* ctx, block_info_t* info);
     static void virtio_block_complete(iotxn_t* txn, void* cookie);
-    static void virtio_block_read(mx_device_t* dev, mx_handle_t vmo,
+    static void virtio_block_read(void* ctx, mx_handle_t vmo,
                                   uint64_t length, uint64_t vmo_offset,
                                   uint64_t dev_offset, void* cookie);
-    static void virtio_block_write(mx_device_t* dev, mx_handle_t vmo,
+    static void virtio_block_write(void* ctx, mx_handle_t vmo,
                                    uint64_t length, uint64_t vmo_offset,
                                    uint64_t dev_offset, void* cookie);
     static void block_do_txn(BlockDevice* dev, uint32_t opcode, mx_handle_t vmo,
@@ -94,7 +94,7 @@ private:
 
     // Callbacks for PROTOCOL_BLOCK
     block_callbacks_t* callbacks_;
-    block_ops_t device_block_ops_;
+    block_protocol_ops_t device_block_ops_;
 
     // pending iotxns
     list_node iotxn_list = LIST_INITIAL_VALUE(iotxn_list);

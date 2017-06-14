@@ -64,21 +64,21 @@ static mx_status_t constrain_args(ramdisk_device_t* ramdev,
     return MX_OK;
 }
 
-static void ramdisk_get_info(mx_device_t* dev, block_info_t* info) {
-    ramdisk_device_t* ramdev = dev->ctx;
+static void ramdisk_get_info(void* ctx, block_info_t* info) {
+    ramdisk_device_t* ramdev = ctx;
     memset(info, 0, sizeof(*info));
     info->block_size = ramdev->blk_size;
     info->block_count = sizebytes(ramdev) / ramdev->blk_size;
 }
 
-static void ramdisk_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
-    ramdisk_device_t* rdev = dev->ctx;
+static void ramdisk_fifo_set_callbacks(void* ctx, block_callbacks_t* cb) {
+    ramdisk_device_t* rdev = ctx;
     rdev->cb = cb;
 }
 
-static void ramdisk_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+static void ramdisk_fifo_read(void* ctx, mx_handle_t vmo, uint64_t length,
                               uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ramdisk_device_t* rdev = dev->ctx;
+    ramdisk_device_t* rdev = ctx;
     mx_off_t len = length;
     mx_status_t status = constrain_args(rdev, &dev_offset, &len);
     if (status != MX_OK) {
@@ -99,9 +99,9 @@ static void ramdisk_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length
     rdev->cb->complete(cookie, status);
 }
 
-static void ramdisk_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+static void ramdisk_fifo_write(void* ctx, mx_handle_t vmo, uint64_t length,
                                uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ramdisk_device_t* rdev = dev->ctx;
+    ramdisk_device_t* rdev = ctx;
     mx_off_t len = length;
     mx_status_t status = constrain_args(rdev, &dev_offset, &len);
     if (status != MX_OK) {
@@ -122,7 +122,7 @@ static void ramdisk_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t lengt
     rdev->cb->complete(cookie, status);
 }
 
-static block_ops_t ramdisk_block_ops = {
+static block_protocol_ops_t ramdisk_block_ops = {
     .set_callbacks = ramdisk_fifo_set_callbacks,
     .get_info = ramdisk_get_info,
     .read = ramdisk_fifo_read,

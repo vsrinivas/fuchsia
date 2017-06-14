@@ -118,13 +118,13 @@ BlockDevice::~BlockDevice() {
     // TODO: clean up allocated physical memory
 }
 
-void BlockDevice::virtio_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
-    BlockDevice* device = static_cast<BlockDevice*>(dev->ctx);
+void BlockDevice::virtio_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
+    BlockDevice* device = static_cast<BlockDevice*>(ctx);
     device->callbacks_ = cb;
 }
 
-void BlockDevice::virtio_block_get_info(mx_device_t* dev, block_info_t* info) {
-    BlockDevice* device = static_cast<BlockDevice*>(dev->ctx);
+void BlockDevice::virtio_block_get_info(void* ctx, block_info_t* info) {
+    BlockDevice* device = static_cast<BlockDevice*>(ctx);
     device->GetInfo(info);
 }
 
@@ -165,16 +165,16 @@ void BlockDevice::block_do_txn(BlockDevice* dev, uint32_t opcode,
     iotxn_queue(dev->device_, txn);
 }
 
-void BlockDevice::virtio_block_read(mx_device_t* dev, mx_handle_t vmo,
+void BlockDevice::virtio_block_read(void* ctx, mx_handle_t vmo,
                                     uint64_t length, uint64_t vmo_offset,
                                     uint64_t dev_offset, void* cookie) {
-    block_do_txn((BlockDevice*)dev->ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+    block_do_txn((BlockDevice*)ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-void BlockDevice::virtio_block_write(mx_device_t* dev, mx_handle_t vmo,
+void BlockDevice::virtio_block_write(void* ctx, mx_handle_t vmo,
                                      uint64_t length, uint64_t vmo_offset,
                                      uint64_t dev_offset, void* cookie) {
-    block_do_txn((BlockDevice*)dev->ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+    block_do_txn((BlockDevice*)ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 mx_status_t BlockDevice::Init() {

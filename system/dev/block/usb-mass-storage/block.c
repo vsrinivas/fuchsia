@@ -27,8 +27,8 @@ static void ums_block_queue(void* ctx, iotxn_t* txn) {
     completion_signal(&ums->iotxn_completion);
 }
 
-static void ums_get_info(mx_device_t* device, block_info_t* info) {
-    ums_block_t* dev = device->ctx;
+static void ums_get_info(void* ctx, block_info_t* info) {
+    ums_block_t* dev = ctx;
     memset(info, 0, sizeof(*info));
     info->block_size = dev->block_size;
     info->block_count = dev->total_blocks;
@@ -91,8 +91,8 @@ static mx_protocol_device_t ums_block_proto = {
     .get_size = ums_block_get_size,
 };
 
-static void ums_async_set_callbacks(mx_device_t* device, block_callbacks_t* cb) {
-    ums_block_t* dev = device->ctx;
+static void ums_async_set_callbacks(void* ctx, block_callbacks_t* cb) {
+    ums_block_t* dev = ctx;
     dev->cb = cb;
 }
 
@@ -102,9 +102,9 @@ static void ums_async_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length,
+static void ums_async_read(void* ctx, mx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ums_block_t* dev = device->ctx;
+    ums_block_t* dev = ctx;
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
@@ -120,9 +120,9 @@ static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length
     iotxn_queue(dev->mxdev, txn);
 }
 
-static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t length,
+static void ums_async_write(void* ctx, mx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ums_block_t* dev = device->ctx;
+    ums_block_t* dev = ctx;
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
@@ -138,7 +138,7 @@ static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t lengt
     iotxn_queue(dev->mxdev, txn);
 }
 
-static block_ops_t ums_block_ops = {
+static block_protocol_ops_t ums_block_ops = {
     .set_callbacks = ums_async_set_callbacks,
     .get_info = ums_get_info,
     .read = ums_async_read,

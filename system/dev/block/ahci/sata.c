@@ -249,13 +249,13 @@ static mx_protocol_device_t sata_device_proto = {
     .release = sata_release,
 };
 
-static void sata_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
-    sata_device_t* device = dev->ctx;
+static void sata_block_set_callbacks(void* ctx, block_callbacks_t* cb) {
+    sata_device_t* device = ctx;
     device->callbacks = cb;
 }
 
-static void sata_block_get_info(mx_device_t* dev, block_info_t* info) {
-    sata_device_t* device = dev->ctx;
+static void sata_block_get_info(void* ctx, block_info_t* info) {
+    sata_device_t* device = ctx;
     sata_get_info(device, info);
 }
 
@@ -294,17 +294,17 @@ static void sata_block_txn(sata_device_t* dev, uint32_t opcode, mx_handle_t vmo,
     iotxn_queue(dev->mxdev, txn);
 }
 
-static void sata_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+static void sata_block_read(void* ctx, mx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_block_txn((sata_device_t*)dev->ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+    sata_block_txn(ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static void sata_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+static void sata_block_write(void* ctx, mx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_block_txn((sata_device_t*)dev->ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+    sata_block_txn(ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
-static block_ops_t sata_block_ops = {
+static block_protocol_ops_t sata_block_ops = {
     .set_callbacks = sata_block_set_callbacks,
     .get_info = sata_block_get_info,
     .read = sata_block_read,

@@ -86,7 +86,7 @@ public:
     static mx_status_t Create(mx::fifo* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
-    mx_status_t Serve(mx_device_t* dev, block_ops_t* ops);
+    mx_status_t Serve(block_protocol_t* proto);
     mx_status_t AttachVmo(mx::vmo vmo, vmoid_t* out);
     mx_status_t AllocateTxn(txnid_t* out);
     void FreeTxn(txnid_t txnid);
@@ -126,7 +126,7 @@ void blockserver_shutdown(BlockServer* bs);
 void blockserver_free(BlockServer* bs);
 
 // Use the current thread to block on incoming FIFO requests.
-mx_status_t blockserver_serve(BlockServer* bs, mx_device_t* dev, block_ops_t* ops);
+mx_status_t blockserver_serve(BlockServer* bs, block_protocol_t* ops);
 
 // Attach an IO buffer to the Block Server
 mx_status_t blockserver_attach_vmo(BlockServer* bs, mx_handle_t vmo, vmoid_t* out);
