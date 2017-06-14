@@ -155,8 +155,8 @@ static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
                                                  usb_endpoint_descriptor_t* ep,
                                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                                  bool enable) {
-    mx_status_t status = intf->hci_protocol->enable_endpoint(intf->hci_mxdev, intf->device_id, ep,
-                                                             ss_comp_desc, enable);
+    mx_status_t status = intf->hci.ops->enable_endpoint(intf->hci.ctx, intf->device_id, ep,
+                                                        ss_comp_desc, enable);
     if (status != MX_OK) {
         printf("usb_interface_enable_endpoint failed\n");
     }
@@ -214,12 +214,12 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
 
 mx_status_t usb_interface_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
     usb_interface_t* intf = device->ctx;
-    return intf->hci_protocol->reset_endpoint(intf->hci_mxdev, intf->device_id, ep_address);
+    return intf->hci.ops->reset_endpoint(intf->hci.ctx, intf->device_id, ep_address);
 }
 
 size_t usb_interface_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
     usb_interface_t* intf = device->ctx;
-    return intf->hci_protocol->get_max_transfer_size(intf->hci_mxdev, intf->device_id, ep_address);
+    return intf->hci.ops->get_max_transfer_size(intf->hci.ctx, intf->device_id, ep_address);
 }
 
 static usb_protocol_t _usb_protocol = {
@@ -241,7 +241,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
 
     intf->device = device;
     intf->hci_mxdev = device->hci_mxdev;
-    intf->hci_protocol = device->hci_protocol;
+    memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
     intf->descriptor = (usb_descriptor_header_t *)interface_desc;
     intf->descriptor_length = interface_desc_length;
@@ -312,7 +312,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         return MX_ERR_NO_MEMORY;
 
     intf->hci_mxdev = device->hci_mxdev;
-    intf->hci_protocol = device->hci_protocol;
+    memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
     intf->descriptor = (usb_descriptor_header_t *)assoc_desc;
     intf->descriptor_length = assoc_desc_length;

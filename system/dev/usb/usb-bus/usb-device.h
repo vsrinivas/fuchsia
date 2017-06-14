@@ -13,7 +13,7 @@
 typedef struct usb_device {
     mx_device_t* mxdev;
     mx_device_t* hci_mxdev;
-    usb_hci_protocol_t* hci_protocol;
+    usb_hci_protocol_t hci;
 
     // ID assigned by host controller
     uint32_t device_id;

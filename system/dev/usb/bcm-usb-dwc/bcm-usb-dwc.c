@@ -506,7 +506,7 @@ static void do_dwc_iotxn_queue(dwc_usb_t* dwc, iotxn_t* txn) {
     }
 }
 
-size_t dwc_get_max_transfer_size(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
+size_t dwc_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
     // Transfers limited to a single page until scatter/gather support is implemented
     return PAGE_SIZE;
 }
@@ -538,8 +538,8 @@ static mx_protocol_device_t dwc_device_proto = {
     .release = dwc_release,
 };
 
-static void dwc_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
-    dwc_usb_t* dwc = device->ctx;
+static void dwc_set_bus_device(void* ctx, mx_device_t* busdev) {
+    dwc_usb_t* dwc = ctx;
     dwc->bus_device = busdev;
     if (busdev) {
         device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS,
@@ -551,18 +551,18 @@ static void dwc_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     }
 }
 
-static size_t dwc_get_max_device_count(mx_device_t* device) {
+static size_t dwc_get_max_device_count(void* ctx) {
     return MAX_DEVICE_COUNT;
 }
 
-static mx_status_t dwc_enable_ep(mx_device_t* hci_device, uint32_t device_id,
+static mx_status_t dwc_enable_ep(void* _ctx, uint32_t device_id,
                                  usb_endpoint_descriptor_t* ep_desc,
                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                  bool enable) {
     xprintf("dwc_enable_ep: device_id = %u, ep_addr = %u\n", device_id,
             ep_desc->bEndpointAddress);
 
-    dwc_usb_t* dwc = hci_device->ctx;
+    dwc_usb_t* dwc = _ctx;
 
     if (device_id == ROOT_HUB_DEVICE_ID) {
         // Nothing to be done for root hub.
@@ -598,12 +598,12 @@ static mx_status_t dwc_enable_ep(mx_device_t* hci_device, uint32_t device_id,
     return MX_OK;
 }
 
-static uint64_t dwc_get_frame(mx_device_t* hci_device) {
+static uint64_t dwc_get_frame(void* ctx) {
     printf("usb dwc_get_frame not implemented\n");
     return MX_OK;
 }
 
-mx_status_t dwc_config_hub(mx_device_t* hci_device, uint32_t device_id, usb_speed_t speed,
+mx_status_t dwc_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
                            usb_hub_descriptor_t* descriptor) {
     // Not sure if DWC controller has to take any specific action here.
     return MX_OK;
@@ -613,14 +613,14 @@ static void usb_control_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
-mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, int port,
+mx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
                                  usb_speed_t speed) {
     // Since a new device was just added it has a device address of 0 on the
     // bus until it is enumerated.
     printf("dwc usb device added hub_address = %u, port = %d, speed = %d\n",
            hub_address, port, speed);
 
-    dwc_usb_t* dwc = hci_device->ctx;
+    dwc_usb_t* dwc = _ctx;
 
     dwc_usb_device_t* new_device = &dwc->usb_devices[0];
     dwc_usb_endpoint_t* ep0 = NULL;
@@ -748,17 +748,16 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
 
     return MX_OK;
 }
-mx_status_t dwc_hub_device_removed(mx_device_t* hci_device,
-                                   uint32_t hub_address, int port) {
+mx_status_t dwc_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
     printf("usb dwc_hub_device_removed not implemented\n");
     return MX_OK;
 }
 
-mx_status_t dwc_reset_endpoint(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
+mx_status_t dwc_reset_endpoint(void* ctx, uint32_t device_id, uint8_t ep_address) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static usb_hci_protocol_t dwc_hci_protocol = {
+static usb_hci_protocol_ops_t dwc_hci_protocol = {
     .set_bus_device = dwc_set_bus_device,
     .get_max_device_count = dwc_get_max_device_count,
     .enable_endpoint = dwc_enable_ep,

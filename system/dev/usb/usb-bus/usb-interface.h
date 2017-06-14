@@ -15,7 +15,7 @@ typedef struct {
     mx_device_t* mxdev;
     usb_device_t* device;
     mx_device_t* hci_mxdev;
-    usb_hci_protocol_t* hci_protocol;
+    usb_hci_protocol_t hci;
     uint32_t device_id;
 
     usb_descriptor_header_t* descriptor;

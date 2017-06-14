@@ -47,8 +47,8 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     xhci->bus_protocol->remove_device(xhci->bus_mxdev, slot_id);
 }
 
-static void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
-    xhci_t* xhci = device->ctx;
+static void xhci_set_bus_device(void* ctx, mx_device_t* busdev) {
+    xhci_t* xhci = ctx;
     xhci->bus_mxdev = busdev;
     if (busdev) {
         device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&xhci->bus_protocol);
@@ -59,49 +59,49 @@ static void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     }
 }
 
-static size_t xhci_get_max_device_count(mx_device_t* device) {
-    xhci_t* xhci = device->ctx;
+static size_t xhci_get_max_device_count(void* ctx) {
+    xhci_t* xhci = ctx;
     // add one to allow device IDs to be 1-based
     return xhci->max_slots + XHCI_RH_COUNT + 1;
 }
 
-static mx_status_t xhci_enable_ep(mx_device_t* device, uint32_t device_id,
+static mx_status_t xhci_enable_ep(void* ctx, uint32_t device_id,
                                   usb_endpoint_descriptor_t* ep_desc,
                                   usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
-    xhci_t* xhci = device->ctx;
+    xhci_t* xhci = ctx;
     return xhci_enable_endpoint(xhci, device_id, ep_desc, ss_comp_desc, enable);
 }
 
-static uint64_t xhci_get_frame(mx_device_t* device) {
-    xhci_t* xhci = device->ctx;
+static uint64_t xhci_get_frame(void* ctx) {
+    xhci_t* xhci = ctx;
     return xhci_get_current_frame(xhci);
 }
 
-mx_status_t xhci_config_hub(mx_device_t* device, uint32_t device_id, usb_speed_t speed,
+mx_status_t xhci_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
-    xhci_t* xhci = device->ctx;
+    xhci_t* xhci = ctx;
     return xhci_configure_hub(xhci, device_id, speed, descriptor);
 }
 
-mx_status_t xhci_hub_device_added(mx_device_t* device, uint32_t hub_address, int port,
+mx_status_t xhci_hub_device_added(void* ctx, uint32_t hub_address, int port,
                                   usb_speed_t speed) {
-    xhci_t* xhci = device->ctx;
+    xhci_t* xhci = ctx;
     return xhci_enumerate_device(xhci, hub_address, port, speed);
 }
 
-mx_status_t xhci_hub_device_removed(mx_device_t* device, uint32_t hub_address, int port) {
-    xhci_t* xhci = device->ctx;
+mx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
+    xhci_t* xhci = ctx;
     xhci_device_disconnected(xhci, hub_address, port);
     return MX_OK;
 }
 
-mx_status_t xhci_reset_ep(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
-    xhci_t* xhci = device->ctx;
+mx_status_t xhci_reset_ep(void* ctx, uint32_t device_id, uint8_t ep_address) {
+    xhci_t* xhci = ctx;
     uint8_t ep_index = xhci_endpoint_index(ep_address);
     return xhci_reset_endpoint(xhci, device_id, ep_index);
 }
 
-size_t xhci_get_max_transfer_size(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
+size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
     if (ep_address == 0) {
         // control requests have uint16 length field so we need to support UINT16_MAX
         // we require one setup, status and data event TRB in addition to data transfer TRBs
@@ -114,7 +114,7 @@ size_t xhci_get_max_transfer_size(mx_device_t* device, uint32_t device_id, uint8
     return PAGE_SIZE * (TRANSFER_RING_SIZE - 2);
 }
 
-usb_hci_protocol_t xhci_hci_protocol = {
+usb_hci_protocol_ops_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
     .get_max_device_count = xhci_get_max_device_count,
     .enable_endpoint = xhci_enable_ep,
