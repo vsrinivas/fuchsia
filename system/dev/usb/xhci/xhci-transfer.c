@@ -207,15 +207,8 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
             // use TRB_TRANSFER_DATA for first data packet on setup requests
             control_bits |= (direction == USB_DIR_IN ? XFER_TRB_DIR_IN : XFER_TRB_DIR_OUT);
             trb_set_control(trb, TRB_TRANSFER_DATA, control_bits);
-        } else if (isochronous) {
-            // we currently do not support isoch buffers that span page boundaries
-            // Section 3.2.11 in the XHCI spec describes how to handle this, but since iotxn buffers
-            // are always close to the beginning of a page, this shouldn't be necessary.
-            if (transfer_size != txn->length) {
-                printf("isoch buffer spans page boundary in xhci_queue_transfer\n");
-                return MX_ERR_INVALID_ARGS;
-            }
-
+        } else if (isochronous && first_packet) {
+            // use TRB_TRANSFER_ISOCH for first data packet on isochronous endpoints
             if (frame == 0) {
                 // set SIA bit to schedule packet ASAP
                 control_bits |= XFER_TRB_SIA;
