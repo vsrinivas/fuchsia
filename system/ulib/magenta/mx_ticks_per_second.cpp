@@ -11,4 +11,4 @@ uint64_t _mx_ticks_per_second(void) {
     return DATA_CONSTANTS.ticks_per_second;
 }
 
-VDSO_PUBLIC_ALIAS(mx_ticks_per_second);
+VDSO_INTERFACE_FUNCTION(mx_ticks_per_second);

@@ -40,4 +40,4 @@ mx_status_t _mx_cache_flush(const void* addr, size_t len, uint32_t flags) {
     return NO_ERROR;
 }
 
-VDSO_PUBLIC_ALIAS(mx_cache_flush);
+VDSO_INTERFACE_FUNCTION(mx_cache_flush);

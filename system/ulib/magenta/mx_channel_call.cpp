@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -19,4 +19,4 @@ mx_status_t _mx_channel_call(mx_handle_t handle, uint32_t options, mx_time_t dea
     return status;
 }
 
-VDSO_PUBLIC_ALIAS(mx_channel_call);
+VDSO_INTERFACE_FUNCTION(mx_channel_call);

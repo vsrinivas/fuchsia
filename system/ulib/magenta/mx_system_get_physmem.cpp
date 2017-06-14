@@ -10,4 +10,4 @@ uint64_t _mx_system_get_physmem(void) {
     return DATA_CONSTANTS.physmem;
 }
 
-VDSO_PUBLIC_ALIAS(mx_system_get_physmem);
+VDSO_INTERFACE_FUNCTION(mx_system_get_physmem);

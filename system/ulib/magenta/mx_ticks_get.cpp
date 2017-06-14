@@ -21,7 +21,7 @@ uint64_t _mx_ticks_get(void) {
 #endif
 }
 
-VDSO_PUBLIC_ALIAS(mx_ticks_get);
+VDSO_INTERFACE_FUNCTION(mx_ticks_get);
 
 // At boot time the kernel can decide to redirect the {_,}mx_ticks_get
 // dynamic symbol table entries to point to this instead.  See VDso::VDso.

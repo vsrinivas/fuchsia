@@ -50,7 +50,7 @@ const char* _mx_status_get_string(mx_status_t status) {
     }
 }
 
-VDSO_PUBLIC_ALIAS(mx_status_get_string);
+VDSO_INTERFACE_FUNCTION(mx_status_get_string);
 
 // Generated with:
 // grep '#define'  system/public/magenta/errors.h | grep -v NO_ERROR |

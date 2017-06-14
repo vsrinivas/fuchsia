@@ -10,4 +10,4 @@ mx_time_t _mx_deadline_after(mx_duration_t nanoseconds) {
     return nanoseconds + VDSO_mx_time_get(MX_CLOCK_MONOTONIC);
 }
 
-VDSO_PUBLIC_ALIAS(mx_deadline_after);
+VDSO_INTERFACE_FUNCTION(mx_deadline_after);
