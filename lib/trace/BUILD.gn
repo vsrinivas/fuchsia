@@ -131,10 +131,10 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "event_unittest.cc",
-    "internal/fields_unittest.cc",
-    "settings_unittest.cc",
-    "writer_unittest.cc",
+    "tests/event_unittest.cc",
+    "tests/fields_unittest.cc",
+    "tests/settings_unittest.cc",
+    "tests/writer_unittest.cc",
   ]
 
   deps = [
@@ -154,7 +154,7 @@ executable("trace_stub_tests") {
   testonly = true
 
   sources = [
-    "writer_stub_unittest.cc",
+    "tests/writer_stub_unittest.cc",
   ]
 
   deps = [
