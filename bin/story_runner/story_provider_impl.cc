@@ -476,7 +476,8 @@ class StoryProviderImpl::PreviousStoriesCall
   void Run() override {
     FlowToken flow{this, &story_ids_};
 
-    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+    page_->GetSnapshot(page_snapshot_.NewRequest(),
+                       to_array(kStoryKeyPrefix), nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "PreviousStoriesCall() "
@@ -489,8 +490,8 @@ class StoryProviderImpl::PreviousStoriesCall
   }
 
   void Cont1(FlowToken flow) {
-    GetEntries(page_snapshot_.get(), kStoryKeyPrefix, &entries_,
-               nullptr /* next_token */, [this, flow](ledger::Status status) {
+    GetEntries(page_snapshot_.get(), &entries_,
+               [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "PreviousStoriesCall() "
                                   << "GetEntries() " << status;

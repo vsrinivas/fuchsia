@@ -54,8 +54,8 @@ class DeviceMapImpl::QueryCall : Operation<fidl::Array<DeviceMapEntryPtr>> {
   void Run() override {
     FlowToken flow{this, &data_};
 
-    GetEntries((*snapshot_).get(), kDeviceKeyPrefix, &entries_,
-               nullptr /* next_token */, [this, flow](ledger::Status status) {
+    GetEntries((*snapshot_).get(), &entries_,
+               [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "QueryCall() "
                                   << "GetEntries() " << status;

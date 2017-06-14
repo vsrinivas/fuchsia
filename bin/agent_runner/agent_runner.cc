@@ -71,7 +71,7 @@ class AgentRunner::InitializeCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    GetEntries((*snapshot_).get(), nullptr, &entries_, nullptr /* next_token */,
+    GetEntries((*snapshot_).get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "InitializeCall() "

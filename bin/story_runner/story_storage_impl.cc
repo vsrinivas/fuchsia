@@ -232,8 +232,8 @@ class StoryStorageImpl::ReadAllModuleDataCall
   }
 
   void Cont1(FlowToken flow) {
-    GetEntries(page_snapshot_.get(), nullptr, &entries_,
-               nullptr /* next_token */, [this, flow](ledger::Status status) {
+    GetEntries(page_snapshot_.get(), &entries_,
+               [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
                                   << "GetEntries() " << status;
@@ -433,8 +433,8 @@ class StoryStorageImpl::ReadLogCall
   }
 
   void Cont1(FlowToken flow) {
-    GetEntries(page_snapshot_.get(), nullptr, &entries_,
-               nullptr /* next_token */, [this, flow](ledger::Status status) {
+    GetEntries(page_snapshot_.get(), &entries_,
+               [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "ReadLogCall() "
                                   << "GetEntries() " << status;

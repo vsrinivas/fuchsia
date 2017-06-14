@@ -86,17 +86,16 @@ void PageClient::OnChange(const std::string& key, const std::string& value) {}
 
 void PageClient::OnDelete(const std::string& key) {}
 
-// Retrieves all entries from the given snapshot and calls the given callback
-// with the final status.
-void GetEntries(ledger::PageSnapshot* const snapshot,
-                const char* const prefix,
-                std::vector<ledger::EntryPtr>* const entries,
-                fidl::Array<uint8_t> token,
-                std::function<void(ledger::Status)> callback) {
+namespace {
+
+void GetEntries_(ledger::PageSnapshot* const snapshot,
+                 std::vector<ledger::EntryPtr>* const entries,
+                 fidl::Array<uint8_t> next_token,
+                 std::function<void(ledger::Status)> callback) {
   snapshot->GetEntries(
-      prefix == nullptr ? nullptr : to_array(prefix), std::move(token),
+      nullptr /* key_start */, std::move(next_token),
       ftl::MakeCopyable([
-        snapshot, prefix, entries, callback = std::move(callback)
+        snapshot, entries, callback = std::move(callback)
       ](ledger::Status status, auto new_entries, auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
@@ -110,9 +109,17 @@ void GetEntries(ledger::PageSnapshot* const snapshot,
           callback(ledger::Status::OK);
           return;
         }
-        GetEntries(snapshot, prefix, entries, std::move(next_token),
-                   std::move(callback));
+        GetEntries_(snapshot, entries, std::move(next_token),
+                    std::move(callback));
       }));
+}
+
+}  // namespace
+
+void GetEntries(ledger::PageSnapshot* const snapshot,
+                std::vector<ledger::EntryPtr>* const entries,
+                std::function<void(ledger::Status)> callback) {
+  GetEntries_(snapshot, entries, nullptr /* next_token */, std::move(callback));
 }
 
 }  // namespace modular

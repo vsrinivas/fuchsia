@@ -79,10 +79,10 @@ class PageClient : ledger::PageWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
 
+// Retrieves all entries from the given snapshot and calls the given callback
+// with the final status.
 void GetEntries(ledger::PageSnapshot* snapshot,
-                const char* prefix,
                 std::vector<ledger::EntryPtr>* entries,
-                fidl::Array<uint8_t> token,
                 std::function<void(ledger::Status)> callback);
 
 }  // namespace modular

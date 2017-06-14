@@ -548,7 +548,8 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    page_->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
+    page_->GetSnapshot(snapshot_.NewRequest(),
+                       to_array(message_queues_key_prefix_), nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR)
@@ -560,8 +561,7 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
   }
 
   void GetKeysToDelete(FlowToken flow) {
-    GetEntries(snapshot_.get(), message_queues_key_prefix_.c_str(),
-               &component_entries_, nullptr,
+    GetEntries(snapshot_.get(), &component_entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "GetEntries() status=" << status;
