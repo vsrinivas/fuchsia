@@ -45,6 +45,8 @@ class Station {
         return &address_;
     }
 
+    uint16_t aid() const { return aid_; }
+
     wlan_channel_t channel() const {
         MX_DEBUG_ASSERT(state_ != WlanState::kUnjoined);
         MX_DEBUG_ASSERT(!bss_.is_null());
@@ -53,16 +55,22 @@ class Station {
 
     mx_status_t Join(JoinRequestPtr req);
     mx_status_t Authenticate(AuthenticateRequestPtr req);
+    mx_status_t Associate(AssociateRequestPtr req);
 
     mx_status_t HandleBeacon(const Packet* packet);
     mx_status_t HandleAuthentication(const Packet* packet);
+    mx_status_t HandleAssociationResponse(const Packet* packet);
     mx_status_t HandleTimeout();
 
     const Timer& timer() const { return *timer_; }
 
+
   private:
     mx_status_t SendJoinResponse();
     mx_status_t SendAuthResponse(AuthenticateResultCodes code);
+    mx_status_t SendAssocResponse(AssociateResultCodes code);
+
+    uint16_t next_seq();
 
     DeviceInterface* device_;
     mxtl::unique_ptr<Timer> timer_;
@@ -73,7 +81,9 @@ class Station {
     WlanState state_ = WlanState::kUnjoined;
     mx_time_t join_timeout_ = 0;
     mx_time_t auth_timeout_ = 0;
+    mx_time_t assoc_timeout_ = 0;
     mx_time_t last_seen_ = 0;
+    uint16_t aid_ = 0;
 
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
 };

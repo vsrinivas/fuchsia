@@ -18,9 +18,7 @@ namespace wlan {
 
 Station::Station(DeviceInterface* device, mxtl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
-    (void)device_;
-    (void)timer_;
-    (void)auth_alg_;
+    (void)assoc_timeout_;
 }
 
 void Station::Reset() {
@@ -98,7 +96,6 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
         return SendAuthResponse(AuthenticateResultCodes::REFUSED);
     }
 
-    // TODO(tkilbourn): actually send the packet
     // TODO(tkilbourn): better size management
     size_t auth_len = sizeof(MgmtFrameHeader) - sizeof(HtControl) + sizeof(Authentication);
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
@@ -107,16 +104,9 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
-    uint16_t seq = device_->GetState()->next_seq();
-    if (seq == last_seq_) {
-        // If the sequence number has rolled over and back to the last seq number we sent to this
-        // station, increment again.
-        // IEEE Std 802.11-2016, 10.3.2.11.2, Table 10-3, Note TR1
-        seq = device_->GetState()->next_seq();
-    }
-    last_seq_ = seq;
 
     auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), auth_len));
+    packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
     auto hdr = packet->mut_field<MgmtFrameHeader>(0);
     hdr->fc.set_type(kManagement);
@@ -124,7 +114,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     std::memcpy(hdr->addr1, address_.data(), sizeof(hdr->addr1));
     std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
     std::memcpy(hdr->addr3, address_.data(), sizeof(hdr->addr3));
-    hdr->sc.set_seq(seq);
+    hdr->sc.set_seq(next_seq());
 
     auto auth = packet->mut_field<Authentication>(hdr->size());
     // TODO(tkilbourn): this assumes Open System authentication
@@ -145,6 +135,99 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
         SendAuthResponse(AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+        // TODO(tkilbourn): reset the station?
+    }
+    return status;
+}
+
+mx_status_t Station::Associate(AssociateRequestPtr req) {
+    debugfn();
+
+    MX_DEBUG_ASSERT(!req.is_null());
+
+    if (bss_.is_null()) {
+        return MX_ERR_BAD_STATE;
+    }
+
+    // TODO(tkilbourn): better result codes
+    if (!bss_->bssid.Equals(req->peer_sta_address)) {
+        errorf("bad peer STA address for association\n");
+        return SendAuthResponse(AuthenticateResultCodes::REFUSED);
+    }
+    if (state_ == WlanState::kUnjoined ||
+        state_ == WlanState::kUnauthenticated) {
+        errorf("must authenticate before associating\n");
+        return SendAuthResponse(AuthenticateResultCodes::REFUSED);
+    }
+    if (state_ == WlanState::kAssociated) {
+        warnf("already authenticated; sending request anyway\n");
+    }
+
+    // TODO(tkilbourn): better size management; for now reserve 128 bytes for Association elements
+    size_t assoc_len =
+        sizeof(MgmtFrameHeader) - sizeof(HtControl) + sizeof(AssociationRequest) + 128;
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    const DeviceAddress& mymac = device_->GetState()->address();
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), assoc_len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
+    hdr->fc.set_type(kManagement);
+    hdr->fc.set_subtype(kAssociationRequest);
+    std::memcpy(hdr->addr1, address_.data(), sizeof(hdr->addr1));
+    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
+    std::memcpy(hdr->addr3, address_.data(), sizeof(hdr->addr3));
+    hdr->sc.set_seq(next_seq());
+
+    // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
+    // request.
+    auto assoc = packet->mut_field<AssociationRequest>(hdr->size());
+    assoc->cap.set_ess(1);
+    assoc->listen_interval = 0;
+    ElementWriter w(assoc->elements, packet->len() - hdr->size() - sizeof(AssociationRequest));
+    if (!w.write<SsidElement>(bss_->ssid.data())) {
+        errorf("could not write ssid \"%s\" to association request\n", bss_->ssid.data());
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return MX_ERR_IO;
+    }
+    // TODO(tkilbourn): add extended rates support to get the rest of 802.11g rates.
+    std::vector<uint8_t> rates = { 2, 4, 11, 22, 12, 18, 24, 36 };
+    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+        errorf("could not write supported rates\n");
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return MX_ERR_IO;
+    }
+
+    // Validate the request in debug mode
+    MX_DEBUG_ASSERT(assoc->Validate(w.size()));
+
+    size_t actual_len = hdr->size() + sizeof(AssociationRequest) + w.size();
+    mx_status_t status = packet->set_len(actual_len);
+    if (status != MX_OK) {
+        errorf("could not set packet length to %zu: %d\n", actual_len, status);
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return status;
+    }
+
+    status = device_->SendWlan(std::move(packet));
+    if (status != MX_OK) {
+        errorf("could not send assoc packet: %d\n", status);
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return status;
+    }
+
+    // TODO(tkilbourn): get the assoc timeout from somewhere
+    assoc_timeout_ = timer_->Now() + WLAN_TU(bss_->beacon_period * 8);
+    status = timer_->StartTimer(assoc_timeout_);
+    if (status != MX_OK) {
+        errorf("could not set auth timer: %d\n", status);
+        // This is the wrong result code, but we need to define our own codes at some later time.
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         // TODO(tkilbourn): reset the station?
     }
     return status;
@@ -226,6 +309,41 @@ mx_status_t Station::HandleAuthentication(const Packet* packet) {
     return MX_OK;
 }
 
+mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
+    debugfn();
+
+    if (state_ != WlanState::kAuthenticated) {
+        // TODO(tkilbourn): should we process this Association response packet anyway? The spec is
+        // unclear.
+        debugf("unexpected association response frame\n");
+        return MX_OK;
+    }
+
+    auto hdr = packet->field<MgmtFrameHeader>(0);
+    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
+    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+
+    auto assoc = packet->field<AssociationResponse>(hdr->size());
+    if (!assoc) {
+        errorf("association response packet too small (len=%zd)\n", packet->len() - hdr->size());
+        return MX_ERR_IO;
+    }
+
+    if (assoc->status_code != status_code::kSuccess) {
+        errorf("association failed (status code=%u)\n", assoc->status_code);
+        // TODO(tkilbourn): map to the correct result code
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return MX_ERR_BAD_STATE;
+    }
+
+    state_ = WlanState::kAssociated;
+    assoc_timeout_ = 0;
+    aid_ = assoc->aid & kAidMask;
+    timer_->CancelTimer();
+    SendAssocResponse(AssociateResultCodes::SUCCESS);
+    return MX_OK;
+}
+
 mx_status_t Station::HandleTimeout() {
     debugfn();
     mx_time_t now = timer_->Now();
@@ -240,6 +358,13 @@ mx_status_t Station::HandleTimeout() {
         infof("auth timed out; moving back to joining\n");
         auth_timeout_ = 0;
         return SendAuthResponse(AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+    }
+
+    if (assoc_timeout_ > 0 && now >= assoc_timeout_) {
+        infof("assoc timed out; moving back to authenticated\n");
+        assoc_timeout_ = 0;
+        // TODO(tkilbourn): need a better error code for this
+        return SendAssocResponse(AssociateResultCodes::REFUSED_TEMPORARILY);
     }
 
     return MX_OK;
@@ -295,6 +420,43 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     }
 
     return status;
+}
+
+mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
+    debugfn();
+    auto resp = AssociateResponse::New();
+    // TODO(tkilbourn): set this based on the actual auth type
+    resp->result_code = code;
+    resp->association_id = aid_;
+
+    size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::ASSOCIATE_confirm, resp);
+    if (status != MX_OK) {
+        errorf("could not serialize AssociateResponse: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
+    return status;
+}
+
+uint16_t Station::next_seq() {
+    uint16_t seq = device_->GetState()->next_seq();
+    if (seq == last_seq_) {
+        // If the sequence number has rolled over and back to the last seq number we sent to this
+        // station, increment again.
+        // IEEE Std 802.11-2016, 10.3.2.11.2, Table 10-3, Note TR1
+        seq = device_->GetState()->next_seq();
+    }
+    last_seq_ = seq;
+    return seq;
 }
 
 }  // namespace wlan

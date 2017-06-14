@@ -197,6 +197,8 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
         return HandleProbeResponse(packet);
     case ManagementSubtype::kAuthentication:
         return HandleAuthentication(packet);
+    case ManagementSubtype::kAssociationResponse:
+        return HandleAssociationResponse(packet);
     default:
         break;
     }
@@ -256,6 +258,17 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         status = sta_->Authenticate(std::move(req));
         break;
     }
+    case Method::ASSOCIATE_request: {
+        AssociateRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::ASSOCIATE_request, &req);
+        if (status != MX_OK) {
+            errorf("could not deserialize AssociateRequest: %d\n", status);
+            break;
+        }
+
+        status = sta_->Associate(std::move(req));
+        break;
+    }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
         status = MX_ERR_NOT_SUPPORTED;
@@ -294,10 +307,23 @@ mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
 mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
     debugfn();
 
-    auto hdr = packet->field<MgmtFrameHeader>(0);
-    if (sta_ != nullptr && sta_->bssid() != nullptr &&
-            DeviceAddress(hdr->addr3) == *sta_->bssid()) {
-        sta_->HandleAuthentication(packet);
+    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) {
+            sta_->HandleAuthentication(packet);
+        }
+    }
+    return MX_OK;
+}
+
+mx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
+    debugfn();
+
+    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) {
+            sta_->HandleAssociationResponse(packet);
+        }
     }
     return MX_OK;
 }

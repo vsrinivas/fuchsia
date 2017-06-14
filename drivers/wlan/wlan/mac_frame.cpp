@@ -22,7 +22,7 @@ element_id::ElementId kValidProbeRequestIds[] = {
     element_id::kExtCapabilities,
     element_id::kSsidList,
     element_id::kChannelUsage,
-    element_id::kInternetworking,
+    element_id::kInterworking,
     element_id::kMeshId,
     element_id::kMultiband,
     element_id::kDmgCapabilities,
@@ -31,31 +31,68 @@ element_id::ElementId kValidProbeRequestIds[] = {
     element_id::kElementWithExtension,
     element_id::kVendorSpecific,
 };
+
+// IEEE Std 802.11-2016, 9.3.3.6
+element_id::ElementId kValidAssociationRequestIds[] = {
+    element_id::kSsid,
+    element_id::kSuppRates,
+    element_id::kExtSuppRates,
+    element_id::kPowerCapability,
+    element_id::kSupportedChannels,
+    element_id::kRsn,
+    element_id::kQosCapability,
+    element_id::kRmEnabledCapabilities,
+    element_id::kMobilityDomain,
+    element_id::kSuppOperatingClasses,
+    element_id::kHtCapabilities,
+    element_id::k2040BssCoex,
+    element_id::kExtCapabilities,
+    element_id::kQosTrafficCapability,
+    element_id::kTimBroadcastRequest,
+    element_id::kInterworking,
+    element_id::kMultiband,
+    element_id::kDmgCapabilities,
+    element_id::kMultipleMacSublayers,
+    element_id::kVhtCapabilities,
+    element_id::kOperatingModeNotification,
+    element_id::kVendorSpecific,
+};
+
+bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, ElementReader* r) {
+    if (!ids || !r) return false;
+    size_t idx = 0;
+    // Iterate through the elements of the reader, ensuring that each element is in the
+    // ids list and that they appear in the proper order.
+    // TODO(tkilbourn): handle required vs optional elements
+    while (r->is_valid()) {
+        const ElementHeader* hdr = r->peek();
+        if (hdr == nullptr) {
+            return false;
+        }
+        while (idx < ids_len && hdr->id != ids[idx]) {
+            idx++;
+        }
+        if (idx == ids_len) {
+            // We reached the end of the valid ids without finding this one, so it's an invalid id.
+            return false;
+        }
+        r->skip(*hdr);
+    }
+    // Ensure we've read all the data from the reader.
+    return r->offset() == len;
+}
 }  // namespace
 
 bool ProbeRequest::Validate(size_t len) {
     ElementReader reader(elements, len);
-    size_t idx = 0;
-    constexpr size_t kEndIndex = mxtl::count_of(kValidProbeRequestIds);
-    // Iterate through the elements of the ProbeRequest, ensuring that each element is in the
-    // valid_ids_ list and that they appear in the proper order.
-    // TODO(tkilbourn): handle required vs optional elements
-    while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) {
-            return false;
-        }
-        while (idx < kEndIndex && hdr->id != kValidProbeRequestIds[idx]) {
-            idx++;
-        }
-        if (idx == kEndIndex) {
-            // We reached the end of the valid ids without finding this one, so it's an invalid id.
-            return false;
-        }
-        reader.skip(*hdr);
-    }
-    // Ensure we've read all the data from the ProbeRequest.
-    return reader.offset() == len;
+    constexpr size_t kValidIdSize = mxtl::count_of(kValidProbeRequestIds);
+    return ValidateElements(len, kValidProbeRequestIds, kValidIdSize, &reader);
+}
+
+bool AssociationRequest::Validate(size_t len) {
+    ElementReader reader(elements, len);
+    constexpr size_t kValidIdSize = mxtl::count_of(kValidAssociationRequestIds);
+    return ValidateElements(len, kValidAssociationRequestIds, kValidIdSize, &reader);
 }
 
 }  // namespace wlan

@@ -11,6 +11,7 @@
 #include <mxtl/slab_allocator.h>
 #include <mxtl/unique_ptr.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -25,6 +26,7 @@ class Buffer {
     virtual uint8_t* data() = 0;
     virtual uint8_t* ctrl() = 0;
     virtual size_t capacity() const = 0;
+    virtual void clear(size_t len) = 0;
 };
 
 constexpr size_t kCtrlSize = 32;
@@ -36,6 +38,10 @@ class FixedBuffer : public Buffer {
     uint8_t* data() override { return data_; }
     uint8_t* ctrl() override { return ctrl_; }
     size_t capacity() const override { return BufferSize; }
+    void clear(size_t len) override {
+        std::memset(data_, 0, std::min(BufferSize, len));
+        std::memset(ctrl_, 0, kCtrlSize);
+    }
 
   private:
     uint8_t data_[BufferSize];
@@ -91,12 +97,23 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
 
     Packet(mxtl::unique_ptr<Buffer> buffer, size_t len);
     size_t Capacity() const { return buffer_->capacity(); }
+    void clear() {
+        buffer_->clear(len_);
+        ctrl_len_ = 0;
+    }
 
     void set_peer(Peer s) { peer_ = s; }
     Peer peer() const { return peer_; }
 
     const uint8_t* data() const { return buffer_->data(); }
     uint8_t* mut_data() { return buffer_->data(); }
+
+    // Length can only be made shorter at this time.
+    mx_status_t set_len(size_t len) {
+        if (len > len_) return MX_ERR_INVALID_ARGS;
+        len_ = len;
+        return MX_OK;
+    }
     size_t len() const { return len_; }
 
     template <typename T>

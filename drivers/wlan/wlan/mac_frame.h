@@ -306,12 +306,42 @@ enum AuthAlgorithm : uint16_t {
 
 // IEEE Std 802.11-2016, 9.3.3.12
 struct Authentication {
+    // TODO(tkilbourn): bool Validate(size_t len)
+    // Authentication frames are complicated, so when we need more than Open System auth, figure out
+    // how to proceed.
+
     // 9.4.1.1
     uint16_t auth_algorithm_number;
     // 9.4.1.2
     uint16_t auth_txn_seq_number;
     // 9.4.1.9
     uint16_t status_code;
+
+    uint8_t elements[];
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.3.3.6
+struct AssociationRequest {
+    bool Validate(size_t len);
+
+    // 9.4.1.4
+    CapabilityInfo cap;
+    // 9.4.1.6
+    uint16_t listen_interval;
+
+    uint8_t elements[];
+} __PACKED;
+
+constexpr uint16_t kAidMask = (1 << 11) - 1;
+
+// IEEE Std 802.11-2016, 9.3.3.7
+struct AssociationResponse {
+    // 9.4.1.4
+    CapabilityInfo cap;
+    // 9.4.1.9
+    uint16_t status_code;
+    // 9.4.1.8
+    uint16_t aid;
 
     uint8_t elements[];
 } __PACKED;

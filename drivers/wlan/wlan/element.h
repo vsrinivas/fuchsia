@@ -187,7 +187,7 @@ enum ElementId : uint8_t {
     kChannelSwitchTiming = 104,
     kPtiControl = 105,
     kTpuBufferStatus = 106,
-    kInternetworking = 107,
+    kInterworking = 107,
     kAdvertisementProtocol = 108,
     kExpeditedBandwidthRequest = 109,
     kQosMap = 110,
