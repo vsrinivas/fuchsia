@@ -13,3 +13,17 @@ source_set("entity_span") {
     "//lib/ftl",
   ]
 }
+
+source_set("entity_utils") {
+  sources = [
+    "entity_utils.cc",
+    "entity_utils.h",
+  ]
+
+  public_deps = [
+    ":entity_span",
+    "//apps/maxwell/services/context",
+    "//apps/modular/lib/rapidjson",
+    "//lib/ftl",
+  ]
+}

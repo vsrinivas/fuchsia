@@ -5,12 +5,17 @@
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_span.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace maxwell {
 
 constexpr char kWebViewUrl[] = "web_view";
+// TODO(travismart): This url breaks in web_view because it's running an
+// "unsupported browser." Follow up on this.
+const std::string kGmailUrlPrefix = "https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=";
 
 ProposalPtr MkUrlProposal(const std::string& query) {
   auto p = Proposal::New();
@@ -19,14 +24,14 @@ ProposalPtr MkUrlProposal(const std::string& query) {
   create_story->module_id = kWebViewUrl;
 
   create_story->initial_data =
-      "{\"view\": {\"uri\": \"http://www.google.com/#q=" + query + "\" } }";
+      "{\"view\": {\"uri\": \"" + kGmailUrlPrefix + query + "\" } }";
 
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
   p->on_selected.push_back(std::move(action));
 
   auto d = SuggestionDisplay::New();
-  d->headline = "Search Google for: " + query;
+  d->headline = "Compose email to: " + query;
   d->subheadline = "";
   d->details = "";
   d->color = 0xff4285f4;
@@ -38,8 +43,8 @@ ProposalPtr MkUrlProposal(const std::string& query) {
   return p;
 }
 
-// Subscribe to focused_entities in ApplicationContext, and Suggest any found
-// focused_entities to the user.
+// Subscribe to selected entities in ApplicationContext, and Suggest any found
+// selected entities to the user.
 class ProposalMaker : ContextListener {
  public:
   ProposalMaker()
@@ -48,26 +53,29 @@ class ProposalMaker : ContextListener {
         proposal_out_(
             app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         binding_(this) {
-    FTL_LOG(INFO) << "Initializing";
     auto query = ContextQuery::New();
-    query->topics.push_back("focused_entity");
+    query->topics.push_back(kSelectedEntitiesTopic);
     provider_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
   // |ContextListener|
   void OnUpdate(ContextUpdatePtr result) override {
-    // TODO(travismart): Update focused_entity storage from a raw text entity.
-    rapidjson::Document text_doc;
-    text_doc.Parse(result->values["focused_entity"]);
-    if (!text_doc.HasMember("text") || !text_doc["text"].IsString()) {
-      FTL_LOG(ERROR) << "Invalid focused_entity entry in ApplicationContext.";
+    if (!KeyInUpdateResult(result, kSelectedEntitiesTopic)) {
+      return;
     }
-    const std::string raw_text = text_doc["text"].GetString();
-    FTL_LOG(INFO) << "focused_entity:" << raw_text;
-    proposal_out_->Propose(MkUrlProposal(raw_text));
-
-    // TODO(travismart): Propose a deep link based on entity type.
+    const std::vector<EntitySpan> entities =
+        EntitySpan::EntitiesFromJson(result->values[kSelectedEntitiesTopic]);
+    for (const EntitySpan& e : entities) {
+      if (e.GetType() == kEmailType) {
+        proposal_out_->Propose(MkUrlProposal(e.GetContent()));
+      }
+      // TODO(travismart): Propose more deep links based on entity type.
+      else {
+        FTL_LOG(ERROR) << "SelectedEntity type not recognized: " << e.GetType();
+      }
+    }
+    // TODO(travismart): UnPropose an unselected entity.
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;

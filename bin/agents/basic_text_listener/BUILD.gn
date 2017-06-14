@@ -13,6 +13,7 @@ executable("basic_text_listener") {
     "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/agents/entity_utils:entity_span",
+    "//apps/maxwell/src/agents/entity_utils:entity_utils",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]

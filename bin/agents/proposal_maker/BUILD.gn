@@ -13,6 +13,8 @@ executable("proposal_maker") {
     "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/src/agents/entity_utils:entity_span",
+    "//apps/maxwell/src/agents/entity_utils:entity_utils",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]

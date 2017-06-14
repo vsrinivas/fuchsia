@@ -6,6 +6,7 @@
 #include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -14,21 +15,16 @@
 
 namespace maxwell {
 
-const std::string kRawEntitiesTopic = "/inferred/focal_entities";
-const std::string kRawTextSelectionTopic =
-    "/story/focused/explicit/raw/text_selection";
-const std::string kFocusedEntityTopic = "/inferred/focused_entities";
-
 // Subscribe to entities and selection in the Context Engine, and Publish any
-// focused entities back to the Context Engine.
-class FocusedEntityFinder : ContextListener {
+// selected entities back to the Context Engine.
+class SelectedEntityFinder : ContextListener {
  public:
-  FocusedEntityFinder()
+  SelectedEntityFinder()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
         publisher_(
             app_context_->ConnectToEnvironmentService<ContextPublisher>()),
-        topics_({kRawEntitiesTopic, kRawTextSelectionTopic}),
+        topics_({kFocalEntitiesTopic, kRawTextSelectionTopic}),
         binding_(this) {
     auto query = ContextQuery::New();
     for (const std::string& s : topics_) {
@@ -38,32 +34,6 @@ class FocusedEntityFinder : ContextListener {
   }
 
  private:
-  // Parse a JSON representation of an array of entities.
-  std::vector<EntitySpan> GetEntitiesFromJson(const std::string& json_string) {
-    // Validate and parse the string.
-    if (json_string.empty()) {
-      FTL_LOG(INFO) << "No current entities.";
-      return std::vector<EntitySpan>();
-    }
-    rapidjson::Document entities_doc;
-    entities_doc.Parse(json_string);
-    if (entities_doc.HasParseError()) {
-      FTL_LOG(ERROR) << "Invalid Entities JSON, error #: "
-                     << entities_doc.GetParseError();
-      return std::vector<EntitySpan>();
-    }
-    if (!entities_doc.IsArray()) {
-      FTL_LOG(ERROR) << "Invalid " << kRawEntitiesTopic << " entry in Context.";
-      return std::vector<EntitySpan>();
-    }
-
-    std::vector<EntitySpan> entities;
-    for (const rapidjson::Value& e : entities_doc.GetArray()) {
-      entities.push_back(EntitySpan::FromJson(modular::JsonValueToString(e)));
-    }
-    return entities;
-  }
-
   // Parse a JSON representation of selection.
   std::pair<int, int> GetSelectionFromJson(const std::string& json_string) {
     // Validate and parse the string.
@@ -95,7 +65,7 @@ class FocusedEntityFinder : ContextListener {
 
   // Return a JSON representation of an array of entities that fall within
   // start and end.
-  std::string GetFocusedEntities(const std::vector<EntitySpan>& entities,
+  std::string GetSelectedEntities(const std::vector<EntitySpan>& entities,
                                  const int selection_start,
                                  const int selection_end) {
     rapidjson::Document d;
@@ -111,12 +81,16 @@ class FocusedEntityFinder : ContextListener {
 
   // |ContextListener|
   void OnUpdate(ContextUpdatePtr result) override {
+    if (!KeyInUpdateResult(result, kFocalEntitiesTopic) ||
+        !KeyInUpdateResult(result, kRawTextSelectionTopic)) {
+      return;
+    }
     const std::vector<EntitySpan> entities =
-        GetEntitiesFromJson(result->values[kRawEntitiesTopic]);
+        EntitySpan::EntitiesFromJson(result->values[kFocalEntitiesTopic]);
     const std::pair<int, int> start_and_end =
         GetSelectionFromJson(result->values[kRawTextSelectionTopic]);
-    publisher_->Publish(kFocusedEntityTopic,
-                        GetFocusedEntities(entities, start_and_end.first,
+    publisher_->Publish(kSelectedEntitiesTopic,
+                        GetSelectedEntities(entities, start_and_end.first,
                                            start_and_end.second));
   }
 
@@ -131,7 +105,7 @@ class FocusedEntityFinder : ContextListener {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  maxwell::FocusedEntityFinder app;
+  maxwell::SelectedEntityFinder app;
   loop.Run();
   return 0;
 }

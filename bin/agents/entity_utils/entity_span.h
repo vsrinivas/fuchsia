@@ -28,6 +28,11 @@ class EntitySpan {
   // fields given in the above constructor as keys.
   static EntitySpan FromJson(const std::string& json_string);
 
+  // Parse a JSON representation of an array of EntitySpans.
+  static std::vector<EntitySpan> EntitiesFromJson(
+      const std::string& json_string);
+
+
   std::string GetContent() const { return content_; }
   std::string GetType() const { return type_; }
   int GetStart() const { return start_; }

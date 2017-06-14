@@ -9,6 +9,7 @@
 #include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -18,8 +19,6 @@
 namespace maxwell {
 
 const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
-const std::string kRawTextTopic = "/story/focused/explicit/raw/text";
-const std::string kRawEntitiesTopic = "/inferred/focal_entities";
 
 // Subscribe to the Context Engine and Publish any entities found back to
 // the Context Engine.
@@ -54,7 +53,7 @@ class BasicTextListener : ContextListener {
       const std::string content = match.str();
       const int start = match.position();
       const int end = start + match.length();
-      const EntitySpan entity(content, "email", start, end);
+      const EntitySpan entity(content, kEmailType, start, end);
       // TODO(travismart): It would be more efficient to work directly with
       // JSON values here, so we don't have to make multiple copies of strings
       // and parse them. However, strings allow our interface to be independent
@@ -68,18 +67,20 @@ class BasicTextListener : ContextListener {
 
   // |ContextListener|
   void OnUpdate(ContextUpdatePtr result) override {
+    if (!KeyInUpdateResult(result, kRawTextTopic)) {
+      return;
+    }
     rapidjson::Document text_doc;
-
+    text_doc.Parse(result->values[kRawTextTopic]);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
-    text_doc.Parse(result->values[topics_[0]]);
     if (!text_doc[0].HasMember("text") || !text_doc[0]["text"].IsString()) {
       FTL_LOG(ERROR) << "Invalid " << kRawTextTopic
                      << " entry in Context Engine.";
     }
     const std::string raw_text = text_doc[0]["text"].GetString();
 
-    publisher_->Publish(kRawEntitiesTopic, GetEntitiesFromText(raw_text));
+    publisher_->Publish(kFocalEntitiesTopic, GetEntitiesFromText(raw_text));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
