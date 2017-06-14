@@ -41,7 +41,7 @@ grok_code_symbols() {
   local symbol type addr size rest
   while read symbol type addr size rest; do
     case "$symbol" in
-    CODE_*|DATA_*|_start)
+    CODE_*|DATA_*|SYSCALL_*|_start)
       if [ "$symbol" = _start ]; then
         symbol=ENTRY
       fi

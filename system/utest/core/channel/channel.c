@@ -766,6 +766,31 @@ static bool channel_call2(void) {
     END_TEST;
 }
 
+// SYSCALL_mx_channel_call_finish is an internal system call used in the
+// vDSO's implementation of mx_channel_call.  It's not part of the ABI and
+// so it's not exported from the vDSO.  It's hard to test the kernel's
+// invariants without calling this directly.  So use some chicanery to
+// find its address in the vDSO despite it not being public.
+//
+// The vdso-code.h header file is generated from the vDSO binary.  It gives
+// the offsets of the internal functions.  So take a public vDSO function,
+// subtract its offset to discover the vDSO base (could do this other ways,
+// but this is the simplest), and then add the offset of the internal
+// SYSCALL_mx_channel_call_finish function we want to call.
+#include "vdso-code.h"
+static mx_status_t mx_channel_call_finish(mx_handle_t handle,
+                                          mx_time_t deadline,
+                                          const mx_channel_call_args_t* args,
+                                          uint32_t* actual_bytes,
+                                          uint32_t* actual_handles,
+                                          mx_status_t* read_status) {
+    uintptr_t vdso_base =
+        (uintptr_t)&mx_handle_close - VDSO_SYSCALL_mx_handle_close;
+    uintptr_t fnptr = vdso_base + VDSO_SYSCALL_mx_channel_call_finish;
+    return (*(__typeof(mx_channel_call_finish)*)fnptr)(
+        handle, deadline, args, actual_bytes, actual_handles, read_status);
+}
+
 static bool bad_channel_call_finish(void) {
     BEGIN_TEST;
 

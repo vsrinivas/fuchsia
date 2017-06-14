@@ -14,20 +14,20 @@ static const string add_attribute(map<string, string> attributes,
 }
 
 bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
-    if (skip_vdso_calls_ && sc.is_vdso()) {
-        return true;
-    }
-
     constexpr uint32_t indent_spaces = 4u;
 
-    for (auto name_prefix : name_prefixes_) {
-        auto syscall_name = name_prefix + sc.name;
+    for (const auto& name_prefix : name_prefixes_) {
+        if (name_prefix.second(sc))
+            continue;
+
+        auto syscall_name = name_prefix.first + sc.name;
 
         os << function_prefix_;
 
-        write_syscall_signature_line(os, sc, name_prefix, "\n", "\n" + string(indent_spaces, ' '),
-                                     allow_pointer_wrapping_ && !sc.is_no_wrap() && !sc.is_vdso(),
-                                     no_args_type_);
+        write_syscall_signature_line(
+            os, sc, name_prefix.first, "\n", "\n" + string(indent_spaces, ' '),
+            allow_pointer_wrapping_ && !sc.is_no_wrap() && !sc.is_vdso(),
+            no_args_type_);
 
         os << " ";
 
@@ -41,8 +41,6 @@ bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
         os.seekp(-1, std::ios_base::end);
 
         os << ";\n\n";
-
-        syscall_name = "_" + syscall_name;
     }
 
     return os.good();

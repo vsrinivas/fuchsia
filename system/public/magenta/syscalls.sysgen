@@ -152,13 +152,13 @@ syscall channel_write
         handles: mx_handle_t[num_handles] IN, num_handles: uint32_t)
     returns (mx_status_t);
 
-syscall channel_call_noretry
+syscall channel_call_noretry internal
     (handle: mx_handle_t, options: uint32_t, deadline: mx_time_t,
         args: mx_channel_call_args_t[1] IN)
     returns (mx_status_t, actual_bytes: uint32_t,
                 actual_handles: uint32_t, read_status: mx_status_t);
 
-syscall channel_call_finish
+syscall channel_call_finish internal
     (handle: mx_handle_t, deadline: mx_time_t, args: mx_channel_call_args_t[1] IN)
     returns (mx_status_t, actual_bytes: uint32_t,
                 actual_handles: uint32_t, read_status: mx_status_t);

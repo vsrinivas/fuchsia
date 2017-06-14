@@ -31,7 +31,7 @@ bool Generator::footer(ofstream& os) {
 
 bool VDsoAsmGenerator::syscall(ofstream& os, const Syscall& sc) {
     if (!sc.is_vdso()) {
-        bool is_public = true;
+        bool is_public = !sc.is_internal();
         for (const CallWrapper* wrapper : wrappers_) {
             if (wrapper->applies(sc)) {
                 is_public = false;
@@ -93,7 +93,7 @@ bool TraceInfoGenerator::syscall(ofstream& os, const Syscall& sc) {
 
 bool CategoryGenerator::syscall(ofstream& os, const Syscall& sc) {
     for (const auto& attr : sc.attributes) {
-        if (attr != "*")
+        if (attr != "*" && attr != "internal")
             category_map_[attr].push_back(&sc.name);
     }
     return true;

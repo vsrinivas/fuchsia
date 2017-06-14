@@ -13,28 +13,6 @@ using std::vector;
 static const string in = "    ";
 static const string inin = in + in;
 
-void write_extern_syscall_signature_line(ofstream& os, const Syscall& sc, string name_prefix) {
-    os << "extern \"C\" {\nextern ";
-    write_syscall_signature_line(
-        os, sc, name_prefix, "", " ", false, "void");
-    os << " __attribute__((visibility(\"hidden\")))";
-    if (sc.is_noreturn()) {
-        os << " __attribute__((__noreturn__))";
-    }
-    os << ";\n}\n";
-}
-
-void write_syscall_alias_line(ofstream& os, const Syscall& sc,
-                              const string& name_prefix, const string& alias_prefix, const string& other_attributes) {
-
-    os << "decltype(" << alias_prefix << sc.name << ") " << alias_prefix << sc.name
-       << " __attribute__((";
-    if (!other_attributes.empty()) {
-        os << other_attributes << ", ";
-    }
-    os << "alias(\"" << name_prefix << sc.name << "\")));\n\n";
-}
-
 static bool none_apply(const Syscall& sc, const std::vector<CallWrapper*> wrappers) {
     for (const CallWrapper* wrapper : wrappers) {
         if (wrapper->applies(sc)) {
@@ -50,16 +28,13 @@ bool VdsoWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
         return os.good();
     }
 
-    // Declare the actual syscall as an extern - it is generated elsewhere.
-    write_extern_syscall_signature_line(os, sc, call_prefix_);
-
     // Writing the wrapper.
     write_syscall_signature_line(os, sc, wrapper_prefix_, "", " ", false, "");
     os << " {\n"
        << in;
     std::string return_var = write_syscall_return_var(os, sc);
     pre_call(os, sc);
-    os << in;
+    os << inin;
     // Invoke the actuall syscall.
     write_syscall_invocation(os, sc, return_var, call_prefix_);
     post_call(os, sc, return_var);
@@ -69,9 +44,8 @@ bool VdsoWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     }
     os << "}\n\n";
 
-    // Now alias the wrapper as the external and vdso symbols.
-    write_syscall_alias_line(os, sc, wrapper_prefix_, external_prefix_, "weak");
-    write_syscall_alias_line(os, sc, wrapper_prefix_, vdso_prefix_, "visibility(\"hidden\")");
+    // Now put the wrapper into the public interface.
+    os << "VDSO_INTERFACE_FUNCTION(mx_" << sc.name << ");\n\n";
 
     return os.good();
 }

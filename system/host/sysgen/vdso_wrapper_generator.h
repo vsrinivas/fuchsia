@@ -10,11 +10,11 @@
 // CallWrapper list.
 class VdsoWrapperGenerator : public Generator {
 public:
-    VdsoWrapperGenerator(std::string external_prefix, std::string wrapper_prefix,
-                         std::string vdso_prefix, std::string call_prefix,
+    VdsoWrapperGenerator(std::string wrapper_prefix,
+                         std::string call_prefix,
                          std::vector<CallWrapper*> call_wrappers)
-        : external_prefix_(external_prefix), wrapper_prefix_(wrapper_prefix),
-          vdso_prefix_(vdso_prefix), call_prefix_(call_prefix), wrappers_(call_wrappers) {}
+        : wrapper_prefix_(wrapper_prefix),
+          call_prefix_(call_prefix), wrappers_(call_wrappers) {}
 
     bool syscall(std::ofstream& os, const Syscall& sc) override;
 
@@ -22,9 +22,7 @@ private:
     void pre_call(std::ofstream& os, const Syscall& sc) const;
     void post_call(std::ofstream& os, const Syscall& sc, std::string return_var) const;
 
-    std::string external_prefix_;
     std::string wrapper_prefix_;
-    std::string vdso_prefix_;
     std::string call_prefix_;
     std::vector<CallWrapper*> wrappers_;
 };

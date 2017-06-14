@@ -36,9 +36,7 @@ static BlockingRetryWrapper blocking_wrapper;
 static vector<CallWrapper*> wrappers = {&test_wrapper, &blocking_wrapper};
 
 static VdsoWrapperGenerator vdso_wrapper_generator(
-    "mx_",         // external function name (points to wrapper)
     "_mx_",        // wrapper function name
-    "VDSO_mx_",    // vdso-internal name (points to wrapper)
     "SYSCALL_mx_", // syscall implementation name
     wrappers);
 
@@ -55,29 +53,46 @@ static KernelWrapperGenerator kernel_wrappers(
     "wrapper_", // wrapper prefix
     "MX_SYS_"); // syscall numbers constant prefix
 
+static bool skip_nothing(const Syscall&) {
+    return false;
+}
+
+static bool skip_internal(const Syscall& sc) {
+    return sc.is_internal();
+}
+
+static bool skip_vdso(const Syscall& sc) {
+    return sc.is_vdso();
+}
+
 static HeaderGenerator user_header(
     "extern ",                       // function prefix
-    vector<string>({"mx_", "_mx_"}), // function name prefixes
+    {
+        {"mx_", skip_internal},
+        {"_mx_", skip_internal},
+    },
     "void",                          // no-args special type
     false,                           // wrap pointers
-    user_attrs,
-    false); // skip vdso calls
+    user_attrs);
 
 static HeaderGenerator vdso_header(
     "__attribute__((visibility(\"hidden\"))) extern ", // function prefix
-    vector<string>({"VDSO_mx_"}),                      // function name prefixes
+    {
+        {"VDSO_mx_", skip_nothing},
+        {"SYSCALL_mx_", skip_vdso},
+    },
     "void",                                            // no-args special type
     false,
-    user_attrs,
-    true);
+    user_attrs);
 
 static HeaderGenerator kernel_header(
     "",
-    vector<string>({"sys_"}),
+    {
+        {"sys_", skip_vdso},
+    },
     "",
     true,
-    kernel_attrs,
-    true);
+    kernel_attrs);
 
 static VDsoAsmGenerator vdso_asm_generator(
     "m_syscall", // syscall macro name
