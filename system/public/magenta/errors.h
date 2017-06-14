@@ -129,6 +129,11 @@
 // Example: A disk block is irrecoverably damaged.
 #define MX_ERR_IO_DATA_LOSS (-43)
 
+// MX_ERR_IO_NOT_PRESENT: The device is no longer available (has been
+// unplugged from the system, powered down, or the driver has been
+// unloaded)
+#define MX_ERR_IO_NOT_PRESENT (-44)
+
 
 // ======== Filesystem Errors ========
 // MX_ERR_BAD_PATH: Path name is too long.

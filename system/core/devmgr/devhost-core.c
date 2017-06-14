@@ -156,8 +156,9 @@ void dev_ref_release(mx_device_t* dev) {
         DM_UNLOCK();
         device_op_release(dev);
         DM_LOCK();
-        if (dev->flags & DEV_FLAG_INSTANCE) {
-            // instances don't support device_remove() so we decrement the parent ref count here
+
+        // At this point we can safely release the ref on our parent
+        if (dev->parent) {
             dev_ref_release(dev->parent);
         }
     }
@@ -442,10 +443,11 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
         dev_ref_release(dev);
     }
 
-    // detach from parent, downref parent
+    // detach from parent.  we do not downref the parent
+    // until after our refcount hits zero and our release()
+    // hook has been called.
     if (dev->parent) {
         list_delete(&dev->node);
-        dev_ref_release(dev->parent);
     }
 
     dev->flags |= DEV_FLAG_VERY_DEAD;
