@@ -14,33 +14,29 @@ module modular;
 // or completely overwritten, depending on the use of Set() and Update().
 // A Link contains a JSON string, which is "null" when the Link is created.
 //
-// Each module receives a handle to one instance of Link at startup.
-// This instance is shared with the module that requested the start of
-// the module. A module can create additional Link instances through
-// the Story handle that it also receives at startup. Why would it
-// do that? For example to share the Link instance with modules it
-// requests to start in turn.
+// Each module receives a handle to one Link instance in its ModuleContext which
+// it receives in Module.Initialize(). It can access it by calling
+// ModuleContext.GetLink() with null as the link name. This instance is shared
+// with the parent Module if there is any, or with the StoryController client if
+// the Module is a top level Module of a Story. A Module can create additional
+// Link instances by calling ModuleContext.GetLink() with a non-null link name.
+// Why would it do that? For example to share the new Link instance with Modules
+// it requests to start in turn.
 //
-// A client of Link can set the JSON string stored in the instance and
-// register a handler (an implementation of the LinkWatcher interface) to be
-// notified of changes to the JSON string in the Link. A client may or may not
-// notified of changes it itself makes to the Link document, depending on
-// whether it registers with WatchAll() or Watch(), respectively. If the client
-// registers with Watch(), then it will not be notified of changes made
-// *through the same handle*.
+// A client may obtain another handle to the same Link instance by calling
+// GetLink() with the same name again. This can be used to create an extra
+// handle to register a watcher on. If the changes to the Link value are made
+// through the original handle, the watcher is notified of all such changes.
 //
-// A client may obtain another handle to the same Link instance using
-// the Dup() method. The primary purpose of this is to be able to
-// retain one handle and pass another handle to a StartModule()
-// request. (In Fidl, once a handle is passed as argument to a method,
-// it's gone from the caller.)
+// A client of Link can set the JSON string stored in the instance and register
+// a handler (an implementation of the LinkWatcher interface) to be notified of
+// changes to the JSON string in the Link. A client may or may not notified of
+// changes it itself makes to the Link document, depending on whether it
+// registers with WatchAll() or Watch(), respectively. If the client registers
+// with Watch(), then it will not be notified of changes made *through the same
+// handle*.
 //
-// The Dup() method can also be used to create an extra handle to
-// register a watcher on. If the changes to the Link value are made
-// through the original handle, the watcher is notified of all such
-// changes.
-//
-// No service name: created by Story.
+// No service name: returned from ModuleContext.GetLink().
 //
 // TODO(jimbe) Add error reporting for JSON and Pointer errors.
 interface Link {
@@ -102,29 +98,23 @@ interface Link {
   // all documents in the Link, even if it's empty.
   Watch(LinkWatcher watcher);
 
-  // Like Watch(), but the watcher is notified also of changes made
-  // through the same handle as the watcher is registered on.
+  // Like Watch(), but the watcher is notified also of changes made through the
+  // same handle as the watcher is registered on.
   WatchAll(LinkWatcher watcher);
 
-  // Obtains another handle for the same Link instance. Can be used to
-  // keep a reference to a Link instance and pass it as an argument to
-  // another service.
-  Dup(Link& dup);
-
-  // Allows to await completion of previously pipelined requests, to
-  // create sequentiality across service instances without giving
-  // every operation an empty return value. Used to gate an operation
-  // on another service that would actually tear down this service on
-  // state being persistent.
+  // Allows to await completion of previously pipelined requests, to create
+  // sequentiality across service instances without giving every operation an
+  // empty return value. Used to gate an operation on another service that would
+  // actually tear down this service on state being persistent.
   Sync() => ();
 };
 
 // This interface is meant to be implemented by a client of Link.
 //
-// The Notify() method is invoked whenever the Link changes. The entire
-// JSON string in the Link will be sent. In other words, this isn't an
-// incremental notification. |json| cannot be null because an empty Link
-// is the valid JSON document "null".
+// The Notify() method is invoked whenever the Link changes. The entire JSON
+// string in the Link will be sent. In other words, this isn't an incremental
+// notification. |json| cannot be null because an empty Link is the valid JSON
+// document "null".
 //
 // No service name: created by Module.
 interface LinkWatcher {

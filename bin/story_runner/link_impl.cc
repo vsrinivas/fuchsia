@@ -370,10 +370,6 @@ void LinkConnection::NotifyWatchers(const CrtJsonDoc& doc,
       [&json](LinkWatcher* const watcher) { watcher->Notify(json); });
 }
 
-void LinkConnection::Dup(fidl::InterfaceRequest<Link> dup) {
-  LinkConnection::New(impl_, std::move(dup));
-}
-
 void LinkConnection::Sync(const SyncCallback& callback) {
   impl_->Sync(callback);
 }

@@ -32,18 +32,17 @@ class LinkConnection;
 // A Link is a mutable and observable value shared between modules.
 //
 // When a module requests to run more modules using
-// ModuleContext::StartModule(), a Link instance is associated with
-// each such request, i.e. a Link instance is shared between at least
-// two modules. The same Link instance can be used in multiple
-// StartModule() requests, so it can be shared between more than two
-// modules. The Dup() method allows to obtain more handles of the same
-// Link instance.
+// ModuleContext::StartModule(), a Link instance is associated with each such
+// request, i.e. a Link instance is shared between at least two modules. The
+// same Link instance can be used in multiple StartModule() requests, so it can
+// be shared between more than two modules. The instance is identified by its
+// name in the context of the calling module.
 //
-// If a watcher is registered through one handle using the Watch()
-// method, it only receives notifications for changes by requests
-// through other handles. To make this possible, each connection is
-// bound to a separate LinkConnection instance rather than to LinkImpl
-// directly, and LinkImpl owns all its LinkConnection instances.
+// If a watcher is registered through one handle using the Watch() method, it
+// only receives notifications for changes by requests through other handles. To
+// make this possible, each connection is bound to a separate LinkConnection
+// instance rather than to LinkImpl directly, and LinkImpl owns all its
+// LinkConnection instances.
 class LinkImpl {
  public:
   // Connects a new LinkConnection object for the given Link interface
@@ -141,7 +140,6 @@ class LinkConnection : Link {
   void Erase(fidl::Array<fidl::String> path) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
-  void Dup(fidl::InterfaceRequest<Link> request) override;
   void Sync(const SyncCallback& callback) override;
 
   // Used by Watch() and WatchAll().
