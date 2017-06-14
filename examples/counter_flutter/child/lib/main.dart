@@ -52,6 +52,7 @@ class _ChildCounterModule extends Module implements LinkWatcher {
     ModuleContextProxy moduleContext = new ModuleContextProxy()
       ..ctrl.bind(moduleContextHandle);
     moduleContext.getLink(null, _link.ctrl.request());
+    moduleContext.ctrl.close();
 
     _link.watchAll(_linkWatcherBinding.wrap(this));
   }
