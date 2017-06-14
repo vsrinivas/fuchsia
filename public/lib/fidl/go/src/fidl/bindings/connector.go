@@ -56,24 +56,29 @@ func (c *Connector) ReadMessage() (*Message, error) {
 		return nil, errConnectionClosed
 	}
 
-	// Check if we already have a message.
-	// TODO: how big this should this be?
-	bytes := make([]byte, 256)
-	handles := make([]mx.Handle, 16)
-	_, _, err := (&mx.Channel{c.pipe}).Read(bytes, handles, 0)
-	if mxerror.Status(err) == mx.ErrShouldWait {
+	// TODO: what are the best initial sizes?
+	bytes := make([]byte, 128)
+	handles := make([]mx.Handle, 3)
+retry:
+	numBytes, numHandles, err := (&mx.Channel{c.pipe}).Read(bytes, handles, 0)
+	switch mxerror.Status(err) {
+	case mx.ErrOk:
+		// NOP
+	case mx.ErrBufferTooSmall:
+		bytes = make([]byte, numBytes)
+		handles = make([]mx.Handle, numHandles)
+		goto retry
+	case mx.ErrShouldWait:
 		waitId := c.waiter.AsyncWait(c.pipe, mx.SignalChannelReadable, c.waitChan)
 		select {
 		case <-c.waitChan:
-			_, _, err = (&mx.Channel{c.pipe}).Read(bytes, handles, 0)
-			if err != nil {
-				return nil, err
-			}
+			// We've got a message. Retry reading.
+			goto retry
 		case <-c.done:
 			c.waiter.CancelWait(waitId)
 			return nil, errConnectionClosed
 		}
-	} else if err != nil {
+	default:
 		return nil, err
 	}
 	return ParseMessage(bytes, handles)

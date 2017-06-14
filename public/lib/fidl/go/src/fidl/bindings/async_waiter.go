@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"sync/atomic"
 
 	"syscall/mx"
 	"syscall/mx/mxerror"
@@ -77,14 +76,10 @@ type asyncWaiterWorker struct {
 	// |items| is used to make |WaitMany()| calls directly.
 	// All these arrays should be operated simultaneously; i-th element
 	// of each refers to i-th handle.
-	items      []mx.WaitItem
+	items        []mx.WaitItem
 	asyncWaitIds []AsyncWaitId
 	responses    []chan<- WaitResponse
 
-	// Flag shared between waiterImpl and worker that is 1 iff the worker is
-	// already notified by waiterImpl. The worker sets it to 0 as soon as
-	// |WaitMany()| succeeds.
-	isNotified *int32
 	waitChan   <-chan waitRequest // should have a non-empty buffer
 	cancelChan <-chan AsyncWaitId // should have a non-empty buffer
 	ids        uint64             // is incremented each |AsyncWait()| call
@@ -142,11 +137,11 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 			id := AsyncWaitId(w.ids)
 			w.asyncWaitIds = append(w.asyncWaitIds, id)
 			request.idChan <- id
-		case AsyncWaitId := <-w.cancelChan:
+		case asyncWaitId := <-w.cancelChan:
 			// Zero index is reserved for the waking channel handle.
 			index := 0
 			for i := 1; i < len(w.asyncWaitIds); i++ {
-				if w.asyncWaitIds[i] == AsyncWaitId {
+				if w.asyncWaitIds[i] == asyncWaitId {
 					index = i
 					break
 				}
@@ -170,10 +165,6 @@ func (w *asyncWaiterWorker) runLoop() {
 Loop:
 	for {
 		err := mx.WaitMany(w.items, mx.TimensecInfinite)
-		// Set flag to 0, so that the next incoming request to
-		// waiterImpl would explicitly wake worker by sending a message
-		// to waking channel.
-		atomic.StoreInt32(w.isNotified, 0)
 		switch mxerror.Status(err) {
 		case mx.ErrOk, mx.ErrTimedOut:
 			// NOP
@@ -183,10 +174,8 @@ Loop:
 		}
 		// Zero index means that the worker was signaled by asyncWaiterImpl.
 		if (w.items[0].Pending & w.items[0].WaitFor) != 0 {
-			// TODO: how big should this be?
-			dataBuf := make([]byte, 256)
-			(&mx.Channel{w.items[0].Handle}).Read(dataBuf, nil, 0)
-			// TODO: log error
+			// Clear the signal from asyncWaiterImpl.
+			w.items[0].Handle.Signal(mx.SignalUser0, 0)
 			w.processIncomingRequests()
 		} else {
 			w.respondToSatisfiedWaits()
@@ -196,10 +185,10 @@ Loop:
 
 // asyncWaiterImpl is an implementation of |AsyncWaiter| interface.
 // Runs a worker in a separate goroutine and comunicates with it by sending a
-// message to |wakingChannel| to wake worker from |WaitMany()| call and
+// signal to |wakingEvent| to wake worker from |WaitMany()| call and
 // sending request via |waitChan| and |cancelChan|.
 type asyncWaiterImpl struct {
-	wakingChannel *mx.Channel
+	wakingEvent mx.Event
 
 	// Flag shared between waiterImpl and worker that is 1 iff the worker is
 	// already notified by waiterImpl. The worker sets it to 0 as soon as
@@ -215,24 +204,26 @@ func finalizeWorker(worker *asyncWaiterWorker) {
 }
 
 func finalizeAsyncWaiter(waiter *asyncWaiterImpl) {
-	waiter.wakingChannel.Close()
+	waiter.wakingEvent.Close()
 }
 
 // newAsyncWaiter creates an asyncWaiterImpl and starts its worker goroutine.
 func newAsyncWaiter() *asyncWaiterImpl {
-	c0, c1, err := mx.NewChannel(0)
+	e0, err := mx.NewEvent(0)
 	if err != nil {
-		panic(fmt.Sprintf("can't create channel %v", err))
+		panic(fmt.Sprintf("can't create event %v", err))
 	}
 	waitChan := make(chan waitRequest, 10)
 	cancelChan := make(chan AsyncWaitId, 10)
-	isNotified := new(int32)
-	item := mx.WaitItem{c1.Handle, mx.SignalChannelReadable, 0}
+	e1, err := e0.Duplicate(mx.RightSameRights)
+	if err != nil {
+		panic(fmt.Sprintf("can't duplicate event %v", err))
+	}
+	item := mx.WaitItem{Handle: mx.Handle(e1), WaitFor: mx.SignalUser0}
 	worker := &asyncWaiterWorker{
 		[]mx.WaitItem{item},
 		[]AsyncWaitId{0},
 		[]chan<- WaitResponse{make(chan WaitResponse)},
-		isNotified,
 		waitChan,
 		cancelChan,
 		0,
@@ -240,8 +231,7 @@ func newAsyncWaiter() *asyncWaiterImpl {
 	runtime.SetFinalizer(worker, finalizeWorker)
 	go worker.runLoop()
 	waiter := &asyncWaiterImpl{
-		wakingChannel:    c0,
-		isWorkerNotified: isNotified,
+		wakingEvent:    e0,
 		waitChan:         waitChan,
 		cancelChan:       cancelChan,
 	}
@@ -252,11 +242,11 @@ func newAsyncWaiter() *asyncWaiterImpl {
 // wakeWorker wakes the worker from |WaitMany()| call. This should be called
 // after sending a message to |waitChan| or |cancelChan| to avoid deadlock.
 func (w *asyncWaiterImpl) wakeWorker() {
-	if atomic.CompareAndSwapInt32(w.isWorkerNotified, 0, 1) {
-		err := w.wakingChannel.Write([]byte{0}, nil, 0)
-		if err != nil {
-			panic("can't write to a channel")
-		}
+	// Send a signal.
+	// TODO: Add Signal method to mx.Event type
+	err := mx.Handle(w.wakingEvent).Signal(0, mx.SignalUser0)
+	if err != nil {
+		panic("can't signal an event")
 	}
 }
 

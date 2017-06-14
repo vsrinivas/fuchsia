@@ -25,7 +25,7 @@ func (o *ChannelHandleOwner) PassChannel() mx.Handle {
 	}
 	handle := o.handle
 	o.handle = mx.HANDLE_INVALID
-	return handle;
+	return handle
 }
 
 // Close closes the underlying handle.

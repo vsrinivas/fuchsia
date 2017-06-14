@@ -54,15 +54,22 @@ func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 		return nil
 	}
 	for len(w.responders) > 0 {
-		// TODO: how big should this be?
-		bytes := make([]byte, 64*1024)
-		handles := make([]mx.Handle, 16)
+		// TODO: what are the best initial sizes?
+		bytes := make([]byte, 128)
+		handles := make([]mx.Handle, 3)
+	retry:
 		numBytes, numHandles, err := (&mx.Channel{w.handle}).Read(bytes, handles, 0)
-		if mxerror.Status(err) == mx.ErrShouldWait {
+		switch mxerror.Status(err) {
+		case mx.ErrOk:
+			// NOP
+		case mx.ErrBufferTooSmall:
+			bytes = make([]byte, numBytes)
+			handles = make([]mx.Handle, numHandles)
+			goto retry
+		case mx.ErrShouldWait:
 			w.waitId = w.waiter.AsyncWait(w.handle, mx.SignalChannelReadable, w.waitChan)
 			return nil
-		}
-		if err != nil {
+		default:
 			return err
 		}
 		message, err := ParseMessage(bytes[:numBytes], handles[:numHandles])
