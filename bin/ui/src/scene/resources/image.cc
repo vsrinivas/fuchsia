@@ -77,10 +77,10 @@ ImagePtr Image::New(Session* session,
       return nullptr;
     }
 
-    if (args->memory_offset + image_size >= host_memory->size()) {
+    if (args->memory_offset + image_size > host_memory->size()) {
       error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the Image must fit with the size of "
-          << "the Memory";
+          << "Image::CreateFromMemory(): the Image must fit within the size "
+          << "of the Memory";
       return nullptr;
     }
 
@@ -118,10 +118,10 @@ ImagePtr Image::New(Session* session,
       return nullptr;
     }
 
-    if (args->memory_offset + memory_reqs.size >= gpu_memory->size()) {
+    if (args->memory_offset + memory_reqs.size > gpu_memory->size()) {
       error_reporter->ERROR()
-          << "Image::CreateFromMemory(): the Image must fit with the size of "
-          << "the Memory";
+          << "Image::CreateFromMemory(): the Image must fit within the size "
+          << "of the Memory";
       return nullptr;
     }
 
