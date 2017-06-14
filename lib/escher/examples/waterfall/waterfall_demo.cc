@@ -124,7 +124,9 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
     char key_char = key[0];
     switch (key_char) {
       case 'A':
-        cycle_ssdo_acceleration_ = true;
+        enable_ssdo_acceleration_ = !enable_ssdo_acceleration_;
+        FTL_LOG(INFO) << "Enable SSDO acceleration: "
+                      << (enable_ssdo_acceleration_ ? "true" : "false");
         return true;
       case 'B':
         run_offscreen_benchmark_ = true;
@@ -188,11 +190,8 @@ void WaterfallDemo::DrawFrame() {
   renderer_->set_enable_lighting(enable_lighting_);
   renderer_->set_sort_by_pipeline(sort_by_pipeline_);
   renderer_->set_enable_profiling(profile_one_frame_);
+  renderer_->set_enable_ssdo_acceleration(enable_ssdo_acceleration_);
   profile_one_frame_ = false;
-  if (cycle_ssdo_acceleration_) {
-    renderer_->CycleSsdoAccelerationMode();
-    cycle_ssdo_acceleration_ = false;
-  }
 
   if (run_offscreen_benchmark_) {
     run_offscreen_benchmark_ = false;

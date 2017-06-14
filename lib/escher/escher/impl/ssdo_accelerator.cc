@@ -4,8 +4,8 @@
 
 #include "escher/impl/ssdo_accelerator.h"
 
-#include "escher/impl/image_cache.h"
 #include "escher/impl/command_buffer.h"
+#include "escher/impl/image_cache.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/texture.h"
 #include "escher/resources/resource_life_preserver.h"
@@ -15,233 +15,7 @@ namespace impl {
 
 namespace {
 
-constexpr char g_high_low_neighbors_packed_kernel_src[] = R"GLSL(
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout (binding = 0) uniform sampler2D depthImage;
-layout (binding = 1, rgba8) uniform image2D resultImage;
-
-const int kSize = 8;
-void main() {
-  float depths[kSize + 2][kSize + 2];
-  uint x = gl_GlobalInvocationID.x * kSize;
-  uint y = gl_GlobalInvocationID.y * kSize;
-
-  for (uint i = 0; i < kSize + 2; ++i) {
-    for (uint j = 0; j < kSize + 2; ++j) {
-      depths[i][j] = texture(depthImage, ivec2(x + i - 1, y + j - 1)).r;
-    }
-  }
-
-  vec4 zero = vec4(0.f, 0.f, 0.f, 0.f);
-  for (uint i = 0; i < kSize / 4; ++i) {
-    for (uint j = 0; j < kSize / 4; ++j) {
-      ivec4 packed_output = ivec4(0, 0, 0, 0);
-      for (uint row = 0; row < 4; ++row) {
-        for (uint col = 0; col < 4; ++col) {
-          // The center of a 3x3 neighborhood of interest.
-          ivec2 pos = ivec2(i * 4 + col + 1, j * 4 + row + 1);
-
-          // TODO: this is slower than the unvectorized code below on
-          // NVIDIA/Linux.  Compare on Fuchsia.
-          /*
-          float cd = depths[pos.x][pos.y];
-          vec4 center_depths = vec4(cd, cd, cd, cd);
-
-          vec4 difference = center_depths - vec4(depths[pos.x - 1][pos.y - 1],
-                                                 depths[pos.x - 1][pos.y],
-                                                 depths[pos.x - 1][pos.y + 1],
-                                                 depths[pos.x][pos.y - 1]);
-          bool higher_neighbor = any(greaterThan(difference, zero));
-          bool lower_neighbor = any(lessThan(difference, zero));
-
-          difference = center_depths - vec4(depths[pos.x][pos.y + 1],
-                                            depths[pos.x + 1][pos.y - 1],
-                                            depths[pos.x + 1][pos.y],
-                                            depths[pos.x + 1][pos.y + 1]);
-
-          higher_neighbor = higher_neighbor ||
-              any(greaterThan(difference, vec4(0.f, 0.f, 0.f, 0.f)));
-          lower_neighbor = lower_neighbor ||
-              any(lessThan(difference, vec4(0.f, 0.f, 0.f, 0.f)));
-
-          int bits = (higher_neighbor ? 1 : 0) +
-                     (lower_neighbor ? 2 : 0);
-          packed_output[row] += (bits << (col * 2));
-          */
-
-          float center_depth = depths[pos.x][pos.y];
-
-          // Determine whether the current pixel has a higher and/or lower
-          // neighbor.  This is done by accumulating positive/negative depth
-          // differences (more performant than e.g. boolean operations).
-          bool higher_neighbor = false;
-          bool lower_neighbor = false;
-          float difference;
-          difference = center_depth - depths[pos.x - 1][pos.y - 1];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x - 1][pos.y];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x - 1][pos.y + 1];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x][pos.y - 1];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x][pos.y + 1];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x + 1][pos.y - 1];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x + 1][pos.y];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          difference = center_depth - depths[pos.x + 1][pos.y + 1];
-          higher_neighbor = higher_neighbor || (difference > 0.f);
-          lower_neighbor = lower_neighbor || (difference < 0.f);
-
-          int bits = (higher_neighbor ? 1 : 0) +
-                     (lower_neighbor ? 2 : 0);
-          packed_output[row] += (bits << (col * 2));
-        }
-      }
-
-      imageStore(resultImage,
-                 ivec2(x / 4 + i, y / 4 + j),
-                 vec4(packed_output) / 255.f);
-    }
-  }
-}
-)GLSL";
-
-constexpr char g_high_low_neighbors_packed_parallel_kernel_src[] = R"GLSL(
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-// Square root of the number of threads in the workgroup.
-const int kWorkgroupThreadDim = 2;
-layout(local_size_x = kWorkgroupThreadDim, local_size_y = kWorkgroupThreadDim) in;
-
-layout (binding = 0) uniform sampler2D depthImage;
-layout (binding = 1, rgba8) uniform image2D resultImage;
-
-// Length of an edge of the square region of pixels that is collectively
-// processed by all threads in the workgroup.
-const int kRegionSize = kWorkgroupThreadDim * 4;
-
-// The algorithm requires depth values not only for the region of interest, but
-// also a 1-pixel 'buffer zone' around it.
-shared lowp float depths[kRegionSize + 2][kRegionSize + 2];
-
-// Loads the depth values that are processed by all threads in this workgroup.
-void loadDepthValues() {
-  if (kWorkgroupThreadDim == 2) {
-    // Use a specialized version when there are 4 threads.  Each thread loads
-    // 1/4 of the depth region that is shared between workgroup threads.
-    ivec2 offset = ivec2(5 * gl_LocalInvocationID.xy);
-    ivec2 depth_load_region_top_left =
-        4 * ivec2(gl_GlobalInvocationID.xy - gl_LocalInvocationID.xy)
-        + offset
-        - ivec2(1, 1);
-    for (uint i = 0; i < 5; ++i) {
-      for (uint j = 0; j < 5; ++j) {
-        depths[i + offset.x][j + offset.y] =
-            texture(depthImage,
-                    depth_load_region_top_left + ivec2(i, j)).r;
-      }
-    }
-  } else {
-    // We designate one thread as the leader; it is responsible for loading all
-    // required depth values while the other threads wait.
-    if (gl_LocalInvocationID.x == 0 && gl_LocalInvocationID.y == 0) {
-      ivec2 depth_load_region_top_left = ivec2(gl_GlobalInvocationID.x * 4 - 1,
-                                               gl_GlobalInvocationID.y * 4 - 1);
-      for (uint i = 0; i < kRegionSize + 2; ++i) {
-        for (uint j = 0; j < kRegionSize + 2; ++j) {
-          depths[i][j] = texture(depthImage,
-                                 depth_load_region_top_left + ivec2(i, j)).r;
-        }
-      }
-    }
-  }
-}
-
-void main() {
-  loadDepthValues();
-  memoryBarrierShared();
-
-  // Each thread is responsible for processing a 4x4 region, and packing the
-  // 16 2-bit result values into a single pixel.
-  ivec4 packed_output = ivec4(0, 0, 0, 0);
-  for (uint row = 0; row < 4; ++row) {
-    for (uint col = 0; col < 4; ++col) {
-      // The center of a 3x3 neighborhood of interest.
-      uvec2 pos = gl_LocalInvocationID.xy * 4 + uvec2(col + 1, row + 1);
-
-      float center_depth = depths[pos.x][pos.y];
-
-      // Determine whether the current pixel has a higher and/or lower
-      // neighbor.  This is done by accumulating positive/negative depth
-      // differences (more performant than e.g. boolean operations).
-      bool higher_neighbor = false;
-      bool lower_neighbor = false;
-      float difference;
-      difference = center_depth - depths[pos.x - 1][pos.y - 1];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x - 1][pos.y];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x - 1][pos.y + 1];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x][pos.y - 1];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x][pos.y + 1];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x + 1][pos.y - 1];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x + 1][pos.y];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      difference = center_depth - depths[pos.x + 1][pos.y + 1];
-      higher_neighbor = higher_neighbor || (difference > 0.f);
-      lower_neighbor = lower_neighbor || (difference < 0.f);
-
-      int bits = (higher_neighbor ? 1 : 0) +
-                 (lower_neighbor ? 2 : 0);
-      packed_output[row] += (bits << (col * 2));
-    }
-  }
-
-  imageStore(resultImage,
-             ivec2(gl_GlobalInvocationID.xy),
-             vec4(packed_output) / 255.f);
-}
-)GLSL";
-
-constexpr char g_sampling_filtering_packed_kernel_src[] = R"GLSL(
+constexpr char g_kernel_src[] = R"GLSL(
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
@@ -536,7 +310,7 @@ void main() {
 }
 )GLSL";
 
-constexpr char g_null_packed_kernel_src[] = R"GLSL(
+constexpr char g_null_kernel_src[] = R"GLSL(
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
@@ -552,7 +326,7 @@ void main() {
 }
 )GLSL";
 
-constexpr char g_unpack_32_to_2_kernel_src[] = R"GLSL(
+constexpr char g_unpack_kernel_src[] = R"GLSL(
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
@@ -602,30 +376,11 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
                                                 const TexturePtr& depth_texture,
                                                 vk::ImageUsageFlags image_flags,
                                                 Timestamper* timestamper) {
-  switch (mode_) {
-    case 0:
-      return GenerateNullLookupTable(command_buffer, depth_texture, image_flags,
-                                     timestamper);
-    case 1:
-      return GenerateSampleLookupTable(command_buffer, depth_texture,
-                                       image_flags, timestamper);
-    // There are "parallel" and "sequential" variations of the high/low table
-    // generation kernel.
-    case 2:
-    case 3:
-      return GenerateHighLowLookupTable(command_buffer, depth_texture,
-                                        image_flags, timestamper);
-    default:
-      FTL_CHECK(false);
-      return TexturePtr();
+  if (!enabled_) {
+    return GenerateNullLookupTable(command_buffer, depth_texture, image_flags,
+                                   timestamper);
   }
-}
 
-TexturePtr SsdoAccelerator::GenerateSampleLookupTable(
-    CommandBuffer* command_buffer,
-    const TexturePtr& depth_texture,
-    vk::ImageUsageFlags image_flags,
-    Timestamper* timestamper) {
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
 
@@ -649,110 +404,19 @@ TexturePtr SsdoAccelerator::GenerateSampleLookupTable(
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
-  if (!sampling_filtering_packed_kernel_) {
-    FTL_DLOG(INFO) << "Lazily instantiating sampling_filtering_packed_kernel_";
-    sampling_filtering_packed_kernel_ = std::make_unique<ComputeShader>(
+  if (!kernel_) {
+    FTL_DLOG(INFO) << "Lazily instantiating kernel_";
+    kernel_ = std::make_unique<ComputeShader>(
         vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
-        0, g_sampling_filtering_packed_kernel_src, compiler_);
+        0, g_kernel_src, compiler_);
   }
 
-  sampling_filtering_packed_kernel_->Dispatch({depth_texture, tmp_texture},
-                                              command_buffer, work_groups_x,
-                                              work_groups_y, 1, nullptr);
+  kernel_->Dispatch({depth_texture, tmp_texture}, command_buffer, work_groups_x,
+                    work_groups_y, 1, nullptr);
 
-  timestamper->AddTimestamp(
-      "generated spiffy new SSDO acceleration lookup table");
-  return tmp_texture;
-}
-
-TexturePtr SsdoAccelerator::GenerateHighLowLookupTable(
-    CommandBuffer* command_buffer,
-    const TexturePtr& depth_texture,
-    vk::ImageUsageFlags image_flags,
-    Timestamper* timestamper) {
-  uint32_t width = depth_texture->width();
-  uint32_t height = depth_texture->height();
-
-  // Set below.
-  ComputeShader* high_low_neighbors_kernel = nullptr;
-  uint32_t work_groups_x = 0;
-  uint32_t work_groups_y = 0;
-  uint32_t packed_width = 0;
-  uint32_t packed_height = 0;
-
-  if (mode_ == 2) {
-    // The "sequential kernel" processes a kSize x kSize region in a single
-    // thread.  No memory is shared with other threads in the workgroup.
-    // TODO: it seems like the parallel kernel should outperform this one, but
-    // it doesn't.  We need to understand why this is.  Are we
-    // bandwidth-limited?
-    // That doesn't explain the significant slowdown.
-    if (!high_low_neighbors_packed_kernel_) {
-      FTL_DLOG(INFO)
-          << "Lazily instantiating high_low_neighbors_packed_kernel_";
-      high_low_neighbors_packed_kernel_ = std::make_unique<ComputeShader>(
-          vulkan_context(),
-          std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
-                                       vk::ImageLayout::eGeneral},
-          0, g_high_low_neighbors_packed_kernel_src, compiler_);
-    }
-    high_low_neighbors_kernel = high_low_neighbors_packed_kernel_.get();
-    // Size of neighborhood of pixels to work on for each invocation of the
-    // compute kernel.  Must match the value in the compute shader source code,
-    // and be a multiple of 4.
-    constexpr uint32_t kSize = 8;
-    work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);
-    work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);
-    packed_width = width / 4 + (width % kSize > 0 ? 1 : 0);
-    packed_height = height / 4 + (height % kSize > 0 ? 1 : 0);
-  } else if (mode_ == 3) {
-    // The "parallel" kernel processes a 4x4 region with each thread, and shares
-    // memory between all threads in the workgroup.
-    if (!high_low_neighbors_packed_parallel_kernel_) {
-      FTL_DLOG(INFO)
-          << "Lazily instantiating high_low_neighbors_packed_parallel_kernel_";
-      high_low_neighbors_packed_parallel_kernel_ =
-          std::make_unique<ComputeShader>(
-              vulkan_context(),
-              std::vector<vk::ImageLayout>{
-                  vk::ImageLayout::eShaderReadOnlyOptimal,
-                  vk::ImageLayout::eGeneral},
-              0, g_high_low_neighbors_packed_parallel_kernel_src, compiler_);
-    }
-    high_low_neighbors_kernel =
-        high_low_neighbors_packed_parallel_kernel_.get();
-    constexpr uint32_t kSize = 4;
-    work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);
-    work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);
-    packed_width = width / 4 + (width % kSize > 0 ? 1 : 0);
-    packed_height = height / 4 + (height % kSize > 0 ? 1 : 0);
-  } else {
-    FTL_CHECK(false);  // unexpected mode_
-  }
-
-  ImagePtr tmp_image = image_cache_->NewImage(
-      {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
-       image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
-      life_preserver_, tmp_image, vk::Filter::eNearest,
-      vk::ImageAspectFlagBits::eColor, true);
-  command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
-                                        vk::ImageLayout::eGeneral);
-
-  high_low_neighbors_kernel->Dispatch({depth_texture, tmp_texture},
-                                      command_buffer, work_groups_x,
-                                      work_groups_y, 1, nullptr);
-
-  if (high_low_neighbors_kernel == high_low_neighbors_packed_kernel_.get()) {
-    timestamper->AddTimestamp(
-        "generated SSDO acceleration high/low neighbors lookup table");
-  } else {
-    timestamper->AddTimestamp(
-        "generated SSDO acceleration high/low neighbors lookup table "
-        "(parallel)");
-  }
+  timestamper->AddTimestamp("generated SSDO acceleration lookup table");
   return tmp_texture;
 }
 
@@ -784,17 +448,17 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
-  if (!null_packed_kernel_) {
-    FTL_DLOG(INFO) << "Lazily instantiating null_packed_kernel_";
-    null_packed_kernel_ = std::make_unique<ComputeShader>(
+  if (!null_kernel_) {
+    FTL_DLOG(INFO) << "Lazily instantiating null_kernel_";
+    null_kernel_ = std::make_unique<ComputeShader>(
         vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
-        0, g_null_packed_kernel_src, compiler_);
+        0, g_null_kernel_src, compiler_);
   }
 
-  null_packed_kernel_->Dispatch({depth_texture, tmp_texture}, command_buffer,
-                                work_groups_x, work_groups_y, 1, nullptr);
+  null_kernel_->Dispatch({depth_texture, tmp_texture}, command_buffer,
+                         work_groups_x, work_groups_y, 1, nullptr);
 
   timestamper->AddTimestamp("generated null SSDO acceleration lookup table");
   return tmp_texture;
@@ -825,42 +489,22 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   uint32_t work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);
   uint32_t work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);
 
-  if (!unpack_32_to_2_kernel_) {
-    FTL_DLOG(INFO) << "Lazily instantiating unpack_32_to_2_kernel_";
-    unpack_32_to_2_kernel_ = std::make_unique<ComputeShader>(
+  if (!unpack_kernel_) {
+    FTL_DLOG(INFO) << "Lazily instantiating unpack_kernel_";
+    unpack_kernel_ = std::make_unique<ComputeShader>(
         vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
                                      vk::ImageLayout::eGeneral},
-        0, g_unpack_32_to_2_kernel_src, compiler_);
+        0, g_unpack_kernel_src, compiler_);
   }
-  unpack_32_to_2_kernel_->Dispatch({packed_lookup_table, result_texture},
-                                   command_buffer, work_groups_x, work_groups_y,
-                                   1, nullptr);
+  unpack_kernel_->Dispatch({packed_lookup_table, result_texture},
+                           command_buffer, work_groups_x, work_groups_y, 1,
+                           nullptr);
 
   timestamper->AddTimestamp(
       "finished unpacking SSDO acceleration table for debug visualization");
 
   return result_texture;
-}
-
-void SsdoAccelerator::CycleMode() {
-  mode_ = (mode_ + 1) % 4;
-  switch (mode_) {
-    case 0:
-      FTL_LOG(INFO) << "SsdoAccelerator mode: null";
-      break;
-    case 1:
-      FTL_LOG(INFO) << "SsdoAccelerator mode: directional casters";
-      break;
-    case 2:
-      FTL_LOG(INFO) << "SsdoAccelerator mode: high/low neighbors";
-      break;
-    case 3:
-      FTL_LOG(INFO) << "SsdoAccelerator mode: high/low neighbors (parallel)";
-      break;
-    default:
-      FTL_CHECK(false);
-  }
 }
 
 }  // namespace impl

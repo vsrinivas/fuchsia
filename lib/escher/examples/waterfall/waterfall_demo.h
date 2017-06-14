@@ -46,8 +46,8 @@ class WaterfallDemo : public Demo {
   // True if the Model objects should be binned by pipeline, false if they
   // should be rendered in their natural order.
   bool sort_by_pipeline_ = true;
-  // Choose which SSDO acceleration mode is used.
-  bool cycle_ssdo_acceleration_ = false;
+  // True if SSDO should be accelerated by generating a lookup table each frame.
+  bool enable_ssdo_acceleration_ = true;
   bool stop_time_ = false;
   // True if lighting should be periodically toggled on and off.
   bool auto_toggle_lighting_ = false;

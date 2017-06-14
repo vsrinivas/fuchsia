@@ -471,8 +471,9 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     ImagePtr depth_image_multisampled = image_cache_->NewImage(info);
 
     FramebufferPtr multisample_fb = ftl::MakeRefCounted<Framebuffer>(
-        escher_, width, height, std::vector<ImagePtr>{color_image_multisampled,
-                                                      depth_image_multisampled},
+        escher_, width, height,
+        std::vector<ImagePtr>{color_image_multisampled,
+                              depth_image_multisampled},
         model_renderer_->lighting_pass());
 
     current_frame()->KeepAlive(multisample_fb);
@@ -522,8 +523,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   EndFrame(frame_done, frame_retired_callback);
 }
 
-void PaperRenderer::CycleSsdoAccelerationMode() {
-  ssdo_accelerator_->CycleMode();
+void PaperRenderer::set_enable_ssdo_acceleration(bool b) {
+  ssdo_accelerator_->set_enabled(b);
 }
 
 }  // namespace escher

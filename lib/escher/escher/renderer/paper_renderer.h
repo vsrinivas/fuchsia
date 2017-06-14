@@ -25,6 +25,10 @@ class PaperRenderer : public Renderer {
   // Set whether SSDO lighting model is used.
   void set_enable_lighting(bool b) { enable_lighting_ = b; }
 
+  // Set whether SSDO computation should be accelerated by generating a lookup
+  // table each frame.
+  void set_enable_ssdo_acceleration(bool b);
+
   // Set whether objects should be sorted by their pipeline, or rendered in the
   // order that they are provided by the caller.
   void set_sort_by_pipeline(bool b) { sort_by_pipeline_ = b; }
