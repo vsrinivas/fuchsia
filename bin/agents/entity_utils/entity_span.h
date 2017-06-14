@@ -21,7 +21,12 @@ class EntitySpan {
   // |type| denotes the entity type (e.g. "email").
   // |start| and |end| represent the character offsets within the source string
   // (|end| points to the character after |content|).
-  EntitySpan(std::string content, std::string type, int start, int end);
+  EntitySpan(const std::string& content, const std::string& type,
+             const int start, const int end);
+
+  // Constructs a new EntitySpan by parsing a JSON-formatted string with the
+  // fields given in the above constructor as keys.
+  static EntitySpan FromJson(const std::string& json_string);
 
   std::string GetContent() const { return content_; }
   std::string GetType() const { return type_; }
@@ -32,6 +37,10 @@ class EntitySpan {
   std::string GetJsonString() const { return json_string_; }
 
  private:
+  // A common initialization method called by constructors.
+  void Init(const std::string& name, const std::string& type, const int start,
+            const int end);
+
   std::string content_;
   std::string type_;
   int start_;

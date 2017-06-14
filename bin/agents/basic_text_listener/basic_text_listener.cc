@@ -9,6 +9,7 @@
 #include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
@@ -18,6 +19,7 @@ namespace maxwell {
 
 const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
 const std::string kRawTextTopic = "/story/focused/explicit/raw/text";
+const std::string kRawEntitiesTopic = "/inferred/focal_entities";
 
 // Subscribe to the Context Engine and Publish any entities found back to
 // the Context Engine.
@@ -45,21 +47,23 @@ class BasicTextListener : ContextListener {
         std::sregex_iterator(raw_text.begin(), raw_text.end(), entity_regex);
     const auto entities_end = std::sregex_iterator();
 
-    rapidjson::StringBuffer s;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-    writer.StartObject();
-    writer.StartArray();
+    rapidjson::Document d;
+    rapidjson::Value entities_json(rapidjson::kArrayType);
     for (std::sregex_iterator i = entities_begin; i != entities_end; ++i) {
       const std::smatch match = *i;
-      const std::string entity = match.str();
+      const std::string content = match.str();
       const int start = match.position();
       const int end = start + match.length();
-      writer.String(EntitySpan(entity, "email", start, end).GetJsonString());
+      const EntitySpan entity(content, "email", start, end);
+      // TODO(travismart): It would be more efficient to work directly with
+      // JSON values here, so we don't have to make multiple copies of strings
+      // and parse them. However, strings allow our interface to be independent
+      // of choice of JSON library.
+      d.Parse(entity.GetJsonString());
+      entities_json.PushBack(d, d.GetAllocator());
     }
-    writer.EndArray();
-    writer.EndObject();
 
-    return s.GetString();
+    return modular::JsonValueToString(entities_json);
   }
 
   // |ContextListener|
@@ -74,9 +78,8 @@ class BasicTextListener : ContextListener {
                      << " entry in Context Engine.";
     }
     const std::string raw_text = text_doc[0]["text"].GetString();
-    FTL_LOG(INFO) << "raw/text:" << raw_text;
 
-    publisher_->Publish("raw/entities", GetEntitiesFromText(raw_text));
+    publisher_->Publish(kRawEntitiesTopic, GetEntitiesFromText(raw_text));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;

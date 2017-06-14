@@ -4,26 +4,48 @@
 
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 
+#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "lib/ftl/logging.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
 namespace maxwell {
 
-EntitySpan::EntitySpan(std::string content, std::string type, int start, int end)
-    : content_(content), type_(type), start_(start), end_(end) {
-  rapidjson::StringBuffer s;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-  writer.StartObject();
-  writer.Key("content");
-  writer.String(content);
-  writer.Key("type");
-  writer.String(type);
-  writer.Key("start");
-  writer.Uint(start_);
-  writer.Key("end");
-  writer.Uint(end_);
-  writer.EndObject();
-  json_string_ = s.GetString();
+EntitySpan::EntitySpan(const std::string& content, const std::string& type,
+                       const int start, const int end) {
+  this->Init(content, type, start, end);
+}
+
+EntitySpan EntitySpan::FromJson(const std::string& json_string) {
+  rapidjson::Document e;
+  e.Parse(json_string);
+  if (e.HasParseError() ||
+      !(e.HasMember("content") && e["content"].IsString() &&
+        e.HasMember("type") && e["type"].IsString() && e.HasMember("start") &&
+        e["start"].IsInt() && e.HasMember("end") && e["end"].IsInt())) {
+    // TODO(travismart): Validate this with rapidjson schema validation.
+    FTL_LOG(ERROR) << "Invalid parsing of Entity from JSON: " << json_string;
+  }
+  return EntitySpan(e["content"].GetString(), e["type"].GetString(),
+                    e["start"].GetInt(), e["end"].GetInt());
+}
+
+void EntitySpan::Init(const std::string& content, const std::string& type,
+                      const int start, const int end) {
+  content_ = content;
+  type_ = type;
+  start_ = start;
+  end_ = end;
+
+  rapidjson::Document d;
+  auto& allocator = d.GetAllocator();
+  rapidjson::Value entity(rapidjson::kObjectType);
+  entity.AddMember("content", content, allocator);
+  entity.AddMember("type", type, allocator);
+  entity.AddMember("start", start, allocator);
+  entity.AddMember("end", end, allocator);
+  json_string_ = modular::JsonValueToString(entity);
 }
 
 }  // namespace maxwell

@@ -12,6 +12,7 @@ executable("entity_focuser") {
   deps = [
     "//application/lib/app",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/src/agents/entity_utils:entity_span",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]

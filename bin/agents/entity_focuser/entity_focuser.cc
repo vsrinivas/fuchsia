@@ -4,53 +4,126 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_span.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/rapidjson/writer.h"
 
 namespace maxwell {
 
-// Subscribe to entities and selection in ApplicationContext, and Publish any
-// focused entities back to ApplicationContext.
+const std::string kRawEntitiesTopic = "/inferred/focal_entities";
+const std::string kRawTextSelectionTopic =
+    "/story/focused/explicit/raw/text_selection";
+const std::string kFocusedEntityTopic = "/inferred/focused_entities";
+
+// Subscribe to entities and selection in the Context Engine, and Publish any
+// focused entities back to the Context Engine.
 class FocusedEntityFinder : ContextListener {
  public:
   FocusedEntityFinder()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        publisher_(
+            app_context_->ConnectToEnvironmentService<ContextPublisher>()),
+        topics_({kRawEntitiesTopic, kRawTextSelectionTopic}),
         binding_(this) {
-    FTL_LOG(INFO) << "Initializing";
     auto query = ContextQuery::New();
-    query->topics.push_back("raw/entity");
-    query->topics.push_back("raw/text_selection");
+    for (const std::string& s : topics_) {
+      query->topics.push_back(s);
+    }
     provider_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
+  // Parse a JSON representation of an array of entities.
+  std::vector<EntitySpan> GetEntitiesFromJson(const std::string& json_string) {
+    // Validate and parse the string.
+    if (json_string.empty()) {
+      FTL_LOG(INFO) << "No current entities.";
+      return std::vector<EntitySpan>();
+    }
+    rapidjson::Document entities_doc;
+    entities_doc.Parse(json_string);
+    if (entities_doc.HasParseError()) {
+      FTL_LOG(ERROR) << "Invalid Entities JSON, error #: "
+                     << entities_doc.GetParseError();
+      return std::vector<EntitySpan>();
+    }
+    if (!entities_doc.IsArray()) {
+      FTL_LOG(ERROR) << "Invalid " << kRawEntitiesTopic << " entry in Context.";
+      return std::vector<EntitySpan>();
+    }
+
+    std::vector<EntitySpan> entities;
+    for (const rapidjson::Value& e : entities_doc.GetArray()) {
+      entities.push_back(EntitySpan::FromJson(modular::JsonValueToString(e)));
+    }
+    return entities;
+  }
+
+  // Parse a JSON representation of selection.
+  std::pair<int, int> GetSelectionFromJson(const std::string& json_string) {
+    // Validate and parse the string.
+    if (json_string.empty()) {
+      FTL_LOG(INFO) << "No current selection.";
+      return std::make_pair(-1, -1);
+    }
+    rapidjson::Document selection_doc;
+    selection_doc.Parse(json_string);
+    if (selection_doc.HasParseError() || selection_doc.Empty() ||
+        !selection_doc.IsArray()) {
+      FTL_LOG(ERROR) << "Invalid " << kRawTextSelectionTopic
+                     << " entry in Context.";
+      return std::make_pair(-1, -1);
+    }
+    const rapidjson::Value& selection = selection_doc[0];
+    if (!(selection.HasMember("start") && selection["start"].IsInt() &&
+          selection.HasMember("end") && selection["end"].IsInt())) {
+      FTL_LOG(ERROR) << "Invalid " << kRawTextSelectionTopic
+                     << " entry in Context. "
+                     << "Missing \"start\" or \"end\" keys.";
+      return std::make_pair(-1, -1);
+    }
+
+    const int start = selection["start"].GetInt();
+    const int end = selection["end"].GetInt();
+    return std::make_pair(start, end);
+  }
+
+  // Return a JSON representation of an array of entities that fall within
+  // start and end.
+  std::string GetFocusedEntities(const std::vector<EntitySpan>& entities,
+                                 const int selection_start,
+                                 const int selection_end) {
+    rapidjson::Document d;
+    rapidjson::Value entities_json(rapidjson::kArrayType);
+    for (const EntitySpan& e : entities) {
+      if (e.GetStart() <= selection_start && e.GetEnd() >= selection_end) {
+        d.Parse(e.GetJsonString());
+        entities_json.PushBack(d, d.GetAllocator());
+      }
+    }
+    return modular::JsonValueToString(entities_json);
+  }
+
   // |ContextListener|
   void OnUpdate(ContextUpdatePtr result) override {
-    // TODO(travismart): Update entity storage from a raw text entry.
-    rapidjson::Document entity_doc;
-    entity_doc.Parse(result->values["raw/entity"]);
-    if (!entity_doc.HasMember("text") || !entity_doc["text"].IsString()) {
-      FTL_LOG(ERROR) << "Invalid raw/entity entry in ApplicationContext.";
-    }
-    const std::string raw_text = entity_doc["text"].GetString();
-    FTL_LOG(INFO) << "raw/entity:" << raw_text;
-
-    rapidjson::Document selection_doc;
-    entity_doc.Parse(result->values["raw/text_selection"]);
-    if (!selection_doc.HasMember("start") || !selection_doc.HasMember("end")) {
-      FTL_LOG(ERROR) << "Invalid raw/selection entry in ApplicationContext.";
-    }
-    const int start = selection_doc["start"].GetInt();
-    const int end = selection_doc["end"].GetInt();
-    FTL_LOG(INFO) << "raw/selection:" << start << ", " << end;
-
-    // TODO(travismart): Properly process entity and selection and publish a
-    // "focused_entity" back to ApplicationContext.
+    const std::vector<EntitySpan> entities =
+        GetEntitiesFromJson(result->values[kRawEntitiesTopic]);
+    const std::pair<int, int> start_and_end =
+        GetSelectionFromJson(result->values[kRawTextSelectionTopic]);
+    publisher_->Publish(kFocusedEntityTopic,
+                        GetFocusedEntities(entities, start_and_end.first,
+                                           start_and_end.second));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
   ContextProviderPtr provider_;
+  ContextPublisherPtr publisher_;
+  const std::vector<std::string> topics_;
   fidl::Binding<ContextListener> binding_;
 };
 

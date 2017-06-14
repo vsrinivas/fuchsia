@@ -10,5 +10,6 @@ source_set("entity_span") {
 
   public_deps = [
     "//apps/modular/lib/rapidjson",
+    "//lib/ftl",
   ]
 }
