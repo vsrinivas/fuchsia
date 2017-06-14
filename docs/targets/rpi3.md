@@ -81,4 +81,5 @@ information, see `docs/getting_started.md`:
 
 9. Insert the SD Card and connect power to boot the Pi
 
-
+## Netboot
+Add `netsvc.netboot=true` to `cmdline.txt` to enable netbooting from the SD Card.
