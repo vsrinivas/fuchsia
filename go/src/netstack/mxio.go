@@ -1187,6 +1187,9 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 	s.mu.Lock()
 	ios := s.io[cookie]
 	s.mu.Unlock()
+	if ios == nil && op != rio.OpOpen {
+		return mx.ErrBadState
+	}
 
 	switch op {
 	case rio.OpOpen:
