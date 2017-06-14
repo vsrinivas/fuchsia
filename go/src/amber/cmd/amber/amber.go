@@ -99,8 +99,8 @@ func loadKeys(path string) ([]*data.Key, error) {
 }
 
 func amber(client *tuf.Client) error {
-	files := []string{"/system/bin/tuf-client",
-		"/system/bin/amber"}
+	files := []string{
+		"/system/apps/amber"}
 	reqSet := daemon.NewPackageSet()
 
 	d := sha512.New()
@@ -121,17 +121,29 @@ func amber(client *tuf.Client) error {
 	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
 	defer checker.CancelAll()
 	checker.AddSource(fetcher)
+	pmMonitor(checker)
 
-	fmt.Println("Press Ctrl+C or Ctrl+D to exit.")
+	fmt.Println("Press Ctrl+D to exit.")
 	buf := make([]byte, 1)
 	for {
 		_, err := os.Stdin.Read(buf)
 		if (err != nil && err != io.EOF) || buf[0] == 3 || buf[0] == 4 {
+			fmt.Printf("Err: %v\n", err)
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
+	return nil
+}
+
+var needsPath = "/data/pkgs/needs"
+
+func pmMonitor(d *daemon.Daemon) error {
+	s := time.NewTicker(200 * time.Millisecond)
+	l := time.NewTicker(5 * time.Minute)
+	end := make(chan struct{})
+	go daemon.WatchNeeds(d, s.C, l.C, end, needsPath)
 	return nil
 }
 
