@@ -297,7 +297,7 @@ mx_status_t __mxio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
     return MX_OK;
 }
 
-mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, uint32_t mode) {
+static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, uint32_t mode) {
     if (path == NULL) {
         return MX_ERR_INVALID_ARGS;
     }

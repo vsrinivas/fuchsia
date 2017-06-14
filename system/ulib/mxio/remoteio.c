@@ -581,46 +581,6 @@ mx_status_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle
     return mxrio_connect(dir, h, MXRIO_OPEN, path);
 }
 
-static mx_status_t remote_create_fd(mx_handle_t h, int* fd) {
-    mxio_t* io = mxio_remote_create(h, 0);
-    if (io == NULL) {
-        return MX_ERR_NO_MEMORY;
-    }
-
-    int result = mxio_bind_to_fd(io, -1, 0);
-    if (result < 0) {
-        mxio_release(io);
-        return MX_ERR_NO_RESOURCES;
-    }
-
-    *fd = result;
-    return MX_OK;
-}
-
-mx_status_t mxio_remote_connect(const char* path, int* fd) {
-    mx_handle_t h1, h2;
-    mx_status_t status;
-    if ((status = mx_channel_create(0, &h1, &h2)) != MX_OK)
-        return status;
-    if ((status = mxio_service_connect(path, h1)) != MX_OK) {
-        mx_handle_close(h2);
-        return status;
-    }
-    return remote_create_fd(h2, fd);
-}
-
-mx_status_t mxio_remote_connect_at(mx_handle_t dir, const char* path, int* fd) {
-    mx_handle_t h1, h2;
-    mx_status_t status;
-    if ((status = mx_channel_create(0, &h1, &h2)) != MX_OK)
-        return status;
-    if ((status = mxio_service_connect_at(dir, path, h1)) != MX_OK) {
-        mx_handle_close(h2);
-        return status;
-    }
-    return remote_create_fd(h2, fd);
-}
-
 mx_handle_t mxio_service_clone(mx_handle_t svc) {
     mx_handle_t cli, srv;
     mx_status_t r;

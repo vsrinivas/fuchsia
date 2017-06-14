@@ -28,36 +28,14 @@ static mx_status_t mxio_getsockopt(mxio_t* io, int level, int optname,
                                    void* restrict optval,
                                    socklen_t* restrict optlen);
 
-static int socket_service(void) {
-    static mtx_t lock = MTX_INIT;
-    static int service = INT_MIN;
-
-    mtx_lock(&lock);
-    if (service == INT_MIN) {
-        // This is the first time we've tried to connect to the socket service.
-        if (mxio_remote_connect("/svc/net.Netstack", &service) != MX_OK) {
-            // We failed to connect. Because we connect asynchronously, the only
-            // reason we can fail is something local to our process (e.g., we
-            // cannot create any channels), which means there's no reason to try
-            // to connect again in the future. We remember that we failed by
-            // storing -1 in |service| so we don't try to reconnect
-            // continuously.
-            service = -1;
-        }
-    }
-    int result = service;
-    mtx_unlock(&lock);
-
-    return result;
-}
-
 int socket(int domain, int type, int protocol) {
     mxio_t* io = NULL;
     mx_status_t r;
 
     char path[1024];
-    int n = snprintf(path, sizeof(path), "%s/%d/%d/%d", MXRIO_SOCKET_DIR_SOCKET,
-                     domain, type & ~SOCK_NONBLOCK, protocol);
+    int n = snprintf(path, sizeof(path), "%s/%s/%d/%d/%d", MXRIO_SOCKET_ROOT,
+                     MXRIO_SOCKET_DIR_SOCKET, domain, type & ~SOCK_NONBLOCK,
+                     protocol);
     if (n < 0 || n >= (int)sizeof(path)) {
         return ERRNO(EINVAL);
     }
@@ -66,7 +44,7 @@ int socket(int domain, int type, int protocol) {
     // if necessary.
     // TODO: move to a better mechanism when available.
     unsigned retry = 0;
-    while ((r = __mxio_open_at(&io, socket_service(), path, 0, 0)) == MX_ERR_NOT_FOUND) {
+    while ((r = __mxio_open(&io, path, 0, 0)) == MX_ERR_NOT_FOUND) {
         if (retry >= 24) {
             // 10-second timeout
             return ERRNO(EIO);
@@ -262,7 +240,7 @@ int getaddrinfo(const char* __restrict node,
     // if necessary.
     // TODO: move to a better mechanism when available.
     unsigned retry = 0;
-    while ((r = __mxio_open_at(&io, socket_service(), MXRIO_SOCKET_DIR_NONE,
+    while ((r = __mxio_open(&io, MXRIO_SOCKET_ROOT "/" MXRIO_SOCKET_DIR_NONE,
                             0, 0)) == MX_ERR_NOT_FOUND) {
         if (retry >= 24) {
             // 10-second timeout
