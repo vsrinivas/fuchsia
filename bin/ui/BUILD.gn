@@ -13,7 +13,6 @@ config("vulkan_config") {
 
 group("all") {
   public_deps = [
-    ":tests",
     "examples",
     "lib/input",
     "lib/skia",
@@ -25,21 +24,151 @@ group("all") {
   testonly = true
 }
 
-group("tests") {
+package("tests") {
   testonly = true
 
-  public_deps = [
+  deps = [
     "services/composition/cpp:apptests",
     "services/geometry/cpp:apptests",
     "src/input_reader/tests",
-    "src/view_manager/tests",
     "src/scene:tests",
+    "src/view_manager/tests",
+  ]
+
+  tests = [
+    {
+      name = "compositor_services_apptests"
+    },
+    {
+      name = "scene_manager_apptests"
+    },
+    {
+      name = "scene_manager_unittests"
+    },
+    {
+      name = "geometry_util_unittests"
+    },
+    {
+      name = "input_apptests"
+    },
+    {
+      name = "view_manager_apptests"
+    },
   ]
 }
 
-package("mozart") {
-  testonly = true
+# Cannot be sandboxed yet because it relies upon /dev/class/input
+package("root_presenter") {
   app = true
+
+  deps = [
+    "src/root_presenter",
+  ]
+
+  binaries = [ {
+        name = "root_presenter"
+      } ]
+
+  resources = [ {
+        path = rebase_path("src/root_presenter/resources/cursor32.png")
+        dest = "root_presenter/cursor32.png"
+      } ]
+}
+
+package("ime_service") {
+  archive = true
+
+  deps = [
+    "src/ime",
+  ]
+
+  binaries = [ {
+        name = "ime_service"
+        dest = "app"
+      } ]
+}
+
+package("jank_view") {
+  archive = true
+
+  deps = [
+    "examples/jank",
+  ]
+
+  binaries = [ {
+        name = "jank_view"
+        dest = "app"
+      } ]
+}
+
+package("noodles_view") {
+  archive = true
+
+  deps = [
+    "examples/noodles",
+  ]
+
+  binaries = [ {
+        name = "noodles_view"
+        dest = "app"
+      } ]
+}
+
+package("paint_view") {
+  archive = true
+
+  deps = [
+    "examples/paint",
+  ]
+
+  binaries = [ {
+        name = "paint_view"
+        dest = "app"
+      } ]
+}
+
+package("shapes_view") {
+  archive = true
+
+  deps = [
+    "examples/shapes",
+  ]
+
+  binaries = [ {
+        name = "shapes_view"
+        dest = "app"
+      } ]
+}
+
+package("spinning_square_view") {
+  archive = true
+
+  deps = [
+    "examples/spinning_square",
+  ]
+
+  binaries = [ {
+        name = "spinning_square_view"
+        dest = "app"
+      } ]
+}
+
+package("tile_view") {
+  archive = true
+
+  deps = [
+    "examples/tile",
+  ]
+
+  binaries = [ {
+        name = "tile_view"
+        dest = "app"
+      } ]
+}
+
+package("mozart") {
+  app = true
+  testonly = true
 
   deps = [
     ":all",
@@ -68,78 +197,27 @@ package("mozart") {
       name = "gen/apps/mozart/examples/hello_material/hello_material.flx"
     },
     {
-      name = "ime_service"
-    },
-    {
       name = "input"
     },
     {
       name = "gen/apps/mozart/examples/basic_wm/basic_wm.flx"
     },
     {
-      name = "jank_view"
-    },
-    {
       name = "launch"
-    },
-    {
-      name = "noodles_view"
-    },
-    {
-      name = "paint_view"
     },
     {
       name = "print_input"
     },
     {
-      name = "root_presenter"
-    },
-    {
       name = "screencap"
-    },
-    {
-      name = "shapes_view"
-    },
-    {
-      name = "spinning_square_view"
-    },
-    {
-      name = "tile_view"
     },
     {
       name = "view_manager_service"
     },
   ]
 
-  tests = [
-    {
-      name = "compositor_services_apptests"
-    },
-    {
-      name = "scene_manager_apptests"
-    },
-    {
-      name = "scene_manager_unittests"
-    },
-    {
-      name = "geometry_util_unittests"
-    },
-    {
-      name = "input_apptests"
-    },
-    {
-      name = "view_manager_apptests"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("src/root_presenter/resources/cursor32.png")
-      dest = "root_presenter/cursor32.png"
-    },
-    {
-      path = rebase_path("src/compositor/compositor.config")
-      dest = "compositor/compositor.config"
-    },
-  ]
+  resources = [ {
+        path = rebase_path("src/compositor/compositor.config")
+        dest = "compositor/compositor.config"
+      } ]
 }

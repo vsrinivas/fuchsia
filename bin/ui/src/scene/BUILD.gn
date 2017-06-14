@@ -159,7 +159,7 @@ executable("unittests") {
 group("tests") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":apptests",
     ":unittests",
   ]
