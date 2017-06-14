@@ -570,6 +570,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
                     ResultCall result_call)
       : Operation(container, std::move(result_call)),
         story_provider_impl_(story_provider_impl) {
+    importance_.mark_non_null();
     Ready();
   }
 
