@@ -12,32 +12,38 @@
 #include <trace.h>
 #include <kernel/thread.h>
 #include <arch/arm64.h>
+#include <arch/arm64/mp.h>
 
 #define LOCAL_TRACE 0
 
 struct context_switch_frame {
-    vaddr_t lr;
-    vaddr_t pad;                // Padding to keep frame size a multiple of
-    vaddr_t tpidr_el0;          //  sp alignment requirements (16 bytes)
-    vaddr_t tpidrro_el0;
-    vaddr_t r18;
-    vaddr_t r19;
-    vaddr_t r20;
-    vaddr_t r21;
-    vaddr_t r22;
-    vaddr_t r23;
-    vaddr_t r24;
-    vaddr_t r25;
-    vaddr_t r26;
-    vaddr_t r27;
-    vaddr_t r28;
-    vaddr_t r29;
+    uint64_t tpidr_el0;
+    uint64_t tpidrro_el0;
+    uint64_t r19;
+    uint64_t r20;
+    uint64_t r21;
+    uint64_t r22;
+    uint64_t r23;
+    uint64_t r24;
+    uint64_t r25;
+    uint64_t r26;
+    uint64_t r27;
+    uint64_t r28;
+    uint64_t r29;
+    uint64_t lr;
 };
+
+// assert that the context switch frame is a multiple of 16 to maintain
+// stack alignment requirements per ABI
+static_assert(sizeof(context_switch_frame) % 16 == 0, "");
 
 extern void arm64_context_switch(addr_t *old_sp, addr_t new_sp);
 
 void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
 {
+    // zero out the entire arch state
+    t->arch = {};
+
     // create a default stack frame on the stack
     vaddr_t stack_top = (vaddr_t)t->stack + t->stack_size;
 
@@ -48,8 +54,7 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     struct context_switch_frame *frame = (struct context_switch_frame *)(stack_top);
     frame--;
 
-    // fill it in
-    memset(frame, 0, sizeof(*frame));
+    // fill in the entry point
     frame->lr = entry_point;
 
     // This is really a global (boot-time) constant value.
@@ -63,9 +68,6 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     t->arch.unsafe_sp =
         ROUNDDOWN((vaddr_t)t->unsafe_stack + t->stack_size, 16);
 #endif
-
-    // zero out the fpu state
-    memset(&t->arch.fpstate, 0, sizeof(t->arch.fpstate));
 }
 
 __NO_SAFESTACK void arch_thread_construct_first(thread_t *t)
@@ -76,6 +78,9 @@ __NO_SAFESTACK void arch_thread_construct_first(thread_t *t)
     thread_t *fake = get_current_thread();
     t->arch.stack_guard = fake->arch.stack_guard;
     t->arch.unsafe_sp = fake->arch.unsafe_sp;
+
+    // make sure the thread saves a copy of the current cpu pointer
+    t->arch.current_percpu_ptr = arm64_read_percpu_ptr();
 
     // Force the thread pointer immediately to the real struct.  This way
     // our callers don't have to avoid safe-stack code or risk losing track
@@ -92,6 +97,12 @@ __NO_SAFESTACK void arch_context_switch(thread_t *oldthread,
 {
     LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
     DSB; /* broadcast tlb operations in case the thread moves to another cpu */
+
+    /* set the current cpu pointer in the new thread's structure so it can be
+     * restored on exception entry.
+     */
+    newthread->arch.current_percpu_ptr = arm64_read_percpu_ptr();
+
     arm64_fpu_context_switch(oldthread, newthread);
     arm64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }

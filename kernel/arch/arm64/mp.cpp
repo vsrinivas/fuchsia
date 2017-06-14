@@ -17,12 +17,19 @@
 
 // map of cluster/cpu to cpu_id
 uint arm64_cpu_map[SMP_CPU_MAX_CLUSTERS][SMP_CPU_MAX_CLUSTER_CPUS] = { { 0 } };
+
+// cpu id to cluster and id within cluster map
 uint arm64_cpu_cluster_ids[SMP_MAX_CPUS] = { 0 };
 uint arm64_cpu_cpu_ids[SMP_MAX_CPUS] = { 0 };
+
+// total number of detected cpus
 uint arm_num_cpus = 1;
 
+// per cpu structures, each cpu will point to theirs using the x18 register
+arm64_percpu arm64_percpu_array[SMP_MAX_CPUS];
+
 // initializes cpu_map and arm_num_cpus
-void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus) {
+void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus) {
     ASSERT(cluster_count <= SMP_CPU_MAX_CLUSTERS);
 
     // assign cpu_ids sequentially
@@ -38,25 +45,42 @@ void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus) {
             arm64_cpu_cluster_ids[cpu_id] = cluster;
             arm64_cpu_cpu_ids[cpu_id] = cpu;
 
+            // set the per cpu structure's cpu id
+            arm64_percpu_array[cpu_id].cpu_num = cpu_id;
+
             cpu_id++;
         }
     }
     arm_num_cpus = cpu_id;
+    smp_mb();
 }
 
-status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
-{
+// do the 'slow' lookup by mpidr to cpu number
+static uint arch_curr_cpu_num_slow() {
+    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
+    uint cluster = (mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT;
+    uint cpu = (mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT;
+
+    return arm64_cpu_map[cluster][cpu];
+}
+
+status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
     LTRACEF("target 0x%x, ipi %u\n", target, (uint)ipi);
 
     return interrupt_send_ipi(target, ipi);
 }
 
-void arch_mp_init_percpu(void)
-{
+void arm64_init_percpu_early(void) {
+    // slow lookup the current cpu id and setup the percpu structure
+    uint cpu = arch_curr_cpu_num_slow();
+
+    arm64_write_percpu_ptr(&arm64_percpu_array[cpu]);
+}
+
+void arch_mp_init_percpu(void) {
     interrupt_init_percpu();
 }
 
-void arch_flush_state_and_halt(event_t *flush_done)
-{
+void arch_flush_state_and_halt(event_t *flush_done) {
     PANIC_UNIMPLEMENTED;
 }

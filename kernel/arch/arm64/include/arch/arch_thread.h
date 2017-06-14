@@ -23,6 +23,8 @@ struct fpstate {
     uint64_t    regs[64];
 };
 
+struct arm64_percpu;
+
 struct arch_thread {
     // The compiler (when it's Clang with -mcmodel=kernel) knows
     // the position of these two fields relative to TPIDR_EL1,
@@ -41,10 +43,14 @@ struct arch_thread {
     // NULL if not suspended or stopped in an exception.
     struct arm64_iframe_long *suspended_general_regs;
 
-    /* if non-NULL, address to return to on data fault */
+    // Point to the current cpu pointer when the thread is running, used to
+    // restore x18 on exception entry. Swapped on context switch.
+    struct arm64_percpu *current_percpu_ptr;
+
+    // if non-NULL, address to return to on data fault
     void *data_fault_resume;
 
-    /* saved fpu state */
+    // saved fpu state
     struct fpstate fpstate;
 };
 

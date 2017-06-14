@@ -113,6 +113,10 @@ KERNEL_COMPILEFLAGS += $(SAFESTACK)
 
 endif
 
+# tell the compiler to leave x18 alone so we can use it to point
+# at the current cpu structure
+KERNEL_COMPILEFLAGS += -ffixed-x18
+
 # make sure some bits were set up
 MEMVARS_SET := 0
 ifneq ($(MEMBASE),)

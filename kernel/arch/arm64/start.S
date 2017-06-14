@@ -371,6 +371,9 @@ FUNCTION(arm_reset)
     adr_global tmp, boot_cpu_fake_thread_pointer_location
     msr     tpidr_el1, tmp
 
+    // set the per cpu pointer for cpu 0
+    adr_global x18, arm64_percpu_array
+
     // Choose a good (ideally random) stack-guard value as early as possible.
     bl      choose_stack_guard
     str	    x0, [tmp, #MX_TLS_STACK_GUARD_OFFSET]

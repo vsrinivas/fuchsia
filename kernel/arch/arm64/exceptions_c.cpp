@@ -27,8 +27,6 @@
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
 
-bool arm64_in_int_handler[SMP_MAX_CPUS];
-
 static void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe);
 
 static void dump_iframe(const struct arm64_iframe_long *iframe)
@@ -254,11 +252,20 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     exception_die(iframe, esr);
 }
 
+static inline void arm64_restore_percpu_pointer() {
+    arm64_write_percpu_ptr(get_current_thread()->arch.current_percpu_ptr);
+}
+
 /* called from assembly */
 extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
 {
     uint32_t esr = (uint32_t)ARM64_READ_SYSREG(esr_el1);
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
+
+    if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
+        // if we came from a lower level, restore the per cpu pointer
+        arm64_restore_percpu_pointer();
+    }
 
     switch (ec) {
         case 0b000000: /* unknown reason */
@@ -311,25 +318,33 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
          */
         arm64_thread_process_pending_signals(iframe);
     }
+
+    /* if we're returning to kernel space, make sure we restore the correct x18 */
+    if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
+        iframe->r[18] = (uint64_t)arm64_read_percpu_ptr();
+    }
 }
 
 /* called from assembly */
 extern "C" uint32_t arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
 {
+    if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
+        // if we came from a lower level, restore the per cpu pointer
+        arm64_restore_percpu_pointer();
+    }
+
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
-    uint32_t curr_cpu = arch_curr_cpu_num();
-    arm64_in_int_handler[curr_cpu] = true;
+    arch_set_in_int_handler(true);
 
     enum handler_return ret = platform_irq(iframe);
 
-    arm64_in_int_handler[curr_cpu] = false;
+    arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */
     if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
         uint32_t exit_flags = 0;
-        thread_t *thread = get_current_thread();
-        if (thread_is_signaled(thread))
+        if (thread_is_signaled(get_current_thread()))
             exit_flags |= ARM64_IRQ_EXIT_THREAD_SIGNALED;
         if (ret != INT_NO_RESCHEDULE)
             exit_flags |= ARM64_IRQ_EXIT_RESCHEDULE;
@@ -339,12 +354,21 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short *iframe, uint exception_
     /* preempt the thread if the interrupt has signaled it */
     if (ret != INT_NO_RESCHEDULE)
         thread_preempt();
+
+    /* if we're returning to kernel space, make sure we restore the correct x18 */
+    if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
+        iframe->r[18] = (uint64_t)arm64_read_percpu_ptr();
+    }
+
     return 0;
 }
 
 /* called from assembly */
 extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_long *iframe)
 {
+    // we came from a lower level, so restore the per cpu pointer
+    arm64_restore_percpu_pointer();
+
     /* in the case of receiving a kill signal, this function may not return,
      * but the scheduler would have been invoked so it's fine.
      */
@@ -361,6 +385,9 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_l
 /* called from assembly */
 extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which)
 {
+    // restore the percpu pointer (x18) unconditionally
+    arm64_restore_percpu_pointer();
+
     printf("invalid exception, which 0x%x\n", which);
     dump_iframe(iframe);
 
@@ -372,6 +399,7 @@ static void arm64_thread_process_pending_signals(struct arm64_iframe_long *ifram
     thread_t *thread = get_current_thread();
     DEBUG_ASSERT(iframe != nullptr);
     DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
+
     thread->arch.suspended_general_regs = iframe;
     thread_process_pending_signals();
     thread->arch.suspended_general_regs = nullptr;

@@ -176,6 +176,9 @@ void arm64_dump_cache_info(uint32_t cpu) {
 
 static void arm64_cpu_early_init(void)
 {
+    /* make sure the per cpu pointer is set up */
+    arm64_init_percpu_early();
+
     uint64_t mmfr0 = ARM64_READ_SYSREG(ID_AA64MMFR0_EL1);
 
     /* check to make sure implementation supports 16 bit asids */
@@ -338,13 +341,12 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 /* called from assembly */
 extern "C" void arm64_secondary_entry(void)
 {
-    uint cpu = arch_curr_cpu_num();
-
     arm64_cpu_early_init();
 
     spin_lock(&arm_boot_cpu_lock);
     spin_unlock(&arm_boot_cpu_lock);
 
+    uint cpu = arch_curr_cpu_num();
     thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
     /* run early secondary cpu init routines up to the threading level */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);

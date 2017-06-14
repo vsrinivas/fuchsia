@@ -11,16 +11,15 @@
 /* void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp); */
 FUNCTION(arm64_context_switch)
     /* save old frame */
-    push x28, x29
-    push x26, x27
-    push x24, x25
-    push x22, x23
-    push x20, x21
-    push x18, x19
-    mrs  x18, tpidr_el0
-    mrs  x19, tpidrro_el0
-    push x18, x19
-    push x30, xzr
+    push x29, x30
+    push x27, x28
+    push x25, x26
+    push x23, x24
+    push x21, x22
+    push x19, x20
+    mrs  x19, tpidr_el0
+    mrs  x20, tpidrro_el0
+    push x19, x20
 
     /* save old sp */
     mov  x15, sp
@@ -30,16 +29,15 @@ FUNCTION(arm64_context_switch)
     mov  sp, x1
 
     /* restore new frame */
-    pop  x30, xzr
-    pop  x18, x19
-    msr  tpidr_el0, x18
-    msr  tpidrro_el0, x19
-    pop  x18, x19
-    pop  x20, x21
-    pop  x22, x23
-    pop  x24, x25
-    pop  x26, x27
-    pop  x28, x29
+    pop  x19, x20
+    msr  tpidr_el0, x19
+    msr  tpidrro_el0, x20
+    pop  x19, x20
+    pop  x21, x22
+    pop  x23, x24
+    pop  x25, x26
+    pop  x27, x28
+    pop  x29, x30
 
     ret
 END_FUNCTION(arm64_context_switch)
