@@ -9,11 +9,14 @@
 
 __BEGIN_CDECLS;
 
-typedef struct ihda_codec_protocol {
-    // get_driver_channel
-    //
+typedef struct ihda_codec_protocol_ops {
     // Fetch an mx_handle_t to a channel which can be used to communicate with the codec device.
-    mx_status_t (*get_driver_channel)(mx_device_t* codec_dev, mx_handle_t* channel_out);
+    mx_status_t (*get_driver_channel)(void* ctx, mx_handle_t* channel_out);
+} ihda_codec_protocol_ops_t;
+
+typedef struct ihda_codec_protocol {
+    ihda_codec_protocol_ops_t* ops;
+    void* ctx;
 } ihda_codec_protocol_t;
 
 __END_CDECLS;
