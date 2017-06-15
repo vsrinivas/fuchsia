@@ -265,23 +265,13 @@ mod tests {
             _ => panic!("wrong packet type"),
         }
 
-        // Calling wait_async then cancel, we should still get the packet as it will have been sent
-        // before the cancel call.
+        // Calling wait_async then cancel, we should not get a packet as cancel will remove it from
+        // the queue.
         assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
-        let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
-        assert_eq!(read_packet.key(), key);
-        assert_eq!(read_packet.status(), 0);
-        match read_packet.contents() {
-            PacketContents::SignalOne(sig) => {
-                assert_eq!(sig.trigger(), MX_USER_SIGNAL_0);
-                assert_eq!(sig.observed(), MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
-                assert_eq!(sig.count(), 1);
-            }
-            _ => panic!("wrong packet type"),
-        }
+        assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
-        // However if the event is signalled after the cancel, we shouldn't get a packet.
+        // If the event is signalled after the cancel, we also shouldn't get a packet.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
         assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
