@@ -23,7 +23,7 @@ interface AccountProvider {
   // |display_name| is a *temporary* field to associate a human-readable name
   // with an account. In the future we want to get this from the identity
   // provider.
-  AddAccount(IdentityProvider identity_provider, string? display_name)
+  AddAccount(IdentityProvider identity_provider)
        => (Account? account, string? error_code);
 
   // Get a |TokenProviderFactory| associated with an |account_id|. It is used
