@@ -169,9 +169,6 @@ mx_device_t* device_get_parent(mx_device_t* dev);
 
 mx_handle_t device_get_resource(mx_device_t* dev);
 
-//TODO: rename to device_get_protocol()
-mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id, void** protocol);
-
 // protocols look like:
 // typedef struct {
 //     protocol_xyz_ops_t* ops;

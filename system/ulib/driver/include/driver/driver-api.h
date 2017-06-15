@@ -25,7 +25,6 @@ typedef struct driver_api {
     // Device Interface - Accessors
     const char* (*get_name)(mx_device_t* dev);
     mx_device_t* (*get_parent)(mx_device_t* dev);
-    mx_status_t (*old_get_protocol)(mx_device_t* dev, uint32_t proto_id, void** protocol);
     mx_status_t (*get_protocol)(mx_device_t* dev, uint32_t proto_id, void* protocol);
     mx_handle_t (*get_resource)(mx_device_t* dev);
     void (*state_clr_set)(mx_device_t* dev, mx_signals_t clr, mx_signals_t set);
