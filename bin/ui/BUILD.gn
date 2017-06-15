@@ -93,6 +93,19 @@ package("ime_service") {
       } ]
 }
 
+package("view_manager_service") {
+  archive = true
+
+  deps = [
+    "src/view_manager",
+  ]
+
+  binaries = [ {
+        name = "view_manager_service"
+        dest = "app"
+      } ]
+}
+
 package("jank_view") {
   archive = true
 
@@ -215,9 +228,6 @@ package("mozart") {
     },
     {
       name = "screencap"
-    },
-    {
-      name = "view_manager_service"
     },
   ]
 
