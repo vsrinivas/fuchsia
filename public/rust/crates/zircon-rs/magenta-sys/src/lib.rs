@@ -84,8 +84,8 @@ bitflags! {
         const MX_OBJECT_SIGNAL_19         = 1 << 19,
         const MX_OBJECT_SIGNAL_20         = 1 << 20,
         const MX_OBJECT_SIGNAL_21         = 1 << 21,
-        const MX_OBJECT_SIGNAL_22         = 1 << 22,
-        const MX_OBJECT_SIGNAL_23         = 1 << 23,
+        const MX_OBJECT_LAST_HANDLE       = 1 << 22,
+        const MX_OBJECT_HANDLE_CLOSED     = 1 << 23,
         const MX_USER_SIGNAL_0            = 1 << 24,
         const MX_USER_SIGNAL_1            = 1 << 25,
         const MX_USER_SIGNAL_2            = 1 << 26,
@@ -98,6 +98,12 @@ bitflags! {
         const MX_OBJECT_READABLE          = MX_OBJECT_SIGNAL_0.bits,
         const MX_OBJECT_WRITABLE          = MX_OBJECT_SIGNAL_1.bits,
         const MX_OBJECT_PEER_CLOSED       = MX_OBJECT_SIGNAL_2.bits,
+
+        // Cancelation (handle was closed while waiting with it)
+        const MX_SIGNAL_HANDLE_CLOSED     = MX_OBJECT_HANDLE_CLOSED.bits,
+
+        // Only one user-more reference (handle) to the object exists.
+        const MX_SIGNAL_LAST_HANDLE       = MX_OBJECT_LAST_HANDLE.bits,
 
         // Event
         const MX_EVENT_SIGNALED           = MX_OBJECT_SIGNAL_3.bits,
