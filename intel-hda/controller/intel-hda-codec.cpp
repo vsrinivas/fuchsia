@@ -47,7 +47,7 @@ void IntelHDACodec::PrintDebugPrefix() const {
     printf("[%s:%u] ", controller_.dev_name(), codec_id_);
 }
 
-#define DEV (static_cast<IntelHDACodec*>(codec_dev->ctx))
+#define DEV (static_cast<IntelHDACodec*>(ctx))
 mx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
@@ -74,10 +74,10 @@ mx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .resume       = nullptr,
 };
 
-ihda_codec_protocol_t IntelHDACodec::CODEC_PROTO_THUNKS = {
-    .get_driver_channel = [](mx_device_t* codec_dev, mx_handle_t* channel_out) -> mx_status_t
+ihda_codec_protocol_ops_t IntelHDACodec::CODEC_PROTO_THUNKS = {
+    .get_driver_channel = [](void* ctx, mx_handle_t* channel_out) -> mx_status_t
     {
-        MX_DEBUG_ASSERT(codec_dev && codec_dev->ctx);
+        MX_DEBUG_ASSERT(ctx);
         return DEV->CodecGetDispatcherChannel(channel_out);
     },
 };
