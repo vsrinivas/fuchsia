@@ -183,7 +183,7 @@ static status_t gic_configure_interrupt(unsigned int vector,
         return ERR_INVALID_ARGS;
 
     if (tm != IRQ_TRIGGER_MODE_EDGE) {
-        // We don't currently support non-edge triggered interupts via the GIC,
+        // We don't currently support non-edge triggered interrupts via the GIC,
         // and we pre-initialize everything to edge triggered.
         // TODO: re-evaluate this.
         return ERR_NOT_SUPPORTED;

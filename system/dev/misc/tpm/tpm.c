@@ -171,7 +171,7 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
         goto cleanup_device;
     }
 
-    // Configure interupts
+    // Configure interrupts
     status = tpm_set_irq(LOCALITY0, 10);
     if (status != MX_OK) {
         goto cleanup_device;

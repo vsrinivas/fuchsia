@@ -50,7 +50,7 @@ static int dma_irq_thread(void* arg) {
 
         dma_regs->channels[dma->ch_num].cs |= BCM_DMA_CS_INT;
         if (stat != NO_ERROR) {
-            xprintf("dma interupt wait failed = %d\n", stat);
+            xprintf("dma interrupt wait failed = %d\n", stat);
             break;
         }
         if (dma->irq_thrd_stop)
