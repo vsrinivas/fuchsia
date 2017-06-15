@@ -10,6 +10,7 @@ group("examples") {
   public_deps = [
     "//apps/netstack/examples/sockettest",
     "//apps/netstack/examples/sockettest:closetest",
+    "//apps/netstack/examples/sockettest:netstack_loopback_test",
     "//apps/netstack/examples/sockettest:mctest",
     "//apps/netstack/examples/sockettest:nbiotest",
     "//apps/netstack/examples/sockettest:passfdtest",
@@ -42,6 +43,10 @@ package("netstack_tests") {
   binaries = [
     {
       name = "closetest"
+    },
+
+    {
+      name = "netstack_loopback_test"
     },
 
     {
