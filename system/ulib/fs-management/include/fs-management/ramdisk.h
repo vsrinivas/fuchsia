@@ -11,6 +11,11 @@
 
 __BEGIN_CDECLS
 
+// Wait for a "parent" device to have a child "driver" bound.
+//
+// Return 0 on success, -1 on error.
+int wait_for_driver_bind(const char* parent, const char* driver);
+
 // Creates a ramdisk  returns the full path to the ramdisk in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
 //

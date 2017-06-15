@@ -63,6 +63,7 @@ bool test_watcher_basic(void) {
     vfs_watch_dir_t request;
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK, "");
     request.mask = VFS_WATCH_MASK_ADDED;
+    request.options = 0;
     ASSERT_EQ(ioctl_vfs_watch_dir_v2(dirfd(dir), &request), MX_OK, "");
 
     // The channel should be empty
@@ -112,6 +113,7 @@ bool test_watcher_unsupported(void) {
     // Ask to watch an unsupported event
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK, "");
     request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_EVT_EXISTING;
+    request.options = 0;
     ASSERT_NEQ(ioctl_vfs_watch_dir_v2(dirfd(dir), &request), MX_OK, "");
     mx_handle_close(h);
 
