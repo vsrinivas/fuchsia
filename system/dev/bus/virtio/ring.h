@@ -4,10 +4,9 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <stddef.h>
+#include <virtio/virtio_ring.h>
 
 #include "trace.h"
-#include "virtio_ring.h"
 
 namespace virtio {
 
