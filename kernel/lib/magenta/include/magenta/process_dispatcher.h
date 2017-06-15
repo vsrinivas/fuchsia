@@ -200,6 +200,8 @@ public:
     // user_ptrs; do not use this pattern as an example.
     status_t GetAspaceMaps(user_ptr<mx_info_maps_t> maps, size_t max,
                            size_t* actual, size_t* available);
+    status_t GetVmos(user_ptr<mx_info_vmo_t> vmos, size_t max,
+                     size_t* actual, size_t* available);
 
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags,
                               mxtl::RefPtr<Dispatcher>* out_dispatcher,

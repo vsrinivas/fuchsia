@@ -595,6 +595,133 @@ status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
     return MX_OK;
 }
 
+namespace {
+mx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
+                             bool is_handle, mx_rights_t handle_rights) {
+    mx_info_vmo_t entry = {};
+    entry.koid = vmo->user_id();
+    vmo->get_name(entry.name, sizeof(entry.name));
+    entry.size_bytes = vmo->size();
+    entry.parent_koid = vmo->parent_user_id();
+    entry.num_children = vmo->num_children();
+    entry.num_mappings = vmo->num_mappings();
+    entry.share_count = vmo->share_count();
+    entry.flags =
+        (vmo->is_paged() ? MX_INFO_VMO_TYPE_PAGED : MX_INFO_VMO_TYPE_PHYSICAL) |
+        (vmo->is_cow_clone() ? MX_INFO_VMO_IS_COW_CLONE : 0);
+    entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
+    if (is_handle) {
+        entry.flags |= MX_INFO_VMO_VIA_HANDLE;
+        entry.handle_rights = handle_rights;
+    } else {
+        entry.flags |= MX_INFO_VMO_VIA_MAPPING;
+    }
+    return entry;
+}
+
+// Builds a list of all VMOs mapped into a VmAspace.
+class AspaceVmoEnumerator final : public VmEnumerator {
+public:
+    // NOTE: Code outside of the syscall layer should not typically know about
+    // user_ptrs; do not use this pattern as an example.
+    AspaceVmoEnumerator(user_ptr<mx_info_vmo_t> vmos, size_t max)
+        : vmos_(vmos), max_(max) {}
+
+    bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
+                     uint depth) override {
+        available_++;
+        if (nelem_ < max_) {
+            // We're likely to see the same VMO a couple times in a given
+            // address space (e.g., somelib.so mapped as r--, r-x), but leave it
+            // to userspace to do deduping.
+            mx_info_vmo_t entry = VmoToInfoEntry(map->vmo().get(),
+                                                 /*is_handle=*/false,
+                                                 /*handle_rights=*/0);
+            if (vmos_.copy_array_to_user(&entry, 1, nelem_) != MX_OK) {
+                return false;
+            }
+            nelem_++;
+        }
+        return true;
+    }
+
+    size_t nelem() const { return nelem_; }
+    size_t available() const { return available_; }
+
+private:
+    const user_ptr<mx_info_vmo_t> vmos_;
+    const size_t max_;
+
+    size_t nelem_ = 0;
+    size_t available_ = 0;
+};
+} // namespace
+
+// NOTE: Code outside of the syscall layer should not typically know about
+// user_ptrs; do not use this pattern as an example.
+status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
+                         user_ptr<mx_info_vmo_t> vmos, size_t max,
+                         size_t* actual, size_t* available) {
+    DEBUG_ASSERT(aspace != nullptr);
+    DEBUG_ASSERT(actual != nullptr);
+    DEBUG_ASSERT(available != nullptr);
+    *actual = 0;
+    *available = 0;
+    if (aspace->is_destroyed()) {
+        return MX_ERR_BAD_STATE;
+    }
+
+    AspaceVmoEnumerator ave(vmos, max);
+    if (!aspace->EnumerateChildren(&ave)) {
+        // AspaceVmoEnumerator only returns false
+        // when it can't copy to the user pointer.
+        return MX_ERR_INVALID_ARGS;
+    }
+    *actual = ave.nelem();
+    *available = ave.available();
+    return MX_OK;
+}
+
+// NOTE: Code outside of the syscall layer should not typically know about
+// user_ptrs; do not use this pattern as an example.
+status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
+                                  user_ptr<mx_info_vmo_t> vmos, size_t max,
+                                  size_t* actual_out, size_t* available_out) {
+    DEBUG_ASSERT(process != nullptr);
+    DEBUG_ASSERT(actual_out != nullptr);
+    DEBUG_ASSERT(available_out != nullptr);
+    size_t actual = 0;
+    size_t available = 0;
+    // We may see multiple handles to the same VMO, but leave it to userspace to
+    // do deduping.
+    mx_status_t s = process->ForEachHandle([&](mx_handle_t handle,
+                                               mx_rights_t rights,
+                                               mxtl::RefPtr<Dispatcher> disp) {
+        auto vmod = DownCastDispatcher<VmObjectDispatcher>(&disp);
+        if (vmod == nullptr) {
+            // This handle isn't a VMO; skip it.
+            return MX_OK;
+        }
+        available++;
+        if (actual < max) {
+            mx_info_vmo_t entry = VmoToInfoEntry(vmod->vmo().get(),
+                                                 /*is_handle=*/true,
+                                                 rights);
+            if (vmos.copy_array_to_user(&entry, 1, actual) != MX_OK) {
+                return MX_ERR_INVALID_ARGS;
+            }
+            actual++;
+        }
+        return MX_OK;
+    });
+    if (s != MX_OK) {
+        return s;
+    }
+    *actual_out = actual;
+    *available_out = available;
+    return MX_OK;
+}
+
 void DumpProcessAddressSpace(mx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {

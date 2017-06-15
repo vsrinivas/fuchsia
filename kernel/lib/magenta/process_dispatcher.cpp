@@ -511,6 +511,32 @@ status_t ProcessDispatcher::GetAspaceMaps(
     return GetVmAspaceMaps(aspace_, maps, max, actual, available);
 }
 
+status_t ProcessDispatcher::GetVmos(
+    user_ptr<mx_info_vmo_t> vmos, size_t max,
+    size_t* actual_out, size_t* available_out) {
+    AutoLock lock(&state_lock_);
+    if (state_ != State::RUNNING) {
+        return MX_ERR_BAD_STATE;
+    }
+    size_t actual = 0;
+    size_t available = 0;
+    status_t s = GetProcessVmosViaHandles(this, vmos, max, &actual, &available);
+    if (s != MX_OK) {
+        return s;
+    }
+    size_t actual2 = 0;
+    size_t available2 = 0;
+    DEBUG_ASSERT(max >= actual);
+    s = GetVmAspaceVmos(aspace_, vmos.element_offset(actual), max - actual,
+                        &actual2, &available2);
+    if (s != MX_OK) {
+        return s;
+    }
+    *actual_out = actual + actual2;
+    *available_out = available + available2;
+    return MX_OK;
+}
+
 status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags,
                                              mxtl::RefPtr<Dispatcher>* out_thread,
                                              mx_rights_t* out_rights) {

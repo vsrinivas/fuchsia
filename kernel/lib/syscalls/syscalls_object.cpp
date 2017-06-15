@@ -14,6 +14,7 @@
 #include <lib/heap.h>
 #include <platform.h>
 
+#include <magenta/diagnostics.h>
 #include <magenta/handle_owner.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
@@ -382,6 +383,30 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             size_t count = buffer_size / sizeof(mx_info_maps_t);
             size_t avail = 0;
             status = process->GetAspaceMaps(maps, count, &count, &avail);
+
+            if (_actual && (_actual.copy_to_user(count) != MX_OK))
+                return MX_ERR_INVALID_ARGS;
+            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
+                return MX_ERR_INVALID_ARGS;
+            return status;
+        }
+        case MX_INFO_PROCESS_VMOS: {
+            mxtl::RefPtr<ProcessDispatcher> process;
+            mx_status_t status =
+                up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &process);
+            if (status < 0)
+                return status;
+            if (process.get() == up) {
+                // Not safe to look at yourself: the user buffer will live
+                // inside the VmAspace we're examining, and we can't
+                // fault in the buffer's pages while the aspace lock is held.
+                return MX_ERR_ACCESS_DENIED;
+            }
+
+            auto vmos = _buffer.reinterpret<mx_info_vmo_t>();
+            size_t count = buffer_size / sizeof(mx_info_vmo_t);
+            size_t avail = 0;
+            status = process->GetVmos(vmos, count, &count, &avail);
 
             if (_actual && (_actual.copy_to_user(count) != MX_OK))
                 return MX_ERR_INVALID_ARGS;

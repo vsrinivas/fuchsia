@@ -277,6 +277,10 @@ The *depth* field of each entry describes its relationship to the nodes that
 come before it. Depth 0 is the root Aspace, depth 1 is the root VMAR, and all
 other entries have depth 2 or greater.
 
+To get a full picture of how a process uses its VMOs and how a VMO is used
+by various processes, you may need to combine this information with
+MX_INFO_PROCESS_VMOS.
+
 See the `vmaps` command-line tool for an example user of this topic, and to dump
 the maps of arbitrary processes by koid.
 
@@ -289,6 +293,69 @@ Additional errors:
     Aspace.
 *   **MX_ERR_BAD_STATE**: If the target process is not currently running, or if
     its address space has been destroyed.
+
+### MX_INFO_PROCESS_VMOS
+
+*handle* type: **Process** other than your own, with **MX_RIGHT_READ**
+
+*buffer* type: **mx_info_vmos_t[n]**
+
+The *mx_info_vmos_t* array is list of all VMOs pointed to by the target process.
+Some VMOs are mapped, some are pointed to by handles, and some are both.
+
+**Note**: The same VMO may appear multiple times due to multiple
+mappings/handles. Also, because VMOs can change as the target process runs,
+the same VMO may have different values each time it appears. It is the
+caller's job to resolve any duplicates.
+
+To get a full picture of how a process uses its VMOs and how a VMO is used
+by various processes, you may need to combine this information with
+MX_INFO_PROCESS_MAPS.
+
+```
+// Describes a VMO.
+typedef struct mx_info_vmo {
+    // The koid of this VMO.
+    mx_koid_t koid;
+
+    // The name of this VMO.
+    char name[MX_MAX_NAME_LEN];
+
+    // The size of this VMO; i.e., the amount of virtual address space it
+    // would consume if mapped.
+    uint64_t size_bytes;
+
+    // If this VMO is a clone, the koid of its parent. Otherwise, zero.
+    // See |flags| for the type of clone.
+    mx_koid_t parent_koid;
+
+    // The number of clones of this VMO, if any.
+    size_t num_children;
+
+    // The number of times this VMO is currently mapped into VMARs.
+    // Note that the same process will often map the same VMO twice,
+    // and both mappings will be counted here. (I.e., this is not a count
+    // of the number of processes that map this VMO; see share_count.)
+    size_t num_mappings;
+
+    // An estimate of the number of unique address spaces that
+    // this VMO is mapped into. Every process has its own address space,
+    // and so does the kernel.
+    size_t share_count;
+
+    // Bitwise OR of MX_INFO_VMO_* values.
+    uint32_t flags;
+
+    // If |MX_INFO_VMO_TYPE(flags) == MX_INFO_VMO_TYPE_PAGED|, the amount of
+    // memory currently allocated to this VMO; i.e., the amount of physical
+    // memory it consumes. Undefined otherwise.
+    uint64_t committed_bytes;
+
+    // If |flags & MX_INFO_VMO_VIA_HANDLE|, the handle rights.
+    // Undefined otherwise.
+    mx_rights_t handle_rights;
+} mx_info_vmo_t;
+```
 
 ### MX_INFO_KMEM_STATS
 
