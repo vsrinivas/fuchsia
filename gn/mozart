@@ -14,6 +14,7 @@
         "root_presenter": "//apps/mozart:root_presenter",
         "shapes_view": "//apps/mozart:shapes_view",
         "spinning_square_view": "//apps/mozart:spinning_square_view",
-        "tile_view": "//apps/mozart:tile_view"
+        "tile_view": "//apps/mozart:tile_view",
+        "view_manager_service": "//apps/mozart:view_manager_service"
     }
 }
