@@ -15,6 +15,11 @@ __BEGIN_CDECLS;
  * FIXME(yky,teisenbe): not the real thing
  */
 
-typedef struct mx_acpi_protocol {
+typedef struct acpi_protocol_ops {
     mx_handle_t (*clone_handle)(mx_device_t* dev);
-} mx_acpi_protocol_t;
+} acpi_protocol_ops_t;
+
+typedef struct acpi_protocol {
+    acpi_protocol_ops_t* ops;
+    void* ctx;
+} acpi_protocol_t;

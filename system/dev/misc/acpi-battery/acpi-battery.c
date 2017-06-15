@@ -105,12 +105,12 @@ static int acpi_battery_poll_thread(void* arg) {
 }
 
 static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    mx_acpi_protocol_t* acpi;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_ACPI, (void**)&acpi)) {
+    acpi_protocol_t acpi;
+    if (device_get_protocol(dev, MX_PROTOCOL_ACPI, &acpi)) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mx_handle_t handle = acpi->clone_handle(dev);
+    mx_handle_t handle = acpi.ops->clone_handle(acpi.ctx);
     if (handle <= 0) {
         printf("acpi-battery: error cloning handle (%d)\n", handle);
         return handle;

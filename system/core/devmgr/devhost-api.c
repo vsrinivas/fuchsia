@@ -124,6 +124,7 @@ static bool is_new_protocol(uint32_t proto_id) {
     case MX_PROTOCOL_DISPLAY:
     case MX_PROTOCOL_PCI:
     case MX_PROTOCOL_IHDA_CODEC:
+    case MX_PROTOCOL_ACPI:
         return true;
     default:
         return false;
