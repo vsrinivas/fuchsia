@@ -190,12 +190,8 @@ Loop:
 type asyncWaiterImpl struct {
 	wakingEvent mx.Event
 
-	// Flag shared between waiterImpl and worker that is 1 iff the worker is
-	// already notified by waiterImpl. The worker sets it to 0 as soon as
-	// |WaitMany()| succeeds.
-	isWorkerNotified *int32
-	waitChan         chan<- waitRequest // should have a non-empty buffer
-	cancelChan       chan<- AsyncWaitId // should have a non-empty buffer
+	waitChan   chan<- waitRequest // should have a non-empty buffer
+	cancelChan chan<- AsyncWaitId // should have a non-empty buffer
 }
 
 func finalizeWorker(worker *asyncWaiterWorker) {
@@ -231,9 +227,9 @@ func newAsyncWaiter() *asyncWaiterImpl {
 	runtime.SetFinalizer(worker, finalizeWorker)
 	go worker.runLoop()
 	waiter := &asyncWaiterImpl{
-		wakingEvent:    e0,
-		waitChan:         waitChan,
-		cancelChan:       cancelChan,
+		wakingEvent: e0,
+		waitChan:    waitChan,
+		cancelChan:  cancelChan,
 	}
 	runtime.SetFinalizer(waiter, finalizeAsyncWaiter)
 	return waiter

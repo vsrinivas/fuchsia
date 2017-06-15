@@ -31,7 +31,7 @@ type routeRequest struct {
 // to appropriate receivers. The work is done on a separate go routine.
 type routerWorker struct {
 	// The channel handle to send requests and receive responses.
-	handle mx.Handle
+	channel *mx.Channel
 	// Map from request id to response channel.
 	responders map[uint64]chan<- MessageReadResult
 	// The channel of incoming requests that require responses.
@@ -58,7 +58,7 @@ func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 		bytes := make([]byte, 128)
 		handles := make([]mx.Handle, 3)
 	retry:
-		numBytes, numHandles, err := (&mx.Channel{w.handle}).Read(bytes, handles, 0)
+		numBytes, numHandles, err := w.channel.Read(bytes, handles, 0)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
@@ -67,7 +67,7 @@ func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 			handles = make([]mx.Handle, numHandles)
 			goto retry
 		case mx.ErrShouldWait:
-			w.waitId = w.waiter.AsyncWait(w.handle, mx.SignalChannelReadable, w.waitChan)
+			w.waitId = w.waiter.AsyncWait(w.channel.Handle, mx.SignalChannelReadable, w.waitChan)
 			return nil
 		default:
 			return err
@@ -102,7 +102,8 @@ func (w *routerWorker) runLoop() error {
 				return waitResponse.Error
 			}
 		case request := <-w.requestChan:
-			if err := WriteMessage(w.handle, request.message); err != nil {
+			err := w.channel.Write(request.message.Bytes, request.message.Handles, 0)
+			if err != nil {
 				return err
 			}
 			if request.responseChan != nil {
@@ -126,8 +127,8 @@ type Router struct {
 	// Mutex protecting requestChan from new requests in case the router is
 	// closed and the handle.
 	mu sync.Mutex
-	// The channel handle to send requests and receive responses.
-	handle mx.Handle
+	// The channel to send requests and receive responses.
+	channel *mx.Channel
 	// Channel to communicate with worker.
 	requestChan chan<- routeRequest
 
@@ -142,13 +143,14 @@ type Router struct {
 func NewRouter(handle mx.Handle, waiter AsyncWaiter) *Router {
 	requestChan := make(chan routeRequest, 10)
 	doneChan := make(chan struct{})
+	channel := &mx.Channel{handle}
 	router := &Router{
-		handle:      handle,
+		channel:     channel,
 		requestChan: requestChan,
 		done:        doneChan,
 	}
 	router.runWorker(&routerWorker{
-		handle,
+		channel,
 		make(map[uint64]chan<- MessageReadResult),
 		requestChan,
 		doneChan,
@@ -175,7 +177,7 @@ func (r *Router) Accept(message *Message) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if !r.handle.IsValid() {
+	if !r.channel.Handle.IsValid() {
 		return mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.Router.Accept"}
 	}
 	r.requestChan <- routeRequest{message, nil}
@@ -204,7 +206,7 @@ func (r *Router) runWorker(worker *routerWorker) {
 			}
 		}()
 		r.mu.Lock()
-		r.handle.Close()
+		r.channel.Close()
 		// If we acquire the lock then no other go routine is waiting
 		// to write to responseChan. All go routines that acquire the
 		// lock after us will return before sending to responseChan as
@@ -230,7 +232,7 @@ func (r *Router) AcceptWithResponse(message *Message) <-chan MessageReadResult {
 	// Return an error before sending a request to requestChan if the router
 	// is closed so that we can safely close responseChan once we close the
 	// router.
-	if !r.handle.IsValid() {
+	if !r.channel.Handle.IsValid() {
 		responseChan <- MessageReadResult{nil, mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.Router.AcceptWithResponse"}}
 		return responseChan
 	}

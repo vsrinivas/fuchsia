@@ -17,8 +17,8 @@ var errConnectionClosed = mx.Error{Status: mx.ErrPeerClosed}
 // from the channel waiting on it if necessary. The operation are
 // thread-safe.
 type Connector struct {
-	mu   sync.RWMutex // protects pipe handle
-	pipe mx.Handle
+	mu      sync.RWMutex // protects channel handle
+	channel *mx.Channel
 
 	done      chan struct{}
 	waitMutex sync.Mutex
@@ -28,9 +28,9 @@ type Connector struct {
 
 // NewStubConnector returns a new |Connector| instance that sends and
 // receives messages from a provided channel handle.
-func NewConnector(pipe mx.Handle, waiter AsyncWaiter) *Connector {
+func NewConnector(handle mx.Handle, waiter AsyncWaiter) *Connector {
 	return &Connector{
-		pipe:     pipe,
+		channel:  &mx.Channel{handle},
 		waiter:   waiter,
 		done:     make(chan struct{}),
 		waitChan: make(chan WaitResponse, 1),
@@ -41,18 +41,18 @@ func NewConnector(pipe mx.Handle, waiter AsyncWaiter) *Connector {
 func (c *Connector) ReadMessage() (*Message, error) {
 	// Make sure that only one goroutine at a time waits a the handle.
 	// We use separate lock so that we can send messages to the channel
-	// while waiting on the pipe.
+	// while waiting on the channel.
 	//
 	// It is better to acquire this lock first so that a potential queue of
 	// readers will wait while closing the channel in case of Close()
 	// call.
 	c.waitMutex.Lock()
 	defer c.waitMutex.Unlock()
-	// Use read lock to use pipe handle without modifying it.
+	// Get read lock to use channel handle
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if !c.pipe.IsValid() {
+	if !c.channel.Handle.IsValid() {
 		return nil, errConnectionClosed
 	}
 
@@ -60,7 +60,7 @@ func (c *Connector) ReadMessage() (*Message, error) {
 	bytes := make([]byte, 128)
 	handles := make([]mx.Handle, 3)
 retry:
-	numBytes, numHandles, err := (&mx.Channel{c.pipe}).Read(bytes, handles, 0)
+	numBytes, numHandles, err := c.channel.Read(bytes, handles, 0)
 	switch mxerror.Status(err) {
 	case mx.ErrOk:
 		// NOP
@@ -69,7 +69,7 @@ retry:
 		handles = make([]mx.Handle, numHandles)
 		goto retry
 	case mx.ErrShouldWait:
-		waitId := c.waiter.AsyncWait(c.pipe, mx.SignalChannelReadable, c.waitChan)
+		waitId := c.waiter.AsyncWait(c.channel.Handle, mx.SignalChannelReadable, c.waitChan)
 		select {
 		case <-c.waitChan:
 			// We've got a message. Retry reading.
@@ -86,13 +86,13 @@ retry:
 
 // WriteMessage writes a message to the channel.
 func (c *Connector) WriteMessage(message *Message) error {
-	// Use read lock to use pipe handle without modifying it.
+	// Get read lock to use channel handle
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if !c.pipe.IsValid() {
+	if !c.channel.Handle.IsValid() {
 		return errConnectionClosed
 	}
-	return WriteMessage(c.pipe, message)
+	return c.channel.Write(message.Bytes, message.Handles, 0)
 }
 
 // Close closes the channel aborting wait on the channel.
@@ -100,8 +100,8 @@ func (c *Connector) WriteMessage(message *Message) error {
 func (c *Connector) Close() {
 	// Stop waiting to acquire the lock.
 	close(c.done)
-	// Use write lock to modify the pipe handle.
+	// Get write lock to close channel handle
 	c.mu.Lock()
-	c.pipe.Close()
+	c.channel.Close()
 	c.mu.Unlock()
 }

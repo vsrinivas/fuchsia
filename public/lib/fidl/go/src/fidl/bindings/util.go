@@ -6,8 +6,6 @@ package bindings
 
 import (
 	"sync/atomic"
-
-	"syscall/mx"
 )
 
 func align(size, alignment int) int {
@@ -18,15 +16,6 @@ func align(size, alignment int) int {
 // number of bits.
 func bytesForBits(bits uint64) int {
 	return int((bits + 7) / 8)
-}
-
-// WriteMessage writes a message to a channel.
-func WriteMessage(handle mx.Handle, message *Message) error {
-	err := (&mx.Channel{handle}).Write(message.Bytes, message.Handles, 0)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // StringPointer converts provided string to *string.
