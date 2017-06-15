@@ -139,7 +139,7 @@ private:
 
     // Upstream PCI device, protocol interface, and device info.
     mx_device_t*          pci_dev_   = nullptr;
-    pci_protocol_t*       pci_proto_ = nullptr;
+    pci_protocol_t        pci_ = { nullptr, nullptr };
     mx_pcie_device_info_t pci_dev_info_;
 
     // Unique ID and published HDA device node.
