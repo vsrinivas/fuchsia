@@ -21,6 +21,10 @@
             "bootfs_path": "apps/flog_viewer"
         },
         {
+            "binary": "master_gain",
+            "bootfs_path": "apps/master_gain"
+        },
+        {
             "binary": "media_audio_tests",
             "bootfs_path": "test/media_audio_tests"
         },
