@@ -30,10 +30,9 @@ enum class DevicePacket : uint64_t {
 };
 }  // namespace
 
-Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
-  : WlanBaseDevice("wlan"),
-    parent_(device),
-    mlme_(ddk::WlanmacProtocolProxy(wlanmac_ops)),
+Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
+  : WlanBaseDevice(device, "wlan"),
+    mlme_(ddk::WlanmacProtocolProxy(wlanmac_proto)),
     buffer_alloc_(kNumSlabs, true) {
     debugfn();
 }
@@ -45,7 +44,7 @@ Device::~Device() {
 
 // Disable thread safety analysis, as this is a part of device initialization. All thread-unsafe
 // work should occur before multiple threads are possible (e.g., before MainLoop is started and
-// before Add() is called), or locks should be held.
+// before DdkAdd() is called), or locks should be held.
 mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     debugfn();
 
@@ -61,7 +60,7 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     }
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    status = Add(parent_);
+    status = DdkAdd();
     if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();

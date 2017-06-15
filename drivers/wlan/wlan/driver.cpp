@@ -13,13 +13,13 @@
 extern "C" mx_status_t wlan_bind(void* ctx, mx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
-    wlanmac_protocol_t* wlanmac_ops;
-    if (device_op_get_protocol(device, MX_PROTOCOL_WLANMAC, (void**)&wlanmac_ops)) {
+    wlanmac_protocol_t wlanmac_proto;
+    if (device_get_protocol(device, MX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&wlanmac_proto))) {
         std::printf("wlan: bind: no wlanmac protocol\n");
         return MX_ERR_INTERNAL;
     }
 
-    auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_ops);
+    auto wlandev = std::make_unique<wlan::Device>(device, &wlanmac_proto);
     auto status = wlandev->Bind();
     if (status != MX_OK) {
         std::printf("wlan: could not bind: %d\n", status);

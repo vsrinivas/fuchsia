@@ -9,14 +9,14 @@
 namespace wlan {
 namespace testing {
 
-Device::Device(mx_device_t* device, test_protocol_t* test_ops)
-  : TestBaseDevice("wlan-test"),
-    test_proxy_(test_ops, device) {}
+Device::Device(mx_device_t* device, test_protocol_t* test_proto)
+  : TestBaseDevice(device, "wlan-test"),
+    test_proxy_(test_proto) {}
 
 mx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
 
-    auto status = Add(test_proxy_.device());
+    auto status = DdkAdd();
     if (status != MX_OK) {
         std::printf("wlan-test: could not add test device: %d\n", status);
     }

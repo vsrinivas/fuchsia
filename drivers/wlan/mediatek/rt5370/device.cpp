@@ -66,11 +66,10 @@ constexpr mx_duration_t Device::kDefaultBusyWait;
 
 Device::Device(mx_device_t* device, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-  : ddk::Device<Device, ddk::Unbindable>("rt5370"),
-    usb_device_(device),
+  : ddk::Device<Device, ddk::Unbindable>(device, "rt5370"),
     rx_endpt_(bulk_in),
     tx_endpts_(std::move(bulk_out)) {
-    debugf("Device dev=%p bulk_in=%u\n", usb_device_, rx_endpt_);
+    debugf("Device dev=%p bulk_in=%u\n", parent(), rx_endpt_);
 
     channels_.insert({
             {1, Channel(1, 0, 241, 2, 2)},
@@ -193,7 +192,7 @@ mx_status_t Device::Bind() {
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
-    status = Add(usb_device_);
+    status = DdkAdd();
     if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {
@@ -205,7 +204,7 @@ mx_status_t Device::Bind() {
 }
 
 mx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
-    auto ret = usb_control(usb_device_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0,
+    auto ret = usb_control(parent(), (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0,
             offset, value, sizeof(*value));
     return ret < 0 ? ret : MX_OK;
 }
@@ -215,7 +214,7 @@ template <uint16_t A> mx_status_t Device::ReadRegister(Register<A>* reg) {
 }
 
 mx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
-    auto ret = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
+    auto ret = usb_control(parent(), (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
             offset, &value, sizeof(value));
     return ret < 0 ? ret : MX_OK;
 }
@@ -452,7 +451,7 @@ mx_status_t Device::LoadFirmware() {
             errorf("error reading firmware\n");
             return MX_ERR_BAD_STATE;
         }
-        status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
+        status = usb_control(parent(), (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
                              0, addr, buf, to_send);
         if (status < (ssize_t)to_send) {
             errorf("failed to send firmware\n");
@@ -475,7 +474,7 @@ mx_status_t Device::LoadFirmware() {
     CHECK_WRITE(H2M_MAILBOX_STATUS, status);
 
     // Tell the device to load the firmware
-    status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
+    status = usb_control(parent(), (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
                          kFirmware, 0, NULL, 0);
     if (status != MX_OK) {
         errorf("failed to send load firmware command\n");
@@ -689,7 +688,7 @@ mx_status_t Device::InitRegisters() {
     status = WriteRegister(udc);
     CHECK_WRITE(USB_DMA_CFG, status);
 
-    status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
+    status = usb_control(parent(), (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
             kReset, 0, NULL, 0);
     if (status != MX_OK) {
         errorf("failed reset\n");
@@ -1020,7 +1019,7 @@ mx_status_t Device::InitRegisters() {
     memset(&rwe.ba_sess_mask, 0xff, sizeof(rwe.ba_sess_mask));
     for (int i = 0; i < 256; i++) {
         uint16_t addr = RX_WCID_BASE + i * sizeof(rwe);
-        status = usb_control(usb_device_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
+        status = usb_control(parent(), (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
                              0, addr, &rwe, sizeof(rwe));
         if (status < (ssize_t)sizeof(rwe)) {
             errorf("failed to set RX WCID search entry\n");
@@ -1549,7 +1548,7 @@ mx_status_t Device::DisableWpdma() {
 
 mx_status_t Device::DetectAutoRun(bool* autorun) {
     uint32_t fw_mode = 0;
-    mx_status_t status = usb_control(usb_device_, (USB_DIR_IN | USB_TYPE_VENDOR),
+    mx_status_t status = usb_control(parent(), (USB_DIR_IN | USB_TYPE_VENDOR),
             kDeviceMode, kAutorun, 0, &fw_mode, sizeof(fw_mode));
     if (status < 0) {
         errorf("DeviceMode error: %d\n", status);
@@ -2136,7 +2135,7 @@ void Device::HandleRxComplete(iotxn_t* request) {
     }
 
     std::lock_guard<std::mutex> guard(lock_);
-    auto ac = mxtl::MakeAutoCall([&]() { iotxn_queue(usb_device_, request); });
+    auto ac = mxtl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
 
     if (request->status == MX_OK) {
         // Handle completed rx
@@ -2227,7 +2226,7 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         req->length = kReadBufSize;
         req->complete_cb = &Device::ReadIotxnComplete;
         req->cookie = this;
-        iotxn_queue(usb_device_, req);
+        iotxn_queue(parent(), req);
     }
     // Only one TX queue for now
     auto tx_endpt = tx_endpts_.front();
@@ -2381,7 +2380,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     iotxn_copyto(req, data, len, offset);
     // Total request length is packet length + 4 bytes for TxInfo
     req->length = pkt_len + 4;
-    iotxn_queue(usb_device_, req);
+    iotxn_queue(parent(), req);
 }
 
 mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {

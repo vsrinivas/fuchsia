@@ -32,7 +32,7 @@ class Device : public WlanBaseDevice,
                public ddk::EthmacProtocol<Device>,
                public ddk::WlanmacIfc<Device> {
   public:
-    Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_ops);
+    Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
     ~Device();
 
     mx_status_t Bind();
@@ -72,7 +72,6 @@ class Device : public WlanBaseDevice,
     mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
     void ResetChannelLocked() __TA_REQUIRES(lock_);
 
-    mx_device_t* parent_;
     std::mutex lock_;
     std::thread work_thread_;
     mx::port port_;

@@ -23,7 +23,7 @@ using TestBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 class Device : public TestBaseDevice,
                public ddk::WlanmacProtocol<Device> {
   public:
-    Device(mx_device_t* device, test_protocol_t* test_ops);
+    Device(mx_device_t* device, test_protocol_t* test_proto);
 
     mx_status_t Bind();
 

@@ -14,13 +14,13 @@
 extern "C" mx_status_t wlan_test_bind(void* ctx, mx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
-    test_protocol_t* proto;
-    auto status = device_op_get_protocol(device, MX_PROTOCOL_TEST, reinterpret_cast<void**>(&proto));
+    test_protocol_t proto;
+    auto status = device_get_protocol(device, MX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
     if (status != MX_OK) {
         return status;
     }
 
-    auto dev = std::make_unique<wlan::testing::Device>(device, proto);
+    auto dev = std::make_unique<wlan::testing::Device>(device, &proto);
     status = dev->Bind();
     if (status != MX_OK) {
         std::printf("wlan-test: could not bind: %d\n", status);
