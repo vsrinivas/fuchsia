@@ -8,12 +8,44 @@ body {
   margin: 0px;
 }
 
+.action-log-card {
+  grid-column-start: 3;
+  grid-column-end: span 8;
+}
+
+.context-subscribers-card {
+  grid-column-end: span 4;
+}
+
+.context-topics-card {
+  grid-column-end: span 8;
+}
+
 .mdc-card {
-  background-color:white;
+  background-color: white;
 }
 
 .mdc-tab-bar {
   padding-left: 24px;
+}
+
+.overview-action-log-card {
+  grid-column-start: 5;
+}
+
+.overview-ask-query-card {
+  grid-column-start: 9;
+}
+
+.overview-header-card {
+  grid-column-end: span 12;
+}
+
+.overview-story-card {
+}
+
+.overview-suggestions-card {
+  grid-column-start: 9;
 }
 
 .panel {
@@ -23,4 +55,24 @@ body {
 
 .panel.active {
   display: block;
+}
+
+.story-id {
+
+}
+
+.story-list-item {
+  padding: 10px;
+}
+
+.story-name {
+
+}
+
+.story-status {
+
+}
+
+.story-visible {
+
 }

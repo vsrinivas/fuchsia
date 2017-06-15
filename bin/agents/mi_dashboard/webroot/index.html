@@ -47,11 +47,56 @@
   <main>
     <section class="panels">
       <div id="overview-panel" class="panel active" role="tabpanel">
-        <h3>Overview</h3>
-      </div>
+        <div class="mdc-layout-grid__inner">
+          <!--
+          <div class="cell mdc-layout-grid__cell overview-header-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Header</h1>
+              </section>
+            </div> <!-- card
+          </div> <!-- grid__cell -->
+          <div class="cell mdc-layout-grid__cell overview-story-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Stories</h1>
+              </section>
+              <ul id="story-overview-list" class="mdc-list">
+              </ul>
+            </div> <!-- card -->
+          </div> <!-- grid__cell -->
+          <div class="cell mdc-layout-grid__cell overview-action-log-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Action Log</h1>
+              </section>
+              <ul id="actionLogOverview" class="mdc-list mdc-list--two-line mdc-list--dense">
+              </ul>
+            </div> <!-- card -->
+          </div> <!-- grid__cell -->
+          <div class="cell mdc-layout-grid__cell overview-ask-query-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Ask</h1>
+              </section>
+              <section id="askQueryOverview" class="mdc-card__supporting-text">
+                <i>No Query</i>
+              </section>
+            </div> <!-- card -->
+          </div> <!-- grid__cell -->
+          <!--
+          <div class="cell mdc-layout-grid__cell overview-suggestions-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Suggestions</h1>
+              </section>
+            </div> <!-- card
+          </div> <!-- grid__cell -->
+        </div> <!-- grid__inner -->
+      </div> <!-- overview-panel -->
       <div id="context-panel" class="panel grid mdc-layout-grid" role="tabpanel">
         <div class="mdc-layout-grid__inner">
-          <div class="cell mdc-layout-grid__cell">
+          <div class="cell mdc-layout-grid__cell context-topics-card">
             <div class="mdc-card">
               <section class="mdc-card__primary">
                 <h1 class="mdc-card__title mdc-card__title--large">Context Topics</h1>
@@ -69,7 +114,7 @@
               </section>
             </div> <!-- mdc_card -->
           </div> <!-- cell -->
-          <div class="cell mdc-layout-grid__cell">
+          <div class="cell mdc-layout-grid__cell context-subscribers-card">
             <div class="mdc-card">
               <section class="mdc-card__primary">
                 <h1 class="mdc-card__title mdc-card__title--large">Context Subscriptions</h1>
@@ -78,35 +123,24 @@
                 Registered subscribers and topics they're
                 subscribed to.
               </section>
-              <section class="mdc-card__supporting-text">
-                <table>
-                  <thead><tr><th>Subscriber</th><th>Queries</th></tr></thead>
-                  <tbody id="contextSubscriptions">
-                  </tbody>
-                </table>
-              </section>
+              <ul id="contextSubscriptions" class="mdc-list mdc-list--two-line mdc-list--dense">
+              </ul>
             </div> <!-- mdc_card -->
           </div> <!-- cell -->
         </div> <!-- grid__inner -->
       </div> <!-- context-panel -->
       <div id="action-log-panel" class="panel" role="tabpanel">
         <div class="mdc-layout-grid__inner">
-          <div class="cell mdc-layout-grid__cell">
+          <div class="cell mdc-layout-grid__cell action-log-card">
             <div class="mdc-card">
               <section class="mdc-card__primary">
                 <h1 class="mdc-card__title mdc-card__title--large">Action Log</h1>
               </section>
               <section class="mdc-card__supporting-text">
-                The current content of the Action Log, which is
-                populated by the explicit reporting of modules.
+                Currently populated by the explicit reporting of modules.
               </section>
-              <section class="mdc-card__supporting-text">
-                <table>
-                  <thead><tr><th>Method</th><th>Component URL</th><th>Parameters</th></tr></thead>
-                  <tbody id="actionLog">
-                  </tbody>
-                </table>
-              </section>
+              <ul id="actionLog" class="mdc-list mdc-list--two-line mdc-list--dense">
+              </ul>
             </div> <!-- mdc_card -->
           </div> <!-- cell -->
         </div> <!-- grid__inner -->
