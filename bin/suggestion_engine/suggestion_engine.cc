@@ -98,9 +98,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     // timeline_stories_watcher_->SetWatcher(
     //     []() { FTL_LOG(INFO) << "Something changed."; });
 
-    repo_.reset(
-        new Repo(TimelineStoriesFilter(timeline_stories_watcher_.get()),
-                 std::move(context_publisher_ptr)));
+    repo_.reset(new Repo(nullptr, std::move(context_publisher_ptr)));
   }
 
   // end SuggestionEngine
