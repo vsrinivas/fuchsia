@@ -52,6 +52,7 @@ union Action {
 
 // Creates a new story with the specified module
 struct CreateStory {
+  // TODO(alhaad, thatguy): This should be renamed to module_name.
   string module_id;
 
   // If set, calls Link.AddDocuments() on the new Story's Link immediately after
@@ -74,8 +75,11 @@ struct AddModuleToStory {
   // Story to which the module is to be added.
   string story_id;
 
-  // Module which is to be added.
-  string module_id;
+  // Name of the module which is to be added.
+  string module_name;
+
+  // URL of the module which is to be added.
+  string module_url;
 
   // Name of the link for the added module.
   string link_name;

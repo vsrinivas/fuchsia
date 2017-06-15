@@ -459,7 +459,8 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
 
   auto add_module_to_story = AddModuleToStory::New();
   add_module_to_story->story_id = "foo://bar";
-  add_module_to_story->module_id = module_id;
+  add_module_to_story->module_name = module_id;
+  add_module_to_story->module_url = module_id;
   add_module_to_story->module_path = fidl::Array<fidl::String>::New(0);
   add_module_to_story->link_name = "";
 

@@ -63,7 +63,8 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
 
   auto add_module = AddModuleToStory::New();
   add_module->story_id = action_data.story_id;
-  add_module->module_id = "file:///system/apps/email/composer";
+  add_module->module_url = "file:///system/apps/email/composer";
+  add_module->module_name = video_id;
 
   for (auto segment = action_data.module_path.begin();
        segment != action_data.module_path.end(); segment++) {
