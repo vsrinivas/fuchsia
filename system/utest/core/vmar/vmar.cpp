@@ -687,16 +687,28 @@ bool invalid_args_test() {
                                MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &region, &region_addr),
               MX_ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE - 1, vmo, 0,
-                          4 * PAGE_SIZE,
-                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
-                          &map_addr),
-              MX_ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, PAGE_SIZE - 1,
-                          3 * PAGE_SIZE,
-                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
-                          &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+    // Try the invalid maps with and without MX_VM_FLAG_MAP_RANGE.
+    for (size_t i = 0; i < 2; ++i) {
+        const uint32_t map_range = i ? MX_VM_FLAG_MAP_RANGE : 0;
+        // Specific, misaligned vmar offset
+        EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE - 1, vmo, 0,
+                              4 * PAGE_SIZE,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC | map_range,
+                              &map_addr),
+                  MX_ERR_INVALID_ARGS, "");
+        // Specific, misaligned vmo offset
+        EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, PAGE_SIZE - 1,
+                              3 * PAGE_SIZE,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC | map_range,
+                              &map_addr),
+                  MX_ERR_INVALID_ARGS, "");
+        // Non-specific, misaligned vmo offset
+        EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, PAGE_SIZE - 1,
+                              3 * PAGE_SIZE,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | map_range,
+                              &map_addr),
+                  MX_ERR_INVALID_ARGS, "");
+    }
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
@@ -798,6 +810,50 @@ bool unaligned_len_test() {
         size_t read;
         EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
                   MX_ERR_NO_MEMORY, "");
+    }
+
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+
+    END_TEST;
+}
+
+// Test passing in unaligned lens to map
+bool unaligned_len_map_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    uintptr_t map_addr;
+
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), MX_OK, "");
+    ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), MX_OK, "");
+
+    for (size_t i = 0; i < 2; ++i) {
+        const uint32_t map_range = i ? MX_VM_FLAG_MAP_RANGE : 0;
+        ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE - 1, MX_VM_FLAG_PERM_READ | map_range,
+                              &map_addr),
+                 MX_OK, "");
+
+        // Make sure we can access the last page of the memory mapping
+        {
+            uint8_t buf;
+            size_t read;
+            EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
+                      MX_OK, "");
+        }
+
+        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), MX_OK, "");
+        // Make sure we can't access the last page of the memory mappings anymore
+        {
+            uint8_t buf;
+            size_t read;
+            EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
+                      MX_ERR_NO_MEMORY, "");
+        }
     }
 
     EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
@@ -1649,6 +1705,7 @@ RUN_TEST(map_in_compact_test);
 RUN_TEST(overmapping_test);
 RUN_TEST(invalid_args_test);
 RUN_TEST(unaligned_len_test);
+RUN_TEST(unaligned_len_map_test);
 RUN_TEST(rights_drop_test);
 RUN_TEST(protect_test);
 RUN_TEST(nested_region_perms_test);
