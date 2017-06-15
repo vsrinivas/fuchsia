@@ -50,9 +50,8 @@ typedef struct hid_report_size {
 typedef struct hid_device {
     mx_device_t* mxdev;
 
-    mx_device_t* hid_mxdev;
     hid_info_t info;
-    hidbus_protocol_t* hid_ops;
+    hidbus_protocol_t hid;
 
     // Reassembly buffer for input events too large to fit in a single interrupt
     // transaction.
@@ -89,46 +88,46 @@ typedef struct hid_instance {
 // Convenience functions for calling hidbus protocol functions
 
 static inline mx_status_t hid_op_query(hid_device_t* hid, uint32_t options, hid_info_t* info) {
-    return hid->hid_ops->query(hid->hid_mxdev, options, info);
+    return hid->hid.ops->query(hid->hid.ctx, options, info);
 }
 
 static inline mx_status_t hid_op_start(hid_device_t* hid, hidbus_ifc_t* ifc, void* cookie) {
-    return hid->hid_ops->start(hid->hid_mxdev, ifc, cookie);
+    return hid->hid.ops->start(hid->hid.ctx, ifc, cookie);
 }
 
 static inline void hid_op_stop(hid_device_t* hid) {
-    hid->hid_ops->stop(hid->hid_mxdev);
+    hid->hid.ops->stop(hid->hid.ctx);
 }
 
 static inline mx_status_t hid_op_get_descriptor(hid_device_t* hid, uint8_t desc_type,
                                                 void** data, size_t* len) {
-    return hid->hid_ops->get_descriptor(hid->hid_mxdev, desc_type, data, len);
+    return hid->hid.ops->get_descriptor(hid->hid.ctx, desc_type, data, len);
 }
 
 static inline mx_status_t hid_op_get_report(hid_device_t* hid, uint8_t rpt_type, uint8_t rpt_id,
                                             void* data, size_t len) {
-    return hid->hid_ops->get_report(hid->hid_mxdev, rpt_type, rpt_id, data, len);
+    return hid->hid.ops->get_report(hid->hid.ctx, rpt_type, rpt_id, data, len);
 }
 
 static inline mx_status_t hid_op_set_report(hid_device_t* hid, uint8_t rpt_type, uint8_t rpt_id,
                                             void* data, size_t len) {
-    return hid->hid_ops->set_report(hid->hid_mxdev, rpt_type, rpt_id, data, len);
+    return hid->hid.ops->set_report(hid->hid.ctx, rpt_type, rpt_id, data, len);
 }
 
 static inline mx_status_t hid_op_get_idle(hid_device_t* hid, uint8_t rpt_id, uint8_t* duration) {
-    return hid->hid_ops->get_idle(hid->hid_mxdev, rpt_id, duration);
+    return hid->hid.ops->get_idle(hid->hid.ctx, rpt_id, duration);
 }
 
 static inline mx_status_t hid_op_set_idle(hid_device_t* hid, uint8_t rpt_id, uint8_t duration) {
-    return hid->hid_ops->set_idle(hid->hid_mxdev, rpt_id, duration);
+    return hid->hid.ops->set_idle(hid->hid.ctx, rpt_id, duration);
 }
 
 static inline mx_status_t hid_op_get_protocol(hid_device_t* hid, uint8_t* protocol) {
-    return hid->hid_ops->get_protocol(hid->hid_mxdev, protocol);
+    return hid->hid.ops->get_protocol(hid->hid.ctx, protocol);
 }
 
 static inline mx_status_t hid_op_set_protocol(hid_device_t* hid, uint8_t protocol) {
-    return hid->hid_ops->set_protocol(hid->hid_mxdev, protocol);
+    return hid->hid.ops->set_protocol(hid->hid.ctx, protocol);
 }
 
 
@@ -831,13 +830,12 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
     }
 
     mx_status_t status;
-    if (device_op_get_protocol(parent, MX_PROTOCOL_HIDBUS, (void**)&hiddev->hid_ops)) {
+    if (device_get_protocol(parent, MX_PROTOCOL_HIDBUS, &hiddev->hid)) {
         printf("hid: bind: no hidbus protocol\n");
         status = MX_ERR_INTERNAL;
         goto fail;
     }
 
-    hiddev->hid_mxdev = parent;
     if ((status = hid_op_query(hiddev, 0, &hiddev->info)) < 0) {
         printf("hid: bind: hidbus query failed: %d\n", status);
         goto fail;
@@ -894,7 +892,7 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .proto_id = MX_PROTOCOL_INPUT,
     };
 
-    status = device_add(hiddev->hid_mxdev, &args, &hiddev->mxdev);
+    status = device_add(parent, &args, &hiddev->mxdev);
     if (status != MX_OK) {
         printf("hid: device_add failed for HID device: %d\n", status);
         goto fail;

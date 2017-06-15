@@ -71,19 +71,19 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
     }
 }
 
-static mx_status_t usb_hid_query(mx_device_t* dev, uint32_t options, hid_info_t* info) {
+static mx_status_t usb_hid_query(void* ctx, uint32_t options, hid_info_t* info) {
     if (!info) {
         return MX_ERR_INVALID_ARGS;
     }
-    usb_hid_device_t* hid = dev->ctx;
+    usb_hid_device_t* hid = ctx;
     info->dev_num = hid->info.dev_num;
     info->dev_class = hid->info.dev_class;
     info->boot_device = hid->info.boot_device;
     return MX_OK;
 }
 
-static mx_status_t usb_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie) {
-    usb_hid_device_t* hid = dev->ctx;
+static mx_status_t usb_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
+    usb_hid_device_t* hid = ctx;
     mtx_lock(&hid->lock);
     if (hid->ifc) {
         mtx_unlock(&hid->lock);
@@ -95,17 +95,17 @@ static mx_status_t usb_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cook
     return MX_OK;
 }
 
-static void usb_hid_stop(mx_device_t* dev) {
-    usb_hid_device_t* hid = dev->ctx;
+static void usb_hid_stop(void* ctx) {
+    usb_hid_device_t* hid = ctx;
     mtx_lock(&hid->lock);
     hid->ifc = NULL;
     hid->cookie = NULL;
     mtx_unlock(&hid->lock);
 }
 
-static mx_status_t usb_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
+static mx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
                                           void** data, size_t* len) {
-    usb_hid_device_t* hid = dev->ctx;
+    usb_hid_device_t* hid = ctx;
     int desc_idx = -1;
     for (int i = 0; i < hid->hid_desc->bNumDescriptors; i++) {
         if (hid->hid_desc->descriptors[i].bDescriptorType == desc_type) {
@@ -132,29 +132,29 @@ static mx_status_t usb_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
     return MX_OK;
 }
 
-static mx_status_t usb_hid_get_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+static mx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
                                       void* data, size_t len) {
-    usb_hid_device_t* hid = dev->ctx;
+    usb_hid_device_t* hid = ctx;
     return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len);
 }
 
-static mx_status_t usb_hid_set_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+static mx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
                                       void* data, size_t len) {
-    usb_hid_device_t* hid = dev->ctx;
+    usb_hid_device_t* hid = ctx;
     return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len);
 }
 
-static mx_status_t usb_hid_get_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
-    usb_hid_device_t* hid = dev->ctx;
+static mx_status_t usb_hid_get_idle(void* ctx, uint8_t rpt_id, uint8_t* duration) {
+    usb_hid_device_t* hid = ctx;
     return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_IDLE, rpt_id, hid->interface, duration, sizeof(*duration));
 }
 
-static mx_status_t usb_hid_set_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t duration) {
+static mx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration) {
     mx_status_t status;
-    usb_hid_device_t* hid = dev->ctx;
+    usb_hid_device_t* hid = ctx;
     status = usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0);
     if (status == MX_ERR_IO_REFUSED) {
@@ -165,19 +165,19 @@ static mx_status_t usb_hid_set_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t du
     return status;
 }
 
-static mx_status_t usb_hid_get_protocol(mx_device_t* dev, uint8_t* protocol) {
-    usb_hid_device_t* hid = dev->ctx;
+static mx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
+    usb_hid_device_t* hid = ctx;
     return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol));
 }
 
-static mx_status_t usb_hid_set_protocol(mx_device_t* dev, uint8_t protocol) {
-    usb_hid_device_t* hid = dev->ctx;
+static mx_status_t usb_hid_set_protocol(void* ctx, uint8_t protocol) {
+    usb_hid_device_t* hid = ctx;
     return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0);
 }
 
-static hidbus_protocol_t usb_hid_bus_ops = {
+static hidbus_protocol_ops_t usb_hid_bus_ops = {
     .query = usb_hid_query,
     .start = usb_hid_start,
     .stop = usb_hid_stop,
