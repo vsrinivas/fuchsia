@@ -21,6 +21,10 @@
             "bootfs_path": "apps/color"
         },
         {
+            "binary": "gen/apps/modules/common/modules/image/image.flx",
+            "bootfs_path": "apps/image"
+        },
+        {
             "binary": "gen/apps/modules/common/modules/gallery/gallery.flx",
             "bootfs_path": "apps/gallery"
         },
