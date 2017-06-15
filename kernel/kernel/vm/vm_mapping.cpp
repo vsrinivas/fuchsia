@@ -373,6 +373,8 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
 status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     canary_.Assert();
 
+    len = ROUNDUP(len, PAGE_SIZE);
+
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
         return MX_ERR_BAD_STATE;
@@ -381,8 +383,9 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     LTRACEF("region %p, offset %#zx, size %#zx, commit %d\n", this, offset, len, commit);
 
     DEBUG_ASSERT(object_);
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+    if (!IS_PAGE_ALIGNED(offset) || !is_in_range(base_ + offset, len)) {
+        return ERR_INVALID_ARGS;
+    }
 
     // precompute the flags we'll pass GetPageLocked
     // if committing, then tell it to soft fault in a page
