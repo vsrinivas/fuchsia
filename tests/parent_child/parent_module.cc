@@ -17,8 +17,12 @@ namespace {
 
 constexpr int kTimeoutMilliseconds = 5000;
 
+constexpr char kChildModuleName[] = "child";
 constexpr char kChildModule[] =
     "file:///system/apps/modular_tests/child_module";
+
+constexpr char kChildLink[] = "child";
+constexpr char kChildLinkAlternate[] = "child2";
 
 class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
@@ -30,6 +34,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   ParentApp() { TestInit(__FILE__); }
   ~ParentApp() override = default;
 
+  TestPoint initialized_{"Parent module initialized"};
+
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
@@ -38,22 +44,54 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     initialized_.Pass();
     module_context_.Bind(std::move(module_context));
 
-    StartModule(kChildModule);
-
-    modular::testing::GetStore()->Get("child_module_init",
-                                      [this](const fidl::String&) {
-                                        child_module_->Stop([this] {
-                                          callback_.Pass();
-                                          module_context_->Done();
-                                        });
-                                      });
-
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         Protect([this] { DeleteAndQuit([] {}); }),
         ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+
+    StartChildModuleTwice();
   }
+
+  void StartChildModuleTwice() {
+    module_context_->StartModuleInShell(
+        kChildModuleName, kChildModule, kChildLink,
+        nullptr, nullptr, child_module_.NewRequest(),
+        nullptr);
+
+    child_module_.set_connection_error_handler([this] {
+        OnChildModuleDown();
+      });
+
+    // Start the same module again, but with a different link. This stops the
+    // previous module instance and starts a new one.
+    module_context_->StartModuleInShell(
+        kChildModuleName, kChildModule, kChildLinkAlternate,
+        nullptr, nullptr, child_module2_.NewRequest(),
+        nullptr);
+  }
+
+  TestPoint child_module_down_{"Child module killed for restart"};
+
+  void OnChildModuleDown() {
+    child_module_down_.Pass();
+
+    modular::testing::GetStore()->Get("child_module_init",
+                                      [this](const fidl::String&) {
+                                        child_module2_->Stop([this] {
+                                          OnChildStopped();
+                                        });
+                                      });
+  }
+
+  TestPoint child_module_stopped_{"Child module stopped"};
+
+  void OnChildStopped() {
+    child_module_stopped_.Pass();
+    module_context_->Done();
+  }
+
+  TestPoint stopped_{"Parent module stopped"};
 
   // |Module|
   void Stop(const StopCallback& done) override {
@@ -61,21 +99,9 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     DeleteAndQuit(done);
   }
 
-  void StartModule(const std::string& module_query) {
-    fidl::InterfaceHandle<mozart::ViewOwner> module_view;
-    constexpr char kChildLink[] = "child";
-    constexpr char kChildModuleName[] = "child";
-    module_context_->StartModule(kChildModuleName, module_query, kChildLink,
-                                 nullptr, nullptr, child_module_.NewRequest(),
-                                 module_view.NewRequest());
-  }
-
   modular::ModuleContextPtr module_context_;
   modular::ModuleControllerPtr child_module_;
-
-  TestPoint initialized_{"Parent module initialized"};
-  TestPoint callback_{"Stop child callback invoked"};
-  TestPoint stopped_{"Parent module stopped"};
+  modular::ModuleControllerPtr child_module2_;
 };
 
 }  // namespace

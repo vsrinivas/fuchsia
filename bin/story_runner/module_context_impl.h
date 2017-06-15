@@ -49,6 +49,18 @@ class ModuleContextImpl : ModuleContext {
 
   ~ModuleContextImpl() override;
 
+  const fidl::Array<fidl::String>& module_path() const {
+    return module_path_;
+  }
+
+  const std::string& module_url() const {
+    return module_url_;
+  }
+
+  const LinkPath& link_path() const {
+    return *default_link_path_;
+  }
+
  private:
   // |ModuleContext|
   void GetLink(const fidl::String& name,

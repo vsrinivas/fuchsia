@@ -38,11 +38,11 @@ interface ModuleContext {
   // module's |link_name| is passed to the starting module as its
   // default link.
   //
-  // TODO(mesch): If the method is called again with the same name by
-  // the same Module instance, the existing Module instance should be
-  // restarted with the changed URL if applicable (or stopped), but
-  // right now it isn't, and a duplicate Module instance with the same
-  // name is created.
+  // If the method is called again with the same name by the same Module
+  // instance, but with different arguments (or with non-null service exchange
+  // arguments), the existing Module instance is restarted with the changed
+  // arguments. If the other arguments don't change, just an additional module
+  // controller connection is made, and the view_owner request is closed.
   //
   // The calling Module instance and the new Module instance may also
   // interact by exchanging ServiceProviders. The calling Module

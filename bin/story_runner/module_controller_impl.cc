@@ -21,19 +21,22 @@ ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
     app::ApplicationControllerPtr module_application,
     ModulePtr module,
-    const fidl::Array<fidl::String>& module_path,
-    fidl::InterfaceRequest<ModuleController> module_controller)
+    const fidl::Array<fidl::String>& module_path)
     : story_controller_impl_(story_controller_impl),
       module_application_(std::move(module_application)),
       module_(std::move(module)),
-      module_path_(module_path.Clone()),
-      binding_(this, std::move(module_controller)) {
+      module_path_(module_path.Clone()) {
   module_application_.set_connection_error_handler(
       [this] { SetState(ModuleState::ERROR); });
   module_.set_connection_error_handler([this] { OnConnectionError(); });
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}
+
+void ModuleControllerImpl::Connect(
+    fidl::InterfaceRequest<ModuleController> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
 
 // If the Module instance closes its own connection, we signal this to
 // all current and future watchers by an appropriate state transition.

@@ -10,7 +10,7 @@
 #include "application/services/application_launcher.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -28,13 +28,14 @@ class StoryControllerImpl;
 class ModuleControllerImpl : ModuleController {
  public:
   ModuleControllerImpl(
-      StoryControllerImpl* const story_controller_impl,
+      StoryControllerImpl* story_controller_impl,
       app::ApplicationControllerPtr module_application,
       ModulePtr module,
-      const fidl::Array<fidl::String>& module_path,
-      fidl::InterfaceRequest<ModuleController> module_controller);
+      const fidl::Array<fidl::String>& module_path);
 
   ~ModuleControllerImpl() override;
+
+  void Connect(fidl::InterfaceRequest<ModuleController> request);
 
   // Notifies all watchers of a state change of the module. Also
   // remembers the state to initialize future added watchers.
@@ -69,7 +70,7 @@ class ModuleControllerImpl : ModuleController {
   const fidl::Array<fidl::String> module_path_;
 
   // The service provided here.
-  fidl::Binding<ModuleController> binding_;
+  fidl::BindingSet<ModuleController> bindings_;
 
   // Watchers of this Module instance.
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;

@@ -68,11 +68,8 @@ class StoryControllerImpl : StoryController, StoryContext {
   void GetLinkPath(const LinkPathPtr& link_path,
                    fidl::InterfaceRequest<Link> request);
 
-  // Called by ModuleContextImpl and StartModuleInShell().
-  //
-  // Returns the module instance id so StartModuleInShell() can pass it to the
-  // StoryShell.
-  fidl::String StartModule(
+  // Called by ModuleContextImpl.
+  void StartModule(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& query,
