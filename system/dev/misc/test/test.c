@@ -24,40 +24,40 @@ typedef struct test_root {
     mx_device_t* mxdev;
 } test_root_t;
 
-static void test_device_set_output_socket(mx_device_t* dev, mx_handle_t handle) {
-    test_device_t* device = dev->ctx;
+static void test_device_set_output_socket(void* ctx, mx_handle_t handle) {
+    test_device_t* device = ctx;
     if (device->output != MX_HANDLE_INVALID) {
         mx_handle_close(device->output);
     }
     device->output = handle;
 }
 
-static mx_handle_t test_device_get_output_socket(mx_device_t* dev) {
-    test_device_t* device = dev->ctx;
+static mx_handle_t test_device_get_output_socket(void* ctx) {
+    test_device_t* device = ctx;
     return device->output;
 }
 
-static void test_device_set_control_channel(mx_device_t* dev, mx_handle_t handle) {
-    test_device_t* device = dev->ctx;
+static void test_device_set_control_channel(void* ctx, mx_handle_t handle) {
+    test_device_t* device = ctx;
     if (device->control != MX_HANDLE_INVALID) {
         mx_handle_close(device->control);
     }
     device->control = handle;
 }
 
-static mx_handle_t test_device_get_control_channel(mx_device_t* dev) {
-    test_device_t* device = dev->ctx;
+static mx_handle_t test_device_get_control_channel(void* ctx) {
+    test_device_t* device = ctx;
     return device->control;
 }
 
-static void test_device_set_test_func(mx_device_t* dev, test_func_t func, void* cookie) {
-    test_device_t* device = dev->ctx;
+static void test_device_set_test_func(void* ctx, test_func_t func, void* cookie) {
+    test_device_t* device = ctx;
     device->test_func = func;
     device->cookie = cookie;
 }
 
-static mx_status_t test_device_run_tests(mx_device_t* dev, test_report_t* report, const void* arg, size_t arglen) {
-    test_device_t* device = dev->ctx;
+static mx_status_t test_device_run_tests(void *ctx, test_report_t* report, const void* arg, size_t arglen) {
+    test_device_t* device = ctx;
     if (device->test_func != NULL) {
         return device->test_func(device->cookie, report, arg, arglen);
     } else {
@@ -65,11 +65,12 @@ static mx_status_t test_device_run_tests(mx_device_t* dev, test_report_t* report
     }
 }
 
-static void test_device_destroy(mx_device_t* dev) {
-    device_remove(dev);
+static void test_device_destroy(void *ctx) {
+    test_device_t* device = ctx;
+    device_remove(device->mxdev);
 }
 
-static test_protocol_t test_test_proto = {
+static test_protocol_ops_t test_test_proto = {
     .set_output_socket = test_device_set_output_socket,
     .get_output_socket = test_device_get_output_socket,
     .set_control_channel = test_device_set_control_channel,
@@ -87,21 +88,21 @@ static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         if (inlen != sizeof(mx_handle_t)) {
             return MX_ERR_INVALID_ARGS;
         }
-        test_device_set_output_socket(dev->mxdev, *(mx_handle_t*)in);
+        test_device_set_output_socket(dev, *(mx_handle_t*)in);
         return MX_OK;
 
     case IOCTL_TEST_SET_CONTROL_CHANNEL:
         if (inlen != sizeof(mx_handle_t)) {
             return MX_ERR_INVALID_ARGS;
         }
-        test_device_set_control_channel(dev->mxdev, *(mx_handle_t*)in);
+        test_device_set_control_channel(dev, *(mx_handle_t*)in);
         return MX_OK;
 
     case IOCTL_TEST_RUN_TESTS:
         if (outlen != sizeof(test_report_t)) {
             return MX_ERR_BUFFER_TOO_SMALL;
         }
-        mx_status_t status = test_device_run_tests(dev->mxdev, (test_report_t*)out, in, inlen);
+        mx_status_t status = test_device_run_tests(dev, (test_report_t*)out, in, inlen);
         *out_actual = sizeof(test_report_t);
         return status;
 

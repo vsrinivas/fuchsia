@@ -221,13 +221,13 @@ static void iotxn_test_output_func(const char* line, int len, void* arg) {
 static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const void* arg, size_t arglen) {
     mx_device_t* dev = (mx_device_t*)cookie;
 
-    test_protocol_t* protocol;
-    mx_status_t status = device_op_get_protocol(dev, MX_PROTOCOL_TEST, (void**)&protocol);
+    test_protocol_t proto;
+    mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_TEST, &proto);
     if (status != NO_ERROR) {
         return status;
     }
 
-    mx_handle_t output = protocol->get_output_socket(dev);
+    mx_handle_t output = proto.ops->get_output_socket(proto.ctx);
     if (output != MX_HANDLE_INVALID) {
         unittest_set_output_function(iotxn_test_output_func, &output);
     }
@@ -240,13 +240,13 @@ static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const vo
 }
 
 static mx_status_t iotxn_test_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    test_protocol_t* protocol;
-    mx_status_t status = device_op_get_protocol(dev, MX_PROTOCOL_TEST, (void**)&protocol);
+    test_protocol_t proto;
+    mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_TEST, &proto);
     if (status != NO_ERROR) {
         return status;
     }
 
-    protocol->set_test_func(dev, iotxn_test_func, dev);
+    proto.ops->set_test_func(proto.ctx, iotxn_test_func, dev);
     return NO_ERROR;
 }
 

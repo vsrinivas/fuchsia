@@ -42,14 +42,14 @@ static void inline update_test_report(bool success, test_report_t* report) {
 mx_status_t ddktl_test_func(void* cookie, test_report_t* report, const void* arg, size_t arglen) {
     auto dev = static_cast<mx_device_t*>(cookie);
 
-    test_protocol_t* protocol;
+    test_protocol_t proto;
     auto status =
-        device_op_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void**>(&protocol));
+        device_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
     if (status != NO_ERROR) {
         return status;
     }
 
-    mx_handle_t output = protocol->get_output_socket(dev);
+    mx_handle_t output = proto.ops->get_output_socket(proto.ctx);
     if (output != MX_HANDLE_INVALID) {
         unittest_set_output_function(ddktl_test_output_func, &output);
     }
@@ -64,14 +64,14 @@ mx_status_t ddktl_test_func(void* cookie, test_report_t* report, const void* arg
 }  // namespace
 
 extern "C" mx_status_t ddktl_test_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    test_protocol_t* protocol;
+    test_protocol_t proto;
     auto status =
-        device_op_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void**>(&protocol));
+        device_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
     if (status != NO_ERROR) {
         return status;
     }
 
-    protocol->set_test_func(dev, ddktl_test_func, dev);
+    proto.ops->set_test_func(proto.ctx, ddktl_test_func, dev);
 
     return NO_ERROR;
 }
