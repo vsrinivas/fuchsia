@@ -9,6 +9,7 @@
 #include <arch/arm64.h>
 #include <magenta/compiler.h>
 #include <reg.h>
+#include <arch/spinlock.h>
 
 __BEGIN_CDECLS
 
@@ -59,7 +60,15 @@ static inline bool arch_in_int_handler(void)
 {
     extern bool arm64_in_int_handler[SMP_MAX_CPUS];
 
-    return arm64_in_int_handler[arch_curr_cpu_num()];
+    spin_lock_saved_state_t state;
+
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+
+    const bool result = arm64_in_int_handler[arch_curr_cpu_num()];
+
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+
+    return result;
 }
 
 __END_CDECLS

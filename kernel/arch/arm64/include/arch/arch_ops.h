@@ -14,56 +14,11 @@
 #include <reg.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mp.h>
+#include <arch/arm64/interrupt.h>
 
 __BEGIN_CDECLS
 
 #define ENABLE_CYCLE_COUNTER 1
-
-// override of some routines
-static inline void arch_enable_ints(void)
-{
-    CF;
-    __asm__ volatile("msr daifclr, #2" ::: "memory");
-}
-
-static inline void arch_disable_ints(void)
-{
-    __asm__ volatile("msr daifset, #2" ::: "memory");
-    CF;
-}
-
-static inline bool arch_ints_disabled(void)
-{
-    unsigned long state;
-
-    __asm__ volatile("mrs %0, daif" : "=r"(state));
-    state &= (1<<7);
-
-    return !!state;
-}
-
-static inline void arch_enable_fiqs(void)
-{
-    CF;
-    __asm__ volatile("msr daifclr, #1" ::: "memory");
-}
-
-static inline void arch_disable_fiqs(void)
-{
-    __asm__ volatile("msr daifset, #1" ::: "memory");
-    CF;
-}
-
-// XXX
-static inline bool arch_fiqs_disabled(void)
-{
-    unsigned long state;
-
-    __asm__ volatile("mrs %0, daif" : "=r"(state));
-    state &= (1<<6);
-
-    return !!state;
-}
 
 static inline void arch_spinloop_pause(void)
 {
