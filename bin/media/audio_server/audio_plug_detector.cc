@@ -35,7 +35,10 @@ AudioPlugDetector::~AudioPlugDetector() {
 }
 
 MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
-  static const WatchTarget WATCH_TARGETS[] = {
+  struct {
+    const char* node_dir;
+    DevNodeType type;
+  } WATCH_TARGETS[] = {
       {.node_dir = AUDIO_DEVNODES, .type = DevNodeType::AUDIO},
       {.node_dir = AUDIO2_OUTPUT_DEVNODES, .type = DevNodeType::AUDIO2_OUTPUT},
   };
@@ -43,7 +46,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
   FTL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,
-  // automatically stop monitoring of all sources of device nodes.
+  // automatically stop monitoring all sources of device nodes.
   auto error_cleanup = mxtl::MakeAutoCall([this]() { Stop(); });
 
   {
@@ -60,26 +63,24 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
     // Record our new manager
     manager_ = manager;
 
+    // Size our watcher vector.
+    watch_targets_.reserve(countof(WATCH_TARGETS));
+
     // For each watch target...
-    // 1) Open the directory where dev-nodes get published.
-    // 2) Create a DispatcherChannel channel using the dev node type as the
-    //    owner ctx (so we know what type of device we need to attach to without
-    //    needing to parse the path it was created in).
-    // 3) Create a magenta channel which watches the directory for new device
-    //    nodes being added.
-    // 4) Activate the DispatcherChannel, binding it to ourselves, and the
-    //    magenta channel we just created.
-    // 5) Finally, manually enumerate the files which were there when we
-    //    started.
-    //
-    // TODO(johngro) : This runs a (small) risk of duplicating detection of dev
-    // nodes.  See MG-638 for details.  When watchers have the ability to
-    // atomically enumerate a directory's initial contents, do that instead of
-    // Step #5
+    // 1) Open the directory where dev-nodes get published.  Add this dir fd to
+    //    our vector of active watcher targets so we can use it with openat
+    //    later on.
+    // 2) Create a DispatcherChannel channel using a pointer to the watcher
+    //    target owner ctx (so we know what type of device we need to attach to,
+    //    and have access to the dirfd)
+    // 3) Activate the DispatcherChannel, binding it to ourselves, and obtaining
+    //    the other end of the channel in the process.
+    // 4) Give the other end of our newly created dispatcher channel to the VFS
+    //    and tell it to watch for existing or added device nodes.
     for (const auto& target : WATCH_TARGETS) {
       // Step #1
-      ftl::UniqueFD dirfd(::open(target.node_dir, O_RDONLY | O_DIRECTORY));
-      if (!dirfd.is_valid()) {
+      ftl::UniqueFD tmp(::open(target.node_dir, O_RDONLY | O_DIRECTORY));
+      if (!tmp.is_valid()) {
         FTL_LOG(ERROR) << "AudioPlugDetector failed to open \""
                        << target.node_dir
                        << "\" when attempting to start monitoring for new "
@@ -88,35 +89,24 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
         return MediaResult::NOT_FOUND;
       }
 
-      // Step #2
-      mx::channel watcher;
-      ssize_t res;
-      res = ioctl_vfs_watch_dir(dirfd.get(), watcher.get_address());
-      if (res < 0) {
-        FTL_LOG(ERROR) << "AudioPlugDetector failed to create watcher for \""
-                       << target.node_dir
-                       << "\" when attempting to start monitoring for new "
-                          "device nodes.  (res "
-                       << res << ")";
-        return MediaResult::INTERNAL_ERROR;
-      }
+      watch_targets_.emplace_back(std::move(tmp), target.type);
+      auto& wt = watch_targets_.back();
 
-      // Step #3
+      // Step #2
       auto dispatcher = ::audio::DispatcherChannelAllocator::New(
-          reinterpret_cast<uintptr_t>(&target));
+          reinterpret_cast<uintptr_t>(&wt));
       if (dispatcher == nullptr) {
         FTL_LOG(ERROR)
             << "AudioPlugDetector failed to create DispatcherChannel for \""
             << target.node_dir
-            << "\" when attempting to start monitoring for new device nodes.  "
-               "(res "
-            << res << ")";
+            << "\" when attempting to start monitoring for new device nodes.";
         return MediaResult::INSUFFICIENT_RESOURCES;
       }
 
-      // Step #4
+      // Step #3
       mx_status_t mx_res;
-      mx_res = dispatcher->Activate(mxtl::WrapRefPtr(this), std::move(watcher));
+      mx::channel watcher_channel;
+      mx_res = dispatcher->Activate(mxtl::WrapRefPtr(this), &watcher_channel);
       if (mx_res != MX_OK) {
         FTL_LOG(ERROR)
             << "AudioPlugDetector failed to activate watcher channel for \""
@@ -127,32 +117,23 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
         return MediaResult::INTERNAL_ERROR;
       }
 
-      // Step #5
-      struct dirent* entry;
-      DIR* d = fdopendir(dirfd.get());
-      if (d == nullptr) {
-        FTL_LOG(ERROR)
-            << "AudioPlugDetector failed to enumerate initial contents of \""
-            << target.node_dir
-            << "\" when attempting to start monitoring for new device nodes.  "
-               "(errno "
-            << errno << ")";
+      // Step #4
+      vfs_watch_dir_t wd;
+      wd.channel = watcher_channel.release();
+      wd.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING;
+      wd.options = 0;
+      ssize_t res;
+      res = ioctl_vfs_watch_dir_v2(wt.dirfd.get(), &wd);
+      if (res < 0) {
+        FTL_LOG(ERROR) << "AudioPlugDetector failed to create watcher for \""
+                       << target.node_dir
+                       << "\" when attempting to start monitoring for new "
+                          "device nodes.  (res "
+                       << res << ")";
+        dispatcher->Deactivate(false);
+        mx_handle_close(wd.channel);
         return MediaResult::INTERNAL_ERROR;
       }
-
-      // We have transferred our file descriptor to 'd'.  We are not responsible
-      // for closing it any more.
-      (void)dirfd.release();
-
-      // Process each non "." and ".." entry in the which already exists in the
-      // dev-node directory.
-      while ((entry = readdir(d)) != nullptr) {
-        if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
-          AddAudioDeviceLocked(entry->d_name, target);
-        }
-      }
-
-      closedir(d);
     }
 
     error_cleanup.cancel();
@@ -174,7 +155,8 @@ void AudioPlugDetector::Stop() {
   }
 }
 
-mx_status_t AudioPlugDetector::ProcessChannel(::audio::DispatcherChannel* channel) {
+mx_status_t AudioPlugDetector::ProcessChannel(
+    ::audio::DispatcherChannel* channel) {
   MX_DEBUG_ASSERT(channel != nullptr);
   mxtl::AutoLock process_lock(&process_lock_);
 
@@ -187,21 +169,36 @@ mx_status_t AudioPlugDetector::ProcessChannel(::audio::DispatcherChannel* channe
   // a newly added device.  If we fail to read the channel, propagate the
   // error up to the dispatcher framework.  It will automatically take care of
   // closing the channel for us.
-  char name[32];  // relative device node names should not need a max path
-                  // buffer.
   uint32_t bytes;
+  uint8_t watcher_msg_buf[VFS_WATCH_MSG_MAX];
+  mx_status_t res = channel->Read(watcher_msg_buf,
+                                  sizeof(watcher_msg_buf),
+                                  &bytes);
+  if (res != MX_OK)
+    return res;
 
-  mx_status_t res = channel->Read(name, sizeof(name), &bytes);
-  if (res == MX_OK) {
-    FTL_DCHECK(channel->owner_ctx() != 0);
-    const auto& watch_target =
-        *(reinterpret_cast<WatchTarget*>(channel->owner_ctx()));
+  FTL_DCHECK(channel->owner_ctx() != 0);
+  const auto& watch_target =
+      *(reinterpret_cast<WatchTarget*>(channel->owner_ctx()));
 
-    // Manually null-terminate the filename.  The watcher channel does not do
-    // this for us.
-    name[mxtl::min<uint32_t>(sizeof(name) - 1, bytes)] = 0;
+  uint8_t* msg = watcher_msg_buf;
 
-    AddAudioDeviceLocked(name, watch_target);
+  while (bytes >= 2) {
+      uint8_t event   = *msg++;
+      uint8_t namelen = *msg++;
+      if (bytes < (namelen + 2u))
+          return MX_ERR_BAD_STATE;
+
+      if (namelen &&
+          ((event == VFS_WATCH_EVT_ADDED) || (event == VFS_WATCH_EVT_EXISTING))) {
+        char name_buf[256];
+        ::memcpy(name_buf, msg, namelen);
+        name_buf[namelen + 1u] = 0;
+        AddAudioDeviceLocked(name_buf, watch_target);
+      }
+
+      msg += namelen;
+      bytes -= (namelen + 2u);
   }
 
   return res;
@@ -211,19 +208,15 @@ void AudioPlugDetector::AddAudioDeviceLocked(const char* node_name,
                                              const WatchTarget& watch_target) {
   FTL_DCHECK(manager_ != nullptr);
 
-  static_assert(NAME_MAX <= 255,
-                "NAME_MAX is growing!  Either update this static_assert, or "
-                "consider switching to "
-                "different way to generate this device node name.");
-  char name[NAME_MAX + 1];
-  snprintf(name, sizeof(name), "%s/%s", watch_target.node_dir, node_name);
-
   // Open the device node.
-  ftl::UniqueFD dev_node(::open(
-      name, watch_target.type == DevNodeType::AUDIO ? O_RDWR : O_RDONLY));
+  ftl::UniqueFD dev_node(
+      ::openat(watch_target.dirfd.get(),
+               node_name,
+               watch_target.type == DevNodeType::AUDIO ? O_RDWR : O_RDONLY));
   if (!dev_node.is_valid()) {
     FTL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
-                     << name << "\". (" << strerror(errno) << " : " << errno
+                     << node_name << "\". ("
+                     << strerror(errno) << " : " << errno
                      << ")";
     return;
   }
@@ -252,14 +245,14 @@ void AudioPlugDetector::AddAudioDeviceLocked(const char* node_name,
       int res = ioctl_audio_get_device_type(dev_node.get(), &device_type);
 
       if (res != sizeof(device_type)) {
-        FTL_DLOG(WARNING) << "Failed to get device type for \"" << name
+        FTL_DLOG(WARNING) << "Failed to get device type for \"" << node_name
                           << "\" (res " << res << ")";
         return;
       }
 
       if (device_type != AUDIO_TYPE_SINK) {
         FTL_DLOG(INFO) << "Unsupported USB audio device (type " << device_type
-                       << ") at \"" << name << "\".  Skipping";
+                       << ") at \"" << node_name << "\".  Skipping";
         return;
       }
 
@@ -276,7 +269,7 @@ void AudioPlugDetector::AddAudioDeviceLocked(const char* node_name,
   }
 
   if (new_output == nullptr) {
-    FTL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
+    FTL_LOG(WARNING) << "Failed to instantiate audio output for \"" << node_name
                      << "\"";
     return;
   }

@@ -5,7 +5,9 @@
 #pragma once
 
 #include <magenta/compiler.h>
+#include <magenta/device/vfs.h>
 #include <magenta/types.h>
+#include <mxtl/macros.h>
 #include <mxtl/mutex.h>
 #include <mxtl/ref_ptr.h>
 
@@ -40,7 +42,10 @@ class AudioPlugDetector : public ::audio::DispatcherChannel::Owner {
   enum class DevNodeType { AUDIO, AUDIO2_OUTPUT };
 
   struct WatchTarget {
-    const char* node_dir;
+    WatchTarget(ftl::UniqueFD d, DevNodeType t)
+      : dirfd(std::move(d)), type(t) { }
+
+    ftl::UniqueFD dirfd;
     DevNodeType type;
   };
 
@@ -55,6 +60,8 @@ class AudioPlugDetector : public ::audio::DispatcherChannel::Owner {
   // to add multiple devices in parallel (if we need to), we just need to lock
   // for "write" when shutting down.
   mxtl::Mutex process_lock_;
+
+  std::vector<WatchTarget> watch_targets_ __TA_GUARDED(process_lock_);
 
   // TODO(johngro) : Deal with the thread safty issues here!  If we queue an
   // AddDevice callback on the output manager, there is nothing keeping the
