@@ -63,7 +63,7 @@ count of handles in the reply message are returned via *actual_bytes* and
 *actual_handles*, respectively.
 
 The special return value **MX_ERR_CALL_FAILED** indicates that the message was
-sent, but an error occured while waiting for a response.  This is necessary
+sent, but an error occurred while waiting for a response.  This is necessary
 to disambiguate errors like **MX_ERR_PEER_CLOSED** which could have occurred
 while attempting the write (in which case the caller would still own any handles
 passed via *handles*) or while waiting (in which case the caller would no longer
@@ -95,7 +95,7 @@ closed while waiting for the reply.
 
 **MX_ERR_CANCELED**  *handle* was closed while waiting for a reply.
 
-**MX_ERR_CALL_FAILED**  The write phase of the call succeeded, but an error occured
+**MX_ERR_CALL_FAILED**  The write phase of the call succeeded, but an error occurred
 while or after waiting for the response.  The specific error is returned via
 *read_status* if it is non-null.
 

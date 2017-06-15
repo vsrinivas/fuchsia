@@ -184,7 +184,7 @@ typedef struct emmc_setup_context {
 } emmc_setup_context_t;
 
 // If any of these interrupts is asserted in the SDHCI irq register, it means
-// that an error has occured.
+// that an error has occurred.
 static const uint32_t error_interrupts = (
     EMMC_IRQ_ERR |
     EMMC_IRQ_ERR_CMD_TIMEOUT |

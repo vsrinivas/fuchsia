@@ -251,7 +251,7 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
     {
         AutoLock lock(&lock_);
 
-        // (4) If any of (3A), (3B), or (3C) have occured,
+        // (4) If any of (3A), (3B), or (3C) have occurred,
         // we were removed from the waiters list already
         // and get_msg() returns a non-TIMED_OUT status.
         // Otherwise, the status is MX_ERR_TIMED_OUT and it
