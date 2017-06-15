@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("manager") {
-  output_name = "appmgr"
+source_set("lib") {
+  visibility = [ ":*" ]
 
   sources = [
     "application_controller_impl.cc",
@@ -16,19 +16,22 @@ executable("manager") {
     "application_runner_holder.h",
     "config.cc",
     "config.h",
-    "main.cc",
+    "namespace_builder.cc",
+    "namespace_builder.h",
     "root_application_loader.cc",
     "root_application_loader.h",
     "root_environment_host.cc",
     "root_environment_host.h",
+    "sandbox_metadata.cc",
+    "sandbox_metadata.h",
     "url_resolver.cc",
     "url_resolver.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
-    "//application/lib/svc",
     "//application/lib/farfs",
+    "//application/lib/svc",
     "//application/services",
     "//lib/ftl",
     "//lib/mtl",
@@ -36,7 +39,32 @@ executable("manager") {
     "//third_party/rapidjson",
   ]
 
-  libs = [
-    "launchpad",
+  libs = [ "launchpad" ]
+}
+
+executable("manager") {
+  output_name = "appmgr"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "appmgr_unittests"
+
+  sources = [
+    "sandbox_metadata_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//lib/mtl/test",
   ]
 }

@@ -3,10 +3,13 @@
 # found in the LICENSE file.
 
 group("application") {
+  testonly = true
+
   deps = [
     "lib/farfs",
     "src/archiver",
     "src/archiver($host_toolchain)",
     "src/manager",
+    "src/manager:tests",
   ]
 }

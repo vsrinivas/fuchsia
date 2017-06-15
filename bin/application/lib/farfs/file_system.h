@@ -38,6 +38,9 @@ class FileSystem {
   // writes to the VMO do not mutate the data in the underlying archive.
   mx::vmo GetFileAsVMO(ftl::StringView path);
 
+  // Returns the contents of the the given path as a string.
+  bool GetFileAsString(ftl::StringView path, std::string* result);
+
  private:
   void CreateDirectory();
 

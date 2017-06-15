@@ -33,9 +33,8 @@ struct DirRecord {
       children_array[i] = std::move(children[i]);
     }
 
-    return mxtl::AdoptRef(new vmofs::VnodeDir(dispatcher,
-                                              std::move(names_array),
-                                              std::move(children_array)));
+    return mxtl::AdoptRef(new vmofs::VnodeDir(
+        dispatcher, std::move(names_array), std::move(children_array)));
   }
 
   mtl::VFSDispatcher dispatcher_;
@@ -71,13 +70,15 @@ mxtl::StringPiece ToStringPiece(ftl::StringView view) {
   return mxtl::StringPiece(view.data(), view.size());
 }
 
-mxtl::RefPtr<vmofs::VnodeFile> CreateFile(fs::Dispatcher* dispatcher, mx_handle_t vmo,
+mxtl::RefPtr<vmofs::VnodeFile> CreateFile(fs::Dispatcher* dispatcher,
+                                          mx_handle_t vmo,
                                           const DirectoryTableEntry& entry) {
-  return mxtl::AdoptRef(new vmofs::VnodeFile(
-      dispatcher, vmo, entry.data_offset, entry.data_length));
+  return mxtl::AdoptRef(new vmofs::VnodeFile(dispatcher, vmo, entry.data_offset,
+                                             entry.data_length));
 }
 
-void LeaveDirectory(fs::Dispatcher* dispatcher, ftl::StringView name,
+void LeaveDirectory(fs::Dispatcher* dispatcher,
+                    ftl::StringView name,
                     std::vector<DirRecord>* stack) {
   auto child = stack->back().CreateDirectory(dispatcher);
   stack->pop_back();
@@ -133,11 +134,29 @@ mx::vmo FileSystem::GetFileAsVMO(ftl::StringView path) {
   if (!reader_)
     return mx::vmo();
   DirectoryTableEntry entry;
-  reader_->GetDirectoryEntry(path, &entry);
+  if (!reader_->GetDirectoryEntry(path, &entry))
+    return mx::vmo();
   mx_handle_t result = MX_HANDLE_INVALID;
   mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
                entry.data_length, &result);
   return mx::vmo(result);
+}
+
+bool FileSystem::GetFileAsString(ftl::StringView path, std::string* result) {
+  if (!reader_)
+    return false;
+  DirectoryTableEntry entry;
+  if (!reader_->GetDirectoryEntry(path, &entry))
+    return false;
+  std::string data;
+  data.resize(entry.data_length);
+  size_t actual;
+  mx_status_t status = mx_vmo_read(vmo_, &data[0], entry.data_offset,
+                                   entry.data_length, &actual);
+  if (status != MX_OK || actual != entry.data_length)
+    return false;
+  result->swap(data);
+  return true;
 }
 
 void FileSystem::CreateDirectory() {

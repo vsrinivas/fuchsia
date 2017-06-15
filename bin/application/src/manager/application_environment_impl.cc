@@ -18,6 +18,7 @@
 
 #include "application/lib/app/connect.h"
 #include "application/lib/far/format.h"
+#include "application/src/manager/namespace_builder.h"
 #include "application/src/manager/url_resolver.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -35,7 +36,7 @@ constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
-constexpr char kServiceRootPath[] = "/svc";
+constexpr char kSandboxPath[] = "meta/sandbox";
 
 enum class LaunchType {
   kProcess,
@@ -417,7 +418,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
 
   auto flat_namespace = FlatNamespace::New();
   flat_namespace->paths.resize(1);
-  flat_namespace->paths[0] = kServiceRootPath;
+  flat_namespace->paths[0] = "/svc";
   flat_namespace->directories.resize(1);
   flat_namespace->directories[0] = services_.OpenAsDirectory();
 
@@ -443,19 +444,13 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
   if (!svc)
     return;
 
-  mx_handle_t handles[] = {root.get(), svc.get()};
-  uint32_t types[] = {PA_HND(PA_NS_DIR, 0), PA_HND(PA_NS_DIR, 1)};
-  const char* paths[] = {"/", kServiceRootPath};
-
-  mxio_flat_namespace_t flat;
-  flat.count = 2;
-  flat.handle = handles;
-  flat.type = types;
-  flat.path = paths;
+  NamespaceBuilder builder;
+  builder.AddRoot(std::move(root));
+  builder.AddServices(std::move(svc));
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateProcess(job_for_child_, std::move(package),
-                                      std::move(launch_info), &flat);
+                                      std::move(launch_info), builder.Build());
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
@@ -478,20 +473,25 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
   if (!svc)
     return;
 
-  mx_handle_t handles[] = {pkg.get(), svc.get()};
-  uint32_t types[] = {PA_HND(PA_NS_DIR, 0), PA_HND(PA_NS_DIR, 1)};
-  const char* paths[] = {"/pkg", kServiceRootPath};
+  NamespaceBuilder builder;
+  builder.AddPackage(std::move(pkg));
+  builder.AddServices(std::move(svc));
 
-  mxio_flat_namespace_t flat;
-  flat.count = 2;
-  flat.handle = handles;
-  flat.type = types;
-  flat.path = paths;
+  std::string sandbox_data;
+  if (file_system->GetFileAsString(kSandboxPath, &sandbox_data)) {
+    SandboxMetadata sandbox;
+    if (!sandbox.Parse(sandbox_data)) {
+      FTL_LOG(ERROR) << "Failed to parse sandbox metadata for "
+                     << launch_info->url;
+      return;
+    }
+    builder.AddSandbox(sandbox);
+  }
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateSandboxedProcess(
       job_for_child_, file_system->GetFileAsVMO(kAppPath),
-      std::move(launch_info), &flat);
+      std::move(launch_info), builder.Build());
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
