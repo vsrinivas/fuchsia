@@ -35,6 +35,11 @@
   ],
   "resources": [
     {
+      "bootfs_path": "data/sysui/contextual_location_proposals.json",
+      "default": "true",
+      "file": "apps/sysui/agents/home_work_agent/assets/contextual_location_proposals.json"
+    },
+    {
       "bootfs_path": "data/sysui/contextual_config.json",
       "default": "true",
       "file": "apps/sysui/armadillo_user_shell/assets/contextual_config.json"
