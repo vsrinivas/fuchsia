@@ -12,6 +12,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
+#include <mxtl/limits.h>
 #include <unittest/unittest.h>
 #include <sys/mman.h>
 
@@ -746,6 +747,32 @@ bool invalid_args_test() {
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 0), MX_ERR_INVALID_ARGS, "");
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 0, MX_VM_FLAG_PERM_READ),
               MX_ERR_INVALID_ARGS, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK, "");
+
+    // size rounds up to 0
+    constexpr size_t bad_size = mxtl::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
+    static_assert(((bad_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1)) == 0, "");
+    EXPECT_EQ(mx_vmar_allocate(vmar, 0, bad_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+                               &region, &region_addr),
+              MX_ERR_INVALID_ARGS, "");
+    EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, bad_size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &map_addr),
+              MX_ERR_INVALID_ARGS, "");
+    EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, bad_size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_MAP_RANGE,
+                          &map_addr),
+              MX_ERR_INVALID_ARGS, "");
+    // Attempt bad protect/unmaps
+    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, 0,
+                          4 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &map_addr),
+              MX_OK, "");
+    for (ssize_t i = -1; i < 2; ++i) {
+        EXPECT_EQ(mx_vmar_protect(vmar, map_addr + PAGE_SIZE * i, bad_size, MX_VM_FLAG_PERM_READ),
+                  MX_ERR_INVALID_ARGS, "");
+        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr + PAGE_SIZE * i, bad_size), MX_ERR_INVALID_ARGS, "");
+    }
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK, "");
 
     // Flags with invalid bits set

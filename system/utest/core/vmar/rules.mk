@@ -16,6 +16,12 @@ MODULE_SRCS += \
 MODULE_NAME := vmar-test
 
 MODULE_LIBS := \
-    system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+	system/ulib/c \
+	system/ulib/magenta \
+	system/ulib/mxio \
+    system/ulib/unittest \
+
+MODULE_STATIC_LIBS := \
+	system/ulib/mxtl \
 
 include make/module.mk

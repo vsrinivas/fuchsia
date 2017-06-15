@@ -18,9 +18,10 @@ MODULE_SRCS := \
 MODULE_NAME := core-tests
 
 MODULE_STATIC_LIBS := \
-    system/ulib/runtime \
     system/ulib/ddk \
-    system/ulib/sync
+    system/ulib/mxtl \
+    system/ulib/runtime \
+    system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/unittest \
