@@ -14,6 +14,7 @@ $fuchsia_root/out/build-magenta/tools/netcp $build_dir/external/vulkancts/module
 $fuchsia_root/out/build-magenta/tools/netcp $build_dir/executor/executor :$dest_dir/executor
 $fuchsia_root/out/build-magenta/tools/netcp $build_dir/execserver/execserver :$dest_dir/execserver
 $fuchsia_root/out/build-magenta/tools/netcp third_party/vulkan-cts/cases/dEQP-VK-cases.xml :$dest_dir/dEQP-VK-cases.xml
+$fuchsia_root/out/build-magenta/tools/netcp third_party/vulkan-cts/external/vulkancts/mustpass/1.0.1/vk-default.txt :$dest_dir/vk-default.txt
 $fuchsia_root/out/build-magenta/tools/netcp magma/scripts/vulkancts/run.sh :$dest_dir/run.sh
 
 cd $fuchsia_root/third_party/vulkan-cts/external/vulkancts/data
