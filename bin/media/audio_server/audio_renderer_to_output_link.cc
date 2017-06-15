@@ -41,19 +41,23 @@ void AudioRendererToOutputLink::UpdateGain() {
   // Obtain the renderer gain and, if it is at or below the muted threshold,
   // force the renderer to be muted and get out.
   double db_gain = renderer->db_gain();
-  if (db_gain <= AudioRenderer::kMutedGain) {
+  double output_db_gain = output->db_gain();
+  if ((db_gain <= AudioRenderer::kMutedGain) ||
+      (output_db_gain <= AudioRenderer::kMutedGain)) {
     gain_.ForceMute();
     return;
   }
 
   // Add in the output gain and clamp to the maximum allowed total gain.
-  db_gain += output->db_gain();
+  db_gain += output_db_gain;
   if (db_gain > AudioRenderer::kMaxGain) {
     db_gain = AudioRenderer::kMaxGain;
   }
 
   gain_.Set(db_gain);
 }
+
+void UpdateGain(const AudioOutput& output);
 
 // static
 AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(

@@ -91,6 +91,8 @@ MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
   FTL_DCHECK(output != nullptr);
   FTL_DCHECK(output != throttle_output_);
 
+  output->SetGain(master_gain());
+
   auto emplace_res = outputs_.emplace(output);
   FTL_DCHECK(emplace_res.second);
 
@@ -131,6 +133,13 @@ void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
     } else {
       OnOutputUnplugged(output);
     }
+  }
+}
+
+void AudioOutputManager::SetMasterGain(float db_gain) {
+  master_gain_ = mxtl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
+  for (auto output : outputs_) {
+    output->SetGain(master_gain_);
   }
 }
 

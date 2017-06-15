@@ -37,6 +37,10 @@ class AudioOutput {
   // Accessor for the current value of the dB gain for the output.
   float db_gain() const { return db_gain_; }
 
+  // Set the gain for this output and update all renderer->output links.  Only
+  // safe to call from the main message loop.
+  void SetGain(float db_gain);
+
   // Accessors for the current plug state of the output.
   //
   // In addition to publishing and unpublishing streams when codecs are
@@ -47,8 +51,8 @@ class AudioOutput {
   // Currently this information is used in the Audio Server to implement simple
   // routing policies for AudioRenderers.
   //
-  // plugged   : true when an audio output stream is either hardwired, or believes
-  //             that it has something connected to its plug.
+  // plugged   : true when an audio output stream is either hardwired, or
+  //             believes that it has something connected to its plug.
   // plug_time : The last time (according to mx_time_get(MX_CLOCK_MONOTONIC) at
   //             which the plugged/unplugged state of the output stream last
   //             changed.

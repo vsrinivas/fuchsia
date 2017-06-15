@@ -227,5 +227,14 @@ bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {
   return false;
 }
 
+void AudioOutput::SetGain(float db_gain) {
+  db_gain_ = db_gain;
+
+  for (const auto& link : links_) {
+    FTL_DCHECK(link);
+    link->UpdateGain();
+  }
+}
+
 }  // namespace audio
 }  // namespace media

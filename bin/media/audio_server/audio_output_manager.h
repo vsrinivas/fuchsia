@@ -77,6 +77,10 @@ class AudioOutputManager {
                              bool plugged,
                              mx_time_t plug_time);
 
+  // Master gain control.  Only safe to access via the main message loop thread.
+  void  SetMasterGain(float db_gain);
+  float master_gain() const { return master_gain_; }
+
  private:
   // A placeholder for various types of simple routing policies.  This should be
   // replaced when routing policy moves to a more centralized policy manager.
@@ -118,6 +122,12 @@ class AudioOutputManager {
 
   // A helper class we will use to detect plug/unplug events for audio devices
   mxtl::RefPtr<AudioPlugDetector> plug_detector_;
+
+  // Current master gain setting (in dB).
+  //
+  // TODO(johngro): remove this when we have a policy manager which controls
+  // gain on a per-output basis.
+  float master_gain_ = -20.0;
 
   RoutingPolicy routing_policy_ = RoutingPolicy::LAST_PLUGGED_OUTPUT;
 };

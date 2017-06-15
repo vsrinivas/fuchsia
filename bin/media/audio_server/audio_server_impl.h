@@ -30,6 +30,8 @@ class AudioServerImpl : public AudioServer {
   void CreateRenderer(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer,
       fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
+  void SetMasterGain(float db_gain) override;
+  void GetMasterGain(const GetMasterGainCallback& cbk) override;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // MediaPacked which was queued to an AudioRenderer via. a media pipe.

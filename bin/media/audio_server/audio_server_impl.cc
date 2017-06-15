@@ -58,6 +58,14 @@ void AudioServerImpl::CreateRenderer(
                                 this));
 }
 
+void AudioServerImpl::SetMasterGain(float db_gain) {
+  output_manager_.SetMasterGain(db_gain);
+}
+
+void AudioServerImpl::GetMasterGain(const GetMasterGainCallback& cbk) {
+  cbk(output_manager_.master_gain());
+}
+
 void AudioServerImpl::DoPacketCleanup() {
   // In order to minimize the time we spend in the lock, we allocate a new
   // queue, then lock, swap and clear the sched flag, and finally clean out the
