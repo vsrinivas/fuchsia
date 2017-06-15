@@ -118,6 +118,7 @@ static bool is_new_protocol(uint32_t proto_id) {
     case MX_PROTOCOL_BLOCK_CORE:
     case MX_PROTOCOL_USB_HCI:
     case MX_PROTOCOL_USB_BUS:
+    case MX_PROTOCOL_USB:
         return true;
     default:
         return false;

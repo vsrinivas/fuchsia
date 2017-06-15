@@ -212,17 +212,17 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     return status;
 }
 
-mx_status_t usb_interface_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
-    usb_interface_t* intf = device->ctx;
+mx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
+    usb_interface_t* intf = ctx;
     return intf->hci.ops->reset_endpoint(intf->hci.ctx, intf->device_id, ep_address);
 }
 
-size_t usb_interface_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
-    usb_interface_t* intf = device->ctx;
+size_t usb_interface_get_max_transfer_size(void* ctx, uint8_t ep_address) {
+    usb_interface_t* intf = ctx;
     return intf->hci.ops->get_max_transfer_size(intf->hci.ctx, intf->device_id, ep_address);
 }
 
-static usb_protocol_t _usb_protocol = {
+static usb_protocol_ops_t _usb_protocol = {
     .reset_endpoint = usb_interface_reset_endpoint,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
 };

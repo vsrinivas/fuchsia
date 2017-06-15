@@ -108,21 +108,21 @@ mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int fea
 }
 
 mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
-    usb_protocol_t* usb_protocol;
-    if (device_op_get_protocol(device, MX_PROTOCOL_USB, (void**)&usb_protocol)) {
+    usb_protocol_t usb;
+    if (device_get_protocol(device, MX_PROTOCOL_USB, &usb)) {
         return ERR_NOT_SUPPORTED;
     }
 
-    return usb_protocol->reset_endpoint(device, ep_address);
+    return usb.ops->reset_endpoint(usb.ctx, ep_address);
 }
 
 size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
-    usb_protocol_t* usb_protocol;
-    if (device_op_get_protocol(device, MX_PROTOCOL_USB, (void**)&usb_protocol)) {
+    usb_protocol_t usb;
+    if (device_get_protocol(device, MX_PROTOCOL_USB, &usb)) {
         return 0;
     }
 
-    return usb_protocol->get_max_transfer_size(device, ep_address);
+    return usb.ops->get_max_transfer_size(usb.ctx, ep_address);
 }
 
 // helper function for allocating iotxns for USB transfers
