@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/get.c \
     $(LOCAL_DIR)/walker.c
 
 MODULE_LIBS := \

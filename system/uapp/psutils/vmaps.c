@@ -8,6 +8,7 @@
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 #include <pretty/sizes.h>
+#include <task-utils/get.h>
 #include <task-utils/walker.h>
 
 #include <inttypes.h>
@@ -156,46 +157,6 @@ mx_status_t print_maps(mx_info_maps_t* maps, size_t count, size_t avail) {
     return NO_ERROR;
 }
 
-// Magic status code we use to short-circuit the process tree walk.
-#define VMAPS_FOUND_KOID (-10101)
-
-mx_koid_t desired_koid;
-mx_handle_t found_handle;
-
-mx_status_t job_callback(int depth, mx_handle_t job, mx_koid_t koid, mx_koid_t parent_koid) {
-    if (koid == desired_koid) {
-        fprintf(stderr,
-                "ERROR: koid %" PRIu64 " is a job, not a process\n", koid);
-        return ERR_WRONG_TYPE;
-    }
-    return NO_ERROR;
-}
-
-mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid, mx_koid_t parent_koid) {
-    if (koid == desired_koid) {
-        mx_status_t s =
-            mx_handle_duplicate(process, MX_RIGHT_SAME_RIGHTS, &found_handle);
-        if (s != NO_ERROR) {
-            return s;
-        }
-        return VMAPS_FOUND_KOID;
-    }
-    return NO_ERROR;
-}
-
-mx_status_t get_process(mx_koid_t koid, mx_handle_t* out) {
-    desired_koid = koid;
-    found_handle = MX_HANDLE_INVALID;
-    mx_status_t s = walk_root_job_tree(job_callback, process_callback, NULL);
-    if (s == NO_ERROR || s == VMAPS_FOUND_KOID) {
-        desired_koid = 0;
-        *out = found_handle;
-        found_handle = MX_HANDLE_INVALID;
-        return *out == MX_HANDLE_INVALID ? ERR_NOT_FOUND : NO_ERROR;
-    }
-    return s;
-}
-
 void try_help(char** argv) {
     const char* c = argv[1];
     while (*c == '-') {
@@ -237,8 +198,13 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t process;
-    mx_status_t s = get_process(koid, &process);
-    if (s != NO_ERROR) {
+    mx_obj_type_t type;
+    mx_status_t s = get_task_by_koid(koid, &type, &process);
+    if (s == MX_OK && type != MX_OBJ_TYPE_PROCESS) {
+        mx_handle_close(process);
+        s = MX_ERR_WRONG_TYPE;
+    }
+    if (s != MX_OK) {
         fprintf(stderr,
                 "ERROR: couldn't find process with koid %" PRIu64 ": %s (%d)\n",
                 koid, mx_status_get_string(s), s);
