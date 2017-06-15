@@ -61,7 +61,7 @@ private:
         kPageDirectories * kPageDirectoryEntries * kPageTableEntries * PAGE_SIZE;
 
     static constexpr uint32_t kOverfetchPageCount = 1;
-    static constexpr uint32_t kGuardPageCount = 0;
+    static constexpr uint32_t kGuardPageCount = 8;
 
     static_assert(kSize == 1ull << 32, "ppgtt size calculation");
 

@@ -22,12 +22,16 @@ static unsigned int gen_ppat_index(CachingType caching_type)
     }
 }
 
-static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, CachingType caching_type, bool valid)
+static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, CachingType caching_type, bool valid,
+                                       bool writeable)
 {
-    gen_pte_t pte = bus_addr | PAGE_RW;
+    gen_pte_t pte = bus_addr;
 
     if (valid)
         pte |= PAGE_PRESENT;
+
+    if (writeable)
+        pte |= PAGE_RW;
 
     unsigned int pat_index = gen_ppat_index(caching_type);
     if (pat_index & (1 << 0))
@@ -163,7 +167,8 @@ bool PerProcessGtt::Clear(uint64_t start, uint64_t length)
     if (start + length > Size())
         return DRETF(false, "invalid start + length");
 
-    gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, false);
+    // readable, because mesa doesn't properly handle overfetching
+    gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true, false);
 
     uint32_t page_table_index = (start >> PAGE_SHIFT) & kPageTableMask;
     uint32_t page_directory_index = (start >> (PAGE_SHIFT + kPageTableShift)) & kPageDirectoryMask;
@@ -236,7 +241,7 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
     if (!allocator_->GetSize(addr, &allocated_length))
         return DRETF(false, "couldn't get allocated length for addr");
 
-    // add extra pages to length to account for the overfetch page and guard page
+    // add extra pages to length to account for overfetch and guard pages
     if (length + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE != allocated_length)
         return DRETF(false, "allocated length (0x%zx) doesn't match length (0x%" PRIx64 ")",
                      allocated_length, length);
@@ -263,17 +268,17 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
     for (uint64_t i = 0; i < num_pages + kOverfetchPageCount + kGuardPageCount; i++) {
         if (i < num_pages) {
             // buffer pages
-            gen_pte_t pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
+            gen_pte_t pte = gen_pte_encode(bus_addr_array[i], caching_type, true, true);
             page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
                                                                        page_table_index, pte);
         } else if (i < num_pages + kOverfetchPageCount) {
-            // overfetch page
-            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true);
+            // overfetch page: readable
+            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true, false);
             page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
                                                                        page_table_index, pte);
         } else {
-            // guard page
-            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, false);
+            // guard page: also readable, because mesa doesn't properly handle overfetching
+            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true, false);
             page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
                                                                        page_table_index, pte);
         }

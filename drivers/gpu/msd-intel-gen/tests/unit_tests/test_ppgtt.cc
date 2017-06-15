@@ -44,12 +44,12 @@ public:
 
         uint32_t page_count = size >> PAGE_SHIFT;
 
-        // Note: <= is intentional here to accout for ofer-fetch protection page
+        // Note: <= is intentional here to accout for over-fetch protection page
         for (unsigned int i = 0; i <= page_count; i++) {
             uint64_t pte = get_pte(ppgtt, gpu_addr + i * PAGE_SIZE);
             EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
-            EXPECT_FALSE(pte & 0x1); // page should not be present
-            EXPECT_TRUE(pte & 0x3);  // rw
+            EXPECT_TRUE(pte & (1 << 0));  // present
+            EXPECT_FALSE(pte & (1 << 1)); // not writeable
             EXPECT_EQ(pte & cache_bits(CACHING_NONE), cache_bits(CACHING_NONE));
         }
     }
@@ -76,12 +76,8 @@ public:
                 EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
             }
 
-            if (i < page_count + PerProcessGtt::kOverfetchPageCount) {
-                EXPECT_TRUE(pte & 0x1); // page present
-            } else {
-                EXPECT_FALSE(pte & 0x1); // page present
-            }
-            EXPECT_TRUE(pte & 0x3); // rw
+            EXPECT_TRUE(pte & (1 << 0));
+            EXPECT_EQ(static_cast<bool>(pte & (1 << 1)), i < page_count); // writeable
             EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
         }
         EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
