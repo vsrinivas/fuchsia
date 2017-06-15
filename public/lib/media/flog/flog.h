@@ -211,13 +211,16 @@ class FlogProxy : public T::Proxy_ {
     return std::unique_ptr<FlogProxy<T>>(new FlogProxy<T>(subject_address));
   }
 
-  FlogChannel* flog_channel() {
-    return reinterpret_cast<FlogChannel*>(this->receiver_);
-  }
+  FlogChannel* flog_channel() { return channel_.get(); }
 
  private:
+  explicit FlogProxy(std::unique_ptr<FlogChannel> channel)
+      : T::Proxy_(channel.get()), channel_(std::move(channel)) {}
+
   explicit FlogProxy(uint64_t subject_address)
-      : T::Proxy_(new FlogChannel(T::Name_, subject_address)) {}
+      : FlogProxy(std::make_unique<FlogChannel>(T::Name_, subject_address)) {}
+
+  std::unique_ptr<FlogChannel> channel_;
 };
 
 template <typename T>

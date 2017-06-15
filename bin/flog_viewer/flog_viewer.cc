@@ -183,7 +183,7 @@ void FlogViewer::PrintRemainingAccumulators() {
   for (std::pair<uint32_t, std::shared_ptr<Channel>> pair :
        channels_by_channel_id_) {
     if (pair.second->has_accumulator() && !pair.second->has_parent()) {
-      std::cout << *pair.second << " ";
+      std::cout << "\n" << *pair.second << " ";
       pair.second->PrintAccumulator(std::cout);
       std::cout << "\n";
     }
@@ -215,7 +215,7 @@ void FlogViewer::OnChannelCreated(
       std::cout << entry
                 << "    ERROR: NEW CHANNEL SHARES SUBJECT ADDRESS WITH "
                    "EXISTING CHANNEL "
-                << subject_iter->second << "\n";
+                << *subject_iter->second << "\n";
     } else {
       channel = subject_iter->second;
       channel->Resolve(
@@ -278,8 +278,12 @@ void FlogViewer::OnChannelDeleted(
 
   if (format_ == ChannelHandler::kFormatDigest &&
       iter->second->has_accumulator()) {
+    std::cout << "\nDELETED " << *iter->second << " ";
     iter->second->PrintAccumulator(std::cout);
   }
+
+  channels_by_subject_address_.erase(iter->second->subject_address());
+
   channels_by_channel_id_.erase(iter);
 }
 

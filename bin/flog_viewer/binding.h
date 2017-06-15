@@ -50,8 +50,11 @@ class Binding {
   // The channel referenced by this binding, set via |ChannelHandler::BindAs|.
   std::shared_ptr<Channel> channel() const { return channel_; }
 
-  // Sets the koid.
-  void SetKoid(uint64_t koid) { koid_ = koid; }
+  // Sets the koid and resets the channel.
+  void SetKoid(uint64_t koid) {
+    Reset();
+    koid_ = koid;
+  }
 
   // Sets the channel.
   virtual void SetChannel(std::shared_ptr<Channel> channel);

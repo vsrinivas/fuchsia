@@ -26,7 +26,6 @@ ChildBinding::~ChildBinding() {}
 
 void ChildBinding::SetChannel(std::shared_ptr<Channel> channel) {
   Binding::SetChannel(channel);
-  FTL_DCHECK(!channel->has_parent());
   channel->SetHasParent();
 }
 
