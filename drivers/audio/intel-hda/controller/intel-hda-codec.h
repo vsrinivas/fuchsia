@@ -100,7 +100,7 @@ private:
     static constexpr size_t PROP_COUNT       = 7;
 
     static mx_protocol_device_t CODEC_DEVICE_THUNKS;
-    static ihda_codec_protocol_t CODEC_PROTO_THUNKS;
+    static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
 
     IntelHDACodec(IntelHDAController& controller, uint8_t codec_id);
     virtual ~IntelHDACodec() { MX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }

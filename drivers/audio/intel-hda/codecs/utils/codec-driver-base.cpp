@@ -26,7 +26,6 @@ void IntelHDACodecDriverBase::PrintDebugPrefix() const {
 
 mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
     mx_status_t res;
-    void* proto_void;
 
     if (codec_dev == nullptr)
         return MX_ERR_INVALID_ARGS;
@@ -34,13 +33,13 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
     if (codec_device_ != nullptr)
         return MX_ERR_BAD_STATE;
 
-    res = device_op_get_protocol(codec_dev, MX_PROTOCOL_IHDA_CODEC, &proto_void);
+    ihda_codec_protocol_t proto;
+    res = device_get_protocol(codec_dev, MX_PROTOCOL_IHDA_CODEC, &proto);
     if (res != MX_OK)
         return res;
 
-    auto codec_interface = static_cast<ihda_codec_protocol_t*>(proto_void);
-    if ((codec_interface == nullptr) ||
-        (codec_interface->get_driver_channel == nullptr))
+    if ((proto.ops == nullptr) ||
+        (proto.ops->get_driver_channel == nullptr))
         return MX_ERR_NOT_SUPPORTED;
 
     // Allocate a DispatcherChannel object which we will use to talk to the codec device
@@ -50,7 +49,7 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
 
     // Obtain a channel handle from the device
     mx::channel channel;
-    res = codec_interface->get_driver_channel(codec_dev, channel.get_address());
+    res = proto.ops->get_driver_channel(proto.ctx, channel.get_address());
     if (res != MX_OK)
         return res;
 
