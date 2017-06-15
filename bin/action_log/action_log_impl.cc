@@ -86,7 +86,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   // TODO(azani): Do something sane.
   std::string initial_data = "{\"email-composer\": {\"message\": {";
   if (!last_email_rcpt_.empty()) {
-    initial_data += "\"to\": [\"" + last_email_rcpt_ + "\"]";
+    initial_data += "\"to\": [{\"email\": \"" + last_email_rcpt_ + "\"}],";
   }
   initial_data += "\"subject\": \"Really cool video!!!!1one\",";
   initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
@@ -122,7 +122,7 @@ void UserActionLogImpl::MaybeRecordEmailRecipient(
     return;
   }
   rapidjson::Value* rcpt_value =
-      rapidjson::Pointer("/to/0/address").Get(doc_params);
+      rapidjson::Pointer("/to/0/email").Get(doc_params);
 
   if (rcpt_value == nullptr || !rcpt_value->IsString()) {
     return;
