@@ -13,7 +13,7 @@ namespace {
 
 class TestNone : public ddk::Device<TestNone> {
   public:
-    TestNone() : ddk::Device<TestNone>("ddktl-test") {}
+    TestNone() : ddk::Device<TestNone>(nullptr, "ddktl-test") {}
 
     void DdkRelease() {}
 };
@@ -21,7 +21,7 @@ class TestNone : public ddk::Device<TestNone> {
 #define BEGIN_SUCCESS_CASE(name) \
 class Test##name : public ddk::Device<Test##name, ddk::name> { \
   public: \
-    Test##name() : ddk::Device<Test##name, ddk::name>("ddktl-test") {} \
+    Test##name() : ddk::Device<Test##name, ddk::name>(nullptr, "ddktl-test") {} \
     void DdkRelease() {}
 
 #define END_SUCCESS_CASE };
@@ -94,7 +94,7 @@ static bool do_test() {
 }
 
 struct TestDispatch : public ddk::FullDevice<TestDispatch> {
-    TestDispatch() : ddk::FullDevice<TestDispatch>("ddktl-test") {}
+    TestDispatch() : ddk::FullDevice<TestDispatch>(nullptr, "ddktl-test") {}
 
     // Give access to the device ops for testing
     mx_protocol_device_t* GetDeviceOps() {
@@ -225,13 +225,13 @@ static bool test_dispatch() {
 
 class TestNotReleasable : public ddk::Device<TestNotReleasable> {
   public:
-    TestNotReleasable() : ddk::Device<TestNotReleasable>("ddktl-test", nullptr) {}
+    TestNotReleasable() : ddk::Device<TestNotReleasable>(nullptr, "ddktl-test") {}
 };
 
 #define DEFINE_FAIL_CASE(name) \
 class TestNot##name : public ddk::Device<TestNot##name, ddk::name> { \
   public: \
-    TestNot##name() : ddk::Device<TestNot##name, ddk::name>("ddktl-test", nullptr) {} \
+    TestNot##name() : ddk::Device<TestNot##name, ddk::name>(nullptr, "ddktl-test") {} \
     void DdkRelease() {} \
 };
 
@@ -250,7 +250,7 @@ DEFINE_FAIL_CASE(Resumable)
 
 class TestBadOverride : public ddk::Device<TestBadOverride, ddk::Closable> {
   public:
-    TestBadOverride() : ddk::Device<TestBadOverride, ddk::Closable>("ddktl-test", nullptr) {}
+    TestBadOverride() : ddk::Device<TestBadOverride, ddk::Closable>(nullptr, "ddktl-test") {}
     void DdkRelease() {}
 
     void DdkClose(uint32_t flags) {}
@@ -259,7 +259,7 @@ class TestBadOverride : public ddk::Device<TestBadOverride, ddk::Closable> {
 class TestHiddenOverride : public ddk::Device<TestHiddenOverride, ddk::Closable> {
   public:
     TestHiddenOverride()
-      : ddk::Device<TestHiddenOverride, ddk::Closable>("ddktl-test", nullptr) {}
+      : ddk::Device<TestHiddenOverride, ddk::Closable>(nullptr, "ddktl-test") {}
     void DdkRelease() {}
 
   private:
@@ -269,7 +269,7 @@ class TestHiddenOverride : public ddk::Device<TestHiddenOverride, ddk::Closable>
 class TestStaticOverride : public ddk::Device<TestStaticOverride, ddk::Closable> {
   public:
     TestStaticOverride()
-      : ddk::Device<TestStaticOverride, ddk::Closable>("ddktl-test", nullptr) {}
+      : ddk::Device<TestStaticOverride, ddk::Closable>(nullptr, "ddktl-test") {}
     void DdkRelease() {}
 
     static mx_status_t DdkClose(uint32_t flags) { return NO_ERROR; }
@@ -282,7 +282,7 @@ struct A {
 
 class TestNotAMixin : public ddk::Device<TestNotAMixin, A> {
   public:
-    TestNotAMixin() : ddk::Device<TestNotAMixin, A>("ddktl-test", nullptr) {}
+    TestNotAMixin() : ddk::Device<TestNotAMixin, A>(nullptr, "ddktl-test") {}
     void DdkRelease() {}
 };
 
@@ -293,7 +293,7 @@ using TestNotAllMixinsType = ddk::Device<TestNotAllMixins,
                                          A>;
 class TestNotAllMixins : public TestNotAllMixinsType {
   public:
-    TestNotAllMixins() : TestNotAllMixinsType("ddktl-test", nullptr) {}
+    TestNotAllMixins() : TestNotAllMixinsType(nullptr, "ddktl-test") {}
     void DdkRelease() {}
     mx_status_t DdkOpen(mx_device_t** dev_out, uint32_t flags) { return NO_ERROR; }
     mx_status_t DdkClose(uint32_t flags) { return NO_ERROR; }

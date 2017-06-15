@@ -66,42 +66,40 @@ namespace ddk {
 
 class TestProtocolProxy {
   public:
-    TestProtocolProxy(test_protocol_t* ops, mx_device_t* dev)
-      : ops_(ops), dev_(dev) {}
+    TestProtocolProxy(test_protocol_t* proto)
+      : ops_(proto->ops), ctx_(proto->ctx) {}
 
     void SetOutputSocket(mx::socket socket) {
-        ops_->set_output_socket(dev_, socket.release());
+        ops_->set_output_socket(ctx_, socket.release());
     }
 
     mx::socket GetOutputSocket() {
-        return mx::socket(ops_->get_output_socket(dev_));
+        return mx::socket(ops_->get_output_socket(ctx_));
     }
 
     void SetControlChannel(mx::channel chan) {
-        ops_->set_control_channel(dev_, chan.release());
+        ops_->set_control_channel(ctx_, chan.release());
     }
 
     mx::channel GetControlChannel() {
-        return mx::channel(ops_->get_control_channel(dev_));
+        return mx::channel(ops_->get_control_channel(ctx_));
     }
 
     void SetTestFunc(test_func_t func, void* cookie) {
-        ops_->set_test_func(dev_, func, cookie);
+        ops_->set_test_func(ctx_, func, cookie);
     }
 
     mx_status_t RunTests(test_report_t* report, const void* arg, size_t arglen) {
-        return ops_->run_tests(dev_, report, arg, arglen);
+        return ops_->run_tests(ctx_, report, arg, arglen);
     }
 
     void Destroy() {
-        ops_->destroy(dev_);
+        ops_->destroy(ctx_);
     }
 
-    mx_device_t* device() { return dev_; }
-
   private:
-    test_protocol_t* ops_;
-    mx_device_t* dev_;
+    test_protocol_ops_t* ops_;
+    void* ctx_;
 
 };
 

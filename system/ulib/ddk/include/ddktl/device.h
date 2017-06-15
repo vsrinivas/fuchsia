@@ -80,13 +80,12 @@
 // class MyDevice : public DeviceType {
 //   public:
 //     MyDevice(mx_device_t* parent)
-//       : DeviceType("my-device-name"),
-//         parent_(parent) {}
+//       : DeviceType(parent, "my-device-name") {}
 //
 //     mx_status_t Bind() {
 //         // Any other setup required by MyDevice. The device_add_args_t will be filled out by the
 //         // base class.
-//         return Add(parent_);
+//         return DdkAdd();
 //     }
 //
 //     // Methods required by the ddk mixins
@@ -95,9 +94,6 @@
 //     mx_status_t DdkRead(void* buf, size_t count, mx_off_t off, size_t* actual);
 //     void DdkUnbind();
 //     void DdkRelease();
-//
-//   private:
-//     mx_device_t* parent_;
 // };
 //
 // extern "C" mx_status_t my_bind(mx_device_t* device,
@@ -301,9 +297,7 @@ class Resumable : public internal::base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
-    mx_device_t* mxdev() { return mxdev_; }
-
-    mx_status_t Add(mx_device_t* parent) {
+    mx_status_t DdkAdd() {
         device_add_args_t args = {};
         args.version = DEVICE_ADD_ARGS_VERSION;
         args.name = name_;
@@ -313,8 +307,13 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         args.ops = &ddk_device_proto_;
         AddProtocol(&args);
 
-        return device_add(parent, &args, &mxdev_);
+        return device_add(parent_, &args, &mxdev_);
     }
+
+    // The opaque pointer representing this device.
+    mx_device_t* mxdev() { return mxdev_; }
+    // The opaque pointer representing the device's parent.
+    mx_device_t* parent() { return parent_; }
 
     void SetState(mx_signals_t stateflag) {
         device_state_set(mxdev_, stateflag);
@@ -329,8 +328,9 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     }
 
   protected:
-    Device(const char* name)
-      : Mixins<D>(&ddk_device_proto_)...,
+    Device(mx_device_t* parent, const char* name)
+      : internal::base_device(parent),
+        Mixins<D>(&ddk_device_proto_)...,
         name_(name) {
         internal::CheckMixins<Mixins<D>...>();
         internal::CheckReleasable<D>();

@@ -14,12 +14,14 @@ namespace internal {
 // can fill in the table.
 struct base_device {
   protected:
-    base_device() {
+    base_device(mx_device_t* parent)
+      : parent_(parent) {
         ddk_device_proto_.version = DEVICE_OPS_VERSION;
     }
 
     mx_protocol_device_t ddk_device_proto_ = {};
     mx_device_t* mxdev_ = nullptr;
+    mx_device_t* const parent_;
 };
 
 // base_mixin is a tag that all mixins must inherit from.
