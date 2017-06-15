@@ -6,8 +6,8 @@ package daemon
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 
@@ -53,7 +53,7 @@ func (f *TUFSource) AvailableUpdates(pkgs []*Package) (map[Package]Package, erro
 
 		hashStr := hash.String()
 		if hashStr != p.Version {
-			fmt.Printf("\nAvailable update %s version %s\n", p.Name,
+			log.Printf("Available update %s version %s\n", p.Name,
 				hashStr[:8])
 			updates[*p] = Package{Name: p.Name, Version: hashStr}
 		}
@@ -75,7 +75,7 @@ func (f *delFile) Delete() error {
 
 // FetchPkg gets the content for the requested Package
 func (f *TUFSource) FetchPkg(pkg *Package) (*os.File, error) {
-	fmt.Printf("Requesting download for: %s\n", pkg.Name)
+	log.Printf("Requesting download for: %s\n", pkg.Name)
 	tmp, err := ioutil.TempFile("", pkg.Version)
 	if err != nil {
 		return nil, err

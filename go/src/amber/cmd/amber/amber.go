@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"fuchsia.googlesource.com/amber/daemon"
@@ -26,6 +28,11 @@ var (
 	store = flag.String("s", "/data/amber/tuf", "The path to the local file store")
 	addr  = flag.String("u", "http://192.168.3.1:8083", "The URL (including port if not using port 80)  of the update server.")
 	keys  = flag.String("k", "/system/data/amber/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
+	delay = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
+	demo  = flag.Bool("demo", false, "run demo mode, writes an entry to /data/pkgs/needs")
+
+	demoNeed  = "lib-usb-audio.so"
+	needsPath = "/data/pkgs/needs"
 )
 
 func main() {
@@ -35,6 +42,15 @@ func main() {
 	}
 
 	flag.Parse()
+	log.SetPrefix("amber: ")
+	log.SetFlags(log.Ltime)
+
+	time.Sleep(*delay)
+
+	if *demo {
+		doDemo()
+		return
+	}
 
 	tufStore, err := tuf.FileLocalStore(*store)
 	if err != nil {
@@ -69,7 +85,29 @@ func main() {
 		os.Exit(2)
 	}
 
-	amber(client)
+	d := startupDaemon(client)
+	defer d.CancelAll()
+
+	//block forever
+	select {}
+}
+
+func doDemo() {
+	if err := os.MkdirAll(needsPath, os.ModePerm); err != nil {
+		fmt.Printf("Error making needs dir %v\n")
+		return
+	}
+
+	f, err := os.Create(filepath.Join(needsPath, demoNeed))
+	if err != nil {
+		fmt.Printf("Error making needs file %v\n", err)
+		return
+	}
+	f.Close()
+
+	// sleep a moment for the daemon to see the file
+	time.Sleep(1 * time.Second)
+	os.Remove(filepath.Join(needsPath, demoNeed))
 }
 
 func needsInit(store tuf.LocalStore) (bool, error) {
@@ -98,8 +136,9 @@ func loadKeys(path string) ([]*data.Key, error) {
 	return keys, err
 }
 
-func amber(client *tuf.Client) error {
+func startupDaemon(client *tuf.Client) *daemon.Daemon {
 	if err := os.MkdirAll(daemon.UpdateDst, os.ModePerm); err != nil {
+		// TODO(jmatt) retry for some time period?
 		fmt.Printf("Error creating update destination directory %v\n", err)
 	}
 
@@ -123,25 +162,10 @@ func amber(client *tuf.Client) error {
 
 	fetcher := &daemon.TUFSource{Client: client, Interval: time.Second * 5}
 	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
-	defer checker.CancelAll()
 	checker.AddSource(fetcher)
 	pmMonitor(checker)
-
-	fmt.Println("Press Ctrl+D to exit.")
-	buf := make([]byte, 1)
-	for {
-		_, err := os.Stdin.Read(buf)
-		if (err != nil && err != io.EOF) || buf[0] == 3 || buf[0] == 4 {
-			fmt.Printf("Err: %v\n", err)
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	return nil
+	return checker
 }
-
-var needsPath = "/data/pkgs/needs"
 
 func pmMonitor(d *daemon.Daemon) error {
 	s := time.NewTicker(200 * time.Millisecond)
