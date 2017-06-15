@@ -19,8 +19,6 @@ MODULE_SRCS := $(LOCAL_DIR)/driver-api.c
 
 MODULE_LIBS := system/ulib/c
 
-MODULE_DEFINES := DDK_INTERNAL=1
-
 # for DDK header files
 MODULE_STATIC_LIBS := system/ulib/ddk
 

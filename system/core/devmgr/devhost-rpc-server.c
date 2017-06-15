@@ -139,9 +139,9 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
         size_t actual;
         mx_status_t r;
         if (opcode == IOTXN_OP_READ) {
-            r = device_op_read(dev, buf, count, off, &actual);
+            r = dev_op_read(dev, buf, count, off, &actual);
         } else {
-            r = device_op_write(dev, buf, count, off, &actual);
+            r = dev_op_write(dev, buf, count, off, &actual);
         }
         if (r < 0) {
             return r;
@@ -243,14 +243,14 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
         return actual;
     }
     case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        return device_op_suspend(dev, 0);
+        return dev_op_suspend(dev, 0);
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
-        return device_op_resume(dev, 0);
+        return dev_op_resume(dev, 0);
     }
     default: {
         size_t actual = 0;
-        r = device_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, &actual);
+        r = dev_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, &actual);
         if (r == MX_OK) {
             r = actual;
         }
@@ -345,7 +345,7 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie) {
     }
     case MXRIO_SEEK: {
         size_t end, n;
-        end = device_op_get_size(dev);
+        end = dev_op_get_size(dev);
         switch (arg) {
         case SEEK_SET:
             if ((msg->arg2.off < 0) || ((size_t)msg->arg2.off > end)) {
@@ -402,7 +402,7 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie) {
         vnattr_t* attr = (void*)msg->data;
         memset(attr, 0, sizeof(vnattr_t));
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-        attr->size = device_op_get_size(dev);
+        attr->size = dev_op_get_size(dev);
         attr->nlink = 1;
         return msg->datalen;
     }

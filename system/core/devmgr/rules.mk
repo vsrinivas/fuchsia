@@ -54,8 +54,6 @@ MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/c
 
-MODULE_DEFINES := DDK_INTERNAL=1
-
 include make/module.mk
 
 
@@ -66,8 +64,6 @@ MODULE := $(LOCAL_DIR).host
 MODULE_NAME := devhost
 
 MODULE_TYPE := userapp
-
-MODULE_DEFINES := DDK_INTERNAL=1
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/devhost.c \
@@ -97,8 +93,6 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
-
-MODULE_DEFINES := DDK_INTERNAL=1
 
 include make/module.mk
 

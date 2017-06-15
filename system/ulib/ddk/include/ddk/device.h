@@ -20,69 +20,6 @@ typedef struct mx_device_prop mx_device_prop_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 
 #define MX_DEVICE_NAME_MAX 31
-// DO NOT DEFINE DDK_INTERNAL!
-// These macros make it harder for drivers to use fields
-// that they shouldn't.  If you work around them, your
-// driver WILL break in the near future.  Don't do it.
-#ifndef DDK_INTERNAL
-#define DDK_PRIVATE(name) __ddk_internal__##name
-#else
-#define DDK_PRIVATE(name) name
-#endif
-
-struct mx_device {
-    uintptr_t DDK_PRIVATE(magic);
-
-    mx_protocol_device_t* ops;
-
-    // reserved for driver use; will not be touched by devmgr
-    void* ctx;
-
-    uint32_t DDK_PRIVATE(flags);
-    uint32_t DDK_PRIVATE(refcount);
-
-    mx_handle_t DDK_PRIVATE(event);
-    mx_handle_t DDK_PRIVATE(rpc);
-    mx_handle_t DDK_PRIVATE(resource);
-
-    // most devices implement a single
-    // protocol beyond the base device protocol
-    uint32_t DDK_PRIVATE(protocol_id);
-    void* DDK_PRIVATE(protocol_ops);
-
-    // driver that has published this device
-    mx_driver_t* DDK_PRIVATE(driver);
-
-    // parent in the device tree
-    mx_device_t* DDK_PRIVATE(parent);
-
-    // driver that is bound to this device, NULL if unbound
-    mx_driver_t* DDK_PRIVATE(owner);
-
-    void* DDK_PRIVATE(owner_cookie);
-
-    // for the parent's device_list
-    struct list_node DDK_PRIVATE(node);
-
-    // list of this device's children in the device tree
-    struct list_node DDK_PRIVATE(children);
-
-    // list of this device's instances
-    struct list_node DDK_PRIVATE(instances);
-
-    // iostate
-    void* DDK_PRIVATE(ios);
-
-    char DDK_PRIVATE(name)[MX_DEVICE_NAME_MAX + 1];
-};
-
-// mx_device_t objects must be created or initialized by the driver manager's
-// device_create() function.  Drivers MAY NOT touch any
-// fields in the mx_device_t, except for the protocol_id and protocol_ops
-// fields which it may fill out after init and before device_add() is called,
-// and the ctx field which may be used to store driver-specific data.
-
-
 
 // echo -n "mx_device_ops_v0.5" | sha256sum | cut -c1-16
 #define DEVICE_OPS_VERSION 0Xc9410d2a24f57424
@@ -220,7 +157,5 @@ static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, 
 }
 
 #endif
-
-#undef DDK_PRIVATE
 
 __END_CDECLS;
