@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 
+#include "apps/tracing/lib/trace/ctypes.h"
 #include "apps/tracing/lib/trace/ticks.h"
 
 namespace tracing {
@@ -37,15 +38,15 @@ enum class MetadataType {
 
 // Enumerates all known argument types.
 enum class ArgumentType {
-  kNull = 0,
-  kInt32 = 1,
-  kUint32 = 2,
-  kInt64 = 3,
-  kUint64 = 4,
-  kDouble = 5,
-  kString = 6,
-  kPointer = 7,
-  kKoid = 8,
+  kNull = CTRACE_ARGUMENT_NULL,
+  kInt32 = CTRACE_ARGUMENT_INT32,
+  kUint32 = CTRACE_ARGUMENT_UINT32,
+  kInt64 = CTRACE_ARGUMENT_INT64,
+  kUint64 = CTRACE_ARGUMENT_UINT64,
+  kDouble = CTRACE_ARGUMENT_DOUBLE,
+  kString = CTRACE_ARGUMENT_STRING,
+  kPointer = CTRACE_ARGUMENT_POINTER,
+  kKoid = CTRACE_ARGUMENT_KOID,
 };
 
 // EventType enumerates all known trace event types.
@@ -64,20 +65,20 @@ enum class EventType {
 
 // Specifies the scope of instant events.
 enum class EventScope {
-  kThread = 0,
-  kProcess = 1,
-  kGlobal = 2,
+  kThread = CTRACE_SCOPE_THREAD,
+  kProcess = CTRACE_SCOPE_PROCESS,
+  kGlobal = CTRACE_SCOPE_GLOBAL,
 };
 
 // String index in a string table and in encoded form.
 // These are stored as 16-bit values in the trace.
 using StringIndex = uint32_t;
-using EncodedStringRef = uint32_t;
+using EncodedStringRef = ctrace_encoded_stringref_t;
 
 // Thread index in a thread table and in encoded form.
 // These are stored as 8-bit values in the trace.
 using ThreadIndex = uint32_t;
-using EncodedThreadRef = uint32_t;
+using EncodedThreadRef = ctrace_encoded_threadref_t;
 
 // Trace provider id in a trace session.
 using ProviderId = uint32_t;

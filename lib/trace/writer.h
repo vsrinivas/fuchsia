@@ -16,15 +16,19 @@
 #include <mx/eventpair.h>
 #include <mx/vmo.h>
 
+#include "apps/tracing/lib/trace/cwriter.h"
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/lib/trace/types.h"
 #include "lib/ftl/macros.h"
 
 namespace tracing {
+
 namespace internal {
 class TraceEngine;
+TraceEngine* AcquireEngine();
 void ReleaseEngine();
 }  // namespace internal
+
 namespace writer {
 
 // Describes the final disposition of tracing when it stopped.
@@ -216,20 +220,24 @@ class StringRef {
     return StringRef(index, nullptr);
   }
 
+  explicit StringRef(const ctrace_stringref_t& sr)
+    : StringRef(sr.encoded_value, sr.inline_string) {}
+
   bool is_empty() const {
-    return encoded_value_ == ::tracing::internal::StringRefFields::kEmpty;
+    return ref_.encoded_value == ::tracing::internal::StringRefFields::kEmpty;
   }
   bool is_inlined() const {
-    return encoded_value_ & ::tracing::internal::StringRefFields::kInlineFlag;
+    return ref_.encoded_value & ::tracing::internal::StringRefFields::kInlineFlag;
   }
   bool is_indexed() const { return !is_empty() && !is_inlined(); }
 
-  EncodedStringRef encoded_value() const { return encoded_value_; }
-  const char* inline_string() const { return inline_string_; }
+  const ctrace_stringref_t& c_ref() const { return ref_; }
+  EncodedStringRef encoded_value() const { return ref_.encoded_value; }
+  const char* inline_string() const { return ref_.inline_string; }
 
   size_t Size() const {
     return is_inlined() ? ::tracing::internal::Pad(
-                              encoded_value_ &
+                              ref_.encoded_value &
                               ::tracing::internal::StringRefFields::kLengthMask)
                         : 0;
   }
@@ -237,17 +245,18 @@ class StringRef {
   void WriteTo(Payload& payload) const {
     if (is_inlined()) {
       payload.WriteBytes(
-          inline_string_,
-          encoded_value_ & ::tracing::internal::StringRefFields::kLengthMask);
+          ref_.inline_string,
+          ref_.encoded_value & ::tracing::internal::StringRefFields::kLengthMask);
     }
   }
 
  private:
-  explicit StringRef(EncodedStringRef encoded_value, const char* inline_string)
-      : encoded_value_(encoded_value), inline_string_(inline_string) {}
+  explicit StringRef(EncodedStringRef encoded_value, const char* inline_string) {
+    ref_.encoded_value = encoded_value;
+    ref_.inline_string = inline_string;
+  }
 
-  EncodedStringRef encoded_value_;
-  const char* inline_string_;
+  ctrace_stringref_t ref_;
 };
 
 // A thread reference which is either encoded inline or indirectly by
@@ -265,36 +274,39 @@ class ThreadRef {
 
   static ThreadRef MakeUnknown() { return MakeInlined(0u, 0u); }
 
+  explicit ThreadRef(const ctrace_threadref_t& tr)
+    : ThreadRef(tr.encoded_value, tr.inline_process_koid, tr.inline_thread_koid) {}
+
   bool is_inlined() const {
-    return encoded_value_ == ::tracing::internal::ThreadRefFields::kInline;
+    return ref_.encoded_value == ::tracing::internal::ThreadRefFields::kInline;
   }
 
   bool is_unknown() const {
-    return is_inlined() && !inline_process_koid_ && !inline_thread_koid_;
+    return is_inlined() && !ref_.inline_process_koid && !ref_.inline_thread_koid;
   }
 
-  EncodedThreadRef encoded_value() const { return encoded_value_; }
-  mx_koid_t inline_process_koid() const { return inline_process_koid_; }
-  mx_koid_t inline_thread_koid() const { return inline_thread_koid_; }
+  const ctrace_threadref_t& c_ref() const { return ref_; }
+  EncodedThreadRef encoded_value() const { return ref_.encoded_value; }
+  mx_koid_t inline_process_koid() const { return ref_.inline_process_koid; }
+  mx_koid_t inline_thread_koid() const { return ref_.inline_thread_koid; }
 
   size_t Size() const { return is_inlined() ? 2 * sizeof(uint64_t) : 0; }
 
   void WriteTo(Payload& payload) const {
     if (is_inlined())
-      payload.Write(inline_process_koid_).Write(inline_thread_koid_);
+      payload.Write(ref_.inline_process_koid).Write(ref_.inline_thread_koid);
   }
 
  private:
   explicit ThreadRef(EncodedThreadRef encoded_value,
                      mx_koid_t inline_process_koid,
-                     mx_koid_t inline_thread_koid)
-      : encoded_value_(encoded_value),
-        inline_process_koid_(inline_process_koid),
-        inline_thread_koid_(inline_thread_koid) {}
+                     mx_koid_t inline_thread_koid) {
+    ref_.encoded_value = encoded_value;
+    ref_.inline_process_koid = inline_process_koid;
+    ref_.inline_thread_koid = inline_thread_koid;
+  }
 
-  EncodedThreadRef encoded_value_;
-  mx_koid_t inline_process_koid_;
-  mx_koid_t inline_thread_koid_;
+  ctrace_threadref_t ref_;
 };
 
 // Represents a named argument and value pair.

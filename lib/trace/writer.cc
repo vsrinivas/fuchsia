@@ -111,6 +111,18 @@ void StoppedTracing(TraceDisposition trace_disposition) {
   ReleaseEngine();
 }
 
+// Called when the last reference has been released.
+void ReleasedLastReference() {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_state == TraceState::kStopped && !g_finished_posted) {
+    FTL_DCHECK(g_owned_engine);
+    g_finished_posted = true;
+    g_owned_engine->task_runner()->PostTask([] { FinishedTracing(); });
+  }
+}
+
+}  // namespace
+
 // Acquires a reference to the engine, incrementing the reference count.
 TraceEngine* AcquireEngine() {
   // Quick check: Is there possibly an engine at all?
@@ -132,18 +144,6 @@ TraceEngine* AcquireEngine() {
   ReleaseEngine();
   return nullptr;
 }
-
-// Called when the last reference has been released.
-void ReleasedLastReference() {
-  std::lock_guard<std::mutex> lock(g_mutex);
-  if (g_state == TraceState::kStopped && !g_finished_posted) {
-    FTL_DCHECK(g_owned_engine);
-    g_finished_posted = true;
-    g_owned_engine->task_runner()->PostTask([] { FinishedTracing(); });
-  }
-}
-
-}  // namespace
 
 // Releases a reference to the engine, decrementing the reference count
 // and finishing tracing when the count hits zero.

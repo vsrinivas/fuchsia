@@ -8,6 +8,7 @@
 
 namespace tracing {
 namespace internal {
+
 namespace {
 std::atomic<uint64_t> g_nonce = ATOMIC_VAR_INIT(1u);
 }  // namespace

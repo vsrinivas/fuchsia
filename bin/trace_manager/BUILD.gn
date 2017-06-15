@@ -59,6 +59,7 @@ package("trace_tests") {
   deps = [
     ":trace_tests_bin",
     "lib/trace:trace_stub_tests",
+    "lib/trace:ctrace_stub_tests",
   ]
 
   tests = [
@@ -67,6 +68,9 @@ package("trace_tests") {
     },
     {
       name = "trace_stub_tests"
+    },
+    {
+      name = "ctrace_stub_tests"
     },
   ]
 }
