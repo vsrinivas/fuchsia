@@ -731,7 +731,7 @@ status_t PcieDevice::MaskUnmaskIrqLocked(uint irq_id, bool mask) {
         return ERR_BAD_STATE;
 
     /* OK, everything looks good.  Go ahead and make the change based on the
-     * mode we are curently in. */
+     * mode we are currently in. */
     switch (irq_.mode) {
     case PCIE_IRQ_MODE_LEGACY: return MaskUnmaskLegacyIrq(mask);
     case PCIE_IRQ_MODE_MSI:    return MaskUnmaskMsiIrq(irq_id, mask);
