@@ -99,6 +99,25 @@ MODULE_STATIC_LIBS := \
 
 include make/module.mk
 
+MODULE := $(LOCAL_DIR).vmos
+
+MODULE_TYPE := userapp
+
+MODULE_SRCS += $(LOCAL_DIR)/vmos.cpp
+
+MODULE_NAME := vmos
+
+MODULE_LIBS := \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
+
+MODULE_STATIC_LIBS := \
+    system/ulib/pretty \
+    system/ulib/task-utils
+
+include make/module.mk
+
 MODULE := $(LOCAL_DIR).kstats
 
 MODULE_TYPE := userapp

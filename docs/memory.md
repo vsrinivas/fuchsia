@@ -143,7 +143,7 @@ R  000059f5c7068000-000059f5c708d000      148k:sz                    'useralloc'
 ### Dump all VMOs associated with a process
 
 ```
-k mx vmos <pid>
+vmos <pid>
 ```
 
 This will also show unmapped VMOs, which neither `ps` nor `vmaps` currently
@@ -151,41 +151,33 @@ account for.
 
 It also shows whether a given VMO is a clone, along with its parent's koid.
 
-> NOTE: This is a kernel command, and will print to the kernel console.
-
 ```
-$ k mx vmos 1102
-process [1102]:
-Handles to VMOs:
-      handle rights  koid parent #chld #map #shr    size   alloc name
-   158288097 rwxmdt  1144      -     0    1    1    256k      4k -
-   151472261 r-xmdt  1031      -     0   22   11     28k     28k -
-  total: 2 VMOs, size 284k, alloc 32k
-Mapped VMOs:
-           -      -  koid parent #chld #map #shr    size   alloc name
-           -      -  1109   1038     1    1    1   25.6k      8k -
-           -      -  1146   1109     0    2    1      8k      8k -
-           -      -  1146   1109     0    2    1      8k      8k -
+$ vmos 1118
+rights  koid parent #chld #map #shr    size   alloc name
+rwxmdt  1170      -     0    1    1      4k      4k stack: msg of 0x5a
+r-xmdt  1031      -     2   28   14     28k     28k vdso/full
+     -  1298      -     0    1    1      2M     68k jemalloc-heap
+     -  1381      -     0    3    1    516k      8k self-dump-thread:0x12afe79c8b38
+     -  1233   1232     1    1    1   33.6k      4k libbacktrace.so
+     -  1237   1233     0    1    1      4k      4k data:libbacktrace.so
 ...
-           -      -  1343      -     0    3    1    516k      8k -
-           -      -  1325      -     0    1    1     28k      4k -
-...
-           -      -  1129   1038     1    1    1  883.2k     12k -
-           -      -  1133   1129     0    1    1     16k     12k -
-           -      -  1134      -     0    1    1     12k     12k -
-           -      -  koid parent #chld #map #shr    size   alloc name
+     -  1153   1146     1    1    1  883.2k     12k ld.so.1
+     -  1158   1153     0    1    1     16k     12k data:ld.so.1
+     -  1159      -     0    1    1     12k     12k bss:ld.so.1
+rights  koid parent #chld #map #shr    size   alloc name
 ```
 
 Columns:
 
--   `handle`: The `mx_handle_t` value of this process's handle to the VMO.
--   `rights`: The rights that the handle has, zero or more of:
+-   `rights`: If the process points to the VMO via a handle, this column shows
+    the rights that the handle has, zero or more of:
     -   `r`: `MX_RIGHT_READ`
     -   `w`: `MX_RIGHT_WRITE`
     -   `x`: `MX_RIGHT_EXECUTE`
     -   `m`: `MX_RIGHT_MAP`
     -   `d`: `MX_RIGHT_DUPLICATE`
     -   `t`: `MX_RIGHT_TRANSFER`
+    -   **NOTE**: Non-handle entries will have a single '-' in this colum.
 -   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO without a
     koid was created by the kernel, and has never had a userspace handle.
 -   `parent`: The koid of the VMO's parent, if it's a clone.
@@ -214,9 +206,8 @@ PSS     =  PRIVATE + (SHARED / #shr)
 k mx vmos all
 ```
 
-Just like `k mx vmos <pid>`, but dumps all VMOs across all processes and the
-kernel. A `koid` value of zero means that only the kernel has a reference to
-that VMO.
+Just like `vmos <pid>`, but dumps all VMOs across all processes and the kernel.
+A `koid` value of zero means that only the kernel has a reference to that VMO.
 
 ### Limitations
 

@@ -357,6 +357,9 @@ typedef struct mx_info_vmo {
 } mx_info_vmo_t;
 ```
 
+See the `vmos` command-line tool for an example user of this topic, and to dump
+the VMOs of arbitrary processes by koid.
+
 ### MX_INFO_KMEM_STATS
 
 *handle* type: **Resource** (Specifically, the root resource)
