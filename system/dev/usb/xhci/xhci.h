@@ -80,7 +80,6 @@ struct xhci {
     mx_device_t* bus_mxdev;
     usb_bus_protocol_t bus;
 
-    pci_protocol_t* pci_proto;
     bool legacy_irq_mode;
     mx_handle_t irq_handle;
     mx_handle_t mmio_handle;

@@ -213,8 +213,8 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     xhci_t* xhci = NULL;
     mx_status_t status;
 
-    pci_protocol_t* pci_proto;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci_proto)) {
+    pci_protocol_t pci;
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci)) {
         status = MX_ERR_NOT_SUPPORTED;
         goto error_return;
     }
@@ -225,7 +225,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto error_return;
     }
 
-    status = pci_proto->claim_device(dev);
+    status = pci.ops->claim_device(pci.ctx);
     if (status < 0) {
         printf("usb_xhci_bind claim_device failed %d\n", status);
         goto error_return;
@@ -237,8 +237,8 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
-    status = pci_proto->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                     &mmio, &mmio_len, &mmio_handle);
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &mmio, &mmio_len, &mmio_handle);
     if (status != MX_OK) {
         printf("usb_xhci_bind could not find bar\n");
         status = MX_ERR_INTERNAL;
@@ -246,16 +246,16 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // enable bus master
-    status = pci_proto->enable_bus_master(dev, true);
+    status = pci.ops->enable_bus_master(pci.ctx, true);
     if (status < 0) {
         printf("usb_xhci_bind enable_bus_master failed %d\n", status);
         goto error_return;
     }
 
     // select our IRQ mode
-    status = pci_proto->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1);
+    status = pci.ops->set_irq_mode(pci.ctx, MX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
-        mx_status_t status_legacy = pci_proto->set_irq_mode(dev, MX_PCIE_IRQ_MODE_LEGACY, 1);
+        mx_status_t status_legacy = pci.ops->set_irq_mode(pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
 
         if (status_legacy < 0) {
             printf("usb_xhci_bind Failed to set IRQ mode to either MSI "
@@ -268,7 +268,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // register for interrupts
-    status = pci_proto->map_interrupt(dev, 0, &irq_handle);
+    status = pci.ops->map_interrupt(pci.ctx, 0, &irq_handle);
     if (status != MX_OK) {
         printf("usb_xhci_bind map_interrupt failed %d\n", status);
         goto error_return;
@@ -277,7 +277,6 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     xhci->irq_handle = irq_handle;
     xhci->mmio_handle = mmio_handle;
     xhci->cfg_handle = cfg_handle;
-    xhci->pci_proto = pci_proto;
 
     // stash this here for the startup thread to call device_add() with
     xhci->parent = dev;

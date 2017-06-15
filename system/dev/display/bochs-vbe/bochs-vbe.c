@@ -184,13 +184,13 @@ static mx_protocol_device_t bochs_vbe_device_proto = {
 // implement driver object:
 
 static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    pci_protocol_t* pci;
+    pci_protocol_t pci;
     mx_status_t status;
 
-    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
         return MX_ERR_NOT_SUPPORTED;
 
-    status = pci->claim_device(dev);
+    status = pci.ops->claim_device(pci.ctx);
     if (status != MX_OK)
         return status;
 
@@ -200,19 +200,19 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
         return MX_ERR_NO_MEMORY;
 
     // map register window
-    status = pci->map_resource(dev, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                           &device->regs, &device->regs_size,
-                           &device->regs_handle);
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &device->regs, &device->regs_size,
+                                   &device->regs_handle);
     if (status != MX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
 
     // map framebuffer window
-    status = pci->map_resource(dev, PCI_RESOURCE_BAR_0,  MX_CACHE_POLICY_WRITE_COMBINING,
-                           &device->framebuffer,
-                           &device->framebuffer_size,
-                           &device->framebuffer_handle);
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_0,  MX_CACHE_POLICY_WRITE_COMBINING,
+                                   &device->framebuffer,
+                                   &device->framebuffer_size,
+                                   &device->framebuffer_handle);
     if (status != MX_OK) {
         printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;

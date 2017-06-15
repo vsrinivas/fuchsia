@@ -29,25 +29,24 @@ enum pci_resource_ids {
     PCI_RESOURCE_COUNT,
 };
 
-typedef struct pci_protocol {
-    mx_status_t (*claim_device)(mx_device_t* dev);
-    mx_status_t (*map_resource)(mx_device_t* dev,
-                                uint32_t res_id,
-                                uint32_t cache_policy,
-                                void** vaddr,
-                                size_t* size,
-                                mx_handle_t* out_handle);
-    mx_status_t (*enable_bus_master)(mx_device_t* dev, bool enable);
-    mx_status_t (*enable_pio)(mx_device_t* dev, bool enable);
-    mx_status_t (*reset_device)(mx_device_t* dev);
-    mx_status_t (*map_interrupt)(mx_device_t* dev, int which_irq, mx_handle_t* out_handle);
-    mx_status_t (*query_irq_mode_caps)(mx_device_t* dev,
-                                       mx_pci_irq_mode_t mode,
+typedef struct pci_protocol_ops {
+    mx_status_t (*claim_device)(void* ctx);
+    mx_status_t (*map_resource)(void* ctx, uint32_t res_id, uint32_t cache_policy,
+                                void** vaddr, size_t* size, mx_handle_t* out_handle);
+    mx_status_t (*enable_bus_master)(void* ctx, bool enable);
+    mx_status_t (*enable_pio)(void* ctx, bool enable);
+    mx_status_t (*reset_device)(void* ctx);
+    mx_status_t (*map_interrupt)(void* ctx, int which_irq, mx_handle_t* out_handle);
+    mx_status_t (*query_irq_mode_caps)(void* ctx, mx_pci_irq_mode_t mode,
                                        uint32_t* out_max_irqs);
-    mx_status_t (*set_irq_mode)(mx_device_t* dev,
-                                mx_pci_irq_mode_t mode,
+    mx_status_t (*set_irq_mode)(void* ctx, mx_pci_irq_mode_t mode,
                                 uint32_t requested_irq_count);
-    mx_status_t (*get_device_info)(mx_device_t* dev, mx_pcie_device_info_t* out_info);
+    mx_status_t (*get_device_info)(void* ctx, mx_pcie_device_info_t* out_info);
+} pci_protocol_ops_t;
+
+typedef struct pci_protocol {
+    pci_protocol_ops_t* ops;
+    void* ctx;
 } pci_protocol_t;
 
 __END_CDECLS;

@@ -130,11 +130,11 @@ static mx_protocol_device_t intel_i915_device_proto = {
 // implement driver object:
 
 static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    pci_protocol_t* pci;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+    pci_protocol_t pci;
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
         return MX_ERR_NOT_SUPPORTED;
 
-    mx_status_t status = pci->claim_device(dev);
+    mx_status_t status = pci.ops->claim_device(pci.ctx);
     if (status < 0)
         return status;
 
@@ -146,8 +146,8 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;
-    status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                               (void**)&pci_config, &config_size, &cfg_handle);
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   (void**)&pci_config, &config_size, &cfg_handle);
     if (status == MX_OK) {
         if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
             // TODO: this should be based on the specific target
@@ -157,18 +157,18 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // map register window
-    status = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                           &device->regs, &device->regs_size, &device->regs_handle);
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &device->regs, &device->regs_size, &device->regs_handle);
     if (status != MX_OK) {
         printf("i915: failed to map bar 0: %d\n", status);
         goto fail;
     }
 
     // map framebuffer window
-    status = pci->map_resource(dev, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_WRITE_COMBINING,
-                           &device->framebuffer,
-                           &device->framebuffer_size,
-                           &device->framebuffer_handle);
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_WRITE_COMBINING,
+                                   &device->framebuffer,
+                                   &device->framebuffer_size,
+                                   &device->framebuffer_handle);
     if (status != MX_OK) {
         printf("i915: failed to map bar 2: %d\n", status);
         goto fail;

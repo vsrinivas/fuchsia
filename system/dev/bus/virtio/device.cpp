@@ -62,8 +62,8 @@ mx_status_t Device::MapBar(uint8_t i) {
     uint64_t sz;
     mx_handle_t tmp_handle;
 
-    mx_status_t r = pci_->map_resource(bus_device_, PCI_RESOURCE_BAR_0 + i, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                      (void**)&bar_[i].mmio_base, &sz, &tmp_handle);
+    mx_status_t r = pci_.ops->map_resource(pci_.ctx, PCI_RESOURCE_BAR_0 + i, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                          (void**)&bar_[i].mmio_base, &sz, &tmp_handle);
     if (r != NO_ERROR) {
         VIRTIO_ERROR("cannot map io %d\n", bar_[i].mmio_handle.get());
         return r;
@@ -82,25 +82,25 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     mx_handle_t tmp_handle;
 
     // save off handles to things
-    pci_ = pci;
+    memcpy(&pci_, pci, sizeof(pci_protocol_t));
     pci_config_handle_.reset(pci_config_handle);
     pci_config_ = pci_config;
 
     // claim the pci device
     mx_status_t r;
-    r = pci->claim_device(bus_device_);
+    r = pci_.ops->claim_device(pci_.ctx);
     if (r != NO_ERROR)
         return r;
 
     // enable bus mastering
-    if ((r = pci->enable_bus_master(bus_device_, true)) != NO_ERROR) {
+    if ((r = pci_.ops->enable_bus_master(pci_.ctx, true)) != NO_ERROR) {
         VIRTIO_ERROR("cannot enable bus master %d\n", r);
         return r;
     }
 
     // try to set up our IRQ mode
-    if (pci->set_irq_mode(bus_device_, MX_PCIE_IRQ_MODE_MSI, 1)) {
-        if (pci->set_irq_mode(bus_device_, MX_PCIE_IRQ_MODE_LEGACY, 1)) {
+    if (pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_MSI, 1)) {
+        if (pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1)) {
             VIRTIO_ERROR("failed to set irq mode\n");
             return -1;
         } else {
@@ -108,7 +108,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
         }
     }
 
-    r = pci->map_interrupt(bus_device_, 0, &tmp_handle);
+    r = pci_.ops->map_interrupt(pci_.ctx, 0, &tmp_handle);
     if (r != NO_ERROR) {
         VIRTIO_ERROR("failed to map irq %d\n", r);
         return r;
@@ -208,7 +208,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             }
 
             // enable pio access
-            if ((r = pci->enable_pio(bus_device_, true)) < 0) {
+            if ((r = pci_.ops->enable_pio(pci_.ctx, true)) < 0) {
                 VIRTIO_ERROR("cannot enable PIO %d\n", r);
                 return -1;
             }

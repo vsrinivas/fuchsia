@@ -80,7 +80,7 @@ protected:
     mxtl::Mutex lock_;
 
     // handles to pci bits
-    pci_protocol_t* pci_ = nullptr;
+    pci_protocol_t pci_ = { nullptr, nullptr };
     mx::handle pci_config_handle_ = {};
     const pci_config_t* pci_config_ = nullptr;
     mx::handle irq_handle_ = {};

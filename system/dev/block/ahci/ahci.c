@@ -74,7 +74,7 @@ typedef struct ahci_device {
     uint64_t regs_size;
     mx_handle_t regs_handle;
 
-    pci_protocol_t* pci;
+    pci_protocol_t pci;
 
     mx_handle_t irq_handle;
     thrd_t irq_thread;
@@ -698,15 +698,6 @@ fail:
 // implement driver object:
 
 static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    pci_protocol_t* pci;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return MX_ERR_NOT_SUPPORTED;
-
-    mx_status_t status = pci->claim_device(dev);
-    if (status < 0) {
-        xprintf("ahci: error %d claiming pci device\n", status);
-        return status;
-    }
-
     // map resources and initalize the device
     ahci_device_t* device = calloc(1, sizeof(ahci_device_t));
     if (!device) {
@@ -714,9 +705,25 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         return MX_ERR_NO_MEMORY;
     }
 
+    if (device_get_protocol(dev, MX_PROTOCOL_PCI, &device->pci)) {
+        free(device);
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
+    mx_status_t status = device->pci.ops->claim_device(device->pci.ctx);
+    if (status < 0) {
+        free(device);
+        xprintf("ahci: error %d claiming pci device\n", status);
+        return status;
+    }
+
+
     // map register window
-    status = pci->map_resource(dev, PCI_RESOURCE_BAR_5, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                               (void**)&device->regs, &device->regs_size, &device->regs_handle);
+    status = device->pci.ops->map_resource(device->pci.ctx,
+                                           PCI_RESOURCE_BAR_5,
+                                           MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                           (void**)&device->regs,
+                                           &device->regs_size, &device->regs_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d mapping register window\n", status);
         goto fail;
@@ -725,8 +732,11 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     const pci_config_t* config;
     size_t config_size;
     mx_handle_t config_handle;
-    status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                               (void**)&config, &config_size, &config_handle);
+    status = device->pci.ops->map_resource(device->pci.ctx,
+                                           PCI_RESOURCE_CONFIG,
+                                           MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                           (void**)&config,
+                                           &config_size, &config_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d getting pci config\n", status);
         goto fail;
@@ -741,25 +751,22 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     // FIXME intel devices need to set SATA port enable at config + 0x92
     mx_handle_close(config_handle);
 
-    // save for interrupt handler
-    device->pci = pci;
-
     // ahci controller is bus master
-    status = pci->enable_bus_master(dev, true);
+    status = device->pci.ops->enable_bus_master(device->pci.ctx, true);
     if (status < 0) {
         xprintf("ahci: error %d in enable bus master\n", status);
         goto fail;
     }
 
     // set msi irq mode
-    status = pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1);
+    status = device->pci.ops->set_irq_mode(device->pci.ctx, MX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
         xprintf("ahci: error %d setting irq mode\n", status);
         goto fail;
     }
 
     // get irq handle
-    status = pci->map_interrupt(dev, 0, &device->irq_handle);
+    status = device->pci.ops->map_interrupt(device->pci.ctx, 0, &device->irq_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d getting irq handle\n", status);
         goto fail;

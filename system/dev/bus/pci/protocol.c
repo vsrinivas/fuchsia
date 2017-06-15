@@ -10,27 +10,23 @@
 
 #include "kpci-private.h"
 
-static mx_status_t pci_claim_device(mx_device_t* dev) {
-    kpci_device_t* device = dev->ctx;
-    assert(device->handle != MX_HANDLE_INVALID);
+static mx_status_t pci_claim_device(void* ctx) {
+    kpci_device_t* device = ctx;
     return mx_pci_claim_device(device->handle);
 }
 
-static mx_status_t pci_enable_bus_master(mx_device_t* dev, bool enable) {
-    kpci_device_t* device = dev->ctx;
-    assert(device->handle != MX_HANDLE_INVALID);
+static mx_status_t pci_enable_bus_master(void* ctx, bool enable) {
+    kpci_device_t* device = ctx;
     return mx_pci_enable_bus_master(device->handle, enable);
 }
 
-static mx_status_t pci_enable_pio(mx_device_t* dev, bool enable) {
-    kpci_device_t* device = dev->ctx;
-    assert(device->handle != MX_HANDLE_INVALID);
+static mx_status_t pci_enable_pio(void* ctx, bool enable) {
+    kpci_device_t* device = ctx;
     return mx_pci_enable_pio(device->handle, enable);
 }
 
-static mx_status_t pci_reset_device(mx_device_t* dev) {
-    kpci_device_t* device = dev->ctx;
-    assert(device->handle != MX_HANDLE_INVALID);
+static mx_status_t pci_reset_device(void* ctx) {
+    kpci_device_t* device = ctx;
     return mx_pci_reset_device(device->handle);
 }
 
@@ -45,32 +41,29 @@ static mx_status_t do_resource_bookkeeping(mx_pci_resource_t* res) {
     }
 
     switch(res->type) {
-        case PCI_RESOURCE_TYPE_PIO:
+    case PCI_RESOURCE_TYPE_PIO:
 #if __x86_64__
             // x86 PIO space access requires permission in the I/O bitmap
-            status = mx_mmap_device_io(get_root_resource(), res->pio_addr, res->size);
+        status = mx_mmap_device_io(get_root_resource(), res->pio_addr, res->size);
 #else
-            status = MX_ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
 #endif
-            break;
-        default:
-            status = MX_OK;
+        break;
+    default:
+        status = MX_OK;
     }
 
     return status;
 }
 
-static mx_status_t pci_get_resource(mx_device_t* dev, uint32_t res_id, mx_pci_resource_t* out_res) {
+static mx_status_t pci_get_resource(void* ctx, uint32_t res_id, mx_pci_resource_t* out_res) {
     mx_status_t status = MX_OK;
 
-    if (!dev || !out_res || res_id >= PCI_RESOURCE_COUNT) {
+    if (!out_res || res_id >= PCI_RESOURCE_COUNT) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    kpci_device_t* device = dev->ctx;
-    if (device->handle == MX_HANDLE_INVALID) {
-        return MX_ERR_BAD_HANDLE;
-    }
+    kpci_device_t* device = ctx;
 
     switch (res_id) {
         case PCI_RESOURCE_BAR_0:
@@ -99,18 +92,18 @@ static_assert(PCI_RESOURCE_BAR_5 == 5, "BAR 5's value is not 5");
 static_assert(PCI_RESOURCE_CONFIG > PCI_RESOURCE_BAR_5, "resource order in the enum is wrong");
 
 /* Get a resource from the pci bus driver and map for the driver. */
-static mx_status_t pci_map_resource(mx_device_t* dev,
+static mx_status_t pci_map_resource(void* ctx,
                                     uint32_t res_id,
                                     mx_cache_policy_t cache_policy,
                                     void** vaddr,
                                     size_t* size,
                                     mx_handle_t* out_handle) {
-    if (!dev || !vaddr || !size || !out_handle) {
+    if (!vaddr || !size || !out_handle) {
         return MX_ERR_INVALID_ARGS;
     }
 
     mx_pci_resource_t resource;
-    mx_status_t status = pci_get_resource(dev, res_id, &resource);
+    mx_status_t status = pci_get_resource(ctx, res_id, &resource);
     if (status != MX_OK) {
         return status;
     }
@@ -152,14 +145,14 @@ static mx_status_t pci_map_resource(mx_device_t* dev,
     return status;
 }
 
-static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_t* out_handle) {
+static mx_status_t pci_map_interrupt(void* ctx, int which_irq, mx_handle_t* out_handle) {
     mx_status_t status = MX_OK;
 
-    if (!dev || !out_handle) {
+    if (!out_handle) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    kpci_device_t* device = dev->ctx;
+    kpci_device_t* device = ctx;
     if (device->handle == MX_HANDLE_INVALID) {
         return MX_ERR_BAD_HANDLE;
     }
@@ -173,34 +166,30 @@ static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_
     return MX_OK;
 }
 
-static mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
+static mx_status_t pci_query_irq_mode_caps(void* ctx,
                                            mx_pci_irq_mode_t mode,
                                            uint32_t* out_max_irqs) {
-    kpci_device_t* device = dev->ctx;
-    assert(device->handle != MX_HANDLE_INVALID);
+    kpci_device_t* device = ctx;
     return mx_pci_query_irq_mode_caps(device->handle, mode, out_max_irqs);
 }
 
-static mx_status_t pci_set_irq_mode(mx_device_t* dev,
-                                    mx_pci_irq_mode_t mode,
+static mx_status_t pci_set_irq_mode(void* ctx, mx_pci_irq_mode_t mode,
                                     uint32_t requested_irq_count) {
-    kpci_device_t* device = dev->ctx;
-    assert(device->handle != MX_HANDLE_INVALID);
+    kpci_device_t* device = ctx;
     return mx_pci_set_irq_mode(device->handle, mode, requested_irq_count);
 }
 
-static mx_status_t pci_get_device_info(mx_device_t* dev, mx_pcie_device_info_t* out_info) {
-    if ((dev == NULL) || (out_info == NULL))
+static mx_status_t pci_get_device_info(void* ctx, mx_pcie_device_info_t* out_info) {
+    if (out_info == NULL) {
         return MX_ERR_INVALID_ARGS;
+    }
 
-    kpci_device_t* device = dev->ctx;
-    assert(device != NULL);
-
+    kpci_device_t* device = ctx;
     *out_info = device->info;
     return MX_OK;
 }
 
-static pci_protocol_t _pci_protocol = {
+static pci_protocol_ops_t _pci_protocol = {
     .claim_device = pci_claim_device,
     .enable_bus_master = pci_enable_bus_master,
     .enable_pio = pci_enable_pio,
