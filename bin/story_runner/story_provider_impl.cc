@@ -271,7 +271,9 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
 
     // We ensure that everything has been written to the story page before this
     // operation is done.
-    controller_->Sync([flow] {});
+    controller_->Sync([this, flow] {
+        story_provider_impl_->NotifyImportanceWatchers();
+      });
   }
 
   ledger::Ledger* const ledger_;                  // not owned
@@ -802,11 +804,23 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
   }
 
   i->second.impl->Log(MakeLogEntry(StorySignal::FOCUSED));
+
+  // Focusing changes importance, but the log needs to be written first.
+  i->second.impl->Sync([this] {
+      NotifyImportanceWatchers();
+    });
 }
 
 void StoryProviderImpl::OnContextChange() {
-  // We sloppily assume that importance may change on every context change. This
-  // will surely be revised.
+  NotifyImportanceWatchers();
+}
+
+void StoryProviderImpl::NotifyImportanceWatchers() {
+  // TODO(mesch): This notification may be triggered because context changes,
+  // which can change importance of all stories, or because single story
+  // changed, which would require to compute importance only of the single
+  // story. But here we cannot distinguish, and will always recompute
+  // everything.
   importance_watchers_.ForAllPtrs(
       [this](StoryImportanceWatcher* const watcher) {
         watcher->OnImportanceChange();

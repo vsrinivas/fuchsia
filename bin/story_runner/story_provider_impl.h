@@ -136,6 +136,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Called by ContextHandler.
   void OnContextChange();
 
+  void NotifyImportanceWatchers();
+
   StoryContextLogPtr MakeLogEntry(const StorySignal signal);
 
   const Scope* const user_scope_;
