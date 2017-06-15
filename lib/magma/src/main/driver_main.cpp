@@ -70,23 +70,23 @@ static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable)
 
 // implement display protocol
 
-static mx_status_t intel_i915_set_mode(mx_device_t* dev, mx_display_info_t* info)
+static mx_status_t intel_i915_set_mode(void* ctx, mx_display_info_t* info)
 {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info)
+static mx_status_t intel_i915_get_mode(void* ctx, mx_display_info_t* info)
 {
     assert(info);
-    intel_i915_device_t* device = get_i915_device(dev->ctx);
+    intel_i915_device_t* device = get_i915_device(ctx);
     memcpy(info, &device->info, sizeof(mx_display_info_t));
     return MX_OK;
 }
 
-static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuffer)
+static mx_status_t intel_i915_get_framebuffer(void* ctx, void** framebuffer)
 {
     assert(framebuffer);
-    intel_i915_device_t* device = get_i915_device(dev->ctx);
+    intel_i915_device_t* device = get_i915_device(ctx);
     (*framebuffer) = device->framebuffer_addr;
     return MX_OK;
 }
@@ -108,17 +108,17 @@ static inline void clflush_range(void* start, size_t size)
     }
 }
 
-static void intel_i915_flush(mx_device_t* dev)
+static void intel_i915_flush(void* ctx)
 {
-    intel_i915_device_t* device = get_i915_device(dev->ctx);
+    intel_i915_device_t* device = get_i915_device(ctx);
     // Don't incur overhead of flushing when console's not visible
     if (device->console_visible)
         clflush_range(device->framebuffer_addr, device->framebuffer_size);
 }
 
-static void intel_i915_acquire_or_release_display(mx_device_t* dev, bool acquire)
+static void intel_i915_acquire_or_release_display(void* ctx, bool acquire)
 {
-    intel_i915_device_t* device = get_i915_device(dev->ctx);
+    intel_i915_device_t* device = get_i915_device(ctx);
     DLOG("intel_i915_acquire_or_release_display");
 
     std::unique_lock<std::mutex> lock(device->magma_mutex);
@@ -146,16 +146,15 @@ static void intel_i915_acquire_or_release_display(mx_device_t* dev, bool acquire
     }
 }
 
-static void intel_i915_set_ownership_change_callback(mx_device_t* dev, mx_display_cb_t callback,
-                                                     void* cookie)
+static void intel_i915_set_ownership_change_callback(void* ctx, mx_display_cb_t callback, void* cookie)
 {
-    intel_i915_device_t* device = get_i915_device(dev->ctx);
+    intel_i915_device_t* device = get_i915_device(ctx);
     std::unique_lock<std::mutex> lock(device->magma_mutex);
     device->ownership_change_callback = callback;
     device->ownership_change_cookie = cookie;
 }
 
-static mx_display_protocol_t intel_i915_display_proto = {
+static display_protocol_ops_t intel_i915_display_proto = {
     .set_mode = intel_i915_set_mode,
     .get_mode = intel_i915_get_mode,
     .get_framebuffer = intel_i915_get_framebuffer,
