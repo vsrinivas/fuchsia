@@ -289,7 +289,7 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
   uniform_buffers_.clear();
 
   auto display_list = ftl::MakeRefCounted<ModelDisplayList>(
-      renderer_->life_preserver(), per_model_descriptor_set_, std::move(items_),
+      renderer_->resource_recycler(), per_model_descriptor_set_, std::move(items_),
       std::move(textures_), std::move(resources_));
   command_buffer->KeepAlive(display_list);
   return display_list;

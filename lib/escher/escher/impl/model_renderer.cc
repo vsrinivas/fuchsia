@@ -32,7 +32,7 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
                              uint32_t lighting_pass_sample_count,
                              vk::Format depth_format)
     : device_(escher->vulkan_context().device),
-      life_preserver_(escher->resource_life_preserver()),
+      resource_recycler_(escher->resource_recycler()),
       mesh_manager_(escher->mesh_manager()),
       model_data_(model_data) {
   rectangle_ = CreateRectangle();
@@ -220,7 +220,7 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
 
   auto image = image_utils::NewRgbaImage(
       escher->image_cache(), escher->gpu_uploader(), 1, 1, channels);
-  return ftl::MakeRefCounted<Texture>(escher->resource_life_preserver(),
+  return ftl::MakeRefCounted<Texture>(escher->resource_recycler(),
                                       std::move(image), vk::Filter::eNearest);
 }
 

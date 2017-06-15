@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace escher {
 
-ResourceLifePreserver::ResourceLifePreserver(const VulkanContext& context)
+ResourceRecycler::ResourceRecycler(const VulkanContext& context)
     : ResourceManager(context) {}
 
-ResourceLifePreserver::~ResourceLifePreserver() {
+ResourceRecycler::~ResourceRecycler() {
   FTL_DCHECK(unused_resources_.empty());
 }
 
-void ResourceLifePreserver::OnReceiveOwnable(
-    std::unique_ptr<Resource> resource) {
+void ResourceRecycler::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
   if (resource->sequence_number() <= last_finished_sequence_number_) {
     // Recycle immediately.
     RecycleResource(std::move(resource));
@@ -24,7 +23,7 @@ void ResourceLifePreserver::OnReceiveOwnable(
   }
 }
 
-void ResourceLifePreserver::CommandBufferFinished(uint64_t sequence_number) {
+void ResourceRecycler::CommandBufferFinished(uint64_t sequence_number) {
   FTL_DCHECK(sequence_number > last_finished_sequence_number_);
   last_finished_sequence_number_ = sequence_number;
 

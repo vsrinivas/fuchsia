@@ -8,7 +8,7 @@
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace escher {
 
@@ -21,7 +21,7 @@ Framebuffer::Framebuffer(impl::EscherImpl* escher,
                          uint32_t height,
                          std::vector<ImagePtr> images,
                          vk::RenderPass render_pass)
-    : Resource(escher->resource_life_preserver()),
+    : Resource(escher->resource_recycler()),
       width_(width),
       height_(height),
       images_(std::move(images)) {

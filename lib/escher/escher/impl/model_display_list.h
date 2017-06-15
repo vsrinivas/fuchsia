@@ -24,7 +24,7 @@ class ModelDisplayList : public Resource {
     uint32_t stencil_reference;
   };
 
-  ModelDisplayList(ResourceLifePreserver* life_preserver,
+  ModelDisplayList(ResourceRecycler* resource_recycler,
                    vk::DescriptorSet stage_data,
                    std::vector<Item> items,
                    std::vector<TexturePtr> textures,

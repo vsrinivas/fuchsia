@@ -5,7 +5,7 @@
 #include "escher/shape/mesh.h"
 
 #include "escher/impl/escher_impl.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/vk/buffer.h"
 
 namespace escher {
@@ -15,7 +15,7 @@ const ResourceTypeInfo Mesh::kTypeInfo("Mesh",
                                        ResourceType::kWaitableResource,
                                        ResourceType::kMesh);
 
-Mesh::Mesh(ResourceLifePreserver* life_preserver,
+Mesh::Mesh(ResourceRecycler* resource_recycler,
            MeshSpec spec,
            uint32_t num_vertices,
            uint32_t num_indices,
@@ -23,7 +23,7 @@ Mesh::Mesh(ResourceLifePreserver* life_preserver,
            BufferPtr index_buffer,
            vk::DeviceSize vertex_buffer_offset,
            vk::DeviceSize index_buffer_offset)
-    : WaitableResource(life_preserver),
+    : WaitableResource(resource_recycler),
       spec_(std::move(spec)),
       num_vertices_(num_vertices),
       num_indices_(num_indices),

@@ -17,7 +17,7 @@ class DepthToColor {
  public:
   DepthToColor(impl::GlslToSpirvCompiler* compiler,
                impl::ImageCache* image_cache,
-               ResourceLifePreserver* life_preserver);
+               ResourceRecycler* resource_recycler);
 
   TexturePtr Convert(impl::CommandBuffer* command_buffer,
                      const TexturePtr& depth_texture,
@@ -27,7 +27,7 @@ class DepthToColor {
  private:
   impl::GlslToSpirvCompiler* compiler_;
   impl::ImageCache* const image_cache_;
-  ResourceLifePreserver* const life_preserver_;
+  ResourceRecycler* const resource_recycler_;
   std::unique_ptr<impl::ComputeShader> kernel_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DepthToColor);

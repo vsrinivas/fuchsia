@@ -4,11 +4,11 @@
 
 #include "escher/util/depth_to_color.h"
 
-#include "escher/impl/image_cache.h"
 #include "escher/impl/command_buffer.h"
+#include "escher/impl/image_cache.h"
 #include "escher/renderer/texture.h"
 #include "escher/renderer/timestamper.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace {
 constexpr char g_kernel_src[] = R"GLSL(
@@ -36,10 +36,10 @@ namespace escher {
 
 DepthToColor::DepthToColor(impl::GlslToSpirvCompiler* compiler,
                            impl::ImageCache* image_cache,
-                           ResourceLifePreserver* life_preserver)
+                           ResourceRecycler* resource_recycler)
     : compiler_(compiler),
       image_cache_(image_cache),
-      life_preserver_(life_preserver) {}
+      resource_recycler_(resource_recycler) {}
 
 TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
                                  const TexturePtr& depth_texture,
@@ -60,7 +60,7 @@ TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
       image_cache_->NewImage({vk::Format::eR8G8B8A8Unorm, width, width, 1,
                               image_flags | vk::ImageUsageFlagBits::eStorage});
   TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
-      life_preserver_, tmp_image, vk::Filter::eNearest,
+      resource_recycler_, tmp_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);

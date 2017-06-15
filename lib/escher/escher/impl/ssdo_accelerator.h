@@ -17,7 +17,7 @@ class SsdoAccelerator {
  public:
   SsdoAccelerator(GlslToSpirvCompiler* compiler,
                   ImageCache* image_cache,
-                  ResourceLifePreserver* life_preserver);
+                  ResourceRecycler* resource_recycler);
   ~SsdoAccelerator();
 
   // Generates a packed lookup table to accelerate SSDO sampling/filtering.
@@ -68,7 +68,7 @@ class SsdoAccelerator {
   GlslToSpirvCompiler* compiler_;
 
   ImageCache* const image_cache_;
-  ResourceLifePreserver* const life_preserver_;
+  ResourceRecycler* const resource_recycler_;
 
   // Used by GenerateLookupTable().
   std::unique_ptr<ComputeShader> kernel_;

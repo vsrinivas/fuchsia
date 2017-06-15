@@ -30,7 +30,7 @@ class MeshManager : public MeshBuilderFactory {
   MeshManager(CommandBufferPool* command_buffer_pool,
               GpuAllocator* allocator,
               GpuUploader* uploader,
-              ResourceLifePreserver* life_preserver);
+              ResourceRecycler* resource_recycler);
   ~MeshManager();
 
   // The returned MeshBuilder is not thread-safe.
@@ -38,7 +38,7 @@ class MeshManager : public MeshBuilderFactory {
                                 size_t max_vertex_count,
                                 size_t max_index_count) override;
 
-  ResourceLifePreserver* life_preserver() const { return life_preserver_; }
+  ResourceRecycler* resource_recycler() const { return resource_recycler_; }
 
  private:
   void UpdateBusyResources();
@@ -66,7 +66,7 @@ class MeshManager : public MeshBuilderFactory {
   CommandBufferPool* const command_buffer_pool_;
   GpuAllocator* const allocator_;
   GpuUploader* const uploader_;
-  ResourceLifePreserver* const life_preserver_;
+  ResourceRecycler* const resource_recycler_;
   const vk::Device device_;
   const vk::Queue queue_;
 

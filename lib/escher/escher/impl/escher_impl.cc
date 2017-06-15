@@ -11,7 +11,7 @@
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/profiling/timestamp_profiler.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/util/cplusplus.h"
 #include "escher/vk/gpu_allocator.h"
 #include "escher/vk/naive_gpu_allocator.h"
@@ -57,10 +57,10 @@ std::unique_ptr<MeshManager> NewMeshManager(
     CommandBufferPool* transfer_pool,
     GpuAllocator* allocator,
     GpuUploader* uploader,
-    ResourceLifePreserver* life_preserver) {
+    ResourceRecycler* resource_recycler) {
   return std::make_unique<MeshManager>(
       transfer_pool ? transfer_pool : main_pool, allocator, uploader,
-      life_preserver);
+      resource_recycler);
 }
 
 }  // namespace
@@ -79,15 +79,15 @@ EscherImpl::EscherImpl(const VulkanContext& context)
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),
       pipeline_cache_(std::make_unique<PipelineCache>()),
-      resource_life_preserver_(
-          std::make_unique<ResourceLifePreserver>(vulkan_context_)),
+      resource_recycler_(
+          std::make_unique<ResourceRecycler>(vulkan_context_)),
       image_cache_(
           std::make_unique<ImageCache>(vulkan_context_, gpu_allocator())),
       mesh_manager_(NewMeshManager(command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator(),
                                    gpu_uploader(),
-                                   resource_life_preserver_.get())),
+                                   resource_recycler_.get())),
       glsl_compiler_(std::make_unique<GlslToSpirvCompiler>()),
       renderer_count_(0) {
   FTL_DCHECK(context.instance);
@@ -97,7 +97,7 @@ EscherImpl::EscherImpl(const VulkanContext& context)
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
 
-  command_buffer_sequencer_->AddListener(resource_life_preserver_.get());
+  command_buffer_sequencer_->AddListener(resource_recycler_.get());
 
   auto device_properties = context.physical_device.getProperties();
   timestamp_period_ = device_properties.limits.timestampPeriod;
@@ -145,8 +145,8 @@ GlslToSpirvCompiler* EscherImpl::glsl_compiler() {
   return glsl_compiler_.get();
 }
 
-ResourceLifePreserver* EscherImpl::resource_life_preserver() {
-  return resource_life_preserver_.get();
+ResourceRecycler* EscherImpl::resource_recycler() {
+  return resource_recycler_.get();
 }
 
 GpuAllocator* EscherImpl::gpu_allocator() {

@@ -8,7 +8,7 @@
 #include "escher/impl/image_cache.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/texture.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace escher {
 namespace impl {
@@ -361,15 +361,15 @@ void main() {
 
 SsdoAccelerator::SsdoAccelerator(GlslToSpirvCompiler* compiler,
                                  ImageCache* image_cache,
-                                 ResourceLifePreserver* life_preserver)
+                                 ResourceRecycler* resource_recycler)
     : compiler_(compiler),
       image_cache_(image_cache),
-      life_preserver_(life_preserver) {}
+      resource_recycler_(resource_recycler) {}
 
 SsdoAccelerator::~SsdoAccelerator() {}
 
 const VulkanContext& SsdoAccelerator::vulkan_context() const {
-  return life_preserver_->vulkan_context();
+  return resource_recycler_->vulkan_context();
 }
 
 TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
@@ -399,7 +399,7 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
   TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
-      life_preserver_, tmp_image, vk::Filter::eNearest,
+      resource_recycler_, tmp_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
@@ -443,7 +443,7 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
   TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
-      life_preserver_, tmp_image, vk::Filter::eNearest,
+      resource_recycler_, tmp_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
@@ -483,7 +483,7 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   command_buffer->TransitionImageLayout(
       result_image, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
   TexturePtr result_texture = ftl::MakeRefCounted<Texture>(
-      life_preserver_, result_image, vk::Filter::eNearest,
+      resource_recycler_, result_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor);
 
   uint32_t work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);

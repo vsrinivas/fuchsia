@@ -9,7 +9,7 @@
 #include "escher/geometry/types.h"
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/vulkan_utils.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/vk/buffer.h"
 #include "escher/vk/vulkan_context.h"
 
@@ -19,11 +19,11 @@ namespace impl {
 MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator,
                          GpuUploader* uploader,
-                         ResourceLifePreserver* life_preserver)
+                         ResourceRecycler* resource_recycler)
     : command_buffer_pool_(command_buffer_pool),
       allocator_(allocator),
       uploader_(uploader),
-      life_preserver_(life_preserver),
+      resource_recycler_(resource_recycler),
       device_(command_buffer_pool->device()),
       queue_(command_buffer_pool->queue()),
       builder_count_(0) {}
@@ -72,12 +72,12 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   GpuAllocator* allocator = manager_->allocator_;
 
   // TODO: use eTransferDstOptimal instead of eTransferDst?
-  auto vertex_buffer = Buffer::New(manager_->life_preserver(), allocator,
+  auto vertex_buffer = Buffer::New(manager_->resource_recycler(), allocator,
                                    vertex_count_ * vertex_stride_,
                                    vk::BufferUsageFlagBits::eVertexBuffer |
                                        vk::BufferUsageFlagBits::eTransferDst,
                                    vk::MemoryPropertyFlagBits::eDeviceLocal);
-  auto index_buffer = Buffer::New(manager_->life_preserver(), allocator,
+  auto index_buffer = Buffer::New(manager_->resource_recycler(), allocator,
                                   index_count_ * sizeof(uint32_t),
                                   vk::BufferUsageFlagBits::eIndexBuffer |
                                       vk::BufferUsageFlagBits::eTransferDst,
@@ -91,7 +91,7 @@ MeshPtr MeshManager::MeshBuilder::Build() {
                             SemaphorePtr());
   index_writer_.Submit();
 
-  auto mesh = ftl::MakeRefCounted<Mesh>(manager_->life_preserver(), spec_,
+  auto mesh = ftl::MakeRefCounted<Mesh>(manager_->resource_recycler(), spec_,
                                         vertex_count_, index_count_,
                                         vertex_buffer, std::move(index_buffer));
 

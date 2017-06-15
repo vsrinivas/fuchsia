@@ -56,7 +56,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       model_data_(
           std::make_unique<impl::ModelData>(context_, escher->gpu_allocator())),
       ssdo_(std::make_unique<impl::SsdoSampler>(
-          escher->resource_life_preserver(),
+          escher->resource_recycler(),
           full_screen_,
           image_utils::NewNoiseImage(escher->image_cache(),
                                      escher->gpu_uploader(),
@@ -65,14 +65,14 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
                                      vk::ImageUsageFlagBits::eStorage),
           escher->glsl_compiler(),
           model_data_.get())),
-      ssdo_accelerator_(std::make_unique<impl::SsdoAccelerator>(
-          escher->glsl_compiler(),
-          image_cache_,
-          escher->resource_life_preserver())),
+      ssdo_accelerator_(
+          std::make_unique<impl::SsdoAccelerator>(escher->glsl_compiler(),
+                                                  image_cache_,
+                                                  escher->resource_recycler())),
       depth_to_color_(
           std::make_unique<DepthToColor>(escher->glsl_compiler(),
                                          image_cache_,
-                                         escher->resource_life_preserver())),
+                                         escher->resource_recycler())),
       clear_values_({vk::ClearColorValue(
                          std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
                      vk::ClearDepthStencilValue(kMaxDepth, 0)}) {}
@@ -137,11 +137,11 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
 #if SSDO_SAMPLING_USES_KERNEL
   TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_life_preserver(), depth_in, vk::Filter::eNearest,
+      escher_->resource_recycler(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
 
   TexturePtr output_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_life_preserver() color_out, vk::Filter::eNearest,
+      escher_->resource_recycler() color_out, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor);
 
   command_buffer->KeepAlive(depth_texture);
@@ -165,7 +165,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
 #else
   TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_life_preserver(), depth_in, vk::Filter::eNearest,
+      escher_->resource_recycler(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
   command_buffer->KeepAlive(depth_texture);
 
@@ -195,7 +195,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
   if (!kSkipFiltering) {
     {
       auto color_out_tex = ftl::MakeRefCounted<Texture>(
-          escher_->resource_life_preserver(), color_out, vk::Filter::eNearest);
+          escher_->resource_recycler(), color_out, vk::Filter::eNearest);
       command_buffer->KeepAlive(color_out_tex);
 
       impl::SsdoSampler::FilterConfig filter_config;
@@ -218,7 +218,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
     }
     {
       auto color_aux_tex = ftl::MakeRefCounted<Texture>(
-          escher_->resource_life_preserver(), color_aux, vk::Filter::eNearest);
+          escher_->resource_recycler(), color_aux, vk::Filter::eNearest);
       command_buffer->KeepAlive(color_aux_tex);
 
       impl::SsdoSampler::FilterConfig filter_config;
@@ -373,7 +373,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
       image_cache_, depth_format_, ssdo_accel_width, ssdo_accel_height,
       vk::ImageUsageFlagBits::eSampled);
   TexturePtr ssdo_accel_depth_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_life_preserver(), ssdo_accel_depth_image,
+      escher_->resource_recycler(), ssdo_accel_depth_image,
       vk::Filter::eNearest, vk::ImageAspectFlagBits::eDepth,
       // TODO: use a more descriptive enum than true.
       true);
@@ -434,7 +434,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     SubmitPartialFrame();
 
     illumination_texture = ftl::MakeRefCounted<Texture>(
-        escher_->resource_life_preserver(), illum1, vk::Filter::eNearest);
+        escher_->resource_recycler(), illum1, vk::Filter::eNearest);
 
     // Done after previous SubmitPartialFrame(), because this is needed by the
     // final lighting pass.

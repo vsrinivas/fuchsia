@@ -7,7 +7,7 @@
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace escher {
 
@@ -15,12 +15,12 @@ const ResourceTypeInfo Texture::kTypeInfo("Texture",
                                           ResourceType::kResource,
                                           ResourceType::kTexture);
 
-Texture::Texture(ResourceLifePreserver* life_preserver,
+Texture::Texture(ResourceRecycler* resource_recycler,
                  ImagePtr image,
                  vk::Filter filter,
                  vk::ImageAspectFlags aspect_mask,
                  bool use_unnormalized_coordinates)
-    : Resource(life_preserver),
+    : Resource(resource_recycler),
       image_(std::move(image)),
       width_(image_->width()),
       height_(image_->height()) {

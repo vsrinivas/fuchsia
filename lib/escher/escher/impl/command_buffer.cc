@@ -111,7 +111,7 @@ void CommandBuffer::KeepAlive(Resource* resource) {
     // they're still in use.  Therefore, we must ref the allocations until the
     // CommandBuffer has completed.  One way to fix this would be for
     // DescriptorSetPool to become a CommandBufferSequencerListener, similar to
-    // ResourceLifePreserver.
+    // ResourceRecycler.
     used_resources_.push_back(ResourcePtr(resource));
   }
 }

@@ -7,8 +7,8 @@
 #include <unordered_map>
 
 #include "escher/impl/command_buffer_sequencer.h"
-#include "escher/resources/resource_life_preserver.h"
 #include "escher/resources/resource_manager.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace escher {
 
@@ -17,11 +17,11 @@ namespace escher {
 // the sequence numbers from a CommandBufferSequencer with the sequence numbers
 // of resources that it is keeping alive. The default implementation does not
 // recycle resources, instead destroying them as soon as it is safe.
-class ResourceLifePreserver : public ResourceManager,
-                              public impl::CommandBufferSequencerListener {
+class ResourceRecycler : public ResourceManager,
+                         public impl::CommandBufferSequencerListener {
  public:
-  explicit ResourceLifePreserver(const VulkanContext& context);
-  virtual ~ResourceLifePreserver();
+  explicit ResourceRecycler(const VulkanContext& context);
+  virtual ~ResourceRecycler();
 
  private:
   // Gives subclasses a chance to recycle the resource. Default implementation

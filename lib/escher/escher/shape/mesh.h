@@ -19,7 +19,7 @@ class Mesh : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Mesh(ResourceLifePreserver* life_preserver,
+  Mesh(ResourceRecycler* resource_recycler,
        MeshSpec spec,
        uint32_t num_vertices,
        uint32_t num_indices,

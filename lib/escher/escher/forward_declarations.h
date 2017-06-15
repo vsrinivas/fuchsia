@@ -26,7 +26,7 @@ class Model;
 class Object;
 class PaperRenderer;
 class Resource;
-class ResourceLifePreserver;
+class ResourceRecycler;
 class Renderer;
 class Semaphore;
 class Shape;

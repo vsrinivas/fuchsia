@@ -53,7 +53,7 @@ class Escher : public MeshBuilderFactory {
   uint64_t GetNumGpuBytesAllocated();
 
   const VulkanContext& vulkan_context();
-  ResourceLifePreserver* resource_life_preserver();
+  ResourceRecycler* resource_recycler();
   GpuAllocator* gpu_allocator();
   impl::GpuUploader* gpu_uploader();
 

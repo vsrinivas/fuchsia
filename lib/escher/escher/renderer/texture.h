@@ -17,9 +17,9 @@ class Texture : public Resource {
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
   // and |use_unnormalized_coordinates| are used to create the VkSampler.
-  // |life_preserver| guarantees that the underlying Vulkan resources are not
+  // |resource_recycler| guarantees that the underlying Vulkan resources are not
   // destroyed while still referenced by a pending command buffer.
-  Texture(ResourceLifePreserver* life_preserver,
+  Texture(ResourceRecycler* resource_recycler,
           ImagePtr image,
           vk::Filter filter,
           vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,

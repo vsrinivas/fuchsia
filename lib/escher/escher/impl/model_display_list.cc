@@ -5,7 +5,7 @@
 #include "escher/impl/model_display_list.h"
 
 #include "escher/renderer/texture.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace escher {
 namespace impl {
@@ -15,12 +15,12 @@ const ResourceTypeInfo ModelDisplayList::kTypeInfo(
     ResourceType::kResource,
     ResourceType::kImplModelDisplayList);
 
-ModelDisplayList::ModelDisplayList(ResourceLifePreserver* life_preserver,
+ModelDisplayList::ModelDisplayList(ResourceRecycler* resource_recycler,
                                    vk::DescriptorSet stage_data,
                                    std::vector<Item> items,
                                    std::vector<TexturePtr> textures,
                                    std::vector<ResourcePtr> resources)
-    : Resource(life_preserver),
+    : Resource(resource_recycler),
       stage_data_(stage_data),
       items_(std::move(items)),
       textures_(std::move(textures)),

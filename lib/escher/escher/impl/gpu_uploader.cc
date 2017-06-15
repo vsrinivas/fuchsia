@@ -9,7 +9,7 @@
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/vk/gpu_allocator.h"
 
 namespace escher {
@@ -110,7 +110,7 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
 GpuUploader::GpuUploader(const VulkanContext& context,
                          CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
-    : ResourceLifePreserver(context),
+    : ResourceRecycler(context),
       command_buffer_pool_(command_buffer_pool),
       device_(command_buffer_pool_->device()),
       queue_(command_buffer_pool_->queue()),

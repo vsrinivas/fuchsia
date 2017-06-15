@@ -15,7 +15,7 @@
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/texture.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/shape/mesh.h"
 
 namespace escher {
@@ -611,23 +611,23 @@ vk::RenderPass CreateRenderPass(vk::Device device) {
 
 }  // namespace
 
-SsdoSampler::SsdoSampler(ResourceLifePreserver* life_preserver,
+SsdoSampler::SsdoSampler(ResourceRecycler* resource_recycler,
                          MeshPtr full_screen,
                          ImagePtr noise_image,
                          GlslToSpirvCompiler* compiler,
                          ModelData* model_data)
-    : device_(life_preserver->vulkan_context().device),
-      pool_(life_preserver->vulkan_context(),
+    : device_(resource_recycler->vulkan_context().device),
+      pool_(resource_recycler->vulkan_context(),
             GetDescriptorSetLayoutCreateInfo(),
             6),
       full_screen_(full_screen),
-      noise_texture_(ftl::MakeRefCounted<Texture>(life_preserver,
+      noise_texture_(ftl::MakeRefCounted<Texture>(resource_recycler,
                                                   noise_image,
                                                   vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
       // it.
       render_pass_(CreateRenderPass(device_)),
-      sampler_kernel_(life_preserver->vulkan_context(),
+      sampler_kernel_(resource_recycler->vulkan_context(),
                       {vk::ImageLayout::eShaderReadOnlyOptimal,
                        vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral},
                       sizeof(SamplerConfig),

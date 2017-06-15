@@ -52,7 +52,7 @@ class SsdoSampler {
   static const vk::DescriptorSetLayoutCreateInfo&
   GetDescriptorSetLayoutCreateInfo();
 
-  SsdoSampler(ResourceLifePreserver* life_preserver,
+  SsdoSampler(ResourceRecycler* resource_recycler,
               MeshPtr full_screen,
               ImagePtr noise_image,
               GlslToSpirvCompiler* compiler,

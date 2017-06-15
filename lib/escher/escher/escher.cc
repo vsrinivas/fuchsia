@@ -8,7 +8,7 @@
 #include "escher/impl/mesh_manager.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/renderer/texture.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/util/cplusplus.h"
 #include "escher/util/image_utils.h"
 #include "escher/vk/gpu_allocator.h"
@@ -51,7 +51,7 @@ TexturePtr Escher::NewTexture(ImagePtr image,
                               vk::Filter filter,
                               vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
-  return ftl::MakeRefCounted<Texture>(impl_->resource_life_preserver(),
+  return ftl::MakeRefCounted<Texture>(impl_->resource_recycler(),
                                       std::move(image), filter, aspect_mask,
                                       use_unnormalized_coordinates);
 }
@@ -64,8 +64,8 @@ const VulkanContext& Escher::vulkan_context() {
   return impl_->vulkan_context();
 }
 
-ResourceLifePreserver* Escher::resource_life_preserver() {
-  return impl_->resource_life_preserver();
+ResourceRecycler* Escher::resource_recycler() {
+  return impl_->resource_recycler();
 }
 
 GpuAllocator* Escher::gpu_allocator() {

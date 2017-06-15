@@ -41,7 +41,7 @@ class ModelRenderer {
     return pipeline_cache_.get();
   }
 
-  ResourceLifePreserver* life_preserver() const { return life_preserver_; }
+  ResourceRecycler* resource_recycler() const { return resource_recycler_; }
 
   ModelDisplayListPtr CreateDisplayList(const Stage& stage,
                                         const Model& model,
@@ -65,7 +65,7 @@ class ModelRenderer {
   vk::RenderPass depth_prepass_;
   vk::RenderPass lighting_pass_;
 
-  ResourceLifePreserver* const life_preserver_;
+  ResourceRecycler* const resource_recycler_;
   MeshManager* const mesh_manager_;
   ModelData* const model_data_;
 

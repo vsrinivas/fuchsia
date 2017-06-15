@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "escher/resources/resource_life_preserver.h"
 #include "escher/resources/resource_manager.h"
+#include "escher/resources/resource_recycler.h"
 #include "escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {
 
-class GpuUploader : public ResourceLifePreserver {
+class GpuUploader : public ResourceRecycler {
  public:
   GpuUploader(const VulkanContext& context,
               CommandBufferPool* command_buffer_pool,
@@ -67,7 +67,7 @@ class GpuUploader : public ResourceLifePreserver {
     FTL_DISALLOW_COPY_AND_ASSIGN(Writer);
   };
 
-  // |ResourceLifePreserver|
+  // |ResourceRecycler|
   void RecycleResource(std::unique_ptr<Resource> resource) override;
 
   // Get a Writer that has the specified amount of scratch space.
