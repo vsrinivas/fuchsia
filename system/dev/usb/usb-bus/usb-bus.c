@@ -55,19 +55,28 @@ static void usb_bus_remove_device(void* ctx, uint32_t device_id) {
 static mx_status_t usb_bus_configure_hub(void* ctx, mx_device_t* hub_device, usb_speed_t speed,
                                          usb_hub_descriptor_t* descriptor) {
     usb_bus_t* bus = ctx;
-    uint32_t hub_id = usb_interface_get_device_id(hub_device);
+    uint32_t hub_id;
+    if (usb_interface_get_device_id(hub_device, &hub_id) != MX_OK) {
+        return MX_ERR_INTERNAL;
+    }
     return bus->hci.ops->configure_hub(bus->hci.ctx, hub_id, speed, descriptor);
 }
 
 static mx_status_t usb_bus_device_added(void* ctx, mx_device_t* hub_device, int port, usb_speed_t speed) {
     usb_bus_t* bus = ctx;
-    uint32_t hub_id = usb_interface_get_device_id(hub_device);
+    uint32_t hub_id;
+    if (usb_interface_get_device_id(hub_device, &hub_id) != MX_OK) {
+        return MX_ERR_INTERNAL;
+    }
     return bus->hci.ops->hub_device_added(bus->hci.ctx, hub_id, port, speed);
 }
 
 static mx_status_t usb_bus_device_removed(void* ctx, mx_device_t* hub_device, int port) {
     usb_bus_t* bus = ctx;
-    uint32_t hub_id = usb_interface_get_device_id(hub_device);
+    uint32_t hub_id;
+    if (usb_interface_get_device_id(hub_device, &hub_id) != MX_OK) {
+        return MX_ERR_INTERNAL;
+    }
     return bus->hci.ops->hub_device_removed(bus->hci.ctx, hub_id, port);
 }
 

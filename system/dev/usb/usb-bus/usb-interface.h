@@ -59,7 +59,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
 
 void usb_device_remove_interfaces(usb_device_t* device);
 
-uint32_t usb_interface_get_device_id(mx_device_t* device);
+mx_status_t usb_interface_get_device_id(mx_device_t* device, uint32_t* id);
 
 bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id);
 

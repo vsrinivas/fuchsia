@@ -212,19 +212,25 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     return status;
 }
 
-mx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
+static mx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return intf->hci.ops->reset_endpoint(intf->hci.ctx, intf->device_id, ep_address);
 }
 
-size_t usb_interface_get_max_transfer_size(void* ctx, uint8_t ep_address) {
+static size_t usb_interface_get_max_transfer_size(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return intf->hci.ops->get_max_transfer_size(intf->hci.ctx, intf->device_id, ep_address);
+}
+
+static uint32_t _usb_interface_get_device_id(void* ctx) {
+    usb_interface_t* intf = ctx;
+    return intf->device_id;
 }
 
 static usb_protocol_ops_t _usb_protocol = {
     .reset_endpoint = usb_interface_reset_endpoint,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
+    .get_device_id = _usb_interface_get_device_id,
 };
 
 mx_status_t usb_device_add_interface(usb_device_t* device,
@@ -389,9 +395,13 @@ void usb_device_remove_interfaces(usb_device_t* device) {
     }
 }
 
-uint32_t usb_interface_get_device_id(mx_device_t* device) {
-    usb_interface_t* intf = device->ctx;
-    return intf->device_id;
+mx_status_t usb_interface_get_device_id(mx_device_t* device, uint32_t* out) {
+    usb_protocol_t usb;
+    if (device_get_protocol(device, MX_PROTOCOL_USB, &usb) != MX_OK) {
+        return MX_ERR_INTERNAL;
+    }
+    *out = usb.ops->get_device_id(usb.ctx);
+    return MX_OK;
 }
 
 bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id) {
