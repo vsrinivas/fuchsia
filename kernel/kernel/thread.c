@@ -630,6 +630,11 @@ static void thread_do_suspend(void)
 {
     thread_t *current_thread = get_current_thread();
     if (current_thread->user_callback) {
+        // Note: After calling this callback, we must not return without
+        // calling the callback with THREAD_USER_STATE_RESUME.  That is
+        // because those callbacks act as barriers which control when it is
+        // safe for the mx_thread_read_state()/mx_thread_write_state()
+        // syscalls to access the userland register state kept by thread_t.
         current_thread->user_callback(THREAD_USER_STATE_SUSPEND, current_thread->user_thread);
     }
 
