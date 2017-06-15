@@ -120,6 +120,10 @@ void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
 
 void VideoFrameSource::GetPacketConsumer(
     fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+  if (is_bound()) {
+    Reset();
+  }
+
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 

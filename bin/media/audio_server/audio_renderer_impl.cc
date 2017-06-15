@@ -242,6 +242,10 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
 void AudioRendererImpl::GetPacketConsumer(
     fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) {
   // Bind our pipe to the interface request.
+  if (pipe_.is_bound()) {
+    pipe_.Reset();
+  }
+
   pipe_.Bind(std::move(consumer_request));
 }
 
