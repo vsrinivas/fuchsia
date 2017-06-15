@@ -14,7 +14,7 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
-static constexpr float DEFAULT_HEADPHONE_GAIN = -30.0;
+static constexpr float DEFAULT_HEADPHONE_GAIN = 0.0;
 static constexpr float DEFAULT_SPEAKER_GAIN = 0.0;
 
 void RealtekCodec::PrintDebugPrefix() const {
