@@ -33,7 +33,7 @@ enum class DevicePacket : uint64_t {
 Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
   : WlanBaseDevice("wlan"),
     parent_(device),
-    mlme_(ddk::WlanmacProtocolProxy(wlanmac_ops, device)),
+    mlme_(ddk::WlanmacProtocolProxy(wlanmac_ops)),
     buffer_alloc_(kNumSlabs, true) {
     debugfn();
 }
