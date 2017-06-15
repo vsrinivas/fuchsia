@@ -6,7 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
-#include <ddk/protocol/ramdisk.h>
+#include <magenta/device/ramdisk.h>
 #include <sync/completion.h>
 
 #include <magenta/process.h>
