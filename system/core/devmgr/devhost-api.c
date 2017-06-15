@@ -121,6 +121,7 @@ static bool is_new_protocol(uint32_t proto_id) {
     case MX_PROTOCOL_USB:
     case MX_PROTOCOL_HIDBUS:
     case MX_PROTOCOL_TEST:
+    case MX_PROTOCOL_DISPLAY:
         return true;
     default:
         return false;

@@ -130,29 +130,29 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
 
 // implement display protocol
 
-static mx_status_t bochs_vbe_set_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t bochs_vbe_set_mode(void* ctx, mx_display_info_t* info) {
     assert(info);
-    bochs_vbe_device_t* vdev = dev->ctx;
+    bochs_vbe_device_t* vdev = ctx;
     memcpy(&vdev->info, info, sizeof(mx_display_info_t));
     set_hw_mode(vdev);
     return MX_OK;
 }
 
-static mx_status_t bochs_vbe_get_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t bochs_vbe_get_mode(void* ctx, mx_display_info_t* info) {
     assert(info);
-    bochs_vbe_device_t* vdev = dev->ctx;
+    bochs_vbe_device_t* vdev = ctx;
     memcpy(info, &vdev->info, sizeof(mx_display_info_t));
     return MX_OK;
 }
 
-static mx_status_t bochs_vbe_get_framebuffer(mx_device_t* dev, void** framebuffer) {
+static mx_status_t bochs_vbe_get_framebuffer(void* ctx, void** framebuffer) {
     assert(framebuffer);
-    bochs_vbe_device_t* vdev = dev->ctx;
+    bochs_vbe_device_t* vdev = ctx;
     (*framebuffer) = vdev->framebuffer;
     return MX_OK;
 }
 
-static mx_display_protocol_t bochs_vbe_display_proto = {
+static display_protocol_ops_t bochs_vbe_display_proto = {
     .set_mode = bochs_vbe_set_mode,
     .get_mode = bochs_vbe_get_mode,
     .get_framebuffer = bochs_vbe_get_framebuffer,

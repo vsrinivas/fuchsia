@@ -26,8 +26,7 @@ typedef struct fb fb_t;
 
 struct fb {
     mx_device_t* mxdev;
-    mx_device_t* dpydev;
-    mx_display_protocol_t* dpy;
+    display_protocol_t dpy;
     mx_display_info_t info;
     size_t bufsz;
     void* buffer;
@@ -44,12 +43,12 @@ struct fb {
     fbi_t* fullscreen;
 };
 
-#define FB_HAS_GPU(fb) (fb->dpy->acquire_or_release_display != NULL)
-#define FB_ACQUIRE(fb) (fb->dpy->acquire_or_release_display(fb->dpydev, true))
-#define FB_RELEASE(fb) (fb->dpy->acquire_or_release_display(fb->dpydev, false))
+#define FB_HAS_GPU(fb) (fb->dpy.ops->acquire_or_release_display != NULL)
+#define FB_ACQUIRE(fb) (fb->dpy.ops->acquire_or_release_display(fb->dpy.ctx, true))
+#define FB_RELEASE(fb) (fb->dpy.ops->acquire_or_release_display(fb->dpy.ctx, false))
 static inline void FB_FLUSH(fb_t* fb) {
-    if (fb->dpy->flush) {
-        fb->dpy->flush(fb->dpydev);
+    if (fb->dpy.ops->flush) {
+        fb->dpy.ops->flush(fb->dpy.ctx);
     }
 }
 
@@ -331,15 +330,15 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     mx_status_t r;
-    if ((r = device_op_get_protocol(dev, MX_PROTOCOL_DISPLAY, (void**)&fb->dpy)) < 0) {
+    if ((r = device_get_protocol(dev, MX_PROTOCOL_DISPLAY, &fb->dpy)) < 0) {
         printf("fb: display does not support display protocol: %d\n", r);
         goto fail;
     }
-    if ((r = fb->dpy->get_mode(dev, &fb->info)) < 0) {
+    if ((r = fb->dpy.ops->get_mode(fb->dpy.ctx, &fb->info)) < 0) {
         printf("fb: display get mode failed: %d\n", r);
         goto fail;
     }
-    if ((r = fb->dpy->get_framebuffer(dev, &fb->buffer)) < 0) {
+    if ((r = fb->dpy.ops->get_framebuffer(fb->dpy.ctx, &fb->buffer)) < 0) {
         printf("fb: display get framebuffer failed: %d\n", r);
         goto fail;
     }
@@ -348,8 +347,6 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
     mx_object_signal(fb->event, 0, MX_USER_SIGNAL_0);
-
-    fb->dpydev = dev;
 
     // Our display drivers do not initialize pixelsize
     // Determine it based on pixel format
@@ -396,7 +393,7 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     if (FB_HAS_GPU(fb)) {
-        fb->dpy->set_ownership_change_callback(fb->dpydev, fb_callback, fb);
+        fb->dpy.ops->set_ownership_change_callback(fb->dpy.ctx, fb_callback, fb);
         FB_ACQUIRE(fb);
     }
     return MX_OK;

@@ -33,10 +33,10 @@ public:
 
 private:
     // DDK driver hooks
-    static mx_status_t virtio_gpu_set_mode(mx_device_t* dev, mx_display_info_t* info);
-    static mx_status_t virtio_gpu_get_mode(mx_device_t* dev, mx_display_info_t* info);
-    static mx_status_t virtio_gpu_get_framebuffer(mx_device_t* dev, void** framebuffer);
-    static void virtio_gpu_flush(mx_device_t* dev);
+    static mx_status_t virtio_gpu_set_mode(void* ctx, mx_display_info_t* info);
+    static mx_status_t virtio_gpu_get_mode(void* ctx, mx_display_info_t* info);
+    static mx_status_t virtio_gpu_get_framebuffer(void* ctx, void** framebuffer);
+    static void virtio_gpu_flush(void* ctx);
 
     // internal routines
     mx_status_t send_command_response(const void* cmd, size_t cmd_len, void** _res, size_t res_len);
@@ -55,7 +55,7 @@ private:
     Ring vring_ = {this};
 
     // display protocol ops
-    mx_display_protocol_t display_proto_ops_ = {};
+    display_protocol_ops_t display_proto_ops_ = {};
 
     // gpu op
     void* gpu_req_ = nullptr;

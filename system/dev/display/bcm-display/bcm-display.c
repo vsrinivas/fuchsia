@@ -42,30 +42,30 @@ typedef struct {
     uint8_t* framebuffer;
 } bcm_display_t;
 
-static mx_status_t vc_set_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t vc_set_mode(void* ctx, mx_display_info_t* info) {
     return MX_OK;
 }
 
-static mx_status_t vc_get_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t vc_get_mode(void* ctx, mx_display_info_t* info) {
     if (!info) return MX_ERR_INVALID_ARGS;
-    bcm_display_t* display = dev->ctx;
+    bcm_display_t* display = ctx;
     memcpy(info, &display->disp_info, sizeof(mx_display_info_t));
     return MX_OK;
 }
 
-static mx_status_t vc_get_framebuffer(mx_device_t* dev, void** framebuffer) {
+static mx_status_t vc_get_framebuffer(void* ctx, void** framebuffer) {
     if (!framebuffer) return MX_ERR_INVALID_ARGS;
-    bcm_display_t* display = dev->ctx;
+    bcm_display_t* display = ctx;
     (*framebuffer) = display->framebuffer;
     return MX_OK;
 }
 
-static void vc_flush_framebuffer(mx_device_t* dev) {
-    bcm_display_t* display = dev->ctx;
+static void vc_flush_framebuffer(void* ctx) {
+    bcm_display_t* display = ctx;
     mx_cache_flush(display->framebuffer, display->fb_desc.fb_size, MX_CACHE_FLUSH_DATA);
 }
 
-static mx_display_protocol_t vc_display_proto = {
+static display_protocol_ops_t vc_display_proto = {
     .set_mode = vc_set_mode,
     .get_mode = vc_get_mode,
     .get_framebuffer = vc_get_framebuffer,

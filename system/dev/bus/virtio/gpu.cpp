@@ -26,16 +26,16 @@ namespace virtio {
 // DDK level ops
 
 // queue an iotxn. iotxn's are always completed by its complete() op
-mx_status_t GpuDevice::virtio_gpu_set_mode(mx_device_t* dev, mx_display_info_t* info) {
-    GpuDevice* gd = static_cast<GpuDevice*>(dev->ctx);
+mx_status_t GpuDevice::virtio_gpu_set_mode(void* ctx, mx_display_info_t* info) {
+    GpuDevice* gd = static_cast<GpuDevice*>(ctx);
 
     LTRACEF("dev %p, info %p\n", gd, info);
 
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t GpuDevice::virtio_gpu_get_mode(mx_device_t* dev, mx_display_info_t* info) {
-    GpuDevice* gd = static_cast<GpuDevice*>(dev->ctx);
+mx_status_t GpuDevice::virtio_gpu_get_mode(void* ctx, mx_display_info_t* info) {
+    GpuDevice* gd = static_cast<GpuDevice*>(ctx);
 
     LTRACEF("dev %p, info %p\n", gd, info);
 
@@ -53,8 +53,8 @@ mx_status_t GpuDevice::virtio_gpu_get_mode(mx_device_t* dev, mx_display_info_t* 
     return NO_ERROR;
 }
 
-mx_status_t GpuDevice::virtio_gpu_get_framebuffer(mx_device_t* dev, void** framebuffer) {
-    GpuDevice* gd = static_cast<GpuDevice*>(dev->ctx);
+mx_status_t GpuDevice::virtio_gpu_get_framebuffer(void* ctx, void** framebuffer) {
+    GpuDevice* gd = static_cast<GpuDevice*>(ctx);
 
     LTRACEF("dev %p, framebuffer %p\n", gd, framebuffer);
 
@@ -66,8 +66,8 @@ mx_status_t GpuDevice::virtio_gpu_get_framebuffer(mx_device_t* dev, void** frame
     return NO_ERROR;
 }
 
-void GpuDevice::virtio_gpu_flush(mx_device_t* dev) {
-    GpuDevice* gd = static_cast<GpuDevice*>(dev->ctx);
+void GpuDevice::virtio_gpu_flush(void* ctx) {
+    GpuDevice* gd = static_cast<GpuDevice*>(ctx);
 
     LTRACEF("dev %p\n", gd);
 

@@ -37,27 +37,27 @@ typedef struct kaveri_disp_device {
 } kaveri_disp_device_t;
 
 // implement display protocol
-static mx_status_t kaveri_disp_set_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t kaveri_disp_set_mode(void* ctx, mx_display_info_t* info) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t kaveri_disp_get_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t kaveri_disp_get_mode(void* ctx, mx_display_info_t* info) {
     assert(info);
-    kaveri_disp_device_t* device = dev->ctx;
+    kaveri_disp_device_t* device = ctx;
 
     memcpy(info, &device->info, sizeof(mx_display_info_t));
     return MX_OK;
 }
 
-static mx_status_t kaveri_disp_get_framebuffer(mx_device_t* dev, void** framebuffer) {
+static mx_status_t kaveri_disp_get_framebuffer(void* ctx, void** framebuffer) {
     assert(framebuffer);
-    kaveri_disp_device_t* device = dev->ctx;
+    kaveri_disp_device_t* device = ctx;
 
     (*framebuffer) = device->framebuffer;
     return MX_OK;
 }
 
-static mx_display_protocol_t kaveri_disp_display_proto = {
+static display_protocol_ops_t kaveri_disp_display_proto = {
     .set_mode = kaveri_disp_set_mode,
     .get_mode = kaveri_disp_get_mode,
     .get_framebuffer = kaveri_disp_get_framebuffer,

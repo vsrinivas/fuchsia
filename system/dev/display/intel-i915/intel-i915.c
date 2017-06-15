@@ -67,25 +67,25 @@ static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable) {
 
 // implement display protocol
 
-static mx_status_t intel_i915_set_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t intel_i915_set_mode(void* ctx, mx_display_info_t* info) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info) {
+static mx_status_t intel_i915_get_mode(void* ctx, mx_display_info_t* info) {
     assert(info);
-    intel_i915_device_t* device = dev->ctx;
+    intel_i915_device_t* device = ctx;
     memcpy(info, &device->info, sizeof(mx_display_info_t));
     return MX_OK;
 }
 
-static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuffer) {
+static mx_status_t intel_i915_get_framebuffer(void* ctx, void** framebuffer) {
     assert(framebuffer);
-    intel_i915_device_t* device = dev->ctx;
+    intel_i915_device_t* device = ctx;
     (*framebuffer) = device->framebuffer;
     return MX_OK;
 }
 
-static mx_display_protocol_t intel_i915_display_proto = {
+static display_protocol_ops_t intel_i915_display_proto = {
     .set_mode = intel_i915_set_mode,
     .get_mode = intel_i915_get_mode,
     .get_framebuffer = intel_i915_get_framebuffer,
