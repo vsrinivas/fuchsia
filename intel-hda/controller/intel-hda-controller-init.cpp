@@ -150,7 +150,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
 
     MX_DEBUG_ASSERT(irq_handle_  == MX_HANDLE_INVALID);
     MX_DEBUG_ASSERT(regs_handle_ == MX_HANDLE_INVALID);
-    MX_DEBUG_ASSERT(pci_proto_   == nullptr);
+    MX_DEBUG_ASSERT(pci_.ops == nullptr);
 
     pci_dev_ = pci_dev;
 
@@ -158,7 +158,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller (unknown BDF)");
 
     // The device had better be a PCI device, or we are very confused.
-    res = device_op_get_protocol(pci_dev_, MX_PROTOCOL_PCI, reinterpret_cast<void**>(&pci_proto_));
+    res = device_get_protocol(pci_dev_, MX_PROTOCOL_PCI, reinterpret_cast<void*>(&pci_));
     if (res != MX_OK) {
         LOG("PCI device does not support PCI protocol! (res %d)\n", res);
         return res;
@@ -166,8 +166,8 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
 
     // Fetch our device info and use it to re-generate our debug tag once we
     // know our BDF address.
-    MX_DEBUG_ASSERT(pci_proto_ != nullptr);
-    res = pci_proto_->get_device_info(pci_dev_, &pci_dev_info_);
+    MX_DEBUG_ASSERT(pci_.ops != nullptr);
+    res = pci_.ops->get_device_info(pci_.ctx, &pci_dev_info_);
     if (res != MX_OK) {
         LOG("Failed to fetch basic PCI device info! (res %d)\n", res);
         return res;
@@ -180,7 +180,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
 
 
     // Claim the device.
-    res = pci_proto_->claim_device(pci_dev_);
+    res = pci_.ops->claim_device(pci_.ctx);
     if (res != MX_OK) {
         LOG("Failed to claim PCI device! (res %d)\n", res);
         return res;
@@ -191,7 +191,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     MX_DEBUG_ASSERT(regs_handle_ == MX_HANDLE_INVALID);
     uint64_t reg_window_size;
     hda_all_registers_t* all_regs;
-    res = pci_proto_->map_resource(pci_dev_,
+    res = pci_.ops->map_resource(pci_.ctx,
                                PCI_RESOURCE_BAR_0,
                                MX_CACHE_POLICY_UNCACHED_DEVICE,
                                reinterpret_cast<void**>(&all_regs),
@@ -218,9 +218,9 @@ mx_status_t IntelHDAController::SetupPCIInterrupts() {
 
     // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
     // that fails, fall back on legacy IRQs.
-    mx_status_t res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_MSI, 1);
+    mx_status_t res = pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_MSI, 1);
     if (res != MX_OK) {
-        res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_LEGACY, 1);
+        res = pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
         if (res != MX_OK) {
             LOG("Failed to set IRQ mode (%d)!\n", res);
             return res;
@@ -233,14 +233,14 @@ mx_status_t IntelHDAController::SetupPCIInterrupts() {
     }
 
     MX_DEBUG_ASSERT(irq_handle_ == MX_HANDLE_INVALID);
-    res = pci_proto_->map_interrupt(pci_dev_, 0, &irq_handle_);
+    res = pci_.ops->map_interrupt(pci_.ctx, 0, &irq_handle_);
     if (res != MX_OK) {
         LOG("Failed to map IRQ! (res %d)\n", res);
         return res;
     }
 
     // Enable Bus Mastering so we can DMA data and receive MSIs
-    res = pci_proto_->enable_bus_master(pci_dev_, true);
+    res = pci_.ops->enable_bus_master(pci_.ctx, true);
     if (res != MX_OK) {
         LOG("Failed to enable PCI bus mastering!\n");
         return res;

@@ -73,7 +73,7 @@ IntelHDAController::~IntelHDAController() {
 
     // Release our register window.
     if (regs_handle_ != MX_HANDLE_INVALID) {
-        MX_DEBUG_ASSERT(pci_proto_ != nullptr);
+        MX_DEBUG_ASSERT(pci_.ops != nullptr);
         mx_handle_close(regs_handle_);
     }
 
@@ -82,9 +82,9 @@ IntelHDAController::~IntelHDAController() {
         mx_handle_close(irq_handle_);
 
     // Disable IRQs at the PCI level.
-    if (pci_proto_ != nullptr) {
-        MX_DEBUG_ASSERT(pci_dev_ != nullptr);
-        pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_DISABLED, 0);
+    if (pci_.ops != nullptr) {
+        MX_DEBUG_ASSERT(pci_.ctx != nullptr);
+        pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_DISABLED, 0);
     }
 
     // Let go of our stream state.
@@ -96,12 +96,12 @@ IntelHDAController::~IntelHDAController() {
     cmd_buf_mem_.Release();
     bdl_mem_.Release();
 
-    if (pci_dev_ != nullptr) {
+    if (pci_.ops != nullptr) {
         // TODO(johngro) : unclaim the PCI device.  Right now, there is no way
         // to do this aside from closing the device handle (which would
         // seriously mess up the DevMgr's brain)
-        pci_dev_ = nullptr;
-        pci_proto_ = nullptr;
+        pci_.ops = nullptr;
+        pci_.ctx = nullptr;
     }
 }
 
