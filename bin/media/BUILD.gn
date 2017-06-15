@@ -22,6 +22,7 @@ group("services") {
 group("examples") {
   deps = [
     "//apps/media/examples/audio_player",
+    "//apps/media/examples/master_gain",
     "//apps/media/examples/media_player",
     "//apps/media/examples/media_player_flutter",
     "//apps/media/examples/vu_meter",
