@@ -555,10 +555,12 @@ mod tests {
 
         // If we set a signal, we should be able to wait for it.
         assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(), MX_USER_SIGNAL_0);
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+            MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(), MX_USER_SIGNAL_0);
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+            MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Now clear it, and waiting should time out again.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
@@ -577,26 +579,26 @@ mod tests {
           WaitItem { handle: e2.get_ref(), waitfor: MX_USER_SIGNAL_1, pending: MX_SIGNAL_NONE },
         ];
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-        assert_eq!(items[0].pending, MX_SIGNAL_NONE);
-        assert_eq!(items[1].pending, MX_SIGNAL_NONE);
+        assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
 
         // Signal one object and it should return success.
         assert!(e1.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
-        assert_eq!(items[0].pending, MX_USER_SIGNAL_0);
-        assert_eq!(items[1].pending, MX_SIGNAL_NONE);
+        assert_eq!(items[0].pending, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
 
         // Signal the other and it should return both.
         assert!(e2.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
-        assert_eq!(items[0].pending, MX_USER_SIGNAL_0);
-        assert_eq!(items[1].pending, MX_USER_SIGNAL_1);
+        assert_eq!(items[0].pending, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, MX_USER_SIGNAL_1 | MX_SIGNAL_LAST_HANDLE);
 
         // Clear signals on both; now it should time out again.
         assert!(e1.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
         assert!(e2.signal(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-        assert_eq!(items[0].pending, MX_SIGNAL_NONE);
-        assert_eq!(items[1].pending, MX_SIGNAL_NONE);
+        assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
     }
 }

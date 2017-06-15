@@ -56,7 +56,7 @@ impl Default for EventPairOpts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Duration, MX_SIGNAL_NONE, MX_USER_SIGNAL_0};
+    use {Duration, MX_SIGNAL_LAST_HANDLE, MX_SIGNAL_NONE, MX_USER_SIGNAL_0};
     use deadline_after;
 
     #[test]
@@ -69,10 +69,12 @@ mod tests {
 
         // If we set a signal, we should be able to wait for it.
         assert!(p1.signal_peer(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(), MX_USER_SIGNAL_0);
+        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+            MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(), MX_USER_SIGNAL_0);
+        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+            MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Now clear it, and waiting should time out again.
         assert!(p1.signal_peer(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());

@@ -266,7 +266,7 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Duration, MX_CHANNEL_READABLE, MX_CHANNEL_WRITABLE, MX_RIGHT_SAME_RIGHTS, Vmo, VmoOpts};
+    use {Duration, MX_CHANNEL_READABLE, MX_CHANNEL_WRITABLE, MX_RIGHT_SAME_RIGHTS, MX_SIGNAL_LAST_HANDLE, Vmo, VmoOpts};
     use deadline_after;
     use std::thread;
 
@@ -366,7 +366,7 @@ mod tests {
         // Start a new thread to respond to the call.
         let server = thread::spawn(move || {
             assert_eq!(p2.wait(MX_CHANNEL_READABLE, deadline_after(hundred_ms)),
-                Ok(MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE));
+                Ok(MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE));
             let mut buf = MessageBuf::new();
             assert_eq!(p2.read(0, &mut buf), Ok(()));
             assert_eq!(buf.bytes(), b"txidcall");
