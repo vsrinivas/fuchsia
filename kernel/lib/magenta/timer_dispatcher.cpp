@@ -67,7 +67,7 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     canary_.Assert();
 
     // Deadline values 0 and 1 are special.
-    if (deadline <= kMinTimerDeadline)
+    if (deadline < kMinTimerDeadline)
         return MX_ERR_INVALID_ARGS;
 
     // zero period is valid but other small values are not.

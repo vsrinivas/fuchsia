@@ -62,10 +62,21 @@ static bool invalid_calls() {
 
     ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), MX_OK, "");
     ASSERT_EQ(mx_timer_start(timer.get(), 0u, 0u, 0u), MX_ERR_INVALID_ARGS, "");
-    ASSERT_EQ(mx_timer_start(timer.get(), 1u, 0u, 0u), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(mx_timer_start(timer.get(), MX_TIMER_MIN_DEADLINE - 1, 0u, 0u), ERR_INVALID_ARGS, "");
 
     const auto deadline_timer = mx_deadline_after(MX_MSEC(1));
     ASSERT_EQ(mx_timer_start(timer.get(), deadline_timer, MX_USEC(2), 0u), MX_ERR_NOT_SUPPORTED, "");
+
+    END_TEST;
+}
+
+static bool edge_cases() {
+    BEGIN_TEST;
+
+    mx::handle timer;
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), NO_ERROR, "");
+    ASSERT_EQ(mx_timer_start(timer.get(), MX_TIMER_MIN_DEADLINE, 0u, 0u), MX_OK, "");
+    ASSERT_EQ(mx_timer_start(timer.get(), MX_TIMER_MIN_DEADLINE, MX_TIMER_MIN_PERIOD, 0u), MX_OK, "");
 
     END_TEST;
 }
@@ -100,6 +111,7 @@ BEGIN_TEST_CASE(timers_test)
 RUN_TEST(basic_test)
 RUN_TEST(restart_test)
 RUN_TEST(invalid_calls)
+RUN_TEST(edge_cases)
 RUN_TEST(periodic)
 END_TEST_CASE(timers_test)
 
