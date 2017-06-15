@@ -350,11 +350,11 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
 {
     DLOG("intel_i915_bind start mx_device %p", mx_device);
 
-    pci_protocol_t* pci;
-    if (device_op_get_protocol(mx_device, MX_PROTOCOL_PCI, (void**)&pci))
-        return DRET_MSG(MX_ERR_NOT_SUPPORTED, "device_op_get_protocol failed");
+    pci_protocol_t pci;
+    if (device_get_protocol(mx_device, MX_PROTOCOL_PCI, (void*)&pci))
+        return DRET_MSG(MX_ERR_NOT_SUPPORTED, "device_get_protocol failed");
 
-    mx_status_t status = pci->claim_device(mx_device);
+    mx_status_t status = pci.ops->claim_device(pci.ctx);
     if (status < 0)
         return DRET_MSG(status, "claim_device failed");
 

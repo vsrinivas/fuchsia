@@ -55,7 +55,7 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     void* addr;
     uint64_t size;
     mx_handle_t handle;
-    mx_status_t status = pci()->map_resource(mx_device(), pci_bar, cache_policy, &addr, &size, &handle);
+    mx_status_t status = pci().ops->map_resource(pci().ctx, pci_bar, cache_policy, &addr, &size, &handle);
     if (status != MX_OK)
         return DRETP(nullptr, "map_resource failed");
 
@@ -81,7 +81,7 @@ bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
 {
     uint32_t max_irqs;
-    mx_status_t status = pci()->query_irq_mode_caps(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
+    mx_status_t status = pci().ops->query_irq_mode_caps(pci().ctx, MX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
     if (status != MX_OK)
         return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
 
@@ -89,16 +89,16 @@ std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
         return DRETP(nullptr, "max_irqs is zero");
 
     // Mode must be Disabled before we can request Legacy
-    status = pci()->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_DISABLED, 0);
+    status = pci().ops->set_irq_mode(pci().ctx, MX_PCIE_IRQ_MODE_DISABLED, 0);
     if (status != MX_OK)
         return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
 
-    status = pci()->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, 1);
+    status = pci().ops->set_irq_mode(pci().ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
     if (status != MX_OK)
         return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
 
     mx_handle_t interrupt_handle;
-    status = pci()->map_interrupt(mx_device(), 0, &interrupt_handle);
+    status = pci().ops->map_interrupt(pci().ctx, 0, &interrupt_handle);
     if (status < 0)
         return DRETP(nullptr, "map_interrupt failed (%d)", status);
 
@@ -120,17 +120,16 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
     if (!device_handle)
         return DRETP(nullptr, "device_handle is null, cannot create PlatformDevice");
 
-    void* protocol;
+    pci_protocol_t pci;
     mx_device_t* mx_device = reinterpret_cast<mx_device_t*>(device_handle);
-    mx_status_t status = device_op_get_protocol(mx_device, MX_PROTOCOL_PCI, &protocol);
+    mx_status_t status = device_get_protocol(mx_device, MX_PROTOCOL_PCI, &pci);
     if (status != MX_OK)
         return DRETP(nullptr, "pci protocol is null, cannot create PlatformDevice");
 
     pci_config_t* cfg;
     size_t cfg_size;
     mx_handle_t cfg_handle;
-    pci_protocol_t* pci = reinterpret_cast<pci_protocol_t*>(protocol);
-    status = pci->map_resource(mx_device, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
             reinterpret_cast<void**>(&cfg), &cfg_size, &cfg_handle);
     if (status != MX_OK)
         return DRETP(nullptr, "failed to map pci config, cannot create PlatformDevice");

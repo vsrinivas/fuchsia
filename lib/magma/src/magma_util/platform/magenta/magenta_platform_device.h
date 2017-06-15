@@ -13,7 +13,7 @@ namespace magma {
 
 class MagentaPlatformDevice : public PlatformDevice {
 public:
-    MagentaPlatformDevice(mx_device_t* mx_device, pci_protocol_t* pci, pci_config_t* cfg,
+    MagentaPlatformDevice(mx_device_t* mx_device, pci_protocol_t& pci, pci_config_t* cfg,
                           size_t cfg_size, mx_handle_t cfg_handle)
         : mx_device_(mx_device), pci_(pci), cfg_(cfg), cfg_size_(cfg_size), cfg_handle_(cfg_handle)
     {
@@ -32,11 +32,11 @@ public:
 
 private:
     mx_device_t* mx_device() const { return mx_device_; }
-    pci_protocol_t* pci() const { return pci_; }
+    const pci_protocol_t& pci() const { return pci_; }
     pci_config_t* pci_config() const { return cfg_; }
 
     mx_device_t* mx_device_;
-    pci_protocol_t* pci_;
+    pci_protocol_t pci_;
     pci_config_t* cfg_;
     size_t cfg_size_;
     mx_handle_t cfg_handle_;
