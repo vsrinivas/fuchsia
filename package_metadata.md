@@ -15,7 +15,7 @@ See [https://fuchsia.googlesource.com/pm#metadata]
 
 See [https://fuchsia.googlesource.com/pm#contents]
 
-## contents
+## signature
 
 See [https://fuchsia.googlesource.com/pm#signature]
 
