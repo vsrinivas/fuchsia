@@ -310,6 +310,11 @@ static bcm_bus_protocol_ops_t bcm_bus_protocol = {
 static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
 
+    platform_device_protocol_t pdp;
+    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdp) != MX_OK) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
     // Carve out some address space for the device -- it's memory mapped.
     mx_status_t status = mx_mmap_device_memory(
         get_root_resource(),
@@ -339,6 +344,8 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     bcm_vc_poweron(bcm_dev_sd);
     bcm_vc_poweron(bcm_dev_usb);
     bcm_vc_poweron(bcm_dev_i2c1);
+
+    pdp.ops->register_protocol(pdp.ctx, MX_PROTOCOL_BCM_BUS, &bcm_bus_protocol, NULL);
 
     return MX_OK;
 }

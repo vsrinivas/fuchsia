@@ -11,6 +11,7 @@ __BEGIN_CDECLS;
 
 typedef struct {
     mx_status_t (*find_protocol)(void* ctx, uint32_t proto_id, void* out);
+    mx_status_t (*register_protocol)(void* ctx, uint32_t proto_id, void* proto_ops, void* proto_ctx);
 } platform_device_protocol_ops_t;
 
 typedef struct {
