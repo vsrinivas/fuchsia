@@ -45,7 +45,7 @@ constexpr uint32_t kContentSceneResourceId = 1u;
 constexpr uint32_t kCursorImageResourceId = 2u;
 
 // Path of the cursor image to load.
-constexpr char kCursorImage[] = "/system/data/root_presenter/cursor32.png";
+constexpr char kCursorImage[] = "/pkg/data/cursor32.png";
 
 }  // namespace
 

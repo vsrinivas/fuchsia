@@ -57,9 +57,8 @@ package("mozart_tests") {
   ]
 }
 
-# Cannot be sandboxed yet because it relies upon /dev/class/input
 package("root_presenter") {
-  app = true
+  archive = true
 
   deps = [
     "src/root_presenter",
@@ -67,11 +66,17 @@ package("root_presenter") {
 
   binaries = [ {
         name = "root_presenter"
+        dest = "app"
       } ]
 
   resources = [ {
         path = rebase_path("src/root_presenter/resources/cursor32.png")
-        dest = "root_presenter/cursor32.png"
+        dest = "cursor32.png"
+      } ]
+
+  meta = [ {
+        path = rebase_path("src/root_presenter/meta/sandbox")
+        dest = "sandbox"
       } ]
 }
 
