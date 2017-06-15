@@ -210,8 +210,8 @@ UserRunnerImpl::UserRunnerImpl(
   fidl::InterfaceHandle<StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
 
-  fidl::InterfaceHandle<FocusProvider> focus_provider;
-  auto focus_provider_request = focus_provider.NewRequest();
+  fidl::InterfaceHandle<FocusProvider> focus_provider_maxwell;
+  auto focus_provider_request_maxwell = focus_provider_maxwell.NewRequest();
 
   fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
@@ -266,7 +266,7 @@ UserRunnerImpl::UserRunnerImpl(
 
   maxwell_factory->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
-      std::move(story_provider), std::move(focus_provider),
+      std::move(story_provider), std::move(focus_provider_maxwell),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
 
@@ -280,19 +280,21 @@ UserRunnerImpl::UserRunnerImpl(
                 user_intelligence_provider_.get(), std::placeholders::_1));
   // End init maxwell.
 
-  fidl::InterfacePtr<FocusProvider> focus_provider_2;
-  auto focus_provider_request_2 = focus_provider_2.NewRequest();
+  fidl::InterfacePtr<FocusProvider> focus_provider_story_provider;
+  auto focus_provider_request_story_provider =
+      focus_provider_story_provider.NewRequest();
 
   story_provider_impl_.reset(new StoryProviderImpl(
       &user_scope_, device_id, ledger_.get(), root_page_.get(),
       std::move(story_shell), component_context_info,
-      std::move(focus_provider_2), intelligence_services_.get(),
+      std::move(focus_provider_story_provider), intelligence_services_.get(),
       user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   focus_handler_.reset(new FocusHandler(device_id, root_page_.get()));
-  focus_handler_->AddProviderBinding(std::move(focus_provider_request));
-  focus_handler_->AddProviderBinding(std::move(focus_provider_request_2));
+  focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
+  focus_handler_->AddProviderBinding(
+      std::move(focus_provider_request_story_provider));
 
   visible_stories_handler_.reset(new VisibleStoriesHandler);
   visible_stories_handler_->AddProviderBinding(

@@ -996,6 +996,10 @@ void StoryControllerImpl::DefocusModule(
   }
 }
 
+void StoryControllerImpl::RequestStoryFocus() {
+  story_provider_impl_->RequestStoryFocus(story_id_);
+}
+
 const fidl::String& StoryControllerImpl::GetStoryId() const {
   return story_id_;
 }

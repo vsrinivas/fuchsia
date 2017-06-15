@@ -87,6 +87,8 @@ class ModuleContextImpl : ModuleContext {
   // |ModuleContext|
   void GetStoryId(const GetStoryIdCallback& callback) override;
   // |ModuleContext|
+  void RequestFocus() override;
+  // |ModuleContext|
   void Ready() override;
   // |ModuleContext|
   void Done() override;

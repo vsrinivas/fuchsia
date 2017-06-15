@@ -773,6 +773,12 @@ void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
       });
 }
 
+// Called by StoryControllerImpl on behalf of ModuleContextImpl
+void StoryProviderImpl::RequestStoryFocus(const fidl::String& story_id) {
+  FTL_LOG(INFO) << "RequestStoryFocus() " << story_id;
+  focus_provider_->Request(story_id);
+}
+
 // |StoryProvider|
 void StoryProviderImpl::GetController(
     const fidl::String& story_id,

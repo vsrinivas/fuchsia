@@ -83,6 +83,11 @@ interface ModuleContext {
   // suggestion proposal to resume this story.
   GetStoryId() => (string story_id);
 
+  // Requests that the current story and module gain focus.
+  // HACK(zbowling): This is temporary and ripe for abuse by modules authors.
+  // Callers should be limited, possibly by policy, from taking user focus.
+  RequestFocus();
+
   // The Module instance holding this handle to the ModuleContext
   // declares it's ready to run. The module context implementation
   // notifies all ModuleWatchers registered on the ModuleController by

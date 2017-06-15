@@ -92,6 +92,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void GetStoryInfo(const fidl::String& story_id,
                     const GetStoryInfoCallback& callback) override;
 
+  // Called by StoryControllerImpl. Sends request to FocusProvider
+  void RequestStoryFocus(const fidl::String& story_id);
+
  private:
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
   using ImportanceMap = fidl::Map<fidl::String, float>;

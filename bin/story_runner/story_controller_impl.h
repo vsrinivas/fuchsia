@@ -103,11 +103,14 @@ class StoryControllerImpl : StoryController, StoryContext {
   void GetImportance(const ContextState& context_state,
                      const std::function<void(float)>& result);
 
-  // Called by ModuleControllerImpl
+  // Called by ModuleControllerImpl and ModuleContextImpl
   void FocusModule(const fidl::Array<fidl::String>& module_path);
 
   // Called by ModuleControllerImpl
   void DefocusModule(const fidl::Array<fidl::String>& module_path);
+
+  // Called by ModuleContextImpl
+  void RequestStoryFocus();
 
   // Called by ModuleControllerImpl.
   //

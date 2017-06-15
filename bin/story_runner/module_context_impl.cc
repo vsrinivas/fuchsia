@@ -100,6 +100,13 @@ void ModuleContextImpl::GetStoryId(const GetStoryIdCallback& callback) {
   callback(story_controller_impl_->GetStoryId());
 }
 
+void ModuleContextImpl::RequestFocus() {
+  // TODO(zbowling): we should be asking the module_controller_impl_ if it's ok.
+  // For now, we are not going to "request" anything. Just do it.
+  story_controller_impl_->FocusModule(module_path_);
+  story_controller_impl_->RequestStoryFocus();
+}
+
 void ModuleContextImpl::Ready() {
   if (module_controller_impl_) {
     module_controller_impl_->SetState(ModuleState::RUNNING);
