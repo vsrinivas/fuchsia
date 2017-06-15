@@ -100,17 +100,23 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
     }
 }
 
-uint32_t BuildHandleStats(const ProcessDispatcher& pd, uint32_t* handle_type, size_t size) {
-    AutoLock lock(&pd.handle_table_lock_);
+// Returns the count of a process's handles. If |handle_type| is non-NULL,
+// it should point to |size| elements. For each handle, the corresponding
+// mx_obj_type_t-indexed element of |handle_type| is incremented.
+static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
+                                 uint32_t* handle_type, size_t size) {
     uint32_t total = 0;
-    for (const auto& handle : pd.handles_) {
+    pd.ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
+                         mxtl::RefPtr<Dispatcher> disp) {
         if (handle_type) {
-            uint32_t type = static_cast<uint32_t>(handle.dispatcher()->get_type());
-            if (size > type)
+            uint32_t type = static_cast<uint32_t>(disp->get_type());
+            if (size > type) {
                 ++handle_type[type];
+            }
         }
         ++total;
-    }
+        return MX_OK;
+    });
     return total;
 }
 
@@ -123,13 +129,14 @@ size_t ProcessDispatcher::PageCount() const {
     return aspace_->AllocatedPages();
 }
 
-static char* DumpHandleTypeCountLocked(const ProcessDispatcher& pd) {
-    static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
-
+// Counts the process's handles by type and formats them into the provided
+// buffer as strings.
+static void FormatHandleTypeCount(const ProcessDispatcher& pd,
+                                  char *buf, size_t buf_len) {
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, buf_len, "%3u: %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
              types[MX_OBJ_TYPE_JOB],
              types[MX_OBJ_TYPE_PROCESS],
@@ -141,21 +148,24 @@ static char* DumpHandleTypeCountLocked(const ProcessDispatcher& pd) {
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
              types[MX_OBJ_TYPE_IOPORT2]
              );
-    return buf;
 }
 
 void DumpProcessList() {
-    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vo #vm #ch #ev #ip [  job:name]\n", "id");
+    printf("%8s-s  #t  #pg  #h: #jb #pr #th #vo #vm #ch #ev #ip [  job:name]\n",
+           "id");
 
     auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
+        char handle_counts[(MX_OBJ_TYPE_LAST * 4) + 1 + /*slop*/ 16];
+        FormatHandleTypeCount(*process, handle_counts, sizeof(handle_counts));
+
         char pname[MX_MAX_NAME_LEN];
         process->get_name(pname);
-        printf("%8" PRIu64 "-%c %3u %4zu %s  [%5" PRIu64 ":%s]\n",
+        printf("%8" PRIu64 "-%c %3u %4zu %s [%5" PRIu64 ":%s]\n",
                process->get_koid(),
                StateChar(*process),
                process->ThreadCount(),
                process->PageCount(),
-               DumpHandleTypeCountLocked(*process),
+               handle_counts,
                process->get_related_koid(),
                pname);
     });
@@ -165,23 +175,21 @@ void DumpProcessList() {
 void DumpProcessHandles(mx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
-        printf("process not found!\n");
+        printf("process %" PRIu64 " not found!\n", id);
         return;
     }
 
     printf("process [%" PRIu64 "] handles :\n", id);
     printf("handle       koid : type\n");
 
-    AutoLock lock(&pd->handle_table_lock_);
     uint32_t total = 0;
-    for (const auto& handle : pd->handles_) {
-        auto type = handle.dispatcher()->get_type();
+    pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
+                          mxtl::RefPtr<Dispatcher> disp) {
         printf("%9d %7" PRIu64 " : %s\n",
-            pd->MapHandleToValue(&handle),
-            handle.dispatcher()->get_koid(),
-            ObjectTypeToString(type));
+            handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
         ++total;
-    }
+        return MX_OK;
+    });
     printf("total: %u handles\n", total);
 }
 
@@ -311,8 +319,7 @@ public:
 } // namespace
 
 // Dumps all VMOs associated with a process.
-// Non-static so this can be a friend of ProcessDispatcher.
-void DumpProcessVmObjects(mx_koid_t id) {
+static void DumpProcessVmObjects(mx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
         printf("process not found!\n");
@@ -325,20 +332,14 @@ void DumpProcessVmObjects(mx_koid_t id) {
     int count = 0;
     uint64_t total_size = 0;
     uint64_t total_alloc = 0;
-    AutoLock lock(&pd->handle_table_lock_);
-    for (const auto& handle : pd->handles_) {
-        auto d = handle.dispatcher();
-        auto vmod = DownCastDispatcher<VmObjectDispatcher>(&d);
+    pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
+                          mxtl::RefPtr<Dispatcher> disp) {
+        auto vmod = DownCastDispatcher<VmObjectDispatcher>(&disp);
         if (vmod == nullptr) {
-            continue;
+            return MX_OK;
         }
         auto vmo = vmod->vmo();
-
-        DumpVmObject(
-            *vmo,
-            pd->MapHandleToValue(&handle),
-            handle.rights(),
-            handle.dispatcher()->get_koid());
+        DumpVmObject(*vmo, handle, rights, vmod->get_koid());
 
         // TODO: Doesn't handle the case where a process has multiple
         // handles to the same VMO; will double-count all of these totals.
@@ -347,7 +348,8 @@ void DumpProcessVmObjects(mx_koid_t id) {
         // TODO: Doing this twice (here and in DumpVmObject) is a waste of
         // work, and can get out of sync.
         total_alloc += vmo->AllocatedPages() * PAGE_SIZE;
-    }
+        return MX_OK;
+    });
     char size_str[MAX_FORMAT_SIZE_LEN];
     char alloc_str[MAX_FORMAT_SIZE_LEN];
     printf("  total: %d VMOs, size %s, alloc %s\n",

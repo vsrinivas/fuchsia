@@ -160,6 +160,26 @@ public:
 
     bool IsHandleValid(mx_handle_t handle_value);
 
+    // Calls the provided
+    // |mx_status_t func(mx_handle_t, mx_rights_t, mxtl::RefPtr<Dispatcher>)|
+    // on every handle owned by the process. Stops if |func| returns an error,
+    // returning the error value.
+    template <typename T>
+    status_t ForEachHandle(T func) const {
+        AutoLock lock(&handle_table_lock_);
+        for (const auto& handle : handles_) {
+            // It would be nice to only pass a const Dispatcher* to the
+            // callback, but many callers will use DownCastDispatcher()
+            // which requires a (necessarily non-const) RefPtr<Dispatcher>.
+            mx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
+                                 mxtl::move(handle.dispatcher()));
+            if (s != MX_OK) {
+                return s;
+            }
+        }
+        return MX_OK;
+    }
+
     // accessors
     Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
@@ -243,9 +263,6 @@ private:
 
     // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();
-    friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
-    friend void DumpProcessHandles(mx_koid_t id);
-    friend void DumpProcessVmObjects(mx_koid_t id);
     friend void KillProcess(mx_koid_t id);
     friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
