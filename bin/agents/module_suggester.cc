@@ -43,11 +43,6 @@ const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
        0xffe52d27 /*YouTube red from color spec*/, "",
        "http://s-media-cache-ak0.pinimg.com/originals/bf/66/4b/"
        "bf664b1b730ac0423225c0c3526a44ef.jpg"}},
-     {"Music",
-      {"file:///system/apps/music_story",
-       0xffff8c00 /*Google Play Music logo orange*/, "",
-       "https://d3rt1990lpmkn.cloudfront.net/640/"
-       "843b5fdc00c829aaf4250e9f611f4d0646391ff5"}},
      {"Noodles",
       {"file:///system/apps/noodles_view", 0xff212121 /*Grey 900*/, "", ""}},
      {"Color",
