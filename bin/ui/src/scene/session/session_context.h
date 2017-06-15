@@ -8,7 +8,7 @@
 #include "escher/escher.h"
 #include "escher/impl/gpu_uploader.h"
 #include "escher/renderer/image_factory.h"
-#include "escher/resources/resource_life_preserver.h"
+#include "escher/resources/resource_recycler.h"
 
 namespace mozart {
 namespace scene {
@@ -43,7 +43,7 @@ class SessionContext {
   virtual void OnSessionTearDown(Session* session) = 0;
 
   virtual vk::Device vk_device() = 0;
-  virtual escher::ResourceLifePreserver* escher_resource_life_preserver() = 0;
+  virtual escher::ResourceRecycler* escher_resource_recycler() = 0;
   virtual escher::ImageFactory* escher_image_factory() = 0;
   virtual escher::impl::GpuUploader* escher_gpu_uploader() = 0;
 };

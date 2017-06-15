@@ -21,7 +21,7 @@ class SessionTest : public ::testing::Test,
   void SetUp() override;
   void TearDown() override;
   vk::Device vk_device() override { return nullptr; };
-  escher::ResourceLifePreserver* escher_resource_life_preserver() override {
+  escher::ResourceRecycler* escher_resource_recycler() override {
     return nullptr;
   };
   escher::ImageFactory* escher_image_factory() override { return nullptr; };

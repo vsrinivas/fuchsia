@@ -12,14 +12,14 @@ namespace scene {
 
 SceneManagerImpl::SceneManagerImpl(
     vk::Device vk_device,
-    escher::ResourceLifePreserver* life_preserver,
+    escher::ResourceRecycler* resource_recycler,
     escher::GpuAllocator* allocator,
     escher::impl::GpuUploader* uploader)
     : session_count_(0),
       vk_device_(vk_device),
-      life_preserver_(life_preserver),
+      resource_recycler_(resource_recycler),
       image_factory_(
-          std::make_unique<escher::SimpleImageFactory>(life_preserver,
+          std::make_unique<escher::SimpleImageFactory>(resource_recycler,
                                                        allocator)),
       gpu_uploader_(uploader),
       renderer_(std::make_unique<Renderer>()) {}

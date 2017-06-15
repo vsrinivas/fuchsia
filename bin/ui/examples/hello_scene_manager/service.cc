@@ -47,7 +47,7 @@ class HelloSceneManagerService : public Demo {
         swapchain_helper_(harness->GetVulkanSwapchain(), renderer_),
         scene_manager_(std::make_unique<SceneManagerImpl>(
             escher()->vulkan_context().device,
-            escher()->resource_life_preserver(),
+            escher()->resource_recycler(),
             escher()->gpu_allocator(),
             escher()->gpu_uploader())),
         binding_(scene_manager_.get()) {

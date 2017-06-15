@@ -24,7 +24,7 @@ Image::Image(Session* session,
     : Resource(session, Image::kTypeInfo),
       memory_(memory),
       image_(ftl::MakeRefCounted<escher::Image>(
-          session->context()->escher_resource_life_preserver(),
+          session->context()->escher_resource_recycler(),
           image_info,
           vk_image,
           memory->escher_gpu_mem())) {}

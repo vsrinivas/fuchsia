@@ -23,7 +23,7 @@ Material::Material(Session* session,
                texture_image,
                texture_image
                    ? ftl::MakeRefCounted<escher::Texture>(
-                         session->context()->escher_resource_life_preserver(),
+                         session->context()->escher_resource_recycler(),
                          texture_image->escher_image(),
                          vk::Filter::eLinear)
                    : escher::TexturePtr(),

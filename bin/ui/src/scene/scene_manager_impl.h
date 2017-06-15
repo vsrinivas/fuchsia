@@ -24,7 +24,7 @@ class Renderer;
 class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
  public:
   SceneManagerImpl(vk::Device vk_device,
-                   escher::ResourceLifePreserver* life_preserver,
+                   escher::ResourceRecycler* resource_recycler,
                    escher::GpuAllocator* allocator,
                    escher::impl::GpuUploader* uploader);
   SceneManagerImpl();
@@ -51,8 +51,8 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
   // TODO: Should this belong in Renderer, or something like a
   // SessionResourceFactory?
   vk::Device vk_device() override { return vk_device_; }
-  escher::ResourceLifePreserver* escher_resource_life_preserver() override {
-    return life_preserver_;
+  escher::ResourceRecycler* escher_resource_recycler() override {
+    return resource_recycler_;
   }
   escher::ImageFactory* escher_image_factory() override {
     return image_factory_.get();
@@ -83,7 +83,7 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
   std::atomic<size_t> session_count_;
 
   vk::Device vk_device_;
-  escher::ResourceLifePreserver* life_preserver_;
+  escher::ResourceRecycler* resource_recycler_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   escher::impl::GpuUploader* gpu_uploader_;
 
