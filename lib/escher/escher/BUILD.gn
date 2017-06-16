@@ -178,7 +178,6 @@ static_library("escher") {
     "util/depth_to_color.h",
     "util/image_utils.cc",
     "util/image_utils.h",
-    "util/need.h",
     "util/stopwatch.h",
     "vk/buffer.cc",
     "vk/buffer.h",
