@@ -7,7 +7,7 @@
     "packages": {
         "ime_service": "//apps/mozart:ime_service",
         "jank_view": "//apps/mozart:jank_view",
-        "mozart_tests": "//apps/mozart:tests",
+        "mozart_tests": "//apps/mozart:mozart_tests",
         "mozart": "//apps/mozart",
         "noodles_view": "//apps/mozart:noodles_view",
         "paint_view": "//apps/mozart:paint_view",
