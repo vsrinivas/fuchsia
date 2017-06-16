@@ -105,7 +105,7 @@ public:
      */
     inline status_t EnableBusMaster(bool enabled) {
         if (enabled && disabled_)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
 
         return ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
                          enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
@@ -119,7 +119,7 @@ public:
      */
     inline status_t EnablePio(bool enabled) {
         if (enabled && disabled_)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
 
         return ModifyCmd(enabled ? 0 : PCI_COMMAND_IO_EN,
                          enabled ? PCI_COMMAND_IO_EN : 0);
@@ -133,7 +133,7 @@ public:
      */
     inline status_t EnableMmio(bool enabled) {
         if (enabled && disabled_)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
 
         return ModifyCmd(enabled ? 0 : PCI_COMMAND_MEM_EN,
                          enabled ? PCI_COMMAND_MEM_EN : 0);
@@ -183,7 +183,7 @@ public:
      * @return A status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
-     * ++ ERR_UNAVAILABLE
+     * ++ MX_ERR_UNAVAILABLE
      *    The device has become unplugged and is waiting to be released.
      */
     status_t GetIrqMode(pcie_irq_mode_info_t* out_info) const;
@@ -209,16 +209,16 @@ public:
      * @return A status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
-     * ++ ERR_UNAVAILABLE
+     * ++ MX_ERR_UNAVAILABLE
      *    The device has become unplugged and is waiting to be released.
-     * ++ ERR_BAD_STATE
+     * ++ MX_ERR_BAD_STATE
      *    The device cannot transition into the selected mode at this point in time
      *    due to the mode it is currently in.
-     * ++ ERR_NOT_SUPPORTED
+     * ++ MX_ERR_NOT_SUPPORTED
      *    ++ The chosen mode is not supported by the device
      *    ++ The device supports the chosen mode, but does not support the number of
      *       IRQs requested.
-     * ++ ERR_NO_RESOURCES
+     * ++ MX_ERR_NO_RESOURCES
      *    The system is unable to allocate sufficient system IRQs to satisfy the
      *    number of IRQs and exclusivity mode requested the device driver.
      */
@@ -236,7 +236,7 @@ public:
 
         result = SetIrqMode(PCIE_IRQ_MODE_DISABLED, 0);
 
-        DEBUG_ASSERT(result == NO_ERROR);
+        DEBUG_ASSERT(result == MX_OK);
     }
 
     /**
@@ -251,11 +251,11 @@ public:
      * @return A status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
-     * ++ ERR_UNAVAILABLE
+     * ++ MX_ERR_UNAVAILABLE
      *    The device has become unplugged and is waiting to be released.
-     * ++ ERR_BAD_STATE
+     * ++ MX_ERR_BAD_STATE
      *    The device is in DISABLED IRQ mode.
-     * ++ ERR_INVALID_ARGS
+     * ++ MX_ERR_INVALID_ARGS
      *    The irq_id parameter is out of range for the currently configured mode.
      */
     status_t RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
@@ -269,14 +269,14 @@ public:
      * @return A status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
-     * ++ ERR_UNAVAILABLE
+     * ++ MX_ERR_UNAVAILABLE
      *    The device has become unplugged and is waiting to be released.
-     * ++ ERR_BAD_STATE
+     * ++ MX_ERR_BAD_STATE
      *    Attempting to mask or unmask an IRQ while in the DISABLED mode or with no
      *    handler registered.
-     * ++ ERR_INVALID_ARGS
+     * ++ MX_ERR_INVALID_ARGS
      *    The irq_id parameter is out of range for the currently configured mode.
-     * ++ ERR_NOT_SUPPORTED
+     * ++ MX_ERR_NOT_SUPPORTED
      *    The device is operating in MSI mode, but neither the PCI device nor the
      *    platform interrupt controller support masking the MSI vector.
      */

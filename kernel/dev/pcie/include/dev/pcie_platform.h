@@ -94,7 +94,7 @@ public:
         // Bus driver code should not be calling this if the platform does not
         // indicate support for MSI.
         DEBUG_ASSERT(false);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     /**

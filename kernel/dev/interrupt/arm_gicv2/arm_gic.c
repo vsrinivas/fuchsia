@@ -146,33 +146,33 @@ static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
         (irq & 0xf);
 
     if (irq >= 16)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     LTRACEF("GICD_SGIR: %x\n", val);
 
     GICREG(0, GICD_SGIR) = val;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t gic_mask_interrupt(unsigned int vector)
 {
     if (vector >= max_irqs)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     gic_set_enable(vector, false);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t gic_unmask_interrupt(unsigned int vector)
 {
     if (vector >= max_irqs)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     gic_set_enable(vector, true);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t gic_configure_interrupt(unsigned int vector,
@@ -180,21 +180,21 @@ static status_t gic_configure_interrupt(unsigned int vector,
                                         enum interrupt_polarity pol)
 {
     if (vector >= max_irqs)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (tm != IRQ_TRIGGER_MODE_EDGE) {
         // We don't currently support non-edge triggered interrupts via the GIC,
         // and we pre-initialize everything to edge triggered.
         // TODO: re-evaluate this.
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
         // TODO: polarity should actually be configure through a GPIO controller
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t gic_get_interrupt_config(unsigned int vector,
@@ -202,12 +202,12 @@ static status_t gic_get_interrupt_config(unsigned int vector,
                                          enum interrupt_polarity* pol)
 {
     if (vector >= max_irqs)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
     if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static unsigned int gic_remap_interrupt(unsigned int vector)
@@ -271,7 +271,7 @@ static status_t gic_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
         arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static enum handler_return arm_ipi_generic_handler(void *arg) {

@@ -58,7 +58,7 @@ static status_t bcm28xx_mask_interrupt(unsigned int vector) {
 
     spin_unlock_irqrestore(&lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t bcm28xx_unmask_interrupt(unsigned int vector) {
@@ -98,7 +98,7 @@ static status_t bcm28xx_unmask_interrupt(unsigned int vector) {
 
     spin_unlock_irqrestore(&lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static bool bcm28xx_is_valid_interrupt(unsigned int vector, uint32_t flags) {
@@ -116,7 +116,7 @@ static status_t bcm28xx_configure_interrupt(unsigned int vector,
                                             enum interrupt_trigger_mode tm,
                                             enum interrupt_polarity pol)
 {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /*
@@ -128,7 +128,7 @@ static status_t bcm28xx_get_interrupt_config(unsigned int vector,
 {
     if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
     if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static enum handler_return bcm28xx_handle_irq(struct arm64_iframe_short* frame) {
@@ -235,7 +235,7 @@ static status_t bcm28xx_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void bcm28xx_init_percpu_early(void) {

@@ -52,7 +52,7 @@ struct udisplay_info {
 static struct udisplay_info g_udisplay;
 
 status_t udisplay_init(void) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void dlog_bluescreen_halt(void) {
@@ -114,7 +114,7 @@ status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
     if (result)
         g_udisplay.framebuffer_virt = 0;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo) {
@@ -126,28 +126,28 @@ status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo) {
     status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
             0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
             mxtl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = mapping->MapRange(0, size, true);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mapping->Destroy();
         return status;
     }
 
     g_udisplay.framebuffer_virt = reinterpret_cast<void*>(mapping->base());
     g_udisplay.framebuffer_size = size;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t udisplay_set_display_info(struct display_info* display) {
     memcpy(&g_udisplay.info, display, sizeof(struct display_info));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t udisplay_bind_gfxconsole(void) {
     if (g_udisplay.framebuffer_virt == 0)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     register_print_callback(&qrcode_cb);
 
@@ -156,5 +156,5 @@ status_t udisplay_bind_gfxconsole(void) {
     g_udisplay.info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER | DISPLAY_FLAG_CRASH_FRAMEBUFFER;
     gfxconsole_bind_display(&g_udisplay.info, nullptr);
 
-    return NO_ERROR;
+    return MX_OK;
 }

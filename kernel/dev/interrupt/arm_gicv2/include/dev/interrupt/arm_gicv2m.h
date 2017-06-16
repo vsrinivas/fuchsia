@@ -41,10 +41,10 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, 
  * @param out_info A pointer to the structure which will hold info about the frame
  * @return A status code indicating the success or failure of the operation.
  * Status codes may include...
- *  ++ ERR_UNAVAILABLE The GICv2m subsystem was never initialized
- *  ++ ERR_NOT_FOUND frame_ndx is out of range
- *  ++ ERR_INVALID_ARGS out_info is NULL
- *  ++ ERR_BAD_STATE The frame index exists, but the registers in the frame
+ *  ++ MX_ERR_UNAVAILABLE The GICv2m subsystem was never initialized
+ *  ++ MX_ERR_NOT_FOUND frame_ndx is out of range
+ *  ++ MX_ERR_INVALID_ARGS out_info is NULL
+ *  ++ MX_ERR_BAD_STATE The frame index exists, but the registers in the frame
  *     appear to be corrupt or invalid (internal error)
  */
 status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_info);

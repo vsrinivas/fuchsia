@@ -28,13 +28,13 @@ status_t arm_gicv2m_msi_init(void) {
     status_t ret;
 
     ret = p2ra_init(&g_32bit_targets, PCIE_MAX_MSI_IRQS);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         TRACEF("Failed to initialize 32 bit allocation pool!\n");
         return ret;
     }
 
     ret = p2ra_init(&g_64bit_targets, PCIE_MAX_MSI_IRQS);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         TRACEF("Failed to initialize 64 bit allocation pool!\n");
         p2ra_free(&g_32bit_targets);
         return ret;
@@ -50,14 +50,14 @@ status_t arm_gicv2m_msi_init(void) {
      * system more sophisticated.
      */
     arm_gicv2m_frame_info_t info;
-    for (uint i = 0; arm_gicv2m_get_frame_info(i, &info) == NO_ERROR; ++i) {
+    for (uint i = 0; arm_gicv2m_get_frame_info(i, &info) == MX_OK; ++i) {
         p2ra_state_t* pool = ((uint64_t)info.doorbell & 0xFFFFFFFF00000000)
                            ? &g_64bit_targets
                            : &g_32bit_targets;
 
         uint len = info.end_spi_id - info.start_spi_id + 1;
         ret = p2ra_add_range(pool, info.start_spi_id, len);
-        if (ret != NO_ERROR) {
+        if (ret != MX_OK) {
             TRACEF("Failed to add MSI IRQ range [%u, %u] to allocator (ret %d).\n",
                     info.start_spi_id, len, ret);
             goto finished;
@@ -65,7 +65,7 @@ status_t arm_gicv2m_msi_init(void) {
     }
 
 finished:
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         p2ra_free(&g_32bit_targets);
         p2ra_free(&g_64bit_targets);
     }
@@ -78,15 +78,15 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
                                     bool is_msix,
                                     pcie_msi_block_t* out_block) {
     if (!out_block)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (out_block->allocated)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
-    status_t ret = ERR_INTERNAL;
+    status_t ret = MX_ERR_INTERNAL;
     bool is_32bit = false;
     uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
     uint alloc_start;
@@ -97,13 +97,13 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
         ret = p2ra_allocate_range(&g_64bit_targets, alloc_size, &alloc_start);
 
     /* No allocation yet?  Fall back on the 32 bit pool */
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         ret = p2ra_allocate_range(&g_32bit_targets, alloc_size, &alloc_start);
         is_32bit = true;
     }
 
     /* If we have not managed to allocate yet, then we fail */
-    if (ret != NO_ERROR)
+    if (ret != MX_OK)
         return ret;
 
     /* Find the target physical address for this allocation.
@@ -114,7 +114,7 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
      * about this.
      */
     arm_gicv2m_frame_info_t info;
-    for (uint i = 0; (ret = arm_gicv2m_get_frame_info(i, &info)) == NO_ERROR; ++i) {
+    for (uint i = 0; (ret = arm_gicv2m_get_frame_info(i, &info)) == MX_OK; ++i) {
         uint alloc_end = alloc_start + alloc_size - 1;
 
         if (((alloc_start >= info.start_spi_id) && (alloc_start <= info.end_spi_id)) &&
@@ -123,8 +123,8 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
     }
 
     /* This should never ever fail */
-    DEBUG_ASSERT(ret == NO_ERROR);
-    if (ret != NO_ERROR) {
+    DEBUG_ASSERT(ret == MX_OK);
+    if (ret != MX_OK) {
         p2ra_free_range(is_32bit ? &g_32bit_targets : &g_64bit_targets, alloc_start, alloc_size);
         return ret;
     }
@@ -136,7 +136,7 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
     out_block->tgt_addr     = info.doorbell;
     out_block->tgt_data     = alloc_start;
     out_block->allocated    = true;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void arm_gicv2m_free_msi_block(pcie_msi_block_t* block) {

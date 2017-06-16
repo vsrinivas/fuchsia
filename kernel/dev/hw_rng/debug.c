@@ -16,7 +16,7 @@ static int cmd_rng32(int argc, const cmd_args *argv, uint32_t flags)
 {
     uint32_t val = hw_rng_get_u32();
     printf("Random val = %u (0x%08x)\n", val, val);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
@@ -28,7 +28,7 @@ static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
                "wait  : true  -> wait indefinitely for bytes to be generated\n"
                "      : false -> terminate if HW generator runs out of entropy (default)\n",
                argv[0].str);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     printf("Generating %lu random bytes\n", argv[1].u);
@@ -53,7 +53,7 @@ static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 STATIC_COMMAND_START

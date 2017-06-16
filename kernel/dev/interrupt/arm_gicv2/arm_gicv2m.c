@@ -71,15 +71,15 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, 
 
 status_t arm_gicv2m_get_frame_info(const uint frame_ndx, arm_gicv2m_frame_info_t* out_info) {
     if (!out_info)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     memset(out_info, 0, sizeof(*out_info));
 
     if (!g_reg_frames || !g_reg_frame_count)
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
 
     if (frame_ndx >= g_reg_frame_count)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     uint32_t type_reg = REG_RD(g_reg_frames_virt[frame_ndx], MSI_TYPER_OFFSET);
     uint     base_spi = (type_reg >> 16) & 0x3FF;
@@ -89,12 +89,12 @@ status_t arm_gicv2m_get_frame_info(const uint frame_ndx, arm_gicv2m_frame_info_t
     if (!num_spi ||
         (base_spi < MIN_VALID_MSI_SPI) ||
         (last_spi > MAX_VALID_MSI_SPI))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     out_info->start_spi_id = base_spi;
     out_info->end_spi_id   = last_spi;
     out_info->doorbell     = g_reg_frames[frame_ndx] + MSI_SETSPI_NS_OFFSET;
     out_info->iid          = REG_RD(g_reg_frames_virt[frame_ndx], MSI_IIDR_OFFSET);
 
-    return NO_ERROR;
+    return MX_OK;
 }

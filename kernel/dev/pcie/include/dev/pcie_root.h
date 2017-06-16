@@ -42,8 +42,8 @@ public:
     // @param pin     The pin we want to swizzle
     // @param irq     An output pointer for what IRQ this pin goes to
     //
-    // @return NO_ERROR if we successfully swizzled
-    // @return ERR_NOT_FOUND if we did not know how to swizzle this pin
+    // @return MX_OK if we successfully swizzled
+    // @return MX_ERR_NOT_FOUND if we did not know how to swizzle this pin
     virtual status_t Swizzle(uint dev_id, uint func_id, uint pin, uint *irq) = 0;
 
     // WAVL-tree Index

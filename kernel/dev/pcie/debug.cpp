@@ -670,13 +670,13 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv, uint32_t flags) {
             printf("       -e : Dump raw extended config (implies -l -c)\n");
             printf("       -f : Force dump at least standard config, even if the device didn't "
                                "enumerate (requires a full BDF address)\n");
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     bus_drv->ForeachDevice(dump_pcie_device, &params);
 
@@ -697,7 +697,7 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv, uint32_t flags) {
         printf("PCIe scan discovered %u device%s\n", params.found, (params.found == 1) ? "" : "s");
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flags) {
@@ -719,12 +719,12 @@ int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flag
 
     if (confused) {
         printf("usage: %s <bus_id> <dev_id> <func_id>\n", argv[0].str);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mxtl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
@@ -738,7 +738,7 @@ int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flag
         printf("done\n");
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv, uint32_t flags) {
@@ -760,12 +760,12 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv, uint32_t flags
 
     if (confused) {
         printf("usage: %s <bus_id> <dev_id> <func_id>\n", argv[0].str);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mxtl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
@@ -775,19 +775,19 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv, uint32_t flags
         printf("Attempting reset of device %02x:%02x.%01x...\n", bus_id, dev_id, func_id);
         status_t res = dev->DoFunctionLevelReset();
         dev = nullptr;
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             printf("Reset attempt failed (res = %d).\n", res);
         else
             printf("Success, device %02x:%02x.%01x has been reset.\n", bus_id, dev_id, func_id);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args *argv, uint32_t flags) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     return bus_drv->RescanDevices();
 }

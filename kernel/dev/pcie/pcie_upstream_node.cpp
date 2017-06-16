@@ -44,7 +44,7 @@ void PcieUpstreamNode::AllocateDownstreamBars() {
         auto device = GetDownstream(i);
         if (device != nullptr) {
             status_t res = device->AllocateBars();
-            if (res != NO_ERROR)
+            if (res != MX_OK)
                 device->Disable();
         }
     }
