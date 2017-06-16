@@ -17,7 +17,7 @@
     0x1f, 0xf8,                                    \
     0xd2, 0x11,                                    \
     0xba, 0x4b, 0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b \
-};
+}
 
 // GUID for a system partition
 #define GUID_SYSTEM_STRING "606B000B-B7C7-4653-A7D5-B737332C899D"
@@ -26,7 +26,7 @@
     0xc7, 0xb7,                                    \
     0x53, 0x46,                                    \
     0xa7, 0xd5, 0xb7, 0x37, 0x33, 0x2c, 0x89, 0x9d \
-};
+}
 
 // GUID for a data partition
 #define GUID_DATA_STRING "08185F0C-892D-428A-A789-DBEEC8F55E6A"
@@ -35,7 +35,7 @@
     0x2d, 0x89,                                    \
     0x8a, 0x42,                                    \
     0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a \
-};
+}
 
 #define GUID_BLOBFS_STRING "2967380E-134C-4CBB-B6DA-17E7CE1CA45D"
 #define GUID_BLOBFS_VALUE {                        \
@@ -43,7 +43,7 @@
     0x4c, 0x13,                                    \
     0xbb, 0x4c,                                    \
     0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d \
-};
+}
 
 typedef struct gpt_partition {
     uint8_t type[GPT_GUID_LEN];
