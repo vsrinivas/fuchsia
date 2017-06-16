@@ -36,6 +36,7 @@ class AudioPlayerController {
   bool _playing = false;
   bool _ended = false;
   bool _hasVideo = false;
+  bool _isRemote = false;
 
   TimelineFunction _timelineFunction;
   Problem _problem;
@@ -95,6 +96,7 @@ class AudioPlayerController {
 
     _close();
     _active = true;
+    _isRemote = true;
 
     _netMediaService.createNetMediaPlayerProxy(
         device, service, _netMediaPlayer.ctrl.request());
@@ -113,6 +115,7 @@ class AudioPlayerController {
   /// Internal version of |close|.
   void _close() {
     _active = false;
+    _isRemote = false;
 
     if (_netMediaPlayer != null) {
       _netMediaPlayer.ctrl.close();
@@ -170,6 +173,9 @@ class AudioPlayerController {
 
   /// Indicates whether the content has a video stream.
   bool get hasVideo => _hasVideo;
+
+  /// Indicates whether the actual player is local (false) or remote (true).
+  bool get isRemote => _isRemote;
 
   /// Indicates whether the player is currently playing.
   bool get playing => _playing;
@@ -244,8 +250,7 @@ class AudioPlayerController {
       return;
     }
 
-    int positionNanoseconds =
-        (position.inMicroseconds * 1000).round();
+    int positionNanoseconds = (position.inMicroseconds * 1000).round();
 
     _netMediaPlayer.seek(positionNanoseconds);
 
