@@ -21,7 +21,7 @@ __BEGIN_CDECLS
  * @param src The source buffer.
  * @param len The number of bytes to copy.
  *
- * @return NO_ERROR on success
+ * @return MX_OK on success
  */
 status_t arch_copy_from_user(void *dst, const void *src, size_t len);
 
@@ -35,7 +35,7 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len);
  * @param src The source buffer.
  * @param len The number of bytes to copy.
  *
- * @return NO_ERROR on success
+ * @return MX_OK on success
  */
 status_t arch_copy_to_user(void *dst, const void *src, size_t len);
 

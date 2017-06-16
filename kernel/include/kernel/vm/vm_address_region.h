@@ -94,7 +94,7 @@ public:
     // If a VMO-mapping, unmap all pages and remove dependency on vm object it has a ref to.
     // Otherwise recursively destroy child VMARs and transition to the DEAD state.
     //
-    // Returns NO_ERROR on success, ERR_BAD_STATE if already dead, and other
+    // Returns MX_OK on success, MX_ERR_BAD_STATE if already dead, and other
     // values on error (typically unmap failure).
     virtual status_t Destroy();
 
@@ -341,14 +341,14 @@ public:
     status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
                            uint32_t vmar_flags, const char* name,
                            mxtl::RefPtr<VmAddressRegion>* out) override {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
                              uint32_t vmar_flags,
                              mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                              uint arch_mmu_flags, const char* name,
                              mxtl::RefPtr<VmMapping>* out) override {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) override {
@@ -356,11 +356,11 @@ public:
     }
 
     status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) override {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     status_t Unmap(vaddr_t base, size_t size) override {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     void Dump(uint depth, bool verbose) const override {
@@ -370,7 +370,7 @@ public:
     status_t PageFault(vaddr_t va, uint pf_flags) override {
         // We should never be trying to page fault on this...
         ASSERT(false);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     size_t AllocatedPages() const override {
@@ -378,7 +378,7 @@ public:
     }
 
     status_t Destroy() override {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     ~VmAddressRegionDummy() override {}
@@ -388,7 +388,7 @@ public:
     }
 
     status_t DestroyLocked() override {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     void Activate() override {

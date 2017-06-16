@@ -65,7 +65,7 @@ void timer_thaw_percpu(void);
 
 /* special helper routine to simultaneously try to acquire a spinlock and check for
  * timer cancel, which is needed in a few special cases.
- * returns NO_ERROR if spinlock was acquired, ERR_TIMED_OUT if timer was canceled.
+ * returns MX_OK if spinlock was acquired, MX_ERR_TIMED_OUT if timer was canceled.
  */
 status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock);
 
