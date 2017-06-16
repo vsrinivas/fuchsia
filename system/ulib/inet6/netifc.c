@@ -319,7 +319,7 @@ static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     mtx_unlock(&eth_lock);
 
     // stop polling
-    return 1;
+    return MX_ERR_STOP;
 
 fail_destroy_client:
     eth_destroy(eth);
@@ -328,7 +328,7 @@ fail_close_fd:
     close(netfd);
     netfd = -1;
     mtx_unlock(&eth_lock);
-    return -1;
+    return MX_OK;
 }
 
 int netifc_open(void) {
@@ -337,9 +337,12 @@ int netifc_open(void) {
         return -1;
     }
 
-    mx_status_t status = mxio_watch_directory(dirfd, netifc_open_cb, NULL);
+    mx_status_t status = mxio_watch_directory(dirfd, netifc_open_cb, MX_TIME_INFINITE, NULL);
     close(dirfd);
-    return (status < 0) ? -1 : 0;
+
+    // callback returns STOP if it finds and successfully
+    // opens a network interface
+    return (status == MX_ERR_STOP) ? 0 : -1;
 }
 
 void netifc_close(void) {

@@ -321,7 +321,7 @@ static int hid_input_devices_poll_thread(void* arg) {
         printf("hid: error opening %s\n", DEV_INPUT);
         return MX_ERR_INTERNAL;
     }
-    mxio_watch_directory(dirfd, hid_input_device_added, NULL);
+    mxio_watch_directory(dirfd, hid_input_device_added, MX_TIME_INFINITE, NULL);
     close(dirfd);
     return -1;
 }

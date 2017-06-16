@@ -309,7 +309,7 @@ int service_starter(void* arg) {
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
-        mxio_watch_directory(dirfd, block_device_added, NULL);
+        mxio_watch_directory(dirfd, block_device_added, MX_TIME_INFINITE, NULL);
     }
     close(dirfd);
     return 0;

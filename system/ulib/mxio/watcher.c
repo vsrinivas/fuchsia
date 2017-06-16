@@ -104,7 +104,7 @@ static mx_status_t mxio_watcher_process(mxio_watcher_t* w, uint8_t* msg, size_t 
     return MX_OK;
 }
 
-static mx_status_t mxio_watcher_loop(mxio_watcher_t* w) {
+static mx_status_t mxio_watcher_loop(mxio_watcher_t* w, mx_time_t deadline) {
     for (;;) {
         // extra byte for watcher process use
         uint8_t msg[VFS_WATCH_MSG_MAX + 1];
@@ -116,7 +116,7 @@ static mx_status_t mxio_watcher_loop(mxio_watcher_t* w) {
             }
             if ((status = mx_object_wait_one(w->h, MX_CHANNEL_READABLE |
                                              MX_CHANNEL_PEER_CLOSED,
-                                             MX_TIME_INFINITE, NULL)) < 0) {
+                                             deadline, NULL)) < 0) {
                 return status;
             }
             continue;
@@ -133,7 +133,7 @@ void mxio_watcher_destroy(mxio_watcher_t* watcher) {
     free(watcher);
 }
 
-mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
+mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, mx_time_t deadline, void *cookie) {
     mxio_watcher_t* watcher;
 
     mx_status_t status;
@@ -185,16 +185,9 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
     watcher->func = cb;
     watcher->cookie = cookie;
     watcher->fd = dirfd;
-    status = mxio_watcher_loop(watcher);
+    status = mxio_watcher_loop(watcher, deadline);
 
 done:
     mxio_watcher_destroy(watcher);
-
-    // If cb returns a positive value because it wants us to stop polling, then
-    // we translate that to MX_OK for the caller.
-    if (status >= MX_OK) {
-        return MX_OK;
-    }
-
     return status;
 }
