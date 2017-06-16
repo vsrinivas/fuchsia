@@ -177,7 +177,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
     /* if this is from user space, let magenta get a shot at it */
     if (is_user) {
         CPU_STATS_INC(exceptions);
-        if (call_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
+        if (call_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == MX_OK)
             return;
     }
 #endif
@@ -235,7 +235,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
         if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
             excp_type = MX_EXCP_UNALIGNED_ACCESS;
         }
-        if (call_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == NO_ERROR)
+        if (call_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == MX_OK)
             return;
     }
 #endif
@@ -296,7 +296,7 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
             }
 #if WITH_LIB_MAGENTA
             /* let magenta get a shot at it */
-            if (call_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
+            if (call_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == MX_OK)
                 break;
 #endif
             printf("unhandled synchronous exception\n");
@@ -407,7 +407,7 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (is_user_address(context->frame->usp)) {
         uint8_t buf[256];
-        if (copy_from_user_unsafe(buf, (void *)context->frame->usp, sizeof(buf)) == NO_ERROR) {
+        if (copy_from_user_unsafe(buf, (void *)context->frame->usp, sizeof(buf)) == MX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->usp);
             hexdump_ex(buf, sizeof(buf), context->frame->usp);
         }

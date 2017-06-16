@@ -81,7 +81,7 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
         i++;
     }
     if (i==SMP_MAX_CPUS)
-        return ERR_NO_RESOURCES;
+        return MX_ERR_NO_RESOURCES;
     LTRACEF("set mpid 0x%lx sp to %p\n", mpid, sp);
 #if __has_feature(safe_stack)
     LTRACEF("set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
@@ -93,7 +93,7 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
     arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch.stack_guard;
     arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {

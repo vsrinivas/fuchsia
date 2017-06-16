@@ -26,7 +26,7 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
     // handler (since the fault will always be from trying to access an
     // unprivileged page).
     if (!is_user_address_range((vaddr_t)src, len)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     thread_t *thr = get_current_thread();
@@ -38,7 +38,7 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
 status_t arch_copy_to_user(void *dst, const void *src, size_t len)
 {
     if (!is_user_address_range((vaddr_t)dst, len)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     thread_t *thr = get_current_thread();

@@ -23,18 +23,18 @@ static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_re
     *buf_size = sizeof(*out);
 
     if (provided_buf_size < sizeof(*out))
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
         if (thread->exception_context->frame == NULL)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
     } else {
         // TODO(dje): Punt if, for example, suspended in channel call.
         // Can be removed when MG-747 done.
         if (thread->arch.suspended_general_regs == nullptr)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
     }
 
     struct arm64_iframe_long *in = thread->arch.suspended_general_regs;
@@ -47,24 +47,24 @@ static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_re
     out->pc = in->elr;
     out->cpsr = in->spsr;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_general_regs_t *in, uint32_t buf_size)
 {
     if (buf_size != sizeof(*in))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
         if (thread->exception_context->frame == NULL)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
     } else {
         // TODO(dje): Punt if, for example, suspended in channel call.
         // Can be removed when MG-747 done.
         if (thread->arch.suspended_general_regs == nullptr)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
     }
 
     struct arm64_iframe_long *out = thread->arch.suspended_general_regs;
@@ -77,7 +77,7 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_gene
     out->elr = in->pc;
     out->spsr = in->cpsr;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // The caller is responsible for making sure the thread is in an exception
@@ -89,7 +89,7 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
     case 0:
         return arch_get_general_regs(thread, (mx_arm64_general_regs_t *)regs, buf_size);
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -102,6 +102,6 @@ status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, u
     case 0:
         return arch_set_general_regs(thread, (mx_arm64_general_regs_t *)regs, buf_size);
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
