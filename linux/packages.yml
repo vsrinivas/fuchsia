@@ -62,6 +62,8 @@ all:
   - libglapi-mesa
   - libglib2.0-0
   - libglib2.0-dev
+  - libglu1-mesa
+  - libglu1-mesa-dev
   - libgnome-keyring0
   - libgnome-keyring-dev
   - libgnutls-openssl27
