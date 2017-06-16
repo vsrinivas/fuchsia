@@ -149,7 +149,7 @@ void *AcpiOsMapMemory(
             aligned_address,
             0,
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return NULL;
     }
     const uintptr_t real_addr =
@@ -168,7 +168,7 @@ void *AcpiOsMapMemory(
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
     status_t status = VmAspace::kernel_aspace()->FreeRegion(
             reinterpret_cast<vaddr_t>(LogicalAddress));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         TRACEF("WARNING: ACPI failed to free region %p, size %" PRIu64 "\n",
                LogicalAddress, (uint64_t)Length);
     }
