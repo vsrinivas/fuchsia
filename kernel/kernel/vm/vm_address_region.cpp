@@ -242,6 +242,8 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
         return MX_ERR_ACCESS_DENIED;
     }
 
+    // If size overflows, it'll become 0 and get rejected in
+    // CreateSubVmarInternal.
     size = ROUNDUP(size, PAGE_SIZE);
 
     // Make sure that vmo_offset is aligned and that a mapping of this size
@@ -574,11 +576,10 @@ void VmAddressRegion::Activate() {
 status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
     canary_.Assert();
 
+    size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0 || !IS_PAGE_ALIGNED(base)) {
         return MX_ERR_INVALID_ARGS;
     }
-
-    size = ROUNDUP(size, PAGE_SIZE);
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
@@ -673,11 +674,10 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
 status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
     canary_.Assert();
 
+    size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0 || !IS_PAGE_ALIGNED(base)) {
         return MX_ERR_INVALID_ARGS;
     }
-
-    size = ROUNDUP(size, PAGE_SIZE);
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {

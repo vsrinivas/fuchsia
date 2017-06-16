@@ -374,6 +374,9 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     canary_.Assert();
 
     len = ROUNDUP(len, PAGE_SIZE);
+    if (len == 0) {
+        return ERR_INVALID_ARGS;
+    }
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
