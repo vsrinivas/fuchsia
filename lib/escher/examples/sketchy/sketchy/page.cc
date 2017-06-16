@@ -85,7 +85,7 @@ escher::Model* Page::GetModel(const escher::Stopwatch& stopwatch,
       0.f, page_material_));
 
   if (!strokes_.empty()) {
-    const float depth_range = stage->viewing_volume().depth_range();
+    const float depth_range = stage->viewing_volume().depth();
     const float depth_increment = depth_range / (strokes_.size() + 1);
     float height = depth_increment;
 

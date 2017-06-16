@@ -135,14 +135,9 @@ void ModelRenderer::Draw(const Stage& stage,
         vk::PipelineStageFlagBits::eFragmentShader);
   }
 
-  auto& volume = stage.viewing_volume();
-  // We assume that we are looking down at the stage, so volume.near() equals
-  // the maximum height above the stage.
-  FTL_DCHECK(volume.far() == 0 && volume.near() > 0);
-
   vk::Viewport viewport;
-  viewport.width = volume.width();
-  viewport.height = volume.height();
+  viewport.width = stage.viewing_volume().width();
+  viewport.height = stage.viewing_volume().height();
   // We normalize all depths to the range [0,1].  If we didn't, then Vulkan
   // would clip them anyway.  NOTE: this is only true because we are using an
   // orthonormal projection; otherwise the depth computed by the vertex shader

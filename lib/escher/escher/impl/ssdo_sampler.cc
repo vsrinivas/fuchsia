@@ -859,7 +859,7 @@ SsdoSampler::SamplerConfig::SamplerConfig(const Stage& stage)
                      stage.key_light().intensity())),
       viewing_volume(vec3(stage.viewing_volume().width(),
                           stage.viewing_volume().height(),
-                          stage.viewing_volume().depth_range())) {}
+                          stage.viewing_volume().depth())) {}
 
 }  // namespace impl
 }  // namespace escher

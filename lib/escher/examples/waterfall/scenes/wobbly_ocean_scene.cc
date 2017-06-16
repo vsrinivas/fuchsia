@@ -74,8 +74,8 @@ escher::Model* WobblyOceanScene::Update(const escher::Stopwatch& stopwatch,
 
   float screenWidth = stage->viewing_volume().width();
   float screenHeight = stage->viewing_volume().height();
-  float minElevation = stage->viewing_volume().far();
-  float maxElevation = stage->viewing_volume().near();
+  float minElevation = stage->viewing_volume().bottom();
+  float maxElevation = stage->viewing_volume().top();
   float elevationRange = maxElevation - minElevation;
 
   std::vector<Object> objects;

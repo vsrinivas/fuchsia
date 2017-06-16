@@ -201,7 +201,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
       impl::SsdoSampler::FilterConfig filter_config;
       filter_config.stride = vec2(1.f / stage.viewing_volume().width(), 0.f);
-      filter_config.scene_depth = stage.viewing_volume().depth_range();
+      filter_config.scene_depth = stage.viewing_volume().depth();
       ssdo_->Filter(command_buffer, fb_aux, color_out_tex, accelerator_texture,
                     &filter_config);
 
@@ -224,7 +224,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
       impl::SsdoSampler::FilterConfig filter_config;
       filter_config.stride = vec2(0.f, 1.f / stage.viewing_volume().height());
-      filter_config.scene_depth = stage.viewing_volume().depth_range();
+      filter_config.scene_depth = stage.viewing_volume().depth();
       ssdo_->Filter(command_buffer, fb_out, color_aux_tex, accelerator_texture,
                     &filter_config);
 

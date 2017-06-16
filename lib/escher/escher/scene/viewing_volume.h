@@ -25,11 +25,6 @@ class ViewingVolume {
   float bottom() const { return bottom_; }
   float depth() const { return top_ - bottom_; }
 
-  // TODO: These are deprecated, now that Escher supports fully 3D scenes.
-  float near() const { return top_; }
-  float far() const { return bottom_; }
-  float depth_range() const { return std::abs(top_ - bottom_); }
-
  private:
   float width_ = 0.0f;
   float height_ = 0.0f;

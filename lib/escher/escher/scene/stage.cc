@@ -23,9 +23,6 @@ void Stage::Resize(SizeI size,
 }
 
 void Stage::set_viewing_volume(ViewingVolume value) {
-  // The camera is looking down, so the things on the "floor" of the stage
-  // are farthest, and also "lowest" (i.e. they have the smaller z-value).
-  FTL_DCHECK(value.near() > value.far());
   viewing_volume_ = std::move(value);
 }
 
