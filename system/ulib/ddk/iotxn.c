@@ -446,15 +446,15 @@ void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // This can only fail if iotxn_queue() is not implemented by the
     // device, in which case we fall back to calling the read or write op
-    if (device_op_iotxn_queue(dev, txn) != MX_OK) {
+    if (device_iotxn_queue(dev, txn) != MX_OK) {
         mx_status_t status;
         size_t actual = 0;
         void* buf;
         iotxn_mmap(txn, &buf);
         if (txn->opcode == IOTXN_OP_READ) {
-            status = device_op_read(dev, buf, txn->length, txn->offset, &actual);
+            status = device_read(dev, buf, txn->length, txn->offset, &actual);
         } else if (txn->opcode == IOTXN_OP_WRITE) {
-            status = device_op_write(dev, buf, txn->length, txn->offset, &actual);
+            status = device_write(dev, buf, txn->length, txn->offset, &actual);
         } else {
             status = MX_ERR_NOT_SUPPORTED;
         }

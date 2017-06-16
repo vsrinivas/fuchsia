@@ -142,7 +142,7 @@ static mx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
-        return device_op_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
+        return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
         return MX_ERR_NOT_SUPPORTED;
@@ -294,8 +294,8 @@ static int gpt_bind_thread(void* arg) {
     unsigned partitions = 0; // used to keep track of number of partitions found
     block_info_t block_info;
     size_t actual = 0;
-    ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
-                                 &block_info, sizeof(block_info), &actual);
+    ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
+                              &block_info, sizeof(block_info), &actual);
     if (rc < 0 || actual != sizeof(block_info)) {
         xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, device_get_name(dev));
         goto unbind;

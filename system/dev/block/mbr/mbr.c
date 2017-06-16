@@ -128,7 +128,7 @@ static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
-        return device_op_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
+        return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
         return MX_ERR_NOT_SUPPORTED;
@@ -273,8 +273,8 @@ static int mbr_bind_thread(void* arg) {
 
     block_info_t block_info;
     size_t actual;
-    ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
-                                 &block_info, sizeof(block_info), &actual);
+    ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
+                              &block_info, sizeof(block_info), &actual);
     if (rc < 0 || actual != sizeof(block_info)) {
         xprintf("mbr: Could not get block size for dev=%s, retcode = %zd\n",
                 dev->name, rc);

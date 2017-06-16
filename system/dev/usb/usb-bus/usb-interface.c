@@ -129,8 +129,8 @@ static mx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_bu
     }
     default:
         // other ioctls are handled by top level device
-        return device_op_ioctl(intf->device->mxdev, op, in_buf, in_len, out_buf, out_len,
-                               out_actual);
+        return device_ioctl(intf->device->mxdev, op, in_buf, in_len,
+                            out_buf, out_len, out_actual);
     }
 }
 

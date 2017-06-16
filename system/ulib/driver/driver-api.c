@@ -52,28 +52,28 @@ __EXPORT mx_handle_t device_get_resource(mx_device_t* dev) {
     return API->get_resource(dev);
 }
 
-__EXPORT mx_off_t device_op_get_size(mx_device_t* dev) {
-    return API->op_get_size(dev);
+__EXPORT mx_off_t device_get_size(mx_device_t* dev) {
+    return API->get_size(dev);
 }
 
-__EXPORT mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,
-                                    mx_off_t off, size_t* actual) {
-    return API->op_read(dev, buf, count, off, actual);
+__EXPORT mx_status_t device_read(mx_device_t* dev, void* buf, size_t count,
+                                 mx_off_t off, size_t* actual) {
+    return API->read(dev, buf, count, off, actual);
 }
 
-__EXPORT mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
-                                     mx_off_t off, size_t* actual) {
-    return API->op_write(dev, buf, count, off, actual);
+__EXPORT mx_status_t device_write(mx_device_t* dev, const void* buf, size_t count,
+                                  mx_off_t off, size_t* actual) {
+    return API->write(dev, buf, count, off, actual);
 }
 
-__EXPORT mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
-                                     const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len, size_t* out_actual) {
-    return API->op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, out_actual);
+__EXPORT mx_status_t device_ioctl(mx_device_t* dev, uint32_t op,
+                                  const void* in_buf, size_t in_len,
+                                  void* out_buf, size_t out_len, size_t* out_actual) {
+    return API->ioctl(dev, op, in_buf, in_len, out_buf, out_len, out_actual);
 }
 
-__EXPORT mx_status_t device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    return API->op_iotxn_queue(dev, txn);
+__EXPORT mx_status_t device_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    return API->iotxn_queue(dev, txn);
 }
 
 __EXPORT void device_state_clr_set(mx_device_t* dev, mx_signals_t clearflag, mx_signals_t setflag) {

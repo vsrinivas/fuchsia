@@ -30,15 +30,15 @@ typedef struct driver_api {
     void (*state_clr_set)(mx_device_t* dev, mx_signals_t clr, mx_signals_t set);
 
     // Device Interface - Direct Ops Access
-    mx_off_t (*op_get_size)(mx_device_t* dev);
-    mx_status_t (*op_read)(mx_device_t* dev, void* buf, size_t count,
-                           mx_off_t off, size_t* actual);
-    mx_status_t (*op_write)(mx_device_t* dev, const void* buf, size_t count,
-                            mx_off_t off, size_t* actual);
-    mx_status_t (*op_ioctl)(mx_device_t* dev, uint32_t op,
-                            const void* in_buf, size_t in_len,
-                            void* out_buf, size_t out_len, size_t* out_actual);
-    mx_status_t (*op_iotxn_queue)(mx_device_t* dev, iotxn_t* txn);
+    mx_off_t (*get_size)(mx_device_t* dev);
+    mx_status_t (*read)(mx_device_t* dev, void* buf, size_t count,
+                        mx_off_t off, size_t* actual);
+    mx_status_t (*write)(mx_device_t* dev, const void* buf, size_t count,
+                         mx_off_t off, size_t* actual);
+    mx_status_t (*ioctl)(mx_device_t* dev, uint32_t op,
+                         const void* in_buf, size_t in_len,
+                         void* out_buf, size_t out_len, size_t* out_actual);
+    mx_status_t (*iotxn_queue)(mx_device_t* dev, iotxn_t* txn);
 
     // Misc Interfaces
     mx_handle_t (*get_root_resource)(void);

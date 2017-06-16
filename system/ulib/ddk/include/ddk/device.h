@@ -115,21 +115,21 @@ mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_id, void* proto
 
 
 // Direct Device Ops Functions
-mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,
-                           mx_off_t off, size_t* actual);
+mx_status_t device_read(mx_device_t* dev, void* buf, size_t count,
+                        mx_off_t off, size_t* actual);
 
-mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
-                            mx_off_t off, size_t* actual);
+mx_status_t device_write(mx_device_t* dev, const void* buf, size_t count,
+                         mx_off_t off, size_t* actual);
 
-mx_off_t device_op_get_size(mx_device_t* dev);
+mx_off_t device_get_size(mx_device_t* dev);
 
-mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
-                            const void* in_buf, size_t in_len,
-                            void* out_buf, size_t out_len, size_t* out_actual);
+mx_status_t device_ioctl(mx_device_t* dev, uint32_t op,
+                         const void* in_buf, size_t in_len,
+                         void* out_buf, size_t out_len, size_t* out_actual);
 
 // return MX_ERR_NOT_SUPPORTED if this device does not support the iotxn_queue op
 // otherwise returns MX_OK aftering queuing the iotxn
-mx_status_t device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn);
+mx_status_t device_iotxn_queue(mx_device_t* dev, iotxn_t* txn);
 
 
 // Device State Change Functions
@@ -152,6 +152,39 @@ static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
 //      (it does not reflect that the clear is applied and then the set)
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
     device_state_clr_set(dev, clearflag, setflag);
+}
+
+
+//TODO: remove once no longer needed
+
+__attribute__((deprecated("use device_read instead")))
+static inline mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,
+                                         mx_off_t off, size_t* actual) {
+    return device_read(dev, buf, count, off, actual);
+}
+
+__attribute__((deprecated("use device_write instead")))
+static inline mx_status_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
+                                          mx_off_t off, size_t* actual) {
+    return device_write(dev, buf, count, off, actual);
+}
+
+__attribute__((deprecated("use device_get_size instead")))
+static inline mx_off_t device_op_get_size(mx_device_t* dev) {
+    return device_get_size(dev);
+}
+
+__attribute__((deprecated("use device_ioctl instead")))
+static inline mx_status_t device_op_ioctl(mx_device_t* dev, uint32_t op,
+                                          const void* in_buf, size_t in_len,
+                                          void* out_buf, size_t out_len,
+                                          size_t* out_actual) {
+    return device_ioctl(dev, op, in_buf, in_len, out_buf, out_len, out_actual);
+}
+
+__attribute__((deprecated("use device_iotxn_queue instead")))
+static inline mx_status_t device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    return device_iotxn_queue(dev, txn);
 }
 
 __END_CDECLS;

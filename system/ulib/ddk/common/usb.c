@@ -74,8 +74,8 @@ mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16
 usb_speed_t usb_get_speed(mx_device_t* device) {
     int speed;
     size_t actual;
-    mx_status_t status = device_op_ioctl(device, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0,
-                                     &speed, sizeof(speed), &actual);
+    mx_status_t status = device_ioctl(device, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0,
+                                      &speed, sizeof(speed), &actual);
     if (status == MX_OK && actual == sizeof(speed)) {
         return (usb_speed_t)speed;
     } else {
@@ -96,7 +96,7 @@ mx_status_t usb_set_configuration(mx_device_t* device, int config) {
 
 mx_status_t usb_set_interface(mx_device_t* device, int interface_number, int alt_setting) {
     int args[2] = {interface_number, alt_setting};
-    return device_op_ioctl(device, IOCTL_USB_SET_INTERFACE, args, sizeof(args), NULL, 0, NULL);
+    return device_ioctl(device, IOCTL_USB_SET_INTERFACE, args, sizeof(args), NULL, 0, NULL);
 }
 
 mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int feature, int index) {
@@ -148,8 +148,8 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
 
     int desc_size;
     size_t actual;
-    mx_status_t status = device_op_ioctl(device, IOCTL_USB_GET_DESCRIPTORS_SIZE, NULL, 0,
-                                     &desc_size, sizeof(desc_size), &actual);
+    mx_status_t status = device_ioctl(device, IOCTL_USB_GET_DESCRIPTORS_SIZE, NULL, 0,
+                                      &desc_size, sizeof(desc_size), &actual);
     if (status != MX_OK || actual != sizeof(desc_size)) goto fail;
 
     uint8_t* desc = malloc(desc_size);
@@ -158,7 +158,7 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
     iter->desc_end = desc + desc_size;
     iter->current = desc;
 
-    status = device_op_ioctl(device, IOCTL_USB_GET_DESCRIPTORS, NULL, 0, desc, desc_size, &actual);
+    status = device_ioctl(device, IOCTL_USB_GET_DESCRIPTORS, NULL, 0, desc, desc_size, &actual);
     if (status != MX_OK || actual != (size_t)desc_size) goto fail;
     return MX_OK;
 

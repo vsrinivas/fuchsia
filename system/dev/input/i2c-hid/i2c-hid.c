@@ -117,8 +117,8 @@ static mx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
         return MX_ERR_NO_MEMORY;
     }
     size_t actual = 0;
-    mx_status_t status = device_op_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
-                                    buf, sizeof(buf), out, desc_len, &actual);
+    mx_status_t status = device_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
+                                      buf, sizeof(buf), out, desc_len, &actual);
     if (status < 0) {
         printf("i2c-hid: could not read HID report descriptor: %d\n", status);
         free(out);
@@ -194,7 +194,7 @@ static int i2c_hid_irq_thread(void* arg) {
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
         size_t actual = 0;
-        mx_status_t status = device_op_read(dev->i2cdev, buf, len, 0, &actual);
+        mx_status_t status = device_read(dev->i2cdev, buf, len, 0, &actual);
         if (status < 0) {
             return status;
         }
@@ -244,7 +244,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     *data++ = 0x00;
     uint8_t out[4];
     size_t actual = 0;
-    mx_status_t ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out), &actual);
+    mx_status_t ret = device_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out), &actual);
     if (ret < 0 || actual != sizeof(out)) {
         printf("i2c-hid: could not read HID descriptor: %d\n", ret);
         return MX_ERR_NOT_SUPPORTED;
@@ -261,7 +261,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     i2c_hid_prepare_write_read_buffer(buf, 2, desc_len);
     actual = 0;
-    ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len, &actual);
+    ret = device_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len, &actual);
     if (ret < 0 || actual != desc_len) {
         printf("i2c-hid: could not read HID descriptor: %d\n", ret);
         free(i2chid->hiddesc);

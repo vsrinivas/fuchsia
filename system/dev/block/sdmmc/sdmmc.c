@@ -403,8 +403,8 @@ static int sdmmc_bootstrap_thread(void* arg) {
     }
 
     uint32_t new_bus_frequency = 25000000;
-    st = device_op_ioctl(dev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
-                         sizeof(new_bus_frequency), NULL, 0, NULL);
+    st = device_ioctl(dev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
+                      sizeof(new_bus_frequency), NULL, 0, NULL);
     if (st != MX_OK) {
         // This is non-fatal but the card will run slowly.
         xprintf("sdmmc: failed to increase bus frequency.\n");
@@ -419,8 +419,8 @@ static int sdmmc_bootstrap_thread(void* arg) {
         }
 
         const uint32_t new_voltage = SDMMC_VOLTAGE_18;
-        st = device_op_ioctl(dev, IOCTL_SDMMC_SET_VOLTAGE, &new_voltage,
-                             sizeof(new_voltage), NULL, 0, NULL);
+        st = device_ioctl(dev, IOCTL_SDMMC_SET_VOLTAGE, &new_voltage,
+                          sizeof(new_voltage), NULL, 0, NULL);
         if (st != MX_OK) {
             xprintf("sdmmc: Card supports 1.8v signalling but was unable to "
                     "switch to 1.8v mode, retcode = %d\n", st);
@@ -508,8 +508,8 @@ static int sdmmc_bootstrap_thread(void* arg) {
                 break;
             }
             const uint32_t new_bus_width = 4;
-            st = device_op_ioctl(dev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width,
-                                 sizeof(new_bus_width), NULL, 0, NULL);
+            st = device_ioctl(dev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width,
+                              sizeof(new_bus_width), NULL, 0, NULL);
             if (st != MX_OK) {
                 xprintf("sdmmc: failed to set host bus width, retcode = %d\n", st);
             }

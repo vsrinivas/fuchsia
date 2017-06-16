@@ -457,7 +457,7 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
-        status = device_op_ioctl(edev->edev0->macdev, op, in_buf, in_len, out_buf, out_len, out_actual);
+        status = device_ioctl(edev->edev0->macdev, op, in_buf, in_len, out_buf, out_len, out_actual);
         break;
     }
 

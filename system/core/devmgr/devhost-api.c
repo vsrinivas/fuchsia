@@ -136,27 +136,27 @@ void _device_state_clr_set(mx_device_t* dev, mx_signals_t clearflag, mx_signals_
 }
 
 
-mx_off_t _device_op_get_size(mx_device_t* dev) {
+mx_off_t _device_get_size(mx_device_t* dev) {
     return dev->ops->get_size(dev->ctx);
 }
 
-mx_status_t _device_op_read(mx_device_t* dev, void* buf, size_t count,
-                            mx_off_t off, size_t* actual) {
+mx_status_t _device_read(mx_device_t* dev, void* buf, size_t count,
+                         mx_off_t off, size_t* actual) {
     return dev->ops->read(dev->ctx, buf, count, off, actual);
 }
 
-mx_status_t _device_op_write(mx_device_t* dev, const void* buf, size_t count,
-                             mx_off_t off, size_t* actual) {
+mx_status_t _device_write(mx_device_t* dev, const void* buf, size_t count,
+                          mx_off_t off, size_t* actual) {
     return dev->ops->write(dev->ctx, buf, count, off, actual);
 }
 
-mx_status_t _device_op_ioctl(mx_device_t* dev, uint32_t op,
-                             const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* out_actual) {
+mx_status_t _device_ioctl(mx_device_t* dev, uint32_t op,
+                          const void* in_buf, size_t in_len,
+                          void* out_buf, size_t out_len, size_t* out_actual) {
     return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
 }
 
-mx_status_t _device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+mx_status_t _device_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     if (dev->ops->iotxn_queue != NULL) {
         dev->ops->iotxn_queue(dev->ctx, txn);
         return MX_OK;
@@ -221,11 +221,11 @@ driver_api_t devhost_api = {
     .get_protocol = _device_get_protocol,
     .get_resource = _device_get_resource,
     .state_clr_set = _device_state_clr_set,
-    .op_get_size = _device_op_get_size,
-    .op_read = _device_op_read,
-    .op_write = _device_op_write,
-    .op_ioctl = _device_op_ioctl,
-    .op_iotxn_queue = _device_op_iotxn_queue,
+    .get_size = _device_get_size,
+    .read = _device_read,
+    .write = _device_write,
+    .ioctl = _device_ioctl,
+    .iotxn_queue = _device_iotxn_queue,
     .get_root_resource = _get_root_resource,
     .load_firmware = _load_firmware,
 };
