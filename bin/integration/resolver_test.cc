@@ -11,8 +11,7 @@ namespace {
 class ResolverTest : public MaxwellTestBase {
  public:
   ResolverTest()
-      : resolver_(ConnectToService<resolver::Resolver>(
-            "file:///system/apps/resolver")) {}
+      : resolver_(ConnectToService<resolver::Resolver>("resolver")) {}
 
  protected:
   resolver::ResolverPtr resolver_;

@@ -12,8 +12,7 @@ namespace maxwell {
 class ContextEngineTestBase : public MaxwellTestBase {
  public:
   ContextEngineTestBase()
-      : context_engine_(ConnectToService<ContextEngine>(
-            "file:///system/apps/context_engine")) {}
+      : context_engine_(ConnectToService<ContextEngine>("context_engine")) {}
 
  protected:
   void StartContextAgent(const std::string& url) {

@@ -10,7 +10,7 @@
 
 namespace maxwell {
 
-constexpr char kWebViewUrl[] = "file:///system/apps/web_view";
+constexpr char kWebViewUrl[] = "web_view";
 
 ProposalPtr MkUrlProposal(const std::string& query) {
   auto p = Proposal::New();

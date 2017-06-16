@@ -67,12 +67,10 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // Start dependent processes. We get some component-scope services from
   // these processes.
-  context_services_ =
-      StartServiceProviderApp("file:///system/apps/context_engine");
+  context_services_ = StartServiceProviderApp("context_engine");
   context_engine_ =
       app::ConnectToService<maxwell::ContextEngine>(context_services_.get());
-  suggestion_services_ =
-      StartServiceProviderApp("file:///system/apps/suggestion_engine");
+  suggestion_services_ = StartServiceProviderApp("suggestion_engine");
   suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
       suggestion_services_.get());
 
@@ -89,7 +87,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   StartActionLog(suggestion_engine_.get());
 
-  resolver_services_ = StartServiceProviderApp("file:///system/apps/resolver");
+  resolver_services_ = StartServiceProviderApp("resolver");
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
   StartAgent("file:///system/apps/agents/module_suggester");
@@ -164,7 +162,7 @@ app::ServiceProviderPtr UserIntelligenceProviderImpl::StartServiceProviderApp(
 
 void UserIntelligenceProviderImpl::StartActionLog(
     SuggestionEngine* suggestion_engine) {
-  std::string url = "file:///system/apps/action_log";
+  std::string url = "action_log";
   app::ServiceProviderPtr action_log_services = StartServiceProviderApp(url);
   maxwell::UserActionLogFactoryPtr action_log_factory =
       app::ConnectToService<maxwell::UserActionLogFactory>(

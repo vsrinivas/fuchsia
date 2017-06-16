@@ -27,7 +27,7 @@ class ResolverApp {
     app::ServiceProviderPtr child_services;
     component::ComponentIndexPtr component_index;
 
-    launch_info->url = "file:///system/apps/component_manager";
+    launch_info->url = "component_manager";
     launch_info->services = child_services.NewRequest();
 
     context_->launcher()->CreateApplication(

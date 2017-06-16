@@ -124,7 +124,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
  public:
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
     app::ServiceProviderPtr suggestion_services =
-        StartServiceProvider("file:///system/apps/suggestion_engine");
+        StartServiceProvider("suggestion_engine");
     suggestion_engine_ =
         app::ConnectToService<SuggestionEngine>(suggestion_services.get());
     suggestion_provider_ =

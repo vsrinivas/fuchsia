@@ -59,7 +59,7 @@ class _AskHandlerImpl extends AskHandler {
       proposals.add(
         _createProposal(
           id: 'launch dashboard',
-          appUrl: 'file:///system/apps/dashboard',
+          appUrl: 'dashboard',
           headline: 'View the Fuchsia Dashboard',
           color: 0xFFFF0080, // Fuchsia
           imageUrl:
@@ -72,7 +72,7 @@ class _AskHandlerImpl extends AskHandler {
       proposals.add(
         _createProposal(
           id: 'open chat',
-          appUrl: 'file:///system/apps/chat_conversation_list',
+          appUrl: 'chat_conversation_list',
           headline: _chatHeadline,
           color: 0xFF9C27B0, // Material Purple 500
         ),
@@ -80,32 +80,36 @@ class _AskHandlerImpl extends AskHandler {
     }
 
     if ((query.text?.length ?? 0) >= 4) {
-      Directory systemApps = new Directory('/system/apps/');
-      systemApps
-          .listSync(recursive: true, followLinks: false)
-          .map((FileSystemEntity fileSystemEntity) => fileSystemEntity.path)
-          .where((String path) =>
-              Uri.parse(path).pathSegments.last.contains(query.text))
-          .where((String path) => FileSystemEntity.isFileSync(path))
-          .forEach((String path) {
-        String name = Uri.parse(path).pathSegments.last;
-        proposals.add(
-          _createProposal(
-            id: 'open $name',
-            appUrl: 'file://$path',
-            headline: 'Launch $name',
-            subheadline: '(This is potentially unsafe)',
-            color: 0xFF000000 + (name.hashCode % 0xFFFFFF),
-          ),
-        );
-      });
+      void scanDirectory(Directory directory) {
+        directory
+            .listSync(recursive: true, followLinks: false)
+            .map((FileSystemEntity fileSystemEntity) => fileSystemEntity.path)
+            .where((String path) =>
+                Uri.parse(path).pathSegments.last.contains(query.text))
+            .where((String path) => FileSystemEntity.isFileSync(path))
+            .forEach((String path) {
+          String name = Uri.parse(path).pathSegments.last;
+          proposals.add(
+            _createProposal(
+              id: 'open $name',
+              appUrl: 'file://$path',
+              headline: 'Launch $name',
+              subheadline: '(This is potentially unsafe)',
+              color: 0xFF000000 + (name.hashCode % 0xFFFFFF),
+            ),
+          );
+        });
+      }
+
+      scanDirectory(new Directory('/system/apps/'));
+      scanDirectory(new Directory('/system/pkgs/'));
     }
 
     if (query.text?.contains(_musicPatternKanye) ?? false) {
       proposals.add(
         _createProposal(
           id: 'Listen to Kanye',
-          appUrl: 'file:///system/apps/music_artist',
+          appUrl: 'music_artist',
           headline: 'Listen to Kanye',
           color: 0xFF9C27B0, // Material Purple 500,
           initialData: JSON.encode({
@@ -122,7 +126,7 @@ class _AskHandlerImpl extends AskHandler {
       proposals.add(
         _createProposal(
           id: 'Listen to Portugal. The Man',
-          appUrl: 'file:///system/apps/music_artist',
+          appUrl: 'music_artist',
           headline: 'Listen to Portugal. The Man',
           color: 0xFF9C27B0, // Material Purple 500,
           initialData: JSON.encode({
