@@ -118,7 +118,7 @@ void ResourceLinker::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 
 void ResourceLinker::OnHandleError(mx_handle_t handle, mx_status_t error) {
   // Should only happen in case of timeout or loop death.
-  if (error & (ERR_TIMED_OUT | ERR_BAD_STATE)) {
+  if (error & (MX_ERR_TIMED_OUT | MX_ERR_BAD_STATE)) {
     auto resource = RemoveResourceForExpiredExportHandle(handle);
     if (expiration_callback_) {
       expiration_callback_(std::move(resource),
