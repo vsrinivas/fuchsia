@@ -50,6 +50,21 @@ bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
   return true;
 }
 
+bool ArchiveReader::CopyFile(ftl::StringView archive_path, int dst_fd) const {
+  DirectoryTableEntry entry;
+  if (!GetDirectoryEntry(archive_path, &entry))
+    return false;
+  if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
+    fprintf(stderr, "error: Failed to seek to offset of file.\n");
+    return false;
+  }
+  if (!CopyFileToFile(fd_.get(), dst_fd, entry.data_length)) {
+    fprintf(stderr, "error: Failed write contents.\n");
+    return false;
+  }
+  return true;
+}
+
 bool ArchiveReader::GetDirectoryEntry(ftl::StringView archive_path,
                                       DirectoryTableEntry* entry) const {
   PathComparator comparator;
