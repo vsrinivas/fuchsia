@@ -26,6 +26,8 @@ public:
     // TODO(abarth): mx_task_bind_exception_port
 
     mx_status_t kill() const { return mx_task_kill(object<T>::get()); }
+
+    mx_status_t suspend() const { return mx_task_suspend(object<T>::get()); }
 };
 
 } // namespace mx
