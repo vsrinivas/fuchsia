@@ -15,5 +15,6 @@ HOSTAPPS := \
 	$(LOCAL_DIR)/mkfs-msdosfs/rules.mk \
 	$(LOCAL_DIR)/netprotocol/rules.mk \
 	$(LOCAL_DIR)/sysgen/rules.mk \
+	$(LOCAL_DIR)/h2md/rules.mk \
 
 include $(HOSTAPPS)
