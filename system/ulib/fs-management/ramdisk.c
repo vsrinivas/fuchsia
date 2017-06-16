@@ -59,7 +59,7 @@ int destroy_ramdisk(const char* ramdisk_path) {
         return -1;
     }
     ssize_t r = ioctl_ramdisk_unlink(fd);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         fprintf(stderr, "Could not shut off ramdisk\n");
         return -1;
     }

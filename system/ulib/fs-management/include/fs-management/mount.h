@@ -111,8 +111,8 @@ mx_status_t fsck(const char* devicepath, disk_format_t df,
 
 // Umount the filesystem process.
 //
-// Returns ERR_BAD_STATE if mountpath could not be opened.
-// Returns ERR_NOT_FOUND if there is no mounted filesystem on mountpath.
+// Returns MX_ERR_BAD_STATE if mountpath could not be opened.
+// Returns MX_ERR_NOT_FOUND if there is no mounted filesystem on mountpath.
 // Other errors may also be returned if problems occur while unmounting.
 mx_status_t umount(const char* mountpath);
 // 'mountfd' is used in lieu of the mountpath. It is not consumed.

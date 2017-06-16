@@ -22,20 +22,20 @@ mx_status_t completion_wait(completion_t* completion, mx_time_t timeout) {
     for (;;) {
         int current_value = atomic_load(futex);
         if (current_value == SIGNALED) {
-            return NO_ERROR;
+            return MX_OK;
         }
         mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? timeout : mx_deadline_after(timeout);
         switch (mx_futex_wait(futex, current_value, deadline)) {
-        case NO_ERROR:
+        case MX_OK:
             continue;
-        case ERR_BAD_STATE:
-            // If we get ERR_BAD_STATE, the value of the futex changed between
+        case MX_ERR_BAD_STATE:
+            // If we get MX_ERR_BAD_STATE, the value of the futex changed between
             // our load and the wait. This could only have happened if we
             // were signaled.
-            return NO_ERROR;
-        case ERR_TIMED_OUT:
-            return ERR_TIMED_OUT;
-        case ERR_INVALID_ARGS:
+            return MX_OK;
+        case MX_ERR_TIMED_OUT:
+            return MX_ERR_TIMED_OUT;
+        case MX_ERR_INVALID_ARGS:
         default:
             __builtin_trap();
         }

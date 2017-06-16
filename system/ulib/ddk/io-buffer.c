@@ -14,7 +14,7 @@ static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_ha
     mx_vaddr_t virt;
 
     mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("io_buffer: mx_vmar_map failed %d size: %zu\n", status, size);
         mx_handle_close(vmo_handle);
         return status;
@@ -23,7 +23,7 @@ static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_ha
     mx_paddr_t phys;
     size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
     status = mx_vmo_op_range(vmo_handle, MX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("io_buffer: mx_vmo_op_range failed %d size: %zu\n", status, size);
         mx_vmar_unmap(mx_vmar_root_self(), virt, size);
         mx_handle_close(vmo_handle);
@@ -35,20 +35,20 @@ static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_ha
     buffer->offset = offset;
     buffer->virt = (void *)virt;
     buffer->phys = phys;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2, uint32_t flags) {
     if (size == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_handle_t vmo_handle;
     mx_status_t status = mx_vmo_create_contiguous(get_root_resource(), size, alignment_log2, &vmo_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("io_buffer: mx_vmo_create failed %d\n", vmo_handle);
         return status;
     }
@@ -66,14 +66,14 @@ mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_o
     uint64_t size;
 
     if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_status_t status = mx_handle_duplicate(vmo_handle, MX_RIGHT_SAME_RIGHTS, &vmo_handle);
-    if (status != NO_ERROR) return status;
+    if (status != MX_OK) return status;
 
     status = mx_vmo_get_size(vmo_handle, &size);
-    if (status != NO_ERROR) return status;
+    if (status != MX_OK) return status;
 
     return io_buffer_init_common(buffer, vmo_handle, size, offset, flags);
 }

@@ -18,21 +18,21 @@ static mx_status_t do_write(mx_handle_t fifo, block_fifo_request_t* request, siz
     while (true) {
         uint32_t actual;
         status = mx_fifo_write(fifo, request, sizeof(block_fifo_request_t) * count, &actual);
-        if (status == ERR_SHOULD_WAIT) {
+        if (status == MX_ERR_SHOULD_WAIT) {
             mx_signals_t signals;
             if ((status = mx_object_wait_one(fifo,
                                              MX_FIFO_WRITABLE | MX_FIFO_PEER_CLOSED,
-                                             MX_TIME_INFINITE, &signals)) != NO_ERROR) {
+                                             MX_TIME_INFINITE, &signals)) != MX_OK) {
                 return status;
             } else if (signals & MX_FIFO_PEER_CLOSED) {
-                return ERR_PEER_CLOSED;
+                return MX_ERR_PEER_CLOSED;
             }
             // Try writing again...
-        } else if (status == NO_ERROR) {
+        } else if (status == MX_OK) {
             count -= actual;
             request += actual;
             if (count == 0) {
-                return NO_ERROR;
+                return MX_OK;
             }
         } else {
             return status;
@@ -45,14 +45,14 @@ static mx_status_t do_read(mx_handle_t fifo, block_fifo_response_t* response) {
     while (true) {
         uint32_t count;
         status = mx_fifo_read(fifo, response, sizeof(block_fifo_response_t), &count);
-        if (status == ERR_SHOULD_WAIT) {
+        if (status == MX_ERR_SHOULD_WAIT) {
             mx_signals_t signals;
             if ((status = mx_object_wait_one(fifo,
                                              MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                             MX_TIME_INFINITE, &signals)) != NO_ERROR) {
+                                             MX_TIME_INFINITE, &signals)) != MX_OK) {
                 return status;
             } else if (signals & MX_FIFO_PEER_CLOSED) {
-                return ERR_PEER_CLOSED;
+                return MX_ERR_PEER_CLOSED;
             }
             // Try reading again...
         } else {
@@ -74,11 +74,11 @@ typedef struct fifo_client {
 mx_status_t block_fifo_create_client(mx_handle_t fifo, fifo_client_t** out) {
     fifo_client_t* client = calloc(sizeof(fifo_client_t), 1);
     if (client == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     client->fifo = fifo;
     *out = client;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void block_fifo_release_client(fifo_client_t* client) {
@@ -92,15 +92,15 @@ void block_fifo_release_client(fifo_client_t* client) {
 
 mx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests, size_t count) {
     if (count == 0) {
-        return NO_ERROR;
+        return MX_OK;
     } else if (count > MAX_TXN_MESSAGES) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     txnid_t txnid = requests[0].txnid;
     assert(txnid < MAX_TXN_COUNT);
     completion_reset(&client->txns[txnid].completion);
-    client->txns[txnid].status = ERR_IO;
+    client->txns[txnid].status = MX_ERR_IO;
 
     mx_status_t status;
     for (size_t i = 0; i < count; i++) {
@@ -108,14 +108,14 @@ mx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
         requests[i].opcode = (requests[i].opcode & BLOCKIO_OP_MASK) |
                              (i == count - 1 ? BLOCKIO_TXN_END : 0);
     }
-    if ((status = do_write(client->fifo, &requests[0], count)) != NO_ERROR) {
+    if ((status = do_write(client->fifo, &requests[0], count)) != MX_OK) {
         return status;
     }
 
     // As expected by the protocol, when we send one "BLOCKIO_TXN_END" message, we
     // must read a reply message.
     block_fifo_response_t response;
-    if ((status = do_read(client->fifo, &response)) != NO_ERROR) {
+    if ((status = do_read(client->fifo, &response)) != MX_OK) {
         return status;
     }
 

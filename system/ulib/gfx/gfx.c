@@ -690,14 +690,14 @@ int gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned h
         break;
     default:
         xprintf("invalid graphics format\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (ptr == NULL) {
         // allocate a buffer
         ptr = malloc(surface->len);
         if (ptr == NULL) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         assert(ptr);
         surface->flags |= GFX_FLAG_FREE_ON_DESTROY;

@@ -17,7 +17,7 @@ typedef struct {
 
 #define COMPLETION_INIT ((completion_t){0})
 
-// Returns ERR_TIMED_OUT if timeout elapses, and NO_ERROR if woken by
+// Returns MX_ERR_TIMED_OUT if timeout elapses, and MX_OK if woken by
 // a call to completion_wake or if the completion has already been
 // signaled.
 mx_status_t completion_wait(completion_t* completion, mx_time_t timeout);

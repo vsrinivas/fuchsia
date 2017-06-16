@@ -66,11 +66,11 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     }
 
     mx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
-        if (proto_id != MX_PROTOCOL_WLANMAC) return ERR_INVALID_ARGS;
+        if (proto_id != MX_PROTOCOL_WLANMAC) return MX_ERR_INVALID_ARGS;
         ddk::AnyProtocol* proto = static_cast<ddk::AnyProtocol*>(out);
         proto->ops = ddk_proto_ops_;
         proto->ctx = this;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     void DdkRelease() {}
@@ -78,7 +78,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info) {
         query_this_ = get_this();
         query_called_ = true;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     void WlanmacStop() {
@@ -90,7 +90,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         start_this_ = get_this();
         proxy_.swap(proxy);
         start_called_ = true;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     void WlanmacTx(uint32_t options, const void* data, size_t length) {
@@ -101,7 +101,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
         set_channel_this_ = get_this();
         set_channel_called_ = true;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     bool VerifyCalls() const {
@@ -180,15 +180,15 @@ static bool test_wlanmac_protocol() {
     // its ops table is currently invalid.
     wlanmac_protocol_t proto;
     auto status = dev.DdkGetProtocol(0, reinterpret_cast<void*>(&proto));
-    EXPECT_EQ(ERR_INVALID_ARGS, status, "");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "");
 
     status = dev.DdkGetProtocol(MX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&proto));
-    EXPECT_EQ(NO_ERROR, status, "");
-    EXPECT_EQ(NO_ERROR, proto.ops->query(proto.ctx, 0, nullptr), "");
+    EXPECT_EQ(MX_OK, status, "");
+    EXPECT_EQ(MX_OK, proto.ops->query(proto.ctx, 0, nullptr), "");
     proto.ops->stop(proto.ctx);
-    EXPECT_EQ(NO_ERROR, proto.ops->start(proto.ctx, nullptr, nullptr), "");
+    EXPECT_EQ(MX_OK, proto.ops->start(proto.ctx, nullptr, nullptr), "");
     proto.ops->tx(proto.ctx, 0, nullptr, 0);
-    EXPECT_EQ(NO_ERROR, proto.ops->set_channel(proto.ctx, 0, nullptr), "");
+    EXPECT_EQ(MX_OK, proto.ops->set_channel(proto.ctx, 0, nullptr), "");
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -204,16 +204,16 @@ static bool test_wlanmac_protocol_proxy() {
 
     wlanmac_protocol_t proto;
     auto status = protocol_dev.DdkGetProtocol(MX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&proto));
-    EXPECT_EQ(NO_ERROR, status, "");
+    EXPECT_EQ(MX_OK, status, "");
     // The proxy device to wrap the ops + device that represent the parent
     // device.
     ddk::WlanmacProtocolProxy proxy(&proto);
     // The WlanmacIfc to hand to the parent device.
     TestWlanmacIfc ifc_dev;
 
-    EXPECT_EQ(NO_ERROR, proxy.Query(0, nullptr), "");
+    EXPECT_EQ(MX_OK, proxy.Query(0, nullptr), "");
     proxy.Stop();
-    EXPECT_EQ(NO_ERROR, proxy.Start(&ifc_dev), "");
+    EXPECT_EQ(MX_OK, proxy.Start(&ifc_dev), "");
     proxy.Tx(0, nullptr, 0);
     proxy.SetChannel(0, nullptr);
 
@@ -232,11 +232,11 @@ static bool test_wlanmac_protocol_ifc_proxy() {
 
     wlanmac_protocol_t proto;;
     auto status = protocol_dev.DdkGetProtocol(MX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&proto));
-    EXPECT_EQ(NO_ERROR, status, "");
+    EXPECT_EQ(MX_OK, status, "");
 
     ddk::WlanmacProtocolProxy proxy(&proto);
     TestWlanmacIfc ifc_dev;
-    EXPECT_EQ(NO_ERROR, ifc_dev.StartProtocol(&proxy), "");
+    EXPECT_EQ(MX_OK, ifc_dev.StartProtocol(&proxy), "");
 
     // Execute the WlanmacIfc methods
     ASSERT_TRUE(protocol_dev.TestIfc(), "");

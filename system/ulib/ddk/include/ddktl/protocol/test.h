@@ -31,7 +31,7 @@
 //                                 size_t arglen) {
 //     auto dev = static_cast<MyDevice*>(cookie);
 //     // run tests and set up report
-//     return NO_ERROR;
+//     return MX_OK;
 // }
 //
 // class MyDevice : public MyDeviceType {
@@ -48,7 +48,7 @@
 //         test_protocol_t* ops;
 //         auto status = get_device_protocol(parent_, MX_PROTOCOL_TEST,
 //                                           reinterpret_cast<void**>(&ops));
-//         if (status != NO_ERROR) {
+//         if (status != MX_OK) {
 //             return status;
 //         }
 //        proxy_.reset(new ddk::TestProtocolProxy(ops, parent_));

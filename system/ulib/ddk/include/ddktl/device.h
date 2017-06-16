@@ -100,7 +100,7 @@
 //                                void** cookie) {
 //     auto dev = unique_ptr<MyDevice>(new MyDevice(device));
 //     auto status = dev->Bind();
-//     if (status == NO_ERROR) {
+//     if (status == MX_OK) {
 //         // devmgr is now in charge of the memory for dev
 //         dev.release();
 //     }

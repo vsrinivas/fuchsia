@@ -16,7 +16,7 @@ mx_status_t log::create(log* result, uint32_t flags) {
         return status;
     } else {
         result->reset(h);
-        return NO_ERROR;
+        return MX_OK;
     }
 }
 

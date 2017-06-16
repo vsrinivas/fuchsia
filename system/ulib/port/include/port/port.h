@@ -34,10 +34,10 @@ mx_status_t port_wait_repeating(port_t* port, port_handler_t* ph);
 
 // Wait for a packet to arrive of for the port to timeout
 // If the port wait returns and error or timeout, returns that.
-// If once is true, returns NO_ERROR after handling a packet.
+// If once is true, returns MX_OK after handling a packet.
 //
 // If a packet is received, the callback for the port handler
-// is invoked.  If that callback returns NO_ERROR, port_wait()
+// is invoked.  If that callback returns MX_OK, port_wait()
 // is invoked on that port handler again.
 mx_status_t port_dispatch(port_t* port, mx_time_t timeout, bool once);
 

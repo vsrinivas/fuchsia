@@ -52,7 +52,7 @@ public:
     // Find a run of *run_len* *is_set* bits, between bitoff and bitmax.
     // Returns the start of the run in *out*, or bitmax if it is
     // not found in the provided range.
-    // If the run is not found, "ERR_NO_RESOURCES" is returned.
+    // If the run is not found, "MX_ERR_NO_RESOURCES" is returned.
     mx_status_t Find(bool is_set, size_t bitoff, size_t bitmax, size_t run_len, size_t* out) const;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
@@ -62,11 +62,11 @@ public:
              size_t* first_unset = nullptr) const override;
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Returns an error if
-    // bitmax < bitoff or size_ < bitmax, and NO_ERROR otherwise.
+    // bitmax < bitoff or size_ < bitmax, and MX_OK otherwise.
     mx_status_t Set(size_t bitoff, size_t bitmax) override;
 
     // Clears all bits in the range [*bitoff*, *bitmax*).  Returns an error if
-    // bitmax < bitoff or size_ < bitmax, and NO_ERROR otherwise.
+    // bitmax < bitoff or size_ < bitmax, and MX_OK otherwise.
     mx_status_t Clear(size_t bitoff, size_t bitmax) override;
 
     // Clear all bits in the bitmap.

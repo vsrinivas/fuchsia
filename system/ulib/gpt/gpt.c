@@ -258,7 +258,7 @@ int gpt_device_sync(gpt_device_t* dev) {
         header.backup = priv->blocks - 1;
         // generate a guid
         size_t sz;
-        if (mx_cprng_draw(header.guid, GPT_GUID_LEN, &sz) != NO_ERROR ||
+        if (mx_cprng_draw(header.guid, GPT_GUID_LEN, &sz) != MX_OK ||
             sz != GPT_GUID_LEN) {
             return -1;
         }

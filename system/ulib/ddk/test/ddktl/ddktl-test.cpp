@@ -45,7 +45,7 @@ mx_status_t ddktl_test_func(void* cookie, test_report_t* report, const void* arg
     test_protocol_t proto;
     auto status =
         device_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -58,7 +58,7 @@ mx_status_t ddktl_test_func(void* cookie, test_report_t* report, const void* arg
     update_test_report(unittest_run_one_test(test_case_ddktl_device, TEST_ALL), report);
     update_test_report(unittest_run_one_test(test_case_ddktl_ethernet_device, TEST_ALL), report);
     update_test_report(unittest_run_one_test(test_case_ddktl_wlan_device, TEST_ALL), report);
-    return report->n_failed == 0 ? NO_ERROR : ERR_INTERNAL;
+    return report->n_failed == 0 ? MX_OK : MX_ERR_INTERNAL;
 }
 
 }  // namespace
@@ -67,11 +67,11 @@ extern "C" mx_status_t ddktl_test_bind(void* ctx, mx_device_t* dev, void** cooki
     test_protocol_t proto;
     auto status =
         device_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     proto.ops->set_test_func(proto.ctx, ddktl_test_func, dev);
 
-    return NO_ERROR;
+    return MX_OK;
 }

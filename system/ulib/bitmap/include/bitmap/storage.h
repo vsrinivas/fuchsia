@@ -30,10 +30,10 @@ public:
         AllocChecker ac;
         auto arr = new (&ac) char[size];
         if (!ac.check()) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         storage_.reset(arr, size);
-        return NO_ERROR;
+        return MX_OK;
     }
     void* GetData() const { return storage_.get(); }
 private:
@@ -57,15 +57,15 @@ public:
         Release();
         size_ = size;
         mx_status_t status;
-        if ((status = mx::vmo::create(size_, 0, &vmo_)) != NO_ERROR) {
+        if ((status = mx::vmo::create(size_, 0, &vmo_)) != MX_OK) {
             return status;
         } else if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_.get(), 0,
                                          size_, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                                         &mapped_addr_)) != NO_ERROR) {
+                                         &mapped_addr_)) != MX_OK) {
             vmo_.reset();
             return status;
         }
-        return NO_ERROR;
+        return MX_OK;
     }
 
     void* GetData() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }

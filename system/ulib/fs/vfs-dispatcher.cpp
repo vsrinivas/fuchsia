@@ -68,7 +68,7 @@ VfsDispatcher::~VfsDispatcher() {
     // suicide: cause worker threads to wake and die
     // (ideally, we could close the port and the threads would die on their own)
     // shut down existing handlers (to prevent races)
-    if ((status = shutdown_event_.signal(0u, MX_EVENT_SIGNALED)) != NO_ERROR) {
+    if ((status = shutdown_event_.signal(0u, MX_EVENT_SIGNALED)) != MX_OK) {
         FS_TRACE_ERROR("couldn't send kill signal to thread\n");
     }
 
@@ -85,7 +85,7 @@ VfsDispatcher::~VfsDispatcher() {
 static void GetThreadName(char* name, size_t namelen) {
     mx_status_t r = mx_object_get_property(thrd_get_mx_handle(thrd_current()),
                                            MX_PROP_NAME, name, namelen);
-    if (r != NO_ERROR)
+    if (r != MX_OK)
         strncpy(name, "???", namelen);
 }
 
@@ -112,7 +112,7 @@ int VfsDispatcher::Loop() {
 
         if ((r = ioport_.wait(MX_TIME_INFINITE, &packet, 0u)) < 0) {
             xprintf("mxio_dispatcher: port wait failed %d, worker exiting\n", r);
-            return NO_ERROR;
+            return MX_OK;
         }
 
         xprintf("port_wait: thread %s \n", tname);
@@ -121,7 +121,7 @@ int VfsDispatcher::Loop() {
             // reset for the next thread
             r = shutdown_event_.wait_async(ioport_, 0u, MX_EVENT_SIGNALED,
                                            MX_WAIT_ASYNC_ONCE);
-            if (r != NO_ERROR) {
+            if (r != MX_OK) {
                 FS_TRACE_ERROR("vfs-dispatcher: error, couldn't reset thread event\n");
             }
             // exit thread
@@ -137,14 +137,14 @@ int VfsDispatcher::Loop() {
         if (packet.signal.observed & MX_CHANNEL_READABLE) {
             // hit cb multiple times if we know multi packets available
             for (unsigned ix = 0; ix < mxtl::min(kMaxMessageBatchSize, (unsigned)packet.signal.count); ++ix) {
-                if ((r = handler->ExecuteCallback(cb_)) != NO_ERROR) {
+                if ((r = handler->ExecuteCallback(cb_)) != MX_OK) {
                     // error or close: invoke callback in case of error
                     DisconnectHandler(handler, r != ERR_DISPATCHER_DONE);
                     goto free_handler;
                 }
             }
             // maybe more work to do: re-arm handler to fire again
-            if ((r = handler->SetAsyncCallback(ioport_))!= NO_ERROR){
+            if ((r = handler->SetAsyncCallback(ioport_))!= MX_OK){
                 DisconnectHandler(handler, true);
                 goto free_handler;
             }
@@ -160,7 +160,7 @@ int VfsDispatcher::Loop() {
     }
 
     // fatal error -- exiting thread
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
@@ -168,34 +168,34 @@ mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
     AllocChecker ac;
     mxtl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher(cb, pool_size));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     thrd_t* t = new (&ac) thrd_t[pool_size];
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     dispatcher->t_.reset(t, pool_size);
 
     mx_status_t status;
-    if ((status = mx::port::create(MX_PORT_OPT_V2, &dispatcher->ioport_)) != NO_ERROR) {
+    if ((status = mx::port::create(MX_PORT_OPT_V2, &dispatcher->ioport_)) != MX_OK) {
         return status;
     }
-    if ((status = mx::event::create(0u, &dispatcher->shutdown_event_)) != NO_ERROR) {
+    if ((status = mx::event::create(0u, &dispatcher->shutdown_event_)) != MX_OK) {
         return status;
     }
     status = dispatcher->shutdown_event_.wait_async(dispatcher->ioport_, 0u,
                                                     MX_EVENT_SIGNALED,
                                                     MX_WAIT_ASYNC_ONCE);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
-    if ((status = dispatcher->Start("VFS Dispatcher")) != NO_ERROR) {
+    if ((status = dispatcher->Start("VFS Dispatcher")) != MX_OK) {
         return status;
     }
     *out = mxtl::move(dispatcher);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int mxio_dispatcher_thread(void* arg) {
@@ -211,7 +211,7 @@ mx_status_t VfsDispatcher::Start(const char* name) {
 
     if (n_threads_ != 0) {
         // already initialized
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     xprintf("starting dispatcher with %d threads\n", pool_size_);
@@ -225,33 +225,33 @@ mx_status_t VfsDispatcher::Start(const char* name) {
         xprintf("start thread %s\n", namebuf);
         if ((r = thrd_create_with_name(&t_[n_threads_], mxio_dispatcher_thread,
                                        this, namebuf)) != thrd_success) {
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         } else {
             n_threads_++;
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VfsDispatcher::AddVFSHandler(mx_handle_t h, void* cb, void* cookie) {
     AllocChecker ac;
     mxtl::unique_ptr<Handler> handler(new (&ac) Handler(h, cb, cookie));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mxtl::AutoLock md_lock(&lock_);
 
     // set us up to receive read/close callbacks from handler on ioport_
     mx_status_t status;
-    if ((status = handler->SetAsyncCallback(ioport_)) != NO_ERROR) {
+    if ((status = handler->SetAsyncCallback(ioport_)) != MX_OK) {
         return status;
     } else {
         handlers_.push_back(mxtl::move(handler));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace fs

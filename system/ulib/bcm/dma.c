@@ -46,10 +46,10 @@ static int dma_irq_thread(void* arg) {
 
         mx_interrupt_complete(irq_handle);
         stat = mx_interrupt_wait(irq_handle);
-        MX_DEBUG_ASSERT(stat == NO_ERROR);
+        MX_DEBUG_ASSERT(stat == MX_OK);
 
         dma_regs->channels[dma->ch_num].cs |= BCM_DMA_CS_INT;
-        if (stat != NO_ERROR) {
+        if (stat != MX_OK) {
             xprintf("dma interrupt wait failed = %d\n", stat);
             break;
         }
@@ -74,14 +74,14 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
 
     if (dma->state > BCM_DMA_STATE_SHUTDOWN) {
         mtx_unlock(&dma->dma_lock);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     static_assert(BCM_DMA_MAX_CH < countof(dma_regs->channels),
                             "DMA channel out of range");
     if (ch > BCM_DMA_MAX_CH) { // Don't use ch 15 as it has different properties
         mtx_unlock(&dma->dma_lock);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (dma_regs == NULL) {
@@ -90,7 +90,7 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
             DMA_BASE, BCM_DMA_PAGE_SIZE,
             MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&dma_regs);
 
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             goto dma_init_err;
         }
     }
@@ -99,7 +99,7 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
     status = io_buffer_init(&dma->ctl_blks,
                             BCM_DMA_NUM_CONTROL_BLOCKS * sizeof(bcm_dma_cb_t),
                             IO_BUFFER_RW);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         xprintf("\nBCM_DMA: Error Allocating control blocks: %d\n", status);
         goto dma_init_err;
     }
@@ -138,7 +138,7 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
     dma->state = BCM_DMA_STATE_INITIALIZED;
 
     mtx_unlock(&dma->dma_lock);
-    return NO_ERROR;
+    return MX_OK;
 
 dma_init_err:
     mx_handle_close(dma->irq_handle);
@@ -170,16 +170,16 @@ mx_status_t bcm_dma_paddr_to_offset(bcm_dma_t* dma, mx_paddr_t paddr, uint32_t* 
 
     // This call only works if an index was created for the memory object
     if (!dma->mem_idx) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     for (uint32_t i = 0; i < dma->mem_idx_len; i++) {
         if ((paddr >= dma->mem_idx[i].paddr) && (paddr < (dma->mem_idx[i].paddr + dma->mem_idx[i].len))) {
             *offset = dma->mem_idx[i].offset + (paddr - dma->mem_idx[i].paddr);
-            return NO_ERROR;
+            return MX_OK;
         }
     }
-    return ERR_OUT_OF_RANGE;
+    return MX_ERR_OUT_OF_RANGE;
 }
 
 /* Builds index of vmo pages.  This is used to translate physical addresses
@@ -191,7 +191,7 @@ static mx_status_t bcm_dma_build_mem_index(bcm_dma_t* dma, mx_paddr_t* page_list
     dma->mem_idx = calloc(len, sizeof(bcm_dma_vmo_index_t)); //Allocate worst case sized array
     MX_DEBUG_ASSERT(dma->mem_idx);
     if (!dma->mem_idx)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     dma->mem_idx_len = 0;
 
@@ -219,7 +219,7 @@ static mx_status_t bcm_dma_build_mem_index(bcm_dma_t* dma, mx_paddr_t* page_list
             dma->mem_idx_len++;
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t bcm_dma_init_vmo_to_fifo_trans(bcm_dma_t* dma, mx_handle_t vmo, uint32_t t_info,
@@ -230,12 +230,12 @@ mx_status_t bcm_dma_init_vmo_to_fifo_trans(bcm_dma_t* dma, mx_handle_t vmo, uint
 
     if (dma->state < BCM_DMA_STATE_INITIALIZED) {
         mtx_unlock(&dma->dma_lock);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     size_t buffsize;
     mx_status_t status = mx_vmo_get_size(vmo, &buffsize);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto dma_link_err;
     }
 
@@ -243,24 +243,24 @@ mx_status_t bcm_dma_init_vmo_to_fifo_trans(bcm_dma_t* dma, mx_handle_t vmo, uint
 
     MX_DEBUG_ASSERT(num_pages <= BCM_DMA_NUM_CONTROL_BLOCKS);
     if (num_pages > BCM_DMA_NUM_CONTROL_BLOCKS) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto dma_link_err;
     }
 
     buf_pages = calloc(num_pages, sizeof(mx_paddr_t));
     if (!buf_pages) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto dma_link_err;
     }
 
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, buffsize,
                              buf_pages, sizeof(mx_paddr_t) * num_pages);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto dma_link_err;
 
     if (flags & BCM_DMA_FLAGS_USE_MEM_INDEX) {
         status = bcm_dma_build_mem_index(dma, buf_pages, num_pages);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             goto dma_link_err;
     }
 
@@ -319,7 +319,7 @@ mx_status_t bcm_dma_start(bcm_dma_t* dma) {
     mtx_lock(&dma->dma_lock);
     if ((dma_regs == NULL) || (dma->state != BCM_DMA_STATE_READY)) {
         mtx_unlock(&dma->dma_lock);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     dma_regs->channels[dma->ch_num].ctl_blk_addr =
@@ -329,7 +329,7 @@ mx_status_t bcm_dma_start(bcm_dma_t* dma) {
 
     dma->state = BCM_DMA_STATE_RUNNING;
     mtx_unlock(&dma->dma_lock);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t bcm_dma_stop(bcm_dma_t* dma) {
@@ -338,14 +338,14 @@ mx_status_t bcm_dma_stop(bcm_dma_t* dma) {
 
     if ((dma_regs == NULL) || (dma->state < BCM_DMA_STATE_READY)) {
         mtx_unlock(&dma->dma_lock);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     dma_regs->channels[dma->ch_num].cs &= ~BCM_DMA_CS_ACTIVE;
     dma->state = BCM_DMA_STATE_READY;
 
     mtx_unlock(&dma->dma_lock);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void bcm_dma_deinit(bcm_dma_t* dma) {

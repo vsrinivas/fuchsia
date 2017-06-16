@@ -9,17 +9,17 @@ extern "C" {
 
 mx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool) {
     if (out_pool == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto pool = RegionAllocator::RegionPool::Create(max_memory);
     if (pool == nullptr)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // Everything looks good.  Deliberately leak our reference out into the cold
     // cruel world of C.  I sure hope that it comes back some day...
     *out_pool = reinterpret_cast<ralloc_pool_t*>(pool.leak_ref());
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void ralloc_release_pool(ralloc_pool_t* pool) {
@@ -34,19 +34,19 @@ void ralloc_release_pool(ralloc_pool_t* pool) {
 
 mx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator) {
     if (!out_allocator)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     void* mem = ::malloc(sizeof(RegionAllocator));
     if (!mem)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *out_allocator = reinterpret_cast<ralloc_allocator_t*>(new (mem) RegionAllocator());
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool* pool) {
     if (!allocator || !pool)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     RegionAllocator& alloc = *(reinterpret_cast<RegionAllocator*>(allocator));
 
@@ -79,7 +79,7 @@ mx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
                               const ralloc_region_t* region,
                               bool allow_overlap) {
     if (!allocator || !region)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     return reinterpret_cast<RegionAllocator*>(allocator)->AddRegion(*region, allow_overlap);
 }
@@ -88,7 +88,7 @@ mx_status_t ralloc_sub_region(ralloc_allocator_t* allocator,
                               const ralloc_region_t* region,
                               bool allow_incomplete) {
     if (!allocator || !region)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     return reinterpret_cast<RegionAllocator*>(allocator)->SubtractRegion(*region, allow_incomplete);
 }
@@ -98,13 +98,13 @@ mx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator,
                                        uint64_t alignment,
                                        const ralloc_region_t** out_region) {
     if (!allocator || !out_region)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     RegionAllocator::Region::UPtr managed_region;
     RegionAllocator& alloc  = *(reinterpret_cast<RegionAllocator*>(allocator));
     mx_status_t     result = alloc.GetRegion(size, alignment, managed_region);
 
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
         // Everything looks good.  Detach the managed_region our unique_ptr<>
         // and send the unmanaged pointer to the inner ralloc_region_t back
         // to the caller.
@@ -124,13 +124,13 @@ mx_status_t ralloc_get_specific_region_ex(
         const ralloc_region_t*  requested_region,
         const ralloc_region_t** out_region) {
     if (!allocator || !requested_region || !out_region)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     RegionAllocator::Region::UPtr managed_region;
     RegionAllocator& alloc  = *(reinterpret_cast<RegionAllocator*>(allocator));
     mx_status_t     result = alloc.GetRegion(*requested_region, managed_region);
 
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
         // Everything looks good.  Detach the managed_region our unique_ptr<>
         // and send the unmanaged pointer to the inner ralloc_region_t back
         // to the caller.

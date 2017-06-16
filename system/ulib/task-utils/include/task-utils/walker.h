@@ -21,7 +21,7 @@ __BEGIN_CDECLS
 //     thread, the job that contains the process, or the job that contains the
 //     job).
 //
-// If the callback returns a value other than NO_ERROR, the job tree walk will
+// If the callback returns a value other than MX_OK, the job tree walk will
 // terminate without visiting any other node, and the mx_status_t value will be
 // returned by walk_job_tree().
 typedef mx_status_t(task_callback_t)(

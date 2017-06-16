@@ -42,7 +42,7 @@ mx_status_t launch_logs_async(int argc, const char** argv, mx_handle_t* handles,
 
     mx_status_t status;
     const char* errmsg;
-    if ((status = launchpad_go(lp, NULL, &errmsg)) != NO_ERROR) {
+    if ((status = launchpad_go(lp, NULL, &errmsg)) != MX_OK) {
         fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
     }
     return status;
@@ -68,13 +68,13 @@ mx_status_t launch_stdio_sync(int argc, const char** argv, mx_handle_t* handles,
     mx_status_t status;
     mx_handle_t proc;
     const char* errmsg;
-    if ((status = launchpad_go(lp, &proc, &errmsg)) != NO_ERROR) {
+    if ((status = launchpad_go(lp, &proc, &errmsg)) != MX_OK) {
         fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
         return status;
     }
 
     status = mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "launch: Error waiting for process to terminate\n");
         mx_handle_close(proc);
         return status;
@@ -88,9 +88,9 @@ mx_status_t launch_stdio_sync(int argc, const char** argv, mx_handle_t* handles,
     }
     mx_handle_close(proc);
     if (!info.exited || info.return_code != 0) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles,
@@ -100,7 +100,7 @@ mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles
 
     mx_status_t status;
     const char* errmsg;
-    if ((status = launchpad_go(lp, NULL, &errmsg)) != NO_ERROR) {
+    if ((status = launchpad_go(lp, NULL, &errmsg)) != MX_OK) {
         fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
         return status;
     }

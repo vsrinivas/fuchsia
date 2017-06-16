@@ -237,20 +237,20 @@ void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
 
 static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     printf("netifc: ? /dev/class/ethernet/%s\n", fn);
 
     if ((netfd = openat(dirfd, fn, O_RDWR)) < 0) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     eth_info_t info;
     if (ioctl_ethernet_get_info(netfd, &info) < 0) {
         close(netfd);
         netfd = -1;
-        return NO_ERROR;
+        return MX_OK;
     }
     memcpy(netmac, info.mac, sizeof(netmac));
     netmtu = info.mtu;
@@ -400,7 +400,7 @@ int netifc_poll(void) {
         } else {
             status = eth_wait_rx(eth, MX_TIME_INFINITE);
         }
-        if ((status < 0) && (status != ERR_TIMED_OUT)) {
+        if ((status < 0) && (status != MX_ERR_TIMED_OUT)) {
             printf("netifc: eth rx wait failed: %d\n", status);
             return -1;
         }

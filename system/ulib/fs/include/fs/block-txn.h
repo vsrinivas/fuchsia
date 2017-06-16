@@ -99,7 +99,7 @@ inline mx_status_t BlockTxn<vmoid_t, Write, BlockSize, TxnHandler>::Flush() {
         requests_[i].dev_offset *= BlockSize;
         requests_[i].length *= BlockSize;
     }
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     if (count_ != 0) {
         status = handler_->Txn(requests_, count_);
     }
@@ -137,7 +137,7 @@ public:
     }
 
     // Activate the transaction (do nothing)
-    mx_status_t Flush() { return NO_ERROR; }
+    mx_status_t Flush() { return MX_OK; }
 
 private:
     TxnHandler* handler_;

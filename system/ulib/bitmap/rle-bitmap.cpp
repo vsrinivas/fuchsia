@@ -70,7 +70,7 @@ mx_status_t RleBitmap::Set(size_t bitoff, size_t bitmax) {
 
 mx_status_t RleBitmap::SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (free_list == nullptr) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     return SetInternal(bitoff, bitmax, free_list);
@@ -82,7 +82,7 @@ mx_status_t RleBitmap::Clear(size_t bitoff, size_t bitmax) {
 
 mx_status_t RleBitmap::ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (free_list == nullptr) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     return ClearInternal(bitoff, bitmax, free_list);
@@ -90,17 +90,17 @@ mx_status_t RleBitmap::ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free
 
 mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (bitmax < bitoff) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     const size_t bitlen = bitmax - bitoff;
     if (bitlen == 0) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     mxtl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
     if (!new_elem) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     ++num_elems_;
     new_elem->bitoff = bitoff;
@@ -116,7 +116,7 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
 
     // If ends_after was the end of the list, there is no merging to do.
     if (ends_after == elems_.end()) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     auto itr = ends_after;
@@ -146,16 +146,16 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
         --num_elems_;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (bitmax < bitoff) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (bitmax - bitoff == 0) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     auto itr = elems_.begin();
@@ -177,7 +177,7 @@ mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
                 // '*itr' contains [bitoff, bitmax), and we need to split it.
                 mxtl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
                 if (!new_elem) {
-                    return ERR_NO_MEMORY;
+                    return MX_ERR_NO_MEMORY;
                 }
                 ++num_elems_;
                 new_elem->bitoff = bitmax;
@@ -201,7 +201,7 @@ mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
             }
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace bitmap

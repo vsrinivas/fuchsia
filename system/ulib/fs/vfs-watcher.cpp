@@ -29,16 +29,16 @@ mx_status_t WatcherContainer::WatchDir(mx_handle_t* out) {
     mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
                                                                   VFS_WATCH_MASK_ADDED));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mx::channel out_channel;
     if (mx::channel::create(0, &out_channel, &watcher->h) != MX_OK) {
-        return ERR_NO_RESOURCES;
+        return MX_ERR_NO_RESOURCES;
     }
     mxtl::AutoLock lock(&lock_);
     watch_list_.push_back(mxtl::move(watcher));
     *out = out_channel.release();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 constexpr uint32_t kSupportedMasks = VFS_WATCH_MASK_ADDED;
@@ -47,22 +47,22 @@ mx_status_t WatcherContainer::WatchDirV2(const vfs_watch_dir_t* cmd) {
     mx::channel c = mx::channel(cmd->channel);
     if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
         // No events to watch
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (cmd->mask & ~kSupportedMasks) {
         // Asking for an unsupported event
         // TODO(smklein): Add more supported events
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     AllocChecker ac;
     mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mxtl::move(c), cmd->mask));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mxtl::AutoLock lock(&lock_);
     watch_list_.push_back(mxtl::move(watcher));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void WatcherContainer::NotifyAdd(const char* name, size_t len) {

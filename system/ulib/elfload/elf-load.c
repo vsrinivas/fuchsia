@@ -47,7 +47,7 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz
     } else {
         size_t n;
         mx_status_t status = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         if (n != sizeof(ehdr))
             return ERR_ELF_BAD_FORMAT;
@@ -73,7 +73,7 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz
     header->e_phnum = ehdr.e_phnum;
     header->e_entry = ehdr.e_entry;
     *phoff = ehdr.e_phoff;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t phdrs[],
@@ -81,11 +81,11 @@ mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t phdrs[],
     size_t phdrs_size = (size_t)phnum * sizeof(elf_phdr_t);
     size_t n;
     mx_status_t status = mx_vmo_read(vmo, phdrs, phoff, phdrs_size, &n);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     if (n != phdrs_size)
         return ERR_ELF_BAD_FORMAT;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // An ET_DYN file can be loaded anywhere, so choose where.  This
@@ -125,7 +125,7 @@ static mx_status_t choose_load_bias(mx_handle_t root_vmar,
 
     const size_t span = high - low;
     if (span == 0)
-        return NO_ERROR;
+        return MX_OK;
 
     // Allocate a VMAR to reserve the whole address range.
     mx_status_t status = mx_vmar_allocate(root_vmar, 0, span,
@@ -134,7 +134,7 @@ static mx_status_t choose_load_bias(mx_handle_t root_vmar,
                                           MX_VM_FLAG_CAN_MAP_EXECUTE |
                                           MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                           vmar, vmar_base);
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         *bias = *vmar_base - low;
     return status;
 }
@@ -161,7 +161,7 @@ static mx_status_t finish_load_segment(
     if (file_size > 0) {
         mx_status_t status = mx_vmar_map(vmar, start_offset, vmo, file_start,
                                          file_size, flags, &start);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         start_offset += file_size;
@@ -171,7 +171,7 @@ static mx_status_t finish_load_segment(
     // The rest of the segment will be backed by anonymous memory.
     mx_handle_t bss_vmo;
     mx_status_t status = mx_vmo_create(size, 0, &bss_vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     char bss_vmo_name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_BSS;
@@ -179,7 +179,7 @@ static mx_status_t finish_load_segment(
            vmo_name, MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_BSS));
     status = mx_object_set_property(bss_vmo, MX_PROP_NAME,
                                     bss_vmo_name, strlen(bss_vmo_name));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         mx_handle_close(bss_vmo);
         return status;
     }
@@ -191,7 +191,7 @@ static mx_status_t finish_load_segment(
         char buffer[PAGE_SIZE];
         size_t n;
         status = mx_vmo_read(vmo, buffer, file_end, partial_page, &n);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             mx_handle_close(bss_vmo);
             return status;
         }
@@ -200,13 +200,13 @@ static mx_status_t finish_load_segment(
             return ERR_ELF_BAD_FORMAT;
         }
         status = mx_vmo_write(bss_vmo, buffer, 0, n, &n);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             mx_handle_close(bss_vmo);
             return status;
         }
         if (n != partial_page) {
             mx_handle_close(bss_vmo);
-            return ERR_IO;
+            return MX_ERR_IO;
         }
     }
 
@@ -230,7 +230,7 @@ static mx_status_t load_segment(mx_handle_t vmar, size_t vmar_offset,
 
     // Nothing to do for an empty segment (degenerate case).
     if (size == 0)
-        return NO_ERROR;
+        return MX_OK;
 
     uintptr_t file_start = (uintptr_t)ph->p_offset;
     uintptr_t file_end = file_start + ph->p_filesz;
@@ -251,13 +251,13 @@ static mx_status_t load_segment(mx_handle_t vmar, size_t vmar_offset,
     mx_handle_t writable_vmo;
     mx_status_t status = mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                                       file_start, data_size, &writable_vmo);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         char name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
         memcpy(&name[sizeof(VMO_NAME_PREFIX_DATA) - 1],
                vmo_name, MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_DATA));
         status = mx_object_set_property(writable_vmo, MX_PROP_NAME,
                                         name, strlen(name));
-        if (status == NO_ERROR)
+        if (status == MX_OK)
             status = finish_load_segment(
                 vmar, writable_vmo, vmo_name, ph, start, size,
                 0, file_end - file_start, partial_page);
@@ -274,7 +274,7 @@ mx_status_t elf_load_map_segments(mx_handle_t root_vmar,
                                   mx_vaddr_t* base, mx_vaddr_t* entry) {
     char vmo_name[MX_MAX_NAME_LEN];
     if (mx_object_get_property(vmo, MX_PROP_NAME,
-                               vmo_name, sizeof(vmo_name)) != NO_ERROR ||
+                               vmo_name, sizeof(vmo_name)) != MX_OK ||
         vmo_name[0] == '\0')
         memcpy(vmo_name, VMO_NAME_UNKNOWN, sizeof(VMO_NAME_UNKNOWN));
 
@@ -285,17 +285,17 @@ mx_status_t elf_load_map_segments(mx_handle_t root_vmar,
                                           &vmar, &vmar_base, &bias);
 
     size_t vmar_offset = bias - vmar_base;
-    for (uint_fast16_t i = 0; status == NO_ERROR && i < header->e_phnum; ++i) {
+    for (uint_fast16_t i = 0; status == MX_OK && i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD)
             status = load_segment(vmar, vmar_offset, vmo, vmo_name, &phdrs[i]);
     }
 
-    if (status == NO_ERROR && segments_vmar != NULL)
+    if (status == MX_OK && segments_vmar != NULL)
         *segments_vmar = vmar;
     else
         mx_handle_close(vmar);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         if (base != NULL)
             *base = vmar_base;
         if (entry != NULL)

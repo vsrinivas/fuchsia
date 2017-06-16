@@ -81,7 +81,7 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
 
         mx_status_t status = (*read_fn)(
                 channel, 0u, &ctx, handle, sizeof(ctx), 1, &actual, &actual_handles);
-        if ((status != NO_ERROR) || (actual != sizeof(ctx)))
+        if ((status != MX_OK) || (actual != sizeof(ctx)))
             __builtin_trap();
 
         // The received handle in the |ctx| message does not have any use other than
@@ -90,14 +90,14 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
         // Acknowledge the initial message.
         uint32_t ack[2] = { actual, actual_handles };
         status = ctx.channel_write(channel, 0u, ack, sizeof(uint32_t) * 2, NULL, 0u);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             __builtin_trap();
 
         do {
             // wait for the next message.
             status = ctx.object_wait_one(
                 channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE, &actual);
-            if (status != NO_ERROR)
+            if (status != MX_OK)
                 break;
 
             minip_cmd_t cmd;
@@ -119,7 +119,7 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
 
                 if (what & MINIP_CMD_ECHO_MSG) {
                     what &= ~MINIP_CMD_ECHO_MSG;
-                    cmd.status = NO_ERROR;
+                    cmd.status = MX_OK;
                     goto reply;
                 }
                 if (what & MINIP_CMD_CREATE_EVENT) {
@@ -135,7 +135,7 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get either MX_CHANNEL_PEER_CLOSED if
-                // it's doing a wait or will get ERR_CALL_FAILED of it's doing a
+                // it's doing a wait or will get MX_ERR_CALL_FAILED of it's doing a
                 // channel_call().
 
                 if (what & MINIP_CMD_BUILTIN_TRAP)
@@ -145,7 +145,7 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
                     ctx.process_exit(0);
 
                 // Did not match any known message.
-                cmd.status = ERR_WRONG_TYPE;
+                cmd.status = MX_ERR_WRONG_TYPE;
 reply:
                 actual_handles = (handle[0] == MX_HANDLE_INVALID) ? 0u : 1u;
                 status = ctx.channel_write(
@@ -154,7 +154,7 @@ reply:
                 // Loop if there are more commands packed in |what|.
             } while (what);
 
-        } while (status == NO_ERROR);
+        } while (status == MX_OK);
     }
 
     __builtin_trap();
@@ -170,7 +170,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     uint64_t stack_size = 16 * 1024u;
     mx_handle_t stack_vmo = MX_HANDLE_INVALID;
     mx_status_t status = mx_vmo_create(stack_size, 0, &stack_vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // We assume that the code to execute is less than 600 bytes. As of gcc 6
@@ -178,13 +178,13 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     // and the stack usage is 152 bytes.
     size_t actual;
     status = mx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, 600u, &actual);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto exit;
 
     mx_vaddr_t stack_base;
     uint32_t perms = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE;
     status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size, perms, &stack_base);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto exit;
 
     // Compute a valid starting SP for the machine's ABI.
@@ -208,7 +208,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
         // 4- wait for reply.
 
         status = mx_channel_create(0u, &chn[0], &chn[1]);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             goto exit;
 
         // This is not thread-safe.  It steals the startup handle, so it's not
@@ -218,7 +218,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
         if (vdso_vmo == MX_HANDLE_INVALID) {
             vdso_vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
             if (vdso_vmo == MX_HANDLE_INVALID) {
-                status = ERR_INTERNAL;
+                status = MX_ERR_INTERNAL;
                 goto exit;
             }
         }
@@ -228,25 +228,25 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
         uintptr_t phoff;
         mx_status_t status = elf_load_prepare(vdso_vmo, NULL, 0,
                                               &header, &phoff);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             elf_phdr_t phdrs[header.e_phnum];
             status = elf_load_read_phdrs(vdso_vmo, phdrs, phoff,
                                          header.e_phnum);
-            if (status == NO_ERROR)
+            if (status == MX_OK)
                 status = elf_load_map_segments(vmar, &header, phdrs, vdso_vmo,
                                                NULL, &vdso_base, NULL);
         }
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             goto exit;
 
         status = write_ctx_message(chn[0], vdso_base, transfered_handle);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             goto exit;
 
         uintptr_t channel_read = (uintptr_t)get_syscall_addr(&mx_channel_read, vdso_base);
 
         status = mx_process_start(process, thread, stack_base, sp, chn[1], channel_read);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             goto exit;
 
         chn[1] = MX_HANDLE_INVALID;
@@ -257,7 +257,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
 
         if (observed & MX_CHANNEL_PEER_CLOSED) {
             // the child process died prematurely.
-            status = ERR_UNAVAILABLE;
+            status = MX_ERR_UNAVAILABLE;
             goto exit;
         }
 
@@ -291,7 +291,7 @@ mx_status_t mini_process_cmd(mx_handle_t cntrl_channel, uint32_t what, mx_handle
 
     minip_cmd_t cmd = {
         .what = what,
-        .status = NO_ERROR
+        .status = MX_OK
     };
 
     mx_channel_call_args_t call_args = {
@@ -307,14 +307,14 @@ mx_status_t mini_process_cmd(mx_handle_t cntrl_channel, uint32_t what, mx_handle
 
     uint32_t actual_bytes = 0u;
     uint32_t actual_handles = 0u;
-    mx_status_t read_status = NO_ERROR;
+    mx_status_t read_status = MX_OK;
 
     mx_status_t status = mx_channel_call(cntrl_channel,
         0u, MX_TIME_INFINITE, &call_args, &actual_bytes, &actual_handles, &read_status);
 
-    if (status == ERR_CALL_FAILED)
+    if (status == MX_ERR_CALL_FAILED)
         return read_status;
-    else if (status != NO_ERROR)
+    else if (status != MX_OK)
         return status;
     // Message received. Return the status of the remote operation.
     return cmd.status;
@@ -327,18 +327,18 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
     mx_handle_t channel = MX_HANDLE_INVALID;
 
     mx_status_t status = mx_process_create(job, "minipr", 6u, 0u, process, &vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto exit;
 
     *thread = MX_HANDLE_INVALID;
     status = mx_thread_create(*process, "minith", 6u, 0, thread);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto exit;
 
     status = start_mini_process_etc(*process, *thread, vmar, transfered_handle, &channel);
     // On success the transfered_handle gets consumed.
 exit:
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         if (transfered_handle != MX_HANDLE_INVALID)
             mx_handle_close(transfered_handle);
         if (*process != MX_HANDLE_INVALID)

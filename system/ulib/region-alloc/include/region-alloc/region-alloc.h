@@ -355,7 +355,7 @@ public:
     // Set the RegionPool this RegionAllocator will obtain bookkeeping structures from.
     //
     // Possible return values
-    // ++ ERR_BAD_STATE : The RegionAllocator currently has a RegionPool
+    // ++ MX_ERR_BAD_STATE : The RegionAllocator currently has a RegionPool
     // assigned and currently has allocations from this pool.
     mx_status_t SetRegionPool(const RegionPool::RefPtr& region_pool);
     mx_status_t SetRegionPool(RegionPool::RefPtr&& region_pool) {
@@ -376,10 +376,10 @@ public:
     // region.
     //
     // Possible return values
-    // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to add the region.
-    // ++ ERR_INVALID_ARGS : One of the following conditions applies.
+    // ++ MX_ERR_INVALID_ARGS : One of the following conditions applies.
     // ++++ The region is invalid (wraps the space, or size is zero)
     // ++++ The region being added intersects one or more currently
     //      allocated regions.
@@ -399,10 +399,10 @@ public:
     // region.
     //
     // Possible return values
-    // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to subtract the region.
-    // ++ ERR_INVALID_ARGS : One of the following conditions applies.
+    // ++ MX_ERR_INVALID_ARGS : One of the following conditions applies.
     // ++++ The region is invalid (wraps the space, or size is zero)
     // ++++ The region being subtracted intersects one or more currently
     //      allocated regions.
@@ -416,11 +416,11 @@ public:
     // two.  Pass 1 if alignment does not matter.
     //
     // Possible return values
-    // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to perform the allocation.
-    // ++ ERR_INVALID_ARGS : size is zero, or alignment is not a power of two.
-    // ++ ERR_NOT_FOUND : No suitable region could be found in the set of
+    // ++ MX_ERR_INVALID_ARGS : size is zero, or alignment is not a power of two.
+    // ++ MX_ERR_NOT_FOUND : No suitable region could be found in the set of
     // currently available regions which can satisfy the request.
     mx_status_t GetRegion(uint64_t size, uint64_t alignment, Region::UPtr& out_region);
 
@@ -428,11 +428,11 @@ public:
     // currently available regions.
     //
     // Possible return values
-    // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
-    // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // ++ MX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ MX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to perform the allocation.
-    // ++ ERR_INVALID_ARGS : The size of the requested region is zero.
-    // ++ ERR_NOT_FOUND : No suitable region could be found in the set of
+    // ++ MX_ERR_INVALID_ARGS : The size of the requested region is zero.
+    // ++ MX_ERR_NOT_FOUND : No suitable region could be found in the set of
     // currently available regions which can satisfy the request.
     mx_status_t GetRegion(const ralloc_region_t& requested_region, Region::UPtr& out_region);
 

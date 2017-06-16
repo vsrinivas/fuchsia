@@ -145,42 +145,42 @@ public:
     }
 #endif
 
-    virtual mx_status_t WatchDir(mx_handle_t* out) { return ERR_NOT_SUPPORTED; }
+    virtual mx_status_t WatchDir(mx_handle_t* out) { return MX_ERR_NOT_SUPPORTED; }
     virtual mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     virtual void NotifyAdd(const char* name, size_t len) {}
 
     // Ensure that it is valid to open vn.
     virtual mx_status_t Open(uint32_t flags) = 0;
 
-    // Closes vn. Typically, most Vnodes simply return "NO_ERROR".
+    // Closes vn. Typically, most Vnodes simply return "MX_OK".
     virtual mx_status_t Close();
 
     // Read data from vn at offset.
     virtual ssize_t Read(void* data, size_t len, size_t off) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Write data to vn at offset.
     virtual ssize_t Write(const void* data, size_t len, size_t off) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Attempt to find child of vn, child returned on success.
     // Name is len bytes long, and does not include a null terminator.
     virtual mx_status_t Lookup(mxtl::RefPtr<Vnode>* out, const char* name, size_t len) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Read attributes of vn.
     virtual mx_status_t Getattr(vnattr_t* a) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Set attributes of vn.
     virtual mx_status_t Setattr(vnattr_t* a) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Read directory entries of vn, error if not a directory.
@@ -189,31 +189,31 @@ public:
     // the readdir implementation to maintain state across calls.
     // To "rewind" and start from the beginning, cookie may be zero'd.
     virtual mx_status_t Readdir(void* cookie, void* dirents, size_t len) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
     // Mode specifies the type of entity to create.
     virtual mx_status_t Create(mxtl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
     virtual ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Removes name from directory vn
     virtual mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Change the size of vn
     virtual mx_status_t Truncate(size_t len) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Renames the path at oldname in olddir to the path at newname in newdir.
@@ -223,12 +223,12 @@ public:
                                const char* oldname, size_t oldlen,
                                const char* newname, size_t newlen,
                                bool src_must_be_dir, bool dst_must_be_dir) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Creates a hard link to the 'target' vnode with a provided name in vndir
     virtual mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<Vnode> target) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Acquire a vmo from a vnode.
@@ -238,12 +238,12 @@ public:
     // 1) The file by writing to the mapping, or
     // 2) The mapping by writing to the underlying file.
     virtual mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Syncs the vnode with its underlying storage
     virtual mx_status_t Sync() {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     virtual ~Vnode() {};
@@ -253,7 +253,7 @@ public:
 #endif
 
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-    virtual mx_status_t AttachRemote(mx_handle_t h) { return ERR_NOT_SUPPORTED; }
+    virtual mx_status_t AttachRemote(mx_handle_t h) { return MX_ERR_NOT_SUPPORTED; }
 
     // The following methods are required to mount sub-filesystems. The logic
     // (and storage) necessary to implement these functions exists within the
@@ -263,7 +263,7 @@ public:
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const { return false; }
     virtual mx_handle_t DetachRemote() { return MX_HANDLE_INVALID; }
-    virtual mx_handle_t WaitForRemote() { return ERR_UNAVAILABLE; }
+    virtual mx_handle_t WaitForRemote() { return MX_ERR_UNAVAILABLE; }
     virtual mx_handle_t GetRemote() const { return MX_HANDLE_INVALID; }
     virtual void SetRemote(mx_handle_t remote) { MX_DEBUG_ASSERT(false); }
 

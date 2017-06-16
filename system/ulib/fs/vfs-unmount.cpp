@@ -43,9 +43,9 @@ mx_status_t vfs_unmount_handle(mx_handle_t srv, mx_time_t deadline) {
     // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
     mx_status_t status = mx_channel_call(srv, 0, deadline, &args, &dsize, &hcount, &rs);
-    if (status == ERR_CALL_FAILED) {
+    if (status == MX_ERR_CALL_FAILED) {
         // Write phase succeeded. The target filesystem had a chance to unmount properly.
-        status = NO_ERROR;
+        status = MX_OK;
     }
     mx_handle_close(srv);
     return status;

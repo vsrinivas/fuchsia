@@ -35,7 +35,7 @@ typedef struct {
 
 // These routines use this error code to indicate an invalid file format,
 // including wrong machine, wrong endian, etc. as well as a truncated file.
-#define ERR_ELF_BAD_FORMAT ERR_NOT_FOUND
+#define ERR_ELF_BAD_FORMAT MX_ERR_NOT_FOUND
 
 __BEGIN_CDECLS
 

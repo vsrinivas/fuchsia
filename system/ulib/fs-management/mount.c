@@ -67,7 +67,7 @@ static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle
                                          mx_handle_t* hnd, uint32_t* ids, size_t* n) {
     mx_status_t status;
     mx_handle_t mountee_handle;
-    if ((status = mx_channel_create(0, &mountee_handle, mount_handle_out)) != NO_ERROR) {
+    if ((status = mx_channel_create(0, &mountee_handle, mount_handle_out)) != MX_OK) {
         close(devicefd);
         return status;
     }
@@ -80,10 +80,10 @@ static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle
         mx_handle_close(mountee_handle);
         mx_handle_close(*mount_handle_out);
         close(devicefd);
-        return status != 0 ? status : ERR_BAD_STATE;
+        return status != 0 ? status : MX_ERR_BAD_STATE;
     }
     *n = *n + status;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Describes the mountpoint of the to-be-mounted root,
@@ -101,7 +101,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
                                     const char** argv, int argc, mx_handle_t* hnd,
                                     uint32_t* ids, size_t n, mountpoint_t* mp, mx_handle_t root) {
     mx_status_t status;
-    if ((status = cb(argc, argv, hnd, ids, n)) != NO_ERROR) {
+    if ((status = cb(argc, argv, hnd, ids, n)) != MX_OK) {
         return status;
     }
 
@@ -110,8 +110,8 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         mx_signals_t observed;
         status = mx_object_wait_one(root, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                     MX_TIME_INFINITE, &observed);
-        if ((status != NO_ERROR) || (observed & MX_CHANNEL_PEER_CLOSED)) {
-            status = (status != NO_ERROR) ? status : ERR_BAD_STATE;
+        if ((status != MX_OK) || (observed & MX_CHANNEL_PEER_CLOSED)) {
+            status = (status != MX_OK) ? status : MX_ERR_BAD_STATE;
             goto fail;
         }
     }
@@ -139,7 +139,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         free(config);
         return status;
     } else {
-        if ((status = ioctl_vfs_mount_fs(mp->fd, &root)) != NO_ERROR) {
+        if ((status = ioctl_vfs_mount_fs(mp->fd, &root)) != MX_OK) {
             // TODO(smklein): Retreive the root handle if mounting fails.
             // Currently, the recipient of the ioctl is sending the unmount signal
             // if an error occurs.
@@ -147,7 +147,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     // We've entered a failure case where the filesystem process (which may or may not be alive)
@@ -168,7 +168,7 @@ static mx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp
     size_t n = 0;
     mx_handle_t root;
     mx_status_t status;
-    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != NO_ERROR) {
+    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != MX_OK) {
         return status;
     }
 
@@ -186,7 +186,7 @@ static mx_status_t mount_fat(int devicefd, mountpoint_t* mp, const mount_options
     size_t n = 0;
     mx_handle_t root;
     mx_status_t status;
-    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != NO_ERROR) {
+    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != MX_OK) {
         return status;
     }
 
@@ -219,7 +219,7 @@ mx_status_t fmount_common(int devicefd, mountpoint_t* mp, disk_format_t df,
         return mount_fat(devicefd, mp, options, cb);
     default:
         close(devicefd);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -243,7 +243,7 @@ mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
     } else {
         // Open mountpoint; use it directly
         if ((mp.fd = open(mountpath, O_RDONLY | O_DIRECTORY)) < 0) {
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
     }
 
@@ -269,7 +269,7 @@ mx_status_t umount(const char* mountpath) {
     int fd = open(mountpath, O_DIRECTORY | O_NOREMOTE);
     if (fd < 0) {
         fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     mx_status_t status = fumount(fd);
     close(fd);

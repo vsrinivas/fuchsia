@@ -50,39 +50,39 @@ static mx_status_t check_lz4_frame(const lz4_frame_desc* fd,
                                    size_t expected, const char** err) {
     if ((fd->flag & MX_LZ4_FLAG_VERSION) != MX_LZ4_VERSION) {
         *err = "bad lz4 version for bootfs";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((fd->flag & MX_LZ4_FLAG_BLOCK_DEP) == 0) {
         *err = "bad lz4 flag (blocks must be independent)";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (fd->flag & MX_LZ4_FLAG_BLOCK_CKSUM) {
         *err = "bad lz4 flag (block checksum must be disabled)";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((fd->flag & MX_LZ4_FLAG_CONTENT_SZ) == 0) {
         *err = "bad lz4 flag (content size must be included)";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (fd->flag & MX_LZ4_FLAG_RESERVED) {
         *err = "bad lz4 flag (reserved bits in flg must be zero)";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((fd->block_desc & MX_LZ4_BLOCK_MAX_MASK) != MX_LZ4_BLOCK_64KB) {
         *err = "bad lz4 flag (max block size must be 64k)";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (fd->block_desc & ~MX_LZ4_BLOCK_MAX_MASK) {
         *err = "bad lz4 flag (reserved bits in bd must be zero)";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (fd->content_size != expected) {
         *err = "lz4 content size does not match bootdata outsize";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // TODO: header checksum
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
@@ -95,7 +95,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
 
     if (*(const uint32_t*)data != MX_LZ4_MAGIC) {
         *err = "bad magic number for compressed bootfs";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     data += sizeof(uint32_t);
 
@@ -107,7 +107,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     if (newsize < hdr->extra) {
         // newsize wrapped, which means the outsize was too large
         *err = "lz4 output size too large";
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mx_handle_t dst_vmo;
     mx_status_t status = mx_vmo_create((uint64_t)newsize, 0, &dst_vmo);
@@ -149,21 +149,21 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
             if (remaining - actual > remaining) {
                 // Remaining wrapped around (would be negative if signed)
                 *err = "bootdata outsize too small for lz4 decompression";
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
             remaining -= actual;
         } else {
             int dcmp = LZ4_decompress_safe((const char*)data, (char*)dst, blocksize, remaining);
             if (dcmp < 0) {
                 *err = "lz4 decompression failed";
-                return ERR_BAD_STATE;
+                return MX_ERR_BAD_STATE;
             }
             dst += dcmp;
             data += blocksize;
             if (remaining - dcmp > remaining) {
                 // Remaining wrapped around (would be negative if signed)
                 *err = "bootdata outsize too small for lz4 decompression";
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
             remaining -= dcmp;
         }
@@ -177,7 +177,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     // we rounded up to the next full page.
     if (remaining > 4095) {
         *err = "bootdata size error; outsize does not match decompressed size";
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     status = mx_vmar_unmap(vmar, dst_addr, newsize);
@@ -186,7 +186,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
         return status;
     }
     *out = dst_vmo;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
@@ -196,7 +196,7 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
 
     if (length > SIZE_MAX) {
         *err = "bootfs VMO too large to map";
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
 
     uintptr_t addr = 0;
@@ -220,7 +220,7 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
         break;
     default:
         *err = "unknown bootdata type, not attempting decompression\n";
-        status = ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
         break;
     }
 

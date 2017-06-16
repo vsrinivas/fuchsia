@@ -83,14 +83,14 @@ const uint8_t* Digest::Hash(const void* buf, size_t len) {
 mx_status_t Digest::Parse(const char* hex, size_t len) {
     MX_DEBUG_ASSERT(ref_count_ == 0);
     if (len < sizeof(bytes_) * 2) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     uint8_t c = 0;
     size_t i = 0;
     for (size_t j = 0; j < sizeof(bytes_) * 2; ++j) {
         c = static_cast<uint8_t>(toupper(hex[j]) & 0xFF);
         if (!isxdigit(c)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         c = static_cast<uint8_t>(c < 'A' ? c - '0' : c - '7'); // '7' = 'A' - 10
         if (j % 2 == 0) {
@@ -99,12 +99,12 @@ mx_status_t Digest::Parse(const char* hex, size_t len) {
             bytes_[i++] |= c;
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Digest::ToString(char* out, size_t len) const {
     if (len < sizeof(bytes_) * 2 + 1) {
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
     memset(out, 0, len);
     char* p = out;
@@ -112,16 +112,16 @@ mx_status_t Digest::ToString(char* out, size_t len) const {
         sprintf(p, "%02x", bytes_[i]);
         p += 2;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
     if (len < sizeof(bytes_)) {
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
     memset(out, 0, len);
     memcpy(out, bytes_, sizeof(bytes_));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 const uint8_t* Digest::AcquireBytes() const {
@@ -159,11 +159,11 @@ mx_status_t merkle_digest_init(merkle::Digest** out) {
     AllocChecker ac;
     mxtl::unique_ptr<merkle::Digest> uptr(new (&ac) merkle::Digest());
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     uptr->Init();
     *out = uptr.release();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void merkle_digest_update(merkle::Digest* digest, const void* buf, size_t len) {

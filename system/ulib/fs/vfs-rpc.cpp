@@ -100,7 +100,7 @@ done:
 
     if (!pipeline) {
         // Describe the VFS object to the caller in the non-pipelined case.
-        obj.status = (r < 0) ? r : NO_ERROR;
+        obj.status = (r < 0) ? r : MX_OK;
         obj.hcount = (r > 0) ? r : 0;
         mx_channel_write(rh, 0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
                          obj.handle, obj.hcount);
@@ -132,7 +132,7 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
 
     if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
         mx_handle_close(h);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     ios->vn = mxtl::RefPtr<Vnode>(this);
     ios->io_flags = flags;
@@ -142,7 +142,7 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
         free(ios);
         return r;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace fs
@@ -155,17 +155,17 @@ static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx
 
     if (ios->token != MX_HANDLE_INVALID) {
         // Token has already been set for this iostate
-        if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != NO_ERROR)) {
+        if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != MX_OK)) {
             return r;
         }
-        return NO_ERROR;
-    } else if ((r = mx_event_create(0, &ios->token)) != NO_ERROR) {
+        return MX_OK;
+    } else if ((r = mx_event_create(0, &ios->token)) != MX_OK) {
         return r;
-    } else if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != NO_ERROR)) {
+    } else if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != MX_OK)) {
         mx_handle_close(ios->token);
         ios->token = MX_HANDLE_INVALID;
         return r;
-    } else if ((r = mx_object_set_cookie(ios->token, mx_process_self(), vnode_cookie)) != NO_ERROR) {
+    } else if ((r = mx_object_set_cookie(ios->token, mx_process_self(), vnode_cookie)) != MX_OK) {
         mx_handle_close(*out);
         mx_handle_close(ios->token);
         ios->token = MX_HANDLE_INVALID;
@@ -184,7 +184,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         for (unsigned i = 0; i < msg->hcount; i++) {
             mx_handle_close(msg->handle[i]);
         }
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     msg->hcount = 0;
 
@@ -192,7 +192,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
     case MXRIO_OPEN: {
         char* path = (char*)msg->data;
         if ((len < 1) || (len > PATH_MAX)) {
-            fs::mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
+            fs::mxrio_reply_channel_status(msg->handle[0], MX_ERR_INVALID_ARGS);
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
@@ -281,7 +281,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         switch (arg) {
         case SEEK_SET:
             if (msg->arg2.off < 0) {
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
             n = msg->arg2.off;
             break;
@@ -291,13 +291,13 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
                 // if negative seek
                 if (n > ios->io_off) {
                     // wrapped around. attempt to seek before start
-                    return ERR_INVALID_ARGS;
+                    return MX_ERR_INVALID_ARGS;
                 }
             } else {
                 // positive seek
                 if (n < ios->io_off) {
                     // wrapped around. overflow
-                    return ERR_INVALID_ARGS;
+                    return MX_ERR_INVALID_ARGS;
                 }
             }
             break;
@@ -307,28 +307,28 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
                 // if negative seek
                 if (n > attr.size) {
                     // wrapped around. attempt to seek before start
-                    return ERR_INVALID_ARGS;
+                    return MX_ERR_INVALID_ARGS;
                 }
             } else {
                 // positive seek
                 if (n < attr.size) {
                     // wrapped around
-                    return ERR_INVALID_ARGS;
+                    return MX_ERR_INVALID_ARGS;
                 }
             }
             break;
         default:
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (vn->IsDevice()) {
             if (n > attr.size) {
                 // devices may not seek past the end
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
         }
         ios->io_off = n;
         msg->arg2.off = ios->io_off;
-        return NO_ERROR;
+        return MX_OK;
     }
     case MXRIO_STAT: {
         mx_status_t r;
@@ -344,7 +344,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
     }
     case MXRIO_READDIR: {
         if (arg > MXIO_CHUNK_SIZE) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (msg->arg2.off == READDIR_CMD_RESET) {
             memset(&ios->dircookie, 0, sizeof(ios->dircookie));
@@ -364,7 +364,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
             (arg > (ssize_t)sizeof(msg->data)) ||
             (IOCTL_KIND(msg->arg2.op) != IOCTL_KIND_SET_HANDLE)) {
             mx_handle_close(msg->handle[0]);
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if (len < sizeof(mx_handle_t)) {
             len = sizeof(mx_handle_t);
@@ -381,7 +381,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
 
         ssize_t r = fs::Vfs::Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
 
-        if (r == ERR_NOT_SUPPORTED) {
+        if (r == MX_ERR_NOT_SUPPORTED) {
             mx_handle_close(msg->handle[0]);
         }
 
@@ -391,7 +391,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         if (len > MXIO_IOCTL_MAX_INPUT ||
             (arg > (ssize_t)sizeof(msg->data)) ||
             (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_SET_HANDLE)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
@@ -401,7 +401,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         // Ioctls which act on iostate
         case IOCTL_VFS_GET_TOKEN: {
             if (arg != sizeof(mx_handle_t)) {
-                r = ERR_INVALID_ARGS;
+                r = MX_ERR_INVALID_ARGS;
             } else {
                 mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
                 r = iostate_get_token(reinterpret_cast<uint64_t>(vn.get()), ios, out);
@@ -435,7 +435,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
     }
     case MXRIO_TRUNCATE: {
         if (msg->arg2.off < 0) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         return vn->Truncate(msg->arg2.off);
     }
@@ -446,7 +446,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         auto ac = mxtl::MakeAutoCall([&msg](){ mx_handle_close(msg->handle[0]); });
 
         if (len < 4) { // At least one byte for src + dst + null terminators
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         char* data_end = (char*)(msg->data + len - 1);
@@ -456,7 +456,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         const char* newname = (const char*)msg->data + (oldlen + 1);
 
         if (data_end <= newname) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         mx_status_t r;
@@ -465,12 +465,12 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         mxtl::AutoLock lock(&vfs_lock);
         if ((r = mx_object_get_cookie(msg->handle[0], mx_process_self(), &vcookie)) < 0) {
             // TODO(smklein): Return a more specific error code for "token not from this server"
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         if (vcookie == 0) {
             // Client closed the channel associated with the token
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         mxtl::RefPtr<Vnode> target_parent =
@@ -485,13 +485,13 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
     }
     case MXRIO_MMAP: {
         if (len != sizeof(mxrio_mmap_data_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mxrio_mmap_data_t* data = reinterpret_cast<mxrio_mmap_data_t*>(msg->data);
 
         mx_status_t status = vn->Mmap(data->flags, data->length, &data->offset,
                                       &msg->handle[0]);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             msg->hcount = 1;
         }
         return status;
@@ -506,7 +506,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
             mx_handle_close(msg->handle[i]);
         }
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 
@@ -528,7 +528,7 @@ mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<Vnode> vn) {
     mx_status_t r;
 
     if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == NULL)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     ios->vn = mxtl::move(vn);  // reference passed in by caller
     ios->io_flags = 0;
 
@@ -539,7 +539,7 @@ mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<Vnode> vn) {
     }
 
     // Tell the calling process that we've mounted
-    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != NO_ERROR) {
+    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != MX_OK) {
         free(ios);
         return r;
     }
@@ -551,5 +551,5 @@ mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<Vnode> vn) {
 
     // calling thread blocks
     mxio_dispatcher_run(vfs_dispatcher);
-    return NO_ERROR;
+    return MX_OK;
 }

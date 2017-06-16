@@ -40,12 +40,12 @@
 //         ethmac_protocol_t* ops;
 //         auto status = get_device_protocol(parent_, MX_PROTOCOL_ETHERMAC,
 //                                           reinterpret_cast<void**>(&ops));
-//         if (status != NO_ERROR) {
+//         if (status != MX_OK) {
 //             return status;
 //         }
 //        proxy_.reset(new ddk::EthmacProtocolProxy(ops, parent_));
 //        status = proxy_->Start(this);
-//        if (status != NO_ERROR) {
+//        if (status != MX_OK) {
 //            return status;
 //        }
 //        return device_add(ddk_device(), parent_);
@@ -90,7 +90,7 @@
 //
 //     mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info) {
 //         // Fill out the ethmac info
-//         return NO_ERROR;
+//         return MX_OK;
 //     }
 //
 //     void EthmacStop() {
@@ -100,7 +100,7 @@
 //     mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
 //         // Start ethmac operation
 //         proxy_.swap(proxy);
-//         return NO_ERROR;
+//         return MX_OK;
 //     }
 //
 //     void EthmacSend(uint32_t options, void* data, size_t length) {

@@ -25,12 +25,12 @@ static mx_status_t fsck_minfs(const char* devicepath, const fsck_options_t* opti
     int device_fd;
     if ((device_fd = open(devicepath, O_RDWR)) < 0) {
         fprintf(stderr, "Failed to open device\n");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     mx_status_t status;
     if ((status = mxio_transfer_fd(device_fd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
         fprintf(stderr, "Failed to access device handle\n");
-        return status != 0 ? status : ERR_BAD_STATE;
+        return status != 0 ? status : MX_ERR_BAD_STATE;
     }
     n += status;
 
@@ -75,6 +75,6 @@ mx_status_t fsck(const char* devicepath, disk_format_t df,
     case DISK_FORMAT_FAT:
         return fsck_fat(devicepath, options, cb);
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }

@@ -65,8 +65,8 @@ mx_status_t port_dispatch(port_t* port, mx_time_t deadline, bool once) {
     for (;;) {
         mx_port_packet_t pkt;
         mx_status_t r;
-        if ((r = mx_port_wait(port->handle, deadline, &pkt, 0)) != NO_ERROR) {
-            if (r != ERR_TIMED_OUT) {
+        if ((r = mx_port_wait(port->handle, deadline, &pkt, 0)) != MX_OK) {
+            if (r != MX_ERR_TIMED_OUT) {
                 printf("port_dispatch: port wait failed %d\n", r);
             }
             return r;
@@ -79,12 +79,12 @@ mx_status_t port_dispatch(port_t* port, mx_time_t deadline, bool once) {
         } else {
             zprintf("port_dispatch(%p) port=%x ph=%p func=%p: signals=%x\n",
                     port, port->handle, ph, ph->func, pkt.signal.observed);
-            if (ph->func(ph, pkt.signal.observed, 0) == NO_ERROR) {
+            if (ph->func(ph, pkt.signal.observed, 0) == MX_OK) {
                 port_wait(port, ph);
             }
         }
         if (once) {
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 }
@@ -104,12 +104,12 @@ static mx_status_t port_fd_handler_func(port_handler_t* ph, mx_signals_t signals
 mx_status_t port_fd_handler_init(port_fd_handler_t* fh, int fd, unsigned pollevt) {
     mxio_t* io = __mxio_fd_to_io(fd);
     if (io == NULL) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     __mxio_wait_begin(io, pollevt, &fh->ph.handle, &fh->ph.waitfor);
     fh->ph.func = port_fd_handler_func;
     fh->mxio_context = io;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void port_fd_handler_done(port_fd_handler_t* fh) {

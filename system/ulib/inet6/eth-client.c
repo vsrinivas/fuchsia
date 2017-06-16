@@ -27,7 +27,7 @@ mx_status_t eth_create(int fd, mx_handle_t io_vmo, void* io_mem, eth_client_t** 
     eth_client_t* eth;
 
     if ((eth = calloc(1, sizeof(*eth))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     eth_fifos_t fifos;
@@ -60,7 +60,7 @@ mx_status_t eth_create(int fd, mx_handle_t io_vmo, void* io_mem, eth_client_t** 
     eth->iobuf = io_mem;
 
     *out = eth;
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     mx_handle_close(fifos.tx_fifo);
@@ -103,8 +103,8 @@ mx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
     mx_status_t status;
     uint32_t count;
     if ((status = mx_fifo_read(eth->tx_fifo, entries, sizeof(entries), &count)) < 0) {
-        if (status == ERR_SHOULD_WAIT) {
-            return NO_ERROR;
+        if (status == MX_ERR_SHOULD_WAIT) {
+            return MX_OK;
         } else {
             return status;
         }
@@ -115,7 +115,7 @@ mx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, e->cookie);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
@@ -124,8 +124,8 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
     mx_status_t status;
     uint32_t count;
     if ((status = mx_fifo_read(eth->rx_fifo, entries, sizeof(entries), &count)) < 0) {
-        if (status == ERR_SHOULD_WAIT) {
-            return NO_ERROR;
+        if (status == MX_ERR_SHOULD_WAIT) {
+            return MX_OK;
         } else {
             return status;
         }
@@ -136,14 +136,14 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, e->cookie, e->length, e->flags);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
 // Wait for completed rx packets
-// ERR_PEER_CLOSED - far side disconnected
-// ERR_TIMED_OUT - deadline lapsed
-// NO_ERROR - completed packets are available
+// MX_ERR_PEER_CLOSED - far side disconnected
+// MX_ERR_TIMED_OUT - deadline lapsed
+// MX_OK - completed packets are available
 mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t deadline) {
     mx_status_t status;
     mx_signals_t signals;
@@ -154,7 +154,7 @@ mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t deadline) {
         return status;
     }
     if (signals & MX_FIFO_PEER_CLOSED) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
-    return NO_ERROR;
+    return MX_OK;
 }

@@ -18,15 +18,15 @@ mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::Dispatcher>* out) {
     AllocChecker ac;
     mxtl::unique_ptr<MxioDispatcher> d(new (&ac) MxioDispatcher());
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mx_status_t status = mxio_dispatcher_create(&d->dispatcher_, mxrio_handler);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     mxio_dispatcher_start(d->dispatcher_, "mxio-dispatcher");
     *out = mxtl::move(d);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t MxioDispatcher::AddVFSHandler(mx_handle_t h, void* cb, void* iostate) {

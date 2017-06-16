@@ -31,7 +31,7 @@ Vnode::Vnode(fs::Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
 Vnode::~Vnode() = default;
 
 mx_status_t Vnode::Close() {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 fs::Dispatcher* Vnode::GetDispatcher() {
@@ -59,20 +59,20 @@ uint32_t VnodeFile::GetVType() {
 
 mx_status_t VnodeFile::Open(uint32_t flags) {
     if (flags & O_DIRECTORY) {
-        return ERR_NOT_DIR;
+        return MX_ERR_NOT_DIR;
     }
     switch (flags & O_ACCMODE) {
     case O_WRONLY:
     case O_RDWR:
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
 mx_status_t VnodeFile::Serve(mx_handle_t h, uint32_t flags) {
     mx_handle_close(h);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 ssize_t VnodeFile::Read(void* data, size_t length, size_t offset) {
@@ -99,7 +99,7 @@ mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     attr->blksize = kVmofsBlksize;
     attr->blkcount = mxtl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeFile::GetHandles(uint32_t flags, mx_handle_t* hnds,
@@ -152,22 +152,22 @@ uint32_t VnodeDir::GetVType() {
 }
 
 mx_status_t VnodeDir::Open(uint32_t flags) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (IsDotOrDotDot(name, len)) {
         *out = mxtl::RefPtr<fs::Vnode>(this);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     mxtl::StringPiece value(name, len);
     auto* it = mxtl::lower_bound(names_.begin(), names_.end(), value);
     if (it == names_.end() || *it != value) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
     *out = children_[it - names_.begin()];
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
@@ -176,7 +176,7 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     attr->blksize = kVmofsBlksize;
     attr->blkcount = mxtl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
@@ -184,13 +184,13 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     fs::DirentFiller df(data, len);
     mx_status_t r = 0;
     if (c->last_id < 1) {
-        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
             return df.BytesFilled();
         }
         c->last_id = 1;
     }
     if (c->last_id < 2) {
-        if ((r = df.Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+        if ((r = df.Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
             return df.BytesFilled();
         }
         c->last_id = 2;
@@ -200,7 +200,7 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
         mxtl::StringPiece name = names_[i];
         const auto& child = children_[i];
         uint32_t vtype = child->GetVType();
-        if ((r = df.Next(name.data(), name.length(), VTYPE_TO_DTYPE(vtype))) != NO_ERROR) {
+        if ((r = df.Next(name.data(), name.length(), VTYPE_TO_DTYPE(vtype))) != MX_OK) {
             break;
         }
         c->last_id = i + 2;

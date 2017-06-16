@@ -77,25 +77,25 @@ mx_status_t RawBitmapGeneric<Storage>::Reset(size_t size) {
     size_ = size;
     if (size_ == 0) {
         data_ = nullptr;
-        return NO_ERROR;
+        return MX_OK;
     }
     size_t last_idx = LastIdx(size);
     mx_status_t status = bits_.Allocate(sizeof(size_t) * (last_idx + 1));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     data_ = static_cast<size_t*>(bits_.GetData());
     ClearAll();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename Storage>
 mx_status_t RawBitmapGeneric<Storage>::Shrink(size_t size) {
     if (size > size_) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     size_ = size;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename Storage>
@@ -130,19 +130,19 @@ template <typename Storage>
 mx_status_t RawBitmapGeneric<Storage>::Find(bool is_set, size_t bitoff, size_t bitmax,
                                                 size_t run_len, size_t* out) const {
     if (!out || bitmax <= bitoff) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     size_t start = bitoff;
     while (bitoff - start < run_len && bitoff < bitmax) {
         start = Scan(bitoff, bitmax, !is_set);
         if (bitmax - start < run_len) {
             *out = bitmax;
-            return ERR_NO_RESOURCES;
+            return MX_ERR_NO_RESOURCES;
         }
         bitoff = Scan(start, start + run_len, is_set);
     }
     *out = start;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename Storage>
@@ -158,10 +158,10 @@ bool RawBitmapGeneric<Storage>::Get(size_t bitoff, size_t bitmax, size_t* first)
 template <typename Storage>
 mx_status_t RawBitmapGeneric<Storage>::Set(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (bitoff == bitmax) {
-        return NO_ERROR;
+        return MX_OK;
     }
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
@@ -169,16 +169,16 @@ mx_status_t RawBitmapGeneric<Storage>::Set(size_t bitoff, size_t bitmax) {
         data_[i] |=
                 GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename Storage>
 mx_status_t RawBitmapGeneric<Storage>::Clear(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (bitoff == bitmax) {
-        return NO_ERROR;
+        return MX_OK;
     }
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
@@ -186,7 +186,7 @@ mx_status_t RawBitmapGeneric<Storage>::Clear(size_t bitoff, size_t bitmax) {
         data_[i] &=
                 ~(GetMask(i == first_idx, i == last_idx, bitoff, bitmax));
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename Storage>

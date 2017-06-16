@@ -40,12 +40,12 @@
 //         wlanmac_protocol_t* ops;
 //         auto status = get_device_protocol(parent_, MX_PROTOCOL_WLANMAC,
 //                                           reinterpret_cast<void**>(&ops));
-//         if (status != NO_ERROR) {
+//         if (status != MX_OK) {
 //             return status;
 //         }
 //        proxy_.reset(new ddk::WlanmacProtocolProxy(ops, parent_));
 //        status = proxy_->Start(this);
-//        if (status != NO_ERROR) {
+//        if (status != MX_OK) {
 //            return status;
 //        }
 //        return device_add(ddk_device(), parent_);
@@ -91,7 +91,7 @@
 //
 //     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info) {
 //         // Fill out the ethmac info
-//         return NO_ERROR;
+//         return MX_OK;
 //     }
 //
 //     void WlanmacStop() {
@@ -101,7 +101,7 @@
 //     mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
 //         // Start wlanmac operation
 //         proxy_.swap(proxy);
-//         return NO_ERROR;
+//         return MX_OK;
 //     }
 //
 //     void WlanmacTx(uint32_t options, void* data, size_t length) {
@@ -110,7 +110,7 @@
 //
 //     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
 //         // Set the radio channel
-//         return NO_ERROR;
+//         return MX_OK;
 //     }
 //
 //   private:

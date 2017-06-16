@@ -14,19 +14,19 @@ __BEGIN_CDECLS
 // mini-process available commands. Use mini_process_cmd() to send them.
 //
 // The process echoes a canned message.
-// The return value upon success is NO_ERROR.
+// The return value upon success is MX_OK.
 #define MINIP_CMD_ECHO_MSG         1
 // The process creates an event and sends it back on |handle|.
-// The return value upon success is NO_ERROR.
+// The return value upon success is MX_OK.
 #define MINIP_CMD_CREATE_EVENT     2
 // The process creates a channel and sends one end back on |handle|.
-// The return value upon success is NO_ERROR.
+// The return value upon success is MX_OK.
 #define MINIP_CMD_CREATE_CHANNEL   4
 // The process will execute __builtin_trap() which causes a fatal exception.
-// The return value upon success is ERR_PEER_CLOSED.
+// The return value upon success is MX_ERR_PEER_CLOSED.
 #define MINIP_CMD_BUILTIN_TRAP     8
 // The process just calls mx_process_exit() immediately without replying.
-// The return value upon success is ERR_PEER_CLOSED.
+// The return value upon success is MX_ERR_PEER_CLOSED.
 #define MINIP_CMD_EXIT_NORMAL      16
 
 // Create and run a minimal process with one thread that blocks forever.

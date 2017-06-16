@@ -39,14 +39,14 @@ mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* d
 
     // 'name' should not contain paths consisting of exclusively '/' characters.
     if (len == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     } else if (len > NAME_MAX) {
-        return ERR_BAD_PATH;
+        return MX_ERR_BAD_PATH;
     }
 
     *len_out = len;
     *dir_out = is_dir;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace anonymous
@@ -67,22 +67,22 @@ mx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
 #ifdef __Fuchsia__
     if (remote_ == 0) {
         // Trying to get remote on a non-remote vnode
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     } else if (!(flags_ & V_FLAG_MOUNT_READY)) {
         mx_signals_t observed;
         mx_status_t status = mx_object_wait_one(remote_,
                                                 MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                                 0,
                                                 &observed);
-        if ((status != NO_ERROR) || (observed & MX_CHANNEL_PEER_CLOSED)) {
+        if ((status != MX_OK) || (observed & MX_CHANNEL_PEER_CLOSED)) {
             // Not set (or otherwise remote is bad)
-            return ERR_UNAVAILABLE;
+            return MX_ERR_UNAVAILABLE;
         }
         flags_ |= V_FLAG_MOUNT_READY;
     }
     return remote_;
 #else
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif
 }
 
@@ -111,19 +111,19 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
     mxtl::RefPtr<Vnode> vn;
 
     bool must_be_dir = false;
-    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
+    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
         return r;
     }
 
     if (flags & O_CREAT) {
         if (must_be_dir && !S_ISDIR(mode)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         if ((r = vndir->Create(&vn, path, len, mode)) < 0) {
-            if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
+            if ((r == MX_ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
             }
-            if (r == ERR_NOT_SUPPORTED) {
+            if (r == MX_ERR_NOT_SUPPORTED) {
                 // filesystem may not supporte create (like devfs)
                 // in which case we should still try to open() the file
                 goto try_open;
@@ -163,13 +163,13 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
     FS_TRACE(VFS, "VfsOpen: vn=%p\n", vn.get());
     *pathout = "";
     *out = vn;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len) {
     bool must_be_dir;
     mx_status_t r;
-    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
+    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
         return r;
     }
     return vndir->Unlink(path, len, must_be_dir);
@@ -183,16 +183,16 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
     bool old_must_be_dir;
     bool new_must_be_dir;
     mx_status_t r;
-    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != MX_OK) {
         return r;
     } else if (old_must_be_dir) {
-        return ERR_NOT_DIR;
+        return MX_ERR_NOT_DIR;
     }
 
-    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != MX_OK) {
         return r;
     } else if (new_must_be_dir) {
-        return ERR_NOT_DIR;
+        return MX_ERR_NOT_DIR;
     }
 
     // Look up the target vnode
@@ -201,11 +201,11 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
         return r;
     }
     r = newparent->Link(newname, newlen, target);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         return r;
     }
     newparent->NotifyAdd(newname, newlen);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
@@ -216,19 +216,19 @@ mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpa
     bool old_must_be_dir;
     bool new_must_be_dir;
     mx_status_t r;
-    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != MX_OK) {
         return r;
     }
-    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != MX_OK) {
         return r;
     }
     r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
                           old_must_be_dir, new_must_be_dir);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         return r;
     }
     newparent->NotifyAdd(newname, newlen);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
@@ -237,17 +237,17 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
 #ifdef __Fuchsia__
     case IOCTL_VFS_WATCH_DIR: {
         if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_status_t status = vn->WatchDir(reinterpret_cast<mx_handle_t*>(out_buf));
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
         return sizeof(mx_handle_t);
     }
     case IOCTL_VFS_WATCH_DIR_V2: {
         if (in_len != sizeof(vfs_watch_dir_t)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
         return vn->WatchDirV2(request);
@@ -255,7 +255,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
     }
     case IOCTL_VFS_MOUNT_FS: {
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t h = *reinterpret_cast<const mx_handle_t*>(in_buf);
         mx_status_t status = Vfs::InstallRemote(vn, h);
@@ -277,12 +277,12 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         if ((in_len < sizeof(mount_mkdir_config_t)) ||
             (namelen < 1) || (namelen > PATH_MAX) || (name[namelen - 1] != 0) ||
             (out_len != 0)) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mxtl::AutoLock lock(&vfs_lock);
         mx_status_t r = Open(vn, &vn, name, &name,
                              O_CREAT | O_RDONLY | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
-        MX_DEBUG_ASSERT(r <= NO_ERROR); // Should not be accessing remote nodes
+        MX_DEBUG_ASSERT(r <= MX_OK); // Should not be accessing remote nodes
         if (r < 0) {
             return r;
         }
@@ -295,7 +295,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
                 vfs_unmount_handle(old_remote, 0);
                 mx_handle_close(old_remote);
             } else {
-                return ERR_BAD_STATE;
+                return MX_ERR_BAD_STATE;
             }
         }
         // Lock already held; don't lock again
@@ -314,7 +314,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
     }
     case IOCTL_VFS_UNMOUNT_NODE: {
         if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t* h = (mx_handle_t*)out_buf;
         return Vfs::UninstallRemote(vn, h);
@@ -331,7 +331,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
 }
 
 mx_status_t Vnode::Close() {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 DirentFiller::DirentFiller(void* ptr, size_t len) :
@@ -346,14 +346,14 @@ mx_status_t DirentFiller::Next(const char* name, size_t len, uint32_t type) {
         sz = (sz + 3) & (~3);
     }
     if (sz > len_ - pos_) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     de->size = static_cast<uint32_t>(sz);
     de->type = type;
     memcpy(de->name, name, len);
     de->name[len] = 0;
     pos_ += sz;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Starting at vnode vn, walk the tree described by the path string,
@@ -413,7 +413,7 @@ mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
             // final path segment, we're done here
             *out = vn;
             *pathout = path;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 }

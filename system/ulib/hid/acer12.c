@@ -344,7 +344,7 @@ bool is_acer12_touch_report_desc(const uint8_t* data, size_t len) {
 
 mx_status_t setup_acer12_touch(int fd) {
     if (fd < 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
-    return NO_ERROR;
+    return MX_OK;
 }
