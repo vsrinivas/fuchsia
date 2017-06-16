@@ -117,9 +117,9 @@ mx_status_t _device_get_protocol(mx_device_t* dev, uint32_t proto_id, void* out)
     if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
         proto->ops = dev->protocol_ops;
         proto->ctx = dev->ctx;
-        return NO_ERROR;
+        return MX_OK;
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_handle_t _device_get_resource(mx_device_t* dev) {
@@ -159,9 +159,9 @@ mx_status_t _device_op_ioctl(mx_device_t* dev, uint32_t op,
 mx_status_t _device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     if (dev->ops->iotxn_queue != NULL) {
         dev->ops->iotxn_queue(dev->ctx, txn);
-        return NO_ERROR;
+        return MX_OK;
     } else {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 

@@ -13,9 +13,9 @@
 mx_status_t mx_hid_fifo_create(mx_hid_fifo_t** fifo) {
     *fifo = malloc(sizeof(mx_hid_fifo_t));
     if (*fifo == NULL)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     mx_hid_fifo_init(*fifo);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void mx_hid_fifo_init(mx_hid_fifo_t* fifo) {
@@ -40,7 +40,7 @@ ssize_t mx_hid_fifo_peek(mx_hid_fifo_t* fifo, void* out) {
 }
 
 ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, void* buf, size_t len) {
-    if (!buf) return ERR_INVALID_ARGS;
+    if (!buf) return MX_ERR_INVALID_ARGS;
     if (fifo->empty) return 0;
     if (!len) return 0;
 
@@ -53,8 +53,8 @@ ssize_t mx_hid_fifo_read(mx_hid_fifo_t* fifo, void* buf, size_t len) {
 }
 
 ssize_t mx_hid_fifo_write(mx_hid_fifo_t* fifo, const void* buf, size_t len) {
-    if (!fifo->empty && fifo->tail == fifo->head) return ERR_BUFFER_TOO_SMALL;
-    if (len > HID_FIFO_SIZE - mx_hid_fifo_size(fifo)) return ERR_BUFFER_TOO_SMALL;
+    if (!fifo->empty && fifo->tail == fifo->head) return MX_ERR_BUFFER_TOO_SMALL;
+    if (len > HID_FIFO_SIZE - mx_hid_fifo_size(fifo)) return MX_ERR_BUFFER_TOO_SMALL;
 
     for (size_t c = len; c > 0; c--, fifo->head = (fifo->head + 1) & HID_FIFO_MASK) {
         fifo->buf[fifo->head] = *(uint8_t*)buf++;

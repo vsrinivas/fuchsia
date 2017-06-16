@@ -302,7 +302,7 @@ static mx_protocol_device_t ramdisk_ctl_proto = {
 static mx_status_t ramdisk_driver_bind(void* ctx, mx_device_t* parent, void** cookie) {
     ramctl_device_t* ramctl = calloc(1, sizeof(ramctl_device_t));
     if (ramctl == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     device_add_args_t args = {

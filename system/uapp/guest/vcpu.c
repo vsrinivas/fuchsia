@@ -189,20 +189,20 @@ static mx_status_t handle_virtio_block_read(mx_guest_packet_t* packet, uint16_t 
     case VIRTIO_PCI_QUEUE_SIZE:
         *input_size = 2;
         packet->port_in_ret.u16 = VIRTIO_DEFAULT_QUEUE_SIZE;
-        return NO_ERROR;
+        return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         *input_size = 1;
         packet->port_in_ret.u8 = 0;
-        return NO_ERROR;
+        return MX_OK;
     case VIRTIO_PCI_CONFIG_OFFSET_NOMSI ...
          VIRTIO_PCI_CONFIG_OFFSET_NOMSI + sizeof(block_config) - 1: {
         *input_size = 1;
         uint8_t* buf = (uint8_t*)&block_config;
         packet->port_in_ret.u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
-        return NO_ERROR;
+        return MX_OK;
     }}
     fprintf(stderr, "Unhandled block read %#x\n", port);
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_in_t* port_in) {
@@ -211,7 +211,7 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     memset(&packet, 0, sizeof(packet));
     packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     io_port_state_t* io_port_state = &context->guest_state->io_port_state;
     switch (port_in->port) {
     case UART_RECEIVE_IO_PORT + 4:
@@ -254,11 +254,11 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         }
         default:
             fprintf(stderr, "Unhandled port in %#x\n", port_in->port);
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         }
     }}
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
     if (port_in->access_size != input_size)
         return MX_ERR_IO_DATA_INTEGRITY;
@@ -269,15 +269,15 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
 static mx_status_t handle_virtio_block_write(uint16_t port) {
     switch (port) {
     case VIRTIO_PCI_DEVICE_STATUS:
-        return NO_ERROR;
+        return MX_OK;
     case VIRTIO_PCI_QUEUE_PFN:
     case VIRTIO_PCI_QUEUE_SIZE:
     case VIRTIO_PCI_QUEUE_SELECT:
         // TODO(abdulla): Correctly implement the vring.
-        return NO_ERROR;
+        return MX_OK;
     }
     fprintf(stderr, "Unhandled block write %#x\n", port);
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_out_t* port_out) {
@@ -324,7 +324,7 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     }
 
     fprintf(stderr, "Unhandled port out %#x\n", port_out->port);
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,

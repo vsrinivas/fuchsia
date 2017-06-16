@@ -33,7 +33,7 @@ mx_status_t get_maps(mx_koid_t koid, mx_handle_t process,
         mx_status_t s = mx_object_get_info(process, MX_INFO_PROCESS_MAPS,
                                            maps, count * sizeof(mx_info_maps_t),
                                            &actual, &avail);
-        if (s != NO_ERROR) {
+        if (s != MX_OK) {
             fprintf(stderr,
                     "ERROR: couldn't get maps for process with koid %" PRIu64
                     ": %s (%d)\n",
@@ -48,7 +48,7 @@ mx_status_t get_maps(mx_koid_t koid, mx_handle_t process,
         *out_maps = maps;
         *out_count = actual;
         *out_avail = avail;
-        return NO_ERROR;
+        return MX_OK;
     }
 }
 
@@ -154,7 +154,7 @@ mx_status_t print_maps(mx_info_maps_t* maps, size_t count, size_t avail) {
     if (avail > count) {
         printf("[%zd entries truncated]\n", avail - count);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void try_help(char** argv) {
@@ -216,10 +216,10 @@ int main(int argc, char** argv) {
     size_t avail;
     s = get_maps(koid, process, &maps, &count, &avail);
     mx_handle_close(process);
-    if (s != NO_ERROR) {
+    if (s != MX_OK) {
         return 1;
     }
     s = print_maps(maps, count, avail);
     free(maps);
-    return s == NO_ERROR ? 0 : 1;
+    return s == MX_OK ? 0 : 1;
 }

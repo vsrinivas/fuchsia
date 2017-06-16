@@ -104,7 +104,7 @@ public:
 
         mx_status_t Wait(lk_time_t deadline) {
             if (unlikely(!armed())) {
-                return ERR_BAD_STATE;
+                return MX_ERR_BAD_STATE;
             }
             return event_.Wait(deadline);
         }
@@ -112,7 +112,7 @@ public:
         // Returns any delivered message via out and the status.
         mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out) {
             if (unlikely(!armed())) {
-                return ERR_BAD_STATE;
+                return MX_ERR_BAD_STATE;
             }
             *out = mxtl::move(msg_);
             channel_ = nullptr;

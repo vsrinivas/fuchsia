@@ -29,7 +29,7 @@ static mx_status_t wait_for_message(
                                             MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                             MX_TIME_INFINITE,
                                             &pending);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     if (pending & MX_CHANNEL_READABLE) {
@@ -37,25 +37,25 @@ static mx_status_t wait_for_message(
         uint32_t num_handles_returned = 0;
         status = mx_channel_read(h, 0, NULL, NULL, rsp_len,
                 num_handles_returned, &rsp_len, &num_handles_returned);
-        if (status != ERR_BUFFER_TOO_SMALL) {
+        if (status != MX_ERR_BUFFER_TOO_SMALL) {
             return status;
         }
         if (rsp_len < sizeof(acpi_rsp_hdr_t)) {
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
         if (num_handles_returned > MAX_RETURNED_HANDLES) {
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
 
         acpi_rsp_hdr_t* rsp = malloc(rsp_len);
         if (!rsp) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
 
         mx_handle_t handles_returned[MAX_RETURNED_HANDLES];
         status = mx_channel_read(h, 0, rsp, handles_returned, rsp_len,
                 num_handles_returned, &rsp_len, &num_handles_returned);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             free(rsp);
             return status;
         }
@@ -68,7 +68,7 @@ static mx_status_t wait_for_message(
             for (uint32_t i = 0; i < num_handles_returned; ++i) {
                 mx_handle_close(handles_returned[i]);
             }
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
 
         *response = rsp;
@@ -77,13 +77,13 @@ static mx_status_t wait_for_message(
         memcpy(handles, handles_returned,
                 sizeof(mx_handle_t) * num_handles_returned);
 
-        return NO_ERROR;
+        return MX_OK;
     } else if (pending & MX_CHANNEL_PEER_CLOSED) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     } else {
-        // Shouldn't happen; if status == NO_ERROR, then one of the signals
+        // Shouldn't happen; if status == MX_OK, then one of the signals
         // should be pending.
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 }
 
@@ -108,7 +108,7 @@ static mx_status_t run_txn(
     mx_handle_t* rsp_handles, size_t num_rsp_handles) {
 
     if (cmd_len < sizeof(acpi_cmd_hdr_t)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     *rsp = NULL;
@@ -121,7 +121,7 @@ static mx_status_t run_txn(
     cmd_hdr->request_id = req_id;
 
     mx_status_t status = mx_channel_write(h->pipe, 0, cmd, cmd_len, &cmd_handle, (cmd_handle > 0) ? 1 : 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         if (cmd_handle) {
             mx_handle_close(cmd_handle);
         }
@@ -130,27 +130,27 @@ static mx_status_t run_txn(
 
     size_t handle_count = num_rsp_handles;
     status = wait_for_message(h->pipe, req_id, rsp, rsp_len, rsp_handles, &handle_count);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto exit;
     }
 
     acpi_rsp_hdr_t* rsp_hdr = *(acpi_rsp_hdr_t**)rsp;
 
     // Validate the response
-    if (rsp_hdr->status != NO_ERROR) {
+    if (rsp_hdr->status != MX_OK) {
         status = rsp_hdr->status;
         goto cleanup;
     }
     if (rsp_hdr->len != *rsp_len) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup;
     }
     if (handle_count != num_rsp_handles) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup;
     }
 
-    status = NO_ERROR;
+    status = MX_OK;
     goto exit;
 
 cleanup:
@@ -181,19 +181,19 @@ mx_status_t acpi_list_children(acpi_handle_t* h,
     size_t rsp_len;
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     // Validate the response
     if (rsp_len != sizeof(*rsp) + sizeof(rsp->children[0]) * rsp->num_children) {
         free(rsp);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     *response = rsp;
     *len = rsp_len;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t acpi_get_child_handle(acpi_handle_t* h, const char name[4],
@@ -213,13 +213,13 @@ mx_status_t acpi_get_child_handle(acpi_handle_t* h, const char name[4],
     mx_handle_t handles[1] = {0};
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, handles, countof(handles));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     acpi_handle_init(child, handles[0]);
     free(rsp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
@@ -238,13 +238,13 @@ mx_status_t acpi_get_pci_init_arg(acpi_handle_t* h,
 
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     *response = rsp;
     *len = rsp_len;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state) {
@@ -261,7 +261,7 @@ mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state) {
     size_t rsp_len;
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -283,12 +283,12 @@ mx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len) {
     size_t rsp_len;
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     free(rsp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response) {
@@ -305,12 +305,12 @@ mx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response) {
 
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     *response = rsp;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response) {
@@ -327,21 +327,21 @@ mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response) {
 
     mx_status_t status =
         run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     *response = rsp;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t acpi_enable_event(acpi_handle_t* _h, mx_handle_t port, uint64_t key, uint16_t events) {
     if (_h == NULL) {
         mx_handle_close(port);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (port == MX_HANDLE_INVALID) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_status_t status;
@@ -362,7 +362,7 @@ mx_status_t acpi_enable_event(acpi_handle_t* _h, mx_handle_t port, uint64_t key,
         return status;
     }
     free(rsp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {

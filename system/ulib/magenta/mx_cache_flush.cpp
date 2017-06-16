@@ -9,7 +9,7 @@
 
 mx_status_t _mx_cache_flush(const void* addr, size_t len, uint32_t flags) {
     if (flags == 0 || (flags & ~(MX_CACHE_FLUSH_INSN | MX_CACHE_FLUSH_DATA)))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
 #if defined(__x86_64__)
 
@@ -37,7 +37,7 @@ mx_status_t _mx_cache_flush(const void* addr, size_t len, uint32_t flags) {
 
 #endif
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VDSO_INTERFACE_FUNCTION(mx_cache_flush);

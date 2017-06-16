@@ -795,7 +795,7 @@ static bool bad_channel_call_finish(void) {
     BEGIN_TEST;
 
     mx_handle_t cli, srv;
-    ASSERT_EQ(mx_channel_create(0, &cli, &srv), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &cli, &srv), MX_OK, "");
 
     char msg[8] = { 0, };
     mx_channel_call_args_t args = {
@@ -813,14 +813,14 @@ static bool bad_channel_call_finish(void) {
     uint32_t act_handles = 0xffffffff;
 
     // Call channel_call_finish without having had a channel call interrupted
-    mx_status_t rs = NO_ERROR;
+    mx_status_t rs = MX_OK;
     mx_status_t r = mx_channel_call_finish(cli, mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
                                            &act_handles, &rs);
 
     mx_handle_close(cli);
 
-    EXPECT_EQ(r, ERR_CALL_FAILED, "");
-    EXPECT_EQ(rs, ERR_BAD_STATE, "");
+    EXPECT_EQ(r, MX_ERR_CALL_FAILED, "");
+    EXPECT_EQ(rs, MX_ERR_BAD_STATE, "");
 
     END_TEST;
 }

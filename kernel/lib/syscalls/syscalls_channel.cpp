@@ -362,11 +362,11 @@ mx_status_t channel_call_epilogue(ProcessDispatcher* up,
         goto read_failed;
     }
 
-    if (actual_bytes.copy_to_user(num_bytes) != NO_ERROR) {
+    if (actual_bytes.copy_to_user(num_bytes) != MX_OK) {
         call_status = MX_ERR_INVALID_ARGS;
         goto read_failed;
     }
-    if (actual_handles.copy_to_user(num_handles) != NO_ERROR) {
+    if (actual_handles.copy_to_user(num_handles) != MX_OK) {
         call_status = MX_ERR_INVALID_ARGS;
         goto read_failed;
     }

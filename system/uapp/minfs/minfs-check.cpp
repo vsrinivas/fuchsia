@@ -16,7 +16,7 @@ mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
     if (ino >= fs_->info_.inode_count) {
         FS_TRACE_ERROR("check: ino %u out of range (>=%u)\n",
               ino, fs_->info_.inode_count);
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
     uint32_t bno_of_ino = ino / kMinfsInodesPerBlock;
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
@@ -25,9 +25,9 @@ mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
     memcpy(inode, reinterpret_cast<void*>(iaddr), kMinfsInodeSize);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
         FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);
-        return ERR_IO_DATA_INTEGRITY;
+        return MX_ERR_IO_DATA_INTEGRITY;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #define CD_DUMP 1
@@ -37,29 +37,29 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
                                          uint32_t* bno_out) {
     if (n < kMinfsDirect) {
         *bno_out = inode->dnum[n];
-        return NO_ERROR;
+        return MX_OK;
     }
     n -= kMinfsDirect;
     uint32_t i = static_cast<uint32_t>(n / (kMinfsBlockSize / sizeof(uint32_t)));
     uint32_t j = n % (kMinfsBlockSize / sizeof(uint32_t));
 
     if (i >= kMinfsIndirect) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
 
     uint32_t ibno;
     if ((ibno = inode->inum[i]) == 0) {
         *bno_out = 0;
-        return NO_ERROR;
+        return MX_OK;
     }
     char data[kMinfsBlockSize];
     mx_status_t status;
-    if ((status = fs_->bc_->Readblk(ibno, data)) != NO_ERROR) {
+    if ((status = fs_->bc_->Readblk(ibno, data)) != MX_OK) {
         return status;
     }
     uint32_t* ientry = reinterpret_cast<uint32_t*>(data);
     *bno_out = ientry[j];
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
@@ -71,7 +71,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
 
     mx_status_t status;
     mxtl::RefPtr<VnodeMinfs> vn;
-    if ((status = VnodeMinfs::AllocateHollow(fs_.get(), &vn)) != NO_ERROR) {
+    if ((status = VnodeMinfs::AllocateHollow(fs_.get(), &vn)) != MX_OK) {
         return status;
     }
     memcpy(&vn->inode_, inode, kMinfsInodeSize);
@@ -83,7 +83,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
         uint32_t data[MINFS_DIRENT_SIZE];
         size_t actual;
         status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, off, &actual);
-        if (status != NO_ERROR || actual != MINFS_DIRENT_SIZE) {
+        if (status != MX_OK || actual != MINFS_DIRENT_SIZE) {
             FS_TRACE_ERROR("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
             if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
                 // So we couldn't read the last direntry, for whatever reason, but our
@@ -98,22 +98,22 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                 if (c == 'y') {
                     // Mark the 'last' visible direntry as last.
                     status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, prev_off, &actual);
-                    if (status != NO_ERROR || actual != MINFS_DIRENT_SIZE) {
+                    if (status != MX_OK || actual != MINFS_DIRENT_SIZE) {
                         FS_TRACE_ERROR("check: Error trying to update last dirent as 'last': %d.\n"
                               "Can't read the last dirent even though we just did earlier.\n",
                               status);
-                        return status < 0 ? status : ERR_IO;
+                        return status < 0 ? status : MX_ERR_IO;
                     }
                     minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
                     de->reclen |= kMinfsReclenLast;
                     WriteTxn txn(fs_->bc_.get());
                     vn->WriteInternal(&txn, data, MINFS_DIRENT_SIZE, prev_off, &actual);
-                    return NO_ERROR;
+                    return MX_OK;
                 } else {
-                    return ERR_IO;
+                    return MX_ERR_IO;
                 }
             } else {
-                return status < 0 ? status : ERR_IO;
+                return status < 0 ? status : MX_ERR_IO;
             }
         }
         minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
@@ -122,7 +122,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
         if (!is_last && ((rlen < MINFS_DIRENT_SIZE) ||
                          (rlen > kMinfsMaxDirentSize) || (rlen & 3))) {
             FS_TRACE_ERROR("check: ino#%u: de[%u]: bad dirent reclen (%u)\n", ino, eno, rlen);
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         }
         if (de->ino == 0) {
             if (flags & CD_DUMP) {
@@ -132,16 +132,16 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
             // Re-read the dirent to acquire the full name
             uint32_t record_full[DirentSize(NAME_MAX)];
             status = vn->ReadInternal(record_full, DirentSize(de->namelen), off, &actual);
-            if (status != NO_ERROR || actual != DirentSize(de->namelen)) {
+            if (status != MX_OK || actual != DirentSize(de->namelen)) {
                 FS_TRACE_ERROR("check: Error reading dirent of size: %u\n", DirentSize(de->namelen));
-                return ERR_IO;
+                return MX_ERR_IO;
             }
             de = reinterpret_cast<minfs_dirent_t*>(record_full);
             bool dot_or_dotdot = false;
 
             if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
                 FS_TRACE_ERROR("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
-                return ERR_IO_DATA_INTEGRITY;
+                return MX_ERR_IO_DATA_INTEGRITY;
             }
             if ((de->namelen == 1) && (de->name[0] == '.')) {
                 if (dot) {
@@ -194,7 +194,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
     if (dotdot == false) {
         FS_TRACE_ERROR("check: ino#%u: directory missing '..'\n", ino);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 const char* MinfsChecker::CheckDataBlock(uint32_t bno) {
@@ -243,7 +243,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
         mx_status_t status;
         uint32_t bno;
         if ((status = GetInodeNthBno(inode, n, &bno)) < 0) {
-            if (status == ERR_OUT_OF_RANGE) {
+            if (status == MX_ERR_OUT_OF_RANGE) {
                 break;
             } else {
                 return status;
@@ -271,7 +271,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
              ino, inode->block_count, blocks);
         conforming_ = false;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_dotdot) {
@@ -287,14 +287,14 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_
 
     if (inode.magic == kMinfsMagicDir && prev_checked && !dot_or_dotdot) {
         FS_TRACE_ERROR("check: ino#%u: Multiple hard links to directory (excluding '.' and '..') found\n", ino);
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     links_[ino - 1] += 1;
 
     if (prev_checked) {
         // we've been here before
-        return NO_ERROR;
+        return MX_OK;
     }
 
     links_[ino - 1] -= inode.link_count;
@@ -325,7 +325,7 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_
             return status;
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t MinfsChecker::CheckForUnusedBlocks() const {
@@ -340,9 +340,9 @@ mx_status_t MinfsChecker::CheckForUnusedBlocks() const {
     if (missing) {
         FS_TRACE_ERROR("check: %u allocated block%s not in use\n",
               missing, missing > 1 ? "s" : "");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t MinfsChecker::CheckForUnusedInodes() const {
@@ -357,9 +357,9 @@ mx_status_t MinfsChecker::CheckForUnusedInodes() const {
     if (missing) {
         FS_TRACE_ERROR("check: %u allocated inode%s not in use\n",
               missing, missing > 1 ? "s" : "");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t MinfsChecker::CheckLinkCounts() const {
@@ -368,15 +368,15 @@ mx_status_t MinfsChecker::CheckLinkCounts() const {
         if (links_[n] != 0) {
             error += 1;
             FS_TRACE_ERROR("check: inode#%u has incorrect link count %u\n", n + 1, links_[n]);
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         }
     }
     if (error) {
         FS_TRACE_ERROR("check: %u inode%s with incorrect link count\n",
               error, error > 1 ? "s" : "");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 MinfsChecker::MinfsChecker()
@@ -398,7 +398,7 @@ mx_status_t MinfsChecker::Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* 
         return status;
     }
     fs_.reset(fs);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
@@ -416,7 +416,7 @@ mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
     }
 
     MinfsChecker chk;
-    if ((status = chk.Init(mxtl::move(bc), info)) != NO_ERROR) {
+    if ((status = chk.Init(mxtl::move(bc), info)) != MX_OK) {
         return status;
     }
 
@@ -425,22 +425,22 @@ mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
         return status;
     }
 
-    status = NO_ERROR;
+    status = MX_OK;
     mx_status_t r;
 
     // Save an error if it occurs, but check for subsequent errors
     // anyway.
     r = chk.CheckForUnusedBlocks();
-    status |= (status != NO_ERROR) ? 0 : r;
+    status |= (status != MX_OK) ? 0 : r;
     r = chk.CheckForUnusedInodes();
-    status |= (status != NO_ERROR) ? 0 : r;
+    status |= (status != MX_OK) ? 0 : r;
     r = chk.CheckLinkCounts();
-    status |= (status != NO_ERROR) ? 0 : r;
+    status |= (status != MX_OK) ? 0 : r;
 
     //TODO: check allocated inodes that were abandoned
     //TODO: check allocated blocks that were not accounted for
     //TODO: check unallocated inodes where magic != 0
-    status |= (status != NO_ERROR) ? 0 : (chk.conforming_ ? NO_ERROR : ERR_BAD_STATE);
+    status |= (status != MX_OK) ? 0 : (chk.conforming_ ? MX_OK : MX_ERR_BAD_STATE);
     return status;
 }
 

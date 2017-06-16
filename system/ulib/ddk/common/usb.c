@@ -22,7 +22,7 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
 
     uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
     mx_status_t status = iotxn_alloc(&txn, flags, length);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     txn->protocol = MX_PROTOCOL_USB;
@@ -54,7 +54,7 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
     completion_wait(&completion, MX_TIME_INFINITE);
 
     status = txn->status;
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         status = txn->actual;
 
         if (length > 0 && !out) {
@@ -76,7 +76,7 @@ usb_speed_t usb_get_speed(mx_device_t* device) {
     size_t actual;
     mx_status_t status = device_op_ioctl(device, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0,
                                      &speed, sizeof(speed), &actual);
-    if (status == NO_ERROR && actual == sizeof(speed)) {
+    if (status == MX_OK && actual == sizeof(speed)) {
         return (usb_speed_t)speed;
     } else {
         return USB_SPEED_UNDEFINED;
@@ -110,7 +110,7 @@ mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int fea
 mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
     usb_protocol_t usb;
     if (device_get_protocol(device, MX_PROTOCOL_USB, &usb)) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     return usb.ops->reset_endpoint(usb.ctx, ep_address);
@@ -130,7 +130,7 @@ iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size) {
     iotxn_t* txn;
 
     mx_status_t status = iotxn_alloc(&txn, 0, data_size);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return NULL;
     }
     txn->protocol = MX_PROTOCOL_USB;
@@ -150,17 +150,17 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
     size_t actual;
     mx_status_t status = device_op_ioctl(device, IOCTL_USB_GET_DESCRIPTORS_SIZE, NULL, 0,
                                      &desc_size, sizeof(desc_size), &actual);
-    if (status != NO_ERROR || actual != sizeof(desc_size)) goto fail;
+    if (status != MX_OK || actual != sizeof(desc_size)) goto fail;
 
     uint8_t* desc = malloc(desc_size);
-    if (!desc) return ERR_NO_MEMORY;
+    if (!desc) return MX_ERR_NO_MEMORY;
     iter->desc = desc;
     iter->desc_end = desc + desc_size;
     iter->current = desc;
 
     status = device_op_ioctl(device, IOCTL_USB_GET_DESCRIPTORS, NULL, 0, desc, desc_size, &actual);
-    if (status != NO_ERROR || actual != (size_t)desc_size) goto fail;
-    return NO_ERROR;
+    if (status != MX_OK || actual != (size_t)desc_size) goto fail;
+    return MX_OK;
 
 fail:
     free(iter->desc);

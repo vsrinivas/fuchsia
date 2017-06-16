@@ -207,7 +207,7 @@ static mxio_t* mxio_iodir(const char** path, int dirfd) {
 // PATH_MAX bytes.
 #define CHECK_CAN_INCREMENT(i)           \
     if (unlikely((i) + 1 >= PATH_MAX)) { \
-        return ERR_BAD_PATH;             \
+        return MX_ERR_BAD_PATH;          \
     }
 
 // Cleans an input path, transforming it to out, according to the
@@ -1378,14 +1378,14 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
         tmp2[cwd_len] = '/';
         strcpy(tmp2 + cwd_len + 1, filename);
         mx_status_t status = __mxio_cleanpath(tmp2, tmp, &outlen, &is_dir);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errno = EINVAL;
             return NULL;
         }
     } else {
         // Clean the provided absolute path
         mx_status_t status = __mxio_cleanpath(filename, tmp, &outlen, &is_dir);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             errno = EINVAL;
             return NULL;
         }

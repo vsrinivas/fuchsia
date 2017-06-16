@@ -8,34 +8,41 @@
 
 const char* _mx_status_get_string(mx_status_t status) {
     switch (status) {
-    case NO_ERROR: return "NO_ERROR";
-    case ERR_INTERNAL: return "ERR_INTERNAL";
-    case ERR_NOT_SUPPORTED: return "ERR_NOT_SUPPORTED";
-    case ERR_NO_RESOURCES: return "ERR_NO_RESOURCES";
-    case ERR_NO_MEMORY: return "ERR_NO_MEMORY";
-    case ERR_INVALID_ARGS: return "ERR_INVALID_ARGS";
-    case ERR_WRONG_TYPE: return "ERR_WRONG_TYPE";
-    case ERR_BAD_SYSCALL: return "ERR_BAD_SYSCALL";
-    case ERR_BAD_HANDLE: return "ERR_BAD_HANDLE";
-    case ERR_OUT_OF_RANGE: return "ERR_OUT_OF_RANGE";
-    case ERR_BUFFER_TOO_SMALL: return "ERR_BUFFER_TOO_SMALL";
-    case ERR_BAD_STATE: return "ERR_BAD_STATE";
-    case ERR_NOT_FOUND: return "ERR_NOT_FOUND";
-    case ERR_ALREADY_EXISTS: return "ERR_ALREADY_EXISTS";
-    case ERR_ALREADY_BOUND: return "ERR_ALREADY_BOUND";
-    case ERR_TIMED_OUT: return "ERR_TIMED_OUT";
-    case ERR_CANCELED: return "ERR_CANCELED";
-    case ERR_PEER_CLOSED: return "ERR_PEER_CLOSED";
-    case ERR_UNAVAILABLE: return "ERR_UNAVAILABLE";
-    case ERR_SHOULD_WAIT: return "ERR_SHOULD_WAIT";
-    case ERR_ACCESS_DENIED: return "ERR_ACCESS_DENIED";
-    case ERR_IO: return "ERR_IO";
-    case ERR_IO_REFUSED: return "ERR_IO_REFUSED";
-    case ERR_IO_DATA_INTEGRITY: return "ERR_IO_DATA_INTEGRITY";
-    case ERR_IO_DATA_LOSS: return "ERR_IO_DATA_LOSS";
-    case ERR_BAD_PATH: return "ERR_BAD_PATH";
-    case ERR_NOT_DIR: return "ERR_NOT_DIR";
-    case ERR_NOT_FILE: return "ERR_NOT_FILE";
+    case MX_OK: return "MX_OK";
+    case MX_ERR_INTERNAL: return "MX_ERR_INTERNAL";
+    case MX_ERR_NOT_SUPPORTED: return "MX_ERR_NOT_SUPPORTED";
+    case MX_ERR_NO_RESOURCES: return "MX_ERR_NO_RESOURCES";
+    case MX_ERR_NO_MEMORY: return "MX_ERR_NO_MEMORY";
+    case MX_ERR_CALL_FAILED: return "MX_ERR_CALL_FAILED";
+    case MX_ERR_INTERRUPTED_RETRY: return "MX_ERR_INTERRUPTED_RETRY";
+    case MX_ERR_INVALID_ARGS: return "MX_ERR_INVALID_ARGS";
+    case MX_ERR_BAD_HANDLE: return "MX_ERR_BAD_HANDLE";
+    case MX_ERR_WRONG_TYPE: return "MX_ERR_WRONG_TYPE";
+    case MX_ERR_BAD_SYSCALL: return "MX_ERR_BAD_SYSCALL";
+    case MX_ERR_OUT_OF_RANGE: return "MX_ERR_OUT_OF_RANGE";
+    case MX_ERR_BUFFER_TOO_SMALL: return "MX_ERR_BUFFER_TOO_SMALL";
+    case MX_ERR_BAD_STATE: return "MX_ERR_BAD_STATE";
+    case MX_ERR_TIMED_OUT: return "MX_ERR_TIMED_OUT";
+    case MX_ERR_SHOULD_WAIT: return "MX_ERR_SHOULD_WAIT";
+    case MX_ERR_CANCELED: return "MX_ERR_CANCELED";
+    case MX_ERR_PEER_CLOSED: return "MX_ERR_PEER_CLOSED";
+    case MX_ERR_NOT_FOUND: return "MX_ERR_NOT_FOUND";
+    case MX_ERR_ALREADY_EXISTS: return "MX_ERR_ALREADY_EXISTS";
+    case MX_ERR_ALREADY_BOUND: return "MX_ERR_ALREADY_BOUND";
+    case MX_ERR_UNAVAILABLE: return "MX_ERR_UNAVAILABLE";
+    case MX_ERR_ACCESS_DENIED: return "MX_ERR_ACCESS_DENIED";
+    case MX_ERR_IO: return "MX_ERR_IO";
+    case MX_ERR_IO_REFUSED: return "MX_ERR_IO_REFUSED";
+    case MX_ERR_IO_DATA_INTEGRITY: return "MX_ERR_IO_DATA_INTEGRITY";
+    case MX_ERR_IO_DATA_LOSS: return "MX_ERR_IO_DATA_LOSS";
+    case MX_ERR_IO_NOT_PRESENT: return "MX_ERR_IO_NOT_PRESENT";
+    case MX_ERR_BAD_PATH: return "MX_ERR_BAD_PATH";
+    case MX_ERR_NOT_DIR: return "MX_ERR_NOT_DIR";
+    case MX_ERR_NOT_FILE: return "MX_ERR_NOT_FILE";
+    case MX_ERR_FILE_BIG: return "MX_ERR_FILE_BIG";
+    case MX_ERR_NO_SPACE: return "MX_ERR_NO_SPACE";
+    case MX_ERR_STOP: return "MX_ERR_STOP";
+    case MX_ERR_NEXT: return "MX_ERR_NEXT";
     default: return "(UNKNOWN)";
 
     // TODO(mcgrathr): Having this extra case here (a value far away from
@@ -53,6 +60,6 @@ const char* _mx_status_get_string(mx_status_t status) {
 VDSO_INTERFACE_FUNCTION(mx_status_get_string);
 
 // Generated with:
-// grep '#define'  system/public/magenta/errors.h | grep -v NO_ERROR |
-// sed 's/.*ERR_/ERR_/g' | sed 's/\s.*//g' |
+// grep '#define'  system/public/magenta/errors.h | grep -v MX_OK |
+// sed 's/.*MX_ERR_/MX_ERR_/g' | sed 's/\s.*//g' |
 // awk '{print "case "$1": return \""$1"\";";}'

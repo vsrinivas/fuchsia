@@ -11,10 +11,10 @@ static const char kMagentaVersion[] = BUILDID;
 
 mx_status_t _mx_system_get_version(char* version, uint32_t version_len) {
     if (version_len < sizeof(kMagentaVersion))
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     for (size_t i = 0; i < sizeof(kMagentaVersion); ++i)
         version[i] = kMagentaVersion[i];
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VDSO_INTERFACE_FUNCTION(mx_system_get_version);
