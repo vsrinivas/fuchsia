@@ -71,15 +71,15 @@ status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, vm_page
         *_page = nullptr;
 
     if (offset >= size_)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     uint64_t pa = base_ + ROUNDDOWN(offset, PAGE_SIZE);
     if (pa > UINTPTR_MAX)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     *_pa = (paddr_t)pa;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
@@ -87,13 +87,13 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
     canary_.Assert();
 
     if (unlikely(len == 0))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     AutoLock a(&lock_);
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     uint64_t end = offset + len;
@@ -102,14 +102,14 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
     // compute the size of the table we'll need and make sure it fits in the user buffer
     uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
     if (unlikely(table_size > buffer_size))
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     size_t index = 0;
     for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
         // find the physical address
         uint64_t tmp = base_ + off;
         if (tmp > UINTPTR_MAX)
-            return ERR_OUT_OF_RANGE;
+            return MX_ERR_OUT_OF_RANGE;
 
         paddr_t pa = (paddr_t)tmp;
 
@@ -122,18 +122,18 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
             return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
     AutoLock l(&lock_);
 
     if (!cache_policy) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     *cache_policy = mapping_cache_flags_;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
@@ -141,7 +141,7 @@ status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
 
     // Is it a valid cache flag?
     if (cache_policy & ~ARCH_MMU_FLAG_CACHE_MASK) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // If the cache policy is already configured on this VMO and matches
@@ -149,15 +149,15 @@ status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
     // in the serialio and magma drivers, but may change.
     // TODO: revisit this when we shake out more of the future DDK protocol.
     if (cache_policy == mapping_cache_flags_) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // If this VMO is mapped already it is not safe to allow its caching policy to change
     if (mapping_list_len_ != 0) {
         LTRACEF("Warning: trying to change cache policy while this vmo is mapped!\n");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     mapping_cache_flags_ = cache_policy;
-    return NO_ERROR;
+    return MX_OK;
 }

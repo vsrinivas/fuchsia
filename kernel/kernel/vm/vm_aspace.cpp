@@ -140,7 +140,7 @@ status_t VmAspace::Init() {
     bool is_high_kernel = (flags_ & TYPE_MASK) == TYPE_KERNEL;
     uint arch_aspace_flags = is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0;
     status_t status = arch_mmu_init_aspace(&arch_aspace_, base_, size_, arch_aspace_flags);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -149,7 +149,7 @@ status_t VmAspace::Init() {
     if (likely(!root_vmar_)) {
         return VmAddressRegion::CreateRoot(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
@@ -240,7 +240,7 @@ status_t VmAspace::Destroy() {
 
     // tear down and free all of the regions in our address space
     status_t status = root_vmar_->DestroyLocked();
-    if (status != NO_ERROR && status != ERR_BAD_STATE) {
+    if (status != MX_OK && status != MX_ERR_BAD_STATE) {
         return status;
     }
     aspace_destroyed_ = true;
@@ -248,7 +248,7 @@ status_t VmAspace::Destroy() {
     // Break the reference cycle between this aspace and the root VMAR
     root_vmar_.reset(dummy_root_vmar);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool VmAspace::is_destroyed() const {
@@ -282,24 +282,24 @@ status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* nam
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!vmo)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!IS_PAGE_ALIGNED(offset))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     vaddr_t vmar_offset = 0;
     // if they're asking for a specific spot or starting address, copy the address
     if (vmm_flags & VMM_FLAG_VALLOC_SPECIFIC) {
         // can't ask for a specific spot and then not provide one
         if (!ptr) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
         vmar_offset = reinterpret_cast<vaddr_t>(*ptr);
 
         // check that it's page aligned
         if (!IS_PAGE_ALIGNED(vmar_offset) || vmar_offset < base_)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
 
         vmar_offset -= base_;
     }
@@ -319,7 +319,7 @@ status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* nam
     status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2,
                                                   vmar_flags,
                                                   vmo, offset, arch_mmu_flags, name, &r);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -334,7 +334,7 @@ status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* nam
     if (ptr)
         *ptr = (void*)r->base();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
@@ -346,11 +346,11 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     size = ROUNDUP_PAGE_SIZE(size);
     if (size == 0)
-        return NO_ERROR;
+        return MX_OK;
     if (!IS_PAGE_ALIGNED(vaddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!is_inside(*this, vaddr))
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     // trim the size
     size = trim_to_aspace(*this, vaddr, size);
@@ -359,7 +359,7 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     // TODO: decide if a null vmo object is worth it
     auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // lookup how it's already mapped
     uint arch_mmu_flags = 0;
@@ -384,24 +384,24 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
 
     if (size == 0)
-        return NO_ERROR;
+        return MX_OK;
     if (!IS_PAGE_ALIGNED(paddr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     size = ROUNDUP_PAGE_SIZE(size);
 
     // create a vm object to back it
     auto vmo = VmObjectPhysical::Create(paddr, size);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // force it to be mapped up front
     // TODO: add new flag to precisely mean pre-map
     vmm_flags |= VMM_FLAG_COMMIT;
 
     // Apply the cache policy
-    if (vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
     return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
@@ -416,16 +416,16 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // test for invalid flags
     if (!(vmm_flags & VMM_FLAG_COMMIT))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // create a vm object to back it
     auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // always immediately commit memory to the object
     uint64_t committed;
@@ -435,7 +435,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
     if (static_cast<size_t>(committed) < size) {
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
                 static_cast<size_t>(committed) / PAGE_SIZE);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
@@ -450,12 +450,12 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // allocate a vm object to back it
     auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // commit memory up front if requested
     if (vmm_flags & VMM_FLAG_COMMIT) {
@@ -467,7 +467,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
         if (static_cast<size_t>(committed) < size) {
             LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
                     static_cast<size_t>(committed) / PAGE_SIZE);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
     }
 
@@ -481,7 +481,7 @@ status_t VmAspace::FreeRegion(vaddr_t va) {
 
     mxtl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
     if (!r) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     return r->Destroy();

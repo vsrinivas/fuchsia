@@ -96,11 +96,11 @@ void MarkPagesInUse(vaddr_t va, size_t len) {
 status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
     auto r = aspace->FindRegion(va);
     if (!r)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     auto vm_mapping = r->as_vm_mapping();
     if (!vm_mapping)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
 }
@@ -188,9 +188,9 @@ void vm_init_postheap(uint level) {
                 region->base, region->base + region->size, region->arch_mmu_flags, region->name);
 
         status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
-        ASSERT(status == NO_ERROR);
+        ASSERT(status == MX_OK);
         status = ProtectRegion(aspace, region->base, region->arch_mmu_flags);
-        ASSERT(status == NO_ERROR);
+        ASSERT(status == MX_OK);
     }
 
     // mmu_initial_mappings should reflect where we are now, use it to construct the actual
@@ -224,17 +224,17 @@ void vm_init_postheap(uint level) {
             // a mapping between it and the next closest one.
             if (next_kernel_region != vaddr) {
                 status_t status = aspace->ReserveSpace(map->name, next_kernel_region - vaddr, vaddr);
-                ASSERT(status == NO_ERROR);
+                ASSERT(status == MX_OK);
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
                     dprintf(INFO, "VM: freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
                     status = aspace->FreeRegion(vaddr);
-                    ASSERT(status == NO_ERROR);
+                    ASSERT(status == MX_OK);
                 } else {
                     // Otherwise, mark it no-exec since it's not explicitly code
                     status = ProtectRegion(aspace, vaddr, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-                    ASSERT(status == NO_ERROR);
+                    ASSERT(status == MX_OK);
                 }
             }
             vaddr = next_kernel_region_end;
@@ -278,7 +278,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s virt2phys <address>\n", argv[0].str);
         printf("%s map <phys> <virt> <count> <flags>\n", argv[0].str);
         printf("%s unmap <virt> <count>\n", argv[0].str);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     if (!strcmp(argv[1].str, "phys2virt")) {
@@ -336,7 +336,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         goto usage;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 STATIC_COMMAND_START

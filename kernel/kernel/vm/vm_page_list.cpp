@@ -54,9 +54,9 @@ status_t VmPageListNode::AddPage(vm_page* p, size_t index) {
     canary_.Assert();
     DEBUG_ASSERT(index < kPageFanOut);
     if (pages_[index])
-        return ERR_ALREADY_EXISTS;
+        return MX_ERR_ALREADY_EXISTS;
     pages_[index] = p;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmPageList::VmPageList() {
@@ -82,18 +82,18 @@ status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
         mxtl::unique_ptr<VmPageListNode> pl =
             mxtl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
         if (!ac.check())
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
 
         LTRACEF("allocating new inner node %p\n", pl.get());
         __UNUSED auto status = pl->AddPage(p, index);
-        DEBUG_ASSERT(status == NO_ERROR);
+        DEBUG_ASSERT(status == MX_OK);
 
         list_.insert(mxtl::move(pl));
     } else {
         pln->AddPage(p, index);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 vm_page* VmPageList::GetPage(uint64_t offset) {
@@ -122,7 +122,7 @@ status_t VmPageList::FreePage(uint64_t offset) {
     // lookup the tree node that holds this page
     auto pln = list_.find(node_offset);
     if (!pln.IsValid()) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     // free this page
@@ -137,7 +137,7 @@ status_t VmPageList::FreePage(uint64_t offset) {
         pmm_free_page(page);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 size_t VmPageList::FreeAllPages() {

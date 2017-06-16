@@ -104,7 +104,7 @@ done_add:
 
     arena_cumulative_size += info->size;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 vm_page_t* pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
@@ -398,7 +398,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
             printf("%s free_alloced\n", argv[0].str);
             printf("%s free\n", argv[0].str);
         }
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     static struct list_node allocated = LIST_INITIAL_VALUE(allocated);
@@ -510,7 +510,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         goto usage;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 STATIC_COMMAND_START

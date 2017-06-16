@@ -242,7 +242,7 @@ static bool vmm_alloc_zero_size_fails(void* context) {
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->Alloc(
             "test", zero_size, &ptr, 0, 0, kArchRwFlags);
-    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
 
@@ -253,7 +253,7 @@ static bool vmm_alloc_bad_specific_pointer_fails(void* context) {
     status_t err = VmAspace::kernel_aspace()->Alloc(
             "test", 16384, &ptr, 0,
             VmAspace::VMM_FLAG_VALLOC_SPECIFIC | VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
 
@@ -264,7 +264,7 @@ static bool vmm_alloc_contiguous_missing_flag_commit_fails(void* context) {
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->AllocContiguous(
             "test", 4096, &ptr, 0, zero_vmm_flags, kArchRwFlags);
-    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
 
@@ -274,7 +274,7 @@ static bool vmm_alloc_contiguous_zero_size_fails(void* context) {
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->AllocContiguous(
             "test", zero_size, &ptr, 0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
 
@@ -294,7 +294,7 @@ static bool vmaspace_alloc_smoke_test(void* context) {
 
     void* ptr;
     auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, kArchRwFlags);
-    EXPECT_EQ(NO_ERROR, err, "allocating region\n");
+    EXPECT_EQ(MX_OK, err, "allocating region\n");
 
     // destroy the aspace, which should drop all the internal refs to it
     aspace->Destroy();
@@ -378,14 +378,14 @@ static bool vmo_precommitted_map_test(void* context) {
     void* ptr;
     auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                              0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(NO_ERROR, ret, "mapping object");
+    EXPECT_EQ(MX_OK, ret, "mapping object");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
         all_ok = false;
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
-    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    EXPECT_EQ(MX_OK, err, "unmapping object");
     END_TEST;
 }
 
@@ -400,14 +400,14 @@ static bool vmo_demand_paged_map_test(void* context) {
     void* ptr;
     auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                              0, 0, kArchRwFlags);
-    EXPECT_EQ(ret, NO_ERROR, "mapping object");
+    EXPECT_EQ(ret, MX_OK, "mapping object");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
         all_ok = false;
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
-    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    EXPECT_EQ(MX_OK, err, "unmapping object");
     END_TEST;
 }
 
@@ -422,7 +422,7 @@ static bool vmo_dropped_ref_test(void* context) {
     void* ptr;
     auto ret = ka->MapObjectInternal(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
                              0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(ret, NO_ERROR, "mapping object");
+    EXPECT_EQ(ret, MX_OK, "mapping object");
 
     EXPECT_NULL(vmo, "dropped ref to object");
 
@@ -431,7 +431,7 @@ static bool vmo_dropped_ref_test(void* context) {
         all_ok = false;
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
-    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    EXPECT_EQ(MX_OK, err, "unmapping object");
     END_TEST;
 }
 
@@ -447,26 +447,26 @@ static bool vmo_remap_test(void* context) {
     void* ptr;
     auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                              0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(NO_ERROR, ret, "mapping object");
+    EXPECT_EQ(MX_OK, ret, "mapping object");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
         all_ok = false;
 
     auto err = ka->FreeRegion((vaddr_t)ptr);
-    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    EXPECT_EQ(MX_OK, err, "unmapping object");
 
     // map it again
     ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                         0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(ret, NO_ERROR, "mapping object");
+    EXPECT_EQ(ret, MX_OK, "mapping object");
 
     // test that the pattern is still valid
     bool result = test_region((uintptr_t)ptr, ptr, alloc_size);
     EXPECT_TRUE(result, "testing region for corruption");
 
     err = ka->FreeRegion((vaddr_t)ptr);
-    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    EXPECT_EQ(MX_OK, err, "unmapping object");
     END_TEST;
 }
 
@@ -482,7 +482,7 @@ static bool vmo_double_remap_test(void* context) {
     void* ptr;
     auto ret = ka->MapObjectInternal(vmo, "test0", 0, alloc_size, &ptr,
                              0, 0, kArchRwFlags);
-    EXPECT_EQ(NO_ERROR, ret, "mapping object");
+    EXPECT_EQ(MX_OK, ret, "mapping object");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -492,7 +492,7 @@ static bool vmo_double_remap_test(void* context) {
     void* ptr2;
     ret = ka->MapObjectInternal(vmo, "test1", 0, alloc_size, &ptr2,
                         0, 0, kArchRwFlags);
-    EXPECT_EQ(ret, NO_ERROR, "mapping object second time");
+    EXPECT_EQ(ret, MX_OK, "mapping object second time");
     EXPECT_NEQ(ptr, ptr2, "second mapping is different");
 
     // test that the pattern is still valid
@@ -504,7 +504,7 @@ static bool vmo_double_remap_test(void* context) {
     static const size_t alloc_offset = PAGE_SIZE;
     ret = ka->MapObjectInternal(vmo, "test2", alloc_offset, alloc_size - alloc_offset,
                         &ptr3, 0, 0, kArchRwFlags);
-    EXPECT_EQ(ret, NO_ERROR, "mapping object third time");
+    EXPECT_EQ(ret, MX_OK, "mapping object third time");
     EXPECT_NEQ(ptr3, ptr2, "third mapping is different");
     EXPECT_NEQ(ptr3, ptr, "third mapping is different");
 
@@ -514,13 +514,13 @@ static bool vmo_double_remap_test(void* context) {
     EXPECT_EQ(0, mc, "testing region for corruption");
 
     ret = ka->FreeRegion((vaddr_t)ptr3);
-    EXPECT_EQ(NO_ERROR, ret, "unmapping object third time");
+    EXPECT_EQ(MX_OK, ret, "unmapping object third time");
 
     ret = ka->FreeRegion((vaddr_t)ptr2);
-    EXPECT_EQ(NO_ERROR, ret, "unmapping object second time");
+    EXPECT_EQ(MX_OK, ret, "unmapping object second time");
 
     ret = ka->FreeRegion((vaddr_t)ptr);
-    EXPECT_EQ(NO_ERROR, ret, "unmapping object");
+    EXPECT_EQ(MX_OK, ret, "unmapping object");
     END_TEST;
 }
 
@@ -541,34 +541,34 @@ static bool vmo_read_write_smoke_test(void* context) {
     // write to it, make sure it seems to work with valid args
     size_t bytes_written = -1;
     status_t err = vmo->Write(a.get(), 0, 0, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(0u, bytes_written, "writing to object");
 
     bytes_written = -1;
     err = vmo->Write(a.get(), 0, 37, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(37u, bytes_written, "writing to object");
 
     bytes_written = -1;
     err = vmo->Write(a.get(), 99, 37, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(37u, bytes_written, "writing to object");
 
     // should trim the returned size
     bytes_written = -1;
     err = vmo->Write(a.get(), 0, alloc_size + 47, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(alloc_size - 0, bytes_written, "writing to object");
 
     bytes_written = -1;
     err = vmo->Write(a.get(), 31, alloc_size + 47, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(alloc_size - 31, bytes_written, "writing to object");
 
     // should return an error because out of range
     bytes_written = -1;
     err = vmo->Write(a.get(), alloc_size + 99, 42, &bytes_written);
-    EXPECT_EQ(ERR_OUT_OF_RANGE, err, "writing to object");
+    EXPECT_EQ(MX_ERR_OUT_OF_RANGE, err, "writing to object");
     EXPECT_EQ(0u, bytes_written, "writing to object");
 
     // map the object
@@ -576,19 +576,19 @@ static bool vmo_read_write_smoke_test(void* context) {
     uint8_t* ptr;
     err = ka->MapObjectInternal(vmo, "test", 0, alloc_size, (void**)&ptr,
                         0, 0, kArchRwFlags);
-    EXPECT_EQ(NO_ERROR, err, "mapping object");
+    EXPECT_EQ(MX_OK, err, "mapping object");
 
     // write to it at odd offsets
     bytes_written = -1;
     err = vmo->Write(a.get(), 31, 4197, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(4197u, bytes_written, "writing to object");
     int cmpres = memcmp(ptr + 31, a.get(), 4197);
     EXPECT_EQ(0, cmpres, "reading from object");
 
     // write to it, filling the object completely
     err = vmo->Write(a.get(), 0, alloc_size, &bytes_written);
-    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(MX_OK, err, "writing to object");
     EXPECT_EQ(alloc_size, bytes_written, "writing to object");
 
     // test that the data was actually written to it
@@ -604,7 +604,7 @@ static bool vmo_read_write_smoke_test(void* context) {
 
     size_t bytes_read = -1;
     err = vmo->Read(b.get(), 0, alloc_size, &bytes_read);
-    EXPECT_EQ(NO_ERROR, err, "reading from object");
+    EXPECT_EQ(MX_OK, err, "reading from object");
     EXPECT_EQ(alloc_size, bytes_read, "reading from object");
 
     // validate the buffer is valid
@@ -614,7 +614,7 @@ static bool vmo_read_write_smoke_test(void* context) {
     // read from it at an offset
     bytes_read = -1;
     err = vmo->Read(b.get(), 31, 4197, &bytes_read);
-    EXPECT_EQ(NO_ERROR, err, "reading from object");
+    EXPECT_EQ(MX_OK, err, "reading from object");
     EXPECT_EQ(4197u, bytes_read, "reading from object");
     cmpres = memcmp(b.get(), a.get() + 31, 4197);
     EXPECT_EQ(0, cmpres, "reading from object");
@@ -636,10 +636,10 @@ bool vmo_cache_test(void* context) {
     {
         auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
         EXPECT_TRUE(vmo, "");
-        EXPECT_EQ(NO_ERROR, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
+        EXPECT_EQ(MX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
         EXPECT_NEQ(cache_policy, cache_policy_get, "check initial cache policy");
-        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "try set");
-        EXPECT_EQ(NO_ERROR, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
+        EXPECT_EQ(MX_OK, vmo->SetMappingCachePolicy(cache_policy), "try set");
+        EXPECT_EQ(MX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
         EXPECT_EQ(cache_policy, cache_policy_get, "compare flags");
     }
 
@@ -647,38 +647,38 @@ bool vmo_cache_test(void* context) {
     for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
         auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
         EXPECT_TRUE(vmo, "");
-        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "try setting valid flags");
+        EXPECT_EQ(MX_OK, vmo->SetMappingCachePolicy(cache_policy), "try setting valid flags");
     }
 
     // Test invalid flags
     for (uint32_t i = ARCH_MMU_FLAG_CACHE_MASK + 1; i < 32; i++) {
         auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
         EXPECT_TRUE(vmo, "");
-        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(i), "try set with invalid flags");
+        EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(i), "try set with invalid flags");
     }
 
     // Test valid flags with invalid flags
     {
         auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
-        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x5), "bad 0x5");
-        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xA), "bad 0xA");
-        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x55), "bad 0x55");
-        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xAA), "bad 0xAA");
+        EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x5), "bad 0x5");
+        EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xA), "bad 0xA");
+        EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x55), "bad 0x55");
+        EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xAA), "bad 0xAA");
     }
 
     // Test that changing policy while mapped is blocked
     {
         auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
         EXPECT_TRUE(vmo, "");
-        EXPECT_EQ(NO_ERROR, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
+        EXPECT_EQ(MX_OK, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
                   kArchRwFlags), "map vmo");
-        EXPECT_EQ(ERR_BAD_STATE, vmo->SetMappingCachePolicy(cache_policy),
+        EXPECT_EQ(MX_ERR_BAD_STATE, vmo->SetMappingCachePolicy(cache_policy),
                   "set flags while mapped");
-        EXPECT_EQ(NO_ERROR, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
-        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "set flags after unmapping");
-        EXPECT_EQ(NO_ERROR, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
+        EXPECT_EQ(MX_OK, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
+        EXPECT_EQ(MX_OK, vmo->SetMappingCachePolicy(cache_policy), "set flags after unmapping");
+        EXPECT_EQ(MX_OK, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
                   kArchRwFlags), "map vmo again");
-        EXPECT_EQ(NO_ERROR, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
+        EXPECT_EQ(MX_OK, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
     }
 
     pmm_free_page(vm_page);

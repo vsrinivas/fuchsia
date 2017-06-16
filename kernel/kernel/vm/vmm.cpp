@@ -57,7 +57,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     // get the address space object this pointer is in
     VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
     if (!aspace)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     // page fault it
     status_t status = aspace->PageFault(addr, flags);
@@ -66,7 +66,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     // If it's a kernel fault, the kernel could possibly already
     // hold locks on VMOs, Aspaces, etc, so we can't safely do
     // this.
-    if ((status == ERR_NOT_FOUND) && (flags & VMM_PF_FLAG_USER)) {
+    if ((status == MX_ERR_NOT_FOUND) && (flags & VMM_PF_FLAG_USER)) {
         printf("PageFault: %zu free pages\n", pmm_count_free_pages());
         DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8 * 256);
     }
@@ -115,7 +115,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s create_test_aspace\n", argv[0].str);
         printf("%s free_aspace <address>\n", argv[0].str);
         printf("%s set_test_aspace <address>\n", argv[0].str);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     static mxtl::RefPtr<VmAspace> test_aspace;
@@ -194,7 +194,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         goto usage;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 STATIC_COMMAND_START

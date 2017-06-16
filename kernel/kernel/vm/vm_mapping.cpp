@@ -74,18 +74,18 @@ status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) 
     LTRACEF("%p %#" PRIxPTR " %#x %#x\n", this, base_, flags_, new_arch_mmu_flags);
 
     if (!IS_PAGE_ALIGNED(base)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     size = ROUNDUP(size, PAGE_SIZE);
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     if (size == 0 || !is_in_range(base, size)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     return ProtectLocked(base, size, new_arch_mmu_flags);
@@ -97,11 +97,11 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
     // Do not allow changing caching
     if (new_arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (!is_valid_mapping_flags(new_arch_mmu_flags)) {
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     DEBUG_ASSERT(object_);
@@ -113,7 +113,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
     // If we're not actually changing permissions, return fast.
     if (new_arch_mmu_flags == arch_mmu_flags_) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // TODO(teisenbe): deal with error mapping on arch_mmu_protect fail
@@ -124,7 +124,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
                                            new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
         arch_mmu_flags_ = new_arch_mmu_flags;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Handle changing from the left
@@ -135,7 +135,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
             new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_,
                                 object_, object_offset_ + size, arch_mmu_flags_)));
         if (!ac.check()) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
 
         status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
@@ -145,7 +145,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
         size_ = size;
         mapping->ActivateLocked();
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // Handle changing from the right
@@ -158,7 +158,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
                                 object_, object_offset_ + base - base_,
                                 new_arch_mmu_flags)));
         if (!ac.check()) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
 
         status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
@@ -167,7 +167,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
         size_ -= size;
         mapping->ActivateLocked();
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // We're unmapping from the center, so we need to create two new mappings
@@ -181,13 +181,13 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
         new (&ac) VmMapping(*parent_, base, size, flags_,
                             object_, center_vmo_offset, new_arch_mmu_flags)));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mxtl::RefPtr<VmMapping> right_mapping(mxtl::AdoptRef(
         new (&ac) VmMapping(*parent_, base + size, right_size, flags_,
                             object_, right_vmo_offset, arch_mmu_flags_)));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
@@ -199,30 +199,30 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
     center_mapping->ActivateLocked();
     right_mapping->ActivateLocked();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmMapping::Unmap(vaddr_t base, size_t size) {
     LTRACEF("%p %#" PRIxPTR " %zu\n", this, base, size);
 
     if (!IS_PAGE_ALIGNED(base)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     size = ROUNDUP(size, PAGE_SIZE);
 
     mxtl::RefPtr<VmAspace> aspace(aspace_);
     if (!aspace) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     AutoLock guard(aspace->lock());
     if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     if (size == 0 || !is_in_range(base, size)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // If we're unmapping everything, destroy this mapping
@@ -242,7 +242,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     DEBUG_ASSERT(parent_);
 
     if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     // If our parent VMAR is DEAD, then we can only unmap everything.
@@ -272,7 +272,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
         }
         size_ -= size;
 
-        return NO_ERROR;
+        return MX_OK;
     }
 
     // We're unmapping from the center, so we need to split the mapping
@@ -287,7 +287,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
         new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
                             arch_mmu_flags_)));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // Unmap the middle segment
@@ -300,7 +300,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     // Turn us into the left half
     size_ = base - base_;
     mapping->ActivateLocked();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
@@ -332,18 +332,18 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     // so that we don't do extra work.
     if (likely(currently_faulting_)) {
         LTRACEF("recursing to ourself, abort\n");
-        return NO_ERROR;
+        return MX_OK;
     }
 
     if (len == 0)
-        return NO_ERROR;
+        return MX_OK;
 
     // compute the intersection of the passed in vmo range and our mapping
     uint64_t offset_new;
     uint64_t len_new;
     if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len,
                       &offset_new, &len_new))
-        return NO_ERROR;
+        return MX_OK;
 
     DEBUG_ASSERT(len_new > 0 && len_new <= SIZE_MAX);
     DEBUG_ASSERT(offset_new >= object_offset_);
@@ -367,7 +367,7 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     if (status < 0)
         return status;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
@@ -375,7 +375,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     LTRACEF("region %p, offset %#zx, size %#zx, commit %d\n", this, offset, len, commit);
@@ -430,7 +430,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         DEBUG_ASSERT(mapped == 1);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmMapping::DecommitRange(size_t offset, size_t len,
@@ -441,10 +441,10 @@ status_t VmMapping::DecommitRange(size_t offset, size_t len,
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
     if (offset + len < offset || offset + len > size_) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
     // VmObject::DecommitRange will typically call back into our instance's
     // VmMapping::UnmapVmoRangeLocked.
@@ -468,12 +468,12 @@ status_t VmMapping::DestroyLocked() {
     // at some point.  teisenbe@ wants to eventually make mx_vmar_destroy
     // never fail.
     if (aspace_->vdso_code_mapping_ == self)
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
 #endif
 
     // unmap our entire range
     status_t status = UnmapLocked(base_, size_);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -498,7 +498,7 @@ status_t VmMapping::DestroyLocked() {
     // mark ourself as dead
     parent_ = nullptr;
     state_ = LifeCycleState::DEAD;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
@@ -519,17 +519,17 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     if ((pf_flags & VMM_PF_FLAG_USER) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_USER)) {
         // user page fault on non user mapped region
         LTRACEF("permission failure: user fault on non user region\n");
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
     if ((pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_WRITE)) {
         // write to a non-writeable region
         LTRACEF("permission failure: write fault on non-writable region\n");
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
     if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)) {
         // instruction fetch from a no execute region
         LTRACEF("permission failure: execute fault on no execute region\n");
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     }
 
     // grab the lock for the vmo
@@ -575,7 +575,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             // test that the page is already mapped with either the region's mmu flags
             // or the flags that we're about to try to switch it to, which may be read-only
             if (page_flags == arch_mmu_flags_ || page_flags == mmu_flags)
-                return NO_ERROR;
+                return MX_OK;
 
             // assert that we're not accidentally marking the zero page writable
             DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
@@ -584,7 +584,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             status = arch_mmu_protect(&aspace_->arch_aspace(), va, 1, mmu_flags);
             if (status < 0) {
                 TRACEF("failed to modify permissions on existing mapping\n");
-                return ERR_NO_MEMORY;
+                return MX_ERR_NO_MEMORY;
             }
         } else {
             // some other page is mapped there already
@@ -599,18 +599,18 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             status = arch_mmu_unmap(&aspace_->arch_aspace(), va, 1, nullptr);
             if (status < 0) {
                 TRACEF("failed to remove old mapping before replacing\n");
-                return ERR_NO_MEMORY;
+                return MX_ERR_NO_MEMORY;
             }
 
             size_t mapped;
             status = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
             if (status < 0) {
                 TRACEF("failed to map replacement page\n");
-                return ERR_NO_MEMORY;
+                return MX_ERR_NO_MEMORY;
             }
             DEBUG_ASSERT(mapped == 1);
 
-            return NO_ERROR;
+            return MX_OK;
         }
     } else {
         // nothing was mapped there before, map it now
@@ -624,7 +624,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
         status = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
         if (status < 0) {
             TRACEF("failed to map page\n");
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         DEBUG_ASSERT(mapped == 1);
     }
@@ -634,7 +634,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)
         arch_sync_cache_range(va, PAGE_SIZE);
 #endif
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // We disable thread safety analysis here because one of the common uses of this
