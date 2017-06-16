@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <driver/driver-api.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -585,7 +584,6 @@ mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_libname) {
     return devhost_rpc(dev, DC_OP_BIND_DEVICE, drv_libname, "bind-device", &rsp, sizeof(rsp));
 }
 
-extern driver_api_t devhost_api;
 
 mx_handle_t root_resource_handle;
 
@@ -597,12 +595,10 @@ mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h) {
     return port_wait(&dh_port, &ios->ph);
 }
 
-int main(int argc, char** argv) {
+__EXPORT int device_host_main(int argc, char** argv) {
     devhost_io_init();
 
     log(TRACE, "devhost: main()\n");
-
-    driver_api_init(&devhost_api);
 
     root_ios.ph.handle = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (root_ios.ph.handle == MX_HANDLE_INVALID) {

@@ -4,6 +4,8 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+LOCAL_SRCS := system/core/devmgr
+
 MODULE := $(LOCAL_DIR)
 
 MODULE_NAME := driver
@@ -15,11 +17,15 @@ MODULE_SO_NAME := driver
 
 MODULE_COMPILEFLAGS := -fvisibility=hidden
 
-MODULE_SRCS := $(LOCAL_DIR)/driver-api.c
+MODULE_SRCS := \
+	$(LOCAL_SRCS)/devhost.c \
+	$(LOCAL_SRCS)/devhost-api.c \
+	$(LOCAL_SRCS)/devhost-core.c \
+	$(LOCAL_SRCS)/devhost-rpc-server.c \
+	$(LOCAL_SRCS)/devhost-shared.c \
 
-MODULE_LIBS := system/ulib/c
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/port
 
-# for DDK header files
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
