@@ -30,3 +30,26 @@ FUNCTION(guest_start)
 
     vmcall
 FUNCTION(guest_end)
+
+FUNCTION(guest_set_gpr_start)
+    add $1, %rax
+    add $2, %rcx
+    add $3, %rdx
+    add $4, %rbx
+    add $5, %rsp
+    add $6, %rbp
+    add $7, %rsi
+    add $8, %rdi
+    add $9, %r8
+    add $10, %r9
+    add $11, %r10
+    add $12, %r11
+    add $13, %r12
+    add $14, %r13
+    add $15, %r14
+    add $16, %r15
+
+    stc
+
+    vmcall
+FUNCTION(guest_set_gpr_end)
