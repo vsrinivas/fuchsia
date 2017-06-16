@@ -327,13 +327,13 @@ status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock)
         /* we failed to grab it, check for cancel */
         if (t->cancel) {
             /* we were canceled, so bail immediately */
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
         }
         /* tell the arch to wait */
         arch_spinloop_pause();
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void timer_transition_off_cpu(uint old_cpu)

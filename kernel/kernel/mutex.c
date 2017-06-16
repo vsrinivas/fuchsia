@@ -106,7 +106,7 @@ retry:
 
     // we have signalled that we're blocking, so drop into the wait queue
     status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
-    if (unlikely(ret < NO_ERROR)) {
+    if (unlikely(ret < MX_OK)) {
         // mutexes are not interruptable and cannot time out, so it
         // is illegal to return with any error state.
         panic("mutex_acquire: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
@@ -151,7 +151,7 @@ static inline void mutex_release_internal(mutex_t *m, bool reschedule, bool thre
         spin_lock_irqsave(&thread_lock, state);
 
     // release a thread in the wait queue
-    thread_t *t = wait_queue_dequeue_one(&m->wait, NO_ERROR);
+    thread_t *t = wait_queue_dequeue_one(&m->wait, MX_OK);
     DEBUG_ASSERT_MSG(t, "mutex_release: wait queue didn't have anything, but m->val = %#" PRIxPTR "\n", mutex_val(m));
 
     // we woke up a thread, mark the mutex owned by that thread

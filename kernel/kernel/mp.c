@@ -150,7 +150,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
 
     /* let CPUs know to begin executing */
     __UNUSED status_t status = arch_mp_send_ipi(target, MP_IPI_GENERIC);
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 
     if (targetting_self) {
         mp_sync_task(&sync_context);
@@ -232,12 +232,12 @@ static void mp_unplug_trampoline(void) {
 status_t mp_hotplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
-    status_t status = ERR_INTERNAL;
+    status_t status = MX_ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
 
     if (mp_is_cpu_online(cpu_id)) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup_mutex;
     }
 
@@ -255,13 +255,13 @@ status_t mp_unplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
     thread_t *t = NULL;
-    status_t status = ERR_INTERNAL;
+    status_t status = MX_ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
 
     if (!mp_is_cpu_online(cpu_id)) {
         /* Cannot unplug offline CPU */
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto cleanup_mutex;
     }
 
@@ -285,12 +285,12 @@ status_t mp_unplug_cpu(uint cpu_id) {
             NULL, NULL, 4096,
             mp_unplug_trampoline);
     if (t == NULL) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto cleanup_mutex;
     }
 
     status = platform_mp_prep_cpu_unplug(cpu_id);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup_thread;
     }
 
@@ -300,7 +300,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
     thread_set_real_time(t);
 
     status = thread_detach_and_resume(t);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto cleanup_thread;
     }
 
@@ -313,7 +313,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
     timer_transition_off_cpu(cpu_id);
 
     status = platform_mp_cpu_unplug(cpu_id);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         /* Do not cleanup the unplug thread in this case.  We have successfully
          * unplugged the CPU from the scheduler's perspective, but the platform
          * may have failed to shut down the CPU */
@@ -381,9 +381,9 @@ enum handler_return mp_mbx_reschedule_irq(void)
     return (mp.active_cpus & (1U << cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-__WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
-__WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
-__WEAK status_t arch_mp_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
+__WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) { return MX_ERR_NOT_SUPPORTED; }
+__WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) { return MX_ERR_NOT_SUPPORTED; }
+__WEAK status_t arch_mp_cpu_unplug(uint cpu_id) { return MX_ERR_NOT_SUPPORTED; }
 __WEAK status_t platform_mp_cpu_hotplug(uint cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
 __WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) { return arch_mp_prep_cpu_unplug(cpu_id); }
 __WEAK status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
