@@ -70,11 +70,12 @@ void ModuleContextImpl::StartModuleInShell(
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation) {
+    SurfaceRelationPtr surface_relation,
+    const bool focus) {
   story_controller_impl_->StartModuleInShell(
       module_path_, name, query, link_name, std::move(outgoing_services),
       std::move(incoming_services), std::move(module_controller),
-      std::move(surface_relation), ModuleSource::INTERNAL);
+      std::move(surface_relation), focus, ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::GetComponentContext(

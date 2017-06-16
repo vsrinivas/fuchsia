@@ -90,6 +90,7 @@ class StoryControllerImpl : StoryController, StoryContext {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
+      bool focus,
       ModuleSource module_source);
 
   // Called by ModuleContextImpl.

@@ -90,7 +90,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
           if (story_controller_impl_->IsRunning()) {
             story_controller_impl_->StartModuleInShell(
                 parent_module_path_, module_name_, module_url_, link_name_,
-                nullptr, nullptr, nullptr, SurfaceRelation::New(),
+                nullptr, nullptr, nullptr, SurfaceRelation::New(), true,
                 ModuleSource::EXTERNAL);
           }
         });
@@ -228,7 +228,7 @@ class StoryControllerImpl::StartCall : Operation<> {
                   std::move(parent_path),
                   module_data->module_path[module_data->module_path.size() - 1],
                   module_data->url, module_data->default_link_path->link_name,
-                  nullptr, nullptr, nullptr, nullptr,
+                  nullptr, nullptr, nullptr, nullptr, true,
                   module_data->module_source);
             }
           }
@@ -927,6 +927,7 @@ void StoryControllerImpl::StartModuleInShell(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
+    const bool focus,
     ModuleSource module_source) {
   ModuleControllerPtr module_controller;
   mozart::ViewOwnerPtr view_owner;
@@ -950,7 +951,7 @@ void StoryControllerImpl::StartModuleInShell(
       std::move(incoming_services), std::move(module_controller_request),
       view_owner.NewRequest());
 
-  fidl::String id = PathString(module_path);
+  const fidl::String id = PathString(module_path);
 
   // If this is called during Stop(), story_shell_ might already have been
   // reset. TODO(mesch): Then the whole operation should fail.
@@ -960,8 +961,11 @@ void StoryControllerImpl::StartModuleInShell(
     // module |parent_id|, which crashes story shell. This does not currently
     // happen by coincidence.
     fidl::String parent_id = PathString(parent_module_path);
-    story_shell_->ConnectView(std::move(view_owner), id, std::move(parent_id),
+    story_shell_->ConnectView(std::move(view_owner), id, parent_id,
                               std::move(surface_relation));
+    if (focus) {
+      story_shell_->FocusView(id, parent_id);
+    }
   }
 
   if (module_source == ModuleSource::EXTERNAL) {

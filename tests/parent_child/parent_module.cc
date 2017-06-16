@@ -54,17 +54,17 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   }
 
   void StartChildModuleTwice() {
-    module_context_->StartModuleInShell(kChildModuleName, kChildModule,
-                                        kChildLink, nullptr, nullptr,
-                                        child_module_.NewRequest(), nullptr);
+    module_context_->StartModuleInShell(
+        kChildModuleName, kChildModule, kChildLink, nullptr, nullptr,
+        child_module_.NewRequest(), nullptr, true);
 
     child_module_.set_connection_error_handler([this] { OnChildModuleDown(); });
 
     // Start the same module again, but with a different link. This stops the
     // previous module instance and starts a new one.
-    module_context_->StartModuleInShell(kChildModuleName, kChildModule,
-                                        kChildLinkAlternate, nullptr, nullptr,
-                                        child_module2_.NewRequest(), nullptr);
+    module_context_->StartModuleInShell(
+        kChildModuleName, kChildModule, kChildLinkAlternate, nullptr, nullptr,
+        child_module2_.NewRequest(), nullptr, true);
   }
 
   TestPoint child_module_down_{"Child module killed for restart"};

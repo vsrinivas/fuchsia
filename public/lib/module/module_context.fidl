@@ -61,11 +61,14 @@ interface ModuleContext {
   // Providing a |surface_relation| will advise the StoryShell how to
   // layout surfaces that the new module creates. If |surface_relation|
   // is null then a default relation is used.
+  //
+  // If |focused| is set to true, then the surface will also get focus.
   StartModuleInShell(string name, string module_url, string? link_name,
                      app.ServiceProvider? outgoing_services,
                      app.ServiceProvider&? incoming_services,
                      ModuleController& module_controller,
-                     SurfaceRelation? surface_relation);
+                     SurfaceRelation? surface_relation,
+                     bool focused);
 
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this
