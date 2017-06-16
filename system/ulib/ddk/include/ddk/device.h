@@ -114,8 +114,6 @@ mx_handle_t device_get_resource(mx_device_t* dev);
 mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_id, void* protocol);
 
 
-#ifndef DDK_INTERNAL
-
 // Direct Device Ops Functions
 mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,
                            mx_off_t off, size_t* actual);
@@ -155,7 +153,5 @@ static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
     device_state_clr_set(dev, clearflag, setflag);
 }
-
-#endif
 
 __END_CDECLS;

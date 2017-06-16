@@ -8,9 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// needed to access mx_device_t children list in platform_dev_find_protocol()
-#define DDK_INTERNAL 1
-
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
