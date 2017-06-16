@@ -10,7 +10,6 @@ import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-final Duration _kOverlayAutoHideDuration = const Duration(seconds: 3);
 final Duration _kProgressBarUpdateInterval = const Duration(milliseconds: 100);
 
 /// Widget that plays media given a URL (including file: URLs).
@@ -27,14 +26,13 @@ class MediaPlayer extends StatefulWidget {
 
 /// The state of a MediaPlayer widget.
 class _MediaPlayerState extends State<MediaPlayer> {
-  Timer _hideTimer;
   Timer _progressTimer;
 
   @override
   void initState() {
     assert(widget.controller != null);
     widget.controller.addListener(_handleControllerChanged);
-    if (_shouldShowControlOverlay()) {
+    if (widget.controller.shouldShowControlOverlay) {
       _ensureProgressTimer();
     } else {
       _ensureNoProgressTimer();
@@ -45,7 +43,6 @@ class _MediaPlayerState extends State<MediaPlayer> {
   @override
   void dispose() {
     _ensureNoProgressTimer();
-    _hideTimer?.cancel();
     widget.controller.removeListener(_handleControllerChanged);
     super.dispose();
   }
@@ -62,35 +59,11 @@ class _MediaPlayerState extends State<MediaPlayer> {
   /// Handles change notifications from the controller.
   void _handleControllerChanged() {
     setState(() {
-      if (_shouldShowControlOverlay()) {
+      if (widget.controller.shouldShowControlOverlay) {
         _ensureProgressTimer();
       } else {
         _ensureNoProgressTimer();
       }
-    });
-  }
-
-  /// Determines of the control overlay should be shown.
-  bool _shouldShowControlOverlay() {
-    return !widget.controller.hasVideo ||
-        !widget.controller.playing ||
-        _hideTimer != null;
-  }
-
-  /// Shows the control overlay for [_kOverlayAutoHideDuration].
-  void _brieflyShowControlOverlay() {
-    setState(() {
-      if (_hideTimer != null) {
-        _hideTimer.cancel();
-      }
-
-      _hideTimer = new Timer(_kOverlayAutoHideDuration, () {
-        setState(() {
-          _hideTimer = null;
-        });
-      });
-
-      _ensureProgressTimer();
     });
   }
 
@@ -231,12 +204,12 @@ class _MediaPlayerState extends State<MediaPlayer> {
       child: new Stack(
         children: <Widget>[
           new GestureDetector(
-            onTap: _brieflyShowControlOverlay,
+            onTap: widget.controller.brieflyShowControlOverlay,
             child: new ChildView(
                 connection: widget.controller.videoViewConnection),
           ),
           new Offstage(
-            offstage: !_shouldShowControlOverlay(),
+            offstage: !widget.controller.shouldShowControlOverlay,
             child: _buildControlOverlay(),
           ),
         ],

@@ -23,6 +23,8 @@ class MediaPlayerController extends AudioPlayerController
 
   final List<VoidCallback> _listeners = new List<VoidCallback>();
 
+  Timer _hideTimer;
+
   ChildViewConnection _videoViewConnection;
 
   // We don't mess with this except during _activate, but it needs to stay in
@@ -110,6 +112,7 @@ class MediaPlayerController extends AudioPlayerController
   void dispose() {
     _disposed = true;
     close();
+    _hideTimer?.cancel();
     _listeners.clear();
   }
 
@@ -125,6 +128,33 @@ class MediaPlayerController extends AudioPlayerController
 
     return videoMediaRenderer;
   }
+
+  /// Determines whether the control overlay should be shown.
+  bool get shouldShowControlOverlay {
+    return !hasVideo || !playing || _hideTimer != null;
+  }
+
+  /// Shows the control overlay for [overlayAutoHideDuration].
+  void brieflyShowControlOverlay() {
+    bool prevShouldShowControlOverlay = shouldShowControlOverlay;
+
+    _hideTimer?.cancel();
+
+    _hideTimer = new Timer(overlayAutoHideDuration, () {
+      _hideTimer = null;
+      if (!shouldShowControlOverlay) {
+        _notifyListeners();
+      }
+    });
+
+    if (prevShouldShowControlOverlay != shouldShowControlOverlay) {
+      _notifyListeners();
+    }
+  }
+
+  /// The duration to show the control overlay when [brieflyShowControlOverlay]
+  /// is called. The default is 3 seconds.
+  Duration overlayAutoHideDuration = const Duration(seconds: 3);
 
   /// Gets the physical size of the video.
   Size get videoPhysicalSize => hasVideo ? _videoSize : Size.zero;
