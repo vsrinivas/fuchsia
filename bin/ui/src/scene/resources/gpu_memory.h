@@ -15,7 +15,7 @@ namespace mozart {
 namespace scene {
 
 class GpuMemory;
-typedef ftl::RefPtr<GpuMemory> GpuMemoryPtr;
+using GpuMemoryPtr = ftl::RefPtr<GpuMemory>;
 
 // Wraps Vulkan memory (VkDeviceMemory).
 class GpuMemory : public Memory {

@@ -16,7 +16,7 @@ namespace mozart {
 namespace scene {
 
 class Image;
-typedef ftl::RefPtr<Image> ImagePtr;
+using ImagePtr = ftl::RefPtr<Image>;
 
 class Image : public Resource {
  public:

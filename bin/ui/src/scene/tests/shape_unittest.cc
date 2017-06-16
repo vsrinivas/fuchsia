@@ -12,7 +12,7 @@ namespace mozart {
 namespace scene {
 namespace test {
 
-typedef SessionTest ShapeTest;
+using ShapeTest = SessionTest;
 
 TEST_F(ShapeTest, CircleCreation) {
   ResourceId id = 1;

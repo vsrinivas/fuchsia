@@ -16,13 +16,13 @@
 namespace mozart {
 namespace scene {
 
-typedef uint64_t SessionId;
+using SessionId = uint64_t;
 
 class Image;
-typedef ::ftl::RefPtr<Image> ImagePtr;
+using ImagePtr = ::ftl::RefPtr<Image>;
 
 class Session;
-typedef ::ftl::RefPtr<Session> SessionPtr;
+using SessionPtr = ::ftl::RefPtr<Session>;
 
 struct SessionUpdate {
   SessionPtr session;

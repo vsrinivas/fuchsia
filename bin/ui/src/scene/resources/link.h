@@ -18,7 +18,7 @@ class Link final : public Node {
   void Accept(class ResourceVisitor* visitor) override;
 };
 
-typedef ftl::RefPtr<Link> LinkPtr;
+using LinkPtr = ftl::RefPtr<Link>;
 
 }  // namespace scene
 }  // namespace mozart

@@ -8,6 +8,6 @@
 
 namespace mozart {
 
-typedef uint32_t ResourceId;
+using ResourceId = uint32_t;
 
 }  // namespace mozart

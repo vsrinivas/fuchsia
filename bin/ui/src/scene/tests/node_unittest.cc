@@ -13,7 +13,7 @@ namespace mozart {
 namespace scene {
 namespace test {
 
-typedef SessionTest NodeTest;
+using NodeTest = SessionTest;
 
 TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   const ResourceId kNodeId = 1;

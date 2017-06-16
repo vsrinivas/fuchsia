@@ -65,7 +65,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   const ResourceTypeInfo& type_info_;
 };
 
-typedef ftl::RefPtr<Resource> ResourcePtr;
+using ResourcePtr = ftl::RefPtr<Resource>;
 
 }  // namespace scene
 }  // namespace mozart

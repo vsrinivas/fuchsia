@@ -11,10 +11,10 @@ namespace mozart {
 namespace scene {
 
 class Image;
-typedef ftl::RefPtr<Image> ImagePtr;
+using ImagePtr = ftl::RefPtr<Image>;
 
 class Material;
-typedef ftl::RefPtr<Material> MaterialPtr;
+using MaterialPtr = ftl::RefPtr<Material>;
 
 class Material : public Resource {
  public:

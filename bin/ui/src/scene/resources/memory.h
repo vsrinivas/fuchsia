@@ -24,7 +24,7 @@ class Memory : public Resource {
   Memory(Session* session, const ResourceTypeInfo& type_info);
 };
 
-typedef ftl::RefPtr<Memory> MemoryPtr;
+using MemoryPtr = ftl::RefPtr<Memory>;
 
 }  // namespace scene
 }  // namespace mozart

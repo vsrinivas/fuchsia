@@ -15,7 +15,7 @@ namespace mozart {
 namespace scene {
 
 class HostMemory;
-typedef ftl::RefPtr<HostMemory> HostMemoryPtr;
+using HostMemoryPtr = ftl::RefPtr<HostMemory>;
 
 // Wraps a CPU host memory-backed VMO.
 class HostMemory : public Memory {

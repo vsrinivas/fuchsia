@@ -38,7 +38,7 @@ enum ResourceType {
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be
 // represented: for each class, a bit is set for that class and all of its
 // parent classes.
-typedef uint64_t ResourceTypeFlags;
+using ResourceTypeFlags = uint64_t;
 
 // Static metadata about a Resource subclass.
 struct ResourceTypeInfo {

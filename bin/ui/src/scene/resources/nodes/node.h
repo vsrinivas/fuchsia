@@ -13,7 +13,7 @@ namespace mozart {
 namespace scene {
 
 class Node;
-typedef ftl::RefPtr<Node> NodePtr;
+using NodePtr = ftl::RefPtr<Node>;
 
 // Node is an abstract base class for all the concrete node types listed in
 // scene/services/nodes.fidl.

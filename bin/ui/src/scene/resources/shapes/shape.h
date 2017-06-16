@@ -23,7 +23,7 @@ class Shape : public Resource {
   Shape(Session* session, const ResourceTypeInfo& type_info);
 };
 
-typedef ftl::RefPtr<Shape> ShapePtr;
+using ShapePtr = ftl::RefPtr<Shape>;
 
 }  // namespace scene
 }  // namespace mozart
