@@ -45,7 +45,7 @@ static mx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return MX_ERR_BUFFER_TOO_SMALL;
-        ums_get_info(dev->mxdev, info);
+        ums_get_info(dev, info);
         *out_actual = sizeof(*info);
         return MX_OK;
     }
