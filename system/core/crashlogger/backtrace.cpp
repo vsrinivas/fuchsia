@@ -122,7 +122,7 @@ mx_status_t DebugInfoCache::GetDebugInfo(uintptr_t pc,
         return MX_ERR_NOT_FOUND;
     }
 
-#if 1 // Skip using libbacktrace until leaks are fixed.
+#if 1 // Skip using libbacktrace until leaks are fixed. MG-351
     *out_dso = dso;
     *out_bt_state = nullptr;
     return MX_OK;
