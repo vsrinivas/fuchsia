@@ -231,7 +231,7 @@ function msymbolize() {
   mcheck || return 1
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
-  "${MAGENTA_DIR}/scripts/symbolize" "$@"
+  "${MAGENTA_DIR}/scripts/symbolize" --build-dir "${MAGENTA_BUILD_DIR}" "$@"
 }
 
 ### mlog: run magenta log listener
@@ -655,7 +655,9 @@ END
 function fsymbolize() {
   fcheck || return 1
 
-  msymbolize --build-dir "${FUCHSIA_BUILD_DIR}" "$@"
+  # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
+  "${MAGENTA_DIR}/scripts/symbolize" \
+      --build-dir "${MAGENTA_BUILD_DIR}" "${FUCHSIA_BUILD_DIR}" "$@"
 }
 
 ### freboot: reboot the attached device
