@@ -26,6 +26,6 @@ status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
         return mtrace_ipt_control(action, options, arg, size);
 #endif
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }

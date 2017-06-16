@@ -69,7 +69,7 @@ void PRNG::Draw(void* out, size_t size) {
         if (unlikely(total_entropy_added_ < kMinEntropy)) {
             lock_.Release();
             status_t status = event_wait(&ready_);
-            ASSERT(status == NO_ERROR);
+            ASSERT(status == MX_OK);
             lock_.Acquire();
         }
         DrawInternal(out, size);

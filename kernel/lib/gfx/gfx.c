@@ -635,14 +635,14 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             break;
         default:
             dprintf(INFO, "invalid graphics format\n");
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 
     if (ptr == NULL) {
         // allocate a buffer
         ptr = malloc(surface->len);
         if (ptr == NULL) {
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         DEBUG_ASSERT(ptr);
         surface->flags |= GFX_FLAG_FREE_ON_DESTROY;
@@ -694,7 +694,7 @@ int gfx_init_surface_from_display(gfx_surface *surface, struct display_info *inf
             break;
         default:
             DEBUG_ASSERT_MSG(0, "invalid graphics format %d", info->format);
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 
     uint32_t flags = (info->flags & DISPLAY_FLAG_NEEDS_CACHE_FLUSH) ? GFX_FLAG_FLUSH_CPU_CACHE : 0;

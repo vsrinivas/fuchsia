@@ -58,18 +58,18 @@ public:
     bool is_user_address() const { return ::is_user_address(reinterpret_cast<vaddr_t>(ptr_)); }
 
     // Copies |count| T's (or bytes, if T is void) to user memory. If |count| is too large, this
-    // fails with ERR_BUFFER_TOO_SMALL.
+    // fails with MX_ERR_BUFFER_TOO_SMALL.
     status_t copy_to_user(const T* src, size_t count) const {
         if (count > count_)
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         return copy_to_user_unsafe(ptr_, src, count * internal::type_size<T>());
     }
 
     // Copies |count| T's (or bytes, if T is void) from user memory. If |count| is too large, this
-    // fails with ERR_BUFFER_TOO_SMALL.
+    // fails with MX_ERR_BUFFER_TOO_SMALL.
     status_t copy_from_user(typename mxtl::remove_const<T>::type* dst, size_t count) {
         if (count > count_)
-            return ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
         return copy_from_user_unsafe(dst, ptr_, count * internal::type_size<T>());
     }
 

@@ -25,7 +25,7 @@ status_t dpc_queue(dpc_t *dpc, bool reschedule)
     DEBUG_ASSERT(dpc->func);
 
     if (list_in_list(&dpc->node))
-        return NO_ERROR;
+        return MX_OK;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&dpc_lock, state);
@@ -40,7 +40,7 @@ status_t dpc_queue(dpc_t *dpc, bool reschedule)
     if (reschedule)
         thread_reschedule();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t dpc_queue_thread_locked(dpc_t *dpc)
@@ -49,7 +49,7 @@ status_t dpc_queue_thread_locked(dpc_t *dpc)
     DEBUG_ASSERT(dpc->func);
 
     if (list_in_list(&dpc->node))
-        return NO_ERROR;
+        return MX_OK;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&dpc_lock, state);
@@ -60,7 +60,7 @@ status_t dpc_queue_thread_locked(dpc_t *dpc)
 
     spin_unlock_irqrestore(&dpc_lock, state);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool dpc_cancel(dpc_t *dpc)
@@ -86,7 +86,7 @@ static int dpc_thread(void *arg)
     for (;;) {
         // wait for a dpc to fire
         __UNUSED status_t err = event_wait(&dpc_event);
-        DEBUG_ASSERT(err == NO_ERROR);
+        DEBUG_ASSERT(err == MX_OK);
 
         spin_lock_saved_state_t state;
         spin_lock_irqsave(&dpc_lock, state);

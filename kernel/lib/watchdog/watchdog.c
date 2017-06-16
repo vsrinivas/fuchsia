@@ -49,7 +49,7 @@ status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
     dog->timeout = timeout;
     timer_initialize(&dog->expire_timer);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void watchdog_set_enabled(watchdog_t *dog, bool enabled)

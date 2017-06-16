@@ -904,7 +904,7 @@ static ssize_t heap_grow(size_t size, free_t **bucket)
 
     void *ptr = heap_page_alloc(size >> PAGE_SIZE_SHIFT);
     if (ptr == NULL)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     theheap.size += size;
 

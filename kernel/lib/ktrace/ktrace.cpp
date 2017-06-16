@@ -131,8 +131,8 @@ int ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
         len = max - off;
     }
 
-    if (arch_copy_to_user(ptr, ks->buffer + off, len) != NO_ERROR) {
-        return ERR_INVALID_ARGS;
+    if (arch_copy_to_user(ptr, ks->buffer + off, len) != MX_OK) {
+        return MX_ERR_INVALID_ARGS;
     }
     return len;
 }
@@ -172,7 +172,7 @@ status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
         probe = (ktrace_probe_info_t*) calloc(sizeof(*probe) + MX_MAX_NAME_LEN, 1);
         if (probe == nullptr) {
             mutex_release(&probe_list_lock);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         probe->name = (const char*) (probe + 1);
         memcpy(probe + 1, ptr, MX_MAX_NAME_LEN);
@@ -181,9 +181,9 @@ status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
         return probe->num;
     }
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int trace_not_ready = 0;

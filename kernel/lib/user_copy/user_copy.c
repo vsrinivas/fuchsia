@@ -15,10 +15,10 @@
 // want to override with arch-specific versions that check access permissions
 __WEAK status_t arch_copy_from_user(void *dst, const void *src, size_t len) {
     memcpy(dst, src, len);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 __WEAK status_t arch_copy_to_user(void *dst, const void *src, size_t len) {
     memcpy(dst, src, len);
-    return NO_ERROR;
+    return MX_OK;
 }

@@ -76,12 +76,12 @@ public:
                                                  MX_VM_FLAG_CAN_MAP_EXECUTE |
                                                  MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                                  &vmar, &vmar_rights);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         // Map userboot proper.
         status = RoDso::Map(vmar, 0);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             *entry = vmar->vmar()->base() + USERBOOT_ENTRY;
             // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
             // about the actual ELF symbol values when they are Thumb function
@@ -111,12 +111,12 @@ static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
                                   mxtl::RefPtr<VmObjectDispatcher>* disp_ptr,
                                   Handle** ptr) {
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     mx_rights_t rights;
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = VmObjectDispatcher::Create(
         mxtl::move(vmo), &dispatcher, &rights);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
         if (disp_ptr)
             *disp_ptr = mxtl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
         if (readonly)
@@ -132,7 +132,7 @@ static mx_status_t get_job_handle(Handle** ptr) {
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = JobDispatcher::Create(
         0u, GetRootJobDispatcher(), &dispatcher, &rights);
-    if (result == NO_ERROR)
+    if (result == MX_OK)
         *ptr = MakeHandle(mxtl::move(dispatcher), rights);
     return result;
 }
@@ -142,7 +142,7 @@ static mx_status_t get_resource_handle(Handle** ptr) {
     mxtl::RefPtr<ResourceDispatcher> root;
     mx_status_t result = ResourceDispatcher::Create(&root, &rights, "root", MX_RREC_SELF_ROOT);
     root->MakeRoot();
-    if (result == NO_ERROR)
+    if (result == MX_OK)
         *ptr = MakeHandle(mxtl::RefPtr<Dispatcher>(root.get()), rights);
     return result;
 }
@@ -158,7 +158,7 @@ static mx_handle_t make_bootstrap_channel(
         mxtl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
         status_t status = ChannelDispatcher::Create(0, &mpd0, &mpd1, &rights);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         user_channel_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
         kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
@@ -166,7 +166,7 @@ static mx_handle_t make_bootstrap_channel(
 
     // Here it goes!
     mx_status_t status = kernel_channel->Write(mxtl::move(msg));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_handle_t hv = process->MapHandleToValue(user_channel_handle);
@@ -200,7 +200,7 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
         static_cast<uint32_t>(offsetof(struct bootstrap_message, cmdline)) +
         __kernel_cmdline_size;
     uint32_t num_handles = BOOTSTRAP_HANDLES;
-    if (MessagePacket::Create(data_size, num_handles, &packet) != NO_ERROR)
+    if (MessagePacket::Create(data_size, num_handles, &packet) != MX_OK)
         return nullptr;
 
     bootstrap_message* msg =
@@ -265,23 +265,23 @@ static int attempt_userboot() {
     // We'll fill in the handles as we create things.
     mxtl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
     if (!msg)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     Handle** const handles = msg->mutable_handles();
     DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
     mx_status_t status = get_vmo_handle(rootfs_vmo, false, nullptr,
                                         &handles[BOOTSTRAP_RAMDISK]);
     mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
                                 &handles[BOOTSTRAP_STACK]);
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
 
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = get_job_handle(&handles[BOOTSTRAP_JOB]);
 
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mxtl::RefPtr<Dispatcher> proc_disp;
@@ -311,7 +311,7 @@ static int attempt_userboot() {
     uintptr_t vdso_base = 0;
     uintptr_t entry = 0;
     status = userboot.Map(vmar, &vdso_base, &entry);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Map the stack anywhere.
@@ -320,7 +320,7 @@ static int attempt_userboot() {
                        mxtl::move(stack_vmo), 0, stack_size,
                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                        &stack_mapping);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     uintptr_t stack_base = stack_mapping->base();
@@ -348,12 +348,12 @@ static int attempt_userboot() {
     // Start the process's initial thread.
     status = thread->Start(entry, sp, hv, vdso_base,
                            /* initial_thread= */ true);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("userboot: failed to start initial thread: %d\n", status);
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void userboot_init(uint level) {

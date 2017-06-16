@@ -45,14 +45,14 @@ public:
         status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
                 0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
                 mxtl::move(vmo), page_offset, arch_mmu_flags, name, &mapping_);
-        ASSERT(status == NO_ERROR);
+        ASSERT(status == MX_OK);
         data_ = reinterpret_cast<T*>(mapping_->base() + offset_in_page);
     }
 
     ~KernelVmoWindow() {
         if (mapping_) {
             status_t status = mapping_->Destroy();
-            ASSERT(status == NO_ERROR);
+            ASSERT(status == MX_OK);
         }
     }
 
@@ -285,7 +285,7 @@ void VDso::CreateVariant(Variant variant) {
     mxtl::RefPtr<VmObject> new_vmo;
     mx_status_t status = vmo()->Clone(MX_VMO_CLONE_COPY_ON_WRITE, 0, size(),
                                       false, &new_vmo);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
 
     VDsoDynSymWindow dynsym_window(new_vmo);
     VDsoCodeWindow code_window(new_vmo);
@@ -312,10 +312,10 @@ void VDso::CreateVariant(Variant variant) {
     mx_rights_t rights;
     status = VmObjectDispatcher::Create(mxtl::move(new_vmo),
                                         &dispatcher, &rights);
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
 
     status = dispatcher->set_name(name, strlen(name));
-    ASSERT(status == NO_ERROR);
+    ASSERT(status == MX_OK);
 
     variant_vmo_[variant_index(variant)] =
         DownCastDispatcher<VmObjectDispatcher>(&dispatcher);

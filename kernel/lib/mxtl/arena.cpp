@@ -35,9 +35,9 @@ Arena::~Arena() {
 
 status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     if ((ob_size == 0) || (ob_size > PAGE_SIZE))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!count)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     LTRACEF("Arena '%s': ob_size %zu, count %zu\n", name, ob_size, count);
 
     // Carve out the memory:
@@ -58,7 +58,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
         VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_sz);
     if (vmo == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte VMO\n", name, vmo_sz);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     auto kspace = VmAspace::kernel_aspace();
@@ -79,10 +79,10 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
                                                VMAR_FLAG_CAN_MAP_WRITE |
                                                VMAR_FLAG_CAN_MAP_SPECIFIC,
                                            vname, &vmar);
-    if (st != NO_ERROR || vmar == nullptr) {
+    if (st != MX_OK || vmar == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte VMAR (%d)\n",
                 name, vmar_sz, st);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     // The VMAR's parent holds a ref, so it won't be destroyed
     // automatically when we return.
@@ -99,10 +99,10 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
                                ARCH_MMU_FLAG_PERM_READ |
                                    ARCH_MMU_FLAG_PERM_WRITE,
                                "control", &control_mapping);
-    if (st != NO_ERROR || control_mapping == nullptr) {
+    if (st != MX_OK || control_mapping == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte control mapping (%d)\n",
                 name, control_mem_sz, st);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // Create a mapping for the data pool, leaving an unmapped gap
@@ -117,10 +117,10 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
                                ARCH_MMU_FLAG_PERM_READ |
                                    ARCH_MMU_FLAG_PERM_WRITE,
                                "data", &data_mapping);
-    if (st != NO_ERROR || data_mapping == nullptr) {
+    if (st != MX_OK || data_mapping == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte data mapping (%d)\n",
                 name, data_mem_sz, st);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // TODO(dbort): Add a VmMapping flag that says "do not demand page",
@@ -135,7 +135,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     if (LOCAL_TRACE) {
         Dump();
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Arena::Pool::Init(const char* name, mxtl::RefPtr<VmMapping> mapping,
@@ -176,7 +176,7 @@ void* Arena::Pool::Pop() {
             reinterpret_cast<vaddr_t>(committed_) - mapping_->base();
         const size_t len = nc - committed_;
         status_t st = mapping_->MapRange(offset, len, /* commit */ true);
-        if (st != NO_ERROR) {
+        if (st != MX_OK) {
             LTRACEF("%s: can't map range 0x%p..0x%p: %d\n",
                     name_, committed_, nc, st);
             // Try to clean up any committed pages, but don't require

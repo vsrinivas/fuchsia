@@ -144,8 +144,8 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
                     testcase->test_cnt == 1 ? "" : "s");
 
     void* context = NULL;
-    status_t init_res = testcase->init ? testcase->init(&context) : NO_ERROR;
-    if (init_res != NO_ERROR) {
+    status_t init_res = testcase->init ? testcase->init(&context) : MX_OK;
+    if (init_res != MX_OK) {
         printf("%s : FAILED to initialize testcase! (status %d)", testcase->name, init_res);
         return false;
     }

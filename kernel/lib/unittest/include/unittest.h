@@ -46,7 +46,7 @@
  *      EXPECT_EQ(1, foo_value, "foo_func failed");
  *      ... there are EXPECT_* macros for many conditions...
  *      EXPECT_TRUE(foo_condition(), "condition should be true");
- *      EXPECT_NEQ(ERR_TIMED_OUT, foo_event(), "event timed out");
+ *      EXPECT_NEQ(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
  *
  *      END_TEST;
  * }
@@ -62,9 +62,9 @@
  *      *context = new FooTestEnvironment(...);
  *
  *      if (!(*context))
- *          return ERR_NO_MEMORY;
+ *          return MX_ERR_NO_MEMORY;
  *
- *      return NO_ERROR;
+ *      return MX_OK;
  * }
  *
  * While the cleanup function might look like...

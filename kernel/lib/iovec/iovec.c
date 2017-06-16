@@ -21,7 +21,7 @@
 ssize_t iovec_size (const iovec_t *iov, uint iov_cnt)
 {
     if (!iov)
-        return (ssize_t) ERR_INVALID_ARGS;
+        return (ssize_t) MX_ERR_INVALID_ARGS;
 
     size_t c = 0;
     for (uint i = 0; i < iov_cnt; i++, iov++) {
@@ -39,7 +39,7 @@ ssize_t iovec_to_membuf (uint8_t *buf, uint buf_len, const iovec_t *iov, uint io
     uint buf_pos = 0;
 
     if (!buf || !iov)
-        return (ssize_t) ERR_INVALID_ARGS;
+        return (ssize_t) MX_ERR_INVALID_ARGS;
 
     /* for all iovec */
     for (uint i = 0; i < iov_cnt; i++, iov++) {

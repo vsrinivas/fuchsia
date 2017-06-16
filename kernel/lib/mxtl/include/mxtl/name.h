@@ -58,7 +58,7 @@ public:
         AutoSpinLock lock(lock_);
         memcpy(name_, name, len);
         memset(name_ + len, 0, Size - len);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     Name& operator=(const Name<Size>& other) {

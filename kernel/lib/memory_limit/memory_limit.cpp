@@ -22,7 +22,7 @@
 
 status_t mem_limit_init(mem_limit_ctx_t* ctx) {
     if (!ctx) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uint64_t limit = cmdline_get_uint64("kernel.memory-limit-mb", 0u);
@@ -31,10 +31,10 @@ status_t mem_limit_init(mem_limit_ctx_t* ctx) {
         ctx->memory_limit = limit * MB;
         ctx->found_kernel = 0;
         ctx->found_ramdisk = 0;
-        return NO_ERROR;
+        return MX_OK;
     }
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
@@ -46,7 +46,7 @@ status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t r
     if (range_size == 0 || ctx->memory_limit == 0) {
         /* If our limit has been reached this range can be skipped */
         *used_cnt = 0;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     LTRACEF("scanning range %" PRIxPTR " of size %zu, (kernel start %#" PRIxPTR " limit %zu\n",
@@ -203,7 +203,7 @@ status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t r
     *used_cnt = !!(iovs[0].iov_len) + !!(iovs[1].iov_len);
 
     LTRACEF("used %zu iov%s remaining memory %zu bytes\n", *used_cnt, (*used_cnt == 1) ? "," : "s,", ctx->memory_limit);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
@@ -212,7 +212,7 @@ status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_b
     iovec_t vecs[2];
     status_t status = mem_limit_get_iovs(ctx, range_base, range_size, vecs, &used);
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -226,7 +226,7 @@ status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_b
 
         // If either vector failed then abort the rest of the operation. There is no
         // valid situation where only the second vector is used.
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             break;
         }
     }

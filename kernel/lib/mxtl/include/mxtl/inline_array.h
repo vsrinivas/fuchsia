@@ -22,7 +22,7 @@ namespace mxtl {
 //   AllocChecker ac;
 //   mxtl::InlineArray<mx_handle_t, 4u> handle_values(&ac, num_handles);
 //   if (!ac.check())
-//       return ERR_NO_MEMORY;
+//       return MX_ERR_NO_MEMORY;
 //
 // Note: Currently, |max_inline_count| must be at least 1.
 template <typename T, size_t max_inline_count>
