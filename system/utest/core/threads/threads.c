@@ -228,6 +228,39 @@ static bool test_kill_wait_thread(void) {
     END_TEST;
 }
 
+// Arguments for self_killing_thread_fn().
+struct self_killing_thread_args {
+    mxr_thread_t thread; // Used for the thread to kill itself.
+    uint32_t test_value; // Used for testing what the thread does.
+};
+
+__NO_SAFESTACK static void self_killing_thread_fn(void* arg) {
+    struct self_killing_thread_args* args = arg;
+    // Kill the current thread.
+    mx_task_kill(mxr_thread_get_handle(&args->thread));
+    // We should not reach here -- the syscall should not have returned.
+    args->test_value = 999;
+    mx_thread_exit();
+}
+
+// This tests that the mx_task_kill() syscall does not return when a thread
+// uses it to kill itself.
+static bool test_thread_kills_itself(void) {
+    BEGIN_TEST;
+
+    struct self_killing_thread_args args;
+    args.test_value = 111;
+    ASSERT_TRUE(start_thread(self_killing_thread_fn, &args, &args.thread), "");
+    mx_handle_t thread_handle = mxr_thread_get_handle(&args.thread);
+    ASSERT_EQ(mx_object_wait_one(thread_handle, MX_THREAD_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(thread_handle), MX_OK, "");
+    // Check that the thread did not continue execution and modify test_value.
+    ASSERT_EQ(args.test_value, 111u, "");
+
+    END_TEST;
+}
+
 static bool test_info_task_stats_fails(void) {
     BEGIN_TEST;
     // Spin up a thread.
@@ -691,6 +724,7 @@ RUN_TEST(test_thread_start_with_zero_instruction_pointer)
 RUN_TEST(test_kill_busy_thread)
 RUN_TEST(test_kill_sleep_thread)
 RUN_TEST(test_kill_wait_thread)
+RUN_TEST(test_thread_kills_itself)
 RUN_TEST(test_info_task_stats_fails)
 RUN_TEST(test_resume_suspended)
 RUN_TEST(test_suspend_sleeping)
