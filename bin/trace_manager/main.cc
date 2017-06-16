@@ -13,8 +13,7 @@ using namespace tracing;
 
 namespace {
 
-constexpr const char kDefaultConfigFile[] =
-    "/system/data/trace_manager/tracing.config";
+constexpr char kDefaultConfigFile[] = "/pkg/data/tracing.config";
 
 }  // namespace
 

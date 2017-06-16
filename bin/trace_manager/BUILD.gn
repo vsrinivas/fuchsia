@@ -2,34 +2,81 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tracing") {
-  deps = [
-    "//apps/tracing/lib/measure",
-    "//apps/tracing/lib/trace",
-    "//apps/tracing/lib/trace_converters",
-    "//apps/tracing/services",
-    "//apps/tracing/src/ktrace_provider",
-    "//apps/tracing/src/trace",
-    "//apps/tracing/src/trace_manager",
-  ]
-}
+import("//packages/package.gni")
 
-group("tests") {
+executable("trace_tests_bin") {
   testonly = true
 
-  deps = [
-    ":trace_tests",
-    "//apps/tracing/lib/trace:trace_stub_tests",
-  ]
-}
-
-executable("trace_tests") {
-  testonly = true
+  output_name = "trace_tests"
 
   deps = [
+    "lib/measure:unittests",
+    "lib/trace:unittests",
+    "src/trace:unittests",
     "//apps/test_runner/src:gtest_main",
-    "//apps/tracing/lib/measure:unittests",
-    "//apps/tracing/lib/trace:unittests",
-    "//apps/tracing/src/trace:unittests",
   ]
+}
+
+package("trace_manager") {
+  archive = true
+
+  deps = [
+    "src/trace_manager",
+  ]
+
+  binaries = [ {
+        name = "trace_manager"
+        dest = "app"
+      } ]
+
+  resources = [ {
+        path = rebase_path("src/trace_manager/tracing.config")
+        dest = "tracing.config"
+      } ]
+}
+
+package("ktrace_provider") {
+  archive = true
+
+  deps = [
+    "src/ktrace_provider",
+  ]
+
+  binaries = [ {
+        name = "ktrace_provider"
+        dest = "app"
+      } ]
+
+  meta = [ {
+        path = rebase_path("src/ktrace_provider/meta/sandbox")
+        dest = "sandbox"
+      } ]
+}
+
+package("trace_tests") {
+  testonly = true
+
+  deps = [
+    ":trace_tests_bin",
+    "lib/trace:trace_stub_tests",
+  ]
+
+  tests = [
+    {
+      name = "trace_tests"
+    },
+    {
+      name = "trace_stub_tests"
+    },
+  ]
+}
+
+package("trace") {
+  deps = [
+    "src/trace",
+  ]
+
+  binaries = [ {
+        name = "trace"
+      } ]
 }
