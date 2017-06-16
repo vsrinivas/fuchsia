@@ -16,7 +16,7 @@ const float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 // Resource creation.
 mozart2::OpPtr NewCreateMemoryOp(uint32_t id,
                                  mx::vmo vmo,
-                                 mozart2::Memory::MemoryType memory_type);
+                                 mozart2::MemoryType memory_type);
 mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,

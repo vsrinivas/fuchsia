@@ -242,7 +242,7 @@ class VulkanCubeApp {
       ResourceId buffer_memory_id = NewResourceId();
       ops.push_back(
           NewCreateMemoryOp(buffer_memory_id, std::move(buffer_vmo),
-                            mozart2::Memory::MemoryType::VK_DEVICE_MEMORY));
+                            mozart2::MemoryType::VK_DEVICE_MEMORY));
       memory_resource_ids_[i] = buffer_memory_id;
 
       ResourceId buffer_image_id = NewResourceId();

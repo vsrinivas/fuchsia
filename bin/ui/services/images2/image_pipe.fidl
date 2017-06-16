@@ -1,6 +1,7 @@
 module mozart2;
 
 import "apps/mozart/services/images2/image_info.fidl";
+import "apps/mozart/services/images2/memory_type.fidl";
 
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.
@@ -65,8 +66,9 @@ interface ImagePipe {
   // The |memory| is the handle of a memory object which contains the image
   // data.  It is valid to create multiple images backed by the same memory object;
   // they may even overlap.  Consumers must detect this and handle it accordingly.
-  // The |memory_offset| indicates the offset within the memory object at which
-  // the image data begins.
+  // The type of memory stored in the VMO is |memory_type| (e.g. GPU memory, host
+  // memory). The |memory_offset| indicates the offset within the memory object at
+  // which the image data begins.
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| is already registered
@@ -75,7 +77,7 @@ interface ImagePipe {
   // - the image data expected at |memory_offset| according to the |image_info|
   //   exceeds the memory object's bounds
   AddImage(uint32 image_id, ImageInfo image_info,
-           handle<vmo> memory, uint64 memory_offset);
+           handle<vmo> memory, MemoryType memory_type, uint64 memory_offset);
 
   // Removes an image resource from the pipe.
   //

@@ -287,7 +287,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     // them.
     ops.push_back(
         mozart::NewCreateMemoryOp(memory_id, std::move(vmo_copy),
-                                  mozart2::Memory::MemoryType::HOST_MEMORY));
+                                  mozart2::MemoryType::HOST_MEMORY));
 
     mozart::ResourceId image_id = NewResourceId();
     ops.push_back(mozart::NewCreateImageOp(

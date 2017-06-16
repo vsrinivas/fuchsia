@@ -8,6 +8,7 @@ import "apps/mozart/services/scene/nodes.fidl";
 import "apps/mozart/services/scene/shapes.fidl";
 import "apps/mozart/services/scene/types.fidl";
 import "apps/mozart/services/images2/image_info.fidl";
+import "apps/mozart/services/images2/memory_type.fidl";
 
 // These are all of the types of resources that can be created within a
 // |Session|.
@@ -41,15 +42,6 @@ union Resource {
 // it with Mozart.
 // TODO: specify resizing behavior.  Who can resize?  Client/Mozart/both/none?
 struct Memory {
-  // Specifies the type of VMO's memory.
-  enum MemoryType {
-    // VMO is regular host CPU memory.
-    HOST_MEMORY = 0,
-
-    // VMO can be imported as a VkDeviceMemory using vkImportDeviceMemoryMAGMA.
-    VK_DEVICE_MEMORY = 1,
-  };
-
   // The VMO which backs this memory.
   handle<vmo> vmo;
 

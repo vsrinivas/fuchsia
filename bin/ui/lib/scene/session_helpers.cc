@@ -21,7 +21,7 @@ static mozart2::OpPtr NewCreateResourceOp(uint32_t id,
 
 mozart2::OpPtr NewCreateMemoryOp(uint32_t id,
                                  mx::vmo vmo,
-                                 mozart2::Memory::MemoryType memory_type) {
+                                 mozart2::MemoryType memory_type) {
   auto memory = mozart2::Memory::New();
   memory->vmo = std::move(vmo);
   memory->memory_type = memory_type;

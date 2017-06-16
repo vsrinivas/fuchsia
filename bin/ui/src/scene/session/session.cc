@@ -299,9 +299,9 @@ bool Session::ApplyCreateTagNode(ResourceId id,
 ResourcePtr Session::CreateMemory(ResourceId, const mozart2::MemoryPtr& args) {
   vk::Device device = context()->vk_device();
   switch (args->memory_type) {
-    case mozart2::Memory::MemoryType::VK_DEVICE_MEMORY:
+    case mozart2::MemoryType::VK_DEVICE_MEMORY:
       return GpuMemory::New(this, device, args, error_reporter_);
-    case mozart2::Memory::MemoryType::HOST_MEMORY:
+    case mozart2::MemoryType::HOST_MEMORY:
       return HostMemory::New(this, device, args, error_reporter_);
   }
 }
