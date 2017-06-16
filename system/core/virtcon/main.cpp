@@ -57,8 +57,8 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
     mx_status_t status;
     for (;;) {
         if ((status = mx_log_read(ph->handle, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
-            if (status == ERR_SHOULD_WAIT) {
-                return NO_ERROR;
+            if (status == MX_ERR_SHOULD_WAIT) {
+                return MX_OK;
             }
             break;
         }
@@ -129,7 +129,7 @@ static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
             vc_write(vc, data, r, 0);
         }
         if (count) {
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
@@ -147,13 +147,13 @@ static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
             if(launch_shell(vc, fd) < 0) {
                 goto fail;
             }
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
 fail:
     session_destroy(vc);
-    return ERR_STOP;
+    return MX_ERR_STOP;
 }
 
 static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
@@ -163,7 +163,7 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
     int retry = 30;
     while ((fd = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK)) < 0) {
         if (--retry == 0) {
-            return ERR_IO;
+            return MX_ERR_IO;
         }
         usleep(100000);
     }
@@ -171,14 +171,14 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
     int client_fd = openat(fd, "0", O_RDWR);
     if (client_fd < 0) {
         close(fd);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
 
     vc_t* vc;
     if (vc_create(&vc)) {
         close(fd);
         close(client_fd);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     mx_status_t r;
     if ((r = port_fd_handler_init(&vc->fh, fd, POLLIN | POLLRDHUP | POLLHUP)) < 0) {
@@ -203,7 +203,7 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
 
     *out = vc;
     *out_fd = client_fd;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void start_shell(bool make_active) {
@@ -227,17 +227,17 @@ static mx_status_t new_vc_cb(port_handler_t* ph, mx_signals_t signals, uint32_t 
     mx_handle_t h;
     uint32_t dcount, hcount;
     if (mx_channel_read(ph->handle, 0, NULL, &h, 0, 1, &dcount, &hcount) < 0) {
-        return NO_ERROR;
+        return MX_OK;
     }
     if (hcount != 1) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     vc_t* vc;
     int fd;
     if (session_create(&vc, &fd, true) < 0) {
         mx_handle_close(h);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     mx_handle_t handles[MXIO_MAX_HANDLES];
@@ -253,7 +253,7 @@ static mx_status_t new_vc_cb(port_handler_t* ph, mx_signals_t signals, uint32_t 
     }
 
     mx_handle_close(h);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void input_dir_event(unsigned evt, const char* name) {
@@ -273,7 +273,7 @@ static void input_dir_event(unsigned evt, const char* name) {
 
 static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     if (!(signals & MX_CHANNEL_READABLE)) {
-        return ERR_STOP;
+        return MX_ERR_STOP;
     }
 
     // Buffer contains events { Opcode, Len, Name[Len] }
@@ -282,7 +282,7 @@ static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t e
     uint8_t buf[VFS_WATCH_MSG_MAX + 1];
     uint32_t len;
     if (mx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
-        return ERR_STOP;
+        return MX_ERR_STOP;
     }
 
     uint8_t* msg = buf;
@@ -300,7 +300,7 @@ static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t e
         msg += namelen;
         len -= (namelen + 2u);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
@@ -318,7 +318,7 @@ static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uin
         ph->waitfor = MX_USER_SIGNAL_0;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -342,7 +342,7 @@ int main(int argc, char** argv) {
     g_fb_fd = fd;
 
     // create initial console for debug log
-    if (vc_create(&log_vc) != NO_ERROR) {
+    if (vc_create(&log_vc) != MX_OK) {
         return -1;
     }
     g_status_width = log_vc->columns;
@@ -352,7 +352,7 @@ int main(int argc, char** argv) {
     // filter out our own debug messages from the log
     mx_info_handle_basic_t info;
     if (mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC, &info,
-                           sizeof(info), NULL, NULL) == NO_ERROR) {
+                           sizeof(info), NULL, NULL) == MX_OK) {
         proc_koid = info.koid;
     }
 
@@ -376,8 +376,8 @@ int main(int argc, char** argv) {
         vfs_watch_dir_t wd;
         wd.mask = VFS_WATCH_MASK_ALL;
         wd.options = 0;
-        if (mx_channel_create(0, &wd.channel, &input_ph.handle) == NO_ERROR) {
-            if ((ioctl_vfs_watch_dir_v2(input_dir_fd, &wd)) == NO_ERROR) {
+        if (mx_channel_create(0, &wd.channel, &input_ph.handle) == MX_OK) {
+            if ((ioctl_vfs_watch_dir_v2(input_dir_fd, &wd)) == MX_OK) {
                 input_ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
                 input_ph.func = input_cb;
                 port_wait(&port, &input_ph);

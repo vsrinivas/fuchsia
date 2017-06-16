@@ -45,7 +45,7 @@ void expect_keypress(uint8_t expected_keycode, int expected_modifiers,
 class KeyboardInputHelper {
 public:
     KeyboardInputHelper() {
-        EXPECT_EQ(vc_input_create(&vi_, keypress_handler, -1), NO_ERROR, "");
+        EXPECT_EQ(vc_input_create(&vi_, keypress_handler, -1), MX_OK, "");
     }
 
     ~KeyboardInputHelper() {

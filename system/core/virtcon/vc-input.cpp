@@ -115,7 +115,7 @@ mx_status_t vc_set_active(int num, vc_t* to_vc) {
     list_for_every_entry (&g_vc_list, vc, vc_t, node) {
         if ((num == i) || (to_vc == vc)) {
             if (vc == g_active_vc) {
-                return NO_ERROR;
+                return MX_OK;
             }
             if (g_active_vc) {
                 g_active_vc->active = false;
@@ -127,11 +127,11 @@ mx_status_t vc_set_active(int num, vc_t* to_vc) {
             g_active_vc_index = i;
             vc_full_repaint(vc);
             vc_render(vc);
-            return NO_ERROR;
+            return MX_OK;
         }
         i++;
     }
-    return ERR_NOT_FOUND;
+    return MX_ERR_NOT_FOUND;
 }
 
 void vc_status_update() {
@@ -239,7 +239,7 @@ mx_status_t vc_create(vc_t** vc_out) {
     }
 
     *vc_out = vc;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void vc_destroy(vc_t* vc) {
