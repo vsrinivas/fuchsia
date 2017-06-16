@@ -1,34 +1,8 @@
 {
-    "labels": [
-        "//apps/tracing",
-        "//apps/tracing:tests"
-    ],
-    "binaries": [
-        {
-            "binary": "ktrace_provider",
-            "bootfs_path": "apps/ktrace_provider"
-        },
-        {
-            "binary": "trace",
-            "bootfs_path": "apps/trace"
-        },
-        {
-            "binary": "trace_manager",
-            "bootfs_path": "apps/trace_manager"
-        },
-        {
-            "binary": "trace_tests",
-            "bootfs_path": "test/trace_tests"
-        },
-        {
-            "binary": "trace_stub_tests",
-            "bootfs_path": "test/trace_stub_tests"
-        }
-    ],
-    "resources": [
-        {
-            "file": "apps/tracing/src/trace_manager/tracing.config",
-            "bootfs_path": "data/trace_manager/tracing.config"
-        }
-    ]
+    "packages": {
+        "trace_manager": "//apps/tracing:trace_manager",
+        "ktrace_provider": "//apps/tracing:ktrace_provider",
+        "trace_tests": "//apps/tracing:trace_tests",
+        "trace": "//apps/tracing:trace"
+    }
 }
