@@ -31,7 +31,7 @@ mx_status_t GpuDevice::virtio_gpu_set_mode(void* ctx, mx_display_info_t* info) {
 
     LTRACEF("dev %p, info %p\n", gd, info);
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t GpuDevice::virtio_gpu_get_mode(void* ctx, mx_display_info_t* info) {
@@ -50,7 +50,7 @@ mx_status_t GpuDevice::virtio_gpu_get_mode(void* ctx, mx_display_info_t* info) {
     info->pixelsize = 4;
     info->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t GpuDevice::virtio_gpu_get_framebuffer(void* ctx, void** framebuffer) {
@@ -60,10 +60,10 @@ mx_status_t GpuDevice::virtio_gpu_get_framebuffer(void* ctx, void** framebuffer)
 
     void* fb = gd->framebuffer();
     if (!fb)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     *framebuffer = fb;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void GpuDevice::virtio_gpu_flush(void* ctx) {
@@ -129,7 +129,7 @@ mx_status_t GpuDevice::send_command_response(const void* cmd, size_t cmd_len, vo
     /* wait for result */
     cnd_wait(&request_cond_, request_lock_.GetInternal());
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t GpuDevice::get_display_info() {
@@ -146,13 +146,13 @@ mx_status_t GpuDevice::get_display_info() {
     /* send the message and get a response */
     virtio_gpu_resp_display_info* info;
     auto err = send_command_response(&req, sizeof(req), (void**)&info, sizeof(*info));
-    if (err < NO_ERROR) {
-        return ERR_NOT_FOUND;
+    if (err < MX_OK) {
+        return MX_ERR_NOT_FOUND;
     }
 
     /* we got response */
     if (info->hdr.type != VIRTIO_GPU_RESP_OK_DISPLAY_INFO) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     LTRACEF("response:\n");
@@ -169,7 +169,7 @@ mx_status_t GpuDevice::get_display_info() {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t GpuDevice::allocate_2d_resource(uint32_t* resource_id, uint32_t width, uint32_t height) {
@@ -194,11 +194,11 @@ mx_status_t GpuDevice::allocate_2d_resource(uint32_t* resource_id, uint32_t widt
     /* send the command and get a response */
     struct virtio_gpu_ctrl_hdr* res;
     auto err = send_command_response(&req, sizeof(req), (void**)&res, sizeof(*res));
-    assert(err == NO_ERROR);
+    assert(err == MX_OK);
 
     /* see if we got a valid response */
     LTRACEF("response type 0x%x\n", res->type);
-    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? NO_ERROR : ERR_NO_MEMORY;
+    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? MX_OK : MX_ERR_NO_MEMORY;
 
     return err;
 }
@@ -228,11 +228,11 @@ mx_status_t GpuDevice::attach_backing(uint32_t resource_id, mx_paddr_t ptr, size
     /* send the command and get a response */
     struct virtio_gpu_ctrl_hdr* res;
     auto err = send_command_response(&req, sizeof(req), (void**)&res, sizeof(*res));
-    assert(err == NO_ERROR);
+    assert(err == MX_OK);
 
     /* see if we got a valid response */
     LTRACEF("response type 0x%x\n", res->type);
-    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? NO_ERROR : ERR_NO_MEMORY;
+    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? MX_OK : MX_ERR_NO_MEMORY;
 
     return err;
 }
@@ -257,11 +257,11 @@ mx_status_t GpuDevice::set_scanout(uint32_t scanout_id, uint32_t resource_id, ui
     /* send the command and get a response */
     virtio_gpu_ctrl_hdr* res;
     auto err = send_command_response(&req, sizeof(req), (void**)&res, sizeof(*res));
-    assert(err == NO_ERROR);
+    assert(err == MX_OK);
 
     /* see if we got a valid response */
     LTRACEF("response type 0x%x\n", res->type);
-    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? NO_ERROR : ERR_NO_MEMORY;
+    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? MX_OK : MX_ERR_NO_MEMORY;
 
     return err;
 }
@@ -285,11 +285,11 @@ mx_status_t GpuDevice::flush_resource(uint32_t resource_id, uint32_t width, uint
     /* send the command and get a response */
     virtio_gpu_ctrl_hdr* res;
     auto err = send_command_response(&req, sizeof(req), (void**)&res, sizeof(*res));
-    assert(err == NO_ERROR);
+    assert(err == MX_OK);
 
     /* see if we got a valid response */
     LTRACEF("response type 0x%x\n", res->type);
-    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? NO_ERROR : ERR_NO_MEMORY;
+    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? MX_OK : MX_ERR_NO_MEMORY;
 
     return err;
 }
@@ -314,11 +314,11 @@ mx_status_t GpuDevice::transfer_to_host_2d(uint32_t resource_id, uint32_t width,
     /* send the command and get a response */
     virtio_gpu_ctrl_hdr* res;
     auto err = send_command_response(&req, sizeof(req), (void**)&res, sizeof(*res));
-    assert(err == NO_ERROR);
+    assert(err == MX_OK);
 
     /* see if we got a valid response */
     LTRACEF("response type 0x%x\n", res->type);
-    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? NO_ERROR : ERR_NO_MEMORY;
+    err = (res->type == VIRTIO_GPU_RESP_OK_NODATA) ? MX_OK : MX_ERR_NO_MEMORY;
 
     return err;
 }
@@ -379,7 +379,7 @@ mx_status_t GpuDevice::virtio_gpu_start() {
 
     if (pmode_id_ < 0) {
         VIRTIO_ERROR("we failed to find a pmode, exiting\n");
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     printf("virtio-gpu: found display x %u y %u w %u h %u flags 0x%x\n",
@@ -399,7 +399,7 @@ mx_status_t GpuDevice::virtio_gpu_start() {
     err = map_contiguous_memory(len, (uintptr_t*)&fb_, &fb_pa_);
     if (err < 0) {
         VIRTIO_ERROR("failed to allocate framebuffer, wanted 0x%zx bytes\n", len);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     LTRACEF("framebuffer at %p, 0x%zx bytes\n", fb_, len);
@@ -447,7 +447,7 @@ mx_status_t GpuDevice::virtio_gpu_start() {
 
     LTRACE_EXIT;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int GpuDevice::virtio_gpu_start_entry(void* arg) {
@@ -499,7 +499,7 @@ mx_status_t GpuDevice::Init() {
     thrd_create_with_name(&start_thread_, virtio_gpu_start_entry, this, "virtio-gpu-starter");
     thrd_detach(start_thread_);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void GpuDevice::IrqRingUpdate() {

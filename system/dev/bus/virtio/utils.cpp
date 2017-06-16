@@ -60,7 +60,7 @@ mx_status_t map_contiguous_memory(size_t size, uintptr_t* _va, mx_paddr_t* _pa) 
     *_va = va;
     *_pa = pa;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace virtio

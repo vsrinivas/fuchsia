@@ -57,21 +57,21 @@ Device::~Device() {
 
 mx_status_t Device::MapBar(uint8_t i) {
     if (bar_[i].mmio_handle != MX_HANDLE_INVALID)
-        return NO_ERROR;
+        return MX_OK;
 
     uint64_t sz;
     mx_handle_t tmp_handle;
 
     mx_status_t r = pci_.ops->map_resource(pci_.ctx, PCI_RESOURCE_BAR_0 + i, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                           (void**)&bar_[i].mmio_base, &sz, &tmp_handle);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         VIRTIO_ERROR("cannot map io %d\n", bar_[i].mmio_handle.get());
         return r;
     }
     bar_[i].mmio_handle.reset(tmp_handle);
     LTRACEF("bar %hhu mmio_base %p, sz %#" PRIx64 "\n", i, bar_[i].mmio_base, sz);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Device::Bind(pci_protocol_t* pci,
@@ -89,11 +89,11 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     // claim the pci device
     mx_status_t r;
     r = pci_.ops->claim_device(pci_.ctx);
-    if (r != NO_ERROR)
+    if (r != MX_OK)
         return r;
 
     // enable bus mastering
-    if ((r = pci_.ops->enable_bus_master(pci_.ctx, true)) != NO_ERROR) {
+    if ((r = pci_.ops->enable_bus_master(pci_.ctx, true)) != MX_OK) {
         VIRTIO_ERROR("cannot enable bus master %d\n", r);
         return r;
     }
@@ -109,7 +109,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     }
 
     r = pci_.ops->map_interrupt(pci_.ctx, 0, &tmp_handle);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         VIRTIO_ERROR("failed to map irq %d\n", r);
         return r;
     }
@@ -127,7 +127,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
             if (off > PAGE_SIZE) {
                 VIRTIO_ERROR("capability pointer is out of whack %zu\n", off);
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
 
             cap = (virtio_pci_cap *)(((uintptr_t)pci_config_) + off);
@@ -192,7 +192,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                 bar0_pio_base_ = 0;
 
                 r = MapBar(0);
-                if (r != NO_ERROR) {
+                if (r != MX_OK) {
                     VIRTIO_ERROR("cannot mmap io %d\n", r);
                     return r;
                 }
@@ -201,7 +201,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             } else {
                 // this is probably PIO
                 r = mx_mmap_device_io(get_root_resource(), bar0_pio_base_, bar0_size_);
-                if (r != NO_ERROR) {
+                if (r != MX_OK) {
                     VIRTIO_ERROR("failed to access PIO range %#x, length %#xw\n", bar0_pio_base_, bar0_size_);
                     return r;
                 }
@@ -217,7 +217,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
     LTRACE_EXIT;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Device::IrqWorker() {
@@ -331,7 +331,7 @@ mx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 uint16_t Device::GetRingSize(uint16_t index) {

@@ -46,7 +46,7 @@ mx_status_t Ring::Init(uint16_t index, uint16_t count) {
     uint16_t max_ring_size = device_->GetRingSize(index);
     if (count > max_ring_size) {
         VIRTIO_ERROR("ring init count too big for hardware %u > %u\n", count, max_ring_size);
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
 
     // allocate a ring
@@ -78,7 +78,7 @@ mx_status_t Ring::Init(uint16_t index, uint16_t count) {
     mx_paddr_t pa_used = ring_pa_ + ((uintptr_t)ring_.used - (uintptr_t)ring_.desc);
     device_->SetRing(index_, count, pa_desc, pa_avail, pa_used);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void Ring::FreeDesc(uint16_t desc_index) {

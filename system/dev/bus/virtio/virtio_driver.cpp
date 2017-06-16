@@ -42,7 +42,7 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
     mx_handle_t config_handle = MX_HANDLE_INVALID;
     status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                    (void**)&config, &config_size, &config_handle);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         TRACEF("failed to grab config handle\n");
         return status;
     }
@@ -68,11 +68,11 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
 
     LTRACEF("calling Bind on driver\n");
     status = vd->Bind(&pci, config_handle, config);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = vd->Init();
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // if we're here, we're successful so drop the unique ptr ref to the object and let it live on
@@ -80,5 +80,5 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
 
     LTRACE_EXIT;
 
-    return NO_ERROR;
+    return MX_OK;
 }
