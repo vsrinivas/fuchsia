@@ -176,7 +176,7 @@ private:
     static void ThreadUserCallback(enum thread_user_state_change new_state, void* arg);
 
     // change states of the object, do what is appropriate for the state transition
-    void SetState(State) TA_REQ(state_lock_);
+    void SetStateLocked(State) TA_REQ(state_lock_);
 
     mxtl::Canary<mxtl::magic("UTHR")> canary_;
 

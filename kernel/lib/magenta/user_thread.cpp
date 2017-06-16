@@ -224,7 +224,7 @@ status_t UserThread::Initialize(const char* name, size_t len) {
     process_->aspace()->AttachToThread(lkthread);
 
     // we've entered the initialized state
-    SetState(State::INITIALIZED);
+    SetStateLocked(State::INITIALIZED);
 
     return MX_OK;
 }
@@ -273,7 +273,7 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
         return ret;
 
     // mark ourselves as running and resume the kernel thread
-    SetState(State::RUNNING);
+    SetStateLocked(State::RUNNING);
 
     thread_.user_tid = dispatcher_->get_koid();
     thread_.user_pid = process_->get_koid();
@@ -296,7 +296,7 @@ void UserThread::Exit() {
 
         DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
 
-        SetState(State::DYING);
+        SetStateLocked(State::DYING);
     }
 
     // exit here
@@ -321,7 +321,7 @@ void UserThread::Kill() {
         // as we've been initialized previously, forget the LK thread.
         thread_forget(&thread_);
         // reset our state, so that the destructor will properly shut down.
-        SetState(State::INITIAL);
+        SetStateLocked(State::INITIAL);
         // drop the ref, as the LK thread will not own this object.
         __UNUSED auto ret = Release();
         return;
@@ -331,7 +331,7 @@ void UserThread::Kill() {
     thread_kill(&thread_, false);
 
     // enter the dying state
-    SetState(State::DYING);
+    SetStateLocked(State::DYING);
 }
 
 status_t UserThread::Suspend() {
@@ -405,7 +405,7 @@ void UserThread::Exiting() {
         DEBUG_ASSERT(state_ == State::DYING);
 
         // put ourselves into the dead state
-        SetState(State::DEAD);
+        SetStateLocked(State::DEAD);
     }
 
     // remove ourselves from our parent process's view
@@ -444,7 +444,7 @@ void UserThread::Suspending() {
 
         DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
         if (state_ == State::RUNNING) {
-            SetState(State::SUSPENDED);
+            SetStateLocked(State::SUSPENDED);
         }
     }
 
@@ -472,7 +472,7 @@ void UserThread::Resuming() {
 
         DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
         if (state_ == State::SUSPENDED) {
-            SetState(State::RUNNING);
+            SetStateLocked(State::RUNNING);
         }
     }
 
@@ -531,7 +531,7 @@ int UserThread::StartRoutine(void* arg) {
     __UNREACHABLE;
 }
 
-void UserThread::SetState(State state) {
+void UserThread::SetStateLocked(State state) {
     canary_.Assert();
 
     LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
