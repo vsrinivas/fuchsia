@@ -163,7 +163,7 @@
 //
 // MX_ERR_STOP: Do not call again.
 // Example: A notification callback will be called on every
-// event until it returns something other than NO_ERROR.
+// event until it returns something other than MX_OK.
 // This status allows differentiation between "stop due to
 // an error" and "stop because the work is done."
 #define MX_ERR_STOP (-60)

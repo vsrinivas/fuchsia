@@ -167,7 +167,7 @@ typedef struct audio2_stream_cmd_get_gain_resp {
 // of -33.5 being applied.
 //
 // Gain change requests outside of the capabilities of the stream's
-// amplifier will be rejected with a result of ERR_INVALID_ARGS.  Using the
+// amplifier will be rejected with a result of MX_ERR_INVALID_ARGS.  Using the
 // previous example, requests for gains of -65.0 or +3dB would be rejected.
 // Similarly,  If an amplifier is capable of gain control but cannot mute, a
 // request to mute will be rejected.
@@ -257,7 +257,7 @@ typedef struct audio2_rb_cmd_get_buffer_resp {
     audio2_cmd_hdr_t hdr;
     mx_status_t      result;
 
-    // NOTE: If result == NO_ERROR, a VMO handle representing the ring buffer to
+    // NOTE: If result == MX_OK, a VMO handle representing the ring buffer to
     // be used will be returned as well.  Clients may map this buffer with
     // read-write permissions in the case of an output stream, or read-only
     // permissions in the case of an input stream.  The size of the VMO

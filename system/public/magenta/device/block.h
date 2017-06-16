@@ -140,7 +140,7 @@ IOCTL_WRAPPER(ioctl_block_fifo_close, IOCTL_BLOCK_FIFO_CLOSE);
 // Each transaction reads or writes up to 'length' bytes from the device, starting at
 // 'dev_offset', into the VMO associated with 'vmoid', starting at 'vmo_offset'.
 // If the transaction is out of range, for example if 'length' is too large or if
-// 'dev_offset' is beyond the end of the device, ERR_OUT_OF_RANGE is returned.
+// 'dev_offset' is beyond the end of the device, MX_ERR_OUT_OF_RANGE is returned.
 
 #define BLOCKIO_READ      0x0001 // Reads from the Block device into the VMO
 #define BLOCKIO_WRITE     0x0002 // Writes to the Block device from the VMO

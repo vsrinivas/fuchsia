@@ -49,7 +49,7 @@ typedef struct eth_fifos_t {
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_ETH, 2)
 
 // Start/Stop transferring packets
-// Start will not succeed (ERR_BAD_STATE) until the fifos have been
+// Start will not succeed (MX_ERR_BAD_STATE) until the fifos have been
 // obtained and an io buffer vmo has been registered.
 #define IOCTL_ETHERNET_START \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 3)
