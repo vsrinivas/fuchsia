@@ -43,21 +43,21 @@ mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
     if ((info->magic0 != kMinfsMagic0) ||
         (info->magic1 != kMinfsMagic1)) {
         FS_TRACE_ERROR("minfs: bad magic\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (info->version != kMinfsVersion) {
         FS_TRACE_ERROR("minfs: FS Version: %08x. Driver version: %08x\n", info->version,
               kMinfsVersion);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if ((info->block_size != kMinfsBlockSize) ||
         (info->inode_size != kMinfsInodeSize)) {
         FS_TRACE_ERROR("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (info->block_count > max) {
         FS_TRACE_ERROR("minfs: too large for device\n");
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     //TODO: validate layout
     return 0;
@@ -82,7 +82,7 @@ mx_status_t Minfs::InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* i
     memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
     bc_->Writeblk(inoblock_abs, inodata);
 #endif
-    return NO_ERROR;
+    return MX_OK;
 }
 
 Minfs::Minfs(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(mxtl::move(bc)) {
@@ -157,17 +157,17 @@ mx_status_t Minfs::InoFree(
     }
 
     MX_DEBUG_ASSERT(block_count == 0);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* ino_out) {
     size_t bitoff_start;
     mx_status_t status = inode_map_.Find(false, 0, inode_map_.size(), 1, &bitoff_start);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     status = inode_map_.Set(bitoff_start, bitoff_start + 1);
-    assert(status == NO_ERROR);
+    assert(status == MX_OK);
     uint32_t ino = static_cast<uint32_t>(bitoff_start);
 
     // locate data and block offset of bitmap
@@ -181,7 +181,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     // TODO(smklein): optional sanity check of both blocks
 
     // Write the inode back
-    if ((status = InodeSync(txn, ino, inode)) != NO_ERROR) {
+    if ((status = InodeSync(txn, ino, inode)) != MX_OK) {
         inode_map_.Clear(ino, ino + 1);
         return status;
     }
@@ -195,24 +195,24 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     txn->Enqueue(id, ibm_relative_bno, info_.ibm_block + ibm_relative_bno, 1);
 
     *ino_out = ino;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Minfs::VnodeNew(WriteTxn* txn, mxtl::RefPtr<VnodeMinfs>* out, uint32_t type) {
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mxtl::RefPtr<VnodeMinfs> vn;
     mx_status_t status;
 
     // Allocate the in-memory vnode
-    if ((status = VnodeMinfs::Allocate(this, type, &vn)) != NO_ERROR) {
+    if ((status = VnodeMinfs::Allocate(this, type, &vn)) != MX_OK) {
         return status;
     }
 
     // Allocate the on-disk inode
-    if ((status = InoNew(txn, &vn->inode_, &vn->ino_)) != NO_ERROR) {
+    if ((status = InoNew(txn, &vn->inode_, &vn->ino_)) != MX_OK) {
         return status;
     }
 
@@ -228,16 +228,16 @@ void Minfs::VnodeRelease(VnodeMinfs* vn) {
 
 mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
     if ((ino < 1) || (ino >= info_.inode_count)) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
     mxtl::RefPtr<VnodeMinfs> vn = mxtl::RefPtr<VnodeMinfs>(vnode_hash_.find(ino).CopyPointer());
     if (vn != nullptr) {
         *out = mxtl::move(vn);
-        return NO_ERROR;
+        return MX_OK;
     }
     mx_status_t status;
-    if ((status = VnodeMinfs::AllocateHollow(this, &vn)) != NO_ERROR) {
-        return ERR_NO_MEMORY;
+    if ((status = VnodeMinfs::AllocateHollow(this, &vn)) != MX_OK) {
+        return MX_ERR_NO_MEMORY;
     }
 
     // obtain the block of the inode table we need
@@ -254,7 +254,7 @@ mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
     vnode_hash_.insert(vn.get());
 
     *out = mxtl::move(vn);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Allocate a new data block from the block bitmap.
@@ -264,14 +264,14 @@ mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
 mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
     size_t bitoff_start;
     mx_status_t status;
-    if ((status = block_map_.Find(false, hint, block_map_.size(), 1, &bitoff_start)) != NO_ERROR) {
-        if ((status = block_map_.Find(false, 0, hint, 1, &bitoff_start)) != NO_ERROR) {
-            return ERR_NO_SPACE;
+    if ((status = block_map_.Find(false, hint, block_map_.size(), 1, &bitoff_start)) != MX_OK) {
+        if ((status = block_map_.Find(false, 0, hint, 1, &bitoff_start)) != MX_OK) {
+            return MX_ERR_NO_SPACE;
         }
     }
 
     status = block_map_.Set(bitoff_start, bitoff_start + 1);
-    assert(status == NO_ERROR);
+    assert(status == MX_OK);
     uint32_t bno = static_cast<uint32_t>(bitoff_start);
     ValidateBno(bno);
 
@@ -288,7 +288,7 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
 #endif
     ValidateBno(bno);
     *out_bno = bno;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
@@ -328,11 +328,11 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
     AllocChecker ac;
     mxtl::unique_ptr<Minfs> fs(new (&ac) Minfs(mxtl::move(bc), info));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 #ifdef __Fuchsia__
     if ((status = fs::VfsDispatcher::Create(mxrio_handler, kPoolSize,
-                                            &fs->dispatcher_)) != NO_ERROR) {
+                                            &fs->dispatcher_)) != MX_OK) {
         return status;
     }
 #endif
@@ -358,23 +358,23 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
 
 #ifdef __Fuchsia__
     if ((status = fs->bc_->AttachVmo(fs->block_map_.StorageUnsafe()->GetVmo(),
-                                     &fs->block_map_vmoid_)) != NO_ERROR) {
+                                     &fs->block_map_vmoid_)) != MX_OK) {
         return status;
     }
     if ((status = fs->bc_->AttachVmo(fs->inode_map_.StorageUnsafe()->GetVmo(),
-                                     &fs->inode_map_vmoid_)) != NO_ERROR) {
+                                     &fs->inode_map_vmoid_)) != MX_OK) {
         return status;
     }
 
     // Create the inode table.
     uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
     if ((status = MappedVmo::Create(inoblks * kMinfsBlockSize, "minfs-inode-table",
-                                    &fs->inode_table_)) != NO_ERROR) {
+                                    &fs->inode_table_)) != MX_OK) {
         return status;
     }
 
     if ((status = fs->bc_->AttachVmo(fs->inode_table_->GetVmo(),
-                                     &fs->inode_table_vmoid_)) != NO_ERROR) {
+                                     &fs->inode_table_vmoid_)) != MX_OK) {
         return status;
     }
 
@@ -382,7 +382,7 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
     txn.Enqueue(fs->block_map_vmoid_, 0, fs->info_.abm_block, fs->abmblks_);
     txn.Enqueue(fs->inode_map_vmoid_, 0, fs->info_.ibm_block, fs->ibmblks_);
     txn.Enqueue(fs->inode_table_vmoid_, 0, fs->info_.ino_block, inoblks);
-    if ((status = txn.Flush()) != NO_ERROR) {
+    if ((status = txn.Flush()) != MX_OK) {
         return status;
     }
 
@@ -402,14 +402,14 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
 #endif
 
     *out = fs.release();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> bc) {
     mx_status_t status;
 
     char blk[kMinfsBlockSize];
-    if ((status = bc->Readblk(0, &blk)) != NO_ERROR) {
+    if ((status = bc->Readblk(0, &blk)) != MX_OK) {
         FS_TRACE_ERROR("minfs: could not read info block\n");
         return status;
     }
@@ -418,13 +418,13 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
     minfs_dump_info(info);
 
     Minfs* fs;
-    if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) != NO_ERROR) {
+    if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) != MX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
     }
 
     mxtl::RefPtr<VnodeMinfs> vn;
-    if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != NO_ERROR) {
+    if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != MX_OK) {
         FS_TRACE_ERROR("minfs: cannot find root inode\n");
         delete fs;
         return status;
@@ -432,7 +432,7 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
 
     MX_DEBUG_ASSERT(vn->IsDirectory());
     *out = mxtl::move(vn);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Minfs::Unmount() {
@@ -443,7 +443,7 @@ mx_status_t Minfs::Unmount() {
     // the process exits) to ensure that the block device's fifo has been
     // closed.
     delete this;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #ifdef __Fuchsia__

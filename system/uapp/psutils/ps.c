@@ -90,7 +90,7 @@ static mx_status_t job_callback(int depth, mx_handle_t job,
     task_entry_t e = {.type = 'j', .depth = depth};
     mx_status_t status =
         mx_object_get_property(job, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         // This will abort walk_job_tree(), so we don't need to worry
         // about job_stack.
         return status;
@@ -101,7 +101,7 @@ static mx_status_t job_callback(int depth, mx_handle_t job,
     // Put our entry pointer on the job stack so our descendants can find us.
     assert(depth < JOB_STACK_SIZE);
     job_stack[depth] = add_entry(&tasks, &e);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Adds a process's information to |tasks|.
@@ -110,16 +110,16 @@ static mx_status_t process_callback(int depth, mx_handle_t process,
     task_entry_t e = {.type = 'p', .depth = depth};
     mx_status_t status =
         mx_object_get_property(process, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     mx_info_task_stats_t info;
     status = mx_object_get_info(
         process, MX_INFO_TASK_STATS, &info, sizeof(info), NULL, NULL);
-    if (status == ERR_BAD_STATE) {
+    if (status == MX_ERR_BAD_STATE) {
         // Process has exited, but has not been destroyed.
         // Default to zero for all sizes.
-    } else if (status != NO_ERROR) {
+    } else if (status != MX_OK) {
         return status;
     } else {
         e.private_bytes = info.mem_private_bytes;
@@ -140,7 +140,7 @@ static mx_status_t process_callback(int depth, mx_handle_t process,
         // shared_bytes doesn't mean much as a sum, so leave it at zero.
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Return text representation of thread state.
@@ -173,13 +173,13 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread,
     task_entry_t e = {.type = 't', .depth = depth};
     mx_status_t status =
         mx_object_get_property(thread, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     mx_info_thread_t info;
     status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info),
                                 NULL, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     // TODO: Print thread stack size in one of the memory usage fields?
@@ -187,7 +187,7 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread,
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     snprintf(e.state_str, sizeof(e.state_str), "%s", state_string(&info));
     add_entry(&tasks, &e);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void print_header(int id_w, bool with_threads) {
@@ -285,14 +285,14 @@ static void print_kernel_json(const char *name, const char *parent,
 static mx_status_t print_json(task_table_t* table) {
     mx_handle_t root_resource;
     mx_status_t s = get_root_resource(&root_resource);
-    if (s != NO_ERROR) {
+    if (s != MX_OK) {
         return s;
     }
     mx_info_kmem_stats_t stats;
     s = mx_object_get_info(
         root_resource, MX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
     mx_handle_close(root_resource);
-    if (s != NO_ERROR) {
+    if (s != MX_OK) {
         fprintf(stderr, "ERROR: MX_INFO_KMEM_STATS returns %d (%s)\n",
                 s, mx_status_get_string(s));
         return s;
@@ -388,7 +388,7 @@ static mx_status_t print_json(task_table_t* table) {
 
     printf("]\n");
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void print_help(FILE* f) {
@@ -432,7 +432,7 @@ int main(int argc, char** argv) {
     mx_status_t status =
         walk_root_job_tree(job_callback, process_callback,
                            with_threads ? thread_callback : NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                 mx_status_get_string(status), status);
         ret = 1;

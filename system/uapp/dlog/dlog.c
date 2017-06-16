@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
     for (;;) {
         mx_status_t status;
         if ((status = mx_log_read(h, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
-            if ((status == ERR_SHOULD_WAIT) && tail) {
+            if ((status == MX_ERR_SHOULD_WAIT) && tail) {
                 mx_object_wait_one(h, MX_LOG_READABLE, MX_TIME_INFINITE, NULL);
                 continue;
             }

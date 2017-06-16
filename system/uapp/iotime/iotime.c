@@ -166,7 +166,7 @@ int iotime_fread(int argc, char** argv) {
     size_t bufsz = number(argv[4]);
 
     mx_handle_t vmo;
-    if (mx_vmo_create(bufsz, 0, &vmo) != NO_ERROR) {
+    if (mx_vmo_create(bufsz, 0, &vmo) != MX_OK) {
         fprintf(stderr, "error: out of memory\n");
         return -1;
     }
@@ -190,7 +190,7 @@ int iotime_fread(int argc, char** argv) {
     }
 
     mx_handle_t dup;
-    if (mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &dup) != NO_ERROR) {
+    if (mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &dup) != MX_OK) {
         fprintf(stderr, "error: cannot duplicate handle\n");
         return -1;
     }
@@ -202,7 +202,7 @@ int iotime_fread(int argc, char** argv) {
     }
 
     fifo_client_t* client;
-    if (block_fifo_create_client(fifo, &client) != NO_ERROR) {
+    if (block_fifo_create_client(fifo, &client) != MX_OK) {
         fprintf(stderr, "err: cannot create block client for '%s'\n", argv[2]);
         return -1;
     }
@@ -219,7 +219,7 @@ int iotime_fread(int argc, char** argv) {
             .vmo_offset = 0,
             .dev_offset = total - n,
         };
-        if (block_fifo_txn(client, &request, 1) != NO_ERROR) {
+        if (block_fifo_txn(client, &request, 1) != MX_OK) {
             fprintf(stderr, "error: block_fifo_txn error\n");
             return -1;
         }

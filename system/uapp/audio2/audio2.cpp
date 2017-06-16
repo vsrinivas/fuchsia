@@ -198,12 +198,12 @@ int main(int argc, const char** argv) {
     auto stream = AudioStream::Create(input, dev_num);
     if (stream == nullptr) {
         printf("Out of memory!\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // No need to log in the case of failure.  Open has already done so.
     mx_status_t res = stream->Open();
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Execute the chosen command.
@@ -233,7 +233,7 @@ int main(int argc, const char** argv) {
 
         WAVSource wav_source;
         res = wav_source.Initialize(wav_filename);
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
 
         return static_cast<AudioOutput*>(stream.get())->Play(wav_source);

@@ -30,24 +30,24 @@ VnodeBlob::~VnodeBlob() {
 
 mx_status_t VnodeBlob::Open(uint32_t flags) {
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
-        return ERR_NOT_DIR;
+        return MX_ERR_NOT_DIR;
     } else if (IsDirectory() && ((flags & O_ACCMODE) != 0)) {
-        return ERR_NOT_FILE;
+        return MX_ERR_NOT_FILE;
     }
 
     switch (flags & O_ACCMODE) {
     case O_WRONLY:
     case O_RDWR:
         if (GetState() != kBlobStateEmpty) {
-            return ERR_ACCESS_DENIED;
+            return MX_ERR_ACCESS_DENIED;
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeBlob::Readdir(void* cookie, void* dirents, size_t len) {
     if (!IsDirectory()) {
-        return ERR_NOT_DIR;
+        return MX_ERR_NOT_DIR;
     }
 
     return blobstore_->Readdir(cookie, dirents, len);
@@ -55,12 +55,12 @@ mx_status_t VnodeBlob::Readdir(void* cookie, void* dirents, size_t len) {
 
 ssize_t VnodeBlob::Read(void* data, size_t len, size_t off) {
     if (IsDirectory()) {
-        return ERR_NOT_FILE;
+        return MX_ERR_NOT_FILE;
     }
 
     size_t actual;
     mx_status_t status = ReadInternal(data, len, off, &actual);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     return actual;
@@ -68,11 +68,11 @@ ssize_t VnodeBlob::Read(void* data, size_t len, size_t off) {
 
 ssize_t VnodeBlob::Write(const void* data, size_t len, size_t off) {
     if (IsDirectory()) {
-        return ERR_NOT_FILE;
+        return MX_ERR_NOT_FILE;
     }
     size_t actual;
     mx_status_t status = WriteInternal(data, len, &actual);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     return actual;
@@ -83,16 +83,16 @@ mx_status_t VnodeBlob::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, si
     if ((len == 1) && (name[0] == '.') && IsDirectory()) {
         // Special case: Accessing root directory via '.'
         *out = mxtl::RefPtr<VnodeBlob>(this);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     if (!IsDirectory()) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     mx_status_t status;
     merkle::Digest digest;
-    if ((status = digest.Parse(name, len)) != NO_ERROR) {
+    if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     }
     mxtl::RefPtr<VnodeBlob> vn;
@@ -100,7 +100,7 @@ mx_status_t VnodeBlob::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, si
         return status;
     }
     *out = mxtl::move(vn);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeBlob::Getattr(vnattr_t* a) {
@@ -113,26 +113,26 @@ mx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     a->nlink = 1;
     a->create_time = 0;
     a->modify_time = 0;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeBlob::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
     assert(memchr(name, '/', len) == nullptr);
     if (!IsDirectory()) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     merkle::Digest digest;
     mx_status_t status;
-    if ((status = digest.Parse(name, len)) != NO_ERROR) {
+    if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     }
     mxtl::RefPtr<VnodeBlob> vn;
-    if ((status = blobstore_->NewBlob(digest, &vn)) != NO_ERROR) {
+    if ((status = blobstore_->NewBlob(digest, &vn)) != MX_OK) {
         return status;
     }
     *out = mxtl::move(vn);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 constexpr const char kFsName[] = "blobstore";
@@ -142,27 +142,27 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
     switch (op) {
         case IOCTL_VFS_QUERY_FS: {
             if (out_len < strlen(kFsName) + 1) {
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
             strcpy(static_cast<char*>(out_buf), kFsName);
             return strlen(kFsName);
         }
         case IOCTL_VFS_UNMOUNT_FS: {
             mx_status_t status = Sync();
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 FS_TRACE_ERROR("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
             }
             return blobstore_->Unmount();
         }
         default: {
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         }
     }
 }
 
 mx_status_t VnodeBlob::Truncate(size_t len) {
     if (IsDirectory()) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     return SpaceAllocate(len);
@@ -171,27 +171,27 @@ mx_status_t VnodeBlob::Truncate(size_t len) {
 mx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
     assert(memchr(name, '/', len) == nullptr);
     if (!IsDirectory()) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     mx_status_t status;
     merkle::Digest digest;
     mxtl::RefPtr<VnodeBlob> out;
-    if ((status = digest.Parse(name, len)) != NO_ERROR) {
+    if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     } else if ((status = blobstore_->LookupBlob(digest, &out)) < 0) {
         return status;
     }
     out->QueueUnlink();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
     if (IsDirectory()) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     if (flags & MXIO_MMAP_FLAG_WRITE) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     mx_rights_t rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP;
@@ -203,7 +203,7 @@ mx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out
 mx_status_t VnodeBlob::Sync() {
     // TODO(smklein): For now, this is a no-op, but it will change
     // once the kBlobFlagSync flag is in use.
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace blobstore

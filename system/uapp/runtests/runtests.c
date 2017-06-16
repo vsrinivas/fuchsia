@@ -103,7 +103,7 @@ static bool run_tests(const char* dirn, const char* test_name) {
 
         status = mx_object_wait_one(handle, MX_PROCESS_TERMINATED,
                                     MX_TIME_INFINITE, NULL);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
             fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);
             failed_count++;

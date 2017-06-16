@@ -204,7 +204,7 @@ cmd_write_finish:
 
 int cmd_transfer(int fd, int argc, const char** argv) {
     const size_t base_size = sizeof(i2c_slave_ioctl_segment_t);
-    int ret = NO_ERROR;
+    int ret = MX_OK;
 
     // Figure out how big our buffers need to be.
     // Start the counters with enough space for the I2C_SEGMENT_TYPE_END

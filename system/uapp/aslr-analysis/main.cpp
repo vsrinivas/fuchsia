@@ -156,7 +156,7 @@ int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
     for (unsigned int run = 0; run < count; ++run) {
         mx_handle_t handles[2];
         mx_status_t status = mx_channel_create(0, &handles[0], &handles[1]);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             printf("Failed to create channel for test run\n");
             return -1;
         }
@@ -208,7 +208,7 @@ int TestRunMain(int argc, char** argv) {
 
     mx_status_t status =
         mx_channel_write(report_pipe, 0, &report, sizeof(report), NULL, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -226,7 +226,7 @@ mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
     const char* errmsg;
 
     mx_status_t status = mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -238,7 +238,7 @@ mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
     launchpad_add_handles(lp, countof(hnd), hnd, ids);
 
     status = launchpad_go(lp, &proc, &errmsg);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("launch failed (%d): %s\n", status, errmsg);
         return status;
     }
@@ -249,7 +249,7 @@ mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
 int JoinProcess(mx_handle_t proc) {
     mx_status_t status =
         mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("join failed? %d\n", status);
         return -1;
     }

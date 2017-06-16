@@ -106,7 +106,7 @@ private:
     // Returns a handle to an event which will be signalled when
     // the blob is readable.
     //
-    // Returns "NO_ERROR" if blob is already readable.
+    // Returns "MX_OK" if blob is already readable.
     // Otherwise, returns size of the handle.
     mx_status_t GetReadableEvent(mx_handle_t* out);
 
@@ -203,7 +203,7 @@ public:
     // Searches for a blob by name.
     // - If a readable blob with the same name exists, return it.
     // - If a blob with the same name exists, but it is not readable,
-    //   ERR_BAD_STATE is returned.
+    //   MX_ERR_BAD_STATE is returned.
     //
     // 'out' may be null -- the same error code will be returned as if it
     // was a valid pointer.

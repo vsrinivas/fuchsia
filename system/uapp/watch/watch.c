@@ -22,7 +22,7 @@ mx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
         fprintf(stderr, "watch: waiting...\n");
         break;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int main(int argc, char** argv) {

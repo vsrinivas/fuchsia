@@ -15,9 +15,9 @@ mx_status_t callback(int depth, mx_handle_t handle, mx_koid_t koid, mx_koid_t pa
     if (koid == task_id) {
         mx_task_kill(handle);
         // found and killed the task - abort the search
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     task_id = atoll(argv[1]);
 
     mx_status_t status = walk_root_job_tree(callback, callback, NULL);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         fprintf(stderr, "no task found\n");
         return -1;
     }

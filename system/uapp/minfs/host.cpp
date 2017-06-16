@@ -24,7 +24,7 @@
 static mx_status_t do_stat(mxtl::RefPtr<Vnode> vn, struct stat* s) {
     vnattr_t a;
     mx_status_t status = vn->Getattr(&a);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         memset(s, 0, sizeof(struct stat));
         s->st_mode = a.mode;
         s->st_size = a.size;
@@ -63,7 +63,7 @@ static file_t* file_get(int fd) {
 
 int status_to_errno(mx_status_t status) {
     switch (status) {
-    case NO_ERROR:
+    case MX_OK:
         return 0;
     default:
         return EIO;
@@ -213,7 +213,7 @@ int emu_unlink(const char* path) {
     PATH_WRAP(path, unlink, path);
     mxtl::RefPtr<fs::Vnode> vn;
     mx_status_t status = fs::Vfs::Walk(fake_root, &vn, path + PREFIX_SIZE, &path);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         status = vn->Unlink(path, strlen(path), false);
         vn->Close();
     }
@@ -221,7 +221,7 @@ int emu_unlink(const char* path) {
 }
 
 int emu_rename(const char* oldpath, const char* newpath) {
-    STATUS(ERR_NOT_SUPPORTED);
+    STATUS(MX_ERR_NOT_SUPPORTED);
 }
 
 int emu_stat(const char* fn, struct stat* s) {
@@ -248,7 +248,7 @@ int emu_stat(const char* fn, struct stat* s) {
         }
         mxtl::RefPtr<fs::Vnode> vn_fs;
         status = cur->Lookup(&vn_fs, fn, len);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return -ENOENT;
         }
         vn = mxtl::RefPtr<Vnode>::Downcast(vn_fs);
@@ -282,7 +282,7 @@ DIR* emu_opendir(const char* name) {
     PATH_WRAP(name, opendir, name);
     mxtl::RefPtr<fs::Vnode> vn;
     mx_status_t status = fs::Vfs::Open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return nullptr;
     }
     MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));

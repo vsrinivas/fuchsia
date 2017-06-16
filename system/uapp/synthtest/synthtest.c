@@ -251,7 +251,7 @@ static int open_sink(uint32_t* out_sample_rate) {
             }
         }
         ret = ioctl_audio_set_sample_rate(fd, &sample_rate);
-        if (ret != NO_ERROR) {
+        if (ret != MX_OK) {
             printf("%s ioctl_audio_set_sample_rate failed for %d\n", devname, sample_rate);
             goto next;
         }

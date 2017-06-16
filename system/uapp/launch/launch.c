@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
     mx_handle_t vmo;
     if (program_fd != -1) {
         vmo = launchpad_vmo_from_fd(program_fd);
-        if (vmo == ERR_IO) {
+        if (vmo == MX_ERR_IO) {
             perror("launchpad_vmo_from_fd");
             return 2;
         }
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
         if (program == NULL)
             program = argv[optind];
         vmo = launchpad_vmo_from_file(program);
-        if (vmo == ERR_IO) {
+        if (vmo == MX_ERR_IO) {
             perror(program);
             return 2;
         }
@@ -242,7 +242,7 @@ int main(int argc, char** argv) {
     // library, so it makes all the library calls the user asks for.
     if (exec_vmo_file != NULL) {
         mx_handle_t exec_vmo = launchpad_vmo_from_file(exec_vmo_file);
-        if (exec_vmo == ERR_IO) {
+        if (exec_vmo == MX_ERR_IO) {
             perror(exec_vmo_file);
             return 2;
         }
@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
 
     if (exec_vmo_fd != -1) {
         mx_handle_t exec_vmo = launchpad_vmo_from_fd(exec_vmo_fd);
-        if (exec_vmo == ERR_IO) {
+        if (exec_vmo == MX_ERR_IO) {
             perror("launchpad_vmo_from_fd");
             return 2;
         }

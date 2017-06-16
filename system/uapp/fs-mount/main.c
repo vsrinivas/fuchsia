@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     }
     disk_format_t df = detect_disk_format(fd);
     mx_status_t status = mount(fd, mountpath, df, &options, launch_logs_async);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "fs_mount: Error while mounting: %d\n", status);
     }
     return status;

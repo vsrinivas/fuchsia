@@ -120,13 +120,13 @@ int main(int argc, char* const argv[]) {
     // Wait for utility to complete and return status
     status = mx_object_wait_one (proc, MX_TASK_TERMINATED,
                                  MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "%s: Failed during object_wait_one\n", argv[0]);
         return 123;
     }
     mx_info_process_t proc_info;
     if (mx_object_get_info(proc, MX_INFO_PROCESS, &proc_info,
-                           sizeof(proc_info), NULL, NULL) != NO_ERROR) {
+                           sizeof(proc_info), NULL, NULL) != MX_OK) {
         fprintf(stderr, "%s: Failed during object_get_info\n", argv[0]);
         return 122;
     }

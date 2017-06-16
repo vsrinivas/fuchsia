@@ -96,15 +96,15 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
 
     mx_status_t status =
         mx_object_get_property(thread, MX_PROP_NAME, e.name, sizeof(e.name));
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     status = mx_object_get_info(thread, MX_INFO_THREAD, &e.info, sizeof(e.info), NULL, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     status = mx_object_get_info(thread, MX_INFO_THREAD_STATS, &e.stats, sizeof(e.stats), NULL, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -117,7 +117,7 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
             temp->delta_time = e.stats.total_runtime - temp->stats.total_runtime;
             temp->info = e.info;
             temp->stats = e.stats;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
@@ -127,7 +127,7 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
 
     list_add_tail(&thread_list, &new_entry->node);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void sort_threads(enum sort_order order) {
@@ -271,7 +271,7 @@ int main(int argc, char** argv) {
 
         // iterate the entire job tree
         mx_status_t status = walk_root_job_tree(NULL, process_callback, thread_callback);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                     mx_status_get_string(status), status);
             ret = 1;

@@ -17,7 +17,7 @@ mx_status_t get_root_resource(mx_handle_t* root_resource) {
     if (fd < 0) {
         fprintf(stderr, "ERROR: Cannot open sysinfo: %s (%d)\n",
                 strerror(errno), errno);
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     size_t n = ioctl_sysinfo_get_root_resource(fd, root_resource);
@@ -25,7 +25,7 @@ mx_status_t get_root_resource(mx_handle_t* root_resource) {
     if (n != sizeof(*root_resource)) {
         fprintf(stderr, "ERROR: Cannot obtain root resource (%zu != %zu)\n",
                 n, sizeof(root_resource));
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
-    return NO_ERROR;
+    return MX_OK;
 }

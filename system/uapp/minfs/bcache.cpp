@@ -23,13 +23,13 @@ mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
     FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     if (read(fd_, data, kMinfsBlockSize) != kMinfsBlockSize) {
         FS_TRACE_ERROR("minfs: cannot read block %u\n", bno);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t Bcache::Writeblk(uint32_t bno, const void* data) {
@@ -37,13 +37,13 @@ mx_status_t Bcache::Writeblk(uint32_t bno, const void* data) {
     FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     if (write(fd_, data, kMinfsBlockSize) != kMinfsBlockSize) {
         FS_TRACE_ERROR("minfs: cannot write block %u\n", bno);
-        return ERR_IO;
+        return MX_ERR_IO;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 int Bcache::Sync() {
@@ -54,7 +54,7 @@ mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t block
     AllocChecker ac;
     mxtl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax));
     if (!ac.check()) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 #ifdef __Fuchsia__
     mx_status_t status;
@@ -66,7 +66,7 @@ mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t block
     } else if ((r = ioctl_block_alloc_txn(fd, &bc->txnid_)) < 0) {
         mx_handle_close(fifo);
         return static_cast<mx_status_t>(r);
-    } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != NO_ERROR) {
+    } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != MX_OK) {
         ioctl_block_free_txn(fd, &bc->txnid_);
         mx_handle_close(fifo);
         return status;
@@ -74,14 +74,14 @@ mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t block
 #endif
 
     *out = mxtl::move(bc);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #ifdef __Fuchsia__
 mx_status_t Bcache::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
     mx_handle_t xfer_vmo;
     mx_status_t status = mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
     ssize_t r = ioctl_block_attach_vmo(fd_, &xfer_vmo, out);
@@ -89,7 +89,7 @@ mx_status_t Bcache::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
         mx_handle_close(xfer_vmo);
         return static_cast<mx_status_t>(r);
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 #endif
 

@@ -62,24 +62,24 @@ static void print_hex(uint8_t* buf, size_t len) {
 
 static mx_status_t parse_uint_arg(const char* arg, uint32_t min, uint32_t max, uint32_t* out_val) {
     if ((arg == NULL) || (out_val == NULL)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     bool is_hex = (arg[0] == '0') && (arg[1] == 'x');
     if (sscanf(arg, is_hex ? "%x" : "%u", out_val) != 1) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if ((*out_val < min) || (*out_val > max)) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t parse_input_report_type(const char* arg, input_report_type_t* out_type) {
     if ((arg == NULL) || (out_type == NULL)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     static const struct {
@@ -94,11 +94,11 @@ static mx_status_t parse_input_report_type(const char* arg, input_report_type_t*
     for (size_t i = 0; i < countof(LUT); ++i) {
         if (!strcasecmp(arg, LUT[i].name)) {
             *out_type = LUT[i].type;
-            return NO_ERROR;
+            return MX_OK;
         }
     }
 
-    return ERR_INVALID_ARGS;
+    return MX_ERR_INVALID_ARGS;
 }
 
 static mx_status_t parse_set_get_report_args(int argc,
@@ -106,13 +106,13 @@ static mx_status_t parse_set_get_report_args(int argc,
                                              input_report_id_t* out_id,
                                              input_report_type_t* out_type) {
     if ((argc < 3) || (argv == NULL) || (out_id == NULL) || (out_type == NULL)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mx_status_t res;
     uint32_t tmp;
     res = parse_uint_arg(argv[2], 0, 255, &tmp);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         return res;
     }
 
@@ -147,7 +147,7 @@ static int get_report_desc(int fd, const char* name, size_t report_desc_len) {
     uint8_t* buf = malloc(report_desc_len);
     if (!buf) {
         lprintf("hid: out of memory\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     ssize_t rc = ioctl_input_get_report_desc(fd, buf, report_desc_len);
     if (rc < 0) {
@@ -176,7 +176,7 @@ static int get_num_reports(int fd, const char* name, size_t* num_reports) {
 static int get_report_ids(int fd, const char* name, size_t num_reports) {
     size_t out_len = num_reports * sizeof(input_report_id_t);
     input_report_id_t* ids = malloc(out_len);
-    if (!ids) return ERR_NO_MEMORY;
+    if (!ids) return MX_ERR_NO_MEMORY;
 
     ssize_t rc = ioctl_input_get_report_ids(fd, ids, out_len);
     if (rc < 0) {
@@ -252,7 +252,7 @@ static int hid_status(int fd, const char* name, input_report_size_t* max_report_
     try(get_report_ids(fd, name, num_reports));
     try(get_max_report_len(fd, name, max_report_len));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int hid_input_thread(void* arg) {
@@ -266,7 +266,7 @@ static int hid_input_thread(void* arg) {
     max_report_len++;
 
     uint8_t* report = calloc(1, max_report_len);
-    if (!report) return ERR_NO_MEMORY;
+    if (!report) return MX_ERR_NO_MEMORY;
 
     for (uint32_t i = 0; i < args->num_reads; i++) {
         int r = read(args->fd, report, max_report_len);
@@ -285,17 +285,17 @@ static int hid_input_thread(void* arg) {
     lprintf("hid: closing %s\n", args->name);
     close(args->fd);
     free(args);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t hid_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     int fd = openat(dirfd, fn, O_RDONLY);
     if (fd < 0) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     input_args_t* args = malloc(sizeof(*args));
@@ -312,14 +312,14 @@ static mx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
         return thrd_status_to_mx_status(ret);
     }
     thrd_detach(t);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int hid_input_devices_poll_thread(void* arg) {
     int dirfd = open(DEV_INPUT, O_DIRECTORY|O_RDONLY);
     if (dirfd < 0) {
         printf("hid: error opening %s\n", DEV_INPUT);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     mxio_watch_directory(dirfd, hid_input_device_added, NULL);
     close(dirfd);
@@ -337,7 +337,7 @@ int read_reports(int argc, const char** argv) {
     uint32_t tmp = 0xffffffff;
     if (argc > 1) {
         mx_status_t res = parse_uint_arg(argv[1], 0, 0xffffffff, &tmp);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("Failed to parse <num reads> (res %d)\n", res);
             usage();
             return 0;
@@ -390,7 +390,7 @@ int get_report(int argc, const char** argv) {
 
     input_get_report_size_t size_arg;
     mx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
         usage();
         return 0;
@@ -459,7 +459,7 @@ int set_report(int argc, const char** argv) {
 
     input_get_report_size_t size_arg;
     mx_status_t res = parse_set_get_report_args(argc, argv, &size_arg.id, &size_arg.type);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to parse type/id for get report operation (res %d)\n", res);
         usage();
         return 0;
@@ -495,7 +495,7 @@ int set_report(int argc, const char** argv) {
     for (int i = 0; i < payload_size; i++) {
         uint32_t tmp;
         mx_status_t res = parse_uint_arg(argv[i+3], 0, 255, &tmp);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("Failed to parse payload byte \"%s\" (res = %d)\n", argv[i+3], res);
             rc = res;
             goto finished;

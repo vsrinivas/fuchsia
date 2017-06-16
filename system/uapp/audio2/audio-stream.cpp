@@ -48,8 +48,8 @@ mx_status_t DoCallImpl(const mx::channel& channel,
     write_status = channel.call(0, mx_deadline_after(CALL_TIMEOUT), &args, &bytes, &handles,
                                 &read_status);
 
-    if (write_status != NO_ERROR) {
-        if (write_status == ERR_CALL_FAILED) {
+    if (write_status != MX_OK) {
+        if (write_status == MX_ERR_CALL_FAILED) {
             printf("Cmd read failure (cmd %04x, res %d)\n", req.hdr.cmd, read_status);
             return read_status;
         } else {
@@ -60,10 +60,10 @@ mx_status_t DoCallImpl(const mx::channel& channel,
 
     if (bytes != sizeof(RespType)) {
         printf("Unexpected response size (got %u, expected %zu)\n", bytes, sizeof(RespType));
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 template <typename ReqType, typename RespType>
@@ -72,7 +72,7 @@ mx_status_t DoCall(const mx::channel& channel,
                    RespType*          resp,
                    mx::handle*        resp_handle_out = nullptr) {
     mx_status_t res = DoCallImpl(channel, req, resp, resp_handle_out);
-    return (res != NO_ERROR) ? res : resp->result;
+    return (res != MX_OK) ? res : resp->result;
 }
 
 template <typename ReqType, typename RespType>
@@ -104,7 +104,7 @@ AudioStream::AudioStream(bool input, uint32_t dev_id)
 
 mx_status_t AudioStream::Open() {
     if (stream_ch_ != MX_HANDLE_INVALID)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     int fd = ::open(name(), O_RDONLY);
     if (fd < 0) {
@@ -122,7 +122,7 @@ mx_status_t AudioStream::Open() {
         return static_cast<mx_status_t>(res);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t AudioStream::DumpInfo() {
@@ -138,7 +138,7 @@ mx_status_t AudioStream::DumpInfo() {
         req.hdr.transaction_id = 1;
 
         res = DoNoFailCall(stream_ch_, req, &resp);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("Failed to fetch gain information! (res %d)\n", res);
             return res;
         }
@@ -160,7 +160,7 @@ mx_status_t AudioStream::DumpInfo() {
     {   // Current gain settings and caps
         audio2_stream_cmd_plug_detect_resp resp;
         res = GetPlugState(&resp);
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             return res;
 
         printf("  Plug State   : %splugged\n", resp.flags & AUDIO2_PDNF_PLUGGED ? "" : "un");
@@ -174,7 +174,7 @@ mx_status_t AudioStream::DumpInfo() {
     // TODO(johngro) : Add other info (supported formats, plug detect, etc...)
     // as we add commands to the protocol.
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t AudioStream::GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
@@ -187,7 +187,7 @@ mx_status_t AudioStream::GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_
     req.flags = enable_notify ? AUDIO2_PDF_ENABLE_NOTIFICATIONS : AUDIO2_PDF_NONE;
 
     mx_status_t res = DoNoFailCall(stream_ch_, req, out_state);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         printf("Failed to fetch plug detect information! (res %d)\n", res);
 
     return res;
@@ -214,7 +214,7 @@ mx_status_t AudioStream::SetMute(bool mute) {
               : AUDIO2_SGF_MUTE_VALID;
 
     mx_status_t res = DoCall(stream_ch_, req, &resp);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         printf("Failed to %smute stream! (res %d)\n", mute ? "" : "un", res);
     else
         printf("Stream is now %smuted\n", mute ? "" : "un");
@@ -232,7 +232,7 @@ mx_status_t AudioStream::SetGain(float gain) {
     req.gain  = gain;
 
     mx_status_t res = DoCall(stream_ch_, req, &resp);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to set gain to %.2f dB! (res %d)\n", gain, res);
     } else {
         printf("Gain is now %.2f dB.  Stream is %smuted.\n",
@@ -246,7 +246,7 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
     mx_time_t deadline = mx_deadline_after(MX_SEC(static_cast<double>(duration)));
     audio2_stream_cmd_plug_detect_resp resp;
     mx_status_t res = GetPlugState(&resp, true);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     mx_time_t last_plug_time = resp.plug_state_time;
@@ -255,7 +255,7 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
 
     if (resp.flags & AUDIO2_PDNF_HARDWIRED) {
         printf("Stream reports that it is hardwired, Monitoring is not possible.\n");
-        return NO_ERROR;
+        return MX_OK;
 
     }
 
@@ -279,8 +279,8 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
             res = stream_ch_.wait_one(MX_CHANNEL_PEER_CLOSED | MX_CHANNEL_READABLE,
                                       deadline, &pending);
 
-            if ((res != NO_ERROR) || (pending & MX_CHANNEL_PEER_CLOSED)) {
-                if (res != ERR_TIMED_OUT)
+            if ((res != MX_OK) || (pending & MX_CHANNEL_PEER_CLOSED)) {
+                if (res != MX_ERR_TIMED_OUT)
                     printf("Error while waiting for plug notification (res %d)\n", res);
 
                 if (pending & MX_CHANNEL_PEER_CLOSED)
@@ -294,7 +294,7 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
             audio2_stream_plug_detect_notify_t state;
             uint32_t bytes_read;
             res = stream_ch_.read(0, &state, sizeof(state), &bytes_read, nullptr, 0, nullptr);
-            if (res != NO_ERROR) {
+            if (res != MX_OK) {
                 printf("Read failure while waiting for plug notification (res %d)\n", res);
                 break;
             }
@@ -324,7 +324,7 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
             mx_nanosleep(next_wake);
 
             mx_status_t res = GetPlugState(&resp, true);
-            if (res != NO_ERROR) {
+            if (res != MX_OK) {
                 printf("Failed to poll plug state (res %d)\n", res);
                 break;
             }
@@ -337,14 +337,14 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
 
     printf("Monitoring finished.\n");
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,
                                    uint16_t channels,
                                    audio2_sample_format_t sample_format) {
     if ((stream_ch_ == MX_HANDLE_INVALID) || (rb_ch_ != MX_HANDLE_INVALID))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     switch (sample_format) {
     case AUDIO2_SAMPLE_FORMAT_8BIT:         sample_size_ = 1; break;
@@ -354,7 +354,7 @@ mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,
     case AUDIO2_SAMPLE_FORMAT_24BIT_IN32:
     case AUDIO2_SAMPLE_FORMAT_32BIT:
     case AUDIO2_SAMPLE_FORMAT_32BIT_FLOAT:  sample_size_ = 4; break;
-    default: return ERR_NOT_SUPPORTED;
+    default: return MX_ERR_NOT_SUPPORTED;
     }
 
     channel_cnt_ = channels;
@@ -371,7 +371,7 @@ mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,
 
     mx::handle tmp;
     mx_status_t res = DoCall(stream_ch_, req, &resp, &tmp);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to set format %uHz %hu-Ch fmt 0x%x (res %d)\n",
                 frames_per_second, channels, sample_format, res);
     }
@@ -385,10 +385,10 @@ mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,
 
 mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
     if(!frames)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (!rb_ch_.is_valid() || rb_vmo_.is_valid() || !frame_sz_)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // Get a VMO representing the ring buffer we will share with the audio driver.
     audio2_rb_cmd_get_buffer_req_t  req;
@@ -403,10 +403,10 @@ mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
     mx_status_t res;
     res = DoCall(rb_ch_, req, &resp, &tmp);
 
-    if ((res == NO_ERROR) && (resp.result != NO_ERROR))
+    if ((res == MX_OK) && (resp.result != MX_OK))
         res = resp.result;
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to get driver ring buffer VMO (res %d)\n", res);
         return res;
     }
@@ -417,7 +417,7 @@ mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
     // We have the buffer, fetch the size the driver finally decided on.
     uint64_t rb_sz;
     res = rb_vmo_.get_size(&rb_sz);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to fetch ring buffer VMO size (res %d)\n", res);
         return res;
     }
@@ -426,7 +426,7 @@ mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
     if ((rb_sz > mxtl::numeric_limits<decltype(rb_sz_)>::max()) || ((rb_sz % frame_sz_) != 0)) {
         printf("Bad VMO size returned by audio driver! (size = %" PRIu64 " frame_sz = %u)\n",
                 rb_sz, frame_sz_);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     rb_sz_ = static_cast<decltype(rb_sz_)>(rb_sz);
@@ -437,19 +437,19 @@ mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
                       rb_vmo_.get(), 0u, rb_sz_,
                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                       reinterpret_cast<uintptr_t*>(&rb_virt_));
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to map ring buffer VMO (res %d)\n", res);
         return res;
     }
 
     // Success!  zero out the buffer and we are done.
     memset(rb_virt_, 0, rb_sz_);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t AudioStream::StartRingBuffer() {
     if (rb_ch_ == MX_HANDLE_INVALID)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     audio2_rb_cmd_start_req_t  req;
     audio2_rb_cmd_start_resp_t resp;
@@ -462,7 +462,7 @@ mx_status_t AudioStream::StartRingBuffer() {
 
 mx_status_t AudioStream::StopRingBuffer() {
     if (rb_ch_ == MX_HANDLE_INVALID)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     audio2_rb_cmd_stop_req_t  req;
     audio2_rb_cmd_stop_resp_t resp;

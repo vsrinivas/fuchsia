@@ -24,21 +24,21 @@ SineSource::SineSource(float freq, float amp, float duration_secs) {
 
 mx_status_t SineSource::GetFormat(Format* out_format) {
     if (out_format == nullptr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     out_format->frame_rate    = FRAME_RATE;
     out_format->channels      = CHANNELS;
     out_format->sample_format = SAMPLE_FORMAT;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t SineSource::PackFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) {
     if ((buffer == nullptr) || (out_packed == nullptr))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (finished())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(frames_produced_ < frames_to_produce_);
     uint64_t todo = mxtl::min<uint64_t>(frames_to_produce_ - frames_produced_,
@@ -58,5 +58,5 @@ mx_status_t SineSource::PackFrames(void* buffer, uint32_t buf_space, uint32_t* o
     *out_packed = static_cast<uint32_t>(todo * FRAME_SIZE);
     frames_produced_ += todo;
 
-    return NO_ERROR;
+    return MX_OK;
 }

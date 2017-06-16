@@ -136,7 +136,7 @@ static int file_read_thread(void* arg) {
 static int do_play(int src_fd, int dest_fd, uint32_t sample_rate)
 {
     int ret = ioctl_audio_set_sample_rate(dest_fd, &sample_rate);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         printf("sample rate %d not supported\n", sample_rate);
         return ret;
     }

@@ -15,17 +15,17 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
     mx_status_t res;
 
     if (source.finished())
-        return NO_ERROR;
+        return MX_OK;
 
     AudioSource::Format format;
     res = source.GetFormat(&format);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to get source's format (res %d)\n", res);
         return res;
     }
 
     res = SetFormat(format.frame_rate, format.channels, format.sample_format);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to set source format [%u Hz, %hu Chan, %08x fmt] (res %d)\n",
                 format.frame_rate, format.channels, format.sample_format, res);
         return res;
@@ -37,7 +37,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
     // HW is going to require so we can adjust our buffer size to what the HW
     // requires, not what ALSA under QEMU requires.
     res = GetBuffer(480 * 20 * 3, 3);
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         printf("Failed to set output format (res %d)\n", res);
         return res;
     }
@@ -72,7 +72,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
             } else {
                 uint32_t done;
                 res = source.PackFrames(buf + wr, mxtl::min(space, rb_sz_ - wr), &done);
-                if (res != NO_ERROR) {
+                if (res != MX_OK) {
                     printf("Error packing frames (res %d)\n", res);
                     break;
                 }
@@ -96,13 +96,13 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
             wr = 0;
         }
 
-        if (res != NO_ERROR)
+        if (res != MX_OK)
             break;
 
         // If we have not started yet, do so.
         if (!started) {
             res = StartRingBuffer();
-            if (res != NO_ERROR) {
+            if (res != MX_OK) {
                 printf("Failed to start ring buffer!\n");
                 break;
             }
@@ -111,7 +111,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
 
         res = rb_ch_.wait_one(MX_CHANNEL_READABLE, MX_TIME_INFINITE, &sigs);
 
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("Failed to wait for notificiation (res %d)\n", res);
             break;
         }
@@ -119,7 +119,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
         res = rb_ch_.read(0,
                           &pos_notif, sizeof(pos_notif), &bytes_read,
                           nullptr, 0, &junk);
-        if (res != NO_ERROR) {
+        if (res != MX_OK) {
             printf("Failed to read notification from ring buffer channel (res %d)\n", res);
             break;
         }
@@ -127,14 +127,14 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
         if (bytes_read != sizeof(pos_notif)) {
             printf("Bad size when reading notification from ring buffer channel (%u != %zu)\n",
                    bytes_read, sizeof(pos_notif));
-            res = ERR_INTERNAL;
+            res = MX_ERR_INTERNAL;
             break;
         }
 
         if (pos_notif.hdr.cmd != AUDIO2_RB_POSITION_NOTIFY) {
             printf("Unexpected command type when reading notification from ring "
                    "buffer channel (cmd %04x)\n", pos_notif.hdr.cmd);
-            res = ERR_INTERNAL;
+            res = MX_ERR_INTERNAL;
             break;
         }
 
@@ -153,7 +153,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
         }
     }
 
-    if (res == NO_ERROR) {
+    if (res == MX_OK) {
         // We have already let the DMA engine catch up, but we still need to
         // wait for the fifo to play out.  For now, just hard code this as
         // 30uSec.
@@ -164,7 +164,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
     }
 
     mx_status_t stop_res = StopRingBuffer();
-    if (res == NO_ERROR)
+    if (res == MX_OK)
         res = stop_res;
 
     return res;

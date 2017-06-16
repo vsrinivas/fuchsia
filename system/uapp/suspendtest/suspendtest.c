@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
     printf("suspending %s\n", path);
     int ret = ioctl_device_debug_suspend(fd);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         fprintf(stderr, "suspend failed: %d\n", ret);
         goto out;
     }
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 
     printf("resuming %s\n", path);
     ret = ioctl_device_debug_resume(fd);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         fprintf(stderr, "resume failed: %d\n", ret);
     }
 

@@ -34,7 +34,7 @@ static mx_status_t cpustats(mx_handle_t root_resource, mx_time_t delay) {
     // retrieve the system stats
     size_t actual, avail;
     mx_status_t err = mx_object_get_info(root_resource, MX_INFO_CPU_STATS, &stats, sizeof(stats), &actual, &avail);
-    if (err != NO_ERROR) {
+    if (err != MX_OK) {
         fprintf(stderr, "MX_INFO_CPU_STATS returns %d (%s)\n", err, mx_status_get_string(err));
         return err;
     }
@@ -86,7 +86,7 @@ static mx_status_t cpustats(mx_handle_t root_resource, mx_time_t delay) {
         last_idle_time[i] = idle_time;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void print_mem_stat(const char* label, size_t bytes) {
@@ -102,7 +102,7 @@ static mx_status_t memstats(mx_handle_t root_resource) {
     mx_info_kmem_stats_t stats;
     mx_status_t err = mx_object_get_info(
         root_resource, MX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
-    if (err != NO_ERROR) {
+    if (err != MX_OK) {
         fprintf(stderr, "MX_INFO_KMEM_STATS returns %d (%s)\n",
                 err, mx_status_get_string(err));
         return err;
@@ -144,7 +144,7 @@ static mx_status_t memstats(mx_handle_t root_resource) {
         // Maybe have a few buckets like 1s, 10s, 1m.
     }
     printf("%s\n", line);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void print_help(FILE* f) {
@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
 
     mx_handle_t root_resource;
     mx_status_t ret = get_root_resource(&root_resource);
-    if (ret != NO_ERROR) {
+    if (ret != MX_OK) {
         return ret;
     }
 
@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
             ret |= memstats(root_resource);
         }
 
-        if (ret != NO_ERROR)
+        if (ret != MX_OK)
             break;
 
         // TODO: replace once ctrl-c works in the shell

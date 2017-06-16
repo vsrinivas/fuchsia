@@ -92,12 +92,12 @@ static mx_status_t commit(gpt_device_t* gpt, int fd) {
     int rc = gpt_device_sync(gpt);
     if (rc) {
         printf("Error: GPT device sync failed.\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     rc = ioctl_block_rr_part(fd);
     if (rc) {
         printf("Error: GPT updated but device could not be rebound. Please reboot.\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     printf("GPT changes complete.\n");
     return 0;
@@ -161,7 +161,7 @@ static void init_gpt(const char* dev) {
 static void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
     uint8_t guid[GPT_GUID_LEN];
     size_t sz;
-    if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != NO_ERROR)
+    if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != MX_OK)
         return;
 
     int fd;
@@ -302,8 +302,8 @@ static bool parse_guid(char* guid, uint8_t* bytes_out) {
 /*
  * Give a path to a block device and a partition index into a GPT, load the GPT
  * information into memory and find the requested partition. This does all the
- * bounds and other error checking. If NO_ERROR is returned, the out parameters
- * will be set to valid values. If NO_ERROR is returned, the caller should close
+ * bounds and other error checking. If MX_OK is returned, the out parameters
+ * will be set to valid values. If MX_OK is returned, the caller should close
  * fd_out after it is done using the GPT information.
  */
 static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
@@ -311,26 +311,26 @@ static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
                                     gpt_device_t** gpt_out,
                                     gpt_partition_t** part_out) {
     if (idx_part < 0 || idx_part >= PARTITIONS_COUNT) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     int fd = -1;
     gpt_device_t* gpt = init(path_device, warn, &fd);
     if (gpt == NULL) {
         tear_down_gpt(fd, gpt);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     gpt_partition_t* part = gpt->partitions[idx_part];
     if (part == NULL) {
         tear_down_gpt(fd, gpt);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     *gpt_out = gpt;
     *part_out = part;
     *fd_out = fd;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /*
@@ -388,7 +388,7 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
 
     mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
                                       &part);
-    if (rc != NO_ERROR) {
+    if (rc != MX_OK) {
         return rc;
     }
 
@@ -401,14 +401,14 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
         set_type = false;
     } else {
         tear_down_gpt(fd, gpt);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uint8_t guid_bytes[GPT_GUID_LEN];
     if (!expand_special(guid, guid_bytes) && !parse_guid(guid, guid_bytes)) {
         printf("GUID could not be parsed.\n");
         tear_down_gpt(fd, gpt);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (set_type) {
@@ -435,7 +435,7 @@ static mx_status_t set_visibility(char* path_device, long idx_part,
 
     mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
                                       &part);
-    if (rc != NO_ERROR) {
+    if (rc != MX_OK) {
         return rc;
     }
 
@@ -577,7 +577,7 @@ static int repartition(int argc, char** argv) {
 
       uint8_t guid[GPT_GUID_LEN];
       size_t sz;
-      if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != NO_ERROR) {
+      if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != MX_OK) {
         printf("rand read error\n");
         rc = 255;
         goto repartition_end;

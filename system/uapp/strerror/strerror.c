@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
         errno = 0;
         long error_long = strtol(argv[idx], NULL, 10);
         if (errno)
-            exit(ERR_INVALID_ARGS);
+            exit(MX_ERR_INVALID_ARGS);
         int error = (int)error_long;
         const char* mx_error = mx_status_get_string((mx_status_t)error);
         char* posix_error = strerror(error);
