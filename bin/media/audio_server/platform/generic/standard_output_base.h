@@ -75,8 +75,10 @@ class StandardOutputBase : public AudioOutput {
     SetNextSchedTime(ftl::TimePoint::Now() + next_sched_delay);
   }
 
-  virtual bool StartMixJob(MixJob* job, ftl::TimePoint process_start) = 0;
-  virtual bool FinishMixJob(const MixJob& job) = 0;
+  virtual bool StartMixJob(MixJob* job, ftl::TimePoint process_start)
+    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
+  virtual bool FinishMixJob(const MixJob& job)
+    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) = 0;
   virtual RendererBookkeeping* AllocBookkeeping();
   void SetupMixBuffer(uint32_t max_mix_frames);
 

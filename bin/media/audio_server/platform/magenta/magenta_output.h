@@ -26,8 +26,10 @@ class MagentaOutput : public StandardOutputBase {
   void Cleanup() override;
 
   // StandardOutputBase implementation
-  bool StartMixJob(MixJob* job, ftl::TimePoint process_start) override;
-  bool FinishMixJob(const MixJob& job) override;
+  bool StartMixJob(MixJob* job, ftl::TimePoint process_start)
+    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) override;
+  bool FinishMixJob(const MixJob& job)
+    FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) override;
 
  private:
   // TODO(johngro) : Remove the EventReflector class.

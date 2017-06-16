@@ -104,6 +104,7 @@ bool UsbOutput::FinishMixJob(const MixJob& job) {
   int write_result = write(fd_.get(), job.buf, write_size);
   // TODO(dalesat): Refine local_to_output_.
   if (write_result < write_size) {
+    ShutdownSelf();
     return false;
   }
 
