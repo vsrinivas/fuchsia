@@ -20,6 +20,13 @@ documentation and related topics.
 ## Terms
 
 #### **Agent**
+
+### **AppMgr**
+
+The Application Manager (AppMgr) is responsible for launching applications and
+managing the namespaces in which those applications run. It is the first process
+started in the `fuchsia` job by the [DevMgr](#DevMgr).
+
 #### **Armadillo**
 #### **Component**
 
@@ -39,7 +46,7 @@ stability and security.
 
 The Device Manager (DevMgr) is responsible for enumerating, loading, and managing the
 lifecycle of device drivers, as well as low level system tasks (providing filesystem
-servers for the boot filesystem, launching [Init](#Init), and so on).
+servers for the boot filesystem, launching [AppMgr](#AppMgr), and so on).
 
 #### **DDK**
 
@@ -86,13 +93,6 @@ GN files, named `BUILD.gn`, are located all over the repository.
 The "file descriptor" of the Magenta kernel.  A Handle is how a userspace process refers
 to a kernel object.  They can be passed to other processes over [Channel](#Channel)s.
 - [Handle (in Magenta Concepts Doc)](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md)
-
-#### **Init**
-
-Init is the first process that runs in the "fuchsia" [Job](#job). It is started by
-[DevMgr](#devmgr) and is responsible for starting (and restarting) the rest of the
-user space processes. Init is an extremely simple program that is optimized for
-never crashing. For example, Init does not dynamically allocate memory.
 
 #### **Jiri**
 

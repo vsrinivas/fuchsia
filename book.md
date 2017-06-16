@@ -29,6 +29,7 @@ Sections will be populated over time.
  - Device, user, and story runners
  - Components
  - [Namespaces](namespaces.md)
+ - [Sandboxing](sandboxing.md)
  - [Story][framework-story]
  - [Module][framework-module]
  - [Agent][framework-agent]

@@ -45,3 +45,5 @@ The `dev` array contains list of well-known device paths that are provided to
 the application. For example, if the string `class/input` appears in the `dev`
 array, then `/dev/class/input` will appear in the namespaces of applications
 loaded from the package.
+
+See [sandboxing.md] for more information about sandboxing.
