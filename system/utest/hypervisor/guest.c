@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <threads.h>
 
+#include <hypervisor/decode.h>
 #include <hypervisor/guest.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <magenta/types.h>
 #include <unittest/unittest.h>
 
 static const uint64_t kVmoSize = 2 << 20;
@@ -16,6 +20,9 @@ extern const char guest_end[];
 
 extern const char guest_set_gpr_start[];
 extern const char guest_set_gpr_end[];
+
+extern const char guest_mem_trap_start[];
+extern const char guest_mem_trap_end[];
 
 typedef struct test {
     bool supported;
@@ -188,9 +195,117 @@ static bool guest_get_set_gpr(void) {
     END_TEST;
 }
 
+// Returns whether the mem trap object contains the expected values.
+static bool verify_mem_trap_packet(test_t *test,
+                                   const mx_guest_mem_trap_t* mem_trap) {
+#if __x86_64__
+    mx_guest_gpr_t guest_gpr;
+
+    instruction_t inst;
+    mx_status_t status = inst_decode(mem_trap->instruction_buffer,
+                                     mem_trap->instruction_length,
+                                     &guest_gpr, &inst);
+    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(mem_trap->guest_paddr, kVmoSize - PAGE_SIZE, "");
+    ASSERT_EQ(inst.type, INST_MOV_READ, "");
+    ASSERT_EQ(inst.mem, 8u, "");
+    ASSERT_EQ(inst.imm, 0u, "");
+    ASSERT_EQ(inst.reg, &guest_gpr.rax, "");
+    ASSERT_EQ(inst.flags, NULL, "");
+#endif
+
+    return true;
+}
+
+// Handles the expected mem trap guest packet.
+static int mem_trap_handler_thread(void *arg) {
+    test_t *test = (test_t *)arg;
+
+    mx_signals_t observed;
+    mx_status_t status = mx_object_wait_one(test->guest_ctl_fifo,
+                                            MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
+                                            mx_deadline_after(MX_SEC(5)),
+                                            &observed);
+    if (status != MX_OK) {
+        UNITTEST_TRACEF("failed waiting on fifo : error %d\n", status);
+        exit(MX_ERR_INTERNAL);
+    } else if (observed & MX_FIFO_PEER_CLOSED) {
+        UNITTEST_TRACEF("fifo peer closed\n");
+        exit(MX_ERR_INTERNAL);
+    }
+    mx_guest_packet_t packet;
+    uint32_t num_entries;
+    status = mx_fifo_read(test->guest_ctl_fifo, &packet, sizeof(packet),
+                          &num_entries);
+    if (status != MX_OK) {
+        UNITTEST_TRACEF("failed reading from fifo : error %d\n", status);
+        exit(MX_ERR_INTERNAL);
+    } else if (num_entries != 1) {
+        UNITTEST_TRACEF("invalid number of entries read : %d\n", num_entries);
+        exit(MX_ERR_INTERNAL);
+    } else if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP) {
+        UNITTEST_TRACEF("invalid packet type : %d\n", packet.type);
+        exit(MX_ERR_INTERNAL);
+    }
+
+    bool is_valid_packet = verify_mem_trap_packet(test, &packet.mem_trap);
+
+    // Resume the VM.
+    mx_guest_packet_t resp_packet;
+    resp_packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
+    resp_packet.mem_trap_ret.fault = false;
+    uint32_t num_written;
+    status = mx_fifo_write(test->guest_ctl_fifo, &resp_packet,
+                           sizeof(resp_packet), &num_written);
+    // Could not resume VM.
+    if (status != MX_OK) {
+        UNITTEST_TRACEF("failed writing to fifo : error %d\n", status);
+        exit(MX_ERR_INTERNAL);
+    } else if (num_written != 1) {
+        UNITTEST_TRACEF("invalid number of entries written : %d\n", num_written);
+        exit(MX_ERR_INTERNAL);
+    }
+    return is_valid_packet ? MX_OK : MX_ERR_INTERNAL;
+}
+
+
+static bool guest_mem_trap(void) {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, guest_mem_trap_start, guest_mem_trap_end), "");
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+    // Unmap the last page from the EPT.
+    uint64_t mem_trap_args[2] = { kVmoSize - PAGE_SIZE, PAGE_SIZE };
+    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_MEM_TRAP,
+                               mem_trap_args, sizeof(mem_trap_args), NULL, 0),
+              MX_OK, "");
+
+    thrd_t handler;
+    ASSERT_EQ(thrd_create(&handler, mem_trap_handler_thread, &test),
+              thrd_success, "");
+
+    // Enter the guest.
+    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_ENTER,
+                               NULL, 0, NULL, 0),
+              MX_ERR_STOP, "");
+
+    int handler_ret;
+    ASSERT_EQ(thrd_join(handler, &handler_ret), thrd_success, "");
+    ASSERT_EQ(handler_ret, MX_OK, "");
+
+    ASSERT_TRUE(teardown(&test), "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(guest)
 RUN_TEST(guest_enter)
 RUN_TEST(guest_get_set_gpr)
+RUN_TEST(guest_mem_trap)
 END_TEST_CASE(guest)
 
 #ifndef BUILD_COMBINED_TESTS

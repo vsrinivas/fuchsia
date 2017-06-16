@@ -7,7 +7,7 @@
 #define FUNCTION(x)     .global x; .type x,STT_FUNC; x:
 #define UART_IO_PORT    0x3f8
 #define IA32_GS_BASE    0xc0000101
-
+#define VMO_SIZE        0x200000
 .text
 
 FUNCTION(guest_start)
@@ -53,3 +53,10 @@ FUNCTION(guest_set_gpr_start)
 
     vmcall
 FUNCTION(guest_set_gpr_end)
+
+FUNCTION(guest_mem_trap_start)
+    mov $VMO_SIZE, %rdx
+    mov -0x1000(%rdx), %rax
+
+    vmcall
+FUNCTION(guest_mem_trap_end)
