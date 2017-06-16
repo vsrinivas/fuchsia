@@ -9,17 +9,6 @@
 
 __BEGIN_CDECLS
 
-typedef struct mxio_watcher mxio_watcher_t;
-
-// Create a directory watcher for the provided dirfd.
-// The watcher does not take ownership of the fd and
-// the fd may be closed after this call returns and
-// the watcher will continue to work.
-mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out);
-
-// Destroy a directory watcher.
-void mxio_watcher_destroy(mxio_watcher_t* watcher);
-
 typedef mx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, void* cookie);
 
 // This event occurs when a file is added or removed, including

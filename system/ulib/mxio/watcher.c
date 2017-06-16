@@ -14,13 +14,13 @@
 
 #include <mxio/watcher.h>
 
-struct mxio_watcher {
+typedef struct mxio_watcher {
     mx_handle_t h;
     uint32_t flags;
     watchdir_func_t func;
     void* cookie;
     int fd;
-};
+} mxio_watcher_t;
 
 #define FLAG_NEED_DIR_SCAN    1
 
