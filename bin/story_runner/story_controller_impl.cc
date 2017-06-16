@@ -403,7 +403,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-    : Operation(container, []{}),
+      : Operation(container, [] {}),
         story_controller_impl_(story_controller_impl),
         parent_module_path_(parent_module_path.Clone()),
         module_path_(module_path.Clone()),
@@ -475,12 +475,11 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // link value.
     if (i->module_context_impl->module_url() != module_url_ ||
         !i->module_context_impl->link_path().Equals(*link_path_) ||
-        outgoing_services_.is_valid() ||
-        incoming_services_.is_pending()) {
+        outgoing_services_.is_valid() || incoming_services_.is_pending()) {
       i->module_controller_impl->Teardown([this, flow] {
-          // NOTE(mesch): i is invalid at this point.
-          Launch(flow);
-        });
+        // NOTE(mesch): i is invalid at this point.
+        Launch(flow);
+      });
       return;
     }
 
