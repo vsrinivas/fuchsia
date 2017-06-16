@@ -418,6 +418,9 @@ static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
 #if WITH_LIB_MAGENTA
 static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
                                 GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
+    if (exit_info.instruction_length > X86_MAX_INST_LEN)
+        return MX_ERR_INTERNAL;
+
     mx_guest_packet_t packet;
     memset(&packet, 0, sizeof(mx_guest_packet_t));
     packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;

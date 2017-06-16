@@ -7,7 +7,6 @@
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/hypervisor.h>
 
-static const uint32_t kMaxInstructionLength = 15;
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 static const uint8_t kModRMRegMask = 0b00111000;
@@ -115,7 +114,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr
                         instruction_t* inst) {
     if (inst_len == 0)
         return MX_ERR_BAD_STATE;
-    if (inst_len > kMaxInstructionLength)
+    if (inst_len > X86_MAX_INST_LEN)
         return MX_ERR_OUT_OF_RANGE;
 
     // Parse 66H prefix.

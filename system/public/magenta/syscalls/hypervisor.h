@@ -85,13 +85,15 @@ typedef struct mx_guest_port_out {
     };
 } mx_guest_port_out_t;
 
+#define X86_MAX_INST_LEN                        15u
+
 typedef struct mx_guest_mem_trap {
 #if __aarch64__
     uint32_t instruction;
 #elif __x86_64__
     uint8_t instruction_length;
     // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-    uint8_t instruction_buffer[15];
+    uint8_t instruction_buffer[X86_MAX_INST_LEN];
 #else
 #error Unsupported architecture
 #endif
