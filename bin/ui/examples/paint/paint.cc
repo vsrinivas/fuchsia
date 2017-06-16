@@ -22,12 +22,7 @@
 #include "third_party/skia/include/core/SkPath.h"
 #include "third_party/skia/include/core/SkRect.h"
 #ifdef MOZART_EXAMPLES_USE_SCENE_MANAGER
-#include "application/lib/app/connect.h"
-#include "apps/mozart/lib/scene/session_helpers.h"
-#include "apps/mozart/lib/scene/types.h"
-#include "apps/mozart/services/scene/ops.fidl.h"
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
-#include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/examples/paint/session_manager_includes.h"
 #endif  // MOZART_EXAMPLES_USE_SCENE_MANAGER
 
 namespace examples {
