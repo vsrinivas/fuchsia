@@ -159,8 +159,6 @@ template("dart_package") {
         rebase_path(source_dir),
         "--dot-packages",
         rebase_path(dot_packages_file),
-        "--root-build-dir",
-        rebase_path(root_build_dir),
         "--dartanalyzer",
         rebase_path(dart_analyzer_binary),
         "--package-name",
