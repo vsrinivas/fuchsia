@@ -109,9 +109,9 @@ static void pty_make_active_locked(pty_server_t* ps, pty_client_t* pc) {
         pc->flags |= PTY_CLI_ACTIVE;
         device_state_set(pc->mxdev, DEV_STATE_WRITABLE);
         if (pty_fifo_is_full(&pc->fifo)) {
-            device_state_set_clr(ps->mxdev, 0, DEV_STATE_WRITABLE | DEV_STATE_HANGUP);
+            device_state_clr_set(ps->mxdev, DEV_STATE_WRITABLE | DEV_STATE_HANGUP, 0);
         } else {
-            device_state_set_clr(ps->mxdev, DEV_STATE_WRITABLE, DEV_STATE_HANGUP);
+            device_state_clr_set(ps->mxdev, DEV_STATE_HANGUP, DEV_STATE_WRITABLE);
         }
     }
 }
@@ -129,7 +129,7 @@ static void pty_adjust_signals_locked(pty_client_t* pc) {
     } else {
         set = DEV_STATE_READABLE;
     }
-    device_state_set_clr(pc->mxdev, set, clr);
+    device_state_clr_set(pc->mxdev, clr, set);
 }
 
 
@@ -247,7 +247,7 @@ static void pty_client_release(void* ctx) {
     }
     // signal server, if the last client has gone away
     if (list_is_empty(&ps->clients)) {
-        device_state_set_clr(ps->mxdev, DEV_STATE_READABLE | DEV_STATE_HANGUP, DEV_STATE_WRITABLE);
+        device_state_clr_set(ps->mxdev, DEV_STATE_WRITABLE, DEV_STATE_READABLE | DEV_STATE_HANGUP);
     }
     mtx_unlock(&ps->lock);
 

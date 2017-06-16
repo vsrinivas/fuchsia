@@ -148,14 +148,13 @@ static inline void device_state_clr(mx_device_t* dev, mx_signals_t stateflag) {
     device_state_clr_set(dev, stateflag, 0);
 }
 
-//TODO: deprecate and remove this version
-//      (it does not reflect that the clear is applied and then the set)
+
+//TODO: remove once no longer needed
+
+__attribute__((deprecated("use device_state_clr_set instead -- be careful of argument order")))
 static inline void device_state_set_clr(mx_device_t* dev, mx_signals_t setflag, mx_signals_t clearflag) {
     device_state_clr_set(dev, clearflag, setflag);
 }
-
-
-//TODO: remove once no longer needed
 
 __attribute__((deprecated("use device_read instead")))
 static inline mx_status_t device_op_read(mx_device_t* dev, void* buf, size_t count,

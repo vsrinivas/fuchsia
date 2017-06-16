@@ -323,8 +323,13 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         device_state_clr(mxdev_, stateflag);
     }
 
+    void ClearAndSetState(mx_signals_t clearflag, mx_signals_t setflag) {
+        device_state_clr_set(mxdev_, clearflag, setflag);
+    }
+
+    __attribute__((deprecated("use ClearAndSetState instead -- be careful of argument order")))
     void SetAndClearState(mx_signals_t setflag, mx_signals_t clearflag) {
-        device_state_set_clr(mxdev_, setflag, clearflag);
+        device_state_clr_set(mxdev_, clearflag, setflag);
     }
 
   protected:
