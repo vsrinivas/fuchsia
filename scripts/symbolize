@@ -53,13 +53,11 @@ def find_func(find_args, dirname, names):
 
 def find_file_in_build_dir(name, build_dirs):
     find_args = {"name": name, "path": ""}
-    found_path = ""
     for location in build_dirs:
         os.path.walk(location, find_func, find_args)
         if find_args["path"] != "":
-            found_path = os.path.abspath(os.path.join(find_args["path"], name))
-            break
-    return found_path
+            return os.path.abspath(os.path.join(find_args["path"], name))
+    return None
 
 
 def buildid_to_full_path(buildid, build_dirs):
@@ -74,34 +72,65 @@ def buildid_to_full_path(buildid, build_dirs):
     return None
 
 
-def find_dso_full_path(dso, exe_name, name_to_buildid, build_dirs):
-    if dso in name_to_full_path:
-        return name_to_full_path[dso]
+def find_file_in_boot_manifest(boot_app_name, build_dirs):
+    manifest_path = find_file_in_build_dir("bootfs.manifest", build_dirs)
+    if manifest_path:
+        with open(manifest_path) as manifest_file:
+            for line in manifest_file:
+                out_path, in_path = line.rstrip().split("=")
+                if out_path == boot_app_name:
+                    if in_path.endswith(".strip"):
+                        in_path = in_path[:-len(".strip")]
+                    return in_path
+    return None
+
+
+def find_dso_full_path_uncached(dso, exe_name, name_to_buildid, build_dirs):
     if dso in name_to_buildid:
         found_path = buildid_to_full_path(name_to_buildid[dso], build_dirs)
         if found_path:
-            name_to_full_path[dso] = found_path
             return found_path
+
     # The name 'app' indicates the real app name is unknown.
     # If the process has a name property that will be printed, but
     # it has a max of 32 characters so it may be insufficient.
     # Crashlogger prefixes such names with "app:" for our benefit.
     if dso == "app" or dso.startswith("app:"):
-        return find_file_in_build_dir(exe_name, build_dirs)
+        # If an executable was passed on the command-line, try using that
+        if exe_name:
+            found_path = find_file_in_build_dir(exe_name, build_dirs)
+            if found_path:
+                return found_path
+
+        # If this looks like a program in boot fs, consult the manifest
+        if dso.startswith("app:/boot/"):
+            boot_app_name = dso[len("app:/boot/"):]
+            found_path = find_file_in_boot_manifest(boot_app_name, build_dirs)
+            if found_path:
+                return found_path
+        return None
+
     # First, try an exact match for the filename
     found_path = find_file_in_build_dir(dso, build_dirs)
-    if found_path == "":
+    if not found_path:
         # If that fails, and this file doesn't end with .so, try the executable
         # name
         if not dso.endswith(".so"):
             found_path = find_file_in_build_dir(exe_name, build_dirs)
-    if found_path == "":
+    if not found_path:
         # If that still fails and this looks like an absolute path, try the
         # last path component
         if dso.startswith("/"):
             short_name = dso[dso.rfind("/"):]
             found_path = find_file_in_build_dir(short_name, build_dirs)
-    if found_path != "":
+    return found_path
+
+
+def find_dso_full_path(dso, exe_name, name_to_buildid, build_dirs):
+    if dso in name_to_full_path:
+        return name_to_full_path[dso]
+    found_path = find_dso_full_path_uncached(dso, exe_name, name_to_buildid, build_dirs)
+    if found_path:
         name_to_full_path[dso] = found_path
     return found_path
 
