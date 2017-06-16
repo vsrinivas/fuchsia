@@ -46,13 +46,13 @@ class ResponsePrinter {
       size_t num_bytes = sizeof(buf);
       mx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
-      if (result == ERR_SHOULD_WAIT) {
+      if (result == MX_ERR_SHOULD_WAIT) {
         body.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                       MX_TIME_INFINITE, nullptr);
-      } else if (result == ERR_PEER_CLOSED) {
+      } else if (result == MX_ERR_PEER_CLOSED) {
         // not an error
         break;
-      } else if (result == NO_ERROR) {
+      } else if (result == MX_OK) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {
           printf("\nUnexpected error writing to file\n");
           break;

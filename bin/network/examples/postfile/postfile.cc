@@ -53,10 +53,10 @@ class ResponsePrinter {
       size_t num_bytes = sizeof(buf);
       mx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
-      if (result == ERR_SHOULD_WAIT) {
+      if (result == MX_ERR_SHOULD_WAIT) {
         body.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                       MX_TIME_INFINITE, nullptr);
-      } else if (result == NO_ERROR) {
+      } else if (result == MX_OK) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {
           printf("\nUnexpected error writing to file\n");
           break;
@@ -108,7 +108,7 @@ class PostFileApp {
     mx::socket consumer;
     mx::socket producer;
     mx_status_t status = mx::socket::create(0u, &producer, &consumer);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       printf("cannot create socket\n");
       return false;
     }

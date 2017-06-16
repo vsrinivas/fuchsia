@@ -16,23 +16,23 @@ SocketUploadElementReader::SocketUploadElementReader(mx::socket socket)
 SocketUploadElementReader::~SocketUploadElementReader() {}
 
 mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
-  mx_status_t result = NO_ERROR;
+  mx_status_t result = MX_OK;
 
   while (true) {
     size_t num_bytes = buf_.size();
     result = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
-    if (result == ERR_SHOULD_WAIT) {
+    if (result == MX_ERR_SHOULD_WAIT) {
       result = socket_.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                 MX_TIME_INFINITE, nullptr);
-      if (result == NO_ERROR)
+      if (result == MX_OK)
         continue;  // retry now that the socket is ready
     }
 
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
       // If the other end closes the socket,
-      // we get ERR_PEER_CLOSED.
-      if (result == ERR_PEER_CLOSED) {
-        result = NO_ERROR;
+      // we get MX_ERR_PEER_CLOSED.
+      if (result == MX_ERR_PEER_CLOSED) {
+        result = MX_OK;
         break;
       }
       FTL_VLOG(1) << "SocketUploadElementReader: result=" << result;
@@ -42,7 +42,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
     os->write(buf_.data(), num_bytes);
     if (!*os) {
       // TODO(toshik): better result code?
-      result = ERR_BUFFER_TOO_SMALL;
+      result = MX_ERR_BUFFER_TOO_SMALL;
       FTL_VLOG(1) << "SocketUploadElementReader: result=" << result;
       break;
     }
@@ -59,7 +59,7 @@ VmoUploadElementReader::~VmoUploadElementReader() {}
 mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
   uint64_t remaining;
   mx_status_t result = vmo_.get_size(&remaining);
-  if (result != NO_ERROR) {
+  if (result != MX_OK) {
     FTL_VLOG(1) << "VmoUploadELementReader: result=" << result;
     return result;
   }
@@ -68,7 +68,7 @@ mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
   while (remaining > 0) {
     size_t num_bytes = buf_.size();
     result = vmo_.read(buf_.data(), offset, num_bytes, &num_bytes);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
       FTL_VLOG(1) << "VmoUploadELementReader: result=" << result;
       return result;
     }
@@ -77,13 +77,13 @@ mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
     if (!*os) {
       FTL_VLOG(1) << "VmoUploadElementReader: Unable to write to stream.";
       // TODO(toshik): better result code?
-      return ERR_BUFFER_TOO_SMALL;
+      return MX_ERR_BUFFER_TOO_SMALL;
     }
     offset += num_bytes;
     remaining -= num_bytes;
   }
 
-  return NO_ERROR;
+  return MX_OK;
 }
 
 }  // namespace network

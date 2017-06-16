@@ -117,7 +117,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
           current_url_.path() +
               (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
-      if (result != NO_ERROR) {
+      if (result != MX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
@@ -146,7 +146,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
           current_url_.path() +
               (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
-      if (result != NO_ERROR) {
+      if (result != MX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
