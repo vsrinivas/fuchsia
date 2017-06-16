@@ -86,13 +86,13 @@ bool vdso_unmap_test(void) {
     // Removing the vDSO code mapping is not allowed.
     status = mx_vmar_unmap(mx_vmar_root_self(),
                            vdso_code_start, vdso_code_len);
-    EXPECT_EQ(status, ERR_ACCESS_DENIED, "unmap vDSO code");
+    EXPECT_EQ(status, MX_ERR_ACCESS_DENIED, "unmap vDSO code");
 
     // Nor is removing a whole range overlapping the vDSO code.
     status = mx_vmar_unmap(mx_vmar_root_self(),
                            vdso_code_start - PAGE_SIZE,
                            PAGE_SIZE * 2);
-    EXPECT_EQ(status, ERR_ACCESS_DENIED, "unmap range overlapping vDSO code");
+    EXPECT_EQ(status, MX_ERR_ACCESS_DENIED, "unmap range overlapping vDSO code");
 
     END_TEST;
 }
@@ -114,7 +114,7 @@ bool vdso_map_test(void) {
     mx_handle_t proc, vmar;
     ASSERT_EQ(mx_process_create(mx_job_default(),
                                 name, strlen(name), 0, &proc, &vmar),
-              NO_ERROR, "mx_process_create failed");
+              MX_OK, "mx_process_create failed");
 
     // This should fail because it's an executable mapping of
     // the wrong portion of the vDSO image (the first page is
@@ -124,7 +124,7 @@ bool vdso_map_test(void) {
     mx_status_t status = mx_vmar_map(
         vmar, 0, vmo, 0, PAGE_SIZE,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, &addr);
-    EXPECT_EQ(status, ERR_ACCESS_DENIED, "map vDSO data as executable");
+    EXPECT_EQ(status, MX_ERR_ACCESS_DENIED, "map vDSO data as executable");
 
     mx_handle_close(proc);
     mx_handle_close(vmar);

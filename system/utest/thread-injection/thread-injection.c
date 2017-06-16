@@ -71,17 +71,17 @@ bool thread_injection_test(void) {
 
     mx_handle_t proc;
     const char* errmsg;
-    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), NO_ERROR,
+    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), MX_OK,
               launchpad_error_message(lp));
 
     // Now the injector will inject the "injected" program into this process.
     // When that program starts up, it will see the &my_futex value and
     // do a store of the magic value and a mx_futex_wake operation.
     // When it's done that, the test has succeeded.
-    while (status == NO_ERROR && atomic_load(&my_futex) == 0) {
+    while (status == MX_OK && atomic_load(&my_futex) == 0) {
         status = mx_futex_wait(&my_futex, 0, mx_deadline_after(MX_SEC(10)));
         snprintf(msg, sizeof(msg), "mx_futex_wait failed: %d", status);
-        EXPECT_EQ(status, NO_ERROR, msg);
+        EXPECT_EQ(status, MX_OK, msg);
     }
     snprintf(msg, sizeof(msg), "futex set to %#x", my_futex);
     EXPECT_EQ(my_futex, MAGIC, msg);
@@ -90,11 +90,11 @@ bool thread_injection_test(void) {
     // If it didn't, the futex wait probably timed out too.
     ASSERT_EQ(mx_object_wait_one(proc, MX_PROCESS_TERMINATED,
                                  MX_TIME_INFINITE, NULL),
-              NO_ERROR, "waiting for injector to finish");
+              MX_OK, "waiting for injector to finish");
     mx_info_process_t proc_info;
     ASSERT_EQ(mx_object_get_info(proc, MX_INFO_PROCESS,
                                  &proc_info, sizeof(proc_info), NULL, NULL),
-              NO_ERROR, "getting injector exit status");
+              MX_OK, "getting injector exit status");
     mx_handle_close(proc);
     EXPECT_EQ(proc_info.return_code, 0, "injector exit status");
 

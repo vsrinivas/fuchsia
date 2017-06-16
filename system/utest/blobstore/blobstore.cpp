@@ -40,7 +40,7 @@
 // Unmounts a blobstore and removes the backing ramdisk device.
 static int EndBlobstoreTest(const char* ramdisk_path) {
     mx_status_t status = umount(MOUNT_PATH);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to unmount filesystem: %d\n", status);
         return -1;
     }
@@ -58,7 +58,7 @@ static int MountBlobstore(const char* ramdisk_path) {
     // ready to accept commands.
     mx_status_t status;
     if ((status = mount(fd, MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
-                        launch_stdio_async)) != NO_ERROR) {
+                        launch_stdio_async)) != MX_OK) {
         fprintf(stderr, "Could not mount blobstore: %d\n", status);
         destroy_ramdisk(ramdisk_path);
         return -1;
@@ -84,7 +84,7 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
 
     mx_status_t status;
     if ((status = mkfs(ramdisk_path_out, DISK_FORMAT_BLOBFS, launch_stdio_sync,
-                       &default_mkfs_options)) != NO_ERROR) {
+                       &default_mkfs_options)) != MX_OK) {
         fprintf(stderr, "Could not mkfs blobstore: %d", status);
         destroy_ramdisk(ramdisk_path_out);
         return -1;
@@ -207,7 +207,7 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     merkle::Digest digest;
     ASSERT_EQ(merkle::Tree::Create(&info->data[0], info->size_data, &info->merkle[0],
                                    info->size_merkle, &digest),
-              NO_ERROR, "Couldn't create Merkle Tree");
+              MX_OK, "Couldn't create Merkle Tree");
     strcpy(info->path, MOUNT_PATH "/");
     size_t prefix_len = strlen(info->path);
     digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
@@ -215,7 +215,7 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     // Sanity-check the merkle tree
     ASSERT_EQ(merkle::Tree::Verify(&info->data[0], info->size_data, &info->merkle[0],
                                    info->size_merkle, 0, info->size_data, digest),
-              NO_ERROR, "Failed to validate Merkle Tree");
+              MX_OK, "Failed to validate Merkle Tree");
 
     *out = mxtl::move(info);
     return true;
@@ -591,7 +591,7 @@ static bool CreateUmountRemountSmall(void) {
                              info->data.get(), info->size_data, &fd), "");
         // Close fd, unmount filesystem
         ASSERT_EQ(close(fd), 0, "");
-        ASSERT_EQ(umount(MOUNT_PATH), NO_ERROR, "Could not unmount blobstore");
+        ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
         ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
         fd = open(info->path, O_RDONLY);
@@ -751,7 +751,7 @@ static bool CreateUmountRemountLarge(void) {
     }
 
     // Unmount, remount
-    ASSERT_EQ(umount(MOUNT_PATH), NO_ERROR, "Could not unmount blobstore");
+    ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
     ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
     for (auto& state: bl.list) {
@@ -824,7 +824,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     }
 
     // Unmount, remount
-    ASSERT_EQ(umount(MOUNT_PATH), NO_ERROR, "Could not unmount blobstore");
+    ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
     ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
     for (auto& state: bl.list) {

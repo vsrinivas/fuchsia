@@ -164,7 +164,7 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior,
             mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
             // If the process has exited then the kernel may have reaped the
             // thread already. Check.
-            if (status != ERR_NOT_FOUND) {
+            if (status != MX_ERR_NOT_FOUND) {
                 mx_info_thread_t info = tu_thread_get_info(thread);
                 // The thread could still transition to DEAD here (if the
                 // process exits), so check for either DYING or DEAD.
@@ -272,7 +272,7 @@ static bool expect_debugger_attached_eq(
     mx_info_process_t info;
     // MX_ASSERT returns false if the check fails.
     ASSERT_EQ(mx_object_get_info(
-            inferior, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");
+            inferior, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK, "");
     ASSERT_EQ(info.debugger_attached, expected, msg);
     return true;
 }
@@ -311,7 +311,7 @@ static bool debugger_test_exception_handler(mx_handle_t inferior,
 
     mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
     tu_handle_close(thread);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     return true;
 }
@@ -393,7 +393,7 @@ static bool debugger_thread_list_test(void)
     mx_koid_t* threads = tu_malloc(buf_size);
     mx_status_t status = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS,
                                             threads, buf_size, &num_threads, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     // There should be at least 1+NUM_EXTRA_THREADS threads in the result.
     ASSERT_GE(num_threads, (unsigned)(1 + NUM_EXTRA_THREADS), "mx_object_get_info failed");
@@ -405,7 +405,7 @@ static bool debugger_thread_list_test(void)
         mx_handle_t thread = tu_get_thread(inferior, koid);
         mx_info_handle_basic_t info;
         status = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-        EXPECT_EQ(status, NO_ERROR, "mx_object_get_info failed");
+        EXPECT_EQ(status, MX_OK, "mx_object_get_info failed");
         EXPECT_EQ(info.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
     }
 
@@ -432,13 +432,13 @@ static bool property_process_debug_addr_test(void)
     uintptr_t debug_addr = 42;
     mx_status_t status = mx_object_set_property(self, MX_PROP_PROCESS_DEBUG_ADDR,
                                                 &debug_addr, sizeof(debug_addr));
-    ASSERT_EQ(status, ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(status, MX_ERR_ACCESS_DENIED, "");
 
     // Some minimal verification that the value is correct.
 
     status = mx_object_get_property(self, MX_PROP_PROCESS_DEBUG_ADDR,
                                     &debug_addr, sizeof(debug_addr));
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     // These are all dsos we link with. See rules.mk.
     const char* launchpad_so = "liblaunchpad.so";

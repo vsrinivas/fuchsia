@@ -150,7 +150,7 @@ int unmount_memfs(const char* mount_path) {
 int mkfs_minfs(const char* disk_path) {
     mx_status_t status;
     if ((status = mkfs(disk_path, DISK_FORMAT_MINFS, launch_stdio_sync,
-                       &default_mkfs_options)) != NO_ERROR) {
+                       &default_mkfs_options)) != MX_OK) {
         fprintf(stderr, "Could not mkfs filesystem");
         return -1;
     }
@@ -159,7 +159,7 @@ int mkfs_minfs(const char* disk_path) {
 
 int fsck_minfs(const char* disk_path) {
     mx_status_t status;
-    if ((status = fsck(disk_path, DISK_FORMAT_MINFS, &test_fsck_options, launch_stdio_sync)) != NO_ERROR) {
+    if ((status = fsck(disk_path, DISK_FORMAT_MINFS, &test_fsck_options, launch_stdio_sync)) != MX_OK) {
         fprintf(stderr, "fsck on MinFS failed");
         return -1;
     }
@@ -177,7 +177,7 @@ int mount_minfs(const char* disk_path, const char* mount_path) {
     // commands.
     mx_status_t status;
     if ((status = mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
-                        launch_stdio_async)) != NO_ERROR) {
+                        launch_stdio_async)) != MX_OK) {
         fprintf(stderr, "Could not mount filesystem\n");
         return status;
     }
@@ -187,7 +187,7 @@ int mount_minfs(const char* disk_path, const char* mount_path) {
 
 int unmount_minfs(const char* mount_path) {
     mx_status_t status = umount(mount_path);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to unmount filesystem\n");
         return status;
     }
@@ -202,7 +202,7 @@ bool thinfs_exists(void) {
 int mkfs_thinfs(const char* disk_path) {
     mx_status_t status;
     if ((status = mkfs(disk_path, DISK_FORMAT_FAT, launch_stdio_sync,
-                       &default_mkfs_options)) != NO_ERROR) {
+                       &default_mkfs_options)) != MX_OK) {
         fprintf(stderr, "Could not mkfs filesystem");
         return -1;
     }
@@ -211,7 +211,7 @@ int mkfs_thinfs(const char* disk_path) {
 
 int fsck_thinfs(const char* disk_path) {
     mx_status_t status;
-    if ((status = fsck(disk_path, DISK_FORMAT_FAT, &test_fsck_options, launch_stdio_sync)) != NO_ERROR) {
+    if ((status = fsck(disk_path, DISK_FORMAT_FAT, &test_fsck_options, launch_stdio_sync)) != MX_OK) {
         fprintf(stderr, "fsck on FAT failed");
         return -1;
     }
@@ -229,7 +229,7 @@ int mount_thinfs(const char* disk_path, const char* mount_path) {
     // commands.
     mx_status_t status;
     if ((status = mount(fd, mount_path, DISK_FORMAT_FAT, &default_mount_options,
-                        launch_stdio_async)) != NO_ERROR) {
+                        launch_stdio_async)) != MX_OK) {
         fprintf(stderr, "Could not mount filesystem\n");
         return status;
     }
@@ -239,7 +239,7 @@ int mount_thinfs(const char* disk_path, const char* mount_path) {
 
 int unmount_thinfs(const char* mount_path) {
     mx_status_t status = umount(mount_path);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         fprintf(stderr, "Failed to unmount filesystem\n");
         return status;
     }

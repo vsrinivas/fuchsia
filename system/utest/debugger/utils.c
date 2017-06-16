@@ -47,7 +47,7 @@ uint32_t get_uint32_property(mx_handle_t handle, uint32_t prop)
 {
     uint32_t value;
     mx_status_t status = mx_object_get_property(handle, prop, &value, sizeof(value));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         tu_fatal("mx_object_get_property failed", status);
     return value;
 }
@@ -184,24 +184,24 @@ bool dump_inferior_regs(mx_handle_t thread)
     for (unsigned i = 0; i < num_regsets; ++i) {
         uint32_t regset_size = 0;
         status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, NULL, regset_size, &regset_size);
-        ASSERT_EQ(status, ERR_BUFFER_TOO_SMALL, "getting regset size failed");
+        ASSERT_EQ(status, MX_ERR_BUFFER_TOO_SMALL, "getting regset size failed");
         void* buf = tu_malloc(regset_size);
         status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, buf, regset_size, &regset_size);
         // Regset reads can fail for legitimate reasons:
-        // ERR_NOT_SUPPORTED - the regset is not supported on this chip
-        // ERR_UNAVAILABLE - the regset may be currently unavailable
+        // MX_ERR_NOT_SUPPORTED - the regset is not supported on this chip
+        // MX_ERR_UNAVAILABLE - the regset may be currently unavailable
         switch (status) {
-        case NO_ERROR:
+        case MX_OK:
             dump_arch_regs(thread, i, buf);
             break;
-        case ERR_NOT_SUPPORTED:
+        case MX_ERR_NOT_SUPPORTED:
             unittest_printf("Regset %u not supported\n", i);
             break;
-        case ERR_UNAVAILABLE:
+        case MX_ERR_UNAVAILABLE:
             unittest_printf("Regset %u unavailable\n", i);
             break;
         default:
-            ASSERT_EQ(status, NO_ERROR, "getting regset failed");
+            ASSERT_EQ(status, MX_OK, "getting regset failed");
         }
         free(buf);
     }
@@ -215,7 +215,7 @@ uint32_t get_inferior_greg_buf_size(mx_handle_t thread)
     uint32_t regset_size = 0;
     mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
     // It's easier to just terminate if this fails.
-    if (status != ERR_BUFFER_TOO_SMALL)
+    if (status != MX_ERR_BUFFER_TOO_SMALL)
         tu_fatal("get_inferior_greg_buf_size: mx_thread_read_state", status);
     return regset_size;
 }
@@ -227,7 +227,7 @@ void read_inferior_gregs(mx_handle_t thread, void* buf, unsigned buf_size)
     // By convention the general regs are in regset 0.
     mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
     // It's easier to just terminate if this fails.
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         tu_fatal("read_inferior_gregs: mx_thread_read_state", status);
 }
 
@@ -236,7 +236,7 @@ void write_inferior_gregs(mx_handle_t thread, const void* buf, unsigned buf_size
     // By convention the general regs are in regset 0.
     mx_status_t status = mx_thread_write_state(thread, MX_THREAD_STATE_REGSET0, buf, buf_size);
     // It's easier to just terminate if this fails.
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         tu_fatal("write_inferior_gregs: mx_thread_write_state", status);
 }
 
@@ -330,7 +330,7 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
     unittest_printf("Creating process \"%s\"\n", name);
     status = create_inferior(name, countof(argv), argv, NULL,
                              countof(handles), handles, handle_ids, &lp);
-    ASSERT_EQ(status, NO_ERROR, "failed to create inferior");
+    ASSERT_EQ(status, MX_OK, "failed to create inferior");
 
     // Note: |inferior| is a borrowed handle here.
     mx_handle_t inferior = launchpad_get_process_handle(lp);
@@ -346,7 +346,7 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
     // exception port. We could leave this to our caller to do, but since every
     // caller needs this for convenience sake we do this here.
     status = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS, &inferior);
-    ASSERT_EQ(status, NO_ERROR, "mx_handle_duplicate failed");
+    ASSERT_EQ(status, MX_OK, "mx_handle_duplicate failed");
 
     *out_lp = lp;
     *out_inferior = inferior;
@@ -397,24 +397,24 @@ bool resume_inferior(mx_handle_t inferior, mx_koid_t tid)
 
     mx_handle_t thread;
     mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
-    if (status == ERR_NOT_FOUND) {
+    if (status == MX_ERR_NOT_FOUND) {
         // If the process has exited then the kernel may have reaped the
         // thread already. Check.
         if (tu_process_has_exited(inferior))
             return true;
     }
-    ASSERT_EQ(status, NO_ERROR, "mx_object_get_child failed");
+    ASSERT_EQ(status, MX_OK, "mx_object_get_child failed");
 
     unittest_printf("Resuming inferior ...\n");
     status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
     tu_handle_close(thread);
-    if (status == ERR_BAD_STATE) {
+    if (status == MX_ERR_BAD_STATE) {
         // If the process has exited then the thread may have exited
         // ExceptionHandlerExchange already. Check.
         if (tu_process_has_exited(inferior))
             return true;
     }
-    ASSERT_EQ(status, NO_ERROR, "mx_task_resume failed");
+    ASSERT_EQ(status, MX_OK, "mx_task_resume failed");
 
     END_HELPER;
 }
@@ -441,7 +441,7 @@ bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
     BEGIN_HELPER;
 
     unittest_printf("Waiting for exception on eport %d\n", eport);
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), MX_OK, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, exception_port_key, "bad report key");
     unittest_printf("read_exception: got exception %d\n", packet->report.header.type);
 

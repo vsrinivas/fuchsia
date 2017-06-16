@@ -25,7 +25,7 @@ public:
                       mx_job_default(),
                       name, static_cast<uint32_t>(strlen(name)), 0,
                       process_.get_address(), root_vmar_.get_address()),
-                  NO_ERROR, "mx_process_create");
+                  MX_OK, "mx_process_create");
     }
 
     const mx::vmar& root_vmar() const { return root_vmar_; }
@@ -45,12 +45,12 @@ public:
         uintptr_t phoff;
         mx_status_t status = elf_load_prepare(vdso_vmo.get(), nullptr, 0,
                                               &header, &phoff);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             mxtl::Array<elf_phdr_t> phdrs(new elf_phdr_t[header.e_phnum],
                                           header.e_phnum);
             status = elf_load_read_phdrs(vdso_vmo.get(), phdrs.get(), phoff,
                                          header.e_phnum);
-            if (status == NO_ERROR) {
+            if (status == MX_OK) {
                 for (const auto& ph : phdrs) {
                     if (ph.p_type == PT_LOAD && (ph.p_type & PF_X)) {
                         vdso_code_offset_ = ph.p_vaddr;
@@ -86,10 +86,10 @@ bool vdso_map_twice_test() {
     ScratchPad scratch(__func__);
 
     // Load the vDSO once.  That's on me.
-    EXPECT_EQ(scratch.load_vdso(), NO_ERROR, "load vDSO into empty process");
+    EXPECT_EQ(scratch.load_vdso(), MX_OK, "load vDSO into empty process");
 
     // Load the vDSO twice.  Can't get loaded again.
-    EXPECT_EQ(scratch.load_vdso(), ERR_ACCESS_DENIED, "load vDSO second time");
+    EXPECT_EQ(scratch.load_vdso(), MX_ERR_ACCESS_DENIED, "load vDSO second time");
 
     END_TEST;
 }
@@ -101,17 +101,17 @@ bool vdso_map_change_test() {
 
     // Load the vDSO and hold onto the sub-VMAR.
     mx::vmar vdso_vmar;
-    EXPECT_EQ(scratch.load_vdso(&vdso_vmar), NO_ERROR, "load vDSO");
+    EXPECT_EQ(scratch.load_vdso(&vdso_vmar), MX_OK, "load vDSO");
 
     // Changing protections on the code pages is forbidden.
     EXPECT_EQ(vdso_vmar.protect(scratch.vdso_code_address(),
                                 scratch.vdso_code_size(),
                                 MX_VM_FLAG_PERM_READ),
-              ERR_ACCESS_DENIED, "mx_vmar_protect on vDSO code");
+              MX_ERR_ACCESS_DENIED, "mx_vmar_protect on vDSO code");
 
     mx::vmo vmo;
     ASSERT_EQ(mx::vmo::create(scratch.vdso_total_size(), 0, &vmo),
-              NO_ERROR, "mx_vmo_create");
+              MX_OK, "mx_vmo_create");
 
     // Implicit unmapping by overwriting the mapping is forbidden.
     uintptr_t addr = 0;
@@ -119,7 +119,7 @@ bool vdso_map_change_test() {
                             MX_VM_FLAG_PERM_READ |
                             MX_VM_FLAG_SPECIFIC_OVERWRITE,
                             &addr),
-              ERR_ACCESS_DENIED, "mx_vmar_map to overmap vDSO");
+              MX_ERR_ACCESS_DENIED, "mx_vmar_map to overmap vDSO");
     EXPECT_EQ(addr, 0, "mx_vmar_map to overmap vDSO");
 
     // Also forbidden if done from a parent VMAR.
@@ -127,25 +127,25 @@ bool vdso_map_change_test() {
     ASSERT_EQ(scratch.root_vmar().get_info(MX_INFO_VMAR, &root_vmar_info,
                                            sizeof(root_vmar_info),
                                            nullptr, nullptr),
-              NO_ERROR, "mx_object_get_info on root VMAR");
+              MX_OK, "mx_object_get_info on root VMAR");
     EXPECT_EQ(scratch.root_vmar().
               map(scratch.vdso_base() - root_vmar_info.base, vmo,
                   0, scratch.vdso_total_size(),
                   MX_VM_FLAG_PERM_READ | MX_VM_FLAG_SPECIFIC_OVERWRITE,
                   &addr),
-              ERR_ACCESS_DENIED, "mx_vmar_map to overmap vDSO from root");
+              MX_ERR_ACCESS_DENIED, "mx_vmar_map to overmap vDSO from root");
     EXPECT_EQ(addr, 0, "mx_vmar_map to overmap vDSO from root");
 
     // Explicit unmapping covering the vDSO code region is forbidden.
     EXPECT_EQ(scratch.root_vmar().unmap(scratch.vdso_base(),
                                         scratch.vdso_total_size()),
-              ERR_ACCESS_DENIED, "mx_vmar_unmap to unmap vDSO");
+              MX_ERR_ACCESS_DENIED, "mx_vmar_unmap to unmap vDSO");
 
     // Implicit unmapping by destroying a containing VMAR is forbidden.
     EXPECT_EQ(vdso_vmar.destroy(),
-              ERR_ACCESS_DENIED, "mx_vmar_destroy to unmap vDSO");
+              MX_ERR_ACCESS_DENIED, "mx_vmar_destroy to unmap vDSO");
     EXPECT_EQ(scratch.root_vmar().destroy(),
-              ERR_ACCESS_DENIED, "mx_vmar_destroy on root to unmap vDSO");
+              MX_ERR_ACCESS_DENIED, "mx_vmar_destroy on root to unmap vDSO");
 
     END_TEST;
 }
@@ -155,7 +155,7 @@ bool vdso_map_code_wrong_test() {
 
     ScratchPad scratch(__func__);
 
-    ASSERT_EQ(scratch.compute_vdso_sizes(), NO_ERROR,
+    ASSERT_EQ(scratch.compute_vdso_sizes(), MX_OK,
               "cannot read vDSO program headers");
 
     // Try to map the first page, which is not the code, as executable.
@@ -163,7 +163,7 @@ bool vdso_map_code_wrong_test() {
     EXPECT_EQ(scratch.root_vmar().
               map(0, vdso_vmo, 0, PAGE_SIZE,
                   MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, &addr),
-              ERR_ACCESS_DENIED, "executable mapping of wrong part of vDSO");
+              MX_ERR_ACCESS_DENIED, "executable mapping of wrong part of vDSO");
 
     // Try to map only part of the code, not the whole code segment.
     ASSERT_GE(scratch.vdso_code_size(), PAGE_SIZE, "vDSO code < page??");
@@ -172,7 +172,7 @@ bool vdso_map_code_wrong_test() {
         EXPECT_EQ(scratch.root_vmar().
                   map(0, vdso_vmo, scratch.vdso_code_offset(), PAGE_SIZE,
                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, &addr),
-                  ERR_ACCESS_DENIED,
+                  MX_ERR_ACCESS_DENIED,
                   "executable mapping of subset of vDSO code");
     }
 

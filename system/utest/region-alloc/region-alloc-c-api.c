@@ -15,12 +15,12 @@ static bool ralloc_pools_c_api_test(void) {
     // Require that this succeeds, we will not be able to run the tests without
     // it.
     ralloc_pool_t* pool;
-    ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+    ASSERT_EQ(MX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
     ASSERT_NONNULL(pool, "");
 
     // Create an allocator.
     ralloc_allocator_t* alloc;
-    ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+    ASSERT_EQ(MX_OK, ralloc_create_allocator(&alloc), "");
     ASSERT_NONNULL(alloc, "");
 
     {
@@ -29,15 +29,15 @@ static bool ralloc_pools_c_api_test(void) {
         const ralloc_region_t tmp = { .base = 0u, .size = 1u };
         const ralloc_region_t* out;
 
-        EXPECT_EQ(ERR_BAD_STATE, ralloc_add_region(alloc, &tmp, false), "");
-        EXPECT_EQ(ERR_BAD_STATE, ralloc_get_sized_region_ex(alloc, 1u, 1u, &out), "");
-        EXPECT_EQ(ERR_BAD_STATE, ralloc_get_specific_region_ex(alloc, &tmp, &out), "");
+        EXPECT_EQ(MX_ERR_BAD_STATE, ralloc_add_region(alloc, &tmp, false), "");
+        EXPECT_EQ(MX_ERR_BAD_STATE, ralloc_get_sized_region_ex(alloc, 1u, 1u, &out), "");
+        EXPECT_EQ(MX_ERR_BAD_STATE, ralloc_get_specific_region_ex(alloc, &tmp, &out), "");
         EXPECT_NULL(ralloc_get_sized_region(alloc, 1u, 1u), "");
         EXPECT_NULL(ralloc_get_specific_region(alloc, &tmp), "");
     }
 
     // Assign our pool to our allocator, but hold onto the pool for now.
-    EXPECT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+    EXPECT_EQ(MX_OK, ralloc_set_region_pool(alloc, pool), "");
 
     // Release our pool reference.  The allocator should be holding onto its own
     // reference at this point.
@@ -46,14 +46,14 @@ static bool ralloc_pools_c_api_test(void) {
 
     // Add some regions to our allocator.
     for (size_t i = 0; i < countof(GOOD_REGIONS); ++i)
-        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &GOOD_REGIONS[i], false), "");
+        EXPECT_EQ(MX_OK, ralloc_add_region(alloc, &GOOD_REGIONS[i], false), "");
 
     // Make a new pool and try to assign it to the allocator.  This should fail
     // because the allocator is currently using resources from its currently
     // assigned pool.
-    ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+    ASSERT_EQ(MX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
     ASSERT_NONNULL(pool, "");
-    EXPECT_EQ(ERR_BAD_STATE, ralloc_set_region_pool(alloc, pool), "");
+    EXPECT_EQ(MX_ERR_BAD_STATE, ralloc_set_region_pool(alloc, pool), "");
 
     // Add a bunch of adjacent regions to our pool.  Try to add so many
     // that we would normally run out of bookkeeping space.  We should not
@@ -63,7 +63,7 @@ static bool ralloc_pools_c_api_test(void) {
         ralloc_region_t tmp = { .base = GOOD_MERGE_REGION_BASE,
                                      .size = GOOD_MERGE_REGION_SIZE };
         for (size_t i = 0; i < OOM_RANGE_LIMIT; ++i) {
-            ASSERT_EQ(NO_ERROR, ralloc_add_region(alloc, &tmp, false), "");
+            ASSERT_EQ(MX_OK, ralloc_add_region(alloc, &tmp, false), "");
             tmp.base += tmp.size;
         }
     }
@@ -71,7 +71,7 @@ static bool ralloc_pools_c_api_test(void) {
     // Attempt (and fail) to add some bad regions (regions which overlap,
     // regions which wrap the address space)
     for (size_t i = 0; i < countof(BAD_REGIONS); ++i)
-        EXPECT_EQ(ERR_INVALID_ARGS, ralloc_add_region(alloc, &BAD_REGIONS[i], false), "");
+        EXPECT_EQ(MX_ERR_INVALID_ARGS, ralloc_add_region(alloc, &BAD_REGIONS[i], false), "");
 
     // Force the region bookkeeping pool to run out of memory by adding more and
     // more regions until we eventuall run out of room.  Make sure that the
@@ -85,8 +85,8 @@ static bool ralloc_pools_c_api_test(void) {
             mx_status_t res;
 
             res = ralloc_add_region(alloc, &tmp, false);
-            if (res != NO_ERROR) {
-                EXPECT_EQ(ERR_NO_MEMORY, res, "");
+            if (res != MX_OK) {
+                EXPECT_EQ(MX_ERR_NO_MEMORY, res, "");
                 break;
             }
 
@@ -102,7 +102,7 @@ static bool ralloc_pools_c_api_test(void) {
 
     // Now assign the second pool to the allocator.  Now that the allocator is
     // no longer using any resources, this should succeed.
-    EXPECT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+    EXPECT_EQ(MX_OK, ralloc_set_region_pool(alloc, pool), "");
 
     // Release our pool reference.
     ralloc_release_pool(pool);
@@ -120,13 +120,13 @@ static bool ralloc_by_size_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(MX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
-        ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+        ASSERT_EQ(MX_OK, ralloc_create_allocator(&alloc), "");
         ASSERT_NONNULL(alloc, "");
-        ASSERT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+        ASSERT_EQ(MX_OK, ralloc_set_region_pool(alloc, pool), "");
 
         // Release our pool reference.  The allocator should be holding onto its own
         // reference at this point.
@@ -134,7 +134,7 @@ static bool ralloc_by_size_c_api_test(void) {
     }
 
     for (size_t i = 0; i < countof(ALLOC_BY_SIZE_REGIONS); ++i)
-        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i], false), "");
+        EXPECT_EQ(MX_OK, ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i], false), "");
 
     // Run the alloc by size tests.  Hold onto the regions it allocates so they
     // can be cleaned up properly when the test finishes.
@@ -154,7 +154,7 @@ static bool ralloc_by_size_c_api_test(void) {
         // If the allocation claimed to succeed, we should have gotten
         // back a non-null region.  Otherwise, we should have gotten a
         // null region back.
-        if (res == NO_ERROR) {
+        if (res == MX_OK) {
             ASSERT_NONNULL(regions[i], "");
         } else {
             EXPECT_NULL(regions[i], "");
@@ -163,7 +163,7 @@ static bool ralloc_by_size_c_api_test(void) {
         // If the allocation succeeded, and we expected it to succeed,
         // the allocation should have come from the test region we
         // expect and be aligned in the way we asked.
-        if ((res == NO_ERROR) && (TEST->res == NO_ERROR)) {
+        if ((res == MX_OK) && (TEST->res == MX_OK)) {
             ASSERT_LT(TEST->region, countof(ALLOC_BY_SIZE_TESTS), "");
             EXPECT_TRUE(region_contains_region(ALLOC_BY_SIZE_REGIONS + TEST->region,
                                                regions[i]), "");
@@ -190,13 +190,13 @@ static bool ralloc_specific_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(MX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
-        ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+        ASSERT_EQ(MX_OK, ralloc_create_allocator(&alloc), "");
         ASSERT_NONNULL(alloc, "");
-        ASSERT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+        ASSERT_EQ(MX_OK, ralloc_set_region_pool(alloc, pool), "");
 
         // Release our pool reference.  The allocator should be holding onto its own
         // reference at this point.
@@ -204,7 +204,7 @@ static bool ralloc_specific_c_api_test(void) {
     }
 
     for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i)
-        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], false), "");
+        EXPECT_EQ(MX_OK, ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], false), "");
 
     // Run the alloc by size tests.  Hold onto the regions it allocates so they
     // can be cleaned up properly when the test finishes.
@@ -220,7 +220,7 @@ static bool ralloc_specific_c_api_test(void) {
 
         // If the allocation claimed to succeed, we should have gotten back a
         // non-null region which exactly matches our requested region.
-        if (res == NO_ERROR) {
+        if (res == MX_OK) {
             ASSERT_NONNULL(regions[i], "");
             EXPECT_EQ(TEST->req.base, regions[i]->base, "");
             EXPECT_EQ(TEST->req.size, regions[i]->size, "");
@@ -247,13 +247,13 @@ static bool ralloc_add_overlap_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(MX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
-        ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+        ASSERT_EQ(MX_OK, ralloc_create_allocator(&alloc), "");
         ASSERT_NONNULL(alloc, "");
-        ASSERT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+        ASSERT_EQ(MX_OK, ralloc_set_region_pool(alloc, pool), "");
 
         // Release our pool reference.  The allocator should be holding onto its own
         // reference at this point.
@@ -283,13 +283,13 @@ static bool ralloc_subtract_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(MX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
-        ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+        ASSERT_EQ(MX_OK, ralloc_create_allocator(&alloc), "");
         ASSERT_NONNULL(alloc, "");
-        ASSERT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+        ASSERT_EQ(MX_OK, ralloc_set_region_pool(alloc, pool), "");
 
         // Release our pool reference.  The allocator should be holding onto its own
         // reference at this point.
@@ -306,7 +306,7 @@ static bool ralloc_subtract_c_api_test(void) {
         else
             res = ralloc_sub_region(alloc, &TEST->reg, TEST->incomplete);
 
-        EXPECT_EQ(TEST->res ? NO_ERROR : ERR_INVALID_ARGS, res, "");
+        EXPECT_EQ(TEST->res ? MX_OK : MX_ERR_INVALID_ARGS, res, "");
         EXPECT_EQ(TEST->cnt, ralloc_get_available_region_count(alloc), "");
     }
 

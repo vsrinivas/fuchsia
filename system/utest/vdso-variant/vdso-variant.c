@@ -22,7 +22,7 @@ int main(void) {
     mx_handle_t vdso_vmo;
     mx_status_t status = mxio_get_exact_vmo(fd, &vdso_vmo);
     close(fd);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("mxio_get_exact_vmo(%d): %s\n", fd, mx_status_get_string(status));
         return status;
     }
@@ -37,21 +37,21 @@ int main(void) {
     mx_handle_t proc;
     const char* errmsg;
     status = launchpad_go(lp, &proc, &errmsg);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("launchpad_go: %s\n", errmsg);
         return status;
     }
 
     status = mx_object_wait_one(proc, MX_PROCESS_SIGNALED,
                                 MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("mx_object_wait_one: %s\n", mx_status_get_string(status));
         return status;
     }
     mx_info_process_t info;
     status = mx_object_get_info(proc, MX_INFO_PROCESS, &info, sizeof(info),
                                 NULL, NULL);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("mx_object_get_info: %s\n", mx_status_get_string(status));
         return status;
     }

@@ -14,7 +14,7 @@ bool cprng_test_draw_buf_too_large(void) {
     BEGIN_TEST;
     size_t sz;
     mx_status_t status = mx_cprng_draw(buf, sizeof(buf), &sz);
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "");
+    EXPECT_EQ(status, MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -23,7 +23,7 @@ bool cprng_test_draw_bad_buf(void) {
     BEGIN_TEST;
     size_t sz;
     mx_status_t status = mx_cprng_draw((void*)4, sizeof(buf), &sz);
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "");
+    EXPECT_EQ(status, MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -32,7 +32,7 @@ bool cprng_test_draw_success(void) {
     BEGIN_TEST;
     size_t sz;
     mx_status_t status = mx_cprng_draw(buf, sizeof(buf), &sz);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
     EXPECT_EQ(sz, sizeof(buf), "");
 
     int num_zeros = 0;
@@ -51,7 +51,7 @@ bool cprng_test_add_entropy_bad_buf(void) {
     uint8_t buf[MX_CPRNG_ADD_ENTROPY_MAX_LEN];
     BEGIN_TEST;
     mx_status_t status = mx_cprng_add_entropy((void*)4, sizeof(buf));
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "");
+    EXPECT_EQ(status, MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -59,7 +59,7 @@ bool cprng_test_add_entropy_buf_too_large(void) {
     uint8_t buf[MX_CPRNG_ADD_ENTROPY_MAX_LEN + 1];
     BEGIN_TEST;
     mx_status_t status = mx_cprng_add_entropy(buf, sizeof(buf));
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "");
+    EXPECT_EQ(status, MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 

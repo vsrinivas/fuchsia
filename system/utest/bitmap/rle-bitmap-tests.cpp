@@ -28,7 +28,7 @@ static bool SingleBit(void) {
     RleBitmap bitmap;
     EXPECT_FALSE(bitmap.Get(2, 3), "get bit before setting");
 
-    ASSERT_EQ(bitmap.Set(2, 3), NO_ERROR, "set bit");
+    ASSERT_EQ(bitmap.Set(2, 3), MX_OK, "set bit");
     EXPECT_TRUE(bitmap.Get(2, 3), "get bit after setting");
 
     size_t count = 0;
@@ -40,7 +40,7 @@ static bool SingleBit(void) {
     EXPECT_EQ(count, 1U, "bitmap has single range");
     EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
-    ASSERT_EQ(bitmap.Clear(2, 3), NO_ERROR, "clear bit");
+    ASSERT_EQ(bitmap.Clear(2, 3), MX_OK, "clear bit");
     EXPECT_FALSE(bitmap.Get(2, 3), "get bit after clearing");
 
     END_TEST;
@@ -51,10 +51,10 @@ static bool SetTwice(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
+    ASSERT_EQ(bitmap.SetOne(2), MX_OK, "set bit");
     EXPECT_TRUE(bitmap.GetOne(2), "get bit after setting");
 
-    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit again");
+    ASSERT_EQ(bitmap.SetOne(2), MX_OK, "set bit again");
     EXPECT_TRUE(bitmap.GetOne(2), "get bit after setting again");
 
     size_t count = 0;
@@ -74,12 +74,12 @@ static bool ClearTwice(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
+    ASSERT_EQ(bitmap.SetOne(2), MX_OK, "set bit");
 
-    ASSERT_EQ(bitmap.ClearOne(2), NO_ERROR, "clear bit");
+    ASSERT_EQ(bitmap.ClearOne(2), MX_OK, "clear bit");
     EXPECT_FALSE(bitmap.GetOne(2), "get bit after clearing");
 
-    ASSERT_EQ(bitmap.ClearOne(2), NO_ERROR, "clear bit again");
+    ASSERT_EQ(bitmap.ClearOne(2), MX_OK, "clear bit again");
     EXPECT_FALSE(bitmap.GetOne(2), "get bit after clearing again");
 
     for (__UNUSED auto& range : bitmap) {
@@ -99,7 +99,7 @@ static bool GetReturnArg(void) {
     EXPECT_FALSE(bitmap.Get(2, 3, &first_unset), "get bit with nonnull");
     EXPECT_EQ(first_unset, 2U, "check returned arg");
 
-    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
+    ASSERT_EQ(bitmap.SetOne(2), MX_OK, "set bit");
     EXPECT_TRUE(bitmap.Get(2, 3, &first_unset), "get bit after setting");
     EXPECT_EQ(first_unset, 3U, "check returned arg");
 
@@ -107,7 +107,7 @@ static bool GetReturnArg(void) {
     EXPECT_FALSE(bitmap.Get(2, 4, &first_unset), "get larger range after setting");
     EXPECT_EQ(first_unset, 3U, "check returned arg");
 
-    ASSERT_EQ(bitmap.Set(3, 4), NO_ERROR, "set another bit");
+    ASSERT_EQ(bitmap.Set(3, 4), MX_OK, "set another bit");
     EXPECT_FALSE(bitmap.Get(2, 5, &first_unset), "get larger range after setting another");
     EXPECT_EQ(first_unset, 4U, "check returned arg");
 
@@ -119,7 +119,7 @@ static bool SetRange(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
+    ASSERT_EQ(bitmap.Set(2, 100), MX_OK, "set range");
 
     size_t first_unset = 0;
     EXPECT_TRUE(bitmap.Get(2, 3, &first_unset), "get first bit in range");
@@ -148,7 +148,7 @@ static bool ClearAll(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
+    ASSERT_EQ(bitmap.Set(2, 100), MX_OK, "set range");
 
     bitmap.ClearAll();
 
@@ -156,7 +156,7 @@ static bool ClearAll(void) {
         EXPECT_FALSE(true, "iterating on empty set");
     }
 
-    ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
+    ASSERT_EQ(bitmap.Set(2, 100), MX_OK, "set range");
     for (auto& range : bitmap) {
         EXPECT_EQ(range.bitoff, 2U, "bitoff");
         EXPECT_EQ(range.bitlen, 100U - 2U, "bitlen");
@@ -170,8 +170,8 @@ static bool ClearSubrange(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
-    ASSERT_EQ(bitmap.Clear(50, 80), NO_ERROR, "clear range");
+    ASSERT_EQ(bitmap.Set(2, 100), MX_OK, "set range");
+    ASSERT_EQ(bitmap.Clear(50, 80), MX_OK, "clear range");
 
     size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(2, 100, &first_unset), "get whole original range");
@@ -212,7 +212,7 @@ static bool MergeRanges(void) {
     constexpr size_t kMaxVal = 100;
 
     for (size_t i = 0; i < kMaxVal; i += 2) {
-        ASSERT_EQ(bitmap.SetOne(i), NO_ERROR, "setting even bits");
+        ASSERT_EQ(bitmap.SetOne(i), MX_OK, "setting even bits");
     }
 
     size_t count = 0;
@@ -224,7 +224,7 @@ static bool MergeRanges(void) {
     EXPECT_EQ(count, kMaxVal / 2, "check range count");
 
     for (size_t i = 1; i < kMaxVal; i += 4) {
-        ASSERT_EQ(bitmap.SetOne(i), NO_ERROR, "setting congruent 1 mod 4 bits");
+        ASSERT_EQ(bitmap.SetOne(i), MX_OK, "setting congruent 1 mod 4 bits");
     }
 
     count = 0;
@@ -245,10 +245,10 @@ static bool SplitRanges(void) {
     RleBitmap bitmap;
 
     constexpr size_t kMaxVal = 100;
-    ASSERT_EQ(bitmap.Set(0, kMaxVal), NO_ERROR, "setting all bits");
+    ASSERT_EQ(bitmap.Set(0, kMaxVal), MX_OK, "setting all bits");
 
     for (size_t i = 1; i < kMaxVal; i += 4) {
-        ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing congruent 1 mod 4 bits");
+        ASSERT_EQ(bitmap.ClearOne(i), MX_OK, "clearing congruent 1 mod 4 bits");
     }
 
     size_t count = 0;
@@ -268,7 +268,7 @@ static bool SplitRanges(void) {
     EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     for (size_t i = 0; i < kMaxVal; i += 2) {
-        ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing even bits");
+        ASSERT_EQ(bitmap.ClearOne(i), MX_OK, "clearing even bits");
     }
 
     count = 0;
@@ -288,13 +288,13 @@ static bool BoundaryArguments(void) {
 
     RleBitmap bitmap;
 
-    EXPECT_EQ(bitmap.Set(0, 0), NO_ERROR, "range contains no bits");
-    EXPECT_EQ(bitmap.Set(5, 4), ERR_INVALID_ARGS, "max is less than off");
-    EXPECT_EQ(bitmap.Set(5, 5), NO_ERROR, "range contains no bits");
+    EXPECT_EQ(bitmap.Set(0, 0), MX_OK, "range contains no bits");
+    EXPECT_EQ(bitmap.Set(5, 4), MX_ERR_INVALID_ARGS, "max is less than off");
+    EXPECT_EQ(bitmap.Set(5, 5), MX_OK, "range contains no bits");
 
-    EXPECT_EQ(bitmap.Clear(0, 0), NO_ERROR, "range contains no bits");
-    EXPECT_EQ(bitmap.Clear(5, 4), ERR_INVALID_ARGS, "max is less than off");
-    EXPECT_EQ(bitmap.Clear(5, 5), NO_ERROR, "range contains no bits");
+    EXPECT_EQ(bitmap.Clear(0, 0), MX_OK, "range contains no bits");
+    EXPECT_EQ(bitmap.Clear(5, 4), MX_ERR_INVALID_ARGS, "max is less than off");
+    EXPECT_EQ(bitmap.Clear(5, 5), MX_OK, "range contains no bits");
 
     EXPECT_TRUE(bitmap.Get(0, 0), "range contains no bits, so all are true");
     EXPECT_TRUE(bitmap.Get(5, 4), "range contains no bits, so all are true");
@@ -308,24 +308,24 @@ static bool NoAlloc(void) {
 
     RleBitmap bitmap;
 
-    EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, nullptr), ERR_INVALID_ARGS, "set bits with nullptr freelist");
-    EXPECT_EQ(bitmap.ClearNoAlloc(0, 65536, nullptr), ERR_INVALID_ARGS, "clear bits with nullptr freelist");
+    EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, nullptr), MX_ERR_INVALID_ARGS, "set bits with nullptr freelist");
+    EXPECT_EQ(bitmap.ClearNoAlloc(0, 65536, nullptr), MX_ERR_INVALID_ARGS, "clear bits with nullptr freelist");
 
     RleBitmap::FreeList free_list;
-    EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), ERR_NO_MEMORY, "set bits with empty freelist");
+    EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), MX_ERR_NO_MEMORY, "set bits with empty freelist");
 
     AllocChecker ac;
     free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
-    EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), NO_ERROR, "set bits");
+    EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), MX_OK, "set bits");
     EXPECT_TRUE(bitmap.Get(0, 65536), "get bit after setting");
     EXPECT_EQ(free_list.size_slow(), 0U, "free list empty after alloc");
 
-    EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), ERR_NO_MEMORY, "clear bits with empty freelist and alloc needed");
+    EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), MX_ERR_NO_MEMORY, "clear bits with empty freelist and alloc needed");
 
     free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
-    EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), NO_ERROR, "clear bits");
+    EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), MX_OK, "clear bits");
     size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(0, 65536, &first_unset), "get bit after clearing");
     EXPECT_EQ(first_unset, 1U, "check first_unset");
@@ -333,10 +333,10 @@ static bool NoAlloc(void) {
 
     free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
-    EXPECT_EQ(bitmap.SetNoAlloc(1, 65535, &free_list), NO_ERROR, "add range back in");
+    EXPECT_EQ(bitmap.SetNoAlloc(1, 65535, &free_list), MX_OK, "add range back in");
     EXPECT_EQ(free_list.size_slow(), 2U, "free list has two entries after starting with one and merging two existing ranges");
 
-    EXPECT_EQ(bitmap.ClearNoAlloc(0, 65536, &free_list), NO_ERROR, "remove everything we allocated");
+    EXPECT_EQ(bitmap.ClearNoAlloc(0, 65536, &free_list), MX_OK, "remove everything we allocated");
     EXPECT_EQ(free_list.size_slow(), 3U, "free list has as many entries as we allocated");
 
     END_TEST;
@@ -346,8 +346,8 @@ static bool SetOutOfOrder(void) {
     BEGIN_TEST;
 
     RleBitmap bitmap;
-    EXPECT_EQ(bitmap.Set(0x64, 0x65), NO_ERROR, "setting later");
-    EXPECT_EQ(bitmap.Set(0x60, 0x61), NO_ERROR, "setting earlier");
+    EXPECT_EQ(bitmap.Set(0x64, 0x65), MX_OK, "setting later");
+    EXPECT_EQ(bitmap.Set(0x60, 0x61), MX_OK, "setting earlier");
 
     EXPECT_TRUE(bitmap.Get(0x64, 0x65), "getting first set");
     EXPECT_TRUE(bitmap.Get(0x60, 0x61), "getting second set");

@@ -34,7 +34,7 @@ bool DigestStrings(void) {
     mx_status_t rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
     char buf[(Digest::kLength * 2) + 1];
     rc = actual.ToString(buf, sizeof(buf));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     ASSERT_EQ(strncmp(kZeroDigest, buf, sizeof(buf)), 0, __FUNCTION__);
     END_TEST;
 }
@@ -43,7 +43,7 @@ bool DigestZero(void) {
     BEGIN_TEST;
     Digest actual, expected;
     mx_status_t rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     actual.Hash(nullptr, 0);
     ASSERT_TRUE(actual == expected, __FUNCTION__);
     END_TEST;
@@ -54,12 +54,12 @@ bool DigestSelf(void) {
     Digest actual, expected;
     mx_status_t rc =
         expected.Parse(kDoubleZeroDigest, strlen(kDoubleZeroDigest));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     uint8_t buf[Digest::kLength];
     rc = actual.CopyTo(buf, sizeof(buf));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     actual.Hash(buf, Digest::kLength);
     ASSERT_TRUE(actual == expected, __FUNCTION__);
     END_TEST;
@@ -85,20 +85,20 @@ bool DigestCWrappers(void) {
     BEGIN_TEST;
     uint8_t buf[Digest::kLength];
     mx_status_t rc = merkle_digest_hash(nullptr, 0, buf, sizeof(buf) - 1);
-    ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, "Small buffer should be rejected");
+    ASSERT_EQ(rc, MX_ERR_BUFFER_TOO_SMALL, "Small buffer should be rejected");
     rc = merkle_digest_hash(nullptr, 0, buf, sizeof(buf));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
     merkle_digest_t* digest = nullptr;
     rc = merkle_digest_init(&digest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     expected.Hash(buf, sizeof(buf));
     merkle_digest_update(digest, buf, sizeof(buf));
     rc = merkle_digest_final(digest, buf, sizeof(buf));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
     END_TEST;
 }
@@ -107,9 +107,9 @@ bool DigestEquality(void) {
     BEGIN_TEST;
     Digest actual, expected;
     mx_status_t rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     rc = actual.Parse(kZeroDigest, strlen(kZeroDigest));
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     ASSERT_FALSE(actual == nullptr, "Does not equal NULL");
     ASSERT_TRUE(actual == actual, "Equals self");
     const uint8_t* actual_bytes = actual.AcquireBytes();

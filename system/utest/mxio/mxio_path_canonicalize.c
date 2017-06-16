@@ -16,7 +16,7 @@
         const char out_gold[] = (p2);                                         \
         size_t outlen;                                                        \
         bool is_dir;                                                          \
-        EXPECT_EQ(__mxio_cleanpath(in, out, &outlen, &is_dir), NO_ERROR, ""); \
+        EXPECT_EQ(__mxio_cleanpath(in, out, &outlen, &is_dir), MX_OK, ""); \
         EXPECT_EQ(is_dir, dir, "");                                           \
         char msg[PATH_MAX * 3 + 128];                                         \
         sprintf(msg, "[%s] --> [%s], expected [%s]", in, out, out_gold);      \

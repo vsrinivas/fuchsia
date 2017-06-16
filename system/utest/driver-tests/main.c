@@ -62,7 +62,7 @@ static void do_one_test(int tfd, const char* drv_libname, mx_handle_t output, te
 
     mx_handle_t h;
     mx_status_t status = mx_handle_duplicate(output, MX_RIGHT_SAME_RIGHTS, &h);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("driver-tests: error %d duplicating output socket\n", status);
         report->n_tests = 1;
         report->n_failed = 1;
@@ -89,12 +89,12 @@ static int output_thread(void* arg) {
     char buf[1024];
     for (;;) {
         mx_status_t status = mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED, MX_TIME_INFINITE, NULL);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             break;
         }
         size_t bytes = 0;
         status = mx_socket_read(h, 0u, buf, sizeof(buf), &bytes);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             break;
         }
         size_t written = 0;
@@ -112,7 +112,7 @@ static int output_thread(void* arg) {
 int main(int argc, char** argv) {
     mx_handle_t socket[2];
     mx_status_t status = mx_socket_create(0u, socket, socket + 1);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("driver-tests: error creating socket\n");
         return -1;
     }

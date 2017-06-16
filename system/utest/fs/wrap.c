@@ -28,7 +28,7 @@
 
 int status_to_errno(mx_status_t status) {
     switch (status) {
-    case NO_ERROR:
+    case MX_OK:
         return 0;
     default:
         return EIO;

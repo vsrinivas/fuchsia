@@ -27,12 +27,12 @@ bool vmo_create_test() {
     // allocate a bunch of vmos then free them
     for (size_t i = 0; i < countof(vmo); i++) {
         status = mx_vmo_create(i * PAGE_SIZE, 0, &vmo[i]);
-        EXPECT_EQ(NO_ERROR, status, "vm_object_create");
+        EXPECT_EQ(MX_OK, status, "vm_object_create");
     }
 
     for (size_t i = 0; i < countof(vmo); i++) {
         status = mx_handle_close(vmo[i]);
-        EXPECT_EQ(NO_ERROR, status, "handle_close");
+        EXPECT_EQ(MX_OK, status, "handle_close");
     }
 
     END_TEST;
@@ -48,11 +48,11 @@ bool vmo_read_write_test() {
     // allocate an object and read/write from it
     const size_t len = PAGE_SIZE * 4;
     status = mx_vmo_create(len, 0, &vmo);
-    EXPECT_EQ(status, NO_ERROR, "vm_object_create");
+    EXPECT_EQ(status, MX_OK, "vm_object_create");
 
     char buf[len];
     status = mx_vmo_read(vmo, buf, 0, sizeof(buf), &size);
-    EXPECT_EQ(status, NO_ERROR, "vm_object_read");
+    EXPECT_EQ(status, MX_OK, "vm_object_read");
     EXPECT_EQ(sizeof(buf), size, "vm_object_read");
 
     // make sure it's full of zeros
@@ -67,25 +67,25 @@ bool vmo_read_write_test() {
 
     memset(buf, 0x99, sizeof(buf));
     status = mx_vmo_write(vmo, buf, 0, sizeof(buf), &size);
-    EXPECT_EQ(status, NO_ERROR, "vm_object_write");
+    EXPECT_EQ(status, MX_OK, "vm_object_write");
     EXPECT_EQ(sizeof(buf), size, "vm_object_write");
 
     // map it
     uintptr_t ptr;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
-    EXPECT_EQ(NO_ERROR, status, "vm_map");
+    EXPECT_EQ(MX_OK, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
 
     // check that it matches what we last wrote into it
     EXPECT_BYTES_EQ((uint8_t*)buf, (uint8_t*)ptr, sizeof(buf), "mapped buffer");
 
     status = mx_vmar_unmap(mx_vmar_root_self(), ptr, len);
-    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
 
     // close the handle
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     END_TEST;
 }
@@ -99,13 +99,13 @@ bool vmo_map_test() {
 
     // allocate a vmo
     status = mx_vmo_create(4 * PAGE_SIZE, 0, &vmo);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
+    EXPECT_EQ(MX_OK, status, "vm_object_create");
 
     // do a regular map
     ptr[0] = 0;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE,
                          MX_VM_FLAG_PERM_READ, &ptr[0]);
-    EXPECT_EQ(NO_ERROR, status, "map");
+    EXPECT_EQ(MX_OK, status, "map");
     EXPECT_NEQ(0u, ptr[0], "map address");
     //printf("mapped %#" PRIxPTR "\n", ptr[0]);
 
@@ -113,7 +113,7 @@ bool vmo_map_test() {
     ptr[2] = UINTPTR_MAX;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE,
                          MX_VM_FLAG_PERM_READ, &ptr[2]);
-    EXPECT_EQ(NO_ERROR, status, "map");
+    EXPECT_EQ(MX_OK, status, "map");
     EXPECT_NEQ(0u, ptr[2], "map address");
 
     // try to map something completely out of range fixed, should fail
@@ -121,16 +121,16 @@ bool vmo_map_test() {
     status = mx_vmar_map(mx_vmar_root_self(), UINTPTR_MAX,
                          vmo, 0, PAGE_SIZE,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_SPECIFIC, &map_addr);
-    EXPECT_EQ(ERR_INVALID_ARGS, status, "map");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "map");
 
     // cleanup
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     for (auto p: ptr) {
         if (p) {
             status = mx_vmar_unmap(mx_vmar_root_self(), p, PAGE_SIZE);
-            EXPECT_EQ(NO_ERROR, status, "unmap");
+            EXPECT_EQ(MX_OK, status, "unmap");
         }
     }
 
@@ -146,13 +146,13 @@ bool vmo_read_only_map_test() {
     // allocate an object and read/write from it
     const size_t len = PAGE_SIZE;
     status = mx_vmo_create(len, 0, &vmo);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
+    EXPECT_EQ(MX_OK, status, "vm_object_create");
 
     // map it
     uintptr_t ptr;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len,
                          MX_VM_FLAG_PERM_READ, &ptr);
-    EXPECT_EQ(NO_ERROR, status, "vm_map");
+    EXPECT_EQ(MX_OK, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
 
     size_t sz;
@@ -160,11 +160,11 @@ bool vmo_read_only_map_test() {
     EXPECT_LT(sstatus, 0, "write");
 
     status = mx_vmar_unmap(mx_vmar_root_self(), ptr, len);
-    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
 
     // close the handle
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     END_TEST;
 }
@@ -178,47 +178,47 @@ bool vmo_resize_test() {
     // allocate an object
     size_t len = PAGE_SIZE * 4;
     status = mx_vmo_create(len, 0, &vmo);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
+    EXPECT_EQ(MX_OK, status, "vm_object_create");
 
     // get the size that we set it to
     uint64_t size = 0x99999999;
     status = mx_vmo_get_size(vmo, &size);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_get_size");
+    EXPECT_EQ(MX_OK, status, "vm_object_get_size");
     EXPECT_EQ(len, size, "vm_object_get_size");
 
     // try to resize it
     len += PAGE_SIZE;
     status = mx_vmo_set_size(vmo, len);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_set_size");
+    EXPECT_EQ(MX_OK, status, "vm_object_set_size");
 
     // get the size again
     size = 0x99999999;
     status = mx_vmo_get_size(vmo, &size);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_get_size");
+    EXPECT_EQ(MX_OK, status, "vm_object_get_size");
     EXPECT_EQ(len, size, "vm_object_get_size");
 
     // try to resize it to a ludicrous size
     status = mx_vmo_set_size(vmo, UINT64_MAX);
-    EXPECT_EQ(ERR_OUT_OF_RANGE, status, "vm_object_set_size too big");
+    EXPECT_EQ(MX_ERR_OUT_OF_RANGE, status, "vm_object_set_size too big");
 
     // map it
     uintptr_t ptr;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len,
                          MX_VM_FLAG_PERM_READ, &ptr);
-    EXPECT_EQ(NO_ERROR, status, "vm_map");
+    EXPECT_EQ(MX_OK, status, "vm_map");
     EXPECT_NONNULL(ptr, "vm_map");
 
     // resize it with it mapped
     status = mx_vmo_set_size(vmo, size);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_set_size");
+    EXPECT_EQ(MX_OK, status, "vm_object_set_size");
 
     // unmap it
     status = mx_vmar_unmap(mx_vmar_root_self(), ptr, len);
-    EXPECT_EQ(NO_ERROR, status, "unmap");
+    EXPECT_EQ(MX_OK, status, "unmap");
 
     // close the handle
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     END_TEST;
 }
@@ -245,8 +245,8 @@ static mx_rights_t get_handle_rights(mx_handle_t h) {
     mx_info_handle_basic_t info;
     mx_status_t s = mx_object_get_info(h, MX_INFO_HANDLE_BASIC, &info,
                                        sizeof(info), nullptr, nullptr);
-    if (s != NO_ERROR) {
-        EXPECT_EQ(s, NO_ERROR, "");  // Poison the test
+    if (s != MX_OK) {
+        EXPECT_EQ(s, MX_OK, "");  // Poison the test
         return 0;
     }
     return info.rights;
@@ -264,7 +264,7 @@ bool vmo_rights_test() {
 
     // allocate an object
     status = mx_vmo_create(len, 0, &vmo);
-    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
+    EXPECT_EQ(MX_OK, status, "vm_object_create");
 
     // Check that the handle has at least the expected rights.
     // This list should match the list in docs/syscalls/vmo_create.md.
@@ -290,13 +290,13 @@ bool vmo_rights_test() {
     status = mx_vmo_read(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_read");
     status = mx_vmo_write(vmo2, buf, 0, 0, &r);
-    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_write");
+    EXPECT_EQ(MX_ERR_ACCESS_DENIED, status, "vmo_write");
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_WRITE, &vmo2);
     status = mx_vmo_read(vmo2, buf, 0, 0, &r);
-    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_read");
+    EXPECT_EQ(MX_ERR_ACCESS_DENIED, status, "vmo_read");
     status = mx_vmo_write(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_write");
     mx_handle_close(vmo2);
@@ -304,89 +304,89 @@ bool vmo_rights_test() {
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, 0, &vmo2);
     status = mx_vmo_read(vmo2, buf, 0, 0, &r);
-    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_read");
+    EXPECT_EQ(MX_ERR_ACCESS_DENIED, status, "vmo_read");
     status = mx_vmo_write(vmo2, buf, 0, 0, &r);
-    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_write");
+    EXPECT_EQ(MX_ERR_ACCESS_DENIED, status, "vmo_write");
     mx_handle_close(vmo2);
 
     // no permission map (should fail)
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len, 0, &ptr);
-    EXPECT_EQ(ERR_INVALID_ARGS, status, "map_noperms");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "map_noperms");
 
     // full perm test
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
 
     // try most of the permuations of mapping a vmo with various rights dropped
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_write")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_WRITE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     // test that we can get/set a property on it
     const char *set_name = "test vmo";
     status = mx_object_set_property(vmo, MX_PROP_NAME, set_name, sizeof(set_name));
-    EXPECT_EQ(NO_ERROR, status, "set_property");
+    EXPECT_EQ(MX_OK, status, "set_property");
     char get_name[MX_MAX_NAME_LEN];
     status = mx_object_get_property(vmo, MX_PROP_NAME, get_name, sizeof(get_name));
-    EXPECT_EQ(NO_ERROR, status, "get_property");
+    EXPECT_EQ(MX_OK, status, "get_property");
     EXPECT_STR_EQ(set_name, get_name, sizeof(set_name), "vmo name");
 
     // close the handle
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     END_TEST;
 }
@@ -405,16 +405,16 @@ bool vmo_lookup_test() {
 
     // do a lookup (this should fail becase the pages aren't committed)
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));
-    EXPECT_EQ(ERR_NO_MEMORY, status, "lookup on uncommitted vmo");
+    EXPECT_EQ(MX_ERR_NO_MEMORY, status, "lookup on uncommitted vmo");
 
     // commit the memory
     status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, 0, size, buf, sizeof(buf));
-    EXPECT_EQ(NO_ERROR, status, "committing memory");
+    EXPECT_EQ(MX_OK, status, "committing memory");
 
     // do a lookup (should succeed)
     memset(buf, 0, sizeof(buf));
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));
-    EXPECT_EQ(NO_ERROR, status, "lookup on committed vmo");
+    EXPECT_EQ(MX_OK, status, "lookup on committed vmo");
 
     for (auto addr: buf)
         EXPECT_NEQ(0u, addr, "looked up address");
@@ -422,7 +422,7 @@ bool vmo_lookup_test() {
     // do a lookup with an odd offset and an end pointer that ends up at an odd offset
     memset(buf, 0, sizeof(buf));
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 1, size - PAGE_SIZE, buf, sizeof(buf));
-    EXPECT_EQ(NO_ERROR, status, "lookup on committed vmo");
+    EXPECT_EQ(MX_OK, status, "lookup on committed vmo");
 
     for (auto addr: buf)
         EXPECT_NEQ(0u, addr, "looked up address");
@@ -431,19 +431,19 @@ bool vmo_lookup_test() {
 
     // do a lookup with no size
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, 0, buf, sizeof(buf));
-    EXPECT_EQ(ERR_INVALID_ARGS, status, "zero size on lookup");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "zero size on lookup");
 
     // do a lookup out of range
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, size + 1, 1, buf, sizeof(buf));
-    EXPECT_EQ(ERR_OUT_OF_RANGE, status, "out of range");
+    EXPECT_EQ(MX_ERR_OUT_OF_RANGE, status, "out of range");
 
     // do a lookup out of range
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size + 1, buf, sizeof(buf));
-    EXPECT_EQ(ERR_BUFFER_TOO_SMALL, status, "buffer too small");
+    EXPECT_EQ(MX_ERR_BUFFER_TOO_SMALL, status, "buffer too small");
 
     // close the handle
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     END_TEST;
 }
@@ -477,21 +477,21 @@ bool vmo_commit_test() {
     ptr = 0;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
                          MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr);
-    EXPECT_EQ(NO_ERROR, status, "map");
+    EXPECT_EQ(MX_OK, status, "map");
     EXPECT_NONNULL(ptr, "map address");
 
     // second mapping with an offset
     ptr2 = 0;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, PAGE_SIZE, size,
                          MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr2);
-    EXPECT_EQ(NO_ERROR, status, "map2");
+    EXPECT_EQ(MX_OK, status, "map2");
     EXPECT_NONNULL(ptr2, "map address2");
 
     // third mapping with a totally non-overlapping offset
     ptr3 = 0;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, size * 2, size,
                          MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr3);
-    EXPECT_EQ(NO_ERROR, status, "map3");
+    EXPECT_EQ(MX_OK, status, "map3");
     EXPECT_NONNULL(ptr3, "map address3");
 
     // write into it at offset PAGE_SIZE, read it back
@@ -523,15 +523,15 @@ bool vmo_commit_test() {
 
     // unmap our vmos
     status = mx_vmar_unmap(mx_vmar_root_self(), ptr, size);
-    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
     status = mx_vmar_unmap(mx_vmar_root_self(), ptr2, size);
-    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
     status = mx_vmar_unmap(mx_vmar_root_self(), ptr3, size);
-    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
 
     // close the handle
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 
     END_TEST;
 }
@@ -546,11 +546,11 @@ bool vmo_zero_page_test() {
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
 
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // make a few mappings of the vmo
     for (auto &p: ptr) {
-        EXPECT_EQ(NO_ERROR,
+        EXPECT_EQ(MX_OK,
                 mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &p),
                 "map");
         EXPECT_NONNULL(ptr, "map address");
@@ -582,7 +582,7 @@ bool vmo_zero_page_test() {
     uint32_t v = 100;
     size_t written;
     status = mx_vmo_write(vmo, &v, PAGE_SIZE, sizeof(v), &written);
-    EXPECT_EQ(NO_ERROR, status, "writing to vmo");
+    EXPECT_EQ(MX_OK, status, "writing to vmo");
 
     // expect it to read back the new value
     EXPECT_EQ(100, *val, "read 100 from former zero page");
@@ -593,21 +593,21 @@ bool vmo_zero_page_test() {
 
     // commit this range of the vmo via a commit call
     status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, PAGE_SIZE * 2, PAGE_SIZE, nullptr, 0);
-    EXPECT_EQ(NO_ERROR, status, "committing memory");
+    EXPECT_EQ(MX_OK, status, "committing memory");
 
     // write to the third page
     status = mx_vmo_write(vmo, &v, PAGE_SIZE * 2, sizeof(v), &written);
-    EXPECT_EQ(NO_ERROR, status, "writing to vmo");
+    EXPECT_EQ(MX_OK, status, "writing to vmo");
 
     // expect it to read back the new value
     EXPECT_EQ(100, *val, "read 100 from former zero page");
 
     // unmap
     for (auto p: ptr)
-        EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), p, size), "unmap");
+        EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), p, size), "unmap");
 
     // close the handle
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
 
     END_TEST;
 }
@@ -621,33 +621,33 @@ bool vmo_clone_test_1() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
-    EXPECT_EQ(NO_ERROR, mx_object_set_property(vmo, MX_PROP_NAME, "test1", 5), "mx_object_set_property");
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(MX_OK, mx_object_set_property(vmo, MX_PROP_NAME, "test1", 5), "mx_object_set_property");
 
     // clone it
     clone_vmo[0] = MX_HANDLE_INVALID;
-    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(MX_OK, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
     char name[MX_MAX_NAME_LEN];
-    EXPECT_EQ(NO_ERROR, mx_object_get_property(clone_vmo[0], MX_PROP_NAME, name, MX_MAX_NAME_LEN), "mx_object_get_property");
+    EXPECT_EQ(MX_OK, mx_object_get_property(clone_vmo[0], MX_PROP_NAME, name, MX_MAX_NAME_LEN), "mx_object_get_property");
     EXPECT_TRUE(!strcmp(name, "test1"), "get_name");
 
     // clone it a second time
     clone_vmo[1] = MX_HANDLE_INVALID;
-    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
+    EXPECT_EQ(MX_OK, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
     EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[1], "vm_clone_handle");
 
     // clone the clone
     clone_vmo[2] = MX_HANDLE_INVALID;
-    EXPECT_EQ(NO_ERROR, mx_vmo_clone(clone_vmo[1], MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
+    EXPECT_EQ(MX_OK, mx_vmo_clone(clone_vmo[1], MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
     EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[2], "vm_clone_handle");
 
     // close the original handle
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
 
     // close the clone handles
     for (auto h: clone_vmo)
-        EXPECT_EQ(NO_ERROR, mx_handle_close(h), "handle_close");
+        EXPECT_EQ(MX_OK, mx_handle_close(h), "handle_close");
 
     END_TEST;
 }
@@ -663,7 +663,7 @@ bool vmo_clone_test_2() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // fill the original with stuff
     for (size_t off = 0; off < size; off += sizeof(off)) {
@@ -672,7 +672,7 @@ bool vmo_clone_test_2() {
 
     // clone it
     clone_vmo[0] = MX_HANDLE_INVALID;
-    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(MX_OK, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
 
     // verify that the clone reads back as the same
@@ -692,7 +692,7 @@ bool vmo_clone_test_2() {
     mx_vmo_write(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled);
 
     // verify the clone was written to
-    EXPECT_EQ(NO_ERROR, mx_vmo_read(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled), "writing to clone");
+    EXPECT_EQ(MX_OK, mx_vmo_read(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled), "writing to clone");
 
     // verify it was written to
     EXPECT_EQ(99, val, "reading back from clone");
@@ -720,16 +720,16 @@ bool vmo_clone_test_2() {
     // write to the original in the part that is still visible to the clone
     val = 99;
     uint64_t offset = PAGE_SIZE * 2;
-    EXPECT_EQ(NO_ERROR, mx_vmo_write(vmo, &val, offset, sizeof(val), &bytes_handled), "writing to original");
-    EXPECT_EQ(NO_ERROR, mx_vmo_read(clone_vmo[0], &val, offset, sizeof(val), &bytes_handled), "reading back original from clone");
+    EXPECT_EQ(MX_OK, mx_vmo_write(vmo, &val, offset, sizeof(val), &bytes_handled), "writing to original");
+    EXPECT_EQ(MX_OK, mx_vmo_read(clone_vmo[0], &val, offset, sizeof(val), &bytes_handled), "reading back original from clone");
     EXPECT_EQ(99, val, "checking value");
 
     // close the clone handles
     for (auto h: clone_vmo)
-        EXPECT_EQ(NO_ERROR, mx_handle_close(h), "handle_close");
+        EXPECT_EQ(MX_OK, mx_handle_close(h), "handle_close");
 
     // close the original handle
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
 
     END_TEST;
 }
@@ -747,10 +747,10 @@ bool vmo_clone_test_3() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // map it
-    EXPECT_EQ(NO_ERROR,
+    EXPECT_EQ(MX_OK,
             mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr),
             "map");
     EXPECT_NONNULL(ptr, "map address");
@@ -758,9 +758,9 @@ bool vmo_clone_test_3() {
 
     // clone it and map that
     clone_vmo[0] = MX_HANDLE_INVALID;
-    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(MX_OK, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
-    EXPECT_EQ(NO_ERROR,
+    EXPECT_EQ(MX_OK,
             mx_vmar_map(mx_vmar_root_self(), 0, clone_vmo[0], 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &clone_ptr),
             "map");
     EXPECT_NONNULL(clone_ptr, "map address");
@@ -793,14 +793,14 @@ bool vmo_clone_test_3() {
     EXPECT_EQ(99, p[0], "read back from original");
 
     // close the original handle
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
 
     // close the clone handle
-    EXPECT_EQ(NO_ERROR, mx_handle_close(clone_vmo[0]), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(clone_vmo[0]), "handle_close");
 
     // unmap
-    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
+    EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
 
     END_TEST;
 }
@@ -813,10 +813,10 @@ bool vmo_cache_test() {
 
     // The objects returned by mx_vmo_create() are VmObjectPaged objects which
     // should not support these syscalls.
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "creation for cache_policy");
-    EXPECT_EQ(ERR_NOT_SUPPORTED, mx_vmo_set_cache_policy(vmo, MX_CACHE_POLICY_UNCACHED),
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "creation for cache_policy");
+    EXPECT_EQ(MX_ERR_NOT_SUPPORTED, mx_vmo_set_cache_policy(vmo, MX_CACHE_POLICY_UNCACHED),
               "attempt set cache");
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "close handle");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "close handle");
     END_TEST;
 }
 
@@ -824,18 +824,18 @@ bool vmo_decommit_misaligned_test() {
     BEGIN_TEST;
 
     mx_handle_t vmo;
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(PAGE_SIZE * 2, 0, &vmo), "creation for decommit test");
+    EXPECT_EQ(MX_OK, mx_vmo_create(PAGE_SIZE * 2, 0, &vmo), "creation for decommit test");
 
     mx_status_t status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
-    EXPECT_EQ(NO_ERROR, status, "decommitting uncommitted memory");
+    EXPECT_EQ(MX_OK, status, "decommitting uncommitted memory");
 
     status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, 0x10, 0x100, NULL, 0);
-    EXPECT_EQ(NO_ERROR, status, "committing memory");
+    EXPECT_EQ(MX_OK, status, "committing memory");
 
     status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
-    EXPECT_EQ(NO_ERROR, status, "decommitting memory");
+    EXPECT_EQ(MX_OK, status, "decommitting memory");
 
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "close handle");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "close handle");
     END_TEST;
 }
 
@@ -853,10 +853,10 @@ bool vmo_clone_test_4() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // map it
-    EXPECT_EQ(NO_ERROR,
+    EXPECT_EQ(MX_OK,
             mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr),
             "map");
     EXPECT_NONNULL(ptr, "map address");
@@ -868,14 +868,14 @@ bool vmo_clone_test_4() {
 
     // make sure that non page aligned clones do not work
     clone_vmo[0] = MX_HANDLE_INVALID;
-    EXPECT_EQ(ERR_INVALID_ARGS, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 1, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 1, size, &clone_vmo[0]), "vm_clone");
 
     // create a clone that extends beyond the parent by one page
     clone_vmo[0] = MX_HANDLE_INVALID;
-    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(MX_OK, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
 
     // map the clone
-    EXPECT_EQ(NO_ERROR,
+    EXPECT_EQ(MX_OK,
             mx_vmar_map(mx_vmar_root_self(), 0, clone_vmo[0], 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &clone_ptr),
             "map");
     EXPECT_NONNULL(clone_ptr, "map address");
@@ -898,7 +898,7 @@ bool vmo_clone_test_4() {
     }
 
     // resize the original
-    EXPECT_EQ(NO_ERROR, mx_vmo_set_size(vmo, size + PAGE_SIZE), "extend the vmo");
+    EXPECT_EQ(MX_OK, mx_vmo_set_size(vmo, size + PAGE_SIZE), "extend the vmo");
 
     // verify that the last page we have mapped still returns zeros
     for (size_t off = (size - PAGE_SIZE) / sizeof(off); off < size / sizeof(off); off++) {
@@ -910,16 +910,16 @@ bool vmo_clone_test_4() {
 
     // write to the new part of the original
     size_t val = 99;
-    EXPECT_EQ(NO_ERROR, mx_vmo_write(vmo, &val, size, sizeof(val), &handled_bytes), "writing to original after extending");
+    EXPECT_EQ(MX_OK, mx_vmo_write(vmo, &val, size, sizeof(val), &handled_bytes), "writing to original after extending");
 
     // verify that it is reflected in the clone
     EXPECT_EQ(99, cp[(size - PAGE_SIZE) / sizeof(*cp)], "modified newly exposed part of cow clone");
 
     // resize the original again, completely extending it beyond he clone
-    EXPECT_EQ(NO_ERROR, mx_vmo_set_size(vmo, size + PAGE_SIZE * 2), "extend the vmo");
+    EXPECT_EQ(MX_OK, mx_vmo_set_size(vmo, size + PAGE_SIZE * 2), "extend the vmo");
 
     // resize the original to zero
-    EXPECT_EQ(NO_ERROR, mx_vmo_set_size(vmo, 0), "truncate the vmo");
+    EXPECT_EQ(MX_OK, mx_vmo_set_size(vmo, 0), "truncate the vmo");
 
     // verify that the clone now reads completely zeros, since it never COWed
     for (size_t off = 0; off < size / sizeof(off); off++) {
@@ -930,10 +930,10 @@ bool vmo_clone_test_4() {
     }
 
     // close and unmap
-    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
-    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_EQ(NO_ERROR, mx_handle_close(clone_vmo[0]), "handle_close");
-    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_EQ(MX_OK, mx_handle_close(clone_vmo[0]), "handle_close");
+    EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
 
     END_TEST;
 }
@@ -952,45 +952,45 @@ bool vmo_clone_rights_test() {
 
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_EQ(mx_object_set_property(vmo, MX_PROP_NAME,
                                      kOldVmoName, sizeof(kOldVmoName)),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_EQ(get_handle_rights(vmo) & kOldVmoRights, kOldVmoRights, "");
 
     mx_handle_t reduced_rights_vmo;
     ASSERT_EQ(mx_handle_duplicate(vmo, kOldVmoRights, &reduced_rights_vmo),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_EQ(get_handle_rights(reduced_rights_vmo), kOldVmoRights, "");
 
     mx_handle_t clone;
     ASSERT_EQ(mx_vmo_clone(reduced_rights_vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                            0, PAGE_SIZE, &clone),
-              NO_ERROR, "");
+              MX_OK, "");
 
-    EXPECT_EQ(mx_handle_close(reduced_rights_vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(reduced_rights_vmo), MX_OK, "");
 
     ASSERT_EQ(mx_object_set_property(clone, MX_PROP_NAME,
                                      kNewVmoName, sizeof(kNewVmoName)),
-              NO_ERROR, "");
+              MX_OK, "");
 
     char oldname[MX_MAX_NAME_LEN] = "bad";
     EXPECT_EQ(mx_object_get_property(vmo, MX_PROP_NAME,
                                      oldname, sizeof(oldname)),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_STR_EQ(oldname, kOldVmoName, sizeof(kOldVmoName),
                   "original VMO name");
 
     char newname[MX_MAX_NAME_LEN] = "bad";
     EXPECT_EQ(mx_object_get_property(clone, MX_PROP_NAME,
                                      newname, sizeof(newname)),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_STR_EQ(newname, kNewVmoName, sizeof(kNewVmoName),
                   "clone VMO name");
 
-    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
     EXPECT_EQ(get_handle_rights(clone), kNewVmoRights, "");
-    EXPECT_EQ(mx_handle_close(clone), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(clone), MX_OK, "");
 
     END_TEST;
 }

@@ -31,7 +31,7 @@ static int handle_cmp(const void* left, const void* right) {
 static bool find_handle_value_aliases(const size_t window_size) {
     mx_handle_t event;
     mx_status_t s = mx_event_create(0, &event);
-    if (s != NO_ERROR) {
+    if (s != MX_OK) {
         FATALF("Can't create event: %s\n", mx_status_get_string(s));
     }
     mx_handle_t* handle_log =
@@ -44,7 +44,7 @@ static bool find_handle_value_aliases(const size_t window_size) {
         memset(handle_log, 0, window_size * sizeof(mx_handle_t));
         for (size_t i = 0; i < window_size; i++) {
             s = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS, &handle_log[i]);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 FATALF("[i == %zd] Can't duplicate event: %s\n",
                        i, mx_status_get_string(s));
             }
@@ -52,7 +52,7 @@ static bool find_handle_value_aliases(const size_t window_size) {
                 FATALF("[i == %zd] Got bad handle %d\n", i, handle_log[i]);
             }
             s = mx_handle_close(handle_log[i]);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 FATALF("[i == %zd] Can't close handle %d: %s\n",
                        i, handle_log[i], mx_status_get_string(s));
             }

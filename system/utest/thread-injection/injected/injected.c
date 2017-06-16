@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     // looking for.  When it sees this value arrive, the test succeeds.
     atomic_store(my_futex, MAGIC);
     mx_status_t status = mx_futex_wake(my_futex, -1);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         abort();
 
     // If we return, that will call exit and kill the whole process.

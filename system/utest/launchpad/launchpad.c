@@ -38,19 +38,19 @@ static bool launchpad_test(void)
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_handle_duplicate(mxio_job, MX_RIGHT_SAME_RIGHTS, &job_copy),
-              NO_ERROR, "mx_handle_duplicate failed");
+              MX_OK, "mx_handle_duplicate failed");
 
     mx_status_t status = launchpad_create(job_copy, test_inferior_child_name, &lp);
-    ASSERT_EQ(status, NO_ERROR, "launchpad_create");
+    ASSERT_EQ(status, MX_OK, "launchpad_create");
 
     status = launchpad_elf_load(lp, launchpad_vmo_from_file(program_path));
-    ASSERT_EQ(status, NO_ERROR, "launchpad_elf_load");
+    ASSERT_EQ(status, MX_OK, "launchpad_elf_load");
 
     mx_vaddr_t base, entry;
     status = launchpad_get_base_address(lp, &base);
-    ASSERT_EQ(status, NO_ERROR, "launchpad_get_base_address");
+    ASSERT_EQ(status, MX_OK, "launchpad_get_base_address");
     status = launchpad_get_entry_address(lp, &entry);
-    ASSERT_EQ(status, NO_ERROR, "launchpad_get_entry_address");
+    ASSERT_EQ(status, MX_OK, "launchpad_get_entry_address");
     ASSERT_GT(base, 0u, "base > 0");
 
     mx_handle_t dynld_vmo = launchpad_vmo_from_file(dynld_path);
@@ -58,7 +58,7 @@ static bool launchpad_test(void)
     elf_load_header_t header;
     uintptr_t phoff;
     status = elf_load_prepare(dynld_vmo, NULL, 0, &header, &phoff);
-    ASSERT_EQ(status, NO_ERROR, "elf_load_prepare");
+    ASSERT_EQ(status, MX_OK, "elf_load_prepare");
     unittest_printf("entry %p, base %p, header entry %p\n",
                     (void*) entry, (void*) base, (void*) header.e_entry);
     ASSERT_EQ(entry, base + header.e_entry, "bad value for base or entry");

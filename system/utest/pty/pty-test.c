@@ -176,14 +176,14 @@ static bool pty_test(void) {
     ASSERT_EQ(errno, EAGAIN, "");
 
     uint32_t n = 2;
-    ASSERT_EQ(ioctl_pty_make_active(pc, &n), ERR_NOT_FOUND, "");
+    ASSERT_EQ(ioctl_pty_make_active(pc, &n), MX_ERR_NOT_FOUND, "");
 
     // non-controlling client cannot change active client
-    ASSERT_EQ(ioctl_pty_make_active(pc1, &n), ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(ioctl_pty_make_active(pc1, &n), MX_ERR_ACCESS_DENIED, "");
 
     // but controlling client can
     n = 1;
-    ASSERT_EQ(ioctl_pty_make_active(pc, &n), NO_ERROR, "");
+    ASSERT_EQ(ioctl_pty_make_active(pc, &n), MX_OK, "");
     ASSERT_EQ(fd_signals(pc), 0, "");
     ASSERT_EQ(fd_signals(pc1), POLLOUT, "");
     ASSERT_EQ(write(pc1, "test", 4), 4, "");

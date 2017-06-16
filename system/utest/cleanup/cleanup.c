@@ -62,7 +62,7 @@ bool cleanup_test(void) {
     ASSERT_EQ(r, 0, "");
     ASSERT_GE(event, 0, "cleanup-test: event create failed");
     r = mx_channel_write(p1[0], 0, &msg, sizeof(msg), &event, 1);
-    ASSERT_EQ(r, ERR_PEER_CLOSED, "cleanup-test: unexpected message_write return code");
+    ASSERT_EQ(r, MX_ERR_PEER_CLOSED, "cleanup-test: unexpected message_write return code");
 
     r = mx_object_signal(event, 0u, MX_EVENT_SIGNALED);
     ASSERT_GE(r, 0, "cleanup-test: unable to signal event!");
