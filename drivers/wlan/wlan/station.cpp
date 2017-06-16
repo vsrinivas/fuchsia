@@ -111,6 +111,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     if (seq == last_seq_) {
         // If the sequence number has rolled over and back to the last seq number we sent to this
         // station, increment again.
+        // IEEE Std 802.11-2016, 10.3.2.11.2, Table 10-3, Note TR1
         seq = device_->GetState()->next_seq();
     }
     last_seq_ = seq;
