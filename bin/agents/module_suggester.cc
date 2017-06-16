@@ -33,6 +33,9 @@ const std::unordered_map<std::string, ProposalContent> kNextStories({
     {"Video Player",
      {"file:///system/apps/media_player_flutter",
       0xff9575cd /*Deep Purple 300*/, "", ""}},
+    {"Multi-Device Player",
+     {"file:///system/apps/video/video",
+      0xff9575cd /*Deep Purple 300*/, "", ""}},
 });
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
