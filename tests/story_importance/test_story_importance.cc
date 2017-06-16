@@ -14,6 +14,7 @@
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
+#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -107,6 +108,36 @@ class StoryWatcherImpl : modular::StoryWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
+// A simple focus watcher implementation that invokes a "continue" callback when
+// it sees the next focus change.
+class FocusWatcherImpl : modular::FocusWatcher {
+ public:
+  FocusWatcherImpl() : binding_(this) {}
+  ~FocusWatcherImpl() override = default;
+
+  // Registers itself as a watcher on the focus provider.
+  void Watch(modular::FocusProvider* const focus_provider) {
+    focus_provider->Watch(binding_.NewBinding());
+  }
+
+  // Deregisters itself from the watched focus provider.
+  void Reset() { binding_.Close(); }
+
+  // Sets the function where to continue when the next focus change happens.
+  void Continue(std::function<void()> at) { continue_ = at; }
+
+ private:
+  // |FocusWatcher|
+  void OnFocusChange(modular::FocusInfoPtr info) override {
+    FTL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
+    continue_();
+  }
+
+  fidl::Binding<modular::FocusWatcher> binding_;
+  std::function<void()> continue_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
+};
+
 // A context provider watcher implementation.
 class ContextListenerImpl : maxwell::ContextListener {
  public:
@@ -122,6 +153,9 @@ class ContextListenerImpl : maxwell::ContextListener {
     auto query = maxwell::ContextQuery::New();
     query->topics.resize(0);
     context_provider->Subscribe(std::move(query), binding_.NewBinding());
+    binding_.set_connection_error_handler([] {
+        FTL_LOG(WARNING) << "Lost connection to ContextProvider.";
+      });
   }
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
@@ -134,8 +168,11 @@ class ContextListenerImpl : maxwell::ContextListener {
  private:
   // |ContextListener|
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
+    FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
+      FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate() "
+                    << i.GetKey() << " " << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
   }
@@ -149,10 +186,6 @@ class ContextListenerImpl : maxwell::ContextListener {
 // story, then set context to work, start another story. The we compute story
 // importance and verify that the importance of the first story is lower than
 // the importance of the second story.
-//
-// TODO(mesch): This tests only that the context in which a story was created
-// influences importance. We also need to test that the context in which a story
-// gets focus influences importance.
 class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
@@ -195,6 +228,10 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_watcher_.Watch(&story_provider_);
+
+    user_shell_context_->GetFocusController(focus_controller_.NewRequest());
+    user_shell_context_->GetFocusProvider(focus_provider_.NewRequest());
+    focus_watcher_.Watch(focus_provider_.get());
 
     user_shell_context_->GetContextPublisher(context_publisher_.NewRequest());
     user_shell_context_->GetContextProvider(context_provider_.NewRequest());
@@ -293,7 +330,7 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
     story2_watcher_.Watch(story2_controller_.get());
     story2_watcher_.Continue([this] {
       start_story2_.Pass();
-      GetImportance();
+      GetImportance1();
     });
 
     // Start and show the new story.
@@ -302,12 +339,12 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
     view_->ConnectView(std::move(story_view));
   }
 
-  TestPoint get_importance_{"GetImportance()"};
+  TestPoint get_importance1_{"GetImportance1()"};
 
-  void GetImportance() {
+  void GetImportance1() {
     story_provider_->GetImportance(
         [this](fidl::Map<fidl::String, float> importance) {
-          get_importance_.Pass();
+          get_importance1_.Pass();
 
           if (importance.find(story1_id_) == importance.end()) {
             modular::testing::Fail("No importance for story1");
@@ -331,8 +368,49 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
                                    std::to_string(importance[story2_id_]));
           };
 
-          user_context_->Logout();
+          Focus();
         });
+  }
+
+  void Focus() {
+    focus_watcher_.Continue([this] {
+        Focused();
+      });
+
+    focus_controller_->Set(story1_id_);
+  }
+
+  TestPoint focused_{"Focused()"};
+
+  void Focused() {
+    focused_.Pass();
+    GetImportance2();
+  }
+
+  TestPoint get_importance2_{"GetImportance2()"};
+
+  void GetImportance2() {
+    story_provider_->GetImportance(
+        [this](fidl::Map<fidl::String, float> importance) {
+          get_importance2_.Pass();
+
+          if (importance.find(story1_id_) == importance.end()) {
+            modular::testing::Fail("No importance for story1");
+          } else {
+            FTL_LOG(INFO) << "Story1 importance " << importance[story1_id_];
+          }
+
+          if (importance[story1_id_] < 0.4f) {
+            modular::testing::Fail("Wrong importance for story1 " +
+                                   std::to_string(importance[story1_id_]));
+          };
+
+          Logout();
+        });
+  }
+
+  void Logout() {
+    user_context_->Logout();
   }
 
   TestPoint terminate_{"Terminate()"};
@@ -365,6 +443,10 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   modular::UserContextPtr user_context_;
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
+
+  modular::FocusControllerPtr focus_controller_;
+  modular::FocusProviderPtr focus_provider_;
+  FocusWatcherImpl focus_watcher_;
 
   bool story1_context_{};
   fidl::String story1_id_;

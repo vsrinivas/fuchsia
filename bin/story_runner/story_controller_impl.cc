@@ -600,9 +600,8 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
     const auto& context_value = i.GetValue();
 
-    float create_score = 0.0;
-    float focus_score = 0.0;
-    float focus_count = 0.0;
+    float score = 0.0;
+    float count = 0.0;
 
     for (auto& entry : log_) {
       auto i = entry->context.find(kStoryImportanceContext);
@@ -610,28 +609,20 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
         continue;
       }
 
+      // Any log entry with context relevant to importance counts.
+      count += 1.0;
+
       const auto& log_value = i.GetValue();
       if (context_value != log_value) {
         continue;
       }
 
-      switch (entry->signal) {
-        case StorySignal::CREATED:
-          create_score = 1.0;
-          break;
-
-        case StorySignal::FOCUSED:
-          focus_score += 1.0;
-          focus_count += 1.0;
-          break;
-      }
+      // Any log entry with context relevant to importance increases the
+      // importance score.
+      score += 1.0;
     }
 
-    if (focus_count == 0) {
-      result_ = create_score;
-    } else {
-      result_ = 0.5 * create_score + 0.5 * (focus_score / focus_count);
-    }
+    result_ = score / count;
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
