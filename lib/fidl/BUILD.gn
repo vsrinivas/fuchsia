@@ -89,6 +89,18 @@ source_set("operation") {
   ]
 }
 
+source_set("proxy") {
+  sources = [
+    "proxy.cc",
+    "proxy.h",
+  ]
+
+  deps = [
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
+
 source_set("scope") {
   sources = [
     "scope.h",

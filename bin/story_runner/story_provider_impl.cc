@@ -9,6 +9,7 @@
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/fidl/proxy.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
@@ -39,26 +40,6 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
 }
 
 }  // namespace
-
-// Helper class to proxy the StoryShell ViewOwner, so that we can preload it
-class StoryProviderImpl::ViewOwnerProxy {
- public:
-  ViewOwnerProxy(mozart::ViewOwnerPtr view,
-                 fidl::InterfaceRequest<mozart::ViewOwner> view_request,
-                 const std::function<void(ViewOwnerProxy*)>& error_handler)
-      : view_(std::move(view)), binding_(view_.get(), std::move(view_request)) {
-    binding_.set_connection_error_handler(
-        [this, error_handler] { error_handler(this); });
-    view_.set_connection_error_handler(
-        [this, error_handler] { error_handler(this); });
-  }
-
- private:
-  mozart::ViewOwnerPtr view_;
-  fidl::Binding<mozart::ViewOwner> binding_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewOwnerProxy);
-};
 
 // Below are helper classes that encapsulate a chain of asynchronous
 // operations on the Ledger. Because the operations all return
@@ -684,18 +665,7 @@ app::ApplicationControllerPtr StoryProviderImpl::StartStoryShell(
   app::ApplicationControllerPtr controller = std::move(story_shell_controller_);
   app::ServiceProviderPtr services = std::move(story_shell_services_);
 
-  std::unique_ptr<ViewOwnerProxy> view_proxy(new ViewOwnerProxy(
-      std::move(story_shell_view_), std::move(view_request),
-      [this](ViewOwnerProxy* const that) {
-        auto i = std::remove_if(story_shell_view_proxies_.begin(),
-                                story_shell_view_proxies_.end(),
-                                [that](std::unique_ptr<ViewOwnerProxy>& p) {
-                                  return that == p.get();
-                                });
-        FTL_DCHECK(i != story_shell_view_proxies_.end());
-        story_shell_view_proxies_.erase(i, story_shell_view_proxies_.end());
-      }));
-  story_shell_view_proxies_.push_back(std::move(view_proxy));
+  proxies_.Connect(std::move(story_shell_view_), std::move(view_request));
 
   StoryShellFactoryPtr story_shell_factory;
   ConnectToService(services.get(), story_shell_factory.NewRequest());

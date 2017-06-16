@@ -12,6 +12,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/fidl/proxy.h"
 #include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -174,9 +175,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   app::ServiceProviderPtr story_shell_services_;
   mozart::ViewOwnerPtr story_shell_view_;
 
-  // The story shell view proxies for running story shells.
-  class ViewOwnerProxy;
-  std::vector<std::unique_ptr<ViewOwnerProxy>> story_shell_view_proxies_;
+  // Holds the story shell view proxies for running story shells.
+  ProxySet proxies_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
