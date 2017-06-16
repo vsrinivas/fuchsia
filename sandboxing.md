@@ -19,7 +19,7 @@ use to map additional memory into its address space.
 Some of the initial handles given to a process are directories that the process
 mounts into its _namespace_. These handles let the process discover and
 communicate with other processes running on the system, including file systems
-and other servers. See [namespaces.md] for more details.
+and other servers. See [Namespaces](namespaces.md) for more details.
 
 The namespace given to a process strongly influences how much of the system the
 process can influence. Therefore, configuring the sandbox in which a process

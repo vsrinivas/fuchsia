@@ -150,7 +150,7 @@ functional implementations.
 A namespace is the composite hierarchy of files, directories, sockets, [service](#Service)s,
 and other named objects which are offered to application components by their
 [environment](#Environment).
-- [Fuchsia Namespace Spec](https://fuchsia.googlesource.com/docs/+/master/namespaces.md)
+- [Fuchsia Namespace Spec](namespaces.md)
 
 #### **Netstack**
 
