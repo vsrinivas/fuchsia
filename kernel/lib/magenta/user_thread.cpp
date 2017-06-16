@@ -772,7 +772,11 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
             DEBUG_ASSERT(exception_wait_port_ != nullptr);
             excp_port_type = exception_wait_port_->type();
         } else {
-            DEBUG_ASSERT(exception_wait_port_ == nullptr);
+            // Either we're not in an exception, or we're in the window where
+            // event_wait_deadline has woken up but |exception_wait_lock_| has
+            // not been reacquired.
+            DEBUG_ASSERT(exception_wait_port_ == nullptr ||
+                         exception_status_ != ExceptionStatus::UNPROCESSED);
             excp_port_type = ExceptionPort::Type::NONE;
         }
     }
