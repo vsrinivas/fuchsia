@@ -26,15 +26,15 @@ void RemoteDevice::SetLowEnergyData(bool connectable, int8_t rssi,
 
   connectable_ = connectable;
   rssi_ = rssi;
-  advertising_data_length_ = advertising_data.GetSize();
+  advertising_data_length_ = advertising_data.size();
 
-  // Reallocate the advertising data buffer if necessary.
-  if (advertising_data_buffer_.GetSize() < advertising_data.GetSize()) {
+  // Reallocate the advertising data buffer only if necessary.
+  if (advertising_data_buffer_.size() < advertising_data.size()) {
     advertising_data_buffer_ =
         common::DynamicByteBuffer(advertising_data_length_, advertising_data.CopyContents());
   } else {
-    // No need to reallocate. Re-use the existing buffer
-    std::memcpy(advertising_data_buffer_.GetMutableData(), advertising_data.GetData(),
+    // No need to reallocate. Re-use the existing buffer and update the BufferView instead.
+    std::memcpy(advertising_data_buffer_.mutable_data(), advertising_data.data(),
                 advertising_data_length_);
   }
 }

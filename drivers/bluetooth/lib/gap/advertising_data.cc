@@ -11,7 +11,7 @@ namespace bluetooth {
 namespace gap {
 
 AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
-    : is_valid_(true), ptr_(data.GetData()), remaining_bytes_(data.GetSize()) {
+    : is_valid_(true), ptr_(data.data()), remaining_bytes_(data.size()) {
   if (!remaining_bytes_) {
     is_valid_ = false;
     return;
@@ -71,13 +71,13 @@ AdvertisingDataWriter::AdvertisingDataWriter(common::MutableByteBuffer* buffer)
 }
 
 bool AdvertisingDataWriter::WriteField(DataType type, const common::ByteBuffer& data) {
-  size_t next_size = data.GetSize() + 2;  // 2 bytes for [length][type].
-  if (bytes_written_ + next_size > buffer_->GetSize() || next_size > 255) return false;
+  size_t next_size = data.size() + 2;  // 2 bytes for [length][type].
+  if (bytes_written_ + next_size > buffer_->size() || next_size > 255) return false;
 
-  buffer_->GetMutableData()[bytes_written_++] = static_cast<uint8_t>(next_size) - 1;
-  buffer_->GetMutableData()[bytes_written_++] = static_cast<uint8_t>(type);
-  std::memcpy(buffer_->GetMutableData() + bytes_written_, data.GetData(), data.GetSize());
-  bytes_written_ += data.GetSize();
+  (*buffer_)[bytes_written_++] = static_cast<uint8_t>(next_size) - 1;
+  (*buffer_)[bytes_written_++] = static_cast<uint8_t>(type);
+  std::memcpy(buffer_->mutable_data() + bytes_written_, data.data(), data.size());
+  bytes_written_ += data.size();
 
   return true;
 }

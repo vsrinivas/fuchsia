@@ -74,13 +74,13 @@ void FakeControllerBase::Stop() {
 
 void FakeControllerBase::SendCommandChannelPacket(const common::ByteBuffer& packet) {
   FTL_DCHECK(IsStarted());
-  mx_status_t status = cmd_channel_.write(0, packet.GetData(), packet.GetSize(), nullptr, 0);
+  mx_status_t status = cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
   FTL_DCHECK(MX_OK == status);
 }
 
 void FakeControllerBase::SendACLDataChannelPacket(const common::ByteBuffer& packet) {
   FTL_DCHECK(IsStarted());
-  mx_status_t status = acl_channel_.write(0, packet.GetData(), packet.GetSize(), nullptr, 0);
+  mx_status_t status = acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
   FTL_DCHECK(MX_OK == status);
 }
 
@@ -104,7 +104,7 @@ void FakeControllerBase::HandleCommandPacket() {
   common::StaticByteBuffer<hci::kMaxCommandPacketPayloadSize> buffer;
   uint32_t read_size;
   mx_status_t status =
-      cmd_channel_.read(0u, buffer.GetMutableData(), hci::kMaxCommandPacketPayloadSize, &read_size,
+      cmd_channel_.read(0u, buffer.mutable_data(), hci::kMaxCommandPacketPayloadSize, &read_size,
                         nullptr, 0, nullptr);
   FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
@@ -122,7 +122,7 @@ void FakeControllerBase::HandleCommandPacket() {
     return;
   }
 
-  common::MutableBufferView view(buffer.GetMutableData(), read_size);
+  common::MutableBufferView view(buffer.mutable_data(), read_size);
   hci::CommandPacket packet(&view);
   OnCommandPacketReceived(packet);
 }
@@ -130,8 +130,8 @@ void FakeControllerBase::HandleCommandPacket() {
 void FakeControllerBase::HandleACLPacket() {
   common::StaticByteBuffer<hci::ACLDataTxPacket::GetMinBufferSize(hci::kMaxACLPayloadSize)> buffer;
   uint32_t read_size;
-  mx_status_t status = acl_channel_.read(0u, buffer.GetMutableData(), buffer.GetSize(), &read_size,
-                                         nullptr, 0, nullptr);
+  mx_status_t status =
+      acl_channel_.read(0u, buffer.mutable_data(), buffer.size(), &read_size, nullptr, 0, nullptr);
   FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
     if (status == MX_ERR_PEER_CLOSED)
@@ -143,7 +143,7 @@ void FakeControllerBase::HandleACLPacket() {
     return;
   }
 
-  common::BufferView view(buffer.GetData(), read_size);
+  common::BufferView view(buffer.data(), read_size);
   OnACLDataPacketReceived(view);
 }
 

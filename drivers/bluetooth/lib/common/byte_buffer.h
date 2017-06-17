@@ -24,10 +24,10 @@ class ByteBuffer {
 
   // Returns a pointer to the beginning of this buffer. May return nullptr if
   // the buffer has size 0.
-  virtual const uint8_t* GetData() const = 0;
+  virtual const uint8_t* data() const = 0;
 
   // Returns the number of bytes contained in this packet.
-  virtual size_t GetSize() const = 0;
+  virtual size_t size() const = 0;
 
   // Copy the contents of the underlying buffer and return them in a new buffer.
   virtual std::unique_ptr<uint8_t[]> CopyContents() const;
@@ -37,6 +37,12 @@ class ByteBuffer {
   iterator end() const { return cend(); }
   virtual const_iterator cbegin() const = 0;
   virtual const_iterator cend() const = 0;
+
+  // Read-only random access operator.
+  inline const uint8_t& operator[](size_t pos) const {
+    FTL_DCHECK(pos < size());
+    return data()[pos];
+  }
 
   // Returns the contents of this buffer as a C++ string-like object without copying its contents.
   ftl::StringView AsString() const;
@@ -51,7 +57,13 @@ class MutableByteBuffer : public ByteBuffer {
  public:
   // Returns a pointer to the beginning of this buffer. May return nullptr if
   // the buffer has size 0.
-  virtual uint8_t* GetMutableData() = 0;
+  virtual uint8_t* mutable_data() = 0;
+
+  // Random access operator that allows mutations.
+  inline uint8_t& operator[](size_t pos) {
+    FTL_DCHECK(pos < size());
+    return mutable_data()[pos];
+  }
 
   // Sets the contents of the buffer to 0s.
   virtual void SetToZeros() = 0;
@@ -79,13 +91,13 @@ class StaticByteBuffer : public MutableByteBuffer {
   }
 
   // ByteBuffer overrides
-  const uint8_t* GetData() const override { return buffer_.data(); }
-  size_t GetSize() const override { return buffer_.size(); }
+  const uint8_t* data() const override { return buffer_.data(); }
+  size_t size() const override { return buffer_.size(); }
   const_iterator cbegin() const override { return buffer_.cbegin(); }
   const_iterator cend() const override { return buffer_.cend(); }
 
   // MutableByteBuffer overrides:
-  uint8_t* GetMutableData() override { return buffer_.data(); }
+  uint8_t* mutable_data() override { return buffer_.data(); }
   void SetToZeros() override { buffer_.fill(0); }
 
  private:
@@ -127,13 +139,13 @@ class DynamicByteBuffer : public MutableByteBuffer {
   DynamicByteBuffer& operator=(DynamicByteBuffer&& other);
 
   // ByteBuffer overrides:
-  const uint8_t* GetData() const override;
-  size_t GetSize() const override;
+  const uint8_t* data() const override;
+  size_t size() const override;
   const_iterator cbegin() const override;
   const_iterator cend() const override;
 
   // MutableByteBuffer overrides:
-  uint8_t* GetMutableData() override;
+  uint8_t* mutable_data() override;
   void SetToZeros() override;
 
  private:
@@ -157,8 +169,8 @@ class BufferView : public ByteBuffer {
   BufferView();
 
   // ByteBuffer overrides:
-  const uint8_t* GetData() const override;
-  size_t GetSize() const override;
+  const uint8_t* data() const override;
+  size_t size() const override;
   const_iterator cbegin() const override;
   const_iterator cend() const override;
 
@@ -168,7 +180,7 @@ class BufferView : public ByteBuffer {
 };
 
 // A ByteBuffer that does not own the memory that it points to but rather
-// provides an mutable view over it.
+// provides a mutable view over it.
 class MutableBufferView : public MutableByteBuffer {
  public:
   explicit MutableBufferView(MutableByteBuffer* buffer);
@@ -178,13 +190,13 @@ class MutableBufferView : public MutableByteBuffer {
   MutableBufferView();
 
   // ByteBuffer overrides:
-  const uint8_t* GetData() const override;
-  size_t GetSize() const override;
+  const uint8_t* data() const override;
+  size_t size() const override;
   const_iterator cbegin() const override;
   const_iterator cend() const override;
 
   // MutableByteBuffer overrides:
-  uint8_t* GetMutableData() override;
+  uint8_t* mutable_data() override;
   void SetToZeros() override;
 
  private:

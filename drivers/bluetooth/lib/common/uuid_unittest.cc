@@ -102,16 +102,16 @@ TEST(UUIDTest, 128Bit) {
 }
 
 TEST(UUIDTest, CompareBytes) {
-  auto kUUID16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
-  auto kUUID32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
-  auto kUUID128Bytes =
+  auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
+  auto kUuid32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
+  auto kUuid128Bytes =
       common::CreateStaticByteBuffer(0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10,
                                      0x00, 0x00, 0x0d, 0x18, 0x00, 0x00);
 
   UUID uuid(kId1As16);
-  EXPECT_TRUE(uuid.CompareBytes(kUUID16Bytes));
-  EXPECT_TRUE(uuid.CompareBytes(kUUID32Bytes));
-  EXPECT_TRUE(uuid.CompareBytes(kUUID128Bytes));
+  EXPECT_TRUE(uuid.CompareBytes(kUuid16Bytes));
+  EXPECT_TRUE(uuid.CompareBytes(kUuid32Bytes));
+  EXPECT_TRUE(uuid.CompareBytes(kUuid128Bytes));
 
   common::BufferView empty;
   EXPECT_FALSE(uuid.CompareBytes(empty));
@@ -128,53 +128,53 @@ TEST(UUIDTest, ToString) {
   EXPECT_EQ(kId3AsString, UUID(kId3As128).ToString());
 }
 
-TEST(UUIDTest, IsStringValidUUID) {
-  EXPECT_FALSE(IsStringValidUUID("0000180d00001000800000805f9b34fb"));
-  EXPECT_FALSE(IsStringValidUUID("0000180d-0000-1000-8000000805f9b34fb"));
-  EXPECT_FALSE(IsStringValidUUID("0000180d-0000-100008000-00805f9b34fb"));
-  EXPECT_FALSE(IsStringValidUUID("0000180d-000001000-8000-00805f9b34fb"));
-  EXPECT_FALSE(IsStringValidUUID("0000180d00000-1000-8000-00805f9b34fb"));
-  EXPECT_FALSE(IsStringValidUUID("0000180d-0000-1000-8000-00805g9b34fb"));
-  EXPECT_FALSE(IsStringValidUUID("000-180d-0000-1000-8000-00805f9b34fb"));
+TEST(UUIDTest, IsStringValidUuid) {
+  EXPECT_FALSE(IsStringValidUuid("0000180d00001000800000805f9b34fb"));
+  EXPECT_FALSE(IsStringValidUuid("0000180d-0000-1000-8000000805f9b34fb"));
+  EXPECT_FALSE(IsStringValidUuid("0000180d-0000-100008000-00805f9b34fb"));
+  EXPECT_FALSE(IsStringValidUuid("0000180d-000001000-8000-00805f9b34fb"));
+  EXPECT_FALSE(IsStringValidUuid("0000180d00000-1000-8000-00805f9b34fb"));
+  EXPECT_FALSE(IsStringValidUuid("0000180d-0000-1000-8000-00805g9b34fb"));
+  EXPECT_FALSE(IsStringValidUuid("000-180d-0000-1000-8000-00805f9b34fb"));
 
   // Combinations of lower and upper case characters should work.
-  EXPECT_TRUE(IsStringValidUUID("0000180d-0000-1000-8000-00805f9b34fb"));
-  EXPECT_TRUE(IsStringValidUUID("0000180D-0000-1000-8000-00805F9B34FB"));
-  EXPECT_TRUE(IsStringValidUUID("0000180d-0000-1000-8000-00805F9b34fB"));
-  EXPECT_TRUE(IsStringValidUUID(kId2AsString));
-  EXPECT_TRUE(IsStringValidUUID(kId3AsString));
+  EXPECT_TRUE(IsStringValidUuid("0000180d-0000-1000-8000-00805f9b34fb"));
+  EXPECT_TRUE(IsStringValidUuid("0000180D-0000-1000-8000-00805F9B34FB"));
+  EXPECT_TRUE(IsStringValidUuid("0000180d-0000-1000-8000-00805F9b34fB"));
+  EXPECT_TRUE(IsStringValidUuid(kId2AsString));
+  EXPECT_TRUE(IsStringValidUuid(kId3AsString));
 }
 
-TEST(UUIDTest, StringToUUID) {
+TEST(UUIDTest, StringToUuid) {
   UUID uuid;
 
-  EXPECT_FALSE(StringToUUID("0000180d00001000800000805f9b34fb", &uuid));
-  EXPECT_FALSE(StringToUUID("0000180d-0000-1000-8000000805f9b34fb", &uuid));
-  EXPECT_FALSE(StringToUUID("0000180d-0000-100008000-00805f9b34fb", &uuid));
-  EXPECT_FALSE(StringToUUID("0000180d-000001000-8000-00805f9b34fb", &uuid));
-  EXPECT_FALSE(StringToUUID("0000180d00000-1000-8000-00805f9b34fb", &uuid));
-  EXPECT_FALSE(StringToUUID("0000180d-0000-1000-8000-00805g9b34fb", &uuid));
-  EXPECT_FALSE(StringToUUID("000-180d-0000-1000-8000-00805f9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d00001000800000805f9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d-0000-1000-8000000805f9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d-0000-100008000-00805f9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d-000001000-8000-00805f9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d00000-1000-8000-00805f9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d-0000-1000-8000-00805g9b34fb", &uuid));
+  EXPECT_FALSE(StringToUuid("000-180d-0000-1000-8000-00805f9b34fb", &uuid));
 
   // Combinations of lower and upper case characters should work.
-  EXPECT_TRUE(StringToUUID("0000180d-0000-1000-8000-00805f9b34fb", &uuid));
+  EXPECT_TRUE(StringToUuid("0000180d-0000-1000-8000-00805f9b34fb", &uuid));
   EXPECT_EQ(kId1As16, uuid);
-  EXPECT_TRUE(StringToUUID("0000180D-0000-1000-8000-00805F9B34FB", &uuid));
+  EXPECT_TRUE(StringToUuid("0000180D-0000-1000-8000-00805F9B34FB", &uuid));
   EXPECT_EQ(kId1As16, uuid);
-  EXPECT_TRUE(StringToUUID("0000180d-0000-1000-8000-00805F9b34fB", &uuid));
+  EXPECT_TRUE(StringToUuid("0000180d-0000-1000-8000-00805F9b34fB", &uuid));
   EXPECT_EQ(kId1As16, uuid);
 
-  EXPECT_TRUE(StringToUUID(kId2AsString, &uuid));
+  EXPECT_TRUE(StringToUuid(kId2AsString, &uuid));
   EXPECT_EQ(kId2As32, uuid);
 
-  EXPECT_TRUE(StringToUUID(kId3AsString, &uuid));
+  EXPECT_TRUE(StringToUuid(kId3AsString, &uuid));
   EXPECT_EQ(kId3As128, uuid.value());
 }
 
 TEST(UUIDTest, FromBytes) {
-  auto kUUID16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
-  auto kUUID32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
-  auto kUUID128Bytes =
+  auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
+  auto kUuid32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
+  auto kUuid128Bytes =
       common::CreateStaticByteBuffer(0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10,
                                      0x00, 0x00, 0x0d, 0x18, 0x00, 0x00);
 
@@ -188,11 +188,11 @@ TEST(UUIDTest, FromBytes) {
   EXPECT_FALSE(UUID::FromBytes(kInvalid1, &uuid));
   EXPECT_FALSE(UUID::FromBytes(kInvalid2, &uuid));
 
-  EXPECT_TRUE(UUID::FromBytes(kUUID16Bytes, &uuid));
+  EXPECT_TRUE(UUID::FromBytes(kUuid16Bytes, &uuid));
   EXPECT_EQ(kId1As16, uuid);
-  EXPECT_TRUE(UUID::FromBytes(kUUID32Bytes, &uuid));
+  EXPECT_TRUE(UUID::FromBytes(kUuid32Bytes, &uuid));
   EXPECT_EQ(kId1As16, uuid);
-  EXPECT_TRUE(UUID::FromBytes(kUUID128Bytes, &uuid));
+  EXPECT_TRUE(UUID::FromBytes(kUuid128Bytes, &uuid));
   EXPECT_EQ(kId1As16, uuid);
 }
 

@@ -14,16 +14,16 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
-bool MatchUUIDs(const std::vector<common::UUID>& uuids, const common::BufferView& data,
+bool MatchUuids(const std::vector<common::UUID>& uuids, const common::BufferView& data,
                 size_t uuid_size) {
-  if (data.GetSize() % uuid_size) {
+  if (data.size() % uuid_size) {
     FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed service UUIDs list";
     return false;
   }
 
-  size_t uuid_count = data.GetSize() / uuid_size;
+  size_t uuid_count = data.size() / uuid_size;
   for (size_t i = 0; i < uuid_count; i++) {
-    const common::BufferView uuid_bytes(data.GetData() + i * uuid_size, uuid_size);
+    const common::BufferView uuid_bytes(data.data() + i * uuid_size, uuid_size);
     for (const auto& uuid : uuids) {
       if (uuid.CompareBytes(uuid_bytes)) return true;
     }
@@ -54,7 +54,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
   bool tx_power_found = false;
 
   AdvertisingDataReader reader(advertising_data);
-  if (advertising_data.GetSize() && !reader.is_valid()) return false;
+  if (advertising_data.size() && !reader.is_valid()) return false;
 
   DataType type;
   common::BufferView data;
@@ -65,13 +65,13 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
 
         // The Flags field may be zero or more octets long for potential future extension. We only
         // care about the first octet.
-        if (data.GetSize() < kFlagsSizeMin) {
+        if (data.size() < kFlagsSizeMin) {
           FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Flags field received";
           break;
         }
 
         // We check if all bits in |flags_| are present in the data.
-        uint8_t masked_flags = data.GetData()[0] & *flags_;
+        uint8_t masked_flags = data[0] & *flags_;
         flags_ok = all_flags_required_ ? (masked_flags == *flags_) : !!masked_flags;
 
         break;
@@ -79,7 +79,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
       case DataType::kTxPowerLevel: {
         if (pathloss_ok) break;
 
-        if (data.GetSize() != kTxPowerLevelSize) {
+        if (data.size() != kTxPowerLevelSize) {
           FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Tx Power Level received";
           break;
         }
@@ -89,7 +89,7 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
         // An RSSI value of kRSSIInvalid means that RSSI is not available.
         if (rssi == hci::kRSSIInvalid) break;
 
-        int8_t tx_power_lvl = static_cast<int8_t>(*data.GetData());
+        int8_t tx_power_lvl = static_cast<int8_t>(*data.data());
         if (tx_power_lvl < rssi) {
           FTL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level is less than the RSSI";
           break;
@@ -112,28 +112,28 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
 
         // The first two octets of the manufacturer specific data field contains the Company
         // Identifier Code.
-        if (data.GetSize() < kManufacturerSpecificDataSizeMin) {
+        if (data.size() < kManufacturerSpecificDataSizeMin) {
           FTL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed manufacturer-specific data received";
           break;
         }
 
         manufacturer_ok =
-            (le16toh(*reinterpret_cast<const uint16_t*>(data.GetData())) == *manufacturer_code_);
+            (le16toh(*reinterpret_cast<const uint16_t*>(data.data())) == *manufacturer_code_);
         break;
-      case DataType::kIncomplete16BitServiceUUIDs:
-      case DataType::kComplete16BitServiceUUIDs:
+      case DataType::kIncomplete16BitServiceUuids:
+      case DataType::kComplete16BitServiceUuids:
         if (service_uuids_ok) break;
-        service_uuids_ok = MatchUUIDs(service_uuids_, data, k16BitUUIDElemSize);
+        service_uuids_ok = MatchUuids(service_uuids_, data, k16BitUuidElemSize);
         break;
-      case DataType::kIncomplete32BitServiceUUIDs:
-      case DataType::kComplete32BitServiceUUIDs:
+      case DataType::kIncomplete32BitServiceUuids:
+      case DataType::kComplete32BitServiceUuids:
         if (service_uuids_ok) break;
-        service_uuids_ok = MatchUUIDs(service_uuids_, data, k32BitUUIDElemSize);
+        service_uuids_ok = MatchUuids(service_uuids_, data, k32BitUuidElemSize);
         break;
-      case DataType::kIncomplete128BitServiceUUIDs:
-      case DataType::kComplete128BitServiceUUIDs:
+      case DataType::kIncomplete128BitServiceUuids:
+      case DataType::kComplete128BitServiceUuids:
         if (service_uuids_ok) break;
-        service_uuids_ok = MatchUUIDs(service_uuids_, data, k128BitUUIDElemSize);
+        service_uuids_ok = MatchUuids(service_uuids_, data, k128BitUuidElemSize);
         break;
       default:
         break;

@@ -24,7 +24,7 @@ namespace common {
 //   StaticByteBuffer<512> buffer;
 //
 //   // Receive some data on the buffer.
-//   foo::WriteMyPacket(buffer.GetMutableData(), ...);
+//   foo::WriteMyPacket(buffer.mutable_data(), ...);
 //
 //   // Read packet header contents:
 //   struct MyHeaderType {
@@ -104,20 +104,20 @@ class Packet {
   explicit Packet(const ByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
     FTL_DCHECK(buffer_);
-    FTL_DCHECK(buffer_->GetSize() >= size_);
+    FTL_DCHECK(buffer_->size() >= size_);
   }
 
   // Returns a reference to the beginning of the packet header. This may never
   // return nullptr.
   const HeaderType& GetHeader() const {
-    return *reinterpret_cast<const HeaderType*>(buffer_->GetData());
+    return *reinterpret_cast<const HeaderType*>(buffer_->data());
   }
 
   // Returns a pointer to the beginning of the packet payload, immediately
   // following the header. Returns nullptr if the payload is empty.
   const uint8_t* GetPayloadData() const {
     if (!GetPayloadSize()) return nullptr;
-    return buffer_->GetData() + sizeof(HeaderType);
+    return buffer_->data() + sizeof(HeaderType);
   }
 
   // Returns the size of the packet payload, not including the header.
@@ -127,7 +127,7 @@ class Packet {
   // stored in the Packet structure without modifying the underlying buffer.
   void SetPayloadSize(size_t payload_size) {
     size_ = sizeof(HeaderType) + payload_size;
-    FTL_DCHECK(buffer_->GetSize() >= size_);
+    FTL_DCHECK(buffer_->size() >= size_);
   }
 
   // Convenience getter that returns a pointer to the beginning of the packet
@@ -148,7 +148,7 @@ class Packet {
 
   // Returns the raw bytes of the packet in a ByteBuffer. The returned buffer is a view over the
   // portion of the underlying buffer that is used by this packet.
-  const BufferView GetBytes() const { return BufferView(buffer_->GetData(), size_); }
+  const BufferView GetBytes() const { return BufferView(buffer_->data(), size_); }
 
  private:
   const ByteBuffer* buffer_;  // weak
@@ -165,7 +165,7 @@ class MutablePacket : public Packet<HeaderType> {
   // following the header. Returns nullptr if the payload is empty.
   uint8_t* GetMutablePayloadData() const {
     if (!this->GetPayloadSize()) return nullptr;
-    return mutable_buffer()->GetMutableData() + sizeof(HeaderType);
+    return mutable_buffer()->mutable_data() + sizeof(HeaderType);
   }
 
   // Convenience getter that returns a pointer to the beginning of the packet
@@ -187,7 +187,7 @@ class MutablePacket : public Packet<HeaderType> {
  protected:
   // Returns a pointer to the header that can be used to modify header contents.
   HeaderType* GetMutableHeader() const {
-    return reinterpret_cast<HeaderType*>(mutable_buffer()->GetMutableData());
+    return reinterpret_cast<HeaderType*>(mutable_buffer()->mutable_data());
   }
 };
 

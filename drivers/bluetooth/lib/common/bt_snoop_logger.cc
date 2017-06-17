@@ -124,12 +124,12 @@ bool BTSnoopLogger::WritePacket(const ByteBuffer& packet_data, bool is_received,
     return false;
   }
 
-  if (!WriteRecordHeader(fd_, packet_data.GetSize(), is_received, is_data)) {
+  if (!WriteRecordHeader(fd_, packet_data.size(), is_received, is_data)) {
     FTL_LOG(ERROR) << "Failed to write BTSnoop record header";
     return false;
   }
 
-  if (!WriteToFile(fd_, packet_data.GetData(), packet_data.GetSize())) {
+  if (!WriteToFile(fd_, packet_data.data(), packet_data.size())) {
     FTL_LOG(ERROR) << "Failed to write BTSnoop record packet data";
     // TODO(armansito): The file contents are now malformed. Seek back to the
     // beginning of the record header?

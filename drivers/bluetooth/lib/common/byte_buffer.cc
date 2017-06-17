@@ -8,16 +8,15 @@ namespace bluetooth {
 namespace common {
 
 std::unique_ptr<uint8_t[]> ByteBuffer::CopyContents() const {
-  size_t size = GetSize();
-  if (!size) return nullptr;
+  if (!size()) return nullptr;
 
-  auto buffer = std::make_unique<uint8_t[]>(size);
-  memcpy(buffer.get(), GetData(), size);
+  auto buffer = std::make_unique<uint8_t[]>(size());
+  memcpy(buffer.get(), data(), size());
   return buffer;
 }
 
 ftl::StringView ByteBuffer::AsString() const {
-  return ftl::StringView(reinterpret_cast<const char*>(GetData()), GetSize());
+  return ftl::StringView(reinterpret_cast<const char*>(data()), size());
 }
 
 std::string ByteBuffer::ToString() const {
@@ -36,7 +35,7 @@ DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size) : buffer_size_(buffer_s
 }
 
 DynamicByteBuffer::DynamicByteBuffer(const ByteBuffer& buffer)
-    : buffer_size_(buffer.GetSize()), buffer_(buffer.CopyContents()) {
+    : buffer_size_(buffer.size()), buffer_(buffer.CopyContents()) {
   FTL_DCHECK(!buffer_size_ || buffer_.get())
       << "|buffer| cannot be nullptr when |buffer_size| is non-zero";
 }
@@ -60,15 +59,15 @@ DynamicByteBuffer& DynamicByteBuffer::operator=(DynamicByteBuffer&& other) {
   return *this;
 }
 
-const uint8_t* DynamicByteBuffer::GetData() const {
+const uint8_t* DynamicByteBuffer::data() const {
   return buffer_.get();
 }
 
-uint8_t* DynamicByteBuffer::GetMutableData() {
+uint8_t* DynamicByteBuffer::mutable_data() {
   return buffer_.get();
 }
 
-size_t DynamicByteBuffer::GetSize() const {
+size_t DynamicByteBuffer::size() const {
   return buffer_size_;
 }
 
@@ -85,8 +84,8 @@ ByteBuffer::const_iterator DynamicByteBuffer::cend() const {
 }
 
 BufferView::BufferView(const ByteBuffer& buffer) {
-  size_ = buffer.GetSize();
-  bytes_ = buffer.GetData();
+  size_ = buffer.size();
+  bytes_ = buffer.data();
 }
 
 BufferView::BufferView(const ftl::StringView& string) {
@@ -101,11 +100,11 @@ BufferView::BufferView(const uint8_t* bytes, size_t size) : size_(size), bytes_(
 
 BufferView::BufferView() : size_(0u), bytes_(nullptr) {}
 
-const uint8_t* BufferView::GetData() const {
+const uint8_t* BufferView::data() const {
   return bytes_;
 }
 
-size_t BufferView::GetSize() const {
+size_t BufferView::size() const {
   return size_;
 }
 
@@ -119,8 +118,8 @@ ByteBuffer::const_iterator BufferView::cend() const {
 
 MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
   FTL_DCHECK(buffer);
-  size_ = buffer->GetSize();
-  bytes_ = buffer->GetMutableData();
+  size_ = buffer->size();
+  bytes_ = buffer->mutable_data();
 }
 
 MutableBufferView::MutableBufferView(uint8_t* bytes, size_t size) : size_(size), bytes_(bytes) {
@@ -130,11 +129,11 @@ MutableBufferView::MutableBufferView(uint8_t* bytes, size_t size) : size_(size),
 
 MutableBufferView::MutableBufferView() : size_(0u), bytes_(nullptr) {}
 
-const uint8_t* MutableBufferView::GetData() const {
+const uint8_t* MutableBufferView::data() const {
   return bytes_;
 }
 
-size_t MutableBufferView::GetSize() const {
+size_t MutableBufferView::size() const {
   return size_;
 }
 
@@ -146,7 +145,7 @@ ByteBuffer::const_iterator MutableBufferView::cend() const {
   return bytes_ + size_;
 }
 
-uint8_t* MutableBufferView::GetMutableData() {
+uint8_t* MutableBufferView::mutable_data() {
   return bytes_;
 }
 

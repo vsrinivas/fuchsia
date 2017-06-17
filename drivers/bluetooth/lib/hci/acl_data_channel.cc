@@ -250,8 +250,7 @@ void ACLDataChannel::TrySendNextQueuedPackets() {
     auto packet = std::move(to_send.front());
     to_send.pop();
 
-    mx_status_t status =
-        channel_.write(0, packet.bytes.GetData(), packet.bytes.GetSize(), nullptr, 0);
+    mx_status_t status = channel_.write(0, packet.bytes.data(), packet.bytes.size(), nullptr, 0);
     if (status < 0) {
       // TODO(armansito): We'll almost certainly hit this case if the channel's buffer gets filled,
       // so we need to watch for MX_CHANNEL_WRITABLE.
@@ -333,8 +332,8 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   FTL_DCHECK(rx_task_runner_);
 
   uint32_t read_size;
-  mx_status_t status = channel_.read(0u, rx_buffer_.GetMutableData(), rx_buffer_.GetSize(),
-                                     &read_size, nullptr, 0, nullptr);
+  mx_status_t status = channel_.read(0u, rx_buffer_.mutable_data(), rx_buffer_.size(), &read_size,
+                                     nullptr, 0, nullptr);
   if (status < 0) {
     FTL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
@@ -360,7 +359,7 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
 
   // TODO(armansito): We are copying the data here. Need more efficient buffer management.
   common::DynamicByteBuffer buffer(packet.size());
-  memcpy(buffer.GetMutableData(), packet.buffer()->GetData(), packet.size());
+  memcpy(buffer.mutable_data(), packet.buffer()->data(), packet.size());
   rx_task_runner_->PostTask(
       ftl::MakeCopyable([ buffer = std::move(buffer), callback = rx_callback_ ]() mutable {
         callback(std::move(buffer));

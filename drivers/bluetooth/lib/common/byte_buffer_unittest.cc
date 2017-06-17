@@ -16,33 +16,33 @@ TEST(ByteBufferTest, StaticByteBuffer) {
   constexpr size_t kBufferSize = 5;
   StaticByteBuffer<kBufferSize> buffer;
 
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, buffer.size());
   buffer.SetToZeros();
-  buffer.GetMutableData()[3] = 3;
+  buffer[3] = 3;
 
   constexpr std::array<uint8_t, kBufferSize> kExpected{{0x00, 0x00, 0x00, 0x03, 0x00}};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 
   // Moving will result in a copy.
   StaticByteBuffer<kBufferSize> buffer_copy = std::move(buffer);
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
-  EXPECT_EQ(kBufferSize, buffer_copy.GetSize());
+  EXPECT_EQ(kBufferSize, buffer.size());
+  EXPECT_EQ(kBufferSize, buffer_copy.size());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_copy));
 
   // Transfer contents into raw buffer.
   auto contents = buffer.CopyContents();
   EXPECT_TRUE(ContainersEqual(kExpected, contents.get(), kBufferSize));
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, buffer.size());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
 
 TEST(ByteBufferTest, StaticByteBufferVariadicConstructor) {
   constexpr size_t kBufferSize = 3;
   StaticByteBuffer<kBufferSize> buffer0;
-  buffer0.GetMutableData()[0] = 0x01;
-  buffer0.GetMutableData()[1] = 0x02;
-  buffer0.GetMutableData()[2] = 0x03;
+  buffer0[0] = 0x01;
+  buffer0[1] = 0x02;
+  buffer0[2] = 0x03;
 
   StaticByteBuffer<kBufferSize> buffer1{0x01, 0x02, 0x03};
   auto buffer2 = CreateStaticByteBuffer(0x01, 0x02, 0x03);
@@ -56,18 +56,18 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   constexpr size_t kBufferSize = 5;
   DynamicByteBuffer buffer(kBufferSize);
 
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, buffer.size());
   buffer.SetToZeros();
-  buffer.GetMutableData()[3] = 3;
+  buffer[3] = 3;
 
   constexpr std::array<uint8_t, kBufferSize> kExpected{{0x00, 0x00, 0x00, 0x03, 0x00}};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 
   // Moving will invalidate the source buffer.
   DynamicByteBuffer buffer_moved = std::move(buffer);
-  EXPECT_EQ(0u, buffer.GetSize());
-  EXPECT_EQ(kBufferSize, buffer_moved.GetSize());
-  EXPECT_EQ(nullptr, buffer.GetData());
+  EXPECT_EQ(0u, buffer.size());
+  EXPECT_EQ(kBufferSize, buffer_moved.size());
+  EXPECT_EQ(nullptr, buffer.data());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_moved));
 
   // Test CopyContents().
@@ -81,7 +81,7 @@ TEST(ByteBufferTest, DynamicByteBufferConstructFromBuffer) {
   StaticByteBuffer<kBufferSize> buffer({1, 2, 3});
 
   DynamicByteBuffer dyn_buffer(buffer);
-  EXPECT_EQ(kBufferSize, dyn_buffer.GetSize());
+  EXPECT_EQ(kBufferSize, dyn_buffer.size());
   EXPECT_TRUE(ContainersEqual(buffer, dyn_buffer));
 }
 
@@ -101,14 +101,14 @@ TEST(ByteBufferTest, BufferViewTest) {
   constexpr size_t kBufferSize = 5;
   DynamicByteBuffer buffer(kBufferSize);
 
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, buffer.size());
   buffer.SetToZeros();
 
   BufferView view(buffer);
-  EXPECT_EQ(0x00, buffer.GetData()[0]);
-  EXPECT_EQ(0x00, view.GetData()[0]);
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
-  EXPECT_EQ(kBufferSize, view.GetSize());
+  EXPECT_EQ(0x00, buffer[0]);
+  EXPECT_EQ(0x00, view[0]);
+  EXPECT_EQ(kBufferSize, buffer.size());
+  EXPECT_EQ(kBufferSize, view.size());
 }
 
 TEST(ByteBufferTest, MutableBufferViewTest) {
@@ -116,23 +116,23 @@ TEST(ByteBufferTest, MutableBufferViewTest) {
   constexpr size_t kViewSize = 3;
   DynamicByteBuffer buffer(kBufferSize);
 
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, buffer.size());
   buffer.SetToZeros();
 
-  MutableBufferView view(buffer.GetMutableData(), kViewSize);
-  view.GetMutableData()[0] = 0x01;
-  EXPECT_EQ(0x01, buffer.GetData()[0]);
-  EXPECT_EQ(0x01, view.GetData()[0]);
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
-  EXPECT_EQ(kViewSize, view.GetSize());
+  MutableBufferView view(buffer.mutable_data(), kViewSize);
+  view[0] = 0x01;
+  EXPECT_EQ(0x01, buffer[0]);
+  EXPECT_EQ(0x01, view[0]);
+  EXPECT_EQ(kBufferSize, buffer.size());
+  EXPECT_EQ(kViewSize, view.size());
 
   MutableBufferView view2(view);
-  view2.GetMutableData()[0] = 0x00;
-  EXPECT_EQ(0x00, buffer.GetData()[0]);
-  EXPECT_EQ(0x00, view.GetData()[0]);
-  EXPECT_EQ(0x00, view2.GetData()[0]);
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
-  EXPECT_EQ(kViewSize, view.GetSize());
+  view2[0] = 0x00;
+  EXPECT_EQ(0x00, buffer[0]);
+  EXPECT_EQ(0x00, view[0]);
+  EXPECT_EQ(0x00, view2[0]);
+  EXPECT_EQ(kBufferSize, buffer.size());
+  EXPECT_EQ(kViewSize, view.size());
 }
 
 TEST(ByteBufferTest, AsString) {

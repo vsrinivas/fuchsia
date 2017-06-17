@@ -22,12 +22,12 @@ enum class TechnologyType {
 // EIR Data Type, Advertising Data Type (AD Type), OOB Data Type definitions.
 enum class DataType : uint8_t {
   kFlags                        = 0x01,
-  kIncomplete16BitServiceUUIDs  = 0x02,
-  kComplete16BitServiceUUIDs    = 0x03,
-  kIncomplete32BitServiceUUIDs  = 0x04,
-  kComplete32BitServiceUUIDs    = 0x05,
-  kIncomplete128BitServiceUUIDs = 0x06,
-  kComplete128BitServiceUUIDs   = 0x07,
+  kIncomplete16BitServiceUuids  = 0x02,
+  kComplete16BitServiceUuids    = 0x03,
+  kIncomplete32BitServiceUuids  = 0x04,
+  kComplete32BitServiceUuids    = 0x05,
+  kIncomplete128BitServiceUuids = 0x06,
+  kComplete128BitServiceUuids   = 0x07,
   kShortenedLocalName           = 0x08,
   kCompleteLocalName            = 0x09,
   kTxPowerLevel                 = 0x0A,
@@ -57,9 +57,9 @@ constexpr size_t kTxPowerLevelSize = 1;
 constexpr size_t kFlagsSizeMin = 1;
 constexpr size_t kManufacturerSpecificDataSizeMin = kManufacturerIdSize;
 
-constexpr size_t k16BitUUIDElemSize = 2;
-constexpr size_t k32BitUUIDElemSize = 4;
-constexpr size_t k128BitUUIDElemSize = 16;
+constexpr size_t k16BitUuidElemSize = 2;
+constexpr size_t k32BitUuidElemSize = 4;
+constexpr size_t k128BitUuidElemSize = 16;
 
 // Potential values that can be provided in the "Flags" advertising data
 // bitfield.

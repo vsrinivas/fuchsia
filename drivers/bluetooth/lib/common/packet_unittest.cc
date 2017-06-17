@@ -33,8 +33,8 @@ TEST(PacketTest, EmptyPayload) {
   StaticByteBuffer<kBufferSize> buffer;
 
   // Assign some values to the header portion.
-  *reinterpret_cast<uint16_t*>(buffer.GetMutableData()) = 512;
-  buffer.GetMutableData()[2] = 255;
+  *reinterpret_cast<uint16_t*>(buffer.mutable_data()) = 512;
+  buffer[2] = 255;
 
   Packet<TestHeader> packet(&buffer);
   EXPECT_EQ(kBufferSize, packet.size());

@@ -120,7 +120,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   while (reader.GetNextField(&type, &adv_data_field)) {
     switch (type) {
       case gap::DataType::kFlags:
-        flags = adv_data_field.GetData()[0];
+        flags = adv_data_field.data()[0];
         break;
       case gap::DataType::kCompleteLocalName:
         complete_name = adv_data_field.AsString();
@@ -130,7 +130,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
         break;
       case gap::DataType::kTxPowerLevel:
         tx_power_present = true;
-        tx_power_lvl = adv_data_field.GetData()[0];
+        tx_power_lvl = adv_data_field.data()[0];
         break;
       default:
         break;
@@ -305,7 +305,7 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& c
   const std::string& name = cmd_line.positional_args()[0];
   common::StaticByteBuffer<BufferSize(hci::kMaxLocalNameLength)> buffer;
   hci::CommandPacket packet(hci::kWriteLocalName, &buffer, name.length() + 1);
-  buffer.GetMutableData()[name.length()] = '\0';
+  buffer[name.length()] = '\0';
   std::strcpy((char*)packet.GetMutablePayload<hci::WriteLocalNameCommandParams>()->local_name,
               name.c_str());
   packet.EncodeHeader();

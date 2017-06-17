@@ -220,10 +220,10 @@ TEST(HCIPacketTest, ACLDataRxPacket) {
   // 256 + 4
   auto large_bytes = common::StaticByteBuffer<260>();
   large_bytes.SetToZeros();
-  large_bytes.GetMutableData()[0] = 0xFF;
-  large_bytes.GetMutableData()[1] = 0x0F;
-  large_bytes.GetMutableData()[2] = 0x00;
-  large_bytes.GetMutableData()[3] = 0x01;
+  large_bytes[0] = 0xFF;
+  large_bytes[1] = 0x0F;
+  large_bytes[2] = 0x00;
+  large_bytes[3] = 0x01;
   packet = ACLDataRxPacket(&large_bytes);
   EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
   EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable, packet.GetPacketBoundaryFlag());

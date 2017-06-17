@@ -22,12 +22,12 @@ namespace {
 //    "00000000-0000-1000-8000-00805F9B34FB"
 //
 // (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
-constexpr UInt128 kBaseUUID = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
+constexpr UInt128 kBaseUuid = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x00}};
 
 // Format string that can be passed to sscanf. This allows sscanf to convert each octet into a
 // uint8_t.
-constexpr char kScanUUIDFormatString[] =
+constexpr char kScanUuidFormatString[] =
     "%2" SCNx8 "%2" SCNx8 "%2" SCNx8 "%2" SCNx8
     "-"
     "%2" SCNx8 "%2" SCNx8
@@ -59,7 +59,7 @@ bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
   // 16-octets that form the 128-bit UUID.
   if (uuid_string.length() != 36) return false;
 
-  int result = std::sscanf(uuid_string.c_str(), kScanUUIDFormatString, out_bytes->data() + 15,
+  int result = std::sscanf(uuid_string.c_str(), kScanUuidFormatString, out_bytes->data() + 15,
                            out_bytes->data() + 14, out_bytes->data() + 13, out_bytes->data() + 12,
                            out_bytes->data() + 11, out_bytes->data() + 10, out_bytes->data() + 9,
                            out_bytes->data() + 8, out_bytes->data() + 7, out_bytes->data() + 6,
@@ -73,15 +73,15 @@ bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
 
 // static
 bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
-  switch (bytes.GetSize()) {
+  switch (bytes.size()) {
     case 2:
-      *out_uuid = UUID(le16toh(*reinterpret_cast<const uint16_t*>(bytes.GetData())));
+      *out_uuid = UUID(le16toh(*reinterpret_cast<const uint16_t*>(bytes.data())));
       return true;
     case 4:
-      *out_uuid = UUID(le32toh(*reinterpret_cast<const uint32_t*>(bytes.GetData())));
+      *out_uuid = UUID(le32toh(*reinterpret_cast<const uint32_t*>(bytes.data())));
       return true;
     case 16:
-      *out_uuid = UUID(*reinterpret_cast<const UInt128*>(bytes.GetData()));
+      *out_uuid = UUID(*reinterpret_cast<const UInt128*>(bytes.data()));
       return true;
   }
 
@@ -90,7 +90,7 @@ bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
 
 UUID::UUID(const UInt128& uuid128) : type_(Type::k128Bit), value_(uuid128) {}
 
-UUID::UUID(uint16_t uuid16) : type_(Type::k16Bit), value_(kBaseUUID) {
+UUID::UUID(uint16_t uuid16) : type_(Type::k16Bit), value_(kBaseUuid) {
   uint16_t* bytes = reinterpret_cast<uint16_t*>(value_.data() + kBaseOffset);
   *bytes = htole16(uuid16);
 }
@@ -98,7 +98,7 @@ UUID::UUID(uint16_t uuid16) : type_(Type::k16Bit), value_(kBaseUUID) {
 UUID::UUID(uint32_t uuid32)
     // If the value of |uuid32| looks like 0x0000xxxx, then store this as a 16-bit UUID.
     : type_(uuid32 > std::numeric_limits<uint16_t>::max() ? Type::k32Bit : Type::k16Bit),
-      value_(kBaseUUID) {
+      value_(kBaseUuid) {
   uint32_t* bytes = reinterpret_cast<uint32_t*>(value_.data() + kBaseOffset);
   *bytes = htole32(uuid32);
 }
@@ -130,14 +130,14 @@ bool UUID::operator==(const UInt128& uuid128) const {
 }
 
 bool UUID::CompareBytes(const common::ByteBuffer& bytes) const {
-  if (bytes.GetSize() == 2) {
-    return (*this == le16toh(*reinterpret_cast<const uint16_t*>(bytes.GetData())));
+  if (bytes.size() == 2) {
+    return (*this == le16toh(*reinterpret_cast<const uint16_t*>(bytes.data())));
   }
-  if (bytes.GetSize() == 4) {
-    return (*this == le32toh(*reinterpret_cast<const uint32_t*>(bytes.GetData())));
+  if (bytes.size() == 4) {
+    return (*this == le32toh(*reinterpret_cast<const uint32_t*>(bytes.data())));
   }
-  if (bytes.GetSize() == 16) {
-    return (*this == *reinterpret_cast<const UInt128*>(bytes.GetData()));
+  if (bytes.size() == 16) {
+    return (*this == *reinterpret_cast<const UInt128*>(bytes.data()));
   }
 
   return false;
@@ -162,12 +162,12 @@ uint32_t UUID::ValueAs32Bit() const {
   return le32toh(*reinterpret_cast<const uint32_t*>(value_.data() + kBaseOffset));
 }
 
-bool IsStringValidUUID(const std::string& uuid_string) {
+bool IsStringValidUuid(const std::string& uuid_string) {
   UInt128 bytes;
   return ParseUuidString(uuid_string, &bytes);
 }
 
-bool StringToUUID(const std::string& uuid_string, UUID* out_uuid) {
+bool StringToUuid(const std::string& uuid_string, UUID* out_uuid) {
   FTL_DCHECK(out_uuid);
 
   UInt128 bytes;

@@ -70,13 +70,13 @@ TEST(AdvertisingDataTest, ReaderParseFields) {
   common::BufferView data;
   EXPECT_TRUE(reader.GetNextField(&type, &data));
   EXPECT_EQ(DataType::kFlags, type);
-  EXPECT_EQ(1u, data.GetSize());
+  EXPECT_EQ(1u, data.size());
   EXPECT_TRUE(common::ContainersEqual(common::CreateStaticByteBuffer(0x00), data));
 
   EXPECT_TRUE(reader.HasMoreData());
   EXPECT_TRUE(reader.GetNextField(&type, &data));
   EXPECT_EQ(DataType::kCompleteLocalName, type);
-  EXPECT_EQ(4u, data.GetSize());
+  EXPECT_EQ(4u, data.size());
   EXPECT_TRUE(common::ContainersEqual(std::string("Test"), data));
 
   EXPECT_FALSE(reader.HasMoreData());
@@ -116,7 +116,7 @@ TEST(AdvertisingDataTest, WriteField) {
   // Writing kValue2 should fill up the buffer.
   EXPECT_TRUE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue2)));
   EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue3)));
-  EXPECT_EQ(buffer.GetSize(), writer.bytes_written());
+  EXPECT_EQ(buffer.size(), writer.bytes_written());
 
   // Verify the contents.
   DataType type;

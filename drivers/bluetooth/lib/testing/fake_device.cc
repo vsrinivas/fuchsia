@@ -33,13 +33,13 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable, b
       should_batch_reports_(false) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
-  FTL_DCHECK(data.GetSize() <= hci::kMaxLEAdvertisingDataLength);
+  FTL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
   adv_data_ = common::DynamicByteBuffer(data);
 }
 
 void FakeDevice::SetScanResponse(bool should_batch_reports, const common::ByteBuffer& data) {
   FTL_DCHECK(scannable_);
-  FTL_DCHECK(data.GetSize() <= hci::kMaxLEAdvertisingDataLength);
+  FTL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
   scan_rsp_ = common::DynamicByteBuffer(data);
   should_batch_reports_ = should_batch_reports;
 }
@@ -47,10 +47,10 @@ void FakeDevice::SetScanResponse(bool should_batch_reports, const common::ByteBu
 common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_scan_rsp) const {
   size_t event_size = hci::EventPacket::GetMinBufferSize(
       sizeof(hci::LEMetaEventParams) + sizeof(hci::LEAdvertisingReportSubeventParams) +
-      sizeof(hci::LEAdvertisingReportData) + adv_data_.GetSize() + sizeof(int8_t));
+      sizeof(hci::LEAdvertisingReportData) + adv_data_.size() + sizeof(int8_t));
   if (include_scan_rsp) {
     FTL_DCHECK(scannable_);
-    event_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.GetSize() + sizeof(int8_t);
+    event_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t);
   }
 
   common::DynamicByteBuffer buffer(event_size);
@@ -75,8 +75,8 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_
                              ? hci::LEAddressType::kRandom
                              : hci::LEAddressType::kPublic;
   report->address = address_.value();
-  report->length_data = adv_data_.GetSize();
-  std::memcpy(report->data, adv_data_.GetData(), adv_data_.GetSize());
+  report->length_data = adv_data_.size();
+  std::memcpy(report->data, adv_data_.data(), adv_data_.size());
 
   WriteRandomRSSI(reinterpret_cast<int8_t*>(report->data + report->length_data));
 
@@ -92,7 +92,7 @@ common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
   FTL_DCHECK(scannable_);
   size_t event_size = hci::EventPacket::GetMinBufferSize(
       sizeof(hci::LEMetaEventParams) + sizeof(hci::LEAdvertisingReportSubeventParams) +
-      sizeof(hci::LEAdvertisingReportData) + scan_rsp_.GetSize() + sizeof(int8_t));
+      sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t));
   common::DynamicByteBuffer buffer(event_size);
   hci::MutableEventPacket event_packet(hci::kLEMetaEventCode, &buffer);
   auto payload = event_packet.GetMutablePayload<hci::LEMetaEventParams>();
@@ -115,8 +115,8 @@ void FakeDevice::WriteScanResponseReport(hci::LEAdvertisingReportData* report) c
                              ? hci::LEAddressType::kRandom
                              : hci::LEAddressType::kPublic;
   report->address = address_.value();
-  report->length_data = scan_rsp_.GetSize();
-  std::memcpy(report->data, scan_rsp_.GetData(), scan_rsp_.GetSize());
+  report->length_data = scan_rsp_.size();
+  std::memcpy(report->data, scan_rsp_.data(), scan_rsp_.size());
 
   WriteRandomRSSI(reinterpret_cast<int8_t*>(report->data + report->length_data));
 }

@@ -97,9 +97,9 @@ TEST(DiscoveryFilterTest, Connectable) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(empty, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, 16BitServiceUUIDs) {
-  constexpr uint16_t kUUID0 = 0x180d;
-  constexpr uint16_t kUUID1 = 0x1800;
+TEST(DiscoveryFilterTest, 16BitServiceUuids) {
+  constexpr uint16_t kUuid0 = 0x180d;
+  constexpr uint16_t kUuid1 = 0x1800;
 
   const common::BufferView kEmptyData;
 
@@ -130,8 +130,8 @@ TEST(DiscoveryFilterTest, 16BitServiceUUIDs) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch1, false, hci::kRSSIInvalid));
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 
-  // Filter for kUUID0 and kUUID1.
-  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kUUID0), common::UUID(kUUID1)});
+  // Filter for kUuid0 and kUuid1.
+  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kUuid0), common::UUID(kUuid1)});
   EXPECT_FALSE(filter.MatchLowEnergyResult(kEmptyData, false, hci::kRSSIInvalid));
   EXPECT_FALSE(filter.MatchLowEnergyResult(kIncompleteEmpty, false, hci::kRSSIInvalid));
   EXPECT_FALSE(filter.MatchLowEnergyResult(kIncompleteNoMatch, false, hci::kRSSIInvalid));
@@ -143,9 +143,9 @@ TEST(DiscoveryFilterTest, 16BitServiceUUIDs) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, 32BitServiceUUIDs) {
-  constexpr uint16_t kUUID0 = 0x180d;
-  constexpr uint16_t kUUID1 = 0x1800;
+TEST(DiscoveryFilterTest, 32BitServiceUuids) {
+  constexpr uint16_t kUuid0 = 0x180d;
+  constexpr uint16_t kUuid1 = 0x1800;
 
   const common::BufferView kEmptyData;
 
@@ -181,8 +181,8 @@ TEST(DiscoveryFilterTest, 32BitServiceUUIDs) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch1, false, hci::kRSSIInvalid));
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 
-  // Filter for kUUID0 and kUUID1.
-  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kUUID0), common::UUID(kUUID1)});
+  // Filter for kUuid0 and kUuid1.
+  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kUuid0), common::UUID(kUuid1)});
   EXPECT_FALSE(filter.MatchLowEnergyResult(kEmptyData, false, hci::kRSSIInvalid));
   EXPECT_FALSE(filter.MatchLowEnergyResult(kIncompleteEmpty, false, hci::kRSSIInvalid));
   EXPECT_FALSE(filter.MatchLowEnergyResult(kIncompleteNoMatch, false, hci::kRSSIInvalid));
@@ -194,9 +194,9 @@ TEST(DiscoveryFilterTest, 32BitServiceUUIDs) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, 128BitServiceUUIDs) {
-  constexpr uint16_t kUUID0 = 0x180d;
-  constexpr uint16_t kUUID1 = 0x1800;
+TEST(DiscoveryFilterTest, 128BitServiceUuids) {
+  constexpr uint16_t kUuid0 = 0x180d;
+  constexpr uint16_t kUuid1 = 0x1800;
 
   const common::BufferView kEmptyData;
 
@@ -272,8 +272,8 @@ TEST(DiscoveryFilterTest, 128BitServiceUUIDs) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch1, false, hci::kRSSIInvalid));
   EXPECT_TRUE(filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 
-  // Filter for kUUID0 and kUUID1.
-  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kUUID0), common::UUID(kUUID1)});
+  // Filter for kUuid0 and kUuid1.
+  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kUuid0), common::UUID(kUuid1)});
   EXPECT_FALSE(filter.MatchLowEnergyResult(kEmptyData, false, hci::kRSSIInvalid));
   EXPECT_FALSE(filter.MatchLowEnergyResult(kIncompleteEmpty, false, hci::kRSSIInvalid));
   EXPECT_FALSE(filter.MatchLowEnergyResult(kIncompleteNoMatch, false, hci::kRSSIInvalid));
@@ -422,8 +422,8 @@ TEST(DiscoveryFilterTest, Combined) {
   constexpr int8_t kTxPower = 5;
   constexpr int8_t kRSSI = -65;
 
-  constexpr uint16_t kMatchingUUID = 0x180d;
-  constexpr uint16_t kNotMatchingUUID = 0x1800;
+  constexpr uint16_t kMatchingUuid = 0x180d;
+  constexpr uint16_t kNotMatchingUuid = 0x1800;
 
   constexpr char kMatchingName[] = "test";
   constexpr char kNotMatchingName[] = "foo";
@@ -452,7 +452,7 @@ TEST(DiscoveryFilterTest, Combined) {
   // Assign all fields and make them match.
   filter.set_flags(0x01);
   filter.set_connectable(true);
-  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kMatchingUUID)});
+  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kMatchingUuid)});
   filter.set_name_substring(kMatchingName);
   filter.set_pathloss(kMatchingPathlossThreshold);
   filter.set_manufacturer_code(0x00E0);
@@ -467,9 +467,9 @@ TEST(DiscoveryFilterTest, Combined) {
   EXPECT_FALSE(filter.MatchLowEnergyResult(kAdvertisingData, true, kRSSI));
   filter.set_connectable(true);
 
-  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kNotMatchingUUID)});
+  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kNotMatchingUuid)});
   EXPECT_FALSE(filter.MatchLowEnergyResult(kAdvertisingData, true, kRSSI));
-  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kMatchingUUID)});
+  filter.set_service_uuids(std::vector<common::UUID>{common::UUID(kMatchingUuid)});
 
   filter.set_name_substring(kNotMatchingName);
   EXPECT_FALSE(filter.MatchLowEnergyResult(kAdvertisingData, true, kRSSI));

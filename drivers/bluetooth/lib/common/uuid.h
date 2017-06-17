@@ -78,7 +78,7 @@ class UUID final {
 //   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 //
 // where x is one of the alphanumeric characters in the string 0123456789abcdefABCDEF.
-bool IsStringValidUUID(const std::string& uuid_string);
+bool IsStringValidUuid(const std::string& uuid_string);
 
 // Constructs a 128-bit UUID from a string representation in the following formats:
 //
@@ -88,7 +88,7 @@ bool IsStringValidUUID(const std::string& uuid_string);
 //
 // Returns false if the string does not represent a valid Bluetooth UUID. Otherwise returns true and
 // populates |out_uuid|.
-bool StringToUUID(const std::string& uuid_string, UUID* out_uuid);
+bool StringToUuid(const std::string& uuid_string, UUID* out_uuid);
 
 // Equality operators
 inline bool operator==(uint16_t lhs, const UUID& rhs) {

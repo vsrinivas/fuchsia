@@ -27,7 +27,7 @@ void SequentialCommandRunner::QueueCommand(common::DynamicByteBuffer command_pac
                                            const CommandCompleteCallback& callback) {
   FTL_DCHECK(!result_callback_);
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(sizeof(CommandHeader) <= command_packet.GetSize());
+  FTL_DCHECK(sizeof(CommandHeader) <= command_packet.size());
 
   command_queue_.push(std::make_pair(std::move(command_packet), callback));
 }

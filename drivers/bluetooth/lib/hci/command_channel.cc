@@ -240,7 +240,7 @@ void CommandChannel::TrySendNextQueuedCommand() {
   }
 
   mx_status_t status =
-      channel_.write(0, cmd.packet_data.GetData(), cmd.packet_data.GetSize(), nullptr, 0);
+      channel_.write(0, cmd.packet_data.data(), cmd.packet_data.size(), nullptr, 0);
   if (status < 0) {
     // TODO(armansito): We should notify the |status_callback| of the pending
     // command with a special error code in this case.
@@ -307,7 +307,7 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   // the callback on |event| directly since the backing buffer is owned by this
   // CommandChannel and its contents will be modified.
   common::DynamicByteBuffer buffer(event.size());
-  memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
+  memcpy(buffer.mutable_data(), event.buffer()->data(), event.size());
 
   pending_command->task_runner->PostTask(ftl::MakeCopyable([
     buffer = std::move(buffer), complete_callback = pending_command->complete_callback,
@@ -417,7 +417,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
     handler.event_callback(event);
   } else {
     common::DynamicByteBuffer buffer(event.size());
-    memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
+    memcpy(buffer.mutable_data(), event.buffer()->data(), event.size());
 
     handler.task_runner->PostTask(ftl::MakeCopyable(
         [ buffer = std::move(buffer), event_callback = handler.event_callback ]() mutable {
@@ -432,7 +432,7 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   FTL_DCHECK(pending & MX_CHANNEL_READABLE);
 
   uint32_t read_size;
-  mx_status_t status = channel_.read(0u, event_buffer_.GetMutableData(), event_buffer_.GetSize(),
+  mx_status_t status = channel_.read(0u, event_buffer_.mutable_data(), event_buffer_.size(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
     FTL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "

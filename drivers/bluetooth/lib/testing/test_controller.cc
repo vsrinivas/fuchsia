@@ -17,9 +17,9 @@ namespace testing {
 
 CommandTransaction::CommandTransaction(const common::ByteBuffer& expected,
                                        const std::vector<const common::ByteBuffer*>& replies)
-    : expected_(expected.GetSize(), expected.CopyContents()) {
+    : expected_(expected.size(), expected.CopyContents()) {
   for (const auto* buffer : replies) {
-    replies_.push(common::DynamicByteBuffer(buffer->GetSize(), buffer->CopyContents()));
+    replies_.push(common::DynamicByteBuffer(buffer->size(), buffer->CopyContents()));
   }
 }
 
@@ -64,7 +64,7 @@ void TestController::OnCommandPacketReceived(const hci::CommandPacket& command_p
 
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();
-    mx_status_t status = command_channel().write(0, reply.GetData(), reply.GetSize(), nullptr, 0);
+    mx_status_t status = command_channel().write(0, reply.data(), reply.size(), nullptr, 0);
     ASSERT_EQ(MX_OK, status) << "Failed to send reply: " << mx_status_get_string(status);
     current.replies_.pop();
   }

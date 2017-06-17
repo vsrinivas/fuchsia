@@ -166,7 +166,7 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
     for (auto& result : pending_results_) {
       auto& pending = result.second;
       NotifyDeviceFound(pending.result,
-                        common::BufferView(pending.data.GetData(), pending.adv_data_len));
+                        common::BufferView(pending.data.data(), pending.adv_data_len));
     }
   }
 
@@ -254,7 +254,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const hci::EventPacket& ev
     pending.result.connectable = connectable;
     pending.result.rssi = rssi;
     pending.adv_data_len = report->length_data;
-    std::memcpy(pending.data.GetMutableData(), report->data, report->length_data);
+    std::memcpy(pending.data.mutable_data(), report->data, report->length_data);
   }
 }
 
@@ -280,10 +280,9 @@ void LegacyLowEnergyScanner::HandleScanResponse(const hci::LEAdvertisingReportDa
   pending.result.rssi = rssi;
 
   // Append the scan response to the pending advertising data.
-  std::memcpy(pending.data.GetMutableData() + pending.adv_data_len, report.data,
-              report.length_data);
+  std::memcpy(pending.data.mutable_data() + pending.adv_data_len, report.data, report.length_data);
 
-  NotifyDeviceFound(pending.result, common::BufferView(pending.data.GetData(),
+  NotifyDeviceFound(pending.result, common::BufferView(pending.data.data(),
                                                        pending.adv_data_len + report.length_data));
   pending_results_.erase(iter);
 }
