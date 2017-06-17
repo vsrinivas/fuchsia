@@ -112,7 +112,14 @@ you’ll also need to run **B** in the usual order.
 
 ### Tips and tricks
 
-#### Visualizing the content of a GN target
+#### Visualizing the hierarchy of build modules
+
+```
+$ scripts/visualize_module_tree.py > tree.dot
+$ dot -Tpng tree.dot -o tree.png
+```
+
+#### Inspecting the content of a GN target
 
 ```
 $ packages/gn/gn.py desc out/debug-x86-64 //path/to/my:target
