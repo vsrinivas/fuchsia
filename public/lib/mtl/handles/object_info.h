@@ -23,9 +23,6 @@ mx_koid_t GetKoid(mx_handle_t handle);
 // the object associated with the handle has no related object.
 mx_koid_t GetRelatedKoid(mx_handle_t handle);
 
-// Gets the type of a kernel object.
-mx_obj_type_t GetObjectType(mx_handle_t handle);
-
 // Gets the name of a kernel object.
 std::string GetObjectName(mx_handle_t handle);
 
