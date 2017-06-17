@@ -61,7 +61,9 @@ __EXPORT mx_status_t device_add_from_driver(mx_driver_t* drv, mx_device_t* paren
         r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL, MX_HANDLE_INVALID);
     }
     if (r == MX_OK) {
-        *out = dev;
+        if (out) {
+            *out = dev;
+        }
     } else {
         devhost_device_destroy(dev);
     }
