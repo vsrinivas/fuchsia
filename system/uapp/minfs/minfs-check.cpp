@@ -381,15 +381,15 @@ mx_status_t MinfsChecker::CheckLinkCounts() const {
 }
 
 mx_status_t MinfsChecker::CheckAllocatedCounts() const {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     if (alloc_blocks_ != fs_->info_.alloc_block_count) {
         FS_TRACE_ERROR("check: incorrect allocated block count %u (should be %u)\n", fs_->info_.alloc_block_count, alloc_blocks_);
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
     }
 
     if (alloc_inodes_ != fs_->info_.alloc_inode_count) {
         FS_TRACE_ERROR("check: incorrect allocated inode count %u (should be %u)\n", fs_->info_.alloc_inode_count, alloc_inodes_);
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
     }
 
     return status;

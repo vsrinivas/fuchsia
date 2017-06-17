@@ -314,7 +314,7 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
 }
 
 mx_status_t Minfs::CountUpdate(WriteTxn* txn) {
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
 #ifdef __Fuchsia__
     void* infodata = info_vmo_->GetData();
@@ -420,12 +420,12 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
 
     // Create the info vmo
     if ((status = MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
-                                    &fs->info_vmo_)) != NO_ERROR) {
+                                    &fs->info_vmo_)) != MX_OK) {
         return status;
     }
 
     if ((status = fs->bc_->AttachVmo(fs->info_vmo_->GetVmo(),
-                                     &fs->info_vmoid_)) != NO_ERROR) {
+                                     &fs->info_vmoid_)) != MX_OK) {
         return status;
     }
 
