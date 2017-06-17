@@ -888,6 +888,62 @@ static mx_status_t make_part(int device_fd, const char *dev_dir_path,
   return MX_OK;
 }
 
+static mx_status_t format_existing(int device_fd, char *dev_dir_path,
+                                   uint8_t (*guid)[GPT_GUID_LEN],
+                                   disk_format_t disk_format) {
+    lseek(device_fd, 0, SEEK_SET);
+    uint64_t block_size;
+
+    gpt_device_t *gpt_device = read_gpt(device_fd, &block_size);
+    if (gpt_device == NULL) {
+      fprintf(stderr, "WARNING: Couldn't read GPT to format partition.\n");
+      return MX_ERR_INTERNAL;
+    }
+    uint16_t part_id;
+    uint16_t part_count = count_partitions(gpt_device);
+    int rc = find_partition_entries((gpt_partition_t**)&gpt_device->partitions, guid, part_count, &part_id);
+    if (rc != MX_OK) {
+      gpt_device_release(gpt_device);
+      fprintf(stderr, "WARNING: Couldn't find partition to format.\n");
+      return MX_ERR_INTERNAL;
+    }
+
+    char part_path[PATH_MAX];
+    DIR *dev_dir;
+    dev_dir = opendir(dev_dir_path);
+    if (dev_dir == NULL) {
+      fprintf(stderr, "WARNING: Couldn't open device directory.\n");
+      gpt_device_release(gpt_device);
+      return MX_ERR_INTERNAL;
+    }
+    rc = find_partition_path((gpt_partition_t**)&gpt_device->partitions[part_id], (char**) &part_path, dev_dir, 1);
+    if (rc != MX_OK) {
+      gpt_device_release(gpt_device);
+      fprintf(stderr, "WARNING: Couldn't locate partition path.\n");
+      return MX_ERR_INTERNAL;
+    }
+
+    // construct the full path in-place now that we know which device it is
+    size_t len_temp = strlen(part_path) + 1;
+    size_t total_len = strlen(part_path) + strlen(dev_dir_path) + 1;
+
+    // check that the total length required does not exceed available space AND
+    // that accounting for the length of dev_dir_path we can copy part_path
+    // around without source and destination regions not overlapping for memcpy
+    if (total_len > PATH_MAX) {
+      gpt_device_release(gpt_device);
+      fprintf(stderr, "WARNING: Device path is too long!\n");
+      return MX_ERR_INTERNAL;
+    }
+
+    // move the device-specific part to make space for the prefix
+    memmove(&part_path[strlen(dev_dir_path)], part_path, len_temp);
+    memcpy(part_path, dev_dir_path, strlen(dev_dir_path));
+
+    gpt_device_release(gpt_device);
+    return mkfs(part_path, disk_format, launch_stdio_sync, &default_mkfs_options);
+}
+
 /*
  * Given a GPT device struct and a path to the disk device, check to see if
  * there is already a partition with the supplied GUID. If not, try to create
@@ -901,7 +957,8 @@ static mx_status_t make_empty_partition(gpt_device_t *install_dev,
                                         char *device_path, char *dev_dir_path,
                                         uint8_t (*guid)[GPT_GUID_LEN],
                                         uint64_t size_pref, uint64_t size_min,
-                                        disk_format_t disk_format, char *name) {
+                                        disk_format_t disk_format, char *name,
+                                        bool reformat) {
   int device_fd = open(device_path, O_RDWR);
   if (device_fd < 0) {
     printf("WARNING: Problem opening device, '%s' partition not created.\n",
@@ -925,7 +982,16 @@ static mx_status_t make_empty_partition(gpt_device_t *install_dev,
             name);
     close(device_fd);
     return rc;
+  } else if (rc == MX_OK && reformat) {
+    lseek(device_fd, 0, SEEK_SET);
+    rc = format_existing(device_fd, dev_dir_path, guid, disk_format);
+    if (rc != MX_OK) {
+      printf("WARNING: couldn't format existing partition\n");
+      close(device_fd);
+      return rc;
+    }
   }
+
   close(device_fd);
   return MX_OK;
 }
@@ -1302,6 +1368,13 @@ int main(int argc, char **argv) {
                 "Install partition count is unexpected, expected 2.");
   static_assert(PATH_MAX >= sizeof(PATH_BLOCKDEVS),
                 "File path max length is too short for path to block devices.");
+
+  bool wipe = false;
+  if (argc == 2 && strcmp("-w", argv[1]) == 0) {
+    printf("running with wipe");
+    wipe = true;
+  }
+
   // setup the base path in the path buffer
   static char path_buffer[sizeof(PATH_BLOCKDEVS) + 2];
   strcpy(path_buffer, PATH_BLOCKDEVS);
@@ -1318,7 +1391,6 @@ int main(int argc, char **argv) {
 
   // device to install on
   gpt_device_t *install_dev = NULL;
-  // uint64_t block_size;
   partition_flags ready_for_install = 0;
   partition_flags requested_parts = PART_EFI | PART_SYSTEM;
   uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
@@ -1369,7 +1441,7 @@ int main(int argc, char **argv) {
         strcat(path_buffer, "/");
         if (make_empty_partition(install_dev, disk_path, path_buffer, &data_guid,
                                  PREFERRED_SIZE_DATA, MIN_SIZE_DATA,
-                                 DISK_FORMAT_MINFS, "data") != MX_OK) {
+                                 DISK_FORMAT_MINFS, "data", wipe) != MX_OK) {
           printf("WARNING: Problem locating or creating data partition.\n");
         } else {
           part_data_avail = true;
@@ -1394,7 +1466,7 @@ int main(int argc, char **argv) {
         // add a blobfs partition
         if (make_empty_partition(install_dev, disk_path, path_buffer,
                                  &blobfs_guid, PREFERRED_SIZE_DATA,
-                                 MIN_SIZE_DATA, DISK_FORMAT_BLOBFS, "blobfs")
+                                 MIN_SIZE_DATA, DISK_FORMAT_BLOBFS, "blobfs", wipe)
             != MX_OK) {
           printf("WARNING: Problem locating or creating blobfs partition.\n");
         } else {
