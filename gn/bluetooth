@@ -5,8 +5,16 @@
     ],
     "binaries": [
         {
+            "binary": "bluetooth_service",
+            "bootfs_path": "apps/bluetooth"
+        },
+        {
             "binary": "bluetooth_unittests",
             "bootfs_path": "test/bluetooth_unittests"
+        },
+        {
+            "binary": "bluetooth_bluetoothcli",
+            "bootfs_path": "apps/bluetoothcli"
         },
         {
             "binary": "bluetooth_btsnoop",
