@@ -20,7 +20,9 @@ namespace escher {
 class ResourceRecycler : public ResourceManager,
                          public impl::CommandBufferSequencerListener {
  public:
-  explicit ResourceRecycler(const VulkanContext& context);
+  explicit ResourceRecycler(Escher* escher);
+  explicit ResourceRecycler(impl::EscherImpl* escher);
+
   virtual ~ResourceRecycler();
 
  private:
@@ -43,6 +45,10 @@ class ResourceRecycler : public ResourceManager,
   // can't modify elements of an unordered_set, which prevents us from
   // removing a unique_ptr.
   std::unordered_map<Resource*, std::unique_ptr<Resource>> unused_resources_;
+
+  // TODO: use Escher* instead of EscherImpl*.
+  // TODO: push this up into ResourceManager.
+  impl::EscherImpl* const escher_;
 };
 
 }  // namespace escher

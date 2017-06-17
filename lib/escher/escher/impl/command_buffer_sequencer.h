@@ -10,6 +10,8 @@
 namespace escher {
 namespace impl {
 
+class CommandBufferSequencer;
+
 // Listener that can be registered with CommandBufferSequencer.
 class CommandBufferSequencerListener {
  public:
@@ -18,6 +20,11 @@ class CommandBufferSequencerListener {
   // Notify the listener that all command buffers with seq # <= sequence_number
   // have finished executing on the GPU.
   virtual void CommandBufferFinished(uint64_t sequence_number) = 0;
+
+ protected:
+  // Allow subclasses to register/unregister themselves.
+  void Register(CommandBufferSequencer* sequencer);
+  void Unregister(CommandBufferSequencer* sequencer);
 };
 
 // CommandBufferSequencer is responsible for global sequencing of CommandBuffers
@@ -48,9 +55,12 @@ class CommandBufferSequencer {
   // notify all registered listeners.
   void CommandBufferFinished(uint64_t sequence_number);
 
-  void AddListener(CommandBufferSequencerListener* listener);
-
  private:
+  // Allow listeners to register/unregister themselves.
+  friend class CommandBufferSequencerListener;
+  void AddListener(CommandBufferSequencerListener* listener);
+  void RemoveListener(CommandBufferSequencerListener* listener);
+
   uint64_t next_sequence_number_ = 1;
   uint64_t last_finished_sequence_number_ = 0;
   // Sequence numbers of command-buffers that finished out-of-sequence.

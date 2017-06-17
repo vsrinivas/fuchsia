@@ -27,6 +27,7 @@ class EscherImpl {
   ~EscherImpl();
 
   const VulkanContext& vulkan_context();
+  CommandBufferSequencer* command_buffer_sequencer();
   CommandBufferPool* command_buffer_pool();
   CommandBufferPool* transfer_command_buffer_pool();
   GpuAllocator* gpu_allocator();

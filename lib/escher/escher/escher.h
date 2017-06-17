@@ -58,6 +58,10 @@ class Escher : public MeshBuilderFactory {
   impl::GpuUploader* gpu_uploader();
 
  private:
+  // Friends that need access to impl_.
+  friend class ResourceRecycler;
+  friend class impl::GpuUploader;
+
   std::unique_ptr<impl::EscherImpl> impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Escher);

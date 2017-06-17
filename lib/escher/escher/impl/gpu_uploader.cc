@@ -6,7 +6,9 @@
 
 #include <algorithm>
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer_pool.h"
+#include "escher/impl/escher_impl.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
 #include "escher/resources/resource_recycler.h"
@@ -107,15 +109,24 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->KeepAlive(target);
 }
 
-GpuUploader::GpuUploader(const VulkanContext& context,
+GpuUploader::GpuUploader(Escher* escher,
                          CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
-    : ResourceRecycler(context),
-      command_buffer_pool_(command_buffer_pool),
+    : GpuUploader(escher->impl_.get(), command_buffer_pool, allocator) {}
+
+GpuUploader::GpuUploader(impl::EscherImpl* escher,
+                         CommandBufferPool* command_buffer_pool,
+                         GpuAllocator* allocator)
+    : ResourceRecycler(escher),
+      command_buffer_pool_(command_buffer_pool ? command_buffer_pool
+                                               : escher->command_buffer_pool()),
       device_(command_buffer_pool_->device()),
       queue_(command_buffer_pool_->queue()),
-      allocator_(allocator),
-      current_offset_(0) {}
+      allocator_(allocator ? allocator : escher->gpu_allocator()),
+      current_offset_(0) {
+  FTL_DCHECK(command_buffer_pool_);
+  FTL_DCHECK(allocator_);
+}
 
 GpuUploader::~GpuUploader() {
   current_buffer_ = nullptr;

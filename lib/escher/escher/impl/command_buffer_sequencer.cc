@@ -9,9 +9,22 @@
 namespace escher {
 namespace impl {
 
+void CommandBufferSequencerListener::Register(
+    CommandBufferSequencer* sequencer) {
+  FTL_DCHECK(sequencer);
+  sequencer->AddListener(this);
+}
+
+void CommandBufferSequencerListener::Unregister(
+    CommandBufferSequencer* sequencer) {
+  FTL_DCHECK(sequencer);
+  sequencer->RemoveListener(this);
+}
+
 CommandBufferSequencer::~CommandBufferSequencer() {
   // Ensure clean shutdown.
   FTL_DCHECK(next_sequence_number_ == last_finished_sequence_number_ + 1);
+  FTL_DCHECK(listeners_.size() == 0);
 }
 
 uint64_t CommandBufferSequencer::GetNextCommandBufferSequenceNumber() {
@@ -52,7 +65,18 @@ void CommandBufferSequencer::CommandBufferFinished(uint64_t sequence_number) {
 void CommandBufferSequencer::AddListener(
     CommandBufferSequencerListener* listener) {
   if (listener) {
+    FTL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
+               listeners_.end());
     listeners_.push_back(listener);
+  }
+}
+
+void CommandBufferSequencer::RemoveListener(
+    CommandBufferSequencerListener* listener) {
+  if (listener) {
+    listeners_.erase(
+        std::remove(listeners_.begin(), listeners_.end(), listener),
+        listeners_.end());
   }
 }
 

@@ -43,12 +43,12 @@ std::unique_ptr<CommandBufferPool> NewTransferCommandBufferPool(
 }
 
 // Constructor helper.
-std::unique_ptr<GpuUploader> NewGpuUploader(const VulkanContext& context,
+std::unique_ptr<GpuUploader> NewGpuUploader(EscherImpl* escher,
                                             CommandBufferPool* main_pool,
                                             CommandBufferPool* transfer_pool,
                                             GpuAllocator* allocator) {
   return std::make_unique<GpuUploader>(
-      context, transfer_pool ? transfer_pool : main_pool, allocator);
+      escher, transfer_pool ? transfer_pool : main_pool, allocator);
 }
 
 // Constructor helper.
@@ -74,13 +74,12 @@ EscherImpl::EscherImpl(const VulkanContext& context)
           NewTransferCommandBufferPool(context,
                                        command_buffer_sequencer_.get())),
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
-      gpu_uploader_(NewGpuUploader(context,
+      gpu_uploader_(NewGpuUploader(this,
                                    command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),
       pipeline_cache_(std::make_unique<PipelineCache>()),
-      resource_recycler_(
-          std::make_unique<ResourceRecycler>(vulkan_context_)),
+      resource_recycler_(std::make_unique<ResourceRecycler>(this)),
       image_cache_(
           std::make_unique<ImageCache>(vulkan_context_, gpu_allocator())),
       mesh_manager_(NewMeshManager(command_buffer_pool(),
@@ -96,8 +95,6 @@ EscherImpl::EscherImpl(const VulkanContext& context)
   FTL_DCHECK(context.queue);
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
-
-  command_buffer_sequencer_->AddListener(resource_recycler_.get());
 
   auto device_properties = context.physical_device.getProperties();
   timestamp_period_ = device_properties.limits.timestampPeriod;
@@ -123,6 +120,10 @@ void EscherImpl::Cleanup() {
 
 const VulkanContext& EscherImpl::vulkan_context() {
   return vulkan_context_;
+}
+
+CommandBufferSequencer* EscherImpl::command_buffer_sequencer() {
+  return command_buffer_sequencer_.get();
 }
 
 CommandBufferPool* EscherImpl::command_buffer_pool() {

@@ -4,13 +4,22 @@
 
 #include "escher/resources/resource_recycler.h"
 
+#include "escher/escher.h"
+#include "escher/impl/escher_impl.h"
+
 namespace escher {
 
-ResourceRecycler::ResourceRecycler(const VulkanContext& context)
-    : ResourceManager(context) {}
+ResourceRecycler::ResourceRecycler(Escher* escher)
+    : ResourceRecycler(escher->impl_.get()) {}
+
+ResourceRecycler::ResourceRecycler(impl::EscherImpl* escher)
+    : ResourceManager(escher->vulkan_context()), escher_(escher) {
+  Register(escher_->command_buffer_sequencer());
+}
 
 ResourceRecycler::~ResourceRecycler() {
   FTL_DCHECK(unused_resources_.empty());
+  Unregister(escher_->command_buffer_sequencer());
 }
 
 void ResourceRecycler::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
