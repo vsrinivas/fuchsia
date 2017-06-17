@@ -163,7 +163,7 @@ static mx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return MX_ERR_BUFFER_TOO_SMALL;
-        ramdisk_get_info(ramdev->mxdev, info);
+        ramdisk_get_info(ramdev, info);
         *out_actual = sizeof(*info);
         return MX_OK;
     }
