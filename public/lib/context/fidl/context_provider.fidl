@@ -34,38 +34,14 @@ struct ContextUpdate {
   map<string, string> values;
 };
 
-union ContextFilter {
-  // A JSON value. When evaluating against booleans, numbers and strings,
-  // performs an exact match.  For objects, each property in |partial_eq|'s
-  // JSON must have a corresponding value in the topic being evaluated against
-  // and recursively satisfy partial_eq on that property.
-  //
-  // Providing an array is invalid and will always evaluate to false.
-  // TODO(thatguy): At some point, consider how to treat arrays here.
-  string partial_eq;
-
-  // When evaluating against an array, evaluates |filter_array| against each
-  // element and filter the array to contain only those elements.  Evaluates to
-  // true if the resulting array is not empty.
-  ContextFilter filter_array;
-};
-
 struct ContextQuery {
   // A set of topics to include in the ContextUpdate when the following
-  // conditions match. An empty list indicates a wildcard query and includes
-  // all topics.
+  // conditions match. An empty list includes all topics.
   //
-  // If no conditions/filters are given below, the query will match whenever
-  // any of |topics| changes.
+  // If no conditions are given below, the query will match whenever any
+  // of |topics| changes.
+  //
+  // TODO(thatguy): Eventually add more useful query/trigger conditions here.
+  // For now, this is all we will need for a while going forward.
   array<string> topics;
-
-  // A map from topics to filters applied to each topic. A subscription will
-  // only be notified of an update if each specified filter evaluates to true.
-  //
-  // ContextFilters may transform the values they filter for clients subscribed
-  // to this ContextQuery.
-  //
-  // It is an error to add a filter for a topic that is not listed in |topics|.
-  // Filters on a wildcard query have no effect.
-  map<string, ContextFilter>? filters;
 };

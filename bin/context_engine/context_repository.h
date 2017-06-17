@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <deque>
 #include <list>
 #include <map>
 
@@ -25,7 +24,7 @@ class ContextRepository {
   struct Subscription;
 
  public:
-  using SubscriptionId = uint32_t;
+  using SubscriptionId = std::list<Subscription>::const_iterator;
 
   ContextRepository();
   ~ContextRepository();
@@ -60,9 +59,7 @@ class ContextRepository {
 
  private:
   void SetInternal(const std::string& topic, const std::string* json_value);
-
-  bool EvaluateQueryAndBuildUpdate(const ContextQueryPtr& query,
-                                   ContextUpdatePtr* update_output);
+  ContextUpdatePtr BuildContextUpdate(const ContextQueryPtr& query);
 
   // Keyed by context topic.
   std::map<std::string, std::string> values_;
@@ -71,13 +68,10 @@ class ContextRepository {
     ContextQueryPtr query;
     ContextListener* listener;  // Not owned.
   };
-  // A map of SubscriptionId (int) to Subscription.
-  SubscriptionId next_subscription_id_;
-  std::map<int, Subscription> subscriptions_;
-
-  // A map of topic string to subscriptions that have listed that topic
-  // in their |ContextQuery.topics| field.
-  std::map<std::string, std::set<SubscriptionId>> topic_to_subscription_id_;
+  // We use a std::list<> here instead of a std::vector<> since we capture
+  // iterators to identify a subscription for clients, and we want them to
+  // remain valid regardless of operations on the container.
+  std::list<Subscription> subscriptions_;
 
   std::vector<std::unique_ptr<ContextCoprocessor>> coprocessors_;
 

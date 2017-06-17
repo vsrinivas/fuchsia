@@ -42,8 +42,6 @@ source_set("context_repository") {
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
-    "//apps/modular/lib/rapidjson",
-    "//third_party/rapidjson",
   ]
 }
 
