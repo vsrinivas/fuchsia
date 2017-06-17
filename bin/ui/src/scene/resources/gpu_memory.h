@@ -35,6 +35,13 @@ class GpuMemory : public Memory {
   // Returns the created GpuMemory object or nullptr if there was an error.
   static GpuMemoryPtr New(Session* session,
                           vk::Device device,
+                          mx::vmo vmo,
+                          ErrorReporter* error_reporter);
+
+  // Helper method that calls the above method with the VMO from |args|. Also
+  // checks the memory type in debug mode.
+  static GpuMemoryPtr New(Session* session,
+                          vk::Device device,
                           const mozart2::MemoryPtr& args,
                           ErrorReporter* error_reporter);
 

@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 
+#include "apps/mozart/services/images2/memory_type.fidl.h"
+
 namespace mozart {
 namespace scene {
 
@@ -23,6 +25,18 @@ GpuMemoryPtr GpuMemory::New(Session* session,
                             vk::Device device,
                             const mozart2::MemoryPtr& args,
                             ErrorReporter* error_reporter) {
+  if (args->memory_type != mozart2::MemoryType::VK_DEVICE_MEMORY) {
+    error_reporter->ERROR() << "scene::GpuMemory::New(): "
+                               "Memory must be of type VK_DEVICE_MEMORY.";
+    return nullptr;
+  }
+  return New(session, device, std::move(args->vmo), error_reporter);
+}
+
+GpuMemoryPtr GpuMemory::New(Session* session,
+                            vk::Device device,
+                            mx::vmo vmo,
+                            ErrorReporter* error_reporter) {
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 
   if (!device) {
@@ -33,12 +47,11 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   vk::DeviceMemory memory = nullptr;
 
   size_t vmo_size;
-  args->vmo.get_size(&vmo_size);
+  vmo.get_size(&vmo_size);
 
   // Import a VkDeviceMemory from the VMO. vkImportDeviceMemoryMAGMA takes
   // ownership of the VMO handle it is passed.
-  vk::Result err =
-      device.importMemoryMAGMA(args->vmo.release(), nullptr, &memory);
+  vk::Result err = device.importMemoryMAGMA(vmo.release(), nullptr, &memory);
   if (err != vk::Result::eSuccess) {
     error_reporter->ERROR() << "scene::Session::CreateMemory(): "
                                "vkImportDeviceMemoryMAGMA failed.";

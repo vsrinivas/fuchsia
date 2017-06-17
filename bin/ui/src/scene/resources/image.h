@@ -22,10 +22,12 @@ class Image : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Helper method to create an Image object from a mozart2::Image object.
+  // Helper methods to create an Image object.
   // If the image lives in host memory, then the image is uploaded to the
   // the GPU. This means that the Image's backing memory could be different from
   // that associated with the Memory object.
+
+  // Create Image given a MemoryPtr and mozart2::ImagePtr.
   //
   // |session| is the Session that this image can be referenced from.
   // |memory| is the memory that is associated with this image.
@@ -39,6 +41,21 @@ class Image : public Resource {
                       const mozart2::ImagePtr& args,
                       ErrorReporter* error_reporter);
 
+  // Create Image given a MemoryPtr, mozart2::ImageInfoPtr, and memory_offset.
+  //
+  // |session| is the Session that this image can be referenced from.
+  // |memory| is the memory that is associated with this image.
+  // |args| specifies size, format, and other properties.
+  // |error_reporter| is used to log any errors so they can be seen by the
+  // caller.
+  //
+  // Returns the created Image, or nullptr if there was an error.
+  static ImagePtr New(Session* session,
+                      MemoryPtr memory,
+                      const mozart2::ImageInfoPtr& image_info,
+                      uint64_t memory_offset,
+                      ErrorReporter* error_reporter);
+
   void Accept(class ResourceVisitor* visitor) override;
 
   escher::ImagePtr escher_image() { return image_; }
@@ -47,8 +64,8 @@ class Image : public Resource {
   // Create an Image object from a VkImage.
   // |session| is the Session that this image can be referenced from.
   // |image_info| specifies size, format, and other properties.
-  // |vk_image| is the VkImage, whose lifetime is now controlled by this object.
-  // |memory| is the GPU memory that is associated with this image.
+  // |vk_image| is the VkImage, whose lifetime is now controlled by this
+  // object. |memory| is the GPU memory that is associated with this image.
   Image(Session* session,
         escher::ImageInfo image_info,
         vk::Image vk_image,

@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene/resources/host_memory.h"
 
+//#include "apps/mozart/services/images2/memory_type.fidl.h"
+
 namespace mozart {
 namespace scene {
 
@@ -20,10 +22,21 @@ HostMemoryPtr HostMemory::New(Session* session,
                               vk::Device device,
                               const mozart2::MemoryPtr& args,
                               ErrorReporter* error_reporter) {
+  if (args->memory_type != mozart2::MemoryType::HOST_MEMORY) {
+    error_reporter->ERROR() << "scene::HostMemory::New(): "
+                               "Memory must be of type HOST_MEMORY.";
+    return nullptr;
+  }
+  return New(session, device, std::move(args->vmo), error_reporter);
+}
+
+HostMemoryPtr HostMemory::New(Session* session,
+                              vk::Device device,
+                              mx::vmo vmo,
+                              ErrorReporter* error_reporter) {
   uint64_t vmo_size;
-  args->vmo.get_size(&vmo_size);
-  return ftl::MakeRefCounted<HostMemory>(session, std::move(args->vmo),
-                                         vmo_size);
+  vmo.get_size(&vmo_size);
+  return ftl::MakeRefCounted<HostMemory>(session, std::move(vmo), vmo_size);
 }
 
 }  // namespace scene

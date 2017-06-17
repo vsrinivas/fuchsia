@@ -31,6 +31,13 @@ class HostMemory : public Memory {
   // Returns the created HostMemory object or nullptr if there was an error.
   static HostMemoryPtr New(Session* session,
                            vk::Device device,
+                           mx::vmo vmo,
+                           ErrorReporter* error_reporter);
+
+  // Helper method that calls the above method with the VMO from |args|. Also
+  // checks the memory type in debug mode.
+  static HostMemoryPtr New(Session* session,
+                           vk::Device device,
                            const mozart2::MemoryPtr& args,
                            ErrorReporter* error_reporter);
 
