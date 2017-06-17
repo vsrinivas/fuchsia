@@ -375,7 +375,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
     len = ROUNDUP(len, PAGE_SIZE);
     if (len == 0) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     AutoLock guard(aspace_->lock());
@@ -387,7 +387,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
     DEBUG_ASSERT(object_);
     if (!IS_PAGE_ALIGNED(offset) || !is_in_range(base_ + offset, len)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // precompute the flags we'll pass GetPageLocked
