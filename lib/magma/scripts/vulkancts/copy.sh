@@ -9,14 +9,10 @@ fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
 build_dir=$fuchsia_root/out/build-vulkancts
 dest_dir=/data/vulkancts
+netaddr=$fuchsia_root/out/build-magenta/tools/netaddr
+ssh_config="-F $fuchsia_root/out/debug-x86-64/ssh-keys/ssh_config"
 
-$fuchsia_root/out/build-magenta/tools/netcp $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped :$dest_dir/deqp-vk
-$fuchsia_root/out/build-magenta/tools/netcp $build_dir/executor/executor :$dest_dir/executor
-$fuchsia_root/out/build-magenta/tools/netcp $build_dir/execserver/execserver :$dest_dir/execserver
-$fuchsia_root/out/build-magenta/tools/netcp third_party/vulkan-cts/cases/dEQP-VK-cases.xml :$dest_dir/dEQP-VK-cases.xml
-$fuchsia_root/out/build-magenta/tools/netcp third_party/vulkan-cts/external/vulkancts/mustpass/1.0.1/vk-default.txt :$dest_dir/vk-default.txt
-$fuchsia_root/out/build-magenta/tools/netcp magma/scripts/vulkancts/run.sh :$dest_dir/run.sh
-
-cd $fuchsia_root/third_party/vulkan-cts/external/vulkancts/data
-find . -type f | xargs -I % $fuchsia_root/out/build-magenta/tools/netcp % :$dest_dir/%
-cd -
+ssh $ssh_config `$netaddr --fuchsia` mkdir -p $dest_dir
+scp $ssh_config $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped [`$netaddr --fuchsia`]:$dest_dir/deqp-vk
+scp $ssh_config third_party/vulkan-cts/external/vulkancts/mustpass/1.0.1/vk-default.txt [`$netaddr --fuchsia`]:$dest_dir/vk-default.txt
+scp $ssh_config -pr $fuchsia_root/third_party/vulkan-cts/external/vulkancts/data/* [`$netaddr --fuchsia`]:$dest_dir
