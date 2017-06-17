@@ -96,7 +96,6 @@ bool test_rename_with_children(void) {
     // Check that the directory layout has persisted across rename
     expected_dirent_t dir_contents[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "dir1", DT_DIR},
         {false, "dir2", DT_DIR},
         {false, "file", DT_REG},
@@ -104,7 +103,6 @@ bool test_rename_with_children(void) {
     ASSERT_TRUE(check_dir_contents("::dir", dir_contents, countof(dir_contents)), "");
     expected_dirent_t dir2_contents[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "subdir", DT_DIR},
     };
     ASSERT_TRUE(check_dir_contents("::dir/dir2", dir2_contents, countof(dir2_contents)), "");
@@ -147,7 +145,6 @@ bool test_rename_absolute_relative(void) {
     ASSERT_EQ(mkdirat(fd, "foo", 0755), 0, "");
     expected_dirent_t dir_contents_foo[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "foo", DT_DIR},
     };
     ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, countof(dir_contents_foo)), "");
@@ -156,7 +153,6 @@ bool test_rename_absolute_relative(void) {
     ASSERT_EQ(rename("::working_dir/foo", "bar"), 0, "Could not rename foo to bar");
     expected_dirent_t dir_contents_bar[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "bar", DT_DIR},
     };
     ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_bar, countof(dir_contents_bar)), "");
@@ -194,12 +190,10 @@ bool test_rename_at(void) {
 
     expected_dirent_t empty_contents[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
     };
     ASSERT_TRUE(check_dir_contents("::foo", empty_contents, countof(empty_contents)), "");
     expected_dirent_t contains_zab[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "zab", DT_DIR},
     };
     ASSERT_TRUE(check_dir_contents("::bar", contains_zab, countof(contains_zab)), "");
@@ -211,7 +205,6 @@ bool test_rename_at(void) {
     ASSERT_EQ(renameat(barfd, "zab", barfd, "::foo/baz"), 0, "");
     expected_dirent_t contains_baz[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "baz", DT_DIR},
     };
     ASSERT_TRUE(check_dir_contents("::foo", contains_baz, countof(contains_baz)), "");

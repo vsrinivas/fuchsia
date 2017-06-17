@@ -25,8 +25,6 @@
 #include <mxio/io.h>
 #endif
 
-#define NO_DOTDOT true
-
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE                 1
 #define V_FLAG_MOUNT_READY            2

@@ -581,10 +581,14 @@ mx_status_t VnodeDir::CreateFromVmo(const char* name, size_t namelen,
 mx_status_t VnodeDir::CanCreate(const char* name, size_t namelen) const {
     if (!IsDirectory()) {
         return MX_ERR_INVALID_ARGS;
-    } else if (dnode_->Lookup(name, namelen, nullptr) == MX_OK) {
+    }
+    mx_status_t status;
+    if ((status = dnode_->Lookup(name, namelen, nullptr)) == MX_ERR_NOT_FOUND) {
+        return MX_OK;
+    } else if (status == MX_OK) {
         return MX_ERR_ALREADY_EXISTS;
     }
-    return MX_OK;
+    return status;
 }
 
 mx_status_t VnodeDir::AttachVnode(mxtl::RefPtr<VnodeMemfs> vn, const char* name, size_t namelen,

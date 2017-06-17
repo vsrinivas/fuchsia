@@ -26,14 +26,12 @@ bool test_dot_dot_client(void) {
 
     expected_dirent_t foo_dir[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "bar", DT_DIR},
         {false, "bit", DT_DIR},
     };
 
     expected_dirent_t bar_dir[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "baz", DT_DIR},
     };
 
@@ -65,63 +63,31 @@ bool test_dot_dot_client(void) {
 bool test_dot_dot_server(void) {
     BEGIN_TEST;
     ASSERT_EQ(mkdir("::foo", 0755), 0, "");
-    ASSERT_EQ(mkdir("::foo/bit", 0755), 0, "");
     ASSERT_EQ(mkdir("::foo/bar", 0755), 0, "");
-    ASSERT_EQ(mkdir("::foo/bar/baz", 0755), 0, "");
-
-    expected_dirent_t foo_dir[] = {
-        {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
-        {false, "bar", DT_DIR},
-        {false, "bit", DT_DIR},
-    };
-
-    expected_dirent_t bar_dir[] = {
-        {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
-        {false, "baz", DT_DIR},
-    };
 
     int foo_fd = open("::foo", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(foo_fd, 0, "");
 
-    // ".." from foo --> "foo"
-    int fd = openat(foo_fd, "..", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0, "");
-    DIR* dir = fdopendir(fd); // Consumes 'fd'
-    ASSERT_NONNULL(dir, "");
-    ASSERT_TRUE(fcheck_dir_contents(dir, foo_dir, countof(foo_dir)), "");
-    ASSERT_EQ(closedir(dir), 0, "");
+    // ".." from foo --> Not Supported
+    ASSERT_LT(openat(foo_fd, "..", O_RDONLY | O_DIRECTORY), 0, "");
 
-    // "bar/.." from foo --> "foo"
-    fd = openat(foo_fd, "bar/..", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0, "");
-    dir = fdopendir(fd); // Consumes 'fd'
-    ASSERT_NONNULL(dir, "");
-    ASSERT_TRUE(fcheck_dir_contents(dir, foo_dir, countof(foo_dir)), "");
-    ASSERT_EQ(closedir(dir), 0, "");
+    // "bar/../.." from foo --> Not supported
+    ASSERT_LT(openat(foo_fd, "bar/../..", O_RDONLY | O_DIRECTORY), 0, "");
 
-    // "bar/../.." from foo --> "foo"
-    fd = openat(foo_fd, "bar/../..", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0, "");
-    dir = fdopendir(fd); // Consumes 'fd'
-    ASSERT_NONNULL(dir, "");
-    ASSERT_TRUE(fcheck_dir_contents(dir, foo_dir, countof(foo_dir)), "");
-    ASSERT_EQ(closedir(dir), 0, "");
+    // "../../../../../bar" -->  Not supported
+    ASSERT_LT(openat(foo_fd, "../../../../../bar", O_RDONLY | O_DIRECTORY), 0, "");
 
-    // "../../../../../bar" --> "bar"
-    fd = openat(foo_fd, "../../../../../bar", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0, "");
-    dir = fdopendir(fd); // Consumes 'fd'
-    ASSERT_NONNULL(dir, "");
-    ASSERT_TRUE(fcheck_dir_contents(dir, bar_dir, countof(bar_dir)), "");
-    ASSERT_EQ(closedir(dir), 0, "");
+    // Try to create a file named '..'
+    ASSERT_LT(openat(foo_fd, "..", O_RDWR | O_CREAT), 0, "");
+    ASSERT_LT(openat(foo_fd, ".", O_RDWR | O_CREAT), 0, "");
+
+    // Try to create a directory named '..'
+    ASSERT_LT(mkdirat(foo_fd, "..", 0666), 0, "");
+    ASSERT_LT(mkdirat(foo_fd, ".", 0666), 0, "");
 
     // Clean up
     ASSERT_EQ(close(foo_fd), 0, "");
-    ASSERT_EQ(unlink("::foo/bar/baz"), 0, "");
     ASSERT_EQ(unlink("::foo/bar"), 0, "");
-    ASSERT_EQ(unlink("::foo/bit"), 0, "");
     ASSERT_EQ(unlink("::foo"), 0, "");
     END_TEST;
 }
@@ -138,14 +104,12 @@ bool test_dot_dot_rename(void) {
 
     expected_dirent_t foo_dir_bit[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "bar", DT_DIR},
         {false, "bit", DT_DIR},
     };
 
     expected_dirent_t foo_dir_bits[] = {
         {false, ".", DT_DIR},
-        {false, "..", DT_DIR},
         {false, "bar", DT_DIR},
         {false, "bits", DT_DIR},
     };
@@ -173,8 +137,6 @@ bool test_dot_dot_rename(void) {
     ASSERT_EQ(unlink("::foo"), 0, "");
     END_TEST;
 }
-
-// TODO(smklein): Restrict access in ThinFS
 
 RUN_FOR_ALL_FILESYSTEMS(dot_dot_tests,
     RUN_TEST_MEDIUM(test_dot_dot_client)

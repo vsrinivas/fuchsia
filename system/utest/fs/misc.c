@@ -38,7 +38,7 @@ bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
             }
         }
 
-        ASSERT_TRUE(found, "Saw an unexptected dirent");
+        ASSERT_TRUE(found, "Saw an unexpected dirent");
     }
 
     ASSERT_EQ(readdir(dir), NULL, "There exists an entry we didn't expect to see");

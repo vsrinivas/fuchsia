@@ -165,9 +165,6 @@ bool test_persist_with_data(void) {
     de = readdir(dirp);
     ASSERT_NONNULL(de, "");
     ASSERT_EQ(strncmp(de->d_name, ".", 1), 0, "");
-    de = readdir(dirp);
-    ASSERT_NONNULL(de, "");
-    ASSERT_EQ(strncmp(de->d_name, "..", 2), 0, "");
     ASSERT_NULL(readdir(dirp), "");
     ASSERT_EQ(closedir(dirp), 0, "");
 
@@ -228,10 +225,6 @@ bool test_rename_loop(void) {
         de = readdir(dirp);
         ASSERT_NONNULL(de, "");
         ASSERT_EQ(strcmp(de->d_name, "."), 0, "");
-        de = readdir(dirp);
-        ASSERT_NONNULL(de, "");
-        ASSERT_EQ(strcmp(de->d_name, ".."), 0, "");
-
         de = readdir(dirp);
         if (de != nullptr) {
             ASSERT_FALSE(target_found, "Target found twice!");

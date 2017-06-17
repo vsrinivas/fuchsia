@@ -947,12 +947,10 @@ mx_status_t VnodeMinfs::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
         return MX_ERR_NOT_SUPPORTED;
     }
 
-#ifdef NO_DOTDOT
     if (len == 2 && name[0] == '.' && name[1] == '.') {
         // ".." --> "." when every directory is its own root.
-        len = 1;
+        return MX_ERR_NOT_SUPPORTED;
     }
-#endif
 
     return LookupInternal(out, name, len);
 }
@@ -1059,7 +1057,7 @@ mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
             goto fail;
         }
 
-        if (de->ino) {
+        if (de->ino && (de->namelen != 2 || strncmp("..", de->name, de->namelen))) {
             mx_status_t status;
             if ((status = df.Next(de->name, de->namelen, de->type)) != MX_OK) {
                 // no more space
@@ -1129,6 +1127,11 @@ mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
         return MX_ERR_BAD_STATE;
     }
 
+    if ((len == 1) && (name[0] == '.')) {
+        return MX_ERR_INVALID_ARGS;
+    } else if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
+        return MX_ERR_INVALID_ARGS;
+    }
     DirArgs args = DirArgs();
     args.name = name;
     args.len = len;

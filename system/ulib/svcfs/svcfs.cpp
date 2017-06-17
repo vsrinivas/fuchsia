@@ -18,13 +18,16 @@ static void CopyToArray(const char* string, size_t len, mxtl::Array<char>* resul
     result->swap(array);
 }
 
-static bool IsDotOrDotDot(const char* name, size_t len) {
-    return ((len == 1) && (name[0] == '.')) ||
-           ((len == 2) && (name[0] == '.') && (name[1] == '.'));
+static bool IsDot(const char* name, size_t len) {
+    return (len == 1) && (name[0] == '.');
+}
+
+static bool IsDotDot(const char* name, size_t len) {
+    return (len == 2) && (name[0] == '.') && (name[1] == '.');
 }
 
 static bool IsValidServiceName(const char* name, size_t len) {
-    return name && len >= 1 && !IsDotOrDotDot(name, len) &&
+    return name && len >= 1 && !IsDot(name, len) && !IsDotDot(name, len) &&
         !memchr(name, '/', len) && !memchr(name, 0, len);
 }
 
@@ -104,9 +107,11 @@ mx_status_t VnodeDir::Open(uint32_t flags) {
 }
 
 mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    if (IsDotOrDotDot(name, len)) {
+    if (IsDot(name, len)) {
         *out = mxtl::RefPtr<fs::Vnode>(this);
         return MX_OK;
+    } else if (IsDotDot(name, len)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     mxtl::RefPtr<VnodeSvc> vn = nullptr;
@@ -141,12 +146,6 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
             return df.BytesFilled();
         }
         c->last_id = 1;
-    }
-    if (c->last_id < 2) {
-        if ((r = df.Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
-            return df.BytesFilled();
-        }
-        c->last_id = 2;
     }
 
     for (const VnodeSvc& vn : services_) {
@@ -209,9 +208,11 @@ mx_status_t VnodeProviderDir::Open(uint32_t flags) {
 }
 
 mx_status_t VnodeProviderDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    if (IsDotOrDotDot(name, len)) {
+    if (IsDot(name, len)) {
         *out = mxtl::RefPtr<fs::Vnode>(this);
         return MX_OK;
+    } else if (IsDotDot(name, len)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     if (!IsValidServiceName(name, len)) {

@@ -104,15 +104,7 @@ mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out
         return MX_OK;
     }
     if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
-        if (out != nullptr) {
-#ifdef NO_DOTDOT
-            // ".." --> "." when every directory is its own root.
-            *out = nullptr;
-#else
-            *out = parent_;
-#endif
-        }
-        return MX_OK;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     auto dn = children_.find_if([&name, &len](const Dnode& elem) -> bool {
@@ -162,12 +154,6 @@ mx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
         }
         c->order++;
     }
-    if (c->order == 1) {
-        if ((r = df->Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != MX_OK) {
-            return r;
-        }
-        c->order++;
-    }
     return MX_OK;
 }
 
@@ -175,7 +161,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
     mx_status_t r = 0;
 
-    if (c->order <= 1) {
+    if (c->order < 1) {
         if ((r = Dnode::ReaddirStart(df, cookie)) != MX_OK) {
             return;
         }
