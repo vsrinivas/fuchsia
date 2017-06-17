@@ -14,7 +14,12 @@ ranlib=$fuchsia_root/`find buildtools -name "ranlib"`
 strip=$fuchsia_root/`find buildtools -name "strip"`
 ar=$fuchsia_root/`find buildtools -name "llvm-ar"`
 ranlib=$fuchsia_root/`find buildtools -name "llvm-ranlib"`
-sysroot=$fuchsia_root/out/release-x86-64/sysroot
+sysroot=$fuchsia_root/out/debug-x86-64/sysroot
+
+if [ ! -d "$sysroot" ]; then
+	echo "Can't find sysroot: $sysroot"
+	exit 1
+fi
 
 mkdir -p $build_dir
 cd $build_dir
