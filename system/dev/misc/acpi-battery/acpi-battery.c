@@ -29,8 +29,6 @@
 #define ACPI_BATTERY_STATE_CRITICAL    (1 << 2)
 
 typedef struct acpi_battery_device {
-    mx_device_t* mxdev;
-
     acpi_handle_t acpi_handle;
     thrd_t poll_thread;
 
@@ -136,7 +134,7 @@ static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie)
         .proto_id = MX_PROTOCOL_BATTERY,
     };
 
-    mx_status_t status = device_add(dev, &args, &device->mxdev);
+    mx_status_t status = device_add(dev, &args, NULL);
     if (status != MX_OK) {
         printf("acpi-battery: could not add device! err=%d\n", status);
         free(device);

@@ -26,8 +26,6 @@
 #define BCM_FIFO_DEADLINE_MS 100
 
 typedef struct {
-
-    mx_device_t*        mxdev;
     mx_device_t*        parent;
     bcm_i2c_regs_t*     control_regs;
     uint32_t            dev_id;
@@ -249,7 +247,7 @@ static int i2c_bootstrap_thread(void *arg) {
         .ops = &i2c_device_proto,
     };
 
-    status = device_add(i2c_ctx->parent, &args, &i2c_ctx->mxdev);
+    status = device_add(i2c_ctx->parent, &args, NULL);
 
     if (status == MX_OK) return 0;
 

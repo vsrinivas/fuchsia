@@ -78,8 +78,6 @@ typedef struct ipt_per_trace_state {
 } ipt_per_trace_state_t;
 
 typedef struct ipt_device {
-    mx_device_t* mxdev;
-
     mtx_t lock;
 
     ipt_trace_mode_t mode;
@@ -950,7 +948,7 @@ static mx_status_t ipt_bind(void* ctx, mx_device_t* parent, void** cookie) {
     };
 
     mx_status_t status;
-    if ((status = device_add(parent, &args, &ipt_dev->mxdev)) < 0) {
+    if ((status = device_add(parent, &args, NULL)) < 0) {
         free(ipt_dev);
         return status;
     }

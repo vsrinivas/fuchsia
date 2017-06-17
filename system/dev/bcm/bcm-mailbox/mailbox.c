@@ -327,7 +327,6 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     // The device is actually mapped at some offset into the page.
     mailbox_regs = (uint32_t*)(page_base + PAGE_REG_DELTA);
 
-    mx_device_t* rpc_mxdev;
     device_add_args_t vc_rpc_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bcm-vc-rpc",
@@ -336,7 +335,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .proto_ops = &bcm_bus_protocol,
     };
 
-    status = device_add(parent, &vc_rpc_args, &rpc_mxdev);
+    status = device_add(parent, &vc_rpc_args, NULL);
     if (status != MX_OK) {
         return status;
     }

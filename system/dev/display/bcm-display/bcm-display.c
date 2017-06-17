@@ -35,7 +35,6 @@ typedef struct {
 } bcm_fb_desc_t;
 
 typedef struct {
-    mx_device_t* mxdev;
     bcm_bus_protocol_t bus_proto;
     mx_display_info_t disp_info;
     bcm_fb_desc_t fb_desc;
@@ -170,7 +169,7 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .proto_ops = &vc_display_proto,
     };
 
-    status = device_add(parent, &vc_fbuff_args, &display->mxdev);
+    status = device_add(parent, &vc_fbuff_args, NULL);
     if (status != MX_OK) {
         free(display);
     }

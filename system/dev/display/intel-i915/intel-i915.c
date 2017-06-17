@@ -36,7 +36,6 @@
 #endif
 
 typedef struct intel_i915_device {
-    mx_device_t* mxdev;
     void* regs;
     uint64_t regs_size;
     mx_handle_t regs_handle;
@@ -205,7 +204,7 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .proto_ops = &intel_i915_display_proto,
     };
 
-    status = device_add(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, NULL);
     if (status != MX_OK) {
         goto fail;
     }

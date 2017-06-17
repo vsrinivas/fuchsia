@@ -53,7 +53,6 @@ static inline void FB_FLUSH(fb_t* fb) {
 }
 
 struct fbi {
-    mx_device_t* mxdev;
     fb_t* fb;
     void* buffer;
     mx_handle_t vmo;
@@ -297,12 +296,11 @@ static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, ui
     }
 
     mx_status_t r;
-    if ((r = device_add(fb->mxdev, &args, &fbi->mxdev)) < 0) {
+    if ((r = device_add(fb->mxdev, &args, out)) < 0) {
         fbi_release(fbi);
         return r;
     }
 
-    *out = fbi->mxdev;
     return MX_OK;
 }
 

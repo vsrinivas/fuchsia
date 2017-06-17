@@ -44,7 +44,6 @@ typedef struct i2c_hid_desc {
 } __PACKED i2c_hid_desc_t;
 
 typedef struct i2c_hid_device {
-    mx_device_t* mxdev;
     mx_device_t* i2cdev;
 
     mtx_t lock;
@@ -293,7 +292,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .proto_ops = &i2c_hidbus_ops,
     };
 
-    mx_status_t status = device_add(i2chid->i2cdev, &args, &i2chid->mxdev);
+    mx_status_t status = device_add(i2chid->i2cdev, &args, NULL);
     if (status != MX_OK) {
         printf("i2c-hid: could not add device: %d\n", status);
         free(i2chid->hiddesc);

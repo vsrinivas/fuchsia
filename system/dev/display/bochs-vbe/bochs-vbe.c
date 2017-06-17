@@ -31,8 +31,6 @@
 #endif
 
 typedef struct bochs_vbe_device {
-    mx_device_t* mxdev;
-
     void* regs;
     uint64_t regs_size;
     mx_handle_t regs_handle;
@@ -234,7 +232,7 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
         .proto_ops = &bochs_vbe_display_proto,
     };
 
-    status = device_add(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, NULL);
     if (status != MX_OK) {
         goto fail;
     }

@@ -23,8 +23,6 @@
 #define AMD_KAVERI_R7_DID (0x130f)
 
 typedef struct kaveri_disp_device {
-    mx_device_t* mxdev;
-
     void* regs;
     uint64_t regs_size;
     mx_handle_t regs_handle;
@@ -152,7 +150,7 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
         .proto_ops = &kaveri_disp_display_proto,
     };
 
-    status = device_add(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, NULL);
     if (status != MX_OK) {
         goto fail;
     }
