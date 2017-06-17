@@ -1,3 +1,4 @@
+#include "asan_impl.h"
 #include "futex_impl.h"
 #include "libc.h"
 #include "pthread_impl.h"
@@ -14,15 +15,20 @@
 #include <string.h>
 #include <sys/mman.h>
 
-static void start_pthread(void* arg) {
+static inline pthread_t prestart(void* arg) {
     pthread_t self = arg;
     mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
+    __sanitizer_thread_start_hook(self->sanitizer_hook, (thrd_t)self);
+    return self;
+}
+
+static void start_pthread(void* arg) {
+    pthread_t self = prestart(arg);
     pthread_exit(self->start(self->start_arg));
 }
 
 static void start_c11(void* arg) {
-    pthread_t self = arg;
-    mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
+    pthread_t self = prestart(arg);
     int (*start)(void*) = (int (*)(void*))self->start;
     pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
@@ -59,17 +65,28 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->start = entry;
     new->start_arg = arg;
 
+    new->sanitizer_hook = __sanitizer_before_thread_create_hook(
+        (thrd_t)new, attr._a_detach, name,
+        new->safe_stack.iov_base, new->safe_stack.iov_len);
+
     atomic_fetch_add(&libc.thread_count, 1);
     status = mxr_thread_start(&new->mxr_thread,
                               (uintptr_t)new->safe_stack.iov_base,
                               new->safe_stack.iov_len, start, new);
 
     if (status == MX_OK) {
+        __sanitizer_thread_create_hook(new->sanitizer_hook,
+                                       (thrd_t)new, thrd_success);
         *res = new;
         return 0;
     }
 
     atomic_fetch_sub(&libc.thread_count, 1);
+
+    __sanitizer_thread_create_hook(
+        new->sanitizer_hook, (thrd_t)new,
+        status == MX_ERR_ACCESS_DENIED ? thrd_error : thrd_nomem);
+
 fail_after_alloc:
     deallocate_region(&new->safe_stack_region);
     deallocate_region(&new->unsafe_stack_region);
@@ -80,7 +97,7 @@ fail_after_alloc:
 static _Noreturn void final_exit(pthread_t self)
     __asm__("final_exit") __attribute__((used));
 
-static __NO_SAFESTACK void final_exit(pthread_t self) {
+static __NO_SAFESTACK NO_ASAN void final_exit(pthread_t self) {
     deallocate_region(&self->safe_stack_region);
     deallocate_region(&self->unsafe_stack_region);
 
@@ -91,16 +108,8 @@ static __NO_SAFESTACK void final_exit(pthread_t self) {
                                       self->tcb_region.iov_len);
 }
 
-_Noreturn void pthread_exit(void* result) {
-    pthread_t self = __pthread_self();
-    // TODO(kulakowski) Signals?
-    // sigset_t set;
-
-    self->result = result;
-
-    __tls_run_dtors();
-
-    __pthread_tsd_run_dtors();
+static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
+    __sanitizer_thread_exit_hook(self->sanitizer_hook, (thrd_t)self);
 
     /* It's impossible to determine whether this is "the last thread"
      * until performing the atomic decrement, since multiple threads
@@ -111,8 +120,6 @@ _Noreturn void pthread_exit(void* result) {
         atomic_store(&libc.thread_count, 0);
         exit(0);
     }
-
-    __dl_thread_cleanup();
 
     // Switch off the thread's normal stack so it can be freed.  The TCB
     // region stays alive so the pthread_t is still valid for pthread_join.
@@ -141,4 +148,22 @@ _Noreturn void pthread_exit(void* result) {
 #error what architecture?
 #endif
     __builtin_unreachable();
+}
+
+_Noreturn void pthread_exit(void* result) {
+    pthread_t self = __pthread_self();
+    // TODO(kulakowski) Signals?
+    // sigset_t set;
+
+    self->result = result;
+
+    __tls_run_dtors();
+
+    __pthread_tsd_run_dtors();
+
+    __dl_thread_cleanup();
+
+    // After this point the sanitizer runtime will tear down its state,
+    // so we cannot run any more sanitized code.
+    finish_exit(self);
 }

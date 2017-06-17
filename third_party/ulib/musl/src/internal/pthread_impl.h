@@ -60,6 +60,7 @@ struct pthread {
     int tsd_used;
     int errno_value;
 
+    void* sanitizer_hook;
     void* start_arg;
     void* (*start)(void*);
     void* result;

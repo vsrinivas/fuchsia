@@ -1122,6 +1122,7 @@ MODULE_SRCS += \
 MODULE_SRCS += \
     $(LOCAL_DIR)/sanitizers/__asan_early_init.c \
     $(LOCAL_DIR)/sanitizers/asan-stubs.c \
+    $(LOCAL_DIR)/sanitizers/hooks.c \
 
 include make/module.mk
 
