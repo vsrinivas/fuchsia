@@ -19,9 +19,10 @@ using escher::vec3;
 using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
+using escher::RoundedRectSpec;
 using escher::ShapeModifier;
 
-RingTricks2::RingTricks2(Demo* demo) : Scene(demo) {}
+RingTricks2::RingTricks2(Demo* demo) : Scene(demo), factory_(demo->escher()) {}
 
 void RingTricks2::Init(escher::Stage* stage) {
   red_ = ftl::MakeRefCounted<escher::Material>();
@@ -34,10 +35,19 @@ void RingTricks2::Init(escher::Stage* stage) {
   color2_->set_color(vec3(143.f / 255.f, 143.f / 255.f, 143.f / 255.f));
 
   // Create meshes for fancy wobble effect.
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
-                MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
-  ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 285.f,
-                                    265.f, 18.f, -15.f);
+  {
+    MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+                  MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
+    ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 285.f,
+                                      265.f, 18.f, -15.f);
+  }
+
+  // Create rounded rectangles.
+  {
+    MeshSpec mesh_spec{MeshAttribute::kPosition | MeshAttribute::kUV};
+    rounded_rect1_ = factory_.NewRoundedRect(
+        RoundedRectSpec(200, 400, 90, 20, 20, 50), mesh_spec);
+  }
 }
 
 RingTricks2::~RingTricks2() {}
@@ -106,6 +116,10 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
 
   Object circle9(Object::NewCircle(vec2(100, 100), 40.f, 85.f, color1_));
   objects.push_back(circle9);
+
+  // Rounded rect.
+  Object round_rect1(vec3(300, 700, 30.f), rounded_rect1_, red_);
+  objects.push_back(round_rect1);
 
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));

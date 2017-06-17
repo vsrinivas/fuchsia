@@ -5,6 +5,7 @@
 #pragma once
 
 #include "escher/escher.h"
+#include "escher/shape/rounded_rect_factory.h"
 
 #include "examples/waterfall/scenes/scene.h"
 
@@ -20,6 +21,8 @@ class RingTricks2 : public Scene {
                         escher::Stage* stage) override;
 
  private:
+  escher::RoundedRectFactory factory_;
+
   std::unique_ptr<escher::Model> model_;
 
   escher::MaterialPtr red_;
@@ -29,6 +32,10 @@ class RingTricks2 : public Scene {
   escher::MaterialPtr color2_;
 
   escher::MeshPtr ring_mesh1_;
+
+  escher::MeshPtr rounded_rect1_;
+  escher::MeshPtr rounded_rect2_;
+  escher::MeshPtr rounded_rect3_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RingTricks2);
 };

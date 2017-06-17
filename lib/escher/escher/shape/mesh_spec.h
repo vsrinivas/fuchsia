@@ -52,6 +52,8 @@ struct MeshSpec {
   size_t GetStride() const {
     return GetAttributeOffset(MeshAttribute::kStride);
   }
+
+  static constexpr size_t kIndexSize = sizeof(uint32_t);
 };
 
 // Inline function definitions.

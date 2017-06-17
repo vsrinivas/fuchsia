@@ -14,6 +14,7 @@ executable("escher_unittests") {
     "impl/pipeline_cache_unittest.cc",
     "mesh_spec_unittest.cc",
     "run_all_unittests.cc",
+    "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",
   ]
 

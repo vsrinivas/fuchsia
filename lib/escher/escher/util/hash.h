@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 namespace escher {
 
 // FNV-1a 32-bit Hash (http://www.isthe.com/chongo/tech/comp/fnv/index.html)
