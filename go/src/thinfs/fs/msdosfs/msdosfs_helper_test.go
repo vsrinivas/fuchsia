@@ -71,9 +71,8 @@ func checkDoesNotExist(t *testing.T, d fs.Directory, path string) {
 
 // Helper to validate that directory has unlinked child
 func checkDirectoryEmpty(t *testing.T, d fs.Directory) {
-	contents := checkReadDir(t, d, 2)
+	contents := checkReadDir(t, d, 1)
 	checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-	checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
 }
 
 // Helper to validate that directory has not yet unlinked a child
@@ -81,9 +80,8 @@ func checkDirectoryEmpty(t *testing.T, d fs.Directory) {
 func checkDirectoryContains(t *testing.T, d fs.Directory, name string, fType fs.FileType, length int) {
 	contents := checkReadDir(t, d, length)
 	checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-	checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
 	found := false
-	for i := 2; i < length; i++ {
+	for i := 1; i < length; i++ {
 		if contents[i].GetName() == name {
 			if found {
 				t.Fatalf("Dirent named: %s was found twice", name)

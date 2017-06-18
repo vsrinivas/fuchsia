@@ -39,10 +39,12 @@ func traversePath(n node.DirectoryNode, path string) (parent node.DirectoryNode,
 	oldDirectoryID := int64(-1)
 	for i := 0; i < len(pathComponents)-1; i++ {
 		component := pathComponents[i]
-		if component == "." || component == ".." {
+		if component == "." {
 			// In this case, "n" stays the same.
+		} else if component == ".." {
 			// Note that this is Fuchsia-specific behavior for '..', where server-side '..'
-			// is redirected to '.'
+			// is disallowed
+			return nil, "", false, fs.ErrNotSupported
 		} else {
 			n.RLock()
 			newDir, err := traverseDirectory(n, component, fs.OpenFlagRead|fs.OpenFlagDirectory)

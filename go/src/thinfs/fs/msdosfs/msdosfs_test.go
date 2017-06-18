@@ -52,9 +52,8 @@ func TestRootBasic(t *testing.T) {
 		fatFS := checkNewFS(t, dev, fs.ReadWrite)
 		root := fatFS.RootDirectory()
 
-		rootContents := checkReadDir(t, root, 2)
+		rootContents := checkReadDir(t, root, 1)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
 
 		// First, try to open the subdirectory as if it existed.
 		if _, _, err := root.Open("subdir", fs.OpenFlagRead); err != fs.ErrNotFound {
@@ -64,15 +63,13 @@ func TestRootBasic(t *testing.T) {
 		subdir := checkOpenDirectory(t, root, "subdir", fs.OpenFlagWrite|fs.OpenFlagRead|fs.OpenFlagCreate)
 
 		// Verify that the new directory is empty.
-		subDirContents := checkReadDir(t, subdir, 2)
+		subDirContents := checkReadDir(t, subdir, 1)
 		checkDirent(t, subDirContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, subDirContents[1], "..", fs.FileTypeDirectory)
 
 		// Verify the root has been updated.
-		rootContents = checkReadDir(t, root, 3)
+		rootContents = checkReadDir(t, root, 2)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[2], "subdir", fs.FileTypeDirectory)
+		checkDirent(t, rootContents[1], "subdir", fs.FileTypeDirectory)
 
 		checkClose(t, subdir)
 
@@ -83,11 +80,10 @@ func TestRootBasic(t *testing.T) {
 		foo := checkOpenFile(t, root, "foo", fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate)
 
 		// Verify the root has been updated.
-		rootContents = checkReadDir(t, root, 4)
+		rootContents = checkReadDir(t, root, 3)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[2], "subdir", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[3], "foo", fs.FileTypeRegularFile)
+		checkDirent(t, rootContents[1], "subdir", fs.FileTypeDirectory)
+		checkDirent(t, rootContents[2], "foo", fs.FileTypeRegularFile)
 
 		// Write to the file, close it, reopen it, and read it.
 		writeBuf := []byte{'a', 'b', 'c'}
@@ -112,17 +108,15 @@ func TestRootBasic(t *testing.T) {
 		root = fatFS.RootDirectory()
 
 		// Verify root
-		rootContents = checkReadDir(t, root, 4)
+		rootContents = checkReadDir(t, root, 3)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[2], "subdir", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[3], "foo", fs.FileTypeRegularFile)
+		checkDirent(t, rootContents[1], "subdir", fs.FileTypeDirectory)
+		checkDirent(t, rootContents[2], "foo", fs.FileTypeRegularFile)
 
 		// Verify subdirectory
 		subdir = checkOpenDirectory(t, root, "subdir", fs.OpenFlagRead)
-		subDirContents = checkReadDir(t, subdir, 2)
+		subDirContents = checkReadDir(t, subdir, 1)
 		checkDirent(t, subDirContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, subDirContents[1], "..", fs.FileTypeDirectory)
 
 		// Verify foo
 		foo = checkOpenFile(t, root, "foo", fs.OpenFlagRead)
@@ -156,9 +150,8 @@ func TestOpenFlags(t *testing.T) {
 
 		testOpenFlags := func(d fs.Directory) {
 			// Start with an empty directory
-			contents := checkReadDir(t, d, 2)
+			contents := checkReadDir(t, d, 1)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
 
 			// Try creating a node without specifying if it is a file or directory
 			if _, _, err := d.Open("foo", fs.OpenFlagCreate|fs.OpenFlagWrite); err != fs.ErrInvalidArgs {
@@ -266,10 +259,9 @@ func TestOpenFlags(t *testing.T) {
 
 			checkClose(t, f)
 
-			contents = checkReadDir(t, d, 3)
+			contents = checkReadDir(t, d, 2)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-			checkDirent(t, contents[2], "foo", fs.FileTypeRegularFile)
+			checkDirent(t, contents[1], "foo", fs.FileTypeRegularFile)
 		}
 
 		testOpenFlags(root)
@@ -300,19 +292,17 @@ func TestDirectoryHoles(t *testing.T) {
 
 		// Confirm that the directory contains 'filenames' as files, in order.
 		confirmDirectoryContents := func(d fs.Directory, filenames []string) {
-			contents := checkReadDir(t, d, len(filenames)+2)
+			contents := checkReadDir(t, d, len(filenames)+1)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
 			for i := range filenames {
-				checkDirent(t, contents[i+2], filenames[i], fs.FileTypeRegularFile)
+				checkDirent(t, contents[i+1], filenames[i], fs.FileTypeRegularFile)
 			}
 		}
 
 		doTest := func(d fs.Directory) {
 			// Start with an empty directory
-			contents := checkReadDir(t, d, 2)
+			contents := checkReadDir(t, d, 1)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
 
 			filenames := []string{
 				"foo",
@@ -390,28 +380,24 @@ func TestUnmountWithOpenFiles(t *testing.T) {
 		fatFS = checkNewFS(t, dev, fs.ReadOnly)
 		root = fatFS.RootDirectory()
 
-		contents := checkReadDir(t, root, 3)
+		contents := checkReadDir(t, root, 2)
 		checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, contents[2], "aaa", fs.FileTypeDirectory)
+		checkDirent(t, contents[1], "aaa", fs.FileTypeDirectory)
 
 		aaa = checkOpenDirectory(t, root, "aaa", fs.OpenFlagRead)
-		contents = checkReadDir(t, aaa, 3)
+		contents = checkReadDir(t, aaa, 2)
 		checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, contents[2], "bbb", fs.FileTypeDirectory)
+		checkDirent(t, contents[1], "bbb", fs.FileTypeDirectory)
 
 		bbb = checkOpenDirectory(t, aaa, "bbb", fs.OpenFlagRead)
-		contents = checkReadDir(t, bbb, 3)
+		contents = checkReadDir(t, bbb, 2)
 		checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, contents[2], "ccc", fs.FileTypeDirectory)
+		checkDirent(t, contents[1], "ccc", fs.FileTypeDirectory)
 
 		ccc = checkOpenDirectory(t, bbb, "ccc", fs.OpenFlagRead)
-		contents = checkReadDir(t, ccc, 3)
+		contents = checkReadDir(t, ccc, 2)
 		checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, contents[2], "ddd.txt", fs.FileTypeRegularFile)
+		checkDirent(t, contents[1], "ddd.txt", fs.FileTypeRegularFile)
 
 		checkCloseFS(t, fatFS)
 	}
@@ -605,10 +591,9 @@ func TestDup(t *testing.T) {
 		checkClose(t, f)
 
 		// ... but reading the result on d2.
-		rootContents := checkReadDir(t, d2, 3)
+		rootContents := checkReadDir(t, d2, 2)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[2], "file", fs.FileTypeRegularFile)
+		checkDirent(t, rootContents[1], "file", fs.FileTypeRegularFile)
 
 		checkClose(t, d)
 		checkClose(t, d2)
@@ -658,17 +643,15 @@ func TestReadonly(t *testing.T) {
 		root = fatFS.RootDirectory()
 
 		// Verify the structure of the filesystem
-		rootContents := checkReadDir(t, root, 4)
+		rootContents := checkReadDir(t, root, 3)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[2], "foo", fs.FileTypeRegularFile)
-		checkDirent(t, rootContents[3], "subdir", fs.FileTypeDirectory)
+		checkDirent(t, rootContents[1], "foo", fs.FileTypeRegularFile)
+		checkDirent(t, rootContents[2], "subdir", fs.FileTypeDirectory)
 
 		subdir = checkOpenDirectory(t, root, "subdir", fs.OpenFlagRead)
-		subdirContents := checkReadDir(t, subdir, 3)
+		subdirContents := checkReadDir(t, subdir, 2)
 		checkDirent(t, subdirContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, subdirContents[1], "..", fs.FileTypeDirectory)
-		checkDirent(t, subdirContents[2], "bar", fs.FileTypeRegularFile)
+		checkDirent(t, subdirContents[1], "bar", fs.FileTypeRegularFile)
 
 		// Verify the contents of the files. Verify that new writes fail
 		foo = checkOpenFile(t, root, "foo", fs.OpenFlagRead)
@@ -967,9 +950,8 @@ func TestRenameSimple(t *testing.T) {
 			checkExists(t, renameBaseDir, targetName)
 			checkRenameAndBack(srcName, targetName)
 			// Target should exist, but shouldn't be writable (it no longer has a name)
-			targetContents := checkReadDir(t, targetDir, 2)
+			targetContents := checkReadDir(t, targetDir, 1)
 			checkDirent(t, targetContents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, targetContents[1], "..", fs.FileTypeDirectory)
 			if _, _, err := targetDir.Open("foo", exclusiveCreateFlags|fs.OpenFlagFile); err != fs.ErrFailedPrecondition {
 				t.Fatal("Expected error writing to deleted dir, but saw: ", err)
 			}
@@ -1081,7 +1063,7 @@ func TestUnlinkSimple(t *testing.T) {
 
 		// Close the file
 		checkClose(t, foo)
-		checkDirectoryContains(t, d, filename, fs.FileTypeRegularFile, 3)
+		checkDirectoryContains(t, d, filename, fs.FileTypeRegularFile, 2)
 
 		// Unlink the file
 		checkUnlink(t, d, filename)
@@ -1119,8 +1101,8 @@ func TestUnlinkSimple(t *testing.T) {
 		subfile := checkOpenFile(t, subdir, subfilename, fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagExclusive)
 
 		// Verify the parent directory contains the subd, and the subdir contains the subfile
-		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 3)
-		checkDirectoryContains(t, subdir, subfilename, fs.FileTypeRegularFile, 3)
+		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 2)
+		checkDirectoryContains(t, subdir, subfilename, fs.FileTypeRegularFile, 2)
 
 		// Try (and fail) to unlink the subdirectory. Verify nothing was removed
 		checkClose(t, subdir)
@@ -1129,17 +1111,17 @@ func TestUnlinkSimple(t *testing.T) {
 		}
 		subdir = checkOpenDirectory(t, d, subdirname, fs.OpenFlagWrite|fs.OpenFlagRead)
 
-		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 3)
-		checkDirectoryContains(t, subdir, subfilename, fs.FileTypeRegularFile, 3)
+		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 2)
+		checkDirectoryContains(t, subdir, subfilename, fs.FileTypeRegularFile, 2)
 
 		// Try (and succeed) at removing the subfile
 		checkUnlink(t, subdir, subfilename)
 		checkDoesNotExist(t, subdir, subfilename)
-		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 3)
+		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 2)
 		checkDirectoryEmpty(t, subdir)
 
 		// Try (and succeed) to unlink the subdirectory
-		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 3)
+		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 2)
 		checkUnlink(t, d, subdirname)
 		checkDirectoryEmpty(t, d)
 		checkDirectoryEmpty(t, subdir)
@@ -1398,9 +1380,8 @@ func TestPathTraversalStatic(t *testing.T) {
 		fatFS := checkNewFS(t, dev, fs.ReadWrite)
 		root := fatFS.RootDirectory()
 
-		rootContents := checkReadDir(t, root, 2)
+		rootContents := checkReadDir(t, root, 1)
 		checkDirent(t, rootContents[0], ".", fs.FileTypeDirectory)
-		checkDirent(t, rootContents[1], "..", fs.FileTypeDirectory)
 
 		// Make a subdirectory, Verify that the new directory is empty.
 		flags := fs.OpenFlagCreate | fs.OpenFlagWrite | fs.OpenFlagRead | fs.OpenFlagExclusive
@@ -1413,42 +1394,37 @@ func TestPathTraversalStatic(t *testing.T) {
 
 		// Verify the directory structure has been created
 		checkValidRoot := func(d fs.Directory) {
-			contents := checkReadDir(t, d, 3)
+			contents := checkReadDir(t, d, 2)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-			checkDirent(t, contents[2], "foo", fs.FileTypeDirectory)
+			checkDirent(t, contents[1], "foo", fs.FileTypeDirectory)
 		}
 		checkValidRoot(root)
 
 		checkValidFoo := func(d fs.Directory) {
-			contents := checkReadDir(t, d, 4)
+			contents := checkReadDir(t, d, 3)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-			checkDirent(t, contents[2], "fiz", fs.FileTypeDirectory)
-			checkDirent(t, contents[3], "bar", fs.FileTypeDirectory)
+			checkDirent(t, contents[1], "fiz", fs.FileTypeDirectory)
+			checkDirent(t, contents[2], "bar", fs.FileTypeDirectory)
 		}
 		checkValidFoo(foo)
 
 		checkValidFiz := func(d fs.Directory) {
-			contents := checkReadDir(t, d, 3)
+			contents := checkReadDir(t, d, 2)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-			checkDirent(t, contents[2], "file.txt", fs.FileTypeRegularFile)
+			checkDirent(t, contents[1], "file.txt", fs.FileTypeRegularFile)
 		}
 		checkValidFiz(fiz)
 
 		checkValidBar := func(d fs.Directory) {
-			contents := checkReadDir(t, d, 3)
+			contents := checkReadDir(t, d, 2)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
-			checkDirent(t, contents[2], "baz", fs.FileTypeDirectory)
+			checkDirent(t, contents[1], "baz", fs.FileTypeDirectory)
 		}
 		checkValidBar(bar)
 
 		checkValidBaz := func(d fs.Directory) {
-			contents := checkReadDir(t, d, 2)
+			contents := checkReadDir(t, d, 1)
 			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
-			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
 		}
 		checkValidBaz(baz)
 
@@ -1456,19 +1432,7 @@ func TestPathTraversalStatic(t *testing.T) {
 		checkValidRoot(dir)
 		checkClose(t, dir)
 
-		dir = checkOpenDirectory(t, root, "..", fs.OpenFlagRead) // In root, open self via ".."
-		checkValidRoot(dir)
-		checkClose(t, dir)
-
-		dir = checkOpenDirectory(t, root, "../..", fs.OpenFlagRead) // In root, open self via "../..
-		checkValidRoot(dir)
-		checkClose(t, dir)
-
 		dir = checkOpenDirectory(t, foo, ".", fs.OpenFlagRead) // In "/foo", open foo
-		checkValidFoo(dir)
-		checkClose(t, dir)
-
-		dir = checkOpenDirectory(t, foo, "..", fs.OpenFlagRead) // In "/foo", open self via ".."
 		checkValidFoo(dir)
 		checkClose(t, dir)
 
@@ -1480,7 +1444,7 @@ func TestPathTraversalStatic(t *testing.T) {
 		checkValidFiz(dir)
 		checkClose(t, dir)
 
-		dir = checkOpenDirectory(t, foo, "..///./../", fs.OpenFlagRead) // In "/foo", open "foo"
+		dir = checkOpenDirectory(t, foo, ".///././", fs.OpenFlagRead) // In "/foo", open "foo"
 		checkValidFoo(dir)
 		checkClose(t, dir)
 

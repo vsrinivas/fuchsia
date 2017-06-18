@@ -61,12 +61,10 @@ func readDir(n node.DirectoryNode) ([]fs.Dirent, error) {
 
 	var result []fs.Dirent
 	if n.IsRoot() {
-		// The root directory does not contain "." or "..". Create these fake entries.
+		// The root directory does not contain ".". Create this fake entry.
 		dot := direntry.New(".", 0, fs.FileTypeDirectory)
-		dotdot := direntry.New("..", 0, fs.FileTypeDirectory)
 		dot.WriteTime = n.MTime()
-		dotdot.WriteTime = n.MTime()
-		result = append(result, dot, dotdot)
+		result = append(result, dot)
 	}
 
 	for i := 0; ; {
@@ -77,7 +75,7 @@ func readDir(n node.DirectoryNode) ([]fs.Dirent, error) {
 
 		if entry.IsLastFree() {
 			break
-		} else if !entry.IsFree() {
+		} else if !entry.IsFree() && entry.GetName() != ".." {
 			result = append(result, entry)
 		}
 		i += numSlots
@@ -114,7 +112,7 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 	}
 
 	switch singleName {
-	case ".", "..":
+	case ".":
 		if err = validateDotFlags(flags); err != nil {
 			n.Metadata().Dcache.Release(parent.ID())
 			return nil, err
@@ -125,6 +123,8 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 		// We don't need to RELEASE the dcache reference to the parent directory, since we're
 		// opening that node anyway.
 		return parent, nil
+	case "..":
+		return nil, fs.ErrNotSupported
 	}
 
 	// Either "openIncremental" or "createIncremental" will ACQUIRE the target from the dcache
