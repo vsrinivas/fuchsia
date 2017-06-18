@@ -102,6 +102,17 @@ static mx_status_t guest_mem_trap(mx_handle_t handle, mx_vaddr_t guest_paddr, si
     return guest->MemTrap(guest_paddr, size);
 }
 
+static mx_status_t guest_interrupt(mx_handle_t handle, uint8_t interrupt) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &guest);
+    if (status != MX_OK)
+        return status;
+
+    return guest->Interrupt(interrupt);
+}
+
 static mx_status_t guest_set_gpr(mx_handle_t handle, const mx_guest_gpr_t& guest_gpr) {
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -193,6 +204,14 @@ static mx_status_t guest_set_apic_mem(mx_handle_t handle, mx_handle_t apic_mem_h
         if (args.copy_array_from_user(mem_trap_args, sizeof(mem_trap_args)) != MX_OK)
             return MX_ERR_INVALID_ARGS;
         return guest_mem_trap(handle, mem_trap_args[0], mem_trap_args[1]);
+    }
+    case MX_HYPERVISOR_OP_GUEST_INTERRUPT: {
+        uint8_t interrupt;
+        if (args_len != sizeof(interrupt))
+            return MX_ERR_INVALID_ARGS;
+        if (args.copy_array_from_user(&interrupt, sizeof(interrupt)) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
+        return guest_interrupt(handle, interrupt);
     }
     case MX_HYPERVISOR_OP_GUEST_SET_GPR: {
         mx_guest_gpr_t guest_gpr;

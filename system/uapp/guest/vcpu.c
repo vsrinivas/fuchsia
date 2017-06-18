@@ -34,7 +34,6 @@
 
 /* Local APIC register addresses. */
 #define LOCAL_APIC_REGISTER_ID                  0x0020
-#define LOCAL_APIC_REGISTER_EOI                 0x00b0
 #define LOCAL_APIC_REGISTER_SVR                 0x00f0
 #define LOCAL_APIC_REGISTER_ESR                 0x0280
 #define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
@@ -117,7 +116,7 @@ static const uint16_t kPciDeviceBarSize[] = {
     0x40,   // PCI_DEVICE_VIRTIO_BLOCK
 };
 
-mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
+static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     time_t now = time(NULL);
     struct tm tm;
     if (localtime_r(&now, &tm) == NULL)
@@ -334,11 +333,6 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
     switch (offset) {
     case LOCAL_APIC_REGISTER_ID:
         return inst_read32(inst, 0);
-    case LOCAL_APIC_REGISTER_EOI: {
-        // TODO(abdulla): Correctly handle EOI.
-        uint32_t eoi;
-        return inst_write32(inst, &eoi);
-    }
     case LOCAL_APIC_REGISTER_ESR:
         // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
         // ESR, software should first write to it.
@@ -358,6 +352,7 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
         return initial_count > 0 ? MX_ERR_NOT_SUPPORTED : MX_OK;
     }}
 
+    fprintf(stderr, "Unhandled local APIC %#lx\n", offset);
     return MX_ERR_NOT_SUPPORTED;
 }
 
@@ -388,6 +383,7 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
         }}
     }
 
+    fprintf(stderr, "Unhandled IO APIC %#lx\n", offset);
     return MX_ERR_NOT_SUPPORTED;
 }
 

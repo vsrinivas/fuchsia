@@ -45,6 +45,10 @@ status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context);
 status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vaddr_t guest_paddr,
                              size_t size);
 
+/* Interrupt a guest context.
+ */
+status_t arch_guest_interrupt(const mxtl::unique_ptr<GuestContext>& context, uint8_t interrupt);
+
 /* Set general purpose registers of a guest context.
  */
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,

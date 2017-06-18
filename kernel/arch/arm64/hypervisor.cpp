@@ -26,6 +26,10 @@ status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vadd
     return MX_ERR_NOT_SUPPORTED;
 }
 
+status_t arch_guest_interrupt(const mxtl::unique_ptr<GuestContext>& context, uint8_t interrupt) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,
                             const mx_guest_gpr_t& guest_gpr) {
     return MX_ERR_NOT_SUPPORTED;

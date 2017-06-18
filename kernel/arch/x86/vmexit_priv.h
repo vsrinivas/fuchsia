@@ -55,9 +55,20 @@ struct IoInfo {
     IoInfo(uint64_t qualification);
 };
 
+/* APIC access types. */
+enum class ApicAccessType : uint8_t {
+    LINEAR_ACCESS_READ      = 0u,
+    LINEAR_ACCESS_WRITE     = 1u,
+    LINEAR_ACCESS_EXECUTE   = 2u,
+    LINEAR_ACCESS_EVENT     = 3u,
+    GUEST_PHYSICAL_EVENT    = 10u,
+    GUEST_PHYSICAL_RWX      = 15u,
+};
+
 /* Stores local APIC access info from the VMCS exit qualification field. */
 struct ApicAccessInfo {
     uint16_t offset;
+    ApicAccessType access_type;
 
     ApicAccessInfo(uint64_t qualification);
 };
@@ -68,6 +79,8 @@ enum class InterruptionType : uint32_t {
     HARDWARE_EXCEPTION  = 3u,
 };
 
+bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint8_t interrupt,
+                                 bool reschedule);
 void interrupt_window_exiting(bool enable);
 status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
                         LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,

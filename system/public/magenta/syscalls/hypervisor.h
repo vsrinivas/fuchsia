@@ -16,15 +16,16 @@ __BEGIN_CDECLS
 #define MX_HYPERVISOR_OP_GUEST_CREATE           1u
 #define MX_HYPERVISOR_OP_GUEST_ENTER            2u
 #define MX_HYPERVISOR_OP_GUEST_MEM_TRAP         3u
+#define MX_HYPERVISOR_OP_GUEST_INTERRUPT        4u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_GPR          4u
-#define MX_HYPERVISOR_OP_GUEST_GET_GPR          5u
+#define MX_HYPERVISOR_OP_GUEST_SET_GPR          5u
+#define MX_HYPERVISOR_OP_GUEST_GET_GPR          6u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP     6u
+#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP     7u
 
 #if __x86_64__
-#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3    7u
-#define MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM     8u
+#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3    8u
+#define MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM     9u
 #endif // __x86_64__
 
 typedef struct mx_guest_gpr {

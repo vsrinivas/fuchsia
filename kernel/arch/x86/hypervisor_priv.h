@@ -10,14 +10,15 @@
 
 #include <arch/x86/hypervisor.h>
 #include <arch/x86/hypervisor_state.h>
+#include <arch/x86/interrupts.h>
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
 
 typedef struct mx_guest_gpr mx_guest_gpr_t;
 
-static const uint64_t kIoApicPhysBase = 0xfec00000;
-static const uint8_t kIoApicRedirectOffsets = 0x36;
-static const uint32_t kInvalidInterrupt = UINT32_MAX >> 1;
+static const uint16_t kNumInterrupts = X86_MAX_INT + 1;
 
 #define X86_MSR_IA32_FEATURE_CONTROL                0x003a      /* Feature control */
 #define X86_MSR_IA32_VMX_BASIC                      0x0480      /* Basic info */
@@ -266,10 +267,10 @@ struct LocalApicState {
     timer_t timer;
     // Event for handling block on HLT.
     event_t event;
-    // Active interrupt, one of enum x86_interrupt_vector or kInvalidInterrupt.
-    uint32_t active_interrupt;
-    // TSC deadline.
-    uint64_t tsc_deadline;
+    // Lock for the interrupt bitmap.
+    SpinLock interrupt_lock;
+    // Bitmap of active interrupts.
+    bitmap::RawBitmapGeneric<bitmap::DefaultStorage> interrupt_bitmap;
     // Virtual local APIC address.
     void* apic_addr;
     // Virtual local APIC memory.
@@ -285,6 +286,7 @@ public:
                    paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
                    FifoDispatcher* ctl_fifo);
+    status_t Interrupt(uint8_t interrupt);
     status_t SetGpr(const mx_guest_gpr_t& guest_gpr);
     status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
     status_t SetApicMem(mxtl::RefPtr<VmObject> apic_mem);
