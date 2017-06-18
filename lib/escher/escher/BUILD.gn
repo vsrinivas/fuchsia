@@ -181,6 +181,8 @@ static_library("escher") {
     "util/stopwatch.h",
     "vk/buffer.cc",
     "vk/buffer.h",
+    "vk/buffer_factory.cc",
+    "vk/buffer_factory.h",
     "vk/gpu_allocator.cc",
     "vk/gpu_allocator.h",
     "vk/gpu_mem.cc",

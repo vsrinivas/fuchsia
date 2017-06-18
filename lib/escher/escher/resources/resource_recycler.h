@@ -25,6 +25,9 @@ class ResourceRecycler : public ResourceManager,
 
   virtual ~ResourceRecycler();
 
+ protected:
+  impl::EscherImpl* escher() const { return escher_; }
+
  private:
   // Gives subclasses a chance to recycle the resource. Default implementation
   // immediately destroys resource.
