@@ -43,6 +43,10 @@ git branch -d branch_name
 See the Gerrit documentation for more detail:
 [https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change](https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change)
 
+## [Non-Googlers only] Sign the Google CLA
+
+In order to land your change, you need to sign the [Google CLA](https://cla.developers.google.com/).
+
 ## [Googlers only] Issue actions
 
 Commit messages may reference issue IDs in Fuchsia's
