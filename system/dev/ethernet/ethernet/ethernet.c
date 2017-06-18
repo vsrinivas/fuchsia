@@ -237,16 +237,21 @@ static int eth_tx_thread(void* arg) {
         }
 
         uint32_t n = count;
-        for (eth_fifo_entry_t* e = entries; count-- > 0; e++) {
+        for (eth_fifo_entry_t* e = entries; count > 0; e++) {
             if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
                 e->flags = ETH_FIFO_INVALID;
             } else {
-                edev0->mac.ops->send(edev0->mac.ctx, 0, edev->io_buf + e->offset, e->length);
+                uint32_t opt = count > 1 ? ETHMAC_TX_OPT_MORE : 0u;
+                if (opt) {
+                    xprintf("setting OPT_MORE (%u packets to go)\n", count);
+                }
+                edev0->mac.ops->send(edev0->mac.ctx, opt, edev->io_buf + e->offset, e->length);
                 e->flags = ETH_FIFO_TX_OK;
                 if (edev->state & ETHDEV_TX_LOOPBACK) {
                     eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
                 }
             }
+            count--;
         }
 
         if ((status = mx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {

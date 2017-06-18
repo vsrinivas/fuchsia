@@ -52,6 +52,9 @@ typedef struct ethmac_ifc_virt {
     void (*complete_tx)(void* cookie, uint32_t count);
 } ethmac_ifc_t;
 
+// Indicates that additional data is available to be sent after this call finishes. Allows a ethmac
+// driver to batch tx to hardware if possible.
+#define ETHMAC_TX_OPT_MORE (1u)
 
 // The ethernet midlayer will never call ethermac_protocol
 // methods from multiple threads simultaneously, but it
