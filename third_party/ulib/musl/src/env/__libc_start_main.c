@@ -6,6 +6,7 @@
 #include <stdatomic.h>
 #include <string.h>
 
+#include <magenta/sanitizer.h>
 #include <magenta/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
@@ -26,6 +27,7 @@ struct start_params {
     mx_handle_t* handles;
     uint32_t* handle_info;
     int (*main)(int, char**, char**);
+    pthread_t td;
 };
 
 // This gets called via inline assembly below, after switching onto
@@ -33,6 +35,10 @@ struct start_params {
 static _Noreturn void start_main(const struct start_params*)
     __asm__("start_main") __attribute__((used));
 static void start_main(const struct start_params* p) {
+    __sanitizer_startup_hook(p->argc, p->argv, __environ,
+                             p->td->safe_stack.iov_base,
+                             p->td->safe_stack.iov_len);
+
     // Allow companion libraries a chance to claim handles, zeroing out
     // handles[i] and handle_info[i] for handles they claim.
     if (&__libc_extensions_init != NULL)
@@ -172,7 +178,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     atomic_store(&libc.thread_count, 1);
 
     // This consumes the thread handle and sets up the thread pointer.
-    pthread_t td = __init_main_thread(main_thread_handle);
+    p.td = __init_main_thread(main_thread_handle);
 
     // Switch to the allocated stack and call start_main(&p) there.
     // The original stack stays around just to hold argv et al.
@@ -184,15 +190,17 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     __asm__("lea -8(%[base], %[len], 1), %%rsp\n"
             "jmp start_main\n"
             "# Target receives %[arg]" : :
-            [base]"r"(td->safe_stack.iov_base),
-            [len]"r"(td->safe_stack.iov_len),
+            [base]"r"(p.td->safe_stack.iov_base),
+            [len]"r"(p.td->safe_stack.iov_len),
+            "m"(p), // Tell the compiler p's fields are all still alive.
             [arg]"D"(&p));
 #elif defined(__aarch64__)
     __asm__("add sp, %[base], %[len]\n"
             "mov x0, %[arg]\n"
             "b start_main" : :
-            [base]"r"(td->safe_stack.iov_base),
-            [len]"r"(td->safe_stack.iov_len),
+            [base]"r"(p.td->safe_stack.iov_base),
+            [len]"r"(p.td->safe_stack.iov_len),
+            "m"(p), // Tell the compiler p's fields are all still alive.
             [arg]"r"(&p));
 #else
 #error what architecture?

@@ -51,6 +51,17 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void);
 // definitions are seen by libc even if the user code is being compiled
 // with -fvisibility=hidden or equivalent.
 
+// This is called at program startup, with the arguments that will be
+// passed to main.  This is called before any other application code,
+// including both static constructors and initialization of things like
+// mxio and mx_get_startup_handle.  It's basically the first thing called
+// after libc's most basic internal global initialization is complete and
+// the initial thread has switched to its real thread stack.  Since not
+// even all of libc's own constructors have run yet, this should not call
+// into libc or other library code.
+__EXPORT void __sanitizer_startup_hook(int argc, char** argv, char** envp,
+                                       void* stack_base, size_t stack_size);
+
 // This is called when a new thread has been created but is not yet
 // running.  Its C11 thrd_t value has been determined and its stack has
 // been allocated.  All that remains is to actually start the thread
