@@ -37,7 +37,7 @@ Sections will be populated over time.
 
 # Storage
 
- - Block devices
+ - [Block devices](block_devices.md)
  - [File systems](filesystems.md)
  - Directory hierarchy
  - [Ledger](https://fuchsia.googlesource.com/ledger/+/HEAD/README.md)
