@@ -29,8 +29,15 @@
 #  define xprintf(args...)
 #endif
 
+// TODO(tkilbourn): remove all xxprintfs once the batch tx path is proven
+#if AX88179_DEBUG_VERBOSE
+#  define xxprintf(args...) printf(args)
+#else
+#  define xxprintf(args...)
+#endif
+
 #define READ_REQ_COUNT 8
-#define WRITE_REQ_COUNT 4
+#define WRITE_REQ_COUNT 8
 #define USB_BUF_SIZE 24576
 #define INTR_REQ_SIZE 8
 #define RX_HEADER_SIZE 4
@@ -52,6 +59,15 @@ typedef struct {
     // pool of free USB bulk requests
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
+
+    // Locks the tx_in_flight and pending_tx list.
+    mtx_t tx_lock;
+    // Whether an iotxn has been queued to the USB device.
+    bool tx_in_flight;
+    // List of iotxns that have pending data. Used to buffer data if a USB transaction is in flight.
+    // Additional data must be appended to the tail of the list, or if that's full, an iotxn from
+    // free_write_reqs must be added to the list.
+    list_node_t pending_tx;
 
     // callback interface to attached ethernet layer
     ethmac_ifc_t* ifc;
@@ -295,6 +311,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
 }
 
 static void ax88179_write_complete(iotxn_t* request, void* cookie) {
+    xxprintf("ax88179: write complete\n");
     ax88179_t* eth = (ax88179_t*)cookie;
 
     if (request->status == MX_ERR_PEER_CLOSED) {
@@ -302,9 +319,17 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
         return;
     }
 
-    mtx_lock(&eth->mutex);
+    mtx_lock(&eth->tx_lock);
     list_add_tail(&eth->free_write_reqs, &request->node);
-    mtx_unlock(&eth->mutex);
+    iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
+    if (next == NULL) {
+        eth->tx_in_flight = false;
+        xxprintf("ax88179: no txns in flight\n");
+    } else {
+        xxprintf("ax88179: queuing iotxn (%p) of length %lu\n", next, next->length);
+        iotxn_queue(eth->usb_device, next);
+    }
+    mtx_unlock(&eth->tx_lock);
 }
 
 static void ax88179_interrupt_complete(iotxn_t* request, void* cookie) {
@@ -355,25 +380,72 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
 
     ax88179_t* eth = ctx;
 
-    mtx_lock(&eth->mutex);
-    iotxn_t* request = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
-    mtx_unlock(&eth->mutex);
+    mtx_lock(&eth->tx_lock);
+    // 1. Find the iotxn we will be writing into.
+    //   a) If pending_tx is empty, grab an iotxn from free_write_reqs.
+    //   b) Else take the tail of pending_tx.
+    // 2. If the alignment + sizeof(hdr) + length > USB_BUF_SIZE, grab an iotxn from free_write_reqs
+    //    and add it to the tail of pending_tx.
+    // 3. Write to the next 32-byte aligned offset in the iotxn.
+    // 4. If ETHMAC_TX_OPT_MORE, return.
+    // 5. If tx_in_flight, return.
+    // 6. Otherwise, queue the head of pending_tx and set tx_in_flight.
 
-    if (!request) {
-        // drop packets when no outgoing buffers
-        // or do we use a completion to find out when there are new
-        // buffers?
-        return;
+    iotxn_t* txn = NULL;
+    if (list_is_empty(&eth->pending_tx)) {
+        xxprintf("ax88179: no pending txns, getting free write req\n");
+        txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
+        if (txn == NULL) {
+            xxprintf("ax88179: no free write txns!\n");
+            mtx_unlock(&eth->tx_lock);
+            return;
+        }
+        txn->length = 0;
+        list_add_tail(&eth->pending_tx, &txn->node);
+    } else {
+        txn = list_peek_tail_type(&eth->pending_tx, iotxn_t, node);
+        xxprintf("ax88179: got tail iotxn (%p)\n", txn);
     }
+
+    mx_off_t txn_len = ALIGN(txn->length, 4);
+    xxprintf("ax88179: current iotxn len=%lu, next packet len=%zu\n", txn_len, length);
+    if (length > USB_BUF_SIZE - sizeof(ax88179_tx_hdr_t) - txn_len) {
+        xxprintf("ax88179: getting new write req\n");
+        txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
+        if (txn == NULL) {
+            xxprintf("ax88179: no free write txns!\n");
+            mtx_unlock(&eth->tx_lock);
+            return;
+        }
+        list_add_tail(&eth->pending_tx, &txn->node);
+        txn_len = 0;
+    }
+    xxprintf("ax88179: txn=%p\n", txn);
 
     ax88179_tx_hdr_t hdr = {
         .tx_len = htole16(length),
     };
 
-    iotxn_copyto(request, &hdr, sizeof(hdr), 0);
-    iotxn_copyto(request, data, length, sizeof(hdr));
-    request->length = length + sizeof(hdr);
-    iotxn_queue(eth->usb_device, request);
+    iotxn_copyto(txn, &hdr, sizeof(hdr), txn_len);
+    iotxn_copyto(txn, data, length, txn_len + sizeof(hdr));
+    txn->length = txn_len + sizeof(hdr) + length;
+
+    if (options & ETHMAC_TX_OPT_MORE) {
+        xxprintf("ax88179: waiting for more data\n");
+        mtx_unlock(&eth->tx_lock);
+        return;
+    }
+    // TODO(tkilbourn): see if the hardware can handle a couple of tx in flight instead of just one.
+    if (eth->tx_in_flight) {
+        xxprintf("ax88179: txn in flight, waiting\n");
+        mtx_unlock(&eth->tx_lock);
+        return;
+    }
+    txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
+    xxprintf("ax88179: queuing iotxn (%p) of length %lu\n", txn, txn->length);
+    iotxn_queue(eth->usb_device, txn);
+    eth->tx_in_flight = true;
+    mtx_unlock(&eth->tx_lock);
 }
 
 static void ax88179_unbind(void* ctx) {
@@ -387,6 +459,9 @@ static void ax88179_free(ax88179_t* eth) {
         iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
+        iotxn_release(txn);
+    }
+    while ((txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
     }
     iotxn_release(eth->interrupt_req);
@@ -680,6 +755,9 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
+    list_initialize(&eth->pending_tx);
+    mtx_init(&eth->tx_lock, mtx_plain);
+    mtx_init(&eth->mutex, mtx_plain);
 
     eth->usb_device = device;
 
