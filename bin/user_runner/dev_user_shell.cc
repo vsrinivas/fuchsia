@@ -69,8 +69,7 @@ class DevUserShellApp : modular::StoryWatcher,
     user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
     user_shell_context_ptr->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
-    user_shell_context_ptr->GetFocusController(
-        focus_controller_.NewRequest());
+    user_shell_context_ptr->GetFocusController(focus_controller_.NewRequest());
     user_shell_context_ptr->GetVisibleStoriesController(
         visible_stories_controller_.NewRequest());
 

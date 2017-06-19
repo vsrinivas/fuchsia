@@ -31,4 +31,3 @@ source_set("storage") {
     "//lib/ftl",
   ]
 }
-

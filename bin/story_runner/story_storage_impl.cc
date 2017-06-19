@@ -164,16 +164,15 @@ void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
 void StoryStorageImpl::ReadModuleData(
     const fidl::Array<fidl::String>& module_path,
     const ModuleDataCallback& callback) {
-  new ReadDataCall<ModuleData>(
-      &operation_queue_, story_page_,
-      MakeModuleKey(module_path), XdrModuleData, callback);
+  new ReadDataCall<ModuleData>(&operation_queue_, story_page_,
+                               MakeModuleKey(module_path), XdrModuleData,
+                               callback);
 }
 
 void StoryStorageImpl::ReadAllModuleData(
     const AllModuleDataCallback& callback) {
-  new ReadAllDataCall<ModuleData>(
-      &operation_queue_, story_page_, kModuleKeyPrefix, XdrModuleData,
-      callback);
+  new ReadAllDataCall<ModuleData>(&operation_queue_, story_page_,
+                                  kModuleKeyPrefix, XdrModuleData, callback);
 }
 
 void StoryStorageImpl::WriteModuleData(
@@ -188,9 +187,9 @@ void StoryStorageImpl::WriteModuleData(
   data->default_link_path = link_path.Clone();
   data->module_source = module_source;
 
-  new WriteDataCall<ModuleData>(
-      &operation_queue_, story_page_, MakeModuleKey(module_path),
-      XdrModuleData, std::move(data), callback);
+  new WriteDataCall<ModuleData>(&operation_queue_, story_page_,
+                                MakeModuleKey(module_path), XdrModuleData,
+                                std::move(data), callback);
 }
 
 void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
@@ -205,22 +204,20 @@ void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
 
   new WriteDataCall<PerDeviceStoryInfo, PerDeviceStoryInfoPtr>(
       &operation_queue_, story_page_, MakePerDeviceKey(device_id),
-      XdrPerDeviceStoryInfo, std::move(data),
-      callback);
+      XdrPerDeviceStoryInfo, std::move(data), callback);
 }
 
 void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
   new WriteDataCall<StoryContextLog>(
       &operation_queue_, story_page_,
       MakeStoryContextLogKey(log_entry->signal, log_entry->time),
-      XdrStoryContextLog, std::move(log_entry),
-      []{});
+      XdrStoryContextLog, std::move(log_entry), [] {});
 }
 
 void StoryStorageImpl::ReadLog(const LogCallback& callback) {
-  new ReadAllDataCall<StoryContextLog>(
-      &operation_queue_, story_page_, kStoryContextLogKeyPrefix, XdrStoryContextLog,
-      callback);
+  new ReadAllDataCall<StoryContextLog>(&operation_queue_, story_page_,
+                                       kStoryContextLogKeyPrefix,
+                                       XdrStoryContextLog, callback);
 }
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {

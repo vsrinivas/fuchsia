@@ -153,9 +153,8 @@ class ContextListenerImpl : maxwell::ContextListener {
     auto query = maxwell::ContextQuery::New();
     query->topics.resize(0);
     context_provider->Subscribe(std::move(query), binding_.NewBinding());
-    binding_.set_connection_error_handler([] {
-        FTL_LOG(WARNING) << "Lost connection to ContextProvider.";
-      });
+    binding_.set_connection_error_handler(
+        [] { FTL_LOG(WARNING) << "Lost connection to ContextProvider."; });
   }
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
@@ -171,8 +170,8 @@ class ContextListenerImpl : maxwell::ContextListener {
     FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate() "
-                    << i.GetKey() << " " << i.GetValue();
+      FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << i.GetKey() << " "
+                    << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
   }
@@ -373,9 +372,7 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   }
 
   void Focus() {
-    focus_watcher_.Continue([this] {
-        Focused();
-      });
+    focus_watcher_.Continue([this] { Focused(); });
 
     focus_controller_->Set(story1_id_);
   }
@@ -409,9 +406,7 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
         });
   }
 
-  void Logout() {
-    user_context_->Logout();
-  }
+  void Logout() { user_context_->Logout(); }
 
   TestPoint terminate_{"Terminate()"};
 

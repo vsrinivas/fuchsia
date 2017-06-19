@@ -29,7 +29,7 @@ class ProxySet {
   ProxySet();
   ~ProxySet();
 
-  template<typename I>
+  template <typename I>
   void Connect(fidl::InterfacePtr<I> ptr, fidl::InterfaceRequest<I> request);
 
  private:
@@ -62,7 +62,8 @@ template <typename I>
 class Proxy : public ProxyBase {
  public:
   Proxy(ProxySet* set,
-        fidl::InterfacePtr<I> ptr, fidl::InterfaceRequest<I> request);
+        fidl::InterfacePtr<I> ptr,
+        fidl::InterfaceRequest<I> request);
   ~Proxy() override;
 
  private:
@@ -72,14 +73,16 @@ class Proxy : public ProxyBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(Proxy);
 };
 
-template<typename I>
-void ProxySet::Connect(fidl::InterfacePtr<I> ptr, fidl::InterfaceRequest<I> request) {
+template <typename I>
+void ProxySet::Connect(fidl::InterfacePtr<I> ptr,
+                       fidl::InterfaceRequest<I> request) {
   proxies_.emplace_back(new Proxy<I>(this, std::move(ptr), std::move(request)));
 }
 
 template <typename I>
 Proxy<I>::Proxy(ProxySet* const set,
-                fidl::InterfacePtr<I> ptr, fidl::InterfaceRequest<I> request)
+                fidl::InterfacePtr<I> ptr,
+                fidl::InterfaceRequest<I> request)
     : ProxyBase(set),
       ptr_(std::move(ptr)),
       binding_(ptr_.get(), std::move(request)) {

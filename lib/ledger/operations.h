@@ -56,34 +56,33 @@ class ReadDataCall : Operation<DataPtr> {
   }
 
   void Cont(FlowToken flow) {
-    page_snapshot_->Get(
-        to_array(key_),
-        [this, flow](ledger::Status status, mx::vmo value) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                           << " PageSnapshot.Get() " << status;
-            return;
-          }
+    page_snapshot_->Get(to_array(key_),
+                        [this, flow](ledger::Status status, mx::vmo value) {
+                          if (status != ledger::Status::OK) {
+                            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                                           << " PageSnapshot.Get() " << status;
+                            return;
+                          }
 
-          if (!value) {
-            FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                           << " PageSnapshot.Get() null vmo";
-          }
+                          if (!value) {
+                            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                                           << " PageSnapshot.Get() null vmo";
+                          }
 
-          std::string value_as_string;
-          if (!mtl::StringFromVmo(value, &value_as_string)) {
-            FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                           << " Unable to extract data.";
-            return;
-          }
+                          std::string value_as_string;
+                          if (!mtl::StringFromVmo(value, &value_as_string)) {
+                            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                                           << " Unable to extract data.";
+                            return;
+                          }
 
-          if (!XdrRead(value_as_string, &result_, filter_)) {
-            result_.reset();
-            return;
-          }
+                          if (!XdrRead(value_as_string, &result_, filter_)) {
+                            result_.reset();
+                            return;
+                          }
 
-          FTL_DCHECK(!result_.is_null());
-        });
+                          FTL_DCHECK(!result_.is_null());
+                        });
   }
 
   ledger::Page* const page_;  // not owned
@@ -121,8 +120,8 @@ class ReadAllDataCall : Operation<DataArray> {
   void Run() override {
     FlowToken flow{this, &data_};
 
-    page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_),
-                       nullptr, [this, flow](ledger::Status status) {
+    page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_), nullptr,
+                       [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "ReadAllDataCall() "
                                           << "Page.GetSnapshot() " << status;
@@ -205,9 +204,8 @@ class WriteDataCall : Operation<> {
     page_->Put(to_array(key_), to_array(json),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR)
-                       << "WriteDataCall() key =" << key_
-                       << ", Page.Put() " << status;
+                   FTL_LOG(ERROR) << "WriteDataCall() key =" << key_
+                                  << ", Page.Put() " << status;
                  }
                });
   }
@@ -220,6 +218,6 @@ class WriteDataCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
 };
 
-}  // namespace
+}  // namespace modular
 
 #endif  // APPS_MODULAR_LIB_LEDGER_OPERATIONS_H_

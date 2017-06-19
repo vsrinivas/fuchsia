@@ -47,9 +47,7 @@ void FocusHandler::AddControllerBinding(
 // |FocusProvider|
 void FocusHandler::Query(const QueryCallback& callback) {
   new ReadAllDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
-      &operation_queue_, page_,
-      kFocusKeyPrefix, XdrFocusInfo,
-      callback);
+      &operation_queue_, page_, kFocusKeyPrefix, XdrFocusInfo, callback);
 }
 
 // |FocusProvider|
@@ -78,8 +76,7 @@ void FocusHandler::Set(const fidl::String& story_id) {
       ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
 
   new WriteDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
-      &operation_queue_, page_,
-      MakeFocusKey(device_id_), XdrFocusInfo,
+      &operation_queue_, page_, MakeFocusKey(device_id_), XdrFocusInfo,
       std::move(data), [] {});
 }
 

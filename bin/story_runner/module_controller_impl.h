@@ -27,11 +27,10 @@ class StoryControllerImpl;
 // ModuleContextImpl instance.
 class ModuleControllerImpl : ModuleController {
  public:
-  ModuleControllerImpl(
-      StoryControllerImpl* story_controller_impl,
-      app::ApplicationControllerPtr module_application,
-      ModulePtr module,
-      const fidl::Array<fidl::String>& module_path);
+  ModuleControllerImpl(StoryControllerImpl* story_controller_impl,
+                       app::ApplicationControllerPtr module_application,
+                       ModulePtr module,
+                       const fidl::Array<fidl::String>& module_path);
 
   ~ModuleControllerImpl() override;
 

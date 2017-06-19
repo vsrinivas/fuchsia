@@ -34,8 +34,8 @@ void WriteDeviceData(OperationContainer* const operation_container,
   data->profile = profile;
 
   new WriteDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
-      operation_container, page, MakeDeviceKey(device_id),
-      XdrDeviceData, std::move(data), []{});
+      operation_container, page, MakeDeviceKey(device_id), XdrDeviceData,
+      std::move(data), [] {});
 }
 
 }  // namespace
@@ -44,9 +44,9 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_id,
                              const std::string& device_profile,
                              ledger::Page* const page)
-    : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix),
-      page_(page) {
-  WriteDeviceData(&operation_queue_, device_name, device_id, device_profile, page_);
+    : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix), page_(page) {
+  WriteDeviceData(&operation_queue_, device_name, device_id, device_profile,
+                  page_);
 }
 
 DeviceMapImpl::~DeviceMapImpl() = default;
