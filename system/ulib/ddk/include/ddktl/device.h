@@ -297,10 +297,15 @@ class Resumable : public internal::base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
+    // TODO(smklein): Deprecate; remove 'name_'
     mx_status_t DdkAdd() {
+        return DdkAdd(name_);
+    }
+
+    mx_status_t DdkAdd(const char* name) {
         device_add_args_t args = {};
         args.version = DEVICE_ADD_ARGS_VERSION;
-        args.name = name_;
+        args.name = name;
         // Since we are stashing this as a D*, we can use ctx in all
         // the callback functions and cast it directly to a D*.
         args.ctx = static_cast<D*>(this);
