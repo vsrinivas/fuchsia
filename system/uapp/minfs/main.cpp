@@ -277,12 +277,21 @@ int usage() {
 }
 
 off_t get_size(int fd) {
+#ifdef __Fuchsia__
+    block_info_t info;
+    if (ioctl_block_get_info(fd, &info) != sizeof(info)) {
+        fprintf(stderr, "error: minfs could not find size of device\n");
+        return 0;
+    }
+    return info.block_size * info.block_count;
+#else
     struct stat s;
     if (fstat(fd, &s) < 0) {
-        fprintf(stderr, "error: could not find end of file/device\n");
+        fprintf(stderr, "error: minfs could not find end of file/device\n");
         return 0;
     }
     return s.st_size;
+#endif
 }
 
 } // namespace anonymous
