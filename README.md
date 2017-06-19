@@ -9,14 +9,16 @@ authentication, etc.
 
 ## Prerequisities
 
-1. Follow instructions in [fuchsia](https://fuchsia.googlesource.com/fuchsia/+/HEAD/README.md) for getting the source, setup, build and running Fuchsia. 
-1. Follow instructions in [ledger](https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md) to setup the Ledger and all its dependencies including netstack and minfs.
+1. Follow instructions in [fuchsia] for getting the source, setup, build and
+   running Fuchsia.
+2. Follow instructions in [ledger] to setup the Ledger and all its dependencies
+   including netstack and minfs.
 
-To run modules from the command line, you need to modify the startup behavior
-of Fuchsia to prevent device_runner and Armadillo from starting by default.
-Use fset and rebuild as shown below:
+To run modules from the command line, you need to modify the startup behavior of
+Fuchsia to prevent `device_runner` and Armadillo from starting by default. Use
+fset and rebuild as shown below:
 
-```sh
+``` sh
 source fuchsia/scripts/env.sh
 fset x86-64 --modules boot_headless
 fbuild
@@ -24,15 +26,10 @@ fbuild
 
 ## Running
 
-*** promo
-The examples below assume you are using the Fuchsia command line, the plain $.
-If you see "magenta$", then switch to a Fuchsia tab.
-***
-
 You can start the basic test application like this.
 
 ```sh
-device_runner --device_shell=dev_device_shell --user_shell=test_user_shell --user_shell_args=--test=0
+device_runner --device_shell=dev_device_shell --user_shell=test_user_shell
 ```
 
 A single application can be run using `dev_user_shell`. For example, to run
@@ -42,8 +39,8 @@ A single application can be run using `dev_user_shell`. For example, to run
 device_runner --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={"http://schema.domokit.org/counter":5}'
 ```
 
-`dev_device_shell` is used to log in a dummy user directly without
-going through an authentication dialog. `test_user_shell` runs the test.
+`dev_device_shell` is used to log in a dummy user directly without going through
+an authentication dialog. `test_user_shell` runs the test.
 
 Note: if you are running this through `netruncmd` you will need to double-escape
 the quotes:
@@ -66,7 +63,7 @@ by device_runner when opening the Ledger.  However, the --user parameter does
 not work for userpicker_device_shell:
 
 ```sh
-device_runner --device_shell=dev_device_shell --device_shell_args=--user=dummy_user --user_shell=test_user_shell --user_shell_args=--test=0
+device_runner --device_shell=dev_device_shell --device_shell_args=--user=dummy_user --user_shell=test_user_shell
 ```
 
 ## Module URLs
@@ -93,3 +90,7 @@ device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:/
  - [services](services) - fidl API
  - [src](src) - implementation
  - [tests](tests) - testing
+
+
+[fuchsia]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/README.md
+[ledger]: https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md
