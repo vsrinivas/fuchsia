@@ -78,8 +78,8 @@ return values, the handles in *handles* remain in the calling process, unchanged
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any of *handles*
-are not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any element in
+*handles* is not a valid handle.
 
 **MX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
@@ -88,7 +88,7 @@ or there are duplicates among the handles in the *handles* array,
 or *options* is nonzero.
 
 **MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
-any of *handles* do not have **MX_RIGHT_TRANSFER**.
+any element in *handles* does not have **MX_RIGHT_TRANSFER**.
 
 **MX_ERR_PEER_CLOSED**  The other side of the channel was closed or became
 closed while waiting for the reply.

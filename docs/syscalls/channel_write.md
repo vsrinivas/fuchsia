@@ -43,8 +43,8 @@ The maximum number of bytes which may be sent in a message is
 
 ## ERRORS
 
-**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any of *handles*
-are not a valid handle.
+**MX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any element in
+*handles* is not a valid handle.
 
 **MX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
@@ -57,7 +57,7 @@ one of the handles in *handles* was *handle* (the handle to the
 channel being written to).
 
 **MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
-any of *handles* do not have **MX_RIGHT_TRANSFER**.
+any element in *handles* does not have **MX_RIGHT_TRANSFER**.
 
 **MX_ERR_PEER_CLOSED**  The other side of the channel is closed.
 
