@@ -5,6 +5,7 @@
         "tracing"
     ],
     "packages": {
+        "compositor_service": "//apps/mozart:compositor_service",
         "ime_service": "//apps/mozart:ime_service",
         "jank_view": "//apps/mozart:jank_view",
         "mozart_tests": "//apps/mozart:mozart_tests",
