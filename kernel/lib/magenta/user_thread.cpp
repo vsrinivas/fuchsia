@@ -313,25 +313,34 @@ void UserThread::Kill() {
 
     AutoLock lock(&state_lock_);
 
-    // see if we're already going down.
-    if (state_ == State::DYING || state_ == State::DEAD)
-        return;
-    // if we've never been started, then release ourselves.
-    if (state_ == State::INITIALIZED) {
-        // as we've been initialized previously, forget the LK thread.
-        thread_forget(&thread_);
-        // reset our state, so that the destructor will properly shut down.
-        SetStateLocked(State::INITIAL);
-        // drop the ref, as the LK thread will not own this object.
-        __UNUSED auto ret = Release();
-        return;
+    switch (state_) {
+        case State::INITIAL:
+            // initial state, thread was never initialized, leave in this state
+            break;
+        case State::INITIALIZED: {
+            // as we've been initialized previously, forget the LK thread.
+            thread_forget(&thread_);
+            // reset our state, so that the destructor will properly shut down.
+            SetStateLocked(State::INITIAL);
+            // drop the ref, as the LK thread will not own this object.
+            auto ret = Release();
+            // if this was the last ref, something is terribly wrong
+            DEBUG_ASSERT(!ret);
+            break;
+        }
+        case State::RUNNING:
+        case State::SUSPENDED:
+            // deliver a kernel kill signal to the thread
+            thread_kill(&thread_, false);
+
+            // enter the dying state
+            SetStateLocked(State::DYING);
+            break;
+        case State::DYING:
+        case State::DEAD:
+            // already going down
+            break;
     }
-
-    // deliver a kernel kill signal to the thread
-    thread_kill(&thread_, false);
-
-    // enter the dying state
-    SetStateLocked(State::DYING);
 }
 
 status_t UserThread::Suspend() {
