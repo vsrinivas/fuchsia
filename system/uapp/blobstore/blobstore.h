@@ -29,7 +29,7 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 
 constexpr uint64_t kBlobstoreMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobstoreMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobstoreVersion = 0x00000001;
+constexpr uint32_t kBlobstoreVersion = 0x00000002;
 
 constexpr uint32_t kBlobstoreFlagClean      = 1;
 constexpr uint32_t kBlobstoreFlagDirty      = 2;
@@ -54,6 +54,8 @@ typedef struct {
     uint32_t block_size;       // 8K typical
     uint64_t block_count;      // Number of blocks in this area
     uint64_t inode_count;      // Number of blobs in this area
+    uint64_t alloc_block_count; // Total number of allocated blocks
+    uint64_t alloc_inode_count; // Total number of allocated blobs
     uint64_t blob_header_next; // Block containing next blobstore, or zero if this is the last one
 } blobstore_info_t;
 

@@ -18,8 +18,6 @@
 #include "blobstore-private.h"
 #include "fs/vfs.h"
 
-// TODO(smklein): Implement fsck for blobstore
-
 namespace {
 
 int do_blobstore_mount(int fd, int argc, char** argv) {
@@ -40,6 +38,15 @@ int do_blobstore_mkfs(int fd, int argc, char** argv) {
     return blobstore::blobstore_mkfs(fd);
 }
 
+int do_blobstore_check(int fd, int argc, char** argv) {
+    mxtl::RefPtr<blobstore::Blobstore> vn;
+    if (blobstore::blobstore_create(&vn, fd) < 0) {
+        return -1;
+    }
+
+    return blobstore::blobstore_check(vn);
+}
+
 struct {
     const char* name;
     int (*func)(int fd, int argc, char** argv);
@@ -48,6 +55,8 @@ struct {
     {"create", do_blobstore_mkfs, "initialize filesystem"},
     {"mkfs", do_blobstore_mkfs, "initialize filesystem"},
     {"mount", do_blobstore_mount, "mount filesystem"},
+    {"check", do_blobstore_check, "check filesystem integrity"},
+    {"fsck", do_blobstore_check, "check filesystem integrity"},
 };
 
 int usage() {

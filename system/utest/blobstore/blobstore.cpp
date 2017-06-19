@@ -38,15 +38,44 @@
 using digest::Digest;
 using digest::MerkleTree;
 
+const fsck_options_t test_fsck_options = {
+    .verbose = false,
+    .never_modify = true,
+    .always_modify = false,
+    .force = true,
+};
+
 // Helper functions for mounting Blobstore:
+
+//Checks info of mounted blobstore
+static bool CheckBlobstoreInfo(const char* mount_path) {
+    int fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0, "");
+    vfs_query_info_t out;
+    ASSERT_EQ(ioctl_vfs_query_fs(fd, &out, sizeof(out)), (ssize_t)sizeof(out), "Failed to query filesystem");
+    ASSERT_EQ(strncmp("blobstore", out.name, strlen("blobstore")), 0, "Unexpected filesystem mounted");
+    ASSERT_LE(out.used_nodes, out.total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(out.used_bytes, out.total_bytes, "Used bytes greater than free bytes");
+    ASSERT_EQ(close(fd), 0, "");
+    return true;
+}
 
 // Unmounts a blobstore and removes the backing ramdisk device.
 static int EndBlobstoreTest(const char* ramdisk_path) {
-    mx_status_t status = umount(MOUNT_PATH);
-    if (status != MX_OK) {
+    mx_status_t status = MX_OK;
+
+    ASSERT_TRUE(CheckBlobstoreInfo(MOUNT_PATH), "");
+
+    if ((status = umount(MOUNT_PATH)) != MX_OK) {
         fprintf(stderr, "Failed to unmount filesystem: %d\n", status);
         return -1;
     }
+
+    if ((status = fsck(ramdisk_path, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync)) != MX_OK) {
+        fprintf(stderr, "Filesystem fsck failed: %d\n", status);
+        return -1;
+    }
+
     return destroy_ramdisk(ramdisk_path);
 }
 

@@ -70,8 +70,8 @@ typedef struct {
     uint32_t inode_size;    // 256
     uint32_t block_count;   // total number of blocks
     uint32_t inode_count;   // total number of inodes
-    uint32_t alloc_block_count; //total number of allocated data blocks
-    uint32_t alloc_inode_count; //total number of allocated inodes
+    uint32_t alloc_block_count; // total number of allocated data blocks
+    uint32_t alloc_inode_count; // total number of allocated inodes
     uint32_t ibm_block;     // first blockno of inode allocation bitmap
     uint32_t abm_block;     // first blockno of block allocation bitmap
     uint32_t ino_block;     // first blockno of inode table

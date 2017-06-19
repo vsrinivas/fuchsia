@@ -108,10 +108,10 @@ IOCTL_WRAPPER_IN(ioctl_vfs_mount_bootfs_vmo, IOCTL_VFS_MOUNT_BOOTFS_VMO, mx_hand
 
 typedef struct vfs_query_info {
     // these are the total/used # of data bytes, not # of entire disk bytes
-    uint32_t total_bytes;
-    uint32_t used_bytes;
-    uint32_t total_nodes;
-    uint32_t used_nodes;
+    uint64_t total_bytes;
+    uint64_t used_bytes;
+    uint64_t total_nodes;
+    uint64_t used_nodes;
     char name[MAX_FS_NAME_LEN];
 } vfs_query_info_t;
 

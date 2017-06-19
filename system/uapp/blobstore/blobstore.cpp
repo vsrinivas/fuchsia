@@ -295,6 +295,7 @@ mx_status_t VnodeBlob::WriteMetadata() {
         return MX_ERR_IO;
     }
 
+    blobstore_->CountUpdate(&txn);
     flags_ &= ~kBlobFlagSync;
     return MX_OK;
 }
@@ -472,6 +473,7 @@ mx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
     assert(DataStartBlock(info_) <= *blkno_out);
     status = block_map_.Set(*blkno_out, *blkno_out + nblocks);
     assert(status == MX_OK);
+    info_.alloc_block_count += nblocks;
     return MX_OK;
 }
 
@@ -479,6 +481,7 @@ mx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
 void Blobstore::FreeBlocks(size_t nblocks, size_t blkno) {
     assert(DataStartBlock(info_) <= blkno);
     mx_status_t status = block_map_.Clear(blkno, blkno + nblocks);
+    info_.alloc_block_count -= nblocks;
     assert(status == MX_OK);
 }
 
@@ -488,6 +491,7 @@ mx_status_t Blobstore::AllocateNode(size_t* node_index_out) {
         if (GetNode(i)->start_block == kStartBlockFree) {
             // Found a free node. Mark it as reserved so no one else can allocateit.
             GetNode(i)->start_block = kStartBlockReserved;
+            info_.alloc_inode_count++;
             *node_index_out = i;
             return MX_OK;
         }
@@ -498,6 +502,7 @@ mx_status_t Blobstore::AllocateNode(size_t* node_index_out) {
 // Frees a node IN MEMORY
 void Blobstore::FreeNode(size_t node_index) {
     memset(GetNode(node_index), 0, sizeof(blobstore_inode_t));
+    info_.alloc_inode_count--;
 }
 
 mx_status_t Blobstore::Unmount() {
@@ -571,6 +576,7 @@ mx_status_t Blobstore::ReleaseBlob(VnodeBlob* vn) {
         WriteTxn txn(this);
         WriteNode(&txn, node_index);
         WriteBitmap(&txn, nblocks, start_block);
+        CountUpdate(&txn);
         hash_.erase(*vn);
         return MX_OK;
     }
@@ -579,6 +585,14 @@ mx_status_t Blobstore::ReleaseBlob(VnodeBlob* vn) {
     }
     }
     return MX_ERR_NOT_SUPPORTED;
+}
+
+mx_status_t Blobstore::CountUpdate(WriteTxn* txn) {
+    mx_status_t status = MX_OK;
+    void* infodata = info_vmo_->GetData();
+    memcpy(infodata, &info_, sizeof(info_));
+    txn->Enqueue(info_vmoid_, 0, 0, 1);
+    return status;
 }
 
 typedef struct dircookie {
@@ -674,7 +688,7 @@ Blobstore::~Blobstore() {
     }
 }
 
-mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr<VnodeBlob>* out) {
+mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr<Blobstore>* out) {
     uint64_t blocks = info->block_count;
 
     mx_status_t status = blobstore_check_info(info, blocks);
@@ -728,12 +742,31 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
     } else if ((status = fs->LoadBitmaps()) < 0) {
         fprintf(stderr, "blobstore: Failed to load bitmaps\n");
         return status;
+    } else if ((status = MappedVmo::Create(kBlobstoreBlockSize, "blobstore-superblock",
+                                           &fs->info_vmo_)) != MX_OK) {
+        fprintf(stderr, "blobstore: Failed to create info vmo\n");
+        return status;
+    } else if ((status = fs->AttachVmo(fs->info_vmo_->GetVmo(),
+                                       &fs->info_vmoid_)) != MX_OK) {
+        fprintf(stderr, "blobstore: Failed to attach info vmo\n");
+        return status;
     }
 
-    *out = mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::move(fs)));
+    *out = fs;
+    return MX_OK;
+}
+
+mx_status_t Blobstore::GetRootBlob(mxtl::RefPtr<VnodeBlob>* out) {
+    AllocChecker ac;
+    mxtl::RefPtr<VnodeBlob> vn =
+        mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this)));
+
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
+
+    *out = mxtl::move(vn);
+
     return MX_OK;
 }
 
@@ -744,7 +777,7 @@ mx_status_t Blobstore::LoadBitmaps() {
     return txn.Flush();
 }
 
-mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
+mx_status_t blobstore_create(mxtl::RefPtr<Blobstore>* out, int blockfd) {
     mx_status_t status;
 
     char block[kBlobstoreBlockSize];
@@ -762,7 +795,25 @@ mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
     } else if ((status = blobstore_check_info(info, blocks)) != MX_OK) {
         fprintf(stderr, "blobstore: Info check failed\n");
         return status;
-    } else if ((status = Blobstore::Create(blockfd, info, out)) != MX_OK) {
+    }
+
+    if ((status = Blobstore::Create(blockfd, info, out)) != MX_OK) {
+        fprintf(stderr, "blobstore: mount failed\n");
+        return status;
+    }
+
+    return MX_OK;
+}
+
+mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
+    mx_status_t status;
+    mxtl::RefPtr<Blobstore> fs;
+
+    if ((status = blobstore_create(&fs, blockfd)) != MX_OK) {
+        return status;
+    }
+
+    if ((status = fs->GetRootBlob(out)) != MX_OK) {
         fprintf(stderr, "blobstore: mount failed\n");
         return status;
     }
@@ -788,6 +839,8 @@ int blobstore_mkfs(int fd) {
     info.block_size = kBlobstoreBlockSize;
     info.block_count = blocks;
     info.inode_count = inodes;
+    info.alloc_block_count = 0;
+    info.alloc_inode_count = 0;
     info.blob_header_next = 0; // TODO(smklein): Allow chaining
 
     xprintf("Blobstore Mkfs\n");

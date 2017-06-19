@@ -201,9 +201,13 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
     friend class VnodeBlob;
 
-    static mx_status_t Create(int blockfd, const blobstore_info_t* info, mxtl::RefPtr<VnodeBlob>* out);
+    static mx_status_t Create(int blockfd, const blobstore_info_t* info, mxtl::RefPtr<Blobstore>* out);
+
     mx_status_t Unmount();
     virtual ~Blobstore();
+
+    // Returns the root blob
+    mx_status_t GetRootBlob(mxtl::RefPtr<VnodeBlob>* out);
 
     // Searches for a blob by name.
     // - If a readable blob with the same name exists, return it.
@@ -238,6 +242,8 @@ public:
     blobstore_info_t info_;
 
 private:
+    friend class BlobstoreChecker;
+
     Blobstore(int fd, const blobstore_info_t* info);
     mx_status_t LoadBitmaps();
 
@@ -259,6 +265,9 @@ private:
     // Given a node within the node map at an index, write it to disk.
     mx_status_t WriteNode(WriteTxn* txn, size_t map_index);
 
+    // Enqueues an update for allocated inode/block counts
+    mx_status_t CountUpdate(WriteTxn* txn);
+
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
     using WAVLTreeByMerkle = mxtl::WAVLTree<const uint8_t*,
@@ -273,11 +282,30 @@ private:
     vmoid_t block_map_vmoid_;
     mxtl::unique_ptr<MappedVmo> node_map_;
     vmoid_t node_map_vmoid_;
+    mxtl::unique_ptr<MappedVmo> info_vmo_;
+    vmoid_t info_vmoid_;
+};
+
+class BlobstoreChecker {
+public:
+    BlobstoreChecker();
+    void Init(mxtl::RefPtr<Blobstore> vnode);
+    void TraverseInodeBitmap();
+    void TraverseBlockBitmap();
+    mx_status_t CheckAllocatedCounts() const;
+
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(BlobstoreChecker);
+    mxtl::RefPtr<Blobstore> blobstore_;
+    uint32_t alloc_inodes_;
+    uint32_t alloc_blocks_;
 };
 
 int blobstore_mkfs(int fd);
 
 mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd);
+mx_status_t blobstore_create(mxtl::RefPtr<Blobstore>* out, int blockfd);
+mx_status_t blobstore_check(mxtl::RefPtr<Blobstore> vnode);
 
 mx_status_t readblk(int fd, uint64_t bno, void* data);
 mx_status_t writeblk(int fd, uint64_t bno, const void* data);
