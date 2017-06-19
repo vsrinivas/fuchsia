@@ -41,17 +41,6 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
 
 }  // namespace
 
-// Below are helper classes that encapsulate a chain of asynchronous
-// operations on the Ledger. Because the operations all return
-// something, the handles on which they are invoked need to be kept
-// around until the return value arrives. This precludes them to be
-// local variables. The next thing that comes to mind is to make them
-// fields of the containing object. However, there might be multiple
-// such operations going on concurrently in one StoryProviderImpl
-// (although right now there are not, because they are all serialized
-// in one operation queue), so they cannot be fields of
-// StoryProviderImpl. Thus such operations are separate classes.
-
 class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
  public:
   GetStoryDataCall(OperationContainer* const container,
