@@ -16,22 +16,24 @@ namespace modular {
 
 namespace {
 
-void XdrDeviceData(XdrContext* const xdr, DeviceMapEntryPtr* const data) {
-  xdr->Field("name", &data->get()->name);
-  xdr->Field("device_id", &data->get()->device_id);
-  xdr->Field("profile", &data->get()->profile);
+void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
+  xdr->Field("name", &data->name);
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("profile", &data->profile);
 }
 
 void WriteDeviceData(const std::string& device_name,
                      const std::string& device_id,
                      const std::string& profile,
                      ledger::Page* const page) {
-  std::string json;
   DeviceMapEntryPtr device = DeviceMapEntry::New();
   device->name = device_name;
   device->device_id = device_id;
   device->profile = profile;
+
+  std::string json;
   XdrWrite(&json, &device, XdrDeviceData);
+
   page->Put(to_array(MakeDeviceKey(device_id)), to_array(json),
             [](ledger::Status) {});
 }
