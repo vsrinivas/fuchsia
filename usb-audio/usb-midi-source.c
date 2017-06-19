@@ -40,8 +40,9 @@ static void update_signals(usb_midi_source_t* source) {
         new_signals |= DEV_STATE_READABLE;
     }
     if (new_signals != source->signals) {
-        device_state_set_clr(source->mxdev, new_signals & ~source->signals,
-                             source->signals & ~new_signals);
+        device_state_clr_set(source->mxdev,
+                             source->signals & ~new_signals,
+                             new_signals & ~source->signals);
         source->signals = new_signals;
     }
 }
