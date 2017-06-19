@@ -17,6 +17,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
+#include <lib/io.h>
 
 #include <platform/debug.h>
 
@@ -70,7 +71,8 @@ mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
     if (magenta_copy_from_user(ptr, buf, len) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    platform_dputs(buf, len);
+    __kernel_serial_write(buf, len);
+
     return len;
 }
 
