@@ -21,6 +21,7 @@ executable("manager") {
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",
+    "//apps/mozart/src/scene/tests:util",
     "//lib/escher/escher",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

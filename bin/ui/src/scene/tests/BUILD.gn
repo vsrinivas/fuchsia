@@ -9,7 +9,6 @@ group("tests") {
 
   public_deps = [
     ":apptests",
-    ":release_fence_signaller_unittests",
     ":unittests",
     ":unittests_using_escher",
   ]
@@ -22,6 +21,17 @@ source_set("testing_deps") {
     "//apps/mozart/lib/tests",
     "//apps/mozart/src/scene:common",
     "//third_party/gtest",
+  ]
+}
+
+source_set("util") {
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
+  public_deps = [
+    "//lib/ftl",
+    "//lib/mtl",
   ]
 }
 
@@ -50,6 +60,7 @@ executable("unittests") {
   sources = [
     "node_unittest.cc",
     "proxy_resource_unittest.cc",
+    "release_fence_signaller_unittest.cc",
     "resource_linker_unittest.cc",
     "session_test.cc",
     "session_test.h",
@@ -60,6 +71,7 @@ executable("unittests") {
 
   deps = [
     ":testing_deps",
+    ":util",
     "//apps/mozart/src/tests:main",
   ]
 }
@@ -82,20 +94,5 @@ executable("unittests_using_escher") {
     "//apps/test_runner/lib/reporting",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
-  ]
-}
-
-executable("release_fence_signaller_unittests") {
-  output_name = "release_fence_signaller_unittests"
-
-  testonly = true
-
-  sources = [
-    "release_fence_signaller_unittest.cc",
-  ]
-
-  deps = [
-    ":testing_deps",
-    "//apps/mozart/src/tests:main",
   ]
 }

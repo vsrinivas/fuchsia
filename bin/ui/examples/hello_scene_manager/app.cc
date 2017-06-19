@@ -6,18 +6,20 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "apps/mozart/lib/scene/session_helpers.h"
-#include "apps/mozart/lib/scene/types.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
-#include "apps/mozart/services/scene/ops.fidl.h"
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
-#include "apps/mozart/services/scene/session.fidl.h"
 #include "escher/util/image_utils.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scene/types.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
+#include "apps/mozart/services/scene/ops.fidl.h"
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
+#include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/src/scene/tests/util.h"
 
 using namespace mozart;
 
@@ -42,28 +44,6 @@ class HelloSceneManagerApp {
   }
 
   ResourceId NewResourceId() { return ++resource_id_counter_; }
-
-  static ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size) {
-    mx::vmo vmo;
-    mx_status_t status = mx::vmo::create(size, 0u, &vmo);
-    if (status != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to create vmo: status=" << status
-                     << ", size=" << size;
-      return nullptr;
-    }
-
-    // Optimization: We will be writing to every page of the buffer, so
-    // allocate physical memory for it eagerly.
-    status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
-    if (status != MX_OK) {
-      FTL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status
-                     << ", size=" << size;
-      return nullptr;
-    }
-
-    uint32_t map_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-    return ftl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo), map_flags);
-  }
 
   fidl::Array<mozart2::OpPtr> CreateLinkAndSampleScene() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
@@ -94,7 +74,8 @@ class HelloSceneManagerApp {
     auto checkerboard_pixels = escher::image_utils::NewGradientPixels(
         checkerboard_width, checkerboard_height, &checkerboard_pixels_size);
 
-    auto shared_vmo = CreateSharedVmo(checkerboard_pixels_size);
+    auto shared_vmo =
+        mozart::scene::test::CreateSharedVmo(checkerboard_pixels_size);
 
     memcpy(shared_vmo->Map(), checkerboard_pixels.get(),
            checkerboard_pixels_size);
