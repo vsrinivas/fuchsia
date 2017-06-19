@@ -22,6 +22,10 @@ constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v2.db";
 
+std::string LedgerRepositoryPath(const std::string& user_id) {
+  return kLedgerDataBaseDir + user_id;
+}
+
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
@@ -98,9 +102,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     FTL_CHECK(sizeof random_number == random_size);
 
     auto random_id = std::to_string(random_number);
-    auto ledger_repository_path = kLedgerDataBaseDir + random_id;
     LoginInternal(random_id, random_id, nullptr /* server_name */,
-                  ledger_repository_path, std::move(params));
+                  LedgerRepositoryPath(random_id), std::move(params));
     return;
   }
 
@@ -127,7 +130,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   // |user_id| has to be something that is the same across devices. Currently,
   // we take it as input from the user. TODO(alhaad): Infer it from id token.
   std::string user_id = found_user->display_name()->str();
-  std::string ledger_repository_path = kLedgerDataBaseDir + user_id;
+  std::string ledger_repository_path = LedgerRepositoryPath(user_id);
 
   if (ledger_repository_for_testing_) {
     unsigned random_number;
@@ -270,6 +273,9 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
   std::vector<flatbuffers::Offset<modular::UserStorage>> users;
   for (const auto* user : *(users_storage_->users())) {
     if (user->id()->str() == account_id) {
+      // Delete the local ledger repository for this user too.
+      std::string user_id = user->display_name()->str();
+      files::DeletePath(LedgerRepositoryPath(user_id), true);
       continue;
     }
 
