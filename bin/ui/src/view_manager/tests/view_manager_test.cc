@@ -15,19 +15,29 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
-extern mozart::ViewManagerPtr g_view_manager;
+extern std::unique_ptr<app::ApplicationContext> g_application_context;
 
 namespace view_manager {
 namespace test {
 
-class ViewManagerTest : public mozart::test::TestWithMessageLoop {};
+class ViewManagerTest : public mozart::test::TestWithMessageLoop {
+ protected:
+  static void SetUpTestCase() {
+    view_manager_ = g_application_context
+        ->ConnectToEnvironmentService<mozart::ViewManager>();
+  }
+
+  static mozart::ViewManagerPtr view_manager_;
+};
+
+mozart::ViewManagerPtr ViewManagerTest::view_manager_;
 
 TEST_F(ViewManagerTest, CreateAViewManager) {
-  ASSERT_TRUE(g_view_manager.is_bound());
+  ASSERT_TRUE(view_manager_.is_bound());
 }
 
 TEST_F(ViewManagerTest, CreateAView) {
-  ASSERT_TRUE(g_view_manager.is_bound());
+  ASSERT_TRUE(view_manager_.is_bound());
 
   // Create and bind a mock view listener
   mozart::ViewListenerPtr view_listener;
@@ -38,8 +48,8 @@ TEST_F(ViewManagerTest, CreateAView) {
   // Create a view
   mozart::ViewPtr view;
   mozart::ViewOwnerPtr view_owner;
-  g_view_manager->CreateView(view.NewRequest(), view_owner.NewRequest(),
-                             std::move(view_listener), "test_view");
+  view_manager_->CreateView(view.NewRequest(), view_owner.NewRequest(),
+                            std::move(view_listener), "test_view");
 
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
@@ -66,7 +76,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create a parent view
   mozart::ViewPtr parent_view;
   mozart::ViewOwnerPtr parent_view_owner;
-  g_view_manager->CreateView(
+  view_manager_->CreateView(
       parent_view.NewRequest(), parent_view_owner.NewRequest(),
       std::move(parent_view_listener), "parent_test_view");
 
@@ -82,9 +92,9 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create a child view
   mozart::ViewPtr child_view;
   mozart::ViewOwnerPtr child_view_owner;
-  g_view_manager->CreateView(child_view.NewRequest(),
-                             child_view_owner.NewRequest(),
-                             std::move(child_view_listener), "test_view");
+  view_manager_->CreateView(child_view.NewRequest(),
+                            child_view_owner.NewRequest(),
+                            std::move(child_view_listener), "test_view");
 
   // Add the view to the parent
   parent_view_container->AddChild(0, std::move(child_view_owner));
@@ -128,8 +138,8 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   mozart::test::MockViewTreeListener mock_tree_view_listener;
   fidl::Binding<mozart::ViewTreeListener> tree_listener_binding(
       &mock_tree_view_listener, tree_listener.NewRequest());
-  g_view_manager->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
-                                 "test_view_tree");
+  view_manager_->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
+                                "test_view_tree");
 
   // Get tree's container and wire up listener
   mozart::ViewContainerPtr tree_container;
@@ -155,7 +165,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   // Create a parent view
   mozart::ViewPtr parent_view;
   mozart::ViewOwnerPtr parent_view_owner;
-  g_view_manager->CreateView(
+  view_manager_->CreateView(
       parent_view.NewRequest(), parent_view_owner.NewRequest(),
       std::move(parent_view_listener), "parent_test_view");
 
@@ -194,9 +204,9 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   // Create a child view
   mozart::ViewPtr child_view;
   mozart::ViewOwnerPtr child_view_owner;
-  g_view_manager->CreateView(child_view.NewRequest(),
-                             child_view_owner.NewRequest(),
-                             std::move(child_view_listener), "test_view");
+  view_manager_->CreateView(child_view.NewRequest(),
+                            child_view_owner.NewRequest(),
+                            std::move(child_view_listener), "test_view");
 
   // Add the view to the parent
   parent_view_container->AddChild(child_key, std::move(child_view_owner));

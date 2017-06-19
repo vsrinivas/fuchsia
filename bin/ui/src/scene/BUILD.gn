@@ -112,14 +112,11 @@ source_set("common") {
 source_set("testing_common") {
   testonly = true
 
-  sources = [
-    "tests/main.cc",
-  ]
-
   public_deps = [
     ":common",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/lib/tests",
+    "//apps/mozart/src/tests:main",
     "//third_party/gtest",
   ]
 }

@@ -2,17 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("tests") {
+source_set("main") {
   testonly = true
 
   sources = [
-    "test_with_message_loop.cc",
-    "test_with_message_loop.h",
+    "main.cc",
   ]
-  public_deps = [
-    "//application/lib/app:app",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//third_party/gtest",
+
+  deps = [
+    "//apps/mozart/lib/tests",
+    "//apps/test_runner/lib/reporting",
   ]
 }

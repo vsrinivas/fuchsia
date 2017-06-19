@@ -21,13 +21,13 @@ executable("apptests") {
   testonly = true
 
   sources = [
-    "tests/main.cc",
     "tests/geometry_util_unittests.cc",
   ]
 
   deps = [
     ":cpp",
     "//apps/mozart/lib/tests",
+    "//apps/mozart/src/tests:main",
     "//third_party/gtest",
   ]
 }

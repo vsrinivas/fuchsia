@@ -17,13 +17,13 @@ executable("input_apptests") {
 
   sources = [
     "input_test.cc",
-    "main.cc",
   ]
 
   deps = [
     "//apps/mozart/lib/tests",
     "//apps/mozart/lib/tests/mocks",
     "//apps/mozart/services/input",
+    "//apps/mozart/src/tests:main",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",
