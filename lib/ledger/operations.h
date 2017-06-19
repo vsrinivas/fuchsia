@@ -30,11 +30,13 @@ class ReadDataCall : Operation<DataPtr> {
   ReadDataCall(OperationContainer* const container,
                ledger::Page* const page,
                const std::string& key,
+               const bool not_found_is_ok,
                DataFilter filter,
                ResultCall result_call)
       : Operation<DataPtr>(container, std::move(result_call)),
         page_(page),
         key_(key),
+        not_found_is_ok_(not_found_is_ok),
         filter_(filter) {
     this->Ready();
   }
@@ -59,8 +61,11 @@ class ReadDataCall : Operation<DataPtr> {
     page_snapshot_->Get(to_array(key_),
                         [this, flow](ledger::Status status, mx::vmo value) {
                           if (status != ledger::Status::OK) {
-                            FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                                           << " PageSnapshot.Get() " << status;
+                            if (status != ledger::Status::KEY_NOT_FOUND ||
+                                !not_found_is_ok_) {
+                              FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                                             << " PageSnapshot.Get() " << status;
+                            }
                             return;
                           }
 
@@ -87,6 +92,7 @@ class ReadDataCall : Operation<DataPtr> {
 
   ledger::Page* const page_;  // not owned
   const std::string key_;
+  const bool not_found_is_ok_;
   DataFilter const filter_;
   ledger::PageSnapshotPtr page_snapshot_;
   DataPtr result_;

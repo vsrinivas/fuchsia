@@ -11,6 +11,7 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/fidl/proxy.h"
 #include "apps/modular/lib/ledger/storage.h"
+#include "apps/modular/lib/ledger/operations.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
@@ -39,106 +40,25 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
   xdr->Field("story_page_id", &data->story_page_id);
 }
 
+void MakeGetStoryDataCall(OperationContainer* const container,
+                          ledger::Page* const page,
+                          const fidl::String& story_id,
+                          std::function<void(StoryDataPtr)> result_call) {
+  new ReadDataCall<StoryData>(container, page, MakeStoryKey(story_id),
+                              true /* not_found_is_ok */,
+                              XdrStoryData, std::move(result_call));
+};
+
+void MakeWriteStoryDataCall(OperationContainer* const container,
+                            ledger::Page* const page,
+                            StoryDataPtr story_data,
+                            std::function<void()> result_call) {
+  new WriteDataCall<StoryData>(container, page, MakeStoryKey(story_data->story_info->id),
+                               XdrStoryData, std::move(story_data),
+                               std::move(result_call));
+};
+
 }  // namespace
-
-class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
- public:
-  GetStoryDataCall(OperationContainer* const container,
-                   ledger::Page* page,
-                   const fidl::String& story_id,
-                   ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        page_(page),
-        story_id_(story_id) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &story_data_};
-
-    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this, flow](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           return;
-                         }
-
-                         Cont(flow);
-                       });
-  }
-
-  void Cont(FlowToken flow) {
-    page_snapshot_->Get(
-        to_array(MakeStoryKey(story_id_)),
-        [this, flow](ledger::Status status, mx::vmo value) {
-          if (status != ledger::Status::OK) {
-            // It's always OK if the story is not found, all clients
-            // handle the null case.
-            if (status != ledger::Status::KEY_NOT_FOUND) {
-              FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                             << " PageSnapshot.Get() " << status;
-            }
-            return;
-          }
-
-          std::string value_as_string;
-          if (!mtl::StringFromVmo(value, &value_as_string)) {
-            FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                           << "Unable to extract data.";
-            return;
-          }
-
-          if (!XdrRead(value_as_string, &story_data_, XdrStoryData)) {
-            story_data_.reset();
-          }
-        });
-  };
-
-  ledger::Page* const page_;  // not owned
-  ledger::PageSnapshotPtr page_snapshot_;
-  const fidl::String story_id_;
-  StoryDataPtr story_data_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetStoryDataCall);
-};
-
-class StoryProviderImpl::WriteStoryDataCall : Operation<> {
- public:
-  WriteStoryDataCall(OperationContainer* const container,
-                     ledger::Page* const page,
-                     StoryDataPtr story_data,
-                     ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        page_(page),
-        story_data_(std::move(story_data)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    FTL_DCHECK(!story_data_.is_null());
-
-    std::string json;
-    XdrWrite(&json, &story_data_, XdrStoryData);
-
-    page_->PutWithPriority(
-        to_array(MakeStoryKey(story_data_->story_info->id)), to_array(json),
-        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            const fidl::String& story_id = story_data_->story_info->id;
-            FTL_LOG(ERROR) << "WriteStoryDataCall() " << story_id
-                           << " Page.PutWithPriority() " << status;
-          }
-        });
-  }
-
-  ledger::Page* const page_;  // not owned
-  StoryDataPtr story_data_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryDataCall);
-};
 
 class StoryProviderImpl::MutateStoryDataCall : Operation<> {
  public:
@@ -158,7 +78,7 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    new GetStoryDataCall(&operation_queue_, page_, story_id_,
+    MakeGetStoryDataCall(&operation_queue_, page_, story_id_,
                          [this, flow](StoryDataPtr story_data) {
                            if (!story_data) {
                              // If the story doesn't exist, it was deleted and
@@ -170,7 +90,7 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
                              return;
                            }
 
-                           new WriteStoryDataCall(&operation_queue_, page_,
+                           MakeWriteStoryDataCall(&operation_queue_, page_,
                                                   std::move(story_data),
                                                   [flow] {});
                          });
@@ -243,7 +163,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             story_info->extra = std::move(extra_info_);
             story_info->extra.mark_non_null();
 
-            new WriteStoryDataCall(&operation_queue_, root_page_,
+            MakeWriteStoryDataCall(&operation_queue_, root_page_,
                                    std::move(story_data_),
                                    [this, flow] { Cont1(flow); });
           });
@@ -403,7 +323,7 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
       return;
     }
 
-    new GetStoryDataCall(&operation_queue_, page_, story_id_,
+    MakeGetStoryDataCall(&operation_queue_, page_, story_id_,
                          [this, flow](StoryDataPtr story_data) {
                            if (story_data) {
                              story_data_ = std::move(story_data);
@@ -443,82 +363,6 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   OperationQueue operation_queue_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
-};
-
-class StoryProviderImpl::PreviousStoriesCall
-    : Operation<fidl::Array<fidl::String>> {
- public:
-  PreviousStoriesCall(OperationContainer* const container,
-                      ledger::Page* const page,
-                      ResultCall result_call)
-      : Operation(container, std::move(result_call)), page_(page) {
-    // This resize() has the side effect of marking the array as non-null. Do
-    // not remove it because the fidl declaration of this return value does not
-    // allow nulls.
-    story_ids_.resize(0);
-
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &story_ids_};
-
-    page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(kStoryKeyPrefix),
-                       nullptr, [this, flow](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "PreviousStoriesCall() "
-                                          << "Page.GetSnapshot() " << status;
-                           return;
-                         }
-
-                         Cont1(flow);
-                       });
-  }
-
-  void Cont1(FlowToken flow) {
-    GetEntries(page_snapshot_.get(), &entries_,
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "PreviousStoriesCall() "
-                                  << "GetEntries() " << status;
-                   return;
-                 }
-
-                 Cont2(flow);
-               });
-  }
-
-  void Cont2(FlowToken flow) {
-    // TODO(mesch): Pagination might be needed here. If the list
-    // of entries returned from the Ledger is too large, it might
-    // also be too large to return from StoryProvider.
-
-    for (auto& entry : entries_) {
-      std::string value_as_string;
-      if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-        FTL_LOG(ERROR) << "PreviousStoriesCall() "
-                       << "Unable to extract data.";
-        continue;
-      }
-
-      StoryDataPtr story_data;
-      if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
-        continue;
-      }
-
-      FTL_DCHECK(!story_data.is_null());
-
-      story_ids_.push_back(story_data->story_info->id);
-    }
-  }
-
-  ledger::Page* const page_;  // not owned
-  ledger::PageSnapshotPtr page_snapshot_;
-  std::vector<ledger::EntryPtr> entries_;
-  fidl::Array<fidl::String> story_ids_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
 
 class StoryProviderImpl::TeardownCall : Operation<> {
@@ -724,7 +568,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
-  new GetStoryDataCall(
+  MakeGetStoryDataCall(
       &operation_queue_, root_page_, story_id,
       [callback](StoryDataPtr story_data) {
         callback(story_data ? std::move(story_data->story_info) : nullptr);
@@ -748,7 +592,19 @@ void StoryProviderImpl::GetController(
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
-  new PreviousStoriesCall(&operation_queue_, root_page_, callback);
+  new ReadAllDataCall<StoryData>(
+      &operation_queue_, root_page_,
+      kStoryKeyPrefix, XdrStoryData,
+      [callback] (fidl::Array<StoryDataPtr> data) {
+        fidl::Array<fidl::String> result;
+        result.resize(0);
+
+        for (auto& story_data : data) {
+          result.push_back(story_data->story_info->id);
+        }
+
+        callback(std::move(result));
+      });
 }
 
 // |StoryProvider|

@@ -220,13 +220,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
-  class GetStoryDataCall;
-  class WriteStoryDataCall;
   class MutateStoryDataCall;
   class CreateStoryCall;
   class DeleteStoryCall;
   class GetControllerCall;
-  class PreviousStoriesCall;
   class TeardownCall;
   class GetImportanceCall;
 

@@ -172,7 +172,8 @@ void StoryStorageImpl::ReadModuleData(
     const fidl::Array<fidl::String>& module_path,
     const ModuleDataCallback& callback) {
   new ReadDataCall<ModuleData>(&operation_queue_, story_page_,
-                               MakeModuleKey(module_path), XdrModuleData,
+                               MakeModuleKey(module_path),
+                               false /* not_found_is_ok */, XdrModuleData,
                                callback);
 }
 
