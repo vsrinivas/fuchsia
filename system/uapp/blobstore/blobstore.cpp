@@ -92,6 +92,16 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
     return MX_OK;
 }
 
+mx_status_t blobstore_get_blockcount(int fd, size_t* out) {
+    block_info_t info;
+    ssize_t r;
+    if ((r = ioctl_block_get_info(fd, &info)) < 0) {
+        return static_cast<mx_status_t>(r);
+    }
+    *out = (info.block_size * info.block_count) / kBlobstoreBlockSize;
+    return MX_OK;
+}
+
 } // namespace
 
 namespace blobstore {
@@ -736,7 +746,6 @@ mx_status_t Blobstore::LoadBitmaps() {
 
 mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
     mx_status_t status;
-    struct stat s;
 
     char block[kBlobstoreBlockSize];
     if ((status = readblk(blockfd, 0, (void*) block)) < 0) {
@@ -746,10 +755,11 @@ mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
 
     blobstore_info_t* info = reinterpret_cast<blobstore_info_t*>(&block[0]);
 
-    if (fstat(blockfd, &s) < 0) {
+    uint64_t blocks;
+    if ((status = blobstore_get_blockcount(blockfd, &blocks)) != MX_OK) {
         fprintf(stderr, "blobstore: cannot find end of underlying device\n");
-        return MX_ERR_BAD_STATE;
-    } else if ((status = blobstore_check_info(info, s.st_size / kBlobstoreBlockSize)) != MX_OK) {
+        return status;
+    } else if ((status = blobstore_check_info(info, blocks)) != MX_OK) {
         fprintf(stderr, "blobstore: Info check failed\n");
         return status;
     } else if ((status = Blobstore::Create(blockfd, info, out)) != MX_OK) {
@@ -761,13 +771,12 @@ mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
 }
 
 int blobstore_mkfs(int fd) {
-    struct stat s;
-    if (fstat(fd, &s) < 0) {
+    uint64_t blocks;
+    if (blobstore_get_blockcount(fd, &blocks)) {
         fprintf(stderr, "blobstore: cannot find end of underlying device\n");
-        return MX_ERR_BAD_STATE;
+        return -1;
     }
 
-    uint64_t blocks = s.st_size / kBlobstoreBlockSize;
     uint64_t inodes = 32768;
 
     blobstore_info_t info;
@@ -782,7 +791,7 @@ int blobstore_mkfs(int fd) {
     info.blob_header_next = 0; // TODO(smklein): Allow chaining
 
     xprintf("Blobstore Mkfs\n");
-    xprintf("Disk size  : %llu\n", s.st_size);
+    xprintf("Disk size  : %lu\n", blocks * kBlobstoreBlockSize);
     xprintf("Block Size : %u\n", kBlobstoreBlockSize);
     xprintf("Block Count: %lu\n", blocks);
     xprintf("Inode Count: %lu\n", inodes);
