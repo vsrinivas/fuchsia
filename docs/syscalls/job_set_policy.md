@@ -2,7 +2,7 @@
 
 ## NAME
 
-job_set_policy - Set an job security and resource policies.
+job_set_policy - Set job security and resource policies.
 
 ## SYNOPSIS
 
