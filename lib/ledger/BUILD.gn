@@ -2,6 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("operations") {
+  sources = [
+    "operations.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:operation",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
 source_set("storage") {
   sources = [
     "storage.cc",
@@ -16,3 +31,4 @@ source_set("storage") {
     "//lib/ftl",
   ]
 }
+

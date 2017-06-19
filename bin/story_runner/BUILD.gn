@@ -41,6 +41,7 @@ source_set("story_runner") {
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/fidl:proxy",
     "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/ledger:operations",
     "//apps/modular/lib/ledger:storage",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/util",

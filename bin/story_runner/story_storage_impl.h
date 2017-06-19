@@ -87,19 +87,6 @@ class StoryStorageImpl : public PageClient {
   // Operations implemented here.
   class ReadLinkDataCall;
   class WriteLinkDataCall;
-  template <typename Data,
-            typename DataPtr,
-            typename DataFilter>
-  class ReadDataCall;
-  template <typename Data,
-            typename DataPtr,
-            typename DataArray,
-            typename DataFilter>
-  class ReadAllDataCall;
-  template <typename Data,
-            typename DataPtr,
-            typename DataFilter>
-  class WriteDataCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };
