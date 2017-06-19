@@ -82,6 +82,9 @@ struct dc_device {
     // to this device's devhost, awaiting a response
     list_node_t pending;
 
+    // listnode for this device in the all devices list
+    list_node_t anode;
+
     mx_device_prop_t props[];
 };
 
@@ -128,8 +131,9 @@ void devfs_unpublish(device_t* dev);
 device_t* coordinator_init(mx_handle_t root_job);
 void coordinator(void);
 
-void coordinator_new_driver(driver_t* ctx, const char* version);
+void dc_driver_added(driver_t* drv, const char* version);
 
+void load_driver(const char* path, size_t len);
 void enumerate_drivers(void);
 
 bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,

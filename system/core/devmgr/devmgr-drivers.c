@@ -61,7 +61,7 @@ static void found_driver(magenta_driver_note_t* note, mx_bind_inst_t* bi, void* 
     }
 #endif
 
-    coordinator_new_driver(drv, note->version);
+    dc_driver_added(drv, note->version);
 }
 
 static void find_loadable_drivers(const char* path) {
@@ -100,6 +100,30 @@ static void find_loadable_drivers(const char* path) {
         }
     }
     closedir(dir);
+}
+
+void load_driver(const char* path, size_t len) {
+    //TODO: check for duplicate driver add
+
+    char tmp[len + 1];
+    memcpy(tmp, path, len);
+    tmp[len] = 0;
+
+    int fd;
+    if ((fd = open(path, O_RDONLY)) < 0) {
+        printf("devcoord: cannot open '%s'\n", path);
+        return;
+    }
+    mx_status_t status = read_driver_info(fd, tmp, found_driver);
+    close(fd);
+
+    if (status) {
+        if (status == MX_ERR_NOT_FOUND) {
+            printf("devcoord: no driver info in '%s'\n", tmp);
+        } else {
+            printf("devcoord: error reading info from '%s'\n", tmp);
+        }
+    }
 }
 
 void enumerate_drivers(void) {

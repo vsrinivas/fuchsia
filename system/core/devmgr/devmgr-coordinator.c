@@ -106,6 +106,10 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
         return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
+    if ((len > 11) && !memcmp(cmd, "add-driver:", 11)) {
+        load_driver(cmd + 11, len - 11);
+        return MX_OK;
+    }
     dmprintf("unknown command\n");
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return MX_ERR_NOT_SUPPORTED;
@@ -119,9 +123,19 @@ mx_handle_t get_sysinfo_job_root(void);
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, uint32_t evt);
 static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
 
+static bool dc_running;
+
 static mx_handle_t devhost_job;
 port_t dc_port;
+
+// All Drivers
 static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
+
+// Drivers to add to All Drivers
+static list_node_t list_drivers_new = LIST_INITIAL_VALUE(list_drivers_new);
+
+// All Devices (excluding static immortal devices)
+static list_node_t list_devices = LIST_INITIAL_VALUE(list_devices);
 
 static driver_t* libname_to_driver(const char* libname) {
     driver_t* drv;
@@ -321,9 +335,12 @@ static void dc_dump_drivers(void) {
 }
 
 static void dc_handle_new_device(device_t* dev);
+static void dc_handle_new_driver(void);
 
 #define WORK_IDLE 0
 #define WORK_DEVICE_ADDED 1
+#define WORK_DRIVER_ADDED 2
+
 static list_node_t list_pending_work = LIST_INITIAL_VALUE(list_pending_work);
 static list_node_t list_unbound_devices = LIST_INITIAL_VALUE(list_unbound_devices);
 
@@ -349,6 +366,10 @@ static void process_work(work_t* work) {
     case WORK_DEVICE_ADDED: {
         device_t* dev = containerof(work, device_t, work);
         dc_handle_new_device(dev);
+        break;
+    }
+    case WORK_DRIVER_ADDED: {
+        dc_handle_new_driver();
         break;
     }
     default:
@@ -601,6 +622,8 @@ static mx_status_t dc_add_device(device_t* parent,
     list_add_tail(&parent->children, &dev->node);
     parent->refcount++;
 
+    list_add_tail(&list_devices, &dev->anode);
+
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (child)\n",
         parent, parent->name, parent->refcount);
 
@@ -701,6 +724,9 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
         }
         dc_release_device(parent);
     }
+
+    // remove from list of all devices
+    list_delete(&dev->anode);
 
     if (forced) {
         // release the ref held by the devhost
@@ -1139,7 +1165,16 @@ static bool is_platform_bus_driver(driver_t* drv) {
     return !strcmp(drv->libname, "/boot/driver/platform-bus.so");
 }
 
-void coordinator_new_driver(driver_t* drv, const char* version) {
+static work_t new_driver_work;
+
+void dc_driver_added(driver_t* drv, const char* version) {
+    if (dc_running) {
+        list_add_head(&list_drivers_new, &drv->node);
+        if (new_driver_work.op == WORK_IDLE) {
+            queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
+        }
+        return;
+    }
     if (version[0] == '!') {
         // debugging / development hack
         // prioritize drivers with version "!..." over others
@@ -1177,6 +1212,43 @@ static void acpi_init(void) {
     devhost_init_pcie();
 }
 
+void dc_bind_driver(driver_t* drv) {
+    if (dc_running) {
+        printf("devcoord: driver '%s' added\n", drv->name);
+    }
+    if (is_root_driver(drv)) {
+        dc_attempt_bind(drv, &root_device);
+    } else if (is_misc_driver(drv)) {
+        dc_attempt_bind(drv, &misc_device);
+    } else if (is_platform_bus_driver(drv) &&
+               (platform_device.hrsrc != MX_HANDLE_INVALID)) {
+        dc_attempt_bind(drv, &platform_device);
+    } else if (dc_running) {
+        device_t* dev;
+        list_for_every_entry(&list_devices, dev, device_t, anode) {
+            if (dev->flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
+                // if device is already bound or being destroyed, skip it
+                continue;
+            }
+            if (dc_is_bindable(drv, dev->protocol_id,
+                               dev->props, dev->prop_count, true)) {
+                log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
+                    drv->name, dev->name);
+
+                dc_attempt_bind(drv, dev);
+            }
+        }
+    }
+}
+
+void dc_handle_new_driver(void) {
+    driver_t* drv;
+    while ((drv = list_remove_head_type(&list_drivers_new, driver_t, node)) != NULL) {
+        list_add_tail(&list_drivers, &drv->node);
+        dc_bind_driver(drv);
+    }
+}
+
 void coordinator(void) {
     log(INFO, "devmgr: coordinator()\n");
 
@@ -1195,15 +1267,10 @@ void coordinator(void) {
 
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        if (is_root_driver(drv)) {
-            dc_attempt_bind(drv, &root_device);
-        } else if (is_misc_driver(drv)) {
-            dc_attempt_bind(drv, &misc_device);
-        } else if (is_platform_bus_driver(drv) &&
-                   (platform_device.hrsrc != MX_HANDLE_INVALID)) {
-            dc_attempt_bind(drv, &platform_device);
-        }
+        dc_bind_driver(drv);
     }
+
+    dc_running = true;
 
     for (;;) {
         mx_status_t status;
