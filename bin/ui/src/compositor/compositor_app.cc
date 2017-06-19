@@ -10,8 +10,7 @@
 
 namespace compositor {
 
-constexpr char kCompositorConfigFile[] =
-    "/system/data/compositor/compositor.config";
+constexpr char kCompositorConfigFile[] = "/pkg/data/compositor.config";
 
 CompositorApp::CompositorApp()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
