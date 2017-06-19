@@ -67,8 +67,8 @@ func init() {
 	flag.StringVar(&debsCache, "cache", "debs", "Cache for .deb files")
 
 	// gpg keyring file generated using:
-	//   export KEYS="518E17E1 46925553 2B90D010"
-	//   gpg --recv-keys $KEYS
+	//   export KEYS="518E17E1 2B90D010 C857C906"
+	//   gpg --keyserver keys.gnupg.net --recv-keys $KEYS
 	//   gpg --output ./debian-archive-jessie-stable.gpg --export $KEYS
 	flag.StringVar(&keyRingFile, "keyring", "debian-archive-jessie-stable.gpg", "Keyring file")
 
