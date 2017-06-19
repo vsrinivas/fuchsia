@@ -6,6 +6,7 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/ledger/operations.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -22,87 +23,30 @@ void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("profile", &data->profile);
 }
 
-void WriteDeviceData(const std::string& device_name,
+void WriteDeviceData(OperationContainer* const operation_container,
+                     const std::string& device_name,
                      const std::string& device_id,
                      const std::string& profile,
                      ledger::Page* const page) {
-  DeviceMapEntryPtr device = DeviceMapEntry::New();
-  device->name = device_name;
-  device->device_id = device_id;
-  device->profile = profile;
+  DeviceMapEntryPtr data = DeviceMapEntry::New();
+  data->name = device_name;
+  data->device_id = device_id;
+  data->profile = profile;
 
-  std::string json;
-  XdrWrite(&json, &device, XdrDeviceData);
-
-  page->Put(to_array(MakeDeviceKey(device_id)), to_array(json),
-            [](ledger::Status) {});
+  new WriteDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
+      operation_container, page, MakeDeviceKey(device_id),
+      XdrDeviceData, std::move(data), []{});
 }
 
 }  // namespace
-
-// Asynchronous operations of this service.
-
-class DeviceMapImpl::QueryCall : Operation<fidl::Array<DeviceMapEntryPtr>> {
- public:
-  QueryCall(OperationContainer* const container,
-            std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
-            ResultCall result_call)
-      : Operation(container, std::move(result_call)), snapshot_(snapshot) {
-    data_.resize(0);  // never return null
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &data_};
-
-    GetEntries((*snapshot_).get(), &entries_,
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "QueryCall() "
-                                  << "GetEntries() " << status;
-                   return;
-                 }
-
-                 Cont(flow);
-               });
-  }
-
-  void Cont(FlowToken flow) {
-    if (entries_.size() == 0) {
-      // No existing entries.
-      return;
-    }
-
-    for (const auto& entry : entries_) {
-      std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
-                       << " couldn't be copied.";
-        continue;
-      }
-
-      auto device = DeviceMapEntry::New();
-      if (!XdrRead(value, &device, XdrDeviceData)) {
-        continue;
-      }
-
-      data_.push_back(std::move(device));
-    }
-  }
-
-  std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
-  std::vector<ledger::EntryPtr> entries_;
-  fidl::Array<DeviceMapEntryPtr> data_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
-};
 
 DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_id,
                              const std::string& device_profile,
                              ledger::Page* const page)
-    : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix) {
-  WriteDeviceData(device_name, device_id, device_profile, page);
+    : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix),
+      page_(page) {
+  WriteDeviceData(&operation_queue_, device_name, device_id, device_profile, page_);
 }
 
 DeviceMapImpl::~DeviceMapImpl() = default;
@@ -112,7 +56,8 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, page_snapshot(), callback);
+  new ReadAllDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
+      &operation_queue_, page_, kDeviceKeyPrefix, XdrDeviceData, callback);
 }
 
 void DeviceMapImpl::OnChange(const std::string& key, const std::string& value) {

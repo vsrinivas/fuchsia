@@ -39,11 +39,9 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void OnDelete(const std::string& key) override;
 
   fidl::BindingSet<DeviceMap> bindings_;
+  ledger::Page* const page_;
 
   OperationQueue operation_queue_;
-
-  // Operations implemented here.
-  class QueryCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };
