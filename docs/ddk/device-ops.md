@@ -189,5 +189,5 @@ mx_status_t (*ioctl)(void* ctx, uint32_t op,
 
 #### device_state_set
 ```
-static inline void device_state_set(mx_device_t* dev, mx_signals_t stateflag);
+void device_state_set(mx_device_t* dev, mx_signals_t stateflag);
 ```

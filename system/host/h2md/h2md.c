@@ -206,6 +206,12 @@ int process_source(ctx_t* ctx, char* line, size_t len) {
             len--;
             ws--;
         }
+        // omit static inline prefix on decls
+        if (ctx->state == ONEFUNCTION &&
+            !strncmp(line, "static inline ", 14)) {
+            line += 14;
+            len -= 14;
+        }
         char* x;
         // ; or { ends the decl/definition
         if ((x = strchr(line, ';')) || (x = strchr(line, '{'))) {
