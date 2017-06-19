@@ -46,7 +46,7 @@ bool Transport::Initialize() {
     return false;
   }
 
-  io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport");
+  io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport-io");
 
   // We watch for handle errors and closures to perform the necessary clean up.
   io_task_runner_->PostTask([ handle = channel.get(), this ] {

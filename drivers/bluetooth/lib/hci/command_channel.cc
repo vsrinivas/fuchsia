@@ -8,6 +8,7 @@
 
 #include <magenta/status.h>
 
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -42,8 +43,7 @@ CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_cha
       transport_(transport),
       channel_(std::move(hci_command_channel)),
       is_initialized_(false),
-      io_handler_key_(0u),
-      is_command_pending_(false) {
+      io_handler_key_(0u) {
   FTL_DCHECK(transport_);
   FTL_DCHECK(channel_.is_valid());
 }
@@ -132,15 +132,13 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
     return 0u;
   }
 
-  // We simply make the counter overflow and do not worry about re-assigning an
-  // ID that is currently in use.
-  // TODO(armansito): Make this more robust.
+  std::lock_guard<std::mutex> lock(send_queue_mutex_);
+
   if (next_transaction_id_ == 0u) next_transaction_id_++;
   TransactionId id = next_transaction_id_++;
   QueuedCommand cmd(id, std::move(command_packet), status_callback, complete_callback, task_runner,
                     complete_event_code);
 
-  std::lock_guard<std::mutex> lock(send_queue_mutex_);
   send_queue_.push(std::move(cmd));
   io_task_runner_->PostTask(std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
 
@@ -273,6 +271,8 @@ void CommandChannel::TrySendNextQueuedCommand() {
 }
 
 void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+
   PendingTransactionData* pending_command = GetPendingCommand();
   FTL_DCHECK(pending_command);
   FTL_DCHECK(event.event_code() == pending_command->complete_event_code);
@@ -303,6 +303,20 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
     return;
   }
 
+  // Clear the pending command and process the next queued command when this goes out of scope.
+  auto ac = ftl::MakeAutoCall([this] {
+    SetPendingCommand(nullptr);
+    TrySendNextQueuedCommand();
+  });
+
+  // If the command callback needs to run on the I/O thread, then invoke it immediately.
+  // TODO(armansito): Use a slab-allocated ByteBuffer so that we don't need to make a needless
+  // copy below.
+  if (pending_command->task_runner.get() == io_task_runner_.get()) {
+    pending_command->complete_callback(pending_command->id, event);
+    return;
+  }
+
   // Use a lambda to capture the copied contents of the buffer. We can't invoke
   // the callback on |event| directly since the backing buffer is owned by this
   // CommandChannel and its contents will be modified.
@@ -316,12 +330,11 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
     EventPacket event(&buffer);
     complete_callback(transaction_id, event);
   }));
-
-  SetPendingCommand(nullptr);
-  TrySendNextQueuedCommand();
 }
 
 void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+
   PendingTransactionData* pending_command = GetPendingCommand();
   FTL_DCHECK(pending_command);
   FTL_DCHECK(event.event_code() == kCommandStatusEventCode);
@@ -334,9 +347,16 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
     return;
   }
 
-  pending_command->task_runner->PostTask(
+  auto status_cb =
       std::bind(pending_command->status_callback, pending_command->id,
-                static_cast<Status>(event.GetPayload<CommandStatusEventParams>()->status)));
+                static_cast<Status>(event.GetPayload<CommandStatusEventParams>()->status));
+
+  // If the command callback needs to run on the I/O thread, then invoke it immediately.
+  if (pending_command->task_runner.get() == io_task_runner_.get()) {
+    status_cb();
+  } else {
+    pending_command->task_runner->PostTask(status_cb);
+  }
 
   // Success in this case means that the command will be completed later when we
   // receive an event that matches |pending_command->complete_event_code|.
@@ -351,7 +371,7 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
 
 CommandChannel::PendingTransactionData* CommandChannel::GetPendingCommand() {
   FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-  return is_command_pending_ ? &pending_command_ : nullptr;
+  return pending_command_.value();
 }
 
 void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
@@ -361,21 +381,17 @@ void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
   pending_cmd_timeout_.Cancel();
 
   if (!command) {
-    is_command_pending_ = false;
-
-    // Clear all the bits of |pending_command_|. This is important since the pending command's
-    // callbacks can hold on to shared resources that are expected to be freed when a command
-    // completes.
-    pending_command_ = {};
+    pending_command_.Reset();
     return;
   }
 
-  FTL_DCHECK(!is_command_pending_);
+  FTL_DCHECK(!pending_command_);
   pending_command_ = *command;
-  is_command_pending_ = true;
 }
 
 void CommandChannel::NotifyEventHandler(const EventPacket& event) {
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+
   // Ignore HCI_CommandComplete and HCI_CommandStatus events.
   if (event.event_code() == kCommandCompleteEventCode ||
       event.event_code() == kCommandStatusEventCode) {
@@ -413,6 +429,8 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
 
   // If the given task runner is the I/O task runner, then immediately execute the callback as there
   // is no need to delay the execution.
+  // TODO(armansito): Use slab-allocated ByteBuffer so that we don't need to branch and make a
+  // needless copy.
   if (handler.task_runner.get() == io_task_runner_.get()) {
     handler.event_callback(event);
   } else {
@@ -428,6 +446,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
 }
 
 void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(handle == channel_.get());
   FTL_DCHECK(pending & MX_CHANNEL_READABLE);
 

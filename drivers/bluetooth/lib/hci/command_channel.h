@@ -15,6 +15,7 @@
 #include <mx/channel.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "apps/bluetooth/lib/common/optional.h"
 #include "apps/bluetooth/lib/hci/event_packet.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
@@ -33,9 +34,6 @@ class Transport;
 
 // Represents the HCI Bluetooth command channel. Manages HCI command and event
 // packet control flow.
-//
-// TODO(armansito): Consider making this class fully single-threaded, i.e. use the creation thread
-// for all tasks rather than the I/O thread. OTOH the ACLDataChannel would use the I/O thread.
 class CommandChannel final : public ::mtl::MessageLoopHandler {
  public:
   // |hci_command_channel| is a Magenta channel construct that can receive
@@ -216,10 +214,10 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   // TransactionId counter.
-  std::atomic_size_t next_transaction_id_;
+  std::atomic_size_t next_transaction_id_ __TA_GUARDED(send_queue_mutex_);
 
   // EventHandlerId counter.
-  std::atomic_size_t next_event_handler_id_;
+  std::atomic_size_t next_event_handler_id_ __TA_GUARDED(event_handler_mutex_);
 
   // Used to assert that certain public functions are only called on the creation thread.
   ftl::ThreadChecker thread_checker_;
@@ -252,13 +250,10 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // send one packet at a time to keep things simple.
   //
   // Accessed only from the I/O thread and thus not guarded.
-  PendingTransactionData pending_command_;
+  common::Optional<PendingTransactionData> pending_command_;
 
   // The command timeout callback assigned to the current pending command.
   ftl::CancelableClosure pending_cmd_timeout_;
-
-  // Field indicating whether or not there is currently a pending command.
-  bool is_command_pending_;
 
   // Buffer where we queue incoming HCI event packets.
   common::StaticByteBuffer<EventPacket::GetMinBufferSize(kMaxEventPacketPayloadSize)> event_buffer_;
