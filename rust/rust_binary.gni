@@ -27,6 +27,7 @@ template("rust_binary") {
       "name",
       "non_rust_deps",
       "source_dir",
+      "native_libs",
     ])
     type = "bin"
   }

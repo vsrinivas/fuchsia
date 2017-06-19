@@ -38,9 +38,8 @@ def get_target(label):
         path = base
     return path, name
 
-
 # Writes a cargo config file.
-def write_cargo_config(path, vendor_directory):
+def write_cargo_config(path, vendor_directory, target_triple, root_out_dir, native_libs):
     create_base_directory(path)
     config = {
         "source": {
@@ -50,9 +49,20 @@ def write_cargo_config(path, vendor_directory):
             },
             "vendored-sources": {
                 "directory": vendor_directory
-            }
-        }
+            },
+        },
     }
+
+    if native_libs is not None:
+        config["target"] = {}
+        config["target"][target_triple] = {}
+        for lib in native_libs:
+            config["target"][target_triple][lib] = {
+                            "rustc-link-search": [ root_out_dir ],
+                            "rustc-link-lib": [ lib ],
+                            "root": root_out_dir
+            }
+
     with open(path, "w") as config_file:
         toml.dump(config_file, config)
 
@@ -120,6 +130,9 @@ def main():
                         required=True)
     parser.add_argument("--deps",
                         help="List of dependencies",
+                        nargs="*")
+    parser.add_argument("--native-libs",
+                        help="List of native libraries to be overriden in .config",
                         nargs="*")
     args = parser.parse_args()
 
@@ -205,7 +218,8 @@ def main():
 
     # Write a config file to allow cargo to find the vendored crates.
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
-    write_cargo_config(config_path, args.vendor_directory)
+    write_cargo_config(config_path, args.vendor_directory, args.target_triple,
+                       args.root_out_dir, args.native_libs)
 
     if args.type == "lib":
         # Since the generated .rlib artifact won't actually be used (for now),

@@ -129,6 +129,12 @@ template("rust_artifact") {
       ]
     }
 
+    if (defined(invoker.native_libs)) {
+      native_libs = ["--native-libs"] + invoker.native_libs
+    } else {
+      native_libs = []
+    }
+
     args = [
       "--type",
       type,
@@ -157,7 +163,7 @@ template("rust_artifact") {
       "--vendor-directory",
       rebase_path("//third_party/rust-crates/vendor"),
       "--deps",
-    ] + rust_deps
+    ] + rust_deps + native_libs
 
     if (!is_debug) {
       args += [
