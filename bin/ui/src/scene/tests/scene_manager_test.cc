@@ -12,8 +12,6 @@ namespace scene {
 namespace test {
 
 void SceneManagerTest::SetUp() {
-  mozart::test::TestWithMessageLoop::SetUp();
-
   manager_impl_ = std::make_unique<SceneManagerImplForTest>();
   manager_binding_ = std::make_unique<fidl::Binding<mozart2::SceneManager>>(
       manager_impl_.get());

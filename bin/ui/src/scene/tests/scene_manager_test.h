@@ -58,7 +58,7 @@ class SceneManagerImplForTest : public SceneManagerImpl {
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 };
 
-class SceneManagerTest : public mozart::test::TestWithMessageLoop {
+class SceneManagerTest : public ::testing::Test {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;

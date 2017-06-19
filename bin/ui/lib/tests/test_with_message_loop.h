@@ -5,41 +5,35 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
 
-#include "application/lib/app/application_context.h"
-#include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-// Run message loop until condition is false (timeout after 400*10ms = 4000ms)
-#define RUN_MESSAGE_LOOP_WHILE(condition)                       \
-  {                                                             \
-    for (int i = 0; condition && i < 400; i++) {                \
-      RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10)); \
-    }                                                           \
+// Run message loop *while* condition is true (timeout after 400*10ms = 4000ms)
+#define RUN_MESSAGE_LOOP_WHILE(condition)        \
+  {                                              \
+    for (int i = 0; condition && i < 400; i++) { \
+      ::mozart::test::RunLoopWithTimeout(        \
+          ftl::TimeDelta::FromMilliseconds(10)); \
+    }                                            \
+  }
+
+// Run message loop *until* condition is true (timeout after 400*10ms = 4000ms)
+#define RUN_MESSAGE_LOOP_UNTIL(condition)           \
+  {                                                 \
+    for (int i = 0; !(condition) && i < 400; i++) { \
+      ::mozart::test::RunLoopWithTimeout(           \
+          ftl::TimeDelta::FromMilliseconds(10));    \
+    }                                               \
   }
 
 namespace mozart {
 namespace test {
 
-class TestWithMessageLoop : public ::testing::Test {
- public:
-  TestWithMessageLoop() {}
-
-  void SetUp() override {
-    FTL_CHECK(nullptr != mtl::MessageLoop::GetCurrent());
-  }
-
- protected:
-  // Run the loop for at most |timeout|. Returns |true| if the timeout has
-  // been
-  // reached.
-  bool RunLoopWithTimeout(
-      ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);
-};
+// Run the loop for at most |timeout|. Returns |true| if the timeout has
+// been reached.
+bool RunLoopWithTimeout(
+    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
 
 }  // namespace test
 }  // namespace mozart

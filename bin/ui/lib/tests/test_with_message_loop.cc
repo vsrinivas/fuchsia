@@ -9,12 +9,12 @@
 namespace mozart {
 namespace test {
 
-bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
+bool RunLoopWithTimeout(ftl::TimeDelta timeout) {
   auto canceled = std::make_unique<bool>(false);
   bool* canceled_ptr = canceled.get();
   bool timed_out = false;
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      ftl::MakeCopyable([ this, canceled = std::move(canceled), &timed_out ] {
+      ftl::MakeCopyable([ canceled = std::move(canceled), &timed_out ] {
         if (*canceled) {
           return;
         }

@@ -4,6 +4,8 @@
 
 #include <hid/usages.h>
 
+#include "gtest/gtest.h"
+
 #include "apps/mozart/lib/tests/mocks/mock_input_device.h"
 #include "apps/mozart/lib/tests/mocks/mock_input_device_registry.h"
 #include "apps/mozart/lib/tests/test_with_message_loop.h"
@@ -12,7 +14,7 @@
 namespace input {
 namespace test {
 
-class InputTest : public mozart::test::TestWithMessageLoop {};
+class InputTest : public ::testing::Test {};
 
 mozart::DeviceDescriptorPtr GenerateKeyboardDescriptor() {
   mozart::KeyboardDescriptorPtr keyboard = mozart::KeyboardDescriptor::New();

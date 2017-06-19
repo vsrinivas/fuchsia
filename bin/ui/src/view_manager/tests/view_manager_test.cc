@@ -4,6 +4,11 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
+#include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
+
 #include "apps/mozart/lib/tests/mocks/mock_renderer.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_container_listener.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_listener.h"
@@ -11,20 +16,17 @@
 #include "apps/mozart/lib/tests/test_with_message_loop.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
 
 extern std::unique_ptr<app::ApplicationContext> g_application_context;
 
 namespace view_manager {
 namespace test {
 
-class ViewManagerTest : public mozart::test::TestWithMessageLoop {
+class ViewManagerTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
     view_manager_ = g_application_context
-        ->ConnectToEnvironmentService<mozart::ViewManager>();
+                        ->ConnectToEnvironmentService<mozart::ViewManager>();
   }
 
   static mozart::ViewManagerPtr view_manager_;
