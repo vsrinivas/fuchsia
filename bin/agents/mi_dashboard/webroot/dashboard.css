@@ -76,3 +76,9 @@ body {
 .story-visible {
 
 }
+
+td.wrappable {
+  overflow: hidden;
+  max-width: 450px;
+  word-wrap: break-word;
+}

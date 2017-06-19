@@ -102,7 +102,7 @@ function handleContextUpdate(context) {
     } else {
       // element does not exist, add it to the table
       $("<tr/>").appendTo("#context")
-        .append($("<td/>").text(topic))
+        .append($("<td/>").addClass('wrappable').text(topic))
         .append($("<td/>").attr("id", topicId)
           .append(($("<pre/>").text(topicValue)
             .toggleClass("text-danger", danger))));
