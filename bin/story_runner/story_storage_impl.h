@@ -54,15 +54,15 @@ class StoryStorageImpl : public PageClient {
                        StoryState state,
                        const SyncCallback& callback);
 
-  void WatchLink(const LinkPathPtr& link_path,
-                 LinkImpl* impl,
-                 const DataCallback& watcher);
-  void DropWatcher(LinkImpl* impl);
-
   void Log(StoryContextLogPtr log_entry);
   void ReadLog(const LogCallback& callback);
 
   void Sync(const SyncCallback& callback);
+
+  void WatchLink(const LinkPathPtr& link_path,
+                 LinkImpl* impl,
+                 const DataCallback& watcher);
+  void DropWatcher(LinkImpl* impl);
 
  private:
   // |PageClient|
@@ -87,13 +87,19 @@ class StoryStorageImpl : public PageClient {
   // Operations implemented here.
   class ReadLinkDataCall;
   class WriteLinkDataCall;
-  class ReadModuleDataCall;
-  class ReadAllModuleDataCall;
-  class WriteModuleDataCall;
-  class ReadDeviceDataCall;
-  class WriteDeviceDataCall;
-  class StoryContextLogCall;
-  class ReadLogCall;
+  template <typename Data,
+            typename DataPtr,
+            typename DataFilter>
+  class ReadDataCall;
+  template <typename Data,
+            typename DataPtr,
+            typename DataArray,
+            typename DataFilter>
+  class ReadAllDataCall;
+  template <typename Data,
+            typename DataPtr,
+            typename DataFilter>
+  class WriteDataCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

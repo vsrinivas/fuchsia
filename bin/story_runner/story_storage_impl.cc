@@ -142,16 +142,24 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
-class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
+template <typename Data,
+          typename DataPtr = fidl::StructPtr<Data>,
+          typename DataFilter = XdrFilterType<Data>>
+class StoryStorageImpl::ReadDataCall : Operation<DataPtr> {
  public:
-  ReadModuleDataCall(OperationContainer* const container,
-                     ledger::Page* const page,
-                     const fidl::Array<fidl::String>& module_path,
-                     ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+  using ResultCall = std::function<void(DataPtr)>;
+  using FlowToken = typename Operation<DataPtr>::FlowToken;
+
+  ReadDataCall(OperationContainer* const container,
+               ledger::Page* const page,
+               const std::string& key,
+               DataFilter filter,
+               ResultCall result_call)
+      : Operation<DataPtr>(container, std::move(result_call)),
         page_(page),
-        module_path_(module_path.Clone()) {
-    Ready();
+        key_(key),
+        filter_(filter) {
+    this->Ready();
   }
 
  private:
@@ -161,8 +169,8 @@ class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadModuleDataCall() "
-                                          << "Page.GetSnapshot() " << status;
+                           FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                                          << " Page.GetSnapshot() " << status;
                            return;
                          }
 
@@ -172,21 +180,27 @@ class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
 
   void Cont(FlowToken flow) {
     page_snapshot_->Get(
-        to_array(MakeModuleKey(module_path_)),
+        to_array(key_),
         [this, flow](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadModuleDataCall() "
-                           << " PageSnapshot.GetEntries() " << status;
+            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                           << " PageSnapshot.Get() " << status;
             return;
+          }
+
+          if (!value) {
+            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                           << " PageSnapshot.Get() null vmo";
           }
 
           std::string value_as_string;
           if (!mtl::StringFromVmo(value, &value_as_string)) {
-            FTL_LOG(ERROR) << "Unable to extract data.";
+            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                           << " Unable to extract data.";
             return;
           }
 
-          if (!XdrRead(value_as_string, &result_, XdrModuleData)) {
+          if (!XdrRead(value_as_string, &result_, filter_)) {
             result_.reset();
             return;
           }
@@ -195,34 +209,45 @@ class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
         });
   }
 
-  ledger::Page* page_;
+  ledger::Page* const page_;  // not owned
+  const std::string key_;
+  DataFilter const filter_;
   ledger::PageSnapshotPtr page_snapshot_;
-  const fidl::Array<fidl::String> module_path_;
-  std::vector<ledger::EntryPtr> entries_;
-  ModuleDataPtr result_;
+  DataPtr result_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadModuleDataCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ReadDataCall);
 };
 
-class StoryStorageImpl::ReadAllModuleDataCall
-    : Operation<fidl::Array<ModuleDataPtr>> {
+template <typename Data,
+          typename DataPtr = fidl::StructPtr<Data>,
+          typename DataArray = fidl::Array<DataPtr>,
+          typename DataFilter = XdrFilterType<Data>>
+class StoryStorageImpl::ReadAllDataCall : Operation<DataArray> {
  public:
-  ReadAllModuleDataCall(OperationContainer* const container,
-                        ledger::Page* const page,
-                        ResultCall result_call)
-      : Operation(container, std::move(result_call)), page_(page) {
+  using ResultCall = std::function<void(DataArray)>;
+  using FlowToken = typename Operation<DataArray>::FlowToken;
+
+  ReadAllDataCall(OperationContainer* const container,
+                  ledger::Page* const page,
+                  const char* const prefix,
+                  DataFilter const filter,
+                  ResultCall result_call)
+      : Operation<DataArray>(container, std::move(result_call)),
+        page_(page),
+        prefix_(prefix),
+        filter_(filter) {
     data_.resize(0);
-    Ready();
+    this->Ready();
   }
 
  private:
   void Run() override {
     FlowToken flow{this, &data_};
 
-    page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(kModuleKeyPrefix),
+    page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_),
                        nullptr, [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
+                           FTL_LOG(ERROR) << "ReadAllDataCall() "
                                           << "Page.GetSnapshot() " << status;
                            return;
                          }
@@ -235,7 +260,7 @@ class StoryStorageImpl::ReadAllModuleDataCall
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
+                   FTL_LOG(ERROR) << "ReadAllDataCall() "
                                   << "GetEntries() " << status;
                    return;
                  }
@@ -248,45 +273,48 @@ class StoryStorageImpl::ReadAllModuleDataCall
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-        FTL_LOG(ERROR) << "ReadModuleDataCall() "
+        FTL_LOG(ERROR) << "ReadAllDataCall() "
                        << "Unable to extract data.";
         continue;
       }
 
-      ModuleDataPtr module_data;
-      if (!XdrRead(value_as_string, &module_data, XdrModuleData)) {
+      DataPtr data;
+      if (!XdrRead(value_as_string, &data, filter_)) {
         continue;
       }
 
-      FTL_DCHECK(!module_data.is_null());
+      FTL_DCHECK(!data.is_null());
 
-      data_.push_back(std::move(module_data));
+      data_.push_back(std::move(data));
     }
   }
 
   ledger::Page* page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
+  const char* const prefix_;
+  DataFilter const filter_;
   std::vector<ledger::EntryPtr> entries_;
-  fidl::Array<ModuleDataPtr> data_;
+  DataArray data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadAllModuleDataCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ReadAllDataCall);
 };
 
-class StoryStorageImpl::WriteModuleDataCall : Operation<> {
+template <typename Data,
+          typename DataPtr = fidl::StructPtr<Data>,
+          typename DataFilter = XdrFilterType<Data>>
+class StoryStorageImpl::WriteDataCall : Operation<> {
  public:
-  WriteModuleDataCall(OperationContainer* const container,
-                      ledger::Page* const page,
-                      const fidl::Array<fidl::String>& module_path,
-                      const fidl::String& module_url,
-                      const modular::LinkPathPtr& link_path,
-                      ModuleSource module_source,
-                      ResultCall result_call)
+  WriteDataCall(OperationContainer* const container,
+                ledger::Page* const page,
+                const std::string& key,
+                DataFilter filter,
+                DataPtr data,
+                ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
-        module_path_(module_path.Clone()),
-        module_url_(module_url),
-        link_path_(link_path.Clone()),
-        module_source_(module_source) {
+        key_(key),
+        filter_(filter),
+        data_(std::move(data)) {
     Ready();
   }
 
@@ -294,183 +322,25 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    auto module_data = ModuleData::New();
-    module_data->url = module_url_;
-    module_data->module_path = module_path_.Clone();
-    module_data->default_link_path = std::move(link_path_);
-    module_data->module_source = module_source_;
-
     std::string json;
-    XdrWrite(&json, &module_data, XdrModuleData);
+    XdrWrite(&json, &data_, filter_);
 
-    page_->PutWithPriority(
-        to_array(MakeModuleKey(module_path_)), to_array(json),
-        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "WriteModuleDataCall() " << module_url_
-                           << " Page.PutWithPriority() " << status;
-          }
-        });
-  }
-
-  ledger::Page* const page_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String module_url_;
-  modular::LinkPathPtr link_path_;
-  ModuleSource module_source_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteModuleDataCall);
-};
-
-class StoryStorageImpl::WriteDeviceDataCall : Operation<> {
- public:
-  WriteDeviceDataCall(OperationContainer* const container,
-                      ledger::Page* const page,
-                      const std::string& story_id,
-                      const std::string& device_id,
-                      StoryState state,
-                      ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        page_(page),
-        story_id_(story_id),
-        device_id_(device_id),
-        state_(state) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    auto per_device = PerDeviceStoryInfo::New();
-    per_device->device_id = device_id_;
-    per_device->story_id = story_id_;
-    per_device->timestamp = time(nullptr);
-    per_device->state = state_;
-
-    std::string json;
-    XdrWrite(&json, &per_device, XdrPerDeviceStoryInfo);
-
-    page_->PutWithPriority(
-        to_array(MakePerDeviceKey(per_device->device_id)), to_array(json),
-        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "WriteDeviceDataCall() " << device_id_
-                           << " Page.PutWithPriority() " << status;
-          }
-        });
-  }
-
-  ledger::Page* const page_;  // not owned
-  const std::string story_id_;
-  const std::string device_id_;
-  StoryState state_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(WriteDeviceDataCall);
-};
-
-class StoryStorageImpl::StoryContextLogCall : Operation<> {
- public:
-  StoryContextLogCall(OperationContainer* const container,
-                      ledger::Page* const page,
-                      StoryContextLogPtr log_entry)
-      : Operation(container, [] {}),
-        page_(page),
-        log_entry_(std::move(log_entry)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // We write the current context when the story was created.
-    std::string json;
-    XdrWrite(&json, &log_entry_, XdrStoryContextLog);
-
-    page_->PutWithPriority(
-        to_array(MakeStoryContextLogKey(log_entry_->signal, log_entry_->time)),
-        to_array(json), ledger::Priority::EAGER,
-        [this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "StoryContextLogCall"
-                           << " Page.PutWithPriority() " << status;
-          }
-        });
-  }
-
-  ledger::Page* const page_;  // not owned
-  StoryContextLogPtr log_entry_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryContextLogCall);
-};
-
-class StoryStorageImpl::ReadLogCall
-    : Operation<fidl::Array<StoryContextLogPtr>> {
- public:
-  ReadLogCall(OperationContainer* const container,
-              ledger::Page* const page,
-              ResultCall result_call)
-      : Operation(container, std::move(result_call)), page_(page) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &data_};
-
-    page_->GetSnapshot(page_snapshot_.NewRequest(),
-                       to_array(kStoryContextLogKeyPrefix), nullptr,
-                       [this, flow](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadLogCall()"
-                                          << " Page.GetSnapshot() " << status;
-                           return;
-                         }
-
-                         Cont1(flow);
-                       });
-  }
-
-  void Cont1(FlowToken flow) {
-    GetEntries(page_snapshot_.get(), &entries_,
+    page_->Put(to_array(key_), to_array(json),
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "ReadLogCall() "
-                                  << "GetEntries() " << status;
-                   return;
+                   FTL_LOG(ERROR)
+                       << "WriteDataCall() key =" << key_
+                       << ", Page.Put() " << status;
                  }
-
-                 Cont2(flow);
                });
   }
 
-  void Cont2(FlowToken flow) {
-    for (auto& entry : entries_) {
-      std::string value_as_string;
-      if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-        FTL_LOG(ERROR) << "ReadLogCall() "
-                       << "Unable to extract data.";
-        continue;
-      }
-
-      StoryContextLogPtr value;
-      if (!XdrRead(value_as_string, &value, XdrStoryContextLog)) {
-        continue;
-      }
-
-      FTL_DCHECK(!value.is_null());
-
-      data_.push_back(std::move(value));
-    }
-  }
-
   ledger::Page* const page_;  // not owned
-  ledger::PageSnapshotPtr page_snapshot_;
-  std::vector<ledger::EntryPtr> entries_;
-  fidl::Array<StoryContextLogPtr> data_;
+  const std::string key_;
+  DataFilter const filter_;
+  DataPtr data_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadLogCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
 };
 
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
@@ -494,12 +364,16 @@ void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
 void StoryStorageImpl::ReadModuleData(
     const fidl::Array<fidl::String>& module_path,
     const ModuleDataCallback& callback) {
-  new ReadModuleDataCall(&operation_queue_, story_page_, module_path, callback);
+  new ReadDataCall<ModuleData>(
+      &operation_queue_, story_page_,
+      MakeModuleKey(module_path), XdrModuleData, callback);
 }
 
 void StoryStorageImpl::ReadAllModuleData(
     const AllModuleDataCallback& callback) {
-  new ReadAllModuleDataCall(&operation_queue_, story_page_, callback);
+  new ReadAllDataCall<ModuleData>(
+      &operation_queue_, story_page_, kModuleKeyPrefix, XdrModuleData,
+      callback);
 }
 
 void StoryStorageImpl::WriteModuleData(
@@ -508,8 +382,49 @@ void StoryStorageImpl::WriteModuleData(
     const LinkPathPtr& link_path,
     ModuleSource module_source,
     const SyncCallback& callback) {
-  new WriteModuleDataCall(&operation_queue_, story_page_, module_path,
-                          module_url, link_path, module_source, callback);
+  ModuleDataPtr data = ModuleData::New();
+  data->url = module_url;
+  data->module_path = module_path.Clone();
+  data->default_link_path = link_path.Clone();
+  data->module_source = module_source;
+
+  new WriteDataCall<ModuleData>(
+      &operation_queue_, story_page_, MakeModuleKey(module_path),
+      XdrModuleData, std::move(data), callback);
+}
+
+void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
+                                       const std::string& device_id,
+                                       StoryState state,
+                                       const SyncCallback& callback) {
+  PerDeviceStoryInfoPtr data = PerDeviceStoryInfo::New();
+  data->device_id = device_id;
+  data->story_id = story_id;
+  data->timestamp = time(nullptr);
+  data->state = state;
+
+  new WriteDataCall<PerDeviceStoryInfo, PerDeviceStoryInfoPtr>(
+      &operation_queue_, story_page_, MakePerDeviceKey(device_id),
+      XdrPerDeviceStoryInfo, std::move(data),
+      callback);
+}
+
+void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
+  new WriteDataCall<StoryContextLog>(
+      &operation_queue_, story_page_,
+      MakeStoryContextLogKey(log_entry->signal, log_entry->time),
+      XdrStoryContextLog, std::move(log_entry),
+      []{});
+}
+
+void StoryStorageImpl::ReadLog(const LogCallback& callback) {
+  new ReadAllDataCall<StoryContextLog>(
+      &operation_queue_, story_page_, kStoryContextLogKeyPrefix, XdrStoryContextLog,
+      callback);
+}
+
+void StoryStorageImpl::Sync(const SyncCallback& callback) {
+  new SyncCall(&operation_queue_, callback);
 }
 
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,
@@ -523,26 +438,6 @@ void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
                         [impl](auto& entry) { return entry.impl == impl; });
   FTL_DCHECK(f != watchers_.end());
   watchers_.erase(f);
-}
-
-void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
-                                       const std::string& device_id,
-                                       StoryState state,
-                                       const SyncCallback& callback) {
-  new WriteDeviceDataCall(&operation_queue_, story_page_, story_id, device_id,
-                          state, callback);
-}
-
-void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
-  new StoryContextLogCall(&operation_queue_, story_page_, std::move(log_entry));
-}
-
-void StoryStorageImpl::ReadLog(const LogCallback& callback) {
-  new ReadLogCall(&operation_queue_, story_page_, callback);
-}
-
-void StoryStorageImpl::Sync(const SyncCallback& callback) {
-  new SyncCall(&operation_queue_, callback);
 }
 
 void StoryStorageImpl::OnChange(const std::string& key,
