@@ -9,6 +9,10 @@
             "bootfs_path": "apps/audio_player"
         },
         {
+            "binary": "audio_policy_service",
+            "bootfs_path": "apps/audio_policy_service"
+        },
+        {
             "binary": "audio_server",
             "bootfs_path": "apps/audio_server"
         },
