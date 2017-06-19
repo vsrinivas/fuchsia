@@ -21,6 +21,14 @@
             "bootfs_path": "apps/concert_event_page"
         },
         {
+            "binary": "last_fm_agent.dartx",
+            "bootfs_path": "apps/last_fm_agent"
+        },
+        {
+            "binary": "gen/apps/modules/music/modules/last_fm_artist_bio/last_fm_artist_bio.flx",
+            "bootfs_path": "apps/last_fm_artist_bio"
+        },
+        {
             "binary": "gen/apps/modules/music/modules/music_album/music_album.flx",
             "bootfs_path": "apps/music_album"
         },
