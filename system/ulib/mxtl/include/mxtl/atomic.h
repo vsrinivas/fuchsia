@@ -276,7 +276,6 @@ inline void atomic_signal_fence(memory_order order = memory_order_seq_cst) {
 }
 
 // Aliases for all integer type names.
-using atomic_bool = atomic<bool>;
 using atomic_char = atomic<char>;
 using atomic_schar = atomic<signed char>;
 using atomic_uchar = atomic<unsigned char>;
