@@ -53,12 +53,10 @@ class FocusHandler : FocusProvider, FocusController, PageClient {
   std::vector<FocusWatcherPtr> change_watchers_;
   std::vector<FocusRequestWatcherPtr> request_watchers_;
 
-  // Operations on an instance of this class are sequenced in this
-  // operation queue.
+  // Operations on an instance of this clas are sequenced in this operation
+  // queue. TODO(mesch): They currently do not need to be, but it's easier to
+  // reason this way.
   OperationQueue operation_queue_;
-
-  // Operations implemented here.
-  class QueryCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };

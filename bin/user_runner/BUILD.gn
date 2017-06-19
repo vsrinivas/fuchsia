@@ -93,6 +93,7 @@ source_set("focus") {
     "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:ledger",
     "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/ledger:operations",
     "//apps/modular/lib/ledger:storage",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/user:focus",
