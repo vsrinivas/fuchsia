@@ -652,19 +652,35 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
 
     if (state == ModuleState::DONE) {
       if (story_controller_impl_->story_shell_) {
-        story_controller_impl_->story_shell_->DefocusView(module_id_, [] {});
+        story_controller_impl_->story_shell_->DefocusView(module_id_, [this] {
+          // It's possible that |StopCall| has been called by the time this
+          // callback start to execute.
+          // TODO(alhaad): We need to persist a STOPPED bit for modules that
+          // we stopped even after |StopForTeardown|.
+          if (story_controller_impl_->external_modules_.empty()) {
+            return;
+          }
+          StopModule();
+        });
+      } else {
+        StopModule();
       }
-      auto it = std::find_if(story_controller_impl_->external_modules_.begin(),
-                             story_controller_impl_->external_modules_.end(),
-                             [this](const ExternalModule& m) {
-                               return m.module_watcher_impl.get() == this;
-                             });
-      auto module_controller = std::move(it->module_controller);
-      story_controller_impl_->external_modules_.erase(it);
-
-      // We don't actually stop the modules because of SY-205 and SY-204.
-      // module_controller->Stop([] {});
     }
+  }
+
+  void StopModule() {
+    auto it = std::find_if(story_controller_impl_->external_modules_.begin(),
+                           story_controller_impl_->external_modules_.end(),
+                           [this](const ExternalModule& m) {
+                             return m.module_watcher_impl.get() == this;
+                           });
+    auto module_controller = std::move(it->module_controller);
+    story_controller_impl_->external_modules_.erase(it);
+
+    module_controller->Stop([] {
+      // HACK(alhaad): This never gets called because |module_controller| goes
+      // out of scope.
+    });
   }
 
   fidl::Binding<ModuleWatcher> binding_;
