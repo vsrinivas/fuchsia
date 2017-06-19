@@ -19,15 +19,15 @@
                          PC-AT Compatibility : 1
 
 [02Ch 0044   1]                Subtable Type : 00 [Processor Local APIC]
-[02Dh 0045   1]                       Length : 08
+[02Dh 0045   1]                       Length : 00
 [02Eh 0046   1]                 Processor ID : 00
 [02Fh 0047   1]                Local Apic ID : 00
 [030h 0048   4]        Flags (decoded below) : 00000001
                            Processor Enabled : 1
 
 [034h 0052   1]                Subtable Type : 01 [I/O APIC]
-[035h 0053   1]                       Length : 0C
-[036h 0054   1]                  I/O Apic ID : 08
+[035h 0053   1]                       Length : 00
+[036h 0054   1]                  I/O Apic ID : 00
 [037h 0055   1]                     Reserved : 00
 [038h 0056   4]                      Address : FEC00000
 [03ch 0060   4]                    Interrupt : 00000000
