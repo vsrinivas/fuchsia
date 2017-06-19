@@ -33,7 +33,7 @@ enum ModuleSource {
   // ModuleContext.StartModule() and ModuleContext.StartModuleInShell().
   INTERNAL,
 
-  // Module that was started from outside the story by TQI / UserShell via
+  // Module that was started from outside the story by Maxwell / UserShell via
   // StoryController.AddModule() or StoryController.CreateStory() as first
   // module.
   EXTERNAL,
