@@ -11,8 +11,6 @@
 namespace mozart {
 namespace scene {
 
-SessionContext::SessionContext() = default;
-
 SessionContext::SessionContext(
     escher::Escher* escher,
     FrameScheduler* frame_scheduler,
@@ -25,8 +23,13 @@ SessionContext::SessionContext(
       rounded_rect_factory_(
           escher ? std::make_unique<escher::RoundedRectFactory>(escher)
                  : nullptr),
+      release_fence_signaller_(std::make_unique<ReleaseFenceSignaller>(
+          escher->command_buffer_sequencer())),
       frame_scheduler_(frame_scheduler),
       swapchain_(std::move(swapchain)) {}
+
+SessionContext::SessionContext(std::unique_ptr<ReleaseFenceSignaller> r)
+    : release_fence_signaller_(std::move(r)) {}
 
 SessionContext::~SessionContext() = default;
 

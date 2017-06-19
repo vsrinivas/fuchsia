@@ -16,22 +16,31 @@ SceneManagerImpl::SceneManagerImpl(
     std::unique_ptr<FrameScheduler> frame_scheduler,
     std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : frame_scheduler_(std::move(frame_scheduler)),
-      session_context_(escher, frame_scheduler_.get(), std::move(swapchain)),
+      session_context_(std::make_unique<SessionContext>(escher,
+                                                        frame_scheduler_.get(),
+                                                        std::move(swapchain))),
       session_count_(0) {
   // Either both Escher and a FrameScheduler must be available, or neither.
   FTL_DCHECK(!escher == !frame_scheduler_);
 
   // If a FrameScheduler was created, introduce it to the SessionContext.
   if (frame_scheduler_) {
-    frame_scheduler_->AddListener(&session_context_);
+    frame_scheduler_->AddListener(session_context_.get());
   }
 }
 
 SceneManagerImpl::~SceneManagerImpl() {
   if (frame_scheduler_) {
-    frame_scheduler_->RemoveListener(&session_context_);
+    frame_scheduler_->RemoveListener(session_context_.get());
   }
 }
+
+SceneManagerImpl::SceneManagerImpl(
+    std::unique_ptr<SessionContext> session_context,
+    std::unique_ptr<FrameScheduler> frame_scheduler)
+    : frame_scheduler_(std::move(frame_scheduler)),
+      session_context_(std::move(session_context)),
+      session_count_(0) {}
 
 void SceneManagerImpl::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,

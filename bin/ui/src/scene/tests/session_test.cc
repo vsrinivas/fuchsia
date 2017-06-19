@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/mozart/src/scene/tests/session_test.h"
+
 #include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -12,9 +13,12 @@ namespace mozart {
 namespace scene {
 namespace test {
 
+SessionContextForTest::SessionContextForTest(
+    std::unique_ptr<ReleaseFenceSignaller> r)
+    : SessionContext(std::move(r)) {}
+
 void SessionTest::SetUp() {
-  session_context_ =
-      std::make_unique<SessionContext>(nullptr, nullptr, nullptr);
+  session_context_ = std::unique_ptr<SessionContext>(CreateSessionContext());
   session_ = ftl::MakeRefCounted<Session>(1, session_context_.get(), this);
 }
 
@@ -24,6 +28,10 @@ void SessionTest::TearDown() {
   session_->TearDown();
   session_ = nullptr;
   session_context_.reset();
+}
+
+std::unique_ptr<SessionContext> SessionTest::CreateSessionContext() {
+  return std::make_unique<SessionContextForTest>(nullptr);
 }
 
 void SessionTest::ReportError(ftl::LogSeverity severity,

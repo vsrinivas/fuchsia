@@ -29,7 +29,7 @@ class SceneManagerImpl : public mozart2::SceneManager {
       std::unique_ptr<escher::VulkanSwapchain> swapchain = nullptr);
   ~SceneManagerImpl() override;
 
-  SessionContext& session_context() { return session_context_; }
+  SessionContext* session_context() { return session_context_.get(); }
 
   // mozart2::SceneManager interface methods.
   void CreateSession(
@@ -40,6 +40,11 @@ class SceneManagerImpl : public mozart2::SceneManager {
   size_t GetSessionCount() { return session_count_; }
 
   SessionHandler* FindSession(SessionId id);
+
+ protected:
+  // Only used by subclasses used in testing.
+  explicit SceneManagerImpl(std::unique_ptr<SessionContext> session_context,
+                            std::unique_ptr<FrameScheduler> frame_scheduler);
 
  private:
   friend class SessionHandler;
@@ -53,7 +58,7 @@ class SceneManagerImpl : public mozart2::SceneManager {
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
 
   std::unique_ptr<FrameScheduler> frame_scheduler_;
-  SessionContext session_context_;
+  std::unique_ptr<SessionContext> session_context_;
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;
   std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;

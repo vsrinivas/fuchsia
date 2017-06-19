@@ -73,6 +73,11 @@ void SessionHandlerForTest::Connect(
   ++connect_count_;
 }
 
+DummySessionContext::DummySessionContext() : SessionContext(nullptr) {}
+
+SceneManagerImplForTest::SceneManagerImplForTest()
+    : SceneManagerImpl(std::make_unique<DummySessionContext>(), nullptr) {}
+
 std::unique_ptr<SessionHandler> SceneManagerImplForTest::CreateSessionHandler(
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,

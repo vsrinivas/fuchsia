@@ -44,10 +44,17 @@ class SessionHandlerForTest : public SessionHandler {
   std::atomic<uint32_t> connect_count_;
 };
 
+// Subclass of SessionContext that exposes a default constructor. Leaves
+// lots of instance variables uninitialized.
+class DummySessionContext : public SessionContext {
+ public:
+  DummySessionContext();
+};
+
 // Subclass SceneManagerImpl to make testing easier.
 class SceneManagerImplForTest : public SceneManagerImpl {
  public:
-  SceneManagerImplForTest() = default;
+  SceneManagerImplForTest();
 
   using SceneManagerImpl::FindSession;
 

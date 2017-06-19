@@ -4,16 +4,18 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene/frame_scheduler.h"
-#include "apps/mozart/src/scene/resources/import.h"
-#include "apps/mozart/src/scene/resources/nodes/scene.h"
-#include "apps/mozart/src/scene/resources/resource_linker.h"
 #include "escher/escher.h"
 #include "escher/examples/common/demo_harness.h"
 #include "escher/impl/gpu_uploader.h"
 #include "escher/resources/resource_recycler.h"
 #include "lib/escher/escher/renderer/simple_image_factory.h"
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
+
+#include "apps/mozart/src/scene/frame_scheduler.h"
+#include "apps/mozart/src/scene/release_fence_signaller.h"
+#include "apps/mozart/src/scene/resources/import.h"
+#include "apps/mozart/src/scene/resources/nodes/scene.h"
+#include "apps/mozart/src/scene/resources/resource_linker.h"
 
 namespace mozart {
 namespace scene {
@@ -25,8 +27,6 @@ class Session;
 // environment.
 class SessionContext : public FrameSchedulerListener {
  public:
-  SessionContext();
-
   SessionContext(escher::Escher* escher,
                  FrameScheduler* frame_scheduler,
                  std::unique_ptr<escher::VulkanSwapchain> swapchain);
@@ -68,12 +68,20 @@ class SessionContext : public FrameSchedulerListener {
     return rounded_rect_factory_.get();
   }
 
+  ReleaseFenceSignaller* release_fence_signaller() {
+    return release_fence_signaller_.get();
+  }
+
   // Tell the FrameScheduler to schedule a frame, and remember the Session so
   // that we can tell it to apply updates when the FrameScheduler notifies us
   // via OnPrepareFrame().
   void ScheduleSessionUpdate(uint64_t presentation_time,
                              ftl::RefPtr<Session> session);
   FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
+
+ protected:
+  // Only used by subclasses used in testing.
+  SessionContext(std::unique_ptr<ReleaseFenceSignaller> r);
 
  private:
   // Implement |FrameSchedulerListener|.  For each session, apply all updates
@@ -86,6 +94,7 @@ class SessionContext : public FrameSchedulerListener {
   escher::Escher* const escher_ = nullptr;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
+  std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
   FrameScheduler* const frame_scheduler_ = nullptr;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
 

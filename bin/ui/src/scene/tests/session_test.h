@@ -13,6 +13,11 @@ namespace mozart {
 namespace scene {
 namespace test {
 
+class SessionContextForTest : public SessionContext {
+ public:
+  SessionContextForTest(std::unique_ptr<ReleaseFenceSignaller> r);
+};
+
 class SessionTest : public ::testing::Test, public scene::ErrorReporter {
  public:
   // ::testing::Test virtual method.
@@ -20,6 +25,9 @@ class SessionTest : public ::testing::Test, public scene::ErrorReporter {
 
   // ::testing::Test virtual method.
   void TearDown() override;
+
+  // Subclasses should override to provide their own SessionContext.
+  virtual std::unique_ptr<SessionContext> CreateSessionContext();
 
  protected:
   // Implement ErrorReporter.
