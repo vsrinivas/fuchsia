@@ -4,6 +4,7 @@
 
 #include "apps/media/src/audio_server/audio_output_manager.h"
 
+#include <mxtl/algorithm.h>
 #include <string>
 
 #include "apps/media/src/audio_server/audio_output.h"
@@ -17,7 +18,6 @@ namespace audio {
 
 AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
     : server_(server) {
-  plug_detector_ = AudioPlugDetector::Create();
 }
 
 AudioOutputManager::~AudioOutputManager() {
@@ -45,8 +45,7 @@ MediaResult AudioOutputManager::Init() {
 
   // Step #2: Being monitoring for plug/unplug events for pluggable audio
   // output devices.
-  FTL_DCHECK(plug_detector_ != nullptr);
-  res = plug_detector_->Start(this);
+  res = plug_detector_.Start(this);
   if (res != MediaResult::OK) {
     FTL_LOG(WARNING) << "AudioOutputManager failed to start plug detector (res "
                      << res << ")";
@@ -59,8 +58,7 @@ MediaResult AudioOutputManager::Init() {
 void AudioOutputManager::Shutdown() {
   // Step #1: Stop monitoringing plug/unplug events.  We are shutting down and
   // no longer care about outputs coming and going.
-  FTL_DCHECK(plug_detector_ != nullptr);
-  plug_detector_->Stop();
+  plug_detector_.Stop();
 
   // Step #2: Shutdown all of the active renderers in the system.
   while (!renderers_.empty()) {

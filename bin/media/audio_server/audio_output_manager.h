@@ -121,7 +121,7 @@ class AudioOutputManager {
   AudioOutputPtr throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
-  mxtl::RefPtr<AudioPlugDetector> plug_detector_;
+  AudioPlugDetector plug_detector_;
 
   // Current master gain setting (in dB).
   //
