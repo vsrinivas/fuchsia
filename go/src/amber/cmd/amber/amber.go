@@ -13,6 +13,7 @@ import (
 	"hash"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -70,7 +71,7 @@ func main() {
 	if doInit {
 		rootKeys, err := loadKeys(*keys)
 		if err != nil {
-			fmt.Printf("amber: please provide keys for client %v\n", err)
+			log.Printf("amber: please provide keys for client %v\n", err)
 			return
 		}
 		err = client.Init(rootKeys, len(rootKeys))
@@ -85,7 +86,8 @@ func main() {
 		os.Exit(2)
 	}
 
-	d := startupDaemon(client)
+	d := startupDaemon(client, *addr)
+
 	defer d.CancelAll()
 
 	//block forever
@@ -136,8 +138,8 @@ func loadKeys(path string) ([]*data.Key, error) {
 	return keys, err
 }
 
-func startupDaemon(client *tuf.Client) *daemon.Daemon {
-	if err := os.MkdirAll(daemon.UpdateDst, os.ModePerm); err != nil {
+func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
+	if err := os.MkdirAll(daemon.DstUpdate, os.ModePerm); err != nil {
 		// TODO(jmatt) retry for some time period?
 		fmt.Printf("Error creating update destination directory %v\n", err)
 	}
@@ -163,6 +165,13 @@ func startupDaemon(client *tuf.Client) *daemon.Daemon {
 	fetcher := &daemon.TUFSource{Client: client, Interval: time.Second * 5}
 	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
 	checker.AddSource(fetcher)
+	u, err := url.Parse(srvAddr)
+	if err == nil {
+		u.Path = filepath.Join(u.Path, "blobs")
+		checker.AddBlobRepo(daemon.BlobRepo{Address: u.String(), Interval: time.Second * 5})
+	} else {
+		log.Printf("amber: bad blob repo address %v\n", err)
+	}
 	pmMonitor(checker)
 	return checker
 }

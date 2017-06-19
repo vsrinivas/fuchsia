@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,21 +21,27 @@ import (
 // channel is closed, this function will return.
 func WatchNeeds(d *Daemon, shrt <-chan time.Time, lng <-chan time.Time,
 	stp <-chan struct{}, needsPath string) {
-	oNeeds := make(map[Package]struct{})
+	oldPkgs := make(map[Package]struct{})
+	oldBlobs := make(map[string]struct{})
+	muBlob := &sync.Mutex{}
 
 	for {
 		select {
 		case _, ok := <-shrt:
 			if ok {
-				newNeeds := processUpdate(oNeeds, needsPath)
-				if newNeeds != nil {
-					d.GetUpdates(newNeeds)
+				newPkgs, newBlobs := processUpdate(oldPkgs, oldBlobs, muBlob, needsPath)
+				if newPkgs != nil {
+					d.GetUpdates(newPkgs)
+				}
+
+				for _, blob := range newBlobs {
+					go getBlob(d, blob, muBlob, oldBlobs)
 				}
 			}
 		case _, ok := <-lng:
 			if ok {
-				if len(oNeeds) > 0 {
-					getPkgs(d, oNeeds)
+				if len(oldPkgs) > 0 {
+					getPkgs(d, oldPkgs)
 				}
 			}
 		case _, _ = <-stp:
@@ -41,6 +49,19 @@ func WatchNeeds(d *Daemon, shrt <-chan time.Time, lng <-chan time.Time,
 
 		}
 	}
+}
+
+func getBlob(d *Daemon, newBlob string, muBlob *sync.Mutex,
+	currentBlobs map[string]struct{}) {
+	// TODO(jmatt) Consider using shorter delay if no error
+	d.GetBlob(newBlob)
+
+	go func(mu *sync.Mutex, blobSet map[string]struct{}, targ string) {
+		time.Sleep(5 * time.Minute)
+		mu.Lock()
+		defer mu.Unlock()
+		delete(blobSet, targ)
+	}(muBlob, currentBlobs, newBlob)
 }
 
 // getPkgs requests the supplied set of Packages from the supplied Daemon.
@@ -57,29 +78,38 @@ func getPkgs(d *Daemon, known map[Package]struct{}) {
 // passed in Package set. Any new needs are added to the set and any entries in
 // map not represented in the directory are removed. New needs are also returned
 // as a PackageSet which is returned. If there are no new needs nil is returned.
-func processUpdate(known map[Package]struct{}, needsPath string) *PackageSet {
+func processUpdate(known map[Package]struct{}, oldBlobs map[string]struct{}, muBlobs *sync.Mutex, needsPath string) (*PackageSet, []string) {
+	muBlobs.Lock()
+	defer muBlobs.Unlock()
 	current := make(map[Package]struct{})
 	names, err := ioutil.ReadDir(needsPath)
 	if err != nil {
 		fmt.Println("Couldn't read directory")
-		return nil
+		return nil, nil
 	}
 
-	for _, pkgName := range names {
-		if pkgName.IsDir() {
-			pkgPath := filepath.Join(needsPath, pkgName.Name())
+	blobReqs := make(map[string]struct{})
+
+	for _, entName := range names {
+		if entName.IsDir() {
+			pkgPath := filepath.Join(needsPath, entName.Name())
 			versions, err := ioutil.ReadDir(pkgPath)
 			if err != nil {
 				fmt.Printf("Error reading contents of directory '%s'\n", pkgPath)
 				continue
 			}
 			for _, version := range versions {
-				pkg := Package{Name: pkgName.Name(), Version: version.Name()}
+				pkg := Package{Name: entName.Name(), Version: version.Name()}
 				current[pkg] = struct{}{}
 			}
 		} else {
-			pkg := Package{Name: pkgName.Name(), Version: ""}
-			current[pkg] = struct{}{}
+			if strings.Contains(entName.Name(), ".") {
+				pkg := Package{Name: entName.Name(), Version: ""}
+				current[pkg] = struct{}{}
+			} else {
+				// TODO(jmatt) validate only hex characters
+				blobReqs[entName.Name()] = struct{}{}
+			}
 		}
 	}
 
@@ -91,15 +121,34 @@ func processUpdate(known map[Package]struct{}, needsPath string) *PackageSet {
 		}
 	}
 
+	newBlobs := []string{}
+
+	for k, _ := range oldBlobs {
+		// IF a previously seen blob went away, remove it
+		// ELSE remove previously seen from new request set
+		if _, ok := blobReqs[k]; !ok {
+			delete(oldBlobs, k)
+		} else {
+			delete(blobReqs, k)
+		}
+	}
+
+	// Add any remaining new blob requests to the old blob set and list
+	// to be returned
+	for k, _ := range blobReqs {
+		oldBlobs[k] = struct{}{}
+		newBlobs = append(newBlobs, k)
+	}
+
+	var ps *PackageSet = nil
 	if len(current) > 0 {
-		ps := NewPackageSet()
+		ps = NewPackageSet()
 		for k, _ := range current {
 			tuf_name := fmt.Sprintf("/%s", k.Name)
 			ps.Add(&Package{Name: tuf_name, Version: k.Version})
 			known[k] = struct{}{}
 		}
-		return ps
 	}
 
-	return nil
+	return ps, newBlobs
 }

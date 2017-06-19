@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +16,8 @@ import (
 	"time"
 )
 
-var UpdateDst = "/data/driver"
-
+var DstUpdate = "/data/driver"
+var DstBlob = "/data/pkgs/incoming"
 var newTicker = time.NewTicker
 
 // ErrSrcNotFound is returned when a request is made to RemoveSource, but the
@@ -39,14 +40,27 @@ type Daemon struct {
 	processor func(*Package, *Package, Source, *PackageSet) error
 	// sources must claim this before running updates
 	updateLock sync.Mutex
+
+	//blobSrc       *BlobFetcher
+	muBlobUpdates sync.Mutex
+
+	muRepos sync.Mutex
+	repos   []BlobRepo
 }
 
 // NewDaemon creates a Daemon with the given SourceSet
 func NewDaemon(r *PackageSet, f func(*Package, *Package, Source, *PackageSet) error) *Daemon {
-	return &Daemon{pkgs: r,
+	d := &Daemon{pkgs: r,
 		updateLock: sync.Mutex{},
 		srcMons:    []*SourceMonitor{},
-		processor:  f}
+		processor:  f,
+		repos:      []BlobRepo{}}
+
+	err := os.MkdirAll(DstBlob, os.ModePerm)
+	if err != nil {
+		log.Printf("Error making blob output directory\n")
+	}
+	return d
 }
 
 // AddSource is called to add a Source that can be used to get updates. When the
@@ -60,6 +74,38 @@ func (d *Daemon) AddSource(s Source) {
 		defer d.runCount.Done()
 		mon.Run()
 	}()
+}
+
+func (d *Daemon) blobRepos() []BlobRepo {
+	d.muRepos.Lock()
+	defer d.muRepos.Unlock()
+	c := make([]BlobRepo, len(d.repos))
+	copy(c, d.repos)
+	return c
+}
+
+func (d *Daemon) AddBlobRepo(br BlobRepo) {
+	log.Printf("Adding a blob repo\n")
+	d.muRepos.Lock()
+	d.repos = append(d.repos, br)
+	d.muRepos.Unlock()
+}
+
+// GetBlobs is a blocking call which tries to get all requested blobs
+func (d *Daemon) GetBlob(blob string) error {
+	repos := d.blobRepos()
+	return FetchBlob(repos, blob, &d.muBlobUpdates, DstBlob)
+}
+
+func (d *Daemon) RemoveBlobRepo(r BlobRepo) {
+	d.muRepos.Lock()
+	for i, _ := range d.repos {
+		if d.repos[i] == r {
+			d.repos = append(d.repos[:i], d.repos[i+1:]...)
+			break
+		}
+	}
+	d.muRepos.Unlock()
 }
 
 // GetUpdates queries all available Sources for the supplied PackageSet and
@@ -95,6 +141,7 @@ func (d *Daemon) RemoveSource(src Source) error {
 // CancelAll stops all update retrieval operations, blocking until any
 // in-progress operations complete.
 func (d *Daemon) CancelAll() {
+	//d.blobSrc.Stop()
 	for _, s := range d.srcMons {
 		s.Stop()
 	}
@@ -138,7 +185,7 @@ func ProcessPackage(update *Package, orig *Package, src Source, pkgs *PackageSet
 
 	// take the long way to truncate in case this is a VMO filesystem
 	// which doesn't support truncate
-	dstPath := filepath.Join(UpdateDst, update.Name)
+	dstPath := filepath.Join(DstUpdate, update.Name)
 	e = os.Remove(dstPath)
 	if e != nil && !os.IsNotExist(e) {
 		return NewErrProcessPackage("couldn't remove old file %v", e)
