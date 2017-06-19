@@ -73,8 +73,9 @@ static void update_signals(usb_audio_sink_t* sink) {
         new_signals |= DEV_STATE_WRITABLE;
     }
     if (new_signals != sink->signals) {
-        device_state_set_clr(sink->mxdev, new_signals & ~sink->signals,
-                             sink->signals & ~new_signals);
+        device_state_clr_set(sink->mxdev,
+                             sink->signals & ~new_signals,
+                             new_signals & ~sink->signals);
         sink->signals = new_signals;
     }
 }
@@ -119,7 +120,7 @@ static void usb_audio_sink_release(void* ctx) {
 static uint64_t get_usb_current_frame(usb_audio_sink_t* sink) {
     uint64_t result;
     size_t actual = 0;
-    mx_status_t status = device_op_ioctl(sink->usb_mxdev, IOCTL_USB_GET_CURRENT_FRAME,
+    mx_status_t status = device_ioctl(sink->usb_mxdev, IOCTL_USB_GET_CURRENT_FRAME,
                                  NULL, 0, &result, sizeof(result), &actual);
     if (status != MX_OK || actual != sizeof(result)) {
         printf("get_usb_current_frame failed %u\n",status);

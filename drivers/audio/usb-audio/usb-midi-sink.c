@@ -41,8 +41,9 @@ static void update_signals(usb_midi_sink_t* sink) {
         new_signals |= DEV_STATE_WRITABLE;
     }
     if (new_signals != sink->signals) {
-        device_state_set_clr(sink->mxdev, new_signals & ~sink->signals,
-                             sink->signals & ~new_signals);
+        device_state_clr_set(sink->mxdev,
+                             sink->signals & ~new_signals,
+                             new_signals & ~sink->signals);
         sink->signals = new_signals;
     }
 }
