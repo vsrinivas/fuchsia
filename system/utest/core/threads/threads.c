@@ -229,6 +229,21 @@ static bool test_kill_wait_thread(void) {
     END_TEST;
 }
 
+static bool test_kill_nonstarted_thread(void) {
+    BEGIN_TEST;
+
+    mx_handle_t thread;
+    ASSERT_EQ(mx_thread_create(mx_process_self(), "thread", 5, 0, &thread), MX_OK, "");
+    ASSERT_EQ(mx_task_kill(thread), MX_OK, "");
+
+    // kill it again, to make sure it doesn't trigger any sort of bad state
+    ASSERT_EQ(mx_task_kill(thread), MX_OK, "");
+
+    ASSERT_EQ(mx_handle_close(thread), MX_OK, "");
+
+    END_TEST;
+}
+
 // Arguments for self_killing_fn().
 struct self_killing_thread_args {
     mxr_thread_t thread; // Used for the thread to kill itself.
@@ -694,6 +709,7 @@ RUN_TEST(test_thread_start_with_zero_instruction_pointer)
 RUN_TEST(test_kill_busy_thread)
 RUN_TEST(test_kill_sleep_thread)
 RUN_TEST(test_kill_wait_thread)
+RUN_TEST(test_kill_nonstarted_thread)
 RUN_TEST(test_thread_kills_itself)
 RUN_TEST(test_info_task_stats_fails)
 RUN_TEST(test_resume_suspended)
