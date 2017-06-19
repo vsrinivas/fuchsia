@@ -266,10 +266,19 @@ class AudioPlayerController {
       return;
     }
 
+    // When the timeline function changes, its reference time is likely to
+    // correspond to system time, so we take the opportunity to calibrate
+    // the progress bar.
+    bool prepare = false;
+
     if (status != null) {
       if (status.timelineTransform != null) {
+        TimelineFunction oldTimelineFunction = _timelineFunction;
+
         _timelineFunction =
             new TimelineFunction.fromTransform(status.timelineTransform);
+
+        prepare = oldTimelineFunction != _timelineFunction;
       }
 
       _hasVideo = status.contentHasVideo;
@@ -298,7 +307,7 @@ class AudioPlayerController {
 
       if (_timelineFunction != null &&
           _timelineFunction.referenceTime != 0 &&
-          !_progressBarReady) {
+          (!_progressBarReady || prepare)) {
         _prepareProgressBar();
       }
 
