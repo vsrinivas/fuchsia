@@ -42,46 +42,76 @@ mx::channel CloneChannel(int fd) {
 
 NamespaceBuilder::NamespaceBuilder() = default;
 
-NamespaceBuilder::~NamespaceBuilder() {
-  for (char* string : string_pool_)
-    free(string);
-}
+NamespaceBuilder::~NamespaceBuilder() = default;
 
 void NamespaceBuilder::AddRoot(mx::channel root) {
-  PushDirectory("/", std::move(root));
+  PushDirectoryFromChannel("/", std::move(root));
 }
 
 void NamespaceBuilder::AddPackage(mx::channel package) {
-  PushDirectory("/pkg", std::move(package));
+  PushDirectoryFromChannel("/pkg", std::move(package));
 }
 
 void NamespaceBuilder::AddServices(mx::channel services) {
-  PushDirectory("/svc", std::move(services));
+  PushDirectoryFromChannel("/svc", std::move(services));
 }
 
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
   if (sandbox.dev().empty())
     return;
+
   ftl::UniqueFD dir(open("/dev", O_DIRECTORY | O_RDWR));
   if (!dir.is_valid())
     return;
-  for (const auto& path : sandbox.dev()) {
+  const auto& dev = sandbox.dev();
+  for (const auto& path : dev) {
     ftl::UniqueFD entry(openat(dir.get(), path.c_str(), O_DIRECTORY | O_RDWR));
     if (!entry.is_valid())
       continue;
     mx::channel handle = CloneChannel(entry.get());
     if (!handle)
       continue;
-    string_pool_.push_back(strdup(("/dev/" + path).c_str()));
-    PushDirectory(string_pool_.back(), std::move(handle));
+    PushDirectoryFromChannel("/dev/" + path, std::move(handle));
+  }
+
+  for (const auto& feature : sandbox.features()) {
+    if (feature == "vulkan") {
+      PushDirectoryFromPath("/dev/class/display", O_RDWR);
+      PushDirectoryFromPath("/system/lib/vulkan", O_RDONLY);
+    }
   }
 }
 
+void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
+  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
+    return;
+  ftl::UniqueFD dir(open(path.c_str(), O_DIRECTORY | oflags));
+  if (!dir.is_valid())
+    return;
+  mx::channel handle = CloneChannel(dir.get());
+  if (!handle)
+    return;
+  PushDirectoryFromChannel(std::move(path), std::move(handle));
+}
+
+void NamespaceBuilder::PushDirectoryFromChannel(std::string path,
+                                                mx::channel channel) {
+  types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
+  handles_.push_back(channel.get());
+  paths_.push_back(std::move(path));
+
+  handle_pool_.push_back(std::move(channel));
+}
+
 mxio_flat_namespace_t* NamespaceBuilder::Build() {
+  path_data_.resize(paths_.size());
+  for (size_t i = 0; i < paths_.size(); ++i)
+    path_data_[i] = paths_[i].c_str();
+
   flat_ns_.count = types_.size();
   flat_ns_.handle = handles_.data();
   flat_ns_.type = types_.data();
-  flat_ns_.path = paths_.data();
+  flat_ns_.path = path_data_.data();
   Release();
   return &flat_ns_;
 }
@@ -90,14 +120,6 @@ void NamespaceBuilder::Release() {
   for (auto& handle : handle_pool_)
     (void)handle.release();
   handle_pool_.clear();
-}
-
-void NamespaceBuilder::PushDirectory(const char* path, mx::channel channel) {
-  types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
-  handles_.push_back(channel.get());
-  paths_.push_back(path);
-
-  handle_pool_.push_back(std::move(channel));
 }
 
 }  // namespace app

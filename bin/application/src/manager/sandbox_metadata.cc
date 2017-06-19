@@ -7,8 +7,24 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace app {
+namespace {
+
+template <typename Value>
+bool CopyArrayToVector(const Value& value, std::vector<std::string>* vector) {
+  if (!value.IsArray())
+    return false;
+  for (const auto& entry : value.GetArray()) {
+    if (!entry.IsString())
+      return false;
+    vector->push_back(entry.GetString());
+  }
+  return true;
+}
+
+}  // namespace
 
 constexpr char kDev[] = "dev";
+constexpr char kFeatures[] = "features";
 
 SandboxMetadata::SandboxMetadata() = default;
 
@@ -16,6 +32,7 @@ SandboxMetadata::~SandboxMetadata() = default;
 
 bool SandboxMetadata::Parse(const std::string& data) {
   dev_.clear();
+  features_.clear();
 
   rapidjson::Document document;
   document.Parse(data);
@@ -24,14 +41,14 @@ bool SandboxMetadata::Parse(const std::string& data) {
 
   auto dev = document.FindMember(kDev);
   if (dev != document.MemberEnd()) {
-    const auto& value = dev->value;
-    if (!value.IsArray())
+    if (!CopyArrayToVector(dev->value, &dev_))
       return false;
-    for (const auto& path : value.GetArray()) {
-      if (!path.IsString())
-        return false;
-      dev_.push_back(path.GetString());
-    }
+  }
+
+  auto features = document.FindMember(kFeatures);
+  if (features != document.MemberEnd()) {
+    if (!CopyArrayToVector(features->value, &features_))
+      return false;
   }
 
   return true;

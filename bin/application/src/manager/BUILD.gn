@@ -60,6 +60,7 @@ executable("tests") {
   output_name = "appmgr_unittests"
 
   sources = [
+    "namespace_builder_unittest.cc",
     "sandbox_metadata_unittest.cc",
   ]
 

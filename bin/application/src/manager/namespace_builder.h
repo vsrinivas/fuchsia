@@ -38,15 +38,16 @@ class NamespaceBuilder {
   mxio_flat_namespace_t* Build();
 
  private:
-  void PushDirectory(const char* path, mx::channel channel);
+  void PushDirectoryFromPath(std::string path, int oflags);
+  void PushDirectoryFromChannel(std::string path, mx::channel channel);
   void Release();
 
   std::vector<uint32_t> types_;
   std::vector<mx_handle_t> handles_;
-  std::vector<const char*> paths_;
+  std::vector<std::string> paths_;
 
-  std::vector<char*> string_pool_;
   std::vector<mx::handle> handle_pool_;
+  std::vector<const char*> path_data_;
   mxio_flat_namespace_t flat_ns_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NamespaceBuilder);
