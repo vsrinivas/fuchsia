@@ -107,8 +107,8 @@ class ModuleImpl extends Module {
     // Listen to updates from the context service.
     _intelligenceServices.getContextProvider(_contextProvider.ctrl.request());
     _contextListenerImpl = new ContextListenerImpl();
-    ContextQuery query =
-        new ContextQuery.init(<String>[_kCurrentFocalEntitiesTopic]);
+    ContextQuery query = new ContextQuery.init(
+        <String>[_kCurrentFocalEntitiesTopic], null /* filters */);
     _contextProvider.subscribe(query, _contextListenerImpl.getHandle());
 
     // Indicate readiness

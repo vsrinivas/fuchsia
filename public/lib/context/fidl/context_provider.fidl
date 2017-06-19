@@ -18,6 +18,11 @@ interface ContextProvider {
   //
   // The query will continue to stay active as long as the |listener| handle is
   // not closed.
+  //
+  // TODO(thatguy): Currently a ContextUpdate doesn't indicate when the filter
+  // conditions in |ContextQuery.filters| changes from matching to not
+  // matching.  We should add some indicator in ContextUpdate so clients can
+  // differentiate between "no change" and "your query no longer matches".
   Subscribe(ContextQuery query, ContextListener listener);
 };
 
@@ -36,12 +41,40 @@ struct ContextUpdate {
 
 struct ContextQuery {
   // A set of topics to include in the ContextUpdate when the following
-  // conditions match. An empty list includes all topics.
+  // conditions match. An empty list indicates a wildcard query and includes
+  // all topics.
   //
-  // If no conditions are given below, the query will match whenever any
-  // of |topics| changes.
-  //
-  // TODO(thatguy): Eventually add more useful query/trigger conditions here.
-  // For now, this is all we will need for a while going forward.
+  // If no conditions/filters are given below, the query will match whenever
+  // any of |topics| changes.
   array<string> topics;
+
+  // A map from topics to filters applied to each topic. A subscription will
+  // only be notified of an update if every specified filter evaluates to true.
+  //
+  // Some ContextFilters modify the context value during evaluation. In those
+  // cases, the modified value will be present in |ContextUpdate.values|
+  // instead of the current value in the context service.
+  //
+  // Filters for topics not listed in |topics| are ignored.  Filters on a
+  // wildcard query have no effect because in a wildcard query, no topics are
+  // listed in |topics|).
+  map<string, ContextFilter>? filters;
+};
+
+union ContextFilter {
+  // This JSON value is compared to the JSON value of the topic this filter is
+  // listed for. Only if this JSON value is fully contained in the JSON value
+  // of the topic (i.e. the JSON tree structure is covered by the tree
+  // structure of the context topic JSON value, and all scalar values at the
+  // leaves of this JSON value match their counterpart in the context topic
+  // JSON value), this filter evaluates to true.
+  //
+  // Nowhere in this JSON value may there be an array. Matching an array is
+  // undefined and evaluates to false.
+  string partial_eq;
+
+  // If the context topic value is an array, then only elements of that array
+  // are retained in the topic value that is sent in the notification to the
+  // subscriber that match the ContextFilter provided here.
+  ContextFilter for_each;
 };
