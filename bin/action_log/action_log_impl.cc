@@ -105,6 +105,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   display->icon_urls.push_back("");
   display->image_url = "";
   display->image_type = SuggestionImageType::OTHER;
+  display->annoyance = AnnoyanceType::INTERRUPT;
   proposal->display = std::move(display);
 
   // We clear any existing proposal for this story.
