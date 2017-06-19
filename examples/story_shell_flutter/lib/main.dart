@@ -87,8 +87,8 @@ class StoryShellImpl extends StoryShell {
 
   /// StoryShell
   @override
-  void defocusView(String viewId) {
-    // Nothing
+  void defocusView(String viewId, void callback()) {
+    callback();
   }
 
   /// StoryShell

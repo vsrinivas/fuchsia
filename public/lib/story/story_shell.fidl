@@ -40,7 +40,7 @@ interface StoryShell {
   FocusView(string view_id, string? relative_view_id);
 
   // Defocus the view with view_id, dismissing it to the background.
-  DefocusView(string view_id);
+  DefocusView(string view_id) => ();
 
   // Signals to the StoryShell to tear down itself. Upon response the
   // caller terminates the StoryShell process if it hasn't done so

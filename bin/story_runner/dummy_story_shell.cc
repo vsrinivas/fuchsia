@@ -61,7 +61,10 @@ class DummyStoryShellApp
                  const fidl::String& relative_view_id) override {}
 
   // |StoryShell|
-  void DefocusView(const fidl::String& view_id) override {}
+  void DefocusView(const fidl::String& view_id,
+                   const DefocusViewCallback& callback) override {
+    callback();
+  }
 
   // |StoryShell|
   void Terminate(const TerminateCallback& done) override {

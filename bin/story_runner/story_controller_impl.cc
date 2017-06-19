@@ -652,7 +652,7 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
 
     if (state == ModuleState::DONE) {
       if (story_controller_impl_->story_shell_) {
-        story_controller_impl_->story_shell_->DefocusView(module_id_);
+        story_controller_impl_->story_shell_->DefocusView(module_id_, [] {});
       }
       auto it = std::find_if(story_controller_impl_->external_modules_.begin(),
                              story_controller_impl_->external_modules_.end(),
@@ -983,7 +983,7 @@ void StoryControllerImpl::FocusModule(
 void StoryControllerImpl::DefocusModule(
     const fidl::Array<fidl::String>& module_path) {
   if (story_shell_) {
-    story_shell_->DefocusView(PathString(module_path));
+    story_shell_->DefocusView(PathString(module_path), [] {});
   }
 }
 
