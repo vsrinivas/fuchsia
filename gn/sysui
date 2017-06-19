@@ -63,6 +63,51 @@
     {
       "bootfs_path": "data/sysui/WallpaperImage_004.jpg",
       "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_004.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/ask_proposals.json",
+      "default": "true",
+      "file": "apps/sysui/agents/home_work_agent/assets/ask_proposals.json"
+    },
+    {
+      "bootfs_path": "data/sysui/google_photos.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/google_photos.png"
+    },
+    {
+      "bootfs_path": "data/sysui/panda.png.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/panda.png.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/pavlova.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/pavlova.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/shamra.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/shamra.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/slides.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/slides.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_fluxMemories.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_fluxMemories.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_googleIO.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_googleIO.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_hype.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_hype.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_natureSense.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_natureSense.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_topcook.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_topcook.png"
     }
   ]
 }
