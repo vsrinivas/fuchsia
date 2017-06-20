@@ -134,6 +134,17 @@ uint32_t VmObject::num_mappings() const {
     return mapping_list_len_;
 }
 
+bool VmObject::IsMappedByUser() const {
+    canary_.Assert();
+    AutoLock a(&lock_);
+    for (const auto& m : mapping_list_) {
+        if (m.aspace()->is_user()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 uint32_t VmObject::share_count() const {
     canary_.Assert();
 

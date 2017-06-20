@@ -167,6 +167,10 @@ public:
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
     uint32_t num_mappings() const;
 
+    // Returns true if this VMO is mapped into any VmAspace whose is_user()
+    // returns true.
+    bool IsMappedByUser() const;
+
     // Returns an estimate of the number of unique VmAspaces that this object
     // is mapped into.
     uint32_t share_count() const;

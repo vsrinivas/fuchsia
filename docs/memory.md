@@ -200,14 +200,28 @@ SHARED  =  #shr  > 1 ? alloc : 0
 PSS     =  PRIVATE + (SHARED / #shr)
 ```
 
-### Dump all VMOs in the system (userspace and kernel)
+### Dump "hidden" (unmapped and kernel) VMOs
+
+> NOTE: This is a kernel command, and will print to the kernel console.
 
 ```
-k mx vmos all
+k mx vmos hidden
 ```
 
-Just like `vmos <pid>`, but dumps all VMOs across all processes and the kernel.
+Similar to `vmos <pid>`, but dumps all VMOs in the system that are not mapped
+into any process:
+-   VMOs that userspace has handles to but does not map
+-   VMOs that are mapped only into kernel space
+-   Kernel-only, unmapped VMOs that have no handles
+
 A `koid` value of zero means that only the kernel has a reference to that VMO.
+
+A `#map` value of zero means that the VMO is not mapped into any address space.
+
+**See also**: `k mx vmos all`, which dumps all VMOs in the system. **NOTE**:
+It's very common for this output to be truncated because of kernel console
+buffer limitations, so it's often better to combine the `k mx vmos hidden`
+output with a `vmaps` dump of each user process.
 
 ### Limitations
 
@@ -232,11 +246,6 @@ None of the process-dumping tools account for:
     `k mx ps help` for a description of its columns.
 
 ## Kernel memory
-
-*** note
-**TODO**(dbort): Add commands/APIs to dump and examine kernel memory usage, and
-document them here.
-***
 
 ### Dump system memory arenas and kernel heap usage
 
@@ -270,3 +279,27 @@ Fields:
     data like the ram disk and kernel image, and for early-boot dynamic memory.
 -   `mmu`: The amount of memory used for architecture-specific MMU metadata like
     page tables.
+
+### Dump the kernel address space
+
+> NOTE: This is a kernel command, and will print to the kernel console.
+
+```
+k mx asd kernel
+```
+
+Dumps the kernel's VMAR/mapping/VMO hierarchy, similar to the `vmaps` tool for
+user processes.
+
+```
+$ k mx asd kernel
+as 0xffffffff80252b20 [0xffffff8000000000 0xffffffffffffffff] sz 0x8000000000 fl 0x1 ref 71 'kernel'
+  vmar 0xffffffff802529a0 [0xffffff8000000000 0xffffffffffffffff] sz 0x8000000000 ref 1 'root'
+    map 0xffffff80015f89a0 [0xffffff8000000000 0xffffff8fffffffff] sz 0x1000000000 mmufl 0x18 vmo 0xffffff80015f8890/k0 off 0 p ages 0 ref 1 ''
+      vmo 0xffffff80015f8890/k0 size 0 pages 0 ref 1 parent k0
+    map 0xffffff80015f8b30 [0xffffff9000000000 0xffffff9000000fff] sz 0x1000 mmufl 0x18 vmo 0xffffff80015f8a40/k0 off 0 pages 0 ref 1 ''
+      object 0xffffff80015f8a40 base 0x7ffe2000 size 0x1000 ref 1
+    map 0xffffff80015f8cc0 [0xffffff9000001000 0xffffff9000001fff] sz 0x1000 mmufl 0x1a vmo 0xffffff80015f8bd0/k0 off 0 pages 0 ref 1 ''
+      object 0xffffff80015f8bd0 base 0xfed00000 size 0x1000 ref 1
+...
+```
