@@ -28,8 +28,9 @@ struct ModuleData {
 
 // Addresses a Link within a story.
 struct LinkPath {
-  // The module's module_path this link was created under.
+  // The module_path of the module this link was created under.
   array<string> module_path;
+
   // Name of the link itself.
   string link_name;
 };
@@ -44,5 +45,3 @@ enum ModuleSource {
   // module.
   EXTERNAL,
 };
-
-

@@ -490,10 +490,24 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint story2_delete_{"Story2 Delete"};
 
   void TestStory2_DeleteStory() {
-    story_provider_->DeleteStory(story_info_->id, [this]() {
+    story_provider_->DeleteStory(story_info_->id, [this] {
       story2_delete_.Pass();
-      user_context_->Logout();
     });
+
+    story_provider_->GetStoryInfo(story_info_->id, [this](modular::StoryInfoPtr info) {
+        TestStory2_InfoAfterDeleteIsNull(std::move(info));
+      });
+  }
+
+  TestPoint story2_info_after_delete_{"Story2 Info After Delete"};
+
+  void TestStory2_InfoAfterDeleteIsNull(modular::StoryInfoPtr info) {
+    story2_info_after_delete_.Pass();
+    if (!info.is_null()) {
+      modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
+    }
+
+    user_context_->Logout();
   }
 
   TestPoint terminate_{"Terminate"};

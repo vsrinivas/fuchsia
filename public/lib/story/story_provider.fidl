@@ -7,42 +7,46 @@ module modular;
 import "apps/modular/services/story/story_controller.fidl";
 import "apps/modular/services/story/story_state.fidl";
 
-// UserRunner creates an instance of this service and passes it to the
-// UserShell so it can operate on stories for the user.
+// UserRunner creates an instance of this service and passes it to the UserShell
+// so it can operate on stories for the user. It is also passed to other
+// services that monitor or manipulate stories, specifically the maxwell
+// services.
 //
-// Closing |StoryProvider| has no effect on the state of the framework.
+// Closing a |StoryProvider| connection has no effect on the state of the
+// framework.
 interface StoryProvider {
-  // Creates a new story running the module at |url|. The returned
-  // |story_id| can then be used to get a StoryController to perform
-  // actions on the newly created story.
-  CreateStory(string url) => (string story_id);
+  // Creates a new story containing the module at |module_url| as the first
+  // module. The returned |story_id| can be used to obtain a StoryController
+  // connection to perform actions on the newly created story, specifically
+  // starting it.
+  CreateStory(string module_url) => (string story_id);
 
-  // Like CreateStory, but with extra info and with values for the
-  // root link atomically set. Otherwise, if SetInfoExtra() is called
-  // separately on story controller, separate notifications are
+  // Like CreateStory(), but with extra info and with values for the root link
+  // atomically set. Otherwise, if SetInfoExtra() is called separately on the
+  // story controller, separate StoryProviderWatcher notifications are
   // generated, which is inconvenient.
-  CreateStoryWithInfo(string url, map<string, string>? extra_info,
+  CreateStoryWithInfo(string module_url, map<string, string>? extra_info,
                       string? root_json) => (string story_id);
 
-  // Deletes an existing story from the list of known stories. Returns
-  // when the delete notification is received from the Ledger. If the
-  // story to be deleted is running, it is first stopped and its story
-  // controller disconnected. If the story ID doesn't exist, silently
-  // does nothing.
+  // Deletes an existing story from the list of known stories. Returns when the
+  // delete notification is received from the Ledger. If the story to be deleted
+  // is running, it is first stopped and its story controller disconnected. If
+  // the story ID doesn't exist, it silently does nothing and returns.
   DeleteStory(string story_id) => ();
 
-  // Requests detailed information about the given story. If the story
-  // doesn't exist, returns null.
-  GetStoryInfo(string story_id) => (StoryInfo? info);
+  // Requests detailed information about the given story. If the story doesn't
+  // exist, returns null. GetStoryInfo() called immediately after DeleteStory()
+  // (even before DeleteStory() returns) returns null.
+  GetStoryInfo(string story_id) => (StoryInfo? story_info);
 
-  // Obtains a controller for a previously created story identified by
-  // its story ID. Obtaining the controller doesn't run it yet. If the
-  // story doesn't exist, the interface request is closed.
-  GetController(string story_id, StoryController& story);
+  // Obtains a controller for a previously created story identified by its story
+  // ID. Obtaining the controller doesn't run it yet. If the story doesn't
+  // exist, the interface request is closed.
+  GetController(string story_id, StoryController& story_controller);
 
-  // Returns IDs of known stories. More information about the stories
-  // can be retrieved using GetStoryInfo(), or by GetController(),
-  // then StoryController.GetInfo().
+  // Returns IDs of known stories. More information about the stories can be
+  // retrieved using GetStoryInfo(), or by GetController(), then
+  // StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
 
   // Returns IDs of stories on the current device that are not in the INITIAL or
@@ -68,7 +72,7 @@ interface StoryProvider {
   // Registers a listener for changes in the story collection.
   WatchImportance(StoryImportanceWatcher watcher);
 
-  // Creates a duplicate handle for this StoryProvider.
+  // Creates a duplicate connection to this StoryProvider.
   Duplicate(StoryProvider& request);
 };
 
@@ -87,12 +91,13 @@ interface StoryProvider {
 // OnDelete() is called when a story deletion operation is applied to the
 // CURRENT device. The cause of the deletion could have been ANY device.
 interface StoryProviderWatcher {
-  // The StoryInfo changed or the StoryState changed. |story_state| is
-  // INITIAL if this story was just created. The state will always be "STOPPED"
-  // on the current device if no StoryController is present. This behavior is
-  // only surprising because the state could change to INITIAL after the
+  // The StoryInfo changed or the StoryState changed. |story_state| is INITIAL
+  // if the story was just created. The state will always be "STOPPED" on the
+  // current device if no StoryController is present. This behavior is only
+  // surprising because the state could change to INITIAL after the
   // StoryController is created.
-  // TODO(jimbe) The "INITIAL" value has a race condition between devices and
+  //
+  // TODO(jimbe): The "INITIAL" value has a race condition between devices and
   // should be removed.
   OnChange(StoryInfo story_info, StoryState story_state);
 
