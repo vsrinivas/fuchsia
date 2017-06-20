@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <sys/select.h>
 #include <unistd.h>
 
 #include <unittest/unittest.h>
