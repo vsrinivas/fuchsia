@@ -26,6 +26,13 @@ void threads_test_wait_fn(void* arg) {
     mx_object_signal(event, 0u, MX_USER_SIGNAL_1);
 }
 
+void threads_test_wait_detach_fn(void* arg) {
+    threads_test_wait_fn(arg);
+    // Since we're detached, we are not allowed to return into the default mxr_thread
+    // exit path.
+    mx_thread_exit();
+}
+
 void threads_test_busy_fn(void* arg) {
     volatile uint64_t i = 0u;
     while (true) {

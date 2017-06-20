@@ -9,6 +9,7 @@
 
 void threads_test_sleep_fn(void* arg);
 void threads_test_wait_fn(void* arg);
+void threads_test_wait_detach_fn(void* arg);
 void threads_test_busy_fn(void* arg);
 void threads_test_infinite_sleep_fn(void* arg);
 void threads_test_infinite_wait_fn(void* arg);

@@ -82,10 +82,6 @@ static _Noreturn void thread_trampoline(uintptr_t ctx) {
 
     int old_state = begin_exit(thread);
     switch (old_state) {
-    case DETACHED:
-        // Nobody cares.  Just die, alone and in the dark.
-        // Fall through.
-
     case JOINABLE:
         // Nobody's watching right now, but they might start watching as we
         // exit.  Just in case, behave as if we've been joined and wake the
@@ -96,7 +92,8 @@ static _Noreturn void thread_trampoline(uintptr_t ctx) {
         break;
     }
 
-    // Cannot be in DONE or EXITING and reach here.
+    // Cannot be in DONE, EXITING, or DETACHED and reach here.  For DETACHED, it
+    // is the responsibility of a higher layer to ensure this is not reached.
     __builtin_trap();
 }
 

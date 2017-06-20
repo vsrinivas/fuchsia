@@ -114,7 +114,7 @@ static bool test_detach(void) {
     ASSERT_EQ(mx_event_create(0, &event), MX_OK, "");
 
     mx_handle_t thread_h;
-    ASSERT_TRUE(start_thread(threads_test_wait_fn, &event, &thread, &thread_h), "");
+    ASSERT_TRUE(start_thread(threads_test_wait_detach_fn, &event, &thread, &thread_h), "");
     // We're not detached yet
     ASSERT_FALSE(mxr_thread_detached(&thread), "");
 
@@ -129,8 +129,6 @@ static bool test_detach(void) {
                                  MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL),
               MX_OK, "");
 
-    // Should now say it's not detached again.
-    ASSERT_FALSE(mxr_thread_detached(&thread), "");
     ASSERT_EQ(mx_handle_close(thread_h), MX_OK, "");
 
     END_TEST;
