@@ -14,13 +14,8 @@ MODULE_SRCS += \
 
 # if no one else has defined it by now, build us a default buildid
 # based on the current time.
-# suffix it with _LOCAL if OFFICIAL_BUILD is unset
 ifeq ($(strip $(BUILDID)),)
-ifneq ($(OFFICIAL_BUILD),)
 BUILDID := "$(shell $(SHELLEXEC) $(LOCAL_DIR)/buildid.sh)"
-else
-BUILDID := "$(shell $(SHELLEXEC) $(LOCAL_DIR)/buildid.sh)_LOCAL"
-endif
 endif
 
 # Generate a buildid.h file, lazy evaulated BUILDID_DEFINE at the end
