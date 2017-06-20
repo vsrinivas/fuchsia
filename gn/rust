@@ -1,4 +1,10 @@
 {
+    "packages": {
+      "rust_sample_module": "//rust/rust_sample_module:package"
+    },
+    "imports": [
+        "cairo"
+    ],
     "labels": [
         "//apps/xi",
         "//rust/ledger_example",
@@ -13,10 +19,6 @@
         {
             "binary": "ledger_example",
             "bootfs_path": "bin/rust_ledger_example"
-        },
-        {
-            "binary": "rust_sample_module",
-            "bootfs_path": "apps/rust_sample_module"
         },
         {
             "binary": "xi-core",
