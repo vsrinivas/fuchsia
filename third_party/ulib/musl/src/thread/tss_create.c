@@ -1,6 +1,6 @@
 #include <threads.h>
 
-int __pthread_key_create(tss_t*, void (*)(void*));
+#include "pthread_impl.h"
 
 int tss_create(tss_t* tss, tss_dtor_t dtor) {
     /* Different error returns are possible. C glues them together into

@@ -129,6 +129,8 @@ static inline struct pthread* tp_to_pthread(void* tp) {
 extern void* __pthread_tsd_main[];
 extern volatile size_t __pthread_tsd_size;
 
+void* __tls_get_new(size_t*) ATTR_LIBC_VISIBILITY;
+
 static inline pthread_t __pthread_self(void) {
     return tp_to_pthread(mxr_tp_get());
 }
@@ -155,7 +157,10 @@ _Noreturn void __pthread_exit(void* result) ATTR_LIBC_VISIBILITY;
 int __pthread_join(pthread_t t, void** result) ATTR_LIBC_VISIBILITY;
 
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
-void __private_cond_signal(void* condvar, int n);
+void __private_cond_signal(void* condvar, int n) ATTR_LIBC_VISIBILITY;
+
+int __pthread_key_create(tss_t*, void (*)(void*)) ATTR_LIBC_VISIBILITY;
+int __pthread_key_delete(tss_t k) ATTR_LIBC_VISIBILITY;
 
 // This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
 int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
@@ -183,3 +188,7 @@ pthread_t __allocate_thread(const pthread_attr_t* attr,
     __attribute__((nonnull(1,2))) ATTR_LIBC_VISIBILITY;
 
 pthread_t __init_main_thread(mx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
+
+int __pthread_once(pthread_once_t*, void (*)(void)) ATTR_LIBC_VISIBILITY;
+
+int __clock_gettime(clockid_t, struct timespec*) ATTR_LIBC_VISIBILITY;
