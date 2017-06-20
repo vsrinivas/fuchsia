@@ -73,6 +73,10 @@
             "bootfs_path": "test/net_media_service_tests"
         },
         {
+            "binary": "vol",
+            "bootfs_path": "apps/vol"
+        },
+        {
             "binary": "vu_meter",
             "bootfs_path": "apps/vu_meter"
         }
