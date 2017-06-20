@@ -105,7 +105,12 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   display->icon_urls.push_back("");
   display->image_url = "";
   display->image_type = SuggestionImageType::OTHER;
-  display->annoyance = AnnoyanceType::INTERRUPT;
+  // If there is an email recipient already available, set an interrupt
+  // suggestion.
+  if (!last_email_rcpt_.empty()) {
+    display->annoyance = AnnoyanceType::INTERRUPT;
+    display->headline = "Share Video with " + last_email_rcpt_;
+  }
   proposal->display = std::move(display);
 
   // We clear any existing proposal for this story.
