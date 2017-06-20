@@ -27,7 +27,7 @@
 namespace wlan {
 
 Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
-  : WlanBaseDevice(device, "wlan"),
+  : WlanBaseDevice(device),
     wlanmac_proxy_(wlanmac_proto),
     mlme_(this) {
     debugfn();
@@ -66,7 +66,7 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    status = DdkAdd();
+    status = DdkAdd("wlan");
     if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
         mx_status_t shutdown_status = QueueDevicePortPacket(DevicePacket::kShutdown);

@@ -66,7 +66,7 @@ constexpr mx_duration_t Device::kDefaultBusyWait;
 
 Device::Device(mx_device_t* device, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-  : ddk::Device<Device, ddk::Unbindable>(device, "rt5370"),
+  : ddk::Device<Device, ddk::Unbindable>(device),
     rx_endpt_(bulk_in),
     tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent(), rx_endpt_);
@@ -192,7 +192,7 @@ mx_status_t Device::Bind() {
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
-    status = DdkAdd();
+    status = DdkAdd("rt5370");
     if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {

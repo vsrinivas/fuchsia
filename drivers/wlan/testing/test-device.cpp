@@ -10,13 +10,13 @@ namespace wlan {
 namespace testing {
 
 Device::Device(mx_device_t* device, test_protocol_t* test_proto)
-  : TestBaseDevice(device, "wlan-test"),
+  : TestBaseDevice(device),
     test_proxy_(test_proto) {}
 
 mx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
 
-    auto status = DdkAdd();
+    auto status = DdkAdd("wlan-test");
     if (status != MX_OK) {
         std::printf("wlan-test: could not add test device: %d\n", status);
     }
@@ -25,7 +25,7 @@ mx_status_t Device::Bind() {
 
 void Device::DdkUnbind() {
     std::printf("wlan::testing::Device::Unbind()\n");
-    SetAndClearState(DEV_STATE_HANGUP, DEV_STATE_READABLE | DEV_STATE_WRITABLE);
+    ClearAndSetState(DEV_STATE_READABLE | DEV_STATE_WRITABLE, DEV_STATE_HANGUP);
     device_remove(mxdev());
 }
 
