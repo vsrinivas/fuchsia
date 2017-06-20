@@ -128,13 +128,11 @@ TEST(MessageLoop, AfterTaskCallbacks) {
   loop.PostQuitTask();
   loop.task_runner()->PostTask([&tasks] { tasks.push_back("2"); });
   loop.Run();
-  EXPECT_EQ(4u, tasks.size());
+  EXPECT_EQ(5u, tasks.size());
   EXPECT_EQ("0", tasks[0]);
   EXPECT_EQ("callback", tasks[1]);
   EXPECT_EQ("1", tasks[2]);
   EXPECT_EQ("callback", tasks[3]);
-  // Notice that the callback doesn't run after the quit task because we're
-  // quitting.
 }
 
 TEST(MessageLoop, RemoveAfterTaskCallbacksDuringCallback) {
@@ -344,7 +342,7 @@ TEST(MessageLoop, AfterHandleReadyCallback) {
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
-  EXPECT_EQ(1, after_task_callback_count);
+  EXPECT_EQ(2, after_task_callback_count);
   EXPECT_FALSE(message_loop.HasHandler(key));
 }
 
@@ -364,7 +362,7 @@ TEST(MessageLoop, AfterDeadlineExpiredCallback) {
   message_loop.SetAfterTaskCallback(
       [&after_task_callback_count] { ++after_task_callback_count; });
   message_loop.Run();
-  EXPECT_EQ(1, after_task_callback_count);
+  EXPECT_EQ(2, after_task_callback_count);
 }
 
 class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
@@ -524,7 +522,8 @@ TEST(MessageLoop, FDWaiter) {
   // shares ownership of the event.
   mx::event fdevent;
   EXPECT_EQ(mx::event::create(0u, &fdevent), MX_OK);
-  ftl::UniqueFD fd(mxio_handle_fd(fdevent.get(), MX_USER_SIGNAL_0, 0, /*shared=*/true));
+  ftl::UniqueFD fd(
+      mxio_handle_fd(fdevent.get(), MX_USER_SIGNAL_0, 0, /*shared=*/true));
   EXPECT_TRUE(fd.is_valid());
 
   FDWaiter waiter;
@@ -532,10 +531,11 @@ TEST(MessageLoop, FDWaiter) {
   {
     MessageLoop message_loop;
     std::thread thread([&fdevent]() {
-        // Poke the fdevent, which pokes the fd.
-        EXPECT_EQ(fdevent.signal(0u, MX_USER_SIGNAL_0), MX_OK);
-      });
-    auto callback = [&callback_ran, &message_loop](mx_status_t success, uint32_t events) {
+      // Poke the fdevent, which pokes the fd.
+      EXPECT_EQ(fdevent.signal(0u, MX_USER_SIGNAL_0), MX_OK);
+    });
+    auto callback = [&callback_ran, &message_loop](mx_status_t success,
+                                                   uint32_t events) {
       EXPECT_EQ(success, MX_OK);
       EXPECT_EQ(events, static_cast<uint32_t>(POLLIN));
       callback_ran = true;

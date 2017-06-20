@@ -188,11 +188,7 @@ void MessageLoop::ClearAfterTaskCallback() {
 
 void MessageLoop::Epilogue(async_t* async, void* data) {
   auto loop = static_cast<MessageLoop*>(data);
-  // TODO(jeffbrown): The tests currently assert that the callbacks aren't
-  // invoked when quitting but this seems asymmetrical.  Can we change this
-  // behavior?
-  if (loop->after_task_callback_ &&
-      loop->loop_.GetState() == ASYNC_LOOP_RUNNABLE)
+  if (loop->after_task_callback_)
     loop->after_task_callback_();
 }
 
