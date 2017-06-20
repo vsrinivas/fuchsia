@@ -27,9 +27,7 @@ TEST(File, GetFileSize) {
 
 TEST(File, WriteFileInTwoPhases) {
   ScopedTempDir dir;
-  std::string path;
-
-  ASSERT_TRUE(dir.NewTempFile(&path));
+  std::string path = dir.path() + "/destination";
 
   std::string content = "Hello World";
   ASSERT_TRUE(
