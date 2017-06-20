@@ -14,19 +14,19 @@
 
 #include "threads.h"
 
-__NO_SAFESTACK void threads_test_sleep_fn(void* arg) {
+void threads_test_sleep_fn(void* arg) {
     // Note: You shouldn't use C standard library functions from this thread.
     mx_time_t time = (mx_time_t)arg;
     mx_nanosleep(time);
 }
 
-__NO_SAFESTACK void threads_test_wait_fn(void* arg) {
+void threads_test_wait_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
     mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
     mx_object_signal(event, 0u, MX_USER_SIGNAL_1);
 }
 
-__NO_SAFESTACK void threads_test_busy_fn(void* arg) {
+void threads_test_busy_fn(void* arg) {
     volatile uint64_t i = 0u;
     while (true) {
         ++i;
@@ -34,18 +34,18 @@ __NO_SAFESTACK void threads_test_busy_fn(void* arg) {
     __builtin_trap();
 }
 
-__NO_SAFESTACK void threads_test_infinite_sleep_fn(void* arg) {
+void threads_test_infinite_sleep_fn(void* arg) {
     mx_nanosleep(MX_TIME_INFINITE);
     __builtin_trap();
 }
 
-__NO_SAFESTACK void threads_test_infinite_wait_fn(void* arg) {
+void threads_test_infinite_wait_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
     mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
     __builtin_trap();
 }
 
-__NO_SAFESTACK void threads_test_port_fn(void* arg) {
+void threads_test_port_fn(void* arg) {
     mx_handle_t* port = (mx_handle_t*)arg;
     mx_port_packet_t packet = {};
     mx_port_wait(port[0], MX_TIME_INFINITE, &packet, 0u);
@@ -53,7 +53,7 @@ __NO_SAFESTACK void threads_test_port_fn(void* arg) {
     mx_port_queue(port[1], &packet, 0u);
 }
 
-__NO_SAFESTACK void threads_test_channel_call_fn(void* arg_) {
+void threads_test_channel_call_fn(void* arg_) {
     struct channel_call_suspend_test_arg* arg = arg_;
 
     uint8_t send_buf[9] = "abcdefghi";

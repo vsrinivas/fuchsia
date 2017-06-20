@@ -5,15 +5,15 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
+#include <magenta/types.h>
 
-__NO_SAFESTACK void threads_test_sleep_fn(void* arg);
-__NO_SAFESTACK void threads_test_wait_fn(void* arg);
-__NO_SAFESTACK void threads_test_busy_fn(void* arg);
-__NO_SAFESTACK void threads_test_infinite_sleep_fn(void* arg);
-__NO_SAFESTACK void threads_test_infinite_wait_fn(void* arg);
-__NO_SAFESTACK void threads_test_port_fn(void* arg);
-__NO_SAFESTACK void threads_test_channel_call_fn(void* arg);
+void threads_test_sleep_fn(void* arg);
+void threads_test_wait_fn(void* arg);
+void threads_test_busy_fn(void* arg);
+void threads_test_infinite_sleep_fn(void* arg);
+void threads_test_infinite_wait_fn(void* arg);
+void threads_test_port_fn(void* arg);
+void threads_test_channel_call_fn(void* arg);
 
 struct channel_call_suspend_test_arg {
     mx_handle_t channel;
