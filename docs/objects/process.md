@@ -22,7 +22,7 @@ In general, it is associated with code which it is executing until it is
 forcefully terminated or the program exits.
 
 Processes are owned by [jobs](job.md) and allow an application that is
-composed by more than one process to be threated as a single entity, from the
+composed by more than one process to be treated as a single entity, from the
 perspective of resource and permission limits, as well as lifetime control.
 
 ### Lifetime
