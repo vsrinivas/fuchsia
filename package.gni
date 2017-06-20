@@ -339,5 +339,7 @@ template("package") {
     assert(!defined(invoker.tests) || invoker.tests != [])
     assert(!defined(invoker.libraries) || invoker.libraries != [])
     assert(!defined(invoker.resources) || invoker.resources != [])
+    assert(!defined(invoker.archive) || invoker.archive != "")
+    assert(!defined(invoker.app) || invoker.app != "")
   }
 }
