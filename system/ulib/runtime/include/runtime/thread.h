@@ -76,8 +76,7 @@ bool mxr_thread_detached(mxr_thread_t* thread);
 // Exit from the thread.  Equivalent to mxr_thread_exit unless the
 // thread has been detached.  If it has been detached, then this does
 // mx_vmar_unmap(vmar, addr, len) first, but in a way that permits
-// unmapping the caller's own stack.  The state of the mxr_thread_t
-// structure is undefined after this function is entered.
+// unmapping the caller's own stack.
 _Noreturn void mxr_thread_exit_unmap_if_detached(
     mxr_thread_t* thread, mx_handle_t vmar, uintptr_t addr, size_t len);
 
@@ -94,8 +93,8 @@ mx_status_t mxr_thread_destroy(mxr_thread_t* thread);
 // WARNING:
 // This is intended for debuggers and so on. Holding this wrong could
 // break internal invariants of mxr_thread_t.  It is unsafe to call this
-// function from a different thread once this thread is started.  The
-// returned handle is not a duplicate, and must be duplicated if the caller
+// function from a different thread once this thread is started, if it might
+// exit.  The returned handle is not a duplicate, and must be duplicated if the caller
 // intends to hold it after mxr_thread_start() is called.
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
 

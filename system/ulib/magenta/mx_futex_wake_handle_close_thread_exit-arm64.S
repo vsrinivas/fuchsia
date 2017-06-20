@@ -17,14 +17,14 @@ syscall_entry_begin mx_futex_wake_handle_close_thread_exit
     // atomic_store_explicit(value_ptr, new_value, memory_order_release)
     stlr w2, [x0]
 
+    // Now the stack might be gone and we can never return!
+
     // Save the handle argument in a callee-saves register (x19).
     // Since this function cannot return, do not bother preserving the old contents.
     mov w19, w3
 
     magenta_syscall MX_SYS_futex_wake, mx_futex_wake, mx_futex_wake_handle_close_thread_exit
     cbnz x0, .Lfutex_wake_fail
-
-    // Now the stack might be gone and we can never return!
 
     mov w0, w19
     magenta_syscall MX_SYS_handle_close, mx_handle_close, mx_futex_wake_handle_close_thread_exit
@@ -34,9 +34,11 @@ syscall_entry_begin mx_futex_wake_handle_close_thread_exit
 
     // It should be impossible to get here.
 .Lthread_exit_returned:
+    brk #1000
 
     // We can't recover in these cases, since our stack may have been freed.
 .Lfutex_wake_fail:
+    brk #1000
 .Lhandle_close_fail:
     brk #1000
 

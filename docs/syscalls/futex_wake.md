@@ -17,7 +17,8 @@ mx_status_t mx_futex_wake(const mx_futex_t* value_ptr, uint32_t wake_count);
 Waking a futex causes `wake_count` threads waiting on the `value_ptr`
 futex to be woken up.
 
-Waking up zero threads is not an error condition.
+Waking up zero threads is not an error condition.  Passing in an unallocated
+address for `value_ptr` is not an error condition.
 
 ## RETURN VALUE
 
