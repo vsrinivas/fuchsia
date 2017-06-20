@@ -344,13 +344,31 @@ void UserThread::Kill() {
 }
 
 status_t UserThread::Suspend() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(&state_lock_);
+
+    LTRACEF("%p: state %s\n", this, StateToString(state_));
+
+    if (state_ != State::RUNNING && state_ != State::SUSPENDED)
+        return MX_ERR_BAD_STATE;
 
     return thread_suspend(&thread_);
 }
 
 status_t UserThread::Resume() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(&state_lock_);
+
+    LTRACEF("%p: state %s\n", this, StateToString(state_));
+
+    if (state_ != State::RUNNING && state_ != State::SUSPENDED)
+        return MX_ERR_BAD_STATE;
 
     return thread_resume(&thread_);
 }
