@@ -151,9 +151,9 @@ static inline void vring_init(struct vring* vr, unsigned int num, void* p,
     vr->free_list = 0xffff;
     vr->free_count = 0;
     vr->last_used = 0;
-    vr->desc = (vring_desc*)p;
-    vr->avail = (vring_avail*)((uintptr_t)p + num * sizeof(struct vring_desc));
-    vr->used = (vring_used*)(((uintptr_t)&vr->avail->ring[num] + sizeof(uint16_t) + align - 1) & ~(align - 1));
+    vr->desc = (struct vring_desc*)p;
+    vr->avail = (struct vring_avail*)((uintptr_t)p + num * sizeof(struct vring_desc));
+    vr->used = (struct vring_used*)(((uintptr_t)&vr->avail->ring[num] + sizeof(uint16_t) + align - 1) & ~(align - 1));
 }
 
 static inline size_t vring_size(size_t num, unsigned long align) {
