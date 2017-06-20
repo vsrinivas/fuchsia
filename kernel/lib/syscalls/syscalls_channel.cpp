@@ -302,7 +302,8 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
                 up->UndoRemoveHandleLocked(handles[ix]);
             }
             // 2. Return error directly.  Note that the write phase cannot fail
-            // with ERR_SUSPEND_PENDING.
+            // with MX_ERR_INTERRUPTED_RETRY.
+            DEBUG_ASSERT(result != MX_ERR_INTERRUPTED_RETRY);
             return result;
         }
     }
