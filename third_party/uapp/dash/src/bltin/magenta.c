@@ -479,9 +479,14 @@ static int send_dmctl(const char* command, size_t length) {
     }
 
     dmctl_cmd_t cmd;
+    if (length >= sizeof(cmd.name)) {
+        fprintf(stderr, "error: dmctl command longer than %zu bytes: '%.*s'\n",
+                sizeof(cmd.name), (int)length, command);
+        return -1;
+    }
     snprintf(cmd.name, sizeof(cmd.name), command);
-    mx_handle_t h;
 
+    mx_handle_t h;
     if (mx_socket_create(0, &cmd.h, &h) < 0) {
         return -1;
     }
