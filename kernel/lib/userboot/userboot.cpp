@@ -103,7 +103,7 @@ private:
     const VDso* vdso_;
 };
 
-}; // anonymous namespace
+} // anonymous namespace
 
 
 // Get a handle to a VM object, with full rights except perhaps for writing.

@@ -197,7 +197,7 @@ void blacklist_##category##_syscalls(VDsoDynSymWindow& dynsym_window, \
 #undef SYSCALL_IN_CATEGORY_END
 #undef SYSCALL_CATEGORY_END
 
-}; // anonymous namespace
+} // anonymous namespace
 
 const VDso* VDso::instance_ = NULL;
 

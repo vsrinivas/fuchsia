@@ -152,7 +152,7 @@ uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition
     case MX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
     case MX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
     default: return MX_POL_ACTION_DENY;
-    };
+    }
 }
 
 uint32_t PolicyManager::GetEffectiveAction(uint64_t policy) {
@@ -217,7 +217,7 @@ mx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_polic
         break;
     default:
         return MX_ERR_NOT_SUPPORTED;
-    };
+    }
 
     *partial = result.encoded;
     return MX_OK;

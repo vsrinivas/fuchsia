@@ -71,4 +71,4 @@ inline AutoCall<T> MakeAutoCall(T c) {
     return AutoCall<T>(move(c));
 }
 
-};  // namespace mxtl
+}  // namespace mxtl
