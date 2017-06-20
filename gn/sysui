@@ -108,6 +108,26 @@
     {
       "bootfs_path": "data/sysui/story_topcook.png",
       "file": "apps/sysui/agents/home_work_agent/assets/story_topcook.png"
+    },
+    {
+      "bootfs_path": "data/sysui/1-portugal-the-man.jpeg",
+      "file": "apps/sysui/agents/home_work_agent/assets/1-portugal-the-man.jpeg"
+    },
+    {
+      "bootfs_path": "data/sysui/9-hotel.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/9-hotel.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/9-nonch-harpin.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/9-nonch-harpin.png"
+    },
+    {
+      "bootfs_path": "data/sysui/danielle_cc0.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/danielle_cc0.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/ic_stat_3_googblue_2x_web_24dp.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/ic_stat_3_googblue_2x_web_24dp.png"
     }
   ]
 }
