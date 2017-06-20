@@ -357,9 +357,10 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
     return;
   }
 
-  // TODO(armansito): We are copying the data here. Need more efficient buffer management.
+  // TODO(armansito): Use slab-allocated buffer and stop copying.
   common::DynamicByteBuffer buffer(packet.size());
-  memcpy(buffer.mutable_data(), packet.buffer()->data(), packet.size());
+  packet.buffer()->Copy(&buffer, 0, packet.size());
+
   rx_task_runner_->PostTask(
       ftl::MakeCopyable([ buffer = std::move(buffer), callback = rx_callback_ ]() mutable {
         callback(std::move(buffer));

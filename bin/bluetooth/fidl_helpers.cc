@@ -51,8 +51,8 @@ bool PopulateServiceData(const ::bluetooth::common::BufferView& data, size_t uui
   }
 
   ::bluetooth::common::UUID uuid;
-  ::bluetooth::common::UUID::FromBytes(::bluetooth::common::BufferView(data.data(), uuid_size),
-                                       &uuid);
+  ::bluetooth::common::UUID::FromBytes(data.view(0, uuid_size), &uuid);
+
   std::vector<uint8_t> data_vector(data.cbegin() + uuid_size, data.cend() - uuid_size);
   ::fidl::Array<uint8_t> fidl_data;
   fidl_data.Swap(&data_vector);

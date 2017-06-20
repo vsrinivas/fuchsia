@@ -17,9 +17,9 @@ namespace testing {
 
 CommandTransaction::CommandTransaction(const common::ByteBuffer& expected,
                                        const std::vector<const common::ByteBuffer*>& replies)
-    : expected_(expected.size(), expected.CopyContents()) {
+    : expected_(expected) {
   for (const auto* buffer : replies) {
-    replies_.push(common::DynamicByteBuffer(buffer->size(), buffer->CopyContents()));
+    replies_.push(common::DynamicByteBuffer(*buffer));
   }
 }
 

@@ -11,32 +11,28 @@ namespace bluetooth {
 namespace gap {
 
 AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
-    : is_valid_(true), ptr_(data.data()), remaining_bytes_(data.size()) {
-  if (!remaining_bytes_) {
+    : is_valid_(true), remaining_(data) {
+  if (!remaining_.size()) {
     is_valid_ = false;
     return;
   }
 
-  FTL_DCHECK(ptr_);
-
   // Do a validity check.
-  const uint8_t* ptr = ptr_;
-  size_t remaining_bytes = remaining_bytes_;
-  while (remaining_bytes) {
-    size_t tlv_len = *ptr;
+  common::BufferView tmp(remaining_);
+  while (tmp.size()) {
+    size_t tlv_len = tmp[0];
 
     // A struct can have 0 as its length. In that case its valid to terminate.
     if (!tlv_len) break;
 
     // The full struct includes the length octet itself.
     size_t struct_size = tlv_len + 1;
-    if (struct_size > remaining_bytes) {
+    if (struct_size > tmp.size()) {
       is_valid_ = false;
       break;
     }
 
-    ptr += struct_size;
-    remaining_bytes -= struct_size;
+    tmp = tmp.view(struct_size);
   }
 }
 
@@ -46,23 +42,24 @@ bool AdvertisingDataReader::GetNextField(DataType* out_type, common::BufferView*
 
   if (!HasMoreData()) return false;
 
-  size_t tlv_len = *ptr_;
+  size_t tlv_len = remaining_[0];
   size_t cur_struct_size = tlv_len + 1;
-  FTL_DCHECK(cur_struct_size <= remaining_bytes_);
+  FTL_DCHECK(cur_struct_size <= remaining_.size());
 
-  *out_type = static_cast<DataType>(*(ptr_ + 1));
-  *out_data = common::BufferView(ptr_ + 2, tlv_len - 1);
+  *out_type = static_cast<DataType>(remaining_[1]);
+  *out_data = remaining_.view(2, tlv_len - 1);
 
-  ptr_ += cur_struct_size;
-  remaining_bytes_ -= cur_struct_size;
-
+  // Update |remaining_|.
+  remaining_ = remaining_.view(cur_struct_size);
   return true;
 }
 
 bool AdvertisingDataReader::HasMoreData() const {
-  // If a segment ever begins with 0, then we terminate.
-  if (!is_valid_ || !(*ptr_)) return false;
-  return remaining_bytes_;
+  if (!is_valid_ || !remaining_.size()) return false;
+
+  // If the buffer is valid and has remaining bytes but the length of the next segment is zero, then
+  // we terminate.
+  return !!remaining_[0];
 }
 
 AdvertisingDataWriter::AdvertisingDataWriter(common::MutableByteBuffer* buffer)
@@ -76,8 +73,15 @@ bool AdvertisingDataWriter::WriteField(DataType type, const common::ByteBuffer& 
 
   (*buffer_)[bytes_written_++] = static_cast<uint8_t>(next_size) - 1;
   (*buffer_)[bytes_written_++] = static_cast<uint8_t>(type);
-  std::memcpy(buffer_->mutable_data() + bytes_written_, data.data(), data.size());
-  bytes_written_ += data.size();
+
+  // Get a view into the offset we want to write to.
+  auto target = buffer_->mutable_view(bytes_written_);
+
+  // Copy the data into the view.
+  size_t written = data.Copy(&target);
+  FTL_DCHECK(written == data.size());
+
+  bytes_written_ += written;
 
   return true;
 }

@@ -7,12 +7,20 @@
 namespace bluetooth {
 namespace common {
 
-std::unique_ptr<uint8_t[]> ByteBuffer::CopyContents() const {
-  if (!size()) return nullptr;
+size_t ByteBuffer::Copy(MutableByteBuffer* out_buffer, size_t pos, size_t size) const {
+  FTL_DCHECK(out_buffer);
+  FTL_DCHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
 
-  auto buffer = std::make_unique<uint8_t[]>(size());
-  memcpy(buffer.get(), data(), size());
-  return buffer;
+  size_t write_size = std::min(size, this->size() - pos);
+  FTL_DCHECK(write_size <= out_buffer->size()) << "|out_buffer| is not large enough for copy!";
+
+  std::memcpy(out_buffer->mutable_data(), data() + pos, write_size);
+  return write_size;
+}
+
+const BufferView ByteBuffer::view(size_t pos, size_t size) const {
+  FTL_DCHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  return BufferView(data() + pos, std::min(size, this->size() - pos));
 }
 
 ftl::StringView ByteBuffer::AsString() const {
@@ -21,6 +29,20 @@ ftl::StringView ByteBuffer::AsString() const {
 
 std::string ByteBuffer::ToString() const {
   return AsString().ToString();
+}
+
+void MutableByteBuffer::Write(const uint8_t* data, size_t size, size_t pos) {
+  FTL_DCHECK(data);
+  FTL_DCHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  FTL_DCHECK(size <= this->size() - pos)
+      << "Buffer not large enough! (required: " << size << ", available: " << this->size() - pos;
+
+  std::memcpy(mutable_data() + pos, data, size);
+}
+
+MutableBufferView MutableByteBuffer::mutable_view(size_t pos, size_t size) {
+  FTL_DCHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
+  return MutableBufferView(mutable_data() + pos, std::min(size, this->size() - pos));
 }
 
 DynamicByteBuffer::DynamicByteBuffer() : buffer_size_(0u) {}
@@ -35,9 +57,11 @@ DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size) : buffer_size_(buffer_s
 }
 
 DynamicByteBuffer::DynamicByteBuffer(const ByteBuffer& buffer)
-    : buffer_size_(buffer.size()), buffer_(buffer.CopyContents()) {
+    : buffer_size_(buffer.size()),
+      buffer_(buffer.size() ? std::make_unique<uint8_t[]>(buffer.size()) : nullptr) {
   FTL_DCHECK(!buffer_size_ || buffer_.get())
       << "|buffer| cannot be nullptr when |buffer_size| is non-zero";
+  buffer.Copy(this);
 }
 
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size, std::unique_ptr<uint8_t[]> buffer)
@@ -83,9 +107,8 @@ ByteBuffer::const_iterator DynamicByteBuffer::cend() const {
   return buffer_.get() + buffer_size_;
 }
 
-BufferView::BufferView(const ByteBuffer& buffer) {
-  size_ = buffer.size();
-  bytes_ = buffer.data();
+BufferView::BufferView(const ByteBuffer& buffer, size_t size) {
+  *this = buffer.view(0u, size);
 }
 
 BufferView::BufferView(const ftl::StringView& string) {

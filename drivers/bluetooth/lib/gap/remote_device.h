@@ -38,7 +38,7 @@ class RemoteDevice final {
 
   // Returns the advertising data for this device.
   const common::BufferView advertising_data() const {
-    return common::BufferView(advertising_data_buffer_.GetData(), advertising_data_length_);
+    return advertising_data_buffer_.view(0, advertising_data_length_);
   }
 
   // Returns the most recently observed RSSI for this remote device. Returns hci::kRSSIInvalid if

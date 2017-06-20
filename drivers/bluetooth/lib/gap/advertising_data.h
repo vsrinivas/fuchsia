@@ -6,6 +6,7 @@
 
 #include <cstddef>
 
+#include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/gap/gap.h"
 
 // This file contains convenience classes for reading and writing the contents
@@ -18,14 +19,6 @@
 // Supplement v7 for more information.
 
 namespace bluetooth {
-namespace common {
-
-class BufferView;
-class ByteBuffer;
-class MutableByteBuffer;
-
-}  // namespace common
-
 namespace gap {
 
 // Used for parsing data in TLV-format as described at the beginning of the file above.
@@ -52,8 +45,7 @@ class AdvertisingDataReader {
 
  private:
   bool is_valid_;
-  const uint8_t* ptr_;
-  size_t remaining_bytes_;
+  common::BufferView remaining_;
 };
 
 // Used for writing data in TLV-format as described at the beginning of the file above.

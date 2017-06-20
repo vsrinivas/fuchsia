@@ -16,21 +16,46 @@
 namespace bluetooth {
 namespace common {
 
+class BufferView;
+class MutableBufferView;
+class MutableByteBuffer;
+
 // Interface for buffer implementations with various allocation schemes.
 class ByteBuffer {
  public:
   using const_iterator = const uint8_t*;
   using iterator = const_iterator;
 
-  // Returns a pointer to the beginning of this buffer. May return nullptr if
+  // Returns a pointer to the beginning of this buffer. The return value is undefined if
   // the buffer has size 0.
   virtual const uint8_t* data() const = 0;
 
   // Returns the number of bytes contained in this packet.
   virtual size_t size() const = 0;
 
-  // Copy the contents of the underlying buffer and return them in a new buffer.
-  virtual std::unique_ptr<uint8_t[]> CopyContents() const;
+  // Returns a BufferView that points to the region of this buffer starting at |pos|
+  // of |size| bytes. If |size| is larger than the size of this BufferView then the returned region
+  // will contain all bytes in this buffer starting at |pos|.
+  //
+  // For example:
+  //
+  //  // Get a view of all of |my_buffer|.
+  //  const BufferView view = my_buffer.view();
+  //
+  //  // Get a view of the first 5 bytes in |my_buffer| (assuming |my_buffer| is large enough).
+  //  view = my_buffer.view(0, 5);
+  //
+  //  // Get a view of |my_buffer| starting at the second byte.
+  //  view = my_buffer.view(2);
+  //
+  const BufferView view(size_t pos = 0,
+                        size_t size = std::numeric_limits<std::size_t>::max()) const;
+
+  // Copies |size| bytes of this buffer into |out_buffer| starting at offset |pos| and returns the
+  // number of bytes that were copied. |out_buffer| must be large enough to accomodate the result of
+  // this operation.
+  size_t Copy(MutableByteBuffer* out_buffer, size_t pos = 0,
+              size_t size = std::numeric_limits<std::size_t>::max()) const;
 
   // Iterator functions.
   iterator begin() const { return cbegin(); }
@@ -40,7 +65,7 @@ class ByteBuffer {
 
   // Read-only random access operator.
   inline const uint8_t& operator[](size_t pos) const {
-    FTL_DCHECK(pos < size());
+    FTL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
     return data()[pos];
   }
 
@@ -55,15 +80,27 @@ class ByteBuffer {
 // allows durect mutable access to the underlying buffer.
 class MutableByteBuffer : public ByteBuffer {
  public:
-  // Returns a pointer to the beginning of this buffer. May return nullptr if
+  // Returns a pointer to the beginning of this buffer. The return value is undefined if
   // the buffer has size 0.
   virtual uint8_t* mutable_data() = 0;
 
   // Random access operator that allows mutations.
   inline uint8_t& operator[](size_t pos) {
-    FTL_DCHECK(pos < size());
+    FTL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
     return mutable_data()[pos];
   }
+
+  // Writes the contents of |data| into this buffer starting at |pos|.
+  inline void Write(const ByteBuffer& data, size_t pos = 0) {
+    Write(data.data(), data.size(), pos);
+  }
+
+  // Writes |size| octets of data starting from |data| into this buffer starting at |pos|.
+  void Write(const uint8_t* data, size_t size, size_t pos = 0);
+
+  // Behaves exactly like ByteBuffer::View but returns the result in a MutableBufferView instead.
+  MutableBufferView mutable_view(size_t pos = 0,
+                                 size_t size = std::numeric_limits<std::size_t>::max());
 
   // Sets the contents of the buffer to 0s.
   virtual void SetToZeros() = 0;
@@ -162,7 +199,8 @@ class BufferView : public ByteBuffer {
  public:
   BufferView(const uint8_t* bytes, size_t size);
 
-  explicit BufferView(const ByteBuffer& buffer);
+  explicit BufferView(const ByteBuffer& buffer,
+                      size_t size = std::numeric_limits<std::size_t>::max());
   explicit BufferView(const ftl::StringView& string);
 
   // The default constructor initializes this to an empty buffer.

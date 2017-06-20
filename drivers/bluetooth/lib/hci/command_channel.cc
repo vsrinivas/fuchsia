@@ -321,7 +321,7 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   // the callback on |event| directly since the backing buffer is owned by this
   // CommandChannel and its contents will be modified.
   common::DynamicByteBuffer buffer(event.size());
-  memcpy(buffer.mutable_data(), event.buffer()->data(), event.size());
+  event.buffer()->Copy(&buffer, 0, event.size());
 
   pending_command->task_runner->PostTask(ftl::MakeCopyable([
     buffer = std::move(buffer), complete_callback = pending_command->complete_callback,
@@ -435,7 +435,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
     handler.event_callback(event);
   } else {
     common::DynamicByteBuffer buffer(event.size());
-    memcpy(buffer.mutable_data(), event.buffer()->data(), event.size());
+    event.buffer()->Copy(&buffer, 0, event.size());
 
     handler.task_runner->PostTask(ftl::MakeCopyable(
         [ buffer = std::move(buffer), event_callback = handler.event_callback ]() mutable {
