@@ -297,11 +297,6 @@ class Resumable : public internal::base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
-    // TODO(smklein): Deprecate; remove 'name_'
-    mx_status_t DdkAdd() {
-        return DdkAdd(name_);
-    }
-
     mx_status_t DdkAdd(const char* name) {
         device_add_args_t args = {};
         args.version = DEVICE_ADD_ARGS_VERSION;
@@ -332,26 +327,10 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         device_state_clr_set(mxdev_, clearflag, setflag);
     }
 
-    __attribute__((deprecated("use ClearAndSetState instead -- be careful of argument order")))
-    void SetAndClearState(mx_signals_t setflag, mx_signals_t clearflag) {
-        device_state_clr_set(mxdev_, clearflag, setflag);
-    }
-
   protected:
     Device(mx_device_t* parent)
       : internal::base_device(parent),
         Mixins<D>(&ddk_device_proto_)... {
-        internal::CheckMixins<Mixins<D>...>();
-        internal::CheckReleasable<D>();
-
-        ddk_device_proto_.release = DdkReleaseThunk;
-    }
-
-    // TODO(smklein): Deprecate; remove 'name_'
-    Device(mx_device_t* parent, const char* name)
-      : internal::base_device(parent),
-        Mixins<D>(&ddk_device_proto_)...,
-        name_(name) {
         internal::CheckMixins<Mixins<D>...>();
         internal::CheckReleasable<D>();
 
@@ -380,8 +359,6 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     template <typename T = D>
     void AddProtocol(device_add_args_t* args,
                      typename mxtl::enable_if<!is_protocol<T>::value, T>::type* dummy = 0) {}
-
-    const char* name_;
 };
 
 // Convenience type for implementations that would like to override all
