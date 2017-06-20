@@ -9,6 +9,7 @@ config("svcfs_config") {
 static_library("svcfs") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
+    "include/svcfs/svcfs.h",
     "svcfs.cpp",
   ]
 
