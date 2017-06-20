@@ -172,6 +172,10 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     mx_status_t status = mx_vmo_create(stack_size, 0, &stack_vmo);
     if (status != MX_OK)
         return status;
+    // Try to set the name, but ignore any errors since it's purely for
+    // debugging and diagnostics.
+    static const char vmo_name[] = "mini-process:stack";
+    mx_object_set_property(stack_vmo, MX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
     // We assume that the code to execute is less than 600 bytes. As of gcc 6
     // the code is 488 bytes with frame pointers in x86 and a bit larger for ARM
