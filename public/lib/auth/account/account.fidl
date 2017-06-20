@@ -18,20 +18,10 @@ struct Account {
   // device.
   IdentityProvider identity_provider;
 
-  // The name that is displayed on the device shell while logging in. Display
-  // name is fetched from user profile attributes as configured by the user at
-  // the given identity provider.
+  // The name that is displayed on the device shell while logging in. Current
+  // implementation populates it from a device shell provided string, in the
+  // future we should be able to derive this from the identity provider.
   string display_name;
-
-  // User's profile url that is used by the device shell while logging in.
-  // Profile url is fetched from user profile attributes as configured by the
-  // user at the given identity provider.
-  string url;
-
-  // User's profile image url that is used by the device shell while logging in.
-  // Profile image url is fetched from user profile attributes as configured by
-  // the user at the given identity provider.
-  string image_url;
 };
 
 // The currently supported identity providers. An identity provider provides
