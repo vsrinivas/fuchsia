@@ -82,10 +82,6 @@ class TestRunnerConnection : public TestRunObserver {
   // trigger reading more commands from TCP socket.
   void Teardown(const std::string& test_id, bool success) override {
     FTL_CHECK(test_context_);
-
-    // IMPORTANT: leave this log here, exactly as it is. Currently, tests
-    // launched from host (e.g. Linux) grep for this text to figure out the
-    // amount of the log to associate with the test.
     FTL_LOG(INFO) << "test_runner: teardown " << test_id
                   << " success=" << success;
 
