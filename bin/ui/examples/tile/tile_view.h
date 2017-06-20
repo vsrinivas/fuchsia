@@ -11,6 +11,7 @@
 #include "application/lib/app/application_context.h"
 #include "application/services/application_launcher.fidl.h"
 #include "apps/mozart/examples/tile/tile_params.h"
+#include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
@@ -34,42 +35,45 @@ class TileView : public mozart::BaseView,
   struct ViewData {
     explicit ViewData(const std::string& url,
                       uint32_t key,
-                      app::ApplicationControllerPtr controller);
+                      app::ApplicationControllerPtr controller,
+                      mozart::client::Session* session);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
     app::ApplicationControllerPtr controller;
+    mozart::client::EntityNode host_node;
 
-    mozart::RectF layout_bounds;
     mozart::ViewPropertiesPtr view_properties;
     mozart::ViewInfoPtr view_info;
-    uint32_t scene_version = 1u;
   };
 
   // |BaseView|:
-  void OnLayout() override;
-  void OnDraw() override;
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
 
-  void ConnectViews();
-  void UpdateScene();
-
   // |Presenter|:
-  void Present(::fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override;
-
-  void PresentHelper(::fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
-                     const std::string& url,
-                     app::ApplicationControllerPtr);
+  void Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override;
 
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
       fidl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 
+  // Set up environment with a |Presenter| service.
+  // We launch apps with this environment.
   void CreateNestedEnvironment();
+
+  // Launches initial list of views, passed as command line parameters.
+  void ConnectViews();
+
+  void AddChildView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
+                    const std::string& url,
+                    app::ApplicationControllerPtr);
+  void RemoveChildView(uint32_t child_key);
+  void UpdateScene();
 
   // Nested environment within which the apps started by TileView will run.
   app::ApplicationEnvironmentPtr env_;
@@ -81,11 +85,14 @@ class TileView : public mozart::BaseView,
   // Context inherited when TileView is launched.
   app::ApplicationContext* application_context_;
 
+  // Parsed command-line parameters for this program.
   TileParams params_;
 
-  // The key assigned to the last |View| we added. Incremented every time we
-  // present a new |View|.
-  uint32_t child_key_ = 0;
+  // The container for all views.
+  mozart::client::EntityNode container_node_;
+
+  // The key we will assigned to the next child view which is added.
+  uint32_t next_child_view_key_ = 1u;
 
   // Map from keys to |ViewData|
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;

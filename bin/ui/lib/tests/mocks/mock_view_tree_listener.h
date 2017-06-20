@@ -14,18 +14,12 @@
 namespace mozart {
 namespace test {
 
-using OnMockRendererDiedCallback = std::function<void(void)>;
-
 class MockViewTreeListener : public mozart::ViewTreeListener {
  public:
   MockViewTreeListener();
-  MockViewTreeListener(const OnMockRendererDiedCallback& callback);
   ~MockViewTreeListener();
 
  private:
-  void OnRendererDied(const OnRendererDiedCallback& callback) override;
-
-  OnMockRendererDiedCallback callback_;
   FTL_DISALLOW_COPY_AND_ASSIGN(MockViewTreeListener);
 };
 

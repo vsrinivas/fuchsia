@@ -24,8 +24,6 @@ std::ostream& operator<<(std::ostream& os, const ViewProperties& value);
 std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value);
 std::ostream& operator<<(std::ostream& os, const ViewLayout& value);
 
-std::ostream& operator<<(std::ostream& os, const ViewInvalidation& value);
-
 }  // namespace mozart
 
 #endif  // APPS_MOZART_SERVICES_VIEWS_CPP_FORMATTING_H_

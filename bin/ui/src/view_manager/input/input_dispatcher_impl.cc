@@ -45,9 +45,6 @@ InputDispatcherImpl::InputDispatcherImpl(
     : inspector_(inspector),
       owner_(owner),
       view_tree_token_(std::move(view_tree_token)),
-      hit_tester_(
-          new ViewTreeHitTesterClient(inspector_, view_tree_token_.Clone())),
-      view_hit_resolver_(new ViewHitResolver(owner_)),
       binding_(this, std::move(request)),
       weak_factory_(this) {
   FTL_DCHECK(inspector_);
@@ -76,19 +73,21 @@ void InputDispatcherImpl::ProcessNextEvent() {
     FTL_VLOG(1) << "ProcessNextEvent: " << *event;
 
     if (event->is_pointer()) {
+      // TODO(MZ-164): We may also need to perform hit tests on ADD and
+      // keep track of which views have seen the ADD or REMOVE so that
+      // they can be balanced correctly.
       const mozart::PointerEventPtr& pointer = event->get_pointer();
       if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
-        auto point = mozart::PointF::New();
-        point->x = pointer->x;
-        point->y = pointer->y;
+        mozart::PointF point;
+        point.x = pointer->x;
+        point.y = pointer->y;
         FTL_VLOG(1) << "HitTest: point=" << point;
-        auto hit_result_callback = ftl::MakeCopyable([
-          pt = point.Clone(), weak = weak_factory_.GetWeakPtr()
-        ](std::unique_ptr<ResolvedHits> resolved_hits) mutable {
+        inspector_->HitTest(*view_tree_token_, point, [
+          weak = weak_factory_.GetWeakPtr(), point
+        ](std::vector<ViewHit> view_hits) mutable {
           if (weak)
-            weak->OnHitTestResult(std::move(pt), std::move(resolved_hits));
+            weak->OnHitTestResult(point, std::move(view_hits));
         });
-        hit_tester_->HitTest(std::move(point), hit_result_callback);
         return;
       }
     } else if (event->is_keyboard()) {
@@ -113,49 +112,32 @@ void InputDispatcherImpl::ProcessNextEvent() {
 }
 
 void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
-                                       const EventPath* event_path,
+                                       size_t index,
                                        mozart::InputEventPtr event) {
-  FTL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " " << *event;
-  // TODO(jpoichet) when the chain is changed, we might need to cancel events
+  // TODO(MZ-164) when the chain is changed, we might need to cancel events
   // that have not progagated fully through the chain.
-  if (event_path && event_path_propagation_id_ == event_path_propagation_id) {
-    FTL_DCHECK(event_path->token);
-    FTL_DCHECK(event_path->transform);
-    mozart::InputEventPtr cloned_event = event.Clone();
-    // TODO(jpoichet) once input arena is in place, we won't need the "handled"
-    // boolean on the callback anymore.
-    owner_->DeliverEvent(
-        event_path->token.get(), std::move(event), ftl::MakeCopyable([
-          this, event_path_propagation_id, event_path,
-          cloned_event = std::move(cloned_event)
-        ](bool handled) mutable {
-          if (!handled &&
-              event_path_propagation_id_ == event_path_propagation_id &&
-              event_path && event_path->next) {
-            // Avoid re-entrance on DeliverEvent
-            mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-                ftl::MakeCopyable([
-                  weak = weak_factory_.GetWeakPtr(), event_path_propagation_id,
-                  event_path = std::move(event_path),
-                  cloned_event = std::move(cloned_event)
-                ]() mutable {
-                  if (weak)
-                    weak->DeliverEvent(event_path_propagation_id,
-                                       event_path->next.get(),
-                                       std::move(cloned_event));
+  if (index >= event_path_.size() ||
+      event_path_propagation_id_ != event_path_propagation_id)
+    return;
 
-                }));
-          }
-        }));
-  }
+  // TODO(MZ-33) once input arena is in place, we won't need the "handled"
+  // boolean on the callback anymore.
+  mozart::InputEventPtr view_event = event.Clone();
+  TransformEvent(*event_path_[index].inverse_transform, view_event.get());
+  FTL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " to "
+              << event_path_[index].view_token << ": " << *view_event;
+  owner_->DeliverEvent(
+      &event_path_[index].view_token, std::move(view_event), ftl::MakeCopyable([
+        this, event_path_propagation_id, index, event = std::move(event)
+      ](bool handled) mutable {
+        if (!handled) {
+          DeliverEvent(event_path_propagation_id, index + 1, std::move(event));
+        }
+      }));
 }
 
 void InputDispatcherImpl::DeliverEvent(mozart::InputEventPtr event) {
-  if (event_path_) {
-    TransformEvent(*(event_path_->transform), event.get());
-    DeliverEvent(event_path_propagation_id_, event_path_.get(),
-                 std::move(event));
-  }
+  DeliverEvent(event_path_propagation_id_, 0u, std::move(event));
 }
 
 void InputDispatcherImpl::DeliverKeyEvent(
@@ -165,7 +147,7 @@ void InputDispatcherImpl::DeliverKeyEvent(
   FTL_DCHECK(propagation_index < focus_chain->chain.size());
   FTL_VLOG(1) << "DeliverKeyEvent " << focus_chain->version << " "
               << (1 + propagation_index) << "/" << focus_chain->chain.size()
-              << " " << *(focus_chain->chain[propagation_index]) << " "
+              << " " << *(focus_chain->chain[propagation_index]) << ": "
               << *event;
 
   auto cloned_event = event.Clone();
@@ -226,71 +208,58 @@ void InputDispatcherImpl::OnFocusResult(
   PopAndScheduleNextEvent();
 }
 
-void InputDispatcherImpl::OnHitTestResult(
-    mozart::PointFPtr point,
-    std::unique_ptr<ResolvedHits> resolved_hits) {
+void InputDispatcherImpl::OnHitTestResult(const mozart::PointF& point,
+                                          std::vector<ViewHit> view_hits) {
   FTL_DCHECK(!pending_events_.empty());
-  FTL_VLOG(1) << "OnHitTestResult: resolved_hits=" << resolved_hits.get();
 
-  if (resolved_hits && resolved_hits->result()->root) {
-    mozart::HitTestResultPtr result = resolved_hits->TakeResult();
-    const mozart::SceneHit* root_scene = result->root.get();
-    view_hit_resolver_->Resolve(
-        root_scene, std::move(point), std::move(resolved_hits),
-        [this](std::vector<std::unique_ptr<EventPath>> views) {
-          if (views.empty()) {
-            return;
+  if (view_hits.empty()) {
+    PopAndScheduleNextEvent();
+    return;
+  }
+
+  // FIXME(jpoichet) This should be done somewhere else.
+  inspector_->ActivateFocusChain(
+      view_hits.front().view_token.Clone(),
+      [this](std::unique_ptr<FocusChain> new_chain) {
+        if (!active_focus_chain_ || active_focus_chain_->chain.front()->value !=
+                                        new_chain->chain.front()->value) {
+          if (active_focus_chain_) {
+            FTL_VLOG(1) << "Input focus lost by "
+                        << *(active_focus_chain_->chain.front().get());
+            mozart::InputEventPtr event = mozart::InputEvent::New();
+            mozart::FocusEventPtr focus = mozart::FocusEvent::New();
+            focus->event_time = InputEventTimestampNow();
+            focus->focused = false;
+            event->set_focus(std::move(focus));
+            owner_->DeliverEvent(active_focus_chain_->chain.front().get(),
+                                 std::move(event), nullptr);
           }
 
-          // FIXME(jpoichet) This should be done somewhere else.
-          inspector_->ActivateFocusChain(
-              views.back()->token->Clone(),
-              [this](std::unique_ptr<FocusChain> new_chain) {
-                if (!active_focus_chain_ ||
-                    active_focus_chain_->chain.front()->value !=
-                        new_chain->chain.front()->value) {
-                  if (active_focus_chain_) {
-                    FTL_VLOG(1) << "Input focus lost by "
-                                << *(active_focus_chain_->chain.front().get());
-                    mozart::InputEventPtr event = mozart::InputEvent::New();
-                    mozart::FocusEventPtr focus = mozart::FocusEvent::New();
-                    focus->event_time = InputEventTimestampNow();
-                    focus->focused = false;
-                    event->set_focus(std::move(focus));
-                    owner_->DeliverEvent(
-                        active_focus_chain_->chain.front().get(),
-                        std::move(event), nullptr);
-                  }
+          FTL_VLOG(1) << "Input focus gained by "
+                      << *(new_chain->chain.front().get());
+          mozart::InputEventPtr event = mozart::InputEvent::New();
+          mozart::FocusEventPtr focus = mozart::FocusEvent::New();
+          focus->event_time = InputEventTimestampNow();
+          focus->focused = true;
+          event->set_focus(std::move(focus));
+          owner_->DeliverEvent(new_chain->chain.front().get(), std::move(event),
+                               nullptr);
 
-                  FTL_VLOG(1) << "Input focus gained by "
-                              << *(new_chain->chain.front().get());
-                  mozart::InputEventPtr event = mozart::InputEvent::New();
-                  mozart::FocusEventPtr focus = mozart::FocusEvent::New();
-                  focus->event_time = InputEventTimestampNow();
-                  focus->focused = true;
-                  event->set_focus(std::move(focus));
-                  owner_->DeliverEvent(new_chain->chain.front().get(),
-                                       std::move(event), nullptr);
+          active_focus_chain_ = std::move(new_chain);
+        }
+      });
 
-                  active_focus_chain_ = std::move(new_chain);
-                }
-              });
+  // TODO(jpoichet) Implement Input Arena
+  event_path_propagation_id_++;
+  event_path_ = std::move(view_hits);
 
-          // TODO(jpoichet) Implement Input Arena
-          event_path_propagation_id_++;
-          event_path_ = std::move(views.back());
+  FTL_VLOG(1) << "OnViewHitResolved: view_token_="
+              << event_path_.front().view_token
+              << ", view_transform_=" << event_path_.front().inverse_transform
+              << ", event_path_propagation_id_=" << event_path_propagation_id_;
 
-          FTL_VLOG(1) << "OnViewHitResolved: view_token_=" << event_path_->token
-                      << ", view_transform_=" << event_path_->transform
-                      << ", event_path_propagation_id_="
-                      << event_path_propagation_id_;
-
-          DeliverEvent(std::move(pending_events_.front()));
-          PopAndScheduleNextEvent();
-        });
-  } else {
-    PopAndScheduleNextEvent();
-  }
+  DeliverEvent(std::move(pending_events_.front()));
+  PopAndScheduleNextEvent();
 }
 
 }  // namespace view_manager

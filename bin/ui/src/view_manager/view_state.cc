@@ -15,9 +15,11 @@ ViewState::ViewState(ViewRegistry* registry,
                      mozart::ViewTokenPtr view_token,
                      fidl::InterfaceRequest<mozart::View> view_request,
                      mozart::ViewListenerPtr view_listener,
+                     mozart::client::Session* session,
                      const std::string& label)
     : view_token_(std::move(view_token)),
       view_listener_(std::move(view_listener)),
+      top_node_(session),
       label_(label),
       impl_(new ViewImpl(registry, this)),
       view_binding_(impl_.get(), std::move(view_request)),
@@ -40,8 +42,6 @@ ViewState::ViewState(ViewRegistry* registry,
 ViewState::~ViewState() {}
 
 void ViewState::IssueProperties(mozart::ViewPropertiesPtr properties) {
-  issued_scene_version_++;
-  FTL_CHECK(issued_scene_version_);
   issued_properties_ = std::move(properties);
 }
 

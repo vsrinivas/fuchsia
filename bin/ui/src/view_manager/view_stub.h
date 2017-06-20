@@ -5,8 +5,12 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_STUB_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_STUB_H_
 
+#include <memory>
 #include <vector>
 
+#include <mx/eventpair.h>
+
+#include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -42,8 +46,11 @@ class ViewStub {
   // Begins the process of resolving a view.
   // Invokes |ViewRegistry.OnViewResolved| when the token is obtained
   // from the owner or passes nullptr if an error occurs.
+  // |host_import_token| is the import token associated with the node
+  // that the parent view exported to host the view's graphical contents.
   ViewStub(ViewRegistry* registry,
-           fidl::InterfaceHandle<mozart::ViewOwner> owner);
+           fidl::InterfaceHandle<mozart::ViewOwner> owner,
+           mx::eventpair host_import_token);
   ~ViewStub();
 
   ftl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -77,35 +84,19 @@ class ViewStub {
   // Gets the key that this child has in its container, or 0 if none.
   uint32_t key() const { return key_; }
 
-  // Gets the wrapped scene exposed to the container.
-  const mozart::ScenePtr& stub_scene() const { return stub_scene_; }
-  const mozart::SceneTokenPtr& stub_scene_token() const {
-    return stub_scene_token_;
-  }
-
-  // Gets the scene version which the container set on this view, or 0
-  // if none set or the view has become unavailable.
-  uint32_t scene_version() const { return scene_version_; }
-
   // Gets the properties which the container set on this view, or null
   // if none set or the view has become unavailable.
   const mozart::ViewPropertiesPtr& properties() const { return properties_; }
 
-  // Sets the scene version and properties set by the container.
+  // Sets the properties set by the container.
   // May be called when the view is pending or attached but not after it
   // has become unavailable.
-  void SetProperties(uint32_t scene_version,
-                     mozart::ViewPropertiesPtr properties);
+  void SetProperties(mozart::ViewPropertiesPtr properties);
 
   // Binds the stub to the specified actual view, which must not be null.
   // Must be called at most once to apply the effects of resolving the
   // view owner.
-  void AttachView(ViewState* state, mozart::ScenePtr stub_scene);
-
-  // Sets the stub scene token, which must not be null.
-  // Called after |AttachView| once the scene token is known but the view
-  // must not have been released.
-  void SetStubSceneToken(mozart::SceneTokenPtr stub_scene_token);
+  void AttachView(ViewState* state);
 
   // Marks the stub as unavailable.
   // Returns the previous view state, or null if none.
@@ -126,6 +117,17 @@ class ViewStub {
       std::unique_ptr<ViewStub> view_stub,
       fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
+  // Releases the host import token and host node.
+  void ReleaseHost();
+
+  // Creates the host node from the host import token.
+  // This must be called by the view registry once it is time to bind the view's
+  // graphical content to its host.  The host import token is consumed as
+  // part of creating the host node.
+  void ImportHostNode(mozart::client::Session* session);
+
+  // Gets the imported host node, or null if none.
+  mozart::client::ImportNode* host_node() { return host_node_.get(); }
 
  private:
   void SetTreeRecursively(ViewTreeState* tree);
@@ -145,15 +147,15 @@ class ViewStub {
   mozart::ViewOwnerPtr owner_;
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
-  mozart::ScenePtr stub_scene_;
-  mozart::SceneTokenPtr stub_scene_token_;
+
+  mx::eventpair host_import_token_;
+  std::unique_ptr<mozart::client::ImportNode> host_node_;
 
   // Non-null when we are waiting to transfer the |ViewOwner|.
   // Saves the |ViewOwner| we want to transfer ownership to, and a reference to
   // ourselves to keep us alive until |OnViewResolved| is called.
   std::unique_ptr<PendingViewOwnerTransferState> pending_view_owner_transfer_;
 
-  uint32_t scene_version_ = mozart::kSceneVersionNone;
   mozart::ViewPropertiesPtr properties_;
 
   ViewTreeState* tree_ = nullptr;

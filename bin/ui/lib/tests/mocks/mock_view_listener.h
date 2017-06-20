@@ -14,20 +14,21 @@
 namespace mozart {
 namespace test {
 
-using OnMockInvalidationCallback =
-    std::function<void(mozart::ViewInvalidationPtr invalidation)>;
+using OnMockViewPropertiesCallback =
+    std::function<void(mozart::ViewPropertiesPtr v)>;
 
 class MockViewListener : public mozart::ViewListener {
  public:
   MockViewListener();
-  MockViewListener(const OnMockInvalidationCallback& callback);
+  MockViewListener(const OnMockViewPropertiesCallback& callback);
   ~MockViewListener() override;
 
-  void OnInvalidation(mozart::ViewInvalidationPtr invalidation,
-                      const OnInvalidationCallback& callback) override;
+  void OnPropertiesChanged(
+      mozart::ViewPropertiesPtr properties,
+      const OnPropertiesChangedCallback& callback) override;
 
  private:
-  OnMockInvalidationCallback callback_;
+  OnMockViewPropertiesCallback callback_;
   FTL_DISALLOW_COPY_AND_ASSIGN(MockViewListener);
 };
 

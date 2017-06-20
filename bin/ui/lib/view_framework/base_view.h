@@ -5,11 +5,13 @@
 #ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_BASE_VIEW_H_
 #define APPS_MOZART_LIB_VIEW_FRAMEWORK_BASE_VIEW_H_
 
+#include <memory>
 #include <string>
 
 #include "application/services/service_provider.fidl.h"
-#include "apps/mozart/services/composition/cpp/frame_tracker.h"
-#include "apps/mozart/services/composition/scenes.fidl.h"
+#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/services/input/input_connection.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -25,7 +27,9 @@ namespace mozart {
 //
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
-class BaseView : public ViewListener, public ViewContainerListener {
+class BaseView : private ViewListener,
+                 private ViewContainerListener,
+                 private mozart::InputListener {
  public:
   BaseView(ViewManagerPtr view_manager,
            fidl::InterfaceRequest<ViewOwner> view_owner_request,
@@ -45,26 +49,30 @@ class BaseView : public ViewListener, public ViewContainerListener {
   // Gets the underlying view container interface.
   ViewContainer* GetViewContainer();
 
-  // Gets the scene for the view.
-  // Returns nullptr if the |TakeScene| was called.
-  Scene* scene() { return scene_.get(); }
+  // Gets a wrapper for the view's session.
+  mozart::client::Session* session() { return &session_; }
 
-  // Takes the scene from the view.
-  // This is useful if the scene will be rendered by a separate component.
-  ScenePtr TakeScene() { return std::move(scene_); }
-
-  // Gets the currently requested scene version.
-  // This information is updated before processing each invalidation.
-  uint32_t scene_version() const { return scene_version_; }
+  // Gets the imported parent node to which the session's tree of nodes
+  // should be attached.
+  mozart::client::ImportNode& parent_node() { return parent_node_; }
 
   // Gets the current view properties.
-  // This information is updated before processing each invalidation.
-  // Returns nullptr if none.
+  // Returns nullptr if unknown.
   const ViewProperties* properties() const { return properties_.get(); }
 
-  // Gets the frame tracker which maintains timing information for this view.
-  // This information is updated before processing each invalidation.
-  const FrameTracker& frame_tracker() const { return frame_tracker_; }
+  // Returns true if the view has a non-empty size.
+  bool has_size() const { return size_.width > 0 && size_.height > 0; }
+
+  // Gets the size of the view.
+  const mozart::Size& size() const { return size_; }
+
+  // Gets the view's device pixel ratio.
+  float device_pixel_ratio() const {
+    return properties_ ? properties_->display_metrics->device_pixel_ratio : 1.f;
+  }
+
+  // Gets the input connection.
+  InputConnection* input_connection() { return input_connection_.get(); }
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -73,50 +81,32 @@ class BaseView : public ViewListener, public ViewContainerListener {
   // associated with the view (including the object itself).
   void SetReleaseHandler(ftl::Closure callback);
 
-  // Creates scene metadata initialized using the scene version and
-  // current frame's presentation time.
-  SceneMetadataPtr CreateSceneMetadata() const;
+  // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
+  // during the next frame.
+  void InvalidateScene();
 
-  // Invalidates the view.
-  //
-  // See |View| interface for a full description.
-  void Invalidate();
-
-  // Called during invalidation when the view's properties have changed.
+  // Called when the view's properties have changed.
   //
   // The subclass should compare the old and new properties and make note of
   // whether these property changes will affect the layout or content of
-  // the view.
+  // the view then update accordingly.
   //
   // The default implementation does nothing.
-  //
-  // This method is only called when new view properties were supplied by
-  // the view's parent.
   virtual void OnPropertiesChanged(ViewPropertiesPtr old_properties);
 
-  // Called during invalidation to update its layout.
-  //
-  // The subclass should apply any necessary changes to its layout and to
-  // the properties of its children.  Once this method returns, the view
-  // container will be flushed to allow the children to proceed with their
-  // own invalidations using these new properties.
+  // Called when it's time for the view to update its scene contents due to
+  // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  //
-  // This method is called after |OnPropertiesChanged()|.
-  // This method is not called if the view has not received properties yet.
-  virtual void OnLayout();
+  virtual void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info);
 
-  // Called during invalidation to draw the contents of the view.
+  // Called to handle an input event.
+  // Returns true if the view will handle the event, false if the event
+  // should continue propagating to other views which may handle it themselves.
   //
-  // The subclass should update the contents of its scene and publish it
-  // together with scene metadata generated using |CreateSceneMetadata()|.
-  //
-  // The default implementation does nothing.
-  //
-  // This method is called after |OnLayout()|.
-  // This method is not called if the view has not received properties yet.
-  virtual void OnDraw();
+  // The default implementation returns false.
+  virtual bool OnInputEvent(mozart::InputEventPtr event);
 
   // Called when a child is attached.
   virtual void OnChildAttached(uint32_t child_key, ViewInfoPtr child_view_info);
@@ -126,8 +116,9 @@ class BaseView : public ViewListener, public ViewContainerListener {
 
  private:
   // |ViewListener|:
-  void OnInvalidation(ViewInvalidationPtr invalidation,
-                      const OnInvalidationCallback& callback) override;
+  void OnPropertiesChanged(
+      ViewPropertiesPtr properties,
+      const OnPropertiesChangedCallback& callback) override;
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
@@ -136,18 +127,28 @@ class BaseView : public ViewListener, public ViewContainerListener {
   void OnChildUnavailable(uint32_t child_key,
                           const OnChildUnavailableCallback& callback) override;
 
+  // |InputListener|:
+  void OnEvent(mozart::InputEventPtr event,
+               const OnEventCallback& callback) override;
+
+  void PresentScene();
+
   ViewManagerPtr view_manager_;
   fidl::Binding<ViewListener> view_listener_binding_;
   fidl::Binding<ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<InputListener> input_listener_binding_;
 
   ViewPtr view_;
   app::ServiceProviderPtr view_service_provider_;
   ViewContainerPtr view_container_;
-  ScenePtr scene_;
-  FrameTracker frame_tracker_;
-  uint32_t scene_version_ = kSceneVersionNone;
+  InputConnectionPtr input_connection_;
   ViewPropertiesPtr properties_;
-  bool invalidated_ = false;
+  Size size_;
+  mozart::client::Session session_;
+  mozart::client::ImportNode parent_node_;
+
+  bool invalidate_pending_ = false;
+  bool present_pending_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BaseView);
 };

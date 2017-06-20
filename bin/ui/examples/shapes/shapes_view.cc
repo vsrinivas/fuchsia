@@ -5,15 +5,15 @@
 #include "apps/mozart/examples/shapes/shapes_view.h"
 
 #include "lib/ftl/logging.h"
-#include "third_party/skia/include/core/SkCanvas.h"
-#include "third_party/skia/include/core/SkColor.h"
-#include "third_party/skia/include/core/SkSurface.h"
 
 namespace examples {
 
 namespace {
-constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr float kBackgroundElevation = 0.f;
+constexpr float kCardElevation = 2.f;
+constexpr float kCardCornerRadius = 8.f;
+constexpr float kCircleElevation = 8.f;
+constexpr float kCircleRadius = 40.f;
 }  // namespace
 
 ShapesView::ShapesView(
@@ -21,67 +21,55 @@ ShapesView::ShapesView(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
-               "Shapes") {}
+               "Shapes"),
+      background_node_(session()),
+      card_node_(session()),
+      circle_node_(session()) {
+  mozart::client::Material background_material(session());
+  background_material.SetColor(0x21, 0x21, 0x21, 0xff);  // Grey 900
+  background_node_.SetMaterial(background_material);
+  parent_node().AddChild(background_node_);
+
+  mozart::client::Material card_material(session());
+  card_material.SetColor(0x67, 0x3a, 0xb7, 0xff);  // Deep Purple 500
+  card_node_.SetMaterial(card_material);
+  parent_node().AddChild(card_node_);
+
+  mozart::client::Material circle_material(session());
+  circle_material.SetColor(0xf5, 0x00, 0x57, 0xff);  // Pink A400
+  circle_node_.SetMaterial(circle_material);
+  parent_node().AddChild(circle_node_);
+}
 
 ShapesView::~ShapesView() {}
 
-void ShapesView::OnDraw() {
-  FTL_DCHECK(properties());
+void ShapesView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
+  if (!has_size())
+    return;
 
-  auto update = mozart::SceneUpdate::New();
+  const float center_x = size().width * .5f;
+  const float center_y = size().height * .5f;
+  float card_corner_radius = kCardCornerRadius * device_pixel_ratio();
+  float circle_radius = kCircleRadius * device_pixel_ratio();
 
-  const mozart::Size& size = *properties()->view_layout->size;
-  if (size.width > 0 && size.height > 0) {
-    mozart::RectF bounds;
-    bounds.width = size.width;
-    bounds.height = size.height;
+  mozart::client::Rectangle background_shape(session(), size().width,
+                                             size().height);
+  background_node_.SetShape(background_shape);
+  background_node_.SetTranslation(
+      (float[]){center_x, center_y, kBackgroundElevation});
 
-    // Draw the content of the view to a texture and include it as an
-    // image resource in the scene.
-    mozart::ImagePtr image;
-    sk_sp<SkSurface> surface =
-        mozart::MakeSkSurface(size, &buffer_producer_, &image);
-    FTL_CHECK(surface);
-    DrawContent(size, surface->getCanvas());
-    auto content_resource = mozart::Resource::New();
-    content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = std::move(image);
-    update->resources.insert(kContentImageResourceId,
-                             std::move(content_resource));
+  mozart::client::RoundedRectangle card_shape(
+      session(), size().width * .9f, size().height * .9f, card_corner_radius,
+      card_corner_radius, card_corner_radius, card_corner_radius);
+  card_node_.SetShape(card_shape);
+  card_node_.SetTranslation((float[]){center_x, center_y, kCardElevation});
 
-    // Add a root node to the scene graph to draw the image resource to
-    // the screen such that it fills the entire view.
-    auto root_node = mozart::Node::New();
-    root_node->op = mozart::NodeOp::New();
-    root_node->op->set_image(mozart::ImageNodeOp::New());
-    root_node->op->get_image()->content_rect = bounds.Clone();
-    root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-    update->nodes.insert(kRootNodeId, std::move(root_node));
-  } else {
-    auto root_node = mozart::Node::New();
-    update->nodes.insert(kRootNodeId, std::move(root_node));
-  }
+  mozart::client::Circle circle_shape(session(), circle_radius);
+  circle_node_.SetShape(circle_shape);
+  circle_node_.SetTranslation(
+      (float[]){size().width * .85f, size().height * .85f, kCircleElevation});
 
-  // Submit the scene update.
-  scene()->Update(std::move(update));
-
-  // Publish the scene update, taking care to supply the expected scene version.
-  scene()->Publish(CreateSceneMetadata());
-  buffer_producer_.Tick();
-}
-
-void ShapesView::DrawContent(const mozart::Size& size, SkCanvas* canvas) {
-  canvas->clear(SK_ColorCYAN);
-
-  SkPaint paint;
-  paint.setColor(SK_ColorGREEN);
-  SkRect rect = SkRect::MakeWH(size.width, size.height);
-  rect.inset(10, 10);
-  canvas->drawRect(rect, paint);
-
-  paint.setColor(SK_ColorRED);
-  paint.setFlags(SkPaint::kAntiAlias_Flag);
-  canvas->drawCircle(50, 100, 100, paint);
+  session()->Present(0, [](mozart2::PresentationInfoPtr info) {});
 }
 
 }  // namespace examples

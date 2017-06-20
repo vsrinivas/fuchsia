@@ -47,26 +47,9 @@ void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event,
   event_listener_->OnEvent(std::move(event), callback);
 }
 
-void InputConnectionImpl::HitTest(
-    mozart::PointFPtr point,
-    const mozart::ViewHitTester::HitTestCallback& callback) {
-  if (!view_hit_listener_) {
-    FTL_VLOG(1) << "ViewHitTest: " << *view_token_
-                << " dropped because there was no listener";
-    callback(true, nullptr);
-    return;
-  }
-  view_hit_listener_->HitTest(std::move(point), callback);
-}
-
 void InputConnectionImpl::SetEventListener(
     fidl::InterfaceHandle<mozart::InputListener> listener) {
   event_listener_ = mozart::InputListenerPtr::Create(std::move(listener));
-}
-
-void InputConnectionImpl::SetViewHitTester(
-    fidl::InterfaceHandle<mozart::ViewHitTester> listener) {
-  view_hit_listener_ = mozart::ViewHitTesterPtr::Create(std::move(listener));
 }
 
 void InputConnectionImpl::GetInputMethodEditor(

@@ -32,12 +32,15 @@ class PendingViewOwnerTransferState {
 };
 
 ViewStub::ViewStub(ViewRegistry* registry,
-                   fidl::InterfaceHandle<mozart::ViewOwner> owner)
+                   fidl::InterfaceHandle<mozart::ViewOwner> owner,
+                   mx::eventpair host_import_token)
     : registry_(registry),
       owner_(mozart::ViewOwnerPtr::Create(std::move(owner))),
+      host_import_token_(std::move(host_import_token)),
       weak_factory_(this) {
   FTL_DCHECK(registry_);
   FTL_DCHECK(owner_);
+  FTL_DCHECK(host_import_token_);
 
   owner_.set_connection_error_handler([this] { OnViewResolved(nullptr); });
 
@@ -58,33 +61,20 @@ ViewContainerState* ViewStub::container() const {
   return parent_ ? static_cast<ViewContainerState*>(parent_) : tree_;
 }
 
-void ViewStub::AttachView(ViewState* state, mozart::ScenePtr stub_scene) {
+void ViewStub::AttachView(ViewState* state) {
   FTL_DCHECK(state);
   FTL_DCHECK(!state->view_stub());
-  FTL_DCHECK(stub_scene);
   FTL_DCHECK(is_pending());
 
   state_ = state;
   state_->set_view_stub(this);
-  stub_scene_ = std::move(stub_scene);
   SetTreeForChildrenOfView(state_, tree_);
 }
 
-void ViewStub::SetProperties(uint32_t scene_version,
-                             mozart::ViewPropertiesPtr properties) {
+void ViewStub::SetProperties(mozart::ViewPropertiesPtr properties) {
   FTL_DCHECK(!is_unavailable());
 
-  scene_version_ = scene_version;
   properties_ = std::move(properties);
-}
-
-void ViewStub::SetStubSceneToken(mozart::SceneTokenPtr stub_scene_token) {
-  FTL_DCHECK(stub_scene_token);
-  FTL_DCHECK(state_);
-  FTL_DCHECK(stub_scene_);
-  FTL_DCHECK(!stub_scene_token_);
-
-  stub_scene_token_ = std::move(stub_scene_token);
 }
 
 ViewState* ViewStub::ReleaseView() {
@@ -96,11 +86,8 @@ ViewState* ViewStub::ReleaseView() {
     FTL_DCHECK(state->view_stub() == this);
     state->set_view_stub(nullptr);
     state_ = nullptr;
-    stub_scene_.reset();
-    stub_scene_token_.reset();
     SetTreeForChildrenOfView(state, nullptr);
   }
-  scene_version_ = mozart::kSceneVersionNone;
   properties_.reset();
   unavailable_ = true;
   return state;
@@ -192,6 +179,19 @@ void ViewStub::TransferViewOwnerWhenViewResolved(
 
   // TODO(mikejurka): should we have an error handler on
   // transferred_view_owner_request_?
+}
+
+void ViewStub::ReleaseHost() {
+  host_import_token_.reset();
+  host_node_.reset();
+}
+
+void ViewStub::ImportHostNode(mozart::client::Session* session) {
+  FTL_DCHECK(host_import_token_);
+  FTL_DCHECK(!host_node_);
+
+  host_node_.reset(new mozart::client::ImportNode(session));
+  host_node_->Bind(std::move(host_import_token_));
 }
 
 }  // namespace view_manager

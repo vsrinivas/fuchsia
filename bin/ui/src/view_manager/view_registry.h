@@ -9,7 +9,8 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/input/input_connection_impl.h"
@@ -21,6 +22,7 @@
 #include "apps/mozart/src/view_manager/view_stub.h"
 #include "apps/mozart/src/view_manager/view_tree_state.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -28,19 +30,18 @@ namespace view_manager {
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector, public InputOwner {
  public:
-  explicit ViewRegistry(app::ApplicationContext* application_context,
-                        mozart::CompositorPtr compositor);
+  explicit ViewRegistry(app::ApplicationContext* application_context);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
 
-  // Creates a view and returns its ViewToken.
+  void GetSceneManager(
+      fidl::InterfaceRequest<mozart2::SceneManager> scene_manager_request);
   void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
+                  mx::eventpair parent_export_token,
                   const fidl::String& label);
-
-  // Creates a view tree.
   void CreateViewTree(
       fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       mozart::ViewTreeListenerPtr view_tree_listener,
@@ -55,23 +56,10 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW REQUESTS
 
-  // Creates a scene for the view, replacing its current scene.
-  // Destroys |view_state| if an error occurs.
-  void CreateScene(ViewState* view_state,
-                   fidl::InterfaceRequest<mozart::Scene> scene);
-
-  // Invalidates a view.
-  // Destroys |view_state| if an error occurs.
-  void Invalidate(ViewState* view_state);
-
   // Called when one of the view pipes is closed remotely.
   void OnViewDied(ViewState* view_state, const std::string& reason);
 
   // VIEW TREE REQUESTS
-
-  // Sets the view tree's renderer.
-  // Destroys |tree_state| if an error occurs.
-  void SetRenderer(ViewTreeState* tree_state, mozart::RendererPtr renderer);
 
   // Called when one of the view tree pipes is closed remotely.
   void OnViewTreeDied(ViewTreeState* tree_state, const std::string& reason);
@@ -82,7 +70,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Destroys |container_state| if an error occurs.
   void AddChild(ViewContainerState* container_state,
                 uint32_t child_key,
-                fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner);
+                fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+                mx::eventpair host_import_token);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
@@ -95,16 +84,11 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Destroys |container_state| if an error occurs.
   void SetChildProperties(ViewContainerState* container_state,
                           uint32_t child_key,
-                          uint32_t child_scene_version,
                           mozart::ViewPropertiesPtr child_properties);
 
   // Make child the first responder
   // Destroys |container_state| if an error occurs.
   void RequestFocus(ViewContainerState* container_state, uint32_t child_key);
-
-  // Flushes changes to children.
-  // Destroys |container_state| if an error occurs.
-  void FlushChildren(ViewContainerState* container_state, uint32_t flush_token);
 
   // SERVICE PROVIDER REQUESTS
 
@@ -122,14 +106,9 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW INSPECTOR REQUESTS
 
-  void GetHitTester(
-      mozart::ViewTreeTokenPtr view_tree_token,
-      fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
-      const GetHitTesterCallback& callback) override;
-
-  void ResolveScenes(std::vector<mozart::SceneTokenPtr> scene_tokens,
-                     const ResolveScenesCallback& callback) override;
-
+  void HitTest(const mozart::ViewTreeToken& view_tree_token,
+               const mozart::PointF& point,
+               HitTestCallback callback) override;
   void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
                          const ResolveFocusChainCallback& callback) override;
   void ActivateFocusChain(mozart::ViewTokenPtr view_token,
@@ -142,19 +121,11 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void GetImeService(
       mozart::ViewTokenPtr view_token,
       fidl::InterfaceRequest<mozart::ImeService> ime_service) override;
-  void ResolveHits(mozart::HitTestResultPtr hit_test_result,
-                   const ResolvedHitsCallback& callback) override;
 
   // Delivers an event to a view.
   void DeliverEvent(const mozart::ViewToken* view_token,
                     mozart::InputEventPtr event,
                     ViewInspector::OnEventDelivered callback) override;
-
-  // Query view for hit test
-  void ViewHitTest(
-      const mozart::ViewToken* view_token,
-      mozart::PointFPtr point,
-      const mozart::ViewHitTester::HitTestCallback& callback) override;
 
   // INPUT CONNECTION CALLBACKS
   void OnInputConnectionDied(InputConnectionImpl* connection) override;
@@ -170,6 +141,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void UnregisterViewContainer(ViewContainerState* container_state);
   void UnregisterViewStub(std::unique_ptr<ViewStub> view_stub);
   void UnregisterChildren(ViewContainerState* container_state);
+  void ReleaseViewStubChildHost(ViewStub* view_stub);
 
   // TREE MANIPULATION
 
@@ -182,35 +154,31 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // INVALIDATION
 
-  void ScheduleViewInvalidation(ViewState* view_state, uint32_t flags);
-  void ScheduleViewTreeInvalidation(ViewTreeState* tree_state, uint32_t flags);
-  void TraverseViewTree(ViewTreeState* tree_state,
-                        mozart::FrameInfoPtr frame_info);
-  void TraverseView(ViewState* view_state,
-                    const mozart::FrameInfo* frame_info,
-                    bool parent_properties_changed);
+  // Makes note of the fact that a view or view tree has changed in some
+  // manner to be applied during upcoming traversals.
+  void InvalidateView(ViewState* view_state, uint32_t flags);
+  void InvalidateViewTree(ViewTreeState* tree_state, uint32_t flags);
+
+  // TRAVERSAL
+
+  void ScheduleTraversal();
+
+  // Traverses views delivering updates to view properties in response to prior
+  // invalidations.
+  void Traverse();
+  void TraverseViewTree(ViewTreeState* tree_state);
+  void TraverseView(ViewState* view_state, bool parent_properties_changed);
   mozart::ViewPropertiesPtr ResolveViewProperties(ViewState* view_state);
 
-  // SCENE MANAGEMENT
+  // SESSION MANAGEMENT
 
-  void OnViewSceneTokenAvailable(ftl::WeakPtr<ViewState> view_state_weak,
-                                 mozart::SceneTokenPtr scene_token);
-  void OnStubSceneTokenAvailable(ftl::WeakPtr<ViewStub> view_stub_weak,
-                                 mozart::SceneTokenPtr scene_token);
-  void PublishStubScene(ViewState* view_state);
-
-  // RENDERING
-
-  void SetRendererRootScene(ViewTreeState* view_tree);
-  void OnRendererDied(ViewTreeState* view_tree);
+  void SchedulePresentSession();
+  void PresentSession();
 
   // SIGNALING
 
-  void SendInvalidation(ViewState* view_state,
-                        mozart::ViewInvalidationPtr invalidation);
-
-  void SendRendererDied(ViewTreeState* tree_state);
-
+  void SendPropertiesChanged(ViewState* view_state,
+                             mozart::ViewPropertiesPtr properties);
   void SendChildAttached(ViewContainerState* container_state,
                          uint32_t child_key,
                          mozart::ViewInfoPtr child_view_info);
@@ -226,16 +194,6 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void CreateInputDispatcher(
       mozart::ViewTreeTokenPtr view_tree_token,
       fidl::InterfaceRequest<mozart::InputDispatcher> request);
-
-  // ResolveHits Helper
-  void ResolveSceneHit(
-      const mozart::SceneHit* scene_hit,
-      ResolvedHits* resolved_hits,
-      std::vector<mozart::SceneTokenPtr>* missing_scene_tokens);
-  void OnScenesResolved(std::unique_ptr<ResolvedHits> resolved_hits,
-                        std::vector<uint32_t> missing_scene_token_values,
-                        const ResolvedHitsCallback& callback,
-                        std::vector<mozart::ViewTokenPtr> view_tokens);
 
   // LOOKUP
 
@@ -263,18 +221,23 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   }
 
   app::ApplicationContext* application_context_;
-  mozart::CompositorPtr compositor_;
+  mozart2::SceneManagerPtr scene_manager_;
+  mozart::client::Session session_;
+
+  bool traversal_scheduled_ = false;
+  bool present_session_scheduled_ = false;
 
   uint32_t next_view_token_value_ = 1u;
   uint32_t next_view_tree_token_value_ = 1u;
   std::unordered_map<uint32_t, ViewState*> views_by_token_;
-  std::unordered_map<uint32_t, ViewState*> views_by_scene_token_;
   std::unordered_map<uint32_t, ViewTreeState*> view_trees_by_token_;
 
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
       input_connections_by_view_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
       input_dispatchers_by_view_tree_token_;
+
+  ftl::WeakPtrFactory<ViewRegistry> weak_factory_;  // must be last
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewRegistry);
 };

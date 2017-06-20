@@ -9,7 +9,6 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
-#include "apps/mozart/lib/tests/mocks/mock_renderer.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_container_listener.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_listener.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_tree_listener.h"
@@ -151,12 +150,6 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   fidl::Binding<mozart::ViewContainerListener> tree_container_listener_binding(
       &mock_tree_container_listener, tree_container_listener.NewRequest());
   tree_container->SetListener(std::move(tree_container_listener));
-
-  mozart::RendererPtr renderer;
-  mozart::test::MockRenderer mock_renderer;
-  fidl::Binding<mozart::Renderer> renderer_binding(&mock_renderer,
-                                                   renderer.NewRequest());
-  tree->SetRenderer(std::move(renderer));
 
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;

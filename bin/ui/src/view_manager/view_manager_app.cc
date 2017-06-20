@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/view_manager/view_manager_app.h"
 
-#include "application/lib/app/connect.h"
 #include "apps/mozart/src/view_manager/view_manager_impl.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
@@ -17,15 +16,7 @@ ViewManagerApp::ViewManagerApp()
 
   tracing::InitializeTracer(application_context_.get(), {"view_manager"});
 
-  mozart::CompositorPtr compositor =
-      application_context_->ConnectToEnvironmentService<mozart::Compositor>();
-  compositor.set_connection_error_handler([] {
-    FTL_LOG(ERROR) << "Exiting due to compositor connection error.";
-    exit(1);
-  });
-
-  registry_.reset(
-      new ViewRegistry(application_context_.get(), std::move(compositor)));
+  registry_.reset(new ViewRegistry(application_context_.get()));
 
   application_context_->outgoing_services()->AddService<mozart::ViewManager>(
       [this](fidl::InterfaceRequest<mozart::ViewManager> request) {

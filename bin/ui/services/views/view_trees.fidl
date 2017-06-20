@@ -59,23 +59,13 @@ interface ViewTree {
   // See |InputDispatcher|.
   GetServiceProvider(app.ServiceProvider& service_provider);
 
-  // Sets where the view tree's scene graph will be rendered.
-  //
-  // If |renderer| is null, disconnects the view tree from the renderer
-  // causing its previous renderer to be destroyed.
-  //
-  // See also: |Compositor.CreateRenderer()|.
-  SetRenderer(Renderer? renderer);
-
   // Gets an interface for managing the view tree's root.
   GetContainer(ViewContainer& container);
 };
 
 // An interface clients may implement to receive events from a view tree.
 interface ViewTreeListener {
-  // Called when the tree's renderer connection closed unexpectedly.
-  //
-  // The implementation should invoke the callback once the event has
-  // been handled.
-  OnRendererDied() => ();
+  // There are currently no events defined but we have preserved the
+  // plumbing for the future when ViewContainer will merge into ViewTree
+  // along with its listener.
 };

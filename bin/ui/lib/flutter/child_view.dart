@@ -101,7 +101,8 @@ class ChildViewConnection {
     try {
       launcher.createApplication(launchInfo, controller);
       return new ChildViewConnection.connect(services,
-          childServices: childServices, onAvailable: onAvailable,
+          childServices: childServices,
+          onAvailable: onAvailable,
           onUnavailable: onUnavailable);
     } finally {
       services.ctrl.close();
@@ -128,15 +129,14 @@ class ChildViewConnection {
   final ChildViewConnectionCallback _onUnavailableCallback;
   InterfaceHandle<ViewOwner> _viewOwner;
 
-
   static int _nextViewKey = 1;
   int _viewKey;
 
-  int _sceneVersion = 1;
   ViewProperties _currentViewProperties;
 
   VoidCallback _onViewInfoAvailable;
   ViewInfo _viewInfo;
+  ui.SceneHost _sceneHost;
 
   void _onAttachedToContainer(ViewInfo viewInfo) {
     assert(_viewInfo == null);
@@ -156,8 +156,12 @@ class ChildViewConnection {
     assert(_viewOwner != null);
     assert(_viewKey == null);
     assert(_viewInfo == null);
+    assert(_sceneHost == null);
+    final core.Eventpair pair = new core.Eventpair();
+    assert(pair.status == core.NO_ERROR);
+    _sceneHost = new ui.SceneHost(pair.passEndpoint0().handle.release());
     _viewKey = _nextViewKey++;
-    _viewContainer.addChild(_viewKey, _viewOwner);
+    _viewContainer.addChild(_viewKey, _viewOwner, pair.passEndpoint1().handle);
     _viewOwner = null;
     assert(!_ViewContainerListenerImpl.instance._connections
         .containsKey(_viewKey));
@@ -169,8 +173,10 @@ class ChildViewConnection {
     assert(!_attached);
     assert(_viewOwner == null);
     assert(_viewKey != null);
+    assert(_sceneHost != null);
     assert(_ViewContainerListenerImpl.instance._connections[_viewKey] == this);
     final core.ChannelPair pair = new core.ChannelPair();
+    assert(pair.status == core.NO_ERROR);
     _ViewContainerListenerImpl.instance._connections.remove(_viewKey);
     _viewOwner = new InterfaceHandle<ViewOwner>(pair.channel0, 0);
     _viewContainer.removeChild(
@@ -178,6 +184,8 @@ class ChildViewConnection {
     _viewKey = null;
     _viewInfo = null;
     _currentViewProperties = null;
+    _sceneHost.dispose();
+    _sceneHost = null;
   }
 
   // The number of render objects attached to this view. In between frames, we
@@ -205,8 +213,13 @@ class ChildViewConnection {
   }
 
   ViewProperties _createViewProperties(
-      int physicalWidth, int physicalHeight, double devicePixelRatio,
-      int insetTop, int insetRight, int insetBottom, int insetLeft) {
+      int physicalWidth,
+      int physicalHeight,
+      double devicePixelRatio,
+      int insetTop,
+      int insetRight,
+      int insetBottom,
+      int insetLeft) {
     if (_currentViewProperties != null &&
         _currentViewProperties.displayMetrics.devicePixelRatio ==
             devicePixelRatio &&
@@ -215,8 +228,7 @@ class ChildViewConnection {
         _currentViewProperties.viewLayout.inset.top == insetTop &&
         _currentViewProperties.viewLayout.inset.right == insetRight &&
         _currentViewProperties.viewLayout.inset.bottom == insetBottom &&
-        _currentViewProperties.viewLayout.inset.left == insetLeft)
-      return null;
+        _currentViewProperties.viewLayout.inset.left == insetLeft) return null;
 
     DisplayMetrics displayMetrics = new DisplayMetrics()
       ..devicePixelRatio = devicePixelRatio;
@@ -238,18 +250,27 @@ class ChildViewConnection {
   }
 
   void _setChildProperties(
-      int physicalWidth, int physicalHeight, double devicePixelRatio,
-      int insetTop, int insetRight, int insetBottom, int insetLeft) {
+      int physicalWidth,
+      int physicalHeight,
+      double devicePixelRatio,
+      int insetTop,
+      int insetRight,
+      int insetBottom,
+      int insetLeft) {
     assert(_attached);
     assert(_attachments == 1);
     assert(_viewKey != null);
     if (_viewContainer == null) return;
-    ViewProperties viewProperties =
-        _createViewProperties(physicalWidth, physicalHeight, devicePixelRatio,
-        insetTop, insetRight, insetBottom, insetLeft);
+    ViewProperties viewProperties = _createViewProperties(
+        physicalWidth,
+        physicalHeight,
+        devicePixelRatio,
+        insetTop,
+        insetRight,
+        insetBottom,
+        insetLeft);
     if (viewProperties == null) return;
-    _viewContainer.setChildProperties(
-        _viewKey, _sceneVersion++, viewProperties);
+    _viewContainer.setChildProperties(_viewKey, viewProperties);
   }
 }
 
@@ -346,8 +367,8 @@ class _RenderChildView extends RenderBox {
     if (_connection != null) {
       _physicalWidth = (size.width * scale).round();
       _physicalHeight = (size.height * scale).round();
-      _connection._setChildProperties(_physicalWidth, _physicalHeight, scale,
-        0, 0, 0, 0);
+      _connection._setChildProperties(
+          _physicalWidth, _physicalHeight, scale, 0, 0, 0, 0);
       assert(() {
         if (_viewContainer == null) {
           _debugErrorMessage ??= new TextPainter(
@@ -373,7 +394,7 @@ class _RenderChildView extends RenderBox {
         devicePixelRatio: scale,
         physicalWidth: _physicalWidth,
         physicalHeight: _physicalHeight,
-        sceneToken: _connection._viewInfo.sceneToken.value,
+        sceneHost: _connection._sceneHost,
         hitTestable: hitTestable,
       ));
     }
@@ -405,7 +426,7 @@ class ChildSceneLayer extends Layer {
     this.devicePixelRatio: 1.0,
     this.physicalWidth: 0,
     this.physicalHeight: 0,
-    this.sceneToken: 0,
+    this.sceneHost,
     this.hitTestable: true,
   });
 
@@ -421,8 +442,8 @@ class ChildSceneLayer extends Layer {
   /// The vertical extent of the child, in physical pixels.
   int physicalHeight;
 
-  /// The composited scene that will contain the content rendered by the child.
-  int sceneToken;
+  /// The host site for content rendered by the child.
+  ui.SceneHost sceneHost;
 
   /// Whether this child should be included during hit testing.
   ///
@@ -436,7 +457,7 @@ class ChildSceneLayer extends Layer {
       devicePixelRatio: devicePixelRatio,
       physicalWidth: physicalWidth,
       physicalHeight: physicalHeight,
-      sceneToken: sceneToken,
+      sceneHost: sceneHost,
       hitTestable: hitTestable,
     );
   }
@@ -447,7 +468,9 @@ class ChildSceneLayer extends Layer {
     description.add('offset: $offset');
     description.add('physicalWidth: $physicalWidth');
     description.add('physicalHeight: $physicalHeight');
-    description.add('sceneToken: $sceneToken');
+    description.add('devicePixelRatio: $devicePixelRatio');
+    description.add('sceneHost: $sceneHost');
+    description.add('hitTestable: $hitTestable');
   }
 }
 
@@ -493,9 +516,9 @@ class View {
   ///
   /// |services| should contain the list of service names offered by the
   /// |provider|.
-  static void offerServiceProvider(InterfaceHandle<ServiceProvider> provider,
-                                   List<String> services) {
-    Mozart.offerServiceProvider(provider.passChannel().handle.release(),
-                                services);
+  static void offerServiceProvider(
+      InterfaceHandle<ServiceProvider> provider, List<String> services) {
+    Mozart.offerServiceProvider(
+        provider.passChannel().handle.release(), services);
   }
 }

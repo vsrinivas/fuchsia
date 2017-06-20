@@ -15,9 +15,10 @@ executable("view_manager_apptests") {
 
   testonly = true
 
-  sources = [
-    "view_manager_test.cc",
-  ]
+  #  TODO(MZ-177): These tests need to be rewritten for the new API.
+  #  sources = [
+  #    "view_manager_test.cc",
+  #  ]
 
   deps = [
     "//apps/mozart/lib/tests",

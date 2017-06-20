@@ -15,22 +15,11 @@ Specify the urls of the views to embed initially as command-line arguments.
 
 The following command-line options are also supported:
 
-  Version mode for child views:
-
-    --version=any   : composite most recent unblocked version of each child (default)
-    --version=exact : composite only exact version of child specified during
-                      layout (forces frame-level synchronization of resizing)
-
-  Combinator mode for child views:
-
-    --combinator=merge : use MERGE combinator (default)
-    --combinator=prune : use PRUNE combinator
-    --combinator=flash : use FALLBACK combinator with solid red color as
-                         alternate content
-    --combinator=dim   : use FALLBACK combinator with a dimmed layer containing the
-                         most recent unblocked version of the child
-
   Orientation mode for child views:
 
-    --horizontal : tile children horizontally
+    --horizontal : tile children horizontally (default)
     --vertical   : tile children vertically
+
+Example:
+
+  launch tile_view --horizontal spinning_square_view shapes_view

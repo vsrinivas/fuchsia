@@ -6,14 +6,12 @@
 #define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_TREE_STATE_H_
 
 #include <memory>
-#include <set>
 #include <string>
-#include <unordered_map>
 
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
-#include "apps/mozart/src/view_manager/view_container_state.h"
 #include "apps/mozart/src/view_manager/internal/view_inspector.h"
+#include "apps/mozart/src/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -32,9 +30,6 @@ class ViewTreeState : public ViewContainerState {
   enum {
     // Some of the tree's views have been invalidated.
     INVALIDATION_VIEWS_INVALIDATED = 1u << 0,
-
-    // The renderer changed.
-    INVALIDATION_RENDERER_CHANGED = 1u << 1,
   };
 
   ViewTreeState(ViewRegistry* registry,
@@ -60,34 +55,12 @@ class ViewTreeState : public ViewContainerState {
     return view_tree_listener_;
   }
 
-  // The view tree's renderer.
-  const mozart::RendererPtr& renderer() const { return renderer_; }
-  void SetRenderer(mozart::RendererPtr renderer);
-
-  // The view tree's frame scheduler.
-  // This is updated whenever the renderer is changed.
-  const mozart::FrameSchedulerPtr& frame_scheduler() const {
-    return frame_scheduler_;
-  }
-
   // Gets the view tree's root view.
   ViewStub* GetRoot() const;
-
-  // Starts tracking a hit tester request.
-  // The request will be satisfied by the current renderer if possible.
-  // The callback will be invoked when the renderer changes.
-  void RequestHitTester(
-      fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
-      const ViewInspector::GetHitTesterCallback& callback);
 
   // Gets or sets flags describing the invalidation state of the view tree.
   uint32_t invalidation_flags() const { return invalidation_flags_; }
   void set_invalidation_flags(uint32_t value) { invalidation_flags_ = value; }
-
-  // Gets or sets whether a frame has been scheduled with the renderer
-  // to handle invalidations.
-  bool frame_scheduled() const { return frame_scheduled_; }
-  void set_frame_scheduled(bool value) { frame_scheduled_ = value; }
 
   ViewTreeState* AsViewTreeState() override;
 
@@ -98,8 +71,6 @@ class ViewTreeState : public ViewContainerState {
   const FocusChain* focus_chain();
 
  private:
-  void ClearHitTesterCallbacks(bool renderer_changed);
-
   mozart::ViewTreeTokenPtr view_tree_token_;
   mozart::ViewTreeListenerPtr view_tree_listener_;
 
@@ -109,14 +80,7 @@ class ViewTreeState : public ViewContainerState {
   std::unique_ptr<ViewTreeImpl> impl_;
   fidl::Binding<mozart::ViewTree> view_tree_binding_;
 
-  mozart::RendererPtr renderer_;
-  mozart::FrameSchedulerPtr frame_scheduler_;
-
-  std::vector<ViewInspector::GetHitTesterCallback>
-      pending_hit_tester_callbacks_;
-
   uint32_t invalidation_flags_ = 0u;
-  bool frame_scheduled_ = false;
 
   ftl::WeakPtr<ViewStub> focused_view_;
 

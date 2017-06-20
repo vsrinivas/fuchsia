@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,19 +6,18 @@ executable("spinning_square") {
   output_name = "spinning_square_view"
 
   sources = [
-    "spinning_square.cc",
+    "main.cc",
+    "spinning_square_view.cc",
+    "spinning_square_view.h",
   ]
 
   deps = [
-    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/scene:client",
     "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/buffers/cpp",
-    "//apps/mozart/services/composition",
-    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/scene",
     "//apps/mozart/services/views",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
-    "//third_party/skia",
   ]
 }

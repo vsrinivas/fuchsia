@@ -36,15 +36,10 @@ class InputConnectionImpl : public mozart::InputConnection,
 
   // Delivers an event to a view.
   void DeliverEvent(mozart::InputEventPtr event, OnEventDelivered callback);
-  // Hit test a view.
-  void HitTest(mozart::PointFPtr point,
-               const mozart::ViewHitTester::HitTestCallback& callback);
 
   // |mozart::InputConnection|
   void SetEventListener(
       fidl::InterfaceHandle<mozart::InputListener> listener) override;
-  void SetViewHitTester(
-      fidl::InterfaceHandle<mozart::ViewHitTester> listener) override;
   void GetInputMethodEditor(
       mozart::KeyboardType keyboard_type,
       mozart::InputMethodAction action,
@@ -79,7 +74,6 @@ class InputConnectionImpl : public mozart::InputConnection,
   InputOwner* const owner_;
   mozart::ViewTokenPtr view_token_;
   mozart::InputListenerPtr event_listener_;
-  mozart::ViewHitTesterPtr view_hit_listener_;
 
   fidl::Binding<mozart::InputConnection> binding_;
 

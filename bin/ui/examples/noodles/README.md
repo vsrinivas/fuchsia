@@ -1,10 +1,7 @@
-# Mozart multithreaded rendering example.
+# Mozart Skia Rendering Example
 
-This directory contains a simple application which rasterizes frames on
-a separate thread from the one it uses to handle view events and to produce
-each frame's content.
-
-For the purposes of this example, the content consists of a Lissajous figure.
+This directory contains a simple application which draws a Lissajous figure
+using Skia.
 
 ## USAGE
 

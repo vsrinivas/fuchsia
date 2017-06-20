@@ -16,14 +16,21 @@ ViewManagerImpl::ViewManagerImpl(ViewRegistry* registry)
 
 ViewManagerImpl::~ViewManagerImpl() {}
 
+void ViewManagerImpl::GetSceneManager(
+    fidl::InterfaceRequest<mozart2::SceneManager> scene_manager_request) {
+  registry_->GetSceneManager(std::move(scene_manager_request));
+}
+
 void ViewManagerImpl::CreateView(
     fidl::InterfaceRequest<mozart::View> view_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceHandle<mozart::ViewListener> view_listener,
+    mx::eventpair parent_export_token,
     const fidl::String& label) {
   registry_->CreateView(
       std::move(view_request), std::move(view_owner_request),
-      mozart::ViewListenerPtr::Create(std::move(view_listener)), label);
+      mozart::ViewListenerPtr::Create(std::move(view_listener)),
+      std::move(parent_export_token), label);
 }
 
 void ViewManagerImpl::CreateViewTree(

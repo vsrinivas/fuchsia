@@ -41,18 +41,19 @@ App::~App() {}
 void App::Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
   InitializeServices();
 
-  auto presentation = std::make_unique<Presentation>(
-      compositor_.get(), view_manager_.get(),
-      mozart::ViewOwnerPtr::Create(std::move(view_owner_handle)));
-  presentation->Present([ this, presentation = presentation.get() ] {
-    auto it = std::find_if(
-        presentations_.begin(), presentations_.end(),
-        [presentation](const std::unique_ptr<Presentation>& other) {
-          return other.get() == presentation;
-        });
-    FTL_DCHECK(it != presentations_.end());
-    presentations_.erase(it);
-  });
+  auto presentation =
+      std::make_unique<Presentation>(view_manager_.get(), scene_manager_.get());
+  presentation->Present(
+      mozart::ViewOwnerPtr::Create(std::move(view_owner_handle)),
+      [ this, presentation = presentation.get() ] {
+        auto it = std::find_if(
+            presentations_.begin(), presentations_.end(),
+            [presentation](const std::unique_ptr<Presentation>& other) {
+              return other.get() == presentation;
+            });
+        FTL_DCHECK(it != presentations_.end());
+        presentations_.erase(it);
+      });
 
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());
@@ -103,14 +104,6 @@ void App::OnReport(mozart::InputDeviceImpl* input_device,
 }
 
 void App::InitializeServices() {
-  if (!compositor_) {
-    application_context_->ConnectToEnvironmentService(compositor_.NewRequest());
-    compositor_.set_connection_error_handler([this] {
-      FTL_LOG(ERROR) << "Compositor died, destroying view trees.";
-      Reset();
-    });
-  }
-
   if (!view_manager_) {
     application_context_->ConnectToEnvironmentService(
         view_manager_.NewRequest());
@@ -118,13 +111,19 @@ void App::InitializeServices() {
       FTL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();
     });
+
+    view_manager_->GetSceneManager(scene_manager_.NewRequest());
+    scene_manager_.set_connection_error_handler([this] {
+      FTL_LOG(ERROR) << "SceneManager died, destroying view trees.";
+      Reset();
+    });
   }
 }
 
 void App::Reset() {
   presentations_.clear();  // must be first, holds pointers to services
-  compositor_.reset();
   view_manager_.reset();
+  scene_manager_.reset();
 }
 
 }  // namespace root_presenter

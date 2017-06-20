@@ -9,15 +9,16 @@ namespace test {
 
 MockViewListener::MockViewListener() : callback_(nullptr) {}
 
-MockViewListener::MockViewListener(const OnMockInvalidationCallback& callback)
+MockViewListener::MockViewListener(const OnMockViewPropertiesCallback& callback)
     : callback_(callback) {}
 
 MockViewListener::~MockViewListener() {}
 
-void MockViewListener::OnInvalidation(mozart::ViewInvalidationPtr invalidation,
-                                      const OnInvalidationCallback& callback) {
+void MockViewListener::OnPropertiesChanged(
+    mozart::ViewPropertiesPtr properties,
+    const OnPropertiesChangedCallback& callback) {
   if (callback_) {
-    callback_(std::move(invalidation));
+    callback_(std::move(properties));
   }
   callback();
 }

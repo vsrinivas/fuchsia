@@ -25,12 +25,6 @@ class InputOwner {
                             mozart::InputEventPtr event,
                             OnEventDelivered callback) = 0;
 
-  // Query view for hit test
-  virtual void ViewHitTest(
-      const mozart::ViewToken* view_token,
-      mozart::PointFPtr point,
-      const mozart::ViewHitTester::HitTestCallback& callback) = 0;
-
   // INPUT CONNECTION CALLBACKS
   virtual void OnInputConnectionDied(
       view_manager::InputConnectionImpl* connection) = 0;

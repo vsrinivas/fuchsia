@@ -31,17 +31,9 @@ void ViewImpl::OfferServiceProvider(
                              std::move(service_names));
 }
 
-void ViewImpl::CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) {
-  registry_->CreateScene(state_, std::move(scene));
-}
-
 void ViewImpl::GetContainer(
     fidl::InterfaceRequest<mozart::ViewContainer> view_container_request) {
   container_bindings_.AddBinding(this, std::move(view_container_request));
-}
-
-void ViewImpl::Invalidate() {
-  registry_->Invalidate(state_);
 }
 
 void ViewImpl::SetListener(
@@ -52,8 +44,10 @@ void ViewImpl::SetListener(
 
 void ViewImpl::AddChild(
     uint32_t child_key,
-    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
-  registry_->AddChild(state_, child_key, std::move(child_view_owner));
+    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    mx::eventpair host_import_token) {
+  registry_->AddChild(state_, child_key, std::move(child_view_owner),
+                      std::move(host_import_token));
 }
 
 void ViewImpl::RemoveChild(
@@ -65,18 +59,13 @@ void ViewImpl::RemoveChild(
 
 void ViewImpl::SetChildProperties(
     uint32_t child_key,
-    uint32_t child_scene_version,
     mozart::ViewPropertiesPtr child_view_properties) {
-  registry_->SetChildProperties(state_, child_key, child_scene_version,
+  registry_->SetChildProperties(state_, child_key,
                                 std::move(child_view_properties));
 }
 
 void ViewImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
-}
-
-void ViewImpl::FlushChildren(uint32_t flush_token) {
-  registry_->FlushChildren(state_, flush_token);
 }
 
 void ViewImpl::ConnectToService(const fidl::String& service_name,

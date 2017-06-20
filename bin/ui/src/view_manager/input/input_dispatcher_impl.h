@@ -10,8 +10,7 @@
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
-#include "apps/mozart/src/view_manager/input/view_hit_resolver.h"
-#include "apps/mozart/src/view_manager/input/view_tree_hit_tester_client.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
@@ -44,7 +43,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   // Used for located events (touch, stylus)
   void DeliverEvent(mozart::InputEventPtr event);
   void DeliverEvent(uint64_t event_path_propagation_id,
-                    const EventPath* event_path,
+                    size_t index,
                     mozart::InputEventPtr event);
   // Used for key events (keyboard)
   // |propagation_index| is the current index in the |focus_chain|
@@ -55,19 +54,17 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   void PopAndScheduleNextEvent();
 
   void OnFocusResult(std::unique_ptr<FocusChain> focus_chain);
-  void OnHitTestResult(mozart::PointFPtr point,
-                       std::unique_ptr<ResolvedHits> resolved_hits);
+  void OnHitTestResult(const mozart::PointF& point,
+                       std::vector<ViewHit> view_hits);
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
   mozart::ViewTreeTokenPtr view_tree_token_;
-  ViewTreeHitTesterClient* hit_tester_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<mozart::InputEventPtr> pending_events_;
 
-  std::unique_ptr<EventPath> event_path_;
-  std::unique_ptr<ViewHitResolver> view_hit_resolver_;
+  std::vector<ViewHit> event_path_;
   uint64_t event_path_propagation_id_ = 0;
 
   fidl::Binding<mozart::InputDispatcher> binding_;

@@ -5,8 +5,6 @@
 source_set("internal") {
   sources = [
     "input_owner.h",
-    "resolved_hits.cc",
-    "resolved_hits.h",
     "view_inspector.h",
   ]
 

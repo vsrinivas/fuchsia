@@ -5,24 +5,17 @@
 #ifndef APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
 #define APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
 
-#include <memory>
-#include <mutex>
-
-#include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/lib/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
-#include "third_party/skia/include/core/SkRefCnt.h"
 
-class SkPicture;
+class SkCanvas;
 
 namespace examples {
 
 class Frame;
 class Rasterizer;
 
-class NoodlesView : public mozart::BaseView {
+class NoodlesView : public mozart::SkiaView {
  public:
   NoodlesView(mozart::ViewManagerPtr view_manager,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
@@ -30,59 +23,16 @@ class NoodlesView : public mozart::BaseView {
   ~NoodlesView() override;
 
  private:
-  // Frame queue, held by a std::shared_ptr.
-  // This object acts as a shared fifo between both threads.
-  class FrameQueue {
-   public:
-    FrameQueue();
-    ~FrameQueue();
-
-    // Puts a pending frame into the queue, drops existing frames if needed.
-    // Returns true if the queue was previously empty.
-    bool PutFrame(std::unique_ptr<Frame> frame);
-
-    // Takes a pending frame from the queue.
-    std::unique_ptr<Frame> TakeFrame();
-
-   private:
-    std::mutex mutex_;
-    std::unique_ptr<Frame> next_frame_;  // guarded by |mutex_|
-
-    FTL_DISALLOW_COPY_AND_ASSIGN(FrameQueue);
-  };
-
-  // Wrapper around state which is only accessible by the rasterizer thread.
-  class RasterizerDelegate {
-   public:
-    explicit RasterizerDelegate(const std::shared_ptr<FrameQueue>& frame_queue);
-    ~RasterizerDelegate();
-
-    void CreateRasterizer(fidl::InterfaceHandle<mozart::Scene> scene_info);
-
-    void PublishNextFrame();
-
-   private:
-    std::shared_ptr<FrameQueue> frame_queue_;
-    std::unique_ptr<Rasterizer> rasterizer_;
-
-    FTL_DISALLOW_COPY_AND_ASSIGN(RasterizerDelegate);
-  };
-
   // |BaseView|:
-  void OnDraw() override;
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
+  void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info) override;
 
-  void UpdateFrame();
-  sk_sp<SkPicture> CreatePicture();
+  void Draw(SkCanvas* canvas, float t);
 
-  std::shared_ptr<FrameQueue> frame_queue_;
-
-  std::unique_ptr<RasterizerDelegate> rasterizer_delegate_;
-  std::thread rasterizer_thread_;
-  ftl::RefPtr<ftl::TaskRunner> rasterizer_task_runner_;
-
-  double alpha_ = 0.0;
-  int wx_ = 2;
-  int wy_ = 3;
+  uint64_t start_time_ = 0u;
+  int wx_ = 0;
+  int wy_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NoodlesView);
 };

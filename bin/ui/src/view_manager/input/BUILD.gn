@@ -8,10 +8,6 @@ source_set("input") {
     "input_connection_impl.h",
     "input_dispatcher_impl.cc",
     "input_dispatcher_impl.h",
-    "view_hit_resolver.cc",
-    "view_hit_resolver.h",
-    "view_tree_hit_tester_client.cc",
-    "view_tree_hit_tester_client.h",
   ]
 
   public_deps = [

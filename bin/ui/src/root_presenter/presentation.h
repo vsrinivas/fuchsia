@@ -5,11 +5,12 @@
 #ifndef APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
 #define APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
 
+#include <map>
+#include <memory>
+
 #include "apps/mozart/lib/input/device_state.h"
 #include "apps/mozart/lib/input/input_device_impl.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
-#include "apps/mozart/services/composition/compositor.fidl.h"
-#include "apps/mozart/services/composition/cpp/frame_tracker.h"
+#include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
@@ -18,30 +19,48 @@
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "third_party/skia/include/core/SkImage.h"
 
 namespace root_presenter {
 
+// This class creates a view tree and sets up rendering of a new scene to
+// display the graphical content of the view passed to |PresentScene()|.  It
+// also wires up input dispatch and manages the mouse cursor.
+//
+// The view tree consists of a root view which is implemented by this class
+// and which has the presented (content) view as its child.
+//
+// The scene's node tree has the following structure:
+// + Scene
+//   + RootViewHost
+//     + link: root_view_host_import_token
+//       + RootView's view manager stub
+//         + link: root_view_parent_export_token
+//           + RootView
+//             + link: content_view_host_import_token
+//               + child: ContentViewHost
+//           + link: Content view's actual content
+//   + child: cursor 1
+//   + child: cursor N
 class Presentation : public mozart::ViewTreeListener,
                      public mozart::ViewListener,
                      public mozart::ViewContainerListener {
  public:
-  Presentation(mozart::Compositor* compositor,
-               mozart::ViewManager* view_manager,
-               mozart::ViewOwnerPtr view_owner);
+  Presentation(mozart::ViewManager* view_manager,
+               mozart2::SceneManager* scene_manager);
 
   ~Presentation() override;
 
-  void Present(ftl::Closure shutdown_callback);
+  // Present the specified view.
+  // Invokes the callback if an error occurs.
+  // This method must be called at most once for the lifetime of the
+  // presentation.
+  void Present(mozart::ViewOwnerPtr view_owner, ftl::Closure shutdown_callback);
 
   void OnReport(uint32_t device_id, mozart::InputReportPtr report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
  private:
-  // |ViewTreeListener|:
-  void OnRendererDied(const OnRendererDiedCallback& callback) override;
-
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info,
@@ -50,31 +69,37 @@ class Presentation : public mozart::ViewTreeListener,
                           const OnChildUnavailableCallback& callback) override;
 
   // |ViewListener|:
-  void OnInvalidation(mozart::ViewInvalidationPtr invalidation,
-                      const OnInvalidationCallback& callback) override;
+  void OnPropertiesChanged(
+      mozart::ViewPropertiesPtr properties,
+      const OnPropertiesChangedCallback& callback) override;
 
-  void CreateViewTree();
-  void LoadCursor();
-  void UpdateRootViewProperties();
-  void OnLayout();
-  mozart::SceneMetadataPtr CreateSceneMetadata() const;
-  void UpdateScene();
+  void CreateViewTree(mozart::ViewOwnerPtr view_owner,
+                      mozart2::DisplayInfoPtr display_info);
   void OnEvent(mozart::InputEventPtr event);
 
+  void PresentScene();
   void Shutdown();
 
-  mozart::Compositor* const compositor_;
   mozart::ViewManager* const view_manager_;
-  mozart::ViewOwnerPtr view_owner_;
+  mozart2::SceneManager* const scene_manager_;
 
+  mozart::client::Session session_;
+  mozart::client::Scene scene_;
+  mozart::client::Camera camera_;
+  mozart::client::DisplayRenderer renderer_;
+  mozart::client::EntityNode root_view_host_node_;
+  mx::eventpair root_view_host_import_token_;
+  mozart::client::ImportNode root_view_parent_node_;
+  mx::eventpair root_view_parent_export_token_;
+  mozart::client::EntityNode content_view_host_node_;
+  mx::eventpair content_view_host_import_token_;
+  mozart::client::RoundedRectangle cursor_shape_;
+  mozart::client::Material cursor_material_;
+
+  mozart2::DisplayInfoPtr display_info_;
   mozart::ViewPtr root_view_;
-  mozart::ViewOwnerPtr root_view_owner_;
-  mozart::ScenePtr root_scene_;
 
   ftl::Closure shutdown_callback_;
-
-  mozart::RendererPtr renderer_;
-  mozart::DisplayInfoPtr display_info_;
 
   mozart::PointF mouse_coordinates_;
 
@@ -88,25 +113,20 @@ class Presentation : public mozart::ViewTreeListener,
   mozart::ViewContainerPtr root_container_;
   mozart::InputDispatcherPtr input_dispatcher_;
 
-  mozart::ViewInfoPtr content_view_info_;
+  struct CursorState {
+    bool created;
+    bool visible;
+    mozart::PointF position;
+    std::unique_ptr<mozart::client::ShapeNode> node;
+  };
 
-  mozart::FrameTracker frame_tracker_;
-  uint32_t scene_version_ = mozart::kSceneVersionNone;
-
-  bool cursor_resources_uploaded_ = false;
-  bool scene_resources_uploaded_ = false;
-  bool layout_changed_ = true;
-
-  std::map<uint32_t, std::pair<bool, mozart::PointF>> cursors_;
-  std::map<uint32_t,
-           std::pair<mozart::InputDeviceImpl*,
-                     std::unique_ptr<mozart::DeviceState>>>
+  std::map<uint32_t, CursorState> cursors_;
+  std::map<
+      uint32_t,
+      std::pair<mozart::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
       device_states_by_id_;
 
-  sk_sp<SkImage> cursor_image_;
-  mozart::BufferProducer buffer_producer_;
-
-  ftl::WeakPtrFactory<Presentation> weak_ptr_factory_;
+  ftl::WeakPtrFactory<Presentation> weak_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Presentation);
 };

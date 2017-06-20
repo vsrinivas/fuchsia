@@ -61,10 +61,11 @@ final GlobalKey<WindowManagerState> _windowManager =
 
 void addWindowForChildApplication(ChildApplication application) {
   _windowManager.currentState.addWindow(
-      new WindowFrame(
-        key: new ObjectKey(application),
+      new Window(
         title: application.title,
-        child: new ChildView(connection: application.connection),
+        child: new ChildView(
+          connection: application.connection,
+        ),
       ), onClose: () {
     application.close();
   });
@@ -138,9 +139,9 @@ ApplicationLauncherProxy _initLauncher() {
 class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return new Theme(
-      data: new ThemeData.light(),
-      child: new WindowManager(
+    return new MaterialApp(
+      title: 'Basic Window Manager',
+      home: new WindowManager(
         key: _windowManager,
         wallpaper: new Container(
           decoration: new BoxDecoration(
@@ -151,7 +152,7 @@ class App extends StatelessWidget {
             ),
           ),
         ),
-        initialWindows: <Widget>[
+        decorations: <Widget>[
           new Positioned(
             top: 24.0,
             right: 24.0,
@@ -160,7 +161,7 @@ class App extends StatelessWidget {
             ),
           ),
           new Positioned(
-            right: 24.0,
+            right: 504.0,
             bottom: 24.0,
             child: new FloatingActionButton(
               onPressed: () {
@@ -169,7 +170,72 @@ class App extends StatelessWidget {
                   title: 'Terminal',
                 ));
               },
-              child: new Icon(Icons.apps),
+              child: new Icon(Icons.build),
+            ),
+          ),
+          new Positioned(
+            right: 408.0,
+            bottom: 24.0,
+            child: new FloatingActionButton(
+              onPressed: () {
+                addWindowForChildApplication(new ChildApplication.create(
+                  'paint_view',
+                  title: 'Paint',
+                ));
+              },
+              child: new Icon(Icons.mode_edit),
+            ),
+          ),
+          new Positioned(
+            right: 312.0,
+            bottom: 24.0,
+            child: new FloatingActionButton(
+              onPressed: () {
+                addWindowForChildApplication(new ChildApplication.create(
+                  'spinning_square_view',
+                  title: 'Spinning Square',
+                ));
+              },
+              child: new Icon(Icons.crop_square),
+            ),
+          ),
+          new Positioned(
+            right: 216.0,
+            bottom: 24.0,
+            child: new FloatingActionButton(
+              onPressed: () {
+                addWindowForChildApplication(new ChildApplication.create(
+                  'noodles_view',
+                  title: 'Noodles',
+                ));
+              },
+              child: new Icon(Icons.all_inclusive),
+            ),
+          ),
+          new Positioned(
+            right: 120.0,
+            bottom: 24.0,
+            child: new FloatingActionButton(
+              onPressed: () {
+                addWindowForChildApplication(new ChildApplication.create(
+                  'media_player',
+                  title: 'Media Player',
+                ));
+              },
+              child: new Icon(Icons.weekend),
+            ),
+          ),
+          new Positioned(
+            right: 24.0,
+            bottom: 24.0,
+            child: new FloatingActionButton(
+              onPressed: () {
+                addWindowForChildApplication(new ChildApplication.create(
+                  'web_view',
+                  title: 'Web',
+                ));
+              },
+              child: new Icon(Icons.web),
             ),
           )
         ],

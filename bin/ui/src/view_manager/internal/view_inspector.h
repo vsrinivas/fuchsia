@@ -5,13 +5,14 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_VIEW_INSPECTOR_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_VIEW_INSPECTOR_H_
 
-#include "apps/mozart/services/composition/hit_tests.fidl.h"
-#include "apps/mozart/services/composition/scene_token.fidl.h"
+#include <functional>
+#include <vector>
+
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/mozart/services/views/view_tree_token.fidl.h"
-#include "apps/mozart/src/view_manager/internal/resolved_hits.h"
 
 namespace view_manager {
 class InputConnectionImpl;
@@ -27,13 +28,20 @@ struct FocusChain {
   std::vector<mozart::ViewTokenPtr> chain;
 };
 
+// Provides information about a view which was hit during a hit tests.
+struct ViewHit {
+  // The view which was hit.
+  mozart::ViewToken view_token;
+
+  // Transforms the view tree coordinate system to the view's coordinate system.
+  mozart::TransformPtr inverse_transform;
+};
+
 // Provides a view associate with the ability to inspect and perform operations
 // on the contents of views and view trees.
 class ViewInspector {
  public:
-  using GetHitTesterCallback = std::function<void(bool)>;
-  using ResolveScenesCallback =
-      std::function<void(std::vector<mozart::ViewTokenPtr>)>;
+  using HitTestCallback = std::function<void(std::vector<ViewHit>)>;
   using ResolveFocusChainCallback =
       std::function<void(std::unique_ptr<FocusChain>)>;
   using ActivateFocusChainCallback =
@@ -43,31 +51,11 @@ class ViewInspector {
 
   virtual ~ViewInspector() {}
 
-  // Provides an interface which can be used to perform hit tests on the
-  // contents of the view tree's scene graph.
-  //
-  // The |hit_tester| will be closed if the view tree is not attached to a
-  // renderer, when it is reattached to a different renderer, or when the
-  // view tree is destroyed.
-  //
-  // The callback will be invoked the hit tester is invalidated.
-  // If |renderer_changed| is true, the client should call |GetHitTester|
-  // again to obtain a new one.  Otherwise it should assume that the view
-  // tree has become unavailable (so no hit tester is available).
-  virtual void GetHitTester(
-      mozart::ViewTreeTokenPtr view_tree_token,
-      fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
-      const GetHitTesterCallback& callback) = 0;
-
-  // Given an array of scene tokens, produces an array of view tokens
-  // of equal size containing the view to which the scene belongs or null
-  // if the scene token does not belong to any view.
-  //
-  // It is safe to cache the results of this operation because a scene will
-  // only ever be associated with at most one view although a view may
-  // create several scenes during its lifetime.
-  virtual void ResolveScenes(std::vector<mozart::SceneTokenPtr> scene_tokens,
-                             const ResolveScenesCallback& callback) = 0;
+  // Performs a hit test at the given point and returns the list of views
+  // which were hit.
+  virtual void HitTest(const mozart::ViewTreeToken& view_tree_token,
+                       const mozart::PointF& point,
+                       HitTestCallback callback) = 0;
 
   // Given a token for a view tree, retrieve the current active focus chain for
   // this view tree.
@@ -97,12 +85,6 @@ class ViewInspector {
   virtual void GetImeService(
       mozart::ViewTokenPtr view_token,
       fidl::InterfaceRequest<mozart::ImeService> ime_service) = 0;
-
-  // Resolves all of the scene tokens referenced in the hit test result
-  // then invokes the callback.
-  // Note: May invoke the callback immediately if no remote calls were required.
-  virtual void ResolveHits(mozart::HitTestResultPtr hit_test_result,
-                           const ResolvedHitsCallback& callback) = 0;
 };
 
 }  // namespace view_manager

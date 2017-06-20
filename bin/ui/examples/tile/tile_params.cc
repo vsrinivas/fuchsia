@@ -13,30 +13,6 @@ TileParams::~TileParams() {}
 bool TileParams::Parse(const ftl::CommandLine& command_line) {
   std::string value;
 
-  // Parse --version.
-  if (command_line.GetOptionValue("version", &value)) {
-    if (value == "any")
-      version_mode = TileParams::VersionMode::kAny;
-    else if (value == "exact")
-      version_mode = TileParams::VersionMode::kExact;
-    else
-      return false;
-  }
-
-  // Parse --combinator.
-  if (command_line.GetOptionValue("combinator", &value)) {
-    if (value == "merge")
-      combinator_mode = TileParams::CombinatorMode::kMerge;
-    else if (value == "prune")
-      combinator_mode = TileParams::CombinatorMode::kPrune;
-    else if (value == "flash")
-      combinator_mode = TileParams::CombinatorMode::kFallbackFlash;
-    else if (value == "dim")
-      combinator_mode = TileParams::CombinatorMode::kFallbackDim;
-    else
-      return false;
-  }
-
   // Parse --horizontal and --vertical.
   if (command_line.HasOption("horizontal"))
     orientation_mode = TileParams::OrientationMode::kHorizontal;

@@ -6,16 +6,17 @@ source_set("view_framework") {
   sources = [
     "base_view.cc",
     "base_view.h",
-    "input_handler.cc",
-    "input_handler.h",
   ]
 
   public_deps = [
     "//application/lib/app",
     "//application/services",
+    "//apps/mozart/lib/scene:client",
+    "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
+    "//apps/mozart/services/scene",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace",
     "//lib/fidl/cpp/bindings",
@@ -34,5 +35,18 @@ source_set("view_provider") {
   public_deps = [
     ":view_framework",
     "//apps/tracing/lib/trace:provider",
+  ]
+}
+
+source_set("skia") {
+  sources = [
+    "skia_view.cc",
+    "skia_view.h",
+  ]
+
+  public_deps = [
+    ":view_framework",
+    "//apps/mozart/lib/scene:skia",
+    "//third_party/skia",
   ]
 }

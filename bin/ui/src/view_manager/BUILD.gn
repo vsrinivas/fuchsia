@@ -39,11 +39,11 @@ source_set("lib") {
   public_deps = [
     "//application/lib/app",
     "//apps/modular/lib/rapidjson",
-    "//apps/mozart/services/composition",
-    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/lib/scene:client",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/input",
     "//apps/mozart/services/input/cpp",
+    "//apps/mozart/services/scene",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/view_manager/input",

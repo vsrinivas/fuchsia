@@ -36,38 +36,12 @@ ViewTreeState::ViewTreeState(
   });
 }
 
-ViewTreeState::~ViewTreeState() {
-  ClearHitTesterCallbacks(false /*renderer_changed*/);
-}
-
-void ViewTreeState::SetRenderer(mozart::RendererPtr renderer) {
-  renderer_ = std::move(renderer);
-  frame_scheduler_.reset();
-  if (renderer_)
-    renderer_->GetScheduler(frame_scheduler_.NewRequest());
-
-  ClearHitTesterCallbacks(true /*renderer_changed*/);
-}
+ViewTreeState::~ViewTreeState() {}
 
 ViewStub* ViewTreeState::GetRoot() const {
   if (children().empty())
     return nullptr;
   return children().cbegin()->second.get();
-}
-
-void ViewTreeState::RequestHitTester(
-    fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
-    const ViewInspector::GetHitTesterCallback& callback) {
-  FTL_DCHECK(hit_tester_request.is_pending());
-  if (renderer_)
-    renderer_->GetHitTester(std::move(hit_tester_request));
-  pending_hit_tester_callbacks_.push_back(callback);
-}
-
-void ViewTreeState::ClearHitTesterCallbacks(bool renderer_changed) {
-  for (const auto& callback : pending_hit_tester_callbacks_)
-    callback(renderer_changed);
-  pending_hit_tester_callbacks_.clear();
 }
 
 ViewTreeState* ViewTreeState::AsViewTreeState() {

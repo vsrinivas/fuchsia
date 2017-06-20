@@ -23,11 +23,6 @@ interface InputConnection {
   // If |listener| is null, then the previously set listener is removed.
   SetEventListener(InputListener? listener);
 
-  // Sets the listener to for receiving hit testing queries.
-  //
-  // If |listener| is null, then the previously set listener is removed.
-  SetViewHitTester(ViewHitTester? listener);
-
   // Retrieves an |InputMethodEditor| to handle text editing.
   GetInputMethodEditor(KeyboardType keyboard_type,
                        InputMethodAction action,
@@ -38,6 +33,7 @@ interface InputConnection {
 
 // An interface applications may implement to receive events from an
 // input connection.
+// TODO(MZ-33): This should include hit testing and an input arena.
 interface InputListener {
   // Called to deliver an input event.
   //
@@ -45,16 +41,4 @@ interface InputListener {
   // consumed by the connection.  If |consumed| is false, the system may
   // apply default behavior of its own in response to the event.
   OnEvent(InputEvent event) => (bool consumed);
-};
-
-// An interface applications may implement to handle hit testing queries
-interface ViewHitTester {
-  // Called to hit test the current view.
-  //
-  // |point| is expressed in the view's local coordinate system.
-  //
-  // The |was_hit| result should indicate whether the view was hit or not.
-  // The |subviews| result should list subviews of the current view that
-  // were also hit during the test.
-  HitTest(PointF point) => (bool was_hit, array<ViewToken> subviews);
 };

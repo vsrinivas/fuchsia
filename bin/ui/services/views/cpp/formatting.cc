@@ -17,7 +17,7 @@ std::ostream& operator<<(std::ostream& os, const ViewTreeToken& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewInfo& value) {
-  return os << "{scene_token=" << value.scene_token << "}";
+  return os << "{}";
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewProperties& value) {
@@ -31,13 +31,6 @@ std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value) {
 
 std::ostream& operator<<(std::ostream& os, const ViewLayout& value) {
   return os << "{size=" << value.size << "}";
-}
-
-std::ostream& operator<<(std::ostream& os, const ViewInvalidation& value) {
-  return os << "{properties=" << value.properties
-            << ", container_flush_token=" << value.container_flush_token
-            << ", scene_version=" << value.scene_version
-            << ", frame_info=" << value.frame_info << "}";
 }
 
 }  // namespace mozart

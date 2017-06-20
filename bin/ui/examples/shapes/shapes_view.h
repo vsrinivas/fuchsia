@@ -5,9 +5,8 @@
 #ifndef APPS_MOZART_EXAMPLES_SHAPES_SHAPES_VIEW_H_
 #define APPS_MOZART_EXAMPLES_SHAPES_SHAPES_VIEW_H_
 
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
+#include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/macros.h"
 
 class SkCanvas;
@@ -23,11 +22,11 @@ class ShapesView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnDraw() override;
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
 
-  void DrawContent(const mozart::Size& size, SkCanvas* canvas);
-
-  mozart::BufferProducer buffer_producer_;
+  mozart::client::ShapeNode background_node_;
+  mozart::client::ShapeNode card_node_;
+  mozart::client::ShapeNode circle_node_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ShapesView);
 };

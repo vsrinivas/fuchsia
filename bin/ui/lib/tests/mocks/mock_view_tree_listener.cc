@@ -7,21 +7,9 @@
 namespace mozart {
 namespace test {
 
-MockViewTreeListener::MockViewTreeListener() : callback_(nullptr) {}
-
-MockViewTreeListener::MockViewTreeListener(
-    const OnMockRendererDiedCallback& callback)
-    : callback_(callback) {}
+MockViewTreeListener::MockViewTreeListener() {}
 
 MockViewTreeListener::~MockViewTreeListener() {}
-
-void MockViewTreeListener::OnRendererDied(
-    const OnRendererDiedCallback& callback) {
-  if (callback_) {
-    callback_();
-  }
-  callback();
-}
 
 }  // namespace test
 }  // namespace mozart

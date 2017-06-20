@@ -6,18 +6,12 @@ source_set("mocks") {
   testonly = true
 
   sources = [
-    "mock_hit_tester.cc",
-    "mock_hit_tester.h",
     "mock_input_device.cc",
     "mock_input_device.h",
     "mock_input_device_registry.cc",
     "mock_input_device_registry.h",
-    "mock_renderer.cc",
-    "mock_renderer.h",
     "mock_view_container_listener.cc",
     "mock_view_container_listener.h",
-    "mock_view_inspector.cc",
-    "mock_view_inspector.h",
     "mock_view_listener.cc",
     "mock_view_listener.h",
     "mock_view_tree_listener.cc",

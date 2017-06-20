@@ -8,10 +8,11 @@
 #include <memory>
 #include <string>
 
+#include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "apps/mozart/src/view_manager/view_container_state.h"
 #include "apps/mozart/src/view_manager/internal/view_inspector.h"
+#include "apps/mozart/src/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -26,31 +27,29 @@ class ViewImpl;
 class ViewState : public ViewContainerState {
  public:
   enum {
-    // View invalidated itself explicitly (wants to draw).
-    INVALIDATION_EXPLICIT = 1u << 0,
-
     // Properties may have changed and must be resolved.
-    INVALIDATION_PROPERTIES_CHANGED = 1u << 1,
+    INVALIDATION_PROPERTIES_CHANGED = 1u << 0,
 
     // View's parent changed, may require resolving properties.
-    INVALIDATION_PARENT_CHANGED = 1u << 2,
+    INVALIDATION_PARENT_CHANGED = 1u << 1,
 
     // Next invalidation should carry all properties.
-    INVALIDATION_RESEND_PROPERTIES = 1u << 3,
+    INVALIDATION_RESEND_PROPERTIES = 1u << 2,
 
     // View invalidation is in progress, awaiting a reply.
-    INVALIDATION_IN_PROGRESS = 1u << 4,
+    INVALIDATION_IN_PROGRESS = 1u << 3,
 
     // View invalidation was stalled because the view took too long to
     // respond before a subsequent invalidation was triggered so it must
     // be rescheduled.
-    INVALIDATION_STALLED = 1u << 5,
+    INVALIDATION_STALLED = 1u << 4,
   };
 
   ViewState(ViewRegistry* registry,
             mozart::ViewTokenPtr view_token,
             fidl::InterfaceRequest<mozart::View> view_request,
             mozart::ViewListenerPtr view_listener,
+            mozart::client::Session* session,
             const std::string& label);
   ~ViewState() override;
 
@@ -66,21 +65,13 @@ class ViewState : public ViewContainerState {
     return view_listener_;
   }
 
+  // Gets the view's attachment point.
+  mozart::client::EntityNode& top_node() { return top_node_; }
+
   // Gets or sets the view stub which links this view into the
   // view hierarchy, or null if the view isn't linked anywhere.
   ViewStub* view_stub() const { return view_stub_; }
   void set_view_stub(ViewStub* view_stub) { view_stub_ = view_stub; }
-
-  // The current scene token, or null if none.
-  const mozart::SceneTokenPtr& scene_token() { return scene_token_; }
-  void set_scene_token(mozart::SceneTokenPtr scene_token) {
-    scene_token_ = std::move(scene_token);
-  }
-
-  // Gets the scene version the view was asked to produce.
-  // This value monotonically increases each time new properties are set.
-  // This value is preserved across reparenting.
-  uint32_t issued_scene_version() const { return issued_scene_version_; }
 
   // Gets the properties the view was asked to apply, after applying
   // any inherited properties from the container, or null if none set.
@@ -89,7 +80,7 @@ class ViewState : public ViewContainerState {
     return issued_properties_;
   }
 
-  // Sets the requested properties and increments the scene version.
+  // Sets the requested properties.
   // Sets |issued_properties_valid()| to true if |properties| is not null.
   void IssueProperties(mozart::ViewPropertiesPtr properties);
 
@@ -127,6 +118,7 @@ class ViewState : public ViewContainerState {
 
   mozart::ViewTokenPtr view_token_;
   mozart::ViewListenerPtr view_listener_;
+  mozart::client::EntityNode top_node_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
@@ -137,9 +129,6 @@ class ViewState : public ViewContainerState {
 
   ViewStub* view_stub_ = nullptr;
 
-  mozart::SceneTokenPtr scene_token_;
-
-  uint32_t issued_scene_version_ = 0u;
   mozart::ViewPropertiesPtr issued_properties_;
 
   uint32_t invalidation_flags_ = 0u;

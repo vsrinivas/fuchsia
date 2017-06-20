@@ -8,24 +8,19 @@ executable("paint") {
   output_name = "paint_view"
 
   sources = [
-    "paint.cc",
+    "main.cc",
+    "paint_view.cc",
+    "paint_view.h",
   ]
 
   deps = [
-    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/view_framework:skia",
     "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/buffers/cpp",
-    "//apps/mozart/services/composition",
-    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/scene",
     "//apps/mozart/services/views",
-    "//lib/escher/escher",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/skia",
   ]
-  if (mozart_examples_use_scene_manager) {
-    defines = [ "MOZART_EXAMPLES_USE_SCENE_MANAGER" ]
-    deps += [ "//apps/mozart/lib/scene:session_helpers" ]
-  }
 }

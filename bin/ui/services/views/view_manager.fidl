@@ -4,6 +4,7 @@
 
 module mozart;
 
+import "apps/mozart/services/scene/scene_manager.fidl";
 import "apps/mozart/services/views/view_trees.fidl";
 import "apps/mozart/services/views/views.fidl";
 
@@ -22,11 +23,15 @@ interface ViewManager {
   // Maximum length for a view or view tree label.
   const uint32 kLabelMaxLength = 32;
 
+  // Gets the scene manager associated with this view manager.
+  // All graphical content for this view manager's views and view trees
+  // must come from sessions created by this |scene_manager|.
+  GetSceneManager(mozart2.SceneManager& scene_manager);
+
   // Creates a view.
   //
   // The |view| is used to configure the view and interact with its
-  // local environment.  The view pipe is private to the view and should
-  // not be shared with anyone else.
+  // local environment.
   //
   // The |view_owner| is used as a transferable reference which can
   // be passed to the view's intended container as part of a request to
@@ -41,18 +46,28 @@ interface ViewManager {
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
   //
+  // |parent_export_token| is an export token which the view manager
+  // will use to export the node to which the view's content should be
+  // attached.
+  //
+  // To present graphical content, the view must obtain a |Session| from
+  // the |SceneManager|, create an event pair, bind one endpoint to an
+  // |ImportResourceOp| using |ImportSpec.NODE|, attach its content nodes as
+  // descendants of the imported node, and pass the other endpoint of the
+  // event pair to this method as |parent_export_token|.
+  //
   // To destroy the view and cause it to be removed from the view tree,
   // simply close the |view|, |view_listener|, or |view_owner| channels.
   CreateView(View& view,
              ViewOwner& view_owner,
              ViewListener view_listener,
+             handle<eventpair> parent_export_token,
              string? label);
 
   // Creates a view tree.
   //
   // The |view_tree| is used to configure the view tree and interact
-  // with the views it contains.  The view tree is private to the view
-  // and should not be shared with anyone else.
+  // with the views it contains.
   //
   // The |view_tree_listener| is used to receive events from the view tree.
   //

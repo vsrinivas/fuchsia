@@ -1,7 +1,7 @@
-# Mozart Skia drawing example.
+# Mozart Shapes Example
 
-This directory contains a simple application which uses Skia to draw
-some simple shapes to a view.
+This directory contains a simple application which draws a few primitive
+shapes to a view.
 
 ## USAGE
 

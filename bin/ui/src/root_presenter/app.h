@@ -10,7 +10,6 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/lib/input/input_device_impl.h"
-#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/input/input_device_registry.fidl.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
@@ -58,8 +57,8 @@ class App : public mozart::Presenter,
   fidl::BindingSet<mozart::InputDeviceRegistry> input_receiver_bindings_;
   mozart::input::InputReader input_reader_;
 
-  mozart::CompositorPtr compositor_;
   mozart::ViewManagerPtr view_manager_;
+  mozart2::SceneManagerPtr scene_manager_;
 
   std::vector<std::unique_ptr<Presentation>> presentations_;
 
