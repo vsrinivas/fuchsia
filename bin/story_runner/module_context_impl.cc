@@ -15,22 +15,18 @@
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
-    const fidl::Array<fidl::String>& module_path,
     const ModuleContextInfo& info,
-    const std::string& module_url,
-    const LinkPathPtr& default_link_path,
+    ModuleDataPtr module_data,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<ModuleContext> module_context)
-    : module_path_(module_path.Clone()),
+    : module_data_(std::move(module_data)),
       story_controller_impl_(info.story_controller_impl),
-      module_url_(module_url),
-      default_link_path_(default_link_path.Clone()),
       module_controller_impl_(module_controller_impl),
       component_context_impl_(info.component_context_info,
                               EncodeModuleComponentNamespace(
                                   info.story_controller_impl->GetStoryId()),
-                              EncodeModulePath(module_path_),
-                              module_url_),
+                              EncodeModulePath(module_data_->module_path),
+                              module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider),
       binding_(this, std::move(module_context)) {}
 
@@ -41,10 +37,10 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
   LinkPathPtr link_path;
   if (name) {
     link_path = LinkPath::New();
-    link_path->module_path = module_path_.Clone();
+    link_path->module_path = module_data_->module_path.Clone();
     link_path->link_name = name;
   } else {
-    link_path = default_link_path_.Clone();
+    link_path = module_data_->link_path.Clone();
   }
   story_controller_impl_->GetLinkPath(std::move(link_path), std::move(link));
 }
@@ -58,7 +54,7 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->StartModule(
-      module_path_, name, query, link_name, std::move(outgoing_services),
+      module_data_->module_path, name, query, link_name, std::move(outgoing_services),
       std::move(incoming_services), std::move(module_controller),
       std::move(view_owner), ModuleSource::INTERNAL);
 }
@@ -73,7 +69,7 @@ void ModuleContextImpl::StartModuleInShell(
     SurfaceRelationPtr surface_relation,
     const bool focus) {
   story_controller_impl_->StartModuleInShell(
-      module_path_, name, query, link_name, std::move(outgoing_services),
+      module_data_->module_path, name, query, link_name, std::move(outgoing_services),
       std::move(incoming_services), std::move(module_controller),
       std::move(surface_relation), focus, ModuleSource::INTERNAL);
 }
@@ -87,9 +83,10 @@ void ModuleContextImpl::GetComponentContext(
 void ModuleContextImpl::GetIntelligenceServices(
     fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
   auto module_scope = maxwell::ModuleScope::New();
-  module_scope->module_path = module_path_.Clone();
-  module_scope->url = module_url_;
+  module_scope->module_path = module_data_->module_path.Clone();
+  module_scope->url = module_data_->module_url;
   module_scope->story_id = story_controller_impl_->GetStoryId();
+
   auto scope = maxwell::ComponentScope::New();
   scope->set_module_scope(std::move(module_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
@@ -103,7 +100,7 @@ void ModuleContextImpl::GetStoryId(const GetStoryIdCallback& callback) {
 void ModuleContextImpl::RequestFocus() {
   // TODO(zbowling): we should be asking the module_controller_impl_ if it's ok.
   // For now, we are not going to "request" anything. Just do it.
-  story_controller_impl_->FocusModule(module_path_);
+  story_controller_impl_->FocusModule(module_data_->module_path);
   story_controller_impl_->RequestStoryFocus();
 }
 

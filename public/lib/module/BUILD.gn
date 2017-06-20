@@ -9,8 +9,6 @@ fidl("module") {
   sources = [
     "module.fidl",
     "module_context.fidl",
-    "module_controller.fidl",
-    "module_state.fidl",
   ]
 
   deps = [
@@ -23,7 +21,15 @@ fidl("module") {
   ]
 
   public_deps = [
+    ":module_controller",
     ":module_data",
+  ]
+}
+
+fidl("module_controller") {
+  sources = [
+    "module_controller.fidl",
+    "module_state.fidl",
   ]
 }
 

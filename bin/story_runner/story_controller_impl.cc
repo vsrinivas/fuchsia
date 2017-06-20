@@ -141,6 +141,9 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
 };
 
+// TODO(mesch): Merge the StoryStorageImpl operations into the
+// StoryControllerImpl operations. This Operation exists only to align the
+// operation queues of StoryControllerImpl and StoryStorageImpl.
 class StoryControllerImpl::GetModulesCall
     : Operation<fidl::Array<ModuleDataPtr>> {
  public:
@@ -157,8 +160,8 @@ class StoryControllerImpl::GetModulesCall
     FlowToken flow(this, &result_);
 
     story_controller_impl_->story_storage_impl_->ReadAllModuleData(
-        [this, flow](fidl::Array<ModuleDataPtr> module_data) {
-          result_ = std::move(module_data);
+        [this, flow](fidl::Array<ModuleDataPtr> result) {
+          result_ = std::move(result);
         });
   }
 
@@ -474,8 +477,15 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
       return;
     }
 
-    ii->module_controller_impl->Teardown([flow] {});
-  };
+    ii->module_controller_impl->Teardown([this, flow] { Cont4(flow); });
+  }
+
+  void Cont4(FlowToken flow) {
+    story_controller_impl_->modules_watchers_.ForAllPtrs(
+        [this](StoryModulesWatcher* const watcher) {
+          watcher->OnNewModule(module_data_.Clone());
+        });
+  }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> module_path_;
@@ -657,8 +667,14 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         story_controller_impl_->story_provider_impl_
             ->user_intelligence_provider()};
 
+    module_data_ = ModuleData::New();
+    module_data_->module_url = module_url_;
+    module_data_->module_path = module_path_.Clone();
+    module_data_->link_path = link_path_.Clone();
+    module_data_->surface_relation = surface_relation_.Clone();
+
     connection.module_context_impl.reset(new ModuleContextImpl(
-        module_path_, module_context_info, module_url_, link_path_,
+        module_context_info, module_data_.Clone(),
         connection.module_controller_impl.get(), std::move(self_request)));
 
     story_controller_impl_->connections_.emplace_back(std::move(connection));
@@ -667,15 +683,14 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
   void NotifyWatchers() {
-    ModuleDataPtr module_data = ModuleData::New();
-    module_data->module_url = module_url_;
-    module_data->module_path = module_path_.Clone();
-    module_data->link_path = link_path_.Clone();
-    module_data->surface_relation = surface_relation_.Clone();
-
     story_controller_impl_->watchers_.ForAllPtrs(
-        [&module_data](StoryWatcher* const watcher) {
-          watcher->OnModuleAdded(module_data.Clone());
+        [this](StoryWatcher* const watcher) {
+          watcher->OnModuleAdded(module_data_.Clone());
+        });
+
+    story_controller_impl_->modules_watchers_.ForAllPtrs(
+        [this](StoryModulesWatcher* const watcher) {
+          watcher->OnNewModule(module_data_.Clone());
         });
   }
 
@@ -693,6 +708,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
 
   LinkPathPtr link_path_;
+  ModuleDataPtr module_data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
 };
@@ -906,6 +922,11 @@ void StoryControllerImpl::GetLinkPath(const LinkPathPtr& link_path,
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
+
+  links_watchers_.ForAllPtrs(
+      [&link_path](StoryLinksWatcher* const watcher) {
+          watcher->OnNewLink(link_path.Clone());
+      });
 }
 
 void StoryControllerImpl::StartModule(
@@ -1050,8 +1071,76 @@ void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
 }
 
 // |StoryController|
+void StoryControllerImpl::GetActiveModules(
+    fidl::InterfaceHandle<StoryModulesWatcher> watcher,
+    const GetActiveModulesCallback& callback) {
+  // We execute this in a SyncCall so that we are sure we don't fall in a crack
+  // between a module being created and inserted in the connections collection
+  // during some Operation.
+  new SyncCall(
+      &operation_queue_,
+      ftl::MakeCopyable([this, watcher = std::move(watcher), callback]() mutable {
+          if (watcher) {
+            auto ptr = StoryModulesWatcherPtr::Create(std::move(watcher));
+            modules_watchers_.AddInterfacePtr(std::move(ptr));
+          }
+
+          fidl::Array<ModuleDataPtr> result;
+          result.resize(0);
+          for (auto& connection : connections_) {
+            result.push_back(connection.module_context_impl->module_data().Clone());
+          }
+          callback(std::move(result));
+        }));
+}
+
+// |StoryController|
 void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
   new GetModulesCall(&operation_queue_, this, callback);
+}
+
+// |StoryController|
+void StoryControllerImpl::GetModuleController(
+      fidl::Array<fidl::String> module_path,
+      fidl::InterfaceRequest<ModuleController> request) {
+  for (auto& connection : connections_) {
+    if (module_path.Equals(connection.module_context_impl->module_path())) {
+      connection.module_controller_impl->Connect(std::move(request));
+      return;
+    }
+  }
+
+  // Trying to get a controller for a module that is not active just drops the
+  // connection request.
+}
+
+// |StoryController|
+void StoryControllerImpl::GetActiveLinks(
+    fidl::InterfaceHandle<StoryLinksWatcher> watcher,
+    const GetActiveLinksCallback& callback) {
+  // We execute this in a SyncCall so that we are sure we don't fall in a crack
+  // between a link being created and inserted in the links collection during
+  // some Operation. (Right now Links are not created in an Operation, but we
+  // don't want to rely on it.)
+  new SyncCall(
+      &operation_queue_,
+      ftl::MakeCopyable([this, watcher = std::move(watcher), callback]() mutable {
+          if (watcher) {
+            auto ptr = StoryLinksWatcherPtr::Create(std::move(watcher));
+            links_watchers_.AddInterfacePtr(std::move(ptr));
+          }
+
+          // Only active links, i.e. links currently in use by a module, are
+          // returned here. Eventually we might want to list all links, but this
+          // requires some changes to how links are stored to make it
+          // nice. (Right now we need to parse keys, which we don't want to.)
+          fidl::Array<LinkPathPtr> result;
+          result.resize(0);
+          for (auto& link : links_) {
+            result.push_back(link->link_path().Clone());
+          }
+          callback(std::move(result));
+        }));
 }
 
 // |StoryController|

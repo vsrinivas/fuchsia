@@ -166,7 +166,14 @@ class StoryControllerImpl : StoryController, StoryContext {
                  const fidl::String& url,
                  const fidl::String& link_name,
                  SurfaceRelationPtr surface_relation) override;
+  void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
+                        const GetActiveModulesCallback& callback) override;
   void GetModules(const GetModulesCallback& callback) override;
+  void GetModuleController(
+      fidl::Array<fidl::String> module_path,
+      fidl::InterfaceRequest<ModuleController> request) override;
+  void GetActiveLinks(fidl::InterfaceHandle<StoryLinksWatcher> watcher,
+                      const GetActiveLinksCallback& callback) override;
   void GetLink(fidl::Array<fidl::String> module_path,
                const fidl::String& name,
                fidl::InterfaceRequest<Link> request) override;
@@ -200,7 +207,10 @@ class StoryControllerImpl : StoryController, StoryContext {
   // Implements the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;
 
+  // Watcher for various aspects of the story.
   fidl::InterfacePtrSet<StoryWatcher> watchers_;
+  fidl::InterfacePtrSet<StoryModulesWatcher> modules_watchers_;
+  fidl::InterfacePtrSet<StoryLinksWatcher> links_watchers_;
 
   // Everything for the story shell. Relationships between modules are conveyed
   // to the story shell using their instance IDs.

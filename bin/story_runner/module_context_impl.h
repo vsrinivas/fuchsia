@@ -36,24 +36,25 @@ struct ModuleContextInfo {
 // on its Story handle can be associated with the Module instance.
 class ModuleContextImpl : ModuleContext {
  public:
-  // |module_path| identifies this particular module instance using the path of
-  // modules that have ended up starting this module. The last item in this list
-  // is this module's name. |module_path| can be used to internally name
-  // resources that belong to this module (message queues, Links).
-  ModuleContextImpl(const fidl::Array<fidl::String>& module_path,
-                    const ModuleContextInfo& info,
-                    const std::string& module_url,
-                    const LinkPathPtr& default_link_path,
+  // |module_data| identifies this particular module instance using the path of
+  // modules that have ended up starting this module in the module_path
+  // property. The last item in this list is this module's name. |module_path|
+  // can be used to internally name resources that belong to this module
+  // (message queues, Links).
+  ModuleContextImpl(const ModuleContextInfo& info,
+                    ModuleDataPtr module_data,
                     ModuleControllerImpl* module_controller_impl,
                     fidl::InterfaceRequest<ModuleContext> module_context);
 
   ~ModuleContextImpl() override;
 
-  const fidl::Array<fidl::String>& module_path() const { return module_path_; }
+  const ModuleData& module_data() const { return *module_data_; }
 
-  const std::string& module_url() const { return module_url_; }
+  const fidl::Array<fidl::String>& module_path() const { return module_data_->module_path; }
 
-  const LinkPath& link_path() const { return *default_link_path_; }
+  const std::string& module_url() const { return module_data_->module_url; }
+
+  const LinkPath& link_path() const { return *module_data_->link_path; }
 
  private:
   // |ModuleContext|
@@ -93,21 +94,13 @@ class ModuleContextImpl : ModuleContext {
   // |ModuleContext|
   void Done() override;
 
-  // The path of the modules that have started this module (ie.,
-  // module_path_[n-1] starts module_path_[n]). The last element represents the
-  // name this module was given (as part of ModuleContext.StartModule() or
-  // related).
-  const fidl::Array<fidl::String> module_path_;
+  // Identifies the module by its path, holds the URL of the running module, and
+  // the link it was started with.
+  const ModuleDataPtr module_data_;
 
   // Not owned. The StoryControllerImpl instance this ModuleContextImpl instance
   // connects to.
   StoryControllerImpl* const story_controller_impl_;
-
-  // This ID is used to namespace a module's ledger.
-  const std::string module_url_;
-
-  // The link path this module was started with.
-  LinkPathPtr default_link_path_;
 
   // Not owned. Used to notify module watchers and request tear down.
   ModuleControllerImpl* const module_controller_impl_;

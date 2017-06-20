@@ -150,6 +150,73 @@ class StoryWatcherImpl : modular::StoryWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
+// A simple story modules watcher implementation that just logs the
+// notifications it receives.
+class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
+ public:
+  StoryModulesWatcherImpl() : binding_(this) {}
+  ~StoryModulesWatcherImpl() override = default;
+
+  // Registers itself as a watcher on the given story. Only one story at a time
+  // can be watched.
+  void Watch(modular::StoryControllerPtr* const story_controller) {
+    (*story_controller)->GetActiveModules(
+        binding_.NewBinding(),
+        [this](fidl::Array<modular::ModuleDataPtr> data) {
+          FTL_LOG(INFO) << "StoryModulesWatcherImpl GetModules(): "
+                        << data.size() << " modules";
+        });
+  }
+
+  // Deregisters itself from the watched story.
+  void Reset() { binding_.Close(); }
+
+ private:
+  // |StoryModulesWatcher|
+  void OnNewModule(modular::ModuleDataPtr data) override {
+    FTL_LOG(INFO) << "New Module: " << data->module_url;
+  }
+
+  // |StoryModulesWatcher|
+  void OnStopModule(modular::ModuleDataPtr data) override {
+    FTL_LOG(INFO) << "Stop Module: " << data->module_url;
+  }
+
+  fidl::Binding<modular::StoryModulesWatcher> binding_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryModulesWatcherImpl);
+};
+
+// A simple story links watcher implementation that just logs the notifications
+// it receives.
+class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
+ public:
+  StoryLinksWatcherImpl() : binding_(this) {}
+  ~StoryLinksWatcherImpl() override = default;
+
+  // Registers itself as a watcher on the given story. Only one story at a time
+  // can be watched.
+  void Watch(modular::StoryControllerPtr* const story_controller) {
+    (*story_controller)->GetActiveLinks(
+        binding_.NewBinding(),
+        [this](fidl::Array<modular::LinkPathPtr> data) {
+          FTL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
+                        << data.size() << " links";
+        });
+  }
+
+  // Deregisters itself from the watched story.
+  void Reset() { binding_.Close(); }
+
+ private:
+  // |StoryLinksWatcher|
+  void OnNewLink(modular::LinkPathPtr data) override {
+    FTL_LOG(INFO) << "New Link: " << data->link_name;
+  }
+
+  fidl::Binding<modular::StoryLinksWatcher> binding_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryLinksWatcherImpl);
+};
+
 // A simple story provider watcher implementation. Just logs observed state
 // transitions.
 class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
@@ -368,6 +435,9 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
       });
     });
 
+    story_modules_watcher_.Watch(&story_controller_);
+    story_links_watcher_.Watch(&story_controller_);
+
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -555,6 +625,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
   void TeardownStoryController() {
     story_watcher_.Reset();
+    story_modules_watcher_.Reset();
+    story_links_watcher_.Reset();
     link_watcher_.Reset();
     story_controller_.reset();
     root_.reset();
@@ -564,6 +636,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
   StoryProviderWatcherImpl story_provider_watcher_;
   StoryWatcherImpl story_watcher_;
+  StoryModulesWatcherImpl story_modules_watcher_;
+  StoryLinksWatcherImpl story_links_watcher_;
   LinkWatcherImpl link_watcher_;
 
   std::unique_ptr<modular::ViewHost> view_;

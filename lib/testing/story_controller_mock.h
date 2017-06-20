@@ -46,18 +46,31 @@ class StoryControllerMock : public StoryController {
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override {}
 
   // |StoryController|
-  void GetLink(fidl::Array<fidl::String> module_path,
-               const fidl::String& name,
-               fidl::InterfaceRequest<Link> request) override {}
-
-  // |StoryController|
   void Stop(const StopCallback& done) override {}
 
   // |StoryController|
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override {}
 
   // |StoryController|
+  void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
+                        const GetActiveModulesCallback& callback) override {}
+
+  // |StoryController|
   void GetModules(const GetModulesCallback& callback) override {}
+
+  // |StoryController|
+  void GetModuleController(
+      fidl::Array<fidl::String> module_path,
+      fidl::InterfaceRequest<ModuleController> request) override {}
+
+  // |StoryController|
+  void GetActiveLinks(fidl::InterfaceHandle<StoryLinksWatcher> watcher,
+                      const GetActiveLinksCallback& callback) override {}
+
+  // |StoryController|
+  void GetLink(fidl::Array<fidl::String> module_path,
+               const fidl::String& name,
+               fidl::InterfaceRequest<Link> request) override {}
 
   std::string last_added_module_;
 };
