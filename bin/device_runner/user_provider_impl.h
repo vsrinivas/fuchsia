@@ -42,7 +42,7 @@ class UserProviderImpl : UserProvider {
   // |UserProvider|
   void AddUser(auth::IdentityProvider identity_provider,
                const fidl::String& displayname,
-               const fidl::String& devicename,
+               const fidl::String& devicename, // deprecated
                const fidl::String& servername,
                const AddUserCallback& callback) override;
 
@@ -53,7 +53,6 @@ class UserProviderImpl : UserProvider {
   bool Parse(const std::string& serialized_users);
 
   void LoginInternal(const std::string& user_id,
-                     const std::string& device_name,
                      const fidl::String& server_name,
                      const std::string& local_ledger_path,
                      UserLoginParamsPtr user_login_params);

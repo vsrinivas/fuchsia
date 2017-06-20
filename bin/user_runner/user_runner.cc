@@ -30,7 +30,6 @@ class UserRunnerApp : UserRunnerFactory {
   // |UserRunnerFactory|
   void Create(
       const fidl::String& user_id,
-      const fidl::String& device_name,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
@@ -40,8 +39,8 @@ class UserRunnerApp : UserRunnerFactory {
       fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     // Deleted in UserRunnerImpl::Terminate().
     new UserRunnerImpl(application_context_->environment(), user_id,
-                       device_name, std::move(user_shell),
-                       std::move(story_shell), std::move(ledger_repository),
+                       std::move(user_shell), std::move(story_shell),
+                       std::move(ledger_repository),
                        std::move(token_provider_factory),
                        std::move(user_context), std::move(view_owner_request),
                        std::move(user_runner_request));

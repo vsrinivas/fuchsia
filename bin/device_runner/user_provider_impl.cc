@@ -4,9 +4,6 @@
 
 #include "apps/modular/src/device_runner/user_provider_impl.h"
 
-#include <limits.h>
-#include <unistd.h>
-
 #include "apps/modular/src/device_runner/users_generated.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -21,7 +18,7 @@ namespace {
 // TODO(alhaad): This is also defined in device_runner.cc. Reconcile!
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v2.db";
+constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v3.db";
 
 std::string LedgerRepositoryPath(const std::string& user_id) {
   return kLedgerDataBaseDir + user_id;
@@ -94,7 +91,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   if (params->account_id.is_null() || params->account_id == "") {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     // When running in incogito mode, we generate a random number. This number
-    // serves as account_id, device_name and the filename for ledger repository.
+    // serves as account_id and the filename for ledger repository.
     uint32_t random_number;
     size_t random_size;
     mx_status_t status =
@@ -103,7 +100,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     FTL_CHECK(sizeof random_number == random_size);
 
     auto random_id = std::to_string(random_number);
-    LoginInternal(random_id, random_id, nullptr /* server_name */,
+    LoginInternal(random_id, nullptr /* server_name */,
                   LedgerRepositoryPath(random_id), std::move(params));
     return;
   }
@@ -148,9 +145,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   }
 
   FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
-  LoginInternal(params->account_id, found_user->device_name()->str(),
-                found_user->server_name()->str(), ledger_repository_path,
-                std::move(params));
+  LoginInternal(params->account_id, found_user->server_name()->str(),
+                ledger_repository_path, std::move(params));
 }
 
 void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
@@ -180,31 +176,12 @@ void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
 
 void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
                                const fidl::String& displayname,
-                               const fidl::String& devicename,
+                               const fidl::String& devicename, // TODO(zbowling): deprecated field
                                const fidl::String& servername,
                                const AddUserCallback& callback) {
-  std::string device_name;
-  if (!devicename.is_null() && !devicename.get().empty()) {
-    device_name = devicename;
-  } else {
-    // gethostname() will return "fuchsia" if the network stack hasn't started.
-    // Generally by this point we should have used OAuth to auth. This code is
-    // just optimistically trying to get a more unique and recognizable device
-    // name when the user doesn't specify one with their device shell.
-    char host_name_buffer[HOST_NAME_MAX + 1];
-    int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
-
-    if (result < 0) {
-      FTL_LOG(ERROR) << "unable to get hostname. errno " << errno;
-      device_name = "fuchsia";
-    } else {
-      device_name = host_name_buffer;
-    }
-  }
-
   account_provider_->AddAccount(
       identity_provider, displayname,
-      [this, identity_provider, displayname, device_name, servername, callback](
+      [this, identity_provider, displayname, servername, callback](
           auth::AccountPtr account, const fidl::String& error_code) {
         if (account.is_null()) {
           callback(nullptr, error_code);
@@ -221,7 +198,6 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
                 builder, builder.CreateString(user->id()),
                 user->identity_provider(),
                 builder.CreateString(user->display_name()),
-                builder.CreateString(user->device_name()),
                 builder.CreateString(user->server_name())));
           }
         }
@@ -243,7 +219,6 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
             builder, builder.CreateString(account->id),
             flatbuffer_identity_provider,
             builder.CreateString(account->display_name),
-            builder.CreateString(std::move(device_name)),
             builder.CreateString(std::move(servername))));
 
         builder.Finish(modular::CreateUsersStorage(
@@ -283,7 +258,6 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
     users.push_back(modular::CreateUserStorage(
         builder, builder.CreateString(user->id()), user->identity_provider(),
         builder.CreateString(user->display_name()),
-        builder.CreateString(user->device_name()),
         builder.CreateString(user->server_name())));
   }
 
@@ -334,7 +308,6 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 }
 
 void UserProviderImpl::LoginInternal(const std::string& account_id,
-                                     const std::string& device_name,
                                      const fidl::String& server_name,
                                      const std::string& local_ledger_path,
                                      UserLoginParamsPtr params) {
@@ -363,7 +336,7 @@ void UserProviderImpl::LoginInternal(const std::string& account_id,
                         ? default_user_shell_.Clone()
                         : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
-      app_context_, device_name, std::move(user_shell), story_shell_,
+      app_context_, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), account_id,
       std::move(ledger_repository), std::move(params->view_owner),
       std::move(params->user_controller), ftl::MakeCopyable([

@@ -4,6 +4,9 @@
 
 #include "apps/modular/src/user_runner/device_map_impl.h"
 
+#include <limits.h>
+#include <unistd.h>
+
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/operations.h"
@@ -21,21 +24,19 @@ void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
+  xdr->Field("hostname", &data->hostname);
 }
 
-void WriteDeviceData(OperationContainer* const operation_container,
-                     const std::string& device_name,
-                     const std::string& device_id,
-                     const std::string& profile,
-                     ledger::Page* const page) {
-  DeviceMapEntryPtr data = DeviceMapEntry::New();
-  data->name = device_name;
-  data->device_id = device_id;
-  data->profile = profile;
+std::string LoadHostname() {
+  char host_name_buffer[HOST_NAME_MAX + 1];
+  int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
-  new WriteDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
-      operation_container, page, MakeDeviceKey(device_id), XdrDeviceData,
-      std::move(data), [] {});
+  if (result < 0) {
+    FTL_LOG(ERROR) << "unable to get hostname. errno " << errno;
+    return "fuchsia";
+  }
+
+  return host_name_buffer;
 }
 
 }  // namespace
@@ -45,8 +46,14 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_profile,
                              ledger::Page* const page)
     : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix), page_(page) {
-  WriteDeviceData(&operation_queue_, device_name, device_id, device_profile,
-                  page_);
+  current_device_.name = device_name;
+  current_device_.device_id = device_id;
+  current_device_.profile = device_profile;
+  current_device_.hostname = LoadHostname();
+
+  new WriteDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
+      &operation_queue_, page, MakeDeviceKey(device_id), XdrDeviceData,
+      current_device_.Clone(), [] {});
 }
 
 DeviceMapImpl::~DeviceMapImpl() = default;
@@ -58,6 +65,10 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 void DeviceMapImpl::Query(const QueryCallback& callback) {
   new ReadAllDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
       &operation_queue_, page_, kDeviceKeyPrefix, XdrDeviceData, callback);
+}
+
+void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {
+  callback(current_device_.Clone());
 }
 
 void DeviceMapImpl::OnChange(const std::string& key, const std::string& value) {

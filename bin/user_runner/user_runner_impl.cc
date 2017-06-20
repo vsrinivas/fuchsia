@@ -23,7 +23,6 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
-#include "apps/modular/src/device_info/device_info_impl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
@@ -82,7 +81,6 @@ std::string LedgerStatusToString(ledger::Status status) {
 UserRunnerImpl::UserRunnerImpl(
     const app::ApplicationEnvironmentPtr& application_environment,
     const fidl::String& user_id,
-    const fidl::String& device_name,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
@@ -97,8 +95,7 @@ UserRunnerImpl::UserRunnerImpl(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
       user_scope_(application_environment,
                   std::string(kUserScopeLabelPrefix) + user_id.data()),
-      user_shell_(user_scope_.GetLauncher(), std::move(user_shell)),
-      device_name_(device_name) {
+      user_shell_(user_scope_.GetLauncher(), std::move(user_shell)) {
   binding_->set_connection_error_handler([this] { Terminate([] {}); });
 
   // Show user shell.
@@ -133,18 +130,10 @@ UserRunnerImpl::UserRunnerImpl(
     }
   });
 
-  // DeviceInfo service
+  // DeviceMap service
   std::string device_id = LoadDeviceID(user_id);
+  device_name_ = LoadDeviceName(user_id);
   std::string device_profile = LoadDeviceProfile();
-
-  device_info_impl_.reset(
-      new DeviceInfoImpl(device_name_, device_id, device_profile));
-  user_scope_.AddService<DeviceInfo>(
-      [this](fidl::InterfaceRequest<DeviceInfo> request) {
-        device_info_impl_->Connect(std::move(request));
-      });
-
-  // DeviceMap
 
   device_map_impl_.reset(new DeviceMapImpl(device_name_, device_id,
                                            device_profile, root_page_.get()));

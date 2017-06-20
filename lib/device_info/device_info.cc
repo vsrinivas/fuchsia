@@ -4,6 +4,9 @@
 
 #include "apps/modular/lib/device_info/device_info.h"
 
+#include <limits.h>
+#include <unistd.h>
+
 #include "apps/modular/lib/util/filesystem.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -16,6 +19,7 @@ namespace modular {
 
 constexpr char kDeviceInfoDirectory[] = "/data/modular/device";
 constexpr char kDeviceIDFile[] = "/data/modular/device/%s.syncid";
+constexpr char kDeviceNameFile[] = "/data/modular/device/%s.devicename";
 constexpr char kSyncDeviceProfile[] =
     "/data/modular/device/profile_config.json";
 
@@ -54,6 +58,37 @@ std::string LoadDeviceID(const std::string& user) {
                 << "   set to: " << device_id;
 
   return device_id;
+}
+
+// TODO(zbowling): implement WriteDeviceName
+std::string LoadDeviceName(const std::string& user) {
+  std::string device_name;
+
+  if (!files::IsDirectory(kDeviceInfoDirectory))
+    files::CreateDirectory(kDeviceInfoDirectory);
+
+  std::string path = ftl::StringPrintf(kDeviceNameFile, user.c_str());
+
+  if (!files::ReadFileToString(path, &device_name)) {
+    // gethostname() will return "fuchsia" if the network stack hasn't started.
+    // Generally by this point we should have used OAuth to auth. This code is
+    // just optimistically trying to get a more unique and recognizable device
+    // name when the user doesn't specify one with their device shell.
+    char host_name_buffer[HOST_NAME_MAX + 1];
+    int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
+
+    if (result < 0) {
+      FTL_LOG(ERROR) << "unable to get hostname. errno " << errno;
+      device_name = "fuchsia";
+    } else {
+      device_name = host_name_buffer;
+    }
+    bool success =
+        files::WriteFile(path, device_name.data(), device_name.length());
+    FTL_DCHECK(success);
+  }
+
+  return device_name;
 }
 
 }  // namespace modular

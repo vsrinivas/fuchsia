@@ -8,7 +8,6 @@ group("src") {
   deps = [
     "bootstrap",
     "component_manager",
-    "device_info",
     "device_runner:all",
     "oauth_token_manager:all",
     "story_runner:all",

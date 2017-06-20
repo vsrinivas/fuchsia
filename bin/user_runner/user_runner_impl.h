@@ -35,7 +35,6 @@ namespace modular {
 
 class AgentRunner;
 class ComponentContextImpl;
-class DeviceInfoImpl;
 class DeviceMapImpl;
 class FocusHandler;
 class LinkImpl;
@@ -50,7 +49,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   UserRunnerImpl(
       const app::ApplicationEnvironmentPtr& application_environment,
       const fidl::String& user_id,
-      const fidl::String& device_name,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
@@ -101,7 +99,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
-  std::unique_ptr<DeviceInfoImpl> device_info_impl_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
   std::unique_ptr<RemoteInvokerImpl> remote_invoker_impl_;
   std::string device_name_;

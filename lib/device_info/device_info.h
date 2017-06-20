@@ -13,6 +13,8 @@ std::string LoadDeviceProfile();
 
 std::string LoadDeviceID(const std::string& user);
 
+std::string LoadDeviceName(const std::string& user);
+
 }  // namespace modular
 
 #endif  // APPS_MODULAR_LIB_DEVICE_INFO_DEVICE_INFO_H_

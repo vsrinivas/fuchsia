@@ -32,6 +32,9 @@ class DeviceMapImpl : DeviceMap, PageClient {
   // |DeviceMap|
   void Query(const QueryCallback& callback) override;
 
+  // |DeviceMap|
+  void GetCurrentDevice(const GetCurrentDeviceCallback& callback) override;
+
   // |PageClient|
   void OnChange(const std::string& key, const std::string& value) override;
 
@@ -40,6 +43,8 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   fidl::BindingSet<DeviceMap> bindings_;
   ledger::Page* const page_;
+
+  DeviceMapEntry current_device_;
 
   OperationQueue operation_queue_;
 
