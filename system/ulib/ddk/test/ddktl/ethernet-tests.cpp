@@ -20,7 +20,7 @@ namespace {
 class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
                       public ddk::EthmacIfc<TestEthmacIfc> {
   public:
-    TestEthmacIfc() : ddk::Device<TestEthmacIfc>(nullptr, "ddktl-test") {
+    TestEthmacIfc() : ddk::Device<TestEthmacIfc>(nullptr) {
         this_ = get_this();
     }
 
@@ -61,7 +61,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
                            public ddk::EthmacProtocol<TestEthmacProtocol> {
   public:
     TestEthmacProtocol()
-      : ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>(nullptr, "ddktl-test") {
+      : ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>(nullptr) {
         this_ = get_this();
     }
 

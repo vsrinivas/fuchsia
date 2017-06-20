@@ -338,6 +338,16 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     }
 
   protected:
+    Device(mx_device_t* parent)
+      : internal::base_device(parent),
+        Mixins<D>(&ddk_device_proto_)... {
+        internal::CheckMixins<Mixins<D>...>();
+        internal::CheckReleasable<D>();
+
+        ddk_device_proto_.release = DdkReleaseThunk;
+    }
+
+    // TODO(smklein): Deprecate; remove 'name_'
     Device(mx_device_t* parent, const char* name)
       : internal::base_device(parent),
         Mixins<D>(&ddk_device_proto_)...,
