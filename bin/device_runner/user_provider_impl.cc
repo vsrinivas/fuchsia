@@ -11,6 +11,7 @@
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
 
 namespace modular {
@@ -355,6 +356,9 @@ void UserProviderImpl::LoginInternal(const std::string& account_id,
             << "GetRepository failed: " << status;
       });
 
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
+  token_provider_factory->GetTokenProvider(kLedgerAppUrl,
+                                           ledger_token_provider_for_erase.NewRequest());
   auto user_shell = params->user_shell_config.is_null()
                         ? default_user_shell_.Clone()
                         : std::move(params->user_shell_config);
@@ -362,7 +366,20 @@ void UserProviderImpl::LoginInternal(const std::string& account_id,
       app_context_, device_name, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), account_id,
       std::move(ledger_repository), std::move(params->view_owner),
-      std::move(params->user_controller),
+      std::move(params->user_controller), ftl::MakeCopyable([
+        this, local_ledger_path, server_name,
+        ledger_token_provider_for_erase =
+            std::move(ledger_token_provider_for_erase)
+      ]() mutable {
+        ledger_repository_factory_->EraseRepository(
+            local_ledger_path, server_name,
+            std::move(ledger_token_provider_for_erase),
+            [](ledger::Status status) {
+              if (status != ledger::Status::OK) {
+                FTL_LOG(ERROR) << "EraseRepository failed: " << status;
+              }
+            });
+      }),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });
   user_controllers_[controller.get()] = std::move(controller);
 }

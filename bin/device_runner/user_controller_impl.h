@@ -37,6 +37,9 @@ class UserContextImpl : public UserContext {
   // |UserContext|
   void Logout() override;
 
+  // |UserContext|
+  void LogoutAndResetLedgerState() override;
+
   UserControllerImpl* const controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserContextImpl);
@@ -67,11 +70,13 @@ class UserControllerImpl : UserController {
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserController> user_controller,
+      std::function<void()> reset_ledger_callback,
       DoneCallback done);
 
   // This will effectively tear down the entire instance by calling |done|.
   // |UserController|
   void Logout(const LogoutCallback& done) override;
+  void LogoutAndResetLedgerState(const LogoutCallback& done);
 
  private:
   // |UserController|
@@ -88,6 +93,7 @@ class UserControllerImpl : UserController {
   fidl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
 
   std::vector<LogoutCallback> logout_response_callbacks_;
+  const std::function<void()> reset_ledger_callback_;
   DoneCallback done_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserControllerImpl);
