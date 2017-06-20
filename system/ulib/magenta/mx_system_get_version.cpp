@@ -18,9 +18,3 @@ mx_status_t _mx_system_get_version(char* version, uint32_t version_len) {
 }
 
 VDSO_INTERFACE_FUNCTION(mx_system_get_version);
-
-// Deprecated compatibility aliases.
-decltype(mx_system_get_version) _mx_version_get
-    __WEAK_ALIAS("_mx_system_get_version");
-decltype(mx_system_get_version) mx_version_get
-    __WEAK_ALIAS("_mx_system_get_version");

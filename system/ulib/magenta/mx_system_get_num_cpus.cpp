@@ -12,9 +12,3 @@ uint32_t _mx_system_get_num_cpus(void) {
 }
 
 VDSO_INTERFACE_FUNCTION(mx_system_get_num_cpus);
-
-// Deprecated compatibility aliases.
-decltype(mx_system_get_num_cpus) _mx_num_cpus
-    __WEAK_ALIAS("_mx_system_get_num_cpus");
-decltype(mx_system_get_num_cpus) mx_num_cpus
-    __WEAK_ALIAS("_mx_system_get_num_cpus");
