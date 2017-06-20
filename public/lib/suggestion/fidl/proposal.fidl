@@ -5,6 +5,7 @@
 module maxwell;
 
 import "apps/maxwell/services/suggestion/suggestion_display.fidl";
+import "apps/modular/services/surface/surface.fidl";
 
 // NOTE: Some future-thinking features are represented here and commented out
 // to give a sense for the likely future direction of this service, and are left
@@ -90,6 +91,9 @@ struct AddModuleToStory {
   // Module instance which is already in the story and to which the added module
   // is to be associated. Leave empty if unknown.
   array<string> module_path;
+
+  // Advise the framework on how to layout the newly added module.
+  modular.SurfaceRelation surface_relation;
 };
 
 // An action that calls back to the proposal publisher to be performed.

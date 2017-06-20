@@ -11,6 +11,7 @@
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_display.fidl.h"
 #include "apps/maxwell/src/action_log/action_log_data.h"
+#include "apps/modular/services/surface/surface.fidl.h"
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
@@ -92,6 +93,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
   initial_data += video_id + "\"}}}";
   add_module->initial_data = initial_data;
+  add_module->surface_relation = modular::SurfaceRelation::New();
 
   ActionPtr action(Action::New());
   action->set_add_module_to_story(std::move(add_module));

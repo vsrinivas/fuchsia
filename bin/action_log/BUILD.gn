@@ -16,6 +16,7 @@ executable("action_log") {
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user:scope",
+    "//apps/modular/services/surface",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/rapidjson",

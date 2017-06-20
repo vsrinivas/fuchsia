@@ -163,6 +163,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
             const auto& module_url = add_module_to_story->module_url;
             const auto& link_name = add_module_to_story->link_name;
             const auto& module_path = add_module_to_story->module_path;
+            const auto& surface_relation =
+                add_module_to_story->surface_relation;
 
             FTL_LOG(INFO) << "Adding module " << module_url << " to story "
                           << story_id;
@@ -179,7 +181,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
             }
 
             story_controller->AddModule(module_path.Clone(), module_name,
-                                        module_url, link_name, nullptr);
+                                        module_url, link_name,
+                                        surface_relation.Clone());
             FTL_LOG(INFO) << "Requesting focus for story_id " << story_id;
             focus_provider_ptr_->Request(story_id);
           } else {

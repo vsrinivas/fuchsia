@@ -463,6 +463,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   add_module_to_story->module_url = module_id;
   add_module_to_story->module_path = fidl::Array<fidl::String>::New(0);
   add_module_to_story->link_name = "";
+  add_module_to_story->surface_relation = modular::SurfaceRelation::New();
 
   auto action = Action::New();
   action->set_add_module_to_story(std::move(add_module_to_story));
