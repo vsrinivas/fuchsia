@@ -23,7 +23,7 @@ struct ModuleData {
 
   // The |surface_relation| that was used to start this module with. The same is
   // used when re-inflating the module.
-  SurfaceRelation surface_relation;
+  SurfaceRelation? surface_relation;
 };
 
 // Addresses a Link within a story.

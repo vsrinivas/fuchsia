@@ -442,7 +442,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
       story_controller_impl_->story_storage_impl_->WriteModuleData(
           module_path_, module_url_, link_path_, module_source_,
-          std::move(surface_relation_),
+          surface_relation_.Clone(),
           [this, flow] { Cont(flow); });
 
     } else {
@@ -454,7 +454,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
             link_path_ = module_data->default_link_path.Clone();
             story_controller_impl_->story_storage_impl_->WriteModuleData(
                 module_path_, module_url_, link_path_, module_source_,
-                std::move(surface_relation_),
+                surface_relation_.Clone(),
                 [this, flow] { Cont(flow); });
           });
     }
@@ -551,6 +551,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data->url = module_url_;
     module_data->module_path = module_path_.Clone();
     module_data->default_link_path = link_path_.Clone();
+    module_data->surface_relation = surface_relation_.Clone();
 
     story_controller_impl_->watchers_.ForAllPtrs(
         [&module_data](StoryWatcher* const watcher) {
@@ -565,7 +566,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   const fidl::String module_url_;
   const fidl::String link_name_;
   const ModuleSource module_source_;
-  SurfaceRelationPtr surface_relation_;
+  const SurfaceRelationPtr surface_relation_;
   fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
   fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
@@ -769,9 +770,6 @@ void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
                                     const fidl::String& module_url,
                                     const fidl::String& link_name,
                                     SurfaceRelationPtr surface_relation) {
-  if (surface_relation.is_null()) {
-    surface_relation = SurfaceRelation::New();
-  }
   new AddModuleCall(&operation_queue_, this, std::move(module_path),
                     module_name, module_url, link_name,
                     std::move(surface_relation), [] {});
