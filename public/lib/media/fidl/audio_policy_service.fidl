@@ -1,0 +1,44 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/media/services/net_media_player.fidl";
+
+// Audio policy service definition.
+// TODO(dalesat): Update this definition.
+// This definition is intended to solve short-term issues only, addressing the
+// need to change audio gain system-wide. In the future, we will have a richer
+// model in which audio 'tracks' are grouped and controlled by type and
+// individual output gains can be tweaked.
+[ServiceName="media::AudioPolicyService"]
+interface AudioPolicyService {
+  // Special value for GetStatus version_last_seen parameter to get the current
+  // status immediately.
+  const uint64 kInitialStatus = 0;
+
+  // Gets the status. To get the status immediately, call
+  // GetStatus(kInitialStatus). To get updates thereafter, pass the version
+  // sent in the previous callback.
+  GetStatus(uint64 version_last_seen)
+      => (uint64 version, AudioPolicyStatus status);
+
+  // Sets the system-wide gain in decibels. System audio gain values may not
+  // exceed 0.0. This does not affect the system audio mute value.
+  SetSystemAudioGain(float db);
+
+  // Sets the system-wide 'muted' value. This does not affect the system audio
+  // gain value.
+  SetSystemAudioMute(bool muted);
+};
+
+// Describes the status of the audio policy service.
+struct AudioPolicyStatus {
+  // Current system audio gain in decibels. This value is independent of system
+  // audio muted state.
+  float system_audio_gain_db;
+
+  // Indicates whether system audio is currently muted.
+  bool system_audio_muted;
+};
