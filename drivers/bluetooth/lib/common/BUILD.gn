@@ -15,14 +15,16 @@ source_set("common") {
     "observer_list.h",
     "optional.h",
     "packet.h",
+    "slab_allocator_traits.h",
     "test_helpers.h",
     "uint128.h",
     "uuid.cc",
     "uuid.h",
   ]
 
-  deps = [
+  public_deps = [
     "//lib/ftl",
+    "//magenta/system/ulib/mxtl",
   ]
 }
 
@@ -37,6 +39,7 @@ source_set("tests") {
     "observer_list_unittest.cc",
     "optional_unittest.cc",
     "packet_unittest.cc",
+    "slab_allocator_traits_unittest.cc",
     "uuid_unittest.cc",
   ]
 

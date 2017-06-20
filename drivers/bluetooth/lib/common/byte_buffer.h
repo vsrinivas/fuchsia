@@ -26,6 +26,8 @@ class ByteBuffer {
   using const_iterator = const uint8_t*;
   using iterator = const_iterator;
 
+  virtual ~ByteBuffer() = default;
+
   // Returns a pointer to the beginning of this buffer. The return value is undefined if
   // the buffer has size 0.
   virtual const uint8_t* data() const = 0;
@@ -80,6 +82,8 @@ class ByteBuffer {
 // allows durect mutable access to the underlying buffer.
 class MutableByteBuffer : public ByteBuffer {
  public:
+  ~MutableByteBuffer() override = default;
+
   // Returns a pointer to the beginning of this buffer. The return value is undefined if
   // the buffer has size 0.
   virtual uint8_t* mutable_data() = 0;
@@ -114,6 +118,7 @@ template <size_t BufferSize>
 class StaticByteBuffer : public MutableByteBuffer {
  public:
   StaticByteBuffer() { static_assert(BufferSize, "|BufferSize| must be non-zero"); }
+  ~StaticByteBuffer() override = default;
 
   // Variadic template constructor to initialize a StaticByteBuffer using an
   // initializer_list e.g.:
@@ -159,6 +164,7 @@ class DynamicByteBuffer : public MutableByteBuffer {
  public:
   // The default constructor creates an empty buffer with size 0.
   DynamicByteBuffer();
+  ~DynamicByteBuffer() override = default;
 
   // Allocates a new buffer with |buffer_size| bytes.
   explicit DynamicByteBuffer(size_t buffer_size);
@@ -195,9 +201,10 @@ class DynamicByteBuffer : public MutableByteBuffer {
 
 // A ByteBuffer that does not own the memory that it points to but rather
 // provides an immutable view over it.
-class BufferView : public ByteBuffer {
+class BufferView final : public ByteBuffer {
  public:
   BufferView(const uint8_t* bytes, size_t size);
+  ~BufferView() override = default;
 
   explicit BufferView(const ByteBuffer& buffer,
                       size_t size = std::numeric_limits<std::size_t>::max());
@@ -219,10 +226,11 @@ class BufferView : public ByteBuffer {
 
 // A ByteBuffer that does not own the memory that it points to but rather
 // provides a mutable view over it.
-class MutableBufferView : public MutableByteBuffer {
+class MutableBufferView final : public MutableByteBuffer {
  public:
   explicit MutableBufferView(MutableByteBuffer* buffer);
   MutableBufferView(uint8_t* bytes, size_t size);
+  ~MutableBufferView() override = default;
 
   // The default constructor initializes this to an empty buffer.
   MutableBufferView();
