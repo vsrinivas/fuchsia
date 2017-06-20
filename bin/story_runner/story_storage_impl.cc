@@ -29,9 +29,10 @@ void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
 }
 
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
-  xdr->Field("url", &data->url);
+  xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
-  xdr->Field("default_link_path", &data->default_link_path, XdrLinkPath);
+  // TODO(mesch): Rename the XDR field eventually.
+  xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
 }
@@ -191,9 +192,9 @@ void StoryStorageImpl::WriteModuleData(
     const SurfaceRelationPtr& surface_relation,
     const SyncCallback& callback) {
   ModuleDataPtr data = ModuleData::New();
-  data->url = module_url;
+  data->module_url = module_url;
   data->module_path = module_path.Clone();
-  data->default_link_path = link_path.Clone();
+  data->link_path = link_path.Clone();
   data->module_source = module_source;
   data->surface_relation = surface_relation.Clone();
 

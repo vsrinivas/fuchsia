@@ -231,7 +231,7 @@ class StoryControllerImpl::StartCall : Operation<> {
               story_controller_impl_->StartModuleInShell(
                   std::move(parent_path),
                   module_data->module_path[module_data->module_path.size() - 1],
-                  module_data->url, module_data->default_link_path->link_name,
+                  module_data->module_url, module_data->link_path->link_name,
                   nullptr, nullptr, nullptr,
                   module_data->surface_relation.Clone(), true,
                   module_data->module_source);
@@ -451,7 +451,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       story_controller_impl_->story_storage_impl_->ReadModuleData(
           parent_module_path_, [this, flow](ModuleDataPtr module_data) {
             FTL_DCHECK(module_data);
-            link_path_ = module_data->default_link_path.Clone();
+            link_path_ = module_data->link_path.Clone();
             story_controller_impl_->story_storage_impl_->WriteModuleData(
                 module_path_, module_url_, link_path_, module_source_,
                 surface_relation_.Clone(),
@@ -548,9 +548,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   void NotifyWatchers() {
     ModuleDataPtr module_data = ModuleData::New();
-    module_data->url = module_url_;
+    module_data->module_url = module_url_;
     module_data->module_path = module_path_.Clone();
-    module_data->default_link_path = link_path_.Clone();
+    module_data->link_path = link_path_.Clone();
     module_data->surface_relation = surface_relation_.Clone();
 
     story_controller_impl_->watchers_.ForAllPtrs(

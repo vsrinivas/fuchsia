@@ -136,7 +136,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
 
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-    FTL_LOG(INFO) << "OnModuleAdded: " << module_data->url;
+    FTL_LOG(INFO) << "OnModuleAdded: " << module_data->module_url;
     if (!on_module_added_called_) {
       on_module_added_.Pass();
       on_module_added_called_ = true;
@@ -456,9 +456,9 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
           FTL_LOG(INFO) << "TestUserShell MODULES:";
           for (const auto& module_data : modules) {
-            FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->url;
+            FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->module_url;
             FTL_LOG(INFO) << "TestUserShell         link="
-                          << module_data->default_link_path->link_name;
+                          << module_data->link_path->link_name;
             std::string path;
             for (const auto& path_element : module_data->module_path) {
               path.push_back(' ');

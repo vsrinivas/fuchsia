@@ -9,14 +9,14 @@ import "apps/modular/services/surface/surface.fidl";
 // Information about modules in a Story.
 struct ModuleData {
   // The URL of the module application.
-  string url;
+  string module_url;
 
   // The named path leading up to this module. The last name in this array is
   // this module's name.
   array<string> module_path;
 
   // The name of the link the module was started with.
-  LinkPath default_link_path;
+  LinkPath link_path;
 
   // The way in which this module was first started in the story.
   ModuleSource module_source;
