@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 
-#include "lib/mtl/vfs/vfs_handler.h"
+#include "lib/mtl/vfs/vfs_serve.h"
 
 namespace archive {
 namespace {
@@ -104,21 +104,7 @@ FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()) {
 FileSystem::~FileSystem() = default;
 
 bool FileSystem::Serve(mx::channel channel) {
-  if (!directory_)
-    return false;
-
-  if (directory_->Open(O_DIRECTORY) < 0)
-    return false;
-
-  mx_handle_t h = channel.release();
-  if (directory_->Serve(h, 0) < 0) {
-    directory_->Close();
-    return false;
-  }
-
-  // Setting this signal indicates that this directory is actively being served.
-  mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0);
-  return true;
+  return directory_ && mtl::VFSServe(directory_, std::move(channel));
 }
 
 mx::channel FileSystem::OpenAsDirectory() {

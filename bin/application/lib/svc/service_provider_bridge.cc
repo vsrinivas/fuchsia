@@ -10,7 +10,7 @@
 
 #include <utility>
 
-#include "lib/mtl/vfs/vfs_handler.h"
+#include "lib/mtl/vfs/vfs_serve.h"
 
 namespace app {
 
@@ -34,18 +34,7 @@ void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
 }
 
 bool ServiceProviderBridge::ServeDirectory(mx::channel channel) const {
-  if (directory_->Open(O_DIRECTORY) < 0)
-    return false;
-
-  mx_handle_t h = channel.release();
-  if (directory_->Serve(h, 0) < 0) {
-    directory_->Close();
-    return false;
-  }
-
-  // Setting this signal indicates that this directory is actively being served.
-  mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0);
-  return true;
+  return mtl::VFSServe(directory_, std::move(channel));
 }
 
 mx::channel ServiceProviderBridge::OpenAsDirectory() {
