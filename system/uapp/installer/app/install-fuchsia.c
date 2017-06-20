@@ -901,7 +901,8 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
     }
     uint16_t part_id;
     uint16_t part_count = count_partitions(gpt_device);
-    int rc = find_partition_entries((gpt_partition_t**)&gpt_device->partitions, guid, part_count, &part_id);
+    int rc = find_partition_entries((gpt_partition_t**)&gpt_device->partitions,
+                                    guid, part_count, &part_id);
     if (rc != MX_OK) {
       gpt_device_release(gpt_device);
       fprintf(stderr, "WARNING: Couldn't find partition to format.\n");
@@ -909,6 +910,9 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
     }
 
     char part_path[PATH_MAX];
+    // find_partition_path wants an array of pointers, so we pass a pointer
+    // to the address of the start of the array
+    char *indir = &part_path[0];
     DIR *dev_dir;
     dev_dir = opendir(dev_dir_path);
     if (dev_dir == NULL) {
@@ -916,7 +920,8 @@ static mx_status_t format_existing(int device_fd, char *dev_dir_path,
       gpt_device_release(gpt_device);
       return MX_ERR_INTERNAL;
     }
-    rc = find_partition_path((gpt_partition_t**)&gpt_device->partitions[part_id], (char**) &part_path, dev_dir, 1);
+    rc = find_partition_path((gpt_partition_t**)&gpt_device->partitions[part_id],
+                             &indir, dev_dir, 1);
     if (rc != MX_OK) {
       gpt_device_release(gpt_device);
       fprintf(stderr, "WARNING: Couldn't locate partition path.\n");
