@@ -8,6 +8,8 @@ source_set("vfs") {
     "vfs_dispatcher.h",
     "vfs_handler.cc",
     "vfs_handler.h",
+    "vfs_serve.cc",
+    "vfs_serve.h",
   ]
 
   libs = [
