@@ -179,7 +179,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
             }
 
             story_controller->AddModule(module_path.Clone(), module_name,
-                                        module_url, link_name);
+                                        module_url, link_name, nullptr);
             FTL_LOG(INFO) << "Requesting focus for story_id " << story_id;
             focus_provider_ptr_->Request(story_id);
           } else {
