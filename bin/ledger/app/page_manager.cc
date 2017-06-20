@@ -26,6 +26,7 @@ PageManager::PageManager(
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
   if (page_sync_context) {
+    page_sync_context_->page_sync->SetSyncWatcher(&watchers_);
     page_sync_context_->page_sync->SetOnIdle([this] { CheckEmpty(); });
   }
 
@@ -55,7 +56,7 @@ PageManager::~PageManager() {}
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
   if (sync_backlog_downloaded_) {
     pages_.emplace(environment_->coroutine_service(), this, page_storage_.get(),
-                   std::move(page_request));
+                   std::move(page_request), &watchers_);
   } else {
     page_requests_.push_back(std::move(page_request));
   }

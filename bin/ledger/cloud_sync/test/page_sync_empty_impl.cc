@@ -27,5 +27,9 @@ void PageSyncEmptyImpl::SetOnBacklogDownloaded(
   FTL_NOTIMPLEMENTED();
 }
 
+void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
+  FTL_NOTIMPLEMENTED();
+}
+
 }  // namespace test
 }  // namespace cloud_sync

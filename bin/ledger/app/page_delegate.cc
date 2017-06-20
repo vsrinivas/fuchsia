@@ -23,11 +23,13 @@ namespace ledger {
 PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
                            PageManager* manager,
                            storage::PageStorage* storage,
-                           fidl::InterfaceRequest<Page> request)
+                           fidl::InterfaceRequest<Page> request,
+                           SyncWatcherSet* watchers)
     : manager_(manager),
       storage_(storage),
       interface_(std::move(request), this),
-      branch_tracker_(coroutine_service, manager, storage) {
+      branch_tracker_(coroutine_service, manager, storage),
+      watcher_set_(watchers) {
   interface_.set_on_empty([this] {
     operation_serializer_.Serialize(
         [](Status status) {},
@@ -261,8 +263,7 @@ void PageDelegate::SetSyncStateWatcher(
   FTL_NOTIMPLEMENTED() << "Page::SetSyncStateWatcher is not "
                           "implemented: sending dummy response";
   SyncWatcherPtr watcher_ptr = SyncWatcherPtr::Create(std::move(watcher));
-  watcher_ptr->SyncStateChanged(SyncState::IDLE, SyncState::IDLE, [] {});
-  watcher_set_.AddInterfacePtr(std::move(watcher_ptr));
+  watcher_set_->AddSyncWatcher(std::move(watcher_ptr));
   callback(Status::OK);
 }
 

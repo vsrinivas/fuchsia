@@ -12,6 +12,7 @@
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_delegate.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
+#include "apps/ledger/src/app/sync_watcher_set.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -73,6 +74,8 @@ class PageManager {
 
   bool sync_backlog_downloaded_ = false;
   std::vector<fidl::InterfaceRequest<Page>> page_requests_;
+
+  SyncWatcherSet watchers_;
 
   // Must be the last member field.
   ftl::WeakPtrFactory<PageManager> weak_factory_;

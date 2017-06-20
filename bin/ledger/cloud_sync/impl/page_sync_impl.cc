@@ -85,6 +85,13 @@ void PageSyncImpl::SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) {
   on_backlog_downloaded_ = on_backlog_downloaded;
 }
 
+void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
+  page_watcher_ = watcher;
+  if (page_watcher_) {
+    page_watcher_->Notify(download_state_, upload_state_);
+  }
+}
+
 void PageSyncImpl::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& commits,
     storage::ChangeSource source) {
@@ -445,6 +452,9 @@ void PageSyncImpl::SetState(DownloadSyncState download_state,
 void PageSyncImpl::NotifyStateWatcher() {
   if (ledger_watcher_) {
     ledger_watcher_->Notify(download_state_, upload_state_);
+  }
+  if (page_watcher_) {
+    page_watcher_->Notify(download_state_, upload_state_);
   }
 }
 

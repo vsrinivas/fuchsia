@@ -18,6 +18,7 @@ class PageSyncEmptyImpl : public PageSync {
   bool IsIdle() override;
   void SetOnBacklogDownloaded(
       ftl::Closure on_backlog_downloaded_callback) override;
+  void SetSyncWatcher(SyncStateWatcher* watcher) override;
 };
 
 }  // namespace test

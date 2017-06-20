@@ -7,6 +7,7 @@
 
 #include <functional>
 
+#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 
@@ -42,6 +43,9 @@ class PageSync {
   // exposing the local page until it catches up with the cloud. Can be set at
   // most once and only before calling Start().
   virtual void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) = 0;
+
+  // Sets a watcher for the synchronization state of this page.
+  virtual void SetSyncWatcher(SyncStateWatcher* watcher) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageSync);

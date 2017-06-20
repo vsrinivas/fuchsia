@@ -84,6 +84,8 @@ class PageSyncImpl : public PageSync,
 
   void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) override;
 
+  void SetSyncWatcher(SyncStateWatcher* watcher) override;
+
   // storage::CommitWatcher:
   void OnNewCommits(
       const std::vector<std::unique_ptr<const storage::Commit>>& commits,
@@ -179,6 +181,7 @@ class PageSyncImpl : public PageSync,
 
   // Watcher of the synchronization state that reports to the LedgerSync object.
   std::unique_ptr<SyncStateWatcher> ledger_watcher_;
+  SyncStateWatcher* page_watcher_ = nullptr;
   // Download & upload states.
   DownloadSyncState download_state_ = DOWNLOAD_IDLE;
   UploadSyncState upload_state_ = UPLOAD_IDLE;

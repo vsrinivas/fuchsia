@@ -14,6 +14,7 @@
 #include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_impl.h"
+#include "apps/ledger/src/app/sync_watcher_set.h"
 #include "apps/ledger/src/callback/operation_serializer.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/journal.h"
@@ -37,7 +38,8 @@ class PageDelegate {
   PageDelegate(coroutine::CoroutineService* coroutine_service,
                PageManager* manager,
                storage::PageStorage* storage,
-               fidl::InterfaceRequest<Page> request);
+               fidl::InterfaceRequest<Page> request,
+               SyncWatcherSet* watchers);
   ~PageDelegate();
 
   void set_on_empty(ftl::Closure on_empty_callback) {
@@ -123,7 +125,7 @@ class PageDelegate {
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer<Status> operation_serializer_;
-  fidl::InterfacePtrSet<SyncWatcher> watcher_set_;
+  SyncWatcherSet* watcher_set_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
 };

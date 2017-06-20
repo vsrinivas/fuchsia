@@ -427,6 +427,32 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   EXPECT_EQ(UPLOAD_IDLE, state_watcher_->states[3].upload);
 }
 
+// Verifies that the backlog of commits to upload returned from
+// GetUnsyncedCommits() is uploaded to CloudProvider.
+TEST_F(PageSyncImplTest, PageWatcher) {
+  TestSyncStateWatcher watcher;
+  storage_.NewCommit("id1", "content1");
+  storage_.NewCommit("id2", "content2");
+  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetSyncWatcher(&watcher);
+  StartPageSync();
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(5u, watcher.states.size());
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[0].download);
+  EXPECT_EQ(CATCH_UP_DOWNLOAD, watcher.states[1].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[2].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[3].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[4].download);
+
+  EXPECT_EQ(UPLOAD_IDLE, watcher.states[0].upload);
+  EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, watcher.states[1].upload);
+  EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, watcher.states[2].upload);
+  EXPECT_EQ(UPLOAD_IN_PROGRESS, watcher.states[3].upload);
+  EXPECT_EQ(UPLOAD_IDLE, watcher.states[4].upload);
+}
+
 // Verifies that the backlog of commits to upload is not uploaded until there's
 // only one local head.
 TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
