@@ -16,11 +16,17 @@ __BEGIN_CDECLS
 // bits for mpidr register
 #define MPIDR_AFF0_MASK     0xFFULL
 #define MPIDR_AFF0_SHIFT    0
-#define MPIDR_AFF1_MASK     0xFF00ULL
+#define MPIDR_AFF1_MASK     (0xFFULL << 8)
 #define MPIDR_AFF1_SHIFT    8
+#define MPIDR_AFF2_MASK     (0xFFULL << 16)
+#define MPIDR_AFF2_SHIFT    16
+#define MPIDR_AFF3_MASK     (0xFFULL << 32)
+#define MPIDR_AFF3_SHIFT    32
 
 #define ARM64_MPID(cluster, cpu) (((cluster << MPIDR_AFF1_SHIFT) & MPIDR_AFF1_MASK) | \
                                   ((cpu << MPIDR_AFF0_SHIFT) & MPIDR_AFF0_MASK))
+
+// TODO: add support for AFF2 and AFF3
 
 void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus);
 
