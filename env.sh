@@ -782,6 +782,26 @@ put ${src} ${dst}
 EOF
 }
 
+function ftest-usage() {
+  cat >&2 <<END
+Usage: ftest target
+Builds the specified target (e.g., ftl_unittests), copies it to the target, and
+executes it. Useful for tight iterations on unittests.
+END
+}
+
+function ftest() {
+  if [[ $# -ne 1 ]]; then
+    ftest-usage
+    return 1
+  fi
+  local target="$1"
+
+  "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "${target}"
+  fcp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
+  fcmd "/tmp/${target}"
+}
+
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
   if [[ ${fpath[(Ie)${FUCHSIA_SCRIPTS_DIR}/zsh-completion]} -eq 0 ]]; then
