@@ -93,7 +93,15 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
   initial_data += video_id + "\"}}}";
   add_module->initial_data = initial_data;
+
+  // We start compose module in a copresent, dependent configuration that takes
+  // 30% emphasis.
   add_module->surface_relation = modular::SurfaceRelation::New();
+  add_module->surface_relation->arrangement =
+      modular::SurfaceArrangement::COPRESENT;
+  add_module->surface_relation->dependency =
+      modular::SurfaceDependency::DEPENDENT;
+  add_module->surface_relation->emphasis = 0.5;
 
   ActionPtr action(Action::New());
   action->set_add_module_to_story(std::move(add_module));
