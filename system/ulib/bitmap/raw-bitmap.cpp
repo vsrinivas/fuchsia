@@ -14,7 +14,10 @@
 
 namespace {
 
-const size_t kBits = sizeof(size_t) * 8;
+// Translates a bit offset into a starting index in the bitmap array.
+constexpr size_t FirstIdx(size_t bitoff) {
+    return bitoff / bitmap::kBits;
+}
 
 // GetMask returns a 64-bit bitmask.  If the block of the bitmap we're looking
 // at isn't the first or last, all bits are set.  Otherwise, the bits outside of
@@ -30,37 +33,27 @@ size_t GetMask(bool first, bool last, size_t off, size_t max) {
     ones = ~ones;
     size_t mask = ones;
     if (first) {
-        mask &= ones << (off % kBits);
+        mask &= ones << (off % bitmap::kBits);
     }
     if (last) {
-        mask &= ones >> ((kBits - (max % kBits)) % kBits);
+        mask &= ones >> ((bitmap::kBits - (max % bitmap::kBits)) % bitmap::kBits);
     }
     return mask;
-}
-
-// Translates a bit offset into a starting index in the bitmap array.
-constexpr size_t FirstIdx(size_t bitoff) {
-    return bitoff / kBits;
-}
-
-// Translates a max bit into a final index in the bitmap array.
-constexpr size_t LastIdx(size_t bitmax) {
-    return (bitmax - 1) / kBits;
 }
 
 // Counts the number of zeros.  It assumes everything in the array up to
 // bits_[idx] is zero.
 #if (SIZE_MAX == UINT_MAX)
-#define CTZ(x) (x == 0 ? kBits : __builtin_ctz(x))
+#define CTZ(x) (x == 0 ? bitmap::kBits : __builtin_ctz(x))
 #elif (SIZE_MAX == ULONG_MAX)
-#define CTZ(x) (x == 0 ? kBits : __builtin_ctzl(x))
+#define CTZ(x) (x == 0 ? bitmap::kBits : __builtin_ctzl(x))
 #elif (SIZE_MAX == ULLONG_MAX)
-#define CTZ(x) (x == 0 ? kBits : __builtin_ctzll(x))
+#define CTZ(x) (x == 0 ? bitmap::kBits : __builtin_ctzll(x))
 #else
 #error "Unsupported size_t length"
 #endif
 size_t CountZeros(size_t idx, size_t value) {
-    return idx * kBits + CTZ(value);
+    return idx * bitmap::kBits + CTZ(value);
 }
 #undef CTZ
 
@@ -68,29 +61,7 @@ size_t CountZeros(size_t idx, size_t value) {
 
 namespace bitmap {
 
-template <typename Storage>
-RawBitmapGeneric<Storage>::RawBitmapGeneric() : size_(0), data_(nullptr) {}
-
-// Resets the bitmap; clearing and resizing it.
-template <typename Storage>
-mx_status_t RawBitmapGeneric<Storage>::Reset(size_t size) {
-    size_ = size;
-    if (size_ == 0) {
-        data_ = nullptr;
-        return MX_OK;
-    }
-    size_t last_idx = LastIdx(size);
-    mx_status_t status = bits_.Allocate(sizeof(size_t) * (last_idx + 1));
-    if (status != MX_OK) {
-        return status;
-    }
-    data_ = static_cast<size_t*>(bits_.GetData());
-    ClearAll();
-    return MX_OK;
-}
-
-template <typename Storage>
-mx_status_t RawBitmapGeneric<Storage>::Shrink(size_t size) {
+mx_status_t RawBitmapBase::Shrink(size_t size) {
     if (size > size_) {
         return MX_ERR_NO_MEMORY;
     }
@@ -98,8 +69,7 @@ mx_status_t RawBitmapGeneric<Storage>::Shrink(size_t size) {
     return MX_OK;
 }
 
-template <typename Storage>
-size_t RawBitmapGeneric<Storage>::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
+size_t RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
     bitmax = mxtl::min(bitmax, size_);
     if (bitoff >= bitmax) {
         return bitmax;
@@ -126,8 +96,7 @@ size_t RawBitmapGeneric<Storage>::Scan(size_t bitoff, size_t bitmax, bool is_set
     return mxtl::min(bitmax, CountZeros(i, value));
 }
 
-template <typename Storage>
-mx_status_t RawBitmapGeneric<Storage>::Find(bool is_set, size_t bitoff, size_t bitmax,
+mx_status_t RawBitmapBase::Find(bool is_set, size_t bitoff, size_t bitmax,
                                                 size_t run_len, size_t* out) const {
     if (!out || bitmax <= bitoff) {
         return MX_ERR_INVALID_ARGS;
@@ -145,8 +114,7 @@ mx_status_t RawBitmapGeneric<Storage>::Find(bool is_set, size_t bitoff, size_t b
     return MX_OK;
 }
 
-template <typename Storage>
-bool RawBitmapGeneric<Storage>::Get(size_t bitoff, size_t bitmax, size_t* first) const {
+bool RawBitmapBase::Get(size_t bitoff, size_t bitmax, size_t* first) const {
     bitmax = mxtl::min(bitmax, size_);
     size_t result = Scan(bitoff, bitmax, true);
     if (first) {
@@ -155,8 +123,7 @@ bool RawBitmapGeneric<Storage>::Get(size_t bitoff, size_t bitmax, size_t* first)
     return result == bitmax;
 }
 
-template <typename Storage>
-mx_status_t RawBitmapGeneric<Storage>::Set(size_t bitoff, size_t bitmax) {
+mx_status_t RawBitmapBase::Set(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -172,8 +139,7 @@ mx_status_t RawBitmapGeneric<Storage>::Set(size_t bitoff, size_t bitmax) {
     return MX_OK;
 }
 
-template <typename Storage>
-mx_status_t RawBitmapGeneric<Storage>::Clear(size_t bitoff, size_t bitmax) {
+mx_status_t RawBitmapBase::Clear(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -189,8 +155,7 @@ mx_status_t RawBitmapGeneric<Storage>::Clear(size_t bitoff, size_t bitmax) {
     return MX_OK;
 }
 
-template <typename Storage>
-void RawBitmapGeneric<Storage>::ClearAll() {
+void RawBitmapBase::ClearAll() {
     if (size_ == 0) {
         return;
     }
@@ -199,10 +164,5 @@ void RawBitmapGeneric<Storage>::ClearAll() {
         data_[i] = 0;
     }
 }
-
-#if !defined _KERNEL && defined __Fuchsia__
-template class RawBitmapGeneric<VmoStorage>;
-#endif
-template class RawBitmapGeneric<DefaultStorage>;
 
 } // namespace bitmap
