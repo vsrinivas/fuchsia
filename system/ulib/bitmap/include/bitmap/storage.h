@@ -14,7 +14,7 @@
 #include <mxtl/array.h>
 #include <mxtl/macros.h>
 
-#ifdef __Fuchsia__
+#if !defined _KERNEL && defined __Fuchsia__
 #include <mx/vmo.h>
 #include <magenta/syscalls.h>
 #endif
@@ -40,7 +40,7 @@ private:
     mxtl::Array<char> storage_;
 };
 
-#ifdef __Fuchsia__
+#if !defined _KERNEL && defined __Fuchsia__
 class VmoStorage {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmoStorage);

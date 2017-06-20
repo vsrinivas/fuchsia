@@ -200,7 +200,7 @@ void RawBitmapGeneric<Storage>::ClearAll() {
     }
 }
 
-#ifdef __Fuchsia__
+#if !defined _KERNEL && defined __Fuchsia__
 template class RawBitmapGeneric<VmoStorage>;
 #endif
 template class RawBitmapGeneric<DefaultStorage>;
