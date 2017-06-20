@@ -9,6 +9,14 @@ config("fs_config") {
 static_library("fs") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
+    "include/fs/block-txn.h",
+    "include/fs/dispatcher.h",
+    "include/fs/mapped-vmo.h",
+    "include/fs/mxio-dispatcher.h",
+    "include/fs/trace.h",
+    "include/fs/vfs-client.h",
+    "include/fs/vfs-dispatcher.h",
+    "include/fs/vfs.h",
     "mapped-vmo.cpp",
     "mxio-dispatcher.cpp",
     "vfs.cpp",
