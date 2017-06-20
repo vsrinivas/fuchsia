@@ -628,8 +628,8 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
     }
 
     char vmo_name[MX_MAX_NAME_LEN];
-    if (mx_object_get_property(vmo, MX_PROP_NAME,
-                               vmo_name, sizeof(vmo_name)) != MX_OK ||
+    if (_mx_object_get_property(vmo, MX_PROP_NAME,
+                                vmo_name, sizeof(vmo_name)) != MX_OK ||
         vmo_name[0] == '\0')
         memcpy(vmo_name, VMO_NAME_UNKNOWN, sizeof(VMO_NAME_UNKNOWN));
 
