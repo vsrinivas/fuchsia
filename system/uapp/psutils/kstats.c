@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
     bool timestamp = false;
 
 
-    char c;
+    int c;
     while ((c = getopt(argc, argv, "cd:hmt")) > 0) {
         switch (c) {
             case 'c':
