@@ -4,6 +4,8 @@
 
 module modular;
 
+import "apps/modular/services/surface/surface.fidl";
+
 // Information about modules in a Story.
 struct ModuleData {
   // The URL of the module application.
@@ -18,6 +20,10 @@ struct ModuleData {
 
   // The way in which this module was first started in the story.
   ModuleSource module_source;
+
+  // The |surface_relation| that was used to start this module with. The same is
+  // used when re-inflating the module.
+  SurfaceRelation surface_relation;
 };
 
 // Addresses a Link within a story.

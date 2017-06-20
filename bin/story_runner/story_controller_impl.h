@@ -27,7 +27,7 @@
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
-#include "apps/modular/services/story/surface.fidl.h"
+#include "apps/modular/services/surface/surface.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -161,7 +161,8 @@ class StoryControllerImpl : StoryController, StoryContext {
   void AddModule(fidl::Array<fidl::String> module_path,
                  const fidl::String& module_name,
                  const fidl::String& url,
-                 const fidl::String& link_name) override;
+                 const fidl::String& link_name,
+                 SurfaceRelationPtr surface_relation) override;
   void GetModules(const GetModulesCallback& callback) override;
 
   // Phases of Start() broken out into separate methods.

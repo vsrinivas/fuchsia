@@ -13,6 +13,7 @@
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/per_device_story_info.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
+#include "apps/modular/services/surface/surface.fidl.h"
 
 namespace modular {
 
@@ -47,6 +48,7 @@ class StoryStorageImpl : public PageClient {
                        const fidl::String& module_url,
                        const LinkPathPtr& link_path,
                        ModuleSource module_source,
+                       const SurfaceRelationPtr& surface_relation,
                        const SyncCallback& callback);
 
   void WriteDeviceData(const std::string& story_id,

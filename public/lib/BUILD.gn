@@ -12,6 +12,7 @@ group("services") {
     "module",
     "remote",
     "story",
+    "surface",
     "user",
   ]
 }

@@ -375,7 +375,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
     if (round == 0) {
       story_controller_->AddModule(fidl::Array<fidl::String>::New(0), "second",
-                                   settings_.second_module, "root2");
+                                   settings_.second_module, "root2", nullptr);
     }
   }
 

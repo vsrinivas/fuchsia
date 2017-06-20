@@ -8,6 +8,7 @@ import "apps/modular/services/module/module_data.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/story_info.fidl";
 import "apps/modular/services/story/story_state.fidl";
+import "apps/modular/services/surface/surface.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // Used by the clients of StoryProvider (UserShell) to interact with a
@@ -56,12 +57,14 @@ interface StoryController {
   // as used in calls to GetLink() using that method, the link can be configured
   // with data before running the module. This |link_name| is scoped to the
   // |module_path| provided.
+  // Providing a |surface_relation| will advise the StoryShell how to layout
+  // surfaces that the new module creates.
   // TODO(mesch): The link name should really be a link path, so that a module
   // can be attached to any link in the story.
   // TODO(mesch): Some form of ModuleController might be useful here, e.g. for
   // status notifications.
   AddModule(array<string> module_path, string module_name, string url,
-            string link_name);
+            string link_name, SurfaceRelation? surface_relation);
 
   // Gets all of the modules in the story.
   GetModules() => (array<ModuleData> module_data);

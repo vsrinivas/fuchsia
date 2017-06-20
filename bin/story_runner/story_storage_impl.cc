@@ -22,11 +22,18 @@ void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
+void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
+  xdr->Field("arrangement", &data->arrangement);
+  xdr->Field("dependency", &data->dependency);
+  xdr->Field("emphasis", &data->emphasis);
+}
+
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("default_link_path", &data->default_link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
@@ -180,12 +187,14 @@ void StoryStorageImpl::WriteModuleData(
     const fidl::String& module_url,
     const LinkPathPtr& link_path,
     ModuleSource module_source,
+    const SurfaceRelationPtr& surface_relation,
     const SyncCallback& callback) {
   ModuleDataPtr data = ModuleData::New();
   data->url = module_url;
   data->module_path = module_path.Clone();
   data->default_link_path = link_path.Clone();
   data->module_source = module_source;
+  data->surface_relation = surface_relation.Clone();
 
   new WriteDataCall<ModuleData>(&operation_queue_, story_page_,
                                 MakeModuleKey(module_path), XdrModuleData,

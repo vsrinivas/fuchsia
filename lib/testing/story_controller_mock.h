@@ -8,6 +8,7 @@
 #include <string>
 
 #include "apps/modular/services/story/story_controller.fidl.h"
+#include "apps/modular/services/surface/surface.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
@@ -36,7 +37,8 @@ class StoryControllerMock : public StoryController {
   void AddModule(fidl::Array<fidl::String> module_path,
                  const fidl::String& module_name,
                  const fidl::String& module_url,
-                 const fidl::String& link_name) override {
+                 const fidl::String& link_name,
+                 SurfaceRelationPtr surface_relation) override {
     last_added_module_ = module_url;
   }
 

@@ -15,13 +15,13 @@ fidl("story") {
     "story_provider.fidl",
     "story_shell.fidl",
     "story_state.fidl",
-    "surface.fidl",
   ]
 
   deps = [
     "//application/services:service_provider",
     "//apps/modular/services/component",
     "//apps/modular/services/module:module_data",
+    "//apps/modular/services/surface",
     "//apps/mozart/services/views",
   ]
 }

@@ -5,7 +5,7 @@
 module modular;
 
 import "apps/mozart/services/views/view_token.fidl";
-import "apps/modular/services/story/surface.fidl";
+import "apps/modular/services/surface/surface.fidl";
 
 // The factory for the StoryShell service enforces that only fully
 // configured StoryShell service instances are created.
