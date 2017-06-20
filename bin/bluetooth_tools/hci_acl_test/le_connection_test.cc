@@ -107,7 +107,7 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   common::StaticByteBuffer<hci::CommandPacket::GetMinBufferSize(kPayloadSize)> buffer;
   hci::CommandPacket cmd(hci::kLECreateConnection, &buffer, kPayloadSize);
 
-  auto params = cmd.GetMutablePayload<hci::LECreateConnectionCommandParams>();
+  auto params = cmd.mutable_payload<hci::LECreateConnectionCommandParams>();
   params->scan_interval = htole16(hci::defaults::kLEScanInterval);
   params->scan_window = htole16(hci::defaults::kLEScanWindow);
   params->initiator_filter_policy = hci::GenericEnableParam::kDisable;
@@ -128,18 +128,18 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
                                   const hci::EventPacket& event) {
     FTL_DCHECK(event.event_code() == hci::kCommandStatusEventCode);
 
-    auto payload = event.GetPayload<hci::CommandStatusEventParams>();
-    FTL_DCHECK(le16toh(payload->command_opcode) == hci::kLECreateConnection);
+    const auto& payload = event.payload<hci::CommandStatusEventParams>();
+    FTL_DCHECK(le16toh(payload.command_opcode) == hci::kLECreateConnection);
 
-    if (payload->status != hci::Status::kSuccess) {
-      LogErrorStatusAndQuit("LE Create Connection Status (failed)", payload->status);
+    if (payload.status != hci::Status::kSuccess) {
+      LogErrorStatusAndQuit("LE Create Connection Status (failed)", payload.status);
     }
   };
 
   // This is the event that signals the completion of a connection.
   auto le_conn_complete_cb = [ this, orig_params = conn_params ](const hci::EventPacket& event) {
     FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
-    FTL_DCHECK(event.GetPayload<hci::LEMetaEventParams>()->subevent_code ==
+    FTL_DCHECK(event.payload<hci::LEMetaEventParams>().subevent_code ==
                hci::kLEConnectionCompleteSubeventCode);
 
     auto params = event.GetLEEventParams<hci::LEConnectionCompleteSubeventParams>();
@@ -173,15 +173,15 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
     auto disconn_cb = [this](const hci::EventPacket& event) {
       FTL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
 
-      auto params = event.GetPayload<hci::DisconnectionCompleteEventParams>();
-      auto iter = conn_map_.find(le16toh(params->connection_handle));
+      const auto& params = event.payload<hci::DisconnectionCompleteEventParams>();
+      auto iter = conn_map_.find(le16toh(params.connection_handle));
       if (iter == conn_map_.end()) {
         FTL_LOG(ERROR) << "Received Disconnection Complete event for unknown handle";
         return;
       }
 
       conn_map_.erase(iter);
-      FTL_LOG(INFO) << ftl::StringPrintf("Disconnected - reason: 0x%02x", params->reason);
+      FTL_LOG(INFO) << ftl::StringPrintf("Disconnected - reason: 0x%02x", params.reason);
       hci_->command_channel()->RemoveEventHandler(disconn_handler_id_);
       message_loop_.QuitNow();
     };
@@ -214,7 +214,7 @@ void LEConnectionTest::SendNotifications() {
     hci::ACLDataTxPacket rsp(conn_map_.begin()->first,
                              hci::ACLPacketBoundaryFlag::kFirstNonFlushable,
                              hci::ACLBroadcastFlag::kPointToPoint, kDataLength, &rsp_bytes);
-    auto payload = rsp.GetMutablePayloadData();
+    auto payload = rsp.mutable_payload_data();
     // L2CAP: payload length
     payload[0] = 0x04;
     payload[1] = 0x00;
@@ -249,12 +249,10 @@ void LEConnectionTest::ACLDataRxCallback(common::DynamicByteBuffer rx_bytes) {
   // response, otherwise just sit back and let the connection time out.
 
   // The L2CAP header contains 4 bytes: 2-octet length and 2-octet channel ID.
-  const uint8_t* bytes = packet.GetPayloadData();
-  const size_t len = packet.GetPayloadSize();
+  auto rx_payload = packet.payload_data();
+  if (rx_payload.size() < 5) return;
 
-  if (len < 5) return;
-
-  uint16_t l2cap_channel_id = le16toh(*reinterpret_cast<const uint16_t*>(bytes + 2));
+  uint16_t l2cap_channel_id = le16toh(*reinterpret_cast<const uint16_t*>(rx_payload.data() + 2));
   if (l2cap_channel_id != 4) return;
 
   FTL_LOG(INFO) << "Got L2CAP frame on ATT protocol channel!";
@@ -267,27 +265,27 @@ void LEConnectionTest::ACLDataRxCallback(common::DynamicByteBuffer rx_bytes) {
   hci::ACLDataTxPacket rsp(packet.GetConnectionHandle(),
                            hci::ACLPacketBoundaryFlag::kFirstNonFlushable,
                            hci::ACLBroadcastFlag::kPointToPoint, kDataLength, &rsp_bytes);
-  auto payload = rsp.GetMutablePayloadData();
+  auto rsp_payload = rsp.mutable_payload_data();
   // L2CAP: payload length
-  payload[0] = 0x05;
-  payload[1] = 0x00;
+  rsp_payload[0] = 0x05;
+  rsp_payload[1] = 0x00;
 
   // L2CAP: ATT channel ID
-  payload[2] = 0x04;
-  payload[3] = 0x00;
+  rsp_payload[2] = 0x04;
+  rsp_payload[3] = 0x00;
 
   // ATT: Opcode: Error Response
-  payload[4] = 0x01;
+  rsp_payload[4] = 0x01;
 
   // ATT: Request Opcode (from original packet)
-  payload[5] = bytes[4];
+  rsp_payload[5] = rx_payload[4];
 
   // ATT: Attribute Handle
-  payload[6] = 0x00;
-  payload[7] = 0x00;
+  rsp_payload[6] = 0x00;
+  rsp_payload[7] = 0x00;
 
   // ATT: Error Code: Request Not Supported
-  payload[8] = 0x06;
+  rsp_payload[8] = 0x06;
 
   rsp.EncodeHeader();
   hci_->acl_data_channel()->SendPacket(std::move(rsp_bytes));

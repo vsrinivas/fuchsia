@@ -142,7 +142,7 @@ bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
     return false;
   }
 
-  if (acl_packet.GetPayloadSize() > GetBufferMTU(*conn)) {
+  if (acl_packet.payload_size() > GetBufferMTU(*conn)) {
     FTL_LOG(ERROR) << "ACL data packet too large!";
     return false;
   }
@@ -178,12 +178,12 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
   FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
-  auto payload = event.GetPayload<NumberOfCompletedPacketsEventParams>();
+  const auto& payload = event.payload<NumberOfCompletedPacketsEventParams>();
   size_t total_comp_packets = 0;
   size_t le_total_comp_packets = 0;
 
-  for (uint8_t i = 0; i < payload->number_of_handles; ++i) {
-    const NumberOfCompletedPacketsEventData* data = payload->data + i;
+  for (uint8_t i = 0; i < payload.number_of_handles; ++i) {
+    const NumberOfCompletedPacketsEventData* data = payload.data + i;
 
     // TODO(armansito): This could be racy, i.e. the connection could be removed before we had a
     // chance to process this event. While the HCI guarantees that this event won't be received for
@@ -350,16 +350,16 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
 
   const size_t rx_payload_size = read_size - sizeof(ACLDataHeader);
   ACLDataRxPacket packet(&rx_buffer_);
-  if (packet.GetPayloadSize() != rx_payload_size) {
+  if (packet.payload_size() != rx_payload_size) {
     FTL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
-                   << "payload size from header (" << packet.GetPayloadSize() << ")"
+                   << "payload size from header (" << packet.payload_size() << ")"
                    << " does not match received payload size: " << rx_payload_size;
     return;
   }
 
   // TODO(armansito): Use slab-allocated buffer and stop copying.
   common::DynamicByteBuffer buffer(packet.size());
-  packet.buffer()->Copy(&buffer, 0, packet.size());
+  packet.data().Copy(&buffer, 0, packet.size());
 
   rx_task_runner_->PostTask(
       ftl::MakeCopyable([ buffer = std::move(buffer), callback = rx_callback_ ]() mutable {

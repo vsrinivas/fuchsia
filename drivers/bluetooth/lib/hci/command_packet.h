@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/common/packet.h"
+#include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 
 namespace bluetooth {
@@ -16,7 +16,7 @@ class MutableByteBuffer;
 namespace hci {
 
 // Represents a HCI command packet.
-class CommandPacket : public ::bluetooth::common::MutablePacket<CommandHeader> {
+class CommandPacket : public ::bluetooth::common::MutablePacketView<CommandHeader> {
  public:
   CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, size_t payload_size = 0u);
 

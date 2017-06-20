@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/common/packet.h"
+#include "apps/bluetooth/lib/common/packet_view.h"
 
 #include <string>
 
@@ -27,7 +27,7 @@ struct TestPayload {
   uint8_t arg3[0];
 } __attribute__((packed));
 
-TEST(PacketTest, EmptyPayload) {
+TEST(PacketViewTest, EmptyPayload) {
   constexpr size_t kBufferSize = sizeof(TestHeader);
 
   StaticByteBuffer<kBufferSize> buffer;
@@ -36,13 +36,14 @@ TEST(PacketTest, EmptyPayload) {
   *reinterpret_cast<uint16_t*>(buffer.mutable_data()) = 512;
   buffer[2] = 255;
 
-  Packet<TestHeader> packet(&buffer);
+  PacketView<TestHeader> packet(&buffer);
   EXPECT_EQ(kBufferSize, packet.size());
-  EXPECT_EQ(0u, packet.GetPayloadSize());
-  EXPECT_EQ(nullptr, packet.GetPayloadData());
+  EXPECT_EQ(0u, packet.payload_size());
+  EXPECT_EQ(nullptr, packet.payload_bytes());
+  EXPECT_EQ(0u, packet.payload_data().size());
 
-  EXPECT_EQ(512, packet.GetHeader().field16);
-  EXPECT_EQ(255, packet.GetHeader().field8);
+  EXPECT_EQ(512, packet.header().field16);
+  EXPECT_EQ(255, packet.header().field8);
 
   // Verify the buffer contents.
   // TODO(armansito): This assumes that the packet is encoded in Bluetooth
@@ -54,7 +55,7 @@ TEST(PacketTest, EmptyPayload) {
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
 
-TEST(PacketTest, NonEmptyPayload) {
+TEST(PacketViewTest, NonEmptyPayload) {
   constexpr size_t kPayloadPadding = 4;
   constexpr size_t kPayloadSize = sizeof(TestPayload) + kPayloadPadding;
   constexpr size_t kBufferSize = sizeof(TestHeader) + kPayloadSize;
@@ -62,12 +63,12 @@ TEST(PacketTest, NonEmptyPayload) {
   StaticByteBuffer<kBufferSize> buffer;
   buffer.SetToZeros();
 
-  MutablePacket<TestHeader> packet(&buffer, kPayloadSize);
+  MutablePacketView<TestHeader> packet(&buffer, kPayloadSize);
   EXPECT_EQ(kBufferSize, packet.size());
-  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
-  EXPECT_NE(nullptr, packet.GetPayloadData());
+  EXPECT_EQ(kPayloadSize, packet.payload_size());
+  EXPECT_NE(nullptr, packet.payload_bytes());
 
-  auto payload = packet.GetMutablePayload<TestPayload>();
+  auto payload = packet.mutable_payload<TestPayload>();
   EXPECT_NE(nullptr, payload);
 
   // Modify the payload.

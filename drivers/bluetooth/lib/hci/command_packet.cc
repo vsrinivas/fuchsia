@@ -12,21 +12,21 @@ namespace bluetooth {
 namespace hci {
 
 CommandPacket::CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, size_t payload_size)
-    : common::MutablePacket<CommandHeader>(buffer, payload_size), opcode_(opcode) {
-  FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
+    : common::MutablePacketView<CommandHeader>(buffer, payload_size), opcode_(opcode) {
+  FTL_DCHECK(this->payload_size() <= kMaxCommandPacketPayloadSize);
 }
 
 CommandPacket::CommandPacket(common::MutableByteBuffer* buffer)
-    : common::MutablePacket<CommandHeader>(buffer, buffer->size() - sizeof(CommandHeader)) {
+    : common::MutablePacketView<CommandHeader>(buffer, buffer->size() - sizeof(CommandHeader)) {
   FTL_DCHECK(buffer->size() >= sizeof(CommandHeader));
-  FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
-  opcode_ = le16toh(GetHeader().opcode);
+  FTL_DCHECK(payload_size() <= kMaxCommandPacketPayloadSize);
+  opcode_ = le16toh(header().opcode);
 }
 
 void CommandPacket::EncodeHeader() {
-  FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
-  GetMutableHeader()->opcode = htole16(opcode_);
-  GetMutableHeader()->parameter_total_size = static_cast<uint8_t>(GetPayloadSize());
+  FTL_DCHECK(payload_size() <= kMaxCommandPacketPayloadSize);
+  mutable_header()->opcode = htole16(opcode_);
+  mutable_header()->parameter_total_size = static_cast<uint8_t>(payload_size());
 }
 
 }  // namespace hci

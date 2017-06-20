@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/common/packet.h"
+#include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 
 namespace bluetooth {
@@ -19,7 +19,7 @@ namespace hci {
 // TODO(armansito): Rename these to ACLDataPacketReader and ACLDataPacketWriter.
 
 // Represents a HCI ACL data packet to be sent from the host to the controller.
-class ACLDataTxPacket : public ::bluetooth::common::MutablePacket<ACLDataHeader> {
+class ACLDataTxPacket : public ::bluetooth::common::MutablePacketView<ACLDataHeader> {
  public:
   ACLDataTxPacket(ConnectionHandle connection_handle, ACLPacketBoundaryFlag packet_boundary_flag,
                   ACLBroadcastFlag broadcast_flag, size_t data_length,
@@ -41,7 +41,7 @@ class ACLDataTxPacket : public ::bluetooth::common::MutablePacket<ACLDataHeader>
 };
 
 // Represents a HCI ACL data packet received from the controller.
-class ACLDataRxPacket : public ::bluetooth::common::Packet<ACLDataHeader> {
+class ACLDataRxPacket : public ::bluetooth::common::PacketView<ACLDataHeader> {
  public:
   explicit ACLDataRxPacket(const common::ByteBuffer* buffer);
 

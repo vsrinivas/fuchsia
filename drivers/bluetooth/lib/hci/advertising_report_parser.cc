@@ -12,14 +12,14 @@ namespace hci {
 AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
     : encountered_error_(false) {
   FTL_DCHECK(event.event_code() == kLEMetaEventCode);
-  auto params = event.GetPayload<LEMetaEventParams>();
-  FTL_DCHECK(params->subevent_code == kLEAdvertisingReportSubeventCode);
+  const auto& params = event.payload<LEMetaEventParams>();
+  FTL_DCHECK(params.subevent_code == kLEAdvertisingReportSubeventCode);
 
   auto subevent_params = event.GetLEEventParams<LEAdvertisingReportSubeventParams>();
 
   remaining_reports_ = subevent_params->num_reports;
-  remaining_bytes_ = event.GetPayloadSize() - sizeof(LEMetaEventParams) -
-                     sizeof(LEAdvertisingReportSubeventParams);
+  remaining_bytes_ =
+      event.payload_size() - sizeof(LEMetaEventParams) - sizeof(LEAdvertisingReportSubeventParams);
   ptr_ = subevent_params->reports;
 }
 

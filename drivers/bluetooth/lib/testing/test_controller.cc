@@ -60,7 +60,7 @@ void TestController::OnCommandPacketReceived(const hci::CommandPacket& command_p
   ASSERT_FALSE(cmd_transactions_.empty()) << "Received unexpected command packet";
 
   auto& current = cmd_transactions_.front();
-  ASSERT_TRUE(ContainersEqual(current.expected_, *command_packet.buffer()));
+  ASSERT_TRUE(ContainersEqual(current.expected_, command_packet.data()));
 
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();

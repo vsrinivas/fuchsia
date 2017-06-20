@@ -14,7 +14,7 @@ source_set("common") {
     "manufacturer_names.h",
     "observer_list.h",
     "optional.h",
-    "packet.h",
+    "packet_view.h",
     "slab_allocator_traits.h",
     "test_helpers.h",
     "uint128.h",
@@ -38,7 +38,7 @@ source_set("tests") {
     "manufacturer_names_unittest.cc",
     "observer_list_unittest.cc",
     "optional_unittest.cc",
-    "packet_unittest.cc",
+    "packet_view_unittest.cc",
     "slab_allocator_traits_unittest.cc",
     "uuid_unittest.cc",
   ]

@@ -121,10 +121,10 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
       [&id, this, test_obj](CommandChannel::TransactionId callback_id, const EventPacket& event) {
         EXPECT_EQ(id, callback_id);
         EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
-        EXPECT_EQ(4, event.GetHeader().parameter_total_size);
+        EXPECT_EQ(4, event.header().parameter_total_size);
         EXPECT_EQ(kNumHCICommandPackets,
-                  event.GetPayload<CommandCompleteEventParams>()->num_hci_command_packets);
-        EXPECT_EQ(kReset, le16toh(event.GetPayload<CommandCompleteEventParams>()->command_opcode));
+                  event.payload<CommandCompleteEventParams>().num_hci_command_packets);
+        EXPECT_EQ(kReset, le16toh(event.payload<CommandCompleteEventParams>().command_opcode));
         EXPECT_EQ(Status::kHardwareFailure, event.GetReturnParams<SimpleReturnParams>()->status);
 
         // Quit the message loop to continue the test.
@@ -216,9 +216,9 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
                                  const EventPacket& event) {
     EXPECT_EQ(callback_id, id);
     EXPECT_EQ(kCommandStatusEventCode, event.event_code());
-    EXPECT_EQ(Status::kSuccess, event.GetPayload<CommandStatusEventParams>()->status);
-    EXPECT_EQ(1, event.GetPayload<CommandStatusEventParams>()->num_hci_command_packets);
-    EXPECT_EQ(kReset, le16toh(event.GetPayload<CommandStatusEventParams>()->command_opcode));
+    EXPECT_EQ(Status::kSuccess, event.payload<CommandStatusEventParams>().status);
+    EXPECT_EQ(1, event.payload<CommandStatusEventParams>().num_hci_command_packets);
+    EXPECT_EQ(kReset, le16toh(event.payload<CommandStatusEventParams>().command_opcode));
 
     // Quit the message loop to continue the test.
     message_loop()->QuitNow();
@@ -422,7 +422,7 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   auto event_cb = [&event_count, kTestEventCode, this](const EventPacket& event) {
     event_count++;
     EXPECT_EQ(kTestEventCode, event.event_code());
-    EXPECT_EQ(1, event.GetHeader().parameter_total_size);
+    EXPECT_EQ(1, event.header().parameter_total_size);
 
     // We post this task to the end of the message queue so that the quit call
     // doesn't inherently guarantee that this callback gets invoked only once.
@@ -454,7 +454,7 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   auto event_cb0 = [&event_count0, kTestSubeventCode0, this](const EventPacket& event) {
     event_count0++;
     EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
-    EXPECT_EQ(kTestSubeventCode0, event.GetPayload<LEMetaEventParams>()->subevent_code);
+    EXPECT_EQ(kTestSubeventCode0, event.payload<LEMetaEventParams>().subevent_code);
     message_loop()->PostQuitTask();
   };
 
@@ -462,7 +462,7 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   auto event_cb1 = [&event_count1, kTestSubeventCode1, this](const EventPacket& event) {
     event_count1++;
     EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
-    EXPECT_EQ(kTestSubeventCode1, event.GetPayload<LEMetaEventParams>()->subevent_code);
+    EXPECT_EQ(kTestSubeventCode1, event.payload<LEMetaEventParams>().subevent_code);
     message_loop()->PostQuitTask();
   };
 

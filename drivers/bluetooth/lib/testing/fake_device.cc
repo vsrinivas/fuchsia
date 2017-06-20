@@ -55,7 +55,7 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_
 
   common::DynamicByteBuffer buffer(event_size);
   hci::MutableEventPacket event_packet(hci::kLEMetaEventCode, &buffer);
-  auto payload = event_packet.GetMutablePayload<hci::LEMetaEventParams>();
+  auto payload = event_packet.mutable_payload<hci::LEMetaEventParams>();
   payload->subevent_code = hci::kLEAdvertisingReportSubeventCode;
 
   auto subevent_payload =
@@ -95,7 +95,7 @@ common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
       sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t));
   common::DynamicByteBuffer buffer(event_size);
   hci::MutableEventPacket event_packet(hci::kLEMetaEventCode, &buffer);
-  auto payload = event_packet.GetMutablePayload<hci::LEMetaEventParams>();
+  auto payload = event_packet.mutable_payload<hci::LEMetaEventParams>();
   payload->subevent_code = hci::kLEAdvertisingReportSubeventCode;
 
   auto subevent_payload =

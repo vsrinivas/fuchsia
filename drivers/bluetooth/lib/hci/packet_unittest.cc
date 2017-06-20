@@ -39,9 +39,9 @@ TEST(HCIPacketTest, CommandPacket) {
   CommandPacket packet(kTestOpCode, &buffer, kPayloadSize);
 
   EXPECT_EQ(kTestOpCode, packet.opcode());
-  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
+  EXPECT_EQ(kPayloadSize, packet.payload_size());
 
-  packet.GetMutablePayload<TestPayload>()->foo = 127;
+  packet.mutable_payload<TestPayload>()->foo = 127;
   packet.EncodeHeader();
 
   constexpr std::array<uint8_t, kBufferSize> kExpected{{
@@ -60,14 +60,14 @@ TEST(HCIPacketTest, CommandPacketFromBuffer) {
   CommandPacket packet(kTestOpCode, &buffer, kPayloadSize);
 
   EXPECT_EQ(kTestOpCode, packet.opcode());
-  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
+  EXPECT_EQ(kPayloadSize, packet.payload_size());
 
   packet.EncodeHeader();
 
   CommandPacket packet0(&buffer);
 
   EXPECT_EQ(kTestOpCode, packet.opcode());
-  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
+  EXPECT_EQ(kPayloadSize, packet.payload_size());
 }
 
 TEST(HCIPacketTest, EventPacket) {
@@ -80,8 +80,8 @@ TEST(HCIPacketTest, EventPacket) {
   EventPacket packet(&bytes);
 
   EXPECT_EQ(kTestEventCode, packet.event_code());
-  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
-  EXPECT_EQ(127, packet.GetPayload<TestPayload>()->foo);
+  EXPECT_EQ(kPayloadSize, packet.payload_size());
+  EXPECT_EQ(127, packet.payload<TestPayload>().foo);
 }
 
 TEST(HCIPacketTest, EventPacketGetReturnParams) {
@@ -179,7 +179,7 @@ TEST(HCIPacketTest, ACLDataTxPacket) {
   // First 12-bits: 0x07F
   // Upper 4-bits: 0b0101
   EXPECT_TRUE(
-      ContainersEqual(packet.GetBytes(), std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
+      ContainersEqual(packet.data(), std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
 
   packet = ACLDataTxPacket(0x0FFF, ACLPacketBoundaryFlag::kCompletePDU,
                            ACLBroadcastFlag::kActiveSlaveBroadcast, kDataLength, &buffer);
@@ -188,7 +188,7 @@ TEST(HCIPacketTest, ACLDataTxPacket) {
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0111
   EXPECT_TRUE(
-      ContainersEqual(packet.GetBytes(), std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
+      ContainersEqual(packet.data(), std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
 
   packet = ACLDataTxPacket(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
                            ACLBroadcastFlag::kPointToPoint, kMaxDataLength, &buffer);
@@ -197,8 +197,8 @@ TEST(HCIPacketTest, ACLDataTxPacket) {
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0000
   EXPECT_TRUE(ContainersEqual(
-      packet.GetBytes(), std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                                  0x00, 0x00, 0x00, 0x00, 0x00}}));
+      packet.data(), std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                              0x00, 0x00, 0x00, 0x00}}));
 }
 
 TEST(HCIPacketTest, ACLDataRxPacket) {
@@ -208,14 +208,14 @@ TEST(HCIPacketTest, ACLDataRxPacket) {
   EXPECT_EQ(0x007F, packet.GetConnectionHandle());
   EXPECT_EQ(ACLPacketBoundaryFlag::kContinuingFragment, packet.GetPacketBoundaryFlag());
   EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet.GetBroadcastFlag());
-  EXPECT_EQ(1u, packet.GetPayloadSize());
+  EXPECT_EQ(1u, packet.payload_size());
 
   bytes = common::CreateStaticByteBuffer(0xFF, 0x7F, 0x01, 0x00, 0x00);
   packet = ACLDataRxPacket(&bytes);
   EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
   EXPECT_EQ(ACLPacketBoundaryFlag::kCompletePDU, packet.GetPacketBoundaryFlag());
   EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet.GetBroadcastFlag());
-  EXPECT_EQ(1u, packet.GetPayloadSize());
+  EXPECT_EQ(1u, packet.payload_size());
 
   // 256 + 4
   auto large_bytes = common::StaticByteBuffer<260>();
@@ -228,7 +228,7 @@ TEST(HCIPacketTest, ACLDataRxPacket) {
   EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
   EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable, packet.GetPacketBoundaryFlag());
   EXPECT_EQ(ACLBroadcastFlag::kPointToPoint, packet.GetBroadcastFlag());
-  EXPECT_EQ(256u, packet.GetPayloadSize());
+  EXPECT_EQ(256u, packet.payload_size());
 }
 
 }  // namespace

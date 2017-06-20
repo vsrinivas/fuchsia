@@ -9,17 +9,17 @@
 namespace bluetooth {
 namespace hci {
 
-EventPacket::EventPacket(common::ByteBuffer* buffer) : common::Packet<EventHeader>(buffer) {
-  SetPayloadSize(GetHeader().parameter_total_size);
-  FTL_DCHECK(GetPayloadSize() <= kMaxEventPacketPayloadSize);
+EventPacket::EventPacket(common::ByteBuffer* buffer) : common::PacketView<EventHeader>(buffer) {
+  Resize(header().parameter_total_size);
+  FTL_DCHECK(payload_size() <= kMaxEventPacketPayloadSize);
 }
 
 MutableEventPacket::MutableEventPacket(EventCode event_code, common::MutableByteBuffer* buffer)
-    : common::MutablePacket<EventHeader>(buffer, buffer->size() - sizeof(EventHeader)) {
+    : common::MutablePacketView<EventHeader>(buffer, buffer->size() - sizeof(EventHeader)) {
   FTL_DCHECK(buffer->size() >= sizeof(EventHeader));
-  FTL_DCHECK(GetPayloadSize() <= kMaxEventPacketPayloadSize);
-  GetMutableHeader()->event_code = event_code;
-  GetMutableHeader()->parameter_total_size = static_cast<uint8_t>(GetPayloadSize());
+  FTL_DCHECK(payload_size() <= kMaxEventPacketPayloadSize);
+  mutable_header()->event_code = event_code;
+  mutable_header()->parameter_total_size = static_cast<uint8_t>(payload_size());
 }
 
 }  // namespace hci

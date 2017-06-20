@@ -15,7 +15,7 @@ common::DynamicByteBuffer BuildHCICommand(hci::OpCode opcode, void* params, size
   hci::CommandPacket cmd_packet(opcode, &buffer, params_size);
   if (params_size) {
     FTL_DCHECK(params);
-    std::memcpy(cmd_packet.GetMutablePayloadData(), params, params_size);
+    std::memcpy(cmd_packet.mutable_payload_bytes(), params, params_size);
   }
   cmd_packet.EncodeHeader();
   return buffer;

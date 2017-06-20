@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/common/packet.h"
+#include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 
 namespace bluetooth {
@@ -16,12 +16,12 @@ class ByteBuffer;
 namespace hci {
 
 // Represents a HCI event packet.
-class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
+class EventPacket : public ::bluetooth::common::PacketView<EventHeader> {
  public:
   explicit EventPacket(common::ByteBuffer* buffer);
 
   // Returns the HCI event code for this packet.
-  EventCode event_code() const { return GetHeader().event_code; }
+  EventCode event_code() const { return header().event_code; }
 
   // Returns the minimum number of bytes needed for an EventPacket with the
   // given |payload_size|.
@@ -36,10 +36,10 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
   template <typename ReturnParams>
   const ReturnParams* GetReturnParams() const {
     if (event_code() != kCommandCompleteEventCode ||
-        sizeof(ReturnParams) > GetPayloadSize() - sizeof(CommandCompleteEventParams))
+        sizeof(ReturnParams) > payload_size() - sizeof(CommandCompleteEventParams))
       return nullptr;
     return reinterpret_cast<const ReturnParams*>(
-        GetPayload<CommandCompleteEventParams>()->return_parameters);
+        payload<CommandCompleteEventParams>().return_parameters);
   }
 
   // If this is a LE Meta Event packet, this method returns a pointer to the beginning of the
@@ -48,15 +48,15 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
   template <typename SubeventParams>
   const SubeventParams* GetLEEventParams() const {
     if (event_code() != kLEMetaEventCode ||
-        sizeof(SubeventParams) > GetPayloadSize() - sizeof(LEMetaEventParams))
+        sizeof(SubeventParams) > payload_size() - sizeof(LEMetaEventParams))
       return nullptr;
     return reinterpret_cast<const SubeventParams*>(
-        GetPayload<LEMetaEventParams>()->subevent_parameters);
+        payload<LEMetaEventParams>().subevent_parameters);
   }
 };
 
 // An EventPacket that allows its contents to be modified.
-class MutableEventPacket : public ::bluetooth::common::MutablePacket<EventHeader> {
+class MutableEventPacket : public ::bluetooth::common::MutablePacketView<EventHeader> {
  public:
   // Constructor immediately encodes the event header.
   explicit MutableEventPacket(EventCode event_code, common::MutableByteBuffer* buffer);

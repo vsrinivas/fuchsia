@@ -115,7 +115,7 @@ void FakeController::RespondWithCommandComplete(hci::OpCode opcode, void* return
   common::DynamicByteBuffer buffer(hci::EventPacket::GetMinBufferSize(
       sizeof(hci::CommandCompleteEventParams) + return_params_size));
   hci::MutableEventPacket event_packet(hci::kCommandCompleteEventCode, &buffer);
-  auto payload = event_packet.GetMutablePayload<hci::CommandCompleteEventParams>();
+  auto payload = event_packet.mutable_payload<hci::CommandCompleteEventParams>();
   payload->num_hci_command_packets = settings_.num_hci_command_packets;
   payload->command_opcode = htole16(opcode);
   std::memcpy(payload->return_parameters, return_params, return_params_size);
@@ -224,8 +224,8 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
       break;
     }
     case hci::kSetEventMask: {
-      auto in_params = command_packet.GetPayload<hci::SetEventMaskCommandParams>();
-      settings_.event_mask = le64toh(in_params->event_mask);
+      const auto& in_params = command_packet.payload<hci::SetEventMaskCommandParams>();
+      settings_.event_mask = le64toh(in_params.event_mask);
 
       hci::SimpleReturnParams params;
       params.status = hci::Status::kSuccess;
@@ -233,8 +233,8 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
       break;
     }
     case hci::kLESetEventMask: {
-      auto in_params = command_packet.GetPayload<hci::LESetEventMaskCommandParams>();
-      settings_.le_event_mask = le64toh(in_params->le_event_mask);
+      const auto& in_params = command_packet.payload<hci::LESetEventMaskCommandParams>();
+      settings_.le_event_mask = le64toh(in_params.le_event_mask);
 
       hci::SimpleReturnParams params;
       params.status = hci::Status::kSuccess;
@@ -242,18 +242,18 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
       break;
     }
     case hci::kReadLocalExtendedFeatures: {
-      auto in_params = command_packet.GetPayload<hci::ReadLocalExtendedFeaturesCommandParams>();
+      const auto& in_params = command_packet.payload<hci::ReadLocalExtendedFeaturesCommandParams>();
 
       hci::ReadLocalExtendedFeaturesReturnParams out_params;
-      out_params.page_number = in_params->page_number;
+      out_params.page_number = in_params.page_number;
       out_params.maximum_page_number = 2;
 
-      if (in_params->page_number > 2) {
+      if (in_params.page_number > 2) {
         out_params.status = hci::Status::kInvalidHCICommandParameters;
       } else {
         out_params.status = hci::Status::kSuccess;
 
-        switch (in_params->page_number) {
+        switch (in_params.page_number) {
           case 0:
             out_params.extended_lmp_features = htole64(settings_.lmp_features_page0);
             break;
@@ -269,29 +269,29 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
       break;
     }
     case hci::kLESetScanParameters: {
-      auto in_params = command_packet.GetPayload<hci::LESetScanParametersCommandParams>();
+      const auto& in_params = command_packet.payload<hci::LESetScanParametersCommandParams>();
 
       hci::SimpleReturnParams out_params;
       if (le_scan_state_.enabled) {
         out_params.status = hci::Status::kCommandDisallowed;
       } else {
         out_params.status = hci::Status::kSuccess;
-        le_scan_state_.scan_type = in_params->scan_type;
-        le_scan_state_.scan_interval = le16toh(in_params->scan_interval);
-        le_scan_state_.scan_window = le16toh(in_params->scan_window);
-        le_scan_state_.own_address_type = in_params->own_address_type;
-        le_scan_state_.filter_policy = in_params->filter_policy;
+        le_scan_state_.scan_type = in_params.scan_type;
+        le_scan_state_.scan_interval = le16toh(in_params.scan_interval);
+        le_scan_state_.scan_window = le16toh(in_params.scan_window);
+        le_scan_state_.own_address_type = in_params.own_address_type;
+        le_scan_state_.filter_policy = in_params.filter_policy;
       }
 
       RespondWithCommandComplete(command_packet.opcode(), &out_params, sizeof(out_params));
       break;
     }
     case hci::kLESetScanEnable: {
-      auto in_params = command_packet.GetPayload<hci::LESetScanEnableCommandParams>();
+      const auto& in_params = command_packet.payload<hci::LESetScanEnableCommandParams>();
 
-      le_scan_state_.enabled = (in_params->scanning_enabled == hci::GenericEnableParam::kEnable);
+      le_scan_state_.enabled = (in_params.scanning_enabled == hci::GenericEnableParam::kEnable);
       le_scan_state_.filter_duplicates =
-          (in_params->filter_duplicates == hci::GenericEnableParam::kEnable);
+          (in_params.filter_duplicates == hci::GenericEnableParam::kEnable);
 
       // Post the scan state update before scheduling the HCI Command Complete event. This
       // guarantees that single-threaded unit tests receive the scan state update BEFORE the HCI

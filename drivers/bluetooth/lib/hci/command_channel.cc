@@ -280,12 +280,12 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   // In case that this is a CommandComplete event, make sure that the command
   // opcode actually matches the pending command.
   if (event.event_code() == kCommandCompleteEventCode &&
-      le16toh(event.GetPayload<CommandCompleteEventParams>()->command_opcode) !=
+      le16toh(event.payload<CommandCompleteEventParams>().command_opcode) !=
           pending_command->opcode) {
     FTL_LOG(ERROR) << ftl::StringPrintf(
         "hci: CommandChannel: Unmatched CommandComplete event - opcode: "
         "0x%04x, pending: 0x%04x",
-        le16toh(event.GetPayload<CommandCompleteEventParams>()->command_opcode),
+        le16toh(event.payload<CommandCompleteEventParams>().command_opcode),
         pending_command->opcode);
     return;
   }
@@ -293,13 +293,12 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   // In case that this is a CommandComplete event, make sure that the command
   // opcode actually matches the pending command.
   if (event.event_code() == kCommandStatusEventCode &&
-      le16toh(event.GetPayload<CommandStatusEventParams>()->command_opcode) !=
+      le16toh(event.payload<CommandStatusEventParams>().command_opcode) !=
           pending_command->opcode) {
     FTL_LOG(ERROR) << ftl::StringPrintf(
         "hci: CommandChannel: Unmatched CommandStatus event - opcode: "
         "0x%04x, pending: 0x%04x",
-        le16toh(event.GetPayload<CommandStatusEventParams>()->command_opcode),
-        pending_command->opcode);
+        le16toh(event.payload<CommandStatusEventParams>().command_opcode), pending_command->opcode);
     return;
   }
 
@@ -321,7 +320,7 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   // the callback on |event| directly since the backing buffer is owned by this
   // CommandChannel and its contents will be modified.
   common::DynamicByteBuffer buffer(event.size());
-  event.buffer()->Copy(&buffer, 0, event.size());
+  event.data().Copy(&buffer, 0, event.size());
 
   pending_command->task_runner->PostTask(ftl::MakeCopyable([
     buffer = std::move(buffer), complete_callback = pending_command->complete_callback,
@@ -341,15 +340,14 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
   FTL_DCHECK(pending_command->complete_event_code != kCommandStatusEventCode);
 
   // Make sure that the command opcode actually matches the pending command.
-  if (le16toh(event.GetPayload<CommandStatusEventParams>()->command_opcode) !=
+  if (le16toh(event.payload<CommandStatusEventParams>().command_opcode) !=
       pending_command->opcode) {
     FTL_LOG(ERROR) << "hci: CommandChannel: Unmatched CommandStatus event";
     return;
   }
 
-  auto status_cb =
-      std::bind(pending_command->status_callback, pending_command->id,
-                static_cast<Status>(event.GetPayload<CommandStatusEventParams>()->status));
+  auto status_cb = std::bind(pending_command->status_callback, pending_command->id,
+                             static_cast<Status>(event.payload<CommandStatusEventParams>().status));
 
   // If the command callback needs to run on the I/O thread, then invoke it immediately.
   if (pending_command->task_runner.get() == io_task_runner_.get()) {
@@ -360,7 +358,7 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
 
   // Success in this case means that the command will be completed later when we
   // receive an event that matches |pending_command->complete_event_code|.
-  if (event.GetPayload<CommandStatusEventParams>()->status == Status::kSuccess) return;
+  if (event.payload<CommandStatusEventParams>().status == Status::kSuccess) return;
 
   // A CommandStatus event with an error status usually means that the command
   // that was in progress could not be executed. Complete the transaction and
@@ -408,7 +406,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
   const std::unordered_map<EventCode, EventHandlerId>* event_handlers;
 
   if (event.event_code() == kLEMetaEventCode) {
-    event_code = event.GetPayload<LEMetaEventParams>()->subevent_code;
+    event_code = event.payload<LEMetaEventParams>().subevent_code;
     event_handlers = &subevent_code_handlers_;
   } else {
     event_code = event.event_code();
@@ -435,7 +433,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
     handler.event_callback(event);
   } else {
     common::DynamicByteBuffer buffer(event.size());
-    event.buffer()->Copy(&buffer, 0, event.size());
+    event.data().Copy(&buffer, 0, event.size());
 
     handler.task_runner->PostTask(ftl::MakeCopyable(
         [ buffer = std::move(buffer), event_callback = handler.event_callback ]() mutable {
@@ -471,9 +469,9 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
 
   const size_t rx_payload_size = read_size - sizeof(EventHeader);
   EventPacket event(&event_buffer_);
-  if (event.GetPayloadSize() != rx_payload_size) {
+  if (event.payload_size() != rx_payload_size) {
     FTL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                   << "payload size from header (" << event.GetPayloadSize() << ")"
+                   << "payload size from header (" << event.payload_size() << ")"
                    << " does not match received payload size: " << rx_payload_size;
     return;
   }
