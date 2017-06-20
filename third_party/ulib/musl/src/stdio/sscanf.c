@@ -10,5 +10,3 @@ int sscanf(const char* restrict s, const char* restrict fmt, ...) {
     va_end(ap);
     return ret;
 }
-
-weak_alias(sscanf, __isoc99_sscanf);

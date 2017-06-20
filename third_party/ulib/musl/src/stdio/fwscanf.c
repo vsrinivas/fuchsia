@@ -11,5 +11,3 @@ int fwscanf(FILE* restrict f, const wchar_t* restrict fmt, ...) {
     va_end(ap);
     return ret;
 }
-
-weak_alias(fwscanf, __isoc99_fwscanf);

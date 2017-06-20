@@ -32,5 +32,3 @@ int vswscanf(const wchar_t* restrict s, const wchar_t* restrict fmt, va_list ap)
         .buf = buf, .buf_size = sizeof buf, .cookie = (void*)s, .read = wstring_read, .lock = -1};
     return vfwscanf(&f, fmt, ap);
 }
-
-weak_alias(vswscanf, __isoc99_vswscanf);

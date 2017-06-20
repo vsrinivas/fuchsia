@@ -378,5 +378,3 @@ int vfwscanf(FILE* restrict f, const wchar_t* restrict fmt, va_list ap) {
     FUNLOCK(f);
     return matches;
 }
-
-weak_alias(vfwscanf, __isoc99_vfwscanf);
