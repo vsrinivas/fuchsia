@@ -13,6 +13,8 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
+#include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
+#include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
 namespace mozart {
@@ -43,6 +45,14 @@ void ShapeNode::Accept(ResourceVisitor* visitor) {
 }
 
 void CircleShape::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void RectangleShape::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

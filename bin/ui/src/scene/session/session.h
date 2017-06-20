@@ -86,6 +86,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args);
   bool ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args);
   bool ApplyCreateRectangle(ResourceId id, const mozart2::RectanglePtr& args);
+  bool ApplyCreateRoundedRectangle(ResourceId id,
+                                   const mozart2::RoundedRectanglePtr& args);
   bool ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args);
   bool ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args);
   bool ApplyCreateMaterial(ResourceId id, const mozart2::MaterialPtr& args);
@@ -106,12 +108,33 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
   ResourcePtr CreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);
+  ResourcePtr CreateRectangle(ResourceId id, float width, float height);
+  ResourcePtr CreateRoundedRectangle(ResourceId id,
+                                     float width,
+                                     float height,
+                                     float top_left_radius,
+                                     float top_right_radius,
+                                     float bottom_right_radius,
+                                     float bottom_left_radius);
   ResourcePtr CreateMaterial(ResourceId id,
                              ImagePtr image,
                              float red,
                              float green,
                              float blue,
                              float alpha);
+
+  // Return false and log an error if the value is not of the expected type.
+  // NOTE: although failure does not halt execution of the program, it does
+  // indicate client error, and will be used by the caller to tear down the
+  // Session.
+  bool AssertValueIsOfType(const mozart2::ValuePtr& value,
+                           const mozart2::Value::Tag* tags,
+                           size_t tag_count);
+  template <size_t N>
+  bool AssertValueIsOfType(const mozart2::ValuePtr& value,
+                           const std::array<mozart2::Value::Tag, N>& tags) {
+    return AssertValueIsOfType(value, tags.data(), N);
+  }
 
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }

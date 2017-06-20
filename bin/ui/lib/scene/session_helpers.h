@@ -30,8 +30,36 @@ mozart2::OpPtr NewCreateBufferOp(uint32_t id,
                                  uint32_t memory_offset,
                                  uint32_t num_bytes);
 mozart2::OpPtr NewCreateLinkOp(uint32_t id, mx::eventpair epair);
+
 mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius);
+mozart2::OpPtr NewCreateRectangleOp(uint32_t id, float width, float height);
+mozart2::OpPtr NewCreateRoundedRectangleOp(uint32_t id,
+                                           float width,
+                                           float height,
+                                           float top_left_radius,
+                                           float top_right_radius,
+                                           float bottom_right_radius,
+                                           float bottom_left_radius);
+
+// Variant of NewCreateCircleOp that uses a variable radius instead of a
+// constant one set at construction time.
 mozart2::OpPtr NewCreateVarCircleOp(uint32_t id, uint32_t radius_var_id);
+// Variant of NewCreateRectangleOp that uses a variable width/height instead of
+// constant ones set at construction time.
+mozart2::OpPtr NewCreateVarRectangleOp(uint32_t id,
+                                       uint32_t width_var_id,
+                                       uint32_t height_var_id);
+// Variant of NewCreateRoundedRectangleOp that uses a variable width/height/etc.
+// instead of constant ones set at construction time.
+mozart2::OpPtr NewCreateVarRoundedRectangleOp(
+    uint32_t id,
+    uint32_t width_var_id,
+    uint32_t height_var_id,
+    uint32_t top_left_radius_var_id,
+    uint32_t top_right_radius_var_id,
+    uint32_t bottom_left_radius_var_id,
+    uint32_t bottom_right_radius_var_id);
+
 mozart2::OpPtr NewCreateMaterialOp(uint32_t id,
                                    uint32_t texture_id,
                                    uint8_t red,

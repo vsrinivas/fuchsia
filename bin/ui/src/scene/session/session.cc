@@ -13,10 +13,26 @@
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
+#include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
+#include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene/util/unwrap.h"
+
+#include "escher/shape/mesh.h"
+#include "escher/shape/rounded_rect_factory.h"
 
 namespace mozart {
 namespace scene {
+
+namespace {
+
+// Makes it convenient to check that a value is constant and of a specific type,
+// or a variable.
+// TODO: There should also be a convenient way of type-checking a variable;
+// this will necessarily involve looking up the value in the ResourceMap.
+constexpr std::array<mozart2::Value::Tag, 2> kFloatValueTypes{
+    {mozart2::Value::Tag::VECTOR1, mozart2::Value::Tag::VARIABLE_ID}};
+
+}  // anonymous namespace
 
 Session::Session(SessionId id,
                  SessionContext* context,
@@ -87,6 +103,9 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateLink(id, op->resource->get_link());
     case mozart2::Resource::Tag::RECTANGLE:
       return ApplyCreateRectangle(id, op->resource->get_rectangle());
+    case mozart2::Resource::Tag::ROUNDED_RECTANGLE:
+      return ApplyCreateRoundedRectangle(id,
+                                         op->resource->get_rounded_rectangle());
     case mozart2::Resource::Tag::CIRCLE:
       return ApplyCreateCircle(id, op->resource->get_circle());
     case mozart2::Resource::Tag::MESH:
@@ -219,27 +238,68 @@ bool Session::ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args) {
 
 bool Session::ApplyCreateRectangle(ResourceId id,
                                    const mozart2::RectanglePtr& args) {
-  error_reporter_->ERROR()
-      << "scene::Session::ApplyCreateRectangle(): unimplemented";
-  return false;
+  if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
+      !AssertValueIsOfType(args->height, kFloatValueTypes)) {
+    return false;
+  }
+
+  if (args->width->which() == mozart2::Value::Tag::VARIABLE_ID ||
+      args->height->which() == mozart2::Value::Tag::VARIABLE_ID) {
+    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
+                                "unimplemented: variable width/height.";
+    return false;
+  }
+
+  auto rectangle = CreateRectangle(id, args->width->get_vector1(),
+                                   args->height->get_vector1());
+  return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
+}
+
+bool Session::ApplyCreateRoundedRectangle(
+    ResourceId id,
+    const mozart2::RoundedRectanglePtr& args) {
+  if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
+      !AssertValueIsOfType(args->height, kFloatValueTypes) ||
+      !AssertValueIsOfType(args->top_left_radius, kFloatValueTypes) ||
+      !AssertValueIsOfType(args->top_right_radius, kFloatValueTypes) ||
+      !AssertValueIsOfType(args->bottom_left_radius, kFloatValueTypes) ||
+      !AssertValueIsOfType(args->bottom_right_radius, kFloatValueTypes)) {
+    return false;
+  }
+
+  if (args->width->which() == mozart2::Value::Tag::VARIABLE_ID ||
+      args->height->which() == mozart2::Value::Tag::VARIABLE_ID ||
+      args->top_left_radius->which() == mozart2::Value::Tag::VARIABLE_ID ||
+      args->top_right_radius->which() == mozart2::Value::Tag::VARIABLE_ID ||
+      args->bottom_left_radius->which() == mozart2::Value::Tag::VARIABLE_ID ||
+      args->bottom_right_radius->which() == mozart2::Value::Tag::VARIABLE_ID) {
+    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
+                                "unimplemented: variable width/height/radii.";
+    return false;
+  }
+
+  auto rectangle = CreateRoundedRectangle(
+      id, args->width->get_vector1(), args->height->get_vector1(),
+      args->top_left_radius->get_vector1(),
+      args->top_right_radius->get_vector1(),
+      args->bottom_right_radius->get_vector1(),
+      args->bottom_left_radius->get_vector1());
+  return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
 bool Session::ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args) {
-  auto tag = args->radius->which();
-  if (tag == mozart2::Value::Tag::VECTOR1) {
-    float initial_radius = args->radius->get_vector1();
-    auto circle = CreateCircle(id, initial_radius);
-    return circle ? resources_.AddResource(id, std::move(circle)) : false;
-  } else if (tag == mozart2::Value::Tag::VARIABLE_ID) {
-    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
-                                "unimplemented: variable radius";
-    return false;
-  } else {
-    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
-                                "radius must be a float or a variable of type "
-                                "float";
+  if (!AssertValueIsOfType(args->radius, kFloatValueTypes)) {
     return false;
   }
+
+  if (args->radius->which() == mozart2::Value::Tag::VARIABLE_ID) {
+    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
+                                "unimplemented: variable radius.";
+    return false;
+  }
+
+  auto circle = CreateCircle(id, args->radius->get_vector1());
+  return circle ? resources_.AddResource(id, std::move(circle)) : false;
 }
 
 bool Session::ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args) {
@@ -342,6 +402,34 @@ ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {
   return ftl::MakeRefCounted<CircleShape>(this, initial_radius);
 }
 
+ResourcePtr Session::CreateRectangle(ResourceId id, float width, float height) {
+  return ftl::MakeRefCounted<RectangleShape>(this, width, height);
+}
+
+ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
+                                            float width,
+                                            float height,
+                                            float top_left_radius,
+                                            float top_right_radius,
+                                            float bottom_right_radius,
+                                            float bottom_left_radius) {
+  auto factory = context()->escher_rounded_rect_factory();
+  if (!factory) {
+    error_reporter_->ERROR() << "scene::Session::CreateRoundedRectangle(): "
+                                "no RoundedRectFactory available.";
+    return ResourcePtr();
+  }
+
+  escher::RoundedRectSpec rect_spec(width, height, top_left_radius,
+                                    top_right_radius, bottom_right_radius,
+                                    bottom_left_radius);
+  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition |
+                             escher::MeshAttribute::kUV};
+
+  return ftl::MakeRefCounted<RoundedRectangleShape>(
+      this, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
+}
+
 ResourcePtr Session::CreateMaterial(ResourceId id,
                                     ImagePtr image,
                                     float red,
@@ -366,6 +454,30 @@ void Session::TearDown() {
 
 ErrorReporter* Session::error_reporter() const {
   return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
+}
+
+bool Session::AssertValueIsOfType(const mozart2::ValuePtr& value,
+                                  const mozart2::Value::Tag* tags,
+                                  size_t tag_count) {
+  FTL_DCHECK(tag_count > 0);
+  for (size_t i = 0; i < tag_count; ++i) {
+    if (value->which() == tags[i]) {
+      return true;
+    }
+  }
+  std::ostringstream str;
+  if (tag_count == 1) {
+    str << ", which is not the expected type: " << tags[0] << ".";
+  } else {
+    str << ", which is not one of the expected types (" << tags[0];
+    for (size_t i = 1; i < tag_count; ++i) {
+      str << ", " << tags[i];
+    }
+    str << ").";
+  }
+  error_reporter_->ERROR() << "scene::Session: received value of type: "
+                           << value->which() << str.str();
+  return false;
 }
 
 }  // namespace scene

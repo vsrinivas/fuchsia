@@ -9,13 +9,14 @@
 namespace mozart {
 namespace scene {
 
-class CircleShape final : public Shape {
+class RectangleShape final : public Shape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  CircleShape(Session* session, float initial_radius);
+  RectangleShape(Session* session, float initial_width, float initial_height);
 
-  float radius() const { return radius_; }
+  float width() const { return width_; }
+  float height() const { return height_; }
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
@@ -29,7 +30,8 @@ class CircleShape final : public Shape {
       const escher::MaterialPtr& material) override;
 
  private:
-  float radius_;
+  float width_;
+  float height_;
 };
 
 }  // namespace scene

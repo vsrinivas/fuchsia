@@ -4,6 +4,8 @@
 
 #include "apps/mozart/lib/scene/session_helpers.h"
 
+#include <sstream>
+
 namespace mozart {
 
 // Helper function for all resource creation functions.
@@ -80,6 +82,136 @@ mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius) {
 
   auto resource = mozart2::Resource::New();
   resource->set_circle(std::move(circle));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateRectangleOp(uint32_t id, float width, float height) {
+  auto width_value = mozart2::Value::New();
+  width_value->set_vector1(width);
+
+  auto height_value = mozart2::Value::New();
+  height_value->set_vector1(height);
+
+  auto rectangle = mozart2::Rectangle::New();
+  rectangle->width = std::move(width_value);
+  rectangle->height = std::move(height_value);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_rectangle(std::move(rectangle));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateRoundedRectangleOp(uint32_t id,
+                                           float width,
+                                           float height,
+                                           float top_left_radius,
+                                           float top_right_radius,
+                                           float bottom_right_radius,
+                                           float bottom_left_radius) {
+  auto width_value = mozart2::Value::New();
+  width_value->set_vector1(width);
+
+  auto height_value = mozart2::Value::New();
+  height_value->set_vector1(height);
+
+  auto top_left_radius_value = mozart2::Value::New();
+  top_left_radius_value->set_vector1(top_left_radius);
+
+  auto top_right_radius_value = mozart2::Value::New();
+  top_right_radius_value->set_vector1(top_right_radius);
+
+  auto bottom_right_radius_value = mozart2::Value::New();
+  bottom_right_radius_value->set_vector1(bottom_right_radius);
+
+  auto bottom_left_radius_value = mozart2::Value::New();
+  bottom_left_radius_value->set_vector1(bottom_left_radius);
+
+  auto rectangle = mozart2::RoundedRectangle::New();
+  rectangle->width = std::move(width_value);
+  rectangle->height = std::move(height_value);
+  rectangle->top_left_radius = std::move(top_left_radius_value);
+  rectangle->top_right_radius = std::move(top_right_radius_value);
+  rectangle->bottom_right_radius = std::move(bottom_right_radius_value);
+  rectangle->bottom_left_radius = std::move(bottom_left_radius_value);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_rounded_rectangle(std::move(rectangle));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateVarCircleOp(uint32_t id,
+                                    uint32_t radius_var_id,
+                                    uint32_t height_var_id) {
+  auto radius_value = mozart2::Value::New();
+  radius_value->set_variable_id(radius_var_id);
+
+  auto circle = mozart2::Circle::New();
+  circle->radius = std::move(radius_value);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_circle(std::move(circle));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateVarRectangleOp(uint32_t id,
+                                       uint32_t width_var_id,
+                                       uint32_t height_var_id) {
+  auto width_value = mozart2::Value::New();
+  width_value->set_variable_id(width_var_id);
+
+  auto height_value = mozart2::Value::New();
+  height_value->set_variable_id(height_var_id);
+
+  auto rectangle = mozart2::Rectangle::New();
+  rectangle->width = std::move(width_value);
+  rectangle->height = std::move(height_value);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_rectangle(std::move(rectangle));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateVarRoundedRectangleOp(
+    uint32_t id,
+    uint32_t width_var_id,
+    uint32_t height_var_id,
+    uint32_t top_left_radius_var_id,
+    uint32_t top_right_radius_var_id,
+    uint32_t bottom_left_radius_var_id,
+    uint32_t bottom_right_radius_var_id) {
+  auto width_value = mozart2::Value::New();
+  width_value->set_variable_id(width_var_id);
+
+  auto height_value = mozart2::Value::New();
+  height_value->set_variable_id(height_var_id);
+
+  auto top_left_radius_value = mozart2::Value::New();
+  top_left_radius_value->set_variable_id(top_left_radius_var_id);
+
+  auto top_right_radius_value = mozart2::Value::New();
+  top_right_radius_value->set_variable_id(top_right_radius_var_id);
+
+  auto bottom_left_radius_value = mozart2::Value::New();
+  bottom_left_radius_value->set_variable_id(bottom_left_radius_var_id);
+
+  auto bottom_right_radius_value = mozart2::Value::New();
+  bottom_right_radius_value->set_variable_id(bottom_right_radius_var_id);
+
+  auto rectangle = mozart2::RoundedRectangle::New();
+  rectangle->width = std::move(width_value);
+  rectangle->height = std::move(height_value);
+  rectangle->top_left_radius = std::move(top_left_radius_value);
+  rectangle->top_right_radius = std::move(top_right_radius_value);
+  rectangle->bottom_left_radius = std::move(bottom_left_radius_value);
+  rectangle->bottom_right_radius = std::move(bottom_right_radius_value);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_rounded_rectangle(std::move(rectangle));
 
   return NewCreateResourceOp(id, std::move(resource));
 }

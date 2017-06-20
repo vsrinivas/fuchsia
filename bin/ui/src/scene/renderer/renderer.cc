@@ -65,24 +65,12 @@ void Renderer::Visitor::Visit(Node* r) {
   }
 }
 
-void Renderer::Visitor::Visit(ShapeNode* r) {
-  auto& shape = r->shape();
-  auto& material = r->material();
-  if (!shape || !material)
-    return;
-
-  if (shape->IsKindOf<CircleShape>()) {
-    auto circle = static_cast<CircleShape*>(shape.get());
-    auto& transform = r->GetGlobalTransform();
-
-    escher::vec4 origin = transform * escher::vec4(0, 0, 0, 1);
-    auto object = escher::Object::NewCircle(escher::vec2(origin.x, origin.y),
-                                            circle->radius(), origin.z,
-                                            material->escher_material());
-    display_list_.push_back(object);
-  } else {
-    // TODO: Render other shapes.
-    FTL_CHECK(false);
+void Renderer::Visitor::Visit(ShapeNode* shape_node) {
+  auto& shape = shape_node->shape();
+  auto& material = shape_node->material();
+  if (shape && material) {
+    display_list_.push_back(shape->GenerateRenderObject(
+        shape_node->GetGlobalTransform(), material->escher_material()));
   }
 }
 

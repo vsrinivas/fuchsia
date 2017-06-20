@@ -75,15 +75,26 @@ class HelloSceneManagerApp {
     ResourceId link_id = NewResourceId();
     ops.push_back(NewCreateLinkOp(link_id, std::move(link_handle1)));
 
-    // Create a shape node.
-    ResourceId node_id = NewResourceId();
-    ops.push_back(NewCreateShapeNodeOp(node_id));
+    // Create an EntityNode to act as the root of our subtree.
+    ResourceId entity_node_id = NewResourceId();
+    ops.push_back(NewCreateEntityNodeOp(entity_node_id));
+
+    // Create two shape nodes, one for a circle and one for a rounded-rect.
+    ResourceId circle_node_id = NewResourceId();
+    ops.push_back(NewCreateShapeNodeOp(circle_node_id));
+
+    ResourceId rrect_node_id = NewResourceId();
+    ops.push_back(NewCreateShapeNodeOp(rrect_node_id));
+
+    // Immediately attach them to the root.
+    ops.push_back(NewAddChildOp(entity_node_id, circle_node_id));
+    ops.push_back(NewAddChildOp(entity_node_id, rrect_node_id));
 
     // Generate a checkerboard.
     size_t checkerboard_width = 8;
     size_t checkerboard_height = 8;
     size_t checkerboard_pixels_size;
-    auto checkerboard_pixels = escher::image_utils::NewCheckerboardPixels(
+    auto checkerboard_pixels = escher::image_utils::NewGradientPixels(
         checkerboard_width, checkerboard_height, &checkerboard_pixels_size);
 
     auto shared_vmo = CreateSharedVmo(checkerboard_pixels_size);
@@ -117,22 +128,53 @@ class HelloSceneManagerApp {
     ops.push_back(NewCreateMaterialOp(material_id, checkerboard_image_id, 255,
                                       100, 100, 255));
 
-    // Make the shape a circle.
-    ResourceId shape_id = NewResourceId();
-    ops.push_back(NewCreateCircleOp(shape_id, 50.f));
+    // Make a circle, and attach it and the material to a node.
+    ResourceId circle_id = NewResourceId();
+    ops.push_back(NewCreateCircleOp(circle_id, 50.f));
 
-    ops.push_back(NewSetMaterialOp(node_id, material_id));
-    ops.push_back(NewSetShapeOp(node_id, shape_id));
+    ops.push_back(NewSetMaterialOp(circle_node_id, material_id));
+    ops.push_back(NewSetShapeOp(circle_node_id, circle_id));
+
+    // Make a rounded rect, and attach it and the material to a node.
+    ResourceId rrect_id = NewResourceId();
+    ops.push_back(
+        NewCreateRoundedRectangleOp(rrect_id, 200, 300, 20, 20, 80, 10));
+
+    ops.push_back(NewSetMaterialOp(rrect_node_id, material_id));
+    ops.push_back(NewSetShapeOp(rrect_node_id, rrect_id));
 
     // Translate the circle.
-    float translation[3] = {50.f, 50.f, 10.f};
-    ops.push_back(NewSetTransformOp(node_id, translation,
-                                    kOnesFloat3,        // scale
-                                    kZeroesFloat3,      // anchor point
-                                    kQuaternionDefault  // rotation
-                                    ));
-    // Attach the circle to the Link.
-    ops.push_back(NewAddChildOp(link_id, node_id));
+    {
+      float translation[3] = {50.f, 50.f, 10.f};
+      ops.push_back(NewSetTransformOp(circle_node_id, translation,
+                                      kOnesFloat3,        // scale
+                                      kZeroesFloat3,      // anchor point
+                                      kQuaternionDefault  // rotation
+                                      ));
+    }
+
+    // Translate the rounded rect.
+    {
+      float translation[3] = {350.f, 150.f, 10.f};
+      ops.push_back(NewSetTransformOp(rrect_node_id, translation,
+                                      kOnesFloat3,        // scale
+                                      kZeroesFloat3,      // anchor point
+                                      kQuaternionDefault  // rotation
+                                      ));
+    }
+
+    // Translate the EntityNode root.
+    {
+      float translation[3] = {900.f, 800.f, 10.f};
+      ops.push_back(NewSetTransformOp(entity_node_id, translation,
+                                      kOnesFloat3,        // scale
+                                      kZeroesFloat3,      // anchor point
+                                      kQuaternionDefault  // rotation
+                                      ));
+    }
+
+    // Attach the root EntityNode to the Link.
+    ops.push_back(NewAddChildOp(link_id, entity_node_id));
 
     return ops;
   }

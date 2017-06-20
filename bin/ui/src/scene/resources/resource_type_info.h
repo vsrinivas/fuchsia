@@ -22,17 +22,18 @@ enum ResourceType {
 
   kShape = 1 << 6,
   kRectangle = 1 << 7,
-  kCircle = 1 << 8,
-  kMesh = 1 << 9,
+  kRoundedRectangle = 1 << 8,
+  kCircle = 1 << 9,
+  kMesh = 1 << 10,
 
-  kMaterial = 1 << 10,
+  kMaterial = 1 << 11,
 
-  kNode = 1 << 11,
-  kClipNode = 1 << 12,
-  kEntityNode = 1 << 13,
-  kLinkNode = 1 << 14,
-  kShapeNode = 1 << 15,
-  kTagNode = 1 << 16,
+  kNode = 1 << 12,
+  kClipNode = 1 << 13,
+  kEntityNode = 1 << 14,
+  kLinkNode = 1 << 15,
+  kShapeNode = 1 << 16,
+  kTagNode = 1 << 17,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

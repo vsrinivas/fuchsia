@@ -29,6 +29,7 @@ union Resource {
 
   // Shapes (see shapes.fidl).
   Rectangle rectangle;
+  RoundedRectangle rounded_rectangle;
   Circle circle;
   Mesh mesh;
 

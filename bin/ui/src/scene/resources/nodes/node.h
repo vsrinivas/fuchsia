@@ -30,6 +30,7 @@ class Node : public Resource {
 
   bool SetTransform(const escher::Transform& transform);
   const escher::mat4& GetGlobalTransform() const;
+  const escher::Transform& transform() const { return transform_; }
 
   // This is a static method so that it can be passed a NodePtr&, to facilitate
   // look-up in the node's parent.  No-op if node has no parent.  Always returns

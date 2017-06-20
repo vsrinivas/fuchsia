@@ -16,6 +16,16 @@ struct Rectangle {
   Value height; // float
 };
 
+// RoundedRectangle centered at (0,0).
+struct RoundedRectangle {
+  Value width;                // float
+  Value height;               // float
+  Value top_left_radius;      // float
+  Value top_right_radius;     // float
+  Value bottom_right_radius;  // float
+  Value bottom_left_radius;   // float
+};
+
 struct Circle {
   Value radius;  // float
 };

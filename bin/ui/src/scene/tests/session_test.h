@@ -20,12 +20,15 @@ class SessionTest : public ::testing::Test,
   // ::testing::Test virtual method.
   void SetUp() override;
   void TearDown() override;
-  vk::Device vk_device() override { return nullptr; };
+  vk::Device vk_device() override { return nullptr; }
   escher::ResourceRecycler* escher_resource_recycler() override {
     return nullptr;
-  };
-  escher::ImageFactory* escher_image_factory() override { return nullptr; };
-  escher::impl::GpuUploader* escher_gpu_uploader() override { return nullptr; };
+  }
+  escher::ImageFactory* escher_image_factory() override { return nullptr; }
+  escher::impl::GpuUploader* escher_gpu_uploader() override { return nullptr; }
+  escher::RoundedRectFactory* escher_rounded_rect_factory() override {
+    return nullptr;
+  }
 
  protected:
   // Implement ErrorReporter.

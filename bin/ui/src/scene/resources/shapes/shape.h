@@ -5,7 +5,8 @@
 #pragma once
 
 #include "apps/mozart/src/scene/resources/resource.h"
-#include "lib/escher/escher/geometry/types.h"
+#include "escher/geometry/types.h"
+#include "escher/scene/object.h"
 
 namespace mozart {
 namespace scene {
@@ -18,6 +19,10 @@ class Shape : public Resource {
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
   void Accept(class ResourceVisitor* visitor) override;
+
+  virtual escher::Object GenerateRenderObject(
+      const escher::mat4& transform,
+      const escher::MaterialPtr& material) = 0;
 
  protected:
   Shape(Session* session, const ResourceTypeInfo& type_info);

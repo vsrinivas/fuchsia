@@ -10,6 +10,7 @@ namespace scene {
 using mozart2::Op;
 using mozart2::OpPtr;
 using mozart2::Resource;
+using mozart2::Value;
 
 std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
   switch (op->which()) {
@@ -38,6 +39,9 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case Resource::Tag::RECTANGLE:
       stream << "Rectangle";
+      break;
+    case Resource::Tag::ROUNDED_RECTANGLE:
+      stream << "RoundedRectangle";
       break;
     case Resource::Tag::CIRCLE:
       stream << "Circle";
@@ -68,6 +72,29 @@ std::ostream& operator<<(std::ostream& stream,
       break;
   }
   return stream << ")";
+}
+
+std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag) {
+  switch (tag) {
+    case Value::Tag::VECTOR1:
+      return stream << "vec1";
+    case Value::Tag::VECTOR2:
+      return stream << "vec2";
+    case Value::Tag::VECTOR3:
+      return stream << "vec3";
+    case Value::Tag::COLOR_RGBA:
+      return stream << "rgba";
+    case Value::Tag::DEGREES:
+      return stream << "degrees";
+    case Value::Tag::QUATERNION:
+      return stream << "quat";
+    case Value::Tag::TRANSFORM:
+      return stream << "transform";
+    case Value::Tag::VARIABLE_ID:
+      return stream << "variable";
+    case Value::Tag::__UNKNOWN__:
+      return stream << "__UNKNOWN__";
+  }
 }
 
 }  // namespace scene

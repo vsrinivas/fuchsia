@@ -45,11 +45,7 @@ class HelloSceneManagerService : public Demo {
         application_context_(harness->application_context()),
         renderer_(escher()->NewPaperRenderer()),
         swapchain_helper_(harness->GetVulkanSwapchain(), renderer_),
-        scene_manager_(std::make_unique<SceneManagerImpl>(
-            escher()->vulkan_context().device,
-            escher()->resource_recycler(),
-            escher()->gpu_allocator(),
-            escher()->gpu_uploader())),
+        scene_manager_(std::make_unique<SceneManagerImpl>(escher())),
         binding_(scene_manager_.get()) {
     FTL_DCHECK(application_context_);
 

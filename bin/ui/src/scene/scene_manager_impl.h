@@ -23,10 +23,7 @@ class Renderer;
 
 class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
  public:
-  SceneManagerImpl(vk::Device vk_device,
-                   escher::ResourceRecycler* resource_recycler,
-                   escher::GpuAllocator* allocator,
-                   escher::impl::GpuUploader* uploader);
+  explicit SceneManagerImpl(escher::Escher* escher);
   SceneManagerImpl();
   ~SceneManagerImpl() override;
 
@@ -60,6 +57,9 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
   escher::impl::GpuUploader* escher_gpu_uploader() override {
     return gpu_uploader_;
   }
+  escher::RoundedRectFactory* escher_rounded_rect_factory() override {
+    return rounded_rect_factory_.get();
+  }
 
   const std::vector<LinkPtr>& links() const { return links_; }
 
@@ -86,6 +86,7 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
   escher::ResourceRecycler* resource_recycler_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   escher::impl::GpuUploader* gpu_uploader_;
+  std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
 
   // Placeholders for Links and the Renderer. These will be instantiated
   // differently in the future.

@@ -10,22 +10,26 @@
 namespace mozart {
 namespace scene {
 
-SceneManagerImpl::SceneManagerImpl(
-    vk::Device vk_device,
-    escher::ResourceRecycler* resource_recycler,
-    escher::GpuAllocator* allocator,
-    escher::impl::GpuUploader* uploader)
+SceneManagerImpl::SceneManagerImpl(escher::Escher* escher)
     : session_count_(0),
-      vk_device_(vk_device),
-      resource_recycler_(resource_recycler),
-      image_factory_(
-          std::make_unique<escher::SimpleImageFactory>(resource_recycler,
-                                                       allocator)),
-      gpu_uploader_(uploader),
+      vk_device_(escher->vulkan_context().device),
+      resource_recycler_(escher->resource_recycler()),
+      image_factory_(std::make_unique<escher::SimpleImageFactory>(
+          resource_recycler_,
+          escher->gpu_allocator())),
+      gpu_uploader_(escher->gpu_uploader()),
+      rounded_rect_factory_(
+          std::make_unique<escher::RoundedRectFactory>(escher)),
       renderer_(std::make_unique<Renderer>()) {}
 
 SceneManagerImpl::SceneManagerImpl()
-    : SceneManagerImpl(nullptr, nullptr, nullptr, nullptr) {}
+    : session_count_(0),
+      vk_device_(nullptr),
+      resource_recycler_(nullptr),
+      image_factory_(nullptr),
+      gpu_uploader_(nullptr),
+      rounded_rect_factory_(nullptr),
+      renderer_(std::make_unique<Renderer>()) {}
 
 SceneManagerImpl::~SceneManagerImpl() {}
 
