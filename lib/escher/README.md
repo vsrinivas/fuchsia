@@ -9,9 +9,12 @@ Escher is a physically based renderer.
  * Light diffusion
  * Lens effect
 
-## Building
-Escher requires Vulkan, and currently only builds on Linux.  In order to build
-Escher, you need to:
+## Building for Fuchsia
+Escher is part of the default Fuchsia build.  The "waterfall" demo is installed
+as `system/apps/waterfall`.
+
+## Building for Linux
+Escher can also build on Linux.  In order to do so, you need to:
   * install build dependencies
   ```
   sudo apt install libxinerama-dev libxrandr-dev libxcursor-dev libx11-xcb-dev libx11-dev mesa_common_dev
@@ -29,13 +32,16 @@ Escher, you need to:
   ```
   * pull down dependencies for the waterfall example:
   ```
-  (cd examples/waterfall/third_party; git submodule init; git submodule update)
+  (cd examples/common/third_party; git submodule init; git submodule update)
   ```
   * specify that you want to build only the Escher module:
   ```
-  cd $FUCHSIA_DIR; ./packages/gn/gen.py -m escher -r
+  cd $FUCHSIA_DIR; fset x86-64 --release --modules escher_linux; fgen
   ```
-  * BUILD!!
+    * The `fset` and `fgen` commands are provided by the `env.sh` script; see `$FUCHSIA_DIR/docs/getting_started.md`.  
+    * NOTE!! These commands may conflict with the Vulkan SDK on your LD_LIBRARY_PATH.  It is probably best to run these commands in one terminal window, then switch to another and setting LD_LIBRARY_PATH before Building
+    and running.
+  * BUILD!! AND RUN!!!
   ```
   buildtools/ninja -C out/release-x86-64/ && out/release-x86-64/host_x64/waterfall
   ```
