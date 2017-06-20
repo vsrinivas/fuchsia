@@ -17,6 +17,11 @@ std::string MakeStoryScopeTopic(const std::string& story_id,
                                 const std::string& topic);
 
 std::string MakeModuleScopeTopic(const std::string& story_id,
+                                 const fidl::Array<fidl::String>& module_path,
+                                 const std::string& topic);
+
+// Expects |module_id| to be a short hash of the module path.
+std::string MakeModuleScopeTopic(const std::string& story_id,
                                  const std::string& module_id,
                                  const std::string& topic);
 

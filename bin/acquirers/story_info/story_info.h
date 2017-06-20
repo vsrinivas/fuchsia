@@ -4,15 +4,20 @@
 
 #pragma once
 
+#include <set>
+
 #include "application/lib/app/service_provider_impl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
+#include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
+
+class StoryWatcherImpl;
 
 // This class pulls info about Stories from Framework and stores it in
 // the Context service as follows (note all values are JSON-encoded):
@@ -74,6 +79,11 @@ class StoryInfoAcquirer : public modular::Agent,
       visible_stories_watcher_binding_;
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::FocusWatcher> focus_watcher_binding_;
+
+  // A list of all the Stories we know about.
+  std::set<std::string> known_story_ids_;
+  // One StoryWatcher exists for each entry in |known_story_ids_|.
+  fidl::BindingSet<modular::StoryWatcher, std::unique_ptr<StoryWatcherImpl>> story_watcher_bindings_;
 
   app::ServiceProviderImpl agent_services_;
 

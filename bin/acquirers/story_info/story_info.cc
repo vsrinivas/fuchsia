@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
+#include "apps/maxwell/src/context_engine/scope_utils.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -55,6 +56,50 @@ std::string StoryStateToString(modular::StoryState state) {
 }
 
 }  // namespace
+
+/// StoryWatcherImpl
+
+// TODO(thatguy): This is currently duplicated from
+// apps/modular/src/story_runner/story_storage_impl.cc.
+void XdrLinkPath(modular::XdrContext* const xdr,
+                 modular::LinkPath* const data) {
+  xdr->Field("module_path", &data->module_path);
+  xdr->Field("link_name", &data->link_name);
+}
+
+void XdrModuleData(modular::XdrContext* const xdr,
+                   modular::ModuleData* const data) {
+  xdr->Field("url", &data->url);
+  xdr->Field("module_path", &data->module_path);
+  xdr->Field("default_link_path", &data->default_link_path, XdrLinkPath);
+  xdr->Field("module_source", &data->module_source);
+}
+
+class StoryWatcherImpl : public modular::StoryWatcher {
+ public:
+  StoryWatcherImpl(ContextPublisher* publisher, const fidl::String& story_id)
+      : story_id_(story_id), publisher_(publisher) {}
+
+ private:
+  // |StoryWatcher|
+  void OnStateChange(modular::StoryState new_state) override {
+    // Handled in StoryInfoAcquirer::OnChange()
+  }
+
+  // |StoryWatcher|
+  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
+    std::string meta;
+    modular::XdrWrite(&meta, &module_data, XdrModuleData);
+    publisher_->Publish(
+        MakeModuleScopeTopic(story_id_, module_data->module_path, "meta"),
+        meta);
+  }
+
+  const fidl::String story_id_;
+  ContextPublisher* publisher_;
+};
+
+/// StoryInfoAcquirer
 
 StoryInfoAcquirer::StoryInfoAcquirer()
     : initializer_binding_(this),
@@ -142,6 +187,16 @@ void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
 void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
                                  modular::StoryState state) {
   const std::string id = info->id.get();
+
+  // If we aren't already watching this story, get a controller and create
+  // a watcher.
+  if (known_story_ids_.count(id) == 0) {
+    modular::StoryControllerPtr story_controller;
+    story_provider_->GetController(info->id, story_controller.NewRequest());
+    story_controller->Watch(story_watcher_bindings_.AddBinding(
+        std::make_unique<StoryWatcherImpl>(context_publisher_.get(), id)));
+    known_story_ids_.insert(id);
+  }
 
   std::string url_json;
   modular::XdrWrite(&url_json, &info->url, modular::XdrFilter<fidl::String>);

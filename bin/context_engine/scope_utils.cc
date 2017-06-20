@@ -24,25 +24,27 @@ std::string ToHex(const std::string& s) {
   return r;
 }
 
-// A short-term solution to generate a "Module ID" from the URL by computing a
-// SHA1 hash.  TODO(thatguy): Prefer to use the Module ID assigned by the
-// Framework explicitly.
-std::string GetModuleId(const std::string& module_url) {
+// Generates a short Module ID from a Module's path by taking a SHA1 hash
+// prefix. There are so few Modules in a story that a short hash prefix will be
+// unique.
+const int kHashPrefixLength = 5;
+std::string ModulePathShortHash(const fidl::Array<fidl::String>& module_path) {
+  FTL_CHECK(!module_path.is_null() && !module_path.empty());
+
   SHA_CTX sha_ctx;
   if (SHA1_Init(&sha_ctx) != 1) {
     FTL_LOG(FATAL) << "Could not SHA1_Init().";
   }
-  if (SHA1_Update(&sha_ctx, module_url.data(), module_url.size()) != 1) {
-    FTL_LOG(FATAL) << "Could not SHA1_Update() for string \"" << module_url
-                   << "\".";
+  for (const auto& part : module_path) {
+    FTL_LOG(INFO) << "About to SHA1 " << part;
+    FTL_CHECK(SHA1_Update(&sha_ctx, part.data(), part.size()) == 1);
   }
+
   unsigned char hash[SHA_DIGEST_LENGTH];
-  if (SHA1_Final(hash, &sha_ctx) != 1) {
-    FTL_LOG(FATAL) << "Could not SHA1_Final() for string \"" << module_url
-                   << "\".";
-  }
+  FTL_CHECK(SHA1_Final(hash, &sha_ctx) == 1);
   return ToHex(
-      std::string(reinterpret_cast<char*>(&hash[0]), SHA_DIGEST_LENGTH));
+             std::string(reinterpret_cast<char*>(&hash[0]), SHA_DIGEST_LENGTH))
+      .substr(0, kHashPrefixLength);
 }
 
 bool HasSlash(const std::string topic) {
@@ -62,7 +64,8 @@ std::string ScopeAndTopicToString(const ComponentScopePtr& scope,
   if (scope->is_module_scope()) {
     const auto& module_scope = scope->get_module_scope();
     return MakeModuleScopeTopic(module_scope->story_id,
-                                GetModuleId(module_scope->url), topic);
+                                ModulePathShortHash(module_scope->module_path),
+                                topic);
   }
   return topic;
 }
@@ -86,6 +89,26 @@ std::string MakeModuleScopeTopic(const std::string& story_id,
   out << "/story/id/" << story_id << "/module/" << module_id
       << (HasSlash(topic) ? "" : "/") << topic;
   return out.str();
+}
+
+std::string ModulePathToString(const fidl::Array<fidl::String>& module_path) {
+  std::ostringstream ss;
+  bool first = true;
+  for (const auto& part : module_path) {
+    if (!first) {
+      ss << ':';
+    }
+    first = false;
+    ss << part;
+  }
+  return ss.str();
+}
+
+std::string MakeModuleScopeTopic(const std::string& story_id,
+                                 const fidl::Array<fidl::String>& module_path,
+                                 const std::string& topic) {
+  return MakeModuleScopeTopic(story_id, ModulePathShortHash(module_path),
+                              topic);
 }
 
 std::string MakeFocusedStoryScopeTopic(const std::string& topic) {
