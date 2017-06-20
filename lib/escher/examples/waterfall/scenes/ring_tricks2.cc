@@ -8,6 +8,7 @@
 #include "escher/geometry/types.h"
 #include "escher/material/material.h"
 #include "escher/renderer/image.h"
+#include "escher/renderer/texture.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 #include "escher/shape/modifier_wobble.h"
@@ -33,6 +34,10 @@ void RingTricks2::Init(escher::Stage* stage) {
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
   color1_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
   color2_->set_color(vec3(143.f / 255.f, 143.f / 255.f, 143.f / 255.f));
+
+  gradient_ = ftl::MakeRefCounted<escher::Material>(escher()->NewTexture(
+      escher()->NewGradientImage(128, 128), vk::Filter::eLinear));
+  gradient_->set_color(vec3(0.98f, 0.15f, 0.15f));
 
   // Create meshes for fancy wobble effect.
   {
@@ -118,7 +123,7 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   objects.push_back(circle9);
 
   // Rounded rect.
-  Object round_rect1(vec3(300, 700, 30.f), rounded_rect1_, red_);
+  Object round_rect1(vec3(300, 700, 30.f), rounded_rect1_, gradient_);
   objects.push_back(round_rect1);
 
   // Create the Model

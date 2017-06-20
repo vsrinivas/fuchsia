@@ -31,6 +31,8 @@ class RingTricks2 : public Scene {
   escher::MaterialPtr color1_;
   escher::MaterialPtr color2_;
 
+  escher::MaterialPtr gradient_;
+
   escher::MeshPtr ring_mesh1_;
 
   escher::MeshPtr rounded_rect1_;

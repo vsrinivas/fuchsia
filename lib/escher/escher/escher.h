@@ -36,6 +36,8 @@ class Escher : public MeshBuilderFactory {
   ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
   // Returns RGBA image.
   ImagePtr NewCheckerboardImage(uint32_t width, uint32_t height);
+  // Returns RGBA image.
+  ImagePtr NewGradientImage(uint32_t width, uint32_t height);
   // Returns single-channel luminance image.
   ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
 

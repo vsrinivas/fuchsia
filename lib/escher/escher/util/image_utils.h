@@ -74,6 +74,15 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
                               uint32_t width,
                               uint32_t height);
 
+// Returns RGBA image.
+// |image_factory| is a generic interface that could be an Image cache (in which
+// case a new Image might be created, or an existing one reused). Alternatively
+// the factory could allocate a new Image every time.
+ImagePtr NewGradientImage(ImageFactory* image_factory,
+                          impl::GpuUploader* gpu_uploader,
+                          uint32_t width,
+                          uint32_t height);
+
 // Returns single-channel luminance image containing white noise.
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
@@ -90,6 +99,12 @@ ImagePtr NewNoiseImage(
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
                                                  uint32_t height,
                                                  size_t* out_size = nullptr);
+
+// Return RGBA pixels containing a gradient where the top row is white and the
+// bottom row is black.  Only works for even values of width/height.
+std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width,
+                                             uint32_t height,
+                                             size_t* out_size = nullptr);
 
 // Return eR8Unorm pixels containing random noise.
 std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width,

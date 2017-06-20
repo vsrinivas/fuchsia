@@ -43,6 +43,10 @@ Object Object::NewRect(const Transform& transform, MaterialPtr material) {
                 std::move(material));
 }
 
+Object Object::NewRect(const mat4& transform, MaterialPtr material) {
+  return Object(transform, Shape(Shape::Type::kRect), std::move(material));
+}
+
 Object Object::NewCircle(const vec2& center_position,
                          float radius,
                          float z,
@@ -60,6 +64,13 @@ Object Object::NewCircle(const vec3& center_position,
   transform[3][1] = center_position.y;
   transform[3][2] = center_position.z;
   return Object(transform, Shape(Shape::Type::kCircle), std::move(material));
+}
+
+Object Object::NewCircle(const mat4& transform,
+                         float radius,
+                         MaterialPtr material) {
+  return Object(glm::scale(transform, glm::vec3(radius, radius, 1)),
+                Shape(Shape::Type::kCircle), std::move(material));
 }
 
 }  // namespace escher

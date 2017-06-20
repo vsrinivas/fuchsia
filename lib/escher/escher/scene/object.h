@@ -32,11 +32,15 @@ class Object {
                         const vec2& size,
                         MaterialPtr material);
   static Object NewRect(const Transform& transform, MaterialPtr material);
+  static Object NewRect(const mat4& transform, MaterialPtr material);
   static Object NewCircle(const vec2& center_position,
                           float radius,
                           float z,
                           MaterialPtr material);
   static Object NewCircle(const vec3& center_position,
+                          float radius,
+                          MaterialPtr material);
+  static Object NewCircle(const mat4& transform,
                           float radius,
                           MaterialPtr material);
 

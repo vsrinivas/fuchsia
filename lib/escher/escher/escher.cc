@@ -37,6 +37,11 @@ ImagePtr Escher::NewCheckerboardImage(uint32_t width, uint32_t height) {
       impl_->image_cache(), impl_->gpu_uploader(), width, height);
 }
 
+ImagePtr Escher::NewGradientImage(uint32_t width, uint32_t height) {
+  return image_utils::NewGradientImage(impl_->image_cache(),
+                                       impl_->gpu_uploader(), width, height);
+}
+
 ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
   return image_utils::NewNoiseImage(impl_->image_cache(), impl_->gpu_uploader(),
                                     width, height);

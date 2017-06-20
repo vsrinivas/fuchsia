@@ -164,6 +164,19 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
                             pixels.get());
 }
 
+ImagePtr NewGradientImage(ImageFactory* image_factory,
+                          impl::GpuUploader* gpu_uploader,
+                          uint32_t width,
+                          uint32_t height) {
+  FTL_DCHECK(image_factory);
+  FTL_DCHECK(gpu_uploader);
+
+  auto pixels = NewGradientPixels(width, height);
+  return NewImageFromPixels(image_factory, gpu_uploader,
+                            vk::Format::eR8G8B8A8Unorm, width, height,
+                            pixels.get());
+}
+
 ImagePtr NewNoiseImage(ImageFactory* image_factory,
                        impl::GpuUploader* gpu_uploader,
                        uint32_t width,
@@ -195,6 +208,32 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
       uint32_t index = j * width + i;
       auto& p = pixels[index];
       p.r = p.g = p.b = (i + j) % 2 ? 0 : 255;
+      p.a = 255;
+    }
+  }
+
+  return ptr;
+}
+
+std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width,
+                                             uint32_t height,
+                                             size_t* out_size) {
+  FTL_DCHECK(width % 2 == 0);
+  FTL_DCHECK(height % 2 == 0);
+
+  size_t size_in_bytes = width * height * sizeof(RGBA);
+  auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
+  if (out_size) {
+    (*out_size) = size_in_bytes;
+  }
+  RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
+
+  for (uint32_t j = 0; j < height; ++j) {
+    uint32_t intensity = (height - j) * 255 / height;
+    for (uint32_t i = 0; i < width; ++i) {
+      uint32_t index = j * width + i;
+      auto& p = pixels[index];
+      p.r = p.g = p.b = intensity;
       p.a = 255;
     }
   }
