@@ -114,23 +114,24 @@ int unittest_set_verbosity_level(int new_level);
  */
 #define UNITTEST_TRACEF(str, x...)                                            \
     do {                                                                      \
-        unittest_printf_critical(" [FAILED] \n        %s:%d:\n        " str,  \
-                                 __PRETTY_FUNCTION__, __LINE__, ##x);         \
+        unittest_printf_critical(                                             \
+            " [FAILED] \n        %s:%d:%s:\n        " str,                    \
+            __FILE__, __LINE__, __PRETTY_FUNCTION__, ##x);                    \
     } while (0)
 
 /*
  * Internal-only.
  * Used by macros to check that the test state is set up correctly.
  */
-#define UT_ASSERT_VALID_TEST_STATE                                \
-    do {                                                          \
-        if (current_test_info == NULL) {                          \
-            unittest_printf_critical(                             \
-                "FATAL: %s:%d: Invalid state for EXPECT/ASSERT: " \
-                "possible missing BEGIN_TEST or BEGIN_HELPER\n",  \
-                __PRETTY_FUNCTION__, __LINE__);                   \
-            exit(101); /* Arbitrary, atypical exit status */      \
-        }                                                         \
+#define UT_ASSERT_VALID_TEST_STATE                                   \
+    do {                                                             \
+        if (current_test_info == NULL) {                             \
+            unittest_printf_critical(                                \
+                "FATAL: %s:%d:%s: Invalid state for EXPECT/ASSERT: " \
+                "possible missing BEGIN_TEST or BEGIN_HELPER\n",     \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__);            \
+            exit(101); /* Arbitrary, atypical exit status */         \
+        }                                                            \
     } while (0)
 
 /*
