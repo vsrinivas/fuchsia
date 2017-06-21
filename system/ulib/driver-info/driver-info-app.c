@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "driver-info.h"
+#include <driver-info/driver-info.h>
 
 static void callback(magenta_driver_note_t* dn, mx_bind_inst_t* bi, void* cookie) {
     printf("name:    %s\n", dn->name);
@@ -17,7 +17,7 @@ static void callback(magenta_driver_note_t* dn, mx_bind_inst_t* bi, void* cookie
 
     char line[256];
     for (size_t n = 0; n < dn->bindcount; n++) {
-        dump_bind_inst(bi + n, line, sizeof(line));
+        di_dump_bind_inst(bi + n, line, sizeof(line));
         printf("  %s\n", line);
     }
 }
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         int fd;
         printf("[%s]\n", argv[1]);
         if ((fd = open(argv[1], O_RDONLY)) >= 0) {
-            if (read_driver_info(fd, NULL, callback) < 0) {
+            if (di_read_driver_info(fd, NULL, callback) < 0) {
                 printf("error: no information found\n");
             }
             close(fd);

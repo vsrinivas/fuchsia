@@ -10,7 +10,10 @@
 #include <unistd.h>
 
 #include "devcoordinator.h"
-#include "driver-info.h"
+
+#include <driver-info/driver-info.h>
+
+#include <magenta/driver/binding.h>
 
 static bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
@@ -88,7 +91,7 @@ static void find_loadable_drivers(const char* path) {
         if ((fd = openat(dirfd(dir), de->d_name, O_RDONLY)) < 0) {
             continue;
         }
-        mx_status_t status = read_driver_info(fd, libname, found_driver);
+        mx_status_t status = di_read_driver_info(fd, libname, found_driver);
         close(fd);
 
         if (status) {
@@ -109,7 +112,7 @@ void load_driver(const char* path) {
         printf("devcoord: cannot open '%s'\n", path);
         return;
     }
-    mx_status_t status = read_driver_info(fd, (void*)path, found_driver);
+    mx_status_t status = di_read_driver_info(fd, (void*)path, found_driver);
     close(fd);
 
     if (status) {

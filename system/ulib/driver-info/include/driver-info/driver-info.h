@@ -4,17 +4,24 @@
 
 #pragma once
 
-#include <ddk/binding.h>
+#include <magenta/compiler.h>
+#include <magenta/types.h>
+#include <magenta/driver/binding.h>
 
-mx_status_t read_driver_info(int fd, void *cookie,
-                             void (*func)(magenta_driver_note_t* note,
-                                          mx_bind_inst_t* binding,
-                                          void *cookie));
+__BEGIN_CDECLS;
+
+mx_status_t di_read_driver_info(int fd, void *cookie,
+                                void (*func)(magenta_driver_note_t* note,
+                                             mx_bind_inst_t* binding,
+                                             void *cookie));
+
 // Lookup the human readable name of a bind program parameter, or return NULL if
 // the name is not known.  Used by debug code to do things like dump the
 // published parameters of a device, or dump the bind program of a driver.
-const char* lookup_bind_param_name(uint32_t param_num);
+const char* di_bind_param_name(uint32_t param_num);
 
 // Disassemble a bind program instruction and dump it to the buffer provided by
 // the caller.  If the buffer is too small, the disassembly may be truncated.
-void dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len);
+void di_dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len);
+
+__END_CDECLS;

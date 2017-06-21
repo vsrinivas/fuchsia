@@ -22,7 +22,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-devfs.c \
     $(LOCAL_DIR)/devmgr-drivers.c \
     $(LOCAL_DIR)/devmgr-mxio.c \
-    $(LOCAL_DIR)/driver-info.c \
     $(LOCAL_DIR)/vfs-boot.cpp \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp \
@@ -46,6 +45,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/mxtl \
     system/ulib/port \
     system/ulib/acpisvc-client \
+    system/ulib/driver-info \
 
 MODULE_LIBS := \
     system/ulib/fs-management \
@@ -95,21 +95,3 @@ MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ul
 
 include make/module.mk
 
-
-# driver-info - tool to dump driver metadata
-
-MODULE := $(LOCAL_DIR).driver-info
-
-MODULE_TYPE := userapp
-
-MODULE_NAME := driverinfo
-
-MODULE_SRCS := \
-	$(LOCAL_DIR)/driver-info.c \
-	$(LOCAL_DIR)/driver-info-app.c
-
-MODULE_HEADER_DEPS := system/ulib/ddk
-
-MODULE_LIBS := system/ulib/mxio system/ulib/c
-
-include make/module.mk

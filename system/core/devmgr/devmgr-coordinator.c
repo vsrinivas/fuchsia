@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <ddk/driver.h>
+#include <driver-info/driver-info.h>
 #include <launchpad/launchpad.h>
 #include <magenta/assert.h>
 #include <magenta/ktrace.h>
@@ -19,7 +20,6 @@
 
 #include "acpi.h"
 #include "devcoordinator.h"
-#include "driver-info.h"
 #include "log.h"
 #include "memfs-private.h"
 
@@ -290,7 +290,7 @@ static void dc_dump_device_props(device_t* dev) {
         dmprintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
         for (uint32_t i = 0; i < dev->prop_count; ++i) {
             const mx_device_prop_t* p = dev->props + i;
-            const char* param_name = lookup_bind_param_name(p->id);
+            const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
                 dmprintf("[%2u/%2u] : Value 0x%08x Id %s\n",
@@ -333,7 +333,7 @@ static void dc_dump_drivers(void) {
             dmprintf("Binding : %u instruction%s (%u bytes)\n",
                      count, (count == 1) ? "" : "s", drv->binding_size);
             for (uint32_t i = 0; i < count; ++i) {
-                dump_bind_inst(drv->binding + i, line, sizeof(line));
+                di_dump_bind_inst(drv->binding + i, line, sizeof(line));
                 dmprintf("[%u/%u]: %s\n", i + 1, count, line);
             }
         }

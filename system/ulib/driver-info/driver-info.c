@@ -9,7 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
+#include <magenta/types.h>
+
+#include <magenta/driver/binding.h>
 
 typedef struct {
     uint32_t namesz;
@@ -115,10 +117,10 @@ static mx_status_t callback(void* note, size_t sz, void* _ctx) {
     return MX_OK;
 }
 
-mx_status_t read_driver_info(int fd, void *cookie,
-                             void (*func)(magenta_driver_note_t* note,
-                                          mx_bind_inst_t* binding,
-                                          void *cookie)) {
+mx_status_t di_read_driver_info(int fd, void *cookie,
+                                void (*func)(magenta_driver_note_t* note,
+                                             mx_bind_inst_t* binding,
+                                             void *cookie)) {
     context ctx = {
         .cookie = cookie,
         .func = func,
@@ -128,39 +130,39 @@ mx_status_t read_driver_info(int fd, void *cookie,
                          data, sizeof(data), callback, &ctx);
 }
 
-const char* lookup_bind_param_name(uint32_t param_num) {
+const char* di_bind_param_name(uint32_t param_num) {
     switch (param_num) {
-        case BIND_FLAGS:                  return "P.Flags";
-        case BIND_PROTOCOL:               return "P.Protocol";
-        case BIND_AUTOBIND:               return "P.Autobind";
-        case BIND_PCI_VID:                return "P.PCI.VID";
-        case BIND_PCI_DID:                return "P.PCI.DID";
-        case BIND_PCI_CLASS:              return "P.PCI.Class";
-        case BIND_PCI_SUBCLASS:           return "P.PCI.Subclass";
-        case BIND_PCI_INTERFACE:          return "P.PCI.Interface";
-        case BIND_PCI_REVISION:           return "P.PCI.Revision";
-        case BIND_PCI_BDF_ADDR:           return "P.PCI.BDFAddr";
-        case BIND_USB_VID:                return "P.USB.VID";
-        case BIND_USB_PID:                return "P.USB.PID";
-        case BIND_USB_CLASS:              return "P.USB.Class";
-        case BIND_USB_SUBCLASS:           return "P.USB.Subclass";
-        case BIND_USB_PROTOCOL:           return "P.USB.Protocol";
-        case BIND_PLATFORM_DEV_VID:       return "P.PlatDev.VID";
-        case BIND_PLATFORM_DEV_PID:       return "P.PlatDev.PID";
-        case BIND_PLATFORM_DEV_DID:       return "P.PlatDev.DID";
-        case BIND_ACPI_HID_0_3:           return "P.ACPI.HID[0-3]";
-        case BIND_ACPI_HID_4_7:           return "P.ACPI.HID[4-7]";
-        case BIND_IHDA_CODEC_VID:         return "P.IHDA.Codec.VID";
-        case BIND_IHDA_CODEC_DID:         return "P.IHDA.Codec.DID";
-        case BIND_IHDA_CODEC_MAJOR_REV:   return "P.IHDACodec.MajorRev";
-        case BIND_IHDA_CODEC_MINOR_REV:   return "P.IHDACodec.MinorRev";
-        case BIND_IHDA_CODEC_VENDOR_REV:  return "P.IHDACodec.VendorRev";
-        case BIND_IHDA_CODEC_VENDOR_STEP: return "P.IHDACodec.VendorStep";
-        default: return NULL;
+    case BIND_FLAGS:                  return "Flags";
+    case BIND_PROTOCOL:               return "Protocol";
+    case BIND_AUTOBIND:               return "Autobind";
+    case BIND_PCI_VID:                return "PCI.VID";
+    case BIND_PCI_DID:                return "PCI.DID";
+    case BIND_PCI_CLASS:              return "PCI.Class";
+    case BIND_PCI_SUBCLASS:           return "PCI.Subclass";
+    case BIND_PCI_INTERFACE:          return "PCI.Interface";
+    case BIND_PCI_REVISION:           return "PCI.Revision";
+    case BIND_PCI_BDF_ADDR:           return "PCI.BDFAddr";
+    case BIND_USB_VID:                return "USB.VID";
+    case BIND_USB_PID:                return "USB.PID";
+    case BIND_USB_CLASS:              return "USB.Class";
+    case BIND_USB_SUBCLASS:           return "USB.Subclass";
+    case BIND_USB_PROTOCOL:           return "USB.Protocol";
+    case BIND_PLATFORM_DEV_VID:       return "PlatDev.VID";
+    case BIND_PLATFORM_DEV_PID:       return "PlatDev.PID";
+    case BIND_PLATFORM_DEV_DID:       return "PlatDev.DID";
+    case BIND_ACPI_HID_0_3:           return "ACPI.HID[0-3]";
+    case BIND_ACPI_HID_4_7:           return "ACPI.HID[4-7]";
+    case BIND_IHDA_CODEC_VID:         return "IHDA.Codec.VID";
+    case BIND_IHDA_CODEC_DID:         return "IHDA.Codec.DID";
+    case BIND_IHDA_CODEC_MAJOR_REV:   return "IHDACodec.MajorRev";
+    case BIND_IHDA_CODEC_MINOR_REV:   return "IHDACodec.MinorRev";
+    case BIND_IHDA_CODEC_VENDOR_REV:  return "IHDACodec.VendorRev";
+    case BIND_IHDA_CODEC_VENDOR_STEP: return "IHDACodec.VendorStep";
+    default: return NULL;
     }
 }
 
-void dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len) {
+void di_dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len) {
     if (!b || !buf || !buf_len) {
         return;
     }
@@ -192,7 +194,7 @@ void dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len) {
     if (cc == COND_AL) {
         off += snprintf(buf + off, buf_len - off, "true");
     } else {
-        const char* pb_name = lookup_bind_param_name(pb);
+        const char* pb_name = di_bind_param_name(pb);
         if (pb_name) {
             off += snprintf(buf + off, buf_len - off, "%s", pb_name);
         } else {
