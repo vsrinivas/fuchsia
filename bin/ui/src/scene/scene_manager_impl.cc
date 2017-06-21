@@ -7,6 +7,13 @@
 #include "apps/mozart/src/scene/renderer/renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
+namespace {
+// TODO(MZ-124): We should derive an appropriate value from the rendering
+// targets, in particular giving priority to couple to the display refresh
+// (vsync).
+constexpr uint64_t kHardcodedPresentationIntervalNanos = 16'666'667;
+}  // namespace
+
 namespace mozart {
 namespace scene {
 
@@ -62,6 +69,11 @@ SessionHandler* SceneManagerImpl::FindSession(SessionId id) {
 
 void SceneManagerImpl::ApplySessionUpdate(
     std::unique_ptr<SessionUpdate> update) {
+  // TODO(MX-125): Schedule the update to be applied on or after its
+  // presentation time.  May require a certain amount of queuing.  We should
+  // also set limits on how much state can be retained in the queue.
+  pending_present_callbacks_.push_back(std::move(update->present_callback));
+
   auto& session = update->session;
   if (session->is_valid()) {
     for (auto& op : update->ops) {
@@ -89,6 +101,17 @@ void SceneManagerImpl::TearDownSession(SessionId id) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         ftl::MakeCopyable([handler = std::move(handler)]{}));
   }
+}
+
+void SceneManagerImpl::BeginFrame() {
+  mozart2::PresentationInfo info;
+  info.presentation_time = mx_time_get(CLOCK_MONOTONIC);
+  info.presentation_interval = kHardcodedPresentationIntervalNanos;
+
+  for (const auto& cb : pending_present_callbacks_) {
+    cb(info.Clone());
+  }
+  pending_present_callbacks_.clear();
 }
 
 bool SceneManagerImpl::ExportResource(ResourcePtr resource,

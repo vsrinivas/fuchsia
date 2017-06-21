@@ -248,7 +248,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
         mozart::kOnesFloat3,        // scale
         mozart::kZeroesFloat3,      // anchor point
         mozart::kQuaternionDefault  // rotation
-    ));
+        ));
     // Attach the circle to the Link.
     ops.push_back(mozart::NewAddChildOp(link_id, node_id));
 
@@ -285,9 +285,8 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     // a new Memory object, Image object, and Material object. In general,
     // however, it would be best to create these upfront and then cycle through
     // them.
-    ops.push_back(
-        mozart::NewCreateMemoryOp(memory_id, std::move(vmo_copy),
-                                  mozart2::MemoryType::HOST_MEMORY));
+    ops.push_back(mozart::NewCreateMemoryOp(memory_id, std::move(vmo_copy),
+                                            mozart2::MemoryType::HOST_MEMORY));
 
     mozart::ResourceId image_id = NewResourceId();
     ops.push_back(mozart::NewCreateImageOp(
@@ -305,8 +304,9 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     ops.push_back(mozart::NewSetMaterialOp(node_id_, material_id));
 
     session_->Enqueue(std::move(ops));
-    session_->Present(fidl::Array<mx::event>::New(0),
-                      fidl::Array<mx::event>::New(0));
+    session_->Present(0, fidl::Array<mx::event>::New(0),
+                      fidl::Array<mx::event>::New(0),
+                      [](mozart2::PresentationInfoPtr info) {});
   }
 
   mozart::ResourceId NewResourceId() { return ++resource_id_counter_; }

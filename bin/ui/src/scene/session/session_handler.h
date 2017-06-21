@@ -33,8 +33,10 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
  protected:
   // mozart2::Session interface methods.
   void Enqueue(::fidl::Array<mozart2::OpPtr> ops) override;
-  void Present(::fidl::Array<mx::event> wait_events,
-               ::fidl::Array<mx::event> signal_events) override;
+  void Present(uint64_t presentation_time,
+               ::fidl::Array<mx::event> wait_events,
+               ::fidl::Array<mx::event> signal_events,
+               const PresentCallback& callback) override;
   void Connect(
       ::fidl::InterfaceRequest<mozart2::Session> session,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;

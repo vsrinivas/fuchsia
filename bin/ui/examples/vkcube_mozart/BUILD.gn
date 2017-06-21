@@ -12,7 +12,6 @@ executable("vkcube_mozart") {
   ]
   deps = [
     "//application/lib/app",
-    "//apps/mozart/examples/hello_scene_manager:service",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",

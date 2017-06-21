@@ -58,6 +58,7 @@ class HelloSceneManagerService : public Demo {
   }
 
   void DrawFrame() override {
+    scene_manager_->BeginFrame();
     Renderer* renderer = scene_manager_->renderer();
 
     // TODO: propagate dirty flags up the tree, and only render if dirty

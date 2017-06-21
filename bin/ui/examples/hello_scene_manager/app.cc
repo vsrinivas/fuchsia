@@ -191,8 +191,9 @@ class HelloSceneManagerApp {
 
     // Present
     // TODO: this does not do anything yet.
-    session->Present(fidl::Array<mx::event>::New(0),
-                     fidl::Array<mx::event>::New(0));
+    session->Present(0, fidl::Array<mx::event>::New(0),
+                     fidl::Array<mx::event>::New(0),
+                     [](mozart2::PresentationInfoPtr info) {});
 
     session.set_connection_error_handler([this] {
       FTL_LOG(INFO) << "Session terminated.";

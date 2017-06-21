@@ -67,10 +67,12 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
   // Disconnect one connection, and send Present() on the other.
   sess1a = nullptr;
   sess2b = nullptr;
-  sess1b->Present(::fidl::Array<mx::event>::New(0),
-                  ::fidl::Array<mx::event>::New(0));
-  sess2a->Present(::fidl::Array<mx::event>::New(0),
-                  ::fidl::Array<mx::event>::New(0));
+  sess1b->Present(0u, ::fidl::Array<mx::event>::New(0),
+                  ::fidl::Array<mx::event>::New(0),
+                  [](mozart2::PresentationInfoPtr info) {});
+  sess2a->Present(0u, ::fidl::Array<mx::event>::New(0),
+                  ::fidl::Array<mx::event>::New(0),
+                  [](mozart2::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_WHILE(handler1->present_count() != 1);
   RUN_MESSAGE_LOOP_WHILE(handler2->present_count() != 1);
 
@@ -128,8 +130,9 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
     ops.push_back(NewSetShapeOp(4, 1));
     ops.push_back(NewSetShapeOp(5, 2));
     sess1d->Enqueue(std::move(ops));
-    sess1d->Present(::fidl::Array<mx::event>::New(0),
-                    ::fidl::Array<mx::event>::New(0));
+    sess1d->Present(0u, ::fidl::Array<mx::event>::New(0),
+                    ::fidl::Array<mx::event>::New(0),
+                    [](mozart2::PresentationInfoPtr info) {});
   }
   RUN_MESSAGE_LOOP_WHILE(handler->present_count() != 1);
   {
@@ -145,8 +148,9 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
         << "The subsequent 'resource already exists' error is expected";
     ops.push_back(NewCreateEntityNodeOp(3));  // already exists!
     sess1b->Enqueue(std::move(ops));
-    sess1b->Present(::fidl::Array<mx::event>::New(0),
-                    ::fidl::Array<mx::event>::New(0));
+    sess1b->Present(0u, ::fidl::Array<mx::event>::New(0),
+                    ::fidl::Array<mx::event>::New(0),
+                    [](mozart2::PresentationInfoPtr info) {});
   }
 
   RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 0);

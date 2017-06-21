@@ -58,6 +58,19 @@ class VulkanCubeApp {
   }
 
   void Update() {
+    // Quit if over time.
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = now - startup_time_;
+    if (kDurationBeforeQuitInSeconds != 0 &&
+        elapsed.count() >= 1000 * kDurationBeforeQuitInSeconds) {
+      loop_->task_runner()->PostTask([this] {
+        session_ = nullptr;
+        FTL_LOG(INFO) << "Quitting.";
+        loop_->QuitNow();
+      });
+      return;
+    }
+
     int i = demo_->current_buffer;
 
     // Render the cube to the current buffer
@@ -67,25 +80,11 @@ class VulkanCubeApp {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
     ops.push_back(NewSetMaterialOp(node_id_, material_resource_ids_[i]));
 
-    // Push the frame to the session.
+    // Push the frame to the session and schedule the next update.
     session_->Enqueue(std::move(ops));
-    session_->Present(fidl::Array<mx::event>::New(0),
-                      fidl::Array<mx::event>::New(0));
-    auto now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = now - startup_time_;
-
-    // Post the next frame, or quit.
-    if (kDurationBeforeQuitInSeconds == 0 ||
-        elapsed.count() < 1000 * kDurationBeforeQuitInSeconds) {
-      loop_->task_runner()->PostDelayedTask(
-          [this] { Update(); }, ftl::TimeDelta::FromMilliseconds(16));
-    } else {
-      loop_->task_runner()->PostTask([this] {
-        session_ = nullptr;
-        FTL_LOG(INFO) << "Quitting.";
-        loop_->QuitNow();
-      });
-    }
+    session_->Present(0, fidl::Array<mx::event>::New(0),
+                      fidl::Array<mx::event>::New(0),
+                      [this](mozart2::PresentationInfoPtr info) { Update(); });
   }
 
   void InitializeSwapchain() {
@@ -240,9 +239,8 @@ class VulkanCubeApp {
     for (uint32_t i = 0; i < kNumBuffers; i++) {
       mx::vmo buffer_vmo = std::move(vmos_[i]);  // TODO: don't do this
       ResourceId buffer_memory_id = NewResourceId();
-      ops.push_back(
-          NewCreateMemoryOp(buffer_memory_id, std::move(buffer_vmo),
-                            mozart2::MemoryType::VK_DEVICE_MEMORY));
+      ops.push_back(NewCreateMemoryOp(buffer_memory_id, std::move(buffer_vmo),
+                                      mozart2::MemoryType::VK_DEVICE_MEMORY));
       memory_resource_ids_[i] = buffer_memory_id;
 
       ResourceId buffer_image_id = NewResourceId();

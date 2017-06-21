@@ -21,6 +21,51 @@ interface Session {
   // preparation of the resources required to render the scene, two lists of
   // events are passed.
   //
+  // SCHEDULING PRESENTATION
+  //
+  // |presentation_time| specifies the time on or after which the
+  // client would like the enqueued operations should take visible effect
+  // (light up pixels on the screen), expressed in nanoseconds in the
+  // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
+  // monotonically non-decreasing.
+  //
+  // Using a desired presentation time in the present or past (such as 0)
+  // schedules enqueued operations to take visible effect as soon as possible
+  // (during the next frame to be prepared).
+  //
+  // Using a desired presentation time in the future schedules the enqueued
+  // operations to take visible effect as closely as possible to or after
+  // the stated time (but no earlier).
+  //
+  // Each rendered frame has a target presentation time.  Before rendering
+  // a frame, the scene manager applies all enqueued operations associated
+  // with all prior calls to |Present()| whose desired presentation time
+  // is on or before the frame's target presentation time.
+  //
+  // The |Present()| method does not return until the scene manager begins
+  // preparing the first frame which includes its presented content.
+  // Upon return, the |PresentationInfo| provides timing information for the
+  // frame which includes the presented content.
+  //
+  // To present new content on each successive frame, wait for |Present()|
+  // to return before calling |Present()| again with content for the next
+  // frame.
+  //
+  // It is also possible to enqueue and present successive frames of content
+  // all at once with increasing desired presentation times, incrementing by
+  // |PresentationInfo.presentation_interval| for each one.
+  //
+  // Animation updates are also coordinated in terms of presentation time.
+  //
+  // TODO(jeffbrown): Defining presentation time in terms of |CLOCK_MONOTONIC|
+  // simplifies synchronization across subsystems but it might be too simple.
+  // We should consider using a synthetic timebase and describing its relation
+  // to other clocks separately.  That would make it possible to present
+  // content (animations, media, and UI) in "slow mode" simply by varying the
+  // timing relation, assuming clients play along.
+  //
+  // SYNCHRONIZATION
+  //
   // |wait_events| are used by Mozart to wait until all of the session's
   // resources are ready to render (or to allow downstream components, such as
   // the Vulkan driver, to wait for these resources).
@@ -76,7 +121,9 @@ interface Session {
   // Note: |wait_events| and |signal_events| are only necessary to synchronize
   // access to memory (and other external resources).  Any modification to
   // resources made via the Session API are automatically synchronized.
-  Present(array<handle<event>> wait_events, array<handle<event>> signal_events);
+  Present(uint64 presentation_time,
+      array<handle<event>> wait_events, array<handle<event>> signal_events) =>
+      (PresentationInfo presentation_info);
 
   // Connect another client to the same Session.  The connection is made after
   // the most recent call to Present() has been executed by the Session
@@ -97,6 +144,27 @@ interface Session {
   Connect(Session& session, SessionListener? listener);
 };
 
+// Information returned by |Session.Present()| when the scene manager
+// begins preparing the first frame which includes the presented content.
+struct PresentationInfo {
+  // The actual time at which the enqueued operations are anticipated to take
+  // visible effect, expressed in nanoseconds in the |CLOCK_MONOTONIC|
+  // timebase.
+  //
+  // This value increases monotonically with each new frame, typically in
+  // increments of the |presentation_interval|.
+  uint64 presentation_time;
+
+  // The nominal amount of time which is anticipated to elapse between
+  // successively presented frames, expressed in nanoseconds.  When rendering
+  // to a display, the interval will typically be derived from the display
+  // refresh rate.
+  //
+  // This value is non-zero.  It may vary from time to time, such as when
+  // changing display modes.
+  uint64 presentation_interval;
+};
+
 interface SessionListener {
   OnError(string error);
 
@@ -105,6 +173,6 @@ interface SessionListener {
 
   // TODO: not clear how this will be used.  Subject to change.
   OnResourceAvailabilityChanged(uint32 resource_id, bool is_available);
-  
+
   OnAnimationEnd(uint32 animation_id);
 };

@@ -25,10 +25,15 @@ class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
 struct SessionUpdate {
+  uint64_t presentation_time;
   SessionPtr session;
   ::fidl::Array<mozart2::OpPtr> ops;
   ::fidl::Array<mx::event> wait_events;
   ::fidl::Array<mx::event> signal_events;
+
+  // Callback to report when the update has been applied in response to
+  // an invocation of |Session.Present()|.
+  mozart2::Session::PresentCallback present_callback;
 };
 
 // TODO: use unsafe ref-counting for better performance (our architecture

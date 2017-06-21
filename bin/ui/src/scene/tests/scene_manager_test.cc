@@ -59,9 +59,12 @@ void SessionHandlerForTest::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
   ++enqueue_count_;
 }
 
-void SessionHandlerForTest::Present(::fidl::Array<mx::event> wait_events,
-                                    ::fidl::Array<mx::event> signal_events) {
-  SessionHandler::Present(std::move(wait_events), std::move(signal_events));
+void SessionHandlerForTest::Present(uint64_t presentation_time,
+                                    ::fidl::Array<mx::event> wait_events,
+                                    ::fidl::Array<mx::event> signal_events,
+                                    const PresentCallback& callback) {
+  SessionHandler::Present(presentation_time, std::move(wait_events),
+                          std::move(signal_events), callback);
   ++present_count_;
 }
 

@@ -44,6 +44,9 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
 
   size_t GetSessionCount() { return session_count_; }
 
+  // Called before starting to draw a frame.
+  void BeginFrame();
+
   // Gets the VkDevice that is used with the renderer.
   // TODO: Should this belong in Renderer, or something like a
   // SessionResourceFactory?
@@ -81,6 +84,7 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
 
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;
+  std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
 
   vk::Device vk_device_;
   escher::ResourceRecycler* resource_recycler_;
