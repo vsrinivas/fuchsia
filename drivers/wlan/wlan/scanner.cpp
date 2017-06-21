@@ -392,7 +392,10 @@ mx_time_t Scanner::InitialTimeout() const {
 mx_status_t Scanner::SendScanResponse() {
     debugfn();
     for (auto& bss : bss_descriptors_) {
-        resp_->bss_description_set.push_back(std::move(bss.second));
+        if (req_->ssid.size() == 0 ||
+            req_->ssid == bss.second->ssid) {
+            resp_->bss_description_set.push_back(std::move(bss.second));
+        }
     }
 
     size_t buf_len = sizeof(Header) + resp_->GetSerializedSize();

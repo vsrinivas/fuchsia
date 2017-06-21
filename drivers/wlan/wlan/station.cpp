@@ -196,7 +196,8 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
         return MX_ERR_IO;
     }
     // TODO(tkilbourn): add extended rates support to get the rest of 802.11g rates.
-    std::vector<uint8_t> rates = { 2, 4, 11, 22, 12, 18, 24, 36 };
+    // TODO(tkilbourn): determine these rates based on hardware and the AP
+    std::vector<uint8_t> rates = { 140, 146, 24, 36, 48, 72, 96, 108 };
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -341,7 +342,100 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
     SendAssocResponse(AssociateResultCodes::SUCCESS);
+    // TODO(tkilbourn): this is where we should indicate link status to the ethernet layer
+
     return MX_OK;
+}
+
+mx_status_t Station::HandleData(const Packet* packet) {
+    if (state_ != WlanState::kAssociated) {
+        // Drop packets when not associated
+        return MX_OK;
+    }
+
+    // DataFrameHeader was also parsed by MLME so this should not fail
+    auto hdr = packet->field<DataFrameHeader>(0);
+    MX_DEBUG_ASSERT(hdr != nullptr);
+
+    if (hdr->fc.subtype() != 0) {
+        warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
+        return MX_OK;
+    }
+
+    auto llc = packet->field<LlcHeader>(sizeof(DataFrameHeader));
+    if (llc == nullptr) {
+        errorf("short data packet len=%zu\n", packet->len());
+        return MX_ERR_IO;
+    }
+    MX_DEBUG_ASSERT(packet->len() >= kDataPayloadHeader);
+
+    const size_t eth_len = packet->len() - kDataPayloadHeader + sizeof(EthernetII);
+    auto buffer = GetBuffer(eth_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto eth_packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
+    // no need to clear the packet since every byte is overwritten
+    eth_packet->set_peer(Packet::Peer::kEthernet);
+    auto eth = eth_packet->mut_field<EthernetII>(0);
+    std::memcpy(eth->dest, hdr->addr1, DeviceAddress::kSize);
+    std::memcpy(eth->src, hdr->addr3, DeviceAddress::kSize);
+    eth->ether_type = llc->protocol_id;
+    std::memcpy(eth->payload, llc->payload, packet->len() - kDataPayloadHeader);
+
+    mx_status_t status = device_->SendEthernet(std::move(eth_packet));
+    if (status != MX_OK) {
+        errorf("could not send ethernet data: %d\n", status);
+    }
+    return status;
+}
+
+mx_status_t Station::HandleEth(const Packet* packet) {
+    if (state_ != WlanState::kAssociated) {
+        // Drop packets when not associated
+        return MX_OK;
+    }
+
+    auto eth = packet->field<EthernetII>(0);
+    if (eth == nullptr) {
+        errorf("bad ethernet frame len=%zu\n", packet->len());
+        return MX_ERR_IO;
+    }
+
+    const size_t wlan_len = packet->len() - sizeof(EthernetII) + kDataPayloadHeader;
+    auto buffer = GetBuffer(wlan_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto wlan_packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
+    // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
+    // the payload
+    wlan_packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = wlan_packet->mut_field<DataFrameHeader>(0);
+    std::memset(hdr, 0, sizeof(DataFrameHeader));
+    hdr->fc.set_type(kData);
+    hdr->fc.set_to_ds(1);
+    std::memcpy(hdr->addr1, bss_->bssid.data(), DeviceAddress::kSize);
+    std::memcpy(hdr->addr2, eth->src, DeviceAddress::kSize);
+    std::memcpy(hdr->addr3, eth->dest, DeviceAddress::kSize);
+    hdr->sc.set_seq(next_seq());
+
+    auto llc = wlan_packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
+    llc->dsap = kLlcSnapExtension;
+    llc->ssap = kLlcSnapExtension;
+    llc->control = kLlcUnnumberedInformation;
+    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
+    llc->protocol_id = eth->ether_type;
+
+    std::memcpy(llc->payload, eth->payload, packet->len() - sizeof(EthernetII));
+
+    mx_status_t status = device_->SendWlan(std::move(wlan_packet));
+    if (status != MX_OK) {
+        errorf("could not send wlan data: %d\n", status);
+    }
+    return status;
 }
 
 mx_status_t Station::HandleTimeout() {
@@ -425,7 +519,6 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
 mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     debugfn();
     auto resp = AssociateResponse::New();
-    // TODO(tkilbourn): set this based on the actual auth type
     resp->result_code = code;
     resp->association_id = aid_;
 

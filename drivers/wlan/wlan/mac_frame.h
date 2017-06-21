@@ -346,4 +346,40 @@ struct AssociationResponse {
     uint8_t elements[];
 } __PACKED;
 
+struct DataFrameHeader {
+    FrameControl fc;
+    uint16_t duration;
+    uint8_t addr1[6];
+    uint8_t addr2[6];
+    uint8_t addr3[6];
+    SequenceControl sc;
+
+    // TODO(tkilbourn): QoS Control field, or use a separate struct
+    // TODO(tkilbourn): HT Control field, or use a separate struct
+} __PACKED;
+
+struct LlcHeader {
+    uint8_t dsap;
+    uint8_t ssap;
+    uint8_t control;
+    uint8_t oui[3];
+    uint16_t protocol_id;
+    uint8_t payload[];
+} __PACKED;
+
+constexpr uint8_t kLlcSnapExtension = 0xaa;
+constexpr uint8_t kLlcUnnumberedInformation = 0x03;
+const uint8_t kLlcOui[3] = {};
+
+// Define the size of a non-QoS, non-HT data header, including the 802.2 framing
+constexpr size_t kDataPayloadHeader = sizeof(DataFrameHeader) + sizeof(LlcHeader);
+static_assert(kDataPayloadHeader == 32, "check the data payload header size");
+
+struct EthernetII {
+    uint8_t dest[6];
+    uint8_t src[6];
+    uint16_t ether_type;
+    uint8_t payload[];
+} __PACKED;
+
 }  // namespace wlan

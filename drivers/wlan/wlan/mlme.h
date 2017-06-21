@@ -38,6 +38,7 @@ class Mlme {
     mx_status_t HandleCtrlPacket(const Packet* packet);
     mx_status_t HandleDataPacket(const Packet* packet);
     mx_status_t HandleMgmtPacket(const Packet* packet);
+    mx_status_t HandleEthPacket(const Packet* packet);
     mx_status_t HandleSvcPacket(const Packet* packet);
 
     // Management frame handlers

@@ -111,7 +111,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
         status = HandleSvcPacket(packet);
         break;
     case Packet::Peer::kEthernet:
-        status = HandleDataPacket(packet);
+        status = HandleEthPacket(packet);
         break;
     case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
@@ -177,12 +177,27 @@ mx_status_t Mlme::HandleCtrlPacket(const Packet* packet) {
 
 mx_status_t Mlme::HandleDataPacket(const Packet* packet) {
     debugfn();
+    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+        auto hdr = packet->field<DataFrameHeader>(0);
+        if (hdr == nullptr) {
+            errorf("short data packet len=%zu\n", packet->len());
+            return MX_OK;
+        }
+
+        if (*sta_->bssid() == hdr->addr2) {
+            return sta_->HandleData(packet);
+        }
+    }
     return MX_OK;
 }
 
 mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     debugfn();
     auto hdr = packet->field<MgmtFrameHeader>(0);
+    if (hdr == nullptr) {
+        errorf("short mgmt packet len=%zu\n", packet->len());
+        return MX_OK;
+    }
     debugf("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
             hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
     debugf("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
@@ -205,10 +220,22 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     return MX_OK;
 }
 
+mx_status_t Mlme::HandleEthPacket(const Packet* packet) {
+    debugfn();
+    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+        return sta_->HandleEth(packet);
+    }
+    return MX_OK;
+}
+
 mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     debugfn();
     const uint8_t* p = packet->data();
     auto h = FromBytes<Header>(p, packet->len());
+    if (h == nullptr) {
+        errorf("short service packet len=%zu\n", packet->len());
+        return MX_OK;
+    }
     debugf("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
            h->txn_id, h->flags, h->ordinal);
 

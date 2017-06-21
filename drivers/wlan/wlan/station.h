@@ -60,6 +60,8 @@ class Station {
     mx_status_t HandleBeacon(const Packet* packet);
     mx_status_t HandleAuthentication(const Packet* packet);
     mx_status_t HandleAssociationResponse(const Packet* packet);
+    mx_status_t HandleData(const Packet* packet);
+    mx_status_t HandleEth(const Packet* packet);
     mx_status_t HandleTimeout();
 
     const Timer& timer() const { return *timer_; }
