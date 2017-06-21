@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
+#include <magenta/assert.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
 #include <pretty/hexdump.h>
@@ -39,6 +40,7 @@
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 8
 #define USB_BUF_SIZE 24576
+#define MAX_TX_IN_FLIGHT 4
 #define INTR_REQ_SIZE 8
 #define RX_HEADER_SIZE 4
 #define AX88179_MTU 1500
@@ -65,7 +67,7 @@ typedef struct {
     // Locks the tx_in_flight and pending_tx list.
     mtx_t tx_lock;
     // Whether an iotxn has been queued to the USB device.
-    bool tx_in_flight;
+    uint8_t tx_in_flight;
     // List of iotxns that have pending data. Used to buffer data if a USB transaction is in flight.
     // Additional data must be appended to the tail of the list, or if that's full, an iotxn from
     // free_write_reqs must be added to the list.
@@ -325,20 +327,23 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->tx_lock);
+    MX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     list_add_tail(&eth->free_write_reqs, &request->node);
     if (request->status == MX_ERR_IO_REFUSED) {
         printf("ax88179_write_complete usb_reset_endpoint\n");
         usb_reset_endpoint(eth->usb_device, eth->bulk_out_addr);
-    } else {
-        iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
-        if (next == NULL) {
-            eth->tx_in_flight = false;
-            xxprintf("ax88179: no txns in flight\n");
-        } else {
-            xxprintf("ax88179: queuing iotxn (%p) of length %lu\n", next, next->length);
-            iotxn_queue(eth->usb_device, next);
-        }
     }
+
+    iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
+    if (next == NULL) {
+        eth->tx_in_flight--;
+        xxprintf("ax88179: no pending write txns, %u outstanding\n", eth->tx_in_flight);
+    } else {
+        xxprintf("ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
+                 next, next->length, eth->tx_in_flight);
+        iotxn_queue(eth->usb_device, next);
+    }
+    MX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
 }
 
@@ -397,6 +402,7 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
     ax88179_t* eth = ctx;
 
     mtx_lock(&eth->tx_lock);
+    MX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     // 1. Find the iotxn we will be writing into.
     //   a) If pending_tx is empty, grab an iotxn from free_write_reqs.
     //   b) Else take the tail of pending_tx.
@@ -433,8 +439,8 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
             mtx_unlock(&eth->tx_lock);
             return;
         }
+        txn->length = txn_len = 0;
         list_add_tail(&eth->pending_tx, &txn->node);
-        txn_len = 0;
     }
     xxprintf("ax88179: txn=%p\n", txn);
 
@@ -447,20 +453,21 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
     txn->length = txn_len + sizeof(hdr) + length;
 
     if (options & ETHMAC_TX_OPT_MORE) {
-        xxprintf("ax88179: waiting for more data\n");
+        xxprintf("ax88179: waiting for more data, %u outstanding\n", eth->tx_in_flight);
         mtx_unlock(&eth->tx_lock);
         return;
     }
-    // TODO(tkilbourn): see if the hardware can handle a couple of tx in flight instead of just one.
-    if (eth->tx_in_flight) {
-        xxprintf("ax88179: txn in flight, waiting\n");
+    if (eth->tx_in_flight == MAX_TX_IN_FLIGHT) {
+        xxprintf("ax88179: max outstanding tx, waiting\n");
         mtx_unlock(&eth->tx_lock);
         return;
     }
     txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
-    xxprintf("ax88179: queuing iotxn (%p) of length %lu\n", txn, txn->length);
+    xxprintf("ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
+             txn, txn->length, eth->tx_in_flight);
     iotxn_queue(eth->usb_device, txn);
-    eth->tx_in_flight = true;
+    eth->tx_in_flight++;
+    MX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
 }
 
