@@ -164,7 +164,7 @@ class AudioOutput {
   //
   // Right now, we have no priorities, so this is just a set of renderer/output
   // links.
-  AudioRendererToOutputLinkSet links_;
+  AudioRendererToOutputLinkSet links_ FTL_GUARDED_BY(mutex_);
   AudioOutputManager* manager_;
   AudioOutputWeakPtr weak_self_;
   ftl::Mutex mutex_;

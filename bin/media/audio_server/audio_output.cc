@@ -207,14 +207,20 @@ void AudioOutput::Shutdown() {
 }
 
 void AudioOutput::UnlinkFromRenderers() {
-  for (const auto& link : links_) {
+  AudioRendererToOutputLinkSet old_links;
+
+  {
+    ftl::MutexLocker locker(&mutex_);
+    old_links.swap(links_);
+  }
+
+  for (const auto& link : old_links) {
     FTL_DCHECK(link);
     AudioRendererImplPtr renderer = link->GetRenderer();
     if (renderer) {
       renderer->RemoveOutput(link);
     }
   }
-  links_.clear();
 }
 
 bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {
@@ -227,7 +233,7 @@ bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {
   return false;
 }
 
-void AudioOutput::SetGain(float db_gain) {
+void AudioOutput::SetGain(float db_gain) FTL_NO_THREAD_SAFETY_ANALYSIS {
   db_gain_ = db_gain;
 
   for (const auto& link : links_) {
