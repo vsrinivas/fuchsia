@@ -307,7 +307,10 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         //TODO: api lock integration
         log(RPC_IN, "devhost[%s] bind driver '%s'\n", path, name);
         mx_driver_t* drv;
-        if ((r = dh_find_driver(name, hin[0], &drv)) < 0) {
+        if (ios->dev->flags & DEV_FLAG_DEAD) {
+            log(ERROR, "devhost[%s] bind to removed device disallowed\n", path);
+            r = MX_ERR_IO_NOT_PRESENT;
+        } else if ((r = dh_find_driver(name, hin[0], &drv)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
             void* cookie = NULL;
