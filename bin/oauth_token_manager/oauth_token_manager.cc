@@ -33,7 +33,6 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/synchronization/sleep.h"
 #include "lib/ftl/time/time_point.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -58,6 +57,8 @@ constexpr char kGoogleOAuthAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
 constexpr char kGoogleOAuthTokenEndpoint[] =
     "https://www.googleapis.com/oauth2/v4/token";
+constexpr char kGooglePeopleGetEndpoint[] =
+    "https://www.googleapis.com/plus/v1/people/me";
 constexpr char kFirebaseAuthEndpoint[] =
     "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
     "verifyAssertion";
@@ -252,6 +253,77 @@ void Post(const std::string& request_body,
   });
 }
 
+// Exactly one of success_callback and failure_callback is ever invoked.
+void Get(network::URLLoader* const url_loader,
+         const std::string& url,
+         const std::string& access_token,
+         const std::function<void()>& success_callback,
+         const std::function<void(std::string)>& failure_callback,
+         const std::function<bool(rapidjson::Document)>& set_token_callback) {
+  network::URLRequestPtr request(network::URLRequest::New());
+  request->url = url;
+  request->method = "GET";
+  request->auto_follow_redirects = true;
+
+  // Set Authorization header.
+  network::HttpHeaderPtr auth_header = network::HttpHeader::New();
+  auth_header->name = "Authorization";
+  auth_header->value = "Bearer " + access_token;
+  request->headers.push_back(std::move(auth_header));
+
+  // set content-type header to json.
+  network::HttpHeaderPtr content_type_header = network::HttpHeader::New();
+  content_type_header->name = "content-type";
+  content_type_header->value = "application/json";
+
+  // set accept header to json
+  network::HttpHeaderPtr accept_header = network::HttpHeader::New();
+  accept_header->name = "accept";
+  accept_header->value = "application/json";
+  request->headers.push_back(std::move(accept_header));
+
+  url_loader->Start(std::move(request), [success_callback, failure_callback,
+                                         set_token_callback](
+                                            network::URLResponsePtr response) {
+    if (!response->error.is_null()) {
+      failure_callback(
+          "Network error! code: " + std::to_string(response->error->code) +
+          " description: " + response->error->description.data());
+      return;
+    }
+
+    std::string response_body;
+    if (!response->body.is_null()) {
+      FTL_DCHECK(response->body->is_stream());
+      // TODO(alhaad/ukode): Use non-blocking variant.
+      if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
+                                     &response_body)) {
+        failure_callback("Failed to read response from socket with status:" +
+                         std::to_string(response->status_code));
+        return;
+      }
+    }
+
+    if (response->status_code != 200) {
+      failure_callback(
+          "Status code: " + std::to_string(response->status_code) +
+          " while fetching tokens with error description:" + response_body);
+      return;
+    }
+
+    rapidjson::Document doc;
+    rapidjson::ParseResult ok = doc.Parse(response_body);
+    if (!ok) {
+      std::string error_msg = GetParseError_En(ok.Code());
+      failure_callback("JSON parse error: " + error_msg);
+      return;
+    };
+    auto result = set_token_callback(std::move(doc));
+    FTL_DCHECK(result);
+    success_callback();
+  });
+}
+
 }  // namespace
 
 // Implementation of the OAuth Token Manager app.
@@ -266,7 +338,6 @@ class OAuthTokenManagerApp : AccountProvider {
 
   // |AccountProvider|
   void AddAccount(IdentityProvider identity_provider,
-                  const fidl::String& display_name,
                   const AddAccountCallback& callback) override;
 
   // |AccountProvider|
@@ -340,6 +411,7 @@ class OAuthTokenManagerApp : AccountProvider {
   class GoogleFirebaseTokensCall;
   class GoogleOAuthTokensCall;
   class GoogleUserCredsCall;
+  class GoogleProfileAttributesCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OAuthTokenManagerApp);
 };
@@ -828,20 +900,39 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
          [this] { Success(); },
          [this](const std::string error_message) { Failure(error_message); },
          [this](rapidjson::Document doc) {
-           return SaveCredentials(std::move(doc));
+           return ProcessCredentials(std::move(doc));
          });
   }
 
   // Parses refresh tokens from auth endpoint response and persists it in
   // |kCredentialsFile|.
-  bool SaveCredentials(rapidjson::Document tokens) {
-    if (!tokens.HasMember("refresh_token")) {
+  bool ProcessCredentials(rapidjson::Document tokens) {
+    if (!tokens.HasMember("refresh_token") ||
+        !tokens.HasMember("access_token")) {
       FTL_LOG(ERROR) << "Tokens returned from server does not contain "
-                     << "refresh_token. Returned token: "
+                     << "refresh_token or access_token. Returned token: "
                      << modular::JsonValueToPrettyString(tokens);
       return false;
     };
 
+    if (!SaveCredentials(tokens["refresh_token"].GetString())) {
+      return false;
+    }
+
+    // Store short lived tokens local in-memory cache.
+    uint64_t creation_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    app_->oauth_tokens_[account_->id] = {
+        creation_ts,
+        tokens["expires_in"].GetUint64(),
+        tokens["access_token"].GetString(),
+        tokens["id_token"].GetString(),
+        std::map<std::string, FirebaseAuthToken>(),
+    };
+    return true;
+  }
+
+  // Saves new credentials to the persistent creds storage file.
+  bool SaveCredentials(const std::string& refresh_token) {
     flatbuffers::FlatBufferBuilder builder;
     std::vector<flatbuffers::Offset<::auth::UserCredential>> creds;
 
@@ -872,7 +963,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     std::vector<flatbuffers::Offset<::auth::IdpCredential>> new_idp_creds;
     new_idp_creds.push_back(::auth::CreateIdpCredential(
         builder, ::auth::IdentityProvider_GOOGLE,
-        builder.CreateString(std::move(tokens["refresh_token"].GetString()))));
+        builder.CreateString(std::move(refresh_token))));
 
     creds.push_back(::auth::CreateUserCredential(
         builder, builder.CreateString(account_->id),
@@ -951,6 +1042,100 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   FTL_DISALLOW_COPY_AND_ASSIGN(GoogleUserCredsCall);
 };
 
+class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
+ public:
+  GoogleProfileAttributesCall(OperationContainer* const container,
+                              AccountPtr account,
+                              OAuthTokenManagerApp* const app,
+                              const AddAccountCallback& callback)
+      : Operation(container, [] {}),
+        account_(std::move(account)),
+        app_(app),
+        callback_(callback) {
+    Ready();
+  }
+
+ private:
+  // |Operation|
+  void Run() override {
+    if (!account_) {
+      Failure("Account is empty, running in guest mode.");
+      return;
+    }
+
+    if (app_->oauth_tokens_.find(account_->id) == app_->oauth_tokens_.end()) {
+      FTL_LOG(ERROR) << "Account: " << account_->id << " not found.";
+      return;
+    }
+
+    const std::string access_token =
+        app_->oauth_tokens_[account_->id].access_token;
+    app_->application_context_->ConnectToEnvironmentService(
+        network_service_.NewRequest());
+    network_service_->CreateURLLoader(url_loader_.NewRequest());
+
+    // Fetch profile atrributes for the provisioned user using
+    // https://developers.google.com/+/web/api/rest/latest/people/get api.
+    Get(url_loader_.get(), kGooglePeopleGetEndpoint, access_token,
+        [this] { Success(); },
+        [this](const std::string error_message) { Failure(error_message); },
+        [this](rapidjson::Document doc) {
+          return SetAccountAttributes(std::move(doc));
+        });
+  }
+
+  // Populate profile urls and display name for the account.
+  bool SetAccountAttributes(rapidjson::Document attributes) {
+    FTL_VLOG(1) << "People:get api response: "
+                << modular::JsonValueToPrettyString(attributes);
+
+    if (!account_) {
+      return false;
+    }
+
+    if (attributes.HasMember("displayName")) {
+      account_->display_name = attributes["displayName"].GetString();
+    } else {
+      account_->display_name = "";
+    }
+
+    if (attributes.HasMember("url")) {
+      account_->url = attributes["url"].GetString();
+    } else {
+      account_->url = "";
+    }
+
+    if (attributes.HasMember("image")) {
+      account_->image_url = attributes["image"]["url"].GetString();
+    } else {
+      account_->image_url = "";
+    }
+
+    return true;
+  }
+
+  void Success() {
+    callback_(std::move(account_), nullptr);
+    Done();
+  }
+
+  void Failure(const std::string& error_message) {
+    FTL_LOG(ERROR) << error_message;
+    // Account is missing profile attributes, but still valid.
+    callback_(std::move(account_), error_message);
+    Done();
+  }
+
+  AccountPtr account_;
+  OAuthTokenManagerApp* const app_;
+  const AddAccountCallback callback_;
+
+  network::NetworkServicePtr network_service_;
+  network::URLLoaderPtr url_loader_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleProfileAttributesCall);
+};
+
 OAuthTokenManagerApp::OAuthTokenManagerApp()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       binding_(this) {
@@ -985,23 +1170,29 @@ std::string OAuthTokenManagerApp::GenerateAccountId() {
 }
 
 void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
-                                      const fidl::String& display_name,
                                       const AddAccountCallback& callback) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::AddAccount()";
   auto account = auth::Account::New();
 
   account->id = GenerateAccountId();
   account->identity_provider = identity_provider;
-  // TODO(alhaad/ukode): Derive |display_name| from user profile instead.
-  account->display_name = display_name;
 
   switch (identity_provider) {
     case IdentityProvider::DEV:
       callback(std::move(account), nullptr);
       return;
     case IdentityProvider::GOOGLE:
-      new GoogleUserCredsCall(&operation_queue_, std::move(account), this,
-                              callback);
+      new GoogleUserCredsCall(
+          &operation_queue_, std::move(account), this,
+          [this, callback](AccountPtr account, const fidl::String error_msg) {
+            if (error_msg) {
+              callback(nullptr, error_msg);
+              return;
+            }
+
+            new GoogleProfileAttributesCall(&operation_queue_,
+                                            std::move(account), this, callback);
+          });
       return;
     default:
       callback(nullptr, "Unrecognized Identity Provider");

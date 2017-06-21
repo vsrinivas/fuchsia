@@ -180,7 +180,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
                                const fidl::String& servername,
                                const AddUserCallback& callback) {
   account_provider_->AddAccount(
-      identity_provider, displayname,
+      identity_provider,
       [this, identity_provider, displayname, servername, callback](
           auth::AccountPtr account, const fidl::String& error_code) {
         if (account.is_null()) {
