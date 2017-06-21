@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/socket/socket_drainer.h"
@@ -37,6 +38,7 @@ class SocketDrainerClient : public mtl::SocketDrainer::Client {
   std::string data_;
   mtl::SocketDrainer drainer_;
   ftl::Closure on_empty_callback_;
+  callback::DestructionSentinel destruction_sentinel_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);
 };

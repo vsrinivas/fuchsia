@@ -24,11 +24,12 @@ void SocketDrainerClient::OnDataAvailable(const void* data, size_t num_bytes) {
 }
 
 void SocketDrainerClient::OnDataComplete() {
-  ftl::Closure on_empty_callback = std::move(on_empty_callback_);
-  callback_(data_);
-  // This class might be deleted here. Do not access any field.
-  if (on_empty_callback)
-    on_empty_callback();
+  if (destruction_sentinel_.DestructedWhile([this] { callback_(data_); })) {
+    return;
+  }
+  if (on_empty_callback_) {
+    on_empty_callback_();
+  }
 }
 
 }  // namespace glue

@@ -6,6 +6,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "socket/socket_drainer_client_unittest.cc",
     "socket/socket_writer_unittest.cc",
   ]
 
