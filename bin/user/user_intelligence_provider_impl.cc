@@ -100,11 +100,10 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   StartAgent("file:///system/apps/agents/maxwell_proposal_maker");
 
 // Toggle using the "kronk_dev" gn arg (see README).
-// TODO(rosswang): Reenable kronk when it no longer crashes.
 #ifdef KRONK_DEV
-//  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
+  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
 #else
-//  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk");
+  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk");
 #endif
 
   StartAgent(
