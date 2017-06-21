@@ -9,6 +9,7 @@ group("tests") {
 
   public_deps = [
     ":apptests",
+    ":release_fence_signaller_unittests",
     ":unittests",
     ":unittests_using_escher",
   ]
@@ -80,5 +81,20 @@ executable("unittests_using_escher") {
     "//apps/test_runner/lib/reporting",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
+  ]
+}
+
+executable("release_fence_signaller_unittests") {
+  output_name = "release_fence_signaller_unittests"
+
+  testonly = true
+
+  sources = [
+    "release_fence_signaller_unittest.cc",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/mozart/src/tests:main",
   ]
 }

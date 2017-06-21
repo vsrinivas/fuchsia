@@ -39,6 +39,8 @@ source_set("common") {
   sources = [
     "print_op.cc",
     "print_op.h",
+    "release_fence_signaller.cc",
+    "release_fence_signaller.h",
     "renderer/renderer.cc",
     "renderer/renderer.h",
     "resources/gpu_memory.cc",
