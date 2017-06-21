@@ -128,6 +128,38 @@
     {
       "bootfs_path": "data/sysui/ic_stat_3_googblue_2x_web_24dp.png",
       "file": "apps/sysui/agents/home_work_agent/assets/ic_stat_3_googblue_2x_web_24dp.png"
+    },
+    {
+      "bootfs_path": "data/sysui/calendar.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/calendar.png"
+    },
+    {
+      "bootfs_path": "data/sysui/docs.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/docs.png"
+    },
+    {
+      "bootfs_path": "data/sysui/drawing.jpeg",
+      "file": "apps/sysui/agents/home_work_agent/assets/drawing.jpeg"
+    },
+    {
+      "bootfs_path": "data/sysui/logo_mostly_sunny_light_color_96dp.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/logo_mostly_sunny_light_color_96dp.png"
+    },
+    {
+      "bootfs_path": "data/sysui/miguel_cc0.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/miguel_cc0.png"
+    },
+    {
+      "bootfs_path": "data/sysui/sophie_cc0.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/sophie_cc0.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/threepeaks.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/threepeaks.png"
+    },
+    {
+      "bootfs_path": "data/sysui/truefood.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/truefood.png"
     }
   ]
 }
