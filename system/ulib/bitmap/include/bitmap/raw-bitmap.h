@@ -15,7 +15,7 @@
 
 namespace bitmap {
 
-const size_t kBits = sizeof(size_t) * 8;
+const size_t kBits = sizeof(size_t) * CHAR_BIT;
 
 // Translates a max bit into a final index in the bitmap array.
 constexpr size_t LastIdx(size_t bitmax) {

@@ -192,7 +192,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
 #ifdef __Fuchsia__
     vmoid_t id = inode_map_vmoid_;
 #else
-    void* id = inode_map_.StorageUnsafe()->GetData();
+    const void* id = inode_map_.StorageUnsafe()->GetData();
 #endif
     txn->Enqueue(id, ibm_relative_bno, info_.ibm_block + ibm_relative_bno, 1);
 
