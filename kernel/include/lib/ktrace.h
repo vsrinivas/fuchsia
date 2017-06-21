@@ -70,5 +70,6 @@ static inline status_t ktrace_control(uint32_t action, uint32_t options, void* p
 #define KTRACE_DEFAULT_GRPMASK 0xFFF
 
 void ktrace_report_live_threads(void);
+void ktrace_report_live_processes(void);
 
 __END_CDECLS

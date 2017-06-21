@@ -12,6 +12,7 @@
 
 #include <kernel/auto_lock.h>
 #include <lib/console.h>
+#include <lib/ktrace.h>
 #include <pretty/sizes.h>
 
 #include <magenta/job_dispatcher.h>
@@ -191,6 +192,15 @@ void DumpProcessHandles(mx_koid_t id) {
         return MX_OK;
     });
     printf("total: %u handles\n", total);
+}
+
+void ktrace_report_live_processes() {
+    auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
+        char name[MX_MAX_NAME_LEN];
+        process->get_name(name);
+        ktrace_name(TAG_PROC_NAME, (uint32_t)process->get_koid(), 0, name);
+    });
+    GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
 // Returns a string representation of VMO-related rights.
