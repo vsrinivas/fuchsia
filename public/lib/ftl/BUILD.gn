@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 if (is_android) {
   import("//build/config/android/config.gni")
 }
@@ -15,6 +17,8 @@ config("thread_safety_warning") {
 # These are sources that store static global state that may impose potential
 # constraints on dynamic linking. We separate these out here.
 source_set("stateful_sources") {
+  visibility = [ ":*" ]
+
   sources = [
     "log_level.h",
     "log_settings.h",
@@ -47,10 +51,10 @@ static_library("ftl") {
     "files/unique_fd.cc",
     "files/unique_fd.h",
     "functional/apply.h",
-    "functional/closure.h",
     "functional/cancelable_callback.h",
-    "functional/make_runnable.h",
+    "functional/closure.h",
     "functional/make_copyable.h",
+    "functional/make_runnable.h",
     "inttypes.h",
     "log_settings.cc",
     "logging.cc",
@@ -155,9 +159,6 @@ executable("ftl_unittests") {
   testonly = true
 
   sources = [
-    "test/run_all_unittests.cc",
-    "test/timeout_tolerance.h",
-
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
     "files/file_unittest.cc",
@@ -185,6 +186,8 @@ executable("ftl_unittests") {
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",
     "tasks/one_shot_timer_unittest.cc",
+    "test/run_all_unittests.cc",
+    "test/timeout_tolerance.h",
     "time/time_unittest.cc",
   ]
 
@@ -193,4 +196,18 @@ executable("ftl_unittests") {
     ":ftl_printers",
     "//third_party/gtest",
   ]
+}
+
+package("package") {
+  testonly = true
+
+  package_name = "ftl"
+
+  deps = [
+    ":ftl_unittests",
+  ]
+
+  tests = [ {
+        name = "ftl_unittests"
+      } ]
 }
