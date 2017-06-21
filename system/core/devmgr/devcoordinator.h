@@ -133,7 +133,7 @@ void coordinator(void);
 
 void dc_driver_added(driver_t* drv, const char* version);
 
-void load_driver(const char* path, size_t len);
+void load_driver(const char* path);
 void enumerate_drivers(void);
 
 bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,

@@ -107,7 +107,11 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
     if ((len > 11) && !memcmp(cmd, "add-driver:", 11)) {
-        load_driver(cmd + 11, len - 11);
+        len -= 11;
+        char path[len + 1];
+        memcpy(path, cmd + 11, len);
+        path[len] = 0;
+        load_driver(path);
         return MX_OK;
     }
     dmprintf("unknown command\n");

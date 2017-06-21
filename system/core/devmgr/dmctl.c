@@ -36,7 +36,7 @@ static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_
                                size_t* actual) {
     mx_status_t status = dmctl_cmd(buf, count, MX_HANDLE_INVALID);
     if (status >= 0) {
-        *actual = status;
+        *actual = count;
         status = MX_OK;
     }
     return status;
