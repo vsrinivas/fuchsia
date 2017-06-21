@@ -20,6 +20,8 @@ constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v3.db";
 
+// TODO(alhaad): Once ledger starts using user's firebase id to namespace the
+// user's cloud instance, use account id instead of display name for |user_id|.
 std::string LedgerRepositoryPath(const std::string& user_id) {
   return kLedgerDataBaseDir + user_id;
 }
