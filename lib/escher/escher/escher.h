@@ -58,6 +58,7 @@ class Escher : public MeshBuilderFactory {
   ResourceRecycler* resource_recycler();
   GpuAllocator* gpu_allocator();
   impl::GpuUploader* gpu_uploader();
+  impl::CommandBufferSequencer* command_buffer_sequencer();
 
  private:
   // Friends that need access to impl_.

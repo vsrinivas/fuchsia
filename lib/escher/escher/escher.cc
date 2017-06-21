@@ -81,4 +81,8 @@ impl::GpuUploader* Escher::gpu_uploader() {
   return impl_->gpu_uploader();
 }
 
+impl::CommandBufferSequencer* Escher::command_buffer_sequencer() {
+  return impl_->command_buffer_sequencer();
+}
+
 }  // namespace escher

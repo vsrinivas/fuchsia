@@ -39,6 +39,11 @@ class CommandBufferSequencer {
   // is about to be obtained from a CommandBufferPool.
   uint64_t GetNextCommandBufferSequenceNumber();
 
+  // Get the most recent sequence number generated for a CommandBuffer. All
+  // future sequence numbers will be greater since sequence numbers are
+  // monotonically-increasing.
+  uint64_t GetLastCommandBufferSequenceNumber();
+
   // Receive a notification that the CommandBuffer with the specified sequence
   // number has completed execution.
   //
@@ -61,7 +66,7 @@ class CommandBufferSequencer {
   void AddListener(CommandBufferSequencerListener* listener);
   void RemoveListener(CommandBufferSequencerListener* listener);
 
-  uint64_t next_sequence_number_ = 1;
+  uint64_t last_generated_sequence_number_ = 0;
   uint64_t last_finished_sequence_number_ = 0;
   // Sequence numbers of command-buffers that finished out-of-sequence.
   std::vector<uint64_t> out_of_sequence_numbers_;

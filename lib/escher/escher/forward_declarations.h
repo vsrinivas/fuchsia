@@ -55,6 +55,7 @@ typedef ftl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
 namespace impl {
 class CommandBuffer;
 class CommandBufferPool;
+class CommandBufferSequencer;
 class EscherImpl;
 class GpuUploader;
 class ImageCache;

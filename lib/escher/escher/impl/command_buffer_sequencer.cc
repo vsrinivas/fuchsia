@@ -23,12 +23,16 @@ void CommandBufferSequencerListener::Unregister(
 
 CommandBufferSequencer::~CommandBufferSequencer() {
   // Ensure clean shutdown.
-  FTL_DCHECK(next_sequence_number_ == last_finished_sequence_number_ + 1);
+  FTL_DCHECK(last_generated_sequence_number_ == last_finished_sequence_number_);
   FTL_DCHECK(listeners_.size() == 0);
 }
 
 uint64_t CommandBufferSequencer::GetNextCommandBufferSequenceNumber() {
-  return next_sequence_number_++;
+  return ++last_generated_sequence_number_;
+}
+
+uint64_t CommandBufferSequencer::GetLastCommandBufferSequenceNumber() {
+  return last_generated_sequence_number_;
 }
 
 void CommandBufferSequencer::CommandBufferFinished(uint64_t sequence_number) {
