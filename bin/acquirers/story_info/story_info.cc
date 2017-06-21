@@ -69,9 +69,9 @@ void XdrLinkPath(modular::XdrContext* const xdr,
 
 void XdrModuleData(modular::XdrContext* const xdr,
                    modular::ModuleData* const data) {
-  xdr->Field("url", &data->url);
+  xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
-  xdr->Field("default_link_path", &data->default_link_path, XdrLinkPath);
+  xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
 }
 
