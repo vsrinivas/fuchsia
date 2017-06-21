@@ -65,6 +65,22 @@
       "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_004.jpg"
     },
     {
+      "bootfs_path": "data/sysui/aparna-home.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/aparna-home.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/aparna-sf.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/aparna-sf.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/aparna-work.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/aparna-work.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/danielle-home.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/danielle-home.jpg"
+    },
+    {
       "bootfs_path": "data/sysui/ask_proposals.json",
       "default": "true",
       "file": "apps/sysui/agents/home_work_agent/assets/ask_proposals.json"
