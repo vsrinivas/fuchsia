@@ -14,6 +14,7 @@
 #include <magenta/ktrace.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/device/dmctl.h>
 #include <mxio/io.h>
 
 #include "acpi.h"
@@ -128,6 +129,8 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, ui
 static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
 
 static bool dc_running;
+
+static mx_handle_t dc_watch_channel;
 
 static mx_handle_t devhost_job;
 port_t dc_port;
@@ -411,6 +414,67 @@ static mx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
     return MX_OK;
 }
 
+//TODO: use a better device identifier
+static mx_status_t dc_notify(device_t* dev, uint32_t op) {
+    if (dc_watch_channel == MX_HANDLE_INVALID) {
+        return MX_ERR_BAD_STATE;
+    }
+    mx_status_t r;
+    if (op == DEVMGR_OP_DEVICE_ADDED) {
+        size_t propslen = sizeof(mx_device_prop_t) * dev->prop_count;
+        size_t len = sizeof(devmgr_event_t) + propslen;
+        char msg[len + DC_PATH_MAX];
+        devmgr_event_t* evt = (void*) msg;
+        memset(evt, 0, sizeof(devmgr_event_t));
+        memcpy(msg + sizeof(devmgr_event_t), dev->props, propslen);
+        if (dc_get_topo_path(dev, msg + len, DC_PATH_MAX) < 0) {
+            return MX_OK;
+        }
+        size_t pathlen = strlen(msg + len);
+        len += pathlen;
+        evt->opcode = op;
+        if (dev->flags & DEV_CTX_BOUND) {
+            evt->flags |= DEVMGR_FLAGS_BOUND;
+        }
+        evt->id = (uintptr_t) dev;
+        evt->u.add.protocol_id = dev->protocol_id;
+        evt->u.add.props_len = propslen;
+        evt->u.add.path_len = pathlen;
+        r = mx_channel_write(dc_watch_channel, 0, msg, len, NULL, 0);
+    } else {
+        devmgr_event_t evt;
+        memset(&evt, 0, sizeof(evt));
+        evt.opcode = op;
+        if (dev->flags & DEV_CTX_BOUND) {
+            evt.flags |= DEVMGR_FLAGS_BOUND;
+        }
+        evt.id = (uintptr_t) dev;
+        r = mx_channel_write(dc_watch_channel, 0, &evt, sizeof(evt), NULL, 0);
+    }
+    if (r < 0) {
+        mx_handle_close(dc_watch_channel);
+        dc_watch_channel = MX_HANDLE_INVALID;
+    }
+    return r;
+}
+
+static void dc_watch(mx_handle_t h) {
+    if (dc_watch_channel != MX_HANDLE_INVALID) {
+        mx_handle_close(dc_watch_channel);
+    }
+    dc_watch_channel = h;
+    device_t* dev;
+    list_for_every_entry(&list_devices, dev, device_t, anode) {
+        if (dev->flags & (DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
+            // if device is dead, ignore it
+            continue;
+        }
+        if (dc_notify(dev, DEVMGR_OP_DEVICE_ADDED) < 0) {
+            break;
+        }
+    }
+}
+
 static mx_status_t dc_launch_devhost(devhost_t* host,
                                      const char* name, mx_handle_t hrpc) {
     launchpad_t* lp;
@@ -634,6 +698,7 @@ static mx_status_t dc_add_device(device_t* parent,
     log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
         dev, dev->name, dev->prop_count, dev->args, dev->parent);
 
+    dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
     queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
     return MX_OK;
 }
@@ -738,6 +803,7 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
     if (!(dev->flags & DEV_CTX_SHADOW)) {
         // remove from list of all devices
         list_delete(&dev->anode);
+        dc_notify(dev, DEVMGR_OP_DEVICE_REMOVED);
     }
 
     if (forced) {
@@ -859,6 +925,14 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         r = MX_OK;
         break;
 
+    case DC_OP_DM_WATCH:
+        if (hcount != 1) {
+            goto fail_hcount;
+        }
+        dc_watch(hin[0]);
+        r = MX_OK;
+        break;
+
     case DC_OP_GET_TOPO_PATH: {
         if (hcount != 0) {
             goto fail_hcount;
@@ -893,6 +967,8 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
             if (msg.status != MX_OK) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n",
                     dev->name, msg.status);
+            } else {
+                dc_notify(dev, DEVMGR_OP_DEVICE_CHANGED);
             }
             //TODO: try next driver, clear BOUND flag
             break;

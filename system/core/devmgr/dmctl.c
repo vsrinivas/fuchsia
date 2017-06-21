@@ -19,13 +19,13 @@ static mx_device_t* dmctl_dev;
 
 static mxio_multiloader_t* multiloader;
 
-static mx_status_t dmctl_cmd(const char* cmd, size_t cmdlen, mx_handle_t h) {
+static mx_status_t dmctl_cmd(uint32_t op, const char* cmd, size_t cmdlen, mx_handle_t h) {
     dc_msg_t msg;
     uint32_t msglen;
     if (dc_msg_pack(&msg, &msglen, cmd, cmdlen, NULL, NULL) < 0) {
         return MX_ERR_INVALID_ARGS;
     }
-    msg.op = cmd ? DC_OP_DM_COMMAND : DC_OP_DM_OPEN_VIRTCON;
+    msg.op = op;
     dc_status_t rsp;
     return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen,
                       &h, (h != MX_HANDLE_INVALID) ? 1 : 0,
@@ -34,7 +34,7 @@ static mx_status_t dmctl_cmd(const char* cmd, size_t cmdlen, mx_handle_t h) {
 
 static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_t off,
                                size_t* actual) {
-    mx_status_t status = dmctl_cmd(buf, count, MX_HANDLE_INVALID);
+    mx_status_t status = dmctl_cmd(DC_OP_DM_COMMAND, buf, count, MX_HANDLE_INVALID);
     if (status >= 0) {
         *actual = count;
         status = MX_OK;
@@ -70,12 +70,17 @@ static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         memcpy(&cmd, in_buf, sizeof(cmd));
         cmd.name[sizeof(cmd.name) - 1] = 0;
         *out_actual = 0;
-        return dmctl_cmd(cmd.name, strlen(cmd.name), cmd.h);
+        return dmctl_cmd(DC_OP_DM_COMMAND, cmd.name, strlen(cmd.name), cmd.h);
     case IOCTL_DMCTL_OPEN_VIRTCON:
         if (in_len != sizeof(mx_handle_t)) {
             return MX_ERR_INVALID_ARGS;
         }
-        return dmctl_cmd(NULL, 0, *((mx_handle_t*) in_buf));
+        return dmctl_cmd(DC_OP_DM_OPEN_VIRTCON, NULL, 0, *((mx_handle_t*) in_buf));
+    case IOCTL_DMCTL_WATCH_DEVMGR:
+        if (in_len != sizeof(mx_handle_t)) {
+            return MX_ERR_INVALID_ARGS;
+        }
+        return dmctl_cmd(DC_OP_DM_WATCH, NULL, 0, *((mx_handle_t*) in_buf));
     default:
         return MX_ERR_INVALID_ARGS;
     }
