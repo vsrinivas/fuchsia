@@ -2129,7 +2129,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
 }
 
 void Device::HandleRxComplete(iotxn_t* request) {
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -2174,7 +2174,7 @@ void Device::HandleRxComplete(iotxn_t* request) {
 }
 
 void Device::HandleTxComplete(iotxn_t* request) {
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
