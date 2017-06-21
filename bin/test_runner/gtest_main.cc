@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/application_context.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "apps/test_runner/lib/reporting/results_queue.h"
@@ -17,7 +18,8 @@ int main(int argc, char** argv) {
 
   reporting_thread.Run();
   reporting_thread.TaskRunner()->PostTask([&reporter] {
-    reporter.Start();
+    auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
+    reporter.Start(context.get());
   });
 
   testing::InitGoogleTest(&argc, argv);

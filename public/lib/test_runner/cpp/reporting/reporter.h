@@ -5,6 +5,7 @@
 #ifndef APPS_TEST_RUNNER_LIB_REPORTER_H_
 #define APPS_TEST_RUNNER_LIB_REPORTER_H_
 
+#include "application/lib/app/application_context.h"
 #include "apps/test_runner/lib/reporting/results_queue.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -41,7 +42,7 @@ class Reporter : public mtl::MessageLoopHandler {
   // Attempts to connect to TestRunner FIDL service. If successful, registers an
   // event handler for when the queue is ready to read, so that incoming test
   // results will be reported.
-  void Start();
+  void Start(app::ApplicationContext* context);
 
  private:
    TestRunner* test_runner() {

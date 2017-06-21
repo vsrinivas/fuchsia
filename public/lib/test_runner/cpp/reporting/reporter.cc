@@ -50,11 +50,9 @@ void Reporter::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   }
 }
 
-void Reporter::Start() {
-  auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
-
+void Reporter::Start(app::ApplicationContext* context) {
   if (context->has_environment_services()) {
-    tracing::InitializeTracer(context.get(), {identity_});
+    tracing::InitializeTracer(context, {identity_});
     test_runner_ = context
         ->ConnectToEnvironmentService<test_runner::TestRunner>();
     test_runner_.set_connection_error_handler([this]() {

@@ -15,13 +15,13 @@ source_set("reporting") {
   ]
 
   deps = [
-    "//application/lib/app",
     "//apps/test_runner/services:test_runner",
     "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
   ]
 
   public_deps = [
+    "//application/lib/app",
     "//lib/mtl",
     "//third_party/gtest",
   ]
