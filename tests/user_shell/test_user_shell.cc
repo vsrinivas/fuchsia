@@ -473,18 +473,38 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
         });
   }
 
+  TestPoint story2_info_before_run_{"Story2 GetInfo before Run"};
   TestPoint story2_run_{"Story2 Run"};
 
   void TestStory2_Run() {
+    story_controller_->GetInfo([this] (modular::StoryInfoPtr info, modular::StoryState state) {
+        story2_info_before_run_.Pass();
+        FTL_LOG(INFO) << "StoryState before Start(): " << state;
+
+        if (state != modular::StoryState::INITIAL &&
+            state != modular::StoryState::STOPPED) {
+          modular::testing::Fail("StoryState before Start() must be STARTING or RUNNING.");
+        }
+      });
+
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
     view_->ConnectView(std::move(story_view));
 
-    story2_run_.Pass();
+    story_controller_->GetInfo([this] (modular::StoryInfoPtr info, modular::StoryState state) {
+        story2_run_.Pass();
 
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { TestStory2_DeleteStory(); }, ftl::TimeDelta::FromSeconds(20));
+        FTL_LOG(INFO) << "StoryState after Start(): " << state;
+
+        if (state != modular::StoryState::STARTING &&
+            state != modular::StoryState::RUNNING) {
+          modular::testing::Fail("StoryState after Start() must be STARTING or RUNNING.");
+        }
+
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this] { TestStory2_DeleteStory(); }, ftl::TimeDelta::FromSeconds(20));
+      });
   }
 
   TestPoint story2_delete_{"Story2 Delete"};

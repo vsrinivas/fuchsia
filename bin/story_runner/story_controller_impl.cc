@@ -930,6 +930,12 @@ void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
   new SyncCall(&operation_queue_, [this, callback] {
     story_provider_impl_->GetStoryInfo(
         story_id_,
+        // We capture only |state_| and not |this| because (1) we want the state
+        // after SyncCall finishes, not after GetStoryInfo returns (i.e. we want
+        // the state after the previous operation before GetInfo(), but not
+        // after the operation following GetInfo()), and (2) |this| may have
+        // been deleted when GetStoryInfo returned if there was a Delete
+        // operation in the queue before GetStoryInfo().
         [ state = state_, callback ](modular::StoryInfoPtr story_info) {
           callback(std::move(story_info), state);
         });
