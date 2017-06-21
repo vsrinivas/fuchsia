@@ -298,13 +298,42 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     FTL_LOG(WARNING) << "Failed to save the current configuration.";
   }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
+  ftl::Closure on_version_mismatch = [this, repository_path]() mutable {
+    OnVersionMismatch(std::move(repository_path));
+  };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
-      std::make_unique<backoff::ExponentialBackoff>(), watchers.get());
+      std::make_unique<backoff::ExponentialBackoff>(), watchers.get(),
+      std::move(on_version_mismatch));
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_path, environment_, std::move(watchers), std::move(user_sync));
   container->SetRepository(Status::OK, std::move(repository));
+}
+
+void LedgerRepositoryFactoryImpl::OnVersionMismatch(
+    std::string repository_path) {
+  FTL_LOG(ERROR)
+      << "Data in the cloud is incompatible with the local state, "
+      << "erasing the local state. Log out and back in to sync the state from "
+      << "the cloud.";
+  FTL_LOG(ERROR)
+      << "(This usually happens when Ledger state was reset on one device but "
+      << "not on others.)";
+
+  // First, shut down the repository so that we can delete the files while it's
+  // not running.
+  auto find_repository = repositories_.find(repository_path);
+  FTL_DCHECK(find_repository != repositories_.end());
+  repositories_.erase(find_repository);
+
+  // Delete the local files.
+  if (!files::DeletePath(repository_path, true)) {
+    FTL_LOG(ERROR) << "Unable to delete repository local storage at "
+                   << repository_path;
+    return;
+  }
+  FTL_LOG(INFO) << "Erased local data at " << repository_path;
 }
 
 }  // namespace ledger

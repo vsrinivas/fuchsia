@@ -23,10 +23,14 @@ namespace cloud_sync {
 
 class UserSyncImpl : public UserSync {
  public:
+  // Parameters:
+  //   |on_version_mismatch| is called when the local state is detected to be
+  //     incompatible with the state in the cloud and has to be erased.
   UserSyncImpl(ledger::Environment* environment,
                UserConfig user_config,
                std::unique_ptr<backoff::Backoff> backoff,
-               SyncStateWatcher* watcher);
+               SyncStateWatcher* watcher,
+               ftl::Closure on_version_mismatch);
   ~UserSyncImpl() override;
 
   // Starts UserSyncImpl. This method must be called before any other method.
@@ -47,6 +51,7 @@ class UserSyncImpl : public UserSync {
   ledger::Environment* environment_;
   const UserConfig user_config_;
   std::unique_ptr<backoff::Backoff> backoff_;
+  ftl::Closure on_version_mismatch_;
 
   // Utility to check that the local version is compatible with the cloud
   // version.

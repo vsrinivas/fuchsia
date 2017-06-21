@@ -62,6 +62,8 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
                         std::string sanitized_path,
                         cloud_sync::UserConfig user_config);
 
+  void OnVersionMismatch(std::string repository_path);
+
   Delegate* const delegate_;
   ledger::Environment* const environment_;
   const ConfigPersistence config_persistence_;

@@ -15,12 +15,16 @@ namespace cloud_sync {
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
                            UserConfig user_config,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           SyncStateWatcher* watcher)
+                           SyncStateWatcher* watcher,
+                           ftl::Closure on_version_mismatch)
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
+      on_version_mismatch_(on_version_mismatch),
       aggregator_(watcher),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this) {
+  FTL_DCHECK(on_version_mismatch_);
+}
 
 UserSyncImpl::~UserSyncImpl() {
   FTL_DCHECK(active_ledger_syncs_.empty());
@@ -77,11 +81,9 @@ void UserSyncImpl::CheckCloudVersion() {
               }
 
               FTL_DCHECK(status == LocalVersionChecker::Status::INCOMPATIBLE);
-              FTL_LOG(FATAL)
-                  << "Version on the cloud is incompatible with local "
-                     "version. Very probably the cloud instance has been "
-                     "cleaned up and the local state is stale. Clean the "
-                     "local state before restarting the Ledger.";
+              // |this| can be deleted within on_version_mismatch_() - don't
+              // access member variables afterwards.
+              on_version_mismatch_();
             });
       });
   auth_token_requests_.emplace(request);
