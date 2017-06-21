@@ -122,7 +122,9 @@
 #if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_REQUIRE_ADOPT virtual void Adopt() = 0
 #else   // if (DEBUG_ASSERT_IMPLEMENTED)
-#define __PCIE_REQUIRE_ADOPT
+#define __PCIE_REQUIRE_ADOPT \
+     inline void Adopt() { } \
+    using __force_semicolon = int
 #endif  // if (DEBUG_ASSERT_IMPLEMENTED)
 
 #define PCIE_REQUIRE_REFCOUNTED \
