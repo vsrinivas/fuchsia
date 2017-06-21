@@ -668,6 +668,23 @@ status_t x86_mmu_get_mapping<ExtendedPageTable<PT_L>>(volatile pt_entry_t* table
 }
 
 /**
+ * @brief Update the cursor to skip over a not-present page table entry.
+ */
+template <typename PageTable>
+static void x86_skip_entry(MappingCursor* cursor) {
+    const size_t ps = PageTable::page_size();
+    // Calculate the amount the cursor should skip to get to the next entry at
+    // this page table level.
+    const size_t skipped_size = ps - (cursor->vaddr & (ps - 1));
+    // If our endpoint was in the middle of this range, clamp the
+    // amount we remove from the cursor
+    const size_t size = (cursor->size > skipped_size) ? skipped_size : cursor->size;
+
+    cursor->size -= size;
+    cursor->vaddr += size;
+}
+
+/**
  * @brief Unmaps the range specified by start_cursor
  *
  * Level must be MAX_PAGING_LEVEL when invoked.
@@ -699,17 +716,7 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, volatile pt_entry_t* t
         pt_entry_t pt_val = *e;
         // If the page isn't even mapped, just skip it
         if (!IS_PAGE_PRESENT(pt_val)) {
-            size_t next_entry_vaddr = ROUNDDOWN(new_cursor->vaddr, ps) + ps;
-
-            // If our endpoint was in the middle of this range, clamp the
-            // amount we remove from the cursor
-            if (new_cursor->size < next_entry_vaddr - new_cursor->vaddr) {
-                new_cursor->vaddr += new_cursor->size;
-                new_cursor->size = 0;
-                continue;
-            }
-            new_cursor->size -= next_entry_vaddr - new_cursor->vaddr;
-            new_cursor->vaddr = next_entry_vaddr;
+            x86_skip_entry<PageTable>(new_cursor);
             DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
             continue;
         }
@@ -735,9 +742,7 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, volatile pt_entry_t* t
                 unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
                 unmapped = true;
 
-                const size_t size = (new_cursor->size > ps) ? ps : new_cursor->size;
-                new_cursor->vaddr += size;
-                new_cursor->size -= size;
+                x86_skip_entry<PageTable>(new_cursor);
                 DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
             }
             pt_val = *e;
@@ -1000,15 +1005,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, volatile pt_entry_
         pt_entry_t pt_val = *e;
         // Skip unmapped pages (we may encounter these due to demand paging)
         if (!IS_PAGE_PRESENT(pt_val)) {
-            // If our endpoint was in the middle of this range, clamp the
-            // amount we remove from the cursor
-            if (new_cursor->size < ps) {
-                new_cursor->vaddr += new_cursor->size;
-                new_cursor->size = 0;
-            } else {
-                new_cursor->vaddr += ps;
-                new_cursor->size -= ps;
-            }
+            x86_skip_entry<PageTable>(new_cursor);
             continue;
         }
 
@@ -1039,9 +1036,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, volatile pt_entry_
                 MappingCursor tmp_cursor;
                 x86_mmu_remove_mapping<PageTable>(aspace, table, cursor, &tmp_cursor);
 
-                const size_t size = (new_cursor->size > ps) ? ps : new_cursor->size;
-                new_cursor->vaddr += size;
-                new_cursor->size -= size;
+                x86_skip_entry<PageTable>(new_cursor);
             }
             pt_val = *e;
         }
@@ -1093,6 +1088,7 @@ static status_t x86_mmu_update_mapping_l0(arch_aspace_t* aspace, volatile pt_ent
         new_cursor->size -= PAGE_SIZE;
         DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
     }
+    DEBUG_ASSERT(new_cursor->size == 0 || PageTable::page_aligned(new_cursor->vaddr));
     return MX_OK;
 }
 
