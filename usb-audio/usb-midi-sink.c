@@ -49,7 +49,7 @@ static void update_signals(usb_midi_sink_t* sink) {
 }
 
 static void usb_midi_sink_write_complete(iotxn_t* txn, void* cookie) {
-    if (txn->status == MX_ERR_PEER_CLOSED) {
+    if (txn->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(txn);
         return;
     }
@@ -115,7 +115,7 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
     usb_midi_sink_t* sink = ctx;
 
     if (sink->dead) {
-        return MX_ERR_PEER_CLOSED;
+        return MX_ERR_IO_NOT_PRESENT;
     }
 
     mx_status_t status = MX_OK;
@@ -126,7 +126,7 @@ static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
     while (length > 0) {
         completion_wait(&sink->free_write_completion, MX_TIME_INFINITE);
         if (sink->dead) {
-            return MX_ERR_PEER_CLOSED;
+            return MX_ERR_IO_NOT_PRESENT;
         }
         mtx_lock(&sink->mutex);
         list_node_t* node = list_remove_head(&sink->free_write_reqs);
