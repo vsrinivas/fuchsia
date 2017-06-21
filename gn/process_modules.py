@@ -133,10 +133,6 @@ def update_gopath(maps, build_root):
             if os.path.lexists(target):
                 os.remove(target)
             os.symlink(src, target)
-    target=os.path.join(build_root, "host_x64", "src")
-    if os.path.lexists(target):
-        os.remove(target)
-    os.symlink(os.path.join(build_root, "src"), target)
 
 def write_manifest(manifest, files, autorun=None):
     manifest_dir = os.path.dirname(manifest)
