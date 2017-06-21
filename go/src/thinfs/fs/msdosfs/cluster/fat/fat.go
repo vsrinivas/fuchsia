@@ -24,10 +24,10 @@ import (
 
 var (
 	// ErrHardIO indicates there was an unrecoverable error.
-	ErrHardIO = errors.New("FAT: Hard Error I/O bit set. Run a fsck.fat on the partition containing this filesystem")
+	ErrHardIO = errors.New("FAT: Hard Error I/O bit set. Run 'fsck <device> fat' on the partition containing this filesystem")
 
 	// ErrDirtyFAT indicates the FAT was not unmounted properly.
-	ErrDirtyFAT = errors.New("FAT: Dirty volume bit set. Run a fsck.fat on the partition containing this filesystem")
+	ErrDirtyFAT = errors.New("FAT: Dirty volume bit set. Run 'fsck <device> fat' on the partition containing this filesystem")
 
 	// ErrNotOpen indicates the FAT cannot be accessed because it is not open.
 	ErrNotOpen = errors.New("FAT: FAT not open")
