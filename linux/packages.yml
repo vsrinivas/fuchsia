@@ -48,7 +48,7 @@ all:
   - libfreetype6-dev
   - libgbm1
   - libgbm-dev
-  - libgcc-4.8-dev
+  - libgcc-6-dev
   - libgcc1
   - libgconf-2-4
   - libgconf2-4
@@ -67,7 +67,7 @@ all:
   - libgnome-keyring0
   - libgnome-keyring-dev
   - libgnutls-openssl27
-  - libgnutls-deb0-28
+  - libgnutls30
   - libgnutlsxx28
   - libgnutls28-dev
   - libgomp1
@@ -84,12 +84,12 @@ all:
   - libharfbuzz-gobject0
   - libharfbuzz-icu0
   - libatomic1
-  - libjsoncpp0
+  - libjsoncpp1
   - libjsoncpp-dev
   - libk5crypto3
-  - libkadm5clnt-mit9
-  - libkadm5srv-mit9
-  - libkdb5-7
+  - libkadm5clnt-mit11
+  - libkadm5srv-mit11
+  - libkdb5-8
   - libkeyutils1
   - libkrb5-3
   - libkrb5-dev
@@ -114,11 +114,11 @@ all:
   - libpci-dev
   - libpcre3
   - libpcre3-dev
-  - libpcrecpp0
+  - libpcrecpp0v5
   - libpixman-1-0
   - libpixman-1-dev
-  - libpng12-0
-  - libpng12-dev
+  - libpng16-16
+  - libpng-dev
   - libpthread-stubs0-dev
   - libpulse0
   - libpulse-dev
@@ -126,10 +126,10 @@ all:
   - libselinux1
   - libspeechd2
   - libspeechd-dev
-  - libssl1.0.0
+  - libssl1.0.2
   - libssl-dev
   - libstdc++6
-  - libstdc++-4.8-dev
+  - libstdc++-6-dev
   - libtasn1-6
   - libudev-dev
   - libudev1
@@ -204,7 +204,7 @@ all:
   - zlib1g
   - zlib1g-dev
 amd64:
-  - libasan0
+  - libasan3
   - libcilkrts5
   - libdrm-intel1
   - libitm1

@@ -58,7 +58,7 @@ var (
 func init() {
 	components = stringsValue{"main"}
 
-	flag.StringVar(&release, "release", "stable", "Debian release to use")
+	flag.StringVar(&release, "release", "stretch", "Debian release to use")
 	flag.Var(&components, "c", "Debian components to use")
 	flag.StringVar(&arch, "arch", "amd64", "Target architecture")
 	flag.StringVar(&packagesFile, "packages", "packages.yml", "List of packages")
@@ -67,10 +67,10 @@ func init() {
 	flag.StringVar(&debsCache, "cache", "debs", "Cache for .deb files")
 
 	// gpg keyring file generated using:
-	//   export KEYS="46925553 2B90D010 518E17E1"
+	//   export KEYS="46925553 2B90D010 518E17E1 1A7B6500"
 	//   gpg --keyserver keys.gnupg.net --recv-keys $KEYS
-	//   gpg --output ./debian-archive-jessie-stable.gpg --export $KEYS
-	flag.StringVar(&keyRingFile, "keyring", "debian-archive-jessie-stable.gpg", "Keyring file")
+	//   gpg --output ./debian-archive-stretch-stable.gpg --export $KEYS
+	flag.StringVar(&keyRingFile, "keyring", "debian-archive-stretch-stable.gpg", "Keyring file")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: deb-sysroot-builder\n")
@@ -193,6 +193,8 @@ func downloadPackageList() ([]pkg, error) {
 	for _, name := range append(packages["all"], packages[arch]...) {
 		if pkg, ok := pkgs[name]; ok {
 			list = append(list, pkg)
+		} else {
+			fmt.Printf("Package %s not found\n", name)
 		}
 	}
 
