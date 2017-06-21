@@ -50,7 +50,7 @@ static void update_signals(usb_midi_source_t* source) {
 static void usb_midi_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_midi_source_t* source = (usb_midi_source_t*)cookie;
 
-    if (txn->status == MX_ERR_PEER_CLOSED) {
+    if (txn->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(txn);
         return;
     }
@@ -129,7 +129,7 @@ static mx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, mx_of
     usb_midi_source_t* source = ctx;
 
     if (source->dead) {
-        return MX_ERR_PEER_CLOSED;
+        return MX_ERR_IO_NOT_PRESENT;
     }
 
     mx_status_t status = MX_OK;
