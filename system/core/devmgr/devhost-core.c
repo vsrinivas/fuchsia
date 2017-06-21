@@ -481,6 +481,9 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
     }
 
     dev->flags &= ~DEV_FLAG_BUSY;
+
+    // ask devcoord to find us a driver if it can
+    devhost_device_bind(dev, "");
     return MX_OK;
 }
 

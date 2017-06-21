@@ -711,14 +711,20 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
             if (list_is_empty(&parent->children)) {
                 parent->flags &= (~DEV_CTX_BOUND);
 
+                //TODO: This code is to cause the bind process to
+                //      restart and get a new devhost to be launched
+                //      when a devhost dies.  It should probably be
+                //      more tied to devhost teardown than it is.
+
                 // IF we are the last child of our parent
                 // AND our parent is not itself dead
+                // AND our parent is a BUSDEV
                 // AND our parent's devhost is not dying
                 // THEN we will want to rebind our parent
-                if (!(parent->flags & DEV_CTX_DEAD) &&
+                if (!(parent->flags & DEV_CTX_DEAD) && (parent->flags & DEV_CTX_BUSDEV) &&
                     ((parent->host == NULL) || !(parent->host->flags & DEV_HOST_DYING))) {
 
-                    log(DEVLC, "devcoord: device %p name='%s' is unbound\n",
+                    log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
                         parent, parent->name);
 
                     //TODO: introduce timeout, exponential backoff
@@ -729,8 +735,10 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
         dc_release_device(parent);
     }
 
-    // remove from list of all devices
-    list_delete(&dev->anode);
+    if (!(dev->flags & DEV_CTX_SHADOW)) {
+        // remove from list of all devices
+        list_delete(&dev->anode);
+    }
 
     if (forced) {
         // release the ref held by the devhost
@@ -753,12 +761,16 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
+    // A libname of "" means a general rebind request
+    // instead of a specific request
+    bool autobind = (drvlibname[0] == 0);
+
     //TODO: disallow if we're in the middle of enumeration, etc
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        if (!strcmp(drv->libname, drvlibname)) {
+        if (autobind || !strcmp(drv->libname, drvlibname)) {
             if (dc_is_bindable(drv, dev->protocol_id,
-                               dev->props, dev->prop_count, false)) {
+                               dev->props, dev->prop_count, autobind)) {
                 log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
                 dc_attempt_bind(drv, dev);
