@@ -18,7 +18,7 @@ namespace {
 // TODO(alhaad): This is also defined in device_runner.cc. Reconcile!
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v3.db";
+constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v4.db";
 
 // TODO(alhaad): Once ledger starts using user's firebase id to namespace the
 // user's cloud instance, use account id instead of display name for |user_id|.
