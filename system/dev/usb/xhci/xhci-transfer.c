@@ -489,7 +489,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             txn = (iotxn_t *)trb_get_ptr(trb);
         } else {
             trb = xhci_read_trb_ptr(ring, trb);
-            for (int i = 0; i < 5 && trb; i++) {
+            for (uint i = 0; i < TRANSFER_RING_SIZE && trb; i++) {
                 if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
                     txn = (iotxn_t *)trb_get_ptr(trb);
                     break;
@@ -530,7 +530,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     }
 
     if (!txn) {
-        printf("unable to find iotxn in xhci_handle_transfer_event\n");
+        printf("xhci_handle_transfer_event: unable to find iotxn to complete!\n");
         return;
     }
 
