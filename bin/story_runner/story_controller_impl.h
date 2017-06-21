@@ -172,6 +172,7 @@ class StoryControllerImpl : StoryController, StoryContext {
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
   void TakeOwnership(ModuleControllerPtr module_controller,
+                     const fidl::Array<fidl::String>& module_path,
                      fidl::String module_id);
   void OnRootStateChange(ModuleState new_state);
 

@@ -49,6 +49,7 @@ class StoryStorageImpl : public PageClient {
                        const LinkPathPtr& link_path,
                        ModuleSource module_source,
                        const SurfaceRelationPtr& surface_relation,
+                       bool module_stopped,
                        const SyncCallback& callback);
 
   void WriteDeviceData(const std::string& story_id,

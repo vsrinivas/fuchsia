@@ -35,6 +35,7 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
+  xdr->Field("module_stopped", &data->module_stopped);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
@@ -190,6 +191,7 @@ void StoryStorageImpl::WriteModuleData(
     const LinkPathPtr& link_path,
     ModuleSource module_source,
     const SurfaceRelationPtr& surface_relation,
+    bool module_stopped,
     const SyncCallback& callback) {
   ModuleDataPtr data = ModuleData::New();
   data->module_url = module_url;
@@ -197,6 +199,7 @@ void StoryStorageImpl::WriteModuleData(
   data->link_path = link_path.Clone();
   data->module_source = module_source;
   data->surface_relation = surface_relation.Clone();
+  data->module_stopped = module_stopped;
 
   new WriteDataCall<ModuleData>(&operation_queue_, story_page_,
                                 MakeModuleKey(module_path), XdrModuleData,

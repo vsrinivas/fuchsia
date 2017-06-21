@@ -88,7 +88,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
     story_controller_impl_->story_storage_impl_->WriteModuleData(
         module_path, module_url_, link_path, ModuleSource::EXTERNAL,
-        surface_relation_,
+        surface_relation_, false,
         [this, flow] {
           if (story_controller_impl_->IsRunning()) {
             story_controller_impl_->StartModuleInShell(
@@ -222,7 +222,8 @@ class StoryControllerImpl::StartCall : Operation<> {
     story_controller_impl_->story_storage_impl_->ReadAllModuleData(
         [this, flow](fidl::Array<ModuleDataPtr> data) {
           for (auto& module_data : data) {
-            if (module_data->module_source == ModuleSource::EXTERNAL) {
+            if (module_data->module_source == ModuleSource::EXTERNAL &&
+                !module_data->module_stopped) {
               auto parent_path = module_data->module_path.Clone();
               parent_path.resize(parent_path.size() - 1);
               story_controller_impl_->StartModuleInShell(
@@ -439,7 +440,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
       story_controller_impl_->story_storage_impl_->WriteModuleData(
           module_path_, module_url_, link_path_, module_source_,
-          surface_relation_.Clone(),
+          surface_relation_.Clone(), false,
           [this, flow] { Cont(flow); });
 
     } else {
@@ -451,7 +452,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
             link_path_ = module_data->link_path.Clone();
             story_controller_impl_->story_storage_impl_->WriteModuleData(
                 module_path_, module_url_, link_path_, module_source_,
-                surface_relation_.Clone(),
+                surface_relation_.Clone(), false,
                 [this, flow] { Cont(flow); });
           });
     }
@@ -646,9 +647,11 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
  public:
   ModuleWatcherImpl(fidl::InterfaceRequest<ModuleWatcher> request,
                     StoryControllerImpl* const story_controller_impl,
+                    const fidl::Array<fidl::String>& module_path,
                     fidl::String module_id)
       : binding_(this, std::move(request)),
         story_controller_impl_(story_controller_impl),
+        module_path_(module_path.Clone()),
         module_id_(std::move(module_id)) {}
 
  private:
@@ -658,6 +661,9 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
       story_controller_impl_->OnRootStateChange(state);
     }
 
+    // TODO(vardhan): Currently we only record 'module_stopped = true' if an
+    // externally-module calls Done(). Make it so we record it for internally
+    // started modules and also when ModuleController.Stop() is called.
     if (state == ModuleState::DONE) {
       if (story_controller_impl_->story_shell_) {
         story_controller_impl_->story_shell_->DefocusView(module_id_, [this] {
@@ -677,22 +683,39 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
   }
 
   void StopModule() {
-    auto it = std::find_if(story_controller_impl_->external_modules_.begin(),
-                           story_controller_impl_->external_modules_.end(),
-                           [this](const ExternalModule& m) {
-                             return m.module_watcher_impl.get() == this;
-                           });
-    auto module_controller = std::move(it->module_controller);
-    story_controller_impl_->external_modules_.erase(it);
+    // 1. Read the module data.
+    story_controller_impl_->story_storage_impl_->ReadModuleData(
+        module_path_, [this] (ModuleDataPtr data) {
 
-    module_controller->Stop([] {
-      // HACK(alhaad): This never gets called because |module_controller| goes
-      // out of scope.
-    });
+          // 2. Write it back, with module_stopped = true.
+          story_controller_impl_->story_storage_impl_->WriteModuleData(
+              module_path_, data->module_url, std::move(data->link_path),
+              data->module_source, std::move(data->surface_relation), true,
+              [this] {
+
+                // 3. Remove this module watcher.
+                auto it = std::find_if(
+                    story_controller_impl_->external_modules_.begin(),
+                    story_controller_impl_->external_modules_.end(),
+                    [this](const ExternalModule& m) {
+                      return m.module_watcher_impl.get() == this;
+                    });
+
+                auto module_controller = std::move(it->module_controller);
+                story_controller_impl_->external_modules_.erase(it);
+                // |this| is no longer valid at this point.
+
+                module_controller->Stop([] {
+                  // HACK(alhaad): This never gets called because
+                  // |module_controller| goes out of scope.
+                });
+              });
+        });
   }
 
   fidl::Binding<ModuleWatcher> binding_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
+  const fidl::Array<fidl::String> module_path_;
   const fidl::String module_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
@@ -889,7 +912,7 @@ void StoryControllerImpl::StartModuleInShell(
       std::move(incoming_services), std::move(module_controller_request),
       view_owner.NewRequest());
 
-  const fidl::String id = PathString(module_path);
+  const fidl::String view_id = PathString(module_path);
 
   // If this is called during Stop(), story_shell_ might already have been
   // reset. TODO(mesch): Then the whole operation should fail.
@@ -898,16 +921,17 @@ void StoryControllerImpl::StartModuleInShell(
     // re-inflation, it is possible that module |id| gets connected before
     // module |parent_id|, which crashes story shell. This does not currently
     // happen by coincidence.
-    fidl::String parent_id = PathString(parent_module_path);
-    story_shell_->ConnectView(std::move(view_owner), id, parent_id,
+    fidl::String parent_view_id = PathString(parent_module_path);
+    story_shell_->ConnectView(std::move(view_owner), view_id, parent_view_id,
                               std::move(surface_relation));
     if (focus) {
-      story_shell_->FocusView(id, parent_id);
+      story_shell_->FocusView(view_id, parent_view_id);
     }
   }
 
   if (module_source == ModuleSource::EXTERNAL) {
-    TakeOwnership(std::move(module_controller), std::move(id));
+    TakeOwnership(std::move(module_controller), module_path,
+                  std::move(view_id));
   }
 }
 
@@ -1029,10 +1053,11 @@ void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
 }
 
 void StoryControllerImpl::TakeOwnership(ModuleControllerPtr module_controller,
-                                        fidl::String id) {
+                                        const fidl::Array<fidl::String>& module_path,
+                                        fidl::String view_id) {
   ModuleWatcherPtr watcher;
   auto module_watcher_impl = std::make_unique<ModuleWatcherImpl>(
-      watcher.NewRequest(), this, std::move(id));
+      watcher.NewRequest(), this, module_path, std::move(view_id));
   module_controller->Watch(std::move(watcher));
   external_modules_.emplace_back(ExternalModule{std::move(module_watcher_impl),
                                                 std::move(module_controller)});
