@@ -392,9 +392,16 @@ interface ConflictResolver {
 
 // Synchronization state.
 enum SyncState {
+  // There are no pending operations.
   IDLE = 0,
+  // There are pending operations, but there is no syncing in progress. This
+  // could be because of a connection error, because another operation is in
+  // progress (e.g. a download), or due to another reason, such us a pending
+  // merge.
   PENDING,
+  // Sync is in progress.
   IN_PROGRESS,
+  // An internal error occurred while trying to sync.
   ERROR,
 };
 
@@ -402,6 +409,5 @@ enum SyncState {
 // synchronization status of their ledger. SyncStateChanged callback must be
 // called for new state change calls to be sent.
 interface SyncWatcher {
-  SyncStateChanged(SyncState download_status,
-      SyncState upload_status) => ();
+  SyncStateChanged(SyncState download_status, SyncState upload_status) => ();
 };
