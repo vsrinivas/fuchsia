@@ -191,4 +191,19 @@ std::string* XdrContext::AddError() {
   return ret;
 }
 
+std::string* XdrContext::GetError() {
+  return parent_ ? parent_->GetError() : error_;
+}
+
+XdrContext::ErrorEraser::ErrorEraser(XdrContext* context, std::string* error)
+    : context_(context), error_(error), old_length_(error->size()) {}
+XdrContext::ErrorEraser::ErrorEraser(ErrorEraser&& rhs)
+    : context_(rhs.context_),
+      error_(rhs.error_),
+      old_length_(rhs.old_length_) {}
+
+XdrContext::ErrorEraser::~ErrorEraser() {
+  error_->resize(old_length_);
+}
+
 }  // namespace modular

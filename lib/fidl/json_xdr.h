@@ -105,6 +105,24 @@ void XdrFilter(XdrContext* xdr, V* value);
 // Clients usually call Value(); filters for custom types usually call
 // Field().
 class XdrContext {
+ private:
+  // Returned by IgnoreError() to discard any errors that are accumulated by
+  // functions called between the ctor and the dtor.
+  // This class must allow copy-by-value.
+  class ErrorEraser {
+   public:
+    ErrorEraser(XdrContext* context, std::string* error);
+    ErrorEraser(ErrorEraser&& rhs);
+    ~ErrorEraser();
+
+    XdrContext* operator->() { return context_; }
+
+   private:
+    XdrContext* const context_;
+    std::string* const error_;
+    const size_t old_length_;
+  };
+
  public:
   XdrContext(XdrOp op, JsonDoc* doc, std::string* error);
 
@@ -364,22 +382,26 @@ class XdrContext {
     Value(data, XdrFilter<K>, XdrFilter<V>);
   }
 
+  // When adding a new value to a filter, use this function to ignore errors
+  // on the called function(s) in that scope. For example:
+  // data->interaction_timestamp = time(nullptr);
+  // xdr->IgnoreError()->Field("interaction", &data->interaction_timestamp);
+  ErrorEraser IgnoreError() { return ErrorEraser(this, GetError()); }
+
  private:
-  XdrContext(XdrContext* parent,
-             const char* name_,
-             XdrOp op,
-             JsonDoc* doc,
+
+  XdrContext(XdrContext* parent, const char* name_, XdrOp op, JsonDoc* doc,
              JsonValue* value);
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
   XdrContext Element(size_t i);
 
-  // This is factored out of the corresponing Value() methods, because
+  // This is factored out of the corresponding Value() methods, because
   // it needs to work for two different kinds of StructPtr, which
   // however behave exactly the same: fidl::StructPtr<DataType> and
   // fidl::InlineStructPtr<DataType>. So there is a relationship
   // between StructPtr and DataType, which however cannot be simply
-  // expressed in template argument expresions (as far as I know). So
+  // expressed in template argument expressions (as far as I know). So
   // instead there are two different template specializations of
   // Value() which both call this function here. It *is* possible to
   // invoke the function with an assignment of StructPtr and DataType
@@ -418,6 +440,9 @@ class XdrContext {
   // JSON context hierarchy.
   void AddError(const std::string& message);
   std::string* AddError();
+
+  // Return the root error string so that IgnoreError() can manipulate it.
+  std::string* GetError();
 
   // The root of the context tree (where parent_ == nullptr) keeps a
   // string to write errors to. In an error situation the chain of
