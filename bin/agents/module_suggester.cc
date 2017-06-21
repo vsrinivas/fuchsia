@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -15,28 +14,12 @@
 namespace maxwell {
 namespace {
 
-// The Context topic which tells us how many Stories are currently visible. If
-// the count is zero, we know the user is on the home screen.
-const std::string kVisibleCountTopic = "/story/visible_count";
-
 struct ProposalContent {
   std::string url;
   uint32_t color;
   std::string module_data;
   std::string icon;
 };
-
-const std::unordered_map<std::string, ProposalContent> kNextStories({
-    {"Open Mail",
-     {"file:///system/apps/email/story", 0xff4285f4 /*Blue from Inbox*/, "",
-      ""}},
-    {"Video Player",
-     {"media_player_flutter",
-      0xff9575cd /*Deep Purple 300*/, "", ""}},
-    {"Multi-Device Player",
-     {"file:///system/apps/video/video",
-      0xff9575cd /*Deep Purple 300*/, "", ""}},
-});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
     {{"Terminal",
@@ -90,38 +73,15 @@ ProposalPtr MkProposal(const std::string& label,
   return p;
 }
 
-class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
+class ModuleSuggesterAgentApp : public AskHandler {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
-        binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         ask_(this) {
-    fidl::InterfaceHandle<ContextListener> listener_handle;
-    binding_.Bind(&listener_handle);
-
-    auto query = ContextQuery::New();
-    query->topics.push_back(kVisibleCountTopic);
-    provider_->Subscribe(std::move(query), std::move(listener_handle));
-
     fidl::InterfaceHandle<AskHandler> ask_handle;
     ask_.Bind(&ask_handle);
     out_->RegisterAskHandler(std::move(ask_handle));
-  }
-
-  void OnUpdate(ContextUpdatePtr update) override {
-    const int visible_count =
-        std::stoi(update->values[kVisibleCountTopic].data());
-    if (visible_count == 0) {
-      for (const auto& entry : kNextStories) {
-        out_->Propose(MkProposal(entry.first, entry.second));
-      }
-    } else {
-      for (const auto& entry : kNextStories) {
-        out_->Remove(entry.first);
-      }
-    }
   }
 
   void Ask(UserInputPtr query, const AskCallback& callback) override {
@@ -143,8 +103,6 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  ContextProviderPtr provider_;
-  fidl::Binding<ContextListener> binding_;
   ProposalPublisherPtr out_;
   fidl::Binding<AskHandler> ask_;
 };
