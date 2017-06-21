@@ -164,7 +164,11 @@ void ProcessDispatcher::Exit(int retcode) {
         DEBUG_ASSERT_MSG(state_ == State::RUNNING || state_ == State::DYING,
                 "state is %s", StateToString(state_));
 
-        retcode_ = retcode;
+        // Set the exit status if there isn't already an exit in progress.
+        if (state_ != State::DYING) {
+            DEBUG_ASSERT(retcode_ == 0);
+            retcode_ = retcode;
+        }
 
         // enter the dying state, which should kill all threads
         SetStateLocked(State::DYING);
