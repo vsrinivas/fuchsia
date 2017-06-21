@@ -38,8 +38,8 @@ auth::AccountPtr Convert(const UserStorage* user) {
       account->identity_provider = auth::IdentityProvider::GOOGLE;
       break;
     default:
-      FTL_DCHECK(false)
-          << "Unrecognized IdentityProvider" << user->identity_provider();
+      FTL_DCHECK(false) << "Unrecognized IdentityProvider"
+                        << user->identity_provider();
   }
   account->display_name = user->display_name()->str();
   account->url = user->profile_url()->str();
@@ -186,11 +186,12 @@ void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
   callback(std::move(accounts));
 }
 
-void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
-                               const fidl::String& displayname,
-                               const fidl::String& devicename, // TODO(zbowling): deprecated field
-                               const fidl::String& servername,
-                               const AddUserCallback& callback) {
+void UserProviderImpl::AddUser(
+    auth::IdentityProvider identity_provider,
+    const fidl::String& displayname,
+    const fidl::String& devicename,  // TODO(zbowling): deprecated field
+    const fidl::String& servername,
+    const AddUserCallback& callback) {
   account_provider_->AddAccount(
       identity_provider,
       [this, identity_provider, displayname, servername, callback](
@@ -340,17 +341,22 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
   token_provider_factory->GetTokenProvider(kLedgerAppUrl,
                                            ledger_token_provider.NewRequest());
 
+  // TODO(ppi): pass hard-coded server_id and api_key here.
+  auto firebase_config = ledger::FirebaseConfig::New();
+  firebase_config->server_id = server_name;
+  firebase_config->api_key = "";
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
-      local_ledger_path, server_name, std::move(ledger_token_provider),
-      ledger_repository.NewRequest(), [](ledger::Status status) {
+      local_ledger_path, std::move(firebase_config),
+      std::move(ledger_token_provider), ledger_repository.NewRequest(),
+      [](ledger::Status status) {
         FTL_DCHECK(status == ledger::Status::OK)
             << "GetRepository failed: " << status;
       });
 
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
-  token_provider_factory->GetTokenProvider(kLedgerAppUrl,
-                                           ledger_token_provider_for_erase.NewRequest());
+  token_provider_factory->GetTokenProvider(
+      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
   auto user_shell = params->user_shell_config.is_null()
                         ? default_user_shell_.Clone()
                         : std::move(params->user_shell_config);
@@ -363,8 +369,12 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
         ledger_token_provider_for_erase =
             std::move(ledger_token_provider_for_erase)
       ]() mutable {
+        // TODO(ppi): pass hard-coded server_id and api_key here.
+        auto firebase_config = ledger::FirebaseConfig::New();
+        firebase_config->server_id = server_name;
+        firebase_config->api_key = "";
         ledger_repository_factory_->EraseRepository(
-            local_ledger_path, server_name,
+            local_ledger_path, std::move(firebase_config),
             std::move(ledger_token_provider_for_erase),
             [](ledger::Status status) {
               if (status != ledger::Status::OK) {
