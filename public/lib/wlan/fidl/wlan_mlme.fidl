@@ -168,6 +168,29 @@ struct AssociateResponse {
     // etc
 };
 
+// MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1)
+
+struct DisassociateRequest {
+    array<uint8, 6> peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    uint16 reason_code;
+    // VendorSpecificInfo
+};
+
+// MLME-DISASSOCIATE.confirm (IEEE Std 802.11-2016, 6.3.9.2)
+
+struct DisassociateResponse {
+};
+
+// MLME-DISASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.9.3)
+
+struct DisassociateIndication {
+    array<uint8, 6> peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    uint16 reason_code;
+    // VendorSpecificInfo
+};
+
 // Method ordinals
 // To be replaced once FIDL interfaces are available for Go
 enum Method {
@@ -203,5 +226,17 @@ enum Method {
     // Args: AssociateResponse
     ASSOCIATE_confirm,
 
-    LAST = ASSOCIATE_confirm,
+    // MLME-DISASSOCIATE.request
+    // Args: DisassociateRequest
+    DISASSOCIATE_request,
+
+    // MLME-DISASSOCIATE.confirm
+    // Args: DisassociateResponse
+    DISASSOCIATE_confirm,
+
+    // MLME-DISASSOCIATE.indication
+    // Args: DisassociateIndication
+    DISASSOCIATE_indication,
+
+    LAST = DISASSOCIATE_indication,
 };
