@@ -1,0 +1,30 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+use_vulkan_loader = false
+
+group("vkext") {
+  deps = [ ":vk_ext_tiling" ]
+}
+
+executable("vk_ext_tiling") {
+  sources = [
+    "vk_ext_tiling.cc",
+  ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  if (use_vulkan_loader) {
+    public_deps += [ "$magma_build_root:vulkan" ]
+  } else {
+    public_deps += [
+      "$magma_build_root/tests/vulkan_shim",
+      "$mesa_build_root:magma_vulkan",
+    ]
+  }
+}

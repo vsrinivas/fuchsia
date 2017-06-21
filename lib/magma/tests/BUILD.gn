@@ -25,5 +25,6 @@ group("tests") {
     "vkcube",
     "vkreadback",
     "vkreadback:vk_import_export_readback",
+    "vkext",
   ]
 }

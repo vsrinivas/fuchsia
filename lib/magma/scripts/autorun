@@ -24,6 +24,7 @@ echo [==========]
 echo [APP START=]
 /system/test/vkreadback
 /system/test/vk_import_export_readback
+/system/test/vk_ext_tiling
 echo [APP END===]
 echo [==========]
 echo SKIPPED /system/test/magma_integration_tests --gtest_filter=*HangRecovery*Stress*
