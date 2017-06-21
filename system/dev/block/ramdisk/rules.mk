@@ -13,7 +13,6 @@ MODULE_SRCS := $(LOCAL_DIR)/ramdisk.c
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
-    system/ulib/block-client \
     system/ulib/mxcpp \
     system/ulib/mxtl
 
