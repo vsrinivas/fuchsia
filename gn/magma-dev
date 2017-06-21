@@ -40,6 +40,10 @@
             "bootfs_path": "test/vk_import_export_readback"
         },
         {
+            "binary": "vk_ext_tiling",
+            "bootfs_path": "test/vk_ext_tiling"
+        },
+        {
             "binary": "test_wsi_magma",
             "bootfs_path": "test/test_wsi_magma"
         },
