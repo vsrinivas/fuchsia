@@ -175,9 +175,6 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
       link_->Sync([flow] {});
     }
 
-    auto module_path = fidl::Array<fidl::String>::New(1);
-    module_path[0] = module_name_;
-
     new AddModuleCall(&operation_collection_, story_controller_impl_,
                       fidl::Array<fidl::String>::New(0), module_name_,
                       module_url_, link_name_, SurfaceRelation::New(), [flow] {});
