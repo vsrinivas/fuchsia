@@ -25,7 +25,7 @@ source_set("compiler") {
   ]
 }
 
-executable("fidl") {
+executable("fidl2") {
   sources = [
     "main.cpp",
   ]
