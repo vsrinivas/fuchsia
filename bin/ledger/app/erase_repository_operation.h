@@ -25,6 +25,7 @@ class EraseRepositoryOperation {
                            ledger::NetworkService* network_service,
                            std::string repository_path,
                            std::string server_id,
+                           std::string api_key,
                            modular::auth::TokenProviderPtr token_provider);
 
   EraseRepositoryOperation(EraseRepositoryOperation&& other);
@@ -38,6 +39,7 @@ class EraseRepositoryOperation {
   ledger::NetworkService* network_service_;
   std::string repository_path_;
   std::string server_id_;
+  std::string api_key_;
   std::unique_ptr<cloud_sync::AuthProvider> auth_provider_;
 
   std::function<void(bool)> on_done_;

@@ -16,10 +16,12 @@ EraseRepositoryOperation::EraseRepositoryOperation(
     ledger::NetworkService* network_service,
     std::string repository_path,
     std::string server_id,
+    std::string api_key,
     modular::auth::TokenProviderPtr token_provider)
     : network_service_(network_service),
       repository_path_(std::move(repository_path)),
-      server_id_(server_id) {
+      server_id_(server_id),
+      api_key_(std::move(api_key)) {
   token_provider.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "Lost connection to TokenProvider "
                    << "while trying to erase the repository";
@@ -27,7 +29,7 @@ EraseRepositoryOperation::EraseRepositoryOperation(
     on_done_(false);
   });
   auth_provider_ = std::make_unique<AuthProviderImpl>(
-      task_runner, std::move(token_provider));
+      task_runner, api_key_, std::move(token_provider));
 }
 
 EraseRepositoryOperation::EraseRepositoryOperation(

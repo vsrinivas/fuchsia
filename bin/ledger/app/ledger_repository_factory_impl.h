@@ -47,14 +47,14 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   // LedgerRepositoryFactory:
   void GetRepository(
       const fidl::String& repository_path,
-      const fidl::String& server_id,
+      FirebaseConfigPtr firebase_config,
       fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
 
   void EraseRepository(
       const fidl::String& repository_path,
-      const fidl::String& server_id,
+      FirebaseConfigPtr firebase_config,
       fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
       const EraseRepositoryCallback& callback) override;
 

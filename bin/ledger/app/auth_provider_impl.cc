@@ -13,8 +13,11 @@ namespace ledger {
 
 AuthProviderImpl::AuthProviderImpl(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
+    std::string api_key,
     modular::auth::TokenProviderPtr token_provider)
-    : task_runner_(task_runner), token_provider_(std::move(token_provider)) {}
+    : task_runner_(task_runner),
+      api_key_(std::move(api_key)),
+      token_provider_(std::move(token_provider)) {}
 
 ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
     std::function<void(std::string)> callback) {

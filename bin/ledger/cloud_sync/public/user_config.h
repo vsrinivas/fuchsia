@@ -15,7 +15,7 @@ namespace cloud_sync {
 // Sync configuration for a particular user.
 struct UserConfig {
   bool use_sync = false;
-  // ID of the firebase instance.
+  // ID of the Firebase instance.
   std::string server_id;
   // The id of the user.
   std::string user_id;

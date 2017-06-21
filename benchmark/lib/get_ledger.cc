@@ -39,9 +39,15 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
                           ledger_controller->NewRequest());
   }
   ledger::LedgerRepositoryPtr repository;
-  fidl::String fidl_server_id = sync ? fidl::String(server_id) : fidl::String();
+  ledger::FirebaseConfigPtr firebase_config;
+  if (sync) {
+    firebase_config = ledger::FirebaseConfig::New();
+    firebase_config->server_id = server_id;
+    firebase_config->api_key = "";
+  }
+
   repository_factory->GetRepository(
-      ledger_repository_path, std::move(fidl_server_id), nullptr,
+      ledger_repository_path, std::move(firebase_config), nullptr,
       repository.NewRequest(), QuitOnErrorCallback("GetRepository"));
 
   ledger::LedgerPtr ledger;

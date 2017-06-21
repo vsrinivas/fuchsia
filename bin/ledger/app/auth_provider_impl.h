@@ -5,8 +5,9 @@
 #ifndef APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
 #define APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
 
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
+#include <string>
 
+#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/ftl/tasks/task_runner.h"
 
@@ -19,6 +20,7 @@ namespace ledger {
 class AuthProviderImpl : public cloud_sync::AuthProvider {
  public:
   AuthProviderImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                   std::string api_key,
                    modular::auth::TokenProviderPtr token_provider);
 
   // AuthProvider:
@@ -29,6 +31,7 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  const std::string api_key_;
   modular::auth::TokenProviderPtr token_provider_;
 };
 

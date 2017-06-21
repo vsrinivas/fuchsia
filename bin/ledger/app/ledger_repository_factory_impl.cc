@@ -28,11 +28,11 @@ ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
   return repository_path.substr(separator + 1);
 }
 
-cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
+cloud_sync::UserConfig GetUserConfig(const FirebaseConfigPtr& firebase_config,
                                      ftl::StringView user_id,
                                      ftl::StringView user_directory,
                                      cloud_sync::AuthProvider* auth_provider) {
-  if (!server_id || server_id.size() == 0) {
+  if (!firebase_config) {
     cloud_sync::UserConfig user_config;
     user_config.use_sync = false;
     return user_config;
@@ -40,7 +40,7 @@ cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
 
   cloud_sync::UserConfig user_config;
   user_config.use_sync = true;
-  user_config.server_id = server_id.get();
+  user_config.server_id = firebase_config->server_id.get();
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
   user_config.auth_provider = auth_provider;
@@ -196,7 +196,7 @@ LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
 void LedgerRepositoryFactoryImpl::GetRepository(
     const fidl::String& repository_path,
-    const fidl::String& server_id,
+    FirebaseConfigPtr firebase_config,
     fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
@@ -222,7 +222,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     });
   }
   auto auth_provider = std::make_unique<AuthProviderImpl>(
-      environment_->main_runner(), std::move(token_provider_ptr));
+      environment_->main_runner(), firebase_config->api_key,
+      std::move(token_provider_ptr));
   cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
 
   auto ret = repositories_.emplace(
@@ -233,13 +234,13 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 
   auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
     this, sanitized_path = std::move(sanitized_path),
-    server_id = server_id.get(), auth_provider_ptr, container
+    firebase_config = std::move(firebase_config), auth_provider_ptr, container
   ](std::string user_id) {
     if (user_id.empty()) {
       user_id = GetStorageDirectoryName(sanitized_path).ToString();
     }
-    cloud_sync::UserConfig user_config =
-        GetUserConfig(server_id, user_id, sanitized_path, auth_provider_ptr);
+    cloud_sync::UserConfig user_config = GetUserConfig(
+        firebase_config, user_id, sanitized_path, auth_provider_ptr);
     CreateRepository(container, std::move(sanitized_path),
                      std::move(user_config));
 
@@ -248,7 +249,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 
 void LedgerRepositoryFactoryImpl::EraseRepository(
     const fidl::String& repository_path,
-    const fidl::String& server_id,
+    FirebaseConfigPtr firebase_config,
     fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
     const EraseRepositoryCallback& callback) {
   std::string sanitized_path =
@@ -260,14 +261,26 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     repositories_.erase(find_repository);
   }
 
+  if (!firebase_config || !token_provider) {
+    // No sync configuration passed, only delete the local state.
+    if (!files::DeletePath(sanitized_path, true)) {
+      FTL_LOG(ERROR) << "Unable to delete repository local storage at "
+                     << sanitized_path;
+      callback(Status::IO_ERROR);
+      return;
+    }
+    callback(Status::OK);
+    return;
+  }
+
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
 
   delegate_->EraseRepository(
-      EraseRepositoryOperation(environment_->main_runner(),
-                               environment_->network_service(),
-                               std::move(sanitized_path), server_id.get(),
-                               std::move(token_provider_ptr)),
+      EraseRepositoryOperation(
+          environment_->main_runner(), environment_->network_service(),
+          std::move(sanitized_path), firebase_config->server_id,
+          firebase_config->api_key, std::move(token_provider_ptr)),
       [callback = std::move(callback)](bool succeeded) {
         if (succeeded) {
           callback(Status::OK);
