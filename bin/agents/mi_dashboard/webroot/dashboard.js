@@ -251,8 +251,10 @@ function updateOverview(context) {
         setStoryVisible(false, oldFocusedStoryElems);
       }
       var newFocusedStoryId = JSON.parse(rawValue);
-      var newFocusedStoryElems = getOrCreateStoryOverviewElements(newFocusedStoryId);
-      setStoryVisible(true, newFocusedStoryElems);
+      if (newFocusedStoryId != null) {
+        var newFocusedStoryElems = getOrCreateStoryOverviewElements(newFocusedStoryId);
+        setStoryVisible(true, newFocusedStoryElems);
+      }
       _focusedStoryId = newFocusedStoryId;
     } else if (topic == '/suggestion_engine/current_query') {
       var query = rawValue;
