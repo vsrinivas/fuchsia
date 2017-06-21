@@ -17,8 +17,10 @@
 
 #define SRC_PORT 5004
 #define DST_PORT 5005
+
 #define BUFSIZE 2048
 #define BUFS 256
+
 #define RX_FIFO 0
 #define TX_FIFO 1
 
@@ -49,12 +51,14 @@ void flip_src_dst(void* packet) {
     ip6_addr_t src_ip = ip->src;
     ip->src = ip->dst;
     ip->dst = src_ip;
+    ip->next_header = HDR_UDP;
 
     udp_hdr_t* udp = packet + ETH_HDR_LEN + IP6_HDR_LEN;
     uint16_t src_port = udp->src_port;
     udp->src_port = udp->dst_port;
     udp->dst_port = src_port;
-    udp->checksum = ip6_checksum(ip, HDR_UDP, htons(udp->length));
+    udp->checksum = 0;
+    udp->checksum = ip6_checksum(ip, HDR_UDP, ntohs(ip->length));
 }
 
 void send_pending_tx(mx_handle_t tx_fifo) {
@@ -79,7 +83,39 @@ void tx_complete(eth_fifo_entry_t* e) {
     }
 }
 
-void reflect_packet(char* iobuf, mx_handle_t rx_fifo, eth_fifo_entry_t* e) {
+mx_status_t acquire_tx_buffer(eth_buf_t** out) {
+    if (avail_tx_buffers == NULL) {
+        fprintf(stderr, "netreflector: no tx buffers available.\n");
+        return MX_ERR_SHOULD_WAIT;
+    }
+    *out = avail_tx_buffers;
+    avail_tx_buffers = avail_tx_buffers->next;
+    return MX_OK;
+}
+
+void queue_tx_buffer(eth_buf_t* tx) {
+    tx->next = pending_tx;
+    pending_tx = tx;
+}
+
+mx_status_t reflect_packet(char* iobuf, eth_fifo_entry_t* e) {
+    eth_buf_t* tx;
+    mx_status_t status;
+    if ((status = acquire_tx_buffer(&tx)) != MX_OK) {
+        return status;
+    }
+    tx->e->length = e->length;
+
+    void* in_pkt = iobuf + e->offset;
+    void* out_pkt = iobuf + tx->e->offset;
+    memcpy(out_pkt, in_pkt, tx->e->length);
+    flip_src_dst(out_pkt);
+
+    queue_tx_buffer(tx);
+    return MX_OK;
+}
+
+void rx_complete(char* iobuf, mx_handle_t rx_fifo, eth_fifo_entry_t* e) {
     if (!(e->flags & ETH_FIFO_RX_OK)) {
         return;
     }
@@ -93,22 +129,7 @@ void reflect_packet(char* iobuf, mx_handle_t rx_fifo, eth_fifo_entry_t* e) {
     if (ntohs(udp->dst_port) != DST_PORT || ntohs(udp->src_port) != SRC_PORT) {
         goto queue;
     }
-
-    // Acquire buffer, flip source and destination, and schedule packet delivery.
-    if (avail_tx_buffers == NULL) {
-        fprintf(stderr, "netreflector: no tx buffers available.\n");
-        goto queue;
-    }
-    eth_buf_t* tx = avail_tx_buffers;
-    avail_tx_buffers = avail_tx_buffers->next;
-    tx->e->length = e->length;
-
-    void* out_pkt = iobuf + tx->e->offset;
-    memcpy(out_pkt, in_pkt, tx->e->length);
-    flip_src_dst(out_pkt);
-
-    tx->next = pending_tx;
-    pending_tx = tx;
+    reflect_packet(iobuf, e);
 
 queue:
     e->length = BUFSIZE;
@@ -154,7 +175,7 @@ void handle(char* iobuf, eth_fifos_t* fifos) {
                 break;
             case RX_FIFO:
                 for (uint32_t i = 0; i < n; i++, e++) {
-                    reflect_packet(iobuf, fifos->rx_fifo, e);
+                    rx_complete(iobuf, fifos->rx_fifo, e);
                 }
                 break;
             default:
@@ -162,7 +183,6 @@ void handle(char* iobuf, eth_fifos_t* fifos) {
                 break;
             }
         }
-
         send_pending_tx(fifos->tx_fifo);
     }
 }
@@ -188,10 +208,10 @@ int main(int argc, char** argv) {
         return r;
     }
 
-    unsigned count = BUFS * 2;
-    mx_handle_t iovmo;
     // Allocate shareable ethernet buffer data heap. The first BUFS entries represent rx buffers,
     // followed by BUFS entries representing tx buffers.
+    unsigned count = BUFS * 2;
+    mx_handle_t iovmo;
     if ((status = mx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
         return -1;
     }
@@ -253,6 +273,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "netreflector: failed binding port to tx fifo %d\n", status);
         return -1;
     }
+
     handle(iobuf, &fifos);
 
     return 0;
