@@ -288,40 +288,38 @@ exit:
     return status;
 }
 
-
-mx_status_t mini_process_cmd(mx_handle_t cntrl_channel, uint32_t what, mx_handle_t* handle) {
-    // We know that the process replies with the same |cmd.what| so we
-    // can use the fancier channel_call() rather than wait + read.
-
+mx_status_t mini_process_cmd_send(mx_handle_t cntrl_channel, uint32_t what) {
     minip_cmd_t cmd = {
         .what = what,
         .status = MX_OK
     };
 
-    mx_channel_call_args_t call_args = {
-        .wr_bytes = &cmd,
-        .wr_handles = NULL,
-        .rd_bytes = &cmd,
-        .rd_handles = handle,
-        .wr_num_bytes = sizeof(minip_cmd_t),
-        .wr_num_handles = 0u,
-        .rd_num_bytes = sizeof(minip_cmd_t),
-        .rd_num_handles = handle ? 1u : 0u
-    };
+    return mx_channel_write(cntrl_channel, 0, &cmd, sizeof(cmd), NULL, 0);
+}
 
-    uint32_t actual_bytes = 0u;
-    uint32_t actual_handles = 0u;
-    mx_status_t read_status = MX_OK;
-
-    mx_status_t status = mx_channel_call(cntrl_channel,
-        0u, MX_TIME_INFINITE, &call_args, &actual_bytes, &actual_handles, &read_status);
-
-    if (status == MX_ERR_CALL_FAILED)
-        return read_status;
-    else if (status != MX_OK)
+mx_status_t mini_process_cmd_read_reply(mx_handle_t cntrl_channel,
+                                        mx_handle_t* handle) {
+    mx_status_t status = mx_object_wait_one(
+        cntrl_channel, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+        MX_TIME_INFINITE, NULL);
+    if (status != MX_OK)
         return status;
-    // Message received. Return the status of the remote operation.
-    return cmd.status;
+    minip_cmd_t reply;
+    uint32_t handle_count = handle ? 1 : 0;
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handles = 0;
+    status = mx_channel_read(cntrl_channel, 0, &reply, handle, sizeof(reply),
+                             handle_count, &actual_bytes, &actual_handles);
+    if (status != MX_OK)
+        return status;
+    return reply.status;
+}
+
+mx_status_t mini_process_cmd(mx_handle_t cntrl_channel, uint32_t what, mx_handle_t* handle) {
+    mx_status_t status = mini_process_cmd_send(cntrl_channel, what);
+    if (status != MX_OK)
+        return status;
+    return mini_process_cmd_read_reply(cntrl_channel, handle);
 }
 
 mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,

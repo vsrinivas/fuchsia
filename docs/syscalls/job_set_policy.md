@@ -74,7 +74,9 @@ Where *policy* is either
 + **MX_POL_ACTION_DENY**  prevent *condition*.
 
 Optionally it can be augmented via OR with
-+ **MX_POL_ACTION_ALARM** generate an alarm packet via the job.
++ **MX_POL_ACTION_EXCEPTION** generate an exception via the debug port. An
+  exception generated this way acts as a breakpoint. The thread may be
+  resumed after the exception.
 + **MX_POL_ACTION_KILL** terminate the process. It also
 implies **MX_POL_ACTION_DENY**.
 

@@ -16,7 +16,7 @@ namespace {
 //
 // - When the top bit is 1, the lower 3 bits track the action:
 //    0 : MX_POL_ACTION_ALLOW or not (MX_POL_ACTION_DENY)
-//    1 : MX_POL_ACTION_ALARM or not not
+//    1 : MX_POL_ACTION_EXCEPTION or not
 //    2 : MX_POL_ACTION_KILL or not
 //
 // - When the top bit is 0 then its the default policy and other bits
@@ -53,7 +53,7 @@ union Encoding {
 }  // namespace
 
 constexpr uint32_t kPolicyActionValidBits =
-    MX_POL_ACTION_ALLOW | MX_POL_ACTION_DENY | MX_POL_ACTION_ALARM | MX_POL_ACTION_KILL;
+    MX_POL_ACTION_ALLOW | MX_POL_ACTION_DENY | MX_POL_ACTION_EXCEPTION | MX_POL_ACTION_KILL;
 
 // The packing of bits on a bitset (above) is defined by the standard as
 // implementation dependent so we must check that it is using the storage

@@ -79,7 +79,7 @@ static bool policy_basic_test(void) {
 
     mx_policy_basic_t policy[] = {
         { MX_POL_BAD_HANDLE, MX_POL_ACTION_KILL },
-        { MX_POL_NEW_CHANNEL, MX_POL_ACTION_ALLOW | MX_POL_ACTION_ALARM },
+        { MX_POL_NEW_CHANNEL, MX_POL_ACTION_ALLOW | MX_POL_ACTION_EXCEPTION },
         { MX_POL_NEW_FIFO, MX_POL_ACTION_DENY },
     };
 

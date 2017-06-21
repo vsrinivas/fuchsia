@@ -38,6 +38,7 @@
 
 #if WITH_LIB_MAGENTA
 #include <magenta/c_user_thread.h>
+#include <magenta/exception.h>
 #endif
 
 #define STACK_DEBUG_BYTE (0x99)
@@ -364,6 +365,20 @@ status_t thread_suspend(thread_t *t)
     return MX_OK;
 }
 
+/* Signal an exception on the current thread, to be handled when the
+ * current syscall exits.  Unlike other signals, this is synchronous, in
+ * the sense that a thread signals itself.  This exists primarily so that
+ * we can unwind the stack in order to get the state of userland's
+ * callee-saved registers at the point where userland invoked the
+ * syscall. */
+void thread_signal_exception(void)
+{
+    thread_t* t = get_current_thread();
+    THREAD_LOCK(state);
+    t->signals |= THREAD_SIGNAL_EXCEPTION;
+    THREAD_UNLOCK(state);
+}
+
 status_t thread_join(thread_t *t, int *retcode, lk_time_t deadline)
 {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -677,6 +692,20 @@ void thread_process_pending_signals(void)
     THREAD_LOCK(state);
 
     check_kill_signal(current_thread, state);
+
+    /* Report exceptions raised by syscalls */
+    if (current_thread->signals & THREAD_SIGNAL_EXCEPTION) {
+        current_thread->signals &= ~THREAD_SIGNAL_EXCEPTION;
+        THREAD_UNLOCK(state);
+#if WITH_LIB_MAGENTA
+        mx_status_t status = magenta_report_syscall_exception();
+        if (status != MX_OK) {
+            panic("magenta_report_syscall_exception() failed: status=%d\n",
+                  status);
+        }
+#endif
+        return;
+    }
 
     if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
         /* transition the thread to the suspended state */

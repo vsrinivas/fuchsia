@@ -27,7 +27,7 @@ constexpr pol_cookie_t kPolicyEmpty = 0u;
 //   mx_policy_basic in_policy[] = {
 //      { MX_BAD_HANDLE_POLICY, MX_POL_TERMINATE },
 //      { MX_CREATION_POLICY, MX_POL_CHANNEL_ALLOW },
-//      { MX_CREATION_POLICY, MX_POL_FIFO_ALLOW | MX_POL_GENERATE_ALARM },
+//      { MX_CREATION_POLICY, MX_POL_FIFO_ALLOW | MX_POL_ACTION_EXCEPTION },
 //      { MX_VMAR_MAP_POLICY, MX_POL_WX_MAP_DENY | MX_POL_TERMINATE }}
 //
 //  Which is 64 bytes but PolicyManager can encode it in the pol_cookie_t
@@ -60,10 +60,11 @@ public:
     // by |policy| (created using AddPolicy()).
     //
     // If the condition is allowed, returns MX_POL_ACTION_ALLOW,
-    // optionally ORed with MX_POL_ACTION_ALARM according to the policy.
+    // optionally ORed with MX_POL_ACTION_EXCEPTION according to the
+    // policy.
     //
     // If the condition is not allowed, returns MX_POL_ACTION_DENY,
-    // optionally ORed with zero or more of MX_POL_ACTION_ALARM and
+    // optionally ORed with zero or more of MX_POL_ACTION_EXCEPTION and
     // MX_POL_ACTION_KILL.
     //
     // This method asserts if |policy| is invalid, and returns

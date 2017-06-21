@@ -51,4 +51,12 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
 mx_status_t mini_process_cmd(mx_handle_t cntrl_channel,
                              uint32_t what, mx_handle_t* handle);
 
+// The following pair of functions is equivalent to mini_process_cmd(), but
+// they allow sending the request and receiving the reply to be done
+// separately.  This allows handling the case where the mini process gets
+// suspended as a result of executing the command.
+mx_status_t mini_process_cmd_send(mx_handle_t cntrl_channel, uint32_t what);
+mx_status_t mini_process_cmd_read_reply(mx_handle_t cntrl_channel,
+                                        mx_handle_t* handle);
+
 __END_CDECLS

@@ -437,4 +437,15 @@ void arch_fill_in_suspension_context(mx_exception_report_t *report)
     mx_context->arch_id = ARCH_ID_ARM_64;
 }
 
+status_t magenta_report_syscall_exception(void)
+{
+    struct arm64_iframe_long frame = {};
+    arch_exception_context_t context = {};
+    context.frame = &frame;
+    // TODO(mseaborn): Implement reporting the pc register value.
+    mx_vaddr_t pc_register_value = 0;
+    return magenta_exception_handler(MX_EXCP_GENERAL, &context,
+                                     pc_register_value);
+}
+
 #endif

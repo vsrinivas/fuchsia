@@ -731,10 +731,8 @@ mx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
 
 mx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
     auto action = GetSystemPolicyManager()->QueryBasicPolicy(policy_, condition);
-    if (action & MX_POL_ACTION_ALARM) {
-        // TODO(cpu): Generate Port packet. Probably need to call up to the
-        // parent job for the actual port.
-        action &= ~MX_POL_ACTION_ALARM;
+    if (action & MX_POL_ACTION_EXCEPTION) {
+        thread_signal_exception();
     }
     // TODO(cpu): check for the MX_POL_KILL bit and return an error code
     // that sysgen understands as termination.

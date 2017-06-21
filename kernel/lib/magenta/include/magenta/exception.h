@@ -19,6 +19,10 @@ status_t magenta_exception_handler(uint exception_type,
                                    struct arch_exception_context* context,
                                    mx_vaddr_t ip);
 
+// This reports an exception that was raised by a syscall using
+// thread_signal_exception().
+status_t magenta_report_syscall_exception(void);
+
 // arch code must implement this to dump the architecturally specific state they passed to magenta_exception_handler
 void arch_dump_exception_context(const arch_exception_context_t *);
 
