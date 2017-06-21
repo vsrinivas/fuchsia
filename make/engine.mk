@@ -693,7 +693,7 @@ install: all
 
 # generate a config-global.h file with all of the GLOBAL_DEFINES laid out in #define format
 $(GLOBAL_CONFIG_HEADER): FORCE
-	@$(call MAKECONFIGHEADER,$@,GLOBAL_DEFINES,"")
+	@$(call MAKECONFIGHEADER,$@,GLOBAL_DEFINES,"#define __Fuchsia__ 1")
 
 # generate a config-kernel.h file with all of the KERNEL_DEFINES laid out in #define format
 $(KERNEL_CONFIG_HEADER): FORCE
@@ -701,7 +701,7 @@ $(KERNEL_CONFIG_HEADER): FORCE
 
 # generate a config-user.h file with all of the USER_DEFINES laid out in #define format
 $(USER_CONFIG_HEADER): FORCE
-	@$(call MAKECONFIGHEADER,$@,USER_DEFINES,"#define __Fuchsia__ 1")
+	@$(call MAKECONFIGHEADER,$@,USER_DEFINES,"")
 
 $(HOST_CONFIG_HEADER): FORCE
 	@$(call MAKECONFIGHEADER,$@,HOST_DEFINES,"")
