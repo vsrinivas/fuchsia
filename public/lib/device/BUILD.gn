@@ -17,9 +17,3 @@ fidl("device") {
     "//apps/mozart/services/views",
   ]
 }
-
-fidl("info") {
-  sources = [
-    "device_info.fidl",
-  ]
-}
