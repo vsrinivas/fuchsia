@@ -168,6 +168,8 @@ void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
               << "Unrecognized IdentityProvider" << user->identity_provider();
       }
       account->display_name = user->display_name()->str();
+      account->url = user->profile_url()->str();
+      account->image_url = user->image_url()->str();
       accounts.push_back(std::move(account));
     }
   }
@@ -198,7 +200,9 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
                 builder, builder.CreateString(user->id()),
                 user->identity_provider(),
                 builder.CreateString(user->display_name()),
-                builder.CreateString(user->server_name())));
+                builder.CreateString(user->server_name()),
+                builder.CreateString(user->profile_url()),
+                builder.CreateString(user->image_url())));
           }
         }
 
@@ -219,7 +223,9 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
             builder, builder.CreateString(account->id),
             flatbuffer_identity_provider,
             builder.CreateString(account->display_name),
-            builder.CreateString(std::move(servername))));
+            builder.CreateString(std::move(servername)),
+            builder.CreateString(account->url),
+            builder.CreateString(account->image_url)));
 
         builder.Finish(modular::CreateUsersStorage(
             builder, builder.CreateVector(std::move(users))));
@@ -258,7 +264,9 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
     users.push_back(modular::CreateUserStorage(
         builder, builder.CreateString(user->id()), user->identity_provider(),
         builder.CreateString(user->display_name()),
-        builder.CreateString(user->server_name())));
+        builder.CreateString(user->server_name()),
+        builder.CreateString(user->profile_url()),
+        builder.CreateString(user->image_url())));
   }
 
   builder.Finish(modular::CreateUsersStorage(
