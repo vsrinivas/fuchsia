@@ -392,7 +392,49 @@ func (c *Client) doRun() error {
 		log.Printf("doRun")
 	}
 
-	time.Sleep(5 * time.Second)
+	obs, err := c.wlanChan.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+
+	switch mxerror.Status(err) {
+	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		return fmt.Errorf("error waiting on handle: %v", err)
+	case mx.ErrOk:
+		switch {
+		case obs&mx.SignalChannelPeerClosed != 0:
+			c.state = StateStopped
+			return fmt.Errorf("channel closed")
+
+		case obs&MX_SOCKET_READABLE != 0:
+			var buf [4096]byte
+			if _, _, err := c.wlanChan.Read(buf[:], nil, 0); err != nil {
+				c.state = StateStopped
+				return fmt.Errorf("error reading from channel: %v", err)
+			}
+
+			dec := bindings.NewDecoder(buf[:], nil)
+			var header APIHeader
+			if err := header.Decode(dec); err != nil {
+				return fmt.Errorf("could not decode api header: %v", err)
+			}
+			switch header.ordinal {
+			case int32(mlme.Method_DisassociateIndication):
+				var resp mlme.DisassociateIndication
+				if err := resp.Decode(dec); err != nil {
+					c.state = StateAssociating
+					// TODO(tkilbourn): wait the appropriate amount of time before attempting to reassociate
+					return fmt.Errorf("could not decode DisassociateIndication: %v (disassociating anyway)", err)
+				}
+				if debug {
+					PrintDisassociateIndication(&resp)
+				}
+				c.state = StateAssociating
+			default:
+				if debug {
+					log.Printf("unknown message ordinal: %v", header.ordinal)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

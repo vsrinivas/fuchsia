@@ -181,3 +181,9 @@ func PrintAssociateResponse(resp *mlme.AssociateResponse) {
 	log.Print("  Result code: ", resCode)
 	log.Print("  Association ID: ", resp.AssociationId)
 }
+
+func PrintDisassociateIndication(ind *mlme.DisassociateIndication) {
+	log.Print("DisassociateIndication")
+	// TODO(tkilbourn): map reason codes to strings
+	log.Print("  Reason code: ", ind.ReasonCode)
+}
