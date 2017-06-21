@@ -11,7 +11,6 @@ endif
 
 MODULE_HOSTLIB := $(call TOBUILDDIR,tools/lib/lib$(MODULE_NAME).a)
 
-$(MODULE_HOSTLIB): _OBJS := $(MODULE_OBJS)
 $(MODULE_HOSTLIB): $(MODULE_OBJS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking hostlib $@)
