@@ -83,7 +83,12 @@ class StoryWatcherImpl : public modular::StoryWatcher {
  private:
   // |StoryWatcher|
   void OnStateChange(modular::StoryState new_state) override {
-    // Handled in StoryInfoAcquirer::OnChange()
+    // TODO(jwnichols): Choose between recording the state here vs. the StoryProviderWatcher
+    // once the bug in StoryProviderWatcher is fixed.
+    std::string state_text = StoryStateToString(new_state);
+    std::string state_json;
+    modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);
+    publisher_->Publish(CreateKey(story_id_, "state"), state_json);
   }
 
   // |StoryWatcher|
@@ -201,6 +206,8 @@ void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
   std::string url_json;
   modular::XdrWrite(&url_json, &info->url, modular::XdrFilter<fidl::String>);
   context_publisher_->Publish(CreateKey(id, "url"), url_json);
+  // TODO(jwnichols): Choose between recording the state here vs. the StoryWatcher
+  // once the bug in StoryProviderWatcher is fixed.
   std::string state_text = StoryStateToString(state);
   std::string state_json;
   modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);
