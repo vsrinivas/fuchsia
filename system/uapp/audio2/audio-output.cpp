@@ -109,10 +109,16 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
             started = true;
         }
 
-        res = rb_ch_.wait_one(MX_CHANNEL_READABLE, MX_TIME_INFINITE, &sigs);
+        res = rb_ch_.wait_one(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                              MX_TIME_INFINITE, &sigs);
 
         if (res != MX_OK) {
             printf("Failed to wait for notificiation (res %d)\n", res);
+            break;
+        }
+
+        if (sigs & MX_CHANNEL_PEER_CLOSED) {
+            printf("Peer closed connection during playback!\n");
             break;
         }
 

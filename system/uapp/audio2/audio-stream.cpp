@@ -321,9 +321,21 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
                 break;
 
             mx_time_t next_wake = mxtl::min(deadline, now + MX_MSEC(100u));
-            mx_nanosleep(next_wake);
 
-            mx_status_t res = GetPlugState(&resp, true);
+            mx_signals_t sigs;
+            mx_status_t res = stream_ch_.wait_one(MX_CHANNEL_PEER_CLOSED, next_wake, &sigs);
+
+            if ((res != MX_OK) && (res != MX_ERR_TIMED_OUT)) {
+                printf("Error waiting on stream channel (res %d)\n", res);
+                break;
+            }
+
+            if (sigs & MX_CHANNEL_PEER_CLOSED) {
+                printf("Peer closed connection while polling plug state\n");
+                break;
+            }
+
+            res = GetPlugState(&resp, true);
             if (res != MX_OK) {
                 printf("Failed to poll plug state (res %d)\n", res);
                 break;
