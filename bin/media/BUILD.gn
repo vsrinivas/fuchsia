@@ -6,17 +6,24 @@ group("media") {
   deps = [
     ":examples",
     ":services",
+    ":tools",
   ]
 }
 
 group("services") {
   deps = [
-    "//apps/media/src/audio_policy_service:audio_policy_service",
-    "//apps/media/src/audio_server:audio_server",
-    "//apps/media/src/flog_service:flog_service",
-    "//apps/media/src/media_service:media_service",
-    "//apps/media/src/net_media_service:net_media_service",
-    "//apps/media/tools/flog_viewer:flog_viewer",
+    "//apps/media/src/audio_policy_service",
+    "//apps/media/src/audio_server",
+    "//apps/media/src/flog_service",
+    "//apps/media/src/media_service",
+    "//apps/media/src/net_media_service",
+  ]
+}
+
+group("tools") {
+  deps = [
+    "//apps/media/tools/vol",
+    "//apps/media/tools/flog_viewer",
   ]
 }
 
