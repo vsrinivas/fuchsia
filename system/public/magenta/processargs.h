@@ -193,6 +193,10 @@ struct mx_loader_svc_msg {
 // arg=0, data[] sink name (asciiz)
 // Request includes a VMO handle.
 
+#define LOADER_SVC_OP_LOAD_DEBUG_CONFIG 6
+// arg=0, data[] configuration (file) name (asciiz)
+// reply includes vmo handle on success
+
 
 // --- Compatibility Defines ---
 // TODO: remove once Fuchsia deps are resolved

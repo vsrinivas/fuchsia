@@ -76,10 +76,14 @@ static mx_handle_t default_load_object(void* ignored,
         }
         break;
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
-        // When loading a script interpreter, we expect an absolute path.
+    case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
+        // When loading a script interpreter or debug configuration file,
+        // we expect an absolute path.
         if (fn[0] != '/') {
-            fprintf(stderr, "dlsvc: invalid script interpreter '%s' is "
-                    "not an absolute path\n", fn);
+            fprintf(stderr, "dlsvc: invalid %s '%s' is not an absolute path\n",
+                    load_op == LOADER_SVC_OP_LOAD_SCRIPT_INTERP ?
+                    "script interpreter" : "debug config file",
+                    fn);
             return MX_ERR_NOT_FOUND;
         }
         int fd = open(fn, O_RDONLY);
@@ -140,6 +144,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
     switch (msg->opcode) {
     case LOADER_SVC_OP_LOAD_OBJECT:
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+    case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
         // TODO(MG-491): Use a threadpool for loading, and guard against
         // other starvation attacks.

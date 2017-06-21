@@ -2169,3 +2169,19 @@ void __sanitizer_publish_data(const char* sink_name, mx_handle_t vmo) {
     }
     pthread_rwlock_unlock(&lock);
 }
+
+// ... and to get configuration files for them.
+mx_status_t __sanitizer_get_configuration(const char* name,
+                                          mx_handle_t *out_vmo) {
+    pthread_rwlock_rdlock(&lock);
+    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
+                                        name, strlen(name),
+                                        MX_HANDLE_INVALID, out_vmo);
+    if (status != MX_OK) {
+        // TODO(mcgrathr): Send this whereever sanitizer logging goes.
+        debugmsg("Failed to get configuration file \"%s\" (%s): %s\n",
+                 name, _mx_status_get_string(status), dlerror());
+    }
+    pthread_rwlock_unlock(&lock);
+    return status;
+}

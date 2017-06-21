@@ -58,6 +58,14 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void);
 // memory protocol between producer and consumer.
 void __sanitizer_publish_data(const char* sink_name, mx_handle_t vmo);
 
+// Runtimes that want to read configuration files use this interface.
+// The name is a string from the user (something akin to a file name
+// but not necessarily actually a file name); the string is not used
+// after this call returns.  On success, this yields a read-only VMO
+// handle from which the contents associated with that name can be
+// read; the caller is responsible for closing this handle.
+mx_status_t __sanitizer_get_configuration(const char* config_name,
+                                          mx_handle_t* out_vmo);
 
 // The "hook" interfaces are functions that the sanitizer runtime library
 // can define and libc will call.  There are default definitions in libc
