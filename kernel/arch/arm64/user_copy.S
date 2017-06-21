@@ -32,7 +32,7 @@ FUNCTION(_arm64_copy_from_user)
     # Reset data fault return
     str xzr, [x3]
     ret
-END(_arm64_copy_from_user)
+END_FUNCTION(_arm64_copy_from_user)
 
 # status_t _arm64_copy_to_user(void *dst, const void *src, size_t len, void **fault_return)
 FUNCTION(_arm64_copy_to_user)
@@ -59,5 +59,5 @@ FUNCTION(_arm64_copy_to_user)
     # Reset data fault return
     str xzr, [x3]
     ret
-END(_arm64_copy_to_user)
+END_FUNCTION(_arm64_copy_to_user)
 

@@ -18,4 +18,4 @@ FUNCTION(memcpy)
 
 .Lret:
     ret
-END(memcpy)
+END_FUNCTION(memcpy)

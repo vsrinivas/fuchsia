@@ -100,7 +100,7 @@ secondary_spin:
     // Follow the new cpu vector.
     br  tmp
 
-END(bcm28xx_park_cpu)
+END_FUNCTION(bcm28xx_park_cpu)
 
 /* This .ltorg emits any immediate constants here. We need to put this before
  * the bcm28xx_park_cpu_end symbol because we intend to relocate the assembly

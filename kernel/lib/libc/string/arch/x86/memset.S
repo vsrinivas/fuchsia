@@ -19,4 +19,4 @@ FUNCTION(memset)
 
     mov %r11, %rax
     ret
-END(memset)
+END_FUNCTION(memset)

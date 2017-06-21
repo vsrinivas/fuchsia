@@ -90,7 +90,7 @@ DATA(_gdt)
     .int   0x00000000       /* reserved/sbz */
 .endr
 
-END(_gdt)
+END_DATA(_gdt)
 
 DATA(_gdt_end)
 

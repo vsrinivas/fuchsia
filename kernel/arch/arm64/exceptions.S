@@ -150,33 +150,33 @@ FUNCTION(arm64_exception_base)
 /* exceptions from current EL, using SP0 */
 LOCAL_FUNCTION(arm64_sync_exc_current_el_SP0)
     invalid_exception 0
-END(arm64_sync_exc_current_el_SP0)
+END_FUNCTION(arm64_sync_exc_current_el_SP0)
 
 .org 0x080
 LOCAL_FUNCTION(arm64_irq_current_el_SP0)
     invalid_exception 1
-END(arm64_irq_current_el_SP0)
+END_FUNCTION(arm64_irq_current_el_SP0)
 
 .org 0x100
 LOCAL_FUNCTION(arm64_fiq_current_el_SP0)
     invalid_exception 2
-END(arm64_fiq_current_el_SP0)
+END_FUNCTION(arm64_fiq_current_el_SP0)
 
 .org 0x180
 LOCAL_FUNCTION(arm64_err_exc_current_el_SP0)
     invalid_exception 3
-END(arm64_err_exc_current_el_SP0)
+END_FUNCTION(arm64_err_exc_current_el_SP0)
 
 /* exceptions from current EL, using SPx */
 .org 0x200
 LOCAL_FUNCTION(arm64_sync_exc_current_el_SPx)
     sync_exception #0 /* same EL, arm64 */
-END(arm64_sync_exc_current_el_SPx)
+END_FUNCTION(arm64_sync_exc_current_el_SPx)
 
 .org 0x280
 LOCAL_FUNCTION(arm64_irq_current_el_SPx)
     irq_exception #0 /* same EL, arm64 */
-END(arm64_irq_current_el_SPx)
+END_FUNCTION(arm64_irq_current_el_SPx)
 
 .org 0x300
 LOCAL_FUNCTION(arm64_fiq_current_el_SPx)
@@ -184,23 +184,23 @@ LOCAL_FUNCTION(arm64_fiq_current_el_SPx)
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore_short
-END(arm64_fiq_current_el_SPx)
+END_FUNCTION(arm64_fiq_current_el_SPx)
 
 .org 0x380
 LOCAL_FUNCTION(arm64_err_exc_current_el_SPx)
     invalid_exception 0x13
-END(arm64_err_exc_current_el_SPx)
+END_FUNCTION(arm64_err_exc_current_el_SPx)
 
 /* exceptions from lower EL, running arm64 */
 .org 0x400
 LOCAL_FUNCTION(arm64_sync_exc_lower_el_64)
     sync_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL)
-END(arm64_sync_exc_lower_el_64)
+END_FUNCTION(arm64_sync_exc_lower_el_64)
 
 .org 0x480
 LOCAL_FUNCTION(arm64_irq_lower_el_64)
     irq_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL)
-END(arm64_irq_lower_el_64)
+END_FUNCTION(arm64_irq_lower_el_64)
 
 .org 0x500
 LOCAL_FUNCTION(arm64_fiq_lower_el_64)
@@ -208,23 +208,23 @@ LOCAL_FUNCTION(arm64_fiq_lower_el_64)
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore_short
-END(arm64_fiq_lower_el_64)
+END_FUNCTION(arm64_fiq_lower_el_64)
 
 .org 0x580
 LOCAL_FUNCTION(arm64_err_exc_lower_el_64)
     invalid_exception 0x23
-END(arm64_err_exc_lower_el_64)
+END_FUNCTION(arm64_err_exc_lower_el_64)
 
 /* exceptions from lower EL, running arm32 */
 .org 0x600
 LOCAL_FUNCTION(arm64_sync_exc_lower_el_32)
     sync_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
-END(arm64_sync_exc_lower_el_32)
+END_FUNCTION(arm64_sync_exc_lower_el_32)
 
 .org 0x680
 LOCAL_FUNCTION(arm64_irq_lower_el_32)
     irq_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
-END(arm64_irq_lower_el_32)
+END_FUNCTION(arm64_irq_lower_el_32)
 
 .org 0x700
 LOCAL_FUNCTION(arm64_fiq_lower_el_32)
@@ -232,12 +232,12 @@ LOCAL_FUNCTION(arm64_fiq_lower_el_32)
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore_short
-END(arm64_fiq_lower_el_32)
+END_FUNCTION(arm64_fiq_lower_el_32)
 
 .org 0x780
 LOCAL_FUNCTION(arm64_err_exc_lower_el_32)
     invalid_exception 0x33
-END(arm64_err_exc_lower_el_32)
+END_FUNCTION(arm64_err_exc_lower_el_32)
 
 /* If an IRQ happened in userspace, and either the thread was signaled or
    needs to be rescheduled, then we end up here after arm64_irq returns.
@@ -261,14 +261,14 @@ LOCAL_FUNCTION(arm64_finish_user_irq_wrapper)
     bl  arm64_finish_user_irq
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
     b   arm64_exc_shared_restore_long
-END(arm64_finish_user_irq_wrapper)
+END_FUNCTION(arm64_finish_user_irq_wrapper)
 
 LOCAL_FUNCTION(arm64_exc_shared_restore_long)
     regrestore_long
     eret
-END(arm64_exc_shared_restore_long)
+END_FUNCTION(arm64_exc_shared_restore_long)
 
 LOCAL_FUNCTION(arm64_exc_shared_restore_short)
     regrestore_short
     eret
-END(arm64_exc_shared_restore_short)
+END_FUNCTION(arm64_exc_shared_restore_short)

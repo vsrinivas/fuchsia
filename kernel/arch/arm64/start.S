@@ -391,7 +391,7 @@ FUNCTION(arm_reset)
 .Lunsupported_cpu_trap:
     wfe
     b       .Lunsupported_cpu_trap
-END(arm_reset)
+END_FUNCTION(arm_reset)
 
 .ltorg
 
@@ -401,14 +401,14 @@ END(arm_reset)
     .balign 64
 DATA(arch_boot_el)
     .quad 0xdeadbeef00ff00ff
-END(arch_boot_el)
+END_DATA(arch_boot_el)
 DATA(boot_structure_paddr)
     .quad 0x00ff00ffdeadbeef
-END(boot_structure_paddr)
+END_DATA(boot_structure_paddr)
 
 DATA(page_tables_not_ready)
     .long       1
-END(page_tables_not_ready)
+END_DATA(page_tables_not_ready)
 
     .balign 8
 LOCAL_DATA(boot_cpu_fake_arch_thread)
@@ -419,25 +419,25 @@ LOCAL_DATA(boot_cpu_fake_arch_thread)
     .quad 0
 #endif
 LOCAL_DATA(boot_cpu_fake_thread_pointer_location)
-END(boot_cpu_fake_arch_thread)
+END_DATA(boot_cpu_fake_arch_thread)
 
 .bss
 LOCAL_DATA(boot_cpu_kstack)
     .skip ARCH_DEFAULT_STACK_SIZE
     .balign 16
 LOCAL_DATA(boot_cpu_kstack_end)
-END(boot_cpu_kstack)
+END_DATA(boot_cpu_kstack)
 
 #if __has_feature(safe_stack)
 LOCAL_DATA(boot_cpu_unsafe_kstack)
     .skip ARCH_DEFAULT_STACK_SIZE
     .balign 16
 LOCAL_DATA(boot_cpu_unsafe_kstack_end)
-END(boot_cpu_unsafe_kstack)
+END_DATA(boot_cpu_unsafe_kstack)
 #endif
 
 .section .bss.prebss.translation_table, "aw", @nobits
 .align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT
 DATA(tt_trampoline)
     .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
-END(tt_trampoline)
+END_DATA(tt_trampoline)

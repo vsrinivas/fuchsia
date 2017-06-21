@@ -45,4 +45,4 @@ FUNCTION(arm64_uspace_entry)
 
     // Lazy loading of the FPU means we don't need to zero the simd registers
     eret
-END(arm64_uspace_entry)
+END_FUNCTION(arm64_uspace_entry)

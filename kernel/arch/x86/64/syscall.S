@@ -377,4 +377,4 @@ FUNCTION(x86_syscall)
     pop     %r11
     jmp     .Lreturn_from_syscall
 
-END(x86_syscall)
+END_FUNCTION(x86_syscall)

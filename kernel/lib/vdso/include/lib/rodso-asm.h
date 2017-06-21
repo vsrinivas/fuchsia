@@ -29,4 +29,4 @@
     rodso_image_section name, NAME##_CODE_END; \
     DATA(name##_image) \
     .incbin NAME##_FILENAME, 0, NAME##_CODE_END; \
-    END(name##_image)
+    END_DATA(name##_image)
