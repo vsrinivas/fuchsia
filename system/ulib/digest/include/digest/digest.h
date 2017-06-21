@@ -15,11 +15,15 @@
 
 #ifdef USE_LIBCRYPTO
 #include <openssl/sha.h>
-#define DIGEST_LENGTH SHA256_DIGEST_LENGTH
 #else // USE_LIBCRYPTO
 #include <lib/crypto/cryptolib.h>
-#define DIGEST_LENGTH clSHA256_DIGEST_SIZE
 #endif // USE_LIBCRYPTO
+
+#ifndef SHA256_DIGEST_LENGTH
+#define SHA256_DIGEST_LENGTH 32
+#endif
+
+#define DIGEST_LENGTH SHA256_DIGEST_LENGTH
 
 namespace digest {
 
