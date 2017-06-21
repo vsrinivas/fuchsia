@@ -30,9 +30,12 @@
 
 #define LOCAL_TRACE 0
 
+#if WITH_LIB_MAGENTA
+static const uint16_t kLocalApicEoi = 0x00b0;
+#endif // WITH_LIB_MAGENTA
+
 static const uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
-static const uint16_t kLocalApicEoi = 0x00b0;
 static const uint16_t kLocalApicLvtTimer = 0x320;
 
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
