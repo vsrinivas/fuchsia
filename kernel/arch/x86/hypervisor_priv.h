@@ -270,7 +270,7 @@ struct LocalApicState {
     // Lock for the interrupt bitmap.
     SpinLock interrupt_lock;
     // Bitmap of active interrupts.
-    bitmap::RawBitmapGeneric<bitmap::DefaultStorage> interrupt_bitmap;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> interrupt_bitmap;
     // Virtual local APIC address.
     void* apic_addr;
     // Virtual local APIC memory.
