@@ -15,8 +15,8 @@ $(MODULE_HOSTLIB): _OBJS := $(MODULE_OBJS)
 $(MODULE_HOSTLIB): $(MODULE_OBJS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking hostlib $@)
-	@rm -f -- "$@"
-	$(HOST_AR) cr $@ $^
+	$(NOECHO)rm -f -- "$@"
+	$(NOECHO)$(HOST_AR) cr $@ $^
 
 ALLHOST_LIBS += $(MODULE_HOSTLIB)
 
