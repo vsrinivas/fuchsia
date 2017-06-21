@@ -14,13 +14,13 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := hostapp
 
 MODULE_COMPILEFLAGS += \
-	-Isystem/ulib/merkle/include \
+	-Isystem/ulib/digest/include \
 	-Isystem/ulib/mxalloc/include \
 	-Isystem/ulib/mxtl/include
 
 MODULE_SRCS += \
-	system/ulib/merkle/digest.cpp \
-	system/ulib/merkle/tree.cpp \
+	system/ulib/digest/digest.cpp \
+	system/ulib/digest/merkle-tree.cpp \
 	system/ulib/mxalloc/alloc_checker.cpp \
 	$(LOCAL_DIR)/merkleroot.cpp
 

@@ -15,14 +15,17 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
-#include <merkle/digest.h>
-#include <merkle/tree.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
 #include <mxtl/ref_ptr.h>
 #include <mxio/debug.h>
 
 #define MXDEBUG 0
 
 #include "blobstore-private.h"
+
+using digest::Digest;
+using digest::MerkleTree;
 
 namespace {
 
@@ -50,7 +53,7 @@ mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, si
 
 // Number of blocks reserved for the Merkle Tree
 uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode) {
-    uint64_t size_merkle = merkle::Tree::GetTreeLength(blobNode.blob_size);
+    uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
     return mxtl::roundup(size_merkle, kBlobstoreBlockSize) / kBlobstoreBlockSize;
 }
 
@@ -162,7 +165,7 @@ uint64_t VnodeBlob::SizeData() const {
     return 0;
 }
 
-VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest) :
+VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs, const Digest& digest) :
     blobstore_(mxtl::move(bs)),
     bytes_written_(0),
     flags_(kBlobStateEmpty) {
@@ -196,7 +199,7 @@ mx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
 
     // Initialize the inode with known fields
     blobstore_inode_t* inode = blobstore_->GetNode(map_index_);
-    memset(inode->merkle_root_hash, 0, merkle::Digest::kLength);
+    memset(inode->merkle_root_hash, 0, Digest::kLength);
     inode->blob_size = size_data;
     inode->num_blocks = MerkleTreeBlocks(*inode) + BlobDataBlocks(*inode);
 
@@ -275,7 +278,7 @@ mx_status_t VnodeBlob::WriteMetadata() {
     fsync(blobstore_->blockfd_);
 
     // Update the on-disk hash
-    memcpy(inode->merkle_root_hash, &digest_[0], merkle::Digest::kLength);
+    memcpy(inode->merkle_root_hash, &digest_[0], Digest::kLength);
 
     // Write back the blob node
     if (blobstore_->WriteNode(&txn, map_index_)) {
@@ -320,12 +323,12 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         // TODO(smklein): As an optimization, use the CreateInit/Update/Final
         // methods to create the merkle tree as we write data, rather than
         // waiting until the data is fully downloaded to create the tree.
-        size_t merkle_size = merkle::Tree::GetTreeLength(inode->blob_size);
+        size_t merkle_size = MerkleTree::GetTreeLength(inode->blob_size);
         if (merkle_size > 0) {
-            merkle::Digest digest;
+            Digest digest;
             void* merkle_data = GetMerkle();
             const void* blob_data = GetData();
-            if (merkle::Tree::Create(blob_data, inode->blob_size, merkle_data,
+            if (MerkleTree::Create(blob_data, inode->blob_size, merkle_data,
                                      merkle_size, &digest) != MX_OK) {
                 SetState(kBlobStateError);
                 return status;
@@ -385,13 +388,13 @@ mx_status_t VnodeBlob::CopyVmo(mx_rights_t rights, mx_handle_t* out) {
     // we could fault in pages on-demand.
     //
     // For now, we aggressively verify the entire VMO up front.
-    merkle::Digest d;
+    Digest d;
     d = ((const uint8_t*) &digest_[0]);
     auto inode = blobstore_->GetNode(map_index_);
-    uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
+    uint64_t size_merkle = MerkleTree::GetTreeLength(inode->blob_size);
     const void* merkle_data = GetMerkle();
     const void* blob_data = GetData();
-    status = merkle::Tree::Verify(blob_data, inode->blob_size, merkle_data,
+    status = MerkleTree::Verify(blob_data, inode->blob_size, merkle_data,
                                   size_merkle, 0, inode->blob_size, d);
     if (status != MX_OK) {
         return status;
@@ -423,7 +426,7 @@ mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
         return status;
     }
 
-    merkle::Digest d;
+    Digest d;
     d = ((const uint8_t*) &digest_[0]);
     auto inode = blobstore_->GetNode(map_index_);
     if (off >= inode->blob_size) {
@@ -434,10 +437,10 @@ mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
         len = inode->blob_size - off;
     }
 
-    uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
+    uint64_t size_merkle = MerkleTree::GetTreeLength(inode->blob_size);
     const void* merkle_data = GetMerkle();
     const void* blob_data = GetData();
-    status = merkle::Tree::Verify(blob_data, inode->blob_size, merkle_data,
+    status = MerkleTree::Verify(blob_data, inode->blob_size, merkle_data,
                                   size_merkle, off, len, d);
     if (status != MX_OK) {
         return status;
@@ -510,7 +513,7 @@ mx_status_t Blobstore::WriteNode(WriteTxn* txn, size_t map_index) {
     return txn->Flush();
 }
 
-mx_status_t Blobstore::NewBlob(const merkle::Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
+mx_status_t Blobstore::NewBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
     mx_status_t status;
     // If the blob already exists (or we're having trouble looking up the blob),
     // return an error.
@@ -583,8 +586,8 @@ mx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
 
     for (size_t i = c->index; i < info_.inode_count; ++i) {
         if (GetNode(i)->start_block >= kStartBlockMinimum) {
-            merkle::Digest digest(GetNode(i)->merkle_root_hash);
-            char name[merkle::Digest::kLength * 2 + 1];
+            Digest digest(GetNode(i)->merkle_root_hash);
+            char name[Digest::kLength * 2 + 1];
             mx_status_t r = digest.ToString(name, sizeof(name));
             if (r < 0) {
                 return r;
@@ -599,7 +602,7 @@ mx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
     return df.BytesFilled();
 }
 
-mx_status_t Blobstore::LookupBlob(const merkle::Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
+mx_status_t Blobstore::LookupBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
     // Look up blob in the fast map (is the blob open elsewhere?)
     mxtl::RefPtr<VnodeBlob> vn = mxtl::RefPtr<VnodeBlob>(hash_.find(digest.AcquireBytes()).CopyPointer());
     digest.ReleaseBytes();

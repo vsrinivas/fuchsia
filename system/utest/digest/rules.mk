@@ -10,14 +10,14 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/digest.cpp \
-    $(LOCAL_DIR)/tree.cpp \
+    $(LOCAL_DIR)/merkle-tree.cpp \
     $(LOCAL_DIR)/main.c
 
-MODULE_NAME := merkle-test
+MODULE_NAME := digest-test
 
 MODULE_LIBS := \
     system/ulib/unittest \
-    system/ulib/merkle \
+    system/ulib/digest \
     system/ulib/magenta \
     system/ulib/c \
     system/ulib/mxio \

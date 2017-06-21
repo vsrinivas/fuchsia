@@ -14,7 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/blobstore.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/merkle \
+    system/ulib/digest \
     third_party/ulib/cryptolib \
     system/ulib/mxalloc \
     system/ulib/mxcpp \

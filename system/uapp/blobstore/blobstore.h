@@ -6,8 +6,8 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <merkle/digest.h>
-#include <merkle/tree.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
@@ -84,8 +84,9 @@ constexpr uint64_t kStartBlockFree     = 0;
 constexpr uint64_t kStartBlockReserved = 1;
 constexpr uint64_t kStartBlockMinimum  = 2; // Smallest 'data' block possible
 
+using digest::Digest;
 typedef struct {
-    uint8_t  merkle_root_hash[merkle::Digest::kLength];
+    uint8_t  merkle_root_hash[Digest::kLength];
     uint64_t start_block;
     uint64_t num_blocks;
     uint64_t blob_size;

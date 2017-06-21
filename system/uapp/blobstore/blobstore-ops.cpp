@@ -22,6 +22,8 @@
 
 #include "blobstore-private.h"
 
+using digest::Digest;
+
 namespace blobstore {
 
 VnodeBlob::~VnodeBlob() {
@@ -91,7 +93,7 @@ mx_status_t VnodeBlob::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, si
     }
 
     mx_status_t status;
-    merkle::Digest digest;
+    Digest digest;
     if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     }
@@ -122,7 +124,7 @@ mx_status_t VnodeBlob::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, si
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    merkle::Digest digest;
+    Digest digest;
     mx_status_t status;
     if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
@@ -182,7 +184,7 @@ mx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
     }
 
     mx_status_t status;
-    merkle::Digest digest;
+    Digest digest;
     mxtl::RefPtr<VnodeBlob> out;
     if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;

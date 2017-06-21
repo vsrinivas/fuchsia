@@ -12,9 +12,12 @@
 #include <unistd.h>
 
 #include <mxalloc/new.h>
-#include <merkle/digest.h>
-#include <merkle/tree.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
 #include <mxtl/unique_ptr.h>
+
+using digest::Digest;
+using digest::MerkleTree;
 
 int main(int argc, char** argv) {
     if (argc == 1) {
@@ -27,8 +30,8 @@ int main(int argc, char** argv) {
     AllocChecker ac;
     void* data = nullptr;
     mxtl::unique_ptr<uint8_t[]> tree(nullptr);
-    char strbuf[merkle::Digest::kLength * 2 + 1];
-    merkle::Digest digest;
+    char strbuf[Digest::kLength * 2 + 1];
+    Digest digest;
     for (size_t i = 1; i < argc; ++i) {
         const char* arg = argv[i];
         if (stat(arg, &info) < 0) {
@@ -40,7 +43,7 @@ int main(int argc, char** argv) {
         if (!S_ISREG(info.st_mode)) {
             continue;
         }
-        size_t len = merkle::Tree::GetTreeLength(info.st_size);
+        size_t len = MerkleTree::GetTreeLength(info.st_size);
         tree.reset(new (&ac) uint8_t[len]);
         if (!ac.check()) {
             fprintf(stderr, "[-] Failed to allocate tree of %zu bytes.\n", len);
@@ -66,7 +69,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         mx_status_t rc =
-            merkle::Tree::Create(data, info.st_size, tree.get(), len, &digest);
+            MerkleTree::Create(data, info.st_size, tree.get(), len, &digest);
         if (info.st_size != 0 && munmap(data, info.st_size) != 0) {
             perror("munmap");
             fprintf(stderr, "[-] Failed to munmap '%s.\n", arg);

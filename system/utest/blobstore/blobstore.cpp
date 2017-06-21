@@ -24,8 +24,8 @@
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
-#include <merkle/digest.h>
-#include <merkle/tree.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
 #include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
@@ -34,6 +34,9 @@
 #include <unittest/unittest.h>
 
 #define MOUNT_PATH "/tmp/magenta-blobstore-test"
+
+using digest::Digest;
+using digest::MerkleTree;
 
 // Helper functions for mounting Blobstore:
 
@@ -197,15 +200,15 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     info->size_data = size_data;
 
     // Generate the Merkle Tree
-    info->size_merkle = merkle::Tree::GetTreeLength(size_data);
+    info->size_merkle = MerkleTree::GetTreeLength(size_data);
     if (info->size_merkle == 0) {
         info->merkle = nullptr;
     } else {
         info->merkle.reset(new (&ac) char[info->size_merkle]);
         ASSERT_EQ(ac.check(), true, "");
     }
-    merkle::Digest digest;
-    ASSERT_EQ(merkle::Tree::Create(&info->data[0], info->size_data, &info->merkle[0],
+    Digest digest;
+    ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
                                    info->size_merkle, &digest),
               MX_OK, "Couldn't create Merkle Tree");
     strcpy(info->path, MOUNT_PATH "/");
@@ -213,7 +216,7 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
 
     // Sanity-check the merkle tree
-    ASSERT_EQ(merkle::Tree::Verify(&info->data[0], info->size_data, &info->merkle[0],
+    ASSERT_EQ(MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0],
                                    info->size_merkle, 0, info->size_data, digest),
               MX_OK, "Failed to validate Merkle Tree");
 
@@ -529,7 +532,7 @@ static bool CorruptedDigest(void) {
         ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
 
         char hexdigits[17] = "0123456789abcdef";
-        size_t idx = strlen(info->path) - 1 - (rand() % (2 * merkle::Digest::kLength));
+        size_t idx = strlen(info->path) - 1 - (rand() % (2 * Digest::kLength));
         char newchar = hexdigits[rand() % 16];
         while (info->path[idx] == newchar) {
             newchar = hexdigits[rand() % 16];

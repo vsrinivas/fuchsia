@@ -5,27 +5,30 @@
 #pragma once
 
 #include <stddef.h>
-#include <stdint.h>
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
+
+#ifdef __cplusplus
+
+#include <stdint.h>
 
 #ifdef USE_LIBCRYPTO
 #include <openssl/sha.h>
-#define MERKLE_DIGEST_LENGTH SHA256_DIGEST_LENGTH
+#define DIGEST_LENGTH SHA256_DIGEST_LENGTH
 #else // USE_LIBCRYPTO
 #include <lib/crypto/cryptolib.h>
-#define MERKLE_DIGEST_LENGTH clSHA256_DIGEST_SIZE
+#define DIGEST_LENGTH clSHA256_DIGEST_SIZE
 #endif // USE_LIBCRYPTO
 
-#ifdef __cplusplus
-namespace merkle {
+namespace digest {
 
-// This class represents a digest produced by a Merkle-Damgard hash algorithm.
+// This class represents a digest produced by a hash algorithm.
 // This class is not thread safe.
 class Digest final {
 public:
     // The length of a digest in bytes; this matches sizeof(this->data).
-    static constexpr size_t kLength = MERKLE_DIGEST_LENGTH;
+    static constexpr size_t kLength = DIGEST_LENGTH;
 
     Digest() : ctx_{}, bytes_{0}, ref_count_(0) {}
     explicit Digest(const Digest& other);
@@ -106,46 +109,41 @@ private:
     mutable size_t ref_count_;
 };
 
-} // namespace merkle
-
-using merkle_digest_t = merkle::Digest;
-extern "C" {
-#else  // __cplusplus
-typedef struct merkle_digest merkle_digest_t;
+} // namespace digest
 #endif // __cplusplus
 
-// C API for merkle::Digest.  It's called in a similar manner as the
-// corresponding C++ code, namely, the caller should do roughly the following
-// (with additional error checking):
-//     merkle_digest_t *digest = NULL;
-//     merkle_digest_init(&digest);
+__BEGIN_CDECLS
+typedef struct digest_t digest_t;
+
+// C API for Digest.  It's called in a similar manner as the corresponding C++
+// code, namely, the caller should do roughly the following (with additional
+// error checking):
+//     digest_t *digest = NULL;
+//     digest_init(&digest);
 //     while(true) {
 //         // Fill buf with len bytes somehow or break if no more data
-//         merkle_digest_update(digest, buf, len);
+//         digest_update(digest, buf, len);
 //     }
-//     uint8_t result[MERKLE_DIGEST_LENGTH];
-//     merkle_digest_final(digest, result, sizeof(result));
+//     uint8_t result[DIGEST_LENGTH];
+//     digest_final(digest, result, sizeof(result));
 //
 // Then |result| will have the result of the hashing the data.
 
-// C wrapper for |merkle::Digest::Init|.  On success this function allocates
-// memory and returns it in |out|.  The caller must make a call to
-// |merkle_digest_final| to free this memory.
-mx_status_t merkle_digest_init(merkle_digest_t** out);
+// C wrapper for |Digest::Init|.  On success this function allocates memory and
+// returns it in |out|.  The caller must make a call to |digest_final| to free
+// this memory.
+mx_status_t digest_init(digest_t** out);
 
-// C wrapper for |merkle::Digest::Update|.
-void merkle_digest_update(merkle_digest_t* digest, const void* buf, size_t len);
+// C wrapper for |Digest::Update|.
+void digest_update(digest_t* digest, const void* buf, size_t len);
 
-// C wrapper for |merkle::Digest::Final|. |out| must point to a buffer with room
-// for at least |MERKLE_DIGEST_LENGTH| bytes.  This method frees |digest|, which
-// must not be used again after this call.
-mx_status_t merkle_digest_final(merkle_digest_t* digest, void* out,
-                                size_t out_len);
+// C wrapper for |Digest::Final|. |out| must point to a buffer with room for at
+// least |DIGEST_LENGTH| bytes.  This method frees |digest|, which must not be
+// used again after this call.
+mx_status_t digest_final(digest_t* digest, void* out, size_t out_len);
 
-// C wrapper for |merkle::Digest::Hash|.  |out| must point to a buffer with room
-// for at least |MERKLE_DIGEST_LENGTH| bytes.
-mx_status_t merkle_digest_hash(const void* buf, size_t len, void* out,
-                               size_t out_len);
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+// C wrapper for |Digest::Hash|.  |out| must point to a buffer with room for at
+// least |DIGEST_LENGTH| bytes.
+mx_status_t digest_hash(const void* buf, size_t len, void* out, size_t out_len);
+
+__END_CDECLS

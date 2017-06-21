@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <merkle/digest.h>
+#include <digest/digest.h>
 
 #include <ctype.h>
 #include <limits.h>
@@ -14,7 +14,7 @@
 #include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
-namespace merkle {
+namespace digest {
 
 Digest::Digest(const Digest& other) {
     ref_count_ = 0;
@@ -151,35 +151,40 @@ bool Digest::operator!=(const uint8_t* rhs) const {
     return !(*this == rhs);
 }
 
-} // namespace merkle
+} // namespace digest
 
-// C-style wrapper function
+using digest::Digest;
 
-mx_status_t merkle_digest_init(merkle::Digest** out) {
+// C-style wrapper functions
+struct digest_t {
+    Digest obj;
+};
+
+mx_status_t digest_init(digest_t** out) {
     AllocChecker ac;
-    mxtl::unique_ptr<merkle::Digest> uptr(new (&ac) merkle::Digest());
+    mxtl::unique_ptr<digest_t> uptr(new (&ac) digest_t);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
-    uptr->Init();
+    uptr->obj.Init();
     *out = uptr.release();
     return MX_OK;
 }
 
-void merkle_digest_update(merkle::Digest* digest, const void* buf, size_t len) {
-    digest->Update(buf, len);
+void digest_update(digest_t* digest, const void* buf, size_t len) {
+    digest->obj.Update(buf, len);
 }
 
-mx_status_t merkle_digest_final(merkle::Digest* digest, void* out,
+mx_status_t digest_final(digest_t* digest, void* out,
                                 size_t out_len) {
-    mxtl::unique_ptr<merkle::Digest> uptr(digest);
-    uptr->Final();
-    return uptr->CopyTo(static_cast<uint8_t*>(out), out_len);
+    mxtl::unique_ptr<digest_t> uptr(digest);
+    uptr->obj.Final();
+    return uptr->obj.CopyTo(static_cast<uint8_t*>(out), out_len);
 }
 
-mx_status_t merkle_digest_hash(const void* buf, size_t len, void* out,
+mx_status_t digest_hash(const void* buf, size_t len, void* out,
                                size_t out_len) {
-    merkle::Digest digest;
+    Digest digest;
     digest.Hash(buf, len);
     return digest.CopyTo(static_cast<uint8_t*>(out), out_len);
 }

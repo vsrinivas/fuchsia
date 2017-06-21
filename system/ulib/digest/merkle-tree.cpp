@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <merkle/tree.h>
+#include <digest/merkle-tree.h>
 
 #include <stdint.h>
 #include <string.h>
 
+#include <digest/digest.h>
 #include <magenta/assert.h>
 #include <magenta/errors.h>
-#include <merkle/digest.h>
 #include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 
-namespace merkle {
+namespace digest {
 
 // Size of a node in bytes.  Defined in tree.h.
-constexpr size_t Tree::kNodeSize;
+constexpr size_t MerkleTree::kNodeSize;
 
 // The number of digests that fit in a node.  Importantly, if L is a
 // node-aligned length in one level of the Merkle tree, |L / kDigestsPerNode| is
 // the corresponding digest-aligned length in the next level up.
-const size_t kDigestsPerNode = Tree::kNodeSize / Digest::kLength;
+const size_t kDigestsPerNode = MerkleTree::kNodeSize / Digest::kLength;
 
 namespace {
 
@@ -43,7 +43,8 @@ void DigestInit(Digest* digest, uint64_t locality, size_t length) {
     MX_DEBUG_ASSERT(length < UINT32_MAX);
     digest->Init();
     digest->Update(&locality, sizeof(locality));
-    uint32_t len32 = static_cast<uint32_t>(mxtl::min(length, Tree::kNodeSize));
+    uint32_t len32 =
+        static_cast<uint32_t>(mxtl::min(length, MerkleTree::kNodeSize));
     digest->Update(&len32, sizeof(len32));
 }
 
@@ -54,7 +55,8 @@ size_t DigestUpdate(Digest* digest, const uint8_t* in, size_t offset,
                     size_t length) {
     MX_DEBUG_ASSERT(digest);
     // Check if length crosses a node boundary
-    length = mxtl::min(length, Tree::kNodeSize - (offset % Tree::kNodeSize));
+    length = mxtl::min(length, MerkleTree::kNodeSize -
+                                   (offset % MerkleTree::kNodeSize));
     digest->Update(in, length);
     return length;
 }
@@ -62,9 +64,9 @@ size_t DigestUpdate(Digest* digest, const uint8_t* in, size_t offset,
 // Wrapper for Digest::Final.  This pads the hashed data with zeros up to a
 // node boundary before finalizing the digest.
 void DigestFinal(Digest* digest, size_t offset) {
-    offset = offset % Tree::kNodeSize;
+    offset = offset % MerkleTree::kNodeSize;
     if (offset != 0) {
-        size_t pad_len = Tree::kNodeSize - offset;
+        size_t pad_len = MerkleTree::kNodeSize - offset;
         uint8_t pad[pad_len];
         memset(pad, 0, pad_len);
         digest->Update(pad, pad_len);
@@ -78,8 +80,8 @@ void DigestFinal(Digest* digest, size_t offset) {
 // Helper function to transform a length in the current level to a length in the
 // next level up.
 size_t NextLength(size_t length) {
-    if (length > Tree::kNodeSize) {
-        return mxtl::roundup(length, Tree::kNodeSize) / kDigestsPerNode;
+    if (length > MerkleTree::kNodeSize) {
+        return mxtl::roundup(length, MerkleTree::kNodeSize) / kDigestsPerNode;
     } else {
         return 0;
     }
@@ -88,7 +90,7 @@ size_t NextLength(size_t length) {
 // Helper function to transform a length in the current level to a node-aligned
 // length in the next level up.
 size_t NextAligned(size_t length) {
-    return mxtl::roundup(NextLength(length), Tree::kNodeSize);
+    return mxtl::roundup(NextLength(length), MerkleTree::kNodeSize);
 }
 
 } // namespace
@@ -96,15 +98,15 @@ size_t NextAligned(size_t length) {
 ////////
 // Creation methods
 
-size_t Tree::GetTreeLength(size_t data_len) {
+size_t MerkleTree::GetTreeLength(size_t data_len) {
     size_t next_len = NextAligned(data_len);
     return (next_len == 0 ? 0 : next_len + GetTreeLength(next_len));
 }
 
-mx_status_t Tree::Create(const void* data, size_t data_len, void* tree,
-                         size_t tree_len, Digest* digest) {
+mx_status_t MerkleTree::Create(const void* data, size_t data_len, void* tree,
+                               size_t tree_len, Digest* digest) {
     mx_status_t rc;
-    Tree mt;
+    MerkleTree mt;
     if ((rc = mt.CreateInit(data_len, tree_len)) != MX_OK ||
         (rc = mt.CreateUpdate(data, data_len, tree)) != MX_OK ||
         (rc = mt.CreateFinal(tree, digest)) != MX_OK) {
@@ -113,12 +115,12 @@ mx_status_t Tree::Create(const void* data, size_t data_len, void* tree,
     return MX_OK;
 }
 
-Tree::Tree()
+MerkleTree::MerkleTree()
     : initialized_(false), next_(nullptr), level_(0), offset_(0), length_(0) {}
 
-Tree::~Tree() {}
+MerkleTree::~MerkleTree() {}
 
-mx_status_t Tree::CreateInit(size_t data_len, size_t tree_len) {
+mx_status_t MerkleTree::CreateInit(size_t data_len, size_t tree_len) {
     initialized_ = true;
     offset_ = 0;
     length_ = data_len;
@@ -127,7 +129,7 @@ mx_status_t Tree::CreateInit(size_t data_len, size_t tree_len) {
         return MX_OK;
     }
     AllocChecker ac;
-    next_.reset(new (&ac) Tree());
+    next_.reset(new (&ac) MerkleTree());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -141,7 +143,8 @@ mx_status_t Tree::CreateInit(size_t data_len, size_t tree_len) {
     return next_->CreateInit(data_len, tree_len);
 }
 
-mx_status_t Tree::CreateUpdate(const void* data, size_t length, void* tree) {
+mx_status_t MerkleTree::CreateUpdate(const void* data, size_t length,
+                                     void* tree) {
     MX_DEBUG_ASSERT(offset_ + length >= offset_);
     // Must call CreateInit first.
     if (!initialized_) {
@@ -199,12 +202,12 @@ mx_status_t Tree::CreateUpdate(const void* data, size_t length, void* tree) {
     return rc;
 }
 
-mx_status_t Tree::CreateFinal(void* tree, Digest* root) {
+mx_status_t MerkleTree::CreateFinal(void* tree, Digest* root) {
     return CreateFinalInternal(nullptr, tree, root);
 }
 
-mx_status_t Tree::CreateFinalInternal(const void* data, void* tree,
-                                      Digest* root) {
+mx_status_t MerkleTree::CreateFinalInternal(const void* data, void* tree,
+                                            Digest* root) {
     // Must call CreateInit first.  Must call CreateUpdate with all data first.
     if (!initialized_ || (level_ == 0 && offset_ != length_)) {
         return MX_ERR_BAD_STATE;
@@ -239,9 +242,9 @@ mx_status_t Tree::CreateFinalInternal(const void* data, void* tree,
 ////////
 // Verification methods
 
-mx_status_t Tree::Verify(const void* data, size_t data_len, const void* tree,
-                         size_t tree_len, size_t offset, size_t length,
-                         const Digest& root) {
+mx_status_t MerkleTree::Verify(const void* data, size_t data_len,
+                               const void* tree, size_t tree_len, size_t offset,
+                               size_t length, const Digest& root) {
     uint64_t level = 0;
     size_t root_len = data_len;
     while (data_len > kNodeSize) {
@@ -267,8 +270,8 @@ mx_status_t Tree::Verify(const void* data, size_t data_len, const void* tree,
     return VerifyRoot(data, root_len, level, root);
 }
 
-mx_status_t Tree::VerifyRoot(const void* data, size_t root_len, uint64_t level,
-                             const Digest& expected) {
+mx_status_t MerkleTree::VerifyRoot(const void* data, size_t root_len,
+                                   uint64_t level, const Digest& expected) {
     // Must have data if length isn't 0.  Must have either zero or one node.
     if ((!data && root_len != 0) || root_len > kNodeSize) {
         return MX_ERR_INVALID_ARGS;
@@ -282,9 +285,9 @@ mx_status_t Tree::VerifyRoot(const void* data, size_t root_len, uint64_t level,
     return (actual == expected ? MX_OK : MX_ERR_IO_DATA_INTEGRITY);
 }
 
-mx_status_t Tree::VerifyLevel(const void* data, size_t data_len,
-                              const void* tree, size_t offset, size_t length,
-                              uint64_t level) {
+mx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len,
+                                    const void* tree, size_t offset,
+                                    size_t length, uint64_t level) {
     MX_DEBUG_ASSERT(offset + length >= offset);
     // Must have more than one node of data and digests to check against.
     if (!data || data_len <= kNodeSize || !tree) {
@@ -319,13 +322,20 @@ mx_status_t Tree::VerifyLevel(const void* data, size_t data_len,
     return MX_OK;
 }
 
-} // namespace merkle
+} // namespace digest
 
 ////////
 // C-style wrapper functions
 
+using digest::Digest;
+using digest::MerkleTree;
+
+struct merkle_tree_t {
+    MerkleTree obj;
+};
+
 size_t merkle_tree_get_tree_length(size_t data_len) {
-    return merkle::Tree::GetTreeLength(data_len);
+    return MerkleTree::GetTreeLength(data_len);
 }
 
 mx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
@@ -376,7 +386,7 @@ mx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
     mxtl::unique_ptr<merkle_tree_t> mt_uniq(mt);
     // Call the C++ function.
     mx_status_t rc;
-    merkle::Digest digest;
+    Digest digest;
     if ((rc = mt_uniq->obj.CreateFinal(tree, &digest)) != MX_OK) {
         return rc;
     }
@@ -386,8 +396,8 @@ mx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
 mx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
                                size_t tree_len, void* out, size_t out_len) {
     mx_status_t rc;
-    merkle::Digest digest;
-    if ((rc = merkle::Tree::Create(data, data_len, tree, tree_len, &digest)) !=
+    Digest digest;
+    if ((rc = MerkleTree::Create(data, data_len, tree, tree_len, &digest)) !=
         MX_OK) {
         return rc;
     }
@@ -398,10 +408,10 @@ mx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
                                size_t tree_len, size_t offset, size_t length,
                                const void* root, size_t root_len) {
     // Must have a complete root digest.
-    if (root_len < merkle::Digest::kLength) {
+    if (root_len < Digest::kLength) {
         return MX_ERR_INVALID_ARGS;
     }
-    merkle::Digest digest(static_cast<const uint8_t*>(root));
-    return merkle::Tree::Verify(data, data_len, tree, tree_len, offset, length,
-                                digest);
+    Digest digest(static_cast<const uint8_t*>(root));
+    return MerkleTree::Verify(data, data_len, tree, tree_len, offset,
+                                      length, digest);
 }

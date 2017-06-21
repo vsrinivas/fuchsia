@@ -7,7 +7,7 @@
 #include "blobstore.h"
 
 #include <bitmap/raw-bitmap.h>
-#include <merkle/digest.h>
+#include <digest/digest.h>
 #include <mx/event.h>
 #include <mx/vmo.h>
 #include <mxtl/algorithm.h>
@@ -28,6 +28,7 @@ class VnodeBlob;
 
 using WriteTxn = fs::WriteTxn<kBlobstoreBlockSize, Blobstore>;
 using ReadTxn = fs::ReadTxn<kBlobstoreBlockSize, Blobstore>;
+using digest::Digest;
 
 typedef uint32_t BlobFlags;
 
@@ -93,7 +94,7 @@ public:
     // Constructs the "directory" blob
     VnodeBlob(mxtl::RefPtr<Blobstore> bs);
     // Constructs actual blobs
-    VnodeBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest);
+    VnodeBlob(mxtl::RefPtr<Blobstore> bs, const Digest& digest);
     virtual ~VnodeBlob();
 
 private:
@@ -173,21 +174,21 @@ private:
     uint64_t bytes_written_;
 
     BlobFlags flags_;
-    uint8_t digest_[merkle::Digest::kLength];
+    uint8_t digest_[Digest::kLength];
 
     size_t map_index_;
 };
 
 // We need to define this structure to allow the Blob to be indexable by a key
-// which is larger than a primitive type: the keys are 'merkle::Digest::kLength'
+// which is larger than a primitive type: the keys are 'Digest::kLength'
 // bytes long.
 struct MerkleRootTraits {
     static const uint8_t* GetKey(const VnodeBlob& obj) { return obj.GetKey(); }
     static bool LessThan(const uint8_t* k1, const uint8_t* k2) {
-        return memcmp(k1, k2, merkle::Digest::kLength) < 0;
+        return memcmp(k1, k2, Digest::kLength) < 0;
     }
     static bool EqualTo(const uint8_t* k1, const uint8_t* k2) {
-        return memcmp(k1, k2, merkle::Digest::kLength) == 0;
+        return memcmp(k1, k2, Digest::kLength) == 0;
     }
 };
 
@@ -210,13 +211,13 @@ public:
     //
     // If 'out' is not null, then the blob's  will be added to the
     // "quick lookup" map if it was not there already.
-    mx_status_t LookupBlob(const merkle::Digest& digest, mxtl::RefPtr<VnodeBlob>* out);
+    mx_status_t LookupBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* out);
 
     // Creates a new blob in-memory, with no backing disk storage (yet).
     // If a blob with the name already exists, this function fails.
     //
     // Adds Blob to the "quick lookup" map.
-    mx_status_t NewBlob(const merkle::Digest& digest, mxtl::RefPtr<VnodeBlob>* out);
+    mx_status_t NewBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* out);
 
     // Removes blob from 'active' hashmap.
     mx_status_t ReleaseBlob(VnodeBlob* blob);

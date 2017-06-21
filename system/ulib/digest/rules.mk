@@ -10,9 +10,9 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/digest.cpp \
-    $(LOCAL_DIR)/tree.cpp
+    $(LOCAL_DIR)/merkle-tree.cpp
 
-MODULE_SO_NAME := merkle
+MODULE_SO_NAME := digest
 MODULE_LIBS := system/ulib/c
 
 # TODO(aarongreen): cryptolib is FAR too slow for general purpose use.  We'll

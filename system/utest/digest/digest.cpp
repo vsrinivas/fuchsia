@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <merkle/digest.h>
+#include <digest/digest.h>
 
 #include <stdlib.h>
 
 #include <magenta/status.h>
 #include <unittest/unittest.h>
 
-// These unit tests are for the Digest object in ulib/merkle.
+// These unit tests are for the Digest object in ulib/digest.
 
 namespace {
 
 ////////////////
 // Test support.
 
-using merkle::Digest;
+using digest::Digest;
 
 // echo -n | sha256sum
 const char* kZeroDigest =
@@ -84,20 +84,20 @@ bool DigestSplit(void) {
 bool DigestCWrappers(void) {
     BEGIN_TEST;
     uint8_t buf[Digest::kLength];
-    mx_status_t rc = merkle_digest_hash(nullptr, 0, buf, sizeof(buf) - 1);
+    mx_status_t rc = digest_hash(nullptr, 0, buf, sizeof(buf) - 1);
     ASSERT_EQ(rc, MX_ERR_BUFFER_TOO_SMALL, "Small buffer should be rejected");
-    rc = merkle_digest_hash(nullptr, 0, buf, sizeof(buf));
+    rc = digest_hash(nullptr, 0, buf, sizeof(buf));
     ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kZeroDigest, strlen(kZeroDigest));
     ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
-    merkle_digest_t* digest = nullptr;
-    rc = merkle_digest_init(&digest);
+    digest_t* digest = nullptr;
+    rc = digest_init(&digest);
     ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     expected.Hash(buf, sizeof(buf));
-    merkle_digest_update(digest, buf, sizeof(buf));
-    rc = merkle_digest_final(digest, buf, sizeof(buf));
+    digest_update(digest, buf, sizeof(buf));
+    rc = digest_final(digest, buf, sizeof(buf));
     ASSERT_EQ(rc, MX_OK, mx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
     END_TEST;
@@ -128,11 +128,11 @@ bool DigestEquality(void) {
 }
 
 } // namespace
-BEGIN_TEST_CASE(MerkleDigestTests)
+BEGIN_TEST_CASE(DigestTests)
 RUN_TEST(DigestStrings)
 RUN_TEST(DigestZero)
 RUN_TEST(DigestSelf)
 RUN_TEST(DigestSplit)
 RUN_TEST(DigestCWrappers)
 RUN_TEST(DigestEquality)
-END_TEST_CASE(MerkleDigestTests)
+END_TEST_CASE(DigestTests)
