@@ -16,6 +16,8 @@
 #include <unittest/unittest.h>
 #include <sys/mman.h>
 
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+
 // These tests focus on the semantics of the VMARs themselves.  For heavier
 // testing of the mapping permissions, see the VMO tests.
 
@@ -1719,6 +1721,100 @@ bool protect_over_demand_paged_test() {
     END_TEST;
 }
 
+// Verify that we can change protections on unmapped pages successfully.
+bool protect_large_uncommitted_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    // Create a 1GB VMO
+    const size_t size = 1ull << 30;
+    ASSERT_EQ(mx_vmo_create(size, 0, &vmo), MX_OK, "");
+
+    // TODO(teisenbe): Move this into a separate process; currently we don't
+    // have an easy way to run a small test routine in another process.
+    uintptr_t mapping_addr;
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+
+    // Make sure some pages exist
+    volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
+    target[0] = 5;
+    target[size / 2] = 6;
+    target[size - 1] = 7;
+
+    // Ensure we're misaligned relative to a larger paging structure level.
+    // TODO(teisenbe): Would be nice for this to be more arch aware.
+    const uintptr_t base = ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
+    const size_t protect_size = mapping_addr + size - base;
+    ASSERT_EQ(mx_vmar_protect(mx_vmar_root_self(), base, protect_size,
+                              MX_VM_FLAG_PERM_READ),
+              MX_OK, "");
+
+    // Attempt to write to the mapping again
+    bool success;
+    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK, "");
+    EXPECT_TRUE(success, "mapping should still be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+
+    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK, "");
+
+    END_TEST;
+}
+
+// Attempt to unmap a large mostly uncommitted VMO
+bool unmap_large_uncommitted_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    // Create a 1GB VMO
+    const size_t size = 1ull << 30;
+    ASSERT_EQ(mx_vmo_create(size, 0, &vmo), MX_OK, "");
+
+    // TODO(teisenbe): Move this into a separate process; currently we don't
+    // have an easy way to run a small test routine in another process.
+    uintptr_t mapping_addr;
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+
+    // Make sure some pages exist
+    volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
+    target[0] = 5;
+    target[size / 2] = 6;
+    target[size - 1] = 7;
+
+    // Ensure we're misaligned relative to a larger paging structure level.
+    // TODO(teisenbe): Would be nice for this to be more arch aware.
+    const uintptr_t base = ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
+    const size_t unmap_size = mapping_addr + size - base;
+    ASSERT_EQ(mx_vmar_unmap(mx_vmar_root_self(), base, unmap_size), MX_OK, "");
+
+    // Attempt to write to the mapping again
+    bool success;
+    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK, "");
+    EXPECT_TRUE(success, "mapping should still be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+
+    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -1744,6 +1840,8 @@ RUN_TEST(map_specific_overwrite_test);
 RUN_TEST(protect_split_test);
 RUN_TEST(protect_multiple_test);
 RUN_TEST(protect_over_demand_paged_test);
+RUN_TEST(protect_large_uncommitted_test);
+RUN_TEST(unmap_large_uncommitted_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS
