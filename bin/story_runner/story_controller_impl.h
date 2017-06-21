@@ -64,59 +64,6 @@ class StoryControllerImpl : StoryController, StoryContext {
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
 
-  // Called by ModuleContextImpl.
-  void GetLinkPath(const LinkPathPtr& link_path,
-                   fidl::InterfaceRequest<Link> request);
-
-  // Called by ModuleContextImpl.
-  void StartModule(
-      const fidl::Array<fidl::String>& parent_module_path,
-      const fidl::String& module_name,
-      const fidl::String& query,
-      const fidl::String& link_name,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
-      ModuleSource module_source);
-
-  // Called by ModuleContextImpl and AddModule.
-  void StartModuleInShell(
-      const fidl::Array<fidl::String>& parent_module_path,
-      const fidl::String& module_name,
-      const fidl::String& query,
-      const fidl::String& link_name,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation,
-      bool focus,
-      ModuleSource module_source);
-
-  // Called by ModuleContextImpl.
-  const fidl::String& GetStoryId() const;
-
-  // Called by StoryProviderImpl.
-  StoryState GetStoryState() const;
-  void Log(StoryContextLogPtr log_entry);
-  void Sync(const std::function<void()>& done);
-  void GetImportance(const ContextState& context_state,
-                     const std::function<void(float)>& result);
-
-  // Called by ModuleControllerImpl and ModuleContextImpl
-  void FocusModule(const fidl::Array<fidl::String>& module_path);
-
-  // Called by ModuleControllerImpl
-  void DefocusModule(const fidl::Array<fidl::String>& module_path);
-
-  // Called by ModuleContextImpl
-  void RequestStoryFocus();
-
-  // Called by ModuleControllerImpl.
-  //
-  // Releases ownership of |controller|, which deletes itself after return.
-  void ReleaseModule(ModuleControllerImpl* controller);
-
   // Called by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> request);
 
@@ -146,6 +93,59 @@ class StoryControllerImpl : StoryController, StoryContext {
                     const fidl::String& link_json,
                     const std::function<void()>& done);
 
+  // Called by StoryProviderImpl.
+  StoryState GetStoryState() const;
+  void Log(StoryContextLogPtr log_entry);
+  void Sync(const std::function<void()>& done);
+  void GetImportance(const ContextState& context_state,
+                     const std::function<void(float)>& result);
+
+  // Called by ModuleControllerImpl and ModuleContextImpl.
+  void FocusModule(const fidl::Array<fidl::String>& module_path);
+
+  // Called by ModuleControllerImpl.
+  void DefocusModule(const fidl::Array<fidl::String>& module_path);
+
+  // Called by ModuleControllerImpl.
+  //
+  // Releases ownership of |controller|, which deletes itself after return.
+  void ReleaseModule(ModuleControllerImpl* controller);
+
+  // Called by ModuleContextImpl.
+  const fidl::String& GetStoryId() const;
+
+  // Called by ModuleContextImpl.
+  void RequestStoryFocus();
+
+  // Called by ModuleContextImpl.
+  void GetLinkPath(const LinkPathPtr& link_path,
+                   fidl::InterfaceRequest<Link> request);
+
+  // Called by ModuleContextImpl.
+  void StartModule(
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::String& module_name,
+      const fidl::String& query,
+      const fidl::String& link_name,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      ModuleSource module_source);
+
+  // Called by ModuleContextImpl and AddModule.
+  void StartModuleInShell(
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::String& module_name,
+      const fidl::String& query,
+      const fidl::String& link_name,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      SurfaceRelationPtr surface_relation,
+      bool focus,
+      ModuleSource module_source);
+
  private:
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
@@ -153,9 +153,6 @@ class StoryControllerImpl : StoryController, StoryContext {
                     const fidl::String& value,
                     const SetInfoExtraCallback& callback) override;
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override;
-  void GetLink(fidl::Array<fidl::String> module_path,
-               const fidl::String& name,
-               fidl::InterfaceRequest<Link> request) override;
   void Stop(const StopCallback& callback) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
   void AddModule(fidl::Array<fidl::String> module_path,
@@ -164,6 +161,9 @@ class StoryControllerImpl : StoryController, StoryContext {
                  const fidl::String& link_name,
                  SurfaceRelationPtr surface_relation) override;
   void GetModules(const GetModulesCallback& callback) override;
+  void GetLink(fidl::Array<fidl::String> module_path,
+               const fidl::String& name,
+               fidl::InterfaceRequest<Link> request) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);

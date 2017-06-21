@@ -726,33 +726,25 @@ void StoryControllerImpl::Connect(
   bindings_.AddBinding(this, std::move(request));
 }
 
-// |StoryController|
-void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
-  // Synced such that if GetInfo() is called after Start() or Stop(), the state
-  // after the previously invoked operation is returned.
-  //
-  // If this call enters a race with a StoryProvider.DeleteStory() call, it may
-  // silently not return or return null, or return the story info before it was
-  // deleted, depending on where it gets sequenced in the operation queues of
-  // StoryControllerImpl and StoryProviderImpl. The queues do not block each
-  // other, however, because the call on the second queue is made in the done
-  // callback of the operation on the first queue.
-  //
-  // This race is normal fidl concurrency behavior.
-  new SyncCall(&operation_queue_, [this, callback] {
-    story_provider_impl_->GetStoryInfo(
-        story_id_,
-        [ state = state_, callback ](modular::StoryInfoPtr story_info) {
-          callback(std::move(story_info), state);
-        });
-  });
+bool StoryControllerImpl::IsRunning() {
+  switch (state_) {
+    case StoryState::STARTING:
+    case StoryState::RUNNING:
+    case StoryState::DONE:
+      return true;
+    case StoryState::INITIAL:
+    case StoryState::STOPPED:
+    case StoryState::ERROR:
+      return false;
+  }
 }
 
-// |StoryController|
-void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
-                                       const fidl::String& value,
-                                       const SetInfoExtraCallback& callback) {
-  story_provider_impl_->SetStoryInfoExtra(story_id_, name, value, callback);
+void StoryControllerImpl::StopForDelete(const StopCallback& done) {
+  new DeleteCall(&operation_queue_, this, done);
+}
+
+void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
+  new StopCall(&operation_queue_, this, done);
 }
 
 void StoryControllerImpl::AddForCreate(const fidl::String& module_name,
@@ -764,95 +756,45 @@ void StoryControllerImpl::AddForCreate(const fidl::String& module_name,
                        link_name, link_json, done);
 }
 
-// |StoryController|
-void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
-                                    const fidl::String& module_name,
-                                    const fidl::String& module_url,
-                                    const fidl::String& link_name,
-                                    SurfaceRelationPtr surface_relation) {
-  new AddModuleCall(&operation_queue_, this, std::move(module_path),
-                    module_name, module_url, link_name,
-                    std::move(surface_relation), [] {});
+StoryState StoryControllerImpl::GetStoryState() const {
+  return state_;
 }
 
-// |StoryController|
-void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
-  new GetModulesCall(&operation_queue_, this, callback);
+void StoryControllerImpl::Log(StoryContextLogPtr log_entry) {
+  story_storage_impl_->Log(std::move(log_entry));
 }
 
-// |StoryController|
-void StoryControllerImpl::Start(
-    fidl::InterfaceRequest<mozart::ViewOwner> request) {
-  new StartCall(&operation_queue_, this, std::move(request));
+void StoryControllerImpl::Sync(const std::function<void()>& done) {
+  story_storage_impl_->Sync(done);
 }
 
-void StoryControllerImpl::StartStoryShell(
-    fidl::InterfaceRequest<mozart::ViewOwner> request) {
-  story_shell_controller_ = story_provider_impl_->StartStoryShell(
-      story_context_binding_.NewBinding(), story_shell_.NewRequest(),
-      std::move(request));
+void StoryControllerImpl::GetImportance(
+    const ContextState& context_state,
+    const std::function<void(float)>& result) {
+  new GetImportanceCall(&operation_queue_, this, context_state, result);
 }
 
-// |StoryController|
-void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
-  auto ptr = StoryWatcherPtr::Create(std::move(watcher));
-  ptr->OnStateChange(state_);
-  watchers_.AddInterfacePtr(std::move(ptr));
-}
-
-void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
-  switch (state) {
-    case ModuleState::STARTING:
-      state_ = StoryState::STARTING;
-      break;
-    case ModuleState::RUNNING:
-    case ModuleState::UNLINKED:
-      state_ = StoryState::RUNNING;
-      break;
-    case ModuleState::STOPPED:
-      state_ = StoryState::STOPPED;
-      break;
-    case ModuleState::DONE:
-      state_ = StoryState::DONE;
-      break;
-    case ModuleState::ERROR:
-      state_ = StoryState::ERROR;
-      break;
+void StoryControllerImpl::FocusModule(
+    const fidl::Array<fidl::String>& module_path) {
+  if (story_shell_) {
+    if (module_path.size() > 0) {
+      // Focus modules relative to their parent modules.
+      fidl::Array<fidl::String> parent_module_path = module_path.Clone();
+      parent_module_path.resize(parent_module_path.size() - 1);
+      story_shell_->FocusView(PathString(module_path),
+                              PathString(parent_module_path));
+    } else {
+      // Focus root modules absolutely.
+      story_shell_->FocusView(PathString(module_path), nullptr);
+    }
   }
-
-  NotifyStateChange();
 }
 
-void StoryControllerImpl::NotifyStateChange() {
-  watchers_.ForAllPtrs(
-      [this](StoryWatcher* const watcher) { watcher->OnStateChange(state_); });
-
-  // NOTE(mesch): This gets scheduled on the StoryProviderImpl Operation
-  // queue. If the current StoryControllerImpl Operation is part of a
-  // DeleteStory Operation of the StoryProviderImpl, then the SetStoryState
-  // Operation gets scheduled after the delete of the story is completed, and it
-  // will not write anything. The Operation on the other queue is not part of
-  // this Operation, so not subject to locking if it travels in wrong direction
-  // of the hierarchy (the principle we follow is that an Operation in one
-  // container may sync on the operation queue of something inside the
-  // container, but not something outside the container; this way we prevent
-  // lock cycles).
-  //
-  // TODO(mesch): It would still be nicer if we could complete the State writing
-  // while this Operation is executing so that it stays on our queue and there's
-  // no race condition. We need our own copy of the Page* for that.
-
-  story_storage_impl_->WriteDeviceData(
-      story_id_, story_provider_impl_->device_id(), state_, [] {});
-}
-
-void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
-                                  const fidl::String& name,
-                                  fidl::InterfaceRequest<Link> request) {
-  auto link_path = LinkPath::New();
-  link_path->module_path = std::move(module_path);
-  link_path->link_name = name;
-  GetLinkPath(std::move(link_path), std::move(request));
+void StoryControllerImpl::DefocusModule(
+    const fidl::Array<fidl::String>& module_path) {
+  if (story_shell_) {
+    story_shell_->DefocusView(PathString(module_path), [] {});
+  }
 }
 
 void StoryControllerImpl::ReleaseModule(
@@ -865,6 +807,14 @@ void StoryControllerImpl::ReleaseModule(
   FTL_DCHECK(f != connections_.end());
   f->module_controller_impl.release();
   connections_.erase(f);
+}
+
+const fidl::String& StoryControllerImpl::GetStoryId() const {
+  return story_id_;
+}
+
+void StoryControllerImpl::RequestStoryFocus() {
+  story_provider_impl_->RequestStoryFocus(story_id_);
 }
 
 // TODO(vardhan): Should this operation be queued here, or in |LinkImpl|?
@@ -885,37 +835,6 @@ void StoryControllerImpl::GetLinkPath(const LinkPathPtr& link_path,
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
-}
-
-void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
-  auto f = std::find_if(
-      links_.begin(), links_.end(),
-      [link](const std::unique_ptr<LinkImpl>& l) { return l.get() == link; });
-  FTL_DCHECK(f != links_.end());
-  links_.erase(f);
-}
-
-bool StoryControllerImpl::IsRunning() {
-  switch (state_) {
-    case StoryState::STARTING:
-    case StoryState::RUNNING:
-    case StoryState::DONE:
-      return true;
-    case StoryState::INITIAL:
-    case StoryState::STOPPED:
-    case StoryState::ERROR:
-      return false;
-  }
-}
-
-void StoryControllerImpl::TakeOwnership(ModuleControllerPtr module_controller,
-                                        fidl::String id) {
-  ModuleWatcherPtr watcher;
-  auto module_watcher_impl = std::make_unique<ModuleWatcherImpl>(
-      watcher.NewRequest(), this, std::move(id));
-  module_controller->Watch(std::move(watcher));
-  external_modules_.emplace_back(ExternalModule{std::move(module_watcher_impl),
-                                                std::move(module_controller)});
 }
 
 void StoryControllerImpl::StartModule(
@@ -995,65 +914,148 @@ void StoryControllerImpl::StartModuleInShell(
   }
 }
 
-void StoryControllerImpl::FocusModule(
-    const fidl::Array<fidl::String>& module_path) {
-  if (story_shell_) {
-    if (module_path.size() > 0) {
-      // Focus modules relative to their parent modules.
-      fidl::Array<fidl::String> parent_module_path = module_path.Clone();
-      parent_module_path.resize(parent_module_path.size() - 1);
-      story_shell_->FocusView(PathString(module_path),
-                              PathString(parent_module_path));
-    } else {
-      // Focus root modules absolutely.
-      story_shell_->FocusView(PathString(module_path), nullptr);
-    }
-  }
+// |StoryController|
+void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
+  // Synced such that if GetInfo() is called after Start() or Stop(), the state
+  // after the previously invoked operation is returned.
+  //
+  // If this call enters a race with a StoryProvider.DeleteStory() call, it may
+  // silently not return or return null, or return the story info before it was
+  // deleted, depending on where it gets sequenced in the operation queues of
+  // StoryControllerImpl and StoryProviderImpl. The queues do not block each
+  // other, however, because the call on the second queue is made in the done
+  // callback of the operation on the first queue.
+  //
+  // This race is normal fidl concurrency behavior.
+  new SyncCall(&operation_queue_, [this, callback] {
+    story_provider_impl_->GetStoryInfo(
+        story_id_,
+        [ state = state_, callback ](modular::StoryInfoPtr story_info) {
+          callback(std::move(story_info), state);
+        });
+  });
 }
 
-void StoryControllerImpl::DefocusModule(
-    const fidl::Array<fidl::String>& module_path) {
-  if (story_shell_) {
-    story_shell_->DefocusView(PathString(module_path), [] {});
-  }
+// |StoryController|
+void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
+                                       const fidl::String& value,
+                                       const SetInfoExtraCallback& callback) {
+  story_provider_impl_->SetStoryInfoExtra(story_id_, name, value, callback);
 }
 
-void StoryControllerImpl::RequestStoryFocus() {
-  story_provider_impl_->RequestStoryFocus(story_id_);
+// |StoryController|
+void StoryControllerImpl::Start(
+    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+  new StartCall(&operation_queue_, this, std::move(request));
 }
 
-const fidl::String& StoryControllerImpl::GetStoryId() const {
-  return story_id_;
-}
-
-StoryState StoryControllerImpl::GetStoryState() const {
-  return state_;
-}
-
-void StoryControllerImpl::Log(StoryContextLogPtr log_entry) {
-  story_storage_impl_->Log(std::move(log_entry));
-}
-
-void StoryControllerImpl::Sync(const std::function<void()>& done) {
-  story_storage_impl_->Sync(done);
-}
-
-void StoryControllerImpl::GetImportance(
-    const ContextState& context_state,
-    const std::function<void(float)>& result) {
-  new GetImportanceCall(&operation_queue_, this, context_state, result);
-}
-
-void StoryControllerImpl::StopForDelete(const StopCallback& done) {
-  new DeleteCall(&operation_queue_, this, done);
-}
-
-void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
-  new StopCall(&operation_queue_, this, done);
-}
-
+// |StoryController|
 void StoryControllerImpl::Stop(const StopCallback& done) {
   new StopCall(&operation_queue_, this, done);
+}
+
+// |StoryController|
+void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
+  auto ptr = StoryWatcherPtr::Create(std::move(watcher));
+  ptr->OnStateChange(state_);
+  watchers_.AddInterfacePtr(std::move(ptr));
+}
+
+// |StoryController|
+void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
+                                    const fidl::String& module_name,
+                                    const fidl::String& module_url,
+                                    const fidl::String& link_name,
+                                    SurfaceRelationPtr surface_relation) {
+  new AddModuleCall(&operation_queue_, this, std::move(module_path),
+                    module_name, module_url, link_name,
+                    std::move(surface_relation), [] {});
+}
+
+// |StoryController|
+void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
+  new GetModulesCall(&operation_queue_, this, callback);
+}
+
+// |StoryController|
+void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
+                                  const fidl::String& name,
+                                  fidl::InterfaceRequest<Link> request) {
+  auto link_path = LinkPath::New();
+  link_path->module_path = std::move(module_path);
+  link_path->link_name = name;
+  GetLinkPath(std::move(link_path), std::move(request));
+}
+
+void StoryControllerImpl::StartStoryShell(
+    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+  story_shell_controller_ = story_provider_impl_->StartStoryShell(
+      story_context_binding_.NewBinding(), story_shell_.NewRequest(),
+      std::move(request));
+}
+
+void StoryControllerImpl::NotifyStateChange() {
+  watchers_.ForAllPtrs(
+      [this](StoryWatcher* const watcher) { watcher->OnStateChange(state_); });
+
+  // NOTE(mesch): This gets scheduled on the StoryProviderImpl Operation
+  // queue. If the current StoryControllerImpl Operation is part of a
+  // DeleteStory Operation of the StoryProviderImpl, then the SetStoryState
+  // Operation gets scheduled after the delete of the story is completed, and it
+  // will not write anything. The Operation on the other queue is not part of
+  // this Operation, so not subject to locking if it travels in wrong direction
+  // of the hierarchy (the principle we follow is that an Operation in one
+  // container may sync on the operation queue of something inside the
+  // container, but not something outside the container; this way we prevent
+  // lock cycles).
+  //
+  // TODO(mesch): It would still be nicer if we could complete the State writing
+  // while this Operation is executing so that it stays on our queue and there's
+  // no race condition. We need our own copy of the Page* for that.
+
+  story_storage_impl_->WriteDeviceData(
+      story_id_, story_provider_impl_->device_id(), state_, [] {});
+}
+
+void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
+  auto f = std::find_if(
+      links_.begin(), links_.end(),
+      [link](const std::unique_ptr<LinkImpl>& l) { return l.get() == link; });
+  FTL_DCHECK(f != links_.end());
+  links_.erase(f);
+}
+
+void StoryControllerImpl::TakeOwnership(ModuleControllerPtr module_controller,
+                                        fidl::String id) {
+  ModuleWatcherPtr watcher;
+  auto module_watcher_impl = std::make_unique<ModuleWatcherImpl>(
+      watcher.NewRequest(), this, std::move(id));
+  module_controller->Watch(std::move(watcher));
+  external_modules_.emplace_back(ExternalModule{std::move(module_watcher_impl),
+                                                std::move(module_controller)});
+}
+
+void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
+  switch (state) {
+    case ModuleState::STARTING:
+      state_ = StoryState::STARTING;
+      break;
+    case ModuleState::RUNNING:
+    case ModuleState::UNLINKED:
+      state_ = StoryState::RUNNING;
+      break;
+    case ModuleState::STOPPED:
+      state_ = StoryState::STOPPED;
+      break;
+    case ModuleState::DONE:
+      state_ = StoryState::DONE;
+      break;
+    case ModuleState::ERROR:
+      state_ = StoryState::ERROR;
+      break;
+  }
+
+  NotifyStateChange();
 }
 
 }  // namespace modular
