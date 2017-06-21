@@ -76,11 +76,15 @@ std::string LedgerStatusToString(ledger::Status status) {
   }
 };
 
+std::string GetAccountId(const auth::AccountPtr& account) {
+  return account.is_null() ? "GUEST" : account->id;
+}
+
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
     const app::ApplicationEnvironmentPtr& application_environment,
-    const fidl::String& user_id,
+    auth::AccountPtr account,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
@@ -94,7 +98,8 @@ UserRunnerImpl::UserRunnerImpl(
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
       user_scope_(application_environment,
-                  std::string(kUserScopeLabelPrefix) + user_id.data()),
+                  std::string(kUserScopeLabelPrefix) + GetAccountId(account)),
+      account_(std::move(account)),
       user_shell_(user_scope_.GetLauncher(), std::move(user_shell)) {
   binding_->set_connection_error_handler([this] { Terminate([] {}); });
 
@@ -131,8 +136,8 @@ UserRunnerImpl::UserRunnerImpl(
   });
 
   // DeviceMap service
-  std::string device_id = LoadDeviceID(user_id);
-  device_name_ = LoadDeviceName(user_id);
+  std::string device_id = LoadDeviceID(GetAccountId(account_));
+  device_name_ = LoadDeviceName(GetAccountId(account_));
   std::string device_profile = LoadDeviceProfile();
 
   device_map_impl_.reset(new DeviceMapImpl(device_name_, device_id,
@@ -164,7 +169,7 @@ UserRunnerImpl::UserRunnerImpl(
                      }
                    });
   std::string message_queue_path = kMessageQueuePath;
-  message_queue_path.append(user_id);
+  message_queue_path.append(GetAccountId(account));
   if (!files::CreateDirectory(message_queue_path)) {
     FTL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
@@ -316,6 +321,10 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
       });
     });
   });
+}
+
+void UserRunnerImpl::GetAccount(const GetAccountCallback& callback) {
+  callback(account_.Clone());
 }
 
 void UserRunnerImpl::GetAgentProvider(

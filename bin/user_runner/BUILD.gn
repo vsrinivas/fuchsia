@@ -43,6 +43,7 @@ executable("user_runner") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/auth/account",
     "//apps/modular/services/config",
     "//apps/modular/services/module",
     "//apps/modular/services/remote",

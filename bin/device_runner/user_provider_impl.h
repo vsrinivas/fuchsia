@@ -52,7 +52,7 @@ class UserProviderImpl : UserProvider {
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
-  void LoginInternal(const std::string& user_id,
+  void LoginInternal(auth::AccountPtr account,
                      const fidl::String& server_name,
                      const std::string& local_ledger_path,
                      UserLoginParamsPtr user_login_params);

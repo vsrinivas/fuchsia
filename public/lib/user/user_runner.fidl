@@ -6,6 +6,7 @@ module modular;
 
 import "apps/ledger/services/internal/internal.fidl";
 import "apps/modular/services/auth/account_provider.fidl";
+import "apps/modular/services/auth/account/account.fidl";
 import "apps/modular/services/config/config.fidl";
 import "apps/modular/services/user/user_context.fidl";
 import "apps/mozart/services/views/view_token.fidl";
@@ -16,7 +17,7 @@ import "apps/mozart/services/views/view_token.fidl";
 [ServiceName="modular.UserRunnerFactory"]  // Created by user_runner application.
 interface UserRunnerFactory {
   // Launches a user runner instance for a user identified by |user_id|.
-  Create(string user_id,
+  Create(auth.Account? account,
          AppConfig user_shell,
          AppConfig story_shell,
          auth.TokenProviderFactory token_provider_factory,

@@ -29,7 +29,7 @@ class UserRunnerApp : UserRunnerFactory {
  private:
   // |UserRunnerFactory|
   void Create(
-      const fidl::String& user_id,
+      auth::AccountPtr account,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
@@ -38,7 +38,7 @@ class UserRunnerApp : UserRunnerFactory {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     // Deleted in UserRunnerImpl::Terminate().
-    new UserRunnerImpl(application_context_->environment(), user_id,
+    new UserRunnerImpl(application_context_->environment(), std::move(account),
                        std::move(user_shell), std::move(story_shell),
                        std::move(ledger_repository),
                        std::move(token_provider_factory),

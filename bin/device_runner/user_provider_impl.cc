@@ -26,6 +26,38 @@ std::string LedgerRepositoryPath(const std::string& user_id) {
   return kLedgerDataBaseDir + user_id;
 }
 
+auth::AccountPtr Convert(const UserStorage* user) {
+  FTL_DCHECK(user);
+  auto account = auth::Account::New();
+  account->id = user->id()->str();
+  switch (user->identity_provider()) {
+    case IdentityProvider_DEV:
+      account->identity_provider = auth::IdentityProvider::DEV;
+      break;
+    case IdentityProvider_GOOGLE:
+      account->identity_provider = auth::IdentityProvider::GOOGLE;
+      break;
+    default:
+      FTL_DCHECK(false)
+          << "Unrecognized IdentityProvider" << user->identity_provider();
+  }
+  account->display_name = user->display_name()->str();
+  account->url = user->profile_url()->str();
+  account->image_url = user->image_url()->str();
+  return account;
+}
+
+std::string GetRandomId() {
+  uint32_t random_number;
+  size_t random_size;
+  mx_status_t status =
+      mx_cprng_draw(&random_number, sizeof random_number, &random_size);
+  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(sizeof random_number == random_size);
+
+  return std::to_string(random_number);
+}
+
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
@@ -94,16 +126,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     // When running in incogito mode, we generate a random number. This number
     // serves as account_id and the filename for ledger repository.
-    uint32_t random_number;
-    size_t random_size;
-    mx_status_t status =
-        mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-    FTL_CHECK(status == MX_OK);
-    FTL_CHECK(sizeof random_number == random_size);
-
-    auto random_id = std::to_string(random_number);
-    LoginInternal(random_id, nullptr /* server_name */,
-                  LedgerRepositoryPath(random_id), std::move(params));
+    LoginInternal(nullptr /* account */, nullptr /* server_name */,
+                  LedgerRepositoryPath(GetRandomId()), std::move(params));
     return;
   }
 
@@ -147,7 +171,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   }
 
   FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
-  LoginInternal(params->account_id, found_user->server_name()->str(),
+  LoginInternal(Convert(found_user), found_user->server_name()->str(),
                 ledger_repository_path, std::move(params));
 }
 
@@ -156,23 +180,7 @@ void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
       fidl::Array<auth::AccountPtr>::New(0);
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
-      auto account = auth::Account::New();
-      account->id = user->id()->str();
-      switch (user->identity_provider()) {
-        case IdentityProvider_DEV:
-          account->identity_provider = auth::IdentityProvider::DEV;
-          break;
-        case IdentityProvider_GOOGLE:
-          account->identity_provider = auth::IdentityProvider::GOOGLE;
-          break;
-        default:
-          FTL_DCHECK(false)
-              << "Unrecognized IdentityProvider" << user->identity_provider();
-      }
-      account->display_name = user->display_name()->str();
-      account->url = user->profile_url()->str();
-      account->image_url = user->image_url()->str();
-      accounts.push_back(std::move(account));
+      accounts.push_back(Convert(user));
     }
   }
   callback(std::move(accounts));
@@ -317,14 +325,15 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
   return true;
 }
 
-void UserProviderImpl::LoginInternal(const std::string& account_id,
+void UserProviderImpl::LoginInternal(auth::AccountPtr account,
                                      const fidl::String& server_name,
                                      const std::string& local_ledger_path,
                                      UserLoginParamsPtr params) {
   // Get token provider factory for this user.
   auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
-      account_id, token_provider_factory.NewRequest());
+      account.is_null() ? GetRandomId() : account->id.get(),
+      token_provider_factory.NewRequest());
 
   // Get a token provider instance to pass to ledger.
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
@@ -347,7 +356,7 @@ void UserProviderImpl::LoginInternal(const std::string& account_id,
                         : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, std::move(user_shell), story_shell_,
-      std::move(token_provider_factory), account_id,
+      std::move(token_provider_factory), std::move(account),
       std::move(ledger_repository), std::move(params->view_owner),
       std::move(params->user_controller), ftl::MakeCopyable([
         this, local_ledger_path, server_name,

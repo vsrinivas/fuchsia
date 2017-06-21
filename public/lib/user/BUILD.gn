@@ -17,6 +17,7 @@ fidl("user") {
     "//apps/modular/services/agent",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
+    "//apps/modular/services/auth/account",
   ]
 
   deps = [
@@ -45,6 +46,7 @@ fidl("private") {
   deps = [
     "//apps/ledger/services/internal",
     "//apps/modular/services/auth",
+    "//apps/modular/services/auth/account",
     "//apps/modular/services/config",
     "//apps/mozart/services/views",
   ]

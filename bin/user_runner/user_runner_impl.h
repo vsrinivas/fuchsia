@@ -19,6 +19,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/services/auth/account/account.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
@@ -48,7 +49,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
  public:
   UserRunnerImpl(
       const app::ApplicationEnvironmentPtr& application_environment,
-      const fidl::String& user_id,
+      auth::AccountPtr account,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
@@ -64,6 +65,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void Terminate(const TerminateCallback& done) override;
 
   // |UserShellContext|
+  void GetAccount(const GetAccountCallback& callback) override;
   void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
   void GetContextProvider(
       fidl::InterfaceRequest<maxwell::ContextProvider> request) override;
@@ -92,6 +94,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   ConflictResolverImpl conflict_resolver_;
 
   Scope user_scope_;
+
+  auth::AccountPtr account_;
 
   std::unique_ptr<AppClientBase> maxwell_;
   AppClient<UserShell> user_shell_;
