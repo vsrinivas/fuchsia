@@ -292,7 +292,7 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
 static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -314,7 +314,7 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     xxprintf("ax88179: write complete\n");
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }

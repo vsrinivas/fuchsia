@@ -163,7 +163,7 @@ static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
 static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -184,7 +184,7 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -197,7 +197,7 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }

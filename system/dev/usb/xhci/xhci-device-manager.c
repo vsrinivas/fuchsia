@@ -301,7 +301,7 @@ disable_slot_exit:
 }
 
 // returns true if endpoint was enabled
-static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
+static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index, mx_status_t status) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep =  &slot->eps[ep_index];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
@@ -345,10 +345,10 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     iotxn_t* txn;
     iotxn_t* temp;
     list_for_every_entry_safe(&pending_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, MX_ERR_PEER_CLOSED, 0);
+        iotxn_complete(txn, status, 0);
     }
     list_for_every_entry_safe(&queued_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, MX_ERR_PEER_CLOSED, 0);
+        iotxn_complete(txn, status, 0);
     }
     xhci_transfer_ring_free(transfer_ring);
 
@@ -382,7 +382,7 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
     uint32_t drop_flags = 0;
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
-        if (xhci_stop_endpoint(xhci, slot_id, i)) {
+        if (xhci_stop_endpoint(xhci, slot_id, i, MX_ERR_IO_NOT_PRESENT)) {
             drop_flags |= XHCI_ICC_EP_FLAG(i);
          }
     }
@@ -576,7 +576,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
         XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS, index + 1);
     } else {
-        xhci_stop_endpoint(xhci, slot_id, index);
+        xhci_stop_endpoint(xhci, slot_id, index, MX_ERR_BAD_STATE);
         XHCI_WRITE32(&icc->drop_context_flags, XHCI_ICC_EP_FLAG(index));
     }
 

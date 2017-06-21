@@ -301,7 +301,7 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
     //printf("lan9514 read complete\n");
 
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -321,7 +321,7 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
 
 static void lan9514_write_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
-    if (request->status == MX_ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
         iotxn_release(request);
         return;
     }
@@ -333,7 +333,7 @@ static void lan9514_write_complete(iotxn_t* request, void* cookie) {
 
 static void lan9514_interrupt_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
-    if ((request->status == MX_ERR_PEER_CLOSED) || (request->status == MX_ERR_IO)) { // MX_ERR_IO = NACK (no status change)
+    if ((request->status == MX_ERR_IO_NOT_PRESENT) || (request->status == MX_ERR_IO)) { // MX_ERR_IO = NACK (no status change)
         iotxn_release(request);
         return;
     }

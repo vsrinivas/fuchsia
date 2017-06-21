@@ -648,7 +648,7 @@ static int ums_worker_thread(void* arg) {
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&ums->queued_iotxns, iotxn_t, node)) != NULL) {
-        iotxn_complete(txn, MX_ERR_PEER_CLOSED, 0);
+        iotxn_complete(txn, MX_ERR_IO_NOT_PRESENT, 0);
     }
 
     return MX_OK;

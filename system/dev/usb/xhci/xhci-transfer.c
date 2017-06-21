@@ -73,7 +73,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (!ep->enabled)
-        return MX_ERR_PEER_CLOSED;
+        return MX_ERR_BAD_STATE;
 
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_transfer_state_t* state = ep->transfer_state;
@@ -380,7 +380,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     mtx_lock(&ep->lock);
     if (!ep->enabled) {
         mtx_unlock(&ep->lock);
-        return MX_ERR_PEER_CLOSED;
+        return MX_ERR_BAD_STATE;
     }
 
     list_add_tail(&ep->queued_txns, &txn->node);
@@ -524,8 +524,8 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             xprintf("ignoring transfer event with cc: %d\n", cc);
             return;
         default:
-            xprintf("Unhandled transfer event condition code, closing peer connection: %d\n", cc);
-            result = MX_ERR_PEER_CLOSED;
+            printf("xhci_handle_transfer_event: unhandled transfer event condition code %d\n", cc);
+            result = MX_ERR_IO;
             break;
     }
 
