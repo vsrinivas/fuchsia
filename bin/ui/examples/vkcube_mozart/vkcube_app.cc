@@ -217,10 +217,6 @@ class VulkanCubeApp {
   fidl::Array<mozart2::OpPtr> PopulateSession() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
-    // Create a Scene to attach ourselves to.
-    ResourceId scene_id = NewResourceId();
-    ops.push_back(NewCreateSceneOp(scene_id));
-
     // Create a shape node.
     ResourceId node_id = NewResourceId();
     node_id_ = node_id;
@@ -265,8 +261,21 @@ class VulkanCubeApp {
                                     kZeroesFloat3,      // anchor point
                                     kQuaternionDefault  // rotation
                                     ));
-    // Attach the circle to the Scene.
+
+    // Create a Scene, and attach to it the Nodes created above.
+    ResourceId scene_id = NewResourceId();
+    ops.push_back(NewCreateSceneOp(scene_id));
     ops.push_back(NewAddChildOp(scene_id, node_id));
+
+    // Create a Camera to view the Scene.
+    ResourceId camera_id = NewResourceId();
+    ops.push_back(NewCreateCameraOp(camera_id, scene_id));
+
+    // Create a DisplayRenderer that renders the Scene from the viewpoint of the
+    // Camera that we just created.
+    ResourceId renderer_id = NewResourceId();
+    ops.push_back(NewCreateDisplayRendererOp(renderer_id));
+    ops.push_back(NewSetCameraOp(renderer_id, camera_id));
 
     return ops;
   }

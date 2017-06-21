@@ -14,11 +14,12 @@ SceneManagerApp::SceneManagerApp(Params* params,
                                  DemoHarnessFuchsia* demo_harness)
     : Demo(demo_harness),
       application_context_(demo_harness->application_context()),
-      scene_manager_(
+
+      scene_manager_(std::make_unique<SceneManagerImpl>(
           escher(),
-          std::make_unique<FrameScheduler>(escher(),
-                                           harness()->GetVulkanSwapchain(),
-                                           &display_)) {
+          std::make_unique<FrameScheduler>(&display_),
+          std::make_unique<escher::VulkanSwapchain>(
+              harness()->GetVulkanSwapchain()))) {
   FTL_DCHECK(application_context_);
 
   tracing::InitializeTracer(application_context_, {"scene_manager"});
@@ -26,7 +27,7 @@ SceneManagerApp::SceneManagerApp(Params* params,
   application_context_->outgoing_services()->AddService<mozart2::SceneManager>(
       [this](fidl::InterfaceRequest<mozart2::SceneManager> request) {
         FTL_LOG(INFO) << "Accepting connection to SceneManagerImpl";
-        bindings_.AddBinding(&scene_manager_, std::move(request));
+        bindings_.AddBinding(scene_manager_.get(), std::move(request));
       });
 }
 

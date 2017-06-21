@@ -10,9 +10,9 @@ module mozart2;
 // These are characteristics that each type of |Node| either has or doesn't.
 // These constrain operations that reference nodes; violations will cause the
 // |Session| connection to be closed.  For example, |NodeAddChildOp| must target
-// a node with the "has_children" characteristic.  These characteristics
-// are not explicitly reflected in the Mozart Compositor API; instead, they must
-// be enforced by implementations of the API.
+// a node with the "has_children" characteristic.  These characteristics are not
+// explicitly reflected in the Session API; instead, they must be enforced by
+// implementations of the API.
 // - has_transform:
 // - has_children:
 // - has_parts:

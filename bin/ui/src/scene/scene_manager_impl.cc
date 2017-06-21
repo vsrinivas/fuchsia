@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene/scene_manager_impl.h"
 
+#include "apps/mozart/src/scene/display.h"
+
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace mozart {
@@ -11,9 +13,10 @@ namespace scene {
 
 SceneManagerImpl::SceneManagerImpl(
     escher::Escher* escher,
-    std::unique_ptr<FrameScheduler> frame_scheduler)
+    std::unique_ptr<FrameScheduler> frame_scheduler,
+    std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : frame_scheduler_(std::move(frame_scheduler)),
-      session_context_(escher, frame_scheduler_.get()),
+      session_context_(escher, frame_scheduler_.get(), std::move(swapchain)),
       session_count_(0) {
   // Either both Escher and a FrameScheduler must be available, or neither.
   FTL_DCHECK(!escher == !frame_scheduler_);
@@ -24,7 +27,11 @@ SceneManagerImpl::SceneManagerImpl(
   }
 }
 
-SceneManagerImpl::~SceneManagerImpl() {}
+SceneManagerImpl::~SceneManagerImpl() {
+  if (frame_scheduler_) {
+    frame_scheduler_->RemoveListener(&session_context_);
+  }
+}
 
 void SceneManagerImpl::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,
@@ -35,6 +42,16 @@ void SceneManagerImpl::CreateSession(
       CreateSessionHandler(session_id, std::move(request), std::move(listener));
   sessions_.insert({session_id, std::move(handler)});
   ++session_count_;
+}
+
+void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
+  // TODO(MZ-16): need to specify different device pixel ratio for NUC vs.
+  // Acer Switch 12, and also not hardcode width/height.
+  auto info = mozart2::DisplayInfo::New();
+  info->width = Display::kHardcodedDisplayWidth;
+  info->height = Display::kHardcodedDisplayHeight;
+  info->device_pixel_ratio = Display::kHardcodedDevicePixelRatio;
+  callback(std::move(info));
 }
 
 std::unique_ptr<SessionHandler> SceneManagerImpl::CreateSessionHandler(

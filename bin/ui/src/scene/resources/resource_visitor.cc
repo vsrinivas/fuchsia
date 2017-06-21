@@ -4,10 +4,14 @@
 
 #include "apps/mozart/src/scene/resources/resource_visitor.h"
 
+#include "apps/mozart/src/scene/renderer/display_renderer.h"
+#include "apps/mozart/src/scene/renderer/renderer.h"
+#include "apps/mozart/src/scene/resources/camera.h"
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
 #include "apps/mozart/src/scene/resources/import.h"
+#include "apps/mozart/src/scene/resources/lights/directional_light.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
@@ -46,10 +50,6 @@ void TagNode::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void Scene::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
-
 void CircleShape::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
@@ -63,6 +63,22 @@ void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
 }
 
 void Material::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Scene::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Camera::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Renderer::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void DirectionalLight::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

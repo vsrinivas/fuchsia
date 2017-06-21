@@ -6,12 +6,16 @@
 #include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+#include "escher/vk/vulkan_swapchain.h"
+
 namespace mozart {
 namespace scene {
 namespace test {
 
 void SessionTest::SetUp() {
-  session_ = ftl::MakeRefCounted<Session>(1, &session_context_, this);
+  session_context_ =
+      std::make_unique<SessionContext>(nullptr, nullptr, nullptr);
+  session_ = ftl::MakeRefCounted<Session>(1, session_context_.get(), this);
 }
 
 // ::testing::Test virtual method.
@@ -19,6 +23,7 @@ void SessionTest::TearDown() {
   reported_errors_.clear();
   session_->TearDown();
   session_ = nullptr;
+  session_context_.reset();
 }
 
 void SessionTest::ReportError(ftl::LogSeverity severity,

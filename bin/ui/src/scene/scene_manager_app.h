@@ -34,8 +34,10 @@ class SceneManagerApp : public Demo {
 
   app::ApplicationContext* const application_context_;
 
-  SceneManagerImpl scene_manager_;
-  fidl::BindingSet<mozart2::SceneManager, SceneManagerImpl*> bindings_;
+  std::unique_ptr<DemoHarness> demo_harness_;
+  std::unique_ptr<SceneManagerImpl> scene_manager_;
+
+  fidl::BindingSet<mozart2::SceneManager> bindings_;
 
   Display display_;
 

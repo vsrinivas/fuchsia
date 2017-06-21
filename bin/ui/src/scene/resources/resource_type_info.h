@@ -11,27 +11,38 @@ namespace scene {
 
 // All subclasses of Resource are represented here.
 enum ResourceType {
-  kMemory = 1 << 0,
-  kHostMemory = 1 << 1,
-  kGpuMemory = 1 << 2,
-  kImage = 1 << 3,
-  kBuffer = 1 << 4,
-  kScene = 1 << 5,
+  // Support for importing/exporting resources.
+  kImport = 1 << 0,
+
+  // Low-level resources.
+  kMemory = 1 << 1,
+  kHostMemory = 1 << 2,
+  kGpuMemory = 1 << 3,
+  kImage = 1 << 4,
+  kBuffer = 1 << 5,
+
+  // Shapes.
   kShape = 1 << 6,
   kRectangle = 1 << 7,
   kRoundedRectangle = 1 << 8,
   kCircle = 1 << 9,
   kMesh = 1 << 10,
 
-  kMaterial = 1 << 11,
+  // Materials.
+  kMaterial = 1 << 13,
 
-  kNode = 1 << 12,
-  kClipNode = 1 << 13,
-  kEntityNode = 1 << 14,
-  kLinkNode = 1 << 15,
-  kShapeNode = 1 << 16,
-  kTagNode = 1 << 17,
-  kImport = 1 << 18,
+  // Nodes.
+  kNode = 1 << 15,
+  kClipNode = 1 << 16,
+  kEntityNode = 1 << 17,
+  kShapeNode = 1 << 18,
+  kTagNode = 1 << 19,
+
+  // Scene, camera, lighting.
+  kScene = 1 << 23,
+  kCamera = 1 << 24,
+  kDirectionalLight = 1 << 25,
+  kRenderer = 1 << 26,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

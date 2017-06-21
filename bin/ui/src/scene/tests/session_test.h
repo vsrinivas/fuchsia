@@ -44,7 +44,7 @@ class SessionTest : public ::testing::Test, public scene::ErrorReporter {
     }
   }
 
-  SessionContext session_context_;
+  std::unique_ptr<SessionContext> session_context_;
   SessionPtr session_;
   std::vector<std::string> reported_errors_;
 };

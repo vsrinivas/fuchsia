@@ -37,6 +37,18 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::SCENE:
       stream << "Scene";
       break;
+    case Resource::Tag::CAMERA:
+      stream << "Camera";
+      break;
+    case Resource::Tag::DISPLAY_RENDERER:
+      stream << "DisplayRenderer";
+      break;
+    case Resource::Tag::IMAGE_PIPE_RENDERER:
+      stream << "ImagePipeRenderer";
+      break;
+    case Resource::Tag::DIRECTIONAL_LIGHT:
+      stream << "DirectionalLight";
+      break;
     case Resource::Tag::RECTANGLE:
       stream << "Rectangle";
       break;
@@ -82,6 +94,10 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag) {
       return stream << "vec2";
     case Value::Tag::VECTOR3:
       return stream << "vec3";
+    case Value::Tag::VECTOR4:
+      return stream << "vec4";
+    case Value::Tag::MATRIX4X4:
+      return stream << "mat4";
     case Value::Tag::COLOR_RGBA:
       return stream << "rgba";
     case Value::Tag::DEGREES:

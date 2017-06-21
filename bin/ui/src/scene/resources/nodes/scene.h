@@ -19,6 +19,7 @@ class Scene final : public Node {
 
   Scene(Session* session, ResourceId node_id);
 
+  // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
  private:

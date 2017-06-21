@@ -5,6 +5,7 @@
 #include "apps/mozart/src/scene/renderer/renderer.h"
 
 #include "apps/mozart/src/scene/frame_scheduler.h"
+#include "apps/mozart/src/scene/resources/camera.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
@@ -18,22 +19,29 @@
 namespace mozart {
 namespace scene {
 
-Renderer::Renderer(FrameScheduler* frame_scheduler)
-    : frame_scheduler_(frame_scheduler) {
+const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
+                                              "Renderer"};
+
+Renderer::Renderer(Session* session,
+                   ResourceId id,
+                   FrameScheduler* frame_scheduler)
+    : Resource(session, Renderer::kTypeInfo),
+      frame_scheduler_(frame_scheduler) {
   FTL_DCHECK(frame_scheduler);
-  frame_scheduler_->AddRenderer(this);
 }
 
 Renderer::~Renderer() {
-  frame_scheduler_->RemoveRenderer(this);
+  if (camera_) {
+    frame_scheduler_->RemoveRenderer(this);
+  }
 }
 
 std::vector<escher::Object> Renderer::CreateDisplayList(
-    Node* root_node,
+    const ScenePtr& scene,
     escher::vec2 screen_dimensions) {
   // Construct a display list from the tree.
   Visitor v;
-  root_node->Accept(&v);
+  scene->Accept(&v);
   std::vector<escher::Object> objects = v.TakeDisplayList();
 
   // Add a background.
@@ -45,9 +53,21 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
   return objects;
 }
 
-void Renderer::set_scene(Scene* scene) {
-  FTL_DCHECK(!scene_ && scene || scene_ && !scene);
-  scene_ = scene;
+void Renderer::SetCamera(CameraPtr camera) {
+  if (!camera_ && !camera) {
+    // Still no camera.
+    return;
+  } else if (camera_ && camera) {
+    // Switch camera to new one.  No need to notify FrameScheduler.
+    camera_ = std::move(camera);
+  } else if (camera) {
+    // Camera became non-null.  Register with FrameScheduler.
+    camera_ = std::move(camera);
+    frame_scheduler_->AddRenderer(this);
+  } else {
+    camera_ = nullptr;
+    frame_scheduler_->RemoveRenderer(this);
+  }
 }
 
 std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
@@ -118,6 +138,19 @@ void Renderer::Visitor::Visit(Material* r) {
 }
 
 void Renderer::Visitor::Visit(Import* r) {
+  FTL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(Camera* r) {
+  // TODO: use camera's projection matrix.
+  Visit(r->scene().get());
+}
+
+void Renderer::Visitor::Visit(Renderer* r) {
+  FTL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(DirectionalLight* r) {
   FTL_CHECK(false);
 }
 

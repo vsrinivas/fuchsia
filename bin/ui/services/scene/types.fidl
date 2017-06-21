@@ -22,6 +22,11 @@ struct vec4 {
   float w;
 };
 
+struct mat4 {
+  // Column major order.
+  array<float, 16> matrix;
+};
+
 struct ColorRgba {
   uint8 red;
   uint8 green;
@@ -48,6 +53,8 @@ union Value {
   float vector1;
   vec2 vector2;
   vec3 vector3;
+  vec4 vector4;
+  mat4 matrix4x4;
   ColorRgba color_rgba;
   // Degrees of counter-clockwise rotation in the XY plane.
   float degrees;
@@ -64,6 +71,7 @@ enum ValueType {
   kVector2,
   kVector3,
   kVector4,
+  kMatrix4x4,
   kColorRgba,
   kDegrees,
   kQuaternion,

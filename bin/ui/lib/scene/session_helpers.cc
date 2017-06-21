@@ -84,6 +84,25 @@ mozart2::OpPtr NewCreateSceneOp(uint32_t id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
+mozart2::OpPtr NewCreateCameraOp(uint32_t id, uint32_t scene_id) {
+  auto camera = mozart2::Camera::New();
+  camera->scene_id = scene_id;
+
+  auto resource = mozart2::Resource::New();
+  resource->set_camera(std::move(camera));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateDisplayRendererOp(uint32_t id) {
+  auto renderer = mozart2::DisplayRenderer::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_display_renderer(std::move(renderer));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
 mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius) {
   auto radius_value = mozart2::Value::New();
   radius_value->set_vector1(radius);
@@ -403,9 +422,10 @@ mozart2::OpPtr NewSetTransformOp(uint32_t node_id,
                                  const float anchor[3],
                                  const float quaternion[4]) {
   auto set_transform = mozart2::SetTransformOp::New();
-  set_transform->node_id = node_id;
-  set_transform->transform = mozart2::Transform::New();
-  auto& transform = set_transform->transform;
+  set_transform->id = node_id;
+  set_transform->transform = mozart2::Value::New();
+  set_transform->transform->set_transform(mozart2::Transform::New());
+  auto& transform = set_transform->transform->get_transform();
   transform->translation = mozart2::vec3::New();
   transform->translation->x = translation[0];
   transform->translation->y = translation[1];
@@ -461,6 +481,66 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id) {
   op->set_set_clip(std::move(set_clip));
 
   return op;
+}
+
+mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id) {
+  auto set_camera = mozart2::SetCameraOp::New();
+  set_camera->renderer_id = renderer_id;
+  set_camera->camera_id = camera_id;
+
+  auto op = mozart2::Op::New();
+  op->set_set_camera(std::move(set_camera));
+
+  return op;
+}
+
+mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
+                                        const escher::mat4& matrix) {
+  auto set_camera_projection = mozart2::SetCameraProjectionOp::New();
+  set_camera_projection->camera_id = camera_id;
+  set_camera_projection->matrix = NewValue(matrix);
+
+  auto op = mozart2::Op::New();
+  op->set_set_camera_projection(std::move(set_camera_projection));
+
+  return op;
+}
+
+mozart2::ValuePtr NewValue(const escher::vec3& v) {
+  mozart2::vec3Ptr val = mozart2::vec3::New();
+  val->x = v.x;
+  val->y = v.y;
+  val->z = v.z;
+
+  auto result = mozart2::Value::New();
+  result->set_vector3(std::move(val));
+
+  return result;
+}
+
+mozart2::ValuePtr NewValue(const escher::mat4& m) {
+  mozart2::mat4Ptr val = mozart2::mat4::New();
+  val->matrix[0] = m[0][0];
+  val->matrix[1] = m[0][1];
+  val->matrix[2] = m[0][2];
+  val->matrix[3] = m[0][3];
+  val->matrix[4] = m[1][0];
+  val->matrix[5] = m[1][1];
+  val->matrix[6] = m[1][2];
+  val->matrix[7] = m[1][3];
+  val->matrix[8] = m[2][0];
+  val->matrix[9] = m[2][1];
+  val->matrix[10] = m[2][2];
+  val->matrix[11] = m[2][3];
+  val->matrix[12] = m[3][0];
+  val->matrix[13] = m[3][1];
+  val->matrix[14] = m[3][2];
+  val->matrix[15] = m[3][3];
+
+  auto result = mozart2::Value::New();
+  result->set_matrix4x4(std::move(val));
+
+  return result;
 }
 
 }  // namespace mozart

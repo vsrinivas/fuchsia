@@ -7,8 +7,6 @@
 #include <queue>
 #include <unordered_set>
 
-#include "escher/vk/vulkan_swapchain.h"
-#include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/macros.h"
 
 namespace ftl {
@@ -42,9 +40,7 @@ class FrameSchedulerListener {
 // later Vsync.
 class FrameScheduler {
  public:
-  FrameScheduler(escher::Escher* escher,
-                 escher::VulkanSwapchain swapchain,
-                 Display* display);
+  explicit FrameScheduler(Display* display);
   ~FrameScheduler();
 
   // Request a frame to be scheduled at or after |presentation_time|, which
@@ -87,7 +83,6 @@ class FrameScheduler {
   bool TooMuchBackPressure();
 
   ftl::TaskRunner* const task_runner_;
-  escher::VulkanSwapchainHelper swapchain_helper_;
   std::unordered_set<Renderer*> renderers_;
   // TODO: apply listeners in order.  For example, this would allow clients of
   // FrameScheduler to apply session updates before updating animations.

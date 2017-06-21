@@ -13,20 +13,20 @@ namespace scene {
 
 SessionContext::SessionContext() = default;
 
-SessionContext::SessionContext(escher::Escher* escher,
-                               FrameScheduler* frame_scheduler)
-    : vk_device_(escher->vulkan_context().device),
-      resource_recycler_(escher->resource_recycler()),
-      image_factory_(std::make_unique<escher::SimpleImageFactory>(
-          resource_recycler_,
-          escher->gpu_allocator())),
-      gpu_uploader_(escher->gpu_uploader()),
+SessionContext::SessionContext(
+    escher::Escher* escher,
+    FrameScheduler* frame_scheduler,
+    std::unique_ptr<escher::VulkanSwapchain> swapchain)
+    : escher_(escher),
+      image_factory_(escher ? std::make_unique<escher::SimpleImageFactory>(
+                                  escher->resource_recycler(),
+                                  escher->gpu_allocator())
+                            : nullptr),
       rounded_rect_factory_(
-          std::make_unique<escher::RoundedRectFactory>(escher)),
+          escher ? std::make_unique<escher::RoundedRectFactory>(escher)
+                 : nullptr),
       frame_scheduler_(frame_scheduler),
-      renderer_(std::make_unique<Renderer>(frame_scheduler)) {
-  FTL_DCHECK(frame_scheduler);
-}
+      swapchain_(std::move(swapchain)) {}
 
 SessionContext::~SessionContext() = default;
 
@@ -67,40 +67,19 @@ void SessionContext::OnImportResolvedForResource(
   }
 }
 
-ScenePtr SessionContext::CreateScene(Session* session,
-                                     ResourceId node_id,
-                                     const mozart2::ScenePtr& args) {
-  // TODO: Create a SceneHolder class that takes args.token and destroys
-  // links if that gets signalled
-  FTL_DCHECK(args);
-  // For now, just create a dumb list of scenes.
-  auto scene = ftl::MakeRefCounted<Scene>(session, node_id);
-  if (scenes_.size() == 0) {
-    // HACK!  Add first scene to the renderer.  This is temporary; soon the
-    // Session API will explicitly support attaching cameras/scenes to
-    // renderers.
-    if (renderer_) {
-      renderer_->set_scene(scene.get());
-    }
-  }
-  scenes_.push_back(scene);
-  return scene;
-}
-
-void SessionContext::OnSessionTearDown(Session* session) {
-  auto predicate = [session](const ScenePtr& l) {
-    return l->session() == session;
-  };
-  // Remove all scenes for this session.
-  scenes_.erase(std::remove_if(scenes_.begin(), scenes_.end(), predicate),
-                scenes_.end());
-}
-
 void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
                                            ftl::RefPtr<Session> session) {
   updatable_sessions_.push(
       std::make_pair(presentation_time, std::move(session)));
-  frame_scheduler_->RequestFrame(presentation_time);
+
+  if (frame_scheduler_) {
+    frame_scheduler_->RequestFrame(presentation_time);
+  } else {
+    // Apply update immediately.  This is done for tests.
+    FTL_LOG(WARNING)
+        << "No FrameScheduler available; applying update immediately";
+    OnPrepareFrame(presentation_time, 0);
+  }
 }
 
 bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
@@ -114,6 +93,11 @@ bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
                                                    presentation_interval);
   }
   return needs_render;
+}
+
+escher::VulkanSwapchain SessionContext::GetVulkanSwapchain() const {
+  FTL_DCHECK(swapchain_);
+  return *(swapchain_.get());
 }
 
 }  // namespace scene

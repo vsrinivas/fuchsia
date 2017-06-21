@@ -18,6 +18,7 @@ class Shape : public Resource {
   /// Returns if the given point lies within its bounds of this shape.
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
+  // Generate an object to add to an escher::Model.
   virtual escher::Object GenerateRenderObject(
       const escher::mat4& transform,
       const escher::MaterialPtr& material) = 0;

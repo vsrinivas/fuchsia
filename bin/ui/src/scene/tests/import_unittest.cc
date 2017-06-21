@@ -144,7 +144,7 @@ TEST_F(ImportThreadedTest,
        DISABLED_KillingImportedResourceEvictsFromResourceLinker) {
   // Setup a latch on the resource expiring in the linker.
   ftl::AutoResetWaitableEvent import_expired_latch;
-  session_context_.GetResourceLinker().SetOnExpiredCallback(
+  session_context_->GetResourceLinker().SetOnExpiredCallback(
       [this, &import_expired_latch](ResourcePtr,
                                     ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(cause, ResourceLinker::ExpirationCause::kImportHandleClosed);
@@ -170,7 +170,7 @@ TEST_F(ImportThreadedTest,
 
     // Assert that the resource linker is ready to potentially link the
     // resource.
-    ASSERT_EQ(session_context_.GetResourceLinker().UnresolvedImports(), 1u);
+    ASSERT_EQ(session_context_->GetResourceLinker().UnresolvedImports(), 1u);
 
     // Assert that the import node was setup with the correct properties.
     auto import_node = FindResource<Import>(1);
@@ -193,7 +193,7 @@ TEST_F(ImportThreadedTest,
   // Assert that the resource linker has removed the unresolved import
   // registration. We have already asserted that the unresolved import was
   // registered in the initial post task.
-  ASSERT_EQ(session_context_.GetResourceLinker().UnresolvedImports(), 0u);
+  ASSERT_EQ(session_context_->GetResourceLinker().UnresolvedImports(), 0u);
 }
 
 TEST_F(ImportTest,
@@ -391,7 +391,7 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
 
     // Export.
     ASSERT_TRUE(Apply(NewExportResourceOp(1, std::move(export_token))));
-    ASSERT_EQ(session_context_.GetResourceLinker().UnresolvedExports(), 1u);
+    ASSERT_EQ(session_context_->GetResourceLinker().UnresolvedExports(), 1u);
   }
 
   // Embeddee.

@@ -9,6 +9,7 @@
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/resource_linker.h"
 #include "escher/escher.h"
+#include "escher/examples/common/demo_harness.h"
 #include "escher/impl/gpu_uploader.h"
 #include "escher/resources/resource_recycler.h"
 #include "lib/escher/escher/renderer/simple_image_factory.h"
@@ -17,7 +18,7 @@
 namespace mozart {
 namespace scene {
 
-class Renderer;
+class FrameScheduler;
 class Session;
 
 // Interface that describes the ways that a |Session| communicates with its
@@ -26,7 +27,9 @@ class SessionContext : public FrameSchedulerListener {
  public:
   SessionContext();
 
-  SessionContext(escher::Escher* escher, FrameScheduler* frame_scheduler);
+  SessionContext(escher::Escher* escher,
+                 FrameScheduler* frame_scheduler,
+                 std::unique_ptr<escher::VulkanSwapchain> swapchain);
 
   ~SessionContext();
 
@@ -44,35 +47,33 @@ class SessionContext : public FrameSchedulerListener {
                       mozart2::ImportSpec spec,
                       const mx::eventpair& endpoint);
 
-  ScenePtr CreateScene(Session* session,
-                       ResourceId node_id,
-                       const mozart2::ScenePtr& args);
+  escher::Escher* escher() const { return escher_; }
+  escher::VulkanSwapchain GetVulkanSwapchain() const;
 
-  void OnSessionTearDown(Session* session);
-
-  const std::vector<ScenePtr>& scenes() const { return scenes_; }
-
-  vk::Device vk_device() { return vk_device_; }
+  vk::Device vk_device() {
+    return escher_ ? escher_->vulkan_context().device : vk::Device();
+  }
 
   escher::ResourceRecycler* escher_resource_recycler() {
-    return resource_recycler_;
+    return escher_ ? escher_->resource_recycler() : nullptr;
   }
 
   escher::ImageFactory* escher_image_factory() { return image_factory_.get(); }
 
-  escher::impl::GpuUploader* escher_gpu_uploader() { return gpu_uploader_; }
+  escher::impl::GpuUploader* escher_gpu_uploader() {
+    return escher_ ? escher_->gpu_uploader() : nullptr;
+  }
 
   escher::RoundedRectFactory* escher_rounded_rect_factory() {
     return rounded_rect_factory_.get();
   }
-
-  void set_frame_scheduler(FrameScheduler* frame_scheduler);
 
   // Tell the FrameScheduler to schedule a frame, and remember the Session so
   // that we can tell it to apply updates when the FrameScheduler notifies us
   // via OnPrepareFrame().
   void ScheduleSessionUpdate(uint64_t presentation_time,
                              ftl::RefPtr<Session> session);
+  FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
 
  private:
   // Implement |FrameSchedulerListener|.  For each session, apply all updates
@@ -82,14 +83,11 @@ class SessionContext : public FrameSchedulerListener {
                       uint64_t presentation_interval) override;
 
   ResourceLinker resource_linker_;
-  vk::Device vk_device_;
-  escher::ResourceRecycler* resource_recycler_;
+  escher::Escher* const escher_ = nullptr;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
-  escher::impl::GpuUploader* gpu_uploader_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
-  std::vector<ScenePtr> scenes_;
   FrameScheduler* const frame_scheduler_ = nullptr;
-  std::unique_ptr<Renderer> renderer_;
+  std::unique_ptr<escher::VulkanSwapchain> swapchain_;
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.

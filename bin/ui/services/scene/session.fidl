@@ -167,12 +167,4 @@ struct PresentationInfo {
 
 interface SessionListener {
   OnError(string error);
-
-  // TODO: not clear how this will be used.  Subject to change.
-  OnExportTimeout(uint32 resource_id, handle<eventpair> token);
-
-  // TODO: not clear how this will be used.  Subject to change.
-  OnResourceAvailabilityChanged(uint32 resource_id, bool is_available);
-
-  OnAnimationEnd(uint32 animation_id);
 };

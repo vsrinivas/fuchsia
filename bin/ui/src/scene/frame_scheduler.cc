@@ -9,10 +9,6 @@
 #include "apps/mozart/src/scene/display.h"
 #include "apps/mozart/src/scene/renderer/renderer.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
-#include "escher/escher.h"
-#include "escher/renderer/paper_renderer.h"
-#include "escher/scene/model.h"
-#include "escher/scene/stage.h"
 #include "ftl/logging.h"
 
 namespace mozart {
@@ -22,11 +18,8 @@ namespace scene {
 // TODO: more sophisticated prediction.
 constexpr uint64_t kPredictedFrameRenderTime = 4'000'000;  // 4ms
 
-FrameScheduler::FrameScheduler(escher::Escher* escher,
-                               escher::VulkanSwapchain swapchain,
-                               Display* display)
+FrameScheduler::FrameScheduler(Display* display)
     : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner().get()),
-      swapchain_helper_(swapchain, escher->NewPaperRenderer()),
       display_(display) {}
 
 FrameScheduler::~FrameScheduler() {}
@@ -189,26 +182,10 @@ void FrameScheduler::UpdateScene() {
 }
 
 void FrameScheduler::DrawFrame() {
+  // Only a single renderer is currently supported.
   FTL_DCHECK(renderers_.size() == 1);
   auto renderer = *renderers_.begin();
-
-  float width = static_cast<float>(swapchain_helper_.swapchain().width);
-  float height = static_cast<float>(swapchain_helper_.swapchain().height);
-
-  FTL_DCHECK(renderer->scene());
-  escher::Model model(renderer->CreateDisplayList(renderer->scene(),
-                                                  escher::vec2(width, height)));
-
-  escher::Stage stage;
-  stage.Resize(escher::SizeI(width, height), 1.0, escher::SizeI(0, 0));
-  constexpr float kTop = 50;
-  constexpr float kBottom = 0;
-  stage.set_viewing_volume({width, height, kTop, kBottom});
-  stage.set_key_light(escher::DirectionalLight(
-      escher::vec2(1.5f * M_PI, 1.5f * M_PI), 0.15f * M_PI, 0.7f));
-  stage.set_fill_light(escher::AmbientLight(0.3f));
-
-  swapchain_helper_.DrawFrame(stage, model);
+  renderer->DrawFrame();
 }
 
 }  // namespace scene

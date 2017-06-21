@@ -6,6 +6,8 @@
 
 #include "apps/mozart/services/scene/session.fidl.h"
 
+#include "escher/geometry/types.h"
+
 namespace mozart {
 
 const float kZeroesFloat3[3] = {0.f, 0.f, 0.f};
@@ -31,6 +33,9 @@ mozart2::OpPtr NewCreateBufferOp(uint32_t id,
                                  uint32_t memory_offset,
                                  uint32_t num_bytes);
 mozart2::OpPtr NewCreateSceneOp(uint32_t id);
+mozart2::OpPtr NewCreateCameraOp(uint32_t id, uint32_t scene_id);
+mozart2::OpPtr NewCreateDisplayRendererOp(uint32_t id);
+
 mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius);
 mozart2::OpPtr NewCreateRectangleOp(uint32_t id, float width, float height);
 mozart2::OpPtr NewCreateRoundedRectangleOp(uint32_t id,
@@ -101,5 +106,14 @@ mozart2::OpPtr NewSetTransformOp(uint32_t node_id,
 mozart2::OpPtr NewSetShapeOp(uint32_t node_id, uint32_t shape_id);
 mozart2::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id);
 mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
+
+// Camera and lighting operations.
+mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id);
+mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
+                                        const escher::mat4& matrix);
+
+// Value specification.
+mozart2::ValuePtr NewValue(const escher::vec3& v);
+mozart2::ValuePtr NewValue(const escher::mat4& m);
 
 }  // namespace mozart

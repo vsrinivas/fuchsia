@@ -18,6 +18,10 @@ class Display {
   // (vsync).
   static constexpr uint64_t kHardcodedPresentationIntervalNanos = 16'666'667;
 
+  static constexpr uint32_t kHardcodedDisplayWidth = 2160;
+  static constexpr uint32_t kHardcodedDisplayHeight = 1440;
+  static constexpr float kHardcodedDevicePixelRatio = 1.f;
+
   Display();
 
   // Obtain the time of the last Vsync, in nanoseconds.

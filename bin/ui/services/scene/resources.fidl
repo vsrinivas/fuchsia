@@ -8,6 +8,7 @@ import "apps/mozart/services/scene/nodes.fidl";
 import "apps/mozart/services/scene/shapes.fidl";
 import "apps/mozart/services/scene/types.fidl";
 import "apps/mozart/services/images2/image_info.fidl";
+import "apps/mozart/services/images2/image_pipe.fidl";
 import "apps/mozart/services/images2/memory_type.fidl";
 
 // These are all of the types of resources that can be created within a
@@ -18,8 +19,14 @@ union Resource {
   Image image;
   Buffer buffer;
 
-  // Root of the hierarchy.
-  Scene scene;
+  // Shapes (see shapes.fidl).
+  Rectangle rectangle;
+  RoundedRectangle rounded_rectangle;
+  Circle circle;
+  Mesh mesh;
+
+  // Materials.
+  Material material;
 
   // Nodes.
   ClipNode clip_node;
@@ -27,13 +34,14 @@ union Resource {
   ShapeNode shape_node;
   TagNode tag_node;
 
-  // Shapes (see shapes.fidl).
-  Rectangle rectangle;
-  RoundedRectangle rounded_rectangle;
-  Circle circle;
-  Mesh mesh;
+  // Scene representation and display.
+  Scene scene;
+  Camera camera;
+  DisplayRenderer display_renderer;
+  ImagePipeRenderer image_pipe_renderer;
 
-  Material material;
+  // Lighting.
+  DirectionalLight directional_light;
 
   // A value that can be used in place of a constant value.
   Variable variable;
@@ -67,9 +75,56 @@ struct Buffer {
   uint32 num_bytes;
 };
 
-// Represents an external entity which can attach a child |Node| from this
-// |Session|, e.g. the root of a Scene.
+// A Scene is the root of a scene-graph, and defines the rendering environment
+// (lighting, etc.) for the tree of nodes beneath it.  The following operations
+// may be  applied to a Scene (see ops.fidl):
+//   - Add/RemoveLight
+//   - AddChild
 struct Scene {
+};
+
+// A Camera is used to render a Scene from a particular Viewpoint.  This is
+// achieved by setting a Renderer to use the camera.  The following operations
+// may be applied to a Camera (see ops.fidl):
+//   - SetTransform
+//   - SetCameraProjection
+struct Camera {
+  // The scene that the camera is viewing.
+  uint32 scene_id;
+};
+
+// Renderers render a Scene via a Camera.  DisplayRenderer presents the rendered
+// scene by lighting up pixels a physical display.  The following operations
+// may be applied to a DisplayRenderer (see ops.fidl):
+//   - SetCamera
+// TODO: in the future we will explicitly manage multiple displays.  For now,
+// the display is implicitly associated with the SceneManager.
+struct DisplayRenderer {
+};
+
+// Renderers render a Scene via a Camera.  ImagePipeRenderer pushes rendered
+// images of a scene into an ImagePipe.  The following operations may be applied
+// to an ImagePipeRenderer (see ops.fidl):
+//   - SetCamera
+struct ImagePipeRenderer {
+  uint32 width;
+  uint32 height;
+  ImagePipe target;
+};
+
+// A DirectionalLight is a Light that is emitted from a point at infinity.
+//
+// Although the light is directional, the light has some amount of angular
+// dispersion (i.e., the light is not fully columnated). For simplicity, we
+// assume the dispersion of the light source is symmetric about the light's
+// primary direction.
+//
+// The following operations may be applied to a DirectionalLight (see ops.fidl):
+//   - SetDirection
+//   - SetLightIntensity
+struct DirectionalLight {
+  Value direction;  // vec3.
+  Value intensity;  // float
 };
 
 // Simple texture-mapped material.  If no texture is provided (i.e. |texture_id|

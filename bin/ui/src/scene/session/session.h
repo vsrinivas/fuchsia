@@ -40,6 +40,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
 
   SessionId id() const { return id_; }
   SessionContext* context() const { return context_; }
+  escher::Escher* escher() const { return context_->escher(); }
 
   // Return the total number of existing resources associated with this Session.
   size_t GetTotalResourceCount() const { return resource_count_; }
@@ -84,15 +85,26 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyDetachOp(const mozart2::DetachOpPtr& op);
   bool ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op);
   bool ApplySetTransformOp(const mozart2::SetTransformOpPtr& op);
+  bool ApplySetRotationOp(const mozart2::SetRotationOpPtr& op);
   bool ApplySetShapeOp(const mozart2::SetShapeOpPtr& op);
   bool ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op);
   bool ApplySetClipOp(const mozart2::SetClipOpPtr& op);
+  bool ApplySetCameraOp(const mozart2::SetCameraOpPtr& op);
+  bool ApplySetCameraProjectionOp(const mozart2::SetCameraProjectionOpPtr& op);
+  bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
   bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
   bool ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args);
   bool ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args);
   bool ApplyCreateScene(ResourceId id, const mozart2::ScenePtr& args);
+  bool ApplyCreateCamera(ResourceId id, const mozart2::CameraPtr& args);
+  bool ApplyCreateDisplayRenderer(ResourceId id,
+                                  const mozart2::DisplayRendererPtr& args);
+  bool ApplyCreateImagePipeRenderer(ResourceId id,
+                                    const mozart2::ImagePipeRendererPtr& args);
+  bool ApplyCreateDirectionalLight(ResourceId id,
+                                   const mozart2::DirectionalLightPtr& args);
   bool ApplyCreateRectangle(ResourceId id, const mozart2::RectanglePtr& args);
   bool ApplyCreateRoundedRectangle(ResourceId id,
                                    const mozart2::RoundedRectanglePtr& args);
@@ -103,13 +115,23 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateEntityNode(ResourceId id, const mozart2::EntityNodePtr& args);
   bool ApplyCreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
   bool ApplyCreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
+  bool ApplyCreateVariable(ResourceId id, const mozart2::VariablePtr& args);
 
   // Actually create resources.
   ResourcePtr CreateMemory(ResourceId, const mozart2::MemoryPtr& args);
   ResourcePtr CreateImage(ResourceId,
                           MemoryPtr memory,
                           const mozart2::ImagePtr& args);
-  ResourcePtr CreateScene(ResourceId, const mozart2::ScenePtr& args);
+  ResourcePtr CreateScene(ResourceId id, const mozart2::ScenePtr& args);
+  ResourcePtr CreateCamera(ResourceId id, const mozart2::CameraPtr& args);
+  ResourcePtr CreateDisplayRenderer(ResourceId id,
+                                    const mozart2::DisplayRendererPtr& args);
+  ResourcePtr CreateImagePipeRenderer(
+      ResourceId id,
+      const mozart2::ImagePipeRendererPtr& args);
+  ResourcePtr CreateDirectionalLight(ResourceId id,
+                                     escher::vec3 direction,
+                                     float intensity);
   ResourcePtr CreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
   ResourcePtr CreateEntityNode(ResourceId id,
                                const mozart2::EntityNodePtr& args);

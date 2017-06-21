@@ -11,5 +11,9 @@ source_set("session_helpers") {
   ]
   deps = [
     "//apps/mozart/services/scene",
+    "//lib/escher/escher",
+  ]
+  include_dirs = [
+    "//lib/escher",
   ]
 }

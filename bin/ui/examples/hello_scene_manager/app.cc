@@ -56,11 +56,6 @@ class HelloSceneManagerApp {
   fidl::Array<mozart2::OpPtr> CreateExampleScene() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
-    // Create a Scene to attach ourselves to.
-    ResourceId scene_id = NewResourceId();
-    ops.push_back(NewCreateSceneOp(scene_id));
-
-    // Create an EntityNode to act as the root of our subtree.
     ResourceId entity_node_id = NewResourceId();
     ops.push_back(NewCreateEntityNodeOp(entity_node_id));
 
@@ -153,8 +148,20 @@ class HelloSceneManagerApp {
                                       ));
     }
 
-    // Attach the root EntityNode to the Scene.
+    // Create a Scene, and attach to it the Nodes created above.
+    ResourceId scene_id = NewResourceId();
+    ops.push_back(NewCreateSceneOp(scene_id));
     ops.push_back(NewAddChildOp(scene_id, entity_node_id));
+
+    // Create a Camera to view the Scene.
+    ResourceId camera_id = NewResourceId();
+    ops.push_back(NewCreateCameraOp(camera_id, scene_id));
+
+    // Create a DisplayRenderer that renders the Scene from the viewpoint of the
+    // Camera that we just created.
+    ResourceId renderer_id = NewResourceId();
+    ops.push_back(NewCreateDisplayRendererOp(renderer_id));
+    ops.push_back(NewSetCameraOp(renderer_id, camera_id));
 
     return ops;
   }

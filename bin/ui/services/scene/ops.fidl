@@ -13,15 +13,23 @@ union Op {
   ImportResourceOp import_resource;
   ReleaseResourceOp release_resource;
 
-  // Node operations.
+  // Spatial operations.
+  SetTransformOp set_transform;
+  SetRotationOp set_rotation;
+
+  // Node-specific operations.
   AddChildOp add_child; // TODO: Should we require a DetachOp before re-parenting?
   AddPartOp add_part;
   DetachOp detach;
   DetachChildrenOp detach_children;
-  SetTransformOp set_transform;
   SetShapeOp set_shape;
   SetMaterialOp set_material;
   SetClipOp set_clip;
+
+  // Camera and lighting operations.
+  SetCameraOp set_camera;
+  SetCameraProjectionOp set_camera_projection;
+  SetLightIntensityOp set_light_intensity;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -132,19 +140,34 @@ struct DetachChildrenOp {
   uint32 node_id;
 };
 
-// Sets a node's transform.
+// Sets a Resource's (typically a Node's) transform.
 //
 // Constraints:
-// - |id| refs a Node with the has_transform characteristic.
+// - |id| refs a Resource with the has_transform characteristic.
 struct SetTransformOp {
-  uint32 node_id;
-  Transform transform;
+  uint32 id;
+  Value transform;  // type: kTransform
+};
+
+// Sets a Resource's (typically a Node's) rotation.
+//
+// Constraints:
+// - |id| refs a Resource with the has_rotation or has_transform characteristic.
+//
+// TODO: it's not quite clear how to apply this to a Resource with the
+// has_transform characteristic, when the resource already has a Variable
+// transform.  When the resource's transform is not a variable, then there is an
+// obvious interpretation: only the rotation is set (the translation, scale,
+// etc. are left unchanged).
+struct SetRotationOp {
+  uint32 id;
+  Value rotation;  // type: kQuaternion
 };
 
 // Sets/clears a node's shape.
 //
 // Constraints:
-// - |id| refs a |Node| with the has_shape characteristic.
+// - |node_id| refs a |Node| with the has_shape characteristic.
 // - |shape_id| refs a |Shape|, or nothing.
 // - if this op causes the target to have both a |Shape| and a |Material|,
 //   then these must be compatible with each other (see README.md regarding
@@ -163,7 +186,7 @@ struct SetShapeOp {
 // Sets/clears a node's material.
 //
 // Constraints:
-// - |id| refs a |Node| with the has_material characteristic.
+// - |node_id| refs a |Node| with the has_material characteristic.
 // - |material_id| refs a |Material|, or nothing.
 // - if this op causes the target to have both a |Shape| and a |Material|,
 //   then these must be compatible with each other (see README.md regarding
@@ -182,7 +205,7 @@ struct SetMaterialOp {
 // Sets/clears a node's clip.
 //
 // Constraints:
-// - |id| refs a |Node| with the has_clip characteristic.
+// - |node_id| refs a |Node| with the has_clip characteristic.
 // - |clip_id| a |Node| with the is_clip characteristic, or nothing.  If the
 //   referenced node is not rooted, then it will have no effect (since its
 //   full world-transform cannot be determined).
@@ -203,4 +226,35 @@ struct SetClipOp {
   uint32 node_id;
   uint32 clip_id;
   bool clip_to_self;
+};
+
+// Sets a renderer's camera.
+//
+// Constraints:
+// - |renderer_id| refs a |Renderer|.
+// - |camera_id| refs a |Camera|, or stops rendering by passing zero.
+// - |matrix| is a value or variable of type kMatrix4x4.
+struct SetCameraOp {
+  uint32 renderer_id;
+  uint32 camera_id;
+};
+
+// Sets a camera's projection matrix.
+//
+// Constraints:
+// - |camera_id| refs a |Camera|.
+// - |matrix| is a value or variable of type kMatrix4x4.
+struct SetCameraProjectionOp {
+  uint32 camera_id;
+  Value matrix;  // type: kMatrix4x4
+};
+
+// Sets the intensity of a Light.
+//
+// Constraints:
+// - |light_id| refs a |Light|.
+// - |intensity| is a value or variable of type kFloat..
+struct SetLightIntensityOp {
+  uint32 light_id;
+  Value intensity;  // type: kFloat
 };
