@@ -78,7 +78,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   fidl::InterfaceHandle<ContextPublisher> context_publisher;
   auto scope = ComponentScope::New();
   scope->set_global_scope(GlobalScope::New());
-  context_engine_->GetPublisher(std::move(scope), context_publisher.NewRequest());
+  context_engine_->GetPublisher(std::move(scope),
+                                context_publisher.NewRequest());
 
   // Initialize the SuggestionEngine.
   suggestion_engine_->Initialize(Duplicate(story_provider),
@@ -98,12 +99,14 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   StartAgent("file:///system/apps/agents/maxwell_btl");
   StartAgent("file:///system/apps/agents/maxwell_entity_focuser");
   StartAgent("file:///system/apps/agents/maxwell_proposal_maker");
-
+// Toggle using the "kronk" gn arg
+#ifdef KRONK
 // Toggle using the "kronk_dev" gn arg (see README).
 #ifdef KRONK_DEV
   StartAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
 #else
   StartAgent("https://storage.googleapis.com/maxwell-agents/kronk");
+#endif
 #endif
 
   StartAgent(

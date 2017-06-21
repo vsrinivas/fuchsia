@@ -44,6 +44,9 @@ unstable version:
 
 (and then rebuild)
 
+To suppress Kronk startup, use:
+    fgen --args kronk=false
+
 ## Other Docs
 
 * [Module Manifest](docs/module_manifest.md)

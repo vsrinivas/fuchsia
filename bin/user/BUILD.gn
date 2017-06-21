@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # if false, bypasses Kronk launch
+  kronk = true
+
   # if true, uses the "kronk-dev" agent, which is the unstable,
   # under-development version
   kronk_dev = false
@@ -53,8 +56,11 @@ source_set("user_intelligence_provider") {
     "//apps/network/services",
   ]
 
-  if (kronk_dev) {
-    defines = [ "KRONK_DEV" ]
+  if (kronk) {
+    defines = [ "KRONK" ]
+    if (kronk_dev) {
+      defines += [ "KRONK_DEV" ]
+    }
   }
 }
 
