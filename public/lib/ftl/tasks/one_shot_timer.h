@@ -5,8 +5,9 @@
 #ifndef LIB_FTL_TASKS_ONE_SHOT_TIMER_H_
 #define LIB_FTL_TASKS_ONE_SHOT_TIMER_H_
 
-#include "lib/ftl/macros.h"
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
@@ -15,7 +16,7 @@ namespace ftl {
 
 // Posts tasks to a |TaskRunner| to run once after a delay.
 // It may only be used on the same thread as the task runner.
-class OneShotTimer {
+class FTL_EXPORT OneShotTimer {
  public:
   OneShotTimer();
   ~OneShotTimer();

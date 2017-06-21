@@ -5,6 +5,7 @@
 #ifndef LIB_FTL_TASKS_TASK_RUNNER_H_
 #define LIB_FTL_TASKS_TASK_RUNNER_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/time/time_delta.h"
@@ -13,7 +14,7 @@
 namespace ftl {
 
 // Posts tasks to a task queue.
-class TaskRunner : public RefCountedThreadSafe<TaskRunner> {
+class FTL_EXPORT TaskRunner : public RefCountedThreadSafe<TaskRunner> {
  public:
   // Posts a task to run as soon as possible.
   virtual void PostTask(Closure task) = 0;

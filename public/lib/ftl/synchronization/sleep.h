@@ -5,12 +5,13 @@
 #ifndef LIB_FTL_SYNCHRONIZATION_SLEEP_H_
 #define LIB_FTL_SYNCHRONIZATION_SLEEP_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 
 namespace ftl {
 
-void SleepFor(TimeDelta duration);
+FTL_EXPORT void SleepFor(TimeDelta duration);
 
 }  // namespace ftl
 

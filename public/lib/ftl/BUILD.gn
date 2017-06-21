@@ -26,7 +26,9 @@ source_set("stateful_sources") {
   ]
 }
 
-static_library("ftl") {
+source_set("ftl_lib") {
+  visibility = [ ":*" ]
+
   sources = [
     "arraysize.h",
     "build_config.h",
@@ -144,6 +146,24 @@ static_library("ftl") {
   ]
 }
 
+if (is_fuchsia) {
+
+shared_library("ftl") {
+  public_deps = [
+    ":ftl_lib(//build/toolchain/fuchsia:${target_cpu}-shared)",
+  ]
+}
+
+} else {
+
+source_set("ftl") {
+  public_deps = [
+    ":ftl_lib",
+  ]
+}
+
+}
+
 source_set("ftl_printers") {
   testonly = true
 
@@ -204,8 +224,13 @@ package("package") {
   package_name = "ftl"
 
   deps = [
+    ":ftl",
     ":ftl_unittests",
   ]
+
+  libraries = [ {
+        name = "libftl.so"
+      } ]
 
   tests = [ {
         name = "ftl_unittests"

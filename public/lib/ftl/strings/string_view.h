@@ -9,6 +9,7 @@
 #include <string>
 #include <type_traits>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/logging.h"
 
 // MSVC 2015 doesn't support "extended constexpr" from C++14.
@@ -22,7 +23,7 @@
 namespace ftl {
 
 // A string-like object that points to a sized piece of memory.
-class StringView {
+class FTL_EXPORT StringView {
  public:
   // Types.
   using const_iterator = const char*;
@@ -44,8 +45,8 @@ class StringView {
       : data_(str), size_(constexpr_strlen(str)) {}
 
   // Implicit constructor for constant C strings.
-  template<size_t N>
-  constexpr StringView(const char(&str)[N])
+  template <size_t N>
+  constexpr StringView(const char (&str)[N])
       : data_(str), size_(constexpr_strlen(str)) {}
 
   // Implicit constructor.
@@ -148,15 +149,15 @@ class StringView {
 
 // Comparison.
 
-bool operator==(StringView lhs, StringView rhs);
-bool operator!=(StringView lhs, StringView rhs);
-bool operator<(StringView lhs, StringView rhs);
-bool operator>(StringView lhs, StringView rhs);
-bool operator<=(StringView lhs, StringView rhs);
-bool operator>=(StringView lhs, StringView rhs);
+FTL_EXPORT bool operator==(StringView lhs, StringView rhs);
+FTL_EXPORT bool operator!=(StringView lhs, StringView rhs);
+FTL_EXPORT bool operator<(StringView lhs, StringView rhs);
+FTL_EXPORT bool operator>(StringView lhs, StringView rhs);
+FTL_EXPORT bool operator<=(StringView lhs, StringView rhs);
+FTL_EXPORT bool operator>=(StringView lhs, StringView rhs);
 
 // IO.
-std::ostream& operator<<(std::ostream& o, StringView string_view);
+FTL_EXPORT std::ostream& operator<<(std::ostream& o, StringView string_view);
 
 }  // namespace ftl
 

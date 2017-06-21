@@ -9,6 +9,7 @@
 
 #include <iosfwd>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/time/time_delta.h"
 
 namespace ftl {
@@ -19,7 +20,7 @@ namespace ftl {
 // WARNING: This class should not be serialized across reboots, or across
 // devices: the reference point is only stable for a given device between
 // reboots.
-class TimePoint {
+class FTL_EXPORT TimePoint {
  public:
   // Default TimePoint with internal value 0 (epoch).
   constexpr TimePoint() = default;

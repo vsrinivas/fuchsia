@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace ftl {
@@ -31,7 +32,7 @@ inline bool IsValidCharacter(uint32_t code_point) {
           (code_point & 0xFFFEu) != 0xFFFEu);
 }
 
-bool IsStringUTF8(ftl::StringView str);
+FTL_EXPORT bool IsStringUTF8(ftl::StringView str);
 
 // ReadUnicodeCharacter --------------------------------------------------------
 
@@ -42,16 +43,17 @@ bool IsStringUTF8(ftl::StringView str);
 // (as in a for loop) will take the reader to the next character.
 //
 // Returns true on success. On false, |*code_point| will be invalid.
-bool ReadUnicodeCharacter(const char* src,
-                          size_t src_len,
-                          size_t* char_index,
-                          uint32_t* code_point_out);
+FTL_EXPORT bool ReadUnicodeCharacter(const char* src,
+                                     size_t src_len,
+                                     size_t* char_index,
+                                     uint32_t* code_point_out);
 
 // WriteUnicodeCharacter -------------------------------------------------------
 
 // Appends a UTF-8 character to the given 8-bit string.  Returns the number of
 // bytes written.
-size_t WriteUnicodeCharacter(uint32_t code_point, std::string* output);
+FTL_EXPORT size_t WriteUnicodeCharacter(uint32_t code_point,
+                                        std::string* output);
 
 }  // namespace ftl
 

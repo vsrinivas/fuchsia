@@ -16,6 +16,7 @@
 #endif
 #include <stdint.h>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/time/time_delta.h"
@@ -24,7 +25,7 @@ namespace ftl {
 
 class Mutex;
 
-class CondVar final {
+class FTL_EXPORT CondVar final {
  public:
   CondVar();
   ~CondVar();

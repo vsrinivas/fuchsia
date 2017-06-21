@@ -5,13 +5,14 @@
 #ifndef LIB_FTL_FILES_FILE_DESCRIPTOR_H_
 #define LIB_FTL_FILES_FILE_DESCRIPTOR_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/inttypes.h"
 #include "lib/ftl/portable_unistd.h"
 
 namespace ftl {
 
-bool WriteFileDescriptor(int fd, const char* data, ssize_t size);
-ssize_t ReadFileDescriptor(int fd, char* data, ssize_t max_size);
+FTL_EXPORT bool WriteFileDescriptor(int fd, const char* data, ssize_t size);
+FTL_EXPORT ssize_t ReadFileDescriptor(int fd, char* data, ssize_t max_size);
 
 }  // namespace ftl
 

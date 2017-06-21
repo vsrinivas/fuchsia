@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 
 namespace ftl {
@@ -15,7 +16,7 @@ template <typename T>
 class RefPtr;
 
 template <typename T>
-RefPtr<T> AdoptRef(T* ptr);
+FTL_EXPORT RefPtr<T> AdoptRef(T* ptr);
 
 namespace internal {
 

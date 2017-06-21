@@ -43,6 +43,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
 
@@ -53,7 +54,7 @@ namespace ftl {
 // Class that stores processed command lines ("argv[0]", options, and positional
 // arguments) and provides access to them. For more details, see the file-level
 // comment above. This class is thread-safe.
-class CommandLine final {
+class FTL_EXPORT CommandLine final {
  private:
   class ConstructionHelper;
 
@@ -144,7 +145,7 @@ namespace internal {
 
 // Helper class for building command lines (finding options, etc.) from raw
 // arguments.
-class CommandLineBuilder final {
+class FTL_EXPORT CommandLineBuilder final {
  public:
   CommandLineBuilder();
   ~CommandLineBuilder();
@@ -235,7 +236,8 @@ inline CommandLine CommandLineFromInitializerList(
 // This is the "opposite" of the above factory functions, transforming a
 // |CommandLine| into a vector of argument strings according to the rules
 // outlined at the top of this file.
-std::vector<std::string> CommandLineToArgv(const CommandLine& command_line);
+FTL_EXPORT std::vector<std::string> CommandLineToArgv(
+    const CommandLine& command_line);
 
 }  // namespace ftl
 

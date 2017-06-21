@@ -5,6 +5,7 @@
 #ifndef LIB_FTL_FILES_UNIQUE_FD_H_
 #define LIB_FTL_FILES_UNIQUE_FD_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/memory/unique_object.h"
 
 namespace ftl {
@@ -13,7 +14,7 @@ namespace internal {
 struct UniqueFDTraits {
   static int InvalidValue() { return -1; }
   static bool IsValid(int value) { return value >= 0; }
-  static void Free(int fd);
+  FTL_EXPORT static void Free(int fd);
 };
 
 }  // namespace internal

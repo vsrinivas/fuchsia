@@ -5,9 +5,11 @@
 #ifndef LIB_FTL_DEBUG_DEBUGGER_H_
 #define LIB_FTL_DEBUG_DEBUGGER_H_
 
+#include "lib/ftl/ftl_export.h"
+
 namespace ftl {
 
-void BreakDebugger();
+FTL_EXPORT void BreakDebugger();
 
 }  // namespace ftl
 

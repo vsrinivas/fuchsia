@@ -7,11 +7,12 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace files {
 
-class ScopedTempDir {
+class FTL_EXPORT ScopedTempDir {
  public:
   ScopedTempDir();
   explicit ScopedTempDir(ftl::StringView parent_path);

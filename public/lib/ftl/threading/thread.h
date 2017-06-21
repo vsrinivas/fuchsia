@@ -15,11 +15,12 @@
 
 #include <functional>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 
 namespace ftl {
 
-class Thread {
+class FTL_EXPORT Thread {
  public:
   static constexpr size_t default_stack_size = 1 * 1024 * 1024;
 

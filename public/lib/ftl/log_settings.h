@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
+
 namespace ftl {
 
 class CommandLine;
@@ -34,14 +36,14 @@ struct LogSettings {
 };
 
 // Gets the active log settings for the current process.
-void SetLogSettings(const LogSettings& settings);
+FTL_EXPORT void SetLogSettings(const LogSettings& settings);
 
 // Sets the active log settings for the current process.
-LogSettings GetLogSettings();
+FTL_EXPORT LogSettings GetLogSettings();
 
 // Gets the minimum log level for the current process. Never returs a value
 // higher than LOG_FATAL.
-int GetMinLogLevel();
+FTL_EXPORT int GetMinLogLevel();
 
 // Parses log settings from standard command-line options.
 //
@@ -57,15 +59,16 @@ int GetMinLogLevel();
 // Returns false and leaves |out_settings| unchanged if there was an
 // error parsing the options.  Otherwise updates |out_settings| with any
 // values which were overridden by the command-line.
-bool ParseLogSettings(const ftl::CommandLine& command_line,
-                      LogSettings* out_settings);
+FTL_EXPORT bool ParseLogSettings(const ftl::CommandLine& command_line,
+                                 LogSettings* out_settings);
 
 // Parses and applies log settings from standard command-line options.
 // Returns false and leaves the active settings unchanged if there was an
 // error parsing the options.
 //
 // See |ParseLogSettings| for syntax.
-bool SetLogSettingsFromCommandLine(const ftl::CommandLine& command_line);
+FTL_EXPORT bool SetLogSettingsFromCommandLine(
+    const ftl::CommandLine& command_line);
 
 }  // namespace ftl
 

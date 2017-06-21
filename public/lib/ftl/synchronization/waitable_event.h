@@ -10,6 +10,7 @@
 #ifndef LIB_FTL_SYNCHRONIZATION_WAITABLE_EVENT_H_
 #define LIB_FTL_SYNCHRONIZATION_WAITABLE_EVENT_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/cond_var.h"
 #include "lib/ftl/synchronization/mutex.h"
@@ -24,7 +25,7 @@ namespace ftl {
 // to Windows's auto-reset Event, which is also imitated by Chromium's
 // auto-reset |base::WaitableEvent|. However, there are some limitations -- see
 // |Signal()|.) This class is thread-safe.
-class AutoResetWaitableEvent final {
+class FTL_EXPORT AutoResetWaitableEvent final {
  public:
   AutoResetWaitableEvent() {}
   ~AutoResetWaitableEvent() {}
@@ -76,7 +77,7 @@ class AutoResetWaitableEvent final {
 // until explicitly reset. (This is similar to Windows's manual-reset Event,
 // which is also imitated by Chromium's manual-reset |base::WaitableEvent|.)
 // This class is thread-safe.
-class ManualResetWaitableEvent final {
+class FTL_EXPORT ManualResetWaitableEvent final {
  public:
   ManualResetWaitableEvent() {}
   ~ManualResetWaitableEvent() {}

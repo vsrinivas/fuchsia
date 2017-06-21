@@ -17,6 +17,7 @@
 #include <pthread.h>
 #endif
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
@@ -26,7 +27,7 @@ namespace ftl {
 
 class CondVar;
 
-class FTL_LOCKABLE Mutex final {
+class FTL_LOCKABLE FTL_EXPORT Mutex final {
  public:
 #ifndef NDEBUG
   Mutex();
@@ -39,8 +40,8 @@ class FTL_LOCKABLE Mutex final {
 
   void AssertHeld() FTL_ASSERT_EXCLUSIVE_LOCK();
 #elif defined(OS_WIN)
- Mutex() : impl_(SRWLOCK_INIT) {}
- ~Mutex() = default;
+  Mutex() : impl_(SRWLOCK_INIT) {}
+  ~Mutex() = default;
 
   void Lock() FTL_EXCLUSIVE_LOCK_FUNCTION() { AcquireSRWLockExclusive(&impl_); }
 
@@ -80,10 +81,10 @@ class FTL_LOCKABLE Mutex final {
   void CheckHeldAndUnmark();
   void CheckUnheldAndMark();
   DWORD owning_thread_id_ = NULL;
-#endif //  NDEBUG
+#endif  //  NDEBUG
 #else
   pthread_mutex_t impl_;
-#endif //  defined(OS_WIN)
+#endif  //  defined(OS_WIN)
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Mutex);
 };

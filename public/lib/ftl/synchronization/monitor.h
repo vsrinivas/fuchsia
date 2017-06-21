@@ -5,6 +5,7 @@
 #ifndef LIB_FTL_SYNCHRONIZATION_MONITOR_H_
 #define LIB_FTL_SYNCHRONIZATION_MONITOR_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/synchronization/cond_var.h"
 #include "lib/ftl/synchronization/mutex.h"
 
@@ -23,7 +24,7 @@ namespace ftl {
 //
 // See <https://en.wikipedia.org/wiki/Monitor_(synchronization)> for more
 // context.
-class FTL_LOCKABLE Monitor {
+class FTL_LOCKABLE FTL_EXPORT Monitor {
  public:
   Monitor();
   ~Monitor();
@@ -68,7 +69,7 @@ class FTL_LOCKABLE Monitor {
 
 // Helps ensure that calls to |Monitor::Enter| are paired with calls to
 // |Monitor::Exit|. Typically allocated on the stack.
-class FTL_SCOPED_LOCKABLE MonitorLocker {
+class FTL_EXPORT FTL_SCOPED_LOCKABLE MonitorLocker {
  public:
   // Enters the given monitor.
   explicit MonitorLocker(Monitor* monitor) FTL_ACQUIRE(monitor);

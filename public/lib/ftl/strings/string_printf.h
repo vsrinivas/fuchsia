@@ -12,24 +12,27 @@
 #include <string>
 
 #include "lib/ftl/compiler_specific.h"
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 
 namespace ftl {
 
 // Formats |printf()|-like input and returns it as an |std::string|.
-std::string StringPrintf(const char* format, ...)
+FTL_EXPORT std::string StringPrintf(const char* format, ...)
     FTL_PRINTF_FORMAT(1, 2) FTL_WARN_UNUSED_RESULT;
 
 // Formats |vprintf()|-like input and returns it as an |std::string|.
-std::string StringVPrintf(const char* format,
-                          va_list ap) FTL_WARN_UNUSED_RESULT;
+FTL_EXPORT std::string StringVPrintf(const char* format,
+                                     va_list ap) FTL_WARN_UNUSED_RESULT;
 
 // Formats |printf()|-like input and appends it to |*dest|.
-void StringAppendf(std::string* dest, const char* format, ...)
+FTL_EXPORT void StringAppendf(std::string* dest, const char* format, ...)
     FTL_PRINTF_FORMAT(2, 3);
 
 // Formats |vprintf()|-like input and appends it to |*dest|.
-void StringVAppendf(std::string* dest, const char* format, va_list ap);
+FTL_EXPORT void StringVAppendf(std::string* dest,
+                               const char* format,
+                               va_list ap);
 
 }  // namespace ftl
 

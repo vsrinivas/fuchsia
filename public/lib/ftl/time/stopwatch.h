@@ -7,6 +7,7 @@
 #ifndef LIB_FTL_TIME_STOPWATCH_H_
 #define LIB_FTL_TIME_STOPWATCH_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
@@ -14,7 +15,7 @@
 namespace ftl {
 
 // A simple "stopwatch" for measuring time elapsed from a given starting point.
-class Stopwatch final {
+class FTL_EXPORT Stopwatch final {
  public:
   Stopwatch() {}
   ~Stopwatch() {}

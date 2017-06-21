@@ -7,18 +7,20 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
+
 namespace files {
 
 // Returns the current directory. If the current directory cannot be determined,
 // this function will terminate the process.
-std::string GetCurrentDirectory();
+FTL_EXPORT std::string GetCurrentDirectory();
 
 // Returns whether the given path is a directory.
-bool IsDirectory(const std::string& path);
+FTL_EXPORT bool IsDirectory(const std::string& path);
 
 // Create a directory at the given path. If necessary, creates any intermediary
 // directory.
-bool CreateDirectory(const std::string& path);
+FTL_EXPORT bool CreateDirectory(const std::string& path);
 
 }  // namespace files
 

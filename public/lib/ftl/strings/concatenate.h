@@ -8,12 +8,14 @@
 #include <initializer_list>
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace ftl {
 
 // Concatenates a fixed list of strings.
-std::string Concatenate(std::initializer_list<ftl::StringView> string_views);
+FTL_EXPORT std::string Concatenate(
+    std::initializer_list<ftl::StringView> string_views);
 
 }  // namespace ftl
 

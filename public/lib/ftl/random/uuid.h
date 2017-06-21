@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
+
 namespace ftl {
 
 // Generate a 128-bit (pseudo) random UUID in the form of version 4 as described
@@ -17,20 +19,20 @@ namespace ftl {
 // where y is one of [8, 9, A, B].
 // The hexadecimal values "a" through "f" are output as lower case characters.
 // If UUID generation fails an empty string is returned.
-std::string GenerateUUID();
+FTL_EXPORT std::string GenerateUUID();
 
 // Returns true if the input string conforms to the version 4 UUID format.
 // Note that this does NOT check if the hexadecimal values "a" through "f"
 // are in lower case characters, as Version 4 RFC says onput they're
 // case insensitive. (Use IsValidUUIDOutputString for checking if the
 // given string is valid output string)
-bool IsValidUUID(const std::string& guid);
+FTL_EXPORT bool IsValidUUID(const std::string& guid);
 
 // Returns true if the input string is valid version 4 UUID output string.
 // This also checks if the hexadecimal values "a" through "f" are in lower
 // case characters.
-bool IsValidUUIDOutputString(const std::string& guid);
+FTL_EXPORT bool IsValidUUIDOutputString(const std::string& guid);
 
-}  // namespace base
+}  // namespace ftl
 
 #endif  // FTL_RANDOM_UUID_H_

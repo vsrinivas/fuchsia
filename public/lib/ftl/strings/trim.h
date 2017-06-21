@@ -7,13 +7,15 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace ftl {
 
 // Returns a StringView over str, where chars_to_trim are removed from the
 // beginning and end of the StringView.
-ftl::StringView TrimString(ftl::StringView str, ftl::StringView chars_to_trim);
+FTL_EXPORT ftl::StringView TrimString(ftl::StringView str,
+                                      ftl::StringView chars_to_trim);
 
 }  // namespace ftl
 

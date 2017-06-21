@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace ftl {
@@ -19,7 +20,8 @@ inline char ToUpperASCII(char c) {
   return (c >= 'a' && c <= 'z') ? (c + ('A' - 'a')) : c;
 }
 
-bool EqualsCaseInsensitiveASCII(ftl::StringView v1, ftl::StringView v2);
+FTL_EXPORT bool EqualsCaseInsensitiveASCII(ftl::StringView v1,
+                                           ftl::StringView v2);
 
 }  // namespace ftl
 

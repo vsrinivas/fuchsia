@@ -7,6 +7,7 @@
 
 #include <sstream>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/log_level.h"
 #include "lib/ftl/macros.h"
 
@@ -17,7 +18,7 @@ class LogMessageVoidify {
   void operator&(std::ostream&) {}
 };
 
-class LogMessage {
+class FTL_EXPORT LogMessage {
  public:
   LogMessage(LogSeverity severity,
              const char* file,
@@ -37,11 +38,11 @@ class LogMessage {
 };
 
 // Gets the FTL_VLOG default verbosity level.
-int GetVlogVerbosity();
+FTL_EXPORT int GetVlogVerbosity();
 
 // Returns true if |severity| is at or above the current minimum log level.
 // LOG_FATAL and above is always true.
-bool ShouldCreateLogMessage(LogSeverity severity);
+FTL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 
 }  // namespace ftl
 
@@ -89,6 +90,7 @@ bool ShouldCreateLogMessage(LogSeverity severity);
 
 #define FTL_NOTREACHED() FTL_DCHECK(false)
 
-#define FTL_NOTIMPLEMENTED() FTL_LOG(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
+#define FTL_NOTIMPLEMENTED() \
+  FTL_LOG(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
 
 #endif  // LIB_FTL_LOGGING_H_

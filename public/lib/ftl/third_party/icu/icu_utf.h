@@ -197,17 +197,17 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
  * @see FTL_U8_NEXT_UNSAFE
  * @stable ICU 2.4
  */
-#define FTL_U8_NEXT(s, i, length, c)                                    \
-  {                                                                     \
-    (c) = (s)[(i)++];                                                   \
-    if (((uint8_t)(c)) >= 0x80) {                                       \
-      if (FTL_U8_IS_LEAD(c)) {                                          \
-        (c) = ftl_icu::utf8_nextCharSafeBody((const uint8_t*)s, &(i),   \
+#define FTL_U8_NEXT(s, i, length, c)                                   \
+  {                                                                    \
+    (c) = (s)[(i)++];                                                  \
+    if (((uint8_t)(c)) >= 0x80) {                                      \
+      if (FTL_U8_IS_LEAD(c)) {                                         \
+        (c) = ftl_icu::utf8_nextCharSafeBody((const uint8_t*)s, &(i),  \
                                              (size_t)(length), c, -1); \
-      } else {                                                          \
-        (c) = FTL_U_SENTINEL;                                           \
-      }                                                                 \
-    }                                                                   \
+      } else {                                                         \
+        (c) = FTL_U_SENTINEL;                                          \
+      }                                                                \
+    }                                                                  \
   }
 
 /**
@@ -403,6 +403,6 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
     }                                                \
   }
 
-}  // namesapce ftl_icu
+}  // namespace ftl_icu
 
 #endif  // LIB_FTL_THIRD_PARTY_ICU_ICU_UTF_H_
