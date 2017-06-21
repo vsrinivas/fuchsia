@@ -869,6 +869,9 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     const char* name;
     const char* args;
     if ((r = dc_msg_unpack(&msg, msize, &data, &name, &args)) < 0) {
+        while (hcount > 0) {
+            mx_handle_close(hin[--hcount]);
+        }
         return MX_ERR_INTERNAL;
     }
 
@@ -887,7 +890,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_REMOVE_DEVICE:
         if (hcount != 0) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
         dc_remove_device(dev, false);
@@ -895,7 +898,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_BIND_DEVICE:
         if (hcount != 0) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
         r = dc_bind_device(dev, args);
@@ -903,7 +906,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_DM_COMMAND:
         if (hcount > 1) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         if (hcount == 1) {
             dmctl_socket = hin[0];
@@ -917,7 +920,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_DM_OPEN_VIRTCON:
         if (hcount != 1) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         if (mx_channel_write(virtcon_open, 0, NULL, 0, hin, 1) < 0) {
             mx_handle_close(hin[0]);
@@ -927,7 +930,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_DM_WATCH:
         if (hcount != 1) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         dc_watch(hin[0]);
         r = MX_OK;
@@ -935,7 +938,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_GET_TOPO_PATH: {
         if (hcount != 0) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         struct {
             dc_status_t rsp;
@@ -953,7 +956,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     }
     case DC_OP_STATUS: {
         if (hcount != 0) {
-            goto fail_hcount;
+            goto fail_wrong_hcount;
         }
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
@@ -980,7 +983,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     default:
         log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
         r = MX_ERR_NOT_SUPPORTED;
-        break;
+        goto fail_close_handles;
     }
 
 done:
@@ -995,11 +998,12 @@ disconnect:
     mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0);
     return MX_ERR_STOP;
 
-fail_hcount:
+fail_wrong_hcount:
+    r = MX_ERR_INVALID_ARGS;
+fail_close_handles:
     while (hcount > 0) {
         mx_handle_close(hin[--hcount]);
     }
-    r = MX_ERR_INVALID_ARGS;
     goto done;
 }
 
