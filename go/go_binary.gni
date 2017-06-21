@@ -20,7 +20,7 @@ template("go_binary") {
 
     outputs = [ out_path ]
 
-    script = rebase_path("//.") + "/build/gobuild.py"
+    script = rebase_path("//build/go/build.py")
     depfile_path = "${out_path}.d"
     depfile = depfile_path
     console = true # only run one gobuild.py at once
@@ -29,11 +29,13 @@ template("go_binary") {
       "--fuchsia-root",
       rebase_path("//."),
       "--root-out-dir",
-      rebase_path("$root_out_dir"),
+      rebase_path(root_out_dir),
       "--depfile",
       rebase_path(depfile_path),
       "--current-cpu",
       current_cpu,
+      "--current-os",
+      current_os,
       "--go-tool",
       rebase_path("//buildtools/go"),
       "--binname",

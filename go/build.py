@@ -19,8 +19,10 @@ def main():
                         required=True)
     parser.add_argument('--depfile', help='The path to the depfile',
                         required=True)
-    parser.add_argument('--current-cpu', help='Target arch, x64 or arm64.',
-                        required=True)
+    parser.add_argument('--current-cpu', help='Target architecture.',
+                        choices=['x64', 'arm64'], required=True)
+    parser.add_argument('--current-os', help='Target operating system.',
+                        choices=['fuchsia', 'linux', 'mac', 'win'], required=True)
     parser.add_argument('--go-tool', help='The go tool to use for builds')
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
@@ -28,20 +30,23 @@ def main():
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
 
-    if args.current_cpu == "x64":
-        goarch = "amd64"
-    elif args.current_cpu == "arm64":
-        goarch = "arm64"
-    else:
-        print("unknown current_cpu: ", args.current_cpu)
-        return 1
-
+    goarch = {
+        'x64': 'amd64',
+        'arm64': 'arm64',
+    }[args.current_cpu]
+    goos = {
+        'fuchsia': 'fuchsia',
+        'linux': 'linux',
+        'mac': 'darwin',
+        'win': 'windows',
+    }[args.current_os]
     gopath = args.root_out_dir
 
-    os.environ['CGO_ENABLED'] = '1'
-    os.environ['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
-    os.environ['GOOS'] = 'fuchsia'
+    if args.current_os == 'fuchsia':
+        os.environ['CGO_ENABLED'] = '1'
     os.environ['GOARCH'] = goarch
+    os.environ['GOOS'] = goos
+    os.environ['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
     if 'GOBIN' in os.environ:
         del os.environ['GOBIN']
     if 'GOROOT' in os.environ:

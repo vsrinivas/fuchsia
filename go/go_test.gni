@@ -17,7 +17,7 @@ template("go_test") {
 
     outputs = [ out_path ]
 
-    script = rebase_path("//.") + "/build/gobuild.py"
+    script = rebase_path("//build/go/build.py")
     depfile_path = "${out_path}.d"
     depfile = depfile_path
     console = true # only run one gobuild.py at once
@@ -31,6 +31,8 @@ template("go_test") {
       rebase_path(depfile_path),
       "--current-cpu",
       current_cpu,
+      "--current-os",
+      current_os,
       "--is-test=true",
       "--binname",
       target_name,
