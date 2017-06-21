@@ -23,7 +23,7 @@ inline escher::vec4 Unwrap(const mozart2::vec4Ptr& args) {
 }
 
 inline escher::quat Unwrap(const mozart2::QuaternionPtr& args) {
-  return {args->x, args->y, args->z, args->w};
+  return {args->w, escher::vec3(args->x, args->y, args->z)};
 }
 
 inline escher::Transform Unwrap(const mozart2::TransformPtr& args) {
