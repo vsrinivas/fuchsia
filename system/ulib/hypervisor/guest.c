@@ -21,6 +21,7 @@ typedef struct e820entry {
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
 
+static const uint64_t kAddr1mb      = 0x0000000000100000;
 static const uint64_t kAddr3500mb   = 0x00000000e0000000;
 static const uint64_t kAddr4000mb   = 0x0000000100000000;
 
@@ -113,7 +114,7 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
 }
 
 static mx_status_t num_e820_entries(size_t size) {
-    return size > kAddr4000mb ? 3 : 2;
+    return size > kAddr4000mb ? 4 : 3;
 }
 
 mx_status_t guest_create_e820_memory_map(uintptr_t addr, size_t size, uintptr_t e820_off,
@@ -125,22 +126,26 @@ mx_status_t guest_create_e820_memory_map(uintptr_t addr, size_t size, uintptr_t 
 
     e820entry_t* entry = (e820entry_t*)(addr + e820_off);
     memset(entry, 0, e820_size);
-    // 0 to min(size, 3500mb) is available.
+    // 0 to 1mb is reserved.
     entry[0].addr = 0;
-    entry[0].size = size < kAddr3500mb ? size : kAddr3500mb;
-    entry[0].type = kE820Ram;
+    entry[0].size = kAddr1mb;
+    entry[0].type = kE820Reserved;
+    // 1mb to min(size, 3500mb) is available.
+    entry[1].addr = kAddr1mb;
+    entry[1].size = (size < kAddr3500mb ? size : kAddr3500mb) - kAddr1mb;
+    entry[1].type = kE820Ram;
     // 3500mb to 4000mb is reserved.
-    entry[1].addr = kAddr3500mb;
-    entry[1].size = kAddr4000mb - kAddr3500mb;
-    entry[1].type = kE820Reserved;
+    entry[2].addr = kAddr3500mb;
+    entry[2].size = kAddr4000mb - kAddr3500mb;
+    entry[2].type = kE820Reserved;
     if (size > kAddr4000mb) {
         // If size > 4000mb, then make that region available.
-        entry[2].addr = kAddr4000mb;
-        entry[2].size = size - kAddr4000mb;
-        entry[2].type = kE820Ram;
-        *num_entries = 3;
+        entry[3].addr = kAddr4000mb;
+        entry[3].size = size - kAddr4000mb;
+        entry[3].type = kE820Ram;
+        *num_entries = 4;
     } else {
-        *num_entries = 2;
+        *num_entries = 3;
     }
 
     return MX_OK;
