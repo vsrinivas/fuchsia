@@ -979,4 +979,13 @@ class Txwi3 : public BitField<uint32_t> {
     WLAN_BIT_FIELD(eiv, 0, 32);
 };
 
+struct TxPacket {
+    TxInfo tx_info;
+    Txwi0 txwi0;
+    Txwi1 txwi1;
+    Txwi2 txwi2;
+    Txwi3 txwi3;
+    uint8_t payload[];
+} __PACKED;
+
 }  // namespace rt5370

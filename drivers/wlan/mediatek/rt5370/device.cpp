@@ -2335,49 +2335,45 @@ void Device::WlanmacStop() {
 
 void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     iotxn_t* req = nullptr;
-    while (req == nullptr) {
-        {
-            std::lock_guard<std::mutex> guard(lock_);
-            if (!free_write_reqs_.empty()) {
-                req = free_write_reqs_.back();
-                free_write_reqs_.pop_back();
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        if (free_write_reqs_.empty()) {
+            // No free write requests! Drop the packet.
+            static int failed_writes = 0;
+            if (failed_writes++ % 50 == 0) {
+                warnf("dropping tx; no free iotxns\n");
             }
+            return;
         }
-        if (req == nullptr) {
-            // TODO(tkilbourn): drop packets or sleep or something else?
-            sleep_for(MX_MSEC(1));
-        }
+        req = free_write_reqs_.back();
+        free_write_reqs_.pop_back();
     }
-    size_t offset = 0;
+    MX_DEBUG_ASSERT(req != nullptr);
 
+    TxPacket* packet;
+    mx_status_t status = iotxn_mmap(req, reinterpret_cast<void**>(&packet));
+    if (status != MX_OK) {
+        errorf("could not map iotxn: %d\n", status);
+        std::lock_guard<std::mutex> guard(lock_);
+        free_write_reqs_.push_back(req);
+        return;
+    }
+
+    std::memset(packet, 0, sizeof(TxPacket));
     // packet length in the TxInfo includes the 4 32-bit Txwi fields and is 8-byte aligned
-    TxInfo ti;
     size_t pkt_len = (16 + len + 7) & (~7);
-    ti.set_tx_pkt_length(pkt_len);
+    packet->tx_info.set_tx_pkt_length(pkt_len);
     // TODO(tkilbourn): set these more appropriately
-    ti.set_wiv(1);
-    ti.set_qsel(2);
-    auto ti_val = ti.val();
-    iotxn_copyto(req, &ti_val, sizeof(ti_val), offset);
-    offset += sizeof(ti_val);
+    packet->tx_info.set_wiv(1);
+    packet->tx_info.set_qsel(2);
 
-    Txwi0 txwi0;
-    txwi0.set_ofdm(1);
-    auto txwi0_val = txwi0.val();
-    iotxn_copyto(req, &txwi0_val, sizeof(txwi0_val), offset);
-    offset += sizeof(txwi0_val);
+    packet->txwi0.set_ofdm(1);
+    packet->txwi0.set_mcs(7);
 
-    Txwi1 txwi1;
-    txwi1.set_mpdu_total_byte_count(pkt_len - 16);
-    txwi1.set_tx_packet_id(10);
-    auto txwi1_val = txwi1.val();
-    iotxn_copyto(req, &txwi1_val, sizeof(txwi1_val), offset);
-    offset += sizeof(txwi1_val);
+    packet->txwi1.set_mpdu_total_byte_count(pkt_len - 16);
+    packet->txwi1.set_tx_packet_id(10);
 
-    // TODO(tkilbourn): fill out txwi2 and txwi3 when we do encryption
-    offset += 8;
-
-    iotxn_copyto(req, data, len, offset);
+    std::memcpy(packet->payload, data, len);
     // Total request length is packet length + 4 bytes for TxInfo
     req->length = pkt_len + 4;
     iotxn_queue(parent(), req);
