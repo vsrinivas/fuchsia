@@ -1,7 +1,7 @@
 # Firebase Configuration
 
 This document describes how to configure a Firebase project so that it can be
-used for Cloud sync by Ledger.
+used for cloud sync by Ledger.
 
 ## Create the Firebase project
 
@@ -16,22 +16,17 @@ project ID is by looking at the console URL, which takes the form of:
 Go to the [Firebase Console](https://console.firebase.google.com/), and open
 your project.
 
-*** note
-**Warning**: Cloud sync does not (currently) support authorization. The
-configuration below makes the data stored in the Firebase project world-readable
-and world-writable. Please don't store anything private, sensitive or real in
-Ledger yet.
-***
-
 In `Database / Rules`, paste the rules below and click "Publish".
 
 ```
 {
   "rules": {
-    ".read": true,
-    ".write": true,
+    ".read": false,
+    ".write": false,
     "$prefix": {
       "$user": {
+        ".read": "$user === auth.uid",
+        ".write": "$user === auth.uid",
         "$version": {
           "$app": {
             "$page": {
@@ -56,8 +51,10 @@ below and click "Publish".
 ```
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if true;
+    match /{prefix}/{user} {
+      match /{allPaths=**} {
+        allow read, write: if request.auth.uid == user;
+      }
     }
   }
 }

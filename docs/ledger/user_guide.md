@@ -24,76 +24,25 @@ wget http://example.com
 
 You should see the HTML content of the `example.com` placeholder page.
 
-## Cloud Sync
+## Cloud sync
 
-By default Ledger runs without sync. When enabled, Cloud Sync synchronizes the
-content of all pages using the selected cloud provider.
+When running in the guest mode, Ledger works locally but does not synchronize data
+with the cloud.
 
-*** note
-Ledger does not support **migrations** between cloud providers. Once
-Cloud Sync is set up, you won't be able to switch to a different cloud provider
-(e.g. to a different Firebase instance) without flushing the locally persisted
-data (see Reset Everything below).
-***
+When running in the regular mode, Ledger automatically synchronizes user data
+using a communal cloud instance.
 
-*** note
-**Warning**: Ledger does not (currently) support authorization. Data stored in
-the cloud is world-readable and world-writable. Please don't store anything
-private, sensitive or real in Ledger yet.
-***
+## Reset
 
-### Configure
+To erase all data (local on the given device and remote) of the current user,
+long press on the "logout" button in the user shell. This will automatically log
+the user out while Ledger is erased. This needs to be done on every device that
+syncs the data of the given user.
 
-Cloud sync is powered by Firebase. Either [configure](firebase.md) your own
-instance or use an existing correctly configured instance that you have
-permission to use.
-
-Once you picked the instance to use, add a new Fuchsia user in the device shell,
-entering the Firebase project ID (see the [Firebase configuration](firebase.md)
-doc) into the "firebase_id" field. After login, Ledger data of this user will
-sync using the indicated Firebase instance.
-
-### Diagnose
-
-If something seems off with sync, run the following command:
-
-```
-ledger_tool doctor
-```
-
-If the provided information is not enough to resolve the problem, please file a
-bug and attach the output.
-
-## Reset Ledger
-
-### Wipe the current user
-To wipe all data (local and remote) of the current user, run the command:
-
-```
-ledger_tool clean
-```
-
-*** aside
-**cloud storage**: `ledger_tool clean` only clears Firebase for now, but not the
-associated Google Cloud Storage blobs. This should not impact Ledger use and
-it's safe to leave them around. If you want to reclaim the space, the
-administrator of the Firebase instance can visit `Storage / Files` in the
-[Firebase Console](https://console.firebase.google.com/) and delete all objects.
-***
-
-### Wipe all local state
-
-To remove the locally persisted Ledger data for all users, you can run:
-
-```
-$ rm -r /data/ledger
-```
-
-*** note
-Running this command does not remove any data synced to the cloud; if the user
-has sync configured, Ledger will start downloading the missing data the next
-time it starts.
-***
+If for any reason we neglect to wipe the state on one of the devices and attempt
+to sync with the remote state that was reset, Ledger will detect it and drop the
+local state at the leftover device. When that happens, logging out and back in
+restores Ledger to usable state. (FW-213 tracks making the logout automatic)
 
 
 ## Debug and inspect
