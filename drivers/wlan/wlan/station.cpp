@@ -196,9 +196,16 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     }
     // TODO(tkilbourn): add extended rates support to get the rest of 802.11g rates.
     // TODO(tkilbourn): determine these rates based on hardware and the AP
-    std::vector<uint8_t> rates = { 140, 146, 24, 36, 48, 72, 96, 108 };
+    std::vector<uint8_t> rates = { 0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24 };
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
+        SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return MX_ERR_IO;
+    }
+
+    std::vector<uint8_t> ext_rates = { 0x30, 0x48, 0x60, 0x6c };
+    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
+        errorf("could not write extended supported rates\n");
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return MX_ERR_IO;
     }
