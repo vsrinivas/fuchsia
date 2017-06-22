@@ -94,7 +94,7 @@ or *policy* was not **MX_JOB_POL_RELATIVE** or **MX_JOB_POL_ABSOLUTE**, or
 
 **MX_ERR_BAD_HANDLE**  *job_handle* is not valid handle.
 
-**ERR_WRONG_HANDLE**  *job_handle* is not a job handle.
+**MX_ERR_WRONG_TYPE**  *job_handle* is not a job handle.
 
 **MX_ERR_ACCESS_DENIED**  *job_handle* does not have MX_POL_RIGHT_SET right.
 
