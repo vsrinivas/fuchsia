@@ -61,6 +61,9 @@ class ModuleImpl extends Module {
     _moduleContext
         .getIntelligenceServices(_intelligenceServices.ctrl.request());
     _intelligenceServices.getContextPublisher(_publisher.ctrl.request());
+
+    // Indicate readiness
+    _moduleContext.ready();
   }
 
   /// Implementation of the Stop() => (); method.
