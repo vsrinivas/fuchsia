@@ -23,7 +23,7 @@ namespace {{namespace}} {
 
 // --- Constants ---
 {%- for constant in module.constants %}
-{%-   if not constant.kind|is_integral_kind %}
+{%-   if not constant.kind|is_numerical_kind %}
 const {{constant.kind|cpp_pod_type}} {{constant.name}}
     = {{constant|constant_value}};
 {%-   endif %}
@@ -189,8 +189,8 @@ const uint32_t {{base_name}}::Version_;
 
 // Constants
 {%-  for constant in interface.constants %}
-{%-   if constant.kind|is_integral_kind %}
-const {{constant.kind|cpp_pod_type}} {{base_name}}::{{constant.name}};
+{%-   if constant.kind|is_numerical_kind %}
+constexpr {{constant.kind|cpp_pod_type}} {{base_name}}::{{constant.name}};
 {%-   else %}
 const {{constant.kind|cpp_pod_type}} {{base_name}}::{{constant.name}} = {{constant|constant_value}};
 {%-   endif %}

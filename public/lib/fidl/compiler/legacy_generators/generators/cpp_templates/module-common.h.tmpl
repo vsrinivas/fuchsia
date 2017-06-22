@@ -7,8 +7,9 @@
 #ifndef {{header_guard}}
 #define {{header_guard}}
 
-#include <stdint.h>
 #include <iosfwd>
+#include <math.h>
+#include <stdint.h>
 
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -66,8 +67,8 @@ typedef ::fidl::StructPtr<{{union.name}}> {{union.name}}Ptr;
 {%- for constant in module.constants %}
 {#-   To be consistent with constants defined inside interfaces, only make
       integral types compile-time constants. #}
-{%-   if constant.kind|is_integral_kind %}
-const {{constant.kind|cpp_pod_type}} {{constant.name}} = {{constant|constant_value}};
+{%-   if constant.kind|is_numerical_kind %}
+constexpr {{constant.kind|cpp_pod_type}} {{constant.name}} = {{constant|constant_value}};
 {%-   else %}
 extern const {{constant.kind|cpp_pod_type}} {{constant.name}};
 {%-   endif %}
@@ -108,8 +109,8 @@ class {{interface.name}}_Base {
 
 {#--- Constants #}
 {%- for constant in interface.constants %}
-{%-   if constant.kind|is_integral_kind %}
-  static const {{constant.kind|cpp_pod_type}} {{constant.name}} = {{constant|constant_value}};
+{%-   if constant.kind|is_numerical_kind %}
+  static constexpr {{constant.kind|cpp_pod_type}} {{constant.name}} = {{constant|constant_value}};
 {%-   else %}
   static const {{constant.kind|cpp_pod_type}} {{constant.name}};
 {%-   endif %}
