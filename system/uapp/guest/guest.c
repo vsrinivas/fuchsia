@@ -103,21 +103,14 @@ int main(int argc, char** argv) {
     }
 
     uintptr_t guest_ip;
-    uintptr_t bootdata_offset = 0;
-    status = setup_magenta(addr,
-                           first_page,
-                           pt_end_off,
-                           fd,
-                           argc >= 3 ? argv[2] : NULL,
-                           &guest_ip,
-                           &bootdata_offset);
+    uintptr_t bootdata_off = 0;
+    const char* ramdisk_path = argc >= 3 ? argv[2] : NULL;
+    const char* cmdline = NULL;
+    status = setup_magenta(addr, first_page, pt_end_off, fd, ramdisk_path, cmdline, &guest_ip,
+                           &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
-        status = setup_linux(addr,
-                             first_page,
-                             fd,
-                             "earlyprintk=serial,ttyS,115200",
-                             &guest_ip,
-                             &bootdata_offset);
+        cmdline = "earlyprintk=serial,ttyS,115200";
+        status = setup_linux(addr, first_page, fd, cmdline, &guest_ip, &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
         fprintf(stderr, "Unknown kernel\n");
@@ -131,7 +124,7 @@ int main(int argc, char** argv) {
     mx_guest_gpr_t guest_gpr;
     memset(&guest_gpr, 0, sizeof(guest_gpr));
 #if __x86_64__
-    guest_gpr.rsi = bootdata_offset;
+    guest_gpr.rsi = bootdata_off;
 #endif // __x86_64__
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
                               &guest_gpr, sizeof(guest_gpr), NULL, 0);

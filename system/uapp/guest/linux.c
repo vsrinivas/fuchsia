@@ -58,12 +58,8 @@ static bool is_linux(const uintptr_t zero_page) {
            ZP32(zero_page, ZP_SH_32_HEADER) == HEADER_MAGIC;
 }
 
-mx_status_t setup_linux(const uintptr_t addr,
-                        const uintptr_t first_page,
-                        const int fd,
-                        const char command_line[],
-                        uintptr_t* guest_ip,
-                        uintptr_t* zero_page_addr) {
+mx_status_t setup_linux(const uintptr_t addr, const uintptr_t first_page, const int fd,
+                        const char* cmdline, uintptr_t* guest_ip, uintptr_t* zero_page_addr) {
     if (!is_linux(first_page)) {
         return MX_ERR_NOT_SUPPORTED;
     }
@@ -91,17 +87,18 @@ mx_status_t setup_linux(const uintptr_t addr,
 
     // Move the zero-page. For a 64-bit kernel it can go almost anywhere,
     // so we'll put it just below the boot kernel.
-    uintptr_t boot_params_offset = runtime_start - PAGE_SIZE;
-    uint8_t* zero_page = (uint8_t*)(addr + boot_params_offset);
+    uintptr_t boot_params_off = runtime_start - PAGE_SIZE;
+    uint8_t* zero_page = (uint8_t*)(addr + boot_params_off);
     memmove(zero_page, (void*)first_page, PAGE_SIZE);
 
     // Copy the command line string below the zero page.
-    uintptr_t command_line_offset = boot_params_offset - strlen(command_line) + 1;
-    strcpy((char*)(addr + command_line_offset), command_line);
+    size_t cmdline_len = strlen(cmdline) + 1;
+    uintptr_t cmdline_off = boot_params_off - cmdline_len;
+    memcpy((char*)(addr + cmdline_off), cmdline, cmdline_len);
 
     // TODO(andymutton): Setup everything else.
     ZP8(zero_page, ZP_SH_8_LOADER_TYPE) = LOADER_TYPE_UNSPECIFIED;
-    ZP32(zero_page, ZP_SH_32_COMMAND_LINE) = command_line_offset;
+    ZP32(zero_page, ZP_SH_32_COMMAND_LINE) = cmdline_off;
 
     // Zero video, columns and lines to skip early video init - just serial output for now.
     ZP8(zero_page, ZP_SI_8_VIDEO_MODE) = 0;
@@ -115,8 +112,8 @@ mx_status_t setup_linux(const uintptr_t addr,
     }
 
     // Read the rest of the bzImage into the protected_mode_kernel location.
-    int protected_mode_offset = (setup_sects + 1) * SECTOR_SIZE;
-    if (lseek(fd, protected_mode_offset, SEEK_SET) < 0) {
+    int protected_mode_off = (setup_sects + 1) * SECTOR_SIZE;
+    if (lseek(fd, protected_mode_off, SEEK_SET) < 0) {
         fprintf(stderr, "Failed seek to protected mode kernel\n");
         return MX_ERR_IO;
     }
@@ -130,6 +127,6 @@ mx_status_t setup_linux(const uintptr_t addr,
     }
 
     *guest_ip = runtime_start + LEGACY_64_ENTRY_OFFSET;
-    *zero_page_addr = boot_params_offset;
+    *zero_page_addr = boot_params_off;
     return MX_OK;
 }
