@@ -241,7 +241,7 @@ void DeleteHandle(Handle* handle) {
             }
             default:  break;
                 // This is fine. See for example the LogDispatcher.
-        };
+        }
     }
 
     // Destroys, but does not free, the Handle, and fixes up its memory
