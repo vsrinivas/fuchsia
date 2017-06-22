@@ -101,7 +101,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
             packet->peer() == Packet::Peer::kEthernet ? "Ethernet" :
             packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
-    if (kLogLevel >= kLogVerbose) {
+    if (kLogLevel & kLogLevelVerbose) {
         DumpPacket(*packet);
     }
 

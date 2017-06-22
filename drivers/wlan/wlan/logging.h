@@ -8,25 +8,31 @@
 
 // TODO(tkilbourn): use standard logging infrastructure
 namespace wlan {
-constexpr int kLogError = 0;
-constexpr int kLogWarning = 1;
-constexpr int kLogInfo = 2;
-constexpr int kLogDebug = 3;
-constexpr int kLogVerbose = 4;
+constexpr uint64_t kLogLevelError   = 1 << 0;
+constexpr uint64_t kLogLevelWarning = 1 << 1;
+constexpr uint64_t kLogLevelInfo    = 1 << 2;
+constexpr uint64_t kLogLevelDebug   = 1 << 3;
+constexpr uint64_t kLogLevelVerbose = 1 << 4;
+
+constexpr uint64_t kLogErrors = kLogLevelError;
+constexpr uint64_t kLogWarnings = kLogErrors | kLogLevelWarning;
+constexpr uint64_t kLogInfos = kLogWarnings | kLogLevelInfo;
+constexpr uint64_t kLogDebugs = kLogInfos | kLogLevelDebug;
+constexpr uint64_t kLogVerboses = kLogDebugs | kLogLevelVerbose;
 
 // Set this to tune log output
-constexpr int kLogLevel = kLogInfo;
+constexpr uint64_t kLogLevel = kLogInfos;
 
 #define wlogf(level, level_prefix, args...) do { \
-    if (kLogLevel >= level) { \
+    if (level & kLogLevel) { \
         std::printf("wlan: " level_prefix args); \
     } \
 } while (false)
 
-#define errorf(args...) wlogf(kLogError, "[E] ", args)
-#define warnf(args...) wlogf(kLogWarning, "[W] ", args)
-#define infof(args...) wlogf(kLogInfo, "[I] ", args)
-#define debugf(args...) wlogf(kLogDebug, "[D] ", args)
-#define verbosef(args...) wlogf(kLogVerbose, "[V] ", args)
+#define errorf(args...)   wlogf(kLogLevelError,   "[E] ", args)
+#define warnf(args...)    wlogf(kLogLevelWarning, "[W] ", args)
+#define infof(args...)    wlogf(kLogLevelInfo,    "[I] ", args)
+#define debugf(args...)   wlogf(kLogLevelDebug,   "[D] ", args)
+#define verbosef(args...) wlogf(kLogLevelVerbose, "[V] ", args)
 #define debugfn() debugf("%s\n", __PRETTY_FUNCTION__)
 }  // namespace wlan
