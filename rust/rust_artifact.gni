@@ -103,6 +103,9 @@ template("rust_artifact") {
 
     depfile = output_depfile
 
+    base_out_dir = "$target_out_dir/$main_target_name.rust"
+    base_gen_dir = "$target_gen_dir/$main_target_name.rust"
+
     inputs = [
       "${source_dir}/Cargo.toml",
       # This will trigger rebuilds whenever third-party crates are updated.
@@ -114,7 +117,7 @@ template("rust_artifact") {
     ]
     if (type == "lib") {
       outputs += [
-        "$target_gen_dir/$main_target_name.rust/$main_target_name.rust_name",
+        "$base_gen_dir/$main_target_name.rust_name",
       ]
     }
 
@@ -141,9 +144,9 @@ template("rust_artifact") {
       "--name",
       name,
       "--out-dir",
-      rebase_path("$target_out_dir/$main_target_name.rust"),
+      rebase_path(base_out_dir),
       "--gen-dir",
-      rebase_path("$target_gen_dir/$main_target_name.rust"),
+      rebase_path(base_gen_dir),
       "--root-out-dir",
       rebase_path(root_build_dir),
       "--root-gen-dir",
@@ -164,6 +167,16 @@ template("rust_artifact") {
       rebase_path("//third_party/rust-crates/vendor"),
       "--deps",
     ] + rust_deps + native_libs
+
+    if (defined(invoker.with_tests) && invoker.with_tests) {
+      args += [
+        "--with-tests",
+      ]
+
+      outputs += [
+        "$base_out_dir/$name-$type-test",
+      ]
+    }
 
     if (!is_debug) {
       args += [

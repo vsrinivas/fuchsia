@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import json
 import os
 import string
 import subprocess
@@ -134,6 +135,9 @@ def main():
     parser.add_argument("--native-libs",
                         help="List of native libraries to be overriden in .config",
                         nargs="*")
+    parser.add_argument("--with-tests",
+                        help="Whether to generate unit tests too",
+                        action="store_true")
     args = parser.parse_args()
 
     env = os.environ.copy()
@@ -251,9 +255,7 @@ def main():
         call_args.append("--lib")
     if args.type == "bin":
         call_args.extend(["--bin", args.name])
-    return_code = subprocess.call(call_args, env=env, cwd=args.gen_dir)
-    if return_code != 0:
-        return return_code
+    subprocess.check_call(call_args, env=env, cwd=args.gen_dir)
 
     # Fix the depfile manually until a flag gets added to cargo to tweak the
     # base path for targets.
@@ -265,6 +267,26 @@ def main():
     depfile_path = os.path.join(args.out_dir, args.target_triple, build_type,
                                 "%s.d" % output_name)
     fix_depfile(depfile_path, args.root_out_dir)
+
+    if args.with_tests:
+        test_args = list(call_args)
+        test_args[1] = "test"
+        test_args.append("--no-run")
+        test_args.append("--message-format=json")
+        messages = subprocess.check_output(test_args, env=env, cwd=args.gen_dir)
+        generated_test_path = None
+        for line in messages.splitlines():
+            data = json.loads(line)
+            if (data["profile"]["test"]):
+              generated_test_path = data["filenames"][0]
+              break
+        if not generated_test_path:
+            raise Exception("Unable to locate resulting test file")
+        dest_test_path = os.path.join(args.out_dir,
+                                      "%s-%s-test" % (args.name, args.type))
+        if os.path.islink(dest_test_path):
+            os.unlink(dest_test_path)
+        os.symlink(generated_test_path, dest_test_path)
 
     return 0
 

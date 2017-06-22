@@ -15,6 +15,15 @@ import("//build/rust/rust_artifact.gni")
 #   deps (optional)
 #     List of labels for Rust libraries this binary depends on.
 #
+#   non_rust_deps (optional)
+#     List of labels this target depends on that are not Rust libraries. This
+#     includes things like actions that generate Rust code. It typically doesn't
+#     need to be set.
+#
+#   with_tests (optional)
+#     Builds tests associated with the binary. This will create a
+#     `<name>-bin-test` test file in the output directory.
+#
 # Example of usage:
 #
 #   rust_binary("foo") {
@@ -25,9 +34,10 @@ template("rust_binary") {
     forward_variables_from(invoker, [
       "deps",
       "name",
+      "native_libs",
       "non_rust_deps",
       "source_dir",
-      "native_libs",
+      "with_tests",
     ])
     type = "bin"
   }
