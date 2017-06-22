@@ -62,7 +62,8 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
         mtx_unlock(&hid->lock);
         break;
     default:
-        printf("usb-hid: unknown interrupt status %d\n", txn->status);
+        printf("usb-hid: unknown interrupt status %d; not requeuing iotxn\n", txn->status);
+        requeue = false;
         break;
     }
 
