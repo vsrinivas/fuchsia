@@ -20,8 +20,6 @@ __BEGIN_CDECLS
 //   MX_ERR_INVALID_ARGS: |type| or |out| is NULL.
 // Will fail if the calling process does not have the rights to access the root
 // job.
-// Not thread safe. TODO(dbort): Make it thread safe. Requires passing context
-// pointers to walk_job_tree() and its callbacks.
 mx_status_t get_task_by_koid(
     mx_koid_t koid, mx_obj_type_t* type, mx_handle_t* out);
 

@@ -11,6 +11,8 @@ __BEGIN_CDECLS
 
 // Called on a task (job/process/thread) node by walk_job_tree().
 //
+// context: The same value passed to walk_[root_]job_tree(), letting callers pass
+//     a context (e.g., object or struct) into each callback of a walk.
 // depth: The distance from root_job. root_job has depth 0, direct
 //     children have depth 1, and so on.
 // task: A handle to the job/process/thread. Will be closed automatically
@@ -25,20 +27,23 @@ __BEGIN_CDECLS
 // terminate without visiting any other node, and the mx_status_t value will be
 // returned by walk_job_tree().
 typedef mx_status_t(task_callback_t)(
-    int depth, mx_handle_t task, mx_koid_t koid, mx_koid_t parent_koid);
+    void* context, int depth,
+    mx_handle_t task, mx_koid_t koid, mx_koid_t parent_koid);
 
 // Walks the job/process/task tree rooted in root_job. Visits tasks in
 // depth-first pre order. Any callback arg may be NULL.
-// TODO: Let callers provide a void* cookie, and pass it into the callbacks.
+// |context| is passed to all callbacks.
 mx_status_t walk_job_tree(mx_handle_t root_job,
                           task_callback_t job_callback,
                           task_callback_t process_callback,
-                          task_callback_t thread_callback);
+                          task_callback_t thread_callback,
+                          void* context);
 
 // Calls walk_job_tree() on the system's root job. Will fail if the calling
 // process does not have the rights to access the root job.
 mx_status_t walk_root_job_tree(task_callback_t job_callback,
                                task_callback_t process_callback,
-                               task_callback_t thread_callback);
+                               task_callback_t thread_callback,
+                               void* context);
 
 __END_CDECLS

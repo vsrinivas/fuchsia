@@ -19,7 +19,7 @@
 
 #include "resources.h"
 
-#define MAX_STATE_LEN (7 + 1)                       // +1 for trailing NUL
+#define MAX_STATE_LEN (7 + 1) // +1 for trailing NUL
 #define MAX_KOID_LEN sizeof("18446744073709551616") // 1<<64 + NUL
 
 static const char kJSONSchema[] =
@@ -86,7 +86,7 @@ static task_table_t tasks = {};
 static task_entry_t* job_stack[JOB_STACK_SIZE];
 
 // Adds a job's information to |tasks|.
-static mx_status_t job_callback(int depth, mx_handle_t job,
+static mx_status_t job_callback(void* unused_ctx, int depth, mx_handle_t job,
                                 mx_koid_t koid, mx_koid_t parent_koid) {
     task_entry_t e = {.type = 'j', .depth = depth};
     mx_status_t status =
@@ -106,7 +106,8 @@ static mx_status_t job_callback(int depth, mx_handle_t job,
 }
 
 // Adds a process's information to |tasks|.
-static mx_status_t process_callback(int depth, mx_handle_t process,
+static mx_status_t process_callback(void* unused_ctx, int depth,
+                                    mx_handle_t process,
                                     mx_koid_t koid, mx_koid_t parent_koid) {
     task_entry_t e = {.type = 'p', .depth = depth};
     mx_status_t status =
@@ -169,7 +170,8 @@ static const char* state_string(const mx_info_thread_t* info) {
 }
 
 // Adds a thread's information to |tasks|.
-static mx_status_t thread_callback(int depth, mx_handle_t thread,
+static mx_status_t thread_callback(void* unused_ctx, int depth,
+                                   mx_handle_t thread,
                                    mx_koid_t koid, mx_koid_t parent_koid) {
     task_entry_t e = {.type = 't', .depth = depth};
     mx_status_t status =
@@ -267,7 +269,7 @@ static void print_table(task_table_t* table, bool with_threads) {
     print_header(id_w, with_threads);
 }
 
-static void print_kernel_json(const char *name, const char *parent,
+static void print_kernel_json(const char* name, const char* parent,
                               uint64_t size_bytes) {
     printf("  {"
            "\"id\": \"kernel/%s\", "
@@ -432,7 +434,7 @@ int main(int argc, char** argv) {
     int ret = 0;
     mx_status_t status =
         walk_root_job_tree(job_callback, process_callback,
-                           with_threads ? thread_callback : NULL);
+                           with_threads ? thread_callback : NULL, NULL);
     if (status != MX_OK) {
         fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                 mx_status_get_string(status), status);

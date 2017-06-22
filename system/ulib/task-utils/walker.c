@@ -15,6 +15,16 @@
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
 
+// Immutable state of a specific call to walk_job_tree, passed along
+// to most helper functions.
+typedef struct {
+    task_callback_t* job_callback;
+    task_callback_t* process_callback;
+    task_callback_t* thread_callback;
+    void* callback_context;
+} walk_ctx_t;
+
+// A dynamically-managed array of koids.
 typedef struct {
     mx_koid_t* entries;
     size_t num_entries;
@@ -29,9 +39,7 @@ static const size_t kNumInitialKoids = 128;
 static const size_t kNumExtraKoids = 10;
 
 static mx_status_t walk_job_tree_internal(
-    task_callback_t job_callback, task_callback_t process_callback,
-    task_callback_t thread_callback,
-    mx_handle_t job, mx_koid_t job_koid, int depth);
+    const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth);
 
 static koid_table_t* make_koid_table(void) {
     koid_table_t* table = malloc(sizeof(*table));
@@ -46,7 +54,8 @@ static size_t koid_table_byte_capacity(koid_table_t* table) {
 }
 
 static void realloc_koid_table(koid_table_t* table, size_t new_capacity) {
-    table->entries = realloc(table->entries, new_capacity * sizeof(table->entries[0]));
+    table->entries =
+        realloc(table->entries, new_capacity * sizeof(table->entries[0]));
     table->capacity = new_capacity;
 }
 
@@ -74,8 +83,11 @@ static mx_status_t fetch_children(mx_handle_t parent, mx_koid_t parent_koid,
                                     koid_table_byte_capacity(koids),
                                     &actual, &avail);
         if (status != MX_OK) {
-            fprintf(stderr, "ERROR: mx_object_get_info(%" PRIu64 ", %s, ...) failed: %s (%d)\n",
-                    parent_koid, kind_name, mx_status_get_string(status), status);
+            fprintf(stderr,
+                    "ERROR: mx_object_get_info(%" PRIu64 ", %s, ...) "
+                    "failed: %s (%d)\n",
+                    parent_koid, kind_name,
+                    mx_status_get_string(status), status);
             return status;
         }
         if (actual == avail) {
@@ -85,7 +97,9 @@ static mx_status_t fetch_children(mx_handle_t parent, mx_koid_t parent_koid,
 
     // if we're still too small at least warn the user
     if (actual < avail) {
-        fprintf(stderr, "WARNING: mx_object_get_info(%" PRIu64 ", %s, ...) truncated %zu/%zu results\n",
+        fprintf(stderr,
+                "WARNING: mx_object_get_info(%" PRIu64 ", %s, ...) "
+                "truncated %zu/%zu results\n",
                 parent_koid, kind_name, avail - actual, avail);
     }
 
@@ -94,25 +108,28 @@ static mx_status_t fetch_children(mx_handle_t parent, mx_koid_t parent_koid,
 }
 
 static mx_status_t do_threads_worker(
-    koid_table_t* koids, task_callback_t thread_callback,
+    const walk_ctx_t* ctx, koid_table_t* koids,
     mx_handle_t process, mx_koid_t process_koid, int depth) {
 
     mx_status_t status;
 
     // get the list of processes under this job
-    status = fetch_children(process, process_koid, MX_INFO_PROCESS_THREADS, "MX_INFO_PROCESS_THREADS",
-                            koids);
+    status = fetch_children(process, process_koid, MX_INFO_PROCESS_THREADS,
+                            "MX_INFO_PROCESS_THREADS", koids);
     if (status != MX_OK) {
         return status;
     }
 
     for (size_t n = 0; n < koids->num_entries; n++) {
         mx_handle_t child;
-        status = mx_object_get_child(process, koids->entries[n], MX_RIGHT_SAME_RIGHTS, &child);
+        status = mx_object_get_child(process, koids->entries[n],
+                                     MX_RIGHT_SAME_RIGHTS, &child);
         if (status == MX_OK) {
             // call the thread_callback if supplied
-            if (thread_callback) {
-                status = (thread_callback)(depth, child, koids->entries[n], process_koid);
+            if (ctx->thread_callback) {
+                status = (ctx->thread_callback)(
+                    ctx->callback_context,
+                    depth, child, koids->entries[n], process_koid);
                 // abort on failure
                 if (status != MX_OK) {
                     return status;
@@ -121,8 +138,11 @@ static mx_status_t do_threads_worker(
 
             mx_handle_close(child);
         } else {
-            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64 ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
-                    process_koid, koids->entries[n], mx_status_get_string(status), status);
+            fprintf(stderr,
+                    "WARNING: mx_object_get_child(%" PRIu64 ", "
+                    "(proc)%" PRIu64 ", ...) failed: %s (%d)\n",
+                    process_koid, koids->entries[n],
+                    mx_status_get_string(status), status);
         }
     }
 
@@ -130,45 +150,45 @@ static mx_status_t do_threads_worker(
 }
 
 static mx_status_t do_threads(
-    task_callback_t thread_callback,
-    mx_handle_t job, mx_koid_t job_koid, int depth) {
+    const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     koid_table_t* koids = make_koid_table();
-    mx_status_t status = do_threads_worker(koids, thread_callback,
-                                           job, job_koid, depth);
+    mx_status_t status = do_threads_worker(ctx, koids, job, job_koid, depth);
     free_koid_table(koids);
     return status;
 }
 
 static mx_status_t do_processes_worker(
-    koid_table_t* koids,
-    task_callback_t process_callback, task_callback_t thread_callback,
+    const walk_ctx_t* ctx, koid_table_t* koids,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     mx_status_t status;
 
     // get the list of processes under this job
-    status = fetch_children(job, job_koid, MX_INFO_JOB_PROCESSES, "MX_INFO_JOB_PROCESSES",
-                            koids);
+    status = fetch_children(job, job_koid, MX_INFO_JOB_PROCESSES,
+                            "MX_INFO_JOB_PROCESSES", koids);
     if (status != MX_OK) {
         return status;
     }
 
     for (size_t n = 0; n < koids->num_entries; n++) {
         mx_handle_t child;
-        status = mx_object_get_child(job, koids->entries[n], MX_RIGHT_SAME_RIGHTS, &child);
+        status = mx_object_get_child(job, koids->entries[n],
+                                     MX_RIGHT_SAME_RIGHTS, &child);
         if (status == MX_OK) {
             // call the process_callback if supplied
-            if (process_callback) {
-                status = (process_callback)(depth, child, koids->entries[n], job_koid);
+            if (ctx->process_callback) {
+                status = (ctx->process_callback)(ctx->callback_context,
+                                                 depth, child,
+                                                 koids->entries[n], job_koid);
                 // abort on failure
                 if (status != MX_OK) {
                     return status;
                 }
             }
 
-            if (thread_callback) {
-                status = do_threads(thread_callback, child, koids->entries[n], depth + 1);
+            if (ctx->thread_callback) {
+                status = do_threads(ctx, child, koids->entries[n], depth + 1);
                 // abort on failure
                 if (status != MX_OK) {
                     return status;
@@ -177,8 +197,11 @@ static mx_status_t do_processes_worker(
 
             mx_handle_close(child);
         } else {
-            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64 ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
-                    job_koid, koids->entries[n], mx_status_get_string(status), status);
+            fprintf(stderr,
+                    "WARNING: mx_object_get_child(%" PRIu64 ", "
+                    "(proc)%" PRIu64 ", ...) failed: %s (%d)\n",
+                    job_koid, koids->entries[n],
+                    mx_status_get_string(status), status);
         }
     }
 
@@ -186,28 +209,23 @@ static mx_status_t do_processes_worker(
 }
 
 static mx_status_t do_processes(
-    task_callback_t process_callback, task_callback_t thread_callback,
-    mx_handle_t job, mx_koid_t job_koid, int depth) {
+    const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     koid_table_t* koids = make_koid_table();
-    mx_status_t status = do_processes_worker(koids, process_callback, thread_callback,
-                                             job, job_koid, depth);
+    mx_status_t status = do_processes_worker(ctx, koids, job, job_koid, depth);
     free_koid_table(koids);
     return status;
 }
 
 static mx_status_t do_jobs_worker(
-    koid_table_t* koids,
-    task_callback_t job_callback,
-    task_callback_t process_callback,
-    task_callback_t thread_callback,
+    const walk_ctx_t* ctx, koid_table_t* koids,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     mx_status_t status;
 
     // get a list of child jobs for this job
-    status = fetch_children(job, job_koid, MX_INFO_JOB_CHILDREN, "MX_INFO_JOB_CHILDREN",
-                            koids);
+    status = fetch_children(job, job_koid, MX_INFO_JOB_CHILDREN,
+                            "MX_INFO_JOB_CHILDREN", koids);
     if (status != MX_OK) {
         return status;
     }
@@ -215,11 +233,14 @@ static mx_status_t do_jobs_worker(
     // drill down into the job tree
     for (size_t n = 0; n < koids->num_entries; n++) {
         mx_handle_t child;
-        status = mx_object_get_child(job, koids->entries[n], MX_RIGHT_SAME_RIGHTS, &child);
+        status = mx_object_get_child(job, koids->entries[n],
+                                     MX_RIGHT_SAME_RIGHTS, &child);
         if (status == MX_OK) {
             // call the job_callback if supplied
-            if (job_callback) {
-                status = (job_callback)(depth, child, koids->entries[n], job_koid);
+            if (ctx->job_callback) {
+                status = (ctx->job_callback)(ctx->callback_context,
+                                             depth, child,
+                                             koids->entries[n], job_koid);
                 // abort on failure
                 if (status != MX_OK) {
                     return status;
@@ -228,8 +249,7 @@ static mx_status_t do_jobs_worker(
 
             // recurse to its children
             status = walk_job_tree_internal(
-                job_callback, process_callback, thread_callback,
-                child, koids->entries[n], depth + 1);
+                ctx, child, koids->entries[n], depth + 1);
             // abort on failure
             if (status != MX_OK) {
                 return status;
@@ -240,7 +260,8 @@ static mx_status_t do_jobs_worker(
             fprintf(stderr,
                     "WARNING: mx_object_get_child(%" PRIu64 ", (job)%" PRIu64
                     ", ...) failed: %s (%d)\n",
-                    job_koid, koids->entries[n], mx_status_get_string(status), status);
+                    job_koid, koids->entries[n],
+                    mx_status_get_string(status), status);
         }
     }
 
@@ -248,39 +269,32 @@ static mx_status_t do_jobs_worker(
 }
 
 static mx_status_t do_jobs(
-    task_callback_t job_callback,
-    task_callback_t process_callback,
-    task_callback_t thread_callback,
-    mx_handle_t job, mx_koid_t job_koid, int depth) {
+    const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     koid_table_t* koids = make_koid_table();
-    mx_status_t status = do_jobs_worker(koids, job_callback, process_callback,
-                                        thread_callback, job, job_koid, depth);
+    mx_status_t status = do_jobs_worker(ctx, koids, job, job_koid, depth);
     free_koid_table(koids);
     return status;
 }
 
 static mx_status_t walk_job_tree_internal(
-    task_callback_t job_callback, task_callback_t process_callback,
-    task_callback_t thread_callback,
-    mx_handle_t job, mx_koid_t job_koid, int depth) {
+    const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth) {
 
-    if (process_callback != NULL || thread_callback != NULL) {
-        mx_status_t status = do_processes(
-            process_callback, thread_callback, job, job_koid, depth);
+    if (ctx->process_callback != NULL || ctx->thread_callback != NULL) {
+        mx_status_t status = do_processes(ctx, job, job_koid, depth);
         if (status != MX_OK) {
             return status;
         }
     }
 
-    return do_jobs(job_callback, process_callback, thread_callback,
-                   job, job_koid, depth);
+    return do_jobs(ctx, job, job_koid, depth);
 }
 
 mx_status_t walk_job_tree(mx_handle_t root_job,
                           task_callback_t job_callback,
                           task_callback_t process_callback,
-                          task_callback_t thread_callback) {
+                          task_callback_t thread_callback,
+                          void* context) {
     mx_koid_t root_job_koid = 0;
     mx_info_handle_basic_t info;
     mx_status_t status = mx_object_get_info(root_job, MX_INFO_HANDLE_BASIC,
@@ -291,19 +305,26 @@ mx_status_t walk_job_tree(mx_handle_t root_job,
     // Else keep going with a koid of zero.
 
     if (job_callback) {
-        status = (job_callback)(/* depth */ 0, root_job, root_job_koid, 0);
+        status =
+            (job_callback)(context, /* depth */ 0, root_job, root_job_koid, 0);
         if (status != MX_OK) {
             return status;
         }
     }
+    walk_ctx_t ctx = {
+        .job_callback = job_callback,
+        .process_callback = process_callback,
+        .thread_callback = thread_callback,
+        .callback_context = context,
+    };
     return walk_job_tree_internal(
-        job_callback, process_callback, thread_callback,
-        root_job, root_job_koid, /* depth */ 1);
+        &ctx, root_job, root_job_koid, /* depth */ 1);
 }
 
 mx_status_t walk_root_job_tree(task_callback_t job_callback,
                                task_callback_t process_callback,
-                               task_callback_t thread_callback) {
+                               task_callback_t thread_callback,
+                               void* context) {
     int fd = open("/dev/misc/sysinfo", O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "task-utils/walker: cannot open sysinfo: %d\n", errno);
@@ -319,7 +340,7 @@ mx_status_t walk_root_job_tree(task_callback_t job_callback,
     }
 
     mx_status_t s = walk_job_tree(
-        root_job, job_callback, process_callback, thread_callback);
+        root_job, job_callback, process_callback, thread_callback, context);
     mx_handle_close(root_job);
     return s;
 }

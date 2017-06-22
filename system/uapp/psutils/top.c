@@ -10,6 +10,7 @@
 #include <pretty/sizes.h>
 #include <task-utils/walker.h>
 
+#include <fcntl.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -17,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 enum sort_order {
     UNSORTED,
@@ -32,8 +32,8 @@ typedef struct {
     mx_time_t delta_time;
 
     // information about the thread
-    mx_koid_t        proc_koid;
-    mx_koid_t        koid;
+    mx_koid_t proc_koid;
+    mx_koid_t koid;
     mx_info_thread_t info;
     mx_info_thread_stats_t stats;
     char name[MX_MAX_NAME_LEN];
@@ -58,34 +58,38 @@ static const char* state_string(const mx_info_thread_t* info) {
         return "excp";
     } else {
         switch (info->state) {
-            case MX_THREAD_STATE_NEW:
-                return "new";
-            case MX_THREAD_STATE_RUNNING:
-                return "run";
-            case MX_THREAD_STATE_SUSPENDED:
-                return "susp";
-            case MX_THREAD_STATE_BLOCKED:
-                return "block";
-            case MX_THREAD_STATE_DYING:
-                return "dying";
-            case MX_THREAD_STATE_DEAD:
-                return "dead";
-            default:
-                return "???";
+        case MX_THREAD_STATE_NEW:
+            return "new";
+        case MX_THREAD_STATE_RUNNING:
+            return "run";
+        case MX_THREAD_STATE_SUSPENDED:
+            return "susp";
+        case MX_THREAD_STATE_BLOCKED:
+            return "block";
+        case MX_THREAD_STATE_DYING:
+            return "dying";
+        case MX_THREAD_STATE_DEAD:
+            return "dead";
+        default:
+            return "???";
         }
     }
 }
 
-static mx_status_t process_callback(int depth, mx_handle_t proc, mx_koid_t koid, mx_koid_t parent_koid) {
+static mx_status_t process_callback(void* unused_ctx, int depth,
+                                    mx_handle_t proc,
+                                    mx_koid_t koid, mx_koid_t parent_koid) {
     last_process_scanned = koid;
 
-    mx_status_t status =
-        mx_object_get_property(proc, MX_PROP_NAME, &last_process_name, sizeof(last_process_name));
+    mx_status_t status = mx_object_get_property(
+        proc, MX_PROP_NAME, &last_process_name, sizeof(last_process_name));
     return status;
 }
 
 // Adds a thread's information to the thread_list
-static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid, mx_koid_t parent_koid) {
+static mx_status_t thread_callback(void* unused_ctx, int depth,
+                                   mx_handle_t thread,
+                                   mx_koid_t koid, mx_koid_t parent_koid) {
     thread_info_t e = {};
 
     e.koid = koid;
@@ -99,22 +103,26 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
     if (status != MX_OK) {
         return status;
     }
-    status = mx_object_get_info(thread, MX_INFO_THREAD, &e.info, sizeof(e.info), NULL, NULL);
+    status = mx_object_get_info(
+        thread, MX_INFO_THREAD, &e.info, sizeof(e.info), NULL, NULL);
     if (status != MX_OK) {
         return status;
     }
-    status = mx_object_get_info(thread, MX_INFO_THREAD_STATS, &e.stats, sizeof(e.stats), NULL, NULL);
+    status = mx_object_get_info(
+        thread, MX_INFO_THREAD_STATS, &e.stats, sizeof(e.stats), NULL, NULL);
     if (status != MX_OK) {
         return status;
     }
 
     // see if this thread is in the list
-    thread_info_t *temp;
-    list_for_every_entry(&thread_list, temp, thread_info_t, node) {
+    thread_info_t* temp;
+    list_for_every_entry (&thread_list, temp, thread_info_t, node) {
         if (e.koid == temp->koid) {
-            // mark it scanned, compute the delta time, and copy the new state over
+            // mark it scanned, compute the delta time,
+            // and copy the new state over
             temp->scanned = true;
-            temp->delta_time = e.stats.total_runtime - temp->stats.total_runtime;
+            temp->delta_time =
+                e.stats.total_runtime - temp->stats.total_runtime;
             temp->info = e.info;
             temp->stats = e.stats;
             return MX_OK;
@@ -122,7 +130,7 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
     }
 
     // it wasn't in the list, add it
-    thread_info_t *new_entry = malloc(sizeof(thread_info_t));
+    thread_info_t* new_entry = malloc(sizeof(thread_info_t));
     *new_entry = e;
 
     list_add_tail(&thread_list, &new_entry->node);
@@ -137,12 +145,12 @@ static void sort_threads(enum sort_order order) {
     struct list_node new_list = LIST_INITIAL_VALUE(new_list);
 
     // cheezy sort into second list, then swap back to first
-    thread_info_t *e;
+    thread_info_t* e;
     while ((e = list_remove_head_type(&thread_list, thread_info_t, node))) {
-        thread_info_t *t;
+        thread_info_t* t;
 
         bool found = false;
-        list_for_every_entry(&new_list, t, thread_info_t, node) {
+        list_for_every_entry (&new_list, t, thread_info_t, node) {
             if (order == SORT_TIME_DELTA) {
                 if (e->delta_time > t->delta_time) {
                     list_add_before(&t->node, &e->node);
@@ -161,11 +169,12 @@ static void sort_threads(enum sort_order order) {
 }
 
 static void print_threads(void) {
-    thread_info_t *e;
-    printf("%8s %8s %10s %5s %s\n", "PID", "TID", raw_time ? "TIME_NS" : "TIME%", "STATE", "NAME");
+    thread_info_t* e;
+    printf("%8s %8s %10s %5s %s\n",
+           "PID", "TID", raw_time ? "TIME_NS" : "TIME%", "STATE", "NAME");
 
     int i = 0;
-    list_for_every_entry(&thread_list, e, thread_info_t, node) {
+    list_for_every_entry (&thread_list, e, thread_info_t, node) {
         // only print threads that are active
         if (!print_all && e->delta_time == 0)
             continue;
@@ -176,10 +185,12 @@ static void print_threads(void) {
                 percent = e->delta_time / (double)delay * 100;
 
             printf("%8lu %8lu %10.2f %5s %s:%s\n",
-                    e->proc_koid, e->koid, percent, state_string(&e->info), e->proc_name, e->name);
+                   e->proc_koid, e->koid, percent, state_string(&e->info),
+                   e->proc_name, e->name);
         } else {
             printf("%8lu %8lu %10lu %5s %s:%s\n",
-                    e->proc_koid, e->koid, e->delta_time, state_string(&e->info), e->proc_name, e->name);
+                   e->proc_koid, e->koid, e->delta_time, state_string(&e->info),
+                   e->proc_name, e->name);
         }
 
         // only print the first count items (or all, if count < 0)
@@ -213,7 +224,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(arg, "-d")) {
             delay = 0;
             if (i + 1 < argc) {
-                delay = MX_SEC(atoi(argv[i+1]));
+                delay = MX_SEC(atoi(argv[i + 1]));
             }
             if (delay == 0) {
                 fprintf(stderr, "Bad delay\n");
@@ -224,7 +235,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(arg, "-c")) {
             count = 0;
             if (i + 1 < argc) {
-                count = atoi(argv[i+1]);
+                count = atoi(argv[i + 1]);
             }
             if (count == 0) {
                 fprintf(stderr, "Bad count\n");
@@ -237,9 +248,9 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "Bad sort field\n");
                 print_help(stderr);
                 return 1;
-            } else if (!strcmp(argv[i+1], "none")) {
+            } else if (!strcmp(argv[i + 1], "none")) {
                 sort_order = UNSORTED;
-            } else if (!strcmp(argv[i+1], "time")) {
+            } else if (!strcmp(argv[i + 1], "time")) {
                 sort_order = SORT_TIME_DELTA;
             } else {
                 fprintf(stderr, "Bad sort field\n");
@@ -264,13 +275,14 @@ int main(int argc, char** argv) {
         mx_time_t next_deadline = mx_deadline_after(delay);
 
         // mark all active threads as not scanned
-        thread_info_t *e;
-        list_for_every_entry(&thread_list, e, thread_info_t, node) {
+        thread_info_t* e;
+        list_for_every_entry (&thread_list, e, thread_info_t, node) {
             e->scanned = false;
         }
 
         // iterate the entire job tree
-        mx_status_t status = walk_root_job_tree(NULL, process_callback, thread_callback);
+        mx_status_t status =
+            walk_root_job_tree(NULL, process_callback, thread_callback, NULL);
         if (status != MX_OK) {
             fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                     mx_status_get_string(status), status);
@@ -278,8 +290,8 @@ int main(int argc, char** argv) {
         }
 
         // remove every entry that hasn't been scanned this pass
-        thread_info_t *temp;
-        list_for_every_entry_safe(&thread_list, e, temp, thread_info_t, node) {
+        thread_info_t* temp;
+        list_for_every_entry_safe (&thread_list, e, temp, thread_info_t, node) {
             if (!e->scanned) {
                 list_delete(&e->node);
                 free(e);

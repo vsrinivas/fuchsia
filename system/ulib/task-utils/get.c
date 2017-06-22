@@ -7,38 +7,40 @@
 #include <magenta/syscalls.h>
 #include <task-utils/walker.h>
 
-mx_koid_t desired_koid;
-mx_handle_t found_handle;
-mx_obj_type_t found_type;
+typedef struct {
+    mx_koid_t desired_koid;
+    mx_handle_t found_handle;
+    mx_obj_type_t found_type;
+} get_task_ctx_t;
 
-static mx_status_t common_callback(mx_obj_type_t type, mx_handle_t handle,
-                                   mx_koid_t koid) {
-    if (koid == desired_koid) {
+static mx_status_t common_callback(mx_obj_type_t type, get_task_ctx_t* ctx,
+                                   mx_handle_t handle, mx_koid_t koid) {
+    if (koid == ctx->desired_koid) {
         mx_handle_t dup;
         mx_status_t s = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS, &dup);
         if (s != MX_OK) {
             return s;
         }
-        found_handle = dup;
-        found_type = type;
+        ctx->found_handle = dup;
+        ctx->found_type = type;
         return MX_ERR_STOP;
     }
     return MX_OK;
 }
 
-static mx_status_t job_callback(int depth, mx_handle_t handle,
+static mx_status_t job_callback(void* ctx, int depth, mx_handle_t handle,
                                 mx_koid_t koid, mx_koid_t parent_koid) {
-    return common_callback(MX_OBJ_TYPE_JOB, handle, koid);
+    return common_callback(MX_OBJ_TYPE_JOB, ctx, handle, koid);
 }
 
-static mx_status_t process_callback(int depth, mx_handle_t handle,
+static mx_status_t process_callback(void* ctx, int depth, mx_handle_t handle,
                                     mx_koid_t koid, mx_koid_t parent_koid) {
-    return common_callback(MX_OBJ_TYPE_PROCESS, handle, koid);
+    return common_callback(MX_OBJ_TYPE_PROCESS, ctx, handle, koid);
 }
 
-static mx_status_t thread_callback(int depth, mx_handle_t handle,
+static mx_status_t thread_callback(void* ctx, int depth, mx_handle_t handle,
                                    mx_koid_t koid, mx_koid_t parent_koid) {
-    return common_callback(MX_OBJ_TYPE_THREAD, handle, koid);
+    return common_callback(MX_OBJ_TYPE_THREAD, ctx, handle, koid);
 }
 
 mx_status_t get_task_by_koid(mx_koid_t koid,
@@ -46,16 +48,16 @@ mx_status_t get_task_by_koid(mx_koid_t koid,
     if (type == NULL || out == NULL) {
         return MX_ERR_INVALID_ARGS;
     }
-    desired_koid = koid;
-    found_handle = MX_HANDLE_INVALID;
-    found_type = MX_OBJ_TYPE_NONE;
+    get_task_ctx_t ctx = {
+        .desired_koid = koid,
+        .found_handle = MX_HANDLE_INVALID,
+        .found_type = MX_OBJ_TYPE_NONE,
+    };
     mx_status_t s = walk_root_job_tree(
-        job_callback, process_callback, thread_callback);
-    desired_koid = 0;
+        job_callback, process_callback, thread_callback, &ctx);
     if (s == MX_ERR_STOP) {
-        *type = found_type;
-        *out = found_handle;
-        found_handle = MX_HANDLE_INVALID;
+        *type = ctx.found_type;
+        *out = ctx.found_handle;
         return MX_OK;
     }
     if (s == MX_OK) {
