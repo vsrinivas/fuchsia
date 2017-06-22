@@ -380,6 +380,13 @@ void xhci_endpoint_free(xhci_endpoint_t* ep) {
     ep->transfer_state = NULL;
 }
 
+int xhci_get_ep_state(xhci_endpoint_t* ep) {
+    if (!ep->epc) {
+        return EP_STATE_DISABLED;
+    }
+    return XHCI_GET_BITS32(&ep->epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS);
+}
+
 static void xhci_update_erdp(xhci_t* xhci, int interruptor) {
     xhci_event_ring_t* er = &xhci->event_rings[interruptor];
     xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interruptor];

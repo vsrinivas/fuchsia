@@ -511,6 +511,13 @@ typedef volatile struct {
 #define EP_CTX_MAX_ESIT_PAYLOAD_HI_START    24
 #define EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS     8
 
+// EP_CTX_EP_STATE values
+#define EP_STATE_DISABLED                   0
+#define EP_STATE_RUNNING                    1
+#define EP_STATE_HALTED                     2
+#define EP_STATE_STOPPED                    3
+#define EP_STATE_ERROR                      4
+
 // Endpoint context bits (epc1)
 #define EP_CTX_CERR_START                   1
 #define EP_CTX_CERR_BITS                    2

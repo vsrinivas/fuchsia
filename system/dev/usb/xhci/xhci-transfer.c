@@ -113,7 +113,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
     size_t length = txn->length;
 
 
-    if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
+    if (xhci_get_ep_state(ep) == EP_STATE_HALTED) {
         return MX_ERR_IO_REFUSED;
     }
 
@@ -505,8 +505,14 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_SHORT_PACKET:
             result = length;
             break;
+        case TRB_CC_USB_TRANSACTION_ERROR:
+        case TRB_CC_TRB_ERROR:
         case TRB_CC_STALL_ERROR:
-            result = MX_ERR_IO_REFUSED;
+            if (xhci_get_ep_state(ep) == EP_STATE_HALTED) {
+                result = MX_ERR_IO_REFUSED;
+            } else {
+                result = MX_ERR_IO;
+            }
             break;
         case TRB_CC_RING_UNDERRUN:
             // non-fatal error that happens when no transfers are available for isochronous endpoint

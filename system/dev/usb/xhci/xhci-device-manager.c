@@ -240,10 +240,17 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
 
     // read first 8 bytes of device descriptor to fetch ep0 max packet size
     usb_device_descriptor_t device_descriptor;
-    result = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
-                                 &device_descriptor, 8);
+    for (int i = 0; i < 5; i++) {
+        result = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
+                                     &device_descriptor, 8);
+        if (result == MX_ERR_IO_REFUSED) {
+            xhci_reset_endpoint(xhci, slot_id, 0);
+        } else {
+            break;
+        }
+    }
     if (result != 8) {
-        printf("xhci_get_descriptor failed\n");
+        printf("xhci_get_descriptor failed: %d\n", result);
         goto disable_slot_exit;
     }
 

@@ -170,6 +170,7 @@ struct xhci {
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);
 void xhci_endpoint_free(xhci_endpoint_t* ep);
+int xhci_get_ep_state(xhci_endpoint_t* ep);
 void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
