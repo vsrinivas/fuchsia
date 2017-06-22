@@ -6,12 +6,13 @@
 
 #include <unordered_map>
 
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/ask_channel.h"
+#include "apps/maxwell/src/suggestion_engine/debug.h"
 #include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -21,9 +22,12 @@ const std::string kQueryContextKey = "/suggestion_engine/current_query";
 
 class Repo {
  public:
-  Repo(ProposalFilter filter, ContextPublisherPtr publisher)
-      : next_channel_(filter),
+  Repo(ProposalFilter filter,
+       ContextPublisherPtr publisher,
+       SuggestionDebugImpl* debug)
+      : debug_(debug),
         filter_(filter),
+        next_channel_(filter, debug_),
         publisher_(std::move(publisher)) {}
 
   ProposalPublisherImpl* GetOrCreateSourceClient(
@@ -65,7 +69,8 @@ class Repo {
   }
 
   void DispatchAsk(UserInputPtr query, AskChannel* channel) {
-    publisher_->Publish(kQueryContextKey, query->get_text());
+    publisher_->Publish(kQueryContextKey,
+                        "\"" + query->get_text().get() + "\"");
     for (const std::unique_ptr<AskPublisher>& ask : ask_handlers_) {
       ask->handler->Ask(
           query.Clone(), [&ask, channel](fidl::Array<ProposalPtr> proposals) {
@@ -110,6 +115,10 @@ class Repo {
     return std::to_string(id++);
   }
 
+  SuggestionDebugImpl* debug_;
+
+  ProposalFilter filter_;
+
   std::unordered_map<std::string, std::unique_ptr<ProposalPublisherImpl>>
       sources_;
   // indexed by suggestion ID
@@ -120,8 +129,6 @@ class Repo {
                        std::unique_ptr<AskPublisher>,
                        AskPublisher::GetHandler>
       ask_handlers_;
-
-  ProposalFilter filter_;
 
   ContextPublisherPtr publisher_;
 };

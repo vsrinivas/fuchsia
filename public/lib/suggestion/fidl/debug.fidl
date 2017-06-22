@@ -13,23 +13,30 @@ import "user_input.fidl";
 interface SuggestionDebug {
   WatchAskProposals(AskProposalListener listener);
   WatchInterruptionProposals(InterruptionProposalListener listener);
-  WatchPersistentProposals(PersistentProposalListener listener);
+  WatchNextProposals(NextProposalListener listener);
 };
 
 interface AskProposalListener {
   // Receives the current ask query and ranked proposals
-  OnQueryUpdate(UserInput query, array<Proposal> proposals);
+  OnAskStart(string query, array<ProposalSummary> proposals);
   // Receives notification of query completion or dismissal.
   // |selected_proposal| is null if query was dismissed
-  OnQueryEnd(Proposal selected_proposal);
+  OnProposalSelected(ProposalSummary selected_proposal);
 };
 
 interface InterruptionProposalListener {
   // Receives updates to the current proposal list and rankings
-  OnInterrupt(Proposal interruption_proposal);
+  OnInterrupt(ProposalSummary interruption_proposal);
 };
 
-interface PersistentProposalListener {
+interface NextProposalListener {
   // Receives updates to the current proposal list and rankings
-  OnUpdate(array<Proposal> proposals);
+  OnNextUpdate(array<ProposalSummary> proposals);
+};
+
+// This is necessary because a Proposal is not Clone-able, as CustomAction
+// can contain an InterfaceHandle.
+struct ProposalSummary {
+  string id;
+  SuggestionDisplay display;
 };

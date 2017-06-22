@@ -7,6 +7,7 @@
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/debug.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_filter.h"
@@ -29,6 +30,10 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     app_context_->outgoing_services()->AddService<SuggestionProvider>(
         [this](fidl::InterfaceRequest<SuggestionProvider> request) {
           suggestion_provider_bindings_.AddBinding(this, std::move(request));
+        });
+    app_context_->outgoing_services()->AddService<SuggestionDebug>(
+        [this](fidl::InterfaceRequest<SuggestionDebug> request) {
+          debug_bindings_.AddBinding(&debug_, std::move(request));
         });
   }
 
@@ -54,6 +59,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                          InteractionPtr interaction) override {
     std::unique_ptr<SuggestionPrototype> suggestion_prototype =
         repo_->Extract(suggestion_uuid);
+
+    debug_.OnSuggestionSelected(suggestion_prototype.get());
 
     std::string log_detail = suggestion_prototype
                                  ? short_proposal_str(*suggestion_prototype)
@@ -98,7 +105,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     // timeline_stories_watcher_->SetWatcher(
     //     []() { FTL_LOG(INFO) << "Something changed."; });
 
-    repo_.reset(new Repo(nullptr, std::move(context_publisher_ptr)));
+    repo_.reset(new Repo(nullptr, std::move(context_publisher_ptr), &debug_));
   }
 
   // end SuggestionEngine
@@ -213,6 +220,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   fidl::BindingSet<SuggestionEngine> bindings_;
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
+  fidl::BindingSet<SuggestionDebug> debug_bindings_;
 
   modular::StoryProviderPtr story_provider_;
   fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
@@ -231,6 +239,9 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   // new ones that are no longer filtered.
 
   std::unique_ptr<Repo> repo_;
+
+  // Debug service
+  SuggestionDebugImpl debug_;
 };
 
 }  // namespace maxwell

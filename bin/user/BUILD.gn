@@ -50,6 +50,7 @@ source_set("user_intelligence_provider") {
     "//apps/maxwell/services/context:debug",
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
     "//apps/maxwell/services/user",
     "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src/acquirers/story_info:initializer",

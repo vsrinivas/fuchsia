@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
 
 namespace maxwell {
@@ -12,5 +14,7 @@ struct RankedSuggestion {
   SuggestionPrototype* prototype;
   float rank;
 };
+
+typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
 
 }  // namespace maxwell

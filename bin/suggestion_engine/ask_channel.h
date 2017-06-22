@@ -8,6 +8,7 @@
 #include <unordered_set>
 
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/debug.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
 
 namespace maxwell {
@@ -26,8 +27,10 @@ class AskChannel : public SuggestionChannel {
   // SuggestionChannel base class.
   AskChannel(Repo* repo,
              fidl::InterfaceHandle<SuggestionListener> listener,
-             fidl::InterfaceRequest<AskController> controller)
-      : repo_(repo),
+             fidl::InterfaceRequest<AskController> controller,
+             SuggestionDebugImpl* debug)
+      : debug_(debug),
+        repo_(repo),
         subscriber_(this, std::move(listener), std::move(controller)) {}
 
   ~AskChannel();
@@ -73,6 +76,7 @@ class AskChannel : public SuggestionChannel {
   float next_rank() { return next_rank_++; }
   float next_rank_ = 0;
 
+  SuggestionDebugImpl* debug_;
   Repo* repo_;
   AskSubscriber subscriber_;
   std::string query_;

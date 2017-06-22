@@ -70,12 +70,19 @@ function handleWebSocketMessage(evt) {
   if ("context.subscribers" in message) {
     handleContextSubscribers(message["context.subscribers"]);
   }
+  if ("suggestions" in message) {
+    handleSuggestionsUpdate(message["suggestions"]);
+  }
   if ("action_log.all" in message) {
     handleActionLogReset(message["action_log.all"]);
   }
   if ("action_log.new_action" in message) {
     handleActionLogAdd(message["action_log.new_action"]);
   }
+}
+
+function handleSuggestionUpdate(suggestions) {
+  console.log('Got suggestions:', suggestions);
 }
 
 function handleContextUpdate(context) {

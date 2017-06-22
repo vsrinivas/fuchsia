@@ -5,6 +5,7 @@
 #pragma once
 
 #include "apps/maxwell/src/bound_set.h"
+#include "apps/maxwell/src/suggestion_engine/debug.h"
 #include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
@@ -14,7 +15,8 @@ namespace maxwell {
 
 class NextChannel : public SuggestionChannel {
  public:
-  NextChannel(ProposalFilter filter) : filter_(filter) {}
+  NextChannel(ProposalFilter filter, SuggestionDebugImpl* debug)
+      : debug_(debug), filter_(filter) {}
 
   void AddSubscriber(std::unique_ptr<NextSubscriber> subscriber) {
     subscribers_.emplace(std::move(subscriber));
@@ -32,6 +34,7 @@ class NextChannel : public SuggestionChannel {
 
  private:
   void DispatchOnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
+    debug_->OnNextUpdate(ranked_suggestions());
     for (auto& subscriber : subscribers_)
       subscriber->OnAddSuggestion(ranked_suggestion);
     for (auto& interruptions_subscriber : interruptions_subscribers_)
@@ -39,11 +42,14 @@ class NextChannel : public SuggestionChannel {
   }
 
   void DispatchOnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
+    debug_->OnNextUpdate(ranked_suggestions());
     for (auto& subscriber : subscribers_)
       subscriber->OnRemoveSuggestion(ranked_suggestion);
     for (auto& interruptions_subscriber : interruptions_subscribers_)
       interruptions_subscriber->OnRemoveSuggestion(ranked_suggestion);
   }
+
+  SuggestionDebugImpl* debug_;
 
   ProposalFilter filter_;
 

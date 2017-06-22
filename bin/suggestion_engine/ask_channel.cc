@@ -114,6 +114,7 @@ void AskChannel::OnAddSuggestion(SuggestionPrototype* prototype) {
     new_entry->prototype = prototype;
 
     subscriber_.OnAddSuggestion(*new_entry);
+    debug_->OnAskStart(query_, ranked_suggestions());
 
     prototype->ranks_by_channel[this] = new_entry.get();
   } else {
@@ -136,6 +137,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
   if (ranked_suggestion->rank != kExcludeRank) {
     // previously included
     subscriber_.OnRemoveSuggestion(*ranked_suggestion);
+    debug_->OnAskStart(query_, ranked_suggestions());
 
     auto from = find(&include_, ranked_suggestion);
 
@@ -157,6 +159,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
       }  // else keep it stable
 
       subscriber_.OnAddSuggestion(*ranked_suggestion);
+      debug_->OnAskStart(query_, ranked_suggestions());
     } else {
       ranked_suggestion->rank = kExcludeRank;
       exclude_.emplace(ranked_suggestion->prototype->suggestion_id,
@@ -173,6 +176,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
                        std::move(from->second));
       exclude_.erase(from);
       subscriber_.OnAddSuggestion(*ranked_suggestion);
+      debug_->OnAskStart(query_, ranked_suggestions());
     }
     // else no action required
   }

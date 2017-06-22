@@ -14,6 +14,7 @@ import 'src/data_handler.dart';
 import 'src/action_log.dart';
 import 'src/context.dart';
 import 'src/context_subscribers.dart';
+import 'src/suggestion_subscribers.dart';
 
 const _configDir = "/system/data/mi_dashboard";
 const _configFilename = "dashboard.config";
@@ -46,6 +47,7 @@ void main(List args) {
   addDataHandler(new ActionLogDataHandler());
   addDataHandler(new ContextDataHandler());
   addDataHandler(new ContextSubscribersDataHandler());
+  addDataHandler(new ProposalSubscribersDataHandler());
 
   // Initialize the DataHandlers
   _dataHandlerMap.forEach((name, handler) {
