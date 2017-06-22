@@ -50,6 +50,14 @@ version = "0.1.0"
 bitflags = "0.7.0"
 ```
 
+## Testing
+
+Both `rust_library` and `rust_binary` have a `with_tests` attribute which, if
+set to _true_, will trigger unit tests associated with the target to be built
+alongside the target and packaged in a test executable.
+
+Integration tests are currently not supported.
+
 
 ## Managing third-party dependencies
 
