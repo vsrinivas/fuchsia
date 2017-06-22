@@ -45,7 +45,9 @@ closing the VMO handle does not remove the mapping added by this function.
   regions of the VMO
 
 *vmar_offset* must be 0 if *map_flags* does not have **MX_VM_FLAG_SPECIFIC** or
-**MX_VM_FLAG_SPECIFIC_OVERWRITE** set.
+**MX_VM_FLAG_SPECIFIC_OVERWRITE** set.  If neither of those flags are set, then
+the mapping will be assigned an offset at random by the kernel (with an
+allocator determined by policy set on the target VMAR).
 
 ## RETURN VALUE
 
