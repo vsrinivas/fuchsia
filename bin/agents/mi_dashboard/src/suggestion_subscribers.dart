@@ -7,7 +7,6 @@ import 'dart:io';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.services.suggestion..debug/debug.fidl.dart';
-import 'package:apps.maxwell.services.suggestion/proposal.fidl.dart';
 
 import 'data_handler.dart';
 
@@ -85,8 +84,8 @@ class ProposalSubscribersDataHandler extends AskProposalListener with NextPropos
   }
 
   @override
-  void onProposalSelected(ProposalSummary selected_proposal) {
-    _lastSelectedProposal = selected_proposal;
+  void onProposalSelected(ProposalSummary selectedProposal) {
+    _lastSelectedProposal = selectedProposal;
     this._sendMessage(this.makeJsonMessage());
   }
 
@@ -97,8 +96,8 @@ class ProposalSubscribersDataHandler extends AskProposalListener with NextPropos
   }
 
   @override
-  void onInterrupt(ProposalSummary interruption_proposal) {
-    _lastInterruptionProposal = interruption_proposal;
+  void onInterrupt(ProposalSummary interruptionProposal) {
+    _lastInterruptionProposal = interruptionProposal;
     this._sendMessage(this.makeJsonMessage());
   }
 }
