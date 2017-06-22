@@ -39,11 +39,11 @@ public:
         mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
         mx_rights_t* root_vmar_rights);
 
-    // Traits to belong in the parent job's weak list.
-    struct JobListTraitsWeak {
+    // Traits to belong in the parent job's raw list.
+    struct JobListTraitsRaw {
         static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
             ProcessDispatcher& obj) {
-            return obj.dll_job_weak_;
+            return obj.dll_job_raw_;
         }
     };
 
@@ -300,7 +300,7 @@ private:
     const pol_cookie_t policy_;
 
     // The process can belong to either of these lists independently.
-    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_weak_;
+    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
     mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>> dll_job_;
 
     mx_handle_t handle_rand_ = 0;

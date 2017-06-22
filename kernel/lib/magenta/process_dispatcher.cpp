@@ -117,7 +117,7 @@ ProcessDispatcher::~ProcessDispatcher() {
     DEBUG_ASSERT(exception_port_ == nullptr);
     DEBUG_ASSERT(debugger_exception_port_ == nullptr);
 
-    // Remove ourselves from the parent job's weak ref to us. Note that this might
+    // Remove ourselves from the parent job's raw ref to us. Note that this might
     // have beeen called when transitioning State::DEAD. The Job can handle double calls.
     job_->RemoveChildProcess(this);
 
@@ -360,7 +360,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
         LTRACEF_LEVEL(2, "signaling waiters\n");
         state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
 
-        // We remove ourselves from the parent Job weak ref (to us) list early, so
+        // We remove ourselves from the parent Job raw ref (to us) list early, so
         // the semantics of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
         job_->RemoveChildProcess(this);
 

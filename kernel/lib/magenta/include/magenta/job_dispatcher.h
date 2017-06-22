@@ -39,11 +39,11 @@ protected:
 
 class JobDispatcher final : public Dispatcher {
 public:
-    // Traits to belong to the parent's weak job list.
-    struct ListTraitsWeak {
+    // Traits to belong to the parent's raw job list.
+    struct ListTraitsRaw {
         static mxtl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
             JobDispatcher& obj) {
-            return obj.dll_job_weak_;
+            return obj.dll_job_raw_;
         }
     };
 
@@ -112,7 +112,7 @@ private:
     const mxtl::RefPtr<JobDispatcher> parent_;
     const uint32_t max_height_;
 
-    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_weak_;
+    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_raw_;
     mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<JobDispatcher>> dll_job_;
 
     // The user-friendly job name. For debug purposes only. That
@@ -126,18 +126,18 @@ private:
     uint32_t job_count_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
 
-    using WeakJobList =
-        mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsWeak>;
-    using WeakProcessList =
-        mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraitsWeak>;
+    using RawJobList =
+        mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
+    using RawProcessList =
+        mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraitsRaw>;
 
     using ProcessList =
         mxtl::SinglyLinkedList<mxtl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTraits>;
     using JobList =
         mxtl::SinglyLinkedList<mxtl::RefPtr<JobDispatcher>, ListTraits>;
 
-    WeakJobList jobs_ TA_GUARDED(lock_);
-    WeakProcessList procs_ TA_GUARDED(lock_);
+    RawJobList jobs_ TA_GUARDED(lock_);
+    RawProcessList procs_ TA_GUARDED(lock_);
 
     pol_cookie_t policy_ TA_GUARDED(lock_);
 };

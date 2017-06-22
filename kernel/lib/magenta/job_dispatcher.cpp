@@ -103,7 +103,7 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
 
     AutoLock lock(&lock_);
     // The process dispatcher can call us in its destructor or in Kill().
-    if (!ProcessDispatcher::JobListTraitsWeak::node_state(*process).InContainer())
+    if (!ProcessDispatcher::JobListTraitsRaw::node_state(*process).InContainer())
         return;
     procs_.erase(*process);
     --process_count_;
@@ -114,7 +114,7 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
-    if (!JobDispatcher::ListTraitsWeak::node_state(*job).InContainer())
+    if (!JobDispatcher::ListTraitsRaw::node_state(*job).InContainer())
         return;
     jobs_.erase(*job);
     --job_count_;
@@ -186,7 +186,7 @@ void JobDispatcher::Kill() {
 
         state_ = State::KILLING;
 
-        // Convert our weak pointers into refcounted. We will do the killing
+        // Convert our raw pointers into refcounted. We will do the killing
         // outside the lock.
         for (auto& j : jobs_) {
             jobs_to_kill.push_front(mxtl::RefPtr<JobDispatcher>(&j));
