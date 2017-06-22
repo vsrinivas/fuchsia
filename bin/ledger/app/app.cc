@@ -107,8 +107,10 @@ class App : public LedgerController,
     handler.first->Start([
       this, cleanup = std::move(handler.second), callback = std::move(callback)
     ](bool succeeded) {
-      cleanup();
       callback(succeeded);
+      // This lambda is deleted in |cleanup()|, don't access captured members
+      // afterwards.
+      cleanup();
       CheckPendingOperations();
     });
   }

@@ -292,7 +292,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
           environment_->main_runner(), environment_->network_service(),
           std::move(sanitized_path), firebase_config->server_id,
           firebase_config->api_key, std::move(token_provider_ptr)),
-      [callback = std::move(callback)](bool succeeded) {
+      [callback](bool succeeded) {
         if (succeeded) {
           callback(Status::OK);
         } else {
