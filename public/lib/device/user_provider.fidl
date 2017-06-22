@@ -19,19 +19,12 @@ interface UserProvider {
   //
   // |identity_provider| is the identity provider to use for identification.
   //
-  // |display_name| is the name which is displayed to the user. We now fetch it
-  // from the identity provider. This is now deprecated and unused.
-  //
   // |device_name| is what the user wants to name the device. If null or empty
   // the device's current hostname will be used.
   //
-  // |server_name| is the cloud location used to sync the user's Ledger from.
-  //
   // |account| is NULL if there was an error during identification and
   // |error_code| is set.
-  AddUser(auth.IdentityProvider identity_provider,
-          string? deprecated_display_name, string? device_name,
-          string server_name) =>
+  AddUser(auth.IdentityProvider identity_provider) =>
       (auth.Account? account, string? error_code);
 
   // Removes information of a user from the local user database.

@@ -131,8 +131,7 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
             }
             if (account_id.empty()) {
               user_provider_->AddUser(
-                  modular::auth::IdentityProvider::DEV, settings_.user,
-                  settings_.device_name, "" /* servername */,
+                  modular::auth::IdentityProvider::DEV,
                   [this](modular::auth::AccountPtr account,
                          const fidl::String& status) { Login(account->id); });
             } else {

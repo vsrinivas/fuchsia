@@ -10,7 +10,6 @@ table UserStorage {
   id: string;
   identity_provider: IdentityProvider;
   display_name: string;
-  server_name: string;
   profile_url: string;
   image_url: string;
 }

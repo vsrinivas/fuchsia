@@ -22,7 +22,7 @@ const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
 // TODO(alhaad): This is also defined in device_runner.cc. Reconcile!
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v4.db";
+constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v5.db";
 
 // TODO(alhaad): Once ledger starts using user's firebase id to namespace the
 // user's cloud instance, use account id instead of display name for |user_id|.
@@ -130,8 +130,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     // When running in incogito mode, we generate a random number. This number
     // serves as account_id and the filename for ledger repository.
-    LoginInternal(nullptr /* account */, nullptr /* server_name */,
-                  LedgerRepositoryPath(GetRandomId()), std::move(params));
+    LoginInternal(nullptr /* account */, LedgerRepositoryPath(GetRandomId()),
+                  std::move(params));
     return;
   }
 
@@ -175,8 +175,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   }
 
   FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
-  LoginInternal(Convert(found_user), found_user->server_name()->str(),
-                ledger_repository_path, std::move(params));
+  LoginInternal(Convert(found_user), ledger_repository_path, std::move(params));
 }
 
 void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
@@ -190,16 +189,12 @@ void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
   callback(std::move(accounts));
 }
 
-void UserProviderImpl::AddUser(
-    auth::IdentityProvider identity_provider,
-    const fidl::String& displayname,
-    const fidl::String& devicename,  // TODO(zbowling): deprecated field
-    const fidl::String& servername,
-    const AddUserCallback& callback) {
+void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
+                               const AddUserCallback& callback) {
   account_provider_->AddAccount(
       identity_provider,
-      [this, identity_provider, displayname, servername, callback](
-          auth::AccountPtr account, const fidl::String& error_code) {
+      [this, identity_provider, callback](auth::AccountPtr account,
+                                          const fidl::String& error_code) {
         if (account.is_null()) {
           callback(nullptr, error_code);
           return;
@@ -215,7 +210,6 @@ void UserProviderImpl::AddUser(
                 builder, builder.CreateString(user->id()),
                 user->identity_provider(),
                 builder.CreateString(user->display_name()),
-                builder.CreateString(user->server_name()),
                 builder.CreateString(user->profile_url()),
                 builder.CreateString(user->image_url())));
           }
@@ -238,7 +232,6 @@ void UserProviderImpl::AddUser(
             builder, builder.CreateString(account->id),
             flatbuffer_identity_provider,
             builder.CreateString(account->display_name),
-            builder.CreateString(std::move(servername)),
             builder.CreateString(account->url),
             builder.CreateString(account->image_url)));
 
@@ -279,7 +272,6 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
     users.push_back(modular::CreateUserStorage(
         builder, builder.CreateString(user->id()), user->identity_provider(),
         builder.CreateString(user->display_name()),
-        builder.CreateString(user->server_name()),
         builder.CreateString(user->profile_url()),
         builder.CreateString(user->image_url())));
   }
@@ -331,7 +323,6 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 }
 
 void UserProviderImpl::LoginInternal(auth::AccountPtr account,
-                                     const fidl::String& server_name,
                                      const std::string& local_ledger_path,
                                      UserLoginParamsPtr params) {
   // Get token provider factory for this user.
@@ -368,7 +359,7 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
       std::move(token_provider_factory), std::move(account),
       std::move(ledger_repository), std::move(params->view_owner),
       std::move(params->user_controller), ftl::MakeCopyable([
-        this, local_ledger_path, server_name,
+        this, local_ledger_path,
         ledger_token_provider_for_erase =
             std::move(ledger_token_provider_for_erase)
       ]() mutable {
