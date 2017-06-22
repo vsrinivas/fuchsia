@@ -106,6 +106,10 @@ class StoryControllerImpl : StoryController, StoryContext {
   // Called by ModuleControllerImpl.
   void DefocusModule(const fidl::Array<fidl::String>& module_path);
 
+  // Called by ModuleControllerImpl and ModuleWatcherImpl.
+  void StopModule(const fidl::Array<fidl::String>& module_path,
+                  const std::function<void()>& done);
+
   // Called by ModuleControllerImpl.
   //
   // Releases ownership of |controller|, which deletes itself after return.
@@ -147,6 +151,8 @@ class StoryControllerImpl : StoryController, StoryContext {
       ModuleSource module_source);
 
  private:
+  class ModuleWatcherImpl;
+
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
   void SetInfoExtra(const fidl::String& name,
@@ -171,9 +177,8 @@ class StoryControllerImpl : StoryController, StoryContext {
   // Misc internal helpers.
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
-  void TakeOwnership(ModuleControllerPtr module_controller,
-                     const fidl::Array<fidl::String>& module_path,
-                     fidl::String module_id);
+  void AddModuleWatcher(ModuleControllerPtr module_controller,
+                        const fidl::Array<fidl::String>& module_path);
   void OnRootStateChange(ModuleState new_state);
 
   // The ID of the story, its state and the context to obtain it from and
@@ -204,7 +209,6 @@ class StoryControllerImpl : StoryController, StoryContext {
   fidl::Binding<StoryContext> story_context_binding_;
 
   // Needed to hold on to a running story. They get reset on Stop().
-  class ModuleWatcherImpl;
   struct ExternalModule {
     std::unique_ptr<ModuleWatcherImpl> module_watcher_impl;
     ModuleControllerPtr module_controller;
@@ -237,6 +241,7 @@ class StoryControllerImpl : StoryController, StoryContext {
   class StartCall;
   class StartModuleCall;
   class StopCall;
+  class StopModuleCall;
   class DeleteCall;
   class GetModulesCall;
   class GetImportanceCall;

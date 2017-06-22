@@ -51,6 +51,8 @@ class StoryStorageImpl : public PageClient {
                        const SurfaceRelationPtr& surface_relation,
                        bool module_stopped,
                        const SyncCallback& callback);
+  void WriteModuleData(ModuleDataPtr module_data,
+                       const SyncCallback& callback);
 
   void WriteDeviceData(const std::string& story_id,
                        const std::string& device_name,

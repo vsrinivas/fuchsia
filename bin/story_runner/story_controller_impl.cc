@@ -56,6 +56,38 @@ class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
+class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
+ public:
+  ModuleWatcherImpl(fidl::InterfaceRequest<ModuleWatcher> request,
+                    StoryControllerImpl* const story_controller_impl,
+                    const fidl::Array<fidl::String>& module_path)
+      : binding_(this, std::move(request)),
+        story_controller_impl_(story_controller_impl),
+        module_path_(module_path.Clone()) {}
+
+  const fidl::Array<fidl::String>& module_path() const {
+    return module_path_;
+  }
+
+ private:
+  // |ModuleWatcher|
+  void OnStateChange(ModuleState state) override {
+    if (module_path_.size() == 1 && module_path_[0] == kRootModuleName) {
+      story_controller_impl_->OnRootStateChange(state);
+    }
+
+    if (state == ModuleState::DONE) {
+      story_controller_impl_->StopModule(module_path_, []{});
+    }
+  }
+
+  fidl::Binding<ModuleWatcher> binding_;
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const fidl::Array<fidl::String> module_path_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
+};
+
 class StoryControllerImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
@@ -362,6 +394,96 @@ class StoryControllerImpl::StopCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
+class StoryControllerImpl::StopModuleCall : Operation<> {
+ public:
+  StopModuleCall(OperationContainer* const container,
+                 StoryControllerImpl* const story_controller_impl,
+                 const fidl::Array<fidl::String>& module_path,
+                 const std::function<void()>& done)
+      : Operation(container, done),
+        story_controller_impl_(story_controller_impl),
+        module_path_(module_path.Clone()) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    FlowToken flow{this};
+
+    // Read the module data.
+    story_controller_impl_->story_storage_impl_->ReadModuleData(
+        module_path_, [this, flow] (ModuleDataPtr data) {
+          module_data_ = std::move(data);
+          Cont1(flow);
+        });
+  }
+
+  void Cont1(FlowToken flow) {
+    // If the module is external, we also notify story shell about it going
+    // away. An internal module is stopped by its parent module, and it's up to
+    // the parent module to defocus it first. TODO(mesch): Why not always
+    // defocus?
+    if (story_controller_impl_->story_shell_ &&
+        module_data_->module_source == ModuleSource::EXTERNAL) {
+      story_controller_impl_->story_shell_->DefocusView(
+          PathString(module_path_), [this, flow] {
+            Cont2(flow);
+          });
+    } else {
+      Cont2(flow);
+    }
+  }
+
+  void Cont2(FlowToken flow) {
+    // Write the module data back, with module_stopped = true.
+    module_data_->module_stopped = true;
+    story_controller_impl_->story_storage_impl_->WriteModuleData(
+        module_data_->Clone(), [this, flow] {
+          Cont3(flow);
+        });
+  }
+
+  void Cont3(FlowToken flow) {
+    // Discard the ModuleWatcher, if there is any (for external modules only).
+    auto i = std::find_if(
+        story_controller_impl_->external_modules_.begin(),
+        story_controller_impl_->external_modules_.end(),
+        [this](const ExternalModule& m) {
+          return m.module_watcher_impl->module_path().Equals(module_path_);
+        });
+    if (i != story_controller_impl_->external_modules_.end()) {
+      story_controller_impl_->external_modules_.erase(i);
+    }
+
+    // Teardown the module, which discards the module controller. Nothing right
+    // now prevents the parent module to call ModuleController.Stop() multiple
+    // times, and more than a single call might get through before the
+    // ModuleController connection get disconnected by Teardown(). So we
+    // tolerate if we don't have a ModuleControllerImpl for the module.
+    auto ii = std::find_if(
+        story_controller_impl_->connections_.begin(),
+        story_controller_impl_->connections_.end(),
+        [this](const Connection& c) {
+          return c.module_context_impl->module_path().Equals(module_path_);
+        });
+
+    if (ii == story_controller_impl_->connections_.end()) {
+      FTL_LOG(INFO) << "No ModuleController for Module"
+                    << " " << PathString(module_path_) << ". "
+                    << "Was ModuleContext.Stop() called twice?";
+      return;
+    }
+
+    ii->module_controller_impl->Teardown([flow] {});
+  };
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const fidl::Array<fidl::String> module_path_;
+  ModuleDataPtr module_data_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
+};
+
 class StoryControllerImpl::DeleteCall : Operation<> {
  public:
   DeleteCall(OperationContainer* const container,
@@ -643,84 +765,6 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
 
-class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
- public:
-  ModuleWatcherImpl(fidl::InterfaceRequest<ModuleWatcher> request,
-                    StoryControllerImpl* const story_controller_impl,
-                    const fidl::Array<fidl::String>& module_path,
-                    fidl::String module_id)
-      : binding_(this, std::move(request)),
-        story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()),
-        module_id_(std::move(module_id)) {}
-
- private:
-  // |ModuleWatcher|
-  void OnStateChange(ModuleState state) override {
-    if (module_id_ == kRootModuleName) {
-      story_controller_impl_->OnRootStateChange(state);
-    }
-
-    // TODO(vardhan): Currently we only record 'module_stopped = true' if an
-    // externally-module calls Done(). Make it so we record it for internally
-    // started modules and also when ModuleController.Stop() is called.
-    if (state == ModuleState::DONE) {
-      if (story_controller_impl_->story_shell_) {
-        story_controller_impl_->story_shell_->DefocusView(module_id_, [this] {
-          // It's possible that |StopCall| has been called by the time this
-          // callback start to execute.
-          // TODO(alhaad): We need to persist a STOPPED bit for modules that
-          // we stopped even after |StopForTeardown|.
-          if (story_controller_impl_->external_modules_.empty()) {
-            return;
-          }
-          StopModule();
-        });
-      } else {
-        StopModule();
-      }
-    }
-  }
-
-  void StopModule() {
-    // 1. Read the module data.
-    story_controller_impl_->story_storage_impl_->ReadModuleData(
-        module_path_, [this] (ModuleDataPtr data) {
-
-          // 2. Write it back, with module_stopped = true.
-          story_controller_impl_->story_storage_impl_->WriteModuleData(
-              module_path_, data->module_url, std::move(data->link_path),
-              data->module_source, std::move(data->surface_relation), true,
-              [this] {
-
-                // 3. Remove this module watcher.
-                auto it = std::find_if(
-                    story_controller_impl_->external_modules_.begin(),
-                    story_controller_impl_->external_modules_.end(),
-                    [this](const ExternalModule& m) {
-                      return m.module_watcher_impl.get() == this;
-                    });
-
-                auto module_controller = std::move(it->module_controller);
-                story_controller_impl_->external_modules_.erase(it);
-                // |this| is no longer valid at this point.
-
-                module_controller->Stop([] {
-                  // HACK(alhaad): This never gets called because
-                  // |module_controller| goes out of scope.
-                });
-              });
-        });
-  }
-
-  fidl::Binding<ModuleWatcher> binding_;
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String module_id_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
-};
-
 StoryControllerImpl::StoryControllerImpl(
     const fidl::String& story_id,
     ledger::PagePtr story_page,
@@ -815,6 +859,13 @@ void StoryControllerImpl::DefocusModule(
   if (story_shell_) {
     story_shell_->DefocusView(PathString(module_path), [] {});
   }
+}
+
+void StoryControllerImpl::StopModule(
+    const fidl::Array<fidl::String>& module_path,
+    const std::function<void()>& done) {
+  new StopModuleCall(&operation_queue_, this, module_path,
+                     done);
 }
 
 void StoryControllerImpl::ReleaseModule(
@@ -930,8 +981,7 @@ void StoryControllerImpl::StartModuleInShell(
   }
 
   if (module_source == ModuleSource::EXTERNAL) {
-    TakeOwnership(std::move(module_controller), module_path,
-                  std::move(view_id));
+    AddModuleWatcher(std::move(module_controller), module_path);
   }
 }
 
@@ -1052,12 +1102,11 @@ void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
   links_.erase(f);
 }
 
-void StoryControllerImpl::TakeOwnership(ModuleControllerPtr module_controller,
-                                        const fidl::Array<fidl::String>& module_path,
-                                        fidl::String view_id) {
+void StoryControllerImpl::AddModuleWatcher(ModuleControllerPtr module_controller,
+                                           const fidl::Array<fidl::String>& module_path) {
   ModuleWatcherPtr watcher;
   auto module_watcher_impl = std::make_unique<ModuleWatcherImpl>(
-      watcher.NewRequest(), this, module_path, std::move(view_id));
+      watcher.NewRequest(), this, module_path);
   module_controller->Watch(std::move(watcher));
   external_modules_.emplace_back(ExternalModule{std::move(module_watcher_impl),
                                                 std::move(module_controller)});

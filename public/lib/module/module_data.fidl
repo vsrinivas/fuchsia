@@ -25,10 +25,10 @@ struct ModuleData {
   // used when re-inflating the module.
   SurfaceRelation? surface_relation;
 
-  // True if an externally-started module has called Done() and has been
-  // stopped.
-  // TODO(vardhan): Make this work for internally-started modules too (and make
-  // it work when ModuleController.Stop()) is called.
+  // True if an externally-started module has called ModuleContext.Done() and
+  // has been stopped by the story runner, or if an internally-started module
+  // was stopped by its parent module using ModuleController.Stop().
+  //
   // TODO(vardhan): Does this need to be device-scoped?
   bool module_stopped;
 };

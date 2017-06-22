@@ -21,7 +21,13 @@ namespace {
 
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
-constexpr int kTimeoutMilliseconds = 10000;
+//
+// HACK(mesch): This is rather long because we stop the test module very
+// quickly, so the StopCall that takes it down has to wait for the StoryShell
+// (and flutter, and dart) to come up before it can defocus the module. On a
+// slow machine, dart and flutter start really slowly. On a faster machine, test
+// should pass much quicker.
+constexpr int kTimeoutMilliseconds = 120000;
 
 class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
@@ -51,6 +57,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
         application_context()
             ->ConnectToEnvironmentService<modular::RemoteInvoker>();
     remote_invoker_connected_.Pass();
+
+    module_context_->Ready();
 
     remote_invoker_->StartOnDevice(
         "test1", "test2", [this](fidl::String page_id) {

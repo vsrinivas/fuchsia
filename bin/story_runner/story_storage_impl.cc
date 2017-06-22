@@ -209,8 +209,14 @@ void StoryStorageImpl::WriteModuleData(
   data->surface_relation = surface_relation.Clone();
   data->module_stopped = module_stopped;
 
+  WriteModuleData(std::move(data), callback);
+}
+
+void StoryStorageImpl::WriteModuleData(
+    ModuleDataPtr data, const SyncCallback& callback) {
+  const std::string key{MakeModuleKey(data->module_path)};
   new WriteDataCall<ModuleData>(&operation_queue_, story_page_,
-                                MakeModuleKey(module_path), XdrModuleData,
+                                key, XdrModuleData,
                                 std::move(data), callback);
 }
 

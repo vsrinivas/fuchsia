@@ -127,7 +127,7 @@ void ModuleControllerImpl::Defocus() {
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {
-  Teardown(done);
+  story_controller_impl_->StopModule(module_path_, done);
 }
 
 }  // namespace modular
