@@ -52,6 +52,7 @@ mx_status_t Station::Join(JoinRequestPtr req) {
 
     bss_ = std::move(req->selected_bss);
     address_.set_data(bss_->bssid.data());
+    debugjoin("setting channel to %u\n", bss_->channel);
     mx_status_t status = device_->SetChannel(wlan_channel_t{bss_->channel});
     if (status != MX_OK) {
         errorf("could not set wlan channel: %d\n", status);
@@ -97,6 +98,8 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
         errorf("only OpenSystem authentication is supported\n");
         return SendAuthResponse(AuthenticateResultCodes::REFUSED);
     }
+
+    debugjoin("authenticating to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(address_.data()));
 
     // TODO(tkilbourn): better size management
     size_t auth_len = sizeof(MgmtFrameHeader) + sizeof(Authentication);
@@ -164,6 +167,8 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     if (state_ == WlanState::kAssociated) {
         warnf("already authenticated; sending request anyway\n");
     }
+
+    debugjoin("associating to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(address_.data()));
 
     // TODO(tkilbourn): better size management; for now reserve 128 bytes for Association elements
     size_t assoc_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + 128;
@@ -264,7 +269,7 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
         join_timeout_ = 0;
         timer_->CancelTimer();
         state_ = WlanState::kUnauthenticated;
-        debugf("joined %s\n", bss_->ssid.data());
+        debugjoin("joined %s\n", bss_->ssid.data());
         return SendJoinResponse();
     }
 
@@ -277,7 +282,7 @@ mx_status_t Station::HandleAuthentication(const Packet* packet) {
     if (state_ != WlanState::kUnauthenticated) {
         // TODO(tkilbourn): should we process this Authentication packet anyway? The spec is
         // unclear.
-        debugf("unexpected authentication frame\n");
+        debugjoin("unexpected authentication frame\n");
         return MX_OK;
     }
 
@@ -311,6 +316,7 @@ mx_status_t Station::HandleAuthentication(const Packet* packet) {
         return MX_ERR_BAD_STATE;
     }
 
+    debugjoin("authenticated to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(bss_->bssid.data()));
     state_ = WlanState::kAuthenticated;
     auth_timeout_ = 0;
     timer_->CancelTimer();
@@ -323,7 +329,7 @@ mx_status_t Station::HandleDeauthentication(const Packet* packet) {
 
     if (state_ != WlanState::kAssociated ||
         state_ != WlanState::kAuthenticated) {
-        debugf("got spurious deauthenticate; ignoring\n");
+        debugjoin("got spurious deauthenticate; ignoring\n");
         return MX_OK;
     }
 
@@ -348,7 +354,7 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     if (state_ != WlanState::kAuthenticated) {
         // TODO(tkilbourn): should we process this Association response packet anyway? The spec is
         // unclear.
-        debugf("unexpected association response frame\n");
+        debugjoin("unexpected association response frame\n");
         return MX_OK;
     }
 
@@ -369,6 +375,7 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
         return MX_ERR_BAD_STATE;
     }
 
+    debugjoin("associated with " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(bss_->bssid.data()));
     state_ = WlanState::kAssociated;
     assoc_timeout_ = 0;
     aid_ = assoc->aid & kAidMask;
@@ -383,7 +390,7 @@ mx_status_t Station::HandleDisassociation(const Packet* packet) {
     debugfn();
 
     if (state_ != WlanState::kAssociated) {
-        debugf("got spurious disassociate; ignoring\n");
+        debugjoin("got spurious disassociate; ignoring\n");
         return MX_OK;
     }
 
@@ -405,12 +412,19 @@ mx_status_t Station::HandleDisassociation(const Packet* packet) {
 mx_status_t Station::HandleData(const Packet* packet) {
     if (state_ != WlanState::kAssociated) {
         // Drop packets when not associated
+        debugf("dropping data packet while not associated\n");
         return MX_OK;
     }
 
     // DataFrameHeader was also parsed by MLME so this should not fail
     auto hdr = packet->field<DataFrameHeader>(0);
     MX_DEBUG_ASSERT(hdr != nullptr);
+    debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
+              hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
+    debughdr("dest: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "\n",
+              MAC_ADDR_ARGS(hdr->addr1),
+              MAC_ADDR_ARGS(hdr->addr2),
+              MAC_ADDR_ARGS(hdr->addr3));
 
     if (hdr->fc.subtype() != 0) {
         warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
@@ -449,6 +463,7 @@ mx_status_t Station::HandleData(const Packet* packet) {
 mx_status_t Station::HandleEth(const Packet* packet) {
     if (state_ != WlanState::kAssociated) {
         // Drop packets when not associated
+        debugf("dropping eth packet while not associated\n");
         return MX_OK;
     }
 
@@ -476,6 +491,12 @@ mx_status_t Station::HandleEth(const Packet* packet) {
     std::memcpy(hdr->addr2, eth->src, DeviceAddress::kSize);
     std::memcpy(hdr->addr3, eth->dest, DeviceAddress::kSize);
     hdr->sc.set_seq(next_seq());
+    debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
+              hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
+    debughdr("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
+              MAC_ADDR_ARGS(hdr->addr1),
+              MAC_ADDR_ARGS(hdr->addr2),
+              MAC_ADDR_ARGS(hdr->addr3));
 
     auto llc = wlan_packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
     llc->dsap = kLlcSnapExtension;
@@ -497,20 +518,20 @@ mx_status_t Station::HandleTimeout() {
     debugfn();
     mx_time_t now = timer_->Now();
     if (join_timeout_ > 0 && now > join_timeout_) {
-        debugf("join timed out; resetting\n");
+        debugjoin("join timed out; resetting\n");
 
         Reset();
         return SendJoinResponse();
     }
 
     if (auth_timeout_ > 0 && now >= auth_timeout_) {
-        infof("auth timed out; moving back to joining\n");
+        debugjoin("auth timed out; moving back to joining\n");
         auth_timeout_ = 0;
         return SendAuthResponse(AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
     }
 
     if (assoc_timeout_ > 0 && now >= assoc_timeout_) {
-        infof("assoc timed out; moving back to authenticated\n");
+        debugjoin("assoc timed out; moving back to authenticated\n");
         assoc_timeout_ = 0;
         // TODO(tkilbourn): need a better error code for this
         return SendAssocResponse(AssociateResultCodes::REFUSED_TEMPORARILY);

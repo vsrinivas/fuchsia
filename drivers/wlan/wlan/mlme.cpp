@@ -24,9 +24,6 @@
 #include <cstring>
 #include <sstream>
 
-#define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
-#define MAC_ADDR_ARGS(a) ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
-
 namespace wlan {
 
 namespace {
@@ -95,13 +92,13 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
     debugfn();
     MX_DEBUG_ASSERT(packet != nullptr);
     MX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
-    debugf("packet data=%p len=%zu peer=%s\n",
-            packet->data(), packet->len(),
-            packet->peer() == Packet::Peer::kWlan ? "Wlan" :
-            packet->peer() == Packet::Peer::kEthernet ? "Ethernet" :
-            packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
+    debughdr("packet data=%p len=%zu peer=%s\n",
+              packet->data(), packet->len(),
+              packet->peer() == Packet::Peer::kWlan ? "Wlan" :
+              packet->peer() == Packet::Peer::kEthernet ? "Ethernet" :
+              packet->peer() == Packet::Peer::kService ? "Service" : "Unknown");
 
-    if (kLogLevel & kLogLevelVerbose) {
+    if (kLogLevel & kLogDataPacketTrace) {
         DumpPacket(*packet);
     }
 
@@ -115,7 +112,7 @@ mx_status_t Mlme::HandlePacket(const Packet* packet) {
         break;
     case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
-        debugf("FrameControl type: %u subtype: %u\n", fc->type(), fc->subtype());
+        debughdr("FrameControl type: %u subtype: %u\n", fc->type(), fc->subtype());
         switch (fc->type()) {
         case FrameType::kManagement:
             status = HandleMgmtPacket(packet);
@@ -198,12 +195,12 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
         errorf("short mgmt packet len=%zu\n", packet->len());
         return MX_OK;
     }
-    debugf("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
-            hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
-    debugf("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
-            MAC_ADDR_ARGS(hdr->addr1),
-            MAC_ADDR_ARGS(hdr->addr2),
-            MAC_ADDR_ARGS(hdr->addr3));
+    debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n",
+              hdr->fc.val(), hdr->duration, hdr->sc.seq(), hdr->sc.frag());
+    debughdr("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
+              MAC_ADDR_ARGS(hdr->addr1),
+              MAC_ADDR_ARGS(hdr->addr2),
+              MAC_ADDR_ARGS(hdr->addr3));
 
     switch (hdr->fc.subtype()) {
     case ManagementSubtype::kBeacon:
@@ -237,8 +234,8 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         errorf("short service packet len=%zu\n", packet->len());
         return MX_OK;
     }
-    debugf("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
-           h->txn_id, h->flags, h->ordinal);
+    debughdr("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
+              h->txn_id, h->flags, h->ordinal);
 
     mx_status_t status = MX_OK;
     switch (static_cast<Method>(h->ordinal)) {

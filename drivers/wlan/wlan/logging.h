@@ -20,6 +20,17 @@ constexpr uint64_t kLogInfos = kLogWarnings | kLogLevelInfo;
 constexpr uint64_t kLogDebugs = kLogInfos | kLogLevelDebug;
 constexpr uint64_t kLogVerboses = kLogDebugs | kLogLevelVerbose;
 
+#define LOG_CATEGORY(name, value) \
+constexpr uint64_t name = (1 << value)
+
+LOG_CATEGORY(kLogDataFuncTrace, 16);
+LOG_CATEGORY(kLogDataJoinTrace, 17);
+LOG_CATEGORY(kLogDataHeaderTrace, 18);
+LOG_CATEGORY(kLogDataPacketTrace, 19);
+LOG_CATEGORY(kLogDataBeaconTrace, 20);
+
+#undef LOG_CATEGORY
+
 // Set this to tune log output
 constexpr uint64_t kLogLevel = kLogInfos;
 
@@ -34,5 +45,13 @@ constexpr uint64_t kLogLevel = kLogInfos;
 #define infof(args...)    wlogf(kLogLevelInfo,    "[I] ", args)
 #define debugf(args...)   wlogf(kLogLevelDebug,   "[D] ", args)
 #define verbosef(args...) wlogf(kLogLevelVerbose, "[V] ", args)
-#define debugfn() debugf("%s\n", __PRETTY_FUNCTION__)
+
+#define debugfn()          wlogf(kLogDataFuncTrace,   "[V:fn  ] ", "%s\n", __PRETTY_FUNCTION__)
+#define debugjoin(args...) wlogf(kLogDataJoinTrace,   "[V:join] ", args)
+#define debughdr(args...)  wlogf(kLogDataHeaderTrace, "[V:hdr ] ", args)
+#define debugbcn(args...)  wlogf(kLogDataBeaconTrace, "[V:bcn ] ", args)
+
+#define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define MAC_ADDR_ARGS(a) ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
+
 }  // namespace wlan

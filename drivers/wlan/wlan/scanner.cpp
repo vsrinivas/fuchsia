@@ -160,8 +160,8 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
     MX_DEBUG_ASSERT(rxinfo);
     auto hdr = packet->field<MgmtFrameHeader>(0);
     auto bcn = packet->field<Beacon>(sizeof(MgmtFrameHeader));
-    debugf("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
-            bcn->timestamp, bcn->beacon_interval, bcn->cap.val());
+    debugbcn("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
+              bcn->timestamp, bcn->beacon_interval, bcn->cap.val());
 
     BSSDescription* bss;
     uint64_t sender = DeviceAddress(hdr->addr2).to_u64();
@@ -212,7 +212,7 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
         switch (hdr->id) {
         case element_id::kSsid: {
             auto ssid = reader.read<SsidElement>();
-            debugf("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
+            debugbcn("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
             bss->ssid = fidl::String(ssid->ssid, ssid->hdr.len);
             break;
         }
@@ -226,23 +226,23 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
                 MX_DEBUG_ASSERT(sizeof(buf) > used);
                 bptr += snprintf(bptr, sizeof(buf) - used, " %u", supprates->rates[i]);
             }
-            debugf("supported rates:%s\n", buf);
+            debugbcn("supported rates:%s\n", buf);
             break;
         }
         case element_id::kDsssParamSet: {
             auto dsss_params = reader.read<DsssParamSetElement>();
             if (dsss_params == nullptr) goto done_iter;
-            debugf("current channel: %u\n", dsss_params->current_chan);
+            debugbcn("current channel: %u\n", dsss_params->current_chan);
             break;
         }
         case element_id::kCountry: {
             auto country = reader.read<CountryElement>();
             if (country == nullptr) goto done_iter;
-            debugf("country: %.*s\n", 3, country->country);
+            debugbcn("country: %.*s\n", 3, country->country);
             break;
         }
         default:
-            debugf("unknown element id: %u len: %u\n", hdr->id, hdr->len);
+            debugbcn("unknown element id: %u len: %u\n", hdr->id, hdr->len);
             reader.skip(sizeof(ElementHeader) + hdr->len);
             break;
         }
@@ -258,8 +258,8 @@ mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
     MX_DEBUG_ASSERT(IsRunning());
 
     auto resp = packet->field<ProbeResponse>(sizeof(MgmtFrameHeader));
-    debugf("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
-            resp->timestamp, resp->beacon_interval, resp->cap.val());
+    debugbcn("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
+              resp->timestamp, resp->beacon_interval, resp->cap.val());
 
     size_t elt_len = packet->len() - sizeof(MgmtFrameHeader) - sizeof(ProbeResponse);
     ElementReader reader(resp->elements, elt_len);
@@ -271,7 +271,7 @@ mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
         switch (hdr->id) {
         case element_id::kSsid: {
             auto ssid = reader.read<SsidElement>();
-            debugf("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
+            debugbcn("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
             break;
         }
         case element_id::kSuppRates: {
@@ -282,23 +282,23 @@ mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
             for (int i = 0; i < supprates->hdr.len; i++) {
                 bptr += snprintf(bptr, sizeof(buf) - (bptr - buf), " %u", supprates->rates[i]);
             }
-            debugf("supported rates:%s\n", buf);
+            debugbcn("supported rates:%s\n", buf);
             break;
         }
         case element_id::kDsssParamSet: {
             auto dsss_params = reader.read<DsssParamSetElement>();
             if (dsss_params == nullptr) goto done_iter;
-            debugf("current channel: %u\n", dsss_params->current_chan);
+            debugbcn("current channel: %u\n", dsss_params->current_chan);
             break;
         }
         case element_id::kCountry: {
             auto country = reader.read<CountryElement>();
             if (country == nullptr) goto done_iter;
-            debugf("country: %.*s\n", 3, country->country);
+            debugbcn("country: %.*s\n", 3, country->country);
             break;
         }
         default:
-            debugf("unknown element id: %u len: %u\n", hdr->id, hdr->len);
+            debugbcn("unknown element id: %u len: %u\n", hdr->id, hdr->len);
             reader.skip(sizeof(ElementHeader) + hdr->len);
             break;
         }
