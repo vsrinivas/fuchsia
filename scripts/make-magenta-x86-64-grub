@@ -12,6 +12,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 PROJECT="magenta-pc-x86-64"
 PROJECT_DIR="$DIR/../build-$PROJECT"
+BOOTDATA="${1:-$PROJECT_DIR/bootdata.bin}"
 
 (cd "$DIR/.."; ENABLE_NEW_BOOT=true $DIR/make-parallel $PROJECT) || exit
 
@@ -23,7 +24,7 @@ fi
 TEMP="$(mktemp -d)"
 mkdir -p "$TEMP/boot/grub"
 cp "$PROJECT_DIR/magenta.bin" "$TEMP/boot/magenta.bin"
-cp "$PROJECT_DIR/bootdata.bin" "$TEMP/boot/ramdisk.bin"
+cp "$BOOTDATA" "$TEMP/boot/ramdisk.bin"
 cat > "$TEMP/boot/grub/grub.cfg" << EOF
 set timeout=0
 menuentry "Magenta" {
