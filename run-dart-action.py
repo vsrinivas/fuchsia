@@ -31,6 +31,7 @@ class WorkerThread(threading.Thread):
         self.script_queue = script_queue
         self.result_queue = result_queue
         self.args = args
+        self.daemon = True
 
     def run(self):
         while True:
@@ -39,6 +40,9 @@ class WorkerThread(threading.Thread):
             except Queue.Empty, e:
                 # No more scripts to run.
                 return
+            if not os.path.exists(script):
+                self.result_queue.put((script, -1, 'Script does not exist.'))
+                continue
             job = subprocess.Popen(
                 [script] + self.args,
                 stdout=subprocess.PIPE,
@@ -60,6 +64,15 @@ Extra flags will be passed to the supporting Dart tool if applicable.
         '--tree',
         help='Restrict analysis to a source subtree, e.g. //apps/sysui/*',
         default='*')
+    parser.add_argument(
+        '--jobs', '-j',
+        help='Number of concurrent instances to run',
+        type=int,
+        default=multiprocessing.cpu_count())
+    parser.add_argument(
+        '--verbose', '-v',
+        help='Show output from tests that pass',
+        action='store_true')
     parser.add_argument(
         'action',
         help='Action to perform on the targets',
@@ -102,20 +115,25 @@ Extra flags will be passed to the supporting Dart tool if applicable.
     failed_scripts = []
 
     # Create a worker thread for each CPU on the machine.
-    for i in range(multiprocessing.cpu_count()):
+    for i in range(args.jobs):
         WorkerThread(script_queue, result_queue, extras).start()
 
     # Handle results from workers.
     while len(script_results) < len(scripts):
         script, returncode, output = result_queue.get(True)
         script_results.append(returncode)
+        sys.stdout.write('\rProgress: %d/%d\033[K' % (len(script_results), len(scripts)))
+        sys.stdout.flush()
         if returncode != 0:
             failed_scripts.append(script)
-        print '----------------------------------------------------------'
-        print output
+        if args.verbose or returncode != 0:
+            print '\r----------------------------------------------------------'
+            print script
+            print output
 
     if len(failed_scripts):
         failed_scripts.sort()
+        print ''
         print 'Failures in:'
         for script in failed_scripts:
             print '  %s' % script
