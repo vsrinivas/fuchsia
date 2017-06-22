@@ -509,9 +509,11 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     }
 
     if (id_token_.empty()) {
-      Failure(
-          flow,
-          "Unable to refresh id_token. Check if the account is still valid.");
+      // TODO(ukode): Need to differentiate between deleted users, users that
+      // are not provisioned and Guest mode users. For now, return empty
+      // response in such cases as there is no clear way to differentiate
+      // between regular users and guest users.
+      Success(flow);
       return;
     }
 
@@ -526,8 +528,8 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
 
   // Fetch fresh firebase auth token by exchanging idToken from Google.
   void FetchFirebaseToken(FlowToken flow) {
-    FTL_CHECK(!id_token_.empty());
-    FTL_CHECK(!firebase_api_key_.empty());
+    FTL_DCHECK(!id_token_.empty());
+    FTL_DCHECK(!firebase_api_key_.empty());
 
     // JSON post request body
     const std::string json_request_body =
@@ -566,8 +568,8 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   // Parses firebase jwt auth token from firebase auth endpoint response and
   // saves it to local token in-memory cache.
   bool GetFirebaseToken(rapidjson::Document jwt_token) {
-    FTL_LOG(INFO) << "Firebase Token: "
-                  << modular::JsonValueToPrettyString(jwt_token);
+    FTL_VLOG(1) << "Firebase Token: "
+                << modular::JsonValueToPrettyString(jwt_token);
 
     if (!jwt_token.HasMember("idToken") || !jwt_token.HasMember("localId") ||
         !jwt_token.HasMember("email") || !jwt_token.HasMember("expiresIn")) {
@@ -599,8 +601,8 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
 
     if (app_->oauth_tokens_[account_id_].fb_tokens_.find(firebase_api_key_) ==
         app_->oauth_tokens_[account_id_].fb_tokens_.end()) {
-      FTL_LOG(INFO) << "Firebase api key: [" << firebase_api_key_
-                    << "] not found in cache.";
+      FTL_VLOG(1) << "Firebase api key: [" << firebase_api_key_
+                  << "] not found in cache.";
       return false;
     }
 
@@ -610,8 +612,8 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     uint64_t creation_ts = fb_token.creation_ts;
     uint64_t token_expiry = fb_token.expires_in;
     if ((current_ts - creation_ts) < token_expiry) {
-      FTL_LOG(INFO) << "Returning firebase token for api key ["
-                    << firebase_api_key_ << "] from cache. ";
+      FTL_VLOG(1) << "Returning firebase token for api key ["
+                  << firebase_api_key_ << "] from cache. ";
       return true;
     }
 
@@ -620,11 +622,17 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
 
   void Success(FlowToken flow) {
     firebase_token_ = auth::FirebaseToken::New();
-    auto fb_token =
-        app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_];
-    firebase_token_->id_token = fb_token.id_token;
-    firebase_token_->local_id = fb_token.local_id;
-    firebase_token_->email = fb_token.email;
+    if (id_token_.empty()) {
+      firebase_token_->id_token = "";
+      firebase_token_->local_id = "";
+      firebase_token_->email = "";
+    } else {
+      auto fb_token =
+          app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_];
+      firebase_token_->id_token = fb_token.id_token;
+      firebase_token_->local_id = fb_token.local_id;
+      firebase_token_->email = fb_token.email;
+    }
   }
 
   void Failure(FlowToken flow, const std::string& error_message) {
@@ -663,14 +671,18 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     FlowToken flow{this, &result_};
 
     if (account_id_.empty()) {
-      Failure(flow, "Account id is empty, running in guest mode.");
+      Failure(flow, "Account id is empty.");
       return;
     }
 
-    FTL_LOG(INFO) << "Fetching access/id tokens for Account_ID:" << account_id_;
+    FTL_VLOG(1) << "Fetching access/id tokens for Account_ID:" << account_id_;
     const std::string refresh_token = GetRefreshToken();
     if (refresh_token.empty()) {
-      Failure(flow, "User not found");
+      // TODO(ukode): Need to differentiate between deleted users, users that
+      // are not provisioned and Guest mode users. For now, return empty
+      // response in such cases as there is no clear way to differentiate
+      // between regular users and guest users.
+      Success(flow);
       return;
     }
 
@@ -778,7 +790,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     FTL_DCHECK(!account_id_.empty());
 
     if (app_->oauth_tokens_.find(account_id_) == app_->oauth_tokens_.end()) {
-      FTL_LOG(INFO) << "Account: [" << account_id_ << "] not found in cache.";
+      FTL_VLOG(1) << "Account: [" << account_id_ << "] not found in cache.";
       return false;
     }
 
@@ -786,8 +798,8 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     uint64_t creation_ts = app_->oauth_tokens_[account_id_].creation_ts;
     uint64_t token_expiry = app_->oauth_tokens_[account_id_].expires_in;
     if ((current_ts - creation_ts) < token_expiry) {
-      FTL_LOG(INFO) << "Returning access/id tokens for account [" << account_id_
-                    << "] from cache. ";
+      FTL_VLOG(1) << "Returning access/id tokens for account [" << account_id_
+                  << "] from cache. ";
       return true;
     }
 
@@ -795,16 +807,21 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   }
 
   void Success(FlowToken flow) {
-    switch (token_type_) {
-      case ACCESS_TOKEN:
-        result_ = app_->oauth_tokens_[account_id_].access_token;
-        break;
-      case ID_TOKEN:
-        result_ = app_->oauth_tokens_[account_id_].id_token;
-        break;
-      case FIREBASE_JWT_TOKEN:
-      default:
-        Failure(flow, "invalid token type");
+    if (app_->oauth_tokens_.find(account_id_) == app_->oauth_tokens_.end()) {
+      // In guest mode, return empty tokens.
+      result_ = "";
+    } else {
+      switch (token_type_) {
+        case ACCESS_TOKEN:
+          result_ = app_->oauth_tokens_[account_id_].access_token;
+          break;
+        case ID_TOKEN:
+          result_ = app_->oauth_tokens_[account_id_].id_token;
+          break;
+        case FIREBASE_JWT_TOKEN:
+        default:
+          Failure(flow, "invalid token type");
+      }
     }
   }
 
@@ -1059,12 +1076,13 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   // |Operation|
   void Run() override {
     if (!account_) {
-      Failure("Account is empty, running in guest mode.");
+      Failure("Account is null.");
       return;
     }
 
     if (app_->oauth_tokens_.find(account_->id) == app_->oauth_tokens_.end()) {
       FTL_LOG(ERROR) << "Account: " << account_->id << " not found.";
+      Success();  // Maybe a guest account.
       return;
     }
 

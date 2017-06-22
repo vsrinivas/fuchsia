@@ -28,14 +28,14 @@ interface TokenProvider {
   // Gets the access token (with pre-defined scopes) for this user. Access token
   // is returned from cache if not expired, otherwise refreshed from the server.
   //
-  // NULL is returned if running in incognito mode.
+  // Empty response is returned if running in incognito mode.
   GetAccessToken() => (string? access_token);
 
   // Gets the Identity token (with pre-defined scopes) for this user. Identity
   // token is returned from cache if not expired, otherwise refreshed from the
   // server.
   //
-  // NULL is returned if running in incognito mode.
+  // Empty response is returned if running in incognito mode.
   GetIdToken() => (string? id_token);
 
   // Gets the |FirebaseToken| for this user for the specified firebase api key.
@@ -43,7 +43,7 @@ interface TokenProvider {
   // OAuth IdToken as the input. Firebase auth token is returned from cache if
   // not expired, otherwise refreshed from the server.
   //
-  // NULL is returned if running in incognito mode.
+  // Empty response is returned if running in incognito mode.
   GetFirebaseAuthToken(string firebase_api_key) =>
     (FirebaseToken? firebase_token);
 
