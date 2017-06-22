@@ -840,8 +840,8 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
                 log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
                 dc_attempt_bind(drv, dev);
+                break;
             }
-            break;
         }
     }
 
