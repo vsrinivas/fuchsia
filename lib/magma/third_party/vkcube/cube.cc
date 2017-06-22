@@ -559,7 +559,7 @@ void demo_draw(struct demo *demo) {
 
     while (true) {
         // Get the index of the next available swapchain image:
-        err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, 5000,
+        err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, 5000 * 1000 * 1000,
                                           demo->image_acquired_semaphores[demo->frame_index],
                                           VK_NULL_HANDLE, &demo->current_buffer);
 
