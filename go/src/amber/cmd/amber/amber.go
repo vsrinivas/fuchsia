@@ -162,7 +162,7 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 		reqSet.Add(&pkg)
 	}
 
-	fetcher := &daemon.TUFSource{Client: client, Interval: time.Second * 5}
+	fetcher := &daemon.TUFSource{Client: client, Interval: time.Minute * 5}
 	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
 	checker.AddSource(fetcher)
 	u, err := url.Parse(srvAddr)
