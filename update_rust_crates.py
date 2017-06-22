@@ -115,6 +115,8 @@ members = [%s]
         os.utime(update_file, None)
 
     print("Vendor directory updated at %s" % vendor_dir)
+    print("Please verify that //third_party/rust-crates/libraries.gni is "
+          "up-to-date")
 
 
 if __name__ == '__main__':
