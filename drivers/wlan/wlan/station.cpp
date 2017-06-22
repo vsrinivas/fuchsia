@@ -16,6 +16,8 @@
 
 namespace wlan {
 
+static constexpr mx_duration_t kAssocTimeoutTu = 20;
+
 Station::Station(DeviceInterface* device, mxtl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
     (void)assoc_timeout_;
@@ -229,7 +231,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     }
 
     // TODO(tkilbourn): get the assoc timeout from somewhere
-    assoc_timeout_ = timer_->Now() + WLAN_TU(bss_->beacon_period * 8);
+    assoc_timeout_ = timer_->Now() + WLAN_TU(bss_->beacon_period * kAssocTimeoutTu);
     status = timer_->StartTimer(assoc_timeout_);
     if (status != MX_OK) {
         errorf("could not set auth timer: %d\n", status);
