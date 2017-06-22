@@ -11,8 +11,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/processargs.h>
 #include <magenta/process.h>
+#include <magenta/processargs.h>
 #include <mxtl/ref_ptr.h>
 
 #include "blobstore-private.h"
@@ -42,7 +42,7 @@ int do_blobstore_mkfs(int fd, int argc, char** argv) {
 
 struct {
     const char* name;
-    int (*func)(int fd, int argc, char**argv);
+    int (*func)(int fd, int argc, char** argv);
     const char* help;
 } CMDS[] = {
     {"create", do_blobstore_mkfs, "initialize filesystem"},
@@ -66,7 +66,7 @@ int usage() {
     return -1;
 }
 
-} // namespace anonymous
+} // namespace
 
 int main(int argc, char** argv) {
     if (argc < 2) {

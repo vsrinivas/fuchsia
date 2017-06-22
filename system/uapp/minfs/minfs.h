@@ -18,8 +18,8 @@
 
 #include <assert.h>
 #include <limits.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "misc.h"
 

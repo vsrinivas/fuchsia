@@ -8,14 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <magenta/device/vfs.h>
 
 #include <magenta/syscalls.h>
-#include <mxio/vfs.h>
 #include <mxio/debug.h>
+#include <mxio/vfs.h>
 #include <mxtl/ref_ptr.h>
 
 #define MXDEBUG 0
@@ -142,30 +142,30 @@ constexpr const char kFsName[] = "blobstore";
 ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len) {
     switch (op) {
-        case IOCTL_VFS_QUERY_FS: {
-            if (out_len < sizeof(vfs_query_info_t)) {
-                return MX_ERR_INVALID_ARGS;
-            }
+    case IOCTL_VFS_QUERY_FS: {
+        if (out_len < sizeof(vfs_query_info_t)) {
+            return MX_ERR_INVALID_ARGS;
+        }
 
-            vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
-            //TODO(planders): eventually report something besides 0.
-            info->total_bytes = 0;
-            info->used_bytes = 0;
-            info->total_nodes = 0;
-            info->used_nodes = 0;
-            strcpy(info->name, kFsName);
-            return sizeof(*info);
+        vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
+        //TODO(planders): eventually report something besides 0.
+        info->total_bytes = 0;
+        info->used_bytes = 0;
+        info->total_nodes = 0;
+        info->used_nodes = 0;
+        strcpy(info->name, kFsName);
+        return sizeof(*info);
+    }
+    case IOCTL_VFS_UNMOUNT_FS: {
+        mx_status_t status = Sync();
+        if (status != MX_OK) {
+            FS_TRACE_ERROR("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
         }
-        case IOCTL_VFS_UNMOUNT_FS: {
-            mx_status_t status = Sync();
-            if (status != MX_OK) {
-                FS_TRACE_ERROR("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
-            }
-            return blobstore_->Unmount();
-        }
-        default: {
-            return MX_ERR_NOT_SUPPORTED;
-        }
+        return blobstore_->Unmount();
+    }
+    default: {
+        return MX_ERR_NOT_SUPPORTED;
+    }
     }
 }
 

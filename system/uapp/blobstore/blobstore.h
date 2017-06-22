@@ -20,8 +20,8 @@
 
 #include <assert.h>
 #include <limits.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 

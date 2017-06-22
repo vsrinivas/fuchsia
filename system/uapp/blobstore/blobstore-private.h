@@ -32,6 +32,8 @@ using digest::Digest;
 
 typedef uint32_t BlobFlags;
 
+// clang-format off
+
 // After Open;
 constexpr BlobFlags kBlobStateEmpty       = 0x00010000; // Not yet allocated
 // After Ioctl configuring size:
@@ -49,6 +51,8 @@ constexpr BlobFlags kBlobFlagSync         = 0x01000000; // The blob is being wri
 constexpr BlobFlags kBlobFlagDeletable    = 0x02000000; // This node should be unlinked when closed
 constexpr BlobFlags kBlobFlagDirectory    = 0x04000000; // This node represents the root directory
 constexpr BlobFlags kBlobOtherMask        = 0xFF000000;
+
+// clang-format on
 
 static_assert(((kBlobStateMask | kBlobOtherMask) & V_FLAG_RESERVED_MASK) == 0,
               "Blobstore flags conflict with VFS-reserved flags");
@@ -232,6 +236,7 @@ public:
 
     int blockfd_;
     blobstore_info_t info_;
+
 private:
     Blobstore(int fd, const blobstore_info_t* info);
     mx_status_t LoadBitmaps();
