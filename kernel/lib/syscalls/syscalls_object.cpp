@@ -30,6 +30,7 @@
 #define LOCAL_TRACE 0
 
 namespace {
+
 // Gathers the koids of a job's descendants.
 class SimpleJobEnumerator final : public JobEnumerator {
 public:
@@ -75,6 +76,29 @@ private:
     size_t count_ = 0;
     size_t avail_ = 0;
 };
+
+mx_status_t single_record_result(user_ptr<void> _buffer, size_t buffer_size,
+                                 user_ptr<size_t> _actual,
+                                 user_ptr<size_t> _avail,
+                                 void* record_data, size_t record_size) {
+    size_t avail = 1;
+    size_t actual;
+    if (buffer_size >= record_size) {
+        if (_buffer.copy_array_to_user(record_data, record_size) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
+        actual = 1;
+    } else {
+        actual = 0;
+    }
+    if (_actual && (_actual.copy_to_user(actual) != MX_OK))
+        return MX_ERR_INVALID_ARGS;
+    if (_avail && (_avail.copy_to_user(avail) != MX_OK))
+        return MX_ERR_INVALID_ARGS;
+    if (actual == 0)
+        return MX_ERR_BUFFER_TOO_SMALL;
+    return MX_OK;
+}
+
 } // namespace
 
 // actual is an optional return parameter for the number of records returned
@@ -98,8 +122,6 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_HANDLE_BASIC: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
-            size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 0 : 1;
-            size_t avail = 1;
 
             mxtl::RefPtr<Dispatcher> dispatcher;
             mx_rights_t rights;
@@ -107,34 +129,23 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (status != MX_OK)
                 return status;
 
-            if (actual > 0) {
-                bool waitable = dispatcher->get_state_tracker() != nullptr;
+            bool waitable = dispatcher->get_state_tracker() != nullptr;
 
-                // build the info structure
-                mx_info_handle_basic_t info = {
-                    .koid = dispatcher->get_koid(),
-                    .rights = rights,
-                    .type = dispatcher->get_type(),
-                    .related_koid = dispatcher->get_related_koid(),
-                    .props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE,
-                };
+            // build the info structure
+            mx_info_handle_basic_t info = {
+                .koid = dispatcher->get_koid(),
+                .rights = rights,
+                .type = dispatcher->get_type(),
+                .related_koid = dispatcher->get_related_koid(),
+                .props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE,
+            };
 
-                if (_buffer.copy_array_to_user(&info, sizeof(info)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-            }
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_PROCESS: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
-            size_t actual = (buffer_size < sizeof(mx_info_process_t)) ? 0 : 1;
-            size_t avail = 1;
 
             // grab a reference to the dispatcher
             mxtl::RefPtr<ProcessDispatcher> process;
@@ -142,24 +153,15 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (error < 0)
                 return error;
 
-            if (actual > 0) {
-                // build the info structure
-                mx_info_process_t info = { };
+            // build the info structure
+            mx_info_process_t info = { };
 
-                auto err = process->GetInfo(&info);
-                if (err != MX_OK)
-                    return err;
+            auto err = process->GetInfo(&info);
+            if (err != MX_OK)
+                return err;
 
-                if (_buffer.copy_array_to_user(&info, sizeof(info)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-            }
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_PROCESS_THREADS: {
             // grab a reference to the dispatcher
@@ -242,8 +244,6 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_THREAD: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
-            size_t actual = (buffer_size < sizeof(mx_info_thread_t)) ? 0 : 1;
-            size_t avail = 1;
 
             // grab a reference to the dispatcher
             mxtl::RefPtr<ThreadDispatcher> thread;
@@ -251,30 +251,19 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (error < 0)
                 return error;
 
-            if (actual > 0) {
-                // build the info structure
-                mx_info_thread_t info = { };
+            // build the info structure
+            mx_info_thread_t info = { };
 
-                auto err = thread->GetInfo(&info);
-                if (err != MX_OK)
-                    return err;
+            auto err = thread->GetInfo(&info);
+            if (err != MX_OK)
+                return err;
 
-                if (_buffer.copy_array_to_user(&info, sizeof(info)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-            }
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_THREAD_EXCEPTION_REPORT: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
-            size_t actual = (buffer_size < sizeof(mx_exception_report_t)) ? 0 : 1;
-            size_t avail = 1;
 
             // grab a reference to the dispatcher
             mxtl::RefPtr<ThreadDispatcher> thread;
@@ -282,30 +271,19 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (error < 0)
                 return error;
 
-            if (actual > 0) {
-                // build the info structure
-                mx_exception_report_t report = { };
+            // build the info structure
+            mx_exception_report_t report = { };
 
-                auto err = thread->GetExceptionReport(&report);
-                if (err != MX_OK)
-                    return err;
+            auto err = thread->GetExceptionReport(&report);
+            if (err != MX_OK)
+                return err;
 
-                if (_buffer.copy_array_to_user(&report, sizeof(report)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-            }
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &report, sizeof(report));
         }
         case MX_INFO_THREAD_STATS: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
-            size_t actual = (buffer_size < sizeof(mx_info_thread_stats_t)) ? 0 : 1;
-            size_t avail = 1;
 
             // grab a reference to the dispatcher
             mxtl::RefPtr<ThreadDispatcher> thread;
@@ -313,31 +291,19 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (error < 0)
                 return error;
 
-            if (actual > 0) {
-                // build the info structure
-                mx_info_thread_stats_t info = { };
+            // build the info structure
+            mx_info_thread_stats_t info = { };
 
-                auto err = thread->GetStats(&info);
-                if (err != MX_OK)
-                    return err;
+            auto err = thread->GetStats(&info);
+            if (err != MX_OK)
+                return err;
 
-                if (_buffer.copy_array_to_user(&info, sizeof(info)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-            }
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_TASK_STATS: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
-            size_t actual =
-                (buffer_size < sizeof(mx_info_task_stats_t)) ? 0 : 1;
-            size_t avail = 1;
 
             // Grab a reference to the dispatcher. Only supports processes for
             // now, but could support jobs or threads in the future.
@@ -347,24 +313,15 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (error < 0)
                 return error;
 
-            if (actual > 0) {
-                // Build the info structure.
-                mx_info_task_stats_t info = {};
+            // Build the info structure.
+            mx_info_task_stats_t info = {};
 
-                auto err = process->GetStats(&info);
-                if (err != MX_OK)
-                    return err;
+            auto err = process->GetStats(&info);
+            if (err != MX_OK)
+                return err;
 
-                if (_buffer.copy_array_to_user(&info, sizeof(info)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-            }
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_PROCESS_MAPS: {
             mxtl::RefPtr<ProcessDispatcher> process;
@@ -420,27 +377,14 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (status < 0)
                 return status;
 
-            size_t actual = (buffer_size < sizeof(mx_info_vmar_t)) ? 0 : 1;
-            size_t avail = 1;
+            auto real_vmar = vmar->vmar();
+            mx_info_vmar_t info = {
+                .base = real_vmar->base(),
+                .len = real_vmar->size(),
+            };
 
-            if (actual > 0) {
-                auto real_vmar = vmar->vmar();
-                mx_info_vmar_t info = {
-                    .base = real_vmar->base(),
-                    .len = real_vmar->size(),
-                };
-                if (_buffer.copy_array_to_user(&info, sizeof(info)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
-
-            }
-
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_CPU_STATS: {
             // grab a reference to the dispatcher
@@ -519,59 +463,46 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // TODO: figure out a better handle to hang this off to and push this copy code into
             // that dispatcher.
 
-            size_t actual = (buffer_size < sizeof(mx_info_kmem_stats_t)) ? 0 : 1;
-            size_t avail = 1;
+            size_t state_count[_VM_PAGE_STATE_COUNT] = {};
+            pmm_count_total_states(state_count);
 
-            if (actual > 0) {
-                size_t state_count[_VM_PAGE_STATE_COUNT] = {};
-                pmm_count_total_states(state_count);
-
-                size_t total = 0;
-                for (int i = 0; i < _VM_PAGE_STATE_COUNT; i++) {
-                    total += state_count[i];
-                }
-
-                size_t unused_size = 0;
-                size_t free_heap_bytes = 0;
-                heap_get_info(&unused_size, &free_heap_bytes);
-
-                // Note that this intentionally uses uint64_t instead of
-                // size_t in case we ever have a 32-bit userspace but more
-                // than 4GB physical memory.
-                mx_info_kmem_stats_t stats = {};
-                stats.total_bytes = total * PAGE_SIZE;
-                size_t other_bytes = stats.total_bytes;
-
-                stats.free_bytes = state_count[VM_PAGE_STATE_FREE] * PAGE_SIZE;
-                other_bytes -= stats.free_bytes;
-
-                stats.wired_bytes = state_count[VM_PAGE_STATE_WIRED] * PAGE_SIZE;
-                other_bytes -= stats.wired_bytes;
-
-                stats.total_heap_bytes = state_count[VM_PAGE_STATE_HEAP] * PAGE_SIZE;
-                other_bytes -= stats.total_heap_bytes;
-                stats.free_heap_bytes = free_heap_bytes;
-
-                stats.vmo_bytes = state_count[VM_PAGE_STATE_OBJECT] * PAGE_SIZE;
-                other_bytes -= stats.vmo_bytes;
-
-                stats.mmu_overhead_bytes = state_count[VM_PAGE_STATE_MMU] * PAGE_SIZE;
-                other_bytes -= stats.mmu_overhead_bytes;
-
-                // All other VM_PAGE_STATE_* counts get lumped into other_bytes.
-                stats.other_bytes = other_bytes;
-
-                if (_buffer.copy_array_to_user(&stats, sizeof(stats)) != MX_OK)
-                    return MX_ERR_INVALID_ARGS;
+            size_t total = 0;
+            for (int i = 0; i < _VM_PAGE_STATE_COUNT; i++) {
+                total += state_count[i];
             }
 
-            if (_actual && (_actual.copy_to_user(actual) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (actual == 0)
-                return MX_ERR_BUFFER_TOO_SMALL;
-            return MX_OK;
+            size_t unused_size = 0;
+            size_t free_heap_bytes = 0;
+            heap_get_info(&unused_size, &free_heap_bytes);
+
+            // Note that this intentionally uses uint64_t instead of
+            // size_t in case we ever have a 32-bit userspace but more
+            // than 4GB physical memory.
+            mx_info_kmem_stats_t stats = {};
+            stats.total_bytes = total * PAGE_SIZE;
+            size_t other_bytes = stats.total_bytes;
+
+            stats.free_bytes = state_count[VM_PAGE_STATE_FREE] * PAGE_SIZE;
+            other_bytes -= stats.free_bytes;
+
+            stats.wired_bytes = state_count[VM_PAGE_STATE_WIRED] * PAGE_SIZE;
+            other_bytes -= stats.wired_bytes;
+
+            stats.total_heap_bytes = state_count[VM_PAGE_STATE_HEAP] * PAGE_SIZE;
+            other_bytes -= stats.total_heap_bytes;
+            stats.free_heap_bytes = free_heap_bytes;
+
+            stats.vmo_bytes = state_count[VM_PAGE_STATE_OBJECT] * PAGE_SIZE;
+            other_bytes -= stats.vmo_bytes;
+
+            stats.mmu_overhead_bytes = state_count[VM_PAGE_STATE_MMU] * PAGE_SIZE;
+            other_bytes -= stats.mmu_overhead_bytes;
+
+            // All other VM_PAGE_STATE_* counts get lumped into other_bytes.
+            stats.other_bytes = other_bytes;
+
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &stats, sizeof(stats));
         }
         default:
             return MX_ERR_NOT_SUPPORTED;
