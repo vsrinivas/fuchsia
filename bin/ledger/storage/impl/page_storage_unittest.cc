@@ -429,6 +429,33 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   });
 }
 
+TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
+  std::unique_ptr<const TreeNode> node;
+  ASSERT_TRUE(CreateNodeFromEntries({}, std::vector<ObjectId>(1), &node));
+  ObjectId root_id = node->GetId();
+
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+  auto commit1 = CommitImpl::FromContentAndParents(storage_.get(), root_id,
+                                                   std::move(parent));
+  parent.clear();
+  parent.push_back(commit1->Clone());
+  auto commit2 = CommitImpl::FromContentAndParents(storage_.get(), root_id,
+                                                   std::move(parent));
+
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+  commits_and_bytes.emplace_back(commit2->GetId(),
+                                 commit2->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit1->GetId(),
+                                 commit1->GetStorageBytes().ToString());
+
+  Status status;
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_EQ(Status::OK, status);
+}
+
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
   FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);

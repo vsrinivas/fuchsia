@@ -739,56 +739,92 @@ void PageStorageImpl::AddCommits(
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
   std::set<const CommitId*, StringPointerComparator> added_commits;
+  std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
-  for (const auto& commit : commits) {
-    Status s =
-        db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
-    if (s != Status::OK) {
-      callback(s);
-      return;
-    }
+  // If commits arrive out of order, some commits might be skipped. Continue
+  // trying adding commits as long as at least one commit is added on each
+  // iteration.
+  bool continue_trying = true;
+  while (continue_trying && !commits.empty()) {
+    continue_trying = false;
+    std::vector<std::unique_ptr<const Commit>> remaining_commits;
 
-    if (source == ChangeSource::LOCAL) {
-      s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+    for (auto& commit : commits) {
+      Status s;
+
+      // Commits should arrive in order. Check that the parents are either
+      // present in the DB or in the list of already processed commits.
+      // If the commit arrive out of order, print an error, but skip it
+      // temporarly so that the Ledger can recover if all the needed commits are
+      // received in a single batch.
+      for (const CommitIdView& parent_id : commit->GetParentIds()) {
+        if (added_commits.count(&parent_id) == 0) {
+          s = ContainsCommit(parent_id);
+          if (s != Status::OK) {
+            FTL_LOG(ERROR) << "Failed to find parent commit \""
+                           << ToHex(parent_id) << "\" of commit \""
+                           << convert::ToHex(commit->GetId())
+                           << "\". Temporarly skipping in case the commits are "
+                              "out of order.";
+            if (s == Status::NOT_FOUND) {
+              remaining_commits.push_back(std::move(commit));
+              commit.reset();
+              break;
+            } else {
+              callback(Status::INTERNAL_IO_ERROR);
+            }
+            return;
+          }
+        }
+        // Remove the parent from the list of heads.
+        db_.RemoveHead(parent_id);
+      }
+
+      // The commit could not be added. Skip it.
+      if (!commit) {
+        continue;
+      }
+
+      continue_trying = true;
+
+      s = db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
       if (s != Status::OK) {
         callback(s);
         return;
       }
-    }
 
-    // Update heads.
-    s = db_.AddHead(commit->GetId(), commit->GetTimestamp());
-    if (s != Status::OK) {
-      callback(s);
-      return;
-    }
-
-    // Commits must arrive in order: Check that the parents are stored in DB and
-    // remove them from the heads if they are present.
-    for (const CommitIdView& parent_id : commit->GetParentIds()) {
-      if (added_commits.count(&parent_id) == 0) {
-        s = ContainsCommit(parent_id);
+      if (source == ChangeSource::LOCAL) {
+        s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
         if (s != Status::OK) {
-          FTL_LOG(ERROR) << "Failed to find parent commit \""
-                         << ToHex(parent_id) << "\" of commit \""
-                         << convert::ToHex(commit->GetId()) << "\"";
-          if (s == Status::NOT_FOUND) {
-            callback(Status::ILLEGAL_STATE);
-          } else {
-            callback(Status::INTERNAL_IO_ERROR);
-          }
+          callback(s);
           return;
         }
       }
-      db_.RemoveHead(parent_id);
+
+      // Update heads.
+      s = db_.AddHead(commit->GetId(), commit->GetTimestamp());
+      if (s != Status::OK) {
+        callback(s);
+        return;
+      }
+
+      added_commits.insert(&commit->GetId());
+      commits_to_send.push_back(std::move(commit));
     }
 
-    added_commits.insert(&commit->GetId());
+    std::swap(commits, remaining_commits);
+  }
+
+  if (!commits.empty()) {
+    FTL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
+                   << " orphaned commits.";
+    callback(Status::ILLEGAL_STATE);
+    return;
   }
 
   Status s = batch->Execute();
   bool notify_watchers = commits_to_send_.empty();
-  commits_to_send_.emplace(source, std::move(commits));
+  commits_to_send_.emplace(source, std::move(commits_to_send));
   callback(s);
 
   if (s == Status::OK && notify_watchers) {
