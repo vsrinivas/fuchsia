@@ -62,9 +62,6 @@ to the other side with **MX_SOCKET_HALF_CLOSE**.
 
 **MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_TOO_BIG** *size* is larger than the largest allowable size for
-socket messages.
-
 ## SEE ALSO
 
 [socket_create](socket_create.md),

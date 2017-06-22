@@ -321,8 +321,9 @@ static bool socket_short_write(void) {
     // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
     const size_t buffer_size = 256 * 1024 + 1;
     char* buffer = malloc(buffer_size);
-    size_t written = 0;
+    size_t written = ~(size_t)0; // This should get overwritten by the syscall.
     status = mx_socket_write(h0, 0u, buffer, buffer_size, &written);
+    EXPECT_EQ(status, MX_OK, "");
     EXPECT_LT(written, buffer_size, "");
 
     free(buffer);
@@ -412,9 +413,12 @@ static bool socket_datagram_no_short_write(void) {
     // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
     const size_t buffer_size = 256 * 1024 + 1;
     char* buffer = malloc(buffer_size);
-    size_t written = 0;
+    size_t written = 999;
     status = mx_socket_write(h0, 0u, buffer, buffer_size, &written);
-    EXPECT_EQ(written, 0u, "");
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+    // Since the syscall failed, it should not have overwritten this output
+    // parameter.
+    EXPECT_EQ(written, 999u, "");
 
     free(buffer);
     mx_handle_close(h0);
