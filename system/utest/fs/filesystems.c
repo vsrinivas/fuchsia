@@ -260,7 +260,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .can_be_mounted = true,
         .can_mount_sub_filesystems = true,
         .supports_hardlinks = true,
-        .supports_watchers = false,
+        .supports_watchers = true,
         .nsec_granularity = 1,
     },
     {"thinfs",

@@ -1084,15 +1084,20 @@ fail:
 #ifdef __Fuchsia__
 VnodeMinfs::VnodeMinfs(Minfs* fs) :
     fs_(fs), vmo_(MX_HANDLE_INVALID), vmo_indirect_(nullptr) {}
-#else
-VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
-#endif
+
+void VnodeMinfs::NotifyAdd(const char* name, size_t len) { watcher_.NotifyAdd(name, len); }
+mx_status_t VnodeMinfs::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
+mx_status_t VnodeMinfs::WatchDirV2(const vfs_watch_dir_t* cmd) { return watcher_.WatchDirV2(cmd); }
 
 bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
 mx_handle_t VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(flags_); }
 mx_handle_t VnodeMinfs::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
 mx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
 void VnodeMinfs::SetRemote(mx_handle_t remote) { return remoter_.SetRemote(remote); }
+
+#else
+VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
+#endif
 
 mx_status_t VnodeMinfs::Allocate(Minfs* fs, uint32_t type, mxtl::RefPtr<VnodeMinfs>* out) {
     mx_status_t status = AllocateHollow(fs, out);

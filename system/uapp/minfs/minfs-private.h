@@ -258,14 +258,21 @@ private:
     vmoid_t vmoid_;
     vmoid_t vmoid_indirect_;
 
-#endif
+    // Use the watcher container to implement a directory watcher
+    void NotifyAdd(const char* name, size_t len) final;
+    mx_status_t WatchDir(mx_handle_t* out) final;
+    mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) final;
+
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
     virtual mx_handle_t DetachRemote() final;
     virtual mx_handle_t WaitForRemote() final;
     virtual mx_handle_t GetRemote() const final;
     virtual void SetRemote(mx_handle_t remote) final;
+
     fs::RemoteContainer remoter_;
+    fs::WatcherContainer watcher_;
+#endif
 };
 
 // write the inode data of this vnode to disk (default does not update time values)
