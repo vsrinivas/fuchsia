@@ -5,25 +5,52 @@
 #include "apps/media/src/audio_server/gain.h"
 
 #include <math.h>
+#include <mxtl/algorithm.h>
 
 #include "lib/ftl/logging.h"
 
 namespace media {
 namespace audio {
 
-constexpr unsigned int Gain::FRACTIONAL_BITS;
-constexpr Gain::AScale Gain::UNITY;
+constexpr unsigned int Gain::kFractionalScaleBits;
+constexpr Gain::AScale Gain::kUnityScale;
+constexpr float Gain::kMinGain;
+constexpr float Gain::kMaxGain;
 
-Gain::Gain() : amplitude_scale_(UNITY) {}
+Gain::AScale Gain::GetGainScale(float output_db_gain) {
+  float db_target_rend_gain = db_target_rend_gain_.load();
 
-void Gain::Set(float db_gain) {
-  // Compute the amplitude scale factor as a double and sanity check before
-  // converting to the fixed point representation.
-  double amp_scale = pow(10.0, db_gain / 20.0);
-  FTL_DCHECK(amp_scale < (1u << ((sizeof(AScale) * 8) - FRACTIONAL_BITS)));
+  // If nothing has changed, just return the current computed amplitude scale
+  // value.
+  if ((db_current_rend_gain_ == db_target_rend_gain) &&
+      (db_current_output_gain_ == output_db_gain)) {
+    return amplitude_scale_;
+  }
 
-  amp_scale *= static_cast<double>(UNITY);
-  amplitude_scale_.store(static_cast<AScale>(amp_scale));
+  // Update the internal gains, clamping in the process.
+  db_current_rend_gain_ = mxtl::clamp(db_target_rend_gain, kMinGain, kMaxGain);
+  db_current_output_gain_ = mxtl::clamp(output_db_gain, kMinGain, kMaxGain);
+
+  // If either the renderer, output, or combined gain is at the force mute
+  // point, just zero out the amplitude scale and return that.
+  float effective_gain = db_current_rend_gain_ + db_current_output_gain_;
+
+  if ((db_current_rend_gain_   <= kMinGain) ||
+      (db_current_output_gain_ <= kMinGain) ||
+      (effective_gain          <= kMinGain)) {
+    amplitude_scale_ = 0u;
+  } else {
+    // Compute the amplitude scale factor as a double and sanity check before
+    // converting to the fixed point representation.
+    double amp_scale = pow(10.0, effective_gain / 20.0);
+    FTL_DCHECK(amp_scale <
+              (1u << ((sizeof(AScale) * 8) - kFractionalScaleBits)));
+
+    amp_scale *= static_cast<double>(kUnityScale);
+    amplitude_scale_ = static_cast<AScale>(amp_scale);
+  }
+
+  return amplitude_scale_;
 }
 
 }  // namespace audio

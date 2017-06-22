@@ -35,11 +35,12 @@ class AudioOutput {
   MediaResult RemoveRendererLink(const AudioRendererToOutputLinkPtr& link);
 
   // Accessor for the current value of the dB gain for the output.
-  float db_gain() const { return db_gain_; }
+  float db_gain() const { return db_gain_.load(std::memory_order_acquire); }
 
-  // Set the gain for this output and update all renderer->output links.  Only
-  // safe to call from the main message loop.
-  void SetGain(float db_gain);
+  // Set the gain for this output.
+  void SetGain(float db_gain) {
+    db_gain_.store(db_gain, std::memory_order_release);
+  }
 
   // Accessors for the current plug state of the output.
   //
@@ -215,7 +216,7 @@ class AudioOutput {
   // TODO(johngro): Someday, when we expose output enumeration and control from
   // the audio service, add the ability to change this value and update the
   // associated renderer-to-output-link amplitude scale factors.
-  float db_gain_ = 0.0;
+  std::atomic<float> db_gain_;
 
   // TODO(johngro): Eliminate the shutting down flag and just use the
   // task_runner_'s nullness for this test?

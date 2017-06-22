@@ -72,7 +72,7 @@ class SampleScaler<
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     return static_cast<int32_t>((static_cast<int64_t>(val) * scale) >>
-                                Gain::FRACTIONAL_BITS);
+                                Gain::kFractionalScaleBits);
   }
 };
 
@@ -93,7 +93,7 @@ class SampleScaler<
     using Limit = std::numeric_limits<int16_t>;
 
     val = static_cast<int32_t>((static_cast<int64_t>(val) * scale) >>
-                               Gain::FRACTIONAL_BITS);
+                               Gain::kFractionalScaleBits);
 
     return (val > Limit::max()) ? Limit::max()
                                 : ((val < Limit::min()) ? Limit::min() : val);

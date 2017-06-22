@@ -43,7 +43,7 @@ namespace audio {
 // to manage bookkeeping tasks specific to the Renderer/Output relationship. The
 // following rules must be obeyed at all times...
 //
-// + Derrived classes of the Bookkeeping object created by the Output must be
+// + Derived classes of the Bookkeeping object created by the Output must be
 //   safe to destroy either thread.  During destruction, no potentially blocking
 //   operations may be performed.  No heavy operations (such as logging) should
 //   be performed.
@@ -68,13 +68,9 @@ class AudioRendererToOutputLink {
       const AudioRendererImplPtr& renderer, AudioOutputWeakPtr output);
   virtual ~AudioRendererToOutputLink();
 
-  // Utility function which recomputes the amplitude scale factor as function of
-  // the renderer and the output gains.  Should only be called from the audio
-  // service's main message loop thread.
-  void UpdateGain();
-
-  // Accessor for the current value of the gain's amplitude scalar.
-  Gain::AScale amplitude_scale() const { return gain_.amplitude_scale(); }
+  // Accessor for the link's gain state tracking class.  Used by both the main
+  // message loop thread and the mixer threads.
+  Gain& gain() { return gain_; }
 
   // Accessor for the format info assigned to this link.
   const AudioRendererFormatInfo& format_info() const { return *format_info_; }

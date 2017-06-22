@@ -24,7 +24,9 @@ static void FinishShutdownSelf(AudioOutputManager* manager,
   }
 }
 
-AudioOutput::AudioOutput(AudioOutputManager* manager) : manager_(manager) {
+AudioOutput::AudioOutput(AudioOutputManager* manager)
+  : manager_(manager),
+    db_gain_(0.0f) {
   FTL_DCHECK(manager_);
 }
 
@@ -231,15 +233,6 @@ bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {
   }
 
   return false;
-}
-
-void AudioOutput::SetGain(float db_gain) FTL_NO_THREAD_SAFETY_ANALYSIS {
-  db_gain_ = db_gain;
-
-  for (const auto& link : links_) {
-    FTL_DCHECK(link);
-    link->UpdateGain();
-  }
 }
 
 }  // namespace audio

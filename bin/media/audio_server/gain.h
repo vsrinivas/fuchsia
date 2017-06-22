@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
+#pragma once
 
 #include <atomic>
+#include <stdint.h>
 
-#pragma once
+#include "apps/media/services/audio_renderer.fidl.h"
 
 namespace media {
 namespace audio {
@@ -20,24 +21,27 @@ class Gain {
   using AScale = uint32_t;
 
   // constructor
-  Gain();
+  Gain() : db_target_rend_gain_(0.0f) { }
 
   // Audio gains for renderers and outputs are expressed as floating point in
   // decibels.  Renderer and output gains are combined and the stored in the
   // renderer to output link as a 4.28 fixed point amplitude scale factor.
-  static constexpr unsigned int FRACTIONAL_BITS = 28;
-  static constexpr AScale UNITY = (static_cast<AScale>(1u) << FRACTIONAL_BITS);
+  static constexpr unsigned int kFractionalScaleBits = 28;
+  static constexpr AScale kUnityScale =
+    (static_cast<AScale>(1u) << kFractionalScaleBits);
+  static constexpr float kMinGain = AudioRenderer::kMutedGain;
+  static constexpr float kMaxGain = 24.0f;
 
-  // Set the internal value of the amplitude scaler based on the dB value
-  // passed.  With a 4.28 fixed point internal amplitude scalar, legal values
-  // are on the range from [-inf, 24.0]
-  void Set(float db_gain);
+  // Set the renderer's contribution to a link's overall software gain control.
+  // With a 4.28 fixed point internal amplitude scalar, legal values are on the
+  // range from [-inf, 24.0].  Safe to call from any thread, but should only
+  // really be called from the main message loop thread.
+  void SetRendererGain(float db_gain) { db_target_rend_gain_.store(db_gain); }
 
-  // Force the internal amplitude scaler to represent infinite dB down.
-  void ForceMute() { amplitude_scale_.store(0); }
-
-  // Accessor for the current value of the amplitude scaler.
-  AScale amplitude_scale() const { return amplitude_scale_.load(); }
+  // Get the current gain's amplitude scalar, given the current audio output's
+  // gain value (recomputing only when needed).  Should only be called from the
+  // AudioOutput's mixer thread.
+  Gain::AScale GetGainScale(float output_db_gain);
 
   // Helper function which gives the value of the mute threshold for an
   // amplitude scale value for a sample with a given resolution.
@@ -53,11 +57,14 @@ class Gain {
   // are going to end up as 0, so there is no point in performing the fixed
   // point multiply.
   static constexpr AScale MuteThreshold(unsigned int bit_count) {
-    return (static_cast<AScale>(1u) << (FRACTIONAL_BITS - bit_count)) - 1;
+    return (static_cast<AScale>(1u) << (kFractionalScaleBits - bit_count)) - 1;
   }
 
  private:
-  std::atomic<AScale> amplitude_scale_;
+  std::atomic<float> db_target_rend_gain_;
+  float db_current_rend_gain_ = kMinGain;
+  float db_current_output_gain_ = kMinGain;
+  AScale amplitude_scale_ = 0u;
 };
 
 }  // namespace audio

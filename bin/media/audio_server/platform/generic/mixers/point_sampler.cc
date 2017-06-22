@@ -116,7 +116,7 @@ bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
     uint32_t frac_step_size,
     Gain::AScale amplitude_scale,
     bool accumulate) {
-  if (amplitude_scale == Gain::UNITY) {
+  if (amplitude_scale == Gain::kUnityScale) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale)
@@ -127,7 +127,7 @@ bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
     return Mix<ScalerType::MUTED, false>(dst, dst_frames, dst_offset, src,
                                          frac_src_frames, frac_src_offset,
                                          frac_step_size, amplitude_scale);
-  } else if (amplitude_scale < Gain::UNITY) {
+  } else if (amplitude_scale < Gain::kUnityScale) {
     return accumulate ? Mix<ScalerType::LT_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale)

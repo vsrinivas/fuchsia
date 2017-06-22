@@ -28,37 +28,6 @@ AudioRendererToOutputLink::~AudioRendererToOutputLink() {
   ReleaseQueue(pending_queue_);
 }
 
-void AudioRendererToOutputLink::UpdateGain() {
-  AudioRendererImplPtr renderer(GetRenderer());
-  AudioOutputPtr output(GetOutput());
-
-  // If either side of this relationship is going away, then we are shutting
-  // down.  Don't bother to re-calculate the amplitude scale factor.
-  if (!renderer || !output) {
-    return;
-  }
-
-  // Obtain the renderer gain and, if it is at or below the muted threshold,
-  // force the renderer to be muted and get out.
-  double db_gain = renderer->db_gain();
-  double output_db_gain = output->db_gain();
-  if ((db_gain <= AudioRenderer::kMutedGain) ||
-      (output_db_gain <= AudioRenderer::kMutedGain)) {
-    gain_.ForceMute();
-    return;
-  }
-
-  // Add in the output gain and clamp to the maximum allowed total gain.
-  db_gain += output_db_gain;
-  if (db_gain > AudioRenderer::kMaxGain) {
-    db_gain = AudioRenderer::kMaxGain;
-  }
-
-  gain_.Set(db_gain);
-}
-
-void UpdateGain(const AudioOutput& output);
-
 // static
 AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
     const AudioRendererImplPtr& renderer,

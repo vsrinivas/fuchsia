@@ -234,8 +234,9 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
         }
       }
 
-      // Capture the amplitude to apply for the next bit of audio.
-      info->amplitude_scale = link->amplitude_scale();
+      // Capture the amplitude to apply for the next bit of audio, recomputing
+      // as needed.
+      info->amplitude_scale = link->gain().GetGainScale(db_gain());
 
       // Now process the packet which is at the front of the renderer's queue.
       // If the packet has been entirely consumed, pop it off the front and

@@ -266,7 +266,7 @@ void AudioRendererImpl::SetGain(float db_gain) {
 
   for (const auto& output : output_links_) {
     FTL_DCHECK(output);
-    output->UpdateGain();
+    output->gain().SetRendererGain(db_gain_);
   }
 }
 
@@ -277,7 +277,7 @@ void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
 
   auto res = output_links_.emplace(link);
   FTL_DCHECK(res.second);
-  link->UpdateGain();
+  link->gain().SetRendererGain(db_gain_);
 
   // Prime this new output with the pending contents of the throttle output.
   if (throttle_output_link_ != nullptr) {
