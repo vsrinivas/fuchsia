@@ -138,6 +138,30 @@ struct AuthenticateResponse {
     // etc
 };
 
+// MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
+
+struct DeauthenticateRequest {
+    array <uint8, 6> peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    uint16 reason_code;
+    // VendorSpecificInfo
+};
+
+// MLME-DEAUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.6.3)
+
+struct DeauthenticateResponse {
+    array <uint8, 6> peer_sta_address;
+};
+
+// MLME-DEAUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.6.4)
+
+struct DeauthenticateIndication {
+    array<uint8, 6> peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    uint16 reason_code;
+    // VendorSpecificInfo
+};
+
 // MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
 
 struct AssociateRequest {
@@ -217,6 +241,18 @@ enum Method {
     // MLME-AUTHENTICATE.confirm
     // Args: AuthenticateResponse
     AUTHENTICATE_confirm,
+
+    // MLME-DEAUTHENTICATE.request
+    // Args: DeauthenticateRequest
+    DEAUTHENTICATE_request,
+
+    // MLME-DEAUTHENTICATE.confirm
+    // Args: DeauthenticateResponse
+    DEAUTHENTICATE_confirm,
+
+    // MLME-DEAUTHENTICATE.indication
+    // Args: DeauthenticateIndication
+    DEAUTHENTICATE_indication,
 
     // MLME-ASSOCIATE.request
     // Args: AssociateRequest
