@@ -22,18 +22,46 @@ AuthProviderImpl::AuthProviderImpl(
 ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
     std::function<void(std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
-  // TODO(ppi): Request the token from |token_provider_| when support for
-  // Firebase tokens is there.
-  task_runner_->PostTask(
-      [callback = cancellable->WrapCallback(callback)] { callback(""); });
+  if (api_key_.empty()) {
+    task_runner_->PostTask(
+        [callback = cancellable->WrapCallback(callback)] { callback(""); });
+    return cancellable;
+  }
+
+  token_provider_->GetFirebaseAuthToken(
+      api_key_, [callback = cancellable->WrapCallback(callback)](auto token) {
+        if (!token) {
+          // This should not happen - the token provider returns nullptr when
+          // running in the guest mode, but in this case we don't initialize
+          // sync and should never call auth provider.
+          FTL_LOG(ERROR) << "Empty Firebase token returned by token provider.";
+          callback("");
+          return;
+        }
+        callback(token->id_token);
+      });
   return cancellable;
 }
 
 void AuthProviderImpl::GetFirebaseUserId(
     std::function<void(std::string)> callback) {
-  // TODO(ppi): Request the user id from |token_provider_| when support for
-  // Firebase tokens is there.
-  task_runner_->PostTask([callback = std::move(callback)] { callback(""); });
+  if (api_key_.empty()) {
+    task_runner_->PostTask([callback = std::move(callback)] { callback(""); });
+    return;
+  }
+
+  token_provider_->GetFirebaseAuthToken(
+      api_key_, [callback = std::move(callback)](auto token) {
+        if (!token) {
+          // This should not happen - the token provider returns nullptr when
+          // running in the guest mode, but in this case we don't initialize
+          // sync and should never call auth provider.
+          FTL_LOG(ERROR) << "Empty Firebase token returned by token provider.";
+          callback("");
+          return;
+        }
+        callback(token->local_id);
+      });
 }
 
 }  // namespace ledger
