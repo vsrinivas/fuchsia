@@ -66,29 +66,11 @@ PciDeviceDispatcher::~PciDeviceDispatcher() {
     device_ = nullptr;
 }
 
-status_t PciDeviceDispatcher::ClaimDevice() {
-    canary_.Assert();
-
-    status_t result;
-    AutoLock lock(&lock_);
-    DEBUG_ASSERT(device_);
-
-    if (device_->claimed()) return MX_ERR_ALREADY_BOUND;  // Are we claimed already?
-
-    result = device_->Claim();
-    if (result != MX_OK)
-        return result;
-
-    return MX_OK;
-}
-
 status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
-
-    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
 
     device_->EnableBusMaster(enable);
 
@@ -101,8 +83,6 @@ status_t PciDeviceDispatcher::EnablePio(bool enable) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
-
     device_->EnablePio(enable);
 
     return MX_OK;
@@ -114,8 +94,6 @@ status_t PciDeviceDispatcher::EnableMmio(bool enable) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_);
 
-    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
-
     device_->EnableMmio(enable);
 
     return MX_OK;
@@ -124,8 +102,6 @@ status_t PciDeviceDispatcher::EnableMmio(bool enable) {
 const pcie_bar_info_t* PciDeviceDispatcher::GetBar(uint32_t bar_num) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
-
-    if (!device_->claimed()) return nullptr;  // Are we not claimed yet?
 
     return device_->GetBarInfo(bar_num);
 }
@@ -156,8 +132,6 @@ status_t PciDeviceDispatcher::ResetDevice() {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
-
     return device_->DoFunctionLevelReset();
 }
 
@@ -169,7 +143,6 @@ status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
     if ((which_irq < 0) ||
         (static_cast<uint32_t>(which_irq) >= irqs_avail_cnt_)) return MX_ERR_INVALID_ARGS;
 
@@ -211,10 +184,6 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
 
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
-
-    // Are we not claimed yet?
-    if (!device_->claimed())
-        return MX_ERR_BAD_STATE;
 
     if (mode == MX_PCIE_IRQ_MODE_DISABLED)
         requested_irq_count = 0;

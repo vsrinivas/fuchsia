@@ -231,12 +231,6 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto error_return;
     }
 
-    status = pci.ops->claim_device(pci.ctx);
-    if (status < 0) {
-        printf("usb_xhci_bind claim_device failed %d\n", status);
-        goto error_return;
-    }
-
     void* mmio;
     uint64_t mmio_len;
     /*

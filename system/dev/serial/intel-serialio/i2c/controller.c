@@ -111,7 +111,6 @@ static mx_status_t intel_serialio_i2c_add_slave(
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t config_handle;
-    pci.ops->claim_device(pci.ctx);
     status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                    (void**)&pci_config, &config_size, &config_handle);
     if (status != MX_OK) {
@@ -646,10 +645,6 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
         return MX_ERR_NOT_SUPPORTED;
 
-    mx_status_t status = pci.ops->claim_device(pci.ctx);
-    if (status < 0)
-        return status;
-
     intel_serialio_i2c_device_t* device = calloc(1, sizeof(*device));
     if (!device)
         return MX_ERR_NO_MEMORY;
@@ -662,8 +657,10 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t config_handle;
-    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   (void**)&pci_config, &config_size, &config_handle);
+    mx_status_t status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG,
+                                               MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                               (void**)&pci_config, &config_size,
+                                               &config_handle);
     if (status != MX_OK) {
         xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail;

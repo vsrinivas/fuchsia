@@ -297,7 +297,6 @@ public:
 
     bool     plugged_in()     const { return plugged_in_; }
     bool     disabled()       const { return disabled_; }
-    bool     claimed()        const { return claimed_; }
     bool     quirks_done()    const { return quirks_done_; }
 
     bool     is_bridge()      const { return is_bridge_; }
@@ -381,7 +380,6 @@ protected:
     mutable Mutex dev_lock_;
     bool          plugged_in_  = false;
     bool          disabled_    = false;
-    bool          claimed_     = false;
     bool          quirks_done_ = false;
 
     /* Info about the BARs computed and cached during the initial setup/probe,

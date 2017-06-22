@@ -305,24 +305,6 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc,
     return handle_value;
 }
 
-mx_status_t sys_pci_claim_device(mx_handle_t dev_handle) {
-    /**
-     * Claims the PCI device associated with the handle. Called when a driver
-     * successfully probes the device.
-     * @param handle Handle associated with a PCI device
-     */
-    LTRACEF("handle %d\n", dev_handle);
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_WRITE, &pci_device);
-    if (status != MX_OK)
-        return status;
-
-    return pci_device->ClaimDevice();
-}
-
 mx_status_t sys_pci_enable_bus_master(mx_handle_t dev_handle, bool enable) {
     /**
      * Enables or disables bus mastering for the PCI device associated with the handle.
@@ -650,10 +632,6 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
 }
 
 mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, user_ptr<mx_pcie_device_info_t>) {
-    return MX_ERR_NOT_SUPPORTED;
-}
-
-mx_status_t sys_pci_claim_device(mx_handle_t) {
     return MX_ERR_NOT_SUPPORTED;
 }
 

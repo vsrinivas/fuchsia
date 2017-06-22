@@ -329,9 +329,6 @@ static void dump_pcie_hdr(const PcieDevice& dev, lspci_params_t* params)
     if (dev.disabled())
         printf(" [DISABLED]");
 
-    if (dev.claimed())
-        printf(" [CLAIMED]");
-
     printf("\n");
 }
 

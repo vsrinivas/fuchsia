@@ -188,10 +188,6 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
         return MX_ERR_NOT_SUPPORTED;
 
-    status = pci.ops->claim_device(pci.ctx);
-    if (status != MX_OK)
-        return status;
-
     // map resources and initialize the device
     bochs_vbe_device_t* device = calloc(1, sizeof(bochs_vbe_device_t));
     if (!device)

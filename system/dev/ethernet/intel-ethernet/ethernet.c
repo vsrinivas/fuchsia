@@ -145,11 +145,6 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    mx_status_t r;
-    if ((r = edev->pci.ops->claim_device(edev->pci.ctx)) < 0) {
-        return r;
-    }
-
     // Query whether we have MSI or Legacy interrupts.
     uint32_t irq_cnt = 0;
     if ((edev->pci.ops->query_irq_mode_caps(edev->pci.ctx, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == MX_OK) &&
@@ -165,7 +160,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    r = edev->pci.ops->map_interrupt(edev->pci.ctx, 0, &edev->irqh);
+    mx_status_t r = edev->pci.ops->map_interrupt(edev->pci.ctx, 0, &edev->irqh);
     if (r != MX_OK) {
         printf("eth: failed to map irq\n");
         goto fail;

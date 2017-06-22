@@ -710,20 +710,13 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mx_status_t status = device->pci.ops->claim_device(device->pci.ctx);
-    if (status < 0) {
-        free(device);
-        xprintf("ahci: error %d claiming pci device\n", status);
-        return status;
-    }
-
-
     // map register window
-    status = device->pci.ops->map_resource(device->pci.ctx,
-                                           PCI_RESOURCE_BAR_5,
-                                           MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                           (void**)&device->regs,
-                                           &device->regs_size, &device->regs_handle);
+    mx_status_t status = device->pci.ops->map_resource(device->pci.ctx,
+                                                       PCI_RESOURCE_BAR_5,
+                                                       MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                                       (void**)&device->regs,
+                                                       &device->regs_size,
+                                                       &device->regs_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d mapping register window\n", status);
         goto fail;

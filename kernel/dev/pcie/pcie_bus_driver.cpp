@@ -48,7 +48,6 @@ PcieBusDriver::~PcieBusDriver() {
     // driver.
     ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
                       DEBUG_ASSERT(dev);
-                      DEBUG_ASSERT(!dev->claimed());
                       return true;
                   }, nullptr);
 

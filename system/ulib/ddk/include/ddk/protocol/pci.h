@@ -30,7 +30,6 @@ enum pci_resource_ids {
 };
 
 typedef struct pci_protocol_ops {
-    mx_status_t (*claim_device)(void* ctx);
     mx_status_t (*map_resource)(void* ctx, uint32_t res_id, uint32_t cache_policy,
                                 void** vaddr, size_t* size, mx_handle_t* out_handle);
     mx_status_t (*enable_bus_master)(void* ctx, bool enable);

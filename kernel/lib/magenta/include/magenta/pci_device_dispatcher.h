@@ -37,7 +37,6 @@ public:
 
     // TODO(cja): revisit Enable____ methods to be automatic when vmos are handed
     // out so there is less of a dispatcher surface to worry about.
-    status_t ClaimDevice();
     status_t EnableBusMaster(bool enable);
     status_t EnableMmio(bool enable);
     status_t EnablePio(bool enable);

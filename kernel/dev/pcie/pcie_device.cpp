@@ -86,9 +86,6 @@ PcieDevice::~PcieDevice() {
     DEBUG_ASSERT(!upstream_);
     DEBUG_ASSERT(!plugged_in_);
 
-    /* By the time we destruct, we had better not be claimed anymore */
-    DEBUG_ASSERT(!claimed_);
-
     /* TODO(johngro) : ASSERT that this device no longer participating in any of
      * the bus driver's shared IRQ dispatching. */
 
@@ -172,56 +169,12 @@ mxtl::RefPtr<PcieUpstreamNode> PcieDevice::GetUpstream() {
     return bus_drv_.GetUpstream(*this);
 }
 
-status_t PcieDevice::Claim() {
-    AutoLock dev_lock(&dev_lock_);
-
-    /* Has the device already been claimed? */
-    if (claimed_)
-        return MX_ERR_ALREADY_BOUND;
-
-    /* Has the device been unplugged or disabled? */
-    if (!plugged_in_ || disabled_)
-        return MX_ERR_UNAVAILABLE;
-
-    /* Looks good!  Claim the device. */
-    claimed_ = true;
-
-    return MX_OK;
-}
-
-void PcieDevice::Unclaim() {
-    AutoLock dev_lock(&dev_lock_);
-
-    // Nothing to do if we are not claimed.
-    if (!claimed_)
-        return;
-
-    LTRACEF("Unclaiming PCI device %02x:%02x.%x...\n", bus_id_, dev_id_, func_id_);
-
-    /* Make sure that all IRQs are shutdown and all handlers released for this device */
-    SetIrqModeLocked(PCIE_IRQ_MODE_DISABLED, 0);
-
-    /* If this device is not a bridge, disable access to MMIO windows, PIO windows, and system
-     * memory.  If it is a bridge, leave this stuff turned on so that downstream devices can
-     * continue to function. */
-    if (!is_bridge_)
-        cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
-
-    /* Device is now unclaimed */
-    claimed_ = false;
-}
-
 void PcieDevice::Unplug() {
     /* Begin by completely nerfing this device, and preventing an new API
      * operations on it.  We need to be inside the dev lock to do this.  Note:
      * it is assumed that we will not disappear during any of this function,
      * because our caller is holding a reference to us. */
     AutoLock dev_lock(&dev_lock_);
-
-    /* For now ASSERT that we are not claimed.  Moving forward, we need to
-     * inform our owner that we have been suddenly hot-unplugged.
-     */
-    DEBUG_ASSERT(!claimed_);
 
     if (plugged_in_) {
         /* Remove all access this device has to the PCI bus */
@@ -572,19 +525,11 @@ status_t PcieDevice::AllocateBars() {
 
 status_t PcieDevice::AllocateBarsLocked() {
     DEBUG_ASSERT(dev_lock_.IsHeld());
-    DEBUG_ASSERT(plugged_in_ && !claimed_);
+    DEBUG_ASSERT(plugged_in_);
 
     // Have we become unplugged?
     if (!plugged_in_)
         return MX_ERR_UNAVAILABLE;
-
-    // If this has been claimed by a driver, do not make any changes to the BAR
-    // allocation.
-    //
-    // TODO(johngro) : kill this.  It should be impossible to become claimed if
-    // we have not already allocated all of our BARs.
-    if (claimed_)
-        return MX_OK;
 
     /* Allocate BARs for the device */
     DEBUG_ASSERT(bar_count_ <= countof(bars_));
@@ -601,7 +546,7 @@ status_t PcieDevice::AllocateBarsLocked() {
 
 status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
-    DEBUG_ASSERT(plugged_in_ && !claimed_);
+    DEBUG_ASSERT(plugged_in_);
 
     // Do not attempt to remap if we are rescanning the bus and this BAR is
     // already allocated, or if it does not exist (size is zero)
@@ -728,7 +673,6 @@ void PcieDevice::DisableLocked() {
     // forwarding windows, in the case of a bridge).  Flag the device as
     // disabled from here on out.
     DEBUG_ASSERT(dev_lock_.IsHeld());
-    DEBUG_ASSERT(!claimed_);
     TRACEF("WARNING - Disabling device %02x:%02x.%01x due to unsatisfiable configuration\n",
             bus_id_, dev_id_, func_id_);
 

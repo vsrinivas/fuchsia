@@ -86,13 +86,8 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     pci_config_handle_.reset(pci_config_handle);
     pci_config_ = pci_config;
 
-    // claim the pci device
-    mx_status_t r;
-    r = pci_.ops->claim_device(pci_.ctx);
-    if (r != MX_OK)
-        return r;
-
     // enable bus mastering
+    mx_status_t r;
     if ((r = pci_.ops->enable_bus_master(pci_.ctx, true)) != MX_OK) {
         VIRTIO_ERROR("cannot enable bus master %d\n", r);
         return r;

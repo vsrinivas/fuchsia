@@ -93,10 +93,6 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, &pci))
         return MX_ERR_NOT_SUPPORTED;
 
-    status = pci.ops->claim_device(pci.ctx);
-    if (status < 0)
-        return status;
-
     // map resources and initialize the device
     kaveri_disp_device_t* device = calloc(1, sizeof(kaveri_disp_device_t));
     if (!device)

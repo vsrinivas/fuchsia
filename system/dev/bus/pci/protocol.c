@@ -10,11 +10,6 @@
 
 #include "kpci-private.h"
 
-static mx_status_t pci_claim_device(void* ctx) {
-    kpci_device_t* device = ctx;
-    return mx_pci_claim_device(device->handle);
-}
-
 static mx_status_t pci_enable_bus_master(void* ctx, bool enable) {
     kpci_device_t* device = ctx;
     return mx_pci_enable_bus_master(device->handle, enable);
@@ -190,7 +185,6 @@ static mx_status_t pci_get_device_info(void* ctx, mx_pcie_device_info_t* out_inf
 }
 
 static pci_protocol_ops_t _pci_protocol = {
-    .claim_device = pci_claim_device,
     .enable_bus_master = pci_enable_bus_master,
     .enable_pio = pci_enable_pio,
     .reset_device = pci_reset_device,
