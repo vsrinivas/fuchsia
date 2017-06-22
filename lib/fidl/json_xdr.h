@@ -105,24 +105,6 @@ void XdrFilter(XdrContext* xdr, V* value);
 // Clients usually call Value(); filters for custom types usually call
 // Field().
 class XdrContext {
- private:
-  // Returned by IgnoreError() to discard any errors that are accumulated by
-  // functions called between the ctor and the dtor.
-  // This class must allow copy-by-value.
-  class ErrorEraser {
-   public:
-    ErrorEraser(XdrContext* context, std::string* error);
-    ErrorEraser(ErrorEraser&& rhs);
-    ~ErrorEraser();
-
-    XdrContext* operator->() { return context_; }
-
-   private:
-    XdrContext* const context_;
-    std::string* const error_;
-    const size_t old_length_;
-  };
-
  public:
   XdrContext(XdrOp op, JsonDoc* doc, std::string* error);
 
@@ -382,14 +364,40 @@ class XdrContext {
     Value(data, XdrFilter<K>, XdrFilter<V>);
   }
 
+ private:
+  // Returned by ReadErrorHandler() to discard any errors that are accumulated
+  // between the ctor and the dtor and instead call the callback to set a
+  // default value.
+  class XdrCallbackOnReadError {
+   public:
+    XdrCallbackOnReadError(XdrContext* context,
+                       const XdrOp op,
+                       std::string* error,
+                       std::function<void()> callback);
+    XdrCallbackOnReadError(XdrCallbackOnReadError&& rhs);
+    ~XdrCallbackOnReadError();
+
+    XdrContext* operator->() { return context_; }
+
+   private:
+    XdrContext* const context_;
+    const XdrOp op_;
+    std::string* const error_;
+    const size_t old_length_;
+    std::function<void()> error_callback_;
+
+    FTL_DISALLOW_COPY_AND_ASSIGN(XdrCallbackOnReadError);
+  };
+
+ public:
   // When adding a new value to a filter, use this function to ignore errors
   // on the called function(s) in that scope. For example:
-  // data->interaction_timestamp = time(nullptr);
-  // xdr->IgnoreError()->Field("interaction", &data->interaction_timestamp);
-  ErrorEraser IgnoreError() { return ErrorEraser(this, GetError()); }
+  // xdr->ReadErrorHandler(
+  //        [&data] { data->interaction_timestamp = time(nullptr); })
+  //     ->Field("interaction", &data->interaction_timestamp);
+  XdrCallbackOnReadError ReadErrorHandler(std::function<void()> callback);
 
  private:
-
   XdrContext(XdrContext* parent, const char* name_, XdrOp op, JsonDoc* doc,
              JsonValue* value);
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }

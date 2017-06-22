@@ -195,15 +195,34 @@ std::string* XdrContext::GetError() {
   return parent_ ? parent_->GetError() : error_;
 }
 
-XdrContext::ErrorEraser::ErrorEraser(XdrContext* context, std::string* error)
-    : context_(context), error_(error), old_length_(error->size()) {}
-XdrContext::ErrorEraser::ErrorEraser(ErrorEraser&& rhs)
-    : context_(rhs.context_),
-      error_(rhs.error_),
-      old_length_(rhs.old_length_) {}
+XdrContext::XdrCallbackOnReadError XdrContext::ReadErrorHandler(
+    std::function<void()> callback) {
+  return XdrContext::XdrCallbackOnReadError(this, op_, GetError(),
+                                            std::move(callback));
+}
 
-XdrContext::ErrorEraser::~ErrorEraser() {
-  error_->resize(old_length_);
+XdrContext::XdrCallbackOnReadError::XdrCallbackOnReadError(
+    XdrContext* context, XdrOp op, std::string* error,
+    std::function<void()> callback)
+    : context_(context),
+      op_(op),
+      error_(error),
+      old_length_(error->size()),
+      error_callback_(std::move(callback)) {}
+
+XdrContext::XdrCallbackOnReadError::XdrCallbackOnReadError(
+    XdrCallbackOnReadError&& rhs)
+    : context_(rhs.context_),
+      op_(rhs.op_),
+      error_(rhs.error_),
+      old_length_(rhs.old_length_),
+      error_callback_(std::move(rhs.error_callback_)) {}
+
+XdrContext::XdrCallbackOnReadError::~XdrCallbackOnReadError() {
+  if (error_->size() != old_length_ && op_ == XdrOp::FROM_JSON) {
+    error_->resize(old_length_);
+    error_callback_();
+  }
 }
 
 }  // namespace modular
