@@ -309,6 +309,30 @@ mx_status_t Station::HandleAuthentication(const Packet* packet) {
     return MX_OK;
 }
 
+mx_status_t Station::HandleDeauthentication(const Packet* packet) {
+    debugfn();
+
+    if (state_ != WlanState::kAssociated ||
+        state_ != WlanState::kAuthenticated) {
+        debugf("got spurious deauthenticate; ignoring\n");
+        return MX_OK;
+    }
+
+    auto hdr = packet->field<MgmtFrameHeader>(0);
+    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
+    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+
+    auto deauth = packet->field<Deauthentication>(sizeof(MgmtFrameHeader));
+    if (!deauth) {
+        errorf("deauthentication packet too small len=%zu\n", packet->len());
+        return MX_ERR_IO;
+    }
+    infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), deauth->reason_code);
+
+    state_ = WlanState::kAuthenticated;
+    return SendDeauthIndication(deauth->reason_code);
+}
+
 mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     debugfn();
 
@@ -531,6 +555,31 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::AUTHENTICATE_confirm, resp);
     if (status != MX_OK) {
         errorf("could not serialize AuthenticateResponse: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
+    return status;
+}
+
+mx_status_t Station::SendDeauthIndication(uint16_t code) {
+    debugfn();
+    auto ind = DeauthenticateIndication::New();
+    ind->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
+    std::memcpy(ind->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
+    ind->reason_code = code;
+
+    size_t buf_len = sizeof(Header) + ind->GetSerializedSize();
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_indication, ind);
+    if (status != MX_OK) {
+        errorf("could not serialize DeauthenticateIndication: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
     }

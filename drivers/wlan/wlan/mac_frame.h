@@ -388,6 +388,15 @@ struct Authentication {
     uint8_t elements[];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.3.3.13
+struct Deauthentication {
+    // 9.4.1.7
+    uint16_t reason_code;
+
+    // Vendor-specific elements and optional Management MIC element (MME) at the end
+    uint8_t elements[];
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.3.3.6
 struct AssociationRequest {
     bool Validate(size_t len);

@@ -212,6 +212,8 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
         return HandleProbeResponse(packet);
     case ManagementSubtype::kAuthentication:
         return HandleAuthentication(packet);
+    case ManagementSubtype::kDeauthentication:
+        return HandleDeauthentication(packet);
     case ManagementSubtype::kAssociationResponse:
         return HandleAssociationResponse(packet);
     case ManagementSubtype::kDisassociation:
@@ -274,6 +276,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         break;
     }
     case Method::AUTHENTICATE_request: {
+        // TODO(tkilbourn): send error response back to service is !IsStaValid
         AuthenticateRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::AUTHENTICATE_request, &req);
         if (status != MX_OK) {
@@ -281,10 +284,13 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
             break;
         }
 
-        status = sta_->Authenticate(std::move(req));
+        if (IsStaValid()) {
+            status = sta_->Authenticate(std::move(req));
+        }
         break;
     }
     case Method::ASSOCIATE_request: {
+        // TODO(tkilbourn): send error response back to service is !IsStaValid
         AssociateRequestPtr req;
         status = DeserializeServiceMsg(*packet, Method::ASSOCIATE_request, &req);
         if (status != MX_OK) {
@@ -292,7 +298,9 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
             break;
         }
 
-        status = sta_->Associate(std::move(req));
+        if (IsStaValid()) {
+            status = sta_->Associate(std::move(req));
+        }
         break;
     }
     default:
@@ -337,6 +345,18 @@ mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
         if (*sta_->bssid() == hdr->addr3) {
             sta_->HandleAuthentication(packet);
+        }
+    }
+    return MX_OK;
+}
+
+mx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
+    debugfn();
+
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) {
+            sta_->HandleDeauthentication(packet);
         }
     }
     return MX_OK;

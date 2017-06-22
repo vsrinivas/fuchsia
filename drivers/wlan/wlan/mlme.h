@@ -45,6 +45,7 @@ class Mlme {
     mx_status_t HandleBeacon(const Packet* packet);
     mx_status_t HandleProbeResponse(const Packet* packet);
     mx_status_t HandleAuthentication(const Packet* packet);
+    mx_status_t HandleDeauthentication(const Packet* packet);
     mx_status_t HandleAssociationResponse(const Packet* packet);
     mx_status_t HandleDisassociation(const Packet* packet);
 
