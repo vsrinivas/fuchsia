@@ -336,9 +336,12 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
   token_provider_factory->GetTokenProvider(kLedgerAppUrl,
                                            ledger_token_provider.NewRequest());
 
-  auto firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = kFirebaseServerId;
-  firebase_config->api_key = kFirebaseApiKey;
+  ledger::FirebaseConfigPtr firebase_config;
+  if (account) {
+    firebase_config = ledger::FirebaseConfig::New();
+    firebase_config->server_id = kFirebaseServerId;
+    firebase_config->api_key = kFirebaseApiKey;
+  }
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
       local_ledger_path, std::move(firebase_config),
