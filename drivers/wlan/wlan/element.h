@@ -340,4 +340,14 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
     uint8_t triplets[];  // TODO(tkilbourn): define these
 } __PACKED;
 
+struct ExtendedSupportedRatesElement :
+    public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
+    static bool Create(uint8_t* buf, size_t len, size_t* actual,
+                       const std::vector<uint8_t>& rates);
+    static const size_t kMaxLen = 255;
+
+    ElementHeader hdr;
+    uint8_t rates[];
+} __PACKED;
+
 }  // namespace wlan

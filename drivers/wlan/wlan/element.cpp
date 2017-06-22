@@ -99,4 +99,20 @@ bool CountryElement::Create(uint8_t* buf, size_t len, size_t* actual, const char
     return true;
 }
 
+const size_t ExtendedSupportedRatesElement::kMaxLen;
+
+bool ExtendedSupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* actual,
+                                           const std::vector<uint8_t>& rates) {
+    if (rates.size() > kMaxLen) return false;
+    size_t elem_size = sizeof(ExtendedSupportedRatesElement) + rates.size();
+    if (elem_size > len) return false;
+
+    auto elem = reinterpret_cast<ExtendedSupportedRatesElement*>(buf);
+    elem->hdr.id = element_id::kExtSuppRates;
+    elem->hdr.len = rates.size();
+    std::copy(rates.begin(), rates.end(), elem->rates);
+    *actual = elem_size;
+    return true;
+}
+
 }  // namespace wlan
