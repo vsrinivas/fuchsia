@@ -14,7 +14,7 @@ import 'src/data_handler.dart';
 import 'src/action_log.dart';
 import 'src/context.dart';
 import 'src/context_subscribers.dart';
-import 'src/suggestion_subscribers.dart';
+import 'src/proposal_subscribers.dart';
 
 const _configDir = "/system/data/mi_dashboard";
 const _configFilename = "dashboard.config";

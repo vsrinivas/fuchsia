@@ -4,11 +4,14 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:collection/collection.dart';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.services.suggestion..debug/debug.fidl.dart';
 
 import 'data_handler.dart';
+
+Function listEqual = const ListEquality().equals;
 
 class ProposalSubscribersDataHandler extends AskProposalListener with NextProposalListener,
       InterruptionProposalListener, DataHandler {
@@ -27,23 +30,14 @@ class ProposalSubscribersDataHandler extends AskProposalListener with NextPropos
 
   SendWebSocketMessage _sendMessage;
 
-  String makeJsonProposal(ProposalSummary proposal) {
-    if (proposal == null) return JSON.encode({});
-    return JSON.encode({
-      "id": proposal.id
-    });
-  }
-
   String makeJsonMessage() {
     return JSON.encode({
       "suggestions": {
         "ask_query": _lastQuery,
-        "ask_proposals": _lastAskProposals.map((ProposalSummary p) =>
-            makeJsonProposal(p)).toList(),
-        "selection": makeJsonProposal(_lastSelectedProposal),
-        "next_proposals": _currentNextProposals.map((ProposalSummary p) =>
-            makeJsonProposal(p)).toList(),
-        "interruption": makeJsonProposal(_lastInterruptionProposal)
+        "ask_proposals": _lastAskProposals,
+        "selection": _lastSelectedProposal,
+        "next_proposals": _currentNextProposals,
+        "interruption": _lastInterruptionProposal,
       }
     });
   }
@@ -78,26 +72,34 @@ class ProposalSubscribersDataHandler extends AskProposalListener with NextPropos
 
   @override
   void onAskStart(String query, List<ProposalSummary> proposals) {
-    _lastAskProposals = proposals;
-    _lastQuery = query;
-    this._sendMessage(this.makeJsonMessage());
+    if (!listEqual(_lastAskProposals, proposals) || (_lastQuery != query)) {
+      _lastAskProposals = proposals;
+      _lastQuery = query;
+      this._sendMessage(this.makeJsonMessage());
+    }
   }
 
   @override
   void onProposalSelected(ProposalSummary selectedProposal) {
-    _lastSelectedProposal = selectedProposal;
-    this._sendMessage(this.makeJsonMessage());
+    if (_lastSelectedProposal != selectedProposal) {
+      _lastSelectedProposal = selectedProposal;
+      this._sendMessage(this.makeJsonMessage());
+    }
   }
 
   @override
   void onNextUpdate(List<ProposalSummary> proposals) {
-    _currentNextProposals = proposals;
-    this._sendMessage(this.makeJsonMessage());
+    if (!listEqual(_currentNextProposals, proposals)) {
+      _currentNextProposals = proposals;
+      this._sendMessage(this.makeJsonMessage());
+    }
   }
 
   @override
   void onInterrupt(ProposalSummary interruptionProposal) {
-    _lastInterruptionProposal = interruptionProposal;
-    this._sendMessage(this.makeJsonMessage());
+    if (_lastInterruptionProposal != interruptionProposal) {
+      _lastInterruptionProposal = interruptionProposal;
+      this._sendMessage(this.makeJsonMessage());
+    }
   }
 }

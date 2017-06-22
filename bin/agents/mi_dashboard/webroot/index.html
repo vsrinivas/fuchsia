@@ -35,9 +35,9 @@
         <section>
           <nav id="dashboard-tab-bar" class="mdc-tab-bar">
             <a class="mdc-tab mdc-tab--active" href="#overview-panel">OVERVIEW</a>
-            <a class="mdc-tab" href="#context-panel">CONTEXT STORE</a>
-            <a class="mdc-tab" href="#action-log-panel">ACTION LOG</a>
-            <!-- <a class="mdc-tab" href="#three">SUGGESTIONS</a> -->
+            <a class="mdc-tab" href="#context-panel">CONTEXT</a>
+            <a class="mdc-tab" href="#suggestions-panel">SUGGESTIONS</a>
+            <a class="mdc-tab" href="#action-log-panel">ACTIONS</a>
             <span class="mdc-tab-bar__indicator"></span>
           </nav>
         </section>
@@ -129,6 +129,53 @@
           </div> <!-- cell -->
         </div> <!-- grid__inner -->
       </div> <!-- context-panel -->
+
+      <div id="suggestions-panel" class="panel grid mdc-layout-grid" role="tabpanel">
+        <div class="mdc-layout-grid__inner">
+
+          <div class="cell mdc-layout-grid__cell last-query-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Last Ask Query</h1>
+                <h2 id="lastQuery" class="mdc-card__subtitle">(No query)</h2>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+
+          <div class="cell mdc-layout-grid__cell last-selection-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Last Selection</h1>
+                <ul id="lastSelection" class="mdc-list mdc-list--two-line mdc-list--dense">
+                  <li><span>(No selection)</span></li>
+                </ul>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+
+          <div class="cell mdc-layout-grid__cell ask-proposals-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Ask Proposals</h1>
+                <ul id="askProposals" class="mdc-list mdc-list--two-line mdc-list--dense">
+                </ul>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+
+          <div class="cell mdc-layout-grid__cell next-proposals-card">
+            <div class="mdc-card">
+              <section class="mdc-card__primary">
+                <h1 class="mdc-card__title mdc-card__title--large">Next Proposals</h1>
+                <ul id="nextProposals" class="mdc-list mdc-list--two-line mdc-list--dense">
+                </ul>
+              </section>
+            </div> <!-- mdc_card -->
+          </div> <!-- cell -->
+
+        </div> <!-- grid__inner -->
+      </div> <!-- suggestions-panel -->
+
       <div id="action-log-panel" class="panel" role="tabpanel">
         <div class="mdc-layout-grid__inner">
           <div class="cell mdc-layout-grid__cell action-log-card">

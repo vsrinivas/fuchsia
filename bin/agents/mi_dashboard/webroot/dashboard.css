@@ -17,8 +17,24 @@ body {
   grid-column-end: span 4;
 }
 
+.last-query-card {
+  .grid-column-end: span 5;
+}
+
+.last-selection-card {
+  .grid-column-end: span 5;
+}
+
 .context-topics-card {
   grid-column-end: span 8;
+}
+
+.ask-proposals-card {
+  grid-column-end: span 5;
+}
+
+.next-proposals-card {
+  grid-column-end: span 5;
 }
 
 .mdc-card {

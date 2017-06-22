@@ -81,8 +81,49 @@ function handleWebSocketMessage(evt) {
   }
 }
 
-function handleSuggestionUpdate(suggestions) {
-  console.log('Got suggestions:', suggestions);
+function makeProposalHtml(proposal) {
+  var item = document.createElement("li");
+  var headline = document.createElement("span");
+  var subheadline = document.createElement("span");
+  $(item).addClass("mdc-list-item").addClass("proposal-item");
+  $(headline)
+      .addClass("mdc-list-item__text")
+      .text(proposal.display.headline);
+  $(subheadline)
+      .addClass("mdc-list-item__text__secondary")
+      .text(proposal.display.subheadline);
+  $(headline).append(subheadline);
+  $(item).append(headline);
+  return item;
+}
+
+function updateProposals(cardId, proposals) {
+  // TODO(andrewosh): really should do some DOM diffing here.
+  var cardList = $(cardId);
+  cardList.empty();
+  proposals.forEach(function (proposal) {
+    cardList.append(makeProposalHtml(proposal));
+  });
+}
+
+function updateLastSelection(selection) {
+  var selectionList = $("#lastSelection");
+  selectionList.empty();
+  selectionList.append(makeProposalHtml(selection));
+}
+
+function updateLastQuery(query) {
+  var queryElem = $("#lastQuery");
+  queryElem.text(query);
+}
+
+function handleSuggestionsUpdate(suggestions) {
+  updateProposals('#askProposals', suggestions.ask_proposals);
+  updateProposals('#nextProposals', suggestions.next_proposals);
+  if (suggestions.selection) {
+    updateLastSelection(suggestions.selection);
+  }
+  updateLastQuery(suggestions.ask_query);
 }
 
 function handleContextUpdate(context) {
