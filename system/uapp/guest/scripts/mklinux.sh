@@ -22,7 +22,7 @@ PATCHFILE="${SRCFILE%/*}/alldefconfig_plus.patch"
 
 # Location of magenta and its build dir
 MAGENTADIR="${SRCFILE%magenta/*}magenta"
-BUILDDIR="$MAGENTADIR/build-magenta-pc-x86-64"
+BUILDDIR="${MAGENTA_BUILD_DIR:-MAGENTADIR/build-magenta-pc-x86-64}"
 mkdir -p $BUILDDIR
 
 # Location to download tarballs to

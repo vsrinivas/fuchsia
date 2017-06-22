@@ -8,7 +8,7 @@
 
 SRCFILE="$PWD/${BASH_SOURCE[0]}"
 MAGENTADIR="${SRCFILE%magenta/*}magenta"
-BUILDDIR="$MAGENTADIR/build-magenta-pc-x86-64"
+BUILDDIR="${MAGENTA_BUILD_DIR:-MAGENTADIR/build-magenta-pc-x86-64}"
 
 KERNEL="${2:-$BUILDDIR/magenta.bin}"
 BOOTDATA="${3:-$BUILDDIR/bootdata.bin}"
