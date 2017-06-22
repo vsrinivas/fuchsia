@@ -553,6 +553,12 @@ static mx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
         if (child->ino <= ino) {
             continue;
         }
+        // "pure" directories (like /dev/class/$NAME) do not show up
+        // if they have no children, to avoid clutter and confusion.
+        // They remain openable, so they can be watched.
+        if ((child->device == NULL) && list_is_empty(&child->children)) {
+            continue;
+        }
         ino = child->ino;
         mx_status_t r = fill_dirent(ptr, len, child->name, strlen(child->name),
                                     VTYPE_TO_DTYPE(V_TYPE_DIR));
