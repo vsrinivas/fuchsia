@@ -77,7 +77,8 @@ class AudioPipe : public MediaPacketConsumerBase {
 
   // Indicates the priming was requested. The pipe is responsible for calling
   // the callback when priming is complete.
-  void PrimeRequested(const MediaTimelineControlPoint::PrimeCallback& callback);
+  void PrimeRequested(int64_t pts,
+                      const MediaTimelineControlPoint::PrimeCallback& callback);
 
  protected:
   void OnPacketSupplied(SuppliedPacketPtr supplied_packet) override;
@@ -90,6 +91,7 @@ class AudioPipe : public MediaPacketConsumerBase {
   AudioServerImpl* server_;
 
   MediaTimelineControlPoint::PrimeCallback prime_callback_;
+  int64_t prime_pts_;
 
   // State used for timestamp interpolation
   bool next_pts_known_ = 0;

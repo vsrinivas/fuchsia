@@ -19,8 +19,9 @@ VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
   AcceptRevisedMediaType();
 
   timeline_control_point_.SetPrimeRequestedCallback(
-      [this](const MediaTimelineControlPoint::PrimeCallback& callback) {
-        pts_ = kUnspecifiedTime;
+      [this](int64_t pts,
+             const MediaTimelineControlPoint::PrimeCallback& callback) {
+        pts_ = pts;
         SetDemand(kPacketDemand);
 
         if (packet_queue_.size() >= kPacketDemand) {
@@ -165,6 +166,7 @@ void VideoFrameSource::OnPacketSupplied(
       prime_callback_();
       prime_callback_ = nullptr;
     }
+
     timeline_control_point_.SetEndOfStreamPts(supplied_packet->packet()->pts);
   }
 
@@ -180,15 +182,26 @@ void VideoFrameSource::OnPacketSupplied(
     CheckForRevisedMediaType(supplied_packet->packet());
   }
 
-  packet_queue_.push(std::move(supplied_packet));
-
   if (!prime_callback_) {
+    // We aren't priming, so put the packet on the queue regardless.
+    packet_queue_.push(std::move(supplied_packet));
+
     // Discard old packets now in case our frame rate is so low that we have to
     // skip more packets than we demand when GetRgbaFrame is called.
     DiscardOldPackets();
-  } else if (packet_queue_.size() >= kPacketDemand) {
-    prime_callback_();
-    prime_callback_ = nullptr;
+  } else if (supplied_packet->packet()->pts < pts_) {
+    // We're priming, and this packet occurs before the point where playback
+    // will start. Don't bother to put in on the queue.
+    return;
+  } else {
+    // We're priming, and we want to keep this packet. Put it on the queue and
+    // determine whether we're done priming.
+    packet_queue_.push(std::move(supplied_packet));
+
+    if (packet_queue_.size() >= kPacketDemand) {
+      prime_callback_();
+      prime_callback_ = nullptr;
+    }
   }
 
   // If this is the first packet to arrive and we're not telling the views to

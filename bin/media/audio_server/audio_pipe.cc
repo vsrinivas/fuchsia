@@ -44,6 +44,7 @@ AudioPipe::AudioPipe(AudioRendererImpl* owner, AudioServerImpl* server)
 AudioPipe::~AudioPipe() {}
 
 void AudioPipe::PrimeRequested(
+    int64_t pts,
     const MediaTimelineControlPoint::PrimeCallback& cbk) {
   if (prime_callback_) {
     // Prime was already requested. Complete the old one and warn.
@@ -58,6 +59,8 @@ void AudioPipe::PrimeRequested(
   }
 
   prime_callback_ = cbk;
+  prime_pts_ = pts * (owner_->format_info()->frame_to_media_ratio() *
+                      owner_->format_info()->frames_per_ns());
   SetDemand(kDemandMinPacketsOutstanding);
   // TODO(dalesat): Implement better demand strategy.
 }
@@ -124,10 +127,14 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
 
   bool end_of_stream = supplied_packet->packet()->end_of_stream;
 
-  owner_->OnPacketReceived(AudioPacketRefPtr(
-      new AudioPacketRef(std::move(supplied_packet), server_,
-                         frame_count << AudioRendererImpl::PTS_FRACTIONAL_BITS,
-                         start_pts, next_pts_, frame_count)));
+  // If we're priming and the packet occurs before the point at which we'll
+  // start playback, we want to discard the packet rather than keeping it.
+  if (!prime_callback_ || next_pts_ > prime_pts_) {
+    owner_->OnPacketReceived(AudioPacketRefPtr(new AudioPacketRef(
+        std::move(supplied_packet), server_,
+        frame_count << AudioRendererImpl::PTS_FRACTIONAL_BITS, start_pts,
+        next_pts_, frame_count)));
+  }
 
   if (prime_callback_ && (end_of_stream || supplied_packets_outstanding() >=
                                                kDemandMinPacketsOutstanding)) {

@@ -149,7 +149,18 @@ void TimelineControlPoint::Prime(const PrimeCallback& callback) {
   FLOG(log_channel_, PrimeRequested());
 
   if (prime_requested_callback_) {
-    prime_requested_callback_([this, callback]() {
+    int64_t pts;
+
+    {
+      ftl::MutexLocker locker(&mutex_);
+      if (TimelineFunctionPending()) {
+        pts = pending_timeline_function_.subject_time();
+      } else {
+        pts = current_timeline_function_.subject_time();
+      }
+    }
+
+    prime_requested_callback_(pts, [this, callback]() {
       FLOG(log_channel_, CompletingPrime());
       callback();
     });

@@ -86,8 +86,8 @@ AudioRendererImpl::AudioRendererImpl(
   });
 
   timeline_control_point_.SetPrimeRequestedCallback(
-      [this](const TimelineControlPoint::PrimeCallback& callback) {
-        pipe_.PrimeRequested(callback);
+      [this](int64_t pts, const TimelineControlPoint::PrimeCallback& callback) {
+        pipe_.PrimeRequested(pts, callback);
       });
 }
 

@@ -290,7 +290,13 @@ void FfmpegDemuxImpl::Worker() {
     }
 
     if (seek_position != kNotSeeking) {
-      int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000, 0);
+      // AVSEEK_FLAG_BACKWARD tells the demux to search backward from the
+      // specified seek position to the first i-frame it finds. We'll start
+      // producing packets from there so the decoder has the context it needs.
+      // The renderers throw away the packets that occur between the i-frame
+      // and the seek position.
+      int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000,
+                            AVSEEK_FLAG_BACKWARD);
       if (r < 0) {
         FTL_LOG(WARNING) << "av_seek_frame failed, result " << r;
       }

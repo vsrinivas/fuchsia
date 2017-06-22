@@ -20,7 +20,8 @@ namespace media {
 class TimelineControlPoint : public MediaTimelineControlPoint,
                              public TimelineConsumer {
  public:
-  using PrimeRequestedCallback = std::function<void(const PrimeCallback&)>;
+  using PrimeRequestedCallback =
+      std::function<void(int64_t pts, const PrimeCallback&)>;
   using ProgressStartedCallback = std::function<void()>;
 
   TimelineControlPoint();
