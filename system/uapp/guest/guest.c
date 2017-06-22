@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path, cmdline,
                            &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
-        cmdline = "earlyprintk=serial,ttyS,115200";
+        cmdline = "earlyprintk=serial,ttyS,115200 pci=noearly";
         status = setup_linux(addr, kVmoSize, first_page, fd, cmdline, &guest_ip, &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
