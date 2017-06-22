@@ -1,12 +1,5 @@
 {
-    "labels": [
-        "//lib/mtl",
-        "//lib/mtl:mtl_unittests"
-    ],
-    "binaries": [
-        {
-            "binary": "mtl_unittests",
-            "bootfs_path": "test/mtl_unittests"
-        }
-    ]
+    "packages": {
+        "mtl": "//lib/mtl:package"
+    }
 }
