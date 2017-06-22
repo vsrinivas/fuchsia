@@ -376,6 +376,10 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep = &slot->eps[ep_index];
+    if (!slot->sc) {
+        // slot no longer enabled
+        return MX_ERR_IO_NOT_PRESENT;
+    }
 
     mtx_lock(&ep->lock);
     if (!ep->enabled) {
