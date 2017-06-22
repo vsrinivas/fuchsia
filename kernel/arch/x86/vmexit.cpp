@@ -38,6 +38,8 @@ static const uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
 static const uint16_t kLocalApicLvtTimer = 0x320;
 
+static const uint64_t kMiscEnableFastStrings = 1u << 0;
+
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptInfoValid = 1u << 31;
 static const uint64_t kInvalidErrorCode = UINT64_MAX;
@@ -325,6 +327,13 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
         guest_state->rax = kLocalApicPhysBase;
         guest_state->rdx = 0;
         return MX_OK;
+    // From Volume 3, Section 35.1, Table 35-2 (p. 35-11): For now, only
+    // enable fast strings.
+    case X86_MSR_IA32_MISC_ENABLE:
+        next_rip(exit_info);
+        guest_state->rax = read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings;
+        guest_state->rdx = 0;
+        return MX_OK;
     // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
     // type used for an access to a guest-physical address.
     case X86_MSR_IA32_MTRRCAP:
@@ -335,9 +344,6 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
     // From Volume 3, Section 35.1, Table 35-2 (p. 35-13): For now, 0.
     case X86_MSR_IA32_PLATFORM_ID:
-    // From Volume 3, Section 35.1, Table 35-2 (p. 35-11): For now, all
-    // misc features to 0.
-    case X86_MSR_IA32_MISC_ENABLE:
     // From Volume 3, Section 35.1, Table 35-2 (p. 35-5): 0 indicates no
     // microcode update is loaded.
     case X86_MSR_IA32_BIOS_SIGN_ID:
