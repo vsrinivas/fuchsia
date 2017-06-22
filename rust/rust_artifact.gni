@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/shared.gni")
+import("//third_party/rust-crates/libraries.gni")
+
 # Defines a Rust artifact
 #
 # Only for internal use, supporting rust_library and rust_binary.
@@ -125,17 +128,12 @@ template("rust_artifact") {
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
+    deps += rust_native_libs_targets
     if (is_fuchsia) {
       clang_wrapper_target = "//rust/magenta-rs/tools:clang_wrapper($host_toolchain)"
       deps += [
         clang_wrapper_target,
       ]
-    }
-
-    if (defined(invoker.native_libs)) {
-      native_libs = ["--native-libs"] + invoker.native_libs
-    } else {
-      native_libs = []
     }
 
     args = [
@@ -166,7 +164,18 @@ template("rust_artifact") {
       "--vendor-directory",
       rebase_path("//third_party/rust-crates/vendor"),
       "--deps",
-    ] + rust_deps + native_libs
+    ] + rust_deps
+
+    args += [ "--native-libs" ] + rust_native_libs_names
+    if (defined(shared_toolchain_out_dir)) {
+      shared_libs_root = "$root_build_dir/$shared_toolchain_out_dir"
+    } else {
+      shared_libs_root = root_out_dir
+    }
+    args += [
+      "--shared-libs-root",
+      rebase_path(shared_libs_root),
+    ]
 
     if (defined(invoker.with_tests) && invoker.with_tests) {
       args += [

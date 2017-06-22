@@ -34,8 +34,6 @@ template("rust_binary") {
     forward_variables_from(invoker, [
       "deps",
       "name",
-      "native_libs",
-      "non_rust_deps",
       "source_dir",
       "with_tests",
     ])

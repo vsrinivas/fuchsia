@@ -40,7 +40,8 @@ def get_target(label):
     return path, name
 
 # Writes a cargo config file.
-def write_cargo_config(path, vendor_directory, target_triple, root_out_dir, native_libs):
+def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
+                       native_libs):
     create_base_directory(path)
     config = {
         "source": {
@@ -59,9 +60,9 @@ def write_cargo_config(path, vendor_directory, target_triple, root_out_dir, nati
         config["target"][target_triple] = {}
         for lib in native_libs:
             config["target"][target_triple][lib] = {
-                            "rustc-link-search": [ root_out_dir ],
-                            "rustc-link-lib": [ lib ],
-                            "root": root_out_dir
+                "rustc-link-search": [ shared_libs_root ],
+                "rustc-link-lib": [ lib ],
+                "root": shared_libs_root,
             }
 
     with open(path, "w") as config_file:
@@ -133,8 +134,11 @@ def main():
                         help="List of dependencies",
                         nargs="*")
     parser.add_argument("--native-libs",
-                        help="List of native libraries to be overriden in .config",
+                        help="List of native libraries to link to",
                         nargs="*")
+    parser.add_argument("--shared-libs-root",
+                        help="Path to the location of shared libraries",
+                        required=True)
     parser.add_argument("--with-tests",
                         help="Whether to generate unit tests too",
                         action="store_true")
@@ -223,7 +227,7 @@ def main():
     # Write a config file to allow cargo to find the vendored crates.
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
     write_cargo_config(config_path, args.vendor_directory, args.target_triple,
-                       args.root_out_dir, args.native_libs)
+                       args.shared_libs_root, args.native_libs)
 
     if args.type == "lib":
         # Since the generated .rlib artifact won't actually be used (for now),
