@@ -50,8 +50,10 @@ void LedgerRepositoryImpl::GetLedger(
             environment_->main_runner(), environment_->GetIORunner(),
             environment_->coroutine_service(), base_storage_dir_,
             name_as_string);
-    std::unique_ptr<cloud_sync::LedgerSync> ledger_sync =
-        user_sync_->CreateLedgerSync(name_as_string);
+    std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
+    if (user_sync_) {
+      ledger_sync = user_sync_->CreateLedgerSync(name_as_string);
+    }
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(name_as_string)),

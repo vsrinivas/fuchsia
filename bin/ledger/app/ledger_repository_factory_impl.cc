@@ -32,12 +32,7 @@ cloud_sync::UserConfig GetUserConfig(const FirebaseConfigPtr& firebase_config,
                                      ftl::StringView user_id,
                                      ftl::StringView user_directory,
                                      cloud_sync::AuthProvider* auth_provider) {
-  if (!firebase_config) {
-    cloud_sync::UserConfig user_config;
-    user_config.use_sync = false;
-    return user_config;
-  }
-
+  FTL_DCHECK(firebase_config);
   cloud_sync::UserConfig user_config;
   user_config.use_sync = true;
   user_config.server_id = firebase_config->server_id.get();
@@ -69,9 +64,7 @@ bool SaveConfigForDebugging(ftl::StringView user_id,
 bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
                      ftl::StringView repository_path,
                      const std::string& temp_dir) {
-  if (!user_config.use_sync) {
-    return true;
-  }
+  FTL_DCHECK(user_config.use_sync);
 
   std::string server_id_path =
       ftl::Concatenate({repository_path, "/", kServerIdFilename});
@@ -210,6 +203,24 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     return;
   }
 
+  if (!firebase_config) {
+    FTL_LOG(WARNING) << "No sync configuration - Ledger will work locally but "
+                     << "not sync.";
+
+    auto ret = repositories_.emplace(std::piecewise_construct,
+                                     std::forward_as_tuple(sanitized_path),
+                                     std::forward_as_tuple(nullptr));
+    LedgerRepositoryContainer* container = &ret.first->second;
+    container->BindRepository(std::move(repository_request),
+                              std::move(callback));
+    std::unique_ptr<SyncWatcherSet> watchers =
+        std::make_unique<SyncWatcherSet>();
+    auto repository = std::make_unique<LedgerRepositoryImpl>(
+        repository_path, environment_, std::move(watchers), nullptr);
+    container->SetRepository(Status::OK, std::move(repository));
+    return;
+  }
+
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
   if (token_provider_ptr) {
@@ -222,8 +233,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     });
   }
   auto auth_provider = std::make_unique<AuthProviderImpl>(
-      environment_->main_runner(),
-      (firebase_config ? firebase_config->api_key : ""),
+      environment_->main_runner(), firebase_config->api_key,
       std::move(token_provider_ptr));
   cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
 
@@ -295,11 +305,6 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     std::string repository_path,
     cloud_sync::UserConfig user_config) {
-  if (!user_config.use_sync &&
-      config_persistence_ == ConfigPersistence::PERSIST) {
-    FTL_LOG(WARNING) << "No sync configuration set, "
-                     << "Ledger will work locally but won't sync";
-  }
   const std::string temp_dir = ftl::Concatenate({repository_path, "/tmp"});
   if (config_persistence_ == ConfigPersistence::PERSIST &&
       !CheckSyncConfig(user_config, repository_path, temp_dir)) {
