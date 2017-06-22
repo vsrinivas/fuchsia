@@ -321,6 +321,9 @@ BlockServer::~BlockServer() {
 
 void BlockServer::ShutDown() {
     mxtl::AutoLock server_lock(&server_lock_);
+    // Explicitly close the fifo so the server, when done dispatching
+    // requests, will stop reading and return.
+    fifo_.reset();
 }
 
 // C declarations
