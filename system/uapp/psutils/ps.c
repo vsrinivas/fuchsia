@@ -399,6 +399,8 @@ static void print_help(FILE* f) {
     fprintf(f, "Options:\n");
     // -T for compatibility with linux ps
     fprintf(f, " -T             Include threads in the output\n");
+    // TODO(dbort): Remove all JSON and kernel mem output from this tool;
+    // memgraph now handles it all. Also update treemap.py docs.
     fprintf(f, " --json         Print output in JSON\n");
     fprintf(f, " --json-schema  Print a schema for the JSON output format\n");
     fprintf(f, " --units=?      Fix all sizes to the named unit\n");
