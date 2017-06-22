@@ -184,6 +184,19 @@ func PrintAssociateResponse(resp *mlme.AssociateResponse) {
 
 func PrintDisassociateIndication(ind *mlme.DisassociateIndication) {
 	log.Print("DisassociateIndication")
+	log.Printf("  MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+		ind.PeerStaAddress[0], ind.PeerStaAddress[1], ind.PeerStaAddress[2],
+		ind.PeerStaAddress[3], ind.PeerStaAddress[4], ind.PeerStaAddress[5])
 	// TODO(tkilbourn): map reason codes to strings
 	log.Print("  Reason code: ", ind.ReasonCode)
+}
+
+func PrintDeauthenticateIndication(ind *mlme.DeauthenticateIndication) {
+	log.Print("DeauthenticateIndication")
+	log.Printf("  MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+		ind.PeerStaAddress[0], ind.PeerStaAddress[1], ind.PeerStaAddress[2],
+		ind.PeerStaAddress[3], ind.PeerStaAddress[4], ind.PeerStaAddress[5])
+	// TODO(tkilbourn): map reason codes to strings
+	log.Print("  Reason code: ", ind.ReasonCode)
+
 }

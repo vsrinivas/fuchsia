@@ -417,16 +417,25 @@ func (c *Client) doRun() error {
 			}
 			switch header.ordinal {
 			case int32(mlme.Method_DisassociateIndication):
-				var resp mlme.DisassociateIndication
-				if err := resp.Decode(dec); err != nil {
-					c.state = StateAssociating
+				c.state = StateAssociating
+				var ind mlme.DisassociateIndication
+				if err := ind.Decode(dec); err != nil {
 					// TODO(tkilbourn): wait the appropriate amount of time before attempting to reassociate
 					return fmt.Errorf("could not decode DisassociateIndication: %v (disassociating anyway)", err)
 				}
 				if debug {
-					PrintDisassociateIndication(&resp)
+					PrintDisassociateIndication(&ind)
 				}
-				c.state = StateAssociating
+			case int32(mlme.Method_DeauthenticateIndication):
+				c.state = StateAuthenticating
+				var ind mlme.DeauthenticateIndication
+				if err := ind.Decode(dec); err != nil {
+					// TODO(tkilbourn): wait the appropriate amount of time before attempting to reauthenticate
+					return fmt.Errorf("could not decode DeauthenticateIndication: %v (deauthenticating anyway)", err)
+				}
+				if debug {
+					PrintDeauthenticateIndication(&ind)
+				}
 			default:
 				if debug {
 					log.Printf("unknown message ordinal: %v", header.ordinal)
