@@ -20,7 +20,7 @@ typedef enum {
     MX_INFO_PROCESS_THREADS            = 4,  // mx_koid_t[n]
     MX_INFO_RESOURCE_CHILDREN          = 5,  // mx_rrec_t[n]
     MX_INFO_RESOURCE_RECORDS           = 6,  // mx_rrec_t[n]
-    MX_INFO_VMAR                       = 7,  // mx_info_vmar_t
+    MX_INFO_VMAR                       = 7,  // mx_info_vmar_t[1]
     MX_INFO_JOB_CHILDREN               = 8,  // mx_koid_t[n]
     MX_INFO_JOB_PROCESSES              = 9,  // mx_koid_t[n]
     MX_INFO_THREAD                     = 10, // mx_info_thread_t[1]

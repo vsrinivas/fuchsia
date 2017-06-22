@@ -32,6 +32,8 @@ available to read.
 
 If the buffer is insufficiently large, *avail* will be larger than *actual*.
 
+[TOC]
+
 ## TOPICS
 
 ### MX_INFO_HANDLE_VALID
@@ -103,8 +105,8 @@ typedef struct mx_info_process {
 
 *buffer* type: **mx_koid_t[n]**
 
-Returns an array of *mx_koid_t*, one for each thread in the Process at that
-moment in time.
+Returns an array of *mx_koid_t*, one for each running thread in the Process at
+that moment in time.
 
 ### MX_INFO_RESOURCE_CHILDREN
 

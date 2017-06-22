@@ -11,7 +11,7 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/object-info.c
+    $(LOCAL_DIR)/object-info.cpp
 
 MODULE_NAME := object-info-test
 

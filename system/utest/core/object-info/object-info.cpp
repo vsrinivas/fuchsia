@@ -5,6 +5,7 @@
 #include <magenta/process.h>
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
 #include <mini-process/mini-process.h>
 #include <unittest/unittest.h>
@@ -22,12 +23,43 @@
         }                                                   \
     } while (0)
 
+namespace {
+
+// A function that returns a handle to get the info of.
+// Typically get_test_process, get_test_job, mx_process_self, mx_job_default.
+typedef mx_handle_t (*handle_source_fn)();
+
+bool handle_valid_on_valid_handle_succeeds() {
+    BEGIN_TEST;
+    EXPECT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_VALID,
+                                 nullptr, 0, nullptr, nullptr),
+              MX_OK, "");
+    END_TEST;
+}
+
+bool handle_valid_on_closed_handle_fails() {
+    BEGIN_TEST;
+    // Create an event and show that it's valid.
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    EXPECT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
+                                 nullptr, 0, nullptr, nullptr),
+              MX_OK, "");
+
+    // Close the handle and show that it becomes invalid.
+    mx_handle_close(event);
+    EXPECT_NEQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
+                                  nullptr, 0, nullptr, nullptr),
+               MX_OK, "");
+    END_TEST;
+}
+
 // Tests that MX_INFO_TASK_STATS seems to work.
-bool info_task_stats_smoke(void) {
+bool task_stats_smoke() {
     BEGIN_TEST;
     mx_info_task_stats_t info;
     ASSERT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_TASK_STATS,
-                                 &info, sizeof(info), NULL, NULL),
+                                 &info, sizeof(info), nullptr, nullptr),
               MX_OK, "");
     ASSERT_GT(info.mem_private_bytes, 0u, "");
     ASSERT_GT(info.mem_shared_bytes, 0u, "");
@@ -66,7 +98,7 @@ typedef struct test_mapping_info {
 mx_status_t get_koid(mx_handle_t handle, mx_koid_t* koid) {
     mx_info_handle_basic_t info;
     mx_status_t s = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC,
-                                       &info, sizeof(info), NULL, NULL);
+                                       &info, sizeof(info), nullptr, nullptr);
     if (s == MX_OK) {
         *koid = info.koid;
     }
@@ -79,10 +111,10 @@ mx_status_t get_koid(mx_handle_t handle, mx_koid_t* koid) {
 // naturally.
 mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
     static mx_handle_t test_process = MX_HANDLE_INVALID;
-    static test_mapping_info_t* test_info = NULL;
+    static test_mapping_info_t* test_info = nullptr;
 
-    if (info != NULL) {
-        *info = NULL;
+    if (info != nullptr) {
+        *info = nullptr;
     }
     if (test_process == MX_HANDLE_INVALID) {
         // Create a VMO whose handle we'll give to the test process.
@@ -154,7 +186,8 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         // Leaked on failure. Never freed on success.
         test_mapping_info_t* ti = (test_mapping_info_t*)malloc(sizeof(*ti));
         ti->num_mappings = kNumMappings;
-        ti->mappings = (test_mapping_t*)malloc(kNumMappings * sizeof(test_mapping_t));
+        ti->mappings =
+            (test_mapping_t*)malloc(kNumMappings * sizeof(test_mapping_t));
 
         // Big enough to fit all of the mappings with some slop.
         ti->vmar_size = PAGE_SIZE * kNumMappings * 16;
@@ -231,22 +264,22 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         test_process = process;
         test_info = ti;
     }
-    if (info != NULL) {
+    if (info != nullptr) {
         *info = test_info;
     }
     return test_process;
 }
 
-mx_handle_t get_test_process(void) {
-    return get_test_process_etc(NULL);
+mx_handle_t get_test_process() {
+    return get_test_process_etc(nullptr);
 }
 
 // Tests that MX_INFO_PROCESS_MAPS seems to work.
-bool info_process_maps_smoke(void) {
+bool process_maps_smoke() {
     BEGIN_TEST;
     const test_mapping_info_t* test_info;
     const mx_handle_t process = get_test_process_etc(&test_info);
-    ASSERT_NEQ(test_info, NULL, "get_test_process_etc");
+    ASSERT_NONNULL(test_info, "get_test_process_etc");
 
     // Buffer big enough to read all of the test process's map entries.
     const size_t bufsize = test_info->num_mappings * 4 * sizeof(mx_info_maps_t);
@@ -373,80 +406,109 @@ bool info_process_maps_smoke(void) {
     END_TEST;
 }
 
-bool info_process_maps_self_fails(void) {
+template <uint32_t Topic, typename EntryType>
+bool self_fails() {
     BEGIN_TEST;
-    mx_info_maps_t maps[2];
+    EntryType entries[2];
     size_t actual;
     size_t avail;
-    // It's illegal to look at your own maps, because the output buffer
+    // It's illegal to look at your own entries, because the output buffer
     // lives inside the address space that's being examined.
-    EXPECT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps), &actual, &avail),
+    EXPECT_EQ(mx_object_get_info(mx_process_self(), Topic,
+                                 entries, sizeof(entries), &actual, &avail),
               MX_ERR_ACCESS_DENIED, "");
     END_TEST;
 }
 
-bool info_process_maps_invalid_handle_fails(void) {
+template <uint32_t Topic, typename EntryType>
+bool invalid_handle_fails() {
     BEGIN_TEST;
-    mx_info_maps_t maps[2];
+    EntryType entries[2];
     size_t actual;
     size_t avail;
     // Passing MX_HANDLE_INVALID should fail.
-    EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps), &actual, &avail),
+    EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, Topic,
+                                 entries, sizeof(entries), &actual, &avail),
               MX_ERR_BAD_HANDLE, "");
     END_TEST;
 }
 
-bool info_process_maps_non_process_handle_fails(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetWrongHandle>
+bool wrong_handle_type_fails() {
     BEGIN_TEST;
-    mx_info_maps_t maps[2];
+    EntryType entries[2];
     size_t actual;
     size_t avail;
-    // Passing a job handle should fail.
-    EXPECT_EQ(mx_object_get_info(mx_job_default(), MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps), &actual, &avail),
-              MX_ERR_WRONG_TYPE, "");
+    // Passing a handle to an unsupported object type should fail.
+    EXPECT_NEQ(mx_object_get_info(GetWrongHandle(), Topic,
+                                  entries, sizeof(entries), &actual, &avail),
+               MX_OK, "");
     END_TEST;
 }
 
-bool info_process_maps_missing_rights_fails(void) {
+template <uint32_t Topic, typename EntryType,
+          handle_source_fn GetHandle, mx_rights_t MissingRights>
+bool missing_rights_fails() {
     BEGIN_TEST;
-    // Get the test process handle rights.
-    mx_handle_t process = get_test_process();
+    // Call should succeed with the default rights.
+    mx_handle_t obj = GetHandle();
+    EntryType entries[2];
+    size_t actual;
+    size_t avail;
+    EXPECT_EQ(mx_object_get_info(obj, Topic,
+                                 entries, sizeof(entries), &actual, &avail),
+              MX_OK, "");
+
+    // Get the test object handle rights.
     mx_info_handle_basic_t hi;
-    ASSERT_EQ(mx_object_get_info(process, MX_INFO_HANDLE_BASIC,
-                                 &hi, sizeof(hi), NULL, NULL),
+    ASSERT_EQ(mx_object_get_info(obj, MX_INFO_HANDLE_BASIC,
+                                 &hi, sizeof(hi), nullptr, nullptr),
               MX_OK, "");
     char msg[32];
     snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
-    EXPECT_EQ(hi.rights & MX_RIGHT_READ, MX_RIGHT_READ, msg);
+    EXPECT_EQ(hi.rights & MissingRights, MissingRights, msg);
 
-    // Create a handle without MX_RIGHT_READ.
+    // Create a handle without the important rights.
     mx_handle_t handle;
-    ASSERT_EQ(mx_handle_duplicate(get_test_process(),
-                                  hi.rights & ~MX_RIGHT_READ, &handle),
+    ASSERT_EQ(mx_handle_duplicate(obj, hi.rights & ~MissingRights, &handle),
               MX_OK, "");
 
-    // Read should fail.
-    mx_info_maps_t maps[2];
-    size_t actual;
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(handle, MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps), &actual, &avail),
+    // Call should fail without these rights.
+    EXPECT_EQ(mx_object_get_info(handle, Topic,
+                                 entries, sizeof(entries), &actual, &avail),
               MX_ERR_ACCESS_DENIED, "");
 
     mx_handle_close(handle);
     END_TEST;
 }
 
-bool info_process_maps_zero_buffer_succeeds(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool single_zero_buffer_fails() {
+    BEGIN_TEST;
+    EntryType entry;
+    size_t actual;
+    size_t avail;
+    // Passing a zero-sized buffer to a topic that expects a single
+    // in/out entry should fail.
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 &entry, // buffer
+                                 0, // len
+                                 &actual, &avail),
+              MX_ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(0u, actual, "");
+    EXPECT_GT(avail, 0u, "");
+    END_TEST;
+}
+
+template <uint32_t Topic, handle_source_fn GetHandle>
+bool multi_zero_buffer_succeeds() {
     BEGIN_TEST;
     size_t actual;
     size_t avail;
-    // Passing a zero-sized null buffer should succeed.
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
-                                 NULL, // buffer
+    // Passing a zero-sized null buffer to a topic that can handle multiple
+    // in/out entries should succeed.
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 nullptr, // buffer
                                  0, // len
                                  &actual, &avail),
               MX_OK, "");
@@ -455,25 +517,44 @@ bool info_process_maps_zero_buffer_succeeds(void) {
     END_TEST;
 }
 
-bool info_process_maps_null_avail_actual_succeeds(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool short_buffer_succeeds() {
     BEGIN_TEST;
-    mx_info_maps_t maps[2];
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps),
-                                 NULL, // actual
-                                 NULL), // avail
+    EntryType entries[1];
+    size_t actual;
+    size_t avail;
+    // Passing a buffer shorter than avail should succeed.
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 entries,
+                                 sizeof(entries),
+                                 &actual, &avail),
+              MX_OK, "");
+    EXPECT_EQ(1u, actual, "");
+    EXPECT_GT(avail, actual, "");
+    END_TEST;
+}
+
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool null_avail_actual_succeeds() {
+    BEGIN_TEST;
+    EntryType entries[2];
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 entries, sizeof(entries),
+                                 nullptr, // actual
+                                 nullptr), // avail
               MX_OK, "");
     END_TEST;
 }
 
-bool info_process_maps_bad_buffer_fails(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool bad_buffer_fails() {
     BEGIN_TEST;
     size_t actual;
     size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
                                  // Bad buffer pointer value.
-                                 (mx_info_maps_t*)1,
-                                 sizeof(mx_info_maps_t),
+                                 (EntryType*)1,
+                                 sizeof(EntryType),
                                  &actual, &avail),
               MX_ERR_INVALID_ARGS, "");
     END_TEST;
@@ -481,7 +562,8 @@ bool info_process_maps_bad_buffer_fails(void) {
 
 // Tests the behavior when passing a buffer that starts in mapped
 // memory but crosses into unmapped memory.
-bool info_process_maps_partially_unmapped_buffer_fails(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool partially_unmapped_buffer_fails() {
     BEGIN_TEST;
     // Create a two-page VMAR.
     mx_handle_t vmar;
@@ -508,13 +590,15 @@ bool info_process_maps_partially_unmapped_buffer_fails(void) {
               MX_OK, "");
     ASSERT_EQ(vmar_addr, vmo_addr, "");
 
-    // Point to a spot in the mapped page just before the unmapped region.
-    mx_info_maps_t* maps = (mx_info_maps_t*)(vmo_addr + PAGE_SIZE) - 2;
+    // Point to a spot in the mapped page just before the unmapped region:
+    // the first entry will hit mapped memory, the second entry will hit
+    // unmapped memory.
+    EntryType* entries = (EntryType*)(vmo_addr + PAGE_SIZE) - 1;
 
     size_t actual;
     size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(mx_info_maps_t) * 4,
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 entries, sizeof(EntryType) * 4,
                                  &actual, &avail),
               // Bad user buffer should return MX_ERR_INVALID_ARGS.
               MX_ERR_INVALID_ARGS, "");
@@ -525,12 +609,13 @@ bool info_process_maps_partially_unmapped_buffer_fails(void) {
     END_TEST;
 }
 
-bool info_process_maps_bad_actual_fails(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool bad_actual_fails() {
     BEGIN_TEST;
-    mx_info_maps_t maps[2];
+    EntryType entries[2];
     size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps),
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 entries, sizeof(entries),
                                  // Bad actual pointer value.
                                  (size_t*)1,
                                  &avail),
@@ -538,26 +623,25 @@ bool info_process_maps_bad_actual_fails(void) {
     END_TEST;
 }
 
-bool info_process_maps_bad_avail_fails(void) {
+template <uint32_t Topic, typename EntryType, handle_source_fn GetHandle>
+bool bad_avail_fails() {
     BEGIN_TEST;
-    mx_info_maps_t maps[2];
+    EntryType entries[2];
     size_t actual;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
-                                 maps, sizeof(maps), &actual,
+    EXPECT_EQ(mx_object_get_info(GetHandle(), Topic,
+                                 entries, sizeof(entries), &actual,
                                  // Bad available pointer value.
                                  (size_t*)1),
               MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
-// MX_INFO_PROCESS_VMOS tests
-
 // Tests that MX_INFO_PROCESS_VMOS seems to work.
-bool info_process_vmos_smoke(void) {
+bool process_vmos_smoke() {
     BEGIN_TEST;
     const test_mapping_info_t* test_info;
     const mx_handle_t process = get_test_process_etc(&test_info);
-    ASSERT_NEQ(test_info, NULL, "get_test_process_etc");
+    ASSERT_NONNULL(test_info, "get_test_process_etc");
 
     // Buffer big enough to read all of the test process's VMO entries.
     // There'll be one per mapping, one for the unmapped VMO, plus some
@@ -673,183 +757,6 @@ bool info_process_vmos_smoke(void) {
     END_TEST;
 }
 
-bool info_process_vmos_self_fails(void) {
-    BEGIN_TEST;
-    mx_info_vmo_t vmos[2];
-    size_t actual;
-    size_t avail;
-    // It's illegal to look at your own VMOs, because the output buffer
-    // lives inside the address space that's being examined.
-    EXPECT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos), &actual, &avail),
-              MX_ERR_ACCESS_DENIED, "");
-    END_TEST;
-}
-
-bool info_process_vmos_invalid_handle_fails(void) {
-    BEGIN_TEST;
-    mx_info_vmo_t vmos[2];
-    size_t actual;
-    size_t avail;
-    // Passing MX_HANDLE_INVALID should fail.
-    EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos), &actual, &avail),
-              MX_ERR_BAD_HANDLE, "");
-    END_TEST;
-}
-
-bool info_process_vmos_non_process_handle_fails(void) {
-    BEGIN_TEST;
-    mx_info_vmo_t vmos[2];
-    size_t actual;
-    size_t avail;
-    // Passing a job handle should fail.
-    EXPECT_EQ(mx_object_get_info(mx_job_default(), MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos), &actual, &avail),
-              MX_ERR_WRONG_TYPE, "");
-    END_TEST;
-}
-
-bool info_process_vmos_missing_rights_fails(void) {
-    BEGIN_TEST;
-    // Get the test process handle rights.
-    mx_handle_t process = get_test_process();
-    mx_info_handle_basic_t hi;
-    ASSERT_EQ(mx_object_get_info(process, MX_INFO_HANDLE_BASIC,
-                                 &hi, sizeof(hi), NULL, NULL),
-              MX_OK, "");
-    char msg[32];
-    snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
-    EXPECT_EQ(hi.rights & MX_RIGHT_READ, MX_RIGHT_READ, msg);
-
-    // Create a handle without MX_RIGHT_READ.
-    mx_handle_t handle;
-    ASSERT_EQ(mx_handle_duplicate(get_test_process(),
-                                  hi.rights & ~MX_RIGHT_READ, &handle),
-              MX_OK, "");
-
-    // Read should fail.
-    mx_info_vmo_t vmos[2];
-    size_t actual;
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(handle, MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos), &actual, &avail),
-              MX_ERR_ACCESS_DENIED, "");
-
-    mx_handle_close(handle);
-    END_TEST;
-}
-
-bool info_process_vmos_zero_buffer_succeeds(void) {
-    BEGIN_TEST;
-    size_t actual;
-    size_t avail;
-    // Passing a zero-sized null buffer should succeed.
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_VMOS,
-                                 NULL, // buffer
-                                 0, // len
-                                 &actual, &avail),
-              MX_OK, "");
-    EXPECT_EQ(0u, actual, "");
-    EXPECT_GT(avail, 0u, "");
-    END_TEST;
-}
-
-bool info_process_vmos_null_avail_actual_succeeds(void) {
-    BEGIN_TEST;
-    mx_info_vmo_t vmos[2];
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos),
-                                 NULL, // actual
-                                 NULL), // avail
-              MX_OK, "");
-    END_TEST;
-}
-
-bool info_process_vmos_bad_buffer_fails(void) {
-    BEGIN_TEST;
-    size_t actual;
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_VMOS,
-                                 // Bad buffer pointer value.
-                                 (mx_info_vmo_t*)1,
-                                 sizeof(mx_info_vmo_t),
-                                 &actual, &avail),
-              MX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
-// Tests the behavior when passing a buffer that starts in mapped
-// memory but crosses into unmapped memory.
-bool info_process_vmos_partially_unmapped_buffer_fails(void) {
-    BEGIN_TEST;
-    // Create a two-page VMAR.
-    mx_handle_t vmar;
-    uintptr_t vmar_addr;
-    ASSERT_EQ(mx_vmar_allocate(mx_vmar_root_self(),
-                               0, 2 * PAGE_SIZE,
-                               MX_VM_FLAG_CAN_MAP_READ |
-                                   MX_VM_FLAG_CAN_MAP_WRITE |
-                                   MX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &vmar, &vmar_addr),
-              MX_OK, "");
-
-    // Create a one-page VMO.
-    mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), MX_OK, "");
-
-    // Map the first page of the VMAR.
-    uintptr_t vmo_addr;
-    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, PAGE_SIZE,
-                          MX_VM_FLAG_SPECIFIC |
-                              MX_VM_FLAG_PERM_READ |
-                              MX_VM_FLAG_PERM_WRITE,
-                          &vmo_addr),
-              MX_OK, "");
-    ASSERT_EQ(vmar_addr, vmo_addr, "");
-
-    // Point to a spot in the mapped page just before the unmapped region.
-    mx_info_vmo_t* vmos = (mx_info_vmo_t*)(vmo_addr + PAGE_SIZE) - 2;
-
-    size_t actual;
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(mx_info_vmo_t) * 4,
-                                 &actual, &avail),
-              // Bad user buffer should return MX_ERR_INVALID_ARGS.
-              MX_ERR_INVALID_ARGS, "");
-
-    mx_vmar_destroy(vmar);
-    mx_handle_close(vmar);
-    mx_handle_close(vmo);
-    END_TEST;
-}
-
-bool info_process_vmos_bad_actual_fails(void) {
-    BEGIN_TEST;
-    mx_info_vmo_t vmos[2];
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos),
-                                 // Bad actual pointer value.
-                                 (size_t*)1,
-                                 &avail),
-              MX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
-bool info_process_vmos_bad_avail_fails(void) {
-    BEGIN_TEST;
-    mx_info_vmo_t vmos[2];
-    size_t actual;
-    EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_VMOS,
-                                 vmos, sizeof(vmos), &actual,
-                                 // Bad available pointer value.
-                                 (size_t*)1),
-              MX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
 // MX_INFO_JOB_PROCESS/MX_INFO_JOB_CHILDREN tests
 
 // Returns a job with the structure:
@@ -863,9 +770,9 @@ bool info_process_vmos_bad_avail_fails(void) {
 //   - child job 2 (kTestJobChildJobs)
 //     - grandchild process 2.1
 //     - grandchild job 2.1
-static const size_t kTestJobChildProcs = 3;
-static const size_t kTestJobChildJobs = 2;
-static mx_handle_t get_test_job(void) {
+const size_t kTestJobChildProcs = 3;
+const size_t kTestJobChildJobs = 2;
+mx_handle_t get_test_job() {
     static mx_handle_t test_job = MX_HANDLE_INVALID;
 
     if (test_job == MX_HANDLE_INVALID) {
@@ -946,273 +853,128 @@ bool jobch_helper_smoke(uint32_t topic, size_t expected_count) {
     END_TEST;
 }
 
-bool info_job_processes_smoke(void) {
+bool job_processes_smoke() {
     return jobch_helper_smoke(MX_INFO_JOB_PROCESSES, kTestJobChildProcs);
 }
 
-bool info_job_children_smoke(void) {
+bool job_children_smoke() {
     return jobch_helper_smoke(MX_INFO_JOB_CHILDREN, kTestJobChildJobs);
 }
 
-bool jobch_helper_invalid_handle_fails(uint32_t topic) {
-    BEGIN_TEST;
-    mx_koid_t koids[2];
-    size_t actual;
-    size_t avail;
-    // Passing MX_HANDLE_INVALID should fail.
-    EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, topic,
-                                 koids, sizeof(koids), &actual, &avail),
-              MX_ERR_BAD_HANDLE, "");
-    END_TEST;
-}
+} // namespace
 
-bool info_job_processes_invalid_handle_fails(void) {
-    return jobch_helper_invalid_handle_fails(MX_INFO_JOB_PROCESSES);
-}
+// Tests that should pass for any topic. Use the wrappers below instead of
+// calling this directly.
+#define _RUN_COMMON_TESTS(topic, entry_type, get_handle)                   \
+    RUN_TEST((invalid_handle_fails<topic, entry_type>));                   \
+    RUN_TEST((null_avail_actual_succeeds<topic, entry_type, get_handle>)); \
+    RUN_TEST((bad_buffer_fails<topic, entry_type, get_handle>));           \
+    RUN_TEST((bad_actual_fails<topic, entry_type, get_handle>));           \
+    RUN_TEST((bad_avail_fails<topic, entry_type, get_handle>))
 
-bool info_job_children_invalid_handle_fails(void) {
-    return jobch_helper_invalid_handle_fails(MX_INFO_JOB_CHILDREN);
-}
+// Tests that should pass for any topic that expects a single entry in its
+// in/out buffer.
+#define RUN_SINGLE_ENTRY_TESTS(topic, entry_type, get_handle) \
+    _RUN_COMMON_TESTS(topic, entry_type, get_handle);         \
+    RUN_TEST((single_zero_buffer_fails<topic, entry_type, get_handle>))
 
-bool jobch_helper_non_job_handle_fails(uint32_t topic) {
-    BEGIN_TEST;
-    mx_koid_t koids[2];
-    size_t actual;
-    size_t avail;
-    // Passing a process handle should fail.
-    EXPECT_EQ(mx_object_get_info(mx_process_self(), topic, koids, sizeof(koids),
-                                 &actual, &avail),
-              MX_ERR_WRONG_TYPE, "");
-    END_TEST;
-}
-
-bool info_job_processes_non_job_handle_fails(void) {
-    return jobch_helper_non_job_handle_fails(MX_INFO_JOB_PROCESSES);
-}
-
-bool info_job_children_non_job_handle_fails(void) {
-    return jobch_helper_non_job_handle_fails(MX_INFO_JOB_CHILDREN);
-}
-
-bool jobch_helper_missing_rights_fails(uint32_t topic) {
-    BEGIN_TEST;
-    // Get our parent job's rights.
-    mx_info_handle_basic_t hi;
-    ASSERT_EQ(mx_object_get_info(get_test_job(), MX_INFO_HANDLE_BASIC,
-                                 &hi, sizeof(hi), NULL, NULL),
-              MX_OK, "");
-    char msg[32];
-    snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
-    EXPECT_EQ(hi.rights & MX_RIGHT_ENUMERATE, MX_RIGHT_ENUMERATE, msg);
-
-    // Create a handle without MX_RIGHT_ENUMERATE.
-    mx_handle_t handle;
-    ASSERT_EQ(mx_handle_duplicate(get_test_job(),
-                                  hi.rights & ~MX_RIGHT_ENUMERATE, &handle),
-              MX_OK, "");
-
-    // Call should fail.
-    mx_koid_t koids[2];
-    size_t actual;
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(handle, topic, koids, sizeof(koids),
-                                 &actual, &avail),
-              MX_ERR_ACCESS_DENIED, "");
-
-    mx_handle_close(handle);
-    END_TEST;
-}
-
-bool info_job_processes_missing_rights_fails(void) {
-    return jobch_helper_missing_rights_fails(MX_INFO_JOB_PROCESSES);
-}
-
-bool info_job_children_missing_rights_fails(void) {
-    return jobch_helper_missing_rights_fails(MX_INFO_JOB_CHILDREN);
-}
-
-bool jobch_helper_zero_buffer_succeeds(uint32_t topic, size_t expected_count) {
-    BEGIN_TEST;
-    size_t actual;
-    size_t avail;
-    // Passing a zero-sized null buffer should succeed.
-    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
-                                 NULL, // buffer
-                                 0, // len
-                                 &actual, &avail),
-              MX_OK, "");
-    EXPECT_EQ(0u, actual, "");
-    EXPECT_EQ(expected_count, avail, "");
-    END_TEST;
-}
-
-bool info_job_processes_zero_buffer_succeeds(void) {
-    return jobch_helper_zero_buffer_succeeds(
-        MX_INFO_JOB_PROCESSES, kTestJobChildProcs);
-}
-
-bool info_job_children_zero_buffer_succeeds(void) {
-    return jobch_helper_zero_buffer_succeeds(
-        MX_INFO_JOB_CHILDREN, kTestJobChildJobs);
-}
-
-bool jobch_helper_short_buffer_succeeds(uint32_t topic,
-                                        size_t expected_count) {
-    BEGIN_TEST;
-    mx_koid_t koids[1];
-    size_t actual;
-    size_t avail;
-    // Passing a buffer shorter than avail should succeed.
-    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
-                                 koids,
-                                 sizeof(koids),
-                                 &actual, &avail),
-              MX_OK, "");
-    EXPECT_EQ(1u, actual, "");
-    EXPECT_EQ(expected_count, avail, "");
-    END_TEST;
-}
-
-bool info_job_processes_short_buffer_succeeds(void) {
-    return jobch_helper_short_buffer_succeeds(
-        MX_INFO_JOB_PROCESSES, kTestJobChildProcs);
-}
-
-bool info_job_children_short_buffer_succeeds(void) {
-    return jobch_helper_short_buffer_succeeds(
-        MX_INFO_JOB_CHILDREN, kTestJobChildJobs);
-}
-
-bool jobch_helper_null_avail_actual_succeeds(uint32_t topic) {
-    BEGIN_TEST;
-    mx_koid_t koids[2];
-    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
-                                 koids, sizeof(koids),
-                                 NULL, // actual
-                                 NULL), // avail
-              MX_OK, "");
-    END_TEST;
-}
-
-bool info_job_processes_null_avail_actual_succeeds(void) {
-    return jobch_helper_null_avail_actual_succeeds(MX_INFO_JOB_PROCESSES);
-}
-
-bool info_job_children_null_avail_actual_succeeds(void) {
-    return jobch_helper_null_avail_actual_succeeds(MX_INFO_JOB_CHILDREN);
-}
-
-bool jobch_helper_bad_buffer_fails(uint32_t topic) {
-    BEGIN_TEST;
-    size_t actual;
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
-                                 // Bad buffer pointer value.
-                                 (mx_koid_t*)1,
-                                 sizeof(mx_koid_t),
-                                 &actual, &avail),
-              MX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
-bool info_job_processes_bad_buffer_fails(void) {
-    return jobch_helper_bad_buffer_fails(MX_INFO_JOB_PROCESSES);
-}
-
-bool info_job_children_bad_buffer_fails(void) {
-    return jobch_helper_bad_buffer_fails(MX_INFO_JOB_CHILDREN);
-}
-
-bool jobch_helper_bad_actual_fails(uint32_t topic) {
-    BEGIN_TEST;
-    mx_koid_t koids[2];
-    size_t avail;
-    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
-                                 koids, sizeof(koids),
-                                 // Bad actual pointer value.
-                                 (size_t*)1,
-                                 &avail),
-              MX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
-bool info_job_processes_bad_actual_fails(void) {
-    return jobch_helper_bad_actual_fails(MX_INFO_JOB_PROCESSES);
-}
-
-bool info_job_children_bad_actual_fails(void) {
-    return jobch_helper_bad_actual_fails(MX_INFO_JOB_CHILDREN);
-}
-
-bool jobch_helper_bad_avail_fails(uint32_t topic) {
-    BEGIN_TEST;
-    mx_koid_t koids[2];
-    size_t actual;
-    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
-                                 koids, sizeof(koids), &actual,
-                                 // Bad available pointer value.
-                                 (size_t*)1),
-              MX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
-bool info_job_processes_bad_avail_fails(void) {
-    return jobch_helper_bad_avail_fails(MX_INFO_JOB_PROCESSES);
-}
-
-bool info_job_children_bad_avail_fails(void) {
-    return jobch_helper_bad_avail_fails(MX_INFO_JOB_CHILDREN);
-}
-
-// TODO(dbort): A lot of these tests would be good to run on any
-// MX_INFO_* arg.
+// Tests that should pass for any topic that can handle multiple entries in its
+// in/out buffer.
+#define RUN_MULTI_ENTRY_TESTS(topic, entry_type, get_handle)          \
+    _RUN_COMMON_TESTS(topic, entry_type, get_handle);                 \
+    RUN_TEST((multi_zero_buffer_succeeds<topic, get_handle>));        \
+    RUN_TEST((short_buffer_succeeds<topic, entry_type, get_handle>)); \
+    RUN_TEST((partially_unmapped_buffer_fails<topic, entry_type, get_handle>))
 
 BEGIN_TEST_CASE(object_info_tests)
-RUN_TEST(info_task_stats_smoke);
-RUN_TEST(info_process_maps_smoke);
-RUN_TEST(info_process_maps_self_fails);
-RUN_TEST(info_process_maps_invalid_handle_fails);
-RUN_TEST(info_process_maps_non_process_handle_fails);
-RUN_TEST(info_process_maps_missing_rights_fails);
-RUN_TEST(info_process_maps_zero_buffer_succeeds);
-RUN_TEST(info_process_maps_null_avail_actual_succeeds);
-RUN_TEST(info_process_maps_bad_buffer_fails);
-RUN_TEST(info_process_maps_partially_unmapped_buffer_fails);
-RUN_TEST(info_process_maps_bad_actual_fails);
-RUN_TEST(info_process_maps_bad_avail_fails);
-RUN_TEST(info_process_vmos_smoke);
-RUN_TEST(info_process_vmos_self_fails);
-RUN_TEST(info_process_vmos_invalid_handle_fails);
-RUN_TEST(info_process_vmos_non_process_handle_fails);
-RUN_TEST(info_process_vmos_missing_rights_fails);
-RUN_TEST(info_process_vmos_zero_buffer_succeeds);
-RUN_TEST(info_process_vmos_null_avail_actual_succeeds);
-RUN_TEST(info_process_vmos_bad_buffer_fails);
-RUN_TEST(info_process_vmos_partially_unmapped_buffer_fails);
-RUN_TEST(info_process_vmos_bad_actual_fails);
-RUN_TEST(info_process_vmos_bad_avail_fails);
-RUN_TEST(info_job_processes_smoke);
-RUN_TEST(info_job_processes_invalid_handle_fails);
-RUN_TEST(info_job_processes_non_job_handle_fails);
-RUN_TEST(info_job_processes_missing_rights_fails);
-RUN_TEST(info_job_processes_zero_buffer_succeeds);
-RUN_TEST(info_job_processes_short_buffer_succeeds);
-RUN_TEST(info_job_processes_null_avail_actual_succeeds);
-RUN_TEST(info_job_processes_bad_buffer_fails);
-RUN_TEST(info_job_processes_bad_actual_fails);
-RUN_TEST(info_job_processes_bad_avail_fails);
-RUN_TEST(info_job_children_smoke);
-// TODO(dbort): A lot of these tests are almost identical. Port this file to C++
-// and use templates/lambdas to reduce the amount of duplicated code.
-RUN_TEST(info_job_children_invalid_handle_fails);
-RUN_TEST(info_job_children_non_job_handle_fails);
-RUN_TEST(info_job_children_missing_rights_fails);
-RUN_TEST(info_job_children_zero_buffer_succeeds);
-RUN_TEST(info_job_children_short_buffer_succeeds);
-RUN_TEST(info_job_children_null_avail_actual_succeeds);
-RUN_TEST(info_job_children_bad_buffer_fails);
-RUN_TEST(info_job_children_bad_actual_fails);
-RUN_TEST(info_job_children_bad_avail_fails);
+
+// MX_INFO_HANDLE_VALID is an oddball that doesn't care about its buffer,
+// so we can't use the normal topic test suites.
+RUN_TEST(handle_valid_on_valid_handle_succeeds);
+RUN_TEST(handle_valid_on_closed_handle_fails);
+RUN_TEST((invalid_handle_fails<MX_INFO_HANDLE_VALID, void*>));
+
+RUN_TEST(task_stats_smoke);
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_TASK_STATS, mx_info_task_stats_t, mx_process_self);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_TASK_STATS, mx_info_task_stats_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_TASK_STATS, mx_info_task_stats_t, mx_thread_self>));
+
+RUN_TEST(process_maps_smoke);
+RUN_MULTI_ENTRY_TESTS(MX_INFO_PROCESS_MAPS, mx_info_maps_t, get_test_process);
+RUN_TEST((self_fails<MX_INFO_PROCESS_MAPS, mx_info_maps_t>))
+RUN_TEST((wrong_handle_type_fails<MX_INFO_PROCESS_MAPS, mx_info_maps_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_PROCESS_MAPS, mx_info_maps_t, mx_thread_self>));
+RUN_TEST((missing_rights_fails<MX_INFO_PROCESS_MAPS, mx_info_maps_t, get_test_process,
+                               MX_RIGHT_READ>));
+
+RUN_TEST(process_vmos_smoke);
+RUN_MULTI_ENTRY_TESTS(MX_INFO_PROCESS_VMOS, mx_info_vmo_t, get_test_process);
+RUN_TEST((self_fails<MX_INFO_PROCESS_VMOS, mx_info_vmo_t>))
+RUN_TEST((wrong_handle_type_fails<MX_INFO_PROCESS_VMOS, mx_info_vmo_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_PROCESS_VMOS, mx_info_vmo_t, mx_thread_self>));
+RUN_TEST((missing_rights_fails<MX_INFO_PROCESS_VMOS, mx_info_vmo_t, get_test_process,
+                               MX_RIGHT_READ>));
+
+RUN_TEST(job_processes_smoke);
+RUN_MULTI_ENTRY_TESTS(MX_INFO_JOB_PROCESSES, mx_koid_t, get_test_job);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_JOB_PROCESSES, mx_koid_t, get_test_process>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_JOB_PROCESSES, mx_koid_t, mx_thread_self>));
+RUN_TEST((missing_rights_fails<MX_INFO_JOB_PROCESSES, mx_koid_t, get_test_job,
+                               MX_RIGHT_ENUMERATE>));
+
+RUN_TEST(job_children_smoke);
+RUN_MULTI_ENTRY_TESTS(MX_INFO_JOB_CHILDREN, mx_koid_t, get_test_job);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_JOB_CHILDREN, mx_koid_t, get_test_process>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_JOB_CHILDREN, mx_koid_t, mx_thread_self>));
+RUN_TEST((missing_rights_fails<MX_INFO_JOB_CHILDREN, mx_koid_t, get_test_job,
+                               MX_RIGHT_ENUMERATE>));
+
+// Basic tests for all other topics.
+
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_HANDLE_BASIC, mx_info_handle_basic_t, get_test_job);
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_HANDLE_BASIC, mx_info_handle_basic_t, get_test_process);
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_HANDLE_BASIC, mx_info_handle_basic_t, mx_thread_self);
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_HANDLE_BASIC, mx_info_handle_basic_t, mx_vmar_root_self);
+
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_PROCESS, mx_info_process_t, get_test_process);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_PROCESS, mx_info_process_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_PROCESS, mx_info_process_t, mx_thread_self>));
+
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_VMAR, mx_info_vmar_t, mx_vmar_root_self);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_VMAR, mx_info_vmar_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_VMAR, mx_info_vmar_t, get_test_process>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_VMAR, mx_info_vmar_t, mx_thread_self>));
+
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_THREAD, mx_info_thread_t, mx_thread_self);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_THREAD, mx_info_thread_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_THREAD, mx_info_thread_t, get_test_process>));
+
+RUN_SINGLE_ENTRY_TESTS(MX_INFO_THREAD_STATS, mx_info_thread_stats_t, mx_thread_self);
+RUN_TEST((wrong_handle_type_fails<MX_INFO_THREAD_STATS, mx_info_thread_t, get_test_job>));
+RUN_TEST((wrong_handle_type_fails<MX_INFO_THREAD_STATS, mx_info_thread_t, get_test_process>));
+
+// MX_INFO_PROCESS_THREADS tests.
+// TODO(dbort): Use RUN_MULTI_ENTRY_TESTS instead. |short_buffer_succeeds| and
+// |partially_unmapped_buffer_fails| currently fail because those tests expect
+// avail > 1, but the test process only has one thread and it's not trivial to
+// add more.
+RUN_TEST((invalid_handle_fails<MX_INFO_PROCESS_THREADS, mx_koid_t>));
+RUN_TEST((null_avail_actual_succeeds<MX_INFO_PROCESS_THREADS, mx_koid_t, get_test_process>));
+RUN_TEST((bad_buffer_fails<MX_INFO_PROCESS_THREADS, mx_koid_t, get_test_process>));
+RUN_TEST((bad_actual_fails<MX_INFO_PROCESS_THREADS, mx_koid_t, get_test_process>));
+RUN_TEST((bad_avail_fails<MX_INFO_PROCESS_THREADS, mx_koid_t, get_test_process>))
+RUN_TEST((multi_zero_buffer_succeeds<MX_INFO_PROCESS_THREADS, get_test_process>));
+
+// Skip most tests for MX_INFO_THREAD_EXCEPTION_REPORT, which is tested
+// elsewhere and requires the target thread to be in a certain state.
+RUN_TEST((invalid_handle_fails<MX_INFO_THREAD_EXCEPTION_REPORT, mx_exception_report_t>));
+
+// TODO(dbort): Test resource topics
+// RUN_MULTI_ENTRY_TESTS(MX_INFO_RESOURCE_CHILDREN, mx_rrec_t, get_root_resource);
+// RUN_MULTI_ENTRY_TESTS(MX_INFO_RESOURCE_RECORDS, mx_rrec_t, get_root_resource);
+// RUN_MULTI_ENTRY_TESTS(MX_INFO_CPU_STATS, mx_info_cpu_stats_t, get_root_resource);
+// RUN_SINGLE_ENTRY_TESTS(MX_INFO_KMEM_STATS, mx_info_kmem_stats_t, get_root_resource);
+
 END_TEST_CASE(object_info_tests)
 
 #ifndef BUILD_COMBINED_TESTS
