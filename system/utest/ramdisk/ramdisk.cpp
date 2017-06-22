@@ -137,6 +137,33 @@ static bool ramdisk_test_filesystem(void) {
     END_TEST;
 }
 
+static bool ramdisk_test_rebind(void) {
+    BEGIN_TEST;
+
+    // Make a ramdisk
+    char ramdisk_path[PATH_MAX];
+    if (create_ramdisk(PAGE_SIZE / 2, 512, ramdisk_path)) {
+        return -1;
+    }
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GE(fd, 0, "Could not open ramdisk device");
+
+    // Rebind the ramdisk driver
+    ASSERT_EQ(ioctl_block_rr_part(fd), 0, "");
+    // Ensure that the block driver rebinds too.
+    char *path_end = strrchr(ramdisk_path, '/');
+    ASSERT_EQ(strcmp(path_end, "/block"), 0, "");
+    *path_end = '\0';
+    printf("ramdisk_test: [%s] waiting for child [%s]\n", ramdisk_path, "block");
+    ASSERT_EQ(wait_for_driver_bind(ramdisk_path, "block"), 0, "");
+
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    ASSERT_EQ(close(fd), 0, "Could not close ramdisk device");
+
+    END_TEST;
+}
+
 bool ramdisk_test_bad_requests(void) {
     uint8_t buf[PAGE_SIZE];
 
@@ -999,24 +1026,25 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
 }
 
 BEGIN_TEST_CASE(ramdisk_tests)
-RUN_TEST(ramdisk_test_simple)
-RUN_TEST(ramdisk_test_filesystem)
-RUN_TEST(ramdisk_test_bad_requests)
-RUN_TEST(ramdisk_test_release_during_access)
-RUN_TEST(ramdisk_test_release_during_fifo_access)
-RUN_TEST(ramdisk_test_multiple)
-RUN_TEST(ramdisk_test_fifo_no_op)
-RUN_TEST(ramdisk_test_fifo_basic)
-RUN_TEST(ramdisk_test_fifo_multiple_vmo)
-RUN_TEST(ramdisk_test_fifo_multiple_vmo_multithreaded)
+RUN_TEST_SMALL(ramdisk_test_simple)
+RUN_TEST_SMALL(ramdisk_test_filesystem)
+RUN_TEST_SMALL(ramdisk_test_rebind)
+RUN_TEST_SMALL(ramdisk_test_bad_requests)
+RUN_TEST_SMALL(ramdisk_test_release_during_access)
+RUN_TEST_SMALL(ramdisk_test_release_during_fifo_access)
+RUN_TEST_SMALL(ramdisk_test_multiple)
+RUN_TEST_SMALL(ramdisk_test_fifo_no_op)
+RUN_TEST_SMALL(ramdisk_test_fifo_basic)
+RUN_TEST_SMALL(ramdisk_test_fifo_multiple_vmo)
+RUN_TEST_SMALL(ramdisk_test_fifo_multiple_vmo_multithreaded)
 // TODO(smklein): Test ops across different vmos
-RUN_TEST(ramdisk_test_fifo_unclean_shutdown)
-RUN_TEST(ramdisk_test_fifo_large_ops_count)
-RUN_TEST(ramdisk_test_fifo_too_many_ops)
-RUN_TEST(ramdisk_test_fifo_bad_client_vmoid)
-RUN_TEST(ramdisk_test_fifo_bad_client_txnid)
-RUN_TEST(ramdisk_test_fifo_bad_client_unaligned_request)
-RUN_TEST(ramdisk_test_fifo_bad_client_bad_vmo)
+RUN_TEST_SMALL(ramdisk_test_fifo_unclean_shutdown)
+RUN_TEST_SMALL(ramdisk_test_fifo_large_ops_count)
+RUN_TEST_SMALL(ramdisk_test_fifo_too_many_ops)
+RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_vmoid)
+RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_txnid)
+RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_unaligned_request)
+RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_bad_vmo)
 END_TEST_CASE(ramdisk_tests)
 
 } // namespace tests
