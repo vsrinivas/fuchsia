@@ -30,6 +30,10 @@ namespace {
 // from JSON.
 
 void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
+  // TODO(jimbe) Remove error handler after 2017-08-01
+  xdr->ReadErrorHandler(
+         [&data] { data->last_focus_time = mx_time_get(MX_CLOCK_UTC); })
+      ->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
   xdr->Field("extra", &data->extra);
@@ -160,6 +164,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             auto* const story_info = story_data_->story_info.get();
             story_info->url = url_;
             story_info->id = story_id_;
+            story_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);;
             story_info->extra = std::move(extra_info_);
             story_info->extra.mark_non_null();
 
@@ -694,6 +699,7 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
     return;
   }
 
+  i->second.current_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);
   i->second.impl->Log(MakeLogEntry(StorySignal::FOCUSED));
 
   // Focusing changes importance, but the log needs to be written first.

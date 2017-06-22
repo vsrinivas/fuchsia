@@ -13,6 +13,9 @@ struct StoryInfo {
   // The ID of the Story, used to reference it in method arguments.
   string id;
 
+  // Wallclock time when the story was last focused.
+  int64 last_focus_time;
+
   // Data the UserShell wants to keep associated with this Story, like
   // title, a color, or a display rank.
   map<string, string> extra;
