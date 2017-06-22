@@ -15,6 +15,7 @@
 #include "apps/media/src/ffmpeg/ffmpeg_demux.h"
 #include "apps/media/src/util/incident.h"
 #include "apps/media/src/util/safe_clone.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/synchronization/cond_var.h"
 #include "lib/ftl/synchronization/mutex.h"
@@ -302,8 +303,12 @@ void FfmpegDemuxImpl::Worker() {
       PacketPtr packet = PullPacket(&stream_index);
       FTL_DCHECK(packet);
 
-      FTL_DCHECK(supply_callback_);
-      supply_callback_(stream_index, std::move(packet));
+      // TODO(dalesat): Resolve the race that makes this necessary.
+      task_runner_->PostTask(ftl::MakeCopyable(
+          [ this, stream_index, packet = std::move(packet) ]() mutable {
+            FTL_DCHECK(supply_callback_);
+            supply_callback_(stream_index, std::move(packet));
+          }));
     }
   }
 }
