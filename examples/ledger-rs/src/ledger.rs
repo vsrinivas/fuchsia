@@ -2,8 +2,8 @@ use application_services::{ApplicationController_Proxy};
 use application_services_service_provider::ServiceProvider;
 use apps_ledger_services_public::*;
 use apps_ledger_services_internal::*;
-use fuchsia::{Launcher, App};
 use fidl::Error;
+use fuchsia::{Launcher, App};
 use magenta::{Vmo, self};
 
 pub fn ledger_crash_callback(res: Result<Status, Error>) {
@@ -20,7 +20,7 @@ pub struct Ledger {
 
 impl Ledger {
     /// This method of getting a ledger is only applicable to command line apps and should not be used in non-test programs
-    pub fn new(launcher: &mut Launcher, repo_path: String, server_id: Option<String>, ledger_id: Vec<u8>) -> Ledger {
+    pub fn new(launcher: &mut Launcher, repo_path: String, ledger_id: Vec<u8>) -> Ledger {
         let args = vec![String::from("--no_minfs_wait"), String::from("--no_persisted_config")];
         let mut app = launcher.launch(String::from("file:///system/apps/ledger"), Some(args));
 
@@ -32,7 +32,7 @@ impl Ledger {
             controller_request.into_channel());
 
         let (mut repo, repo_request) = LedgerRepository_new_pair();
-        repo_factory.get_repository(repo_path, server_id, None, repo_request);
+        repo_factory.get_repository(repo_path, None, None, repo_request);
 
         let (proxy, ledger_request) = Ledger_new_pair();
         repo.get_ledger(ledger_id, ledger_request).with(ledger_crash_callback);

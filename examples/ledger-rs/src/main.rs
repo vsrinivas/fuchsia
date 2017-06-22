@@ -30,7 +30,7 @@ pub fn main() {
     let mut launcher = Launcher::new(&mut app_context);
     println!("# getting ledger");
     let ledger_id = "rust_ledger_example".to_owned().into_bytes();
-    let mut ledger = ledger::Ledger::new(&mut launcher, "/data/test/rust_ledger_example".to_owned(), None, ledger_id);
+    let mut ledger = ledger::Ledger::new(&mut launcher, "/data/test/rust_ledger_example".to_owned(), ledger_id);
 
     println!("# getting root page");
     let key = vec![0];
