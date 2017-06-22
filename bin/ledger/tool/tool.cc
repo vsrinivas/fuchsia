@@ -11,7 +11,6 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/tool/clean_command.h"
 #include "apps/ledger/src/tool/convert.h"
 #include "apps/ledger/src/tool/doctor_command.h"
 #include "apps/ledger/src/tool/inspect_command.h"
@@ -27,6 +26,9 @@ namespace {
 
 constexpr ftl::StringView kUserIdFlag = "user-id";
 constexpr ftl::StringView kForceFlag = "force";
+
+const char kUserGuideUrl[] =
+    "https://fuchsia.googlesource.com/ledger/+/master/docs/user_guide.md";
 
 }  // namespace
 
@@ -70,16 +72,9 @@ std::unique_ptr<Command> ToolApp::CommandFromArgs(
   }
 
   if (args[0] == "clean") {
-    if (args.size() > 1) {
-      FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
-      return nullptr;
-    }
-    if (!user_config_.use_sync) {
-      std::cout << "the `clean` command requires sync" << std::endl;
-    }
-    return std::make_unique<CleanCommand>(
-        user_config_, user_repository_path_, network_service_.get(),
-        command_line_.HasOption(kForceFlag.ToString()));
+    FTL_LOG(ERROR) << "The `clean` command is gone, please refer to the "
+                   << "User Guide at " << kUserGuideUrl;
+    return nullptr;
   }
 
   if (args[0] == "inspect") {
@@ -119,10 +114,8 @@ bool ToolApp::Initialize() {
   std::string repository_path;
   if (!ReadConfig()) {
     std::cout << "Failed to retrieve user configuration" << std::endl;
-    std::cout
-        << "Hint: refer to the User Guide at "
-        << "https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md"
-        << std::endl;
+    std::cout << "Hint: refer to the User Guide at " << kUserGuideUrl
+              << std::endl;
     return false;
   }
 

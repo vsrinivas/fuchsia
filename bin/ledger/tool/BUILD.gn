@@ -6,8 +6,6 @@ executable("tool") {
   output_name = "ledger_tool"
 
   sources = [
-    "clean_command.cc",
-    "clean_command.h",
     "command.h",
     "convert.cc",
     "convert.h",
