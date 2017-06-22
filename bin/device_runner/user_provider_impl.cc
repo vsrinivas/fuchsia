@@ -15,6 +15,10 @@ namespace modular {
 
 namespace {
 
+// Hard-coded communal Ledger instance.
+const char kFirebaseServerId[] = "fuchsia-ledger";
+const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
+
 // TODO(alhaad): This is also defined in device_runner.cc. Reconcile!
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
@@ -341,10 +345,9 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
   token_provider_factory->GetTokenProvider(kLedgerAppUrl,
                                            ledger_token_provider.NewRequest());
 
-  // TODO(ppi): pass hard-coded server_id and api_key here.
   auto firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = server_name;
-  firebase_config->api_key = "";
+  firebase_config->server_id = kFirebaseServerId;
+  firebase_config->api_key = kFirebaseApiKey;
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
       local_ledger_path, std::move(firebase_config),
@@ -369,10 +372,9 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
         ledger_token_provider_for_erase =
             std::move(ledger_token_provider_for_erase)
       ]() mutable {
-        // TODO(ppi): pass hard-coded server_id and api_key here.
         auto firebase_config = ledger::FirebaseConfig::New();
-        firebase_config->server_id = server_name;
-        firebase_config->api_key = "";
+        firebase_config->server_id = kFirebaseServerId;
+        firebase_config->api_key = kFirebaseApiKey;
         ledger_repository_factory_->EraseRepository(
             local_ledger_path, std::move(firebase_config),
             std::move(ledger_token_provider_for_erase),
