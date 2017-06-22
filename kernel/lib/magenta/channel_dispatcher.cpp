@@ -215,8 +215,8 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
         }
         other = other_;
 
-        // (0) Before writing outbound message and waiting.
-        // Add our stack-allocated waiter to the list.
+        // (0) Before writing the outbound message and waiting, add our
+        // waiter to the list.
         waiters_.push_back(waiter);
     }
 
