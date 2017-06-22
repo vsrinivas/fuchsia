@@ -124,7 +124,7 @@ typedef struct mx_protocol_device {
     // This hook **must not block**.  Use `iotxn_queue` to handle IO which
     // requires processing and delayed status.
     //
-    // The default read implementation returns **ERR_NOT_SUPPORTED**.
+    // The default read implementation returns **MX_ERR_NOT_SUPPORTED**.
     //
     mx_status_t (*read)(void* ctx, void* buf, size_t count,
                         mx_off_t off, size_t* actual);
@@ -142,7 +142,7 @@ typedef struct mx_protocol_device {
     // This hook **must not block**.  Use `iotxn_queue` to handle IO which
     // requires processing and delayed status.
     //
-    // The default write implementation returns **ERR_NOT_SUPPORTED**.
+    // The default write implementation returns **MX_ERR_NOT_SUPPORTED**.
     //
     mx_status_t (*write)(void* ctx, const void* buf, size_t count,
                          mx_off_t off, size_t* actual);
