@@ -222,7 +222,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     });
   }
   auto auth_provider = std::make_unique<AuthProviderImpl>(
-      environment_->main_runner(), firebase_config->api_key,
+      environment_->main_runner(),
+      (firebase_config ? firebase_config->api_key : ""),
       std::move(token_provider_ptr));
   cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
 
