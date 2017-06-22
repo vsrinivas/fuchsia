@@ -97,7 +97,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     }
 
     // TODO(tkilbourn): better size management
-    size_t auth_len = sizeof(MgmtFrameHeader) - sizeof(HtControl) + sizeof(Authentication);
+    size_t auth_len = sizeof(MgmtFrameHeader) + sizeof(Authentication);
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
@@ -116,7 +116,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     std::memcpy(hdr->addr3, address_.data(), sizeof(hdr->addr3));
     hdr->sc.set_seq(next_seq());
 
-    auto auth = packet->mut_field<Authentication>(hdr->size());
+    auto auth = packet->mut_field<Authentication>(sizeof(MgmtFrameHeader));
     // TODO(tkilbourn): this assumes Open System authentication
     auth->auth_algorithm_number = auth_alg_;
     auth->auth_txn_seq_number = 1;
@@ -164,8 +164,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     }
 
     // TODO(tkilbourn): better size management; for now reserve 128 bytes for Association elements
-    size_t assoc_len =
-        sizeof(MgmtFrameHeader) - sizeof(HtControl) + sizeof(AssociationRequest) + 128;
+    size_t assoc_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + 128;
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
@@ -186,10 +185,10 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
 
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
     // request.
-    auto assoc = packet->mut_field<AssociationRequest>(hdr->size());
+    auto assoc = packet->mut_field<AssociationRequest>(sizeof(MgmtFrameHeader));
     assoc->cap.set_ess(1);
     assoc->listen_interval = 0;
-    ElementWriter w(assoc->elements, packet->len() - hdr->size() - sizeof(AssociationRequest));
+    ElementWriter w(assoc->elements, packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
     if (!w.write<SsidElement>(bss_->ssid.data())) {
         errorf("could not write ssid \"%s\" to association request\n", bss_->ssid.data());
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -207,7 +206,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     // Validate the request in debug mode
     MX_DEBUG_ASSERT(assoc->Validate(w.size()));
 
-    size_t actual_len = hdr->size() + sizeof(AssociationRequest) + w.size();
+    size_t actual_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + w.size();
     mx_status_t status = packet->set_len(actual_len);
     if (status != MX_OK) {
         errorf("could not set packet length to %zu: %d\n", actual_len, status);
@@ -277,9 +276,9 @@ mx_status_t Station::HandleAuthentication(const Packet* packet) {
     MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAuthentication);
     MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
 
-    auto auth = packet->field<Authentication>(hdr->size());
+    auto auth = packet->field<Authentication>(sizeof(MgmtFrameHeader));
     if (!auth) {
-        errorf("authentication packet too small (len=%zd)\n", packet->len() - hdr->size());
+        errorf("authentication packet too small (len=%zd)\n", packet->len() - sizeof(MgmtFrameHeader));
         return MX_ERR_IO;
     }
 
@@ -324,9 +323,9 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
     MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
 
-    auto assoc = packet->field<AssociationResponse>(hdr->size());
+    auto assoc = packet->field<AssociationResponse>(sizeof(MgmtFrameHeader));
     if (!assoc) {
-        errorf("association response packet too small (len=%zd)\n", packet->len() - hdr->size());
+        errorf("association response packet too small (len=%zd)\n", packet->len() - sizeof(MgmtFrameHeader));
         return MX_ERR_IO;
     }
 
@@ -345,6 +344,29 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     // TODO(tkilbourn): this is where we should indicate link status to the ethernet layer
 
     return MX_OK;
+}
+
+mx_status_t Station::HandleDisassociation(const Packet* packet) {
+    debugfn();
+
+    if (state_ != WlanState::kAssociated) {
+        debugf("got spurious disassociate; ignoring\n");
+        return MX_OK;
+    }
+
+    auto hdr = packet->field<MgmtFrameHeader>(0);
+    MX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDisassociation);
+    MX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+
+    auto disassoc = packet->field<Disassociation>(sizeof(MgmtFrameHeader));
+    if (!disassoc) {
+        errorf("disassociation packet too small len=%zu\n", packet->len());
+        return MX_ERR_IO;
+    }
+    infof("disassociating from %s, reason=%u\n", bss_->ssid.data(), disassoc->reason_code);
+
+    state_ = WlanState::kAuthenticated;
+    return SendDisassociateIndication(disassoc->reason_code);
 }
 
 mx_status_t Station::HandleData(const Packet* packet) {
@@ -533,6 +555,31 @@ mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::ASSOCIATE_confirm, resp);
     if (status != MX_OK) {
         errorf("could not serialize AssociateResponse: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
+    return status;
+}
+
+mx_status_t Station::SendDisassociateIndication(uint16_t code) {
+    debugfn();
+    auto ind = DisassociateIndication::New();
+    ind->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
+    std::memcpy(ind->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
+    ind->reason_code = code;
+
+    size_t buf_len = sizeof(Header) + ind->GetSerializedSize();
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::DISASSOCIATE_indication, ind);
+    if (status != MX_OK) {
+        errorf("could not serialize DisassociateIndication: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
     }

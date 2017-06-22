@@ -177,7 +177,7 @@ mx_status_t Mlme::HandleCtrlPacket(const Packet* packet) {
 
 mx_status_t Mlme::HandleDataPacket(const Packet* packet) {
     debugfn();
-    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+    if (IsStaValid()) {
         auto hdr = packet->field<DataFrameHeader>(0);
         if (hdr == nullptr) {
             errorf("short data packet len=%zu\n", packet->len());
@@ -214,6 +214,8 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
         return HandleAuthentication(packet);
     case ManagementSubtype::kAssociationResponse:
         return HandleAssociationResponse(packet);
+    case ManagementSubtype::kDisassociation:
+        return HandleDisassociation(packet);
     default:
         break;
     }
@@ -222,10 +224,7 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
 
 mx_status_t Mlme::HandleEthPacket(const Packet* packet) {
     debugfn();
-    if (sta_ != nullptr && sta_->bssid() != nullptr) {
-        return sta_->HandleEth(packet);
-    }
-    return MX_OK;
+    return IsStaValid() ? sta_->HandleEth(packet) : MX_OK;
 }
 
 mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
@@ -311,7 +310,7 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
         scanner_->HandleBeacon(packet);
     }
 
-    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+    if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
         if (*sta_->bssid() == hdr->addr3) {
             sta_->HandleBeacon(packet);
@@ -334,7 +333,7 @@ mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
 mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
     debugfn();
 
-    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+    if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
         if (*sta_->bssid() == hdr->addr3) {
             sta_->HandleAuthentication(packet);
@@ -346,13 +345,29 @@ mx_status_t Mlme::HandleAuthentication(const Packet* packet) {
 mx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
     debugfn();
 
-    if (sta_ != nullptr && sta_->bssid() != nullptr) {
+    if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
         if (*sta_->bssid() == hdr->addr3) {
             sta_->HandleAssociationResponse(packet);
         }
     }
     return MX_OK;
+}
+
+mx_status_t Mlme::HandleDisassociation(const Packet* packet) {
+    debugfn();
+
+    if (IsStaValid()) {
+        auto hdr = packet->field<MgmtFrameHeader>(0);
+        if (*sta_->bssid() == hdr->addr3) {
+            sta_->HandleDisassociation(packet);
+        }
+    }
+    return MX_OK;
+}
+
+bool Mlme::IsStaValid() const {
+    return sta_ != nullptr && sta_->bssid() != nullptr;
 }
 
 mx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {

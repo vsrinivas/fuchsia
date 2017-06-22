@@ -60,6 +60,7 @@ class Station {
     mx_status_t HandleBeacon(const Packet* packet);
     mx_status_t HandleAuthentication(const Packet* packet);
     mx_status_t HandleAssociationResponse(const Packet* packet);
+    mx_status_t HandleDisassociation(const Packet* packet);
     mx_status_t HandleData(const Packet* packet);
     mx_status_t HandleEth(const Packet* packet);
     mx_status_t HandleTimeout();
@@ -71,6 +72,7 @@ class Station {
     mx_status_t SendJoinResponse();
     mx_status_t SendAuthResponse(AuthenticateResultCodes code);
     mx_status_t SendAssocResponse(AssociateResultCodes code);
+    mx_status_t SendDisassociateIndication(uint16_t code);
 
     uint16_t next_seq();
 

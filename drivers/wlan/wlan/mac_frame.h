@@ -134,6 +134,80 @@ class CapabilityInfo : public common::BitField<uint16_t> {
     WLAN_BIT_FIELD(immediate_block_ack, 15, 1);
 };
 
+// IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
+namespace reason_code {
+enum ReasonCode : uint16_t {
+    // 0 Reserved
+    kUnspecifiedReason = 1,
+    kInvalidAuthentication = 2,
+    kLeavingNetworkDeauth = 3,
+    kReasonInactivity = 4,
+    kNoMoreStas = 5,
+    kInvalidClass2Frame = 6,
+    kInvalidClass3Frame = 7,
+    kLeavingNetworkDisassoc = 8,
+    kNotAuthenticated = 9,
+    kUnacceptablePowerCapability = 10,
+    kUnacceptableSupportedChannels = 11,
+    kBssTransitionDisassoc = 12,
+    kReasonInvalidElement = 13,
+    kMicFailure = 14,
+    k4WayHandshakeTimeout = 15,
+    kGkHandshakeTimeout = 16,
+    kHandshakeElementMismatch = 17,
+    kReasonInvalidGroupCipher = 18,
+    kReasonInvalidPairwiseCipher = 19,
+    kReasonInvalidAkmp = 20,
+    kUnsupportedRsneVersion = 21,
+    kInvalidRsneCapabilities = 22,
+    k8021XAuthFailed = 23,
+    kReasonCipherOutOfPolicy = 24,
+    kTdlsPeerUnreachable = 25,
+    kTdlsUnspecifiedReason = 26,
+    kSspRequestedDisassoc = 27,
+    kNoSspRoamingAgreement = 28,
+    kBadCipherOrAkm = 29,
+    kNotAuthorizedThisLocation = 30,
+    kServiceChangePrecludesTs = 31,
+    kUnspecifiedQosReason = 32,
+    kNotEnoughBandwidth = 33,
+    kMissingAcks = 34,
+    kExceededTxop = 35,
+    kStaLeaving = 36,
+    // The following groups of reasons share the same code
+    kEndTs = 37,
+    kEndBa = 37,
+    kEndDls = 37,
+    kUnknownTs = 38,
+    kUnknownBa = 38,
+    kTimeout = 39,
+    // 40-44 Reserved
+    kPeerkeyMismatch = 45,
+    kPeerInitiated = 46,
+    kApInitiated = 47,
+    kReasonInvalidFtActionFrameCount = 48,
+    kReasonInvalidPmkid = 49,
+    kReasonInvalidMde = 50,
+    kReasonInvalidFte = 51,
+    kMeshPeeringCanceled = 52,
+    kMeshMaxPeers = 53,
+    kMeshConfigurationPolicyViolation = 54,
+    kMeshCloseRcvd = 55,
+    kMeshMaxRetries = 56,
+    kMeshConfirmTimeout = 57,
+    kMeshInvalidGtk = 58,
+    kMeshInconsistentParameters = 59,
+    kMeshInvalidSecurityCapability = 60,
+    kMeshPathErrorNoProxyInformation = 61,
+    kMeshPathErrorNoForwardingInformation = 62,
+    kMeshPathErrorDestinationUnreachable = 63,
+    kMacAddressAlreadyExistsInMbss = 64,
+    kMeshChannelSwitchRegulatoryRequirements = 65,
+    kMeshChannelSwitchUnspecified = 66,
+    // 67 - 65535 Reserved
+};
+}  // namespace status_code
+
 // IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 namespace status_code {
 enum StatusCode : uint16_t {
@@ -253,14 +327,8 @@ struct MgmtFrameHeader {
     uint8_t addr2[6];
     uint8_t addr3[6];
     SequenceControl sc;
-    // This field may not be present! Use the size() method to determine the
-    // offset to the frame body.
-    HtControl htc;
 
-    bool has_ht_control() const { return fc.htc_order(); }
-    size_t size() const {
-        return sizeof(MgmtFrameHeader) - (has_ht_control() ? 0 : sizeof(HtControl));
-    }
+    // TODO(tkilbourn): HT Control field, or use a separate struct
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.3
@@ -346,6 +414,16 @@ struct AssociationResponse {
     uint8_t elements[];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.3.3.5
+struct Disassociation {
+    // 9.4.1.7
+    uint16_t reason_code;
+
+    // Vendor-specific elements and optional Management MIC element (MME) at the end
+    uint8_t elements[];
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.3.2.1
 struct DataFrameHeader {
     FrameControl fc;
     uint16_t duration;
@@ -354,10 +432,12 @@ struct DataFrameHeader {
     uint8_t addr3[6];
     SequenceControl sc;
 
+    // TODO(tkilbourn): Address 4 field
     // TODO(tkilbourn): QoS Control field, or use a separate struct
     // TODO(tkilbourn): HT Control field, or use a separate struct
 } __PACKED;
 
+// IEEE Std 802.2, 1998 Edition, 3.2
 struct LlcHeader {
     uint8_t dsap;
     uint8_t ssap;
@@ -367,6 +447,7 @@ struct LlcHeader {
     uint8_t payload[];
 } __PACKED;
 
+// RFC 1042
 constexpr uint8_t kLlcSnapExtension = 0xaa;
 constexpr uint8_t kLlcUnnumberedInformation = 0x03;
 const uint8_t kLlcOui[3] = {};
@@ -375,6 +456,7 @@ const uint8_t kLlcOui[3] = {};
 constexpr size_t kDataPayloadHeader = sizeof(DataFrameHeader) + sizeof(LlcHeader);
 static_assert(kDataPayloadHeader == 32, "check the data payload header size");
 
+// IEEE Std 802.3-2015, 3.1.1
 struct EthernetII {
     uint8_t dest[6];
     uint8_t src[6];
