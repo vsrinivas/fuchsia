@@ -40,6 +40,7 @@ executable("suggestion_engine") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
+    "//apps/modular/lib/fidl:json_xdr",
     "//lib/mtl",
   ]
 }

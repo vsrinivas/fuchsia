@@ -13,6 +13,8 @@
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
+
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -69,8 +71,10 @@ class Repo {
   }
 
   void DispatchAsk(UserInputPtr query, AskChannel* channel) {
-    publisher_->Publish(kQueryContextKey,
-                        "\"" + query->get_text().get() + "\"");
+    std::string formattedQuery;
+    fidl::String queryString = query->get_text();
+    modular::XdrWrite(&formattedQuery, &queryString, modular::XdrFilter<fidl::String>);
+    publisher_->Publish(kQueryContextKey, formattedQuery);
     for (const std::unique_ptr<AskPublisher>& ask : ask_handlers_) {
       ask->handler->Ask(
           query.Clone(), [&ask, channel](fidl::Array<ProposalPtr> proposals) {
