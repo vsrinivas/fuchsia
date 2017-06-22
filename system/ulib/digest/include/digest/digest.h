@@ -9,8 +9,6 @@
 #include <magenta/compiler.h>
 #include <magenta/types.h>
 
-#ifdef __cplusplus
-
 #include <stdint.h>
 
 #ifdef USE_LIBCRYPTO
@@ -24,6 +22,8 @@
 #endif
 
 #define DIGEST_LENGTH SHA256_DIGEST_LENGTH
+
+#ifdef __cplusplus
 
 namespace digest {
 
