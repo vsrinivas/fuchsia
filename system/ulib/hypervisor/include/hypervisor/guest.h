@@ -48,4 +48,15 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
 mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
                          mx_handle_t* guest);
 
+/**
+ * Create an e820 memory map.
+ *
+ * @param addr The mapped address of guest physical memory.
+ * @param size The size of guest physical memory.
+ * @param e820_off The offset to the e820 map.
+ * @param num_entries The number of e820 entries that were added.
+ */
+mx_status_t guest_create_e820_memory_map(uintptr_t addr, size_t size, uintptr_t e820_off,
+                                         int* num_entries);
+
 __END_CDECLS

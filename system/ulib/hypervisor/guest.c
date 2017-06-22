@@ -112,20 +112,56 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
 #endif // __x86_64__
 }
 
+static mx_status_t num_e820_entries(size_t size) {
+    return size > kAddr4000mb ? 3 : 2;
+}
+
+mx_status_t guest_create_e820_memory_map(uintptr_t addr, size_t size, uintptr_t e820_off,
+                                         int* num_entries) {
+    size_t e820_size = num_e820_entries(size) * sizeof(e820entry_t);
+    if (e820_off + e820_size > size) {
+        return MX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    e820entry_t* entry = (e820entry_t*)(addr + e820_off);
+    memset(entry, 0, e820_size);
+    // 0 to min(size, 3500mb) is available.
+    entry[0].addr = 0;
+    entry[0].size = size < kAddr3500mb ? size : kAddr3500mb;
+    entry[0].type = kE820Ram;
+    // 3500mb to 4000mb is reserved.
+    entry[1].addr = kAddr3500mb;
+    entry[1].size = kAddr4000mb - kAddr3500mb;
+    entry[1].type = kE820Reserved;
+    if (size > kAddr4000mb) {
+        // If size > 4000mb, then make that region available.
+        entry[2].addr = kAddr4000mb;
+        entry[2].size = size - kAddr4000mb;
+        entry[2].type = kE820Ram;
+        *num_entries = 3;
+    } else {
+        *num_entries = 2;
+    }
+
+    return MX_OK;
+}
+
 mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
                                   uintptr_t bootdata_off) {
     if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
         return MX_ERR_INVALID_ARGS;
-    const uint32_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
-                                  sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(e820entry_t) * 3);
-    if (bootdata_off + bootdata_len > size)
+
+    size_t e820_size = num_e820_entries(size) * sizeof(e820entry_t);
+    const uint32_t max_bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
+                                      sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
+    if (bootdata_off + max_bootdata_len > size)
         return MX_ERR_BUFFER_TOO_SMALL;
 
     // Bootdata container.
     bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
     header->type = BOOTDATA_CONTAINER;
     header->extra = BOOTDATA_MAGIC;
-    header->length = bootdata_len;
+    header->length = max_bootdata_len;
 
     // ACPI root table pointer.
     bootdata_off += sizeof(bootdata_t);
@@ -141,29 +177,15 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
     bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
     bootdata = (bootdata_t*)(addr + bootdata_off);
     bootdata->type = BOOTDATA_E820_TABLE;
-    bootdata->length = sizeof(e820entry_t) * 3;
+    bootdata->length = e820_size;
 
     bootdata_off += sizeof(bootdata_t);
-    e820entry_t* entry = (e820entry_t*)(addr + bootdata_off);
-    memset(entry, 0, bootdata->length);
-    // 0 to min(size, 3500mb) is available.
-    entry[0].addr = 0;
-    entry[0].size = size < kAddr3500mb ? size : kAddr3500mb;
-    entry[0].type = kE820Ram;
-    // 3500mb to 4000mb is reserved.
-    entry[1].addr = kAddr3500mb;
-    entry[1].size = kAddr4000mb - kAddr3500mb;
-    entry[1].type = kE820Reserved;
-    if (size > kAddr4000mb) {
-        // If size > 4000mb, then make that region available.
-        entry[2].addr = kAddr4000mb;
-        entry[2].size = size - kAddr4000mb;
-        entry[2].type = kE820Ram;
-    } else {
-        // Else, remove the last entry.
-        header->length -= BOOTDATA_ALIGN(sizeof(e820entry_t));
-        bootdata->length -= BOOTDATA_ALIGN(sizeof(e820entry_t));
-    }
+    int num_entries = 0;
+    mx_status_t status = guest_create_e820_memory_map(addr, size, bootdata_off, &num_entries);
+    if (status != MX_OK)
+        return status;
+    if (num_entries != num_e820_entries(size))
+        return MX_ERR_BAD_STATE;
 
     return MX_OK;
 }

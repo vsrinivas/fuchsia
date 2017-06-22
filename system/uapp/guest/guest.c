@@ -106,11 +106,11 @@ int main(int argc, char** argv) {
     uintptr_t bootdata_off = 0;
     const char* ramdisk_path = argc >= 3 ? argv[2] : NULL;
     const char* cmdline = NULL;
-    status = setup_magenta(addr, first_page, pt_end_off, fd, ramdisk_path, cmdline, &guest_ip,
-                           &bootdata_off);
+    status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path, cmdline,
+                           &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
         cmdline = "earlyprintk=serial,ttyS,115200";
-        status = setup_linux(addr, first_page, fd, cmdline, &guest_ip, &bootdata_off);
+        status = setup_linux(addr, kVmoSize, first_page, fd, cmdline, &guest_ip, &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
         fprintf(stderr, "Unknown kernel\n");
