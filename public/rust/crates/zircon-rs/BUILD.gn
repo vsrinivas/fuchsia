@@ -8,4 +8,6 @@ rust_library("magenta") {
   deps = [
     "//rust/magenta-rs/magenta-sys"
   ]
+
+  with_tests = true
 }
