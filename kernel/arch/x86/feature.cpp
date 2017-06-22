@@ -213,6 +213,7 @@ void x86_feature_debug(void)
         { X86_FEATURE_VMX, "vmx" },
         { X86_FEATURE_HYPERVISOR, "hypervisor" },
         { X86_FEATURE_PT, "pt" },
+        { X86_FEATURE_HWP, "hwp" },
     };
 
     const char *vendor_string = NULL;

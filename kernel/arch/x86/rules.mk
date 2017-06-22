@@ -62,6 +62,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/gdt.S \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/header.S \
+	$(LOCAL_DIR)/hwp.cpp \
 	$(LOCAL_DIR)/hypervisor.cpp \
 	$(LOCAL_DIR)/idt.cpp \
 	$(LOCAL_DIR)/ioapic.cpp \

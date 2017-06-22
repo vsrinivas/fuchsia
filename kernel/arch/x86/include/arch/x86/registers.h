@@ -53,6 +53,9 @@
 #define X86_MSR_IA32_FS_BASE            0xc0000100 /* fs base address */
 #define X86_MSR_IA32_GS_BASE            0xc0000101 /* gs base address */
 #define X86_MSR_IA32_KERNEL_GS_BASE     0xc0000102 /* kernel gs base */
+#define X86_MSR_IA32_PM_ENABLE          0x00000770 /* enable/disable HWP */
+#define X86_MSR_IA32_HWP_CAPABILITIES   0x00000771 /* HWP performance range enumeration */
+#define X86_MSR_IA32_HWP_REQUEST        0x00000774 /* power manage control hints */
 #define X86_CR4_PSE                     0xffffffef /* Disabling PSE bit in the CR4 */
 
 /* EFLAGS/RFLAGS */
