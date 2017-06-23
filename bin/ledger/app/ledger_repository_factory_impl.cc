@@ -57,7 +57,7 @@ bool SaveConfigForDebugging(ftl::StringView user_id,
 }
 
 // Verifies that the current server id is not different from the server id used
-// in a previous run.
+// in a previous run and wipes the local state in case of a mismatch.
 //
 // Ledger does not support cloud migrations - once the repository is synced with
 // a cloud, we can't change the server.
@@ -76,17 +76,23 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
       return false;
     }
 
-    if (previous_server_id != user_config.server_id) {
-      FTL_LOG(ERROR) << "Mismatch between the previous server id: "
-                     << previous_server_id
-                     << " and the current one: " << user_config.server_id;
-      FTL_LOG(ERROR) << "Ledger does not support cloud migrations. If you need "
-                     << "to change the server, reset Ledger using "
-                     << "`ledger_tool clean`";
-      return false;
+    if (previous_server_id == user_config.server_id) {
+      return true;
     }
 
-    return true;
+    FTL_LOG(WARNING) << "Mismatch between the previous server id: "
+                     << previous_server_id
+                     << " and the current one: " << user_config.server_id
+                     << ".";
+    FTL_LOG(WARNING) << "Ledger does not support cloud migrations: "
+                     << "Deleting local state at " << repository_path << ".";
+
+    if (!files::DeletePath(repository_path.ToString(), true)) {
+      FTL_LOG(ERROR) << "Unable to delete ledger directory. "
+                     << "Reset Ledger using "
+                     << "`rm -rf " << repository_path << "`";
+      return false;
+    }
   }
 
   std::string temp_dir_root = ftl::Concatenate({repository_path, "/tmp"});
