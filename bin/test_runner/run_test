@@ -131,8 +131,13 @@ def main(argv):
         subprocess.check_call(scp)
 
     id_ = str(uuid.uuid4())
-    sock.send(driver.start_test(id_, test) + '\n')
-    driver.wait_for_teardown(sock.makefile())
+    try:
+      sock.send(driver.start_test(id_, test) + '\n')
+      driver.wait_for_teardown(sock.makefile())
+    except socket.error:
+      print ('Lost connection to Fuchsia. '
+          'Check the log from the device or emulator.')
+      return 1
 
   driver.print_summary()
 
