@@ -844,6 +844,23 @@ static bool channel_nest(void) {
     END_TEST;
 }
 
+// Test the case of writing a channel handle to itself.  The kernel
+// currently disallows this, because otherwise it would create a reference
+// cycle and potentially allow channels to be leaked.
+static bool channel_disallow_write_to_self(void) {
+    BEGIN_TEST;
+
+    mx_handle_t channel[2];
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    EXPECT_EQ(mx_channel_write(channel[0], 0, NULL, 0, &channel[0], 1),
+              MX_ERR_NOT_SUPPORTED, "");
+    // Clean up.
+    EXPECT_EQ(mx_handle_close(channel[0]), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(channel[1]), MX_OK, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -856,6 +873,7 @@ RUN_TEST(channel_call)
 RUN_TEST(channel_call2)
 RUN_TEST(bad_channel_call_finish)
 RUN_TEST(channel_nest)
+RUN_TEST(channel_disallow_write_to_self)
 END_TEST_CASE(channel_tests)
 
 #ifndef BUILD_COMBINED_TESTS
