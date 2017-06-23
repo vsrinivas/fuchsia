@@ -32,48 +32,63 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 #define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
 
 mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
-    xprintf("xhci_reset_endpoint %d %d\n", slot_id, endpoint);
-
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep = &slot->eps[endpoint];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
-    mtx_lock(&ep->lock);
+    // Recover from Halted and Error conditions. See section 4.8.3 of the XHCI spec.
+    int ep_state = xhci_get_ep_state(ep);
+    xprintf("xhci_reset_endpoint %d %d ep_state %d\n", slot_id, endpoint, ep_state);
 
-    // first reset the endpoint
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    // command expects device context index, so increment endpoint by 1
-    uint32_t control = (slot_id << TRB_SLOT_ID_START) | ((endpoint + 1) << TRB_ENDPOINT_ID_START);
-    xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
-    int cc = xhci_sync_command_wait(&command);
-
-    if (cc != TRB_CC_SUCCESS) {
-        mtx_unlock(&ep->lock);
-        return MX_ERR_INTERNAL;
+    if (ep_state == EP_STATE_RUNNING) {
+        return MX_OK;
+    } else if (ep_state == EP_STATE_HALTED) {
+        // reset the endpoint to move from Halted to Stopped state
+        xhci_sync_command_t command;
+        xhci_sync_command_init(&command);
+        // command expects device context index, so increment endpoint by 1
+        uint32_t control = (slot_id << TRB_SLOT_ID_START) |
+                            ((endpoint + 1) << TRB_ENDPOINT_ID_START);
+        xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
+        int cc = xhci_sync_command_wait(&command);
+        if (cc != TRB_CC_SUCCESS) {
+            printf("TRB_CMD_RESET_ENDPOINT failed cc: %d\n", cc);
+            return MX_ERR_INTERNAL;
+        }
     }
 
-    // then move transfer ring's dequeue pointer passed the failed transaction
-    xhci_sync_command_init(&command);
-    uint64_t ptr = xhci_transfer_ring_current_phys(transfer_ring);
-    ptr |= transfer_ring->pcs;
-    // command expects device context index, so increment endpoint by 1
-    control = (slot_id << TRB_SLOT_ID_START) | ((endpoint + 1) << TRB_ENDPOINT_ID_START);
-    xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
-    cc = xhci_sync_command_wait(&command);
+    if (ep_state == EP_STATE_ERROR || ep_state == EP_STATE_HALTED) {
+        // move transfer ring's dequeue pointer passed the failed transaction
+        xhci_sync_command_t command;
+        xhci_sync_command_init(&command);
+        uint64_t ptr = xhci_transfer_ring_current_phys(transfer_ring);
+        ptr |= transfer_ring->pcs;
+        // command expects device context index, so increment endpoint by 1
+        uint32_t control = (slot_id << TRB_SLOT_ID_START) |
+                            ((endpoint + 1) << TRB_ENDPOINT_ID_START);
+        xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
+        int cc = xhci_sync_command_wait(&command);
+        if (cc != TRB_CC_SUCCESS) {
+            printf("TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
+            return MX_ERR_INTERNAL;
+        }
+        transfer_ring->dequeue_ptr = transfer_ring->current;
+    }
 
-    transfer_ring->dequeue_ptr = transfer_ring->current;
+    if (xhci_get_ep_state(ep) == EP_STATE_STOPPED) {
+        // Ring doorbell to continue on to Running
+        XHCI_WRITE32(&xhci->doorbells[slot_id], endpoint + 1);
+    }
 
-    mtx_unlock(&ep->lock);
-
-    return (cc == TRB_CC_SUCCESS ? MX_OK : MX_ERR_INTERNAL);
+    return MX_OK;
 }
 
 // locked on ep->lock
 static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
-    if (!ep->enabled)
+    if (!ep->enabled) {
         return MX_ERR_BAD_STATE;
+    }
 
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_transfer_state_t* state = ep->transfer_state;
@@ -112,9 +127,19 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
 
     size_t length = txn->length;
 
-
-    if (xhci_get_ep_state(ep) == EP_STATE_HALTED) {
+    int ep_state = xhci_get_ep_state(ep);
+    switch (ep_state) {
+    case EP_STATE_RUNNING:
+        break;
+    case EP_STATE_HALTED:
+    case EP_STATE_ERROR:
+        // error and halted states treated the same
         return MX_ERR_IO_REFUSED;
+    case EP_STATE_DISABLED:
+    case EP_STATE_STOPPED:
+    default:
+        xprintf("bad ep state %d\n", ep_state);
+        return MX_ERR_BAD_STATE;
     }
 
     uint32_t interruptor_target = 0;
@@ -501,6 +526,11 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
                 trb = xhci_get_next_trb(ring, trb);
             }
         }
+    }
+
+    int ep_state = xhci_get_ep_state(ep);
+    if (ep_state != EP_STATE_RUNNING) {
+        xprintf("xhci_handle_transfer_event: ep state %d cc %d\n", ep_state, cc);
     }
 
     mx_status_t result;
