@@ -252,7 +252,6 @@ struct linger {
 #define MSG_CONFIRM 0x0800
 #define MSG_RST 0x1000
 #define MSG_ERRQUEUE 0x2000
-#define MSG_NOSIGNAL 0x4000
 #define MSG_MORE 0x8000
 #define MSG_WAITFORONE 0x10000
 #define MSG_FASTOPEN 0x20000000

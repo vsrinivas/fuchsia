@@ -51,7 +51,7 @@ retry:
         goto error;
     }
 
-    if (sendmsg(fd, &msg, MSG_NOSIGNAL) < 0)
+    if (sendmsg(fd, &msg, 0) < 0)
         goto error;
 
     if (!fread(buf, len, 1, f)) {

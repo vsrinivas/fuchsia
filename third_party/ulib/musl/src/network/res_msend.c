@@ -100,7 +100,7 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
             for (i = 0; i < nqueries; i++)
                 if (!alens[i])
                     for (j = 0; j < nns; j++)
-                        sendto(fd, queries[i], qlens[i], MSG_NOSIGNAL, (void*)&ns[j], sl);
+                        sendto(fd, queries[i], qlens[i], 0, (void*)&ns[j], sl);
             t1 = t2;
             servfail_retry = 2 * nqueries;
         }
@@ -141,7 +141,7 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
                 break;
             case 2:
                 if (servfail_retry && servfail_retry--)
-                    sendto(fd, queries[i], qlens[i], MSG_NOSIGNAL, (void*)&ns[j], sl);
+                    sendto(fd, queries[i], qlens[i], 0, (void*)&ns[j], sl);
             default:
                 continue;
             }
