@@ -17,15 +17,15 @@ namespace storage {
 namespace btree {
 
 struct NodeLevelCalculator {
-  //  Return the level in the tree where a node containing |key| must be
-  //  located. The leaves are located on level 0.
+  // Returns the level in the tree where a node containing |key| must be
+  // located. The leaves are located on level 0.
   uint8_t (*GetNodeLevel)(convert::ExtendedStringView key);
 };
 
-// Default algorithm to compute the node level.
+// Returns the default algorithm to compute the node level.
 const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 
-// Applies changes provided by |changes| to the BTree starting at |root_id|.
+// Applies changes provided by |changes| to the B-Tree starting at |root_id|.
 // |changes| must provide |EntryChange| objects sorted by their key. The
 // callback will provide the status of the operation, the id of the new root
 // and the list of ids of all new nodes created after the changes.

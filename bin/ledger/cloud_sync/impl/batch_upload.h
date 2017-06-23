@@ -69,7 +69,7 @@ class BatchUpload {
   // Filters already synced commits.
   void FilterAndUploadCommits();
 
-  // Uploads the commit.
+  // Uploads the commits.
   void UploadCommits();
 
   void RefreshAuthToken(ftl::Closure on_refreshed);

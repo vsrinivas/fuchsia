@@ -48,12 +48,12 @@ class CoroutineService {
  public:
   virtual ~CoroutineService() {}
 
-  // Start a new coroutine that will execute |runnable|.
+  // Starts a new coroutine that will execute |runnable|.
   virtual void StartCoroutine(
       std::function<void(CoroutineHandler*)> runnable) = 0;
 };
 
-// Allow to execute an asynchronous call in a coroutine. The coroutine will
+// Allows to execute an asynchronous call in a coroutine. The coroutine will
 // yield until the asynchronous call terminates, it will then be continued and
 // will store the results of the asynchronous calls in |parameters|. If
 // |SyncCall| returns |true|, the coroutine must unwind its stack and terminate.

@@ -22,7 +22,7 @@ class Object {
   // Returns the id of this storage object.
   virtual ObjectId GetId() const = 0;
 
-  // Returns the data of this object. The return view is valid as long as this
+  // Returns the data of this object. The returned view is valid as long as this
   // object is not deleted.
   virtual Status GetData(ftl::StringView* data) const = 0;
 

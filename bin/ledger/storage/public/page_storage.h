@@ -67,7 +67,7 @@ class PageStorage {
   virtual void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
                                   std::function<void(Status)> callback) = 0;
   // Starts a new |journal| based on the commit with the given |commit_id|. The
-  // base commit must be one of  the head commits. If |implicit| is false all
+  // base commit must be one of the head commits. If |implicit| is false all
   // changes will be lost after a crash. Otherwise, changes to implicit
   // journals will be committed on system restart.
   virtual Status StartCommit(const CommitId& commit_id,

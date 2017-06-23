@@ -16,8 +16,7 @@ class CommitImpl : public Commit {
   ~CommitImpl() override;
 
   // Factory method for creating a |CommitImpl| object given its storage
-  // representation. If the format is incorrect, a NULL pointer will be
-  // returned.
+  // representation. If the format is incorrect, |nullptr| will be returned.
   static std::unique_ptr<Commit> FromStorageBytes(PageStorage* page_storage,
                                                   CommitId id,
                                                   std::string storage_bytes);

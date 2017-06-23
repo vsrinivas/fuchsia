@@ -16,9 +16,10 @@ namespace ledger {
 // Source of the auth information for cloud sync to use, implemented using the
 // system token provider.
 //
-// If configured with empty |api_key|, doesn't attempt to use |token_provider|
-// and yields empty Firebase tokens and user ids. This allows the code to work
-// without auth against public instances (e.g. for running benchmarks).
+// If configured with an empty |api_key|, doesn't attempt to use
+// |token_provider| and yields empty Firebase tokens and user ids. This allows
+// the code to work without auth against public instances (e.g. for running
+// benchmarks).
 //
 // This is currently a placeholder that always returns an empty token.
 class AuthProviderImpl : public cloud_sync::AuthProvider {

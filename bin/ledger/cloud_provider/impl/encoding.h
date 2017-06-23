@@ -15,8 +15,8 @@
 
 namespace cloud_provider {
 
-// These methods encode and decode commits specifically for storing
-// in Firebase Realtime Database.
+// These methods encode and decode commits specifically for storing in Firebase
+// Realtime Database.
 
 // Encodes a batch of commits as a JSON dictionary suitable for storing in
 // Firebase Realtime Database.
@@ -26,10 +26,10 @@ namespace cloud_provider {
 bool EncodeCommits(const std::vector<Commit>& commits,
                    std::string* output_json);
 
-// Decodes multiple commits from the JSON representation of an
-// object holding them in Firebase Realtime Database. If successful, the method
-// returns true, and |output_records| contain the decoded commits
-// along with their timestamps.
+// Decodes multiple commits from the JSON representation of an object holding
+// them in Firebase Realtime Database. If successful, the method returns true,
+// and |output_records| contains the decoded commits along with their
+// timestamps.
 bool DecodeMultipleCommits(const std::string& json,
                            std::vector<Record>* output_records);
 

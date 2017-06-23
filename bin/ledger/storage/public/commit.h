@@ -39,8 +39,8 @@ class Commit {
   // Returns the id of the root node of this commit.
   virtual ObjectIdView GetRootId() const = 0;
 
-  // Returns the byte representation of this |Commit| as they will be
-  // synced to the cloud.
+  // Returns the byte representation of this |Commit| as they will be synced to
+  // the cloud.
   virtual ftl::StringView GetStorageBytes() const = 0;
 
  private:

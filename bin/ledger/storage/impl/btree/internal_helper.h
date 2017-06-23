@@ -22,7 +22,7 @@ namespace storage {
 namespace btree {
 
 // Returns the index of |entries| that contains |key|, or the first entry that
-// has key greather than |key|. In the second case, the key, if present, will
+// has a key greather than |key|. In the second case, the key, if present, will
 // be found in the children at the returned index.
 size_t GetEntryOrChildIndex(const std::vector<Entry> entries,
                             ftl::StringView key);

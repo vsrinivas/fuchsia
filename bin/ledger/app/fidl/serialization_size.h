@@ -23,7 +23,7 @@ const size_t kPrioritySize = sizeof(int32_t);
 const size_t kHandleSize = sizeof(int32_t);
 
 // The overhead for storing the pointer, the timestamp (int64) and the two
-// arrays
+// arrays.
 constexpr size_t kPageChangeHeaderSize =
     kPointerSize + sizeof(int64_t) + 2 * kArrayHeaderSize;
 

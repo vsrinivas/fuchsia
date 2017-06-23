@@ -26,7 +26,7 @@ class LedgerStorage {
 
   // Finds the |PageStorage| corresponding to the page with the given |page_id|.
   // The result will be returned through the given |callback|. If the storage
-  // for the given page doesn't exist a NULL pointer will be returned instead.
+  // for the given page doesn't exist nullptr will be returned instead.
   virtual void GetPageStorage(
       PageId page_id,
       const std::function<void(Status, std::unique_ptr<PageStorage>)>&

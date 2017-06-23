@@ -92,9 +92,9 @@ class PageDelegate {
                    storage::KeyPriority priority,
                    StatusCallback callback);
 
-  // Run |runnable| in a transaction, and notifies |callback| of the result. If
-  // a transaction is currently in progress, reuses it, otherwise creates a new
-  // one and commit it before calling |callback|. This method is not
+  // Runs |runnable| in a transaction, and notifies |callback| of the result. If
+  // a transaction is currently in progress, it reuses it, otherwise creates a
+  // new one and commits it before calling |callback|. This method is not
   // serialized, and should only be called from a callsite that is serialized.
   void RunInTransaction(
       std::function<Status(storage::Journal* journal)> runnable,
@@ -104,13 +104,6 @@ class PageDelegate {
       std::unique_ptr<storage::Journal> journal,
       std::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
-
-  // Queue operations such that they are serialized: an operation is run only
-  // when all previous operations registered through this method have terminated
-  // by calling their callbacks. When |operation| terminates, |callback| is
-  // called with the status returned by |operation|.
-  void SerializeOperation(StatusCallback callback,
-                          std::function<void(StatusCallback)> operation);
 
   void CheckEmpty();
 

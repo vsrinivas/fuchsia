@@ -14,6 +14,7 @@
 
 namespace ledger {
 
+// An implementation of the |PageSnapshot| FIDL interface.
 class PageSnapshotImpl : public PageSnapshot {
  public:
   PageSnapshotImpl(storage::PageStorage* page_storage,

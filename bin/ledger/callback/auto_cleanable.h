@@ -53,7 +53,7 @@ class AutoCleanableSet {
     bool operator!=(const iterator& rhs) const { return base_ != rhs.base_; }
     // This set uses the reference of the object (and not its contents) to
     // define object equality. Thus, calling non-const methods on the stored
-    // objects do not change their hash, and are safe to use.
+    // objects does not change their hash, and they are safe to use.
     V& operator*() const { return const_cast<V&>(*(base_)); }
     V* operator->() const { return const_cast<V*>(base_.operator->()); }
 

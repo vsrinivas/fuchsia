@@ -19,8 +19,7 @@ class Journal {
   virtual ~Journal() {}
 
   // Adds an entry with the given |key| and |object_id| to this |Journal|.
-  // Returns
-  // |OK| on success or the error code otherwise.
+  // Returns |OK| on success or the error code otherwise.
   virtual Status Put(convert::ExtendedStringView key,
                      ObjectIdView object_id,
                      KeyPriority priority) = 0;

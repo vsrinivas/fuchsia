@@ -50,10 +50,10 @@ class WrappedCancellableCallback {
 // Implementation of |Cancellable| for services. A service that wants to return
 // a |Cancellable| can return an instance of |CancellableImpl|. It passes to its
 // factory method a callback that will be executed if the client calls the
-// |Cancel| method.
+// |Cancel()| method.
 //
 // A client callback associated with the cancellable request can be wrapped
-// using WrapCallback(). This ensures that:
+// using |WrapCallback()|. This ensures that:
 //  - the cancellable becomes done automatically when the wrapped callback is
 //    called
 //  - if the wrapped callback is called after the request was cancelled, the

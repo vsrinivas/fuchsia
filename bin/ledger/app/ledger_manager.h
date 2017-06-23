@@ -22,10 +22,10 @@
 
 namespace ledger {
 
-// Manages a ledger instance. Ledger instance represents the data scoped to a
+// Manages a ledger instance. A ledger instance represents the data scoped to a
 // particular user and a particular client app.
 //
-// LedgerManager owns all per-ledger-instance objects: LedgerStorage and a Mojo
+// LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate {
@@ -58,11 +58,11 @@ class LedgerManager : public LedgerImpl::Delegate {
   void CreatePageStorage(storage::PageId page_id,
                          PageManagerContainer* container);
 
-  // Adds a new PageManagerContainer for |page_id| and configures its so that we
-  // delete it from |page_managers_| automatically when the last local client
+  // Adds a new PageManagerContainer for |page_id| and configures it so that it
+  // is automatically deleted from |page_managers_| when the last local client
   // disconnects from the page. Returns the container.
   PageManagerContainer* AddPageManagerContainer(storage::PageIdView page_id);
-  // Create a new page manager for the given storage.
+  // Creates a new page manager for the given storage.
   std::unique_ptr<PageManager> NewPageManager(
       std::unique_ptr<storage::PageStorage> page_storage);
 
@@ -72,12 +72,12 @@ class LedgerManager : public LedgerImpl::Delegate {
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;
-  // merge_manager_ must be destructed after page_managers_ to ensure it
+  // |merge_manager_| must be destructed after |page_managers_| to ensure it
   // outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
   fidl::BindingSet<Ledger> bindings_;
 
-  // Mapping from page id to the manager of that page.
+  // Mapping from each page id to the manager of that page.
   callback::AutoCleanableMap<storage::PageId,
                              PageManagerContainer,
                              convert::StringViewComparator>

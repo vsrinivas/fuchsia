@@ -16,10 +16,11 @@ namespace callback {
 
 namespace internal {
 
-// Base implementation for all specialized waiter. It uses an Accumulator
+// Base implementation for all specialized waiters. It uses an Accumulator
 // abstraction to aggregate results from the different callbacks.
-// A is the accumulator, R is the final return type and Args are the arguments
-// of the callbacks. The accumulator must have the following interface:
+// |A| is the accumulator, |R| is the final return type and |Args| are the
+// arguments of the callbacks. The accumulator must have the following
+// interface:
 // class Accumulator {
 //  public:
 //   TOKEN PrepareCall();
@@ -229,8 +230,8 @@ class StatusWaiter
             internal::StatusAccumulator<S>(success_status)) {}
 };
 
-// Promise is used to wait on an asynchronous call.  A typical usage example
-// is:
+// Promise is used to wait on a single asynchronous call. A typical usage
+// example is:
 // auto promise =
 //     callback::Promise<Status, std::unique_ptr<Object>>::Create(
 //         Status::ILLEGAL_STATE);
@@ -246,7 +247,7 @@ class Promise : public internal::BaseWaiter<internal::PromiseAccumulator<S, V>,
                                             S,
                                             V> {
  public:
-  // Create a new promise. |default_status| and |default_value| will be
+  // Creates a new promise. |default_status| and |default_value| will be
   // returned to the callback in |Finalize| if |NewCallback| is not called.
   static ftl::RefPtr<Promise<S, V>> Create(S default_status,
                                            V default_value = V()) {

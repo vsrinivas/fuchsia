@@ -26,7 +26,7 @@ class Firebase {
   //   |query_params| - array of params that are joined using the "&" separator
   //       passed verbatim as the query parameter of the request. Can be empty.
 
-  // Retrieves JSON representation of the data under the given path. See
+  // Retrieves the JSON representation of the data under the given path. See
   // https://firebase.google.com/docs/database/rest/retrieve-data.
   //
   // TODO(ppi): support response Content-Length header, see LE-210.

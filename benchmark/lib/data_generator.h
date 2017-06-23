@@ -22,7 +22,7 @@ class DataGenerator {
 
   // Builds a key of the given length as "<the given int>-<random data>", so
   // that deterministic ordering of entries can be ensured by using a different
-  // |i| value each time, but the resulting b-tree nodes are always distinct.
+  // |i| value each time, but the resulting B-tree nodes are always distinct.
   fidl::Array<uint8_t> MakeKey(int i, size_t size);
 
   // Builds a random value of the given length.

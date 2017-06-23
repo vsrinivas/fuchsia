@@ -22,13 +22,13 @@ enum class PaginationBehavior {
 
 // Asynchronously creates a PageChange representing the diff of the two provided
 // commits, starting from the given |min_key|. If |pagination_behavior| is
-// |NO_PAGINATION|, it provide all results. If |pagination_behavior| is
-// |BY_SIZE| it will provide a number of results that fits in a fidl message.
+// |NO_PAGINATION|, it provides all results. If |pagination_behavior| is
+// |BY_SIZE| it will provide a number of results that fit in a fidl message.
 // The result, or an error, will be provided in |callback| status. The second
-// argument of the callback is a pair of the PageChangePtr, containing the diff
-// result, and the string representation of the next token, if the result is
-// paginated, or empty, if there are no more results to return. Note that the
-// PageChangePtr in the callback will be NULL if the diff is empty.
+// argument of the callback is either a pair of the PageChangePtr, containing
+// the diff result and the string representation of the next token if the
+// result is paginated, or empty if there are no more results to return. Note
+// that the PageChangePtr in the callback will be nullptr if the diff is empty.
 void ComputePageChange(
     storage::PageStorage* storage,
     const storage::Commit& base,

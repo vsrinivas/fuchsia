@@ -39,7 +39,7 @@ class PageStorageImpl : public PageStorage {
   void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                           std::function<void(Status)> callback);
 
-  // Returns true if the given |object_id| is untracked, i.e. has been  created
+  // Returns true if the given |object_id| is untracked, i.e. has been created
   // using |AddObjectFromLocal()|, but is not yet part of any commit. Untracked
   // objects are invalid after the PageStorageImpl object is destroyed.
   bool ObjectIsUntracked(ObjectIdView object_id);

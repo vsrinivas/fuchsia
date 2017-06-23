@@ -12,8 +12,8 @@ namespace storage {
 namespace btree {
 namespace {
 
-// Aggregates 2 BTreeIterator and allows to walk these concurrently to compute
-// the diff.
+// Aggregates 2 |BTreeIterator|s and allows to walk through these concurrently
+// to compute the diff.
 class IteratorPair {
  public:
   IteratorPair(SynchronousStorage* storage,

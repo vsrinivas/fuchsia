@@ -35,7 +35,7 @@ class TracingLambda {
         did_run_or_moved_out_(false),
         trace_enabled_(false) {}
 
-  // Copy constructor so that the resulting callback can be used as
+  // Copy constructor so that the resulting callback can be used as an
   // std::function, but acts as a move constructor. Only the last copy is valid.
   TracingLambda(TracingLambda&& other)
       : id_(other.id_),
@@ -108,7 +108,7 @@ constexpr const char* CheckConstantCString(const char* value) {
 }  // namespace internal
 }  // namespace callback
 
-// Wraps the given callback so that it's traces using async tracing from the
+// Wraps the given callback so that it's traced using async tracing from the
 // time it's wrapped to the time it completes. Can be used only for callbacks
 // that will be called at most once.
 #define TRACE_CALLBACK(cb, category, name, args...)                       \

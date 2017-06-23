@@ -16,8 +16,8 @@
 
 namespace cloud_provider {
 
-// Relay between Firebase and a CommitWatcher corresponding to
-// particular WatchCommits() request.
+// Relay between Firebase and a CommitWatcher corresponding to particular
+// WatchCommits() request.
 class WatchClientImpl : public firebase::WatchClient {
  public:
   WatchClientImpl(firebase::Firebase* firebase,

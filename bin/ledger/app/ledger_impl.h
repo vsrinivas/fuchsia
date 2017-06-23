@@ -16,6 +16,7 @@
 
 namespace ledger {
 
+// An implementation of the |Ledger| FIDL interface.
 class LedgerImpl : public Ledger {
  public:
   // Delegate capable of actually performing the page operations.

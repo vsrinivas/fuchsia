@@ -11,7 +11,7 @@
 
 namespace glue {
 
-// Fill buffer with |size| random bytes.
+// Fills buffer with |size| random bytes.
 void RandBytes(void* buffer, size_t size);
 
 // Returns a random number in range [0, UINT64_MAX].

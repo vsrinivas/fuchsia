@@ -22,7 +22,7 @@ class AutoCancel;
 // the client calls |Cancel|, the service should interrupt the asynchronous
 // task, in particular, the service must not call any completion callbacks once
 // the client called |Cancel|.
-// Once the client calls |Cancel|, or when the service calls any completion
+// If the client calls |Cancel|, or when the service calls any completion
 // callbacks, the |IsDone| method must return |true|.
 class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
  public:
@@ -52,11 +52,11 @@ class AutoCancel {
   AutoCancel(ftl::RefPtr<Cancellable> cancellable = nullptr);
   ~AutoCancel();
 
-  // Cancel any wrapped |Cancellable| and starts wrapping |cancellable|.
+  // Cancels any wrapped |Cancellable|s and starts wrapping |cancellable|.
   void Reset(ftl::RefPtr<Cancellable> cancellable = nullptr);
 
   // The client can call the |set_on_empty| method once. |callback| will then be
-  // executed when the underlying Cancellable finishes.
+  // executed when the underlying |Cancellable| finishes.
   void set_on_empty(ftl::Closure callback);
 
  private:
@@ -68,7 +68,7 @@ class AutoCancel {
   FTL_DISALLOW_COPY_AND_ASSIGN(AutoCancel);
 };
 
-// RAII container for multiple |Cancellable|. The |Cancellable|s will be
+// RAII container for multiple |Cancellable|s. The |Cancellable|s will be
 // canceled when this object is deleted. The |Cancellable| objects will also be
 // deleted when they complete.
 using CancellableContainer = AutoCleanableSet<AutoCancel>;

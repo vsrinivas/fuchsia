@@ -15,7 +15,7 @@ namespace backoff {
 // Exponential backoff. The returned backoff delay is D + r:
 //   D = |initial_delay| * |retry_factor| ^ N
 //   r = rand(0, D)
-// for N denoting the number of consecutive GetNext() calls, starting at 0.
+// with N denoting the number of consecutive GetNext() calls, starting at 0.
 class ExponentialBackoff : public Backoff {
  public:
   ExponentialBackoff(
@@ -36,7 +36,6 @@ class ExponentialBackoff : public Backoff {
   const ftl::TimeDelta max_delay_;
   // Used to prevent overflows in multiplication.
   const ftl::TimeDelta max_delay_divided_by_factor_;
-  // Rng.
   std::default_random_engine rng_;
 
   ftl::TimeDelta next_delay_ = initial_delay_;

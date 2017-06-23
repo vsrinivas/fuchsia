@@ -42,7 +42,7 @@ class SyncStateWatcher {
 
   virtual ~SyncStateWatcher() {}
 
-  // Notify the watcher of a new state.
+  // Notifies the watcher of a new state.
   virtual void Notify(SyncStateContainer sync_state) = 0;
 
   // Helper method, equivalent to |Notify| above.

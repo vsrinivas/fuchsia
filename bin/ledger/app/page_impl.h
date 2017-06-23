@@ -11,7 +11,7 @@
 namespace ledger {
 class PageDelegate;
 
-// An implementation of the |Page| interface.
+// An implementation of the |Page| FIDL interface.
 class PageImpl : public Page {
  public:
   PageImpl(PageDelegate* delegate);

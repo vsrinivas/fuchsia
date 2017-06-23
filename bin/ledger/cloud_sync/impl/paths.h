@@ -11,12 +11,12 @@
 
 namespace cloud_sync {
 
-// Returns common object name prefix used for all objects stored on behalf of
-// the given user and app.
+// Returns the common object name prefix used for all objects stored on behalf
+// of the given user and app.
 std::string GetGcsPrefixForApp(ftl::StringView user_id, ftl::StringView app_id);
 
-// Returns common object name prefix used for all objects stored for the given
-// page, based on the prefix for the app.
+// Returns the common object name prefix used for all objects stored for the
+// given page, based on the prefix for the app.
 std::string GetGcsPrefixForPage(ftl::StringView app_prefix,
                                 ftl::StringView app_id);
 

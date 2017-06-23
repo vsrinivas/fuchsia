@@ -39,10 +39,10 @@ class UserSyncImpl : public UserSync {
  private:
   // Returns the path where the local version is stored.
   std::string GetLocalVersionPath();
-  // Check that the version on the cloud is compatible with the local version on
-  // the device.
+  // Checks that the version on the cloud is compatible with the local version
+  // on the device.
   void CheckCloudVersion();
-  // Enable sync upload.
+  // Enables sync upload.
   void EnableUpload();
 
   // UserSync:

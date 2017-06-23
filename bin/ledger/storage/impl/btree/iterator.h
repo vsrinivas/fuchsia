@@ -26,8 +26,8 @@ struct EntryAndNodeId {
   const ObjectId& node_id;
 };
 
-// Iterator over a BTree. This iterator exposes the internal of the iteration to
-// allow to skip part of the tree.
+// Iterator over a B-Tree. This iterator exposes the internal of the iteration
+// to allow to skip part of the tree.
 class BTreeIterator {
  public:
   BTreeIterator(SynchronousStorage* storage);
@@ -35,10 +35,10 @@ class BTreeIterator {
   BTreeIterator(BTreeIterator&&);
   BTreeIterator& operator=(BTreeIterator&&);
 
-  // Initialize the iterator with the root node of the tree.
+  // Initializes the iterator with the root node of the tree.
   Status Init(ObjectIdView node_id);
 
-  // Skip the iteration until the first key that is greater or equals to
+  // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
   Status SkipTo(ftl::StringView min_key);
 
@@ -74,7 +74,7 @@ class BTreeIterator {
   // Advances the iterator until it has a value or it finishes.
   Status AdvanceToValue();
 
-  // Skip the next sub tree in the iteration.
+  // Skips the next sub tree in the iteration.
   void SkipNextSubTree();
 
  private:
@@ -94,7 +94,7 @@ class BTreeIterator {
   FTL_DISALLOW_COPY_AND_ASSIGN(BTreeIterator);
 };
 
-// Retrieves the ids of all objects in the BTree, i.e tree nodes and values of
+// Retrieves the ids of all objects in the B-Tree, i.e tree nodes and values of
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
 void GetObjectIds(coroutine::CoroutineService* coroutine_service,
@@ -102,21 +102,20 @@ void GetObjectIds(coroutine::CoroutineService* coroutine_service,
                   ObjectIdView root_id,
                   std::function<void(Status, std::set<ObjectId>)> callback);
 
-// Tries to download all tree nodes and values with EAGER priority that are not
-// locally available from sync. To do this PageStorage::GetObject is called for
-// all corresponding objects.
+// Tries to download all tree nodes and values with |EAGER| priority that are
+// not locally available from sync. To do this |PageStorage::GetObject| is
+// called for all corresponding objects.
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
                         ObjectIdView root_id,
                         std::function<void(Status)> callback);
 
 // Iterates through the nodes of the tree with the given root and calls
-// |on_next| on found entries with a key equal to or greater than |min_key|.
-// The return value of |on_next| can be used to stop the iteration: returning
-// false will interrupt the iteration in progress and no more |on_next| calls
-// will be made. |on_done| is called once, upon successfull completion, i.e.
-// when there are no more elements or iteration was interrupted, or if an error
-// occurs.
+// |on_next| on found entries with a key equal to or greater than |min_key|. The
+// return value of |on_next| can be used to stop the iteration: returning false
+// will interrupt the iteration in progress and no more |on_next| calls will be
+// made. |on_done| is called once, upon successfull completion, i.e. when there
+// are no more elements or iteration was interrupted, or if an error occurs.
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   PageStorage* page_storage,
                   ObjectIdView root_id,

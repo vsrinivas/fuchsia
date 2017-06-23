@@ -19,9 +19,9 @@ namespace ledger {
 class PageManager;
 
 // Tracks the head of a commit "branch". A commit is chosen arbitrarily from the
-// page head commits at construction. Subsequently, this object will track the
+// page's head commits at construction. Subsequently, this object will track the
 // head of this commit branch, unless reset by |SetBranchHead|. If two commits
-// have the same parent, the first one to be received will be followed.
+// have the same parent, the first one to be received will be tracked.
 class BranchTracker : public storage::CommitWatcher {
  public:
   BranchTracker(coroutine::CoroutineService* coroutine_service,
@@ -40,7 +40,7 @@ class BranchTracker : public storage::CommitWatcher {
                            std::string key_prefix);
 
   // Informs the BranchTracker that a transaction is in progress. It first
-  // drains all pending Watcher updates, then stop sending them until
+  // drains all pending Watcher updates, then stops sending them until
   // |StopTransaction| is called. |watchers_drained_callback| is called when all
   // watcher updates have been processed by the clients. This should be used by
   // |PageDelegate| when a transaction is in progress.

@@ -119,8 +119,8 @@ class DB {
                                     convert::ExtendedStringView key) = 0;
 
   // Journal value counters can be used to keep track of how many times a given
-  // value is referenced in a journal.
-  // Returns the number of times the given value is refererenced.
+  // value is referenced in a journal. Returns the number of times the given
+  // value is refererenced.
   virtual Status GetJournalValueCounter(const JournalId& journal_id,
                                         ftl::StringView value,
                                         int64_t* counter) = 0;

@@ -24,7 +24,7 @@ namespace cloud_provider {
 // A CloudProvider instance is scoped to a particular page.
 //
 // When delivered from the server, commits come along with timestamps.
-// These timestamps are server timestamps , i.e. they represent the time of
+// These timestamps are server timestamps, i.e. they represent the time of
 // registering the commit on the server. Their meaning is opaque to the client
 // and depends on the particular service provider, but they can be used to make
 // scoped queries - see GetCommits(), WatchCommits().
@@ -70,7 +70,7 @@ class CloudProvider {
   // Retrieves commits not older than the given |min_timestamp|.  Passing empty
   // |min_timestamp| retrieves all commits.
   //
-  // Result is a vector of pairs of the retrieved commits and their
+  // The result is a vector of pairs of the retrieved commits and their
   // corresponding server timestamps.
   virtual void GetCommits(
       const std::string& auth_token,

@@ -23,7 +23,7 @@ class WatchClient {
 
   // Called when a Firebase event of incorrect format is received. Such
   // notification is ignored, further events continue to be processed after this
-  // call. (but the client might choose to close the stream themselves)
+  // call (but clients might choose to close the stream themselves).
   virtual void OnMalformedEvent() {}
 
   // Called when the stream of events can't be established, or is interrupted,
