@@ -53,15 +53,17 @@ union Action {
 
 // Creates a new story with the specified module
 struct CreateStory {
-  // TODO(alhaad, thatguy): This should be renamed to module_name.
+  // TODO(alhaad, thatguy): This should be renamed to module_url.
   string module_id;
 
-  // If set, calls Link.AddDocuments() on the new Story's Link immediately after
-  // the Story creation.
+  // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
+  // Link.Set() to set the value in the root link of the new Story's primary
+  // module.
   string? initial_data;
 };
 
 // Brings an existing story into focus.
+//
 // TODO(alhaad): It is not entirely clear to me whether it is the user shell
 // which checks if the story is running when brought into focus. Re-visit this.
 struct FocusStory {
@@ -85,11 +87,16 @@ struct AddModuleToStory {
   // Name of the link for the added module.
   string link_name;
 
-  // Data to be passed to the added module at startup.
+  // If not null the JSON value of the link of the added module is set to this
+  // value. If the action is used to connect to an existing link from an
+  // existing module (indicated by module_path), then setting this likely
+  // defeats the purpose of the action, because it overwrites the existing value
+  // of the link.
   string? initial_data;
 
   // Module instance which is already in the story and to which the added module
-  // is to be associated. Leave empty if unknown.
+  // is to be associated. |link_name| then refers to a link emanating from that
+  // module. If empty, the module is added as a root module to the story.
   array<string> module_path;
 
   // Advise the framework on how to layout the newly added module.
