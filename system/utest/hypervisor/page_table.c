@@ -50,13 +50,13 @@ static bool page_table_1gb(void) {
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
     ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), MX_OK, "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 2u, "");
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
     // pdp
     expected[1].entries[0] = X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
+    ASSERT_EQ(pte_off, PAGE_SIZE * 2u, "");
 
     END_TEST;
 }
@@ -69,7 +69,6 @@ static bool page_table_2mb(void) {
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
     ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), MX_OK, "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 3u, "");
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -78,6 +77,7 @@ static bool page_table_2mb(void) {
     // pd
     expected[2].entries[0] = X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
+    ASSERT_EQ(pte_off, PAGE_SIZE * 3u, "");
 
     END_TEST;
 }
@@ -90,7 +90,6 @@ static bool page_table_4kb(void) {
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
     ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), MX_OK, "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -104,6 +103,7 @@ static bool page_table_4kb(void) {
     expected[3].entries[2] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
     expected[3].entries[3] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
+    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     END_TEST;
 }
@@ -116,18 +116,71 @@ static bool page_table_mixed_pages(void) {
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
     ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20)  + (4 << 10), &pte_off), MX_OK, "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
     // pdp
     expected[1].entries[0]  = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+
     // pd
     expected[2].entries[0] = X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
     expected[2].entries[1] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
+
     // pt
     expected[3].entries[0] = (2 << 20) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
+    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
+
+    END_TEST;
+}
+
+// Create a page table for 2gb + 123mb + 32kb bytes.
+static bool page_table_complex(void) {
+    BEGIN_TEST;
+
+    uintptr_t pte_off;
+    page_table actual[4] = INITIALIZE_PAGE_TABLE;
+    page_table expected[4] = INITIALIZE_PAGE_TABLE;
+
+    // 2gb + 123mb + 32kb of RAM. This breaks down a follows:
+    //
+    // PML4
+    // > 1 pointer to a PDPT
+    //
+    // PDPT
+    // > 2 direct-mapped 1gb regions
+    // > 1 ponter to a PD
+    //
+    // PD
+    // > 61 direct-mapped 2mb regions
+    // > 1 pointer to a PT
+    //
+    // PT
+    // >  264 mapped pages
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 0x87B08000, &pte_off), MX_OK, "");
+
+    // pml4
+    expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
+
+    // pdp
+    expected[1].entries[0]  = (0l << 30) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[1].entries[1]  = (1l << 30) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[1].entries[2]  = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+
+    // pd - starts at 2GB
+    const uint64_t pdp_offset = 2l << 30;
+    for (int i = 0; i < 62; ++i) {
+        expected[2].entries[i] = (pdp_offset + (i << 21)) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    }
+    expected[2].entries[61] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
+
+    // pt - starts at 2GB + 122MB
+    const uint64_t pd_offset = pdp_offset + (61l << 21);
+    for (int i = 0; i < 264; ++i) {
+        expected[3].entries[i] = (pd_offset + (i << 12)) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    }
+    ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
+    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     END_TEST;
 }
@@ -137,4 +190,5 @@ RUN_TEST(page_table_1gb)
 RUN_TEST(page_table_2mb)
 RUN_TEST(page_table_4kb)
 RUN_TEST(page_table_mixed_pages)
+RUN_TEST(page_table_complex)
 END_TEST_CASE(x86_64_extended_page_table)
