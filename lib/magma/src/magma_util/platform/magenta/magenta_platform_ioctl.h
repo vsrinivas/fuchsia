@@ -6,7 +6,7 @@
 #define _MAGENTA_PLATFORM_CONNECTION_H_
 
 #include "magenta/device/ioctl-wrapper.h"
-#include <ddk/ioctl.h>
+#include "magenta/driver/ioct.h"
 
 #define IOCTL_MAGMA_CONNECT IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_GPU, 1)
 #define IOCTL_MAGMA_QUERY IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_GPU, 2)
