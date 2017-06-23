@@ -110,9 +110,9 @@ static size_t *saved_addends, *apply_addends_to;
 
 static struct dso ldso, vdso;
 static struct dso *head, *tail, *fini_head;
+static struct dso *detached_head;
 static unsigned long long gencnt;
 static int runtime;
-static int ldd_mode;
 static int ldso_fail;
 static jmp_buf* rtld_fail;
 static pthread_rwlock_t lock;
@@ -794,63 +794,30 @@ __NO_SAFESTACK static struct dso* find_library_in(struct dso* p,
 }
 
 __NO_SAFESTACK static struct dso* find_library(const char* name) {
-    int is_self = 0;
-
-    /* Catch and block attempts to reload the implementation itself */
-    if (name[0] == 'l' && name[1] == 'i' && name[2] == 'b') {
-        static const char *rp, reserved[] = "c\0pthread\0rt\0m\0dl\0util\0xnet\0";
-        char* z = strchr(name, '.');
-        if (z) {
-            size_t l = z - name;
-            for (rp = reserved; *rp && strncmp(name + 3, rp, l - 3); rp += strlen(rp) + 1)
-                ;
-            if (*rp) {
-                if (ldd_mode) {
-                    /* Track which names have been resolved
-                     * and only report each one once. */
-                    static unsigned reported;
-                    unsigned mask = 1U << (rp - reserved);
-                    if (!(reported & mask)) {
-                        reported |= mask;
-                        debugmsg("\t%s => %s (%p)\n",
-                                 name, ldso.name, ldso.base);
-                    }
-                }
-                is_self = 1;
-            }
-        }
-    }
-    if (!strcmp(name, ldso.name))
-        is_self = 1;
-    if (is_self) {
-        if (!ldso.prev) {
-            tail->next = &ldso;
-            ldso.prev = tail;
-            tail = ldso.next ? ldso.next : &ldso;
-        }
-        return &ldso;
-    }
-
     // First see if it's in the general list.
     struct dso* p = find_library_in(head, name);
-    if (p == NULL && ldso.prev == NULL) {
+    if (p == NULL && detached_head != NULL) {
         // ldso is not in the list yet, so the first search didn't notice
         // anything that is only a dependency of ldso, i.e. the vDSO.
         // See if the lookup by name matches ldso or its dependencies.
-        p = find_library_in(&ldso, name);
+        p = find_library_in(detached_head, name);
         if (p != NULL) {
-            // Take it out of its place in the list rooted at ldso.
+            // Take it out of its place in the list rooted at detached_head.
             if (p->prev != NULL)
                 p->prev->next = p->next;
-            if (p->next != NULL)
-                p->next->prev = p->prev;
+            else
+                detached_head = p->next;
+            struct dso* next = p->next;
+            if (next != NULL) {
+                p->next = next->next;
+                next->prev = p->prev;
+            }
             // Stick it on the main list.
             tail->next = p;
             p->prev = tail;
             tail = p;
         }
     }
-
     return p;
 }
 
@@ -1054,9 +1021,6 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
     tail->next = p;
     p->prev = tail;
     tail = p;
-
-    if (ldd_mode)
-        debugmsg("\t%s => %s (%p)\n", p->soname, name, p->base);
 
     *loaded = p;
     return MX_OK;
@@ -1431,9 +1395,9 @@ dl_start_return_t __dls2(
  * transfer control to its entry point. */
 
 __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
+    detached_head = &ldso;
+
     static struct dso app;
-    size_t i;
-    char** argv_orig = argv;
 
     if (argc < 1 || argv[0] == NULL) {
         static const char* dummy_argv0 = "";
@@ -1456,48 +1420,6 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
             trace_maps = true;
     }
 
-    if (exec_vmo == MX_HANDLE_INVALID) {
-        char* ldname = argv[0];
-        size_t l = strlen(ldname);
-        if (l >= 3 && !strcmp(ldname + l - 3, "ldd"))
-            ldd_mode = 1;
-        argv++;
-        while (argv[0] && argv[0][0] == '-' && argv[0][1] == '-') {
-            char* opt = argv[0] + 2;
-            *argv++ = (void*)-1;
-            if (!*opt) {
-                break;
-            } else if (!memcmp(opt, "list", 5)) {
-                ldd_mode = 1;
-            } else if (!memcmp(opt, "preload", 7)) {
-                if (opt[7] == '=')
-                    ld_preload = opt + 8;
-                else if (opt[7])
-                    *argv = 0;
-                else if (*argv)
-                    ld_preload = *argv++;
-            } else {
-                argv[0] = 0;
-            }
-        }
-        argc -= argv - argv_orig;
-        if (!argv[0]) {
-            debugmsg("musl libc (" LDSO_ARCH ")\n"
-                     "Dynamic Program Loader\n"
-                     "Usage: %s [options] [--] pathname%s\n",
-                     ldname, ldd_mode ? "" : " [args]");
-            _exit(1);
-        }
-
-        ldso.name = ldname;
-
-        mx_status_t status = get_library_vmo(argv[0], &exec_vmo);
-        if (status != MX_OK) {
-            debugmsg("%s: cannot load %s: %d\n", ldname, argv[0], status);
-            _exit(1);
-        }
-    }
-
     mx_status_t status = map_library(exec_vmo, &app);
     _mx_handle_close(exec_vmo);
     if (status != MX_OK) {
@@ -1507,16 +1429,6 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     }
 
     app.name = argv[0];
-
-    /* Find the name that would have been used for the dynamic
-     * linker had ldd not taken its place. */
-    if (ldd_mode) {
-        for (i = 0; i < app.phnum; i++) {
-            if (app.phdr[i].p_type == PT_INTERP)
-                ldso.name = laddr(&app, app.phdr[i].p_vaddr);
-        }
-        debugmsg("\t%s (%p)\n", ldso.name, ldso.base);
-    }
 
     if (app.tls.size) {
         libc.tls_head = tls_tail = &app.tls;
@@ -1545,7 +1457,7 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     load_deps(&app);
     make_global(&app);
 
-    for (i = 0; app.dynv[i].d_tag; i++) {
+    for (size_t i = 0; app.dynv[i].d_tag; i++) {
         if (!DT_DEBUG_INDIRECT && app.dynv[i].d_tag == DT_DEBUG)
             app.dynv[i].d_un.d_ptr = (size_t)&debug;
         if (DT_DEBUG_INDIRECT && app.dynv[i].d_tag == DT_DEBUG_INDIRECT) {
@@ -1564,8 +1476,6 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     if (ldso_fail)
         _exit(127);
-    if (ldd_mode)
-        _exit(0);
 
     /* Switch to runtime mode: any further failures in the dynamic
      * linker are a reportable failure rather than a fatal startup
@@ -1623,7 +1533,7 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     // Check for a PT_GNU_STACK header requesting a main thread stack size.
     libc.stack_size = DEFAULT_PTHREAD_ATTR._a_stacksize;
-    for (i = 0; i < app.phnum; i++) {
+    for (size_t i = 0; i < app.phnum; i++) {
         if (app.phdr[i].p_type == PT_GNU_STACK) {
             size_t size = app.phdr[i].p_memsz;
             if (size > 0)
