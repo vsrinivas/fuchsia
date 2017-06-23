@@ -57,7 +57,6 @@ template("fuchsia_shared_library") {
       "cflags_objcc",
       "cflags",
       "check_includes",
-      "configs",
       "data_deps",
       "data",
       "defines",
@@ -77,6 +76,10 @@ template("fuchsia_shared_library") {
       "sources",
       "testonly",
     ])
+
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
 
     if (!defined(output_name)) {
       output_name = group_target
