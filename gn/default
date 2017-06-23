@@ -2,6 +2,7 @@
     "imports": [
         "amber",
         "asio",
+        "bluetooth",
         "boringssl",
         "cmdutils",
         "curl",
