@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/shared.gni")
 import("//packages/package.gni")
 
 if (is_android) {
@@ -148,15 +149,15 @@ source_set("ftl_lib") {
 
 if (is_fuchsia) {
 
-shared_library("ftl") {
+fuchsia_shared_library("ftl") {
   public_deps = [
-    ":ftl_lib(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    ":ftl_lib",
   ]
 }
 
 } else {
 
-source_set("ftl") {
+group("ftl") {
   public_deps = [
     ":ftl_lib",
   ]
