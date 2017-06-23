@@ -13,7 +13,7 @@ source_set("input") {
   deps = [
     "//apps/mozart/services/input",
     "//lib/ftl",
-    "//lib/mtl/tasks",
+    "//lib/mtl",
   ]
 
   libs = [ "hid" ]
