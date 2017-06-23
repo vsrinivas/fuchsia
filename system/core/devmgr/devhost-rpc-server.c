@@ -16,7 +16,7 @@
 #include <sync/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/ioctl.h>
+
 #include <ddk/iotxn.h>
 #include <magenta/device/device.h>
 
