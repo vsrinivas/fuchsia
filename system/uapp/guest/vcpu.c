@@ -22,6 +22,7 @@
 #include <acpica/actypes.h>
 #endif // __x86_64__
 
+#include "constants.h"
 #include "vcpu.h"
 
 /* Memory-mapped device physical addresses. */
@@ -54,8 +55,8 @@
 #define LAST_REDIRECT_OFFSET                    (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
 
 /* UART configuration flags. */
-#define UART_STATUS_IDLE                        (1u << 6)
 #define UART_STATUS_EMPTY                       (1u << 5)
+#define UART_STATUS_IDLE                        (1u << 6)
 
 /* RTC register addresses. */
 #define RTC_REGISTER_SECONDS                    0u
@@ -97,8 +98,9 @@
 #define PCI_BAR_IO_TYPE_PIO                     0x01
 #define PCI_VENDOR_ID_VIRTIO                    0x1af4
 #define PCI_VENDOR_ID_INTEL                     0x8086
-#define PCI_DEVICE_ID_VIRTIO_BLOCK              0x1001
+#define PCI_DEVICE_ID_VIRTIO_BLOCK              0x1042
 #define PCI_DEVICE_ID_INTEL_Q35                 0x29c0
+#define PCI_INTERRUPT_VIRTIO_BLOCK              33u
 
 /* PCI device constants. */
 #define PCI_DEVICE_ROOT_COMPLEX                 0u
@@ -108,9 +110,7 @@
 /* PCI macros. */
 // From a given address, get the PCI device index.
 #define PCI_DEVICE(addr)                        (((addr - PCI_PHYS_BASE(0, 0, 0)) >> 15) & 0x1f)
-
-/* Virtio constants. */
-#define VIRTIO_DEFAULT_QUEUE_SIZE               128u
+#define PCI_ALIGN(n)                            ((((uintptr_t)n) + 4095) & ~4095)
 
 static const uint16_t kPciDeviceBarSize[] = {
     0x10,   // PCI_DEVICE_ROOT_COMPLEX
@@ -172,7 +172,7 @@ static uint16_t pci_device(pci_device_state_t* pci_device_state, uint16_t port,
 }
 
 static const virtio_blk_config_t block_config = {
-    .capacity = 0,
+    .capacity = (8u << 20) / SECTOR_SIZE,
     .size_max = 0,
     .seg_max = 0,
     .geometry = {
@@ -183,24 +183,29 @@ static const virtio_blk_config_t block_config = {
     .blk_size = PAGE_SIZE,
 };
 
-static mx_status_t handle_virtio_block_read(mx_guest_packet_t* packet, uint16_t port,
-                                            uint8_t* input_size) {
+static mx_status_t handle_virtio_block_read(uint16_t port, uint8_t* input_size,
+                                            mx_guest_port_in_ret_t* port_in_ret) {
     switch (port) {
     case VIRTIO_PCI_QUEUE_SIZE:
         *input_size = 2;
-        packet->port_in_ret.u16 = VIRTIO_DEFAULT_QUEUE_SIZE;
+        port_in_ret->u16 = VIRTIO_QUEUE_SIZE;
         return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         *input_size = 1;
-        packet->port_in_ret.u8 = 0;
+        port_in_ret->u8 = 0;
+        return MX_OK;
+    case VIRTIO_PCI_ISR_STATUS:
+        *input_size = 1;
+        port_in_ret->u8 = 1;
         return MX_OK;
     case VIRTIO_PCI_CONFIG_OFFSET_NOMSI ...
          VIRTIO_PCI_CONFIG_OFFSET_NOMSI + sizeof(block_config) - 1: {
         *input_size = 1;
         uint8_t* buf = (uint8_t*)&block_config;
-        packet->port_in_ret.u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
+        port_in_ret->u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
         return MX_OK;
     }}
+
     fprintf(stderr, "Unhandled block read %#x\n", port);
     return MX_ERR_NOT_SUPPORTED;
 }
@@ -252,10 +257,9 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     default: {
         uint16_t port_off;
         switch (pci_device(context->guest_state->pci_device_state, port_in->port, &port_off)) {
-        case PCI_DEVICE_VIRTIO_BLOCK: {
-            status = handle_virtio_block_read(&packet, port_off, &input_size);
+        case PCI_DEVICE_VIRTIO_BLOCK:
+            status = handle_virtio_block_read(port_off, &input_size, &packet.port_in_ret);
             break;
-        }
         default:
             fprintf(stderr, "Unhandled port in %#x\n", port_in->port);
             return MX_ERR_NOT_SUPPORTED;
@@ -270,16 +274,107 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
 }
 
-static mx_status_t handle_virtio_block_write(uint16_t port) {
+static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
+    return index % queue->size;
+}
+
+static mx_status_t null_block_device(void* mem_addr, size_t mem_size, virtio_queue_t* queue) {
+    for (; queue->index < queue->avail->idx; queue->index++, queue->used->idx++) {
+        uint16_t desc_index = queue->avail->ring[ring_index(queue, queue->index)];
+        if (desc_index >= queue->size)
+            return MX_ERR_OUT_OF_RANGE;
+        volatile struct vring_used_elem* used =
+            &queue->used->ring[ring_index(queue, queue->used->idx)];
+        used->id = desc_index;
+        virtio_blk_req_t* req = NULL;
+        while (true) {
+            struct vring_desc desc = queue->desc[desc_index];
+            const uint64_t end = desc.addr + desc.len;
+            if (end < desc.addr || end > mem_size)
+                return MX_ERR_OUT_OF_RANGE;
+            if (req == NULL) {
+                // Header.
+                if (desc.len != sizeof(virtio_blk_req_t))
+                    return MX_ERR_INVALID_ARGS;
+                req = mem_addr + desc.addr;
+            } else if (desc.flags & VRING_DESC_F_NEXT) {
+                // Payload.
+                if (req->type == VIRTIO_BLK_T_IN)
+                    memset(mem_addr + desc.addr, 0, desc.len);
+                used->len += desc.len;
+            } else {
+                // Status.
+                if (desc.len != sizeof(uint8_t))
+                    return MX_ERR_INVALID_ARGS;
+                uint8_t* status = mem_addr + desc.addr;
+                *status = VIRTIO_BLK_S_OK;
+                break;
+            }
+            desc_index = desc.next;
+        };
+    }
+    return MX_OK;
+}
+
+static uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq) {
+    return io_apic_state->redirect[global_irq * 2] & UINT8_MAX;
+}
+
+static mx_status_t handle_virtio_block_write(vcpu_context_t* context, uint16_t port,
+                                             const mx_guest_port_out_t* port_out) {
+    void* mem_addr = context->guest_state->mem_addr;
+    size_t mem_size = context->guest_state->mem_size;
+    virtio_queue_t* queue = &context->guest_state->pci_device_state[PCI_DEVICE_VIRTIO_BLOCK].queue;
     switch (port) {
     case VIRTIO_PCI_DEVICE_STATUS:
+        if (port_out->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
         return MX_OK;
-    case VIRTIO_PCI_QUEUE_PFN:
-    case VIRTIO_PCI_QUEUE_SIZE:
-    case VIRTIO_PCI_QUEUE_SELECT:
-        // TODO(abdulla): Correctly implement the vring.
+    case VIRTIO_PCI_QUEUE_PFN: {
+        if (port_out->access_size != 4)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        queue->desc = mem_addr + (port_out->u32 * PAGE_SIZE);
+        queue->avail = (void*)&queue->desc[queue->size];
+        queue->used_event = (void*)&queue->avail->ring[queue->size];
+        queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
+        queue->avail_event = (void*)&queue->used->ring[queue->size];
+        volatile const void* end = queue->avail_event + 1;
+        if (end < (void*)queue->desc || end > mem_addr + mem_size) {
+            fprintf(stderr, "Ring is outside of guest memory\n");
+            memset(queue, 0, sizeof(virtio_queue_t));
+            return MX_ERR_OUT_OF_RANGE;
+        }
         return MX_OK;
     }
+    case VIRTIO_PCI_QUEUE_SIZE:
+        if (port_out->access_size != 2)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        queue->size = port_out->u16;
+        return MX_OK;
+    case VIRTIO_PCI_QUEUE_SELECT:
+        if (port_out->access_size != 2)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        if (port_out->u16 != 0) {
+            fprintf(stderr, "Only one queue per device is supported\n");
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        return MX_OK;
+    case VIRTIO_PCI_QUEUE_NOTIFY: {
+        if (port_out->access_size != 2)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        if (port_out->u16 != 0) {
+            fprintf(stderr, "Only one queue per device is supported\n");
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        mx_status_t status = null_block_device(mem_addr, mem_size, queue);
+        if (status != MX_OK)
+            return status;
+        uint8_t interrupt = irq_redirect(&context->guest_state->io_apic_state,
+                                         PCI_INTERRUPT_VIRTIO_BLOCK);
+        return mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_INTERRUPT,
+                                &interrupt, sizeof(interrupt), NULL, 0);
+    }}
+
     fprintf(stderr, "Unhandled block write %#x\n", port);
     return MX_ERR_NOT_SUPPORTED;
 }
@@ -330,7 +425,7 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     uint16_t port_off;
     switch (pci_device(context->guest_state->pci_device_state, port_out->port, &port_off)) {
     case PCI_DEVICE_VIRTIO_BLOCK:
-        return handle_virtio_block_write(port_off);
+        return handle_virtio_block_write(context, port_off, port_out);
     }
 
     fprintf(stderr, "Unhandled port out %#x\n", port_out->port);
@@ -411,7 +506,14 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     case PCI_CONFIG_COMMAND:
         return inst_rw16(inst, &pci_device_state->command);
     case PCI_CONFIG_STATUS:
-        return inst_test8(inst, PCI_STATUS_NEW_CAPS, 0);
+        switch (inst->type) {
+        case INST_MOV_READ:
+            return inst_read16(inst, PCI_STATUS_INTERRUPT);
+        case INST_TEST:
+            return inst_test8(inst, PCI_STATUS_NEW_CAPS, PCI_STATUS_INTERRUPT);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
     case PCI_CONFIG_HEADER_TYPE:
         return inst_read8(inst, PCI_HEADER_TYPE_STANDARD);
     case PCI_CONFIG_INTERRUPT_PIN:
@@ -424,10 +526,12 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
         return inst_read8(inst, 0);
     case PCI_REGISTER_BAR_0: {
         uint32_t* bar = &pci_device_state->bar[0];
-        if (inst->type == INST_MOV_READ)  {
-            return inst_read32(inst, (pci_device_state->command & PCI_COMMAND_IO_EN) ?
-                                     *bar | PCI_BAR_IO_TYPE_PIO : UINT32_MAX);
-        } else if (inst->type == INST_MOV_WRITE) {
+        const uint32_t value = (pci_device_state->command & PCI_COMMAND_IO_EN) ?
+                               *bar | PCI_BAR_IO_TYPE_PIO : UINT32_MAX;
+        switch (inst->type) {
+        case INST_MOV_READ:
+            return inst_read32(inst, value);
+        case INST_MOV_WRITE: {
             mx_status_t status = inst_write32(inst, bar);
             if (status != MX_OK)
                 return status;
@@ -435,10 +539,12 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
             *bar &= ~(kPciDeviceBarSize[device] - 1);
             *bar |= PCI_BAR_IO_TYPE_PIO;
             return MX_OK;
-        } else if (inst->type == INST_TEST) {
-            return inst_test8(inst, PCI_BAR_IO_TYPE_PIO, PCI_BAR_IO_TYPE_PIO);
         }
-        return MX_ERR_NOT_SUPPORTED;
+        case INST_TEST:
+            return inst_test8(inst, PCI_BAR_IO_TYPE_PIO, value);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
     }
     case PCI_REGISTER_BAR_1:
     case PCI_REGISTER_BAR_2:
@@ -448,6 +554,8 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
         uint32_t default_bar = 0;
         return inst_rw32(inst, &default_bar);
     }}
+
+    fprintf(stderr, "Unhandled PCI device %d %#lx\n", device, offset);
     return MX_ERR_NOT_SUPPORTED;
 }
 

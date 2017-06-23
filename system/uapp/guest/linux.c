@@ -10,6 +10,7 @@
 
 #include <hypervisor/guest.h>
 
+#include "constants.h"
 #include "linux.h"
 
 #define ALIGN(x, alignment)    (((x) + (alignment - 1)) & ~(alignment - 1))
@@ -52,7 +53,6 @@
 #define LEGACY_64_ENTRY_OFFSET  0x200      // Offset for the legacy 64-bit entry point
 #define LOADER_TYPE_UNSPECIFIED 0xff       // We are bootloader that Linux knows nothing about
 #define MIN_BOOT_PROTOCOL       0x0200     // The minimum boot protocol we support (bzImage)
-#define SECTOR_SIZE             0x200      // Sector size, 512 bytes
 #define MAX_E820_ENTRIES        128        // The space reserved for e820, in entries
 
 // Default address to load bzImage at

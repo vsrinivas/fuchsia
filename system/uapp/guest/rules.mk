@@ -17,8 +17,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/magenta.c \
     $(LOCAL_DIR)/vcpu.c \
 
-MODULE_NAME := guest
-
 MODULE_LIBS := \
 	system/ulib/c \
 	system/ulib/hypervisor \

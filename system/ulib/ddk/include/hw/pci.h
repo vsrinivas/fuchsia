@@ -71,6 +71,7 @@ __BEGIN_CDECLS;
 /*
  * PCI status register bits
  */
+#define PCI_STATUS_INTERRUPT        0x0008
 #define PCI_STATUS_NEW_CAPS         0x0010
 #define PCI_STATUS_66_MHZ           0x0020
 #define PCI_STATUS_FAST_B2B         0x0080

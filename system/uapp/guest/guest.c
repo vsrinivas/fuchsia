@@ -57,6 +57,9 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to initialize guest state mutex\n");
         return MX_ERR_INTERNAL;
     }
+    // Setup guest memory.
+    guest_state.mem_addr = (void*)addr;
+    guest_state.mem_size = kVmoSize;
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];
