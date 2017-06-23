@@ -100,6 +100,25 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
   return true;
 }
 
+bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
+  std::string name_path = repository_path.get() + "/name";
+
+  if (files::ReadFileToString(name_path, name)) {
+    return true;
+  }
+
+  std::string new_name;
+  new_name.resize(16);
+  glue::RandBytes(&new_name[0], new_name.size());
+  if (!files::WriteFile(name_path, new_name.c_str(), new_name.size())) {
+    FTL_LOG(ERROR) << "Unable to write file at: " << name_path;
+    return false;
+  }
+
+  name->swap(new_name);
+  return true;
+}
+
 }  // namespace
 
 // Container for a LedgerRepositoryImpl that keeps tracks of the in-flight FIDL
@@ -196,7 +215,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   TRACE_DURATION("ledger", "repository_factory_get_repository");
   std::string sanitized_path =
       files::SimplifyPath(std::move(repository_path.get()));
-  auto it = repositories_.find(sanitized_path);
+  std::string name;
+  if (!GetRepositoryName(sanitized_path, &name)) {
+    callback(Status::IO_ERROR);
+    return;
+  }
+  auto it = repositories_.find(name);
   if (it != repositories_.end()) {
     it->second.BindRepository(std::move(repository_request),
                               std::move(callback));
@@ -208,7 +232,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
                      << "not sync.";
 
     auto ret = repositories_.emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(sanitized_path),
+                                     std::forward_as_tuple(name),
                                      std::forward_as_tuple(nullptr));
     LedgerRepositoryContainer* container = &ret.first->second;
     container->BindRepository(std::move(repository_request),
@@ -224,10 +248,10 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
   if (token_provider_ptr) {
-    token_provider_ptr.set_connection_error_handler([this, sanitized_path] {
+    token_provider_ptr.set_connection_error_handler([this, name] {
       FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
                      << "shutting down the repository.";
-      auto find_repository = repositories_.find(sanitized_path);
+      auto find_repository = repositories_.find(name);
       FTL_DCHECK(find_repository != repositories_.end());
       repositories_.erase(find_repository);
     });
@@ -238,7 +262,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
 
   auto ret = repositories_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(sanitized_path),
+      std::piecewise_construct, std::forward_as_tuple(name),
       std::forward_as_tuple(std::move(auth_provider)));
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
@@ -265,7 +289,12 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     const EraseRepositoryCallback& callback) {
   std::string sanitized_path =
       files::SimplifyPath(std::move(repository_path.get()));
-  auto find_repository = repositories_.find(sanitized_path);
+  std::string name;
+  if (!GetRepositoryName(sanitized_path, &name)) {
+    callback(Status::IO_ERROR);
+    return;
+  }
+  auto find_repository = repositories_.find(name);
   if (find_repository != repositories_.end()) {
     FTL_LOG(WARNING) << "The repository to be erased is running, "
                      << "shutting it down before erasing.";
