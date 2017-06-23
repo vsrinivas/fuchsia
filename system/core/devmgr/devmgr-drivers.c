@@ -67,7 +67,7 @@ static void found_driver(magenta_driver_note_t* note, mx_bind_inst_t* bi, void* 
     dc_driver_added(drv, note->version);
 }
 
-static void find_loadable_drivers(const char* path) {
+void find_loadable_drivers(const char* path) {
     DIR* dir = opendir(path);
     if (dir == NULL) {
         return;
@@ -122,14 +122,4 @@ void load_driver(const char* path) {
             printf("devcoord: error reading info from '%s'\n", path);
         }
     }
-}
-
-void enumerate_drivers(void) {
-    find_loadable_drivers("/boot/driver");
-    find_loadable_drivers("/boot/driver/test");
-    find_loadable_drivers("/system/driver");
-
-    //TODO: remove deprecated driver paths:
-    find_loadable_drivers("/boot/lib/driver");
-    find_loadable_drivers("/system/lib/driver");
 }

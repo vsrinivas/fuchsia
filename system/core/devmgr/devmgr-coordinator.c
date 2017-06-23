@@ -1345,6 +1345,34 @@ void dc_handle_new_driver(void) {
     }
 }
 
+#define CTL_SCAN_SYSTEM 1
+
+static bool system_available;
+static bool system_loaded;
+
+static mx_status_t dc_control_event(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+    switch (evt) {
+    case CTL_SCAN_SYSTEM:
+        if (!system_loaded) {
+            system_loaded = true;
+            find_loadable_drivers("/system/driver");
+            find_loadable_drivers("/system/lib/driver");
+        }
+        break;
+    }
+    return MX_OK;
+}
+
+static port_handler_t control_handler = {
+    .func = dc_control_event,
+};
+
+
+void load_system_drivers(void) {
+    system_available = true;
+    port_queue(&dc_port, &control_handler, CTL_SCAN_SYSTEM);
+}
+
 void coordinator(void) {
     log(INFO, "devmgr: coordinator()\n");
 
@@ -1359,7 +1387,18 @@ void coordinator(void) {
         devfs_publish(&root_device, &platform_device);
     }
 
-    enumerate_drivers();
+    find_loadable_drivers("/boot/driver");
+    find_loadable_drivers("/boot/driver/test");
+    find_loadable_drivers("/boot/lib/driver");
+
+    // Special case early handling for the ramdisk boot
+    // path where /system is present before the coordinator
+    // starts.  This avoids breaking the "priority hack" and
+    // can be removed once the real driver priority system
+    // exists.
+    if (system_available) {
+        dc_control_event(&control_handler, 0, CTL_SCAN_SYSTEM);
+    }
 
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {

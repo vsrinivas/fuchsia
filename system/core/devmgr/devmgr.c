@@ -230,6 +230,12 @@ int devmgr_start_appmgr(void* arg) {
     static bool appmgr_started = false;
     static bool autorun_started = false;
     static mtx_t lock = MTX_INIT;
+
+    // we're starting the appmgr because /system is present
+    // so we also signal the device coordinator that those
+    // drivers are now loadable
+    load_system_drivers();
+
     mtx_lock(&lock);
     struct stat s;
     if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {

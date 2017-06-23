@@ -27,6 +27,8 @@ ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo);
 bool secondary_bootfs_ready(void);
 int devmgr_start_appmgr(void* arg);
 
+void load_system_drivers(void);
+
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"

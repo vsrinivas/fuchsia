@@ -134,7 +134,7 @@ void coordinator(void);
 void dc_driver_added(driver_t* drv, const char* version);
 
 void load_driver(const char* path);
-void enumerate_drivers(void);
+void find_loadable_drivers(const char* path);
 
 bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
