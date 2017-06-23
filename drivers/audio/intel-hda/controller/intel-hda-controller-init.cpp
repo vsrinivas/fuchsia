@@ -179,13 +179,6 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
              pci_dev_info_.func_id);
 
 
-    // Claim the device.
-    res = pci_.ops->claim_device(pci_.ctx);
-    if (res != MX_OK) {
-        LOG("Failed to claim PCI device! (res %d)\n", res);
-        return res;
-    }
-
     // Map in the registers located at BAR 0.  Make sure that they are the size
     // we expect them to be.
     MX_DEBUG_ASSERT(regs_handle_ == MX_HANDLE_INVALID);
