@@ -586,6 +586,20 @@ void StoryProviderImpl::RequestStoryFocus(const fidl::String& story_id) {
   focus_provider_->Request(story_id);
 }
 
+void StoryProviderImpl::NotifyStoryStateChange(
+    const fidl::String& story_id, const StoryState story_state) {
+  auto i = story_controller_impls_.find(story_id);
+
+  if (i == story_controller_impls_.end()) {
+    // If this call arrives while DeleteStory() is in progress, the story
+    // controller might already be gone from here.
+    return;
+  }
+
+  const StoryInfo* const story_info = i->second.current_info.get();
+  NotifyStoryWatchers(story_info, story_state);
+}
+
 // |StoryProvider|
 void StoryProviderImpl::GetController(
     const fidl::String& story_id,
@@ -652,6 +666,7 @@ void StoryProviderImpl::OnChange(const std::string& key,
   // HACK(jimbe) We don't have the page and it's expensive to get it, so just
   // mark it as STOPPED. We know it's not running or we'd have a
   // StoryController.
+  //
   // If we have a StoryControllerImpl for this story id, update our cached
   // StoryInfo.
   StoryState state = StoryState::STOPPED;
@@ -661,10 +676,7 @@ void StoryProviderImpl::OnChange(const std::string& key,
     i->second.current_info = story_data->story_info.Clone();
   }
 
-  watchers_.ForAllPtrs(
-      [&story_data, state](StoryProviderWatcher* const watcher) {
-        watcher->OnChange(story_data->story_info.Clone(), state);
-      });
+  NotifyStoryWatchers(story_data->story_info.get(), state);
 }
 
 // |PageClient|
@@ -719,6 +731,14 @@ void StoryProviderImpl::NotifyImportanceWatchers() {
   importance_watchers_.ForAllPtrs(
       [this](StoryImportanceWatcher* const watcher) {
         watcher->OnImportanceChange();
+      });
+}
+
+void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
+                                            const StoryState story_state) {
+  watchers_.ForAllPtrs(
+      [story_info, story_state](StoryProviderWatcher* const watcher) {
+        watcher->OnChange(story_info->Clone(), story_state);
       });
 }
 

@@ -75,9 +75,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Called by StoryControllerImpl.
   const AppConfig& story_shell() const { return *story_shell_; }
 
-  // Called by StoryImpl.
-  // Returns a ApplicationControllerPtr rather than taking an interface request
-  // as an argument because the we preload the application.
+  // Called by StoryControllerImpl.
+  //
+  // Returns an ApplicationControllerPtr rather than taking an interface request
+  // as an argument because the application is preloaded.
   app::ApplicationControllerPtr StartStoryShell(
       fidl::InterfaceHandle<StoryContext> story_context,
       fidl::InterfaceRequest<StoryShell> story_shell_request,
@@ -95,6 +96,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // Called by StoryControllerImpl. Sends request to FocusProvider
   void RequestStoryFocus(const fidl::String& story_id);
+
+  // Called by StoryControllerImpl.
+  void NotifyStoryStateChange(const fidl::String& story_id,
+                              StoryState story_state);
 
  private:
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
@@ -152,6 +157,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   void NotifyImportanceWatchers();
 
+  void NotifyStoryWatchers(const StoryInfo* const story_info,
+                           const StoryState story_state);
+
   StoryContextLogPtr MakeLogEntry(const StorySignal signal);
 
   void LoadStoryShell();
@@ -180,10 +188,17 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
+  // The story controllers of the currently active stories, indexed by their
+  // story IDs.
+  //
+  // Only user logout or delete story calls ever remove story controllers from
+  // this collection, but controllers for stopped stories stay in it.
+  //
+  // Also keeps a cached version of the StoryInfo for every story, to send it to
+  // newly registered story provider watchers, and to story provider watchers
+  // when only the story state changes.
   struct StoryControllerImplContainer {
     std::unique_ptr<StoryControllerImpl> impl;
-    // We keep a cached version of the StoryInfo for every story. We send this
-    // copy to newly registered story provider watchers.
     StoryInfoPtr current_info;
   };
   std::unordered_map<std::string, StoryControllerImplContainer>

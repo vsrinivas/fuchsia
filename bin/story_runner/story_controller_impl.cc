@@ -384,7 +384,6 @@ class StoryControllerImpl::StopCall : Operation<> {
     story_controller_impl_->connections_.clear();
 
     story_controller_impl_->state_ = StoryState::STOPPED;
-
     story_controller_impl_->NotifyStateChange();
 
     Done();
@@ -1163,6 +1162,8 @@ void StoryControllerImpl::StartStoryShell(
 void StoryControllerImpl::NotifyStateChange() {
   watchers_.ForAllPtrs(
       [this](StoryWatcher* const watcher) { watcher->OnStateChange(state_); });
+
+  story_provider_impl_->NotifyStoryStateChange(story_id_, state_);
 
   // NOTE(mesch): This gets scheduled on the StoryProviderImpl Operation
   // queue. If the current StoryControllerImpl Operation is part of a

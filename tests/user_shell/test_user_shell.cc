@@ -234,16 +234,70 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   void Reset() { binding_.Close(); }
 
  private:
-  // |StoryProviderWatcher|
-  void OnDelete(const ::fidl::String& story_id) override {
-    FTL_VLOG(1) << "TestUserShellApp::OnDelete() " << story_id;
-  }
+
+  modular::testing::TestPoint on_delete_called_once_{"OnDelete() Called"};
+  int on_delete_called_{};
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfoPtr story_info,
-                modular::StoryState story_state) override {
-    FTL_VLOG(1) << "TestUserShellApp::OnChange() "
-                << " id " << story_info->id << " url " << story_info->url;
+  void OnDelete(const fidl::String& story_id) override {
+    FTL_LOG(INFO) << "StoryProviderWatcherImpl::OnDelete() " << story_id;
+
+    if (++on_delete_called_ == 1) {
+      on_delete_called_once_.Pass();
+    }
+  }
+
+  modular::testing::TestPoint on_starting_called_once_{"OnChange() STARTING Called"};
+  int on_starting_called_{};
+
+  modular::testing::TestPoint on_running_called_once_{"OnChange() RUNNING Called"};
+  int on_running_called_{};
+
+  modular::testing::TestPoint on_stopped_called_once_{"OnChange() STOPPED Called"};
+  int on_stopped_called_{};
+
+  modular::testing::TestPoint on_done_called_once_{"OnChange() DONE Called"};
+  int on_done_called_{};
+
+  // |StoryProviderWatcher|
+  void OnChange(const modular::StoryInfoPtr story_info,
+                const modular::StoryState story_state) override {
+    FTL_LOG(INFO) << "StoryProviderWatcherImpl::OnChange() "
+                  << " id " << story_info->id
+                  << " state " << story_state
+                  << " url " << story_info->url;
+
+    // Just check that all states are covered at least once, proving that we get
+    // state notifications at all from the story provider.
+    switch (story_state) {
+    case modular::StoryState::INITIAL:
+      // Doesn't happen in this test, presumably because of the STOPPED
+      // StoryState HACK(jimbe) in StoryProviderImpl::OnChange().
+      break;
+    case modular::StoryState::STARTING:
+      if (++on_starting_called_ == 1) {
+        on_starting_called_once_.Pass();
+      }
+      break;
+    case modular::StoryState::RUNNING:
+      if (++on_running_called_ == 1) {
+        on_running_called_once_.Pass();
+      }
+      break;
+    case modular::StoryState::STOPPED:
+      if (++on_stopped_called_ == 1) {
+        on_stopped_called_once_.Pass();
+      }
+      break;
+    case modular::StoryState::DONE:
+      if (++on_done_called_ == 1) {
+        on_done_called_once_.Pass();
+      }
+      break;
+    case modular::StoryState::ERROR:
+      // Doesn't happen in this test.
+      break;
+    }
   }
 
   fidl::Binding<modular::StoryProviderWatcher> binding_;
