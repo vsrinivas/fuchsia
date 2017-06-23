@@ -354,16 +354,12 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
     if (device_get_protocol(mx_device, MX_PROTOCOL_PCI, (void*)&pci))
         return DRET_MSG(MX_ERR_NOT_SUPPORTED, "device_get_protocol failed");
 
-    mx_status_t status = pci.ops->claim_device(pci.ctx);
-    if (status < 0)
-        return DRET_MSG(status, "claim_device failed");
-
     // map resources and initialize the device
     auto device = std::make_unique<intel_i915_device_t>();
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
-    status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
+    mx_status_t status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
     if (status == MX_OK) {
         di->format = format;
         di->width = width;
