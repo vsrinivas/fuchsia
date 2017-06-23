@@ -30,6 +30,12 @@ else
 MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
 endif
 
-USER_MANIFEST_LINES += src/kilo.c=$(LOCAL_DIR)/kilo.c
+# NOTE(raggi): kilo.c inclusion is disabled for now, as it is the only
+# non-BUILDDIR-relative entry in bootfs.manifest. Having the relative entry
+# means that rebuilding bootdata from the manifest must be run from inside the
+# magenta source tree. We do not expose a source directory, and we don't want to
+# use absolute paths in the build here. We could install the file to the build
+# dir instead.
+# USER_MANIFEST_LINES += src/kilo.c=$(LOCAL_DIR)/kilo.c
 
 include make/module.mk
