@@ -1,0 +1,20 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# shared_toolchain is the label of the toolchain that will be used for shared
+# library dependencies in the current toolchain.
+#
+# shared_libraries should be build in the shared_toolchain, which often means
+# introducing an intermediate target that switches to the shared_toolchain
+# before depending on a (hidden) shared_library target.
+#
+# shared_toolchain_out_dir is the directory where outputs from the
+# shared_toolchain will go.
+
+if (current_toolchain == target_toolchain) {
+    shared_toolchain = "//build/toolchain/fuchsia:${target_cpu}-shared"
+    shared_toolchain_out_dir = "${target_cpu}-shared"
+} else {
+    shared_toolchain = current_toolchain
+}
