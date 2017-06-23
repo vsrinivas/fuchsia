@@ -4,7 +4,11 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("libmagma") {
+shared_library("libmagma") {
+  visibility = [ "$magma_build_root:libmagma" ]
+
+  output_name = "magma"
+
   public_deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",

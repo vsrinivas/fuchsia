@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/shared.gni")
 import("//packages/package.gni")
 import("//magma/gnbuild/magma.gni")
 
@@ -71,9 +72,9 @@ config("magma_tests_include_config") {
   include_dirs = [ "tests" ]
 }
 
-shared_library("libmagma") {
-  deps = [
-    "src/libmagma($magma_shared_toolchain)",
+group("libmagma") {
+  public_deps = [
+    "src/libmagma($shared_toolchain)",
   ]
 }
 
