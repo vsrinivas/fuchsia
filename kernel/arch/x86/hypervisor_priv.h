@@ -146,6 +146,7 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS2_EPT                 (1u << 1)
 #define PROCBASED_CTLS2_RDTSCP              (1u << 3)
 #define PROCBASED_CTLS2_VPID                (1u << 5)
+#define PROCBASED_CTLS2_INVPCID            (1u << 12)
 
 /* PROCBASED_CTLS flags */
 #define PROCBASED_CTLS_INT_WINDOW_EXITING   (1u << 2)

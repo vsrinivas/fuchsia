@@ -545,7 +545,9 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               PROCBASED_CTLS2_RDTSCP |
                               // Associate cached translations of linear
                               // addresses with a virtual processor ID.
-                              PROCBASED_CTLS2_VPID,
+                              PROCBASED_CTLS2_VPID |
+                              // Enable use of INVPCID instruction.
+                              PROCBASED_CTLS2_INVPCID,
                               0);
     if (status != MX_OK)
         return status;
@@ -656,6 +658,15 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
     // associates all mappings it creates with the value of bits 51:12 of
     // current EPTP. If a VMM uses different EPTP values for different guests,
     // it may use the same VPID for those guests.
+    //
+    // From Volume 3, Section 28.3.3.1: Operations that architecturally
+    // invalidate entries in the TLBs or paging-structure caches independent of
+    // VMX operation (e.g., the INVLPG and INVPCID instructions) invalidate
+    // linear mappings and combined mappings. They are required to do so only
+    // for the current VPID (but, for combined mappings, all EP4TAs). Linear
+    // mappings for the current VPID are invalidated even if EPT is in use.
+    // Combined mappings for the current VPID are invalidated even if EPT is
+    // not in use.
     x86_percpu* percpu = x86_get_percpu();
     vmcs_write(VmcsField16::VPID, static_cast<uint16_t>(percpu->cpu_num + 1));
 
