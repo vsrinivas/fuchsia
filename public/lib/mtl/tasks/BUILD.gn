@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 source_set("tasks") {
+  visibility = [ "//lib/mtl/*" ]
+
   sources = [
     "fd_waiter.cc",
     "fd_waiter.h",

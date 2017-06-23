@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 source_set("vfs") {
+  visibility = [ "//lib/mtl/*" ]
+
   sources = [
     "vfs_dispatcher.cc",
     "vfs_dispatcher.h",

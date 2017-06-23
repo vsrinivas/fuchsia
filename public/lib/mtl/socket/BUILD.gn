@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 source_set("socket") {
+  visibility = [ "//lib/mtl/*" ]
+
   sources = [
     "blocking_drain.cc",
     "blocking_drain.h",

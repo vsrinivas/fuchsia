@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 source_set("handles") {
+  visibility = [ "//lib/mtl/*" ]
+
   sources = [
     "object_info.cc",
     "object_info.h",

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 source_set("io") {
+  visibility = [ "//lib/mtl/*" ]
+
   sources = [
     "device_watcher.cc",
     "device_watcher.h",
