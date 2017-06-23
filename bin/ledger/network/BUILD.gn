@@ -51,7 +51,6 @@ source_set("unittests") {
     ":network",
     "//apps/ledger/src/test:lib",
     "//lib/mtl",
-    "//lib/mtl/waiter",
     "//third_party/gtest",
   ]
 
