@@ -182,27 +182,36 @@ void ProcessDispatcher::Exit(int retcode) {
 void ProcessDispatcher::Kill() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    // MG-880: Call RemoveChildProcess outside of |state_lock_|.
+    bool became_dead = false;
 
-    // we're already dead
-    if (state_ == State::DEAD)
-        return;
+    {
+        AutoLock lock(&state_lock_);
 
-    if (state_ != State::DYING) {
-        // If there isn't an Exit already in progress, set a nonzero exit
-        // status so e.g. crashing tests don't appear to have succeeded.
-        DEBUG_ASSERT(retcode_ == 0);
-        retcode_ = -1;
+        // we're already dead
+        if (state_ == State::DEAD)
+            return;
+
+        if (state_ != State::DYING) {
+            // If there isn't an Exit already in progress, set a nonzero exit
+            // status so e.g. crashing tests don't appear to have succeeded.
+            DEBUG_ASSERT(retcode_ == 0);
+            retcode_ = -1;
+        }
+
+        // if we have no threads, enter the dead state directly
+        if (thread_list_.is_empty()) {
+            SetStateLocked(State::DEAD);
+            became_dead = true;
+        } else {
+            // enter the dying state, which should trigger a thread kill.
+            // the last thread exiting will transition us to DEAD
+            SetStateLocked(State::DYING);
+        }
     }
 
-    // if we have no threads, enter the dead state directly
-    if (thread_list_.is_empty()) {
-        SetStateLocked(State::DEAD);
-    } else {
-        // enter the dying state, which should trigger a thread kill.
-        // the last thread exiting will transition us to DEAD
-        SetStateLocked(State::DYING);
-    }
+    if (became_dead)
+        job_->RemoveChildProcess(this);
 }
 
 void ProcessDispatcher::KillAllThreadsLocked() {
@@ -246,20 +255,28 @@ status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
 void ProcessDispatcher::RemoveThread(UserThread* t) {
     LTRACE_ENTRY_OBJ;
 
-    // we're going to check for state and possibly transition below
-    AutoLock state_lock(&state_lock_);
+    // MG-880: Call RemoveChildProcess outside of |state_lock_|.
+    bool became_dead = false;
 
-    // remove the thread from our list
-    DEBUG_ASSERT(t != nullptr);
-    thread_list_.erase(*t);
+    {
+        // we're going to check for state and possibly transition below
+        AutoLock state_lock(&state_lock_);
 
-    // if this was the last thread, transition directly to DEAD state
-    if (thread_list_.is_empty()) {
-        LTRACEF("last thread left the process %p, entering DEAD state\n", this);
-        SetStateLocked(State::DEAD);
+        // remove the thread from our list
+        DEBUG_ASSERT(t != nullptr);
+        thread_list_.erase(*t);
+
+        // if this was the last thread, transition directly to DEAD state
+        if (thread_list_.is_empty()) {
+            LTRACEF("last thread left the process %p, entering DEAD state\n", this);
+            SetStateLocked(State::DEAD);
+            became_dead = true;
+        }
     }
-}
 
+    if (became_dead)
+        job_->RemoveChildProcess(this);
+}
 
 void ProcessDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACE_ENTRY_OBJ;
@@ -360,9 +377,16 @@ void ProcessDispatcher::SetStateLocked(State s) {
         LTRACEF_LEVEL(2, "signaling waiters\n");
         state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
 
-        // We remove ourselves from the parent Job raw ref (to us) list early, so
-        // the semantics of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
-        job_->RemoveChildProcess(this);
+        // IWBN to call job_->RemoveChildProcess(this) here, but that risks
+        // a deadlock as we have |state_lock_| and RemoveChildProcess grabs the
+        // job's |lock_|, whereas JobDispatcher::EnumerateChildren obtains the
+        // locks in the opposite order. We want to keep lock acquisition order
+        // consistent, and JobDispatcher::EnumerateChildren's order makes
+        // sense. We don't need |state_lock_| when calling RemoveChildProcess
+        // here, so we leave that to the caller after it has released
+        // |state_lock_|. MG-880
+        // The caller should call RemoveChildProcess soon so that the semantics
+        // of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
 
         // The PROC_CREATE record currently emits a uint32_t.
         uint32_t koid = static_cast<uint32_t>(get_koid());
