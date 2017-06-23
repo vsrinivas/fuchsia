@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "ftl"
+    ],
     "packages": {
         "mtl": "//lib/mtl:package"
     }

@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "mtl"
+    ],
     "labels": [
         "//application",
         "//apps/modular/src/bootstrap"
