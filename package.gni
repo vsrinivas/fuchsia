@@ -161,9 +161,7 @@ template("package") {
                                "testonly",
                              ])
 
-      package_manifest_empty = true
       package_manifest_contents = []
-      boot_manifest_empty = true
       boot_manifest_contents = []
 
       sources = []
@@ -174,7 +172,6 @@ template("package") {
         source = entry.path
         sources += [ entry.path ]
         dest = "meta/" + entry.dest
-        package_manifest_empty = false
         package_manifest_contents += [ "$dest=$source" ]
       }
       foreach(binary, binaries) {
@@ -195,14 +192,12 @@ template("package") {
             dest = "bin/" + binary.name
           }
         }
-        package_manifest_empty = false
         package_manifest_contents += [ "$dest=$source" ]
       }
       foreach(test, tests) {
         source = rebase_path(root_build_dir + "/" + test.name)
         sources += [ root_build_dir + "/" + test.name ]
         dest = "test/" + test.name
-        package_manifest_empty = false
         package_manifest_contents += [ "$dest=$source" ]
       }
       foreach(driver, drivers) {
@@ -214,7 +209,6 @@ template("package") {
         # Drivers go in the boot manifest.
         # TODO(jamesr): Once devmgr can reliably load drivers off of /system,
         # unwind this.
-        boot_manifest_empty = false
         boot_manifest_contents += [ "$dest=$source" ]
       }
       foreach(library, libraries) {
@@ -222,7 +216,6 @@ template("package") {
         source = rebase_path(root_build_dir + "/" + library.name)
         sources += [ root_build_dir + "/" + library.name ]
         dest = "lib/" + library.name
-        package_manifest_empty = false
         package_manifest_contents += [ "$dest=$source" ]
       }
       foreach(resource, resources) {
@@ -230,23 +223,18 @@ template("package") {
         source = resource.path
         sources += [ resource.path ]
         dest = "data/" + resource.dest
-        package_manifest_empty = false
         package_manifest_contents += [ "$dest=$source" ]
       }
-      if (!boot_manifest_empty) {
-        boot_manifest = output_base + "boot_manifest"
-        write_file(boot_manifest, boot_manifest_contents)
-      } else {
-        assert(boot_manifest_contents == [])
-      }
+      boot_manifest = output_base + "boot_manifest"
+      write_file(boot_manifest, boot_manifest_contents)
 
       system_manifest = output_base + "system_manifest"
+      archive_manifest = output_base + "archive_manifest"
 
       if (defined(invoker.archive) && invoker.archive) {
-        assert(boot_manifest_empty)
-        assert(!package_manifest_empty)
+        assert(boot_manifest_contents == [])
+        assert(package_manifest_contents != [])
 
-        archive_manifest = output_base + "archive_manifest"
         write_file(archive_manifest, package_manifest_contents)
 
         deps += [ "//application/src/archiver($host_toolchain)" ]
@@ -268,11 +256,8 @@ template("package") {
         write_file(system_manifest,
                    [ "pkgs/$package_name=" + rebase_path(output) ])
       } else {
-        if (!package_manifest_empty) {
-          write_file(system_manifest, package_manifest_contents)
-        } else {
-          assert(package_manifest_contents == [])
-        }
+        write_file(system_manifest, package_manifest_contents)
+        write_file(archive_manifest, [])
 
         # We have to do something in our action
         script = "/usr/bin/touch"
