@@ -36,14 +36,14 @@ var (
 )
 
 var (
-	bootloader   = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
-	kernel       = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
-	bootdata     = flag.String("bootdata", filepath.Join(magentaBuildDir, "bootdata.bin"), "path to bootdata.bin")
-	bootmanifest = flag.String("bootmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/boot.bootfs.manifest"), "path to boot manifest")
-	sysmanifest  = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
-	packages     = flag.String("packages", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/packages"), "file containing list of packages to include")
-	packagesDir  = flag.String("packagesDir", filepath.Join(fuchsiaBuildDir, "package"), "path to the build packages directory")
-	cmdline      = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
+	bootloader     = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
+	kernel         = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
+	bootfsmanifest = flag.String("bootfsmanifest", filepath.Join(magentaBuildDir, "bootfs.manifest"), "path to magenta bootfs.manifest")
+	bootmanifest   = flag.String("bootmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/boot.bootfs.manifest"), "path to boot manifest")
+	sysmanifest    = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
+	packages       = flag.String("packages", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/packages"), "file containing list of packages to include")
+	packagesDir    = flag.String("packagesDir", filepath.Join(fuchsiaBuildDir, "package"), "path to the build packages directory")
+	cmdline        = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
 
 	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("MAGENTA_PROJECT"), "rpi"), "install rpi3 layout")
 	rpi3Root = flag.String("rpi3Root", filepath.Join(magentaDir, "kernel/target/rpi3"), "magenta rpi3 target root")
@@ -75,7 +75,7 @@ func main() {
 
 	disk := flag.Args()[0]
 
-	for _, path := range []string{*kernel, *bootdata, *bootmanifest, *sysmanifest, disk} {
+	for _, path := range []string{*kernel, *bootfsmanifest, *bootmanifest, *sysmanifest, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
@@ -96,12 +96,18 @@ func main() {
 	}
 	for _, packageName := range strings.Split(string(b), "\n") {
 		path := filepath.Join(*packagesDir, packageName, "system_manifest")
-		if _, err := os.Stat(path); err == nil {
-			systemManifests = append(systemManifests, path)
+		// TODO(raggi): remove the size check hack here once packages declare
+		// explicit manifests to include.
+		if info, err := os.Stat(path); err == nil {
+			if info.Size() > 0 {
+				systemManifests = append(systemManifests, path)
+			}
 		}
 		path = filepath.Join(*packagesDir, packageName, "boot_manifest")
-		if _, err := os.Stat(path); err == nil {
-			bootManifests = append(bootManifests, path)
+		if info, err := os.Stat(path); err == nil {
+			if info.Size() > 0 {
+				bootManifests = append(bootManifests, path)
+			}
 		}
 	}
 
@@ -113,7 +119,7 @@ func main() {
 
 	ramdisk := filepath.Join(tempDir, "bootdata.bin")
 
-	args := []string{"-o", ramdisk, "--target=boot", *bootdata}
+	args := []string{"-o", ramdisk, "--target=boot", *bootfsmanifest}
 	cmd := exec.Command("mkbootfs", append(args, bootManifests...)...)
 	b, err = cmd.CombinedOutput()
 	if err != nil {
