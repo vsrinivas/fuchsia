@@ -77,7 +77,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
   for (const auto& feature : sandbox.features()) {
     if (feature == "vulkan") {
       PushDirectoryFromPath("/dev/class/display", O_RDWR);
-      PushDirectoryFromPath("/system/lib/vulkan", O_RDONLY);
+      PushDirectoryFromPath("/system/data/vulkan", O_RDONLY);
     }
   }
 }
