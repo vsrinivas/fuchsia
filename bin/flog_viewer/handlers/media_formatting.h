@@ -56,12 +56,26 @@ std::ostream& operator<<(std::ostream& os,
                          const media::MediaPacketDemandPtr& value);
 std::ostream& operator<<(std::ostream& os, media::TimelineRate value);
 
-struct AsTime {
-  explicit AsTime(int64_t time) : time_(time) {}
+struct AsNsTime {
+  explicit AsNsTime(int64_t time) : time_(time) {}
   int64_t time_;
 };
 
-std::ostream& operator<<(std::ostream& os, AsTime value);
+std::ostream& operator<<(std::ostream& os, AsNsTime value);
+
+struct AsUsTime {
+  explicit AsUsTime(int64_t time) : time_(time) {}
+  int64_t time_;
+};
+
+std::ostream& operator<<(std::ostream& os, AsUsTime value);
+
+struct AsMsTime {
+  explicit AsMsTime(int64_t time) : time_(time) {}
+  int64_t time_;
+};
+
+std::ostream& operator<<(std::ostream& os, AsMsTime value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {

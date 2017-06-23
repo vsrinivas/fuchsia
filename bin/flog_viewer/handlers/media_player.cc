@@ -56,7 +56,8 @@ std::shared_ptr<Accumulator> MediaPlayer::GetAccumulator() {
 }
 
 void MediaPlayer::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaPlayer.BoundAs\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
@@ -65,7 +66,8 @@ void MediaPlayer::BoundAs(uint64_t koid) {
 }
 
 void MediaPlayer::CreatedSource(uint64_t related_koid) {
-  terse_out() << entry() << "MediaPlayer.CreatedSource\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.CreatedSource\n";
   terse_out() << indent;
   terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
   terse_out() << outdent;
@@ -75,7 +77,8 @@ void MediaPlayer::CreatedSource(uint64_t related_koid) {
 
 void MediaPlayer::ReceivedSourceDescription(
     fidl::Array<media::MediaTypePtr> stream_types) {
-  terse_out() << entry() << "MediaPlayer.ReceivedSourceDescription"
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.ReceivedSourceDescription"
               << "\n";
   terse_out() << indent;
   terse_out() << begl << "stream_types: " << stream_types << "\n";
@@ -96,7 +99,8 @@ void MediaPlayer::ReceivedSourceDescription(
 }
 
 void MediaPlayer::CreatedSink(uint64_t stream_index, uint64_t related_koid) {
-  terse_out() << entry() << "MediaPlayer.CreatedSink\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.CreatedSink\n";
   terse_out() << indent;
   terse_out() << begl << "stream_index: " << stream_index << "\n";
   terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
@@ -113,7 +117,8 @@ void MediaPlayer::CreatedSink(uint64_t stream_index, uint64_t related_koid) {
 }
 
 void MediaPlayer::StreamsPrepared() {
-  terse_out() << entry() << "MediaPlayer.StreamsPrepared\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.StreamsPrepared\n";
 
   if (accumulator_->state_ !=
       MediaPlayerAccumulator::State::kDescriptionReceived) {
@@ -124,7 +129,8 @@ void MediaPlayer::StreamsPrepared() {
 }
 
 void MediaPlayer::Flushed() {
-  terse_out() << entry() << "MediaPlayer.Flushed\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.Flushed\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kStreamsPrepared &&
@@ -136,7 +142,8 @@ void MediaPlayer::Flushed() {
 }
 
 void MediaPlayer::Primed() {
-  terse_out() << entry() << "MediaPlayer.Primed\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.Primed\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPriming &&
@@ -148,7 +155,8 @@ void MediaPlayer::Primed() {
 }
 
 void MediaPlayer::Playing() {
-  terse_out() << entry() << "MediaPlayer.Playing\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.Playing\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed) {
@@ -159,7 +167,8 @@ void MediaPlayer::Playing() {
 }
 
 void MediaPlayer::EndOfStream() {
-  terse_out() << entry() << "MediaPlayer.EndOfStream\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.EndOfStream\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPriming &&
@@ -172,19 +181,22 @@ void MediaPlayer::EndOfStream() {
 }
 
 void MediaPlayer::PlayRequested() {
-  terse_out() << entry() << "MediaPlayer.PlayRequested\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.PlayRequested\n";
 
   accumulator_->target_state_ = MediaPlayerAccumulator::State::kPlaying;
 }
 
 void MediaPlayer::PauseRequested() {
-  terse_out() << entry() << "MediaPlayer.PauseRequested\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.PauseRequested\n";
 
   accumulator_->target_state_ = MediaPlayerAccumulator::State::kPrimed;
 }
 
 void MediaPlayer::SeekRequested(int64_t position) {
-  terse_out() << entry() << "MediaPlayer.SeekRequested\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.SeekRequested\n";
   terse_out() << indent;
   terse_out() << begl << "position: " << position << "\n";
   terse_out() << outdent;
@@ -193,7 +205,8 @@ void MediaPlayer::SeekRequested(int64_t position) {
 }
 
 void MediaPlayer::Seeking(int64_t position) {
-  terse_out() << entry() << "MediaPlayer.Seeking\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.Seeking\n";
   terse_out() << indent;
   terse_out() << begl << "position: " << position << "\n";
   terse_out() << outdent;
@@ -210,7 +223,8 @@ void MediaPlayer::Seeking(int64_t position) {
 }
 
 void MediaPlayer::Priming() {
-  terse_out() << entry() << "MediaPlayer.Priming\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.Priming\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed) {
     ReportProblem() << "Priming out of sequence";
@@ -220,7 +234,8 @@ void MediaPlayer::Priming() {
 }
 
 void MediaPlayer::Flushing() {
-  terse_out() << entry() << "MediaPlayer.Flushing\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.Flushing\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kEndOfStream) {
@@ -232,7 +247,8 @@ void MediaPlayer::Flushing() {
 
 void MediaPlayer::SettingTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
-  terse_out() << entry() << "MediaPlayer.SettingTimelineTransform\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.SettingTimelineTransform\n";
   terse_out() << indent;
   terse_out() << begl << "timeline_transform: " << timeline_transform << "\n";
   terse_out() << outdent;
@@ -255,7 +271,7 @@ void MediaPlayerAccumulator::Print(std::ostream& os) {
   os << indent;
   os << begl << "state: " << state_ << "\n";
   os << begl << "target_state: " << target_state_ << "\n";
-  os << begl << "target_position: " << AsTime(target_position_) << "\n";
+  os << begl << "target_position: " << AsNsTime(target_position_) << "\n";
   os << begl << "source: " << source_ << "\n";
   os << begl << "stream_types: " << stream_types_ << "\n";
   os << begl << "sinks: " << sinks_ << "\n";

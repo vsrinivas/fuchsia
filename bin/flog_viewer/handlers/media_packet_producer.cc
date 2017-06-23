@@ -30,7 +30,8 @@ std::shared_ptr<Accumulator> MediaPacketProducer::GetAccumulator() {
 }
 
 void MediaPacketProducer::ConnectedTo(uint64_t related_koid) {
-  terse_out() << entry() << "MediaPacketProducer.ConnectedTo\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPacketProducer.ConnectedTo\n";
   terse_out() << indent;
   terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
   terse_out() << outdent;
@@ -43,13 +44,15 @@ void MediaPacketProducer::ConnectedTo(uint64_t related_koid) {
 }
 
 void MediaPacketProducer::Resetting() {
-  terse_out() << entry() << "MediaPacketProducer.Resetting\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPacketProducer.Resetting\n";
 
   accumulator_->consumer_.Reset();
 }
 
 void MediaPacketProducer::RequestingFlush() {
-  terse_out() << entry() << "MediaPacketProducer.RequestingFlush\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPacketProducer.RequestingFlush\n";
 
   if (accumulator_->flush_requests_.outstanding_count() != 0) {
     ReportProblem() << "RequestingFlush when another flush was outstanding";
@@ -58,7 +61,8 @@ void MediaPacketProducer::RequestingFlush() {
 }
 
 void MediaPacketProducer::FlushCompleted() {
-  terse_out() << entry() << "MediaPacketProducer.FlushCompleted\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPacketProducer.FlushCompleted\n";
 
   if (accumulator_->flush_requests_.outstanding_count() == 0) {
     ReportProblem() << "FlushCompleted when no flush was outstanding";
@@ -67,30 +71,10 @@ void MediaPacketProducer::FlushCompleted() {
   }
 }
 
-void MediaPacketProducer::AllocatingPayloadBuffer(uint32_t index,
-                                                  uint64_t size,
-                                                  uint64_t buffer) {
-  full_out() << entry() << "MediaPacketProducer.AllocatingPayloadBuffer"
-             << "\n";
-  full_out() << indent;
-  full_out() << begl << "index: " << index << "\n";
-  full_out() << begl << "size: " << size << "\n";
-  full_out() << begl << "buffer: " << AsAddress(buffer) << "\n";
-  full_out() << outdent;
-
-  auto iter = accumulator_->outstanding_allocations_.find(buffer);
-  if (iter != accumulator_->outstanding_allocations_.end()) {
-    ReportProblem() << "Allocation of buffer already allocated";
-  }
-
-  accumulator_->outstanding_allocations_.emplace(
-      buffer, MediaPacketProducerAccumulator::Allocation(index, size, buffer));
-  accumulator_->allocations_.Add(size);
-}
-
 void MediaPacketProducer::PayloadBufferAllocationFailure(uint32_t index,
                                                          uint64_t size) {
-  terse_out() << entry() << "MediaPacketProducer.PayloadBufferAllocationFailure"
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPacketProducer.PayloadBufferAllocationFailure"
               << "\n";
   terse_out() << indent;
   terse_out() << begl << "index: " << index << "\n";
@@ -100,27 +84,8 @@ void MediaPacketProducer::PayloadBufferAllocationFailure(uint32_t index,
   ReportProblem() << "Allocation failure";
 }
 
-void MediaPacketProducer::ReleasingPayloadBuffer(uint32_t index,
-                                                 uint64_t buffer) {
-  full_out() << entry() << "MediaPacketProducer.ReleasingPayloadBuffer"
-             << "\n";
-  full_out() << indent;
-  full_out() << begl << "index: " << index << "\n";
-  full_out() << begl << "buffer: " << AsAddress(buffer) << "\n";
-  full_out() << outdent;
-
-  auto iter = accumulator_->outstanding_allocations_.find(buffer);
-  if (iter == accumulator_->outstanding_allocations_.end()) {
-    ReportProblem() << "Release of buffer not currently allocated";
-    return;
-  }
-
-  accumulator_->allocations_.Remove(iter->second.size_);
-  accumulator_->outstanding_allocations_.erase(iter);
-}
-
 void MediaPacketProducer::DemandUpdated(media::MediaPacketDemandPtr demand) {
-  full_out() << entry() << indent;
+  full_out() << AsEntryIndex(entry_index()) << " " << entry() << indent;
   full_out() << "MediaPacketProducer.DemandUpdated\n";
   full_out() << begl << "demand: " << demand << "\n";
   full_out() << outdent;
@@ -137,7 +102,8 @@ void MediaPacketProducer::ProducingPacket(uint64_t label,
                                           media::MediaPacketPtr packet,
                                           uint64_t payload_address,
                                           uint32_t packets_outstanding) {
-  full_out() << entry() << "MediaPacketProducer.ProducingPacket\n";
+  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+             << "MediaPacketProducer.ProducingPacket\n";
   full_out() << indent;
   full_out() << begl << "label: " << label << "\n";
   full_out() << begl << "packet: " << packet << "\n";
@@ -161,7 +127,8 @@ void MediaPacketProducer::ProducingPacket(uint64_t label,
 
 void MediaPacketProducer::RetiringPacket(uint64_t label,
                                          uint32_t packets_outstanding) {
-  full_out() << entry() << "MediaPacketProducer.RetiringPacket\n";
+  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+             << "MediaPacketProducer.RetiringPacket\n";
   full_out() << indent;
   full_out() << begl << "label: " << label << "\n";
   full_out() << begl << "packets_outstanding: " << packets_outstanding << "\n";
@@ -204,24 +171,7 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
   if (packets_.count() != 0) {
     os << begl << "packet size: "
        << "min " << packets_.min() << ", avg " << packets_.average() << ", max "
-       << packets_.max() << ", total " << packets_.total() << "\n";
-  }
-
-  os << begl << "outstanding allocation count: "
-     << "curr " << allocations_.outstanding_count() << ", max "
-     << allocations_.max_outstanding_count() << "\n";
-  if (allocations_.count() != 0) {
-    os << begl << "outstanding allocation size: "
-       << "curr " << allocations_.outstanding_total() << ", max "
-       << allocations_.max_outstanding_total() << "\n";
-  }
-
-  os << begl << "allocation count: " << allocations_.count();
-  if (allocations_.count() != 0) {
-    os << "\n"
-       << begl << "allocation size: "
-       << "min " << allocations_.min() << ", avg " << allocations_.average()
-       << ", max " << allocations_.max() << ", total " << allocations_.total();
+       << packets_.max() << ", total " << packets_.total();
   }
 
   for (const std::pair<uint64_t, std::shared_ptr<Packet>>& pair :
@@ -237,12 +187,13 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
     os << outdent;
   }
 
-  for (const std::pair<uint64_t, Allocation>& pair : outstanding_allocations_) {
-    os << "\n" << begl << "SUSPENSE: outstanding allocation\n";
+  if (current_demand_ &&
+      current_demand_->min_packets_outstanding > packets_.outstanding_count()) {
+    os << "\n" << begl << "SUSPENSE: unmet packet demand\n";
     os << indent;
-    os << begl << "index: " << pair.second.index_ << "\n";
-    os << begl << "size: " << pair.second.size_ << "\n";
-    os << begl << "buffer: " << AsAddress(pair.second.buffer_);
+    os << begl << "demand: " << current_demand_->min_packets_outstanding
+       << "\n";
+    os << begl << "supply: " << packets_.outstanding_count();
     os << outdent;
   }
 

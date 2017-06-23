@@ -35,7 +35,8 @@ std::shared_ptr<Accumulator> MediaRenderer::GetAccumulator() {
 }
 
 void MediaRenderer::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaRenderer.BoundAs\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaRenderer.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
@@ -46,7 +47,8 @@ void MediaRenderer::BoundAs(uint64_t koid) {
 void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
                            uint64_t consumer_address,
                            uint64_t timeline_control_point_address) {
-  terse_out() << entry() << "MediaRenderer.Config\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaRenderer.Config\n";
   terse_out() << indent;
   terse_out() << begl << "supported_types: " << supported_types << "\n";
   terse_out() << begl << "consumer_address: " << *AsChannel(consumer_address)
@@ -65,7 +67,8 @@ void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
 }
 
 void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
-  terse_out() << entry() << "MediaRenderer.SetMediaType\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaRenderer.SetMediaType\n";
   terse_out() << indent;
   terse_out() << begl << "type: " << type << "\n";
   terse_out() << outdent;
@@ -105,7 +108,8 @@ void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
 }
 
 void MediaRenderer::PtsRate(uint32_t ticks, uint32_t seconds) {
-  terse_out() << entry() << "MediaRenderer.PtsRate" << std::endl;
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaRenderer.PtsRate" << std::endl;
   terse_out() << indent;
   terse_out() << begl << "ticks: " << ticks << std::endl;
   terse_out() << begl << "seconds: " << seconds << std::endl;
@@ -117,12 +121,13 @@ void MediaRenderer::PtsRate(uint32_t ticks, uint32_t seconds) {
 void MediaRenderer::EngagePacket(int64_t current_pts,
                                  int64_t packet_pts,
                                  uint64_t packet_label) {
-  terse_out() << entry() << "MediaRenderer.EngagePacket\n";
-  terse_out() << indent;
-  terse_out() << begl << "current_pts: " << AsTime(current_pts) << "\n";
-  terse_out() << begl << "packet_pts: " << AsTime(packet_pts) << "\n";
-  terse_out() << begl << "packet_label: " << packet_label << "\n";
-  terse_out() << outdent;
+  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+             << "MediaRenderer.EngagePacket\n";
+  full_out() << indent;
+  full_out() << begl << "current_pts: " << AsNsTime(current_pts) << "\n";
+  full_out() << begl << "packet_pts: " << AsNsTime(packet_pts) << "\n";
+  full_out() << begl << "packet_label: " << packet_label << "\n";
+  full_out() << outdent;
 
   if (packet_label == 0) {
     // Needed a packet but there was none.
@@ -173,11 +178,12 @@ void MediaRenderer::EngagePacket(int64_t current_pts,
 }
 
 void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
-  terse_out() << entry() << "MediaRenderer.RenderRange" << std::endl;
-  terse_out() << indent;
-  terse_out() << begl << "pts: " << AsTime(pts) << std::endl;
-  terse_out() << begl << "duration: " << duration << std::endl;
-  terse_out() << outdent;
+  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+             << "MediaRenderer.RenderRange" << std::endl;
+  full_out() << indent;
+  full_out() << begl << "pts: " << AsNsTime(pts) << std::endl;
+  full_out() << begl << "duration: " << duration << std::endl;
+  full_out() << outdent;
 
   if (audio_frame_rate_ == media::TimelineRate::Zero) {
     ReportProblem() << "RenderRange called for non-audio media type";
@@ -230,7 +236,7 @@ void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
     // not an integer.
     if (diff > 1 || diff < -1) {
       ReportProblem() << "Unexpected RenderRange pts: expected "
-                      << AsTime(expected_range_pts_) << ", got " << AsTime(pts)
+                      << AsNsTime(expected_range_pts_) << ", got " << AsNsTime(pts)
                       << ", diff " << diff;
     }
   }
@@ -284,7 +290,7 @@ void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
       } else {
         ReportProblem() << "Gap of " << gap_size
                         << " audio frames (between packets) at pts "
-                        << AsTime(pts);
+                        << AsNsTime(pts);
         accumulator_->gaps_in_frames_between_packets_.Add(gap_size);
       }
 
@@ -305,13 +311,13 @@ void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
     } else if (more_packets) {
       ReportProblem() << "Gap of " << duration
                       << " audio frames (between packets) at pts "
-                      << AsTime(pts);
+                      << AsNsTime(pts);
       accumulator_->gaps_in_frames_between_packets_.Add(duration);
     } else if (end_of_stream_) {
       accumulator_->gaps_in_frames_end_of_stream_.Add(duration);
     } else {
       ReportProblem() << "Gap of " << duration
-                      << " audio frames (no packet) at pts " << AsTime(pts);
+                      << " audio frames (no packet) at pts " << AsNsTime(pts);
       accumulator_->gaps_in_frames_no_packet_.Add(duration);
     }
   }
@@ -415,9 +421,9 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
     os << begl << "preroll renders: " << preroll_renders_.count() << std::endl;
   }
 
-  os << begl << "packet earliness: min " << AsTime(packet_earliness_ns_.min())
-     << ", avg " << AsTime(packet_earliness_ns_.average()) << ", max "
-     << AsTime(packet_earliness_ns_.max());
+  os << begl << "packet earliness: min " << AsNsTime(packet_earliness_ns_.min())
+     << ", avg " << AsNsTime(packet_earliness_ns_.average()) << ", max "
+     << AsNsTime(packet_earliness_ns_.max());
 
   if (starved_no_packet_.count() != 0) {
     os << "\n" << begl << "STARVED (no packet): " << starved_no_packet_.count();
@@ -426,9 +432,9 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
   if (starved_ns_.count() != 0) {
     os << "\n"
        << begl << "STARVED (stale packet): count " << starved_ns_.count()
-       << ", staleness min " << AsTime(starved_ns_.min()) << ", avg "
-       << AsTime(starved_ns_.average()) << ", max "
-       << AsTime(starved_ns_.max());
+       << ", staleness min " << AsNsTime(starved_ns_.min()) << ", avg "
+       << AsNsTime(starved_ns_.average()) << ", max "
+       << AsNsTime(starved_ns_.max());
   }
 
   if (missing_packets_.count() != 0) {

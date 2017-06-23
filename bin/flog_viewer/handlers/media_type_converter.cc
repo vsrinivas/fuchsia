@@ -31,7 +31,8 @@ std::shared_ptr<Accumulator> MediaTypeConverter::GetAccumulator() {
 
 void MediaTypeConverter::BoundAs(uint64_t koid,
                                  const fidl::String& converter_type) {
-  terse_out() << entry() << "MediaTypeConverter.BoundAs\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTypeConverter.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << begl << "converter_type: " << converter_type << "\n";
@@ -48,7 +49,8 @@ void MediaTypeConverter::Config(media::MediaTypePtr input_type,
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
 
-  terse_out() << entry() << "MediaTypeConverter.Config\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTypeConverter.Config\n";
   terse_out() << indent;
   terse_out() << begl << "input_type: " << input_type << "\n";
   terse_out() << begl << "output_type: " << output_type << "\n";

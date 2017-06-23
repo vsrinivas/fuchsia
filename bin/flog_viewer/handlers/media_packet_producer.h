@@ -42,13 +42,7 @@ class MediaPacketProducer : public ChannelHandler,
 
   void FlushCompleted() override;
 
-  void AllocatingPayloadBuffer(uint32_t index,
-                               uint64_t size,
-                               uint64_t buffer) override;
-
   void PayloadBufferAllocationFailure(uint32_t index, uint64_t size) override;
-
-  void ReleasingPayloadBuffer(uint32_t index, uint64_t buffer) override;
 
   void DemandUpdated(media::MediaPacketDemandPtr demand) override;
 
@@ -113,9 +107,6 @@ class MediaPacketProducerAccumulator : public Accumulator {
 
   std::unordered_map<uint64_t, std::shared_ptr<Packet>> outstanding_packets_;
   Tracked packets_;
-
-  std::unordered_map<uint64_t, Allocation> outstanding_allocations_;
-  Tracked allocations_;
 
   friend class MediaPacketProducer;
 };

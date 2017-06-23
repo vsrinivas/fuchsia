@@ -26,7 +26,7 @@ MediaPacketProducerBase::~MediaPacketProducerBase() {
 void MediaPacketProducerBase::Connect(
     MediaPacketConsumerPtr consumer,
     const MediaPacketProducer::ConnectCallback& callback) {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FTL_DCHECK(consumer);
 
   FLOG(log_channel_, ConnectedTo(FLOG_PTR_KOID(consumer)));
@@ -50,7 +50,7 @@ void MediaPacketProducerBase::Reset() {
 
 void MediaPacketProducerBase::FlushConsumer(
     const MediaPacketConsumer::FlushCallback& callback) {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FTL_DCHECK(consumer_.is_bound());
 
   FLOG(log_channel_, RequestingFlush());
@@ -75,16 +75,15 @@ void MediaPacketProducerBase::FlushConsumer(
 
 void* MediaPacketProducerBase::AllocatePayloadBuffer(size_t size) {
   void* result = allocator_.AllocateRegion(size);
+
   if (result == nullptr) {
     FLOG(log_channel_, PayloadBufferAllocationFailure(0, size));
-  } else {
-    FLOG(log_channel_, AllocatingPayloadBuffer(0, size, FLOG_ADDRESS(result)));
   }
+
   return result;
 }
 
 void MediaPacketProducerBase::ReleasePayloadBuffer(void* buffer) {
-  FLOG(log_channel_, ReleasingPayloadBuffer(0, FLOG_ADDRESS(buffer)));
   allocator_.ReleaseRegion(buffer);
 }
 
@@ -97,7 +96,7 @@ void MediaPacketProducerBase::ProducePacket(
     bool end_of_stream,
     MediaTypePtr revised_media_type,
     const ProducePacketCallback& callback) {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FTL_DCHECK(size == 0 || payload != nullptr);
 
   if (!consumer_.is_bound()) {

@@ -12,9 +12,7 @@ interface MediaPacketProducerChannel {
   Resetting();
   RequestingFlush();
   FlushCompleted();
-  AllocatingPayloadBuffer(uint32 index, uint64 size, uint64 buffer_address);
   PayloadBufferAllocationFailure(uint32 index, uint64 size);
-  ReleasingPayloadBuffer(uint32 index, uint64 buffer_address);
   DemandUpdated(MediaPacketDemand demand);
   ProducingPacket(
       uint64 label,

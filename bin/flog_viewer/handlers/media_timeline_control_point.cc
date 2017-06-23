@@ -32,7 +32,8 @@ std::shared_ptr<Accumulator> MediaTimelineControlPoint::GetAccumulator() {
 }
 
 void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaTimelineControlPoint.BoundAs\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTimelineControlPoint.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
@@ -41,14 +42,16 @@ void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
 }
 
 void MediaTimelineControlPoint::PrimeRequested() {
-  terse_out() << entry() << "MediaTimelineControlPoint.PrimeRequested"
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTimelineControlPoint.PrimeRequested"
               << "\n";
 
   accumulator_->prime_requests_.Add();
 }
 
 void MediaTimelineControlPoint::CompletingPrime() {
-  terse_out() << entry() << "MediaTimelineControlPoint.CompletingPrime"
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTimelineControlPoint.CompletingPrime"
               << "\n";
 
   accumulator_->prime_requests_.Remove();
@@ -56,7 +59,7 @@ void MediaTimelineControlPoint::CompletingPrime() {
 
 void MediaTimelineControlPoint::ScheduleTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
-  terse_out() << entry()
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
               << "MediaTimelineControlPoint.ScheduleTimelineTransform"
               << "\n";
   terse_out() << indent;
@@ -69,7 +72,8 @@ void MediaTimelineControlPoint::ScheduleTimelineTransform(
 
 void MediaTimelineControlPoint::ApplyTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
-  terse_out() << entry() << "MediaTimelineControlPoint.ApplyTimelineTransform"
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTimelineControlPoint.ApplyTimelineTransform"
               << "\n";
   terse_out() << indent;
   terse_out() << begl << "timeline_transform: " << timeline_transform << "\n";
@@ -81,7 +85,8 @@ void MediaTimelineControlPoint::ApplyTimelineTransform(
 }
 
 void MediaTimelineControlPoint::ReachedEndOfStream() {
-  terse_out() << entry() << "MediaTimelineControlPoint.ReachedEndOfStream"
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTimelineControlPoint.ReachedEndOfStream"
               << "\n";
 
   accumulator_->end_of_streams_reached_.Remove();

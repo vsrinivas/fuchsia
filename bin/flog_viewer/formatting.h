@@ -38,6 +38,13 @@ inline std::ostream& outdent(std::ostream& os) {
   return os;
 }
 
+struct AsEntryIndex {
+  explicit AsEntryIndex(uint32_t index) : index_(index) {}
+  uint32_t index_;
+};
+
+std::ostream& operator<<(std::ostream& os, AsEntryIndex value);
+
 struct AsAddress {
   explicit AsAddress(uint64_t address) : address_(address) {}
   uint64_t address_;

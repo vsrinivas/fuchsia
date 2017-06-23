@@ -30,6 +30,10 @@ std::ostream& begl(std::ostream& os) {
   return os;
 }
 
+std::ostream& operator<<(std::ostream& os, AsEntryIndex value) {
+  return os << std::setfill('0') << std::setw(6) << value.index_;
+}
+
 std::ostream& operator<<(std::ostream& os, AsAddress value) {
   if (value.address_ == 0) {
     return os << "nullptr";
@@ -99,35 +103,16 @@ std::ostream& operator<<(std::ostream& os, const PeerBinding& value) {
   return os << "unresolved binding, koid " << AsKoid(value.koid());
 }
 
-int ostream_entry_second_index() {
-  static int i = std::ios_base::xalloc();
-  return i;
-}
-
 std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
   if (value.is_null()) {
     return os << "NULL ENTRY";
   }
 
-  // We want to know if this entry happened in a different second than the
-  // previous entry. To do this, we use ostream::iword to store a time value
-  // at seconds resolution. We mod it by max long so it'll fit in a long.
-  long second = static_cast<long>((value->time_ns / kNanosecondsPerSecond) %
-                                  std::numeric_limits<long>::max());
-
-  // If this second value differs from the previous one, record the new second
-  // value and print a second header.
-  if (os.iword(ostream_entry_second_index()) != second) {
-    os.iword(ostream_entry_second_index()) = second;
-    os << AsNiceDateTime(value->time_ns) << "\n"
-       << "       ";
-  }
-
-  // Print <nanoseconds> <log_id>.<channel_id>
-  return os << std::setfill('0') << std::setw(9)
-            << value->time_ns % kNanosecondsPerSecond << " " << value->log_id
-            << "." << std::setw(2) << std::setfill('0') << value->channel_id
-            << " ";
+  // Print <hh:mm:ss>.<nanoseconds> <log_id>.<channel_id>
+  return os << AsNiceDateTime(value->time_ns) << "." << std::setfill('0')
+            << std::setw(9) << value->time_ns % kNanosecondsPerSecond << " "
+            << value->log_id << "." << std::setw(2) << std::setfill('0')
+            << value->channel_id << " ";
 }
 
 }  // namespace flog

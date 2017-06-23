@@ -18,6 +18,7 @@ namespace flog {
 
 class Channel;
 
+// Null ostream implementation.
 template <class cT, class traits = std::char_traits<cT>>
 class basic_nullbuf : public std::basic_streambuf<cT, traits> {
   typename traits::int_type overflow(typename traits::int_type c) {

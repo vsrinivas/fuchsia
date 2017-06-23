@@ -140,15 +140,11 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "profile: " << value->profile << "\n";
   os << begl << "pixel_format: " << value->pixel_format << "\n";
   os << begl << "color_space: " << value->color_space << "\n";
-  os << begl << "width: " << value->width << "\n";
-  os << begl << "height: " << value->height << "\n";
-  os << begl << "coded_width: " << value->coded_width << "\n";
-  os << begl << "coded_height: " << value->coded_height << "\n";
-  os << begl << "pixel_aspect_ratio_width: " << value->pixel_aspect_ratio_width
-     << "\n";
-  os << begl
-     << "pixel_aspect_ratio_height: " << value->pixel_aspect_ratio_height
-     << "\n";
+  os << begl << "size: " << value->width << "x" << value->height << "\n";
+  os << begl << "coded_size: " << value->coded_width << "x"
+     << value->coded_height << "\n";
+  os << begl << "pixel_aspect_ratio: " << value->pixel_aspect_ratio_width << "x"
+     << value->pixel_aspect_ratio_height << "\n";
   os << begl << "line_stride: " << AsInlineArray<uint32_t>(value->line_stride)
      << "\n";
   os << begl
@@ -162,11 +158,11 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent;
-  os << begl << "min_width: " << value->min_width << "\n";
-  os << begl << "max_width: " << value->max_width << "\n";
-  os << begl << "min_height: " << value->min_height << "\n";
-  os << begl << "max_height: " << value->max_height;
+  os << indent << "\n";
+  os << begl << "min_size: " << value->min_width << "x" << value->min_height
+     << "\n";
+  os << begl << "max_size: " << value->max_width << "x" << value->max_height
+     << "\n";
   return os << outdent;
 }
 
@@ -225,8 +221,8 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os << indent << "\n";
-  os << begl << "reference_time: " << AsTime(value->reference_time) << "\n";
-  os << begl << "subject_time: " << AsTime(value->subject_time) << "\n";
+  os << begl << "reference_time: " << AsNsTime(value->reference_time) << "\n";
+  os << begl << "subject_time: " << AsNsTime(value->subject_time) << "\n";
   os << begl << "reference_delta: " << value->reference_delta << "\n";
   os << begl << "subject_delta: " << value->subject_delta;
   return os << outdent;
@@ -243,13 +239,32 @@ std::ostream& operator<<(std::ostream& os, const media::MediaPacketPtr& value) {
 std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value) {
   os << "\n";
   os << indent;
-  os << begl << "pts: " << AsTime(value.pts) << "\n";
-  os << begl << "pts_rate_ticks: " << value.pts_rate_ticks << "\n";
-  os << begl << "pts_rate_seconds: " << value.pts_rate_seconds << "\n";
-  os << begl << "end_of_stream: " << value.end_of_stream << "\n";
-  os << begl << "payload_buffer_id: " << value.payload_buffer_id << "\n";
-  os << begl << "payload_offset: " << value.payload_offset << "\n";
-  os << begl << "payload_size: " << value.payload_size;
+  if (value.pts_rate_seconds == 1 && value.pts_rate_ticks == 1000000000ll) {
+    os << begl << "pts: " << AsNsTime(value.pts) << " (ns)\n";
+  } else if (value.pts_rate_seconds == 1 && value.pts_rate_ticks == 1000000ll) {
+    os << begl << "pts: " << AsUsTime(value.pts) << " (us)\n";
+  } else if (value.pts_rate_seconds == 1 && value.pts_rate_ticks == 1000ll) {
+    os << begl << "pts: " << AsMsTime(value.pts) << " (ms)\n";
+  } else {
+    int64_t pts_ns = value.pts * (media::TimelineRate::NsPerSecond /
+                                  media::TimelineRate(value.pts_rate_ticks,
+                                                      value.pts_rate_seconds));
+    os << begl << "pts: " << value.pts << " (" << value.pts_rate_ticks << "/"
+       << value.pts_rate_seconds << ")"
+       << " " << AsNsTime(pts_ns) << " (ns)\n";
+  }
+  if (value.keyframe) {
+    os << begl << "keyframe: true\n";
+  }
+  if (value.end_of_stream) {
+    os << begl << "end_of_stream: true\n";
+  }
+  os << begl << "payload: " << value.payload_buffer_id << " offset "
+     << value.payload_offset << " size " << value.payload_size;
+  if (value.revised_media_type) {
+    os << "\n" << begl << "revised_media_type: " << value.revised_media_type;
+  }
+
   return os << outdent;
 }
 
@@ -262,11 +277,11 @@ std::ostream& operator<<(std::ostream& os,
   os << indent << "\n";
   os << begl << "min_packets_outstanding: " << value->min_packets_outstanding
      << "\n";
-  os << begl << "min_pts: " << AsTime(value->min_pts);
+  os << begl << "min_pts: " << AsNsTime(value->min_pts);
   return os << outdent;
 }
 
-std::ostream& operator<<(std::ostream& os, AsTime value) {
+std::ostream& operator<<(std::ostream& os, AsNsTime value) {
   int64_t time = value.time_;
 
   if (time == media::kUnspecifiedTime) {
@@ -280,6 +295,38 @@ std::ostream& operator<<(std::ostream& os, AsTime value) {
 
   return os << time / 1000000000ll << "." << std::setw(9) << std::setfill('0')
             << time % 1000000000ll;
+}
+
+std::ostream& operator<<(std::ostream& os, AsUsTime value) {
+  int64_t time = value.time_;
+
+  if (time == media::kUnspecifiedTime) {
+    return os << "unspecified";
+  }
+
+  if (time < 0) {
+    time = -time;
+    os << "-";
+  }
+
+  return os << time / 1000000ll << "." << std::setw(6) << std::setfill('0')
+            << time % 1000000ll;
+}
+
+std::ostream& operator<<(std::ostream& os, AsMsTime value) {
+  int64_t time = value.time_;
+
+  if (time == media::kUnspecifiedTime) {
+    return os << "unspecified";
+  }
+
+  if (time < 0) {
+    time = -time;
+    os << "-";
+  }
+
+  return os << time / 1000ll << "." << std::setw(3) << std::setfill('0')
+            << time % 1000ll;
 }
 
 const char* StringFromMediaTypeMedium(media::MediaTypeMedium value) {

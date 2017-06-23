@@ -42,7 +42,8 @@ std::shared_ptr<Accumulator> MediaSource::GetAccumulator() {
 }
 
 void MediaSource::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaSource.BoundAs\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaSource.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
@@ -51,7 +52,8 @@ void MediaSource::BoundAs(uint64_t koid) {
 }
 
 void MediaSource::CreatedDemux(uint64_t related_koid) {
-  terse_out() << entry() << "MediaSource.CreatedDemux\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaSource.CreatedDemux\n";
   terse_out() << indent;
   terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
   terse_out() << outdent;
@@ -65,7 +67,8 @@ void MediaSource::NewStream(uint32_t index,
   FTL_DCHECK(output_type);
   FTL_DCHECK(converter_koids);
 
-  terse_out() << entry() << "MediaSource.NewStream\n";
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaSource.NewStream\n";
   terse_out() << indent;
   terse_out() << begl << "index: " << index << "\n";
   terse_out() << begl << "output_type: " << output_type << "\n";

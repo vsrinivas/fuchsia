@@ -251,11 +251,6 @@ void FlogViewer::OnChannelMessage(
     return;
   }
 
-  if (format_ == ChannelHandler::kFormatTerse ||
-      format_ == ChannelHandler::kFormatFull) {
-    std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
-  }
-
   iter->second->handler()->HandleMessage(iter->second, entry_index, entry,
                                          &message);
 }
