@@ -87,6 +87,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (!ep->enabled) {
+        printf("ep not enabled in xhci_start_transfer_locked\n");
         return MX_ERR_BAD_STATE;
     }
 
@@ -133,12 +134,12 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
         break;
     case EP_STATE_HALTED:
     case EP_STATE_ERROR:
-        // error and halted states treated the same
+    case EP_STATE_STOPPED:
+        // usb_reset_endpoint() can be used to recover from either of these states
         return MX_ERR_IO_REFUSED;
     case EP_STATE_DISABLED:
-    case EP_STATE_STOPPED:
     default:
-        xprintf("bad ep state %d\n", ep_state);
+        printf("bad ep state %d\n", ep_state);
         return MX_ERR_BAD_STATE;
     }
 
@@ -409,6 +410,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     mtx_lock(&ep->lock);
     if (!ep->enabled) {
         mtx_unlock(&ep->lock);
+        printf("ep not enabled in xhci_queue_transfer\n");
         return MX_ERR_BAD_STATE;
     }
 
