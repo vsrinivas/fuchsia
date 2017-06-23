@@ -62,9 +62,7 @@ source_set("writer") {
 
   deps = [
     "//lib/ftl",
-    "//lib/mtl/handles",
-    "//lib/mtl/tasks",
-    "//lib/mtl/vmo",
+    "//lib/mtl",
   ]
 
   public_deps = [
