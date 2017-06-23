@@ -954,8 +954,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     std::vector<flatbuffers::Offset<::auth::UserCredential>> creds;
 
     // Reserialize existing users.
-    if (app_->creds_) {
-      FTL_DCHECK(app_->creds_->creds());
+    if (app_->creds_ && app_->creds_->creds()) {
       for (const auto* cred : *app_->creds_->creds()) {
         if (cred->account_id()->str() == account_->id) {
           // Update existing credentials
