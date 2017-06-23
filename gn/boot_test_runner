@@ -1,7 +1,9 @@
 {
     "imports": [
-        "runtime_config",
+        "ftl",
+        "mtl",
         "netstack",
+        "runtime_config",
         "test_runner"
     ],
     "resources": [
