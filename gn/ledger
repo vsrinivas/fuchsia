@@ -1,6 +1,8 @@
 {
     "imports": [
-        "boringssl_libssl"
+        "boringssl_libssl",
+        "ftl",
+        "mtl"
     ],
     "labels": [
         "//apps/ledger",
