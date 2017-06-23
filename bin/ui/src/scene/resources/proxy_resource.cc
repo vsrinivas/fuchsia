@@ -34,7 +34,10 @@ ProxyResource::ProxyResource(Session* session,
     : Resource(session, ProxyResource::kTypeInfo),
       import_token_(std::move(import_token)),
       import_spec_(spec),
-      ops_delegate_(OpsTargetForSpec(session, spec)) {}
+      ops_delegate_(OpsTargetForSpec(session, spec)) {
+  FTL_DCHECK(ops_delegate_);
+  FTL_DCHECK(!ops_delegate_->type_info().IsKindOf(ProxyResource::kTypeInfo));
+}
 
 ProxyResource::~ProxyResource() {
   if (imported_resource_ != nullptr) {
