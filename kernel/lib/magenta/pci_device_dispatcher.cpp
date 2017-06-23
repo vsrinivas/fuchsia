@@ -57,12 +57,29 @@ PciDeviceDispatcher::PciDeviceDispatcher(mxtl::RefPtr<PcieDevice> device,
 }
 
 PciDeviceDispatcher::~PciDeviceDispatcher() {
+    // Bus mastering and IRQ configuration are two states that should be
+    // disabled when the driver using them has been unloaded.
+    DEBUG_ASSERT(device_);
+
+    status_t s = EnableBusMaster(false);
+    if (s != MX_OK) {
+        printf("Failed to disable bus mastering on %02x:%02x:%1x\n",
+               device_->bus_id(), device_->dev_id(), device_->func_id());
+    }
+
+    s = SetIrqMode(static_cast<mx_pci_irq_mode_t>(PCIE_IRQ_MODE_DISABLED), 0);
+    if (s != MX_OK) {
+        printf("Failed to disable IRQs on %02x:%02x:%1x\n",
+               device_->bus_id(), device_->dev_id(), device_->func_id());
+    }
+
     // Release our reference to the underlying PCI device state to indicate that
     // we are now closed.
     //
     // Note: we should not need the lock at this point in time.  We are
     // destructing, if there are any other threads interacting with methods in
     // this object, then we have a serious lifecycle management problem.
+
     device_ = nullptr;
 }
 
