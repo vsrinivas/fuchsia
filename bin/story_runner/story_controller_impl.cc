@@ -768,7 +768,9 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
       score += 1.0;
     }
 
-    result_ = score / count;
+    if (count > 0.0) {
+      result_ = score / count;
+    }
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
