@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
+import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
 import 'package:apps.maxwell.services.context/context_publisher.fidl.dart';
 import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
@@ -16,14 +18,51 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
+/// The context topic for "focal entities" for the current story.
+const String _kCurrentFocalEntitiesTopic = '/inferred/focal_entities';
+
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final TextEditingController _controller = new TextEditingController();
+final TextEditingController _controllerEntities = new TextEditingController();
 
 /// This is used for keeping the reference around.
 ModuleImpl _module;
 
 void _log(String msg) {
   print('[Basic Text Reporter Module] $msg');
+}
+
+// A listener for finding updated focal entities and applying UI treatment to
+// them.
+class ContextListenerImpl extends ContextListener {
+  final ContextListenerBinding _binding = new ContextListenerBinding();
+
+  /// Constructor
+  ContextListenerImpl();
+
+  /// Gets the [InterfaceHandle]
+  /// The returned handle should only be used once.
+  InterfaceHandle<ContextListener> getHandle() => _binding.wrap(this);
+
+  @override
+  Future<Null> onUpdate(ContextUpdate result) async {
+    // Start by clearing all text.
+    _controllerEntities.clear();
+    if (!result.values.containsKey(_kCurrentFocalEntitiesTopic)) {
+      return;
+    }
+
+    var controllerOutputText = '';
+    List<dynamic> data =
+        JSON.decode(result.values[_kCurrentFocalEntitiesTopic]);
+    for (dynamic entity in data) {
+      if (!(entity is Map<String, dynamic>)) continue;
+      if (entity.containsKey('start') && entity.containsKey('end')) {
+        controllerOutputText += entity['content'] + ',';
+      }
+    }
+    _controllerEntities.text = controllerOutputText;
+  }
 }
 
 /// An implementation of the [Module] interface.
@@ -36,6 +75,9 @@ class ModuleImpl extends Module {
   final ContextPublisherProxy _publisher = new ContextPublisherProxy();
   final IntelligenceServicesProxy _intelligenceServices =
       new IntelligenceServicesProxy();
+
+  final ContextProviderProxy _contextProvider = new ContextProviderProxy();
+  ContextListenerImpl _contextListenerImpl;
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bind(InterfaceRequest<Module> request) {
@@ -61,6 +103,13 @@ class ModuleImpl extends Module {
     _moduleContext
         .getIntelligenceServices(_intelligenceServices.ctrl.request());
     _intelligenceServices.getContextPublisher(_publisher.ctrl.request());
+
+    // Listen to updates from the context service.
+    _intelligenceServices.getContextProvider(_contextProvider.ctrl.request());
+    _contextListenerImpl = new ContextListenerImpl();
+    ContextQuery query =
+        new ContextQuery.init(<String>[_kCurrentFocalEntitiesTopic]);
+    _contextProvider.subscribe(query, _contextListenerImpl.getHandle());
 
     // Indicate readiness
     _moduleContext.ready();
@@ -120,8 +169,6 @@ void main() {
     String currentText = _controller.text;
     int selectionStart = _controller.selection.start;
     int selectionEnd = _controller.selection.end;
-//    _log("Current text: $currentText");
-//    _log("selected text: $selectionStart to $selectionEnd");
     _module.publishText(currentText);
     _module.publishSelection(selectionStart, selectionEnd);
   });
@@ -132,10 +179,22 @@ void main() {
         appBar: new AppBar(
           title: new Text("Basic Text Reporter"),
         ),
-        body: new TextField(
-          controller: _controller,
-          decoration: new InputDecoration(
-            hintText: 'Type something',
+        body: new Container(
+          child: new Column(
+            children: [
+              new TextField(
+                controller: _controller,
+                decoration: new InputDecoration(
+                  hintText: 'Type something',
+                ),
+              ),
+              new TextField(
+                controller: _controllerEntities,
+                decoration: new InputDecoration(
+                  hintText: '[Found entities go here]',
+                ),
+              ),
+            ],
           ),
         ),
       )));
