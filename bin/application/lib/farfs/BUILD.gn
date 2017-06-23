@@ -11,7 +11,7 @@ source_set("farfs") {
   public_deps = [
     "//application/lib/far",
     "//lib/ftl",
-    "//lib/mtl/vfs",
+    "//lib/mtl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/vmofs",
   ]
