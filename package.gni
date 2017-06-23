@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/shared.gni")
+
 declare_args() {
   # Path to the root of the magenta build directory.
   magenta_build_dir = "//out//build-magenta"
@@ -203,8 +205,8 @@ template("package") {
       }
       foreach(driver, drivers) {
         # Driver paths are relative to the root of the build dir.
-        source = rebase_path(root_build_dir + "/" + driver.name)
-        sources += [ root_build_dir + "/" + driver.name ]
+        source = rebase_path(root_build_dir + "/${shared_toolchain_out_dir}/" + driver.name)
+        sources += [ root_build_dir + "/${shared_toolchain_out_dir}/" + driver.name ]
         dest = "driver/" + driver.name
 
         # Drivers go in the boot manifest.
@@ -214,8 +216,9 @@ template("package") {
       }
       foreach(library, libraries) {
         # Library paths are relative to the root of the build dir.
-        source = rebase_path(root_build_dir + "/" + library.name)
-        sources += [ root_build_dir + "/" + library.name ]
+        library_path = root_build_dir + "/${shared_toolchain_out_dir}/" + library.name
+        source = rebase_path(library_path)
+        sources += [ library_path ]
         dest = "lib/" + library.name
         package_manifest_contents += [ "$dest=$source" ]
       }
