@@ -25,6 +25,7 @@ typedef struct {
 } walk_ctx_t;
 
 // A dynamically-managed array of koids.
+// TODO(dbort): Turn into a class now that this is a .cpp file.
 typedef struct {
     mx_koid_t* entries;
     size_t num_entries;
@@ -41,22 +42,23 @@ static const size_t kNumExtraKoids = 10;
 static mx_status_t walk_job_tree_internal(
     const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth);
 
-static koid_table_t* make_koid_table(void) {
-    koid_table_t* table = malloc(sizeof(*table));
-    table->num_entries = 0;
-    table->capacity = kNumInitialKoids;
-    table->entries = malloc(table->capacity * sizeof(table->entries[0]));
-    return table;
-}
-
 static size_t koid_table_byte_capacity(koid_table_t* table) {
     return table->capacity * sizeof(table->entries[0]);
 }
 
 static void realloc_koid_table(koid_table_t* table, size_t new_capacity) {
-    table->entries =
-        realloc(table->entries, new_capacity * sizeof(table->entries[0]));
+    table->entries = reinterpret_cast<mx_koid_t*>(
+        realloc(table->entries, new_capacity * sizeof(table->entries[0])));
     table->capacity = new_capacity;
+}
+
+static koid_table_t* make_koid_table(void) {
+    koid_table_t* table =
+        reinterpret_cast<koid_table_t*>(malloc(sizeof(*table)));
+    table->num_entries = 0;
+    table->entries = nullptr;
+    realloc_koid_table(table, kNumInitialKoids);
+    return table;
 }
 
 static void free_koid_table(koid_table_t* table) {
@@ -280,7 +282,7 @@ static mx_status_t do_jobs(
 static mx_status_t walk_job_tree_internal(
     const walk_ctx_t* ctx, mx_handle_t job, mx_koid_t job_koid, int depth) {
 
-    if (ctx->process_callback != NULL || ctx->thread_callback != NULL) {
+    if (ctx->process_callback != nullptr || ctx->thread_callback != nullptr) {
         mx_status_t status = do_processes(ctx, job, job_koid, depth);
         if (status != MX_OK) {
             return status;
@@ -297,8 +299,8 @@ mx_status_t walk_job_tree(mx_handle_t root_job,
                           void* context) {
     mx_koid_t root_job_koid = 0;
     mx_info_handle_basic_t info;
-    mx_status_t status = mx_object_get_info(root_job, MX_INFO_HANDLE_BASIC,
-                                            &info, sizeof(info), NULL, NULL);
+    mx_status_t status = mx_object_get_info(
+        root_job, MX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status == MX_OK) {
         root_job_koid = info.koid;
     }
@@ -343,4 +345,41 @@ mx_status_t walk_root_job_tree(task_callback_t job_callback,
         root_job, job_callback, process_callback, thread_callback, context);
     mx_handle_close(root_job);
     return s;
+}
+
+// C++ interface
+
+namespace {
+static mx_status_t job_cpp_cb(void* ctx, int depth, mx_handle_t handle,
+                              mx_koid_t koid, mx_koid_t parent_koid) {
+    return reinterpret_cast<TaskEnumerator*>(ctx)->OnJob(
+        depth, handle, koid, parent_koid);
+}
+
+static mx_status_t process_cpp_cb(void* ctx, int depth, mx_handle_t handle,
+                                  mx_koid_t koid, mx_koid_t parent_koid) {
+    return reinterpret_cast<TaskEnumerator*>(ctx)->OnProcess(
+        depth, handle, koid, parent_koid);
+}
+
+static mx_status_t thread_cpp_cb(void* ctx, int depth, mx_handle_t handle,
+                                 mx_koid_t koid, mx_koid_t parent_koid) {
+    return reinterpret_cast<TaskEnumerator*>(ctx)->OnThread(
+        depth, handle, koid, parent_koid);
+}
+} // namespace
+
+mx_status_t TaskEnumerator::WalkJobTree(mx_handle_t root_job) {
+    return walk_job_tree(root_job,
+                         has_on_job() ? job_cpp_cb : nullptr,
+                         has_on_process() ? process_cpp_cb : nullptr,
+                         has_on_thread() ? thread_cpp_cb : nullptr,
+                         reinterpret_cast<void*>(this));
+}
+
+mx_status_t TaskEnumerator::WalkRootJobTree() {
+    return walk_root_job_tree(has_on_job() ? job_cpp_cb : nullptr,
+                              has_on_process() ? process_cpp_cb : nullptr,
+                              has_on_thread() ? thread_cpp_cb : nullptr,
+                              reinterpret_cast<void*>(this));
 }

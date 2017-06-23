@@ -22,5 +22,7 @@ __BEGIN_CDECLS
 // job.
 mx_status_t get_task_by_koid(
     mx_koid_t koid, mx_obj_type_t* type, mx_handle_t* out);
+// TODO(dbort): Add a "desired type" so we don't walk every thread in the
+// system just to find a job.
 
 __END_CDECLS
