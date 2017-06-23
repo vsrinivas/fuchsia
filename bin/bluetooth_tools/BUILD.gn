@@ -5,6 +5,7 @@
 group("tools") {
   public_deps = [
     "bluetoothcli",
+    "bt_intel_tool",
     "btsnoop",
     "hcitool",
   ]

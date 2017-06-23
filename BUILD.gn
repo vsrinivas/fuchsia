@@ -27,5 +27,9 @@ package("bluetooth") {
     {
       name = "hcitool"
     },
+
+    {
+      name = "bt-intel-tool"
+    },
   ]
 }
