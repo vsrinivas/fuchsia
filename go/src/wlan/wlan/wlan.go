@@ -498,7 +498,7 @@ func (c *Client) requestJoin() error {
 
 	req := &mlme.JoinRequest{
 		SelectedBss:        *c.ap.BSSDesc,
-		JoinFailureTimeout: 5,
+		JoinFailureTimeout: 20,
 	}
 	if debug {
 		log.Printf("join req: %v", req)
@@ -566,7 +566,7 @@ func (c *Client) requestAuthenticate() error {
 	req := &mlme.AuthenticateRequest{
 		PeerStaAddress:     c.ap.BSSDesc.Bssid,
 		AuthType:           mlme.AuthenticationTypes_OpenSystem,
-		AuthFailureTimeout: 5,
+		AuthFailureTimeout: 20,
 	}
 	if debug {
 		log.Printf("auth req: %v", req)
