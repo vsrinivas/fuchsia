@@ -324,10 +324,12 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         return res;
     }
 
+    const char* name() const { return device_get_name(mxdev()); }
+
     // The opaque pointer representing this device.
-    mx_device_t* mxdev() { return mxdev_; }
+    mx_device_t* mxdev() const { return mxdev_; }
     // The opaque pointer representing the device's parent.
-    mx_device_t* parent() { return parent_; }
+    mx_device_t* parent() const { return parent_; }
 
     void SetState(mx_signals_t stateflag) {
         device_state_set(mxdev_, stateflag);
