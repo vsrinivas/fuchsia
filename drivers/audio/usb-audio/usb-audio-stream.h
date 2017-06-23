@@ -22,7 +22,7 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
         ddk_proto_id_ = is_input ? MX_PROTOCOL_AUDIO2_INPUT : MX_PROTOCOL_AUDIO2_OUTPUT;
     }
 
-    bool IsInput() const { return (ddk_proto_id_ == MX_PROTOCOL_AUDIO2_INPUT); }
+    bool is_input() const { return (ddk_proto_id_ == MX_PROTOCOL_AUDIO2_INPUT); }
 };
 
 class UsbAudioStream;
@@ -68,10 +68,11 @@ private:
         STARTED,
     };
 
-    UsbAudioStream(mx_device_t* parent, usb_protocol_t* usb, bool is_input)
+    UsbAudioStream(mx_device_t* parent, usb_protocol_t* usb, bool is_input, int usb_index)
         : UsbAudioStreamBase(parent),
           AudioStreamProtocol(is_input),
           usb_(*usb),
+          usb_index_(usb_index),
           create_time_(mx_time_get(MX_CLOCK_MONOTONIC)) { }
 
     virtual ~UsbAudioStream();
@@ -110,6 +111,7 @@ private:
 
     void IotxnComplete(iotxn_t* txn);
     void QueueIotxnLocked() __TA_REQUIRES(txn_lock_);
+    void CompleteIotxnLocked(iotxn_t* txn) __TA_REQUIRES(txn_lock_);
 
     usb_protocol_t                  usb_;
     mxtl::Mutex lock_;
@@ -159,6 +161,7 @@ private:
     uint8_t                         iface_num_   = 0;
     uint8_t                         alt_setting_ = 0;
     uint8_t                         usb_ep_addr_ = 0;
+    const int                       usb_index_;
     const mx_time_t                 create_time_;
     const uint64_t                  ticks_per_msec_ = mx_ticks_per_second() / 1000u;
 

@@ -9,6 +9,7 @@
 #include <magenta/process.h>
 #include <magenta/types.h>
 #include <mx/vmar.h>
+#include <string.h>
 
 #include "debug-logging.h"
 #include "usb-audio.h"
@@ -43,7 +44,7 @@ mx_status_t UsbAudioStream::Create(bool is_input,
                                    usb_interface_descriptor_t* usb_interface,
                                    usb_endpoint_descriptor_t* usb_endpoint,
                                    usb_audio_ac_format_type_i_desc* format_desc) {
-    auto stream = mxtl::AdoptRef(new UsbAudioStream(parent, usb, is_input));
+    auto stream = mxtl::AdoptRef(new UsbAudioStream(parent, usb, is_input, index));
     char name[64];
     snprintf(name, sizeof(name), "usb-audio-%s-%03d", is_input ? "input" : "output", index);
 
@@ -62,7 +63,7 @@ mx_status_t UsbAudioStream::Create(bool is_input,
 }
 
 void UsbAudioStream::PrintDebugPrefix() const {
-    printf("usb-audio-stream: ");
+    printf("usb-audio-%s-%03d: ", is_input() ? "input" : "output", usb_index_);
 }
 
 mx_status_t UsbAudioStream::Bind(const char* devname,
@@ -199,6 +200,22 @@ mx_status_t UsbAudioStream::Bind(const char* devname,
     iface_num_     = usb_interface->bInterfaceNumber;
     alt_setting_   = usb_interface->bAlternateSetting;
     usb_ep_addr_   = usb_endpoint->bEndpointAddress;
+
+#if DEBUG_LOGGING
+    if (continuous_sample_rates_) {
+        LOG("Continuous sample rate range [%u, %u] Hz, %u channel%s, %u bits per sample\n",
+                sample_rates_[0], sample_rates_[1],
+                channel_count_, (channel_count_ != 1) ? "s" : "",
+                format_desc->bBitResolution);
+    } else {
+        for (uint32_t i = 0; i < num_sample_rates_; ++i) {
+            LOG("[%2u/%2u] %u Hz, %u channel%s, %u bits per sample\n",
+                    i + 1, num_sample_rates_, sample_rates_[i],
+                    channel_count_, (channel_count_ != 1) ? "s" : "",
+                    format_desc->bBitResolution);
+        }
+    }
+#endif
 
     return UsbAudioStreamBase::DdkAdd(devname);
 }
@@ -463,9 +480,8 @@ mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
     // with voydanof@ to determine what we can expose from the USB bus driver in
     // order to report this accurately.
     //
-    // Right now, since we only allow two isochronous iotxns in flight at any
-    // point in time, we know that the hardware will not be able to get farther
-    // ahead than that, so this is what we report to the upper levels.
+    // Right now, we assume that the controller will never get farther ahead
+    // than two isochronous iotxns, so we report this the worst case fifo_depth.
     fifo_bytes_ = bytes_per_packet_ << 1;
 
     // If we have no fractional portion to accumulate, we always send
@@ -618,7 +634,7 @@ mx_status_t UsbAudioStream::OnGetBufferLocked(DispatcherChannel* channel,
     // TODO(johngro): skip this step when APIs in the USB bus driver exist to
     // DMA directly from the VMO.
     map_flags = MX_VM_FLAG_PERM_READ;
-    if (IsInput())
+    if (is_input())
         map_flags |= MX_VM_FLAG_PERM_WRITE;
 
     resp.result = mx::vmar::root_self().map(0, ring_buffer_vmo_,
@@ -632,7 +648,7 @@ mx_status_t UsbAudioStream::OnGetBufferLocked(DispatcherChannel* channel,
 
     // Create the client's handle to the ring buffer vmo and set it back to them.
     client_rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP | MX_RIGHT_READ;
-    if (!IsInput())
+    if (!is_input())
         client_rights |= MX_RIGHT_WRITE;
 
     resp.result = ring_buffer_vmo_.duplicate(client_rights, &client_rb_handle);
@@ -786,27 +802,27 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     {
         mxtl::AutoLock txn_lock(&txn_lock_);
 
-        // Start by returning the transaction to the free list, cache the status
-        // code as we do.
-        MX_DEBUG_ASSERT(txn);
+        // Cache the status and lenght of this io transaction.
         mx_status_t txn_status = txn->status;
-        list_add_head(&free_iotxn_, &txn->node);
-        ++free_iotxn_cnt_;
-        MX_DEBUG_ASSERT(free_iotxn_cnt_ <= allocated_iotxn_cnt_);
+        uint32_t txn_length = txn->length;
+
+        // Complete the iotxn.  This will return the transaction to the free
+        // list and (in the case of an input stream) copy the payload to the
+        // ring buffer, and update the ring buffer position.
+        //
+        // TODO(johngro): copying the payload out of the ring buffer is an
+        // operation which goes away when we get to the zero copy world.
+        CompleteIotxnLocked(txn);
 
         // Did the transaction fail because the device was unplugged?  If so,
         // enter the stopping state and close the connections to our clients.
         if (txn_status == MX_ERR_IO_NOT_PRESENT) {
             ring_buffer_state_ = RingBufferState::STOPPING_AFTER_UNPLUG;
         } else {
-            ring_buffer_pos_ += txn->length;
-            if (ring_buffer_pos_ >= ring_buffer_size_) {
-                ring_buffer_pos_ -= ring_buffer_size_;
-                MX_DEBUG_ASSERT(ring_buffer_pos_ < ring_buffer_size_);
-            }
-
+            // If we are supposed to be delivering notifications, check to see
+            // if it is time to do so.
             if (bytes_per_notification_) {
-                notification_acc_ += txn->length;
+                notification_acc_ += txn_length;
 
                 if ((ring_buffer_state_ == RingBufferState::STARTED) &&
                     (notification_acc_ >= bytes_per_notification_)) {
@@ -914,12 +930,12 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
 }
 
 void UsbAudioStream::QueueIotxnLocked() {
-    // TODO(johngro) : update this to handle input as well.
     MX_DEBUG_ASSERT((ring_buffer_state_ == RingBufferState::STARTING) ||
                     (ring_buffer_state_ == RingBufferState::STARTED));
     MX_DEBUG_ASSERT(!list_is_empty(&free_iotxn_));
 
-    // Figure out how much we want to send this time (short or long packet)
+    // Figure out how much we want to send or receive this time (short or long
+    // packet)
     uint32_t todo = bytes_per_packet_;
     fractional_bpp_acc_ += fractional_bpp_inc_;
     if (fractional_bpp_acc_ >= iso_packet_rate_) {
@@ -928,30 +944,85 @@ void UsbAudioStream::QueueIotxnLocked() {
         MX_DEBUG_ASSERT(fractional_bpp_acc_ < iso_packet_rate_);
     }
 
-    // Grab a free iotxn and pack the data into it.
+    // Grab a free iotxn.
     auto txn = list_remove_head_type(&free_iotxn_, iotxn_t, node);
     MX_DEBUG_ASSERT(txn != nullptr);
     MX_DEBUG_ASSERT(free_iotxn_cnt_ > 0);
     --free_iotxn_cnt_;
 
-    uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
-    MX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
-    MX_DEBUG_ASSERT((avail % frame_size_) == 0);
-    uint32_t amt = mxtl::min(avail, todo);
+    // If this is an output stream, copy our data into the iotxn.
+    // TODO(johngro): eliminate this when we can get to a zero-copy world.
+    if (!is_input()) {
+        uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
+        MX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
+        MX_DEBUG_ASSERT((avail % frame_size_) == 0);
+        uint32_t amt = mxtl::min(avail, todo);
 
-    iotxn_copyto(txn, reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_, amt, 0);
-    if (amt == avail) {
-        ring_buffer_offset_ = todo - amt;
-        if (ring_buffer_offset_ > 0) {
-            iotxn_copyto(txn, ring_buffer_virt_, ring_buffer_offset_, amt);
+        const uint8_t* src = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
+        iotxn_copyto(txn, src, amt, 0);
+        if (amt == avail) {
+            ring_buffer_offset_ = todo - amt;
+            if (ring_buffer_offset_ > 0) {
+                iotxn_copyto(txn, ring_buffer_virt_, ring_buffer_offset_, amt);
+            }
+        } else {
+            ring_buffer_offset_ += amt;
         }
-    } else {
-        ring_buffer_offset_ += amt;
     }
 
     usb_iotxn_set_frame(txn, usb_frame_num_++);
     txn->length = todo;
     iotxn_queue(parent_, txn);
+}
+
+void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
+    MX_DEBUG_ASSERT(txn);
+
+    // If we are an input stream, copy the payload into the ring buffer.
+    if (is_input()) {
+        uint32_t todo = txn->length;
+
+        uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
+        MX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
+        MX_DEBUG_ASSERT((avail % frame_size_) == 0);
+
+        uint32_t amt = mxtl::min(avail, todo);
+        uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
+
+        if (txn->status == MX_OK) {
+            iotxn_copyfrom(txn, dst, amt, 0);
+            if (amt < todo) {
+                iotxn_copyfrom(txn, ring_buffer_virt_, todo - amt, amt);
+            }
+        } else {
+            // TODO(johngro): filling with zeros is only the proper thing to do
+            // for signed formats.  USB does support unsigned 8-bit audio; if
+            // that is our format, we should fill with 0x80 instead in order to
+            // fill with silence.
+            memset(dst, 0, amt);
+            if (amt < todo) {
+                memset(ring_buffer_virt_, 0, todo - amt);
+            }
+        }
+    }
+
+    // Update the ring buffer position.
+    ring_buffer_pos_ += txn->length;
+    if (ring_buffer_pos_ >= ring_buffer_size_) {
+        ring_buffer_pos_ -= ring_buffer_size_;
+        MX_DEBUG_ASSERT(ring_buffer_pos_ < ring_buffer_size_);
+    }
+
+    // If this is an input stream, the ring buffer offset should always be equal
+    // to the stream position.
+    if (is_input()) {
+        ring_buffer_offset_ = ring_buffer_pos_;
+    }
+
+    // Return the transaction to the free list.
+    list_add_head(&free_iotxn_, &txn->node);
+    ++free_iotxn_cnt_;
+    MX_DEBUG_ASSERT(free_iotxn_cnt_ <= allocated_iotxn_cnt_);
 }
 
 void UsbAudioStream::NotifyChannelDeactivated(const DispatcherChannel& channel) {
@@ -985,4 +1056,12 @@ mx_status_t usb_audio_sink_create(mx_device_t* device, usb_protocol_t* usb, int 
                                   usb_endpoint_descriptor_t* ep,
                                   usb_audio_ac_format_type_i_desc* format_desc) {
     return audio::usb::UsbAudioStream::Create(false, device, usb, index, intf, ep, format_desc);
+}
+
+extern "C"
+mx_status_t usb_audio_source_create(mx_device_t* device, usb_protocol_t* usb, int index,
+                                    usb_interface_descriptor_t* intf,
+                                    usb_endpoint_descriptor_t* ep,
+                                    usb_audio_ac_format_type_i_desc* format_desc) {
+    return audio::usb::UsbAudioStream::Create(true, device, usb, index, intf, ep, format_desc);
 }

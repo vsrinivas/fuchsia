@@ -10,7 +10,6 @@ fuchsia_shared_library("usb-audio") {
   sources = [
     "audio-util.c",
     "midi.c",
-    "usb-audio-source.c",
     "usb-audio-stream.cpp",
     "usb-audio.c",
     "usb-midi-sink.c",
