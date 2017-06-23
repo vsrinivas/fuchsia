@@ -31,6 +31,5 @@ executable("test_story_importance") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/mtl/tasks",
   ]
 }

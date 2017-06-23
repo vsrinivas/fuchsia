@@ -32,6 +32,5 @@ executable("oauth_token_manager") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/mtl/tasks",
   ]
 }

@@ -24,6 +24,6 @@ source_set("component") {
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
     "//lib/ftl",
-    "//lib/mtl/vmo",
+    "//lib/mtl",
   ]
 }

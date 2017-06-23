@@ -56,7 +56,6 @@ executable("user_runner") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/mtl/tasks",
   ]
 }
 
@@ -77,7 +76,6 @@ executable("dev_user_shell") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/mtl/tasks",
   ]
 }
 
