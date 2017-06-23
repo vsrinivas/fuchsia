@@ -2,27 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/shared.gni")
 import("//magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
-shared_library("msd_vendor") {
+fuchsia_shared_library("msd_vendor") {
   deps = [
-    "$magma_build_root/src/main($magma_shared_toolchain)",
-    "src($magma_shared_toolchain)",
+    "$magma_build_root/src/main",
+    "src",
   ]
 
   ldflags = [ "$shared_ldflags" ]
 }
 
-shared_library("test") {
+fuchsia_shared_library("test") {
   testonly = true
 
   output_name = "msd-intel-gen-test"
 
   deps = [
-    "$magma_build_root/src/main:test_driver($magma_shared_toolchain)",
-    "src($magma_shared_toolchain)",
+    "$magma_build_root/src/main:test_driver",
+    "src",
   ]
 
   ldflags = [ "$shared_ldflags" ]
