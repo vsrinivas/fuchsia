@@ -59,7 +59,11 @@ class DemoHarnessFuchsia : public DemoHarness,
 
   void RenderFrameOrQuit();
 
-  mtl::MessageLoop loop_;
+  // DemoHarnessFuchsia can work with a pre-existing MessageLoop, and also
+  // create its own if necessary.
+  mtl::MessageLoop* loop_;
+  std::unique_ptr<mtl::MessageLoop> owned_loop_;
+
   std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<modular::Module> module_binding_;
   fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;

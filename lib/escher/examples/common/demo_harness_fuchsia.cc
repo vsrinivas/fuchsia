@@ -18,9 +18,15 @@ std::unique_ptr<DemoHarness> DemoHarness::New(
 DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params,
                                        InstanceParams instance_params)
     : DemoHarness(window_params, instance_params),
+      loop_(mtl::MessageLoop::GetCurrent()),
+      owned_loop_(loop_ ? nullptr : new mtl::MessageLoop()),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       module_binding_(this),
       escher_demo_binding_(this) {
+  if (!loop_) {
+    loop_ = owned_loop_.get();
+  }
+
   application_context_->outgoing_services()->AddService<modular::Module>(
       [this](fidl::InterfaceRequest<modular::Module> request) {
         FTL_DCHECK(!module_binding_.is_bound());
@@ -55,19 +61,19 @@ void DemoHarnessFuchsia::ShutdownWindowSystem() {}
 void DemoHarnessFuchsia::Run(Demo* demo) {
   FTL_CHECK(!demo_);
   demo_ = demo;
-  loop_.task_runner()->PostTask([this] { this->RenderFrameOrQuit(); });
-  loop_.Run();
+  loop_->task_runner()->PostTask([this] { this->RenderFrameOrQuit(); });
+  loop_->Run();
 }
 
 void DemoHarnessFuchsia::RenderFrameOrQuit() {
   FTL_CHECK(demo_);  // Must be running.
   if (ShouldQuit()) {
-    loop_.QuitNow();
+    loop_->QuitNow();
     device().waitIdle();
   } else {
     demo_->DrawFrame();
-    loop_.task_runner()->PostDelayedTask([this] { this->RenderFrameOrQuit(); },
-                                         ftl::TimeDelta::FromMilliseconds(1));
+    loop_->task_runner()->PostDelayedTask([this] { this->RenderFrameOrQuit(); },
+                                          ftl::TimeDelta::FromMilliseconds(1));
   }
 }
 
