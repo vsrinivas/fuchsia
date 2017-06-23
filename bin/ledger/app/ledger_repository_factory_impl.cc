@@ -113,6 +113,10 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
     return true;
   }
 
+  if (!files::CreateDirectory(repository_path.get())) {
+    return false;
+  }
+
   std::string new_name;
   new_name.resize(16);
   glue::RandBytes(&new_name[0], new_name.size());
