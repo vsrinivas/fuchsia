@@ -62,17 +62,11 @@ private:
     // saved block device configuration out of the pci config BAR
     virtio_blk_config_t config_ = {};
 
-    struct virtio_blk_req {
-        uint32_t type;
-        uint32_t ioprio;
-        uint64_t sector;
-    } __PACKED;
-
     // a queue of block request/responses
     static const size_t blk_req_count = 32;
 
     mx_paddr_t blk_req_pa_ = 0;
-    virtio_blk_req* blk_req_ = nullptr;
+    virtio_blk_req_t* blk_req_ = nullptr;
 
     mx_paddr_t blk_res_pa_ = 0;
     uint8_t* blk_res_ = nullptr;

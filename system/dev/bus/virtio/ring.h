@@ -48,16 +48,16 @@ private:
 // perform the main loop of finding free descriptor chains and passing it to a passed in function
 template <typename T>
 inline void Ring::IrqRingUpdate(T free_chain) {
-    //TRACEF("used flags 0x%hhx idx 0x%hhx last_used %u\n",
-    //        ring_.used->flags, ring_.used->idx, ring_.last_used);
+    // TRACEF("used flags %#x idx %#x last_used %u\n",
+    //         ring_.used->flags, ring_.used->idx, ring_.last_used);
 
     // find a new free chain of descriptors
     unsigned int cur_idx = ring_.used->idx;
     for (unsigned int i = ring_.last_used; i != (cur_idx & ring_.num_mask); i = (i + 1) & ring_.num_mask) {
-        //TRACEF("looking at idx %u\n", i);
+        // TRACEF("looking at idx %u\n", i);
 
         struct vring_used_elem* used_elem = &ring_.used->ring[i];
-        //TRACEF("used chain id %u, len %u\n", used_elem->id, used_elem->len);
+        // TRACEF("used chain id %u, len %u\n", used_elem->id, used_elem->len);
 
         // free the chain
         free_chain(used_elem);

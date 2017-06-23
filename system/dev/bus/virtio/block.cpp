@@ -20,27 +20,6 @@
 
 #define LOCAL_TRACE 0
 
-// clang-format off
-#define VIRTIO_BLK_F_BARRIER  (1<<0)
-#define VIRTIO_BLK_F_SIZE_MAX (1<<1)
-#define VIRTIO_BLK_F_SEG_MAX  (1<<2)
-#define VIRTIO_BLK_F_GEOMETRY (1<<4)
-#define VIRTIO_BLK_F_RO       (1<<5)
-#define VIRTIO_BLK_F_BLK_SIZE (1<<6)
-#define VIRTIO_BLK_F_SCSI     (1<<7)
-#define VIRTIO_BLK_F_FLUSH    (1<<9)
-#define VIRTIO_BLK_F_TOPOLOGY (1<<10)
-#define VIRTIO_BLK_F_CONFIG_WCE (1<<11)
-
-#define VIRTIO_BLK_T_IN         0
-#define VIRTIO_BLK_T_OUT        1
-#define VIRTIO_BLK_T_FLUSH      4
-
-#define VIRTIO_BLK_S_OK         0
-#define VIRTIO_BLK_S_IOERR      1
-#define VIRTIO_BLK_S_UNSUPP     2
-// clang-format on
-
 namespace virtio {
 
 // DDK level ops
@@ -204,7 +183,7 @@ mx_status_t BlockDevice::Init() {
     }
 
     // allocate a queue of block requests
-    size_t size = sizeof(virtio_blk_req) * blk_req_count + sizeof(uint8_t) * blk_req_count;
+    size_t size = sizeof(virtio_blk_req_t) * blk_req_count + sizeof(uint8_t) * blk_req_count;
 
     mx_status_t r = map_contiguous_memory(size, (uintptr_t*)&blk_req_, &blk_req_pa_);
     if (r < 0) {
@@ -215,8 +194,8 @@ mx_status_t BlockDevice::Init() {
     LTRACEF("allocated blk request at %p, physical address %#" PRIxPTR "\n", blk_req_, blk_req_pa_);
 
     // responses are 32 words at the end of the allocated block
-    blk_res_pa_ = blk_req_pa_ + sizeof(virtio_blk_req) * blk_req_count;
-    blk_res_ = (uint8_t*)((uintptr_t)blk_req_ + sizeof(virtio_blk_req) * blk_req_count);
+    blk_res_pa_ = blk_req_pa_ + sizeof(virtio_blk_req_t) * blk_req_count;
+    blk_res_ = (uint8_t*)((uintptr_t)blk_req_ + sizeof(virtio_blk_req_t) * blk_req_count);
 
     LTRACEF("allocated blk responses at %p, physical address %#" PRIxPTR "\n", blk_res_, blk_res_pa_);
 
@@ -426,8 +405,8 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     txn->context = desc;
 
     /* set up the descriptor pointing to the head */
-    desc->addr = blk_req_pa_ + index * sizeof(virtio_blk_req);
-    desc->len = sizeof(struct virtio_blk_req);
+    desc->addr = blk_req_pa_ + index * sizeof(virtio_blk_req_t);
+    desc->len = sizeof(virtio_blk_req_t);
     desc->flags |= VRING_DESC_F_NEXT;
 
 #if LOCAL_TRACE > 0
