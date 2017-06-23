@@ -802,6 +802,18 @@ function ftest() {
   fcmd "/tmp/${target}"
 }
 
+function fclock() {
+  local device_date
+  if [[ "$(uname -s)" = "Darwin" ]]; then
+    device_date=`date +%Y-%m-%dT%T`
+  else
+    device_date=`date -Iseconds`
+  fi
+
+  echo "Setting device's clock to ${device_date}"
+  fcmd "clock --set ${device_date}"
+}
+
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
   if [[ ${fpath[(Ie)${FUCHSIA_SCRIPTS_DIR}/zsh-completion]} -eq 0 ]]; then
