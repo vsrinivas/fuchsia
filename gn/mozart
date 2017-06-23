@@ -1,8 +1,10 @@
 {
     "imports": [
+        "ftl",
         "magma",
-        "zlib",
-        "tracing"
+        "mtl",
+        "tracing",
+        "zlib"
     ],
     "packages": {
         "compositor_service": "//apps/mozart:compositor_service",
