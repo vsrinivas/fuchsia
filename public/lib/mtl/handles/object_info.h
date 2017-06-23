@@ -10,41 +10,44 @@
 
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
+
 namespace mtl {
 
 // Gets the kernel object id (koid) of the object associated with the handle.
 // Returns |MX_KOID_INVALID| if the handle is invalid.
-mx_koid_t GetKoid(mx_handle_t handle);
+FTL_EXPORT mx_koid_t GetKoid(mx_handle_t handle);
 
 // Gets the kernel object id (koid) of the objected related to the object
 // associated with the handle. For example, if the object associated with the
 // handle is a channel, this function returns the koid of the channel object at
 // the opposite end. Returns |MX_KOID_INVALID| if the handle is invalid or
 // the object associated with the handle has no related object.
-mx_koid_t GetRelatedKoid(mx_handle_t handle);
+FTL_EXPORT mx_koid_t GetRelatedKoid(mx_handle_t handle);
 
 // Gets the name of a kernel object.
-std::string GetObjectName(mx_handle_t handle);
+FTL_EXPORT std::string GetObjectName(mx_handle_t handle);
 
 // Sets the name of a kernel object.
 // Note: The kernel truncates names to |MX_MAX_NAME_LEN|.
-mx_status_t SetObjectName(mx_handle_t handle, const std::string& name);
+FTL_EXPORT mx_status_t SetObjectName(mx_handle_t handle,
+                                     const std::string& name);
 
 // Gets the kernel object id of the current process.
-mx_koid_t GetCurrentProcessKoid();
+FTL_EXPORT mx_koid_t GetCurrentProcessKoid();
 
 // Gets the current process name.
-std::string GetCurrentProcessName();
+FTL_EXPORT std::string GetCurrentProcessName();
 
 // Gets the kernel object id of the current thread.
-mx_koid_t GetCurrentThreadKoid();
+FTL_EXPORT mx_koid_t GetCurrentThreadKoid();
 
 // Gets the current thread name.
-std::string GetCurrentThreadName();
+FTL_EXPORT std::string GetCurrentThreadName();
 
 // Sets the name of the current thread.
 // Note: The kernel truncates names to |MX_MAX_NAME_LEN|.
-mx_status_t SetCurrentThreadName(const std::string& name);
+FTL_EXPORT mx_status_t SetCurrentThreadName(const std::string& name);
 
 }  // namespace mtl
 

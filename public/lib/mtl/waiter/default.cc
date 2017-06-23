@@ -82,7 +82,7 @@ constexpr FidlAsyncWaiter kDefaultAsyncWaiter = {AsyncWait, CancelWait};
 
 namespace fidl {
 
-const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
+FTL_EXPORT const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
   return &mtl::kDefaultAsyncWaiter;
 }
 

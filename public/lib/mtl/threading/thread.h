@@ -5,6 +5,7 @@
 #ifndef LIB_MTL_THREADING_THREAD_H_
 #define LIB_MTL_THREADING_THREAD_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -16,7 +17,7 @@ namespace internal {
 class IncomingTaskQueue;
 }  // namespace internal
 
-class Thread {
+class FTL_EXPORT Thread {
  public:
   static constexpr size_t default_stack_size = 1 * 1024 * 1024;
 

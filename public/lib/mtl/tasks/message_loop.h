@@ -12,6 +12,7 @@
 #include <memory>
 #include <queue>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/synchronization/waitable_event.h"
@@ -22,7 +23,7 @@
 
 namespace mtl {
 
-class MessageLoop : public internal::TaskQueueDelegate {
+class FTL_EXPORT MessageLoop : public internal::TaskQueueDelegate {
  public:
   using HandlerKey = uint64_t;
 

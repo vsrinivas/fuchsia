@@ -7,9 +7,11 @@
 
 #include <magenta/types.h>
 
+#include "lib/ftl/ftl_export.h"
+
 namespace mtl {
 
-class MessageLoopHandler {
+class FTL_EXPORT MessageLoopHandler {
  public:
   // Called when the handle receives signals that the handler was waiting for.
   //
@@ -32,7 +34,8 @@ class MessageLoopHandler {
   //
   // Possible errors are:
   //   - |MX_ERR_TIMED_OUT|: the handler deadline elapsed
-  //   - |MX_ERR_BAD_STATE|: the message loop itself has been destroyed rendering
+  //   - |MX_ERR_BAD_STATE|: the message loop itself has been destroyed
+  //   rendering
   //                         it impossible to continue waiting on any handles
   //
   // The default implementation does nothing.

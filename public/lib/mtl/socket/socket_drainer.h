@@ -5,14 +5,16 @@
 #ifndef LIB_MTL_SOCKET_SOCKET_DRAINER_H_
 #define LIB_MTL_SOCKET_SOCKET_DRAINER_H_
 
+#include <mx/socket.h>
+
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
-#include "mx/socket.h"
 
 namespace mtl {
 
-class SocketDrainer {
+class FTL_EXPORT SocketDrainer {
  public:
   class Client {
    public:
@@ -20,7 +22,7 @@ class SocketDrainer {
     virtual void OnDataComplete() = 0;
 
    protected:
-    virtual ~Client() {}
+    virtual ~Client();
   };
 
   SocketDrainer(Client* client,

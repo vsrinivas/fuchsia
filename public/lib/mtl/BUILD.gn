@@ -2,9 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/shared.gni")
 import("//packages/package.gni")
 
 group("mtl") {
+  public_deps = [
+    ":mtl_lib",
+    "//magenta/system/ulib/fs",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
+  ]
+}
+
+fuchsia_shared_library("mtl_lib") {
+  output_name = "mtl"
+
   public_deps = [
     "//lib/mtl/handles",
     "//lib/mtl/io",
@@ -48,6 +60,10 @@ package("package") {
     ":mtl",
     ":mtl_unittests",
   ]
+
+  libraries = [ {
+        name = "libmtl.so"
+      } ]
 
   tests = [ {
         name = "mtl_unittests"

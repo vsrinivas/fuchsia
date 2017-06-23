@@ -8,9 +8,12 @@
 #include <fs/vfs.h>
 #include <mx/channel.h>
 
+#include "lib/ftl/ftl_export.h"
+
 namespace mtl {
 
-bool VFSServe(mxtl::RefPtr<fs::Vnode> directory, mx::channel request);
+FTL_EXPORT bool VFSServe(mxtl::RefPtr<fs::Vnode> directory,
+                         mx::channel request);
 
 }  // namespace mtl
 

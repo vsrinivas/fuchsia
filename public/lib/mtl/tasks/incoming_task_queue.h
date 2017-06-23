@@ -5,6 +5,7 @@
 #ifndef LIB_MTL_TASKS_INCOMING_TASK_QUEUE_H_
 #define LIB_MTL_TASKS_INCOMING_TASK_QUEUE_H_
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/synchronization/mutex.h"
@@ -15,7 +16,7 @@
 namespace mtl {
 namespace internal {
 
-class TaskQueueDelegate {
+class FTL_EXPORT TaskQueueDelegate {
  public:
   virtual void ScheduleDrainIncomingTasks() = 0;
   virtual bool RunsTasksOnCurrentThread() = 0;
@@ -27,7 +28,7 @@ class TaskQueueDelegate {
 // Receives tasks from multiple threads and provides them for a |MessageLoop|.
 //
 // This object is threadsafe.
-class IncomingTaskQueue : public ftl::TaskRunner {
+class FTL_EXPORT IncomingTaskQueue : public ftl::TaskRunner {
  public:
   IncomingTaskQueue();
   ~IncomingTaskQueue() override;

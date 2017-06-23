@@ -8,13 +8,14 @@
 #include <fs/dispatcher.h>
 #include <mx/channel.h>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace mtl {
 class VFSDispatcher;
 
-class VFSHandler : public MessageLoopHandler {
+class FTL_EXPORT VFSHandler : public MessageLoopHandler {
  public:
   explicit VFSHandler(VFSDispatcher* dispatcher);
   ~VFSHandler() override;

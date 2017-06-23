@@ -12,6 +12,8 @@
 
 namespace mtl {
 
+SocketDrainer::Client::~Client() = default;
+
 SocketDrainer::SocketDrainer(Client* client, const FidlAsyncWaiter* waiter)
     : client_(client),
       waiter_(waiter),

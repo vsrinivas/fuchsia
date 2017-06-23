@@ -10,12 +10,13 @@
 #include <memory>
 #include <set>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/vfs/vfs_handler.h"
 
 namespace mtl {
 
-class VFSDispatcher : public fs::Dispatcher {
+class FTL_EXPORT VFSDispatcher : public fs::Dispatcher {
  public:
   VFSDispatcher();
   ~VFSDispatcher() override;

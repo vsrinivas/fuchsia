@@ -10,12 +10,13 @@
 
 #include <functional>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace mtl {
 
-class FDWaiter : public MessageLoopHandler {
+class FTL_EXPORT FDWaiter : public MessageLoopHandler {
  public:
   FDWaiter();
   ~FDWaiter() override;
@@ -25,7 +26,7 @@ class FDWaiter : public MessageLoopHandler {
   // wait failed (e.g., because the file descriptor was closed during the wait),
   // the first argument will be the error code and the second argument will be
   // zero.
-  using Callback = std::function<void (mx_status_t, uint32_t)>;
+  using Callback = std::function<void(mx_status_t, uint32_t)>;
 
   // Creates an asynchronous, one-shot wait for the given events on the given
   // file descriptor until the given timeout. Calls |callback| when the wait

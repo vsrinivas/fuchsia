@@ -5,18 +5,21 @@
 #ifndef LIB_MTL_VMO_STRINGS_H_
 #define LIB_MTL_VMO_STRINGS_H_
 
+#include <mx/vmo.h>
+
 #include <string>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/strings/string_view.h"
-#include "mx/vmo.h"
 
 namespace mtl {
 
 // Make a new shared buffer with the contents of a string.
-bool VmoFromString(const ftl::StringView& string, mx::vmo* handle_ptr);
+FTL_EXPORT bool VmoFromString(const ftl::StringView& string,
+                              mx::vmo* handle_ptr);
 
 // Copy the contents of a shared buffer into a string.
-bool StringFromVmo(const mx::vmo& handle, std::string* string_ptr);
+FTL_EXPORT bool StringFromVmo(const mx::vmo& handle, std::string* string_ptr);
 
 }  // namespace mtl
 

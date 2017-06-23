@@ -5,8 +5,10 @@
 #ifndef LIB_MTL_IO_REDIRECTION_H_
 #define LIB_MTL_IO_REDIRECTION_H_
 
-#include "mx/handle.h"
-#include "mx/socket.h"
+#include <mx/handle.h>
+#include <mx/socket.h>
+
+#include "lib/ftl/ftl_export.h"
 
 namespace mtl {
 
@@ -28,9 +30,10 @@ struct StartupHandle {
 // |out_socket| receives the local end of the socket.
 // |out_startup_handle| receives the startup handle which must be passed to
 // the launcher to bind the remote end of the socket in the new process.
-mx_status_t CreateRedirectedSocket(int startup_fd,
-                                   mx::socket* out_socket,
-                                   StartupHandle* out_startup_handle);
+FTL_EXPORT mx_status_t
+CreateRedirectedSocket(int startup_fd,
+                       mx::socket* out_socket,
+                       StartupHandle* out_startup_handle);
 
 }  // namespace mtl
 

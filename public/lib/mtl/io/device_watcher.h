@@ -5,14 +5,15 @@
 #ifndef LIB_MTL_IO_DEVICE_WATCHER_H_
 #define LIB_MTL_IO_DEVICE_WATCHER_H_
 
-#include "mx/channel.h"
+#include <mx/channel.h>
 
 #include <functional>
 #include <memory>
 #include <string>
 
-#include "lib/ftl/macros.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/ftl/ftl_export.h"
+#include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -23,7 +24,7 @@ namespace mtl {
 //
 // TODO(jeffbrown): Generalize to watching arbitrary directories or dealing
 // with removal when mxio has a protocol for it.
-class DeviceWatcher : private mtl::MessageLoopHandler {
+class FTL_EXPORT DeviceWatcher : private mtl::MessageLoopHandler {
  public:
   // Callback function which is invoked whenever a device is found.
   // |dir_fd| is the file descriptor of the directory (use for openat()).

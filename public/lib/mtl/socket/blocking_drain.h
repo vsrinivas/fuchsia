@@ -5,16 +5,18 @@
 #ifndef LIB_MTL_SOCKET_BLOCKING_DRAIN_H_
 #define LIB_MTL_SOCKET_BLOCKING_DRAIN_H_
 
+#include <mx/socket.h>
+
 #include <functional>
 
-#include "mx/socket.h"
+#include "lib/ftl/ftl_export.h"
 
 namespace mtl {
 
 // Drain the given socket and call |write_bytes| with pieces of data.
 // |write_bytes| must return the number of bytes consumed. Returns |true| if the
 // socket has been drained, |false| if an error occured.
-bool BlockingDrainFrom(
+FTL_EXPORT bool BlockingDrainFrom(
     mx::socket source,
     const std::function<size_t(const void*, uint32_t)>& write_bytes);
 

@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 
+#include "lib/ftl/ftl_export.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace mtl {
@@ -16,8 +17,8 @@ namespace mtl {
 //
 // The |task_runner| parameter is assigned a |TaskRunner| for running tasks on
 // the newly created thread.
-std::thread CreateThread(ftl::RefPtr<ftl::TaskRunner>* task_runner,
-                         std::string thread_name = "message loop");
+FTL_EXPORT std::thread CreateThread(ftl::RefPtr<ftl::TaskRunner>* task_runner,
+                                    std::string thread_name = "message loop");
 
 }  // namespace mtl
 
