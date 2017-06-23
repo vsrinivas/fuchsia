@@ -61,21 +61,27 @@ package("magma") {
   }
 }
 
+# This config allows inclusion of headers via relative paths from src
+config("magma_src_include_config") {
+  include_dirs = [ "src" ]
+}
+
+# This config allows inclusion of headers via relative paths from tests
+config("magma_tests_include_config") {
+  include_dirs = [ "tests" ]
+}
+
+shared_library("libmagma") {
+  deps = [
+    "src/libmagma($magma_shared_toolchain)",
+  ]
+}
+
 if (target_cpu == "x64") {
   group("libvulkan") {
     public_deps = [
       "$mesa_build_root:magma_vulkan",
     ]
-  }
-
-  # This config allows inclusion of headers via relative paths from src
-  config("magma_src_include_config") {
-    include_dirs = [ "src" ]
-  }
-
-  # This config allows inclusion of headers via relative paths from tests
-  config("magma_tests_include_config") {
-    include_dirs = [ "tests" ]
   }
 
   # internal only
@@ -85,12 +91,6 @@ if (target_cpu == "x64") {
     ]
     public_deps = [
       "include:msd_abi",
-    ]
-  }
-
-  shared_library("libmagma") {
-    deps = [
-      "src/libmagma($magma_shared_toolchain)",
     ]
   }
 
