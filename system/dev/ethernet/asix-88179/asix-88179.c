@@ -51,6 +51,8 @@ typedef struct {
     uint8_t mac_addr[6];
     uint8_t status[INTR_REQ_SIZE];
     bool online;
+    uint8_t bulk_in_addr;
+    uint8_t bulk_out_addr;
 
     // interrupt in request
     iotxn_t* interrupt_req;
@@ -298,7 +300,10 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == MX_OK) && eth->ifc) {
+    if (request->status == MX_ERR_IO_REFUSED) {
+        printf("ax88179_read_complete usb_reset_endpoint\n");
+        usb_reset_endpoint(eth->usb_device, eth->bulk_in_addr);
+    } else if ((request->status == MX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
     }
 
@@ -321,13 +326,18 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
 
     mtx_lock(&eth->tx_lock);
     list_add_tail(&eth->free_write_reqs, &request->node);
-    iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
-    if (next == NULL) {
-        eth->tx_in_flight = false;
-        xxprintf("ax88179: no txns in flight\n");
+    if (request->status == MX_ERR_IO_REFUSED) {
+        printf("ax88179_write_complete usb_reset_endpoint\n");
+        usb_reset_endpoint(eth->usb_device, eth->bulk_out_addr);
     } else {
-        xxprintf("ax88179: queuing iotxn (%p) of length %lu\n", next, next->length);
-        iotxn_queue(eth->usb_device, next);
+        iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
+        if (next == NULL) {
+            eth->tx_in_flight = false;
+            xxprintf("ax88179: no txns in flight\n");
+        } else {
+            xxprintf("ax88179: queuing iotxn (%p) of length %lu\n", next, next->length);
+            iotxn_queue(eth->usb_device, next);
+        }
     }
     mtx_unlock(&eth->tx_lock);
 }
@@ -760,6 +770,8 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     mtx_init(&eth->mutex, mtx_plain);
 
     eth->usb_device = device;
+    eth->bulk_in_addr = bulk_in_addr;
+    eth->bulk_out_addr = bulk_out_addr;
 
     mx_status_t status = MX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
