@@ -98,10 +98,10 @@ static bool page_table_4kb(void) {
     // pd
     expected[2].entries[0] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
     // pt
-    expected[3].entries[0] = PAGE_SIZE * 0 | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    expected[3].entries[1] = PAGE_SIZE * 1 | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    expected[3].entries[2] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    expected[3].entries[3] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[3].entries[0] = PAGE_SIZE * 0 | X86_PTE_P | X86_PTE_RW;
+    expected[3].entries[1] = PAGE_SIZE * 1 | X86_PTE_P | X86_PTE_RW;
+    expected[3].entries[2] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+    expected[3].entries[3] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
@@ -127,7 +127,7 @@ static bool page_table_mixed_pages(void) {
     expected[2].entries[1] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
 
     // pt
-    expected[3].entries[0] = (2 << 20) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[3].entries[0] = (2 << 20) | X86_PTE_P | X86_PTE_RW;
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
@@ -142,7 +142,7 @@ static bool page_table_complex(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    // 2gb + 123mb + 32kb of RAM. This breaks down a follows:
+    // 2gb + 123mb + 32kb of RAM. This breaks down as follows:
     //
     // PML4
     // > 1 pointer to a PDPT
@@ -177,7 +177,7 @@ static bool page_table_complex(void) {
     // pt - starts at 2GB + 122MB
     const uint64_t pd_offset = pdp_offset + (61l << 21);
     for (int i = 0; i < 264; ++i) {
-        expected[3].entries[i] = (pd_offset + (i << 12)) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+        expected[3].entries[i] = (pd_offset + (i << 12)) | X86_PTE_P | X86_PTE_RW;
     }
     ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
