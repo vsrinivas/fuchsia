@@ -5,7 +5,7 @@
 #ifndef LIB_FTL_FTL_EXPORT_H_
 #define LIB_FTL_FTL_EXPORT_H_
 
-#include "build_config.h"
+#include "lib/ftl/build_config.h"
 
 #ifdef OS_FUCHSIA
 #define FTL_EXPORT __attribute__((visibility("default")))
