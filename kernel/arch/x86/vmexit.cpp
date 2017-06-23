@@ -26,13 +26,11 @@
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/syscalls/hypervisor.h>
+
+static const uint16_t kLocalApicEoi = 0x00b0;
 #endif // WITH_LIB_MAGENTA
 
 #define LOCAL_TRACE 0
-
-#if WITH_LIB_MAGENTA
-static const uint16_t kLocalApicEoi = 0x00b0;
-#endif // WITH_LIB_MAGENTA
 
 static const uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
