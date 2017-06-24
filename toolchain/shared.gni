@@ -10,9 +10,10 @@
 
 if (current_toolchain == target_toolchain) {
     shared_toolchain = "//build/toolchain/fuchsia:${target_cpu}-shared"
-    shared_toolchain_out_dir = "${target_cpu}-shared"
+    shared_toolchain_out_dir = "$root_build_dir/${target_cpu}-shared"
 } else {
     shared_toolchain = current_toolchain
+    shared_toolchain_out_dir = root_out_dir
 }
 
 # Most shared libraries in the Fuchsia build should use this template rather

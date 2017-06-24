@@ -167,14 +167,9 @@ template("rust_artifact") {
     ] + rust_deps
 
     args += [ "--native-libs" ] + rust_native_libs_names
-    if (defined(shared_toolchain_out_dir)) {
-      shared_libs_root = "$root_build_dir/$shared_toolchain_out_dir"
-    } else {
-      shared_libs_root = root_out_dir
-    }
     args += [
       "--shared-libs-root",
-      rebase_path(shared_libs_root),
+      rebase_path(shared_toolchain_out_dir),
     ]
 
     if (defined(invoker.with_tests) && invoker.with_tests) {
