@@ -392,9 +392,10 @@ class XdrContext {
  public:
   // When adding a new value to a filter, use this function to ignore errors
   // on the called function(s) in that scope. For example:
-  // xdr->ReadErrorHandler(
-  //        [&data] { data->interaction_timestamp = time(nullptr); })
-  //     ->Field("interaction", &data->interaction_timestamp);
+  //
+  //   xdr->ReadErrorHandler([data] { data->ctime = time(nullptr); })
+  //      ->Field("ctime", &data->ctime);
+  //
   XdrCallbackOnReadError ReadErrorHandler(std::function<void()> callback);
 
  private:
@@ -494,29 +495,22 @@ void XdrFilter(XdrContext* const xdr, V* const value) {
 
 // Clients mostly use the following functions as entry points.
 
-// A wrapper function to read data from a JSON string. This may fail
-// if the JSON supplied doesn't match the structure required by the
-// filter. In that case it logs an error and returns false. Clients
-// are expected to either crash or recover e.g. by ignoring the value.
+// A wrapper function to read data from a JSON document. This may fail if the
+// JSON document doesn't match the structure required by the filter. In that
+// case it logs an error and returns false. Clients are expected to either crash
+// or recover e.g. by ignoring the value.
 template <typename D, typename V>
-bool XdrRead(const std::string& json,
+bool XdrRead(JsonDoc* const doc,
              D* const data,
              XdrFilterType<V> const filter) {
-  JsonDoc doc;
-  doc.Parse(json);
-  if (doc.HasParseError()) {
-    FTL_LOG(ERROR) << "Unable to parse data as JSON: " << json;
-    return false;
-  }
-
   std::string error;
-  XdrContext xdr(XdrOp::FROM_JSON, &doc, &error);
+  XdrContext xdr(XdrOp::FROM_JSON, doc, &error);
   xdr.Value(data, filter);
 
   if (!error.empty()) {
     FTL_LOG(ERROR) << "XdrRead: Unable to extract data from JSON: " << std::endl
                    << error << std::endl
-                   << json << std::endl;
+                   << JsonValueToPrettyString(*doc) << std::endl;
     // This DCHECK is usually caused by adding a field to an XDR filter function
     // when there's already existing data in the Ledger.
     FTL_DCHECK(false)
@@ -528,21 +522,45 @@ bool XdrRead(const std::string& json,
   return true;
 }
 
+// A wrapper function to read data from a JSON string. This may fail if the JSON
+// doesn't parse or doesn't match the structure required by the filter. In that
+// case it logs an error and returns false. Clients are expected to either crash
+// or recover e.g. by ignoring the value.
+template <typename D, typename V>
+bool XdrRead(const std::string& json,
+             D* const data,
+             XdrFilterType<V> const filter) {
+  JsonDoc doc;
+  doc.Parse(json);
+  if (doc.HasParseError()) {
+    FTL_LOG(ERROR) << "Unable to parse data as JSON: " << json;
+    return false;
+  }
+
+  return XdrRead(&doc, data, filter);
+}
+
+// A wrapper function to write data as JSON doc. This never fails.
+template <typename D, typename V>
+void XdrWrite(JsonDoc* const doc,
+              D* const data,
+              XdrFilterType<V> const filter) {
+  std::string error;
+  XdrContext xdr(XdrOp::TO_JSON, doc, &error);
+  xdr.Value(data, filter);
+  FTL_DCHECK(error.empty())
+      << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
+      << error << std::endl
+      << JsonValueToPrettyString(*doc) << std::endl;
+}
+
 // A wrapper function to write data as JSON to a string. This never fails.
 template <typename D, typename V>
 void XdrWrite(std::string* const json,
               D* const data,
               XdrFilterType<V> const filter) {
   JsonDoc doc;
-
-  std::string error;
-  XdrContext xdr(XdrOp::TO_JSON, &doc, &error);
-  xdr.Value(data, filter);
-  FTL_DCHECK(error.empty())
-      << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
-      << error << std::endl
-      << JsonValueToPrettyString(doc) << std::endl;
-
+  XdrWrite(&doc, data, filter);
   *json = JsonValueToString(doc);
 }
 
