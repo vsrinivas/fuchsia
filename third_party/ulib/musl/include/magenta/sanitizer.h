@@ -44,6 +44,20 @@ typedef struct {
 } sanitizer_shadow_bounds_t;
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void);
 
+// Write logging information from the sanitizer runtime.  The buffer
+// is expected to be printable text with '\n' ending each line.
+// Timestamps and globally unique identifiers of the calling process
+// and thread (mx_koid_t) are attached to all messages, so there is no
+// need to include those details in the text.  The log of messages
+// written with this call automatically includes address and ELF build
+// ID details of the program and all shared libraries sufficient to
+// translate raw address values into program symbols or source
+// locations via a post-processor that has access to the original ELF
+// files and their debugging information.  The text can contain markup
+// around address values that should be resolved symbolically; see
+// TODO(mcgrathr) for the format and details of the post-processor.
+void __sanitizer_log_write(const char *buffer, size_t len);
+
 // Runtimes that have binary data to publish (e.g. coverage) use this
 // interface.  The name describes the data sink that will receive this
 // blob of data; the string is not used after this call returns.  The
