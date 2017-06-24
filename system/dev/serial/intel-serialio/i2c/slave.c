@@ -17,26 +17,31 @@
 #include "slave.h"
 
 // Time out after 2 seconds.
-static const uint64_t timeout_ns = 2 * 1000 * 1000 * 1000;
+static const mx_duration_t timeout_ns = MX_SEC(2);
 
-//TODO We should be using interrupts and yielding during long operations, but
+//TODO We should be using interrupts during long operations, but
 //the plumbing isn't all there for that apparently.
-#define DO_UNTIL(condition, action)                                           \
+#define DO_UNTIL(condition, action, poll_interval)                            \
     ({                                                                        \
-        const uint64_t _wait_for_base_time = mx_time_get(MX_CLOCK_MONOTONIC); \
-        uint64_t _wait_for_last_time = _wait_for_base_time;                   \
-        int _wait_for_condition_value = !!(condition);                        \
-        while (!_wait_for_condition_value) {                                  \
-               _wait_for_condition_value = !!(condition);                     \
-               if (_wait_for_last_time - _wait_for_base_time > timeout_ns)    \
-                   break;                                                     \
-               _wait_for_last_time = mx_time_get(MX_CLOCK_MONOTONIC);         \
-               {action;}                                                      \
+        const mx_time_t deadline = mx_deadline_after(timeout_ns);             \
+        int wait_for_condition_value;                                         \
+        while (!(wait_for_condition_value = !!(condition))) {                 \
+            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);                  \
+            if (now >= deadline)                                              \
+                break;                                                        \
+            if (poll_interval)                                                \
+                mx_nanosleep(mx_deadline_after(poll_interval));               \
+            {action;}                                                         \
         }                                                                     \
-        _wait_for_condition_value;                                            \
+        wait_for_condition_value;                                             \
     })
 
-#define WAIT_FOR(condition) DO_UNTIL(condition, )
+#define WAIT_FOR(condition, poll_interval) DO_UNTIL(condition, , poll_interval)
+
+// This is a controller implementation constant.  This value is likely lower
+// than reality, but it is a conservative choice.
+// TODO(teisenbe): Discover this/look it up from a table
+const uint32_t kRxFifoDepth = 8;
 
 // Implement the functionality of the i2c slave devices.
 
@@ -85,7 +90,7 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
 
     mtx_lock(&slave->controller->mutex);
 
-    if (!WAIT_FOR(bus_is_idle(controller))) {
+    if (!WAIT_FOR(bus_is_idle(controller), MX_USEC(50))) {
         status = MX_ERR_TIMED_OUT;
         goto transfer_finish_1;
     }
@@ -112,19 +117,24 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
         uint32_t restart = 0;
         if (last_type == segments->type)
             restart = 1;
+        size_t outstanding_reads = 0;
         while (len--) {
             // Build the cmd register value.
             uint32_t cmd = (restart << DATA_CMD_RESTART);
             restart = 0;
             switch (segments->type) {
             case I2C_SEGMENT_TYPE_WRITE:
-                if (!WAIT_FOR((*REG32(&controller->regs->i2c_sta) &
-                         (0x1 << I2C_STA_TFNF)))) {
-                    status = MX_ERR_TIMED_OUT;
-                    goto transfer_finish_1;
+                // Wait if the TX FIFO is full
+                if (!(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFNF))) {
+                    status = intel_serialio_i2c_wait_for_tx_empty(controller,
+                                                                  mx_deadline_after(timeout_ns));
+                    if (status != MX_OK) {
+                        goto transfer_finish_1;
+                    }
                 }
                 cmd |= (*buf << DATA_CMD_DAT);
                 cmd |= (DATA_CMD_CMD_WRITE << DATA_CMD_CMD);
+                buf++;
                 break;
             case I2C_SEGMENT_TYPE_READ:
                 cmd |= (DATA_CMD_CMD_READ << DATA_CMD_CMD);
@@ -136,49 +146,102 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
                 goto transfer_finish_1;
             }
 
-            if (!len && !segment_count)
+            if (!len && !segment_count) {
                 cmd |= (0x1 << DATA_CMD_STOP);
-
-            // Write the cmd value.
-            *REG32(&controller->regs->data_cmd) = cmd;
-
-            // If this is a read, extract the data.
-            if (segments->type == I2C_SEGMENT_TYPE_READ) {
-                if (!WAIT_FOR(!rx_fifo_empty(controller))) {
-                    status = MX_ERR_TIMED_OUT;
-                    goto transfer_finish_1;
-                }
-                *buf = *REG32(&controller->regs->data_cmd);
             }
 
-            buf++;
+            if (segments->type == I2C_SEGMENT_TYPE_READ) {
+                status = intel_serialio_i2c_issue_rx(controller, cmd);
+                outstanding_reads++;
+            } else if (segments->type == I2C_SEGMENT_TYPE_WRITE) {
+                status = intel_serialio_i2c_issue_tx(controller, cmd);
+            } else {
+                __builtin_trap();
+            }
+            if (status != MX_OK) {
+                goto transfer_finish_1;
+            }
+
+            // If this is a read, extract data if it's ready.
+            while (outstanding_reads) {
+                // If len is > 0 and the queue has more space, we can go queue up more work.
+                if (len > 0 && outstanding_reads < kRxFifoDepth) {
+                    if (rx_fifo_empty(controller)) {
+                        break;
+                    }
+                } else {
+                    if (rx_fifo_empty(controller)) {
+                        // If we've issued all of our read requests, make sure
+                        // that the FIFO threshold will be crossed when the
+                        // reads are ready.
+                        uint32_t rx_threshold;
+                        intel_serialio_i2c_get_rx_fifo_threshold(controller, &rx_threshold);
+                        if (len == 0 && outstanding_reads < rx_threshold) {
+                            status = intel_serialio_i2c_set_rx_fifo_threshold(controller,
+                                                                              outstanding_reads);
+                            if (status != MX_OK) {
+                                goto transfer_finish_1;
+                            }
+                        }
+
+                        // Wait for the FIFO to get some data.
+                        status = intel_serialio_i2c_wait_for_rx_full(controller,
+                                                                     mx_deadline_after(timeout_ns));
+                        if (status != MX_OK) {
+                            goto transfer_finish_1;
+                        }
+
+                        // Restore the RX threshold in case we changed it
+                        status = intel_serialio_i2c_set_rx_fifo_threshold(controller,
+                                                                          rx_threshold);
+                        if (status != MX_OK) {
+                            goto transfer_finish_1;
+                        }
+                    }
+                }
+
+                status = intel_serialio_i2c_read_rx(controller, buf);
+                if (status != MX_OK) {
+                    goto transfer_finish_1;
+                }
+                buf++;
+                outstanding_reads--;
+            }
         }
+        if (outstanding_reads != 0) {
+            __builtin_trap();
+        }
+
         last_type = segments->type;
         segments++;
     }
 
     // Clear out the stop detect interrupt signal.
-    if (!DO_UNTIL(!stop_detected(controller),
-                  *REG32(&controller->regs->clr_stop_det))) {
-        status = MX_ERR_TIMED_OUT;
+    status = intel_serialio_i2c_wait_for_stop_detect(controller, mx_deadline_after(timeout_ns));
+    if (status != MX_OK) {
+        goto transfer_finish_1;
+    }
+    status = intel_serialio_i2c_clear_stop_detect(controller);
+    if (status != MX_OK) {
         goto transfer_finish_1;
     }
 
-    if (!WAIT_FOR(bus_is_idle(controller))) {
+    if (!WAIT_FOR(bus_is_idle(controller), MX_USEC(50))) {
         status = MX_ERR_TIMED_OUT;
         goto transfer_finish_1;
     }
 
     // Read the data_cmd register to pull data out of the RX FIFO.
     if (!DO_UNTIL(rx_fifo_empty(controller),
-                  *REG32(&controller->regs->data_cmd))) {
+                  *REG32(&controller->regs->data_cmd), 0)) {
         status = MX_ERR_TIMED_OUT;
         goto transfer_finish_1;
     }
 
 transfer_finish_1:
-    if (status < 0)
+    if (status < 0) {
         intel_serialio_i2c_reset_controller(controller);
+    }
     mtx_unlock(&controller->mutex);
 transfer_finish_2:
     return status;

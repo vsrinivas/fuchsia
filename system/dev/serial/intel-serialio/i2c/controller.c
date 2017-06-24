@@ -31,6 +31,15 @@
 
 #define ACER_I2C_TOUCH INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID
 
+// Number of entries at which the FIFO level triggers happen
+#define DEFAULT_RX_FIFO_TRIGGER_LEVEL 8
+#define DEFAULT_TX_FIFO_TRIGGER_LEVEL 8
+
+// Signals used on the controller's event_handle
+#define RX_FULL_SIGNAL MX_USER_SIGNAL_0
+#define TX_EMPTY_SIGNAL MX_USER_SIGNAL_1
+#define STOP_DETECT_SIGNAL MX_USER_SIGNAL_2
+
 // Implement the functionality of the i2c bus device.
 
 static uint32_t chip_addr_mask(int width) {
@@ -302,9 +311,194 @@ static mx_status_t intel_serialio_i2c_ioctl(
     }
 }
 
+static int intel_serialio_i2c_irq_thread(void* arg) {
+    intel_serialio_i2c_device_t* dev = (intel_serialio_i2c_device_t*)arg;
+    mx_status_t status;
+    for (;;) {
+        status = mx_interrupt_wait(dev->irq_handle);
+        if (status != MX_OK) {
+            xprintf("i2c: error waiting for interrupt: %d\n", status);
+            continue;
+        }
+
+        uint32_t intr_stat = *REG32(&dev->regs->intr_stat);
+        xprintf("Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
+        if (intr_stat & (1u << INTR_RX_UNDER)) {
+            // If we hit an underflow, it's a bug.
+            __builtin_trap();
+            *REG32(&dev->regs->clr_rx_under);
+        }
+        if (intr_stat & (1u << INTR_RX_OVER)) {
+            // If we hit an overflow, it's a bug.
+            __builtin_trap();
+            *REG32(&dev->regs->clr_rx_over);
+        }
+        if (intr_stat & (1u << INTR_RX_FULL)) {
+            mtx_lock(&dev->irq_mask_mutex);
+            mx_object_signal(dev->event_handle, 0, RX_FULL_SIGNAL);
+            RMWREG32(&dev->regs->intr_mask, INTR_RX_FULL, 1, 0);
+            mtx_unlock(&dev->irq_mask_mutex);
+        }
+        if (intr_stat & (1u << INTR_TX_OVER)) {
+            // If we hit an overflow, it's a bug.
+            __builtin_trap();
+            *REG32(&dev->regs->clr_tx_over);
+        }
+        if (intr_stat & (1u << INTR_TX_EMPTY)) {
+            mtx_lock(&dev->irq_mask_mutex);
+            mx_object_signal(dev->event_handle, 0, TX_EMPTY_SIGNAL);
+            RMWREG32(&dev->regs->intr_mask, INTR_TX_EMPTY, 1, 0);
+            mtx_unlock(&dev->irq_mask_mutex);
+        }
+        if (intr_stat & (1u << INTR_TX_ABORT)) {
+            *REG32(&dev->regs->clr_tx_abort);
+        }
+        if (intr_stat & (1u << INTR_ACTIVITY)) {
+            // Should always be masked
+            __builtin_trap();
+        }
+        if (intr_stat & (1u << INTR_STOP_DETECTION)) {
+            mx_object_signal(dev->event_handle, 0, STOP_DETECT_SIGNAL);
+            *REG32(&dev->regs->clr_stop_det);
+        }
+        if (intr_stat & (1u << INTR_START_DETECTION)) {
+            *REG32(&dev->regs->clr_start_det);
+        }
+        if (intr_stat & (1u << INTR_GENERAL_CALL)) {
+            // Should be masked
+            __builtin_trap();
+        }
+
+        mx_interrupt_complete(dev->irq_handle);
+    }
+    return 0;
+}
+
+mx_status_t intel_serialio_i2c_wait_for_rx_full(
+    intel_serialio_i2c_device_t* controller,
+    mx_time_t deadline) {
+
+    return mx_object_wait_one(controller->event_handle, RX_FULL_SIGNAL, deadline, NULL);
+}
+
+mx_status_t intel_serialio_i2c_wait_for_tx_empty(
+    intel_serialio_i2c_device_t* controller,
+    mx_time_t deadline) {
+
+    return mx_object_wait_one(controller->event_handle, TX_EMPTY_SIGNAL, deadline, NULL);
+}
+
+mx_status_t intel_serialio_i2c_wait_for_stop_detect(
+    intel_serialio_i2c_device_t* controller,
+    mx_time_t deadline) {
+
+    return mx_object_wait_one(controller->event_handle, STOP_DETECT_SIGNAL,
+                              deadline, NULL);
+}
+
+mx_status_t intel_serialio_i2c_clear_stop_detect(intel_serialio_i2c_device_t* controller) {
+    return mx_object_signal(controller->event_handle, STOP_DETECT_SIGNAL, 0);
+}
+
+// Perform a write to the DATA_CMD register, and clear
+// interrupt masks as appropriate
+mx_status_t intel_serialio_i2c_issue_rx(
+    intel_serialio_i2c_device_t* controller,
+    uint32_t data_cmd) {
+
+    *REG32(&controller->regs->data_cmd) = data_cmd;
+    return MX_OK;
+}
+
+mx_status_t intel_serialio_i2c_read_rx(
+    intel_serialio_i2c_device_t* controller,
+    uint8_t* data) {
+
+    *data = *REG32(&controller->regs->data_cmd);
+
+    uint32_t rx_tl;
+    intel_serialio_i2c_get_rx_fifo_threshold(controller, &rx_tl);
+    const uint32_t rxflr = *REG32(&controller->regs->rxflr) & 0x1ff;
+    // If we've dropped the RX queue level below the threshold, clear the signal
+    // and unmask the interrupt.
+    if (rxflr < rx_tl) {
+        mtx_lock(&controller->irq_mask_mutex);
+        mx_status_t status = mx_object_signal(controller->event_handle, RX_FULL_SIGNAL, 0);
+        RMWREG32(&controller->regs->intr_mask, INTR_RX_FULL, 1, 1);
+        mtx_unlock(&controller->irq_mask_mutex);
+        return status;
+    }
+    return MX_OK;
+}
+
+mx_status_t intel_serialio_i2c_issue_tx(
+    intel_serialio_i2c_device_t* controller,
+    uint32_t data_cmd) {
+
+    *REG32(&controller->regs->data_cmd) = data_cmd;
+    uint32_t tx_tl;
+    intel_serialio_i2c_get_tx_fifo_threshold(controller, &tx_tl);
+    const uint32_t txflr = *REG32(&controller->regs->txflr) & 0x1ff;
+    // If we've raised the TX queue level above the threshold, clear the signal
+    // and unmask the interrupt.
+    if (txflr > tx_tl) {
+        mtx_lock(&controller->irq_mask_mutex);
+        mx_status_t status = mx_object_signal(controller->event_handle, TX_EMPTY_SIGNAL, 0);
+        RMWREG32(&controller->regs->intr_mask, INTR_TX_EMPTY, 1, 1);
+        mtx_unlock(&controller->irq_mask_mutex);
+        return status;
+    }
+    return MX_OK;
+}
+
+void intel_serialio_i2c_get_rx_fifo_threshold(
+    intel_serialio_i2c_device_t* controller,
+    uint32_t* threshold) {
+
+    *threshold = (*REG32(&controller->regs->rx_tl) & 0xff) + 1;
+}
+
+// Get an RX interrupt whenever the RX FIFO size is >= the threshold.
+mx_status_t intel_serialio_i2c_set_rx_fifo_threshold(
+    intel_serialio_i2c_device_t* controller,
+    uint32_t threshold) {
+
+    if (threshold - 1 > UINT8_MAX) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    RMWREG32(&controller->regs->rx_tl, 0, 8, threshold - 1);
+    return MX_OK;
+}
+
+void intel_serialio_i2c_get_tx_fifo_threshold(
+    intel_serialio_i2c_device_t* controller,
+    uint32_t* threshold) {
+
+    *threshold = (*REG32(&controller->regs->tx_tl) & 0xff) + 1;
+}
+
+// Get a TX interrupt whenever the TX FIFO size is <= the threshold.
+mx_status_t intel_serialio_i2c_set_tx_fifo_threshold(
+    intel_serialio_i2c_device_t* controller,
+    uint32_t threshold) {
+
+    if (threshold - 1 > UINT8_MAX) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    RMWREG32(&controller->regs->tx_tl, 0, 8, threshold - 1);
+    return MX_OK;
+}
+
 static void intel_serialio_i2c_release(void* ctx) {
-    intel_serialio_i2c_device_t* cont = ctx;
-    free(cont);
+    intel_serialio_i2c_device_t* dev = ctx;
+    mx_handle_close(dev->regs_handle);
+    mx_handle_close(dev->irq_handle);
+    mx_handle_close(dev->event_handle);
+
+    // TODO: Handle joining the irq thread
+    free(dev);
 }
 
 static mx_protocol_device_t intel_serialio_i2c_device_proto = {
@@ -362,12 +556,36 @@ mx_status_t intel_serialio_i2c_reset_controller(
         (speed << CTL_SPEED) |
         (CTL_MASTER_MODE_ENABLED << CTL_MASTER_MODE);
 
-    //XXX Do we need this?
-    *REG32(&device->regs->intr_mask) = INTR_STOP_DETECTION;
+    mtx_lock(&device->irq_mask_mutex);
+    // Mask all interrupts
+    *REG32(&device->regs->intr_mask) = 0;
 
-    *REG32(&device->regs->rx_tl) = 0;
-    *REG32(&device->regs->tx_tl) = 0;
+    status = intel_serialio_i2c_set_rx_fifo_threshold(device, DEFAULT_RX_FIFO_TRIGGER_LEVEL);
+    if (status != MX_OK) {
+        goto cleanup;
+    }
+    status = intel_serialio_i2c_set_tx_fifo_threshold(device, DEFAULT_TX_FIFO_TRIGGER_LEVEL);
+    if (status != MX_OK) {
+        goto cleanup;
+    }
 
+    // Clear the signals
+    status = mx_object_signal(device->event_handle,
+                              RX_FULL_SIGNAL | TX_EMPTY_SIGNAL | STOP_DETECT_SIGNAL, 0);
+    if (status != MX_OK) {
+        goto cleanup;
+    }
+
+    // Reading this register clears all interrupts.
+    *REG32(&device->regs->clr_intr);
+
+    // Unmask the interrupts we care about
+    *REG32(&device->regs->intr_mask) = (1u<<INTR_STOP_DETECTION) | (1u<<INTR_TX_ABORT) |
+            (1u<<INTR_TX_EMPTY) | (1u<<INTR_TX_OVER) | (1u<<INTR_RX_FULL) | (1u<<INTR_RX_OVER) |
+            (1u<<INTR_RX_UNDER);
+
+cleanup:
+    mtx_unlock(&device->irq_mask_mutex);
     return status;
 }
 
@@ -438,6 +656,7 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
 
     list_initialize(&device->slave_list);
     mtx_init(&device->mutex, mtx_plain);
+    mtx_init(&device->irq_mask_mutex, mtx_plain);
     device->pcidev = dev;
 
     const pci_config_t* pci_config;
@@ -454,6 +673,33 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
                                    (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != MX_OK) {
         xprintf("i2c: failed to mape pci bar 0: %d\n", status);
+        goto fail;
+    }
+
+    // set msi irq mode
+    status = pci.ops->set_irq_mode(pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
+    if (status < 0) {
+        xprintf("i2c: failed to set irq mode: %d\n", status);
+        goto fail;
+    }
+
+    // get irq handle
+    status = pci.ops->map_interrupt(pci.ctx, 0, &device->irq_handle);
+    if (status != MX_OK) {
+        xprintf("i2c: failed to get irq handle: %d\n", status);
+        goto fail;
+    }
+
+    status = mx_event_create(0, &device->event_handle);
+    if (status != MX_OK) {
+        xprintf("i2c: failed to create event handle: %d\n", status);
+        goto fail;
+    }
+
+    // start irq thread
+    int ret = thrd_create_with_name(&device->irq_thread, intel_serialio_i2c_irq_thread, device, "i2c-irq");
+    if (ret != thrd_success) {
+        xprintf("i2c: failed to create irq thread: %d\n", ret);
         goto fail;
     }
 
@@ -520,8 +766,13 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     return MX_OK;
 
 fail:
-    if (device->regs_handle > 0)
+    // TODO: Handle joining the irq thread
+    if (device->regs_handle != MX_HANDLE_INVALID)
         mx_handle_close(device->regs_handle);
+    if (device->irq_handle != MX_HANDLE_INVALID)
+        mx_handle_close(device->irq_handle);
+    if (device->event_handle != MX_HANDLE_INVALID)
+        mx_handle_close(device->event_handle);
     if (config_handle)
         mx_handle_close(config_handle);
     free(device);
