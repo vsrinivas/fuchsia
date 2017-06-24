@@ -4,7 +4,7 @@
 
 #include "apps/mozart/lib/scene/session_helpers.h"
 
-#include <sstream>
+#include "lib/ftl/logging.h"
 
 namespace mozart {
 
@@ -332,6 +332,25 @@ mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
   op->set_import_resource(std::move(import_resource));
 
   return op;
+}
+
+mozart2::OpPtr NewBoundExportResourceOp(uint32_t resource_id,
+                                        mx::eventpair* out_import_token) {
+  mx::eventpair export_token;
+  mx_status_t status =
+      mx::eventpair::create(0u, &export_token, out_import_token);
+  FTL_CHECK(status == MX_OK);
+  return NewExportResourceOp(resource_id, std::move(export_token));
+}
+
+mozart2::OpPtr NewBoundImportResourceOp(uint32_t resource_id,
+                                        mozart2::ImportSpec import_spec,
+                                        mx::eventpair* out_export_token) {
+  mx::eventpair import_token;
+  mx_status_t status =
+      mx::eventpair::create(0u, &import_token, out_export_token);
+  FTL_CHECK(status == MX_OK);
+  return NewImportResourceOp(resource_id, import_spec, std::move(import_token));
 }
 
 mozart2::OpPtr NewAddChildOp(uint32_t node_id, uint32_t child_id) {

@@ -80,6 +80,13 @@ mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
                                    mozart2::ImportSpec spec,
                                    mx::eventpair import_token);
 
+// Creates an event pair, binds one end to the operation, and returns the other.
+mozart2::OpPtr NewBoundExportResourceOp(uint32_t resource_id,
+                                        mx::eventpair* out_import_token);
+mozart2::OpPtr NewBoundImportResourceOp(uint32_t resource_id,
+                                        mozart2::ImportSpec import_spec,
+                                        mx::eventpair* out_export_token);
+
 // Node operations.
 mozart2::OpPtr NewAddChildOp(uint32_t node_id, uint32_t child_id);
 mozart2::OpPtr NewAddPartOp(uint32_t node_id, uint32_t part_id);
