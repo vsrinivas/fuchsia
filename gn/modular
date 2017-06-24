@@ -14,6 +14,14 @@
             "bootfs_path": "apps/modular_tests/child_module"
         },
         {
+            "binary": "context_link_module",
+            "bootfs_path": "apps/modular_tests/context_link_module"
+        },
+        {
+            "binary": "context_link_user_shell",
+            "bootfs_path": "apps/modular_tests/context_link_user_shell"
+        },
+        {
             "binary": "component_context_test",
             "bootfs_path": "apps/modular_tests/component_context_test"
         },
