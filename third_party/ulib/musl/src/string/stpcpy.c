@@ -9,20 +9,22 @@
 #define HASZERO(x) ((x)-ONES & ~(x)&HIGHS)
 
 char* __stpcpy(char* restrict d, const char* restrict s) {
-    size_t* wd;
-    const size_t* ws;
-
+#if !__has_feature(address_sanitizer)
+    // This reads past the end of the string, which is usually OK since
+    // it won't cross a page boundary.  But under ASan, even one byte
+    // past the actual end is diagnosed.
     if ((uintptr_t)s % ALIGN == (uintptr_t)d % ALIGN) {
         for (; (uintptr_t)s % ALIGN; s++, d++)
             if (!(*d = *s))
                 return d;
-        wd = (void*)d;
-        ws = (const void*)s;
+        size_t* wd = (void*)d;
+        const size_t* ws = (const void*)s;
         for (; !HASZERO(*ws); *wd++ = *ws++)
             ;
         d = (void*)wd;
         s = (const void*)ws;
     }
+#endif
     for (; (*d = *s); s++, d++)
         ;
 
