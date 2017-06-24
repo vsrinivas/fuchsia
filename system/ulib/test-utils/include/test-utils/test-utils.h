@@ -45,7 +45,7 @@ void tu_handle_close(mx_handle_t handle);
 
 // A wrapper on launchpad_launch.
 
-mx_handle_t tu_launch(const char* name,
+mx_handle_t tu_launch(mx_handle_t job, const char* name,
                       int argc, const char* const* argv,
                       const char* const* envp,
                       size_t num_handles, mx_handle_t* handles,
@@ -54,7 +54,7 @@ mx_handle_t tu_launch(const char* name,
 // The first part of launchpad_launch_mxio_etc that creates the
 // launchpad and initializes the process.
 
-launchpad_t* tu_launch_mxio_init(const char* name,
+launchpad_t* tu_launch_mxio_init(mx_handle_t job, const char* name,
                                  int argc, const char* const* argv,
                                  const char* const* envp,
                                  size_t num_handles, mx_handle_t* handles,

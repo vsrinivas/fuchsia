@@ -145,14 +145,14 @@ bool tu_channel_wait_readable(mx_handle_t channel)
     return true;
 }
 
-mx_handle_t tu_launch(const char* name,
+mx_handle_t tu_launch(mx_handle_t job, const char* name,
                       int argc, const char* const* argv,
                       const char* const* envp,
                       size_t num_handles, mx_handle_t* handles,
                       uint32_t* handle_ids)
 {
     launchpad_t* lp;
-    launchpad_create(0u, name, &lp);
+    launchpad_create(job, name, &lp);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
@@ -167,7 +167,7 @@ mx_handle_t tu_launch(const char* name,
     return child;
 }
 
-launchpad_t* tu_launch_mxio_init(const char* name,
+launchpad_t* tu_launch_mxio_init(mx_handle_t job, const char* name,
                                  int argc, const char* const* argv,
                                  const char* const* envp,
                                  size_t hnds_count, mx_handle_t* handles,
@@ -181,7 +181,7 @@ launchpad_t* tu_launch_mxio_init(const char* name,
     if (name == NULL)
         name = filename;
 
-    launchpad_create(0u, name, &lp);
+    launchpad_create(job, name, &lp);
     launchpad_load_from_file(lp, filename);
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
@@ -316,7 +316,7 @@ int tu_run_program(const char *progname, int argc, const char** argv)
 
     unittest_printf("%s: running %s\n", __func__, progname);
 
-    launchpad_create(0, progname, &lp);
+    launchpad_create(MX_HANDLE_INVALID, progname, &lp);
     launchpad_clone(lp, LP_CLONE_ALL);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
