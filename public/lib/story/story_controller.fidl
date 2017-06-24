@@ -95,7 +95,7 @@ interface StoryController {
   // Link.
   //
   // Notifications for changes to this list are supplied through
-  // StoryLinkWatcher.OnNewLink(), if a watcher is supplied in the call.
+  // StoryLinksWatcher.OnNewLink(), if a watcher is supplied in the call.
   GetActiveLinks(StoryLinksWatcher? watcher) => (array<LinkPath> link_data);
 
   // Gets a connection to the named Link in the story.
