@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <set>
+#include <map>
 
 #include "application/lib/app/service_provider_impl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
@@ -14,6 +14,7 @@
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/macros.h"
 
 namespace maxwell {
 
@@ -37,6 +38,9 @@ class StoryInfoAcquirer : public modular::Agent,
  public:
   StoryInfoAcquirer();
   ~StoryInfoAcquirer() override;
+
+  // Used by StoryWatcherImpl.
+  void DropStoryWatcher(const std::string& story_id);
 
  private:
   // |StoryInfoInitializer|
@@ -80,14 +84,16 @@ class StoryInfoAcquirer : public modular::Agent,
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::FocusWatcher> focus_watcher_binding_;
 
-  // A list of all the Stories we know about.
-  std::set<std::string> known_story_ids_;
-  // One StoryWatcher exists for each entry in |known_story_ids_|.
-  fidl::BindingSet<modular::StoryWatcher, std::unique_ptr<StoryWatcherImpl>> story_watcher_bindings_;
+  // A collection of all active stories we watch. Keys are story IDs, Values are
+  // the StoryWatcher instances.
+  std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
 
   app::ServiceProviderImpl agent_services_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };
+
+std::string CreateKey(const std::string suffix);
+std::string CreateKey(const std::string& story_id, const std::string suffix);
 
 }  // namespace maxwell

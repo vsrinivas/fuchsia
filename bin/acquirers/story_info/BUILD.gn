@@ -8,9 +8,15 @@ executable("story_info") {
   output_name = "acquirers/story_info_main"
 
   sources = [
+    "link_watcher_impl.cc",
+    "link_watcher_impl.h",
+    "modular.cc",
+    "modular.h",
     "story_info.cc",
     "story_info.h",
     "story_info_main.cc",
+    "story_watcher_impl.cc",
+    "story_watcher_impl.h",
   ]
 
   deps = [
@@ -19,7 +25,9 @@ executable("story_info") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/ledger:storage",
     "//apps/modular/services/agent",
+    "//apps/modular/services/story",
     "//apps/modular/services/user",
     "//apps/maxwell/src/context_engine:scope_utils",
     "//lib/mtl",

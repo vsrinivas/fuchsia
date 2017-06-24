@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/maxwell/src/acquirers/story_info/story_info.h"
+
 #include <sstream>
 
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
-#include "apps/maxwell/src/acquirers/story_info/story_info.h"
-#include "apps/maxwell/src/context_engine/scope_utils.h"
+#include "apps/maxwell/src/acquirers/story_info/modular.h"
+#include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -17,6 +19,8 @@ namespace maxwell {
 namespace {
 
 const std::string kStoryPrefix = "/story";
+
+}
 
 std::string CreateKey(const std::string suffix) {
   std::stringstream s;
@@ -29,82 +33,6 @@ std::string CreateKey(const std::string& story_id, const std::string suffix) {
   s << kStoryPrefix << "/id/" << story_id << "/" << suffix;
   return s.str();
 }
-
-std::string StoryStateToString(modular::StoryState state) {
-  // INITIAL
-  // STARTING
-  // RUNNING
-  // DONE
-  // STOPPED
-  // ERROR
-  switch (state) {
-    case modular::StoryState::INITIAL:
-      return "INITIAL";
-    case modular::StoryState::STARTING:
-      return "STARTING";
-    case modular::StoryState::RUNNING:
-      return "RUNNING";
-    case modular::StoryState::DONE:
-      return "DONE";
-    case modular::StoryState::STOPPED:
-      return "STOPPED";
-    case modular::StoryState::ERROR:
-      return "ERROR";
-    default:
-      FTL_LOG(FATAL) << "Unknown modular::StoryState value: " << state;
-  }
-}
-
-}  // namespace
-
-/// StoryWatcherImpl
-
-// TODO(thatguy): This is currently duplicated from
-// apps/modular/src/story_runner/story_storage_impl.cc.
-void XdrLinkPath(modular::XdrContext* const xdr,
-                 modular::LinkPath* const data) {
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("link_name", &data->link_name);
-}
-
-void XdrModuleData(modular::XdrContext* const xdr,
-                   modular::ModuleData* const data) {
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
-  xdr->Field("module_source", &data->module_source);
-}
-
-class StoryWatcherImpl : public modular::StoryWatcher {
- public:
-  StoryWatcherImpl(ContextPublisher* publisher, const fidl::String& story_id)
-      : story_id_(story_id), publisher_(publisher) {}
-
- private:
-  // |StoryWatcher|
-  void OnStateChange(modular::StoryState new_state) override {
-    // TODO(jwnichols): Choose between recording the state here vs. the StoryProviderWatcher
-    // once the bug in StoryProviderWatcher is fixed.
-    std::string state_text = StoryStateToString(new_state);
-    std::string state_json;
-    modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);
-    publisher_->Publish(CreateKey(story_id_, "state"), state_json);
-  }
-
-  // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-    std::string meta;
-    modular::XdrWrite(&meta, &module_data, XdrModuleData);
-    publisher_->Publish(
-        MakeModuleScopeTopic(story_id_, module_data->module_path, "meta"),
-        meta);
-  }
-
-  const fidl::String story_id_;
-  ContextPublisher* publisher_;
-};
-
-/// StoryInfoAcquirer
 
 StoryInfoAcquirer::StoryInfoAcquirer()
     : initializer_binding_(this),
@@ -120,6 +48,10 @@ StoryInfoAcquirer::StoryInfoAcquirer()
 }
 
 StoryInfoAcquirer::~StoryInfoAcquirer() = default;
+
+void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
+  stories_.erase(story_id);
+}
 
 void StoryInfoAcquirer::Initialize(
     fidl::InterfaceHandle<modular::AgentContext> agent_context_handle,
@@ -195,12 +127,11 @@ void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
 
   // If we aren't already watching this story, get a controller and create
   // a watcher.
-  if (known_story_ids_.count(id) == 0) {
-    modular::StoryControllerPtr story_controller;
-    story_provider_->GetController(info->id, story_controller.NewRequest());
-    story_controller->Watch(story_watcher_bindings_.AddBinding(
-        std::make_unique<StoryWatcherImpl>(context_publisher_.get(), id)));
-    known_story_ids_.insert(id);
+  if (stories_.find(id) == stories_.end()) {
+    stories_.emplace(
+        std::make_pair(
+            id, std::make_unique<StoryWatcherImpl>(
+                this, context_publisher_.get(), story_provider_.get(), id)));
   }
 
   std::string url_json;
