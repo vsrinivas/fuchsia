@@ -176,6 +176,10 @@
     {
       "bootfs_path": "data/sysui/truefood.png",
       "file": "apps/sysui/agents/home_work_agent/assets/truefood.png"
+    },
+    {
+      "bootfs_path": "data/sysui/istanbul_240.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/istanbul_240.png"
     }
   ]
 }
