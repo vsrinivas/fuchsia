@@ -41,6 +41,11 @@ static const uint64_t kMiscEnableFastStrings = 1u << 0;
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptInfoValid = 1u << 31;
 static const uint64_t kInvalidErrorCode = UINT64_MAX;
+static const uint32_t kFirstExtendedStateComponent = 2;
+static const uint32_t kLastExtendedStateComponent = 9;
+// From Volume 1, Section 13.4.
+static const uint32_t kXsaveLegacyRegionSize = 512;
+static const uint32_t kXsaveHeaderSize = 64;
 
 ExitInfo::ExitInfo() {
     exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
@@ -167,6 +172,29 @@ static status_t handle_interrupt_window(LocalApicState* local_apic_state) {
     return MX_OK;
 }
 
+// From Volume 2, Section 3.2, Table 3-8  "Processor Extended State Enumeration
+// Main Leaf (EAX = 0DH, ECX = 0)".
+//
+// Bits 31-00: Maximum size (bytes, from the beginning of the XSAVE/XRSTOR save
+// area) required by enabled features in XCR0. May be different than ECX if some
+// features at the end of the XSAVE save area are not enabled.
+status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size) {
+    *xsave_size = kXsaveLegacyRegionSize + kXsaveHeaderSize;
+    for (uint32_t i = kFirstExtendedStateComponent; i <= kLastExtendedStateComponent; ++i) {
+        cpuid_leaf leaf;
+        if (!(guest_xcr0 & (1 << i)))
+            continue;
+        if (!x86_get_cpuid_subleaf(X86_CPUID_XSAVE, i, &leaf))
+            return MX_ERR_INTERNAL;
+        if (leaf.a == 0 && leaf.b == 0 && leaf.c == 0 && leaf.d == 0)
+            continue;
+        const uint32_t component_offset = leaf.b;
+        const uint32_t component_size = leaf.a;
+        *xsave_size = component_offset + component_size;
+    }
+    return MX_OK;
+}
+
 static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
     const uint64_t leaf = guest_state->rax;
     const uint64_t subleaf = guest_state->rcx;
@@ -193,9 +221,16 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             // Disable the x2APIC bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
         }
-        if (leaf == X86_CPUID_XSAVE && subleaf == 1) {
-            // Disable the XSAVES bit.
-            guest_state->rax &= ~(1u << 3);
+        if (leaf == X86_CPUID_XSAVE) {
+            if (subleaf == 0) {
+                uint32_t xsave_size = 0;
+                status_t status = compute_xsave_size(guest_state->xcr0, &xsave_size);
+                if (status != MX_OK)
+                    return status;
+                guest_state->rbx = xsave_size;
+            } else if (subleaf == 1) {
+                guest_state->rax &= ~(1u << 3);
+            }
         }
         return MX_OK;
     default:
