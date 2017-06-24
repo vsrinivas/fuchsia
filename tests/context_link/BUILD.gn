@@ -1,0 +1,53 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("context_link") {
+  testonly = true
+
+  deps = [
+    ":context_link_user_shell",
+    ":context_link_module",
+  ]
+}
+
+executable("context_link_user_shell") {
+  testonly = true
+
+  sources = [
+    "context_link_user_shell.cc",
+  ]
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/fidl:view_host",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/lib/testing",
+    "//apps/modular/services/user",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
+    "//apps/test_runner/services:test_runner",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("context_link_module") {
+  testonly = true
+
+  sources = [
+    "context_link_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//apps/mozart/services/views",
+    "//lib/mtl",
+  ]
+}
+

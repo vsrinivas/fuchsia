@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     ":modular_tests.json",
     "component_context",
+    "context_link",
     "parent_child",
     "queue_persistence",
     "remote",
