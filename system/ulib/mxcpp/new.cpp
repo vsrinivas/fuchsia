@@ -27,6 +27,14 @@ void* operator new[](size_t s) {
 }
 #endif // !_KERNEL
 
+void* operator new(size_t s, const std::nothrow_t&) noexcept {
+    return ::malloc(s);
+}
+
+void* operator new[](size_t s, const std::nothrow_t&) noexcept {
+    return ::malloc(s);
+}
+
 void* operator new(size_t , void *p) {
     return p;
 }

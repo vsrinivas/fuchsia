@@ -6,6 +6,10 @@
 
 #include <stddef.h>
 
+// Fake std::nothrow_t without a standard C++ library.
+namespace std {
+struct nothrow_t {};
+}  // namespace std
 
 // The kernel does not want non-AllocCheckered non-placement new
 // overloads, but userspace can have them.
@@ -13,6 +17,9 @@
 void* operator new(size_t);
 void* operator new[](size_t);
 #endif // !_KERNEL
+
+void* operator new(size_t, const std::nothrow_t&) noexcept;
+void* operator new[](size_t, const std::nothrow_t&) noexcept;
 
 void* operator new(size_t, void *ptr);
 

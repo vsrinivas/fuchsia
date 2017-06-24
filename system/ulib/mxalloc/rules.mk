@@ -10,6 +10,6 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS = $(LOCAL_DIR)/alloc_checker.cpp
 
-MODULE_STATIC_LIBS += system/ulib/c
+MODULE_HEADER_DEPS += system/ulib/mxcpp
 
 include make/module.mk
