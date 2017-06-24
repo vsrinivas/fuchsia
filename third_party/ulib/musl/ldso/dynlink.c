@@ -801,16 +801,24 @@ __NO_SAFESTACK static struct dso* find_library(const char* name) {
         // anything that is only a dependency of ldso, i.e. the vDSO.
         // See if the lookup by name matches ldso or its dependencies.
         p = find_library_in(detached_head, name);
-        if (p != NULL) {
+        if (p == &ldso) {
+            // If something depends on libc (&ldso), we actually want
+            // to pull in the entire detached list in its existing
+            // order (&ldso is always last), so that libc stays after
+            // its own dependencies.
+            detached_head->prev = tail;
+            tail->next = detached_head;
+            tail = p;
+            detached_head = NULL;
+        } else if (p != NULL) {
             // Take it out of its place in the list rooted at detached_head.
             if (p->prev != NULL)
                 p->prev->next = p->next;
             else
                 detached_head = p->next;
-            struct dso* next = p->next;
-            if (next != NULL) {
-                p->next = next->next;
-                next->prev = p->prev;
+            if (p->next != NULL) {
+                p->next->prev = p->prev;
+                p->next = NULL;
             }
             // Stick it on the main list.
             tail->next = p;
@@ -1048,11 +1056,9 @@ __NO_SAFESTACK static mx_status_t load_library(const char* name, int rtld_mode,
 
 __NO_SAFESTACK static void load_deps(struct dso* p) {
     for (; p; p = p->next) {
-        // These don't get space allocated for ->deps.
-        if (p == &ldso || p == &vdso)
-            continue;
         struct dso** deps = NULL;
-        if (runtime && p->deps == NULL)
+        // The two preallocated DSOs don't get space allocated for ->deps.
+        if (runtime && p->deps == NULL && p != &ldso && p != &vdso)
             deps = p->deps = p->buf;
         for (size_t i = 0; p->dynv[i].d_tag; i++) {
             if (p->dynv[i].d_tag != DT_NEEDED)
@@ -1356,7 +1362,7 @@ dl_start_return_t __dls2(
         decode_dyn(&vdso);
 
         vdso.prev = &ldso;
-        ldso.next = &vdso;
+        tail = ldso.next = &vdso;
     }
 
     /* Prepare storage for to save clobbered REL addends so they
@@ -1395,7 +1401,21 @@ dl_start_return_t __dls2(
  * transfer control to its entry point. */
 
 __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
-    detached_head = &ldso;
+    // First load our own dependencies.  Usually this will be just the
+    // vDSO, which is already loaded, so there will be nothing to do.
+    // In a sanitized build, we'll depend on the sanitizer runtime DSO
+    // and load that now (and its dependencies, such as the unwinder).
+    load_deps(&ldso);
+
+    // Now reorder the list so that we appear last, after all our
+    // dependencies.  This ensures that e.g. the sanitizer runtime's
+    // malloc will be chosen over ours, even if the application
+    // doesn't itself depend on the sanitizer runtime SONAME.
+    ldso.next->prev = NULL;
+    detached_head = ldso.next;
+    ldso.prev = tail;
+    ldso.next = NULL;
+    tail->next = &ldso;
 
     static struct dso app;
 
