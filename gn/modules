@@ -37,6 +37,10 @@
             "bootfs_path": "apps/map"
         },
         {
+            "binary": "gen/apps/modules/common/modules/weather_forecast/weather_forecast.flx",
+            "bootfs_path": "apps/weather_forecast"
+        },
+        {
             "binary": "gen/apps/modules/common/modules/usps/usps.flx",
             "bootfs_path": "apps/usps"
         },
