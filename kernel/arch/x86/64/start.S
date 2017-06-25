@@ -86,7 +86,7 @@
 
 .section .text.boot, "ax", @progbits
 .code32
-FUNCTION(_multiboot_start)
+FUNCTION_LABEL(_multiboot_start)
     cmpl $MULTIBOOT_BOOTLOADER_MAGIC, %eax
     jne .Lcommon_boot
     movl %ebx, PHYS(_multiboot_info)
@@ -214,7 +214,7 @@ high_entry:
 
     /* 64bit entry point from a secondary loader */
 .align 8
-FUNCTION(_entry64)
+FUNCTION_LABEL(_entry64)
     mov %esi, PHYS(_bootdata_base)
     /* ensure the stack pointer is sane */
 

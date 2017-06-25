@@ -42,7 +42,7 @@ size                    .req x26
 attr                    .req x27
 
 .section .text.boot, "ax", @progbits
-FUNCTION(_start)
+FUNCTION_LABEL(_start)
 #if FASTBOOT_HEADER
 #include "fastboot-header.S"
 #endif

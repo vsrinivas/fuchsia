@@ -90,6 +90,7 @@ FUNCTION(_x86_copy_from_user)
 
     end_usercopy
     ret
+END_FUNCTION(_x86_copy_from_user)
 
 # status_t _x86_copy_to_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
 FUNCTION(_x86_copy_to_user)
@@ -130,3 +131,4 @@ FUNCTION(_x86_copy_to_user)
 
     end_usercopy
     ret
+END_FUNCTION(_x86_copy_to_user)

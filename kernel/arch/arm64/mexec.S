@@ -91,8 +91,9 @@ FUNCTION(mexec_asm)
 
     // Branch to the next kernel.
     br      new_kernel_addr
+END_FUNCTION(mexec_asm)
 
-memmove_mexec:
+LOCAL_FUNCTION(memmove_mexec)
         // x6 contains the stride (1 word if we're copying forward
         // -1 word if we're copying backwards)
         mov     x6, 1
@@ -142,6 +143,7 @@ memmove_mexec:
         bne     .copy_loop
 .done:
         ret
+END_FUNCTION(memmove_mexec)
 
 // Perform a bulk clean/invalidate across the whole cache
 // Normally on ARM we can use the CIVAC, CVAC, CVAU and IVAC instructions to
@@ -155,7 +157,7 @@ memmove_mexec:
 // cache.
 // The original implementation can be found in the ARMv8-A TRM or at the
 // following URL: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/BABJDBHI.html
-mexec_arch_clean_invalidate_cache_all:
+LOCAL_FUNCTION(mexec_arch_clean_invalidate_cache_all)
          mrs x0, clidr_el1
          and w3, w0, #0x07000000  // get 2 x level of coherence
          lsr w3, w3, #23
@@ -199,6 +201,7 @@ mexec_arch_clean_invalidate_cache_all:
          dsb sy
 
          ret
+END_FUNCTION(mexec_arch_clean_invalidate_cache_all)
 
 
 /* This .ltorg emits any immediate constants here. We need to put this before

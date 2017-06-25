@@ -17,10 +17,10 @@
 .align PAGE_SIZE
 
 .section .text
-FUNCTION(x86_bootstrap16_start)
+FUNCTION_LABEL(x86_bootstrap16_start)
 
 .code16
-FUNCTION(x86_bootstrap16_entry)
+FUNCTION_LABEL(x86_bootstrap16_entry)
     # Enter no-fill cache mode (allegedly this is the initial state
     # according to Intel 3A, but on at least one Broadwell the APs can
     # come up with caching enabled)
@@ -84,7 +84,7 @@ FUNCTION(x86_bootstrap16_entry)
 
 # Get the secondary cpu into 64-bit mode with interrupts disabled and no TSS
 .code64
-FUNCTION(_x86_secondary_cpu_long_mode_entry)
+FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
     # When we get here, %rsi should contain the absolute address of our data
     # page.
     mov $1, %rdi
@@ -144,7 +144,7 @@ FUNCTION(_x86_secondary_cpu_long_mode_entry)
     jmp 0b
 
 # Get the cpu into 64-bit mode with interrupts disabled and no TSS
-FUNCTION(_x86_suspend_wakeup)
+FUNCTION_LABEL(_x86_suspend_wakeup)
     # Retrieve the new PML4 address before our data page becomes unreachable
     mov BCD_PHYS_KERNEL_PML4_OFFSET(%esi), %ecx
 

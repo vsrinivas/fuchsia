@@ -8,7 +8,10 @@
 #include <asm.h>
 
 .section .text
+
 FUNCTION(mexec_asm)
 	// Unimplemented for now, emit an undefined instruction.
 	UD2
+END_FUNCTION(mexec_asm)
+
 DATA(mexec_asm_end)

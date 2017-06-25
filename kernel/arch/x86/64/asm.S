@@ -31,6 +31,7 @@ FUNCTION(x86_64_context_switch)
     popf
 
     retq
+END_FUNCTION(x86_64_context_switch)
 
 #include <arch/x86/mp.h>
 
@@ -51,6 +52,7 @@ FUNCTION(arch_spin_lock)
     cmp $0, %rax // make sure we actually got the lock
     jne .Lspin // if we lost the race, resume waiting
     ret
+END_FUNCTION(arch_spin_lock)
 
 /* int arch_spin_trylock(unsigned long *lock) */
 FUNCTION(arch_spin_trylock)
@@ -60,12 +62,14 @@ FUNCTION(arch_spin_trylock)
 
     xchg %rax, (%rdi)
     ret // return 0 if we got the lock
+END_FUNCTION(arch_spin_trylock)
 
 /* void arch_spin_unlock(spin_lock_t *lock) */
 FUNCTION(arch_spin_unlock)
     mov $0, %rax
     xchg %rax, (%rdi)
     ret
+END_FUNCTION(arch_spin_unlock)
 
 /* rep stos version of page zero */
 FUNCTION(arch_zero_page)
@@ -76,3 +80,4 @@ FUNCTION(arch_zero_page)
     rep     stosq
 
     ret
+END_FUNCTION(arch_zero_page)

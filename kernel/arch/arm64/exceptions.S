@@ -145,7 +145,7 @@ add sp, sp, #(4*8) + (10*8)
     b  arm64_exc_shared_restore_long
 .endm
 
-FUNCTION(arm64_exception_base)
+FUNCTION_LABEL(arm64_exception_base)
 
 /* exceptions from current EL, using SP0 */
 LOCAL_FUNCTION(arm64_sync_exc_current_el_SP0)

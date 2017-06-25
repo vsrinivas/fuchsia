@@ -44,3 +44,4 @@ FUNCTION(x86_uspace_entry)
     mov %ax, %gs
 
     iretq
+END_FUNCTION(x86_uspace_entry)

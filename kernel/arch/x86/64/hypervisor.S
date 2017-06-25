@@ -79,6 +79,7 @@ failure:
     // Return MX_ERR_INTERNAL.
     mov $MX_ERR_INTERNAL, %eax
     ret
+END_FUNCTION(vmx_enter)
 
 /* This is effectively the second-half of vmx_enter. When we return from a
  * VM exit, vmx_state argument is stored in RSP. We use this to restore the
@@ -138,3 +139,4 @@ FUNCTION(vmx_exit_entry)
     // Return MX_OK, using the return address of vmx_enter pushed above.
     mov $MX_OK, %eax
     ret
+END_FUNCTION(vmx_exit_entry)

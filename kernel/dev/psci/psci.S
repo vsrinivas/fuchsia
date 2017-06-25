@@ -12,9 +12,11 @@
 FUNCTION(psci_smc_call)
     smc     #0
     ret
+END_FUNCTION(psci_smc_call)
 
 FUNCTION(psci_hvc_call)
     hvc     #0
     ret
+END_FUNCTION(psci_hvc_call)
 
 .ltorg

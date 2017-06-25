@@ -42,6 +42,7 @@ FUNCTION(_isr_\@)
     pushq $\@                                /* interrupt number */
     jmp interrupt_common
 .endif
+END_FUNCTION(_isr_\@)
 .popsection
 .pushsection .rodata
 .quad _isr_\@
@@ -122,3 +123,4 @@ interrupt_common_iframe_set_up_for_debugger:
     addq $16, %rsp
 
     iretq
+END_FUNCTION(interrupt_common)
