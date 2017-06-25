@@ -7,6 +7,8 @@ config("mxalloc_config") {
 }
 
 static_library("mxalloc") {
+  include_dirs = [ "//magenta/system/ulib/mxcpp/include" ]
+
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
     "include/mxalloc/new.h",
