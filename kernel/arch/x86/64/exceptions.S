@@ -12,9 +12,13 @@
 #define NUM_INT 256
 
 /*
- * Please not that the macro for generating interrupt routine stubs relies
- * on macro execution counter which is shared by all invocation across this
- * compilation unit. Be careful when adding additional macros to this file.
+ * Please note that the macro for generating interrupt routine stubs relies
+ * on the macro execution counter \@ which is shared by all invocations across
+ * this compilation unit. Be careful when adding additional macros to this
+ * file. In particular:
+ * 1) No macros can be executed before def_isr (so \@ starts at zero).
+ * 2) def_isr cannot have any macros (so \@ increments by one for each
+ *    def_isr invocation).
  */
 
 .text
