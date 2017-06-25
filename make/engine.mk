@@ -187,6 +187,23 @@ endif
 endif
 endif
 
+# Turn on -fasynchronous-unwind-tables to get .eh_frame.
+# This is necessary for unwinding through optimized code.
+# The unwind information is part of the loaded binary. It's not that much space
+# and it allows for unwinding of stripped binaries, pc -> source translation
+# can be done offline with, e.g., scripts/symbolize.
+USER_COMPILEFLAGS += -fasynchronous-unwind-tables
+
+# We want .debug_frame for the kernel. MG-62
+# And we still want asynchronous unwind tables. Alas there's (currently) no way
+# to achieve this with our GCC. At the moment we compile with
+# -fno-omit-frame-pointer which is good because we link with -gc-sections which
+# means .eh_frame gets discarded so GCC-built kernels don't have any unwind
+# info (except for assembly - heh)!
+# Assembler code has its own way of requesting .debug_frame vs .eh_frame with
+# the .cfi_sections directive. Sigh.
+KERNEL_COMPILEFLAGS += -fno-exceptions -fno-unwind-tables
+
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 SAFESTACK := -fsanitize=safe-stack -fstack-protector-strong
 NO_SAFESTACK := -fno-sanitize=safe-stack -fno-stack-protector

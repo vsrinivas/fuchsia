@@ -58,10 +58,6 @@ KERNEL_DEFINES += \
 
 ARCH_OPTFLAGS := -O2
 
-# Turn on -fasynchronous-unwind-tables to get .eh_frame.
-# This is necessary for unwinding through optimized code.
-GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
-
 KERNEL_ASPACE_BASE ?= 0xffff000000000000
 KERNEL_ASPACE_SIZE ?= 0x0001000000000000
 USER_ASPACE_BASE   ?= 0x0000000001000000

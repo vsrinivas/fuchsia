@@ -142,13 +142,6 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mskip-rax-setup
 endif
 
-# Turn on -fasynchronous-unwind-tables to get .eh_frame.
-# [While this is the default on x86 we make this explicit.]
-# This is necessary for unwinding through optimized code.
-# Note: If you wish to turn off .eh_frame on x86 you need to both
-# -fno-exceptions and -fno-asynchronous-unwind-tables.
-GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
-
 ARCH_OPTFLAGS := -O2
 
 LINKER_SCRIPT += $(SUBARCH_BUILDDIR)/kernel.ld
