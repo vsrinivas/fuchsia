@@ -11,24 +11,24 @@
 /* void x86_64_context_switch(uint64_t *oldsp, uint64_t newsp) */
 FUNCTION(x86_64_context_switch)
     /* save the old context and restore the new */
-    pushf
-    pushq %rbx
-    pushq %rbp
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15
+    push_flags
+    push_reg %rbx
+    push_reg %rbp
+    push_reg %r12
+    push_reg %r13
+    push_reg %r14
+    push_reg %r15
 
     movq %rsp,(%rdi)
     movq %rsi,%rsp
 
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
-    popq %rbp
-    popq %rbx
-    popf
+    pop_reg %r15
+    pop_reg %r14
+    pop_reg %r13
+    pop_reg %r12
+    pop_reg %rbp
+    pop_reg %rbx
+    pop_flags
 
     retq
 END_FUNCTION(x86_64_context_switch)

@@ -17,11 +17,11 @@
  */
 
 .macro begin_usercopy
-    push %r12
-    push %r13
-    push %r14
-    push %r15
-    push %rbx
+    push_reg %r12
+    push_reg %r13
+    push_reg %r14
+    push_reg %r15
+    push_reg %rbx
 
     # shift all of the arguments into callee save registers
     mov %rdi, %r12
@@ -44,11 +44,11 @@
     jz 0f
     clac
 0:
-    pop %rbx
-    pop %r15
-    pop %r14
-    pop %r13
-    pop %r12
+    pop_reg %rbx
+    pop_reg %r15
+    pop_reg %r14
+    pop_reg %r13
+    pop_reg %r12
 .endm
 
 # status_t _x86_copy_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)

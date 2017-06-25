@@ -9,6 +9,9 @@
 #include <arch/x86/mp.h>
 #include <magenta/mx-syscall-numbers.h>
 
+#define DW_REG_rsp        0x7
+#define DW_REG_rip        0x10
+
 //
 // Macros for preparing ABI conformant calls for syscall wrappers.
 //
@@ -26,12 +29,12 @@
 //
 .macro pre_8_args
     pre_push 3
-    push    %rcx
-    push    %r13
-    push    %r12
+    push_value %rcx
+    push_value %r13
+    push_value %r12
 
     /* move arg 4 into the proper register for calling convention */
-    mov     %r10, %rcx
+    mov      %r10, %rcx
 .endm
 
 .macro post_8_args
@@ -53,9 +56,9 @@
 //
 .macro pre_7_args
     pre_push 2
-    push    %rcx
-    push    %r12
-    mov     %r10, %rcx
+    push_value %rcx
+    push_value %r12
+    mov      %r10, %rcx
 .endm
 
 .macro post_7_args
@@ -76,8 +79,8 @@
 //
 .macro pre_6_args
     pre_push 1
-    push    %rcx
-    mov     %r10, %rcx
+    push_value %rcx
+    mov      %r10, %rcx
 .endm
 
 .macro post_6_args
@@ -196,26 +199,35 @@
 // need to account for that.
 .macro pre_push n
 .if \n % 2 == 0
-    push    $0
+    push_value $0
 .endif
 .endm
 
 .macro post_pop n
 .if \n % 2 == 0
-    add     $(\n + 1) * 8, %rsp
+    add_to_sp ((\n + 1) * 8)
 .else
-    add     $\n * 8, %rsp
+    add_to_sp (\n * 8)
 .endif
 .endm
 
+.macro cfi_outermost_frame
+    // TODO(dje): IWBN to use .cfi_undefined here, but gdb didn't properly
+    // handle initial attempts. Need to try again (or file gdb bug).
+    cfi_register_is_zero DW_REG_rsp
+    cfi_register_is_zero DW_REG_rip
+.endm
 
 // Adds a label for making the syscall and adds it to the jump table.
 .macro syscall_dispatch nargs, syscall
     .pushsection .text.syscall-dispatch,"ax",%progbits
-    .Lcall_\syscall\():
+    LOCAL_FUNCTION(.Lcall_\syscall\())
+        // See x86_syscall for why this is here.
+        cfi_outermost_frame
         pre_\nargs\()_args
         call wrapper_\syscall
         post_\nargs\()_args
+    END_FUNCTION(.Lcall_\syscall\())
     .popsection
     .pushsection .rodata.syscall-table,"a",%progbits
         .quad .Lcall_\syscall
@@ -257,7 +269,18 @@
      *  r14 - saved
      *  r15 - saved
      */
-FUNCTION(x86_syscall)
+FUNCTION_LABEL(x86_syscall)
+    .cfi_startproc simple
+    // CFI tracking here doesn't (currently) try to support backtracing from
+    // kernel space to user space. This is left for later. For now just say
+    // %rsp and %rip of the previous frame are zero, mark all the other
+    // registers as undefined, and have all register push/pop just specify
+    // stack adjustments and not how to find the register's value.
+    cfi_outermost_frame
+    // The default for caller-saved regs is "undefined", but for completeness
+    // sake mark them all as undefined.
+    ALL_CFI_UNDEFINED
+
     /* swap to the kernel GS register */
     swapgs
 
@@ -266,12 +289,13 @@ FUNCTION(x86_syscall)
 
     /* load the kernel stack pointer */
     mov     %gs:PERCPU_KERNEL_SP_OFFSET, %rsp
+    .cfi_def_cfa %rsp, 0
 
     /* save away the user stack pointer */
-    push    %gs:PERCPU_SAVED_USER_SP_OFFSET
+    push_value %gs:PERCPU_SAVED_USER_SP_OFFSET
 
-    push    %r11 /* user RFLAGS */
-    push    %rcx /* user RIP */
+    push_value %r11 /* user RFLAGS */
+    push_value %rcx /* user RIP */
 
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
@@ -280,7 +304,6 @@ FUNCTION(x86_syscall)
     cmp     $MX_SYS_COUNT, %rax
     jae     .Lunknown_syscall
     jmp     *.Lcall_wrapper_table(, %rax, 8)
-#include <magenta/syscall-kernel-branches.S>
 #endif
 .Lunknown_syscall:
     pre_0_args
@@ -294,8 +317,8 @@ FUNCTION(x86_syscall)
        rdx = non-zero if thread was signaled */
 
     /* restore the registers from which SYSRET restores user state */
-    pop     %rcx /* user RIP */
-    pop     %r11 /* user RFLAGS */
+    pop_value %rcx /* user RIP */
+    pop_value %r11 /* user RFLAGS */
 
     /* zero out trashed arg registers */
     xor     %rdi, %rdi
@@ -317,7 +340,7 @@ FUNCTION(x86_syscall)
     cli
 
     /* restore the user stack */
-    pop     %rsp
+    pop_value %rsp
 
     /* put the user gs back */
     swapgs
@@ -335,46 +358,50 @@ FUNCTION(x86_syscall)
        values are gone. The user just has to deal with it. One important thing
        to do here is not leak kernel values to userspace. */
     movq    (%rsp), %rdi /* user rsp */
-    push    %r11 /* rflags */
-    push    %rcx /* rip */
-    push    %r15
-    push    %r14
-    push    %r13
-    push    %r12
-    push    %r11
-    push    %r10
-    push    %r9
-    push    %r8
-    push    %rdi /* rsp */
-    push    %rbp
-    pushq   $0
-    push    %rsi
-    pushq   $0 /* instead of signaled flag */
-    push    %rcx
-    push    %rbx
-    push    %rax
+    push_value %r11 /* rflags */
+    push_value %rcx /* rip */
+    push_value %r15
+    push_value %r14
+    push_value %r13
+    push_value %r12
+    push_value %r11
+    push_value %r10
+    push_value %r9
+    push_value %r8
+    push_value %rdi /* rsp */
+    push_value %rbp
+    push_value $0
+    push_value %rsi
+    push_value $0 /* instead of signaled flag */
+    push_value %rcx
+    push_value %rbx
+    push_value %rax
 
     movq    %rsp, %rdi
     call    x86_syscall_process_pending_signals
 
-    pop     %rax
-    pop     %rbx
-    pop     %rcx
-    pop     %rdx
-    pop     %rsi
-    pop     %rdi
-    pop     %rbp
-    pop     %r8 /* discard any changed %rsp value - TODO(dje): check ok */
-    pop     %r8
-    pop     %r9
-    pop     %r10
-    pop     %r11
-    pop     %r12
-    pop     %r13
-    pop     %r14
-    pop     %r15
-    pop     %rcx
-    pop     %r11
+    pop_value %rax
+    pop_value %rbx
+    pop_value %rcx
+    pop_value %rdx
+    pop_value %rsi
+    pop_value %rdi
+    pop_value %rbp
+    pop_value %r8 /* discard any changed %rsp value - TODO(dje): check ok */
+    pop_value %r8
+    pop_value %r9
+    pop_value %r10
+    pop_value %r11
+    pop_value %r12
+    pop_value %r13
+    pop_value %r14
+    pop_value %r15
+    pop_value %rcx
+    pop_value %r11
     jmp     .Lreturn_from_syscall
 
 END_FUNCTION(x86_syscall)
+
+#if WITH_LIB_SYSCALLS
+#include <magenta/syscall-kernel-branches.S>
+#endif
