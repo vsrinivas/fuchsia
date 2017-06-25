@@ -11,13 +11,13 @@
 
 #include <hypervisor/acpi.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/vcpu.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
 #include "magenta.h"
 #include "linux.h"
-#include "vcpu.h"
 
 static const size_t kVmoSize = 1u << 30;
 static const uint16_t kPioEnable = 1u << 0;

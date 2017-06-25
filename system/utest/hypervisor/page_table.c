@@ -185,10 +185,10 @@ static bool page_table_complex(void) {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(x86_64_extended_page_table)
+BEGIN_TEST_CASE(extended_page_table)
 RUN_TEST(page_table_1gb)
 RUN_TEST(page_table_2mb)
 RUN_TEST(page_table_4kb)
 RUN_TEST(page_table_mixed_pages)
 RUN_TEST(page_table_complex)
-END_TEST_CASE(x86_64_extended_page_table)
+END_TEST_CASE(extended_page_table)

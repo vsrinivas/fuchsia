@@ -15,7 +15,9 @@ MODULE_CFLAGS += \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
+    $(LOCAL_DIR)/block.c \
     $(LOCAL_DIR)/guest.c \
+    $(LOCAL_DIR)/vcpu.c \
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
@@ -23,11 +25,13 @@ MODULE_SRCS += \
 endif
 
 MODULE_LIBS := \
-	system/ulib/c \
+    system/ulib/c \
     system/ulib/magenta \
     system/ulib/mxio \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/virtio \
     third_party/ulib/acpica \
 
 include make/module.mk

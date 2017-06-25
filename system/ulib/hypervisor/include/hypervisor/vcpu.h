@@ -7,13 +7,18 @@
 #include <threads.h>
 
 #include <magenta/types.h>
-#include <virtio/virtio_ring.h>
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
 #define IO_BUFFER_SIZE              512u
+
+#define PCI_DEVICE_ROOT_COMPLEX     0u
+#define PCI_DEVICE_VIRTIO_BLOCK     1u
 #define PCI_MAX_DEVICES             2u
 #define PCI_MAX_BARS                1u
-#define VIRTIO_QUEUE_SIZE           128u
+
+struct vring_desc;
+struct vring_avail;
+struct vring_used;
 
 /* Stores the local APIC state across VM exits. */
 typedef struct local_apic_state {

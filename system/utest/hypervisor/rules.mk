@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/block.c \
     $(LOCAL_DIR)/guest.c \
 
 ifeq ($(SUBARCH),x86-64)
@@ -17,7 +18,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/page_table.c \
     $(LOCAL_DIR)/x86-64.S
 
-MODULE_STATIC_LIBS := system/ulib/pretty
+MODULE_STATIC_LIBS := \
+	system/ulib/pretty
 endif
 
 MODULE_NAME := hypervisor-test
@@ -28,5 +30,8 @@ MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/mxio \
     system/ulib/unittest \
+
+MODULE_STATIC_LIBS += \
+	system/ulib/virtio
 
 include make/module.mk

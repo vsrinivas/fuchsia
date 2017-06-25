@@ -8,9 +8,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <hypervisor/block.h>
 #include <hypervisor/guest.h>
 
-#include "constants.h"
 #include "linux.h"
 
 #define ALIGN(x, alignment)    (((x) + (alignment - 1)) & ~(alignment - 1))

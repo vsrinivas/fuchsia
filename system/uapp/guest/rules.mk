@@ -8,23 +8,15 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 
-MODULE_CFLAGS += \
-    -Ithird_party/lib/acpica/source/include
-
 MODULE_SRCS += \
     $(LOCAL_DIR)/guest.c \
     $(LOCAL_DIR)/linux.c \
     $(LOCAL_DIR)/magenta.c \
-    $(LOCAL_DIR)/vcpu.c \
 
 MODULE_LIBS := \
-	system/ulib/c \
-	system/ulib/hypervisor \
-	system/ulib/magenta \
-	system/ulib/mxio \
-
-MODULE_STATIC_LIBS := \
-	system/ulib/ddk \
-	system/ulib/virtio \
+    system/ulib/c \
+    system/ulib/hypervisor \
+    system/ulib/magenta \
+    system/ulib/mxio \
 
 include make/module.mk
