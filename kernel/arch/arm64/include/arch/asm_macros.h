@@ -20,12 +20,38 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 .endif
 .endm
 
-.macro push ra, rb
+// GAS doesn't support xzr in .cfi directives.
+
+.macro push_regs ra, rb
 stp \ra, \rb, [sp,#-16]!
+.cfi_adjust_cfa_offset 16
+.ifnes "\ra", "xzr"
+.cfi_rel_offset \ra, 0
+.endif
+.ifnes "\rb", "xzr"
+.cfi_rel_offset \rb, 8
+.endif
 .endm
 
-.macro pop ra, rb
+.macro pop_regs ra, rb
 ldp \ra, \rb, [sp], #16
+.cfi_adjust_cfa_offset -16
+.ifnes "\ra", "xzr"
+.cfi_same_value \ra
+.endif
+.ifnes "\rb", "xzr"
+.cfi_same_value \rb
+.endif
+.endm
+
+.macro sub_from_sp value
+sub sp, sp, #\value
+.cfi_adjust_cfa_offset \value
+.endm
+
+.macro add_to_sp value
+add sp, sp, #\value
+.cfi_adjust_cfa_offset -\value
 .endm
 
 .macro adr_global reg, symbol
@@ -99,3 +125,38 @@ movk \reg, #:abs_g3:\symbol
     cmp     \tmp, \new_ptr_end
     b.lo    .Lcalloc_bootmem_aligned_clear_loop\@
 .endm
+
+// For "functions" that are not normal functions in the ABI sense.
+// Treat all previous frame registers as having the same value.
+
+#define ALL_CFI_SAME_VALUE \
+    .cfi_same_value x0 ; \
+    .cfi_same_value x1 ; \
+    .cfi_same_value x2 ; \
+    .cfi_same_value x3 ; \
+    .cfi_same_value x4 ; \
+    .cfi_same_value x5 ; \
+    .cfi_same_value x6 ; \
+    .cfi_same_value x7 ; \
+    .cfi_same_value x8 ; \
+    .cfi_same_value x9 ; \
+    .cfi_same_value x10 ; \
+    .cfi_same_value x11 ; \
+    .cfi_same_value x12 ; \
+    .cfi_same_value x13 ; \
+    .cfi_same_value x14 ; \
+    .cfi_same_value x15 ; \
+    .cfi_same_value x16 ; \
+    .cfi_same_value x17 ; \
+    .cfi_same_value x18 ; \
+    .cfi_same_value x19 ; \
+    .cfi_same_value x20 ; \
+    .cfi_same_value x21 ; \
+    .cfi_same_value x22 ; \
+    .cfi_same_value x23 ; \
+    .cfi_same_value x24 ; \
+    .cfi_same_value x25 ; \
+    .cfi_same_value x26 ; \
+    .cfi_same_value x27 ; \
+    .cfi_same_value x28 ; \
+    .cfi_same_value x29
