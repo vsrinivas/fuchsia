@@ -145,8 +145,8 @@ void DemoHarnessLinux::InitWindowSystem() {
   FTL_CHECK(!g_harness);
   g_harness = this;
 
-  FTL_CHECK(glfwInit());
   glfwSetErrorCallback(DemoGlfwErrorCallback);
+  FTL_CHECK(glfwInit());
 }
 
 void DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& params) {
