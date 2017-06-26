@@ -10,8 +10,8 @@ import string
 import subprocess
 import sys
 
-BUILD_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path += [os.path.join(BUILD_PATH, "third_party/pytoml-0.1.11")]
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml as toml
 
 
@@ -66,7 +66,7 @@ def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
             }
 
     with open(path, "w") as config_file:
-        toml.dump(config_file, config)
+        toml.dump(config, config_file)
 
 
 # Fixes the target path in the given depfile.
@@ -212,7 +212,7 @@ def main():
 
         # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
-            toml.dump(generated_config, config)
+            toml.dump(config, generated_config)
 
     if args.type == "lib":
         # Write a file mapping target name to Rust artifact name.
