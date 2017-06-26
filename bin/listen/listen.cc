@@ -116,7 +116,7 @@ class Service : private mtl::MessageLoopHandler {
     launchpad_set_args(lp, argc_, argv_);
     // TODO: configurable cwd
     // TODO: filesystem sandboxing
-    launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD);
+    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD);
     // TODO: set up environment
 
     // Transfer the socket as stdin and stdout
