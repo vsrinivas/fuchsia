@@ -24,6 +24,7 @@ executable("scene_manager_service") {
 
   deps = [
     ":common",
+    "//lib/escher/examples/common",
   ]
 }
 
@@ -37,6 +38,10 @@ config("common_include_dirs") {
 
 source_set("common") {
   sources = [
+    "display.cc",
+    "display.h",
+    "frame_scheduler.cc",
+    "frame_scheduler.h",
     "print_op.cc",
     "print_op.h",
     "release_fence_signaller.cc",

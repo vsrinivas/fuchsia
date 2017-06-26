@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/scene/renderer/renderer.h"
 
+#include "apps/mozart/src/scene/frame_scheduler.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
@@ -17,9 +18,15 @@
 namespace mozart {
 namespace scene {
 
-Renderer::Renderer() {}
+Renderer::Renderer(FrameScheduler* frame_scheduler)
+    : frame_scheduler_(frame_scheduler) {
+  FTL_DCHECK(frame_scheduler);
+  frame_scheduler_->AddRenderer(this);
+}
 
-Renderer::~Renderer() {}
+Renderer::~Renderer() {
+  frame_scheduler_->RemoveRenderer(this);
+}
 
 std::vector<escher::Object> Renderer::CreateDisplayList(
     Node* root_node,
@@ -38,9 +45,14 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
   return objects;
 }
 
+void Renderer::set_scene(Scene* scene) {
+  FTL_DCHECK(!scene_ && scene || scene_ && !scene);
+  scene_ = scene;
+}
+
 std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
   return std::move(display_list_);
-};
+}
 
 void Renderer::Visitor::Visit(GpuMemory* r) {
   FTL_CHECK(false);

@@ -24,18 +24,6 @@ using ImagePtr = ::ftl::RefPtr<Image>;
 class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
-struct SessionUpdate {
-  uint64_t presentation_time;
-  SessionPtr session;
-  ::fidl::Array<mozart2::OpPtr> ops;
-  ::fidl::Array<mx::event> wait_events;
-  ::fidl::Array<mx::event> signal_events;
-
-  // Callback to report when the update has been applied in response to
-  // an invocation of |Session.Present()|.
-  mozart2::Session::PresentCallback present_callback;
-};
-
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
 class Session : public ftl::RefCountedThreadSafe<Session> {
@@ -69,6 +57,21 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ErrorReporter* error_reporter() const;
 
   ResourceMap* resources() { return &resources_; }
+
+  // Called by SessionHandler::Present().  Stashes the arguments without
+  // applying them; they will later be applied by ApplyScheduledUpdates().
+  // TODO: nothing is currently done with the acquire and release fences.
+  void ScheduleUpdate(uint64_t presentation_time,
+                      ::fidl::Array<mozart2::OpPtr> ops,
+                      ::fidl::Array<mx::event> wait_events,
+                      ::fidl::Array<mx::event> signal_events,
+                      const mozart2::Session::PresentCallback& callback);
+
+  // Called by SessionContext() when it is notified by the FrameScheduler that
+  // a frame should be rendered for the specified |presentation_time|.  Return
+  // true if any updates were applied, and false otherwise.
+  bool ApplyScheduledUpdates(uint64_t presentation_time,
+                             uint64_t presentation_interval);
 
  private:
   // Operation application functions, called by ApplyOp().
@@ -144,6 +147,20 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
+
+  struct Update {
+    uint64_t presentation_time;
+
+    ::fidl::Array<mozart2::OpPtr> ops;
+    ::fidl::Array<mx::event> wait_events;
+    ::fidl::Array<mx::event> signal_events;
+
+    // Callback to report when the update has been applied in response to
+    // an invocation of |Session.Present()|.
+    mozart2::Session::PresentCallback present_callback;
+  };
+  bool ApplyUpdate(Update* update);
+  std::queue<Update> scheduled_updates_;
 
   const SessionId id_;
   SessionContext* const context_;

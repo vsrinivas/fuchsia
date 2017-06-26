@@ -497,5 +497,61 @@ bool Session::AssertValueIsOfType(const mozart2::ValuePtr& value,
   return false;
 }
 
+void Session::ScheduleUpdate(
+    uint64_t presentation_time,
+    ::fidl::Array<mozart2::OpPtr> ops,
+    ::fidl::Array<mx::event> wait_events,
+    ::fidl::Array<mx::event> signal_events,
+    const mozart2::Session::PresentCallback& callback) {
+  if (is_valid()) {
+    scheduled_updates_.push({presentation_time, std::move(ops),
+                             std::move(wait_events), std::move(signal_events),
+                             callback});
+    context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+  }
+}
+
+bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
+                                    uint64_t presentation_interval) {
+  bool needs_render = false;
+  while (!scheduled_updates_.empty() &&
+         scheduled_updates_.front().presentation_time <= presentation_time) {
+    if (ApplyUpdate(&scheduled_updates_.front())) {
+      needs_render = true;
+      auto info = mozart2::PresentationInfo::New();
+      info->presentation_time = presentation_time;
+      info->presentation_interval = presentation_interval;
+      scheduled_updates_.front().present_callback(std::move(info));
+      scheduled_updates_.pop();
+
+      // TODO: gather statistics about how close the actual presentation_time
+      // was to the requested time.
+    } else {
+      // An error was encountered while applying the update.
+      FTL_LOG(WARNING)
+          << "mozart::Session::ApplySessionUpdates() initiating teardown.";
+      TearDown();
+      // Tearing down a session will very probably result in changes to the
+      // global scene-graph.
+      return true;
+    }
+  }
+  return needs_render;
+}
+
+bool Session::ApplyUpdate(Session::Update* update) {
+  if (is_valid()) {
+    for (auto& op : update->ops) {
+      if (!ApplyOp(op)) {
+        return false;
+      }
+    }
+  }
+  return true;
+
+  // TODO: wait_events and signal_events should be added to a list that is
+  // consumed by the FrameScheduler.
+}
+
 }  // namespace scene
 }  // namespace mozart

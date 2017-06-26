@@ -4,28 +4,25 @@
 
 #include "apps/mozart/src/scene/scene_manager_impl.h"
 
-#include "apps/mozart/src/scene/renderer/renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
-
-namespace {
-// TODO(MZ-124): We should derive an appropriate value from the rendering
-// targets, in particular giving priority to couple to the display refresh
-// (vsync).
-constexpr uint64_t kHardcodedPresentationIntervalNanos = 16'666'667;
-}  // namespace
 
 namespace mozart {
 namespace scene {
 
-SceneManagerImpl::SceneManagerImpl()
-    : session_context_(),
-      session_count_(0),
-      renderer_(std::make_unique<Renderer>()) {}
+SceneManagerImpl::SceneManagerImpl(
+    escher::Escher* escher,
+    std::unique_ptr<FrameScheduler> frame_scheduler)
+    : frame_scheduler_(std::move(frame_scheduler)),
+      session_context_(escher, frame_scheduler_.get()),
+      session_count_(0) {
+  // Either both Escher and a FrameScheduler must be available, or neither.
+  FTL_DCHECK(!escher == !frame_scheduler_);
 
-SceneManagerImpl::SceneManagerImpl(escher::Escher* escher)
-    : session_context_(escher),
-      session_count_(0),
-      renderer_(std::make_unique<Renderer>()) {}
+  // If a FrameScheduler was created, introduce it to the SessionContext.
+  if (frame_scheduler_) {
+    frame_scheduler_->AddListener(&session_context_);
+  }
+}
 
 SceneManagerImpl::~SceneManagerImpl() {}
 
@@ -56,26 +53,6 @@ SessionHandler* SceneManagerImpl::FindSession(SessionId id) {
   return nullptr;
 }
 
-void SceneManagerImpl::ApplySessionUpdate(
-    std::unique_ptr<SessionUpdate> update) {
-  // TODO(MX-125): Schedule the update to be applied on or after its
-  // presentation time.  May require a certain amount of queuing.  We should
-  // also set limits on how much state can be retained in the queue.
-  pending_present_callbacks_.push_back(std::move(update->present_callback));
-
-  auto& session = update->session;
-  if (session->is_valid()) {
-    for (auto& op : update->ops) {
-      if (!session->ApplyOp(op)) {
-        FTL_LOG(WARNING) << "mozart::Compositor::SceneManagerImpl::"
-                            "ApplySessionUpdate() initiating teardown";
-        TearDownSession(session->id());
-        return;
-      }
-    }
-  }
-}
-
 void SceneManagerImpl::TearDownSession(SessionId id) {
   auto it = sessions_.find(id);
   FTL_DCHECK(it != sessions_.end());
@@ -90,17 +67,6 @@ void SceneManagerImpl::TearDownSession(SessionId id) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
         ftl::MakeCopyable([handler = std::move(handler)]{}));
   }
-}
-
-void SceneManagerImpl::BeginFrame() {
-  mozart2::PresentationInfo info;
-  info.presentation_time = mx_time_get(CLOCK_MONOTONIC);
-  info.presentation_interval = kHardcodedPresentationIntervalNanos;
-
-  for (const auto& cb : pending_present_callbacks_) {
-    cb(info.Clone());
-  }
-  pending_present_callbacks_.clear();
 }
 
 }  // namespace scene

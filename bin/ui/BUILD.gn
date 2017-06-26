@@ -226,9 +226,6 @@ package("mozart") {
       name = "vkcube_mozart"
     },
     {
-      name = "hello_scene_manager_service"
-    },
-    {
       name = "hello_compositor"
     },
     {

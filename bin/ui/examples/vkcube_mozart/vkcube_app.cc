@@ -34,19 +34,13 @@ class VulkanCubeApp {
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         loop_(mtl::MessageLoop::GetCurrent()),
         demo_(demo) {
-    // Launch SceneManager.
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = "file://system/apps/hello_scene_manager_service";
-    launch_info->services = services_.NewRequest();
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), controller_.NewRequest());
-    controller_.set_connection_error_handler([this] {
-      FTL_LOG(INFO) << "Hello SceneManager service terminated.";
+    // Connect to the SceneManager service.
+    scene_manager_ = application_context_
+                         ->ConnectToEnvironmentService<mozart2::SceneManager>();
+    scene_manager_.set_connection_error_handler([this] {
+      FTL_LOG(INFO) << "Lost connection to SceneManager service.";
       loop_->QuitNow();
     });
-
-    // Connect to the SceneManager service.
-    app::ConnectToService(services_.get(), scene_manager_.NewRequest());
   }
 
   ResourceId NewResourceId() { return ++resource_id_counter_; }

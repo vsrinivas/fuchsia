@@ -13,14 +13,21 @@
 namespace mozart {
 namespace scene {
 
+class FrameScheduler;
+
 // Placeholder Renderer. Doesn't deal with framerate, framebuffer, etc. yet.
 class Renderer {
  public:
-  Renderer();
+  explicit Renderer(FrameScheduler* frame_scheduler);
   ~Renderer();
 
   std::vector<escher::Object> CreateDisplayList(Node* root_node,
                                                 escher::vec2 screen_dimensions);
+
+  FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
+
+  Scene* scene() const { return scene_; }
+  void set_scene(Scene* scene);
 
  private:
   class Visitor : public ResourceVisitor {
@@ -45,6 +52,9 @@ class Renderer {
 
     std::vector<escher::Object> display_list_;
   };
+
+  FrameScheduler* const frame_scheduler_;
+  Scene* scene_ = nullptr;
 };
 
 }  // namespace scene

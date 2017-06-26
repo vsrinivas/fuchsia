@@ -4,6 +4,20 @@
 
 #include <mx/eventpair.h>
 
+#if defined(countof)
+// Workaround for compiler error due to Magenta defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway.
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
+
+#include <glm/gtx/quaternion.hpp>
+
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "escher/util/image_utils.h"
@@ -28,24 +42,18 @@ class HelloSceneManagerApp {
   HelloSceneManagerApp()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         loop_(mtl::MessageLoop::GetCurrent()) {
-    // Launch SceneManager.
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = "file://system/apps/hello_scene_manager_service";
-    launch_info->services = services_.NewRequest();
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), controller_.NewRequest());
-    controller_.set_connection_error_handler([this] {
-      FTL_LOG(INFO) << "Hello SceneManager service terminated.";
+    // Connect to the SceneManager service.
+    scene_manager_ = application_context_
+                         ->ConnectToEnvironmentService<mozart2::SceneManager>();
+    scene_manager_.set_connection_error_handler([this] {
+      FTL_LOG(INFO) << "Lost connection to SceneManager service.";
       loop_->QuitNow();
     });
-
-    // Connect to the SceneManager service.
-    app::ConnectToService(services_.get(), scene_manager_.NewRequest());
   }
 
   ResourceId NewResourceId() { return ++resource_id_counter_; }
 
-  fidl::Array<mozart2::OpPtr> CreateLinkAndSampleScene() {
+  fidl::Array<mozart2::OpPtr> CreateExampleScene() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
     // Create a Scene to attach ourselves to.
@@ -57,15 +65,17 @@ class HelloSceneManagerApp {
     ops.push_back(NewCreateEntityNodeOp(entity_node_id));
 
     // Create two shape nodes, one for a circle and one for a rounded-rect.
+    // Remember the ID of the rounded-rect node, because we're going to animate
+    // it.
     ResourceId circle_node_id = NewResourceId();
     ops.push_back(NewCreateShapeNodeOp(circle_node_id));
 
-    ResourceId rrect_node_id = NewResourceId();
-    ops.push_back(NewCreateShapeNodeOp(rrect_node_id));
+    rrect_node_id_ = NewResourceId();
+    ops.push_back(NewCreateShapeNodeOp(rrect_node_id_));
 
     // Immediately attach them to the root.
     ops.push_back(NewAddChildOp(entity_node_id, circle_node_id));
-    ops.push_back(NewAddChildOp(entity_node_id, rrect_node_id));
+    ops.push_back(NewAddChildOp(entity_node_id, rrect_node_id_));
 
     // Generate a checkerboard.
     size_t checkerboard_width = 8;
@@ -118,23 +128,13 @@ class HelloSceneManagerApp {
     ops.push_back(
         NewCreateRoundedRectangleOp(rrect_id, 200, 300, 20, 20, 80, 10));
 
-    ops.push_back(NewSetMaterialOp(rrect_node_id, material_id));
-    ops.push_back(NewSetShapeOp(rrect_node_id, rrect_id));
+    ops.push_back(NewSetMaterialOp(rrect_node_id_, material_id));
+    ops.push_back(NewSetShapeOp(rrect_node_id_, rrect_id));
 
     // Translate the circle.
     {
       float translation[3] = {50.f, 50.f, 10.f};
       ops.push_back(NewSetTransformOp(circle_node_id, translation,
-                                      kOnesFloat3,        // scale
-                                      kZeroesFloat3,      // anchor point
-                                      kQuaternionDefault  // rotation
-                                      ));
-    }
-
-    // Translate the rounded rect.
-    {
-      float translation[3] = {350.f, 150.f, 10.f};
-      ops.push_back(NewSetTransformOp(rrect_node_id, translation,
                                       kOnesFloat3,        // scale
                                       kZeroesFloat3,      // anchor point
                                       kQuaternionDefault  // rotation
@@ -157,36 +157,68 @@ class HelloSceneManagerApp {
     return ops;
   }
 
-  void Update() {
+  void Init() {
     FTL_LOG(INFO) << "Creating new Session";
-    mozart2::SessionPtr session;
+
     // TODO: set up SessionListener.
-    scene_manager_->CreateSession(session.NewRequest(), nullptr);
-
-    auto ops = CreateLinkAndSampleScene();
-
-    session->Enqueue(std::move(ops));
-
-    // Present
-    // TODO: this does not do anything yet.
-    session->Present(0, fidl::Array<mx::event>::New(0),
-                     fidl::Array<mx::event>::New(0),
-                     [](mozart2::PresentationInfoPtr info) {});
-
-    session.set_connection_error_handler([this] {
+    scene_manager_->CreateSession(session_.NewRequest(), nullptr);
+    session_.set_connection_error_handler([this] {
       FTL_LOG(INFO) << "Session terminated.";
       loop_->QuitNow();
     });
 
     // Wait kSessionDuration seconds, and close the session.
-    constexpr int kSessionDuration = 10;
+    constexpr int kSessionDuration = 20;
     loop_->task_runner()->PostDelayedTask(
-        ftl::MakeCopyable([session = std::move(session)]() {
+        [this] {
           // Allow SessionPtr to go out of scope, thus closing the
           // session.
+          mozart2::SessionPtr session(std::move(session_));
           FTL_LOG(INFO) << "Closing session.";
-        }),
+        },
         ftl::TimeDelta::FromSeconds(kSessionDuration));
+
+    // Set up initial scene.
+    session_->Enqueue(CreateExampleScene());
+
+    start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+    Update(start_time_);
+  }
+
+  void Update(uint64_t next_presentation_time) {
+    auto ops = fidl::Array<mozart2::OpPtr>::New(0);
+
+    // Translate / rotate the rounded rect.
+    {
+      float translation[3] = {350.f, 150.f, 10.f};
+      float rotation[4];
+
+      double secs = static_cast<double>(next_presentation_time - start_time_) /
+                    1'000'000'000;
+      translation[0] += sin(secs) * 100.f;
+      translation[1] += sin(secs) * 37.f;
+
+      auto quaternion =
+          glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));
+      rotation[0] = quaternion.x;
+      rotation[1] = quaternion.y;
+      rotation[2] = quaternion.z;
+      rotation[3] = quaternion.w;
+
+      ops.push_back(NewSetTransformOp(rrect_node_id_, translation,
+                                      kOnesFloat3,    // scale
+                                      kZeroesFloat3,  // anchor point
+                                      rotation));
+    }
+
+    session_->Enqueue(std::move(ops));
+
+    // Present
+    session_->Present(
+        0, fidl::Array<mx::event>::New(0), fidl::Array<mx::event>::New(0),
+        [this](mozart2::PresentationInfoPtr info) {
+          Update(info->presentation_time + info->presentation_interval);
+        });
   }
 
  private:
@@ -196,6 +228,9 @@ class HelloSceneManagerApp {
   mozart2::SceneManagerPtr scene_manager_;
   mtl::MessageLoop* loop_;
   ResourceId resource_id_counter_ = 0;
+  mozart2::SessionPtr session_;
+  ResourceId rrect_node_id_ = 0;
+  uint64_t start_time_ = 0;
 };
 
 int main(int argc, const char** argv) {
@@ -205,8 +240,8 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
   HelloSceneManagerApp app;
-  loop.task_runner()->PostDelayedTask([&app] { app.Update(); },
-                                      ftl::TimeDelta::FromSeconds(5));
+  loop.task_runner()->PostDelayedTask([&app] { app.Init(); },
+                                      ftl::TimeDelta::FromSeconds(2));
   loop.task_runner()->PostDelayedTask(
       [&loop] {
         FTL_LOG(INFO) << "Quitting.";

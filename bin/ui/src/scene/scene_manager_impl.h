@@ -8,6 +8,7 @@
 
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/src/scene/frame_scheduler.h"
 #include "apps/mozart/src/scene/session/session.h"
 #include "apps/mozart/src/scene/session/session_handler.h"
 #include "escher/forward_declarations.h"
@@ -17,13 +18,13 @@
 namespace mozart {
 namespace scene {
 
-class Renderer;
+class FrameScheduler;
 
 class SceneManagerImpl : public mozart2::SceneManager {
  public:
-  SceneManagerImpl();
-
-  SceneManagerImpl(escher::Escher* escher);
+  explicit SceneManagerImpl(
+      escher::Escher* escher = nullptr,
+      std::unique_ptr<FrameScheduler> frame_scheduler = nullptr);
 
   ~SceneManagerImpl() override;
 
@@ -36,17 +37,10 @@ class SceneManagerImpl : public mozart2::SceneManager {
 
   size_t GetSessionCount() { return session_count_; }
 
-  // Called before starting to draw a frame.
-  void BeginFrame();
-
-  Renderer* renderer() const { return renderer_.get(); }
-
   SessionHandler* FindSession(SessionId id);
 
  private:
   friend class SessionHandler;
-
-  void ApplySessionUpdate(std::unique_ptr<SessionUpdate> update);
 
   void TearDownSession(SessionId id);
 
@@ -56,11 +50,11 @@ class SceneManagerImpl : public mozart2::SceneManager {
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
 
+  std::unique_ptr<FrameScheduler> frame_scheduler_;
   SessionContext session_context_;
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;
   std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
-  std::unique_ptr<Renderer> renderer_;
   SessionId next_session_id_ = 1;
 };
 

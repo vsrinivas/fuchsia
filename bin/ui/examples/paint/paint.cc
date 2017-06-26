@@ -185,19 +185,13 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 
 #ifdef MOZART_EXAMPLES_USE_SCENE_MANAGER
   void ConnectToSceneManager(app::ApplicationContext* application_context) {
-    // Launch SceneManager.
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = "file://system/apps/hello_scene_manager_service";
-    launch_info->services = services_.NewRequest();
-    application_context->launcher()->CreateApplication(
-        std::move(launch_info), controller_.NewRequest());
-    controller_.set_connection_error_handler([this] {
-      FTL_LOG(INFO) << "Hello SceneManager service terminated.";
-      mtl::MessageLoop::GetCurrent()->QuitNow();
-    });
-
     // Connect to the SceneManager service.
-    app::ConnectToService(services_.get(), scene_manager_.NewRequest());
+    scene_manager_ = application_context_
+                         ->ConnectToEnvironmentService<mozart2::SceneManager>();
+    scene_manager_.set_connection_error_handler([this] {
+      FTL_LOG(INFO) << "Lost connection to SceneManager service.";
+      loop_->QuitNow();
+    });
   }
 
   void InitializeSceneManagerSession() {

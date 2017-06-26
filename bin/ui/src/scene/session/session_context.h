@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/mozart/src/scene/frame_scheduler.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/resources/resource_linker.h"
@@ -16,15 +17,16 @@
 namespace mozart {
 namespace scene {
 
+class Renderer;
 class Session;
 
 // Interface that describes the ways that a |Session| communicates with its
 // environment.
-class SessionContext final {
+class SessionContext : public FrameSchedulerListener {
  public:
   SessionContext();
 
-  SessionContext(escher::Escher* escher);
+  SessionContext(escher::Escher* escher, FrameScheduler* frame_scheduler);
 
   ~SessionContext();
 
@@ -64,7 +66,21 @@ class SessionContext final {
     return rounded_rect_factory_.get();
   }
 
+  void set_frame_scheduler(FrameScheduler* frame_scheduler);
+
+  // Tell the FrameScheduler to schedule a frame, and remember the Session so
+  // that we can tell it to apply updates when the FrameScheduler notifies us
+  // via OnPrepareFrame().
+  void ScheduleSessionUpdate(uint64_t presentation_time,
+                             ftl::RefPtr<Session> session);
+
  private:
+  // Implement |FrameSchedulerListener|.  For each session, apply all updates
+  // that should be applied before rendering and presenting a frame at
+  // |presentation_time|.
+  bool OnPrepareFrame(uint64_t presentation_time,
+                      uint64_t presentation_interval) override;
+
   ResourceLinker resource_linker_;
   vk::Device vk_device_;
   escher::ResourceRecycler* resource_recycler_;
@@ -72,6 +88,13 @@ class SessionContext final {
   escher::impl::GpuUploader* gpu_uploader_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::vector<ScenePtr> scenes_;
+  FrameScheduler* const frame_scheduler_ = nullptr;
+  std::unique_ptr<Renderer> renderer_;
+
+  // Lists all Session that have updates to apply, sorted by the earliest
+  // requested presentation time of each update.
+  std::priority_queue<std::pair<uint64_t, ftl::RefPtr<Session>>>
+      updatable_sessions_;
 
   void OnImportResolvedForResource(
       ProxyResource* proxy,

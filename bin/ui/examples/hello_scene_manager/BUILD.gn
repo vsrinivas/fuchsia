@@ -2,14 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("hello_scene_manager") {
-  public_deps = [
-    ":manager",
-    ":service",
-  ]
-}
-
-executable("manager") {
+executable("hello_scene_manager") {
   output_name = "hello_scene_manager"
 
   sources = [
@@ -27,30 +20,14 @@ executable("manager") {
     "//lib/ftl",
     "//lib/mtl",
   ]
-}
-
-executable("service") {
-  output_name = "hello_scene_manager_service"
-
-  sources = [
-    "service.cc",
-  ]
-
-  deps = [
-    "//application/lib/app",
-    "//apps/mozart/services/scene",
-    "//apps/mozart/src/scene:common",
-    "//lib/escher/escher",
-    "//lib/escher/examples/common",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//magma:vulkan",
-  ]
 
   include_dirs = [
-    "//lib",
     "//lib/escher",
     "//third_party/glm",
+    "//lib",
+  ]
+
+  defines = [
+    "GLM_ENABLE_EXPERIMENTAL",
   ]
 }

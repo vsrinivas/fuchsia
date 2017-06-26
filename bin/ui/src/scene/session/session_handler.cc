@@ -46,10 +46,9 @@ void SessionHandler::Present(uint64_t presentation_time,
                              ::fidl::Array<mx::event> wait_events,
                              ::fidl::Array<mx::event> signal_events,
                              const PresentCallback& callback) {
-  auto update = std::make_unique<SessionUpdate>(SessionUpdate{
-      presentation_time, session_, std::move(buffered_ops_),
-      std::move(wait_events), std::move(signal_events), callback});
-  scene_manager_->ApplySessionUpdate(std::move(update));
+  session_->ScheduleUpdate(presentation_time, std::move(buffered_ops_),
+                           std::move(wait_events), std::move(signal_events),
+                           callback);
 }
 
 void SessionHandler::Connect(
