@@ -7,6 +7,7 @@ module media;
 import "apps/media/services/net_media_player.fidl";
 
 // Audio policy service definition.
+//
 // TODO(dalesat): Update this definition.
 // This definition is intended to solve short-term issues only, addressing the
 // need to change audio gain system-wide. In the future, we will have a richer
@@ -24,12 +25,16 @@ interface AudioPolicyService {
   GetStatus(uint64 version_last_seen)
       => (uint64 version, AudioPolicyStatus status);
 
-  // Sets the system-wide gain in decibels. System audio gain values may not
-  // exceed 0.0. This does not affect the system audio mute value.
+  // Sets the system-wide gain in decibels. |db| values are clamped to the
+  // range -160db to 0db inclusive. Setting gain to -160db implicitly mutes
+  // system audio. Setting gain to a higher values when it's already -160db
+  // implicitly unmutes system audio. Gain and mute are otherwise independent.
   SetSystemAudioGain(float db);
 
-  // Sets the system-wide 'muted' value. This does not affect the system audio
-  // gain value.
+  // Sets the system-wide 'muted' value. Changing this value has no effect on
+  // the system audio gain value. Calling this method with argument |false|
+  // has no effect if system audio gain is set to -160db. Gain and mute are
+  // otherwise independent.
   SetSystemAudioMute(bool muted);
 };
 

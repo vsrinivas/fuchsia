@@ -52,6 +52,16 @@ void AudioPolicyServiceImpl::SetSystemAudioGain(float db) {
     return;
   }
 
+  if (db == AudioRenderer::kMutedGain) {
+    // System audio gain is being set to |kMutedGain|. This implicitly mutes
+    // system audio.
+    system_audio_muted_ = true;
+  } else if (system_audio_gain_db_ == AudioRenderer::kMutedGain) {
+    // System audio was muted, because gain was set to |kMutedGain|. We're
+    // raising the gain now, so we unmute.
+    system_audio_muted_ = false;
+  }
+
   system_audio_gain_db_ = db;
 
   UpdateAudioService();
@@ -60,6 +70,11 @@ void AudioPolicyServiceImpl::SetSystemAudioGain(float db) {
 }
 
 void AudioPolicyServiceImpl::SetSystemAudioMute(bool muted) {
+  if (system_audio_gain_db_ == AudioRenderer::kMutedGain) {
+    // Keep audio muted if system audio gain is set to |kMutedGain|.
+    muted = true;
+  }
+
   if (system_audio_muted_ == muted) {
     return;
   }
