@@ -54,9 +54,10 @@ provide filesystems. libc itself defines weak symbols for Posix file
 I/O functions such as `open`, `write`, and `fstat`. However, all these
 calls simply fail. In addition to libc.so, programs can link the
 mxio.so library. mxio knows how to speak to those other Fuchsia
-services over Channel IPC.md, and provides a Posix-like layer for libc
-to expose. Sockets are similarly implemented via mxio communicating
-with the userspace network stack.
+services over 
+[Channel IPC](concepts.md#message-passing-sockets-and-channels), and 
+provides a Posix-like layer for libc to expose. Sockets are similarly
+implemented via mxio communicating with the userspace network stack.
 
 #### pthreads
 
