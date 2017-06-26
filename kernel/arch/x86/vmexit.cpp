@@ -238,7 +238,7 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
-static status_t handle_hlt(AutoVmcsLoad* vmcs_load, const ExitInfo& exit_info,
+static status_t handle_hlt(const ExitInfo& exit_info, AutoVmcsLoad* vmcs_load,
                            LocalApicState* local_apic_state) {
     // TODO(abdulla): Use an interruptible sleep here, so that we can:
     // a) Continue to deliver interrupts to the guest.
@@ -254,17 +254,19 @@ static status_t handle_hlt(AutoVmcsLoad* vmcs_load, const ExitInfo& exit_info,
 #if WITH_LIB_MAGENTA
 class FifoStateObserver : public StateObserver {
 public:
-    FifoStateObserver(mx_signals_t watched_signals)
-        : watched_signals_(watched_signals) {
+    FifoStateObserver(AutoVmcsLoad* vmcs_load, mx_signals_t watched_signals)
+        : vmcs_load_(vmcs_load), watched_signals_(watched_signals) {
         event_init(&event_, false, 0);
     }
     status_t Wait(StateTracker* state_tracker) {
         state_tracker->AddObserver(this, nullptr);
         status_t status = event_wait(&event_);
+        vmcs_load_->reload(false);
         state_tracker->RemoveObserver(this);
         return status;
     }
 private:
+    AutoVmcsLoad* vmcs_load_;
     mx_signals_t watched_signals_;
     event_t event_;
     virtual Flags OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) {
@@ -280,19 +282,21 @@ private:
     }
 };
 
-static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals) {
+static status_t packet_wait(AutoVmcsLoad* vmcs_load, StateTracker* state_tracker,
+                            mx_signals_t signals) {
     if (state_tracker->GetSignalsState() & signals)
         return MX_OK;
     // TODO(abdulla): Add stats to keep track of waits.
-    FifoStateObserver state_observer(signals | MX_FIFO_PEER_CLOSED);
+    FifoStateObserver state_observer(vmcs_load, signals | MX_FIFO_PEER_CLOSED);
     status_t status = state_observer.Wait(state_tracker);
     if (status != MX_OK)
         return status;
     return state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED ? MX_ERR_PEER_CLOSED : MX_OK;
 }
 
-static status_t packet_write(FifoDispatcher* ctl_fifo, const mx_guest_packet_t& packet) {
-    status_t status = packet_wait(ctl_fifo->get_state_tracker(), MX_FIFO_WRITABLE);
+static status_t packet_write(AutoVmcsLoad* vmcs_load, FifoDispatcher* ctl_fifo,
+                             const mx_guest_packet_t& packet) {
+    status_t status = packet_wait(vmcs_load, ctl_fifo->get_state_tracker(), MX_FIFO_WRITABLE);
     if (status != MX_OK)
         return status;
     const uint8_t* data = reinterpret_cast<const uint8_t*>(&packet);
@@ -303,8 +307,9 @@ static status_t packet_write(FifoDispatcher* ctl_fifo, const mx_guest_packet_t& 
     return actual != 1 ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
 }
 
-static status_t packet_read(FifoDispatcher* ctl_fifo, mx_guest_packet_t* packet) {
-    status_t status = packet_wait(ctl_fifo->get_state_tracker(), MX_FIFO_READABLE);
+static status_t packet_read(AutoVmcsLoad* vmcs_load, FifoDispatcher* ctl_fifo,
+                            mx_guest_packet_t* packet) {
+    status_t status = packet_wait(vmcs_load, ctl_fifo->get_state_tracker(), MX_FIFO_READABLE);
     if (status != MX_OK)
         return status;
     uint8_t* data = reinterpret_cast<uint8_t*>(packet);
@@ -316,8 +321,8 @@ static status_t packet_read(FifoDispatcher* ctl_fifo, mx_guest_packet_t* packet)
 }
 #endif // WITH_LIB_MAGENTA
 
-static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* guest_state,
-                                      FifoDispatcher* ctl_fifo) {
+static status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcsLoad* vmcs_load,
+                                      GuestState* guest_state, FifoDispatcher* ctl_fifo) {
     next_rip(exit_info);
 #if WITH_LIB_MAGENTA
     IoInfo io_info(exit_info.exit_qualification);
@@ -330,15 +335,15 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
         packet.port_out.access_size = io_info.access_size;
         packet.port_out.port = io_info.port;
         memcpy(packet.port_out.data, &guest_state->rax, io_info.access_size);
-        return packet_write(ctl_fifo, packet);
+        return packet_write(vmcs_load, ctl_fifo, packet);
     }
     packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
     packet.port_in.port = io_info.port;
     packet.port_in.access_size = io_info.access_size;
-    mx_status_t status = packet_write(ctl_fifo, packet);
+    mx_status_t status = packet_write(vmcs_load, ctl_fifo, packet);
     if (status != MX_OK)
         return status;
-    status = packet_read(ctl_fifo, &packet);
+    status = packet_read(vmcs_load, ctl_fifo, &packet);
     if (status != MX_OK)
         return status;
     if (packet.type != MX_GUEST_PKT_TYPE_PORT_IN)
@@ -513,8 +518,9 @@ static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
 }
 
 #if WITH_LIB_MAGENTA
-static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
-                                GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
+static status_t handle_mem_trap(const ExitInfo& exit_info, AutoVmcsLoad* vmcs_load,
+                                vaddr_t guest_paddr, GuestPhysicalAddressSpace* gpas,
+                                FifoDispatcher* ctl_fifo) {
     if (exit_info.instruction_length > X86_MAX_INST_LEN)
         return MX_ERR_INTERNAL;
 
@@ -527,10 +533,10 @@ static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
                                  packet.mem_trap.instruction_length);
     if (status != MX_OK)
         return status;
-    status = packet_write(ctl_fifo, packet);
+    status = packet_write(vmcs_load, ctl_fifo, packet);
     if (status != MX_OK)
         return status;
-    status = packet_read(ctl_fifo, &packet);
+    status = packet_read(vmcs_load, ctl_fifo, &packet);
     if (status != MX_OK)
         return status;
     if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP)
@@ -544,7 +550,8 @@ static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
 }
 #endif // WITH_LIB_MAGENTA
 
-static status_t handle_apic_access(const ExitInfo& exit_info, LocalApicState* local_apic_state,
+static status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcsLoad* vmcs_load,
+                                   LocalApicState* local_apic_state,
                                    GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
 #if WITH_LIB_MAGENTA
     ApicAccessInfo apic_access_info(exit_info.exit_qualification);
@@ -562,18 +569,18 @@ static status_t handle_apic_access(const ExitInfo& exit_info, LocalApicState* lo
         /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
         vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
-        return handle_mem_trap(exit_info, guest_paddr, gpas, ctl_fifo);
+        return handle_mem_trap(exit_info, vmcs_load, guest_paddr, gpas, ctl_fifo);
     }
 #else // WITH_LIB_MAGENTA
     return MX_ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
 }
 
-static status_t handle_ept_violation(const ExitInfo& exit_info, GuestPhysicalAddressSpace* gpas,
-                                     FifoDispatcher* ctl_fifo) {
+static status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcsLoad* vmcs_load,
+                                     GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
 #if WITH_LIB_MAGENTA
     vaddr_t guest_paddr = exit_info.guest_physical_address;
-    return handle_mem_trap(exit_info, guest_paddr, gpas, ctl_fifo);
+    return handle_mem_trap(exit_info, vmcs_load, guest_paddr, gpas, ctl_fifo);
 #else // WITH_LIB_MAGENTA
     return MX_ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
@@ -623,12 +630,12 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return handle_cpuid(exit_info, guest_state);
     case ExitReason::HLT:
         LTRACEF("handling HLT instruction\n\n");
-        return handle_hlt(vmcs_load, exit_info, local_apic_state);
+        return handle_hlt(exit_info, vmcs_load, local_apic_state);
     case ExitReason::VMCALL:
         LTRACEF("handling VMCALL instruction\n\n");
         return MX_ERR_STOP;
     case ExitReason::IO_INSTRUCTION:
-        return handle_io_instruction(exit_info, guest_state, ctl_fifo);
+        return handle_io_instruction(exit_info, vmcs_load, guest_state, ctl_fifo);
     case ExitReason::RDMSR:
         LTRACEF("handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_rdmsr(exit_info, guest_state);
@@ -641,10 +648,10 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return MX_ERR_BAD_STATE;
     case ExitReason::APIC_ACCESS:
         LTRACEF("handling APIC access\n\n");
-        return handle_apic_access(exit_info, local_apic_state, gpas, ctl_fifo);
+        return handle_apic_access(exit_info, vmcs_load, local_apic_state, gpas, ctl_fifo);
     case ExitReason::EPT_VIOLATION:
         LTRACEF("handling EPT violation\n\n");
-        return handle_ept_violation(exit_info, gpas, ctl_fifo);
+        return handle_ept_violation(exit_info, vmcs_load, gpas, ctl_fifo);
     case ExitReason::XSETBV:
         LTRACEF("handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, guest_state);
