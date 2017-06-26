@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <poll.h>
+
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
@@ -173,7 +175,7 @@ class VolApp {
   void WaitForKeystroke() {
     fd_waiter_.Wait(
         [this](mx_status_t status, uint32_t events) { HandleKeystroke(); }, 0,
-        EPOLLIN);
+        POLLIN);
   }
 
   // Handles a keystroke, possibly calling |WaitForKeystroke| to wait for the
