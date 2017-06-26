@@ -12,6 +12,8 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
+#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
+#include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
@@ -36,11 +38,15 @@ void EntityNode::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void Node::Accept(ResourceVisitor* visitor) {
+void ShapeNode::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void ShapeNode::Accept(ResourceVisitor* visitor) {
+void TagNode::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Scene::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
@@ -56,15 +62,11 @@ void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void Shape::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
-
-void Scene::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
-
 void Material::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void ProxyResource::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

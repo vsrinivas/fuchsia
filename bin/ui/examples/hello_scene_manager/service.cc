@@ -4,10 +4,12 @@
 
 #include <cmath>
 #include <memory>
+#include <sstream>
 
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/src/scene/renderer/renderer.h"
+#include "apps/mozart/src/scene/resources/dump_visitor.h"
 #include "apps/mozart/src/scene/scene_manager_impl.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
@@ -66,6 +68,13 @@ class HelloSceneManagerService : public Demo {
     // For now, just assume the first Scene created is the root of the tree.
     const auto& scenes = scene_manager_->session_context().scenes();
     if (scenes.size() > 0) {
+      if (FTL_VLOG_IS_ON(3)) {
+        std::ostringstream output;
+        DumpVisitor visitor(output);
+        scenes[0]->Accept(&visitor);
+        FTL_VLOG(3) << "Scene graph contents\n" << output.str();
+      }
+
       escher::Model model(renderer->CreateDisplayList(
           scenes[0].get(), escher::vec2(kScreenWidth, kScreenHeight)));
       swapchain_helper_.DrawFrame(stage_, model);

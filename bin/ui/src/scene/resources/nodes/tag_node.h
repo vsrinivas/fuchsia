@@ -25,6 +25,8 @@ class TagNode final : public Node {
   /// A hit test may only be initiated at a tag node.
   HitTestResults HitTest(const escher::vec2& point) const;
 
+  void Accept(class ResourceVisitor* visitor) override;
+
  private:
   int32_t tag_value_;
 

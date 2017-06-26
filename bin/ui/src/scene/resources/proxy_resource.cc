@@ -46,8 +46,6 @@ ProxyResource::~ProxyResource() {
   }
 }
 
-void ProxyResource::Accept(class ResourceVisitor* visitor) {}
-
 Resource* ProxyResource::GetOpsDelegate(const ResourceTypeInfo& type_info) {
   if (ProxyResource::kTypeInfo == type_info) {
     return this;

@@ -43,8 +43,6 @@ class Node : public Resource {
 
   const std::set<NodePtr>& parts() { return parts_; }
 
-  void Accept(class ResourceVisitor* visitor) override;
-
   /// Convert a point that is in the coordinate space of the supplied node into
   /// the coordinate space of the callee.
   escher::vec2 ConvertPointFromNode(const escher::vec2& point,

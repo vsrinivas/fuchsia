@@ -43,6 +43,8 @@ source_set("common") {
     "release_fence_signaller.h",
     "renderer/renderer.cc",
     "renderer/renderer.h",
+    "resources/dump_visitor.cc",
+    "resources/dump_visitor.h",
     "resources/gpu_memory.cc",
     "resources/gpu_memory.h",
     "resources/host_memory.cc",

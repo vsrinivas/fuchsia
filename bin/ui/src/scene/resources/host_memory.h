@@ -44,7 +44,7 @@ class HostMemory : public Memory {
   void Accept(class ResourceVisitor* visitor) override;
 
   void* memory_base() { return shared_vmo_->Map(); }
-  uint64_t size() { return size_; }
+  uint64_t size() const { return size_; }
 
  private:
   ftl::RefPtr<mtl::SharedVmo> shared_vmo_;

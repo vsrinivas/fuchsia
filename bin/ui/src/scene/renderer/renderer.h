@@ -31,14 +31,18 @@ class Renderer {
     void Visit(HostMemory* r) override;
     void Visit(Image* r) override;
     void Visit(EntityNode* r) override;
-    void Visit(Node* r) override;
     void Visit(ShapeNode* r) override;
-    void Visit(CircleShape* r) override;
-    void Visit(Shape* r) override;
+    void Visit(TagNode* r) override;
     void Visit(Scene* r) override;
+    void Visit(CircleShape* r) override;
+    void Visit(RectangleShape* r) override;
+    void Visit(RoundedRectangleShape* r) override;
     void Visit(Material* r) override;
+    void Visit(ProxyResource* r) override;
 
    private:
+    void VisitNode(Node* r);
+
     std::vector<escher::Object> display_list_;
   };
 };

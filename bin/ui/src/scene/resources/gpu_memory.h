@@ -47,7 +47,7 @@ class GpuMemory : public Memory {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  escher::GpuMemPtr escher_gpu_mem() const { return escher_gpu_mem_; }
+  const escher::GpuMemPtr& escher_gpu_mem() const { return escher_gpu_mem_; }
 
   vk::DeviceSize size() const { return escher_gpu_mem_->size(); }
 

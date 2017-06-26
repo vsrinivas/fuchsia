@@ -9,6 +9,7 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
+#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
@@ -53,10 +54,14 @@ void Renderer::Visitor::Visit(Image* r) {
 }
 
 void Renderer::Visitor::Visit(EntityNode* r) {
-  Visit(static_cast<Node*>(r));
+  VisitNode(r);
 }
 
-void Renderer::Visitor::Visit(Node* r) {
+void Renderer::Visitor::Visit(TagNode* r) {
+  VisitNode(r);
+}
+
+void Renderer::Visitor::VisitNode(Node* r) {
   for (auto& child : r->children()) {
     child->Accept(this);
   }
@@ -65,28 +70,38 @@ void Renderer::Visitor::Visit(Node* r) {
   }
 }
 
-void Renderer::Visitor::Visit(ShapeNode* shape_node) {
-  auto& shape = shape_node->shape();
-  auto& material = shape_node->material();
+void Renderer::Visitor::Visit(Scene* r) {
+  VisitNode(r);
+}
+
+void Renderer::Visitor::Visit(ShapeNode* r) {
+  auto& shape = r->shape();
+  auto& material = r->material();
   if (shape && material) {
     display_list_.push_back(shape->GenerateRenderObject(
-        shape_node->GetGlobalTransform(), material->escher_material()));
+        r->GetGlobalTransform(), material->escher_material()));
   }
+  // We don't need to call |VisitNode| because shape nodes don't have
+  // children or parts.
 }
 
 void Renderer::Visitor::Visit(CircleShape* r) {
   FTL_CHECK(false);
 }
 
-void Renderer::Visitor::Visit(Shape* r) {
+void Renderer::Visitor::Visit(RectangleShape* r) {
   FTL_CHECK(false);
 }
 
-void Renderer::Visitor::Visit(Scene* r) {
-  Visit(static_cast<Node*>(r));
+void Renderer::Visitor::Visit(RoundedRectangleShape* r) {
+  FTL_CHECK(false);
 }
 
 void Renderer::Visitor::Visit(Material* r) {
+  FTL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(ProxyResource* r) {
   FTL_CHECK(false);
 }
 

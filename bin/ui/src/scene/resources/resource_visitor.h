@@ -13,10 +13,13 @@ class Image;
 class EntityNode;
 class Node;
 class ShapeNode;
-class CircleShape;
-class Shape;
+class TagNode;
 class Scene;
+class CircleShape;
+class RectangleShape;
+class RoundedRectangleShape;
 class Material;
+class ProxyResource;
 
 class ResourceVisitor {
  public:
@@ -24,12 +27,14 @@ class ResourceVisitor {
   virtual void Visit(HostMemory* r) = 0;
   virtual void Visit(Image* r) = 0;
   virtual void Visit(EntityNode* r) = 0;
-  virtual void Visit(Node* r) = 0;
   virtual void Visit(ShapeNode* r) = 0;
-  virtual void Visit(CircleShape* r) = 0;
-  virtual void Visit(Shape* r) = 0;
+  virtual void Visit(TagNode* r) = 0;
   virtual void Visit(Scene* r) = 0;
+  virtual void Visit(CircleShape* r) = 0;
+  virtual void Visit(RectangleShape* r) = 0;
+  virtual void Visit(RoundedRectangleShape* r) = 0;
   virtual void Visit(Material* r) = 0;
+  virtual void Visit(ProxyResource* r) = 0;
 };
 
 }  // namespace scene

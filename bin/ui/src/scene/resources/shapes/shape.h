@@ -18,8 +18,6 @@ class Shape : public Resource {
   /// Returns if the given point lies within its bounds of this shape.
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
-  void Accept(class ResourceVisitor* visitor) override;
-
   virtual escher::Object GenerateRenderObject(
       const escher::mat4& transform,
       const escher::MaterialPtr& material) = 0;
