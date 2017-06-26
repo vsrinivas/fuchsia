@@ -19,7 +19,7 @@
 namespace {
 
 const char kUsageString[] =
-    "Usage: hci_acl_test [options] [public BD_ADDR]\n"
+    "Usage: hci_acl_test [options] [public|random] [BD_ADDR]\n"
     "Options:\n"
     "    --help            Show this help message\n"
     "    --dev=<hci-dev>   Path to the HCI device (default: %s)\n";
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  if (cl.positional_args().size() != 1) {
+  if (cl.positional_args().size() != 2) {
     PrintUsage();
     return EXIT_FAILURE;
   }
@@ -55,9 +55,19 @@ int main(int argc, char* argv[]) {
 
   ftl::SetLogSettings(log_settings);
 
-  bluetooth::common::DeviceAddressBytes dst_addr;
-  if (!dst_addr.SetFromString(cl.positional_args()[0])) {
-    std::cout << "Invalid BD_ADDR: " << cl.positional_args()[0] << std::endl;
+  bluetooth::common::DeviceAddress::Type addr_type;
+  std::string addr_type_str = cl.positional_args()[0];
+  if (addr_type_str == "public") {
+    addr_type = bluetooth::common::DeviceAddress::Type::kLEPublic;
+  } else if (addr_type_str == "random") {
+    addr_type = bluetooth::common::DeviceAddress::Type::kLERandom;
+  } else {
+    std::cout << "Invalid address type: " << addr_type_str << std::endl;
+  }
+
+  bluetooth::common::DeviceAddressBytes addr_bytes;
+  if (!addr_bytes.SetFromString(cl.positional_args()[1])) {
+    std::cout << "Invalid BD_ADDR: " << cl.positional_args()[1] << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -71,7 +81,8 @@ int main(int argc, char* argv[]) {
   }
 
   hci_acl_test::LEConnectionTest le_conn_test;
-  if (!le_conn_test.Run(std::move(hci_dev), dst_addr)) {
+  if (!le_conn_test.Run(std::move(hci_dev),
+                        bluetooth::common::DeviceAddress(addr_type, addr_bytes))) {
     std::cout << "LE Connection Test failed" << std::endl;
     return EXIT_FAILURE;
   }

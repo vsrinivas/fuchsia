@@ -4,32 +4,31 @@
 
 #include "connection.h"
 
+#include "lib/ftl/logging.h"
+
 namespace bluetooth {
 namespace hci {
 
-// static
-ftl::RefPtr<Connection> Connection::NewLEConnection(ConnectionHandle handle, Role role,
-                                                    const LEConnectionParams& params) {
-  FTL_DCHECK(handle);
-
-  // The connection interval should be populated for a valid connection.
-  FTL_DCHECK(params.connection_interval());
-
-  // We cannot use make_unique here because the default constructor is private.
-  auto conn = ftl::AdoptRef(new Connection);
-  conn->handle_ = handle;
-  conn->type_ = LinkType::kLE;
-  conn->role_ = role;
-  conn->le_conn_params_ = std::make_unique<LEConnectionParams>(params);
-
-  return conn;
+Connection::LowEnergyParameters::LowEnergyParameters(uint16_t interval_min, uint16_t interval_max,
+                                                     uint16_t interval, uint16_t latency,
+                                                     uint16_t supervision_timeout)
+    : interval_min_(interval_min),
+      interval_max_(interval_max),
+      interval_(interval),
+      latency_(latency),
+      supervision_timeout_(supervision_timeout) {
+  FTL_DCHECK(interval_min_ <= interval_max_);
 }
 
-const LEConnectionParams* Connection::GetLEConnectionParams() const {
-  // |le_conn_params_ != nullptr <-> type_ == LinkType::kLE.
-  // |le_conn_params_ == nullptr <-> type_ != LinkType::kLE.
-  FTL_DCHECK(!!le_conn_params_.get() == (type_ == LinkType::kLE));
-  return le_conn_params_.get();
+Connection::Connection(ConnectionHandle handle, Role role,
+                       const common::DeviceAddress& peer_address, const LowEnergyParameters& params)
+    : ll_type_(LinkType::kLE),
+      handle_(handle),
+      role_(role),
+      peer_address_(peer_address),
+      le_params_(std::make_unique<LowEnergyParameters>(params)) {
+  FTL_DCHECK(handle);
+  FTL_DCHECK(params.interval());
 }
 
 }  // namespace hci

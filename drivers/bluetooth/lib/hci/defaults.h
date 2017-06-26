@@ -4,7 +4,9 @@
 
 #pragma once
 
-// This file contains certain default values used by our stack.
+// This file contains default values that are listed in the HCI specification for certain commands.
+// These are informational and for testing purposes only; each higher-layer library defines its own
+// defaults.
 
 namespace bluetooth {
 namespace hci {

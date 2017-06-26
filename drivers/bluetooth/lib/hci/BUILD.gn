@@ -19,8 +19,6 @@ static_library("hci") {
     "device_wrapper.cc",
     "device_wrapper.h",
     "defaults.h",
-    "le_connection_params.cc",
-    "le_connection_params.h",
     "legacy_low_energy_scanner.cc",
     "legacy_low_energy_scanner.h",
     "low_energy_scanner.cc",

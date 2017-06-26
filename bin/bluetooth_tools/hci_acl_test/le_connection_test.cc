@@ -21,7 +21,7 @@ namespace hci_acl_test {
 
 LEConnectionTest::LEConnectionTest() : le_conn_complete_handler_id_(0u), disconn_handler_id_(0u) {}
 
-bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddressBytes& dst_addr) {
+bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr) {
   FTL_DCHECK(hci_dev_fd.is_valid());
 
   auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
@@ -89,7 +89,9 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
       std::bind(&LEConnectionTest::ACLDataRxCallback, this, _1));
 
   // Connection parameters with reasonable defaults.
-  hci::LEConnectionParams conn_params(hci::LEPeerAddressType::kPublic, dst_addr_);
+  hci::Connection::LowEnergyParameters conn_params(hci::defaults::kLEConnectionIntervalMin,
+                                                   hci::defaults::kLEConnectionIntervalMax, 0x0000,
+                                                   0x0000, hci::defaults::kLESupervisionTimeout);
 
   // LE Create Connection.
   constexpr size_t kPayloadSize = sizeof(hci::LECreateConnectionCommandParams);
@@ -99,12 +101,14 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   params->scan_interval = htole16(hci::defaults::kLEScanInterval);
   params->scan_window = htole16(hci::defaults::kLEScanWindow);
   params->initiator_filter_policy = hci::GenericEnableParam::kDisable;
-  params->peer_address_type = hci::LEAddressType::kPublic;
-  params->peer_address = conn_params.peer_address();
+  params->peer_address_type = (dst_addr_.type() == common::DeviceAddress::Type::kLEPublic)
+                                  ? hci::LEAddressType::kPublic
+                                  : hci::LEAddressType::kRandom;
+  params->peer_address = dst_addr_.value();
   params->own_address_type = hci::LEOwnAddressType::kPublic;
-  params->conn_interval_min = htole16(conn_params.connection_interval_min());
-  params->conn_interval_max = htole16(conn_params.connection_interval_max());
-  params->conn_latency = htole16(conn_params.connection_latency());
+  params->conn_interval_min = htole16(conn_params.interval_min());
+  params->conn_interval_max = htole16(conn_params.interval_max());
+  params->conn_latency = htole16(conn_params.latency());
   params->supervision_timeout = htole16(conn_params.supervision_timeout());
   params->minimum_ce_length = 0x0000;
   params->maximum_ce_length = 0x0000;
@@ -134,14 +138,9 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
       return;
     }
 
-    hci::LEConnectionParams conn_params(
-        params->peer_address_type, params->peer_address, orig_params.connection_interval_min(),
-        orig_params.connection_interval_max(), le16toh(params->conn_interval),
-        le16toh(params->conn_latency), le16toh(params->supervision_timeout));
-
     FTL_LOG(INFO) << "LE Connection Complete - handle: "
                   << ftl::StringPrintf("0x%04x", le16toh(params->connection_handle))
-                  << ", BD_ADDR: " << conn_params.peer_address().ToString();
+                  << ", BD_ADDR: " << dst_addr_.value().ToString();
 
     // We're done with this event. Unregister the handler.
     hci_->command_channel()->RemoveEventHandler(le_conn_complete_handler_id_);
