@@ -31,18 +31,32 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 // reads a range of bits from an integer
 #define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
 
+static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
+                                             list_node_t* completed_txns);
+
 mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep = &slot->eps[endpoint];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
     // Recover from Halted and Error conditions. See section 4.8.3 of the XHCI spec.
+
+    mtx_lock(&ep->lock);
+
+    if (!ep->halted) {
+        mtx_unlock(&ep->lock);
+        return MX_OK;
+    }
+
     int ep_state = xhci_get_ep_state(ep);
     xprintf("xhci_reset_endpoint %d %d ep_state %d\n", slot_id, endpoint, ep_state);
 
-    if (ep_state == EP_STATE_RUNNING) {
+    if (ep_state == EP_STATE_STOPPED || ep_state == EP_STATE_RUNNING) {
+        ep->halted = false;
+        mtx_unlock(&ep->lock);
         return MX_OK;
-    } else if (ep_state == EP_STATE_HALTED) {
+    }
+    if (ep_state == EP_STATE_HALTED) {
         // reset the endpoint to move from Halted to Stopped state
         xhci_sync_command_t command;
         xhci_sync_command_init(&command);
@@ -53,10 +67,13 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         int cc = xhci_sync_command_wait(&command);
         if (cc != TRB_CC_SUCCESS) {
             printf("TRB_CMD_RESET_ENDPOINT failed cc: %d\n", cc);
+            mtx_unlock(&ep->lock);
             return MX_ERR_INTERNAL;
         }
     }
 
+    // resetting the dequeue pointer gets us out of ERROR state, and is also necessary
+    // after TRB_CMD_RESET_ENDPOINT.
     if (ep_state == EP_STATE_ERROR || ep_state == EP_STATE_HALTED) {
         // move transfer ring's dequeue pointer passed the failed transaction
         xhci_sync_command_t command;
@@ -70,14 +87,31 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         int cc = xhci_sync_command_wait(&command);
         if (cc != TRB_CC_SUCCESS) {
             printf("TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
+            mtx_unlock(&ep->lock);
             return MX_ERR_INTERNAL;
         }
         transfer_ring->dequeue_ptr = transfer_ring->current;
     }
 
-    if (xhci_get_ep_state(ep) == EP_STATE_STOPPED) {
-        // Ring doorbell to continue on to Running
-        XHCI_WRITE32(&xhci->doorbells[slot_id], endpoint + 1);
+    ep_state = xhci_get_ep_state(ep);
+    if (ep_state != EP_STATE_STOPPED && ep_state != EP_STATE_RUNNING) {
+        printf("xhci_reset_endpoint still halted, state %d\n", ep_state);
+        mtx_unlock(&ep->lock);
+        return MX_ERR_INTERNAL;
+    }
+
+    ep->halted = false;
+
+    // start processing transactions again
+    list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
+    xhci_process_transactions_locked(xhci, ep, &completed_txns);
+
+    mtx_unlock(&ep->lock);
+
+    // call complete callbacks out of the lock
+    iotxn_t* txn;
+    while ((txn = list_remove_head_type(&completed_txns, iotxn_t, node)) != NULL) {
+        iotxn_complete(txn, txn->status, txn->actual);
     }
 
     return MX_OK;
@@ -127,22 +161,6 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
     state->needs_data_event = true;
 
     size_t length = txn->length;
-
-    int ep_state = xhci_get_ep_state(ep);
-    switch (ep_state) {
-    case EP_STATE_RUNNING:
-        break;
-    case EP_STATE_HALTED:
-    case EP_STATE_ERROR:
-    case EP_STATE_STOPPED:
-        // usb_reset_endpoint() can be used to recover from either of these states
-        return MX_ERR_IO_REFUSED;
-    case EP_STATE_DISABLED:
-    default:
-        printf("bad ep state %d\n", ep_state);
-        return MX_ERR_BAD_STATE;
-    }
-
     uint32_t interruptor_target = 0;
 
     if (setup) {
@@ -329,6 +347,11 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     txn->context = (void *)ring->current;
 
     XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
+    // it seems we need to ring the doorbell a second time when transitioning from STOPPED
+    while (xhci_get_ep_state(ep) == EP_STATE_STOPPED) {
+        mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
+        XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
+    }
 
     return MX_OK;
 }
@@ -413,11 +436,14 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
         printf("ep not enabled in xhci_queue_transfer\n");
         return MX_ERR_BAD_STATE;
     }
+    if (ep->halted) {
+        mtx_unlock(&ep->lock);
+        return MX_ERR_IO_REFUSED;
+    }
 
     list_add_tail(&ep->queued_txns, &txn->node);
 
-    list_node_t completed_txns;
-    list_initialize(&completed_txns);
+    list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
     xhci_process_transactions_locked(xhci, ep, &completed_txns);
 
     mtx_unlock(&ep->lock);
@@ -514,6 +540,53 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
     iotxn_t* txn = NULL;
 
+    mx_status_t result;
+    switch (cc) {
+        case TRB_CC_SUCCESS:
+        case TRB_CC_SHORT_PACKET:
+            result = length;
+            break;
+        case TRB_CC_USB_TRANSACTION_ERROR:
+        case TRB_CC_TRB_ERROR:
+        case TRB_CC_STALL_ERROR: {
+            int ep_state = xhci_get_ep_state(ep);
+            printf("xhci_handle_transfer_event cc %d ep_state %d\n", cc, ep_state);
+            if (ep_state == EP_STATE_HALTED || ep_state == EP_STATE_ERROR) {
+                result = MX_ERR_IO_REFUSED;
+            } else {
+                result = MX_ERR_IO;
+            }
+            break;
+        }
+        case TRB_CC_RING_UNDERRUN:
+            // non-fatal error that happens when no transfers are available for isochronous endpoint
+            xprintf("TRB_CC_RING_UNDERRUN\n");
+            return;
+        case TRB_CC_RING_OVERRUN:
+            // non-fatal error that happens when no transfers are available for isochronous endpoint
+            xprintf("TRB_CC_RING_OVERRUN\n");
+            return;
+        case TRB_CC_STOPPED:
+        case TRB_CC_STOPPED_LENGTH_INVALID:
+        case TRB_CC_STOPPED_SHORT_PACKET:
+            // for these errors the transfer ring may no longer exist,
+            // so it is not safe to attempt to retrieve our transfer context
+            xprintf("ignoring transfer event with cc: %d\n", cc);
+            return;
+        default: {
+            int ep_state = xhci_get_ep_state(ep);
+            printf("xhci_handle_transfer_event: unhandled transfer event condition code %d "
+                   "ep_state %d:  %08X %08X %08X %08X\n", cc, ep_state,
+                    ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
+            if (ep_state == EP_STATE_HALTED || ep_state == EP_STATE_ERROR) {
+                result = MX_ERR_IO_REFUSED;
+            } else {
+                result = MX_ERR_IO;
+            }
+            break;
+        }
+    }
+
     // TRB pointer is zero in these cases
     if (cc != TRB_CC_RING_UNDERRUN && cc != TRB_CC_RING_OVERRUN) {
         if (control & EVT_TRB_ED) {
@@ -533,42 +606,6 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     int ep_state = xhci_get_ep_state(ep);
     if (ep_state != EP_STATE_RUNNING) {
         xprintf("xhci_handle_transfer_event: ep state %d cc %d\n", ep_state, cc);
-    }
-
-    mx_status_t result;
-    switch (cc) {
-        case TRB_CC_SUCCESS:
-        case TRB_CC_SHORT_PACKET:
-            result = length;
-            break;
-        case TRB_CC_USB_TRANSACTION_ERROR:
-        case TRB_CC_TRB_ERROR:
-        case TRB_CC_STALL_ERROR:
-            if (xhci_get_ep_state(ep) == EP_STATE_HALTED) {
-                result = MX_ERR_IO_REFUSED;
-            } else {
-                result = MX_ERR_IO;
-            }
-            break;
-        case TRB_CC_RING_UNDERRUN:
-            // non-fatal error that happens when no transfers are available for isochronous endpoint
-            xprintf("TRB_CC_RING_UNDERRUN\n");
-            return;
-        case TRB_CC_RING_OVERRUN:
-            // non-fatal error that happens when no transfers are available for isochronous endpoint
-            xprintf("TRB_CC_RING_OVERRUN\n");
-            return;
-        case TRB_CC_STOPPED:
-        case TRB_CC_STOPPED_LENGTH_INVALID:
-        case TRB_CC_STOPPED_SHORT_PACKET:
-            // for these errors the transfer ring may no longer exist,
-            // so it is not safe to attempt to retrieve our transfer context
-            xprintf("ignoring transfer event with cc: %d\n", cc);
-            return;
-        default:
-            printf("xhci_handle_transfer_event: unhandled transfer event condition code %d\n", cc);
-            result = MX_ERR_IO;
-            break;
     }
 
     if (!txn) {
@@ -609,11 +646,14 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         txn->actual = result;
     }
 
-    list_node_t completed_txns;
-    list_initialize(&completed_txns);
+    list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
     list_add_head(&completed_txns, &txn->node);
 
-    xhci_process_transactions_locked(xhci, ep, &completed_txns);
+    if (result == MX_ERR_IO_REFUSED) {
+        ep->halted = true;
+    } else {
+        xhci_process_transactions_locked(xhci, ep, &completed_txns);
+    }
 
     mtx_unlock(&ep->lock);
 

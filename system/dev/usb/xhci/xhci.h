@@ -50,6 +50,7 @@ typedef struct xhci_endpoint {
     xhci_transfer_state_t* transfer_state;  // transfer state for current_txn
     mtx_t lock;
     bool enabled;
+    bool halted;                // set if endpoint is in HALTED or ERROR state
 } xhci_endpoint_t;
 
 typedef struct xhci_slot {
