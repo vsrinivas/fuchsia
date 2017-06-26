@@ -12,6 +12,7 @@
 #  + Initial RAM filesystem and RAM disk (initramfs/initrd) support
 #  + 8250/16550 and compatible serial support
 #  + Console on 8250/16550 and compatible serial port
+#  + kexec
 #
 # More additions to come as and when desired / needed.
 

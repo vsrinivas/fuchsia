@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -105,11 +106,12 @@ int main(int argc, char** argv) {
     uintptr_t guest_ip;
     uintptr_t bootdata_off = 0;
     const char* ramdisk_path = argc >= 3 ? argv[2] : NULL;
-    const char* cmdline = NULL;
-    status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path, cmdline,
+    status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path, NULL,
                            &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
-        cmdline = "earlyprintk=serial,ttyS,115200 pci=noearly";
+        char cmdline[UINT8_MAX];
+        snprintf(cmdline, UINT8_MAX,
+                 "earlyprintk=serial,ttyS,115200 pci=noearly acpi_rsdp=%#" PRIx64, pt_end_off);
         status = setup_linux(addr, kVmoSize, first_page, fd, cmdline, &guest_ip, &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
