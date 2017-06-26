@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"log"
 
 	"github.com/google/netstack/tcpip"
@@ -43,6 +44,16 @@ func isZeros(buf []byte) bool {
 	return true
 }
 
+func (v *c_mxrio_sockopt_req_reply) intValue() int {
+	switch v.optlen {
+	case 4:
+		return int(binary.LittleEndian.Uint32(v.optval[:]))
+	case 8:
+		return int(binary.LittleEndian.Uint64(v.optval[:]))
+	}
+	return 0
+}
+
 // TODO: create a tcpip.Option type
 func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 	switch v.level {
@@ -51,7 +62,7 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case SO_ERROR:
 			return tcpip.ErrorOption{}
 		case SO_REUSEADDR:
-			return tcpip.ReuseAddressOption(0) // TODO extract value
+			return tcpip.ReuseAddressOption(v.intValue())
 		case SO_KEEPALIVE:
 		case SO_BROADCAST:
 		case SO_DEBUG:
@@ -91,7 +102,7 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 	case SOL_TCP:
 		switch v.optname {
 		case TCP_NODELAY:
-			return tcpip.NoDelayOption(0) // TODO extract value
+			return tcpip.NoDelayOption(v.intValue())
 		case TCP_MAXSEG:
 		case TCP_CORK:
 		case TCP_KEEPIDLE:
