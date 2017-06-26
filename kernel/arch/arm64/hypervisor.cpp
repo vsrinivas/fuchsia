@@ -11,7 +11,8 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-status_t arch_guest_create(mxtl::RefPtr<VmObject> phys_mem,
+status_t arch_guest_create(HypervisorContext* hypervisor,
+                           mxtl::RefPtr<VmObject> phys_mem,
                            mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                            mxtl::unique_ptr<GuestContext>* context) {
     return MX_ERR_NOT_SUPPORTED;

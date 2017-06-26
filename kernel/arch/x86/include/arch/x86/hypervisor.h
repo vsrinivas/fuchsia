@@ -6,10 +6,15 @@
 
 #pragma once
 
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
+#include <kernel/spinlock.h>
 #include <magenta/types.h>
 #include <mxtl/array.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
+
+static const uint16_t kNumVpids = 64;
 
 typedef struct mx_guest_gpr mx_guest_gpr_t;
 typedef struct vm_page vm_page_t;
@@ -47,8 +52,12 @@ public:
     ~VmxonContext();
 
     VmxonPerCpu* PerCpu();
+    status_t AllocVpid(uint16_t* vpid);
+    status_t ReleaseVpid(uint16_t vpid);
 
 private:
+    SpinLock vpid_lock_;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumVpids>> vpid_bitmap_;
     mxtl::Array<VmxonPerCpu> per_cpus_;
 
     explicit VmxonContext(mxtl::Array<VmxonPerCpu> per_cpus);
@@ -56,7 +65,8 @@ private:
 
 class VmcsContext {
 public:
-    static status_t Create(mxtl::RefPtr<VmObject> phys_mem,
+    static status_t Create(VmxonContext* hypervisor,
+                           mxtl::RefPtr<VmObject> phys_mem,
                            mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                            mxtl::unique_ptr<VmcsContext>* context);
 
@@ -78,12 +88,15 @@ public:
     uintptr_t ip() const {  return ip_; }
     status_t set_cr3(uintptr_t guest_cr3);
     uintptr_t cr3() const { return cr3_; }
-    GuestPhysicalAddressSpace* gpas() const { return gpas_.get(); }
-    FifoDispatcher* ctl_fifo() const { return ctl_fifo_.get(); }
+
+    VmxonContext* hypervisor() { return hypervisor_; }
+    GuestPhysicalAddressSpace* gpas() { return gpas_.get(); }
+    FifoDispatcher* ctl_fifo() { return ctl_fifo_.get(); }
 
 private:
     uintptr_t ip_ = UINTPTR_MAX;
     uintptr_t cr3_ = UINTPTR_MAX;
+    VmxonContext* hypervisor_;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     mxtl::RefPtr<FifoDispatcher> ctl_fifo_;
 
@@ -91,7 +104,8 @@ private:
     VmxPage apic_address_page_;
     mxtl::Array<VmcsPerCpu> per_cpus_;
 
-    explicit VmcsContext(mxtl::RefPtr<FifoDispatcher> ctl_fifo, mxtl::Array<VmcsPerCpu> per_cpus);
+    explicit VmcsContext(VmxonContext* hypervisor, mxtl::RefPtr<FifoDispatcher> ctl_fifo,
+                         mxtl::Array<VmcsPerCpu> per_cpus);
 };
 
 using HypervisorContext = VmxonContext;

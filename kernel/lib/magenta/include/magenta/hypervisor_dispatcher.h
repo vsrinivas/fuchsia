@@ -19,6 +19,7 @@ public:
     ~HypervisorDispatcher();
 
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_HYPERVISOR; }
+    HypervisorContext* context() { return context_.get(); }
 
 private:
     mxtl::Canary<mxtl::magic("HYPD")> canary_;

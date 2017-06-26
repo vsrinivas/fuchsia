@@ -18,7 +18,7 @@ mx_status_t GuestDispatcher::Create(mxtl::RefPtr<HypervisorDispatcher> hyperviso
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     mxtl::unique_ptr<GuestContext> context;
-    mx_status_t status = arch_guest_create(phys_mem, ctl_fifo, &context);
+    status_t status = arch_guest_create(hypervisor->context(), phys_mem, ctl_fifo, &context);
     if (status != MX_OK)
         return status;
 

@@ -11,12 +11,8 @@
 #include <arch/x86/hypervisor.h>
 #include <arch/x86/hypervisor_state.h>
 #include <arch/x86/interrupts.h>
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
-
-typedef struct mx_guest_gpr mx_guest_gpr_t;
 
 static const uint16_t kNumInterrupts = X86_MAX_INT + 1;
 
@@ -193,6 +189,8 @@ enum class VmcsFieldXX : uint64_t {
 // See Volume 3, Section 3.5 for valid system selectors types.
 #define GUEST_TR_ACCESS_RIGHTS_TSS_BUSY     (11u << 0)
 
+typedef struct mx_guest_gpr mx_guest_gpr_t;
+
 /* Stores VMX info from the IA32_VMX_BASIC MSR. */
 struct VmxInfo {
     uint32_t revision_id;
@@ -283,7 +281,7 @@ class VmcsPerCpu : public PerCpu {
 public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
-    status_t Setup(paddr_t pml4_address, paddr_t apic_access_address,
+    status_t Setup(uint16_t vpid, paddr_t pml4_address, paddr_t apic_access_address,
                    paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
                    FifoDispatcher* ctl_fifo);

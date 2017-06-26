@@ -368,7 +368,6 @@ static int vmx_enable(void* arg) {
 // static
 status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     uint num_cpus = arch_max_num_cpus();
-
     AllocChecker ac;
     VmxonPerCpu* ctxs = new (&ac) VmxonPerCpu[num_cpus];
     if (!ac.check())
@@ -379,8 +378,12 @@ status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
+    status_t status = ctx->vpid_bitmap_.Reset(kNumVpids);
+    if (status != MX_OK)
+        return status;
+
     VmxInfo vmx_info;
-    status_t status = InitPerCpus(vmx_info, &ctx->per_cpus_);
+    status = InitPerCpus(vmx_info, &ctx->per_cpus_);
     if (status != MX_OK)
         return status;
 
@@ -416,6 +419,25 @@ VmxonContext::~VmxonContext() {
 
 VmxonPerCpu* VmxonContext::PerCpu() {
     return &per_cpus_[arch_curr_cpu_num()];
+}
+
+status_t VmxonContext::AllocVpid(uint16_t* vpid) {
+    AutoSpinLock lock(vpid_lock_);
+    size_t first_unset;
+    bool all_set = vpid_bitmap_.Get(0, kNumVpids, &first_unset);
+    if (all_set)
+        return MX_ERR_NO_RESOURCES;
+    if (first_unset > UINT16_MAX)
+        return MX_ERR_OUT_OF_RANGE;
+    *vpid = (first_unset + 1) & UINT16_MAX;
+    return vpid_bitmap_.SetOne(first_unset);
+}
+
+status_t VmxonContext::ReleaseVpid(uint16_t vpid) {
+    AutoSpinLock lock(vpid_lock_);
+    if (vpid == 0 || !vpid_bitmap_.GetOne(vpid - 1))
+        return MX_ERR_INVALID_ARGS;
+    return vpid_bitmap_.ClearOne(vpid - 1);
 }
 
 status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
@@ -527,7 +549,7 @@ static void edit_msr_list(VmxPage* msr_list_page, uint index, uint32_t msr, uint
     entry->value = value;
 }
 
-status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
+status_t VmcsPerCpu::Setup(uint16_t vpid, paddr_t pml4_address, paddr_t apic_access_address,
                            paddr_t msr_bitmaps_address) {
     status_t status = Clear();
     if (status != MX_OK)
@@ -670,7 +692,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
     // Combined mappings for the current VPID are invalidated even if EPT is
     // not in use.
     x86_percpu* percpu = x86_get_percpu();
-    vmcs_write(VmcsField16::VPID, static_cast<uint16_t>(percpu->cpu_num + 1));
+    vmcs_write(VmcsField16::VPID, vpid);
 
     // From Volume 3, Section 28.2: The extended page-table mechanism (EPT) is a
     // feature that can be used to support the virtualization of physical
@@ -928,13 +950,19 @@ status_t VmcsPerCpu::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {
 
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
+    uint16_t vpid;
+    status_t status = context->hypervisor()->AllocVpid(&vpid);
+    if (status != MX_OK)
+        return status;
+
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Setup(context->Pml4Address(), context->ApicAccessAddress(),
+    return per_cpu->Setup(vpid, context->Pml4Address(), context->ApicAccessAddress(),
                           context->MsrBitmapsAddress());
 }
 
 // static
-status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
+status_t VmcsContext::Create(VmxonContext* hypervisor,
+                             mxtl::RefPtr<VmObject> phys_mem,
                              mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                              mxtl::unique_ptr<VmcsContext>* context) {
     uint num_cpus = arch_max_num_cpus();
@@ -945,7 +973,8 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
         return MX_ERR_NO_MEMORY;
 
     mxtl::Array<VmcsPerCpu> cpu_ctxs(ctxs, num_cpus);
-    mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(ctl_fifo, mxtl::move(cpu_ctxs)));
+    mxtl::unique_ptr<VmcsContext> ctx(
+        new (&ac) VmcsContext(hypervisor, ctl_fifo, mxtl::move(cpu_ctxs)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -997,11 +1026,17 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
     return MX_OK;
 }
 
-VmcsContext::VmcsContext(mxtl::RefPtr<FifoDispatcher> ctl_fifo, mxtl::Array<VmcsPerCpu> per_cpus)
-    : ctl_fifo_(ctl_fifo), per_cpus_(mxtl::move(per_cpus)) {}
+VmcsContext::VmcsContext(VmxonContext* hypervisor, mxtl::RefPtr<FifoDispatcher> ctl_fifo,
+                         mxtl::Array<VmcsPerCpu> per_cpus)
+    : hypervisor_(hypervisor), ctl_fifo_(ctl_fifo), per_cpus_(mxtl::move(per_cpus)) {}
 
 static int vmcs_clear(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
+    uint16_t vpid = vmcs_read(VmcsField16::VPID);
+    status_t status = context->hypervisor()->ReleaseVpid(vpid);
+    if (status != MX_OK)
+        return status;
+
     VmcsPerCpu* per_cpu = context->PerCpu();
     return per_cpu->Clear();
 }
@@ -1112,10 +1147,11 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
     return VmxonContext::Create(context);
 }
 
-status_t arch_guest_create(mxtl::RefPtr<VmObject> phys_mem,
+status_t arch_guest_create(HypervisorContext* hypervisor,
+                           mxtl::RefPtr<VmObject> phys_mem,
                            mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                            mxtl::unique_ptr<GuestContext>* context) {
-    return VmcsContext::Create(phys_mem, ctl_fifo, context);
+    return VmcsContext::Create(hypervisor, phys_mem, ctl_fifo, context);
 }
 
 status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {
