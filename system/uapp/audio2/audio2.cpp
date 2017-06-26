@@ -8,9 +8,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "audio-source.h"
+#include "audio-input.h"
 #include "audio-output.h"
+#include "audio-stream.h"
 #include "sine-source.h"
+#include "wav-sink.h"
 #include "wav-source.h"
 
 static constexpr float DEFAULT_PLUG_MONITOR_DURATION = 10.0f;
@@ -20,6 +22,7 @@ static constexpr float MIN_TONE_DURATION = 0.001f;
 static constexpr float DEFAULT_TONE_FREQ = 440.0f;
 static constexpr float MIN_TONE_FREQ = 15.0f;
 static constexpr float MAX_TONE_FREQ = 20000.0f;
+static constexpr float DEFAULT_RECORD_DURATION = 30.0f;
 
 enum class Command {
     INVALID,
@@ -30,6 +33,7 @@ enum class Command {
     PLUG_MONITOR,
     TONE,
     PLAY,
+    RECORD,
 };
 
 void usage(const char* prog_name) {
@@ -64,6 +68,10 @@ void usage(const char* prog_name) {
             DEFAULT_TONE_DURATION);
     printf("play   : Params : <file>\n");
     printf("         Play the specified WAV file on the selected output.\n");
+    printf("record : Params : <file> [duration]\n"
+           "         Record to the specified WAV file from the selected input.\n"
+           "         Duration defaults to %.1f seconds if unspecified.\n",
+           DEFAULT_RECORD_DURATION);
 }
 
 int main(int argc, const char** argv) {
@@ -110,6 +118,7 @@ int main(int argc, const char** argv) {
         { "pmon",   Command::PLUG_MONITOR },
         { "tone",   Command::TONE },
         { "play",   Command::PLAY },
+        { "record", Command::RECORD },
     };
 
     for (const auto& entry : COMMANDS) {
@@ -177,9 +186,22 @@ int main(int argc, const char** argv) {
         break;
 
     case Command::PLAY:
+    case Command::RECORD:
         if (arg >= argc) return -1;
         wav_filename = argv[arg];
         arg++;
+
+        if (cmd == Command::RECORD) {
+            duration = DEFAULT_RECORD_DURATION;
+            if (arg < argc) {
+                if (sscanf(argv[arg], "%f", &duration) != 1) {
+                    printf("Failed to parse record duration \"%s\"\n", argv[arg]);
+                    return -1;
+                }
+                arg++;
+            }
+        }
+
         break;
 
     default:
@@ -237,6 +259,32 @@ int main(int argc, const char** argv) {
             return res;
 
         return static_cast<AudioOutput*>(stream.get())->Play(wav_source);
+    }
+
+    case Command::RECORD: {
+        if (!stream->input()) {
+            printf("The \"record\" command can only be used on input streams.\n");
+            return -1;
+        }
+
+        // TODO(johngro): add the ability to configure the capture format
+        static constexpr uint32_t frames_per_second = 48000u;
+        static constexpr uint16_t channels = 1u;
+        static constexpr audio2_sample_format_t sample_format = AUDIO2_SAMPLE_FORMAT_16BIT;
+
+        res = stream->SetFormat(frames_per_second, channels, sample_format);
+        if (res != MX_OK) {
+            printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n",
+                    frames_per_second, channels, sample_format, res);
+            return -1;
+        }
+
+        WAVSink wav_sink;
+        res = wav_sink.Initialize(wav_filename);
+        if (res != MX_OK)
+            return res;
+
+        return static_cast<AudioInput*>(stream.get())->Record(wav_sink, duration);
     }
 
     default:

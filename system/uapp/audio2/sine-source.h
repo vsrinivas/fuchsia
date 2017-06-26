@@ -6,14 +6,14 @@
 
 #include <magenta/types.h>
 
-#include "audio-source.h"
+#include "audio-stream.h"
 
 class SineSource : public AudioSource {
 public:
     SineSource(float freq, float amp, float duration_secs);
 
     mx_status_t GetFormat(Format* out_format) final;
-    mx_status_t PackFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) final;
+    mx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) final;
     bool finished() const final {
         return (frames_produced_ >= frames_to_produce_);
     }

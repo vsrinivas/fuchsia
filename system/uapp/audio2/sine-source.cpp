@@ -33,7 +33,7 @@ mx_status_t SineSource::GetFormat(Format* out_format) {
     return MX_OK;
 }
 
-mx_status_t SineSource::PackFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) {
+mx_status_t SineSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) {
     if ((buffer == nullptr) || (out_packed == nullptr))
         return MX_ERR_INVALID_ARGS;
 

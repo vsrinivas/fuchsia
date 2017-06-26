@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "audio-output.h"
-#include "audio-source.h"
+#include "audio-stream.h"
 
 mx_status_t AudioOutput::Play(AudioSource& source) {
     mx_status_t res;
@@ -71,7 +71,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
                 wr += todo;
             } else {
                 uint32_t done;
-                res = source.PackFrames(buf + wr, mxtl::min(space, rb_sz_ - wr), &done);
+                res = source.GetFrames(buf + wr, mxtl::min(space, rb_sz_ - wr), &done);
                 if (res != MX_OK) {
                     printf("Error packing frames (res %d)\n", res);
                     break;

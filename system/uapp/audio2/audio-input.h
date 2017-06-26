@@ -8,9 +8,11 @@
 
 #include "audio-device-stream.h"
 
+class AudioSink;
+
 class AudioInput : public AudioDeviceStream {
 public:
-    // TODO(johngro) : Add record-to-wav-file functionality
+    mx_status_t Record(AudioSink& sink, float duration_seconds);
 
 private:
     friend class mxtl::unique_ptr<AudioInput>;

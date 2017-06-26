@@ -12,6 +12,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/audio-output.cpp \
     $(LOCAL_DIR)/audio-device-stream.cpp \
     $(LOCAL_DIR)/sine-source.cpp \
+    $(LOCAL_DIR)/wav-common.cpp \
+    $(LOCAL_DIR)/wav-sink.cpp \
     $(LOCAL_DIR)/wav-source.cpp
 
 MODULE_STATIC_LIBS := \

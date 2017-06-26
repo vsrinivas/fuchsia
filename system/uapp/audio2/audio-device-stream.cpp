@@ -263,7 +263,7 @@ mx_status_t AudioDeviceStream::PlugMonitor(float duration) {
                                                                mx_time_t plug_time) {
         printf("Plug State now : %s (%.3lf sec since last change).\n",
                plug_state ? "plugged" : "unplugged",
-               static_cast<double>(plug_time - last_plug_time) / 1000000000.0);
+               static_cast<double>(plug_time - last_plug_time) / MX_SEC(1));
 
         last_plug_state = plug_state;
         last_plug_time  = plug_time;
@@ -358,7 +358,10 @@ mx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second,
     if ((stream_ch_ == MX_HANDLE_INVALID) || (rb_ch_ != MX_HANDLE_INVALID))
         return MX_ERR_BAD_STATE;
 
-    switch (sample_format) {
+    auto noflag_format = static_cast<audio2_sample_format_t>(
+            (sample_format & ~AUDIO2_SAMPLE_FORMAT_FLAG_MASK));
+
+    switch (noflag_format) {
     case AUDIO2_SAMPLE_FORMAT_8BIT:         sample_size_ = 1; break;
     case AUDIO2_SAMPLE_FORMAT_16BIT:        sample_size_ = 2; break;
     case AUDIO2_SAMPLE_FORMAT_24BIT_PACKED: sample_size_ = 3; break;
@@ -369,9 +372,10 @@ mx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second,
     default: return MX_ERR_NOT_SUPPORTED;
     }
 
-    channel_cnt_ = channels;
-    frame_sz_    = channels * sample_size_;
-    frame_rate_  = frames_per_second;
+    channel_cnt_   = channels;
+    frame_sz_      = channels * sample_size_;
+    frame_rate_    = frames_per_second;
+    sample_format_ = sample_format;
 
     audio2_stream_cmd_set_format_req_t  req;
     audio2_stream_cmd_set_format_resp_t resp;
@@ -445,17 +449,22 @@ mx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
 
     // Map the VMO into our address space
     // TODO(johngro) : How do I specify the cache policy for this mapping?
+    uint32_t flags = input_
+                   ? MX_VM_FLAG_PERM_READ
+                   : MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
     res = mx_vmar_map(mx_vmar_root_self(), 0u,
                       rb_vmo_.get(), 0u, rb_sz_,
-                      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                      reinterpret_cast<uintptr_t*>(&rb_virt_));
+                      flags, reinterpret_cast<uintptr_t*>(&rb_virt_));
     if (res != MX_OK) {
         printf("Failed to map ring buffer VMO (res %d)\n", res);
         return res;
     }
 
-    // Success!  zero out the buffer and we are done.
-    memset(rb_virt_, 0, rb_sz_);
+    // Success!  If this is an output device, zero out the buffer and we are done.
+    if (!input_) {
+        memset(rb_virt_, 0, rb_sz_);
+    }
+
     return MX_OK;
 }
 
