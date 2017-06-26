@@ -1,0 +1,12 @@
+config("driver-info_config") {
+  include_dirs = [ "include" ]
+}
+
+static_library("driver-info") {
+  sources = [ "driver-info.c" ]
+  public = [ "include/driver-info/driver-info.h" ]
+  deps = [
+    "//magenta/third_party/ulib/cksum"
+  ]
+  public_configs = [ ":driver-info_config" ]
+}
