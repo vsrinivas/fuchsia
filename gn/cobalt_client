@@ -8,8 +8,8 @@
     ],
     "binaries": [
         {
-            "binary": "cobalt_unittests",
-            "bootfs_path": "test/cobalt_unittests"
+            "binary": "cobalt_testapp",
+            "bootfs_path": "test/cobalt_testapp"
         }
     ]
 }
