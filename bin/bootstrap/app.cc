@@ -12,6 +12,18 @@
 #include "lib/ftl/logging.h"
 
 namespace bootstrap {
+namespace {
+
+// We explicitly launch netstack because netstack registers itself as
+// |/dev/socket|, which needs to happen eagerly, instead of being discovered
+// via |/svc/net.Netstack|, which can happen asynchronously.
+void LaunchNetstack(app::ServiceProvider* provider) {
+  mx::channel h1, h2;
+  mx::channel::create(0, &h1, &h2);
+  provider->ConnectToService("net.Netstack", std::move(h1));
+}
+
+}  // namespace
 
 constexpr char kServicesConfigFile[] = "/system/data/bootstrap/services.config";
 constexpr char kLoadersConfigFile[] = "/system/data/bootstrap/loaders.config";
@@ -52,6 +64,10 @@ App::App()
   // Launch startup applications.
   for (auto& launch_info : config.TakeApps())
     LaunchApplication(std::move(launch_info));
+
+  // TODO(abarth): Remove this hard-coded mention of netstack once netstack is
+  // fully converted to using service namespaces.
+  LaunchNetstack(&env_services_);
 }
 
 App::~App() {}
