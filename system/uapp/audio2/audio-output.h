@@ -6,18 +6,18 @@
 
 #include <magenta/types.h>
 
-#include "audio-stream.h"
+#include "audio-device-stream.h"
 
 class AudioSource;
 
-class AudioOutput : public AudioStream {
+class AudioOutput : public AudioDeviceStream {
 public:
     mx_status_t Play(AudioSource& source);
 
 private:
     friend class mxtl::unique_ptr<AudioOutput>;
-    friend class AudioStream;
+    friend class AudioDeviceStream;
 
-    explicit AudioOutput(uint32_t dev_id) : AudioStream(false, dev_id) { }
+    explicit AudioOutput(uint32_t dev_id) : AudioDeviceStream(false, dev_id) { }
 };
 

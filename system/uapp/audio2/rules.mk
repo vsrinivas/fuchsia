@@ -10,7 +10,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/audio2.cpp \
     $(LOCAL_DIR)/audio-input.cpp \
     $(LOCAL_DIR)/audio-output.cpp \
-    $(LOCAL_DIR)/audio-stream.cpp \
+    $(LOCAL_DIR)/audio-device-stream.cpp \
     $(LOCAL_DIR)/sine-source.cpp \
     $(LOCAL_DIR)/wav-source.cpp
 

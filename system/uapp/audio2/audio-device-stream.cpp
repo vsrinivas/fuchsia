@@ -19,9 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "audio-device-stream.h"
 #include "audio-input.h"
 #include "audio-output.h"
-#include "audio-stream.h"
 
 template <typename ReqType, typename RespType>
 mx_status_t DoCallImpl(const mx::channel& channel,
@@ -83,18 +83,18 @@ mx_status_t DoNoFailCall(const mx::channel& channel,
     return DoCallImpl(channel, req, resp, resp_handle_out);
 }
 
-mxtl::unique_ptr<AudioStream> AudioStream::Create(bool input, uint32_t dev_id) {
+mxtl::unique_ptr<AudioDeviceStream> AudioDeviceStream::Create(bool input, uint32_t dev_id) {
     AllocChecker ac;
-    mxtl::unique_ptr<AudioStream> res(input
-                                      ? static_cast<AudioStream*>(new (&ac) AudioInput(dev_id))
-                                      : static_cast<AudioStream*>(new (&ac) AudioOutput(dev_id)));
+    mxtl::unique_ptr<AudioDeviceStream>
+        res(input ? static_cast<AudioDeviceStream*>(new (&ac) AudioInput(dev_id))
+                  : static_cast<AudioDeviceStream*>(new (&ac) AudioOutput(dev_id)));
     if (!ac.check())
        return nullptr;
 
     return res;
 }
 
-AudioStream::AudioStream(bool input, uint32_t dev_id)
+AudioDeviceStream::AudioDeviceStream(bool input, uint32_t dev_id)
     : input_(input),
       dev_id_(dev_id) {
     snprintf(name_, sizeof(name_), "/dev/class/audio2-%s/%03u",
@@ -102,7 +102,7 @@ AudioStream::AudioStream(bool input, uint32_t dev_id)
              dev_id_);
 }
 
-mx_status_t AudioStream::Open() {
+mx_status_t AudioDeviceStream::Open() {
     if (stream_ch_ != MX_HANDLE_INVALID)
         return MX_ERR_BAD_STATE;
 
@@ -125,7 +125,7 @@ mx_status_t AudioStream::Open() {
     return MX_OK;
 }
 
-mx_status_t AudioStream::DumpInfo() {
+mx_status_t AudioDeviceStream::DumpInfo() {
     mx_status_t res;
     printf("Info for audio %s stream #%03u (%s)\n",
             input_ ? "input" : "output", dev_id_, name_);
@@ -177,8 +177,8 @@ mx_status_t AudioStream::DumpInfo() {
     return MX_OK;
 }
 
-mx_status_t AudioStream::GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
-                                      bool enable_notify) {
+mx_status_t AudioDeviceStream::GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
+                                            bool enable_notify) {
     MX_DEBUG_ASSERT(out_state != nullptr);
     audio2_stream_cmd_plug_detect_req req;
 
@@ -193,7 +193,7 @@ mx_status_t AudioStream::GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_
     return res;
 }
 
-void AudioStream::DisablePlugNotifications() {
+void AudioDeviceStream::DisablePlugNotifications() {
     audio2_stream_cmd_plug_detect_req req;
 
     req.hdr.cmd = static_cast<audio2_cmd_t>(AUDIO2_STREAM_CMD_PLUG_DETECT | AUDIO2_FLAG_NO_ACK);
@@ -203,7 +203,7 @@ void AudioStream::DisablePlugNotifications() {
     stream_ch_.write(0, &req, sizeof(req), nullptr, 0);
 }
 
-mx_status_t AudioStream::SetMute(bool mute) {
+mx_status_t AudioDeviceStream::SetMute(bool mute) {
     audio2_stream_cmd_set_gain_req  req;
     audio2_stream_cmd_set_gain_resp resp;
 
@@ -222,7 +222,7 @@ mx_status_t AudioStream::SetMute(bool mute) {
     return res;
 }
 
-mx_status_t AudioStream::SetGain(float gain) {
+mx_status_t AudioDeviceStream::SetGain(float gain) {
     audio2_stream_cmd_set_gain_req  req;
     audio2_stream_cmd_set_gain_resp resp;
 
@@ -242,7 +242,7 @@ mx_status_t AudioStream::SetGain(float gain) {
     return res;
 }
 
-mx_status_t AudioStream::PlugMonitor(float duration) {
+mx_status_t AudioDeviceStream::PlugMonitor(float duration) {
     mx_time_t deadline = mx_deadline_after(MX_SEC(static_cast<double>(duration)));
     audio2_stream_cmd_plug_detect_resp resp;
     mx_status_t res = GetPlugState(&resp, true);
@@ -352,9 +352,9 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
     return MX_OK;
 }
 
-mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,
-                                   uint16_t channels,
-                                   audio2_sample_format_t sample_format) {
+mx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second,
+                                         uint16_t channels,
+                                         audio2_sample_format_t sample_format) {
     if ((stream_ch_ == MX_HANDLE_INVALID) || (rb_ch_ != MX_HANDLE_INVALID))
         return MX_ERR_BAD_STATE;
 
@@ -395,7 +395,7 @@ mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,
     return res;
 }
 
-mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
+mx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
     if(!frames)
         return MX_ERR_INVALID_ARGS;
 
@@ -459,7 +459,7 @@ mx_status_t AudioStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
     return MX_OK;
 }
 
-mx_status_t AudioStream::StartRingBuffer() {
+mx_status_t AudioDeviceStream::StartRingBuffer() {
     if (rb_ch_ == MX_HANDLE_INVALID)
         return MX_ERR_BAD_STATE;
 
@@ -472,7 +472,7 @@ mx_status_t AudioStream::StartRingBuffer() {
     return DoCall(rb_ch_, req, &resp);
 }
 
-mx_status_t AudioStream::StopRingBuffer() {
+mx_status_t AudioDeviceStream::StopRingBuffer() {
     if (rb_ch_ == MX_HANDLE_INVALID)
         return MX_ERR_BAD_STATE;
 

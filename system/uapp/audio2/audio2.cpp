@@ -195,7 +195,7 @@ int main(int argc, const char** argv) {
     print_usage.cancel();
 
     // Open the selected stream.
-    auto stream = AudioStream::Create(input, dev_num);
+    auto stream = AudioDeviceStream::Create(input, dev_num);
     if (stream == nullptr) {
         printf("Out of memory!\n");
         return MX_ERR_NO_MEMORY;

@@ -6,15 +6,15 @@
 
 #include <magenta/types.h>
 
-#include "audio-stream.h"
+#include "audio-device-stream.h"
 
-class AudioInput : public AudioStream {
+class AudioInput : public AudioDeviceStream {
 public:
     // TODO(johngro) : Add record-to-wav-file functionality
 
 private:
     friend class mxtl::unique_ptr<AudioInput>;
-    friend class AudioStream;
+    friend class AudioDeviceStream;
 
-    explicit AudioInput(uint32_t dev_id) : AudioStream(true, dev_id) { }
+    explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(true, dev_id) { }
 };

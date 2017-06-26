@@ -10,9 +10,9 @@
 #include <mx/vmo.h>
 #include <mxtl/unique_ptr.h>
 
-class AudioStream {
+class AudioDeviceStream {
 public:
-    static mxtl::unique_ptr<AudioStream> Create(bool input, uint32_t dev_id);
+    static mxtl::unique_ptr<AudioDeviceStream> Create(bool input, uint32_t dev_id);
 
     mx_status_t Open();
     mx_status_t DumpInfo();
@@ -24,7 +24,7 @@ public:
     bool        input() const { return input_; }
 
 protected:
-    friend class mxtl::unique_ptr<AudioStream>;
+    friend class mxtl::unique_ptr<AudioDeviceStream>;
 
     mx_status_t GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
                              bool enable_notify = false);
@@ -36,8 +36,8 @@ protected:
     mx_status_t StartRingBuffer();
     mx_status_t StopRingBuffer();
 
-    AudioStream(bool input, uint32_t dev_id);
-    virtual ~AudioStream() { }
+    AudioDeviceStream(bool input, uint32_t dev_id);
+    virtual ~AudioDeviceStream() { }
 
     mx::channel stream_ch_;
     mx::channel rb_ch_;
