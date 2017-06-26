@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
 
 #include <magenta/device/ethernet.h>
@@ -28,7 +28,7 @@
 #define xprintf(fmt...) printf(fmt)
 #else
 #define xprintf(fmt...) \
-    do { \
+    do {                \
     } while (0)
 #endif
 
@@ -47,8 +47,8 @@ typedef struct ethdev0 {
     list_node_t list_active;
     list_node_t list_idle;
 
-  ethmac_info_t info;
-
+    ethmac_info_t info;
+    uint32_t status;
     mx_device_t* mxdev;
 } ethdev0_t;
 
@@ -111,7 +111,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         if (status == MX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
                 printf("eth [%s]: no rx buffers available (%u times)\n",
-                    edev->name, edev->fail_rx_read);
+                       edev->name, edev->fail_rx_read);
             }
         } else {
             // Fatal, should force teardown
@@ -149,7 +149,17 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
 }
 
 static void eth0_status(void* cookie, uint32_t status) {
-    printf("eth: status() %08x\n", status);
+    xprintf("eth: status() %08x\n", status);
+
+    ethdev0_t* edev0 = cookie;
+    mtx_lock(&edev0->lock);
+    edev0->status = status;
+
+    ethdev_t* edev;
+    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+        mx_object_signal_peer(edev->rx_fifo, 0, MX_USER_SIGNAL_0);
+    }
+    mtx_unlock(&edev0->lock);
 }
 
 // TODO: I think if this arrives at the wrong time during teardown we
@@ -275,7 +285,7 @@ static int eth_tx_thread(void* arg) {
 }
 
 static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len,
-                                    size_t* out_actual) {
+                                        size_t* out_actual) {
     if (out_len < sizeof(eth_fifos_t)) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -315,7 +325,7 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
         return MX_ERR_ALREADY_BOUND;
     }
 
-    mx_handle_t vmo = *((mx_handle_t*) in_buf);
+    mx_handle_t vmo = *((mx_handle_t*)in_buf);
 
     size_t size;
     mx_status_t status;
@@ -410,6 +420,24 @@ static ssize_t eth_set_client_name(ethdev_t* edev, const void* in_buf, size_t in
     return MX_OK;
 }
 
+static mx_status_t eth_get_status(ethdev_t* edev, void* out_buf, size_t out_len,
+                                  size_t* out_actual) {
+    if (out_len < sizeof(uint32_t)) {
+        return MX_ERR_INVALID_ARGS;
+    }
+    if (edev->rx_fifo == MX_HANDLE_INVALID) {
+        return MX_ERR_BAD_STATE;
+    }
+    if (mx_object_signal_peer(edev->rx_fifo, MX_USER_SIGNAL_0, 0) != MX_OK) {
+        return MX_ERR_INTERNAL;
+    }
+
+    uint32_t* status = out_buf;
+    *status = edev->edev0->status;
+    *out_actual = sizeof(status);
+    return MX_OK;
+}
+
 static mx_status_t eth_ioctl(void* ctx, uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
@@ -460,6 +488,9 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
     case IOCTL_ETHERNET_SET_CLIENT_NAME:
         status = eth_set_client_name(edev, in_buf, in_len);
         break;
+    case IOCTL_ETHERNET_GET_STATUS:
+        status = eth_get_status(edev, out_buf, out_len, out_actual);
+        break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
         status = device_ioctl(edev->edev0->macdev, op, in_buf, in_len, out_buf, out_len, out_actual);
@@ -508,7 +539,7 @@ static void eth_kill_locked(ethdev_t* edev) {
     }
 
     if (edev->io_buf) {
-        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t) edev->io_buf, 0);
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
         edev->io_buf = NULL;
     }
     xprintf("eth [%s]: all resources released\n", edev->name);
@@ -601,7 +632,6 @@ static mx_protocol_device_t ethdev0_ops = {
     .unbind = eth0_unbind,
     .release = eth0_release,
 };
-
 
 #define BAD_FEATURES (ETHMAC_FEATURE_RX_QUEUE | ETHMAC_FEATURE_TX_QUEUE)
 

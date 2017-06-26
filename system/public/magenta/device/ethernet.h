@@ -25,6 +25,7 @@ typedef struct eth_info_t {
     uint32_t reserved[12];
 } eth_info_t;
 
+#define ETH_SIGNAL_STATUS MX_USER_SIGNAL_0
 #define ETH_FEATURE_WLAN 1
 
 // Get the fifos to submit tx and rx operations
@@ -65,6 +66,15 @@ typedef struct eth_fifos_t {
 // Associates a name with an ethernet instance.
 #define IOCTL_ETHERNET_SET_CLIENT_NAME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 7)
+
+// Returns: uint32_t link_status_bits
+// The signal ETH_SIGNAL_STATUS will be asserted on rx_fifo when these bits change, and
+// de-asserted when this ioctl is called.
+#define IOCTL_ETHERNET_GET_STATUS \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 8)
+
+// Link status bits:
+#define ETH_STATUS_ONLINE (1u)
 
 // Operation
 //
@@ -129,3 +139,6 @@ IOCTL_WRAPPER(ioctl_ethernet_tx_listen_stop, IOCTL_ETHERNET_TX_LISTEN_STOP);
 
 // ssize_t ioctl_ethernet_set_client_name(int fd, const char* in, size_t in_len);
 IOCTL_WRAPPER_VARIN(ioctl_ethernet_set_client_name, IOCTL_ETHERNET_SET_CLIENT_NAME, char);
+
+// ssize_t ioctl_ethernet_get_status(int fd, uint32_t*);
+IOCTL_WRAPPER_OUT(ioctl_ethernet_get_status, IOCTL_ETHERNET_GET_STATUS, uint32_t);

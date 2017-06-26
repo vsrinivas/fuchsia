@@ -374,8 +374,10 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
                     iotxn_queue(eth->usb_device, req);
                 }
                 xprintf("ax88179 now online\n");
+                eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
             } else if (!online && was_online) {
                 xprintf("ax88179 now offline\n");
+                eth->ifc->status(eth->cookie, 0);
             }
         }
     }

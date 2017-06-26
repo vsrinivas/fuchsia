@@ -6,6 +6,7 @@
 
 #include <ddk/driver.h>
 #include <magenta/compiler.h>
+#include <magenta/device/ethernet.h>
 #include <magenta/hw/usb.h>
 #include <stdbool.h>
 
@@ -38,8 +39,6 @@ typedef struct ethmac_info {
     uint8_t reserved0[2];
     uint32_t reserved1[4];
 } ethmac_info_t;
-
-#define ETHMAC_STATUS_ONLINE (1u)
 
 typedef struct ethmac_ifc_virt {
     void (*status)(void* cookie, uint32_t status);
