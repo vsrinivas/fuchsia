@@ -215,12 +215,15 @@ bootloader_remote_path = "%s/BOOT%s.EFI" % (DIR_EFI_BOOT, arch)
 print "Copying files to disk image."
 working_dir = os.getcwd()
 
+def is_non_empty_file(path):
+  return os.path.exists(path) and os.path.getsize(path) > 0
+
 # Take the files referenced by primary_manifest and each package's system
 # manifests and write them into the minfs image at disk_path using the minfs
 # binary pointed to by minfs_bin.
 system_manifests = [ primary_manifest ]
 boot_manifests = []
-if os.path.exists(boot_manifest):
+if is_non_empty_file(boot_manifest):
     boot_manifests.append(boot_manifest)
 
 with open(package_list) as package_list_file:
@@ -228,11 +231,11 @@ with open(package_list) as package_list_file:
         name = name.rstrip()
         package_dir = os.path.join(args.build_dir, "package", name)
         package_system_manifest = os.path.join(package_dir, "system_manifest")
-        if os.path.exists(package_system_manifest):
+        if is_non_empty_file(package_system_manifest):
             system_manifests.append(package_system_manifest)
 
         package_boot_manifest = os.path.join(package_dir, "boot_manifest")
-        if os.path.exists(package_boot_manifest):
+        if is_non_empty_file(package_boot_manifest):
             boot_manifests.append(package_boot_manifest)
 
 file_count = manifest.build_minfs_image(system_manifests, \
