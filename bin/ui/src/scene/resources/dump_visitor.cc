@@ -154,7 +154,7 @@ void DumpVisitor::Visit(ProxyResource* r) {
   WriteProperty("import_spec") << r->import_spec();
   WriteProperty("is_bound") << (r->bound_resource() != nullptr);
   BeginSection("delegate");
-  r->ops_delegate()->Accept(this);
+  r->delegate()->Accept(this);
   EndSection();
   VisitResource(r);
   EndItem();

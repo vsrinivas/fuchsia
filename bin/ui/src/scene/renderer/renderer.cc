@@ -10,6 +10,7 @@
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
+#include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
@@ -67,6 +68,9 @@ void Renderer::Visitor::VisitNode(Node* r) {
   }
   for (auto& part : r->parts()) {
     part->Accept(this);
+  }
+  for (auto& import : r->imports()) {
+    import->delegate()->Accept(this);
   }
 }
 

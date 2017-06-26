@@ -126,8 +126,8 @@ TEST_F(ProxyResourceTest, PerformsFullLinking) {
     auto entity = FindResource<EntityNode>(2);
     ASSERT_TRUE(entity);
     ASSERT_EQ(proxy_node->bound_resource(), entity.get());
-    ASSERT_TRUE(proxy_node->ops_delegate());
-    ASSERT_EQ(proxy_node->ops_delegate()->type_info().flags,
+    ASSERT_TRUE(proxy_node->delegate());
+    ASSERT_EQ(proxy_node->delegate()->type_info().flags,
               entity->type_info().flags);
     ASSERT_EQ(entity->imports().size(), 1u);
     ASSERT_EQ(*(entity->imports().begin()), proxy_node.get());

@@ -80,7 +80,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   /// the target for ops directed at this resource. Subclasses (notably the
   /// |ProxyResource| since their binding are not mutable) may return alternate
   /// resources to act as the recipients of ops.
-  virtual Resource* GetOpsDelegate(const ResourceTypeInfo& type_info);
+  virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
 
  private:
   Session* const session_;

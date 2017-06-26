@@ -36,8 +36,9 @@ class ProxyResource final : public Resource {
   /// Returns the resource that is a suitable standin for the resource being
   /// bound to by the proxy. Imported resources are never modified by the
   /// importing session. Ops directed at the proxy resource are instead applied
-  /// to this delegate.
-  Resource* ops_delegate() { return ops_delegate_.get(); }
+  /// to this delegate. This delegate also holds the side-effects of these
+  /// operations such as the list of children which were attached.
+  Resource* delegate() { return delegate_.get(); }
 
   /// The specification used to represent the underlying type of the resource
   /// being bound to the proxy.
@@ -50,18 +51,18 @@ class ProxyResource final : public Resource {
 
   /// If an active binding exists between this proxy and a resource, returns
   /// that resource. If no binding exists, returns nullptr.
-  const Resource* bound_resource() { return imported_resource_; }
+  const Resource* bound_resource() { return bound_resource_; }
 
  private:
   // TODO(MZ-132): Don't hold onto the token for the the duration of the
   // lifetime of the proxy resource. This bloats kernel handle tables.
   mx::eventpair import_token_;
   const mozart2::ImportSpec import_spec_;
-  const ResourcePtr ops_delegate_;
-  const Resource* imported_resource_;
+  const ResourcePtr delegate_;
+  const Resource* bound_resource_;
 
   // |Resource|.
-  Resource* GetOpsDelegate(const ResourceTypeInfo& type_info) override;
+  Resource* GetDelegate(const ResourceTypeInfo& type_info) override;
 
   friend class Resource;
 

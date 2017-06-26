@@ -42,7 +42,7 @@ class ResourceMap {
       return ftl::RefPtr<ResourceT>();
     };
 
-    auto resource_ptr = it->second->GetOpsDelegate(ResourceT::kTypeInfo);
+    auto resource_ptr = it->second->GetDelegate(ResourceT::kTypeInfo);
 
     if (resource_ptr == nullptr) {
       error_reporter_->ERROR()

@@ -49,7 +49,7 @@ void Resource::UnbindFromProxy(ProxyResource* proxy) const {
       << "Proxy must not already be unbound from this resource.";
 }
 
-Resource* Resource::GetOpsDelegate(const ResourceTypeInfo& type_info) {
+Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
 }
 
