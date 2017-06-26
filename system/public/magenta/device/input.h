@@ -71,8 +71,6 @@ typedef struct boot_mouse_report {
     int8_t rel_y;
 } __attribute__((packed)) boot_mouse_report_t;
 
-extern const boot_kbd_report_t report_err_rollover;
-
 // ssize_t ioctl_input_get_protocol(int fd, int* out);
 IOCTL_WRAPPER_OUT(ioctl_input_get_protocol, IOCTL_INPUT_GET_PROTOCOL, int);
 

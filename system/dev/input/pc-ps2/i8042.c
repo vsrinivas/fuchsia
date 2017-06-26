@@ -275,6 +275,11 @@ static const uint8_t mouse_hid_report_desc[] = {
     0xC0,              // End Collection
 };
 
+static const boot_kbd_report_t report_err_rollover = {
+    .modifier = 1,
+    .usage = {1, 1, 1, 1, 1, 1 }
+};
+
 static int i8042_wait_read(void) {
     int i = 0;
     while ((~i8042_read_status() & I8042_STR_OBF) && (i < I8042_CTL_TIMEOUT)) {
