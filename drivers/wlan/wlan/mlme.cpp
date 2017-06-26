@@ -4,7 +4,6 @@
 
 #include "mlme.h"
 
-#include "device.h"
 #include "interface.h"
 #include "logging.h"
 #include "mac_frame.h"
