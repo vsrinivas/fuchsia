@@ -23,7 +23,6 @@ const String _kCurrentFocalEntitiesTopic = '/inferred/focal_entities';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final TextEditingController _controller = new TextEditingController();
-final TextEditingController _controllerEntities = new TextEditingController();
 
 /// This is used for keeping the reference around.
 ModuleImpl _module;
@@ -46,22 +45,37 @@ class ContextListenerImpl extends ContextListener {
 
   @override
   Future<Null> onUpdate(ContextUpdate result) async {
-    // Start by clearing all text.
-    _controllerEntities.clear();
     if (!result.values.containsKey(_kCurrentFocalEntitiesTopic)) {
       return;
     }
 
-    var controllerOutputText = '';
     List<dynamic> data =
         JSON.decode(result.values[_kCurrentFocalEntitiesTopic]);
+
+    String outputText = "";
+    int lastEnd = 0;
+    final String allControllerText = _controller.text;
+    // Without this, selection might be overwritten.
+    final TextSelection oldSelection = _controller.selection;
     for (dynamic entity in data) {
-      if (!(entity is Map<String, dynamic>)) continue;
-      if (entity.containsKey('start') && entity.containsKey('end')) {
-        controllerOutputText += entity['content'] + ',';
+      if (!(entity is Map<String, dynamic>) &&
+          entity.containsKey('start') &&
+          entity.containsKey('end')) {
+        final int start = entity['start'];
+        final int end = entity['end'];
+        outputText += allControllerText.substring(lastEnd, start).toLowerCase();
+        outputText += allControllerText.substring(start, end).toUpperCase();
+        lastEnd = end;
       }
     }
-    _controllerEntities.text = controllerOutputText;
+    outputText +=
+        allControllerText.substring(lastEnd, allControllerText.length);
+    if (outputText.length != allControllerText.length) {
+      _log('LENGTH MISMATCH');
+    } else {
+      _controller.text = outputText;
+      _controller.selection = oldSelection;
+    }
   }
 }
 
@@ -174,28 +188,19 @@ void main() {
   });
 
   runApp(new MaterialApp(
-      title: "Basic Text Reporter",
-      home: new Scaffold(
-        appBar: new AppBar(
-          title: new Text("Basic Text Reporter"),
+    title: "Basic Text Reporter",
+    home: new Scaffold(
+      appBar: new AppBar(
+        title: new Text("Basic Text Reporter"),
+      ),
+      body: new Container(
+        child: new TextField(
+          controller: _controller,
+          decoration: new InputDecoration(
+              hintText: 'Type something, selectable entities will become' +
+                  ' ALL CAPS'),
         ),
-        body: new Container(
-          child: new Column(
-            children: [
-              new TextField(
-                controller: _controller,
-                decoration: new InputDecoration(
-                  hintText: 'Type something',
-                ),
-              ),
-              new TextField(
-                controller: _controllerEntities,
-                decoration: new InputDecoration(
-                  hintText: '[Found entities go here]',
-                ),
-              ),
-            ],
-          ),
-        ),
-      )));
+      ),
+    ),
+  ));
 }
