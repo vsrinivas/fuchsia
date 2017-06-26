@@ -100,6 +100,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   StartAgent("file:///system/apps/agents/maxwell_btl");
   StartAgent("file:///system/apps/agents/maxwell_entity_focuser");
   StartAgent("file:///system/apps/agents/maxwell_proposal_maker");
+  StartAgent("file:///system/apps/weather_agent");
 // Toggle using the "kronk" gn arg
 #ifdef KRONK
 // Toggle using the "kronk_dev" gn arg (see README).
