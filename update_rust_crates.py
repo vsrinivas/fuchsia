@@ -12,6 +12,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path += [os.path.join(paths.FUCHSIA_ROOT, "third_party", "pytoml")]
+import pytoml as toml
+
 from check_rust_licenses import check_licenses
 
 
@@ -34,6 +37,24 @@ def get_cargo_bin():
         raise Exception("Platform not supported: %s" % host_os)
     return os.path.join(paths.FUCHSIA_ROOT, "buildtools", "rust",
                         "rust-%s" % host_triple, "bin", "cargo")
+
+
+def list_required_native_libraries(vendor_dir):
+    result = []
+    for item in os.listdir(vendor_dir):
+        if not os.path.isdir(item):
+            continue
+        with open(os.path.join(item, "Cargo.toml"), "r") as cargo_file:
+            config = toml.load(cargo_file)
+            if "links" in config["package"]:
+                result.append(config["package"]["links"])
+    return result
+
+
+def list_known_native_libraries(crates_dir):
+    globals = {}
+    execfile(os.path.join(crates_dir, "libraries.gni"), globals)
+    return globals["rust_native_libs_names"]
 
 
 def call_or_exit(args, dir):
@@ -66,12 +87,14 @@ def main():
             print(" - %s" % config)
 
         # Create Cargo.toml.
-        def mapper(p): return "\"%s\"" % os.path.join(paths.FUCHSIA_ROOT, p)
-        config = '''[workspace]
-members = [%s]
-''' % ", ".join(map(mapper, CONFIGS))
+        def mapper(p): return os.path.join(paths.FUCHSIA_ROOT, p)
+        config = {
+            "workspace": {
+                "members": list(map(mapper, CONFIGS))
+            }
+        }
         with open(toml_path, "w") as config_file:
-            config_file.write(config)
+            toml.dump(config, config_file)
 
         cargo_bin = get_cargo_bin()
 
@@ -96,8 +119,8 @@ members = [%s]
             os.remove(toml_path)
             os.remove(lock_path)
 
-    vendor_dir = os.path.join(paths.FUCHSIA_ROOT, "third_party", "rust-crates",
-                              "vendor")
+    crates_dir = os.path.join(paths.FUCHSIA_ROOT, "third_party", "rust-crates")
+    vendor_dir = os.path.join(crates_dir, "vendor")
     shutil.rmtree(vendor_dir)
     shutil.move(os.path.join(paths.FUCHSIA_ROOT, "vendor"), vendor_dir)
 
@@ -106,8 +129,16 @@ members = [%s]
         print("Some licenses are missing!")
         return 1
 
-    update_file = os.path.join(paths.FUCHSIA_ROOT, "third_party", "rust-crates",
-                               ".vendor-update.stamp")
+    print("Verifying native libraries...")
+    required_libraries = list_required_native_libraries(vendor_dir)
+    known_libraries = list_known_native_libraries(crates_dir)
+    if set(required_libraries) != set(known_libraries):
+        print("Native libraries in libraries.gni need to be updated:")
+        for lib in required_libraries:
+            print(" - %s" % lib)
+        return 1
+
+    update_file = os.path.join(crates_dir, ".vendor-update.stamp")
     # Write the timestamp file.
     # This file is necessary in order to trigger rebuilds of Rust artifacts
     # whenever third-party dependencies are updated.
@@ -115,8 +146,6 @@ members = [%s]
         os.utime(update_file, None)
 
     print("Vendor directory updated at %s" % vendor_dir)
-    print("Please verify that //third_party/rust-crates/libraries.gni is "
-          "up-to-date")
 
 
 if __name__ == '__main__':
