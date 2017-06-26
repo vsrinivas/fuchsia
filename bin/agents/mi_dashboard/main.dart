@@ -79,7 +79,7 @@ void parseConfigAndStart(String configString) {
   _webrootDirectory = new Directory(path.join(_configDir, _webrootPath));
 
   // Start the web server
-  print("[INFO] Starting MI Dashboard web server on port ${_port}...");
+  print("[INFO] Starting MI Dashboard web server on port $_port...");
   HttpServer.bind(InternetAddress.ANY_IP_V6, _port).then((server) {
     server.listen(handleRequest);
   }).catchError((error) {
