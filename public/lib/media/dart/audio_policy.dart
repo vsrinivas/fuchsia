@@ -14,12 +14,19 @@ typedef void UpdateCallback();
 class AudioPolicy {
   static const double _minLevelGain = -60.0;
   static const double _unityGain = 0.0;
+  static const double _initialGain = -12.0;
+
+  // These values determine what counts as a 'significant' change when deciding
+  // whether to call |updateCallback|.
+  static const double _minDbDiff = 0.006;
+  static const double _minPerceivedDiff = 0.0001;
 
   final AudioPolicyServiceProxy _audioPolicyService =
       new AudioPolicyServiceProxy();
 
-  double _systemAudioGainDb = -12.0;
+  double _systemAudioGainDb = _initialGain;
   bool _systemAudioMuted = false;
+  double _systemAudioPerceivedLevel = gainToLevel(_initialGain);
 
   /// Constructs a AudioPolicy object.
   AudioPolicy(ServiceProvider services) {
@@ -27,7 +34,7 @@ class AudioPolicy {
     _handleServiceUpdates(AudioPolicyService.kInitialStatus, null);
   }
 
-  /// Called when properties have changed.
+  /// Called when properties have changed significantly.
   UpdateCallback updateCallback;
 
   /// Disposes this object.
@@ -44,7 +51,19 @@ class AudioPolicy {
   /// implicitly set to true. When gain is changed from -160db to a higher
   /// value, |systemAudioMuted| is implicitly set to false.
   set systemAudioGainDb(double value) {
-    _audioPolicyService.setSystemAudioGain(value);
+    value = value.clamp(AudioRenderer.kMutedGain, _unityGain);
+    if (_systemAudioGainDb == value) {
+      return;
+    }
+
+    _systemAudioGainDb = value;
+    _systemAudioPerceivedLevel = gainToLevel(value);
+
+    if (_systemAudioGainDb == AudioRenderer.kMutedGain) {
+      _systemAudioMuted = true;
+    }
+
+    _audioPolicyService.setSystemAudioGain(_systemAudioGainDb);
   }
 
   /// Gets system-wide audio muted state. |systemAudioMuted| is always true
@@ -54,27 +73,47 @@ class AudioPolicy {
   /// Sets system-wide audio muted state. Setting this value to false when
   /// |systemAudioGainDb| is -160db has no effect.
   set systemAudioMuted(bool value) {
-    _audioPolicyService.setSystemAudioMute(value);
+    value = value || _systemAudioGainDb == AudioRenderer.kMutedGain;
+    if (_systemAudioMuted == value) {
+      return;
+    }
+
+    _systemAudioMuted = value;
+    _audioPolicyService.setSystemAudioMute(_systemAudioMuted);
   }
 
-  /// Gets the perceived system-wide audio level in the range [0,1].
-  double get systemAudioPerceivedLevel => gainToLevel(_systemAudioGainDb);
+  /// Gets the perceived system-wide audio level in the range [0,1]. This value
+  /// is intended to be used for volume sliders. If there is no separate mute
+  /// control, use (systemAudioMuted ? 0.0 : systemAudioPerceivedLevel).
+  double get systemAudioPerceivedLevel => _systemAudioPerceivedLevel;
 
   /// Sets the perceived system-wide audio level in the range [0,1]. When this
   /// property is set to 0.0, |systemAudioGainDb| is set to -160db and
   /// |systemAudioMuted| is implicitly set to true.
   set systemAudioPerceivedLevel(double value) {
-    _audioPolicyService.setSystemAudioGain(levelToGain(value));
+    _systemAudioPerceivedLevel = value.clamp(0.0, 1.0);
+    _systemAudioGainDb = levelToGain(_systemAudioPerceivedLevel);
+    _audioPolicyService.setSystemAudioGain(_systemAudioGainDb);
   }
 
   // Handles a status update from the audio policy service. Call with
   // kInitialStatus, null to initiate status updates.
   void _handleServiceUpdates(int version, AudioPolicyStatus status) {
     if (status != null) {
+      bool callUpdate = _systemAudioMuted != status.systemAudioMuted ||
+          (_systemAudioGainDb - status.systemAudioGainDb).abs() > _minDbDiff;
+
       _systemAudioGainDb = status.systemAudioGainDb;
       _systemAudioMuted = status.systemAudioMuted;
 
-      if (updateCallback != null) {
+      double newPerceivedLevel = gainToLevel(_systemAudioGainDb);
+      if ((_systemAudioPerceivedLevel - newPerceivedLevel).abs() >
+          _minPerceivedDiff) {
+        _systemAudioPerceivedLevel = newPerceivedLevel;
+        callUpdate = true;
+      }
+
+      if (callUpdate && updateCallback != null) {
         updateCallback();
       }
     }
