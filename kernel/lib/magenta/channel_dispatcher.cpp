@@ -310,8 +310,6 @@ status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
 
 status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
-
-    AutoLock lock(&lock_);
     state_tracker_.UpdateState(clear_mask, set_mask);
     return MX_OK;
 }

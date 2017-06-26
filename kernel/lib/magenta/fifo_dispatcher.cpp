@@ -67,6 +67,34 @@ mx_status_t FifoDispatcher::Init(mxtl::RefPtr<FifoDispatcher> other) TA_NO_THREA
     return MX_OK;
 }
 
+mx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+    canary_.Assert();
+
+    if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
+        return MX_ERR_INVALID_ARGS;
+
+    if (!peer) {
+        state_tracker_.UpdateState(clear_mask, set_mask);
+        return MX_OK;
+    }
+
+    mxtl::RefPtr<FifoDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_)
+            return MX_ERR_PEER_CLOSED;
+        other = other_;
+    }
+
+    return other->UserSignalSelf(clear_mask, set_mask);
+}
+
+mx_status_t FifoDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+    canary_.Assert();
+    state_tracker_.UpdateState(clear_mask, set_mask);
+    return MX_OK;
+}
+
 void FifoDispatcher::on_zero_handles() {
     canary_.Assert();
 

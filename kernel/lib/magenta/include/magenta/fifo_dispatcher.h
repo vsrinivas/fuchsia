@@ -33,6 +33,7 @@ public:
     mx_koid_t get_related_koid() const final { return peer_koid_; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
+    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
     mx_status_t Write(const uint8_t* src, size_t len, uint32_t* actual);
     mx_status_t Read(uint8_t* dst, size_t len, uint32_t* actual);
@@ -49,6 +50,7 @@ private:
                           fifo_copy_from_fn_t copy_from_fn);
     mx_status_t Read(uint8_t* ptr, size_t len, uint32_t* actual,
                      fifo_copy_to_fn_t copy_to_fn);
+    mx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
 
     void OnPeerZeroHandles();
 
