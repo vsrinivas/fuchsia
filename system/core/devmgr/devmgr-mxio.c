@@ -95,13 +95,18 @@ mx_status_t devmgr_launch(mx_handle_t job, const char* name,
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
 
+    const char* nametable[2] = { "/", "/svc", };
+    size_t name_count = 0;
+
     mx_handle_t h = vfs_create_global_root_handle();
-    launchpad_add_handle(lp, h, PA_MXIO_ROOT);
+    launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
 
     //TODO: constrain to /svc/debug, or other as appropriate
     if (strcmp(name, "init") && ((h = get_service_root()) != MX_HANDLE_INVALID)) {
-        launchpad_add_handle(lp, h, PA_SERVICE_ROOT);
+        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
     }
+
+    launchpad_set_nametable(lp, name_count, nametable);
 
     if (stdiofd < 0) {
         mx_status_t r;

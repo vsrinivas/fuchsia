@@ -489,23 +489,26 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &h);
     launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
 
+    // Inherit devmgr's environment (including kernel cmdline)
     launchpad_clone(lp, LP_CLONE_ENVIRON);
+
+    const char* nametable[2] = { "/", "/svc", };
+    size_t name_count = 0;
 
     //TODO: eventually devhosts should not have vfs access
     launchpad_add_handle(lp, vfs_create_global_root_handle(),
-                         PA_HND(PA_MXIO_ROOT, 0));
+                         PA_HND(PA_NS_DIR, name_count++));
 
     //TODO: constrain to /svc/device
     if ((h = get_service_root()) != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, PA_SERVICE_ROOT);
+        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
     }
+
+    launchpad_set_nametable(lp, name_count, nametable);
 
     //TODO: limit root job access to root devhost only
     launchpad_add_handle(lp, get_sysinfo_job_root(),
                          PA_HND(PA_USER0, ID_HJOBROOT));
-
-    // Inherit devmgr's environment (including kernel cmdline)
-    launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);
 
     const char* errmsg;
     mx_status_t status = launchpad_go(lp, &host->proc, &errmsg);
