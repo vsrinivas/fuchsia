@@ -26,10 +26,12 @@
 #endif
 
 // VFS Helpers (vfs.c)
-#define V_FLAG_DEVICE                 1
-#define V_FLAG_MOUNT_READY            2
-#define V_FLAG_DEVICE_DETACHED        4
-#define V_FLAG_RESERVED_MASK 0x0000FFFF
+// clang-format off
+#define V_FLAG_DEVICE          0x00000001
+#define V_FLAG_MOUNT_READY     0x00000002
+#define V_FLAG_DEVICE_DETACHED 0x00000004
+#define V_FLAG_RESERVED_MASK   0x0000FFFF
+// clang-format on
 
 __BEGIN_CDECLS
 // A lock which should be used to protect lookup and walk operations

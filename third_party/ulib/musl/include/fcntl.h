@@ -64,6 +64,7 @@ int posix_fallocate(int, off_t, off_t);
 
 #ifdef _ALL_SOURCE
 #define O_NOREMOTE 0100000000
+#define O_ADMIN    0200000000
 #endif
 // clang-format on
 

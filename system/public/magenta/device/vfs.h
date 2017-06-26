@@ -12,10 +12,13 @@
 
 #define IOCTL_VFS_MOUNT_FS \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 0)
-// Unmount the filesystem which 'fd' belongs to.
+// Unmount the filesystem which 'fd' belongs to. Requires O_ADMIN,
+// which is only provided with the original iostate from the
+// root Vnode of a mounted filesystem.
 #define IOCTL_VFS_UNMOUNT_FS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_VFS, 1)
-// If a filesystem is mounted on the node represented by 'fd', unmount it.
+// If a filesystem is mounted on the node represented by 'fd', detach
+// the connection to the filesystem and return it.
 #define IOCTL_VFS_UNMOUNT_NODE \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 2)
 // Add a bootfs vmo to the system fs.

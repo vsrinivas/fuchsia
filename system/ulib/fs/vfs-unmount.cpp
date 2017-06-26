@@ -46,6 +46,14 @@ mx_status_t vfs_unmount_handle(mx_handle_t srv, mx_time_t deadline) {
     if (status == MX_ERR_CALL_FAILED) {
         // Write phase succeeded. The target filesystem had a chance to unmount properly.
         status = MX_OK;
+    } else if (status == MX_OK) {
+        // Read phase succeeded. If the target filesystem returned an error, we
+        // should parse it.
+        if (dsize < MXRIO_HDR_SZ) {
+            status = MX_ERR_IO;
+        } else {
+            status = msg.arg;
+        }
     }
     mx_handle_close(srv);
     return status;

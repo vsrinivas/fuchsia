@@ -1176,8 +1176,8 @@ static bool InvalidOps(void) {
     ASSERT_LT(truncate(info->path, 0), 0, "");
     ASSERT_LT(utime(info->path, nullptr), 0, "");
 
-    // TODO(smklein): Test that a blob fd cannot unmount the entire blobstore.
-    //    ASSERT_LT(ioctl_vfs_unmount_fs(fd), 0, "");
+    // Test that a blob fd cannot unmount the entire blobstore.
+    ASSERT_LT(ioctl_vfs_unmount_fs(fd), 0, "");
 
     // Access the file once more, after these operations
     ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
