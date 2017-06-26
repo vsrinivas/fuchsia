@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <sys/types.h>
+#include <dirent.h>
+
 #include "apps/modular/src/bootstrap/app.h"
 
 #include <magenta/process.h>
@@ -25,10 +28,8 @@ void LaunchNetstack(app::ServiceProvider* provider) {
 
 }  // namespace
 
-constexpr char kServicesConfigFile[] = "/system/data/bootstrap/services.config";
-constexpr char kLoadersConfigFile[] = "/system/data/bootstrap/loaders.config";
-constexpr char kAppsConfigFile[] = "/system/data/bootstrap/apps.config";
 constexpr char kDefaultLabel[] = "boot";
+constexpr char kConfigDir[] = "/system/data/bootstrap/";
 
 App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -36,12 +37,29 @@ App::App()
   FTL_DCHECK(application_context_);
 
   Config config;
-  if (!config.ReadFrom(kServicesConfigFile))
-    FTL_LOG(WARNING) << "Could not parse " << kServicesConfigFile;
-  if (!config.ReadFrom(kLoadersConfigFile))
-    FTL_LOG(WARNING) << "Could not parse " << kLoadersConfigFile;
-  if (!config.ReadFrom(kAppsConfigFile))
-    FTL_LOG(WARNING) << "Could not parse " << kAppsConfigFile;
+  char buf[PATH_MAX];
+  if (strlcpy(buf, kConfigDir, PATH_MAX) >= PATH_MAX) {
+    FTL_LOG(ERROR) << "Config directory path too long";
+  } else {
+    const size_t dir_len = strlen(buf);
+    DIR *cfg_dir = opendir(kConfigDir);
+    if (cfg_dir != NULL) {
+      for (dirent *cfg = readdir(cfg_dir); cfg != NULL; cfg = readdir(cfg_dir)) {
+        if (strcmp(".", cfg->d_name) == 0 || strcmp("..", cfg->d_name) == 0) {
+          continue;
+        }
+        if (strlcat(buf, cfg->d_name, PATH_MAX) >= PATH_MAX) {
+          FTL_LOG(WARNING) << "Could not read config file, path too long";
+          continue;
+        }
+        config.ReadFrom(buf);
+        buf[dir_len] = '\0';
+      }
+      closedir(cfg_dir);
+    } else {
+      FTL_LOG(WARNING) << "Could not open config directory" << kConfigDir;
+    }
+  }
 
   // Set up environment for the programs we will run.
   app::ApplicationEnvironmentHostPtr env_host;
