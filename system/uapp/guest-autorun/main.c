@@ -16,9 +16,9 @@ uint8_t buf[PAGE_SIZE];
 int main(int argc, char** argv) {
     int fd;
     while ((fd = open(path, O_RDWR)) < 0) {
-        mx_status_t status = mx_deadline_after(MX_SEC(1));
+        mx_status_t status = mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to sleep\n");
+            fprintf(stderr, "Failed to sleep %d\n", status);
             return status;
         }
     }
