@@ -16,6 +16,7 @@
 #include "lib/mtl/handles/object_info.h"
 #include "third_party/skia/include/gpu/GrBackendSurface.h"
 #include "third_party/skia/include/gpu/GrContext.h"
+#include "third_party/skia/include/gpu/GrTexture.h"
 #include "third_party/skia/src/gpu/GrResourceProvider.h"
 #include "third_party/skia/src/gpu/vk/GrVkGpu.h"
 
