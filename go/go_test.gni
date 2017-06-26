@@ -4,47 +4,11 @@
 
 # A template for an action that creates a Fuchsia Go test binary.
 
+import("//build/go/go_build.gni")
+
 template("go_test") {
-  assert(defined(invoker.gopackage),
-         "gopackage must be defined for $target_name")
-
-  action(target_name) {
-    testonly = true
-
-    forward_variables_from(invoker, [ "deps" ])
-
-    out_path = "$root_out_dir/$target_name"
-
-    outputs = [ out_path ]
-
-    script = rebase_path("//build/go/build.py")
-    depfile_path = "${out_path}.d"
-    depfile = depfile_path
-    console = true # only run one gobuild.py at once
-
-    args = [
-      "--fuchsia-root",
-      rebase_path("//."),
-      "--root-out-dir",
-      rebase_path("$root_out_dir"),
-      "--depfile",
-      rebase_path(depfile_path),
-      "--current-cpu",
-      current_cpu,
-      "--current-os",
-      current_os,
-      "--is-test=true",
-      "--binname",
-      target_name,
-      "--go-tool",
-      rebase_path("//buildtools/go"),
-      invoker.gopackage,
-    ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
-
-    deps += [ "//third_party/go:go_runtime" ]
+  go_build(target_name) {
+    forward_variables_from(invoker, "*")
+    test = true
   }
 }

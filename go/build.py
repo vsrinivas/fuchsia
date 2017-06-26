@@ -9,6 +9,9 @@ import argparse
 import os
 import subprocess
 import sys
+import string
+import shutil
+import errno
 
 
 def main():
@@ -26,7 +29,9 @@ def main():
     parser.add_argument('--go-tool', help='The go tool to use for builds')
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
-    parser.add_argument('--binname', help='Output file')
+    parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
+                        action='append')
+    parser.add_argument('--binname', help='Output file', required=True)
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
 
@@ -40,47 +45,57 @@ def main():
         'mac': 'darwin',
         'win': 'windows',
     }[args.current_os]
-    gopath = args.root_out_dir
 
-    if args.current_os == 'fuchsia':
-        os.environ['CGO_ENABLED'] = '1'
-    os.environ['GOARCH'] = goarch
-    os.environ['GOOS'] = goos
-    os.environ['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
-    if 'GOBIN' in os.environ:
-        del os.environ['GOBIN']
-    if 'GOROOT' in os.environ:
-        del os.environ['GOROOT']
-    godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
+    # Project path is a package specific gopath, also known as a "project" in go parlance.
+    project_path = os.path.join(args.root_out_dir, 'gen', 'gopaths',
+                                os.path.relpath(args.binname, args.root_out_dir))
 
-    if args.is_test:
-        retcode = subprocess.call([args.go_tool, 'test', '-c', '-o', args.binname,
-                                  args.package], env=os.environ)
+    # Clean up any old project path to avoid leaking old dependencies
+    shutil.rmtree(os.path.join(project_path, 'src'), ignore_errors=True)
+    os.makedirs(os.path.join(project_path, 'src'))
+
+    if args.go_dependency:
+      # Create a gopath for the packages dependency tree
+      for dep in args.go_dependency:
+        dst, src = string.split(dep, '=', 2)
+        dstdir = os.path.join(project_path, 'src', os.path.dirname(dst))
+        try:
+          os.makedirs(dstdir)
+        except OSError as e:
+          # EEXIST occurs if two gopath entries share the same parent name
+          if e.errno != errno.EEXIST:
+            raise
+        tgt = os.path.join(dstdir, os.path.basename(dst))
+        os.symlink(src, tgt)
+
+      gopath = project_path
     else:
-        retcode = subprocess.call([args.go_tool, 'install', args.package],
-                                  env=os.environ)
+      # NOTE(raggi): DEPRECATED: this is superseded by a project path if --go-dependency is used.
+      # NOTE(raggi): can be removed once all gopath entries are removed from //packages/gn/*
+      gopath = args.root_out_dir
+
+    env = {}
+    if args.current_os == 'fuchsia':
+        env['CGO_ENABLED'] = '1'
+    env['GOARCH'] = goarch
+    env['GOOS'] = goos
+    env['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
+
+    cmd = [args.go_tool]
+    if args.is_test:
+      cmd += ['test', '-c']
+    else:
+      cmd += ['build']
+    cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o', args.binname, args.package]
+
+    retcode = subprocess.call(cmd, env=env)
 
     if retcode == 0:
-        if args.is_test:
-            binname = args.binname
-        else:
-            # For regular Go binaries, they are placed in a "bin/fuchsia_ARCH"
-            # output directory; this relocates them to the root of the
-            # gopath. Tests are not impacted.
-            binname = os.path.basename(args.package)
-            src = os.path.join(gopath, "bin", "fuchsia_"+goarch, binname)
-            if args.binname:
-                dst = os.path.join(gopath, args.binname)
-            else:
-                dst = os.path.join(gopath, binname)
-            os.rename(src, dst)
-
+        godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
-                os.environ['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
-                if args.binname:
-                    binname = os.path.basename(args.binname)
-                subprocess.Popen([godepfile, '-o', binname, args.package], stdout=out, env=os.environ)
+                env['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
+                subprocess.Popen([godepfile, '-o', args.binname, args.package], stdout=out, env=env)
     return retcode
 
 
