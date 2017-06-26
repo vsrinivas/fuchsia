@@ -43,17 +43,9 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
             launchpad_set_nametable(lp, flat->count, flat->path);
             launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
             free(flat);
-        } else {
-            if (status == MX_ERR_NOT_FOUND) {
-                // if there's no root namespace, fail back to the legacy handles
-                add_mxio(lp, handles, types, mxio_clone_root(handles, types));
-                if ((status = mxio_clone_svcroot(handles, types)) > 0) {
-                    add_mxio(lp, handles, types, status);
-                }
-            } else {
-                launchpad_abort(lp, status, "clone: error cloning namespace");
-                return status;
-            }
+        } else if (status != MX_ERR_NOT_FOUND) {
+            launchpad_abort(lp, status, "clone: error cloning namespace");
+            return status;
         }
     }
     if (what & LP_CLONE_MXIO_CWD && (status = mxio_clone_cwd(handles, types)) > 0) {

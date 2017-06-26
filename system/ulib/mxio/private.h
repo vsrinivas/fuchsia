@@ -198,7 +198,6 @@ typedef struct {
     mtx_t cwd_lock;
     bool init;
     mode_t umask;
-    mx_handle_t svc_root;
     mxio_t* root;
     mxio_t* cwd;
     mxio_t* fdtab[MAX_MXIO_FD];
@@ -215,5 +214,4 @@ extern mxio_state_t __mxio_global_state;
 #define mxio_cwd_path (__mxio_global_state.cwd_path)
 #define mxio_fdtab (__mxio_global_state.fdtab)
 #define mxio_root_init (__mxio_global_state.init)
-#define mxio_svc_root (__mxio_global_state.svc_root)
 #define mxio_root_ns (__mxio_global_state.ns)

@@ -484,9 +484,6 @@ void __libc_extensions_init(uint32_t handle_count,
         }
 
         switch (PA_HND_TYPE(handle_info[n])) {
-        case PA_MXIO_ROOT:
-            mxio_root_handle = mxio_remote_create(h, 0);
-            break;
         case PA_MXIO_CWD:
             mxio_cwd_handle = mxio_remote_create(h, 0);
             break;
@@ -521,11 +518,6 @@ void __libc_extensions_init(uint32_t handle_count,
                 mx_handle_close(h);
             }
             break;
-        case PA_SERVICE_ROOT:
-            mxio_svc_root = h;
-            // do not remove handle, so it is available
-            // to higher level service connection code
-            continue;
         case PA_NS_DIR:
             // we always contine here to not steal the
             // handles from higher level code that may
@@ -606,7 +598,7 @@ mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types) {
     // in normal operation
     mx_status_t r = mxio_root_handle->ops->clone(mxio_root_handle, handles, types);
     if (r > 0) {
-        *types = PA_MXIO_ROOT;
+        *types = PA_MXIO_REMOTE;
     }
     return r;
 }

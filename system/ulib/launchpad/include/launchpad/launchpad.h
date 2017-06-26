@@ -171,7 +171,6 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 // running process to be shared with the process being launched.
 // The items shared are as of the call to launchpad_clone().
 //
-// CLONE_MXIO_ROOT       shares the root filestem view
 // CLONE_MXIO_NAMESPACE  shares the filestem namespace
 // CLONE_MXIO_CWD        shares the current working directory
 // CLONE_MXIO_STDIO      shares file descriptors 0, 1, and 2
@@ -184,7 +183,6 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 // launchpad_clone_fd() and launchpad_trasnfer_fd() may be used to
 // add additional file descriptors to the launched process.
 #define LP_CLONE_MXIO_NAMESPACE  (0x0001u)
-#define LP_CLONE_MXIO_ROOT       LP_CLONE_MXIO_NAMESPACE // TODO(abarth): remove deprecated alias
 #define LP_CLONE_MXIO_CWD        (0x0002u)
 #define LP_CLONE_MXIO_STDIO      (0x0004u)
 #define LP_CLONE_MXIO_ALL        (0x00FFu)

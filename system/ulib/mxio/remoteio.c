@@ -551,14 +551,6 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
         mx_handle_close(h);
         return MX_ERR_INVALID_ARGS;
     }
-    // If there's an explicit svcroot handle,
-    // attempt to connect through that
-    if (mxio_svc_root != MX_HANDLE_INVALID) {
-        if (strncmp("/svc/", svcpath, 5)) {
-            goto not_found;
-        }
-        return mxio_service_connect_at(mxio_svc_root, svcpath + 5, h);
-    }
     // Otherwise attempt to connect through the root namespace
     if (mxio_root_ns != NULL) {
         return mxio_ns_connect(mxio_root_ns, svcpath, h);
@@ -595,25 +587,6 @@ mx_handle_t mxio_service_clone(mx_handle_t svc) {
         return MX_HANDLE_INVALID;
     }
     return cli;
-}
-
-mx_status_t mxio_clone_svcroot(mx_handle_t* handles, uint32_t* types) {
-    mx_handle_t svc = mxio_svc_root;
-    if (svc == MX_HANDLE_INVALID) {
-        return MX_ERR_BAD_HANDLE;
-    }
-    mx_handle_t cli, srv;
-    mx_status_t r;
-    if ((r = mx_channel_create(0, &cli, &srv)) < 0) {
-        return r;
-    }
-    if ((r = mxrio_connect(svc, srv, MXRIO_CLONE, "")) < 0) {
-        mx_handle_close(cli);
-        return r;
-    }
-    handles[0] = cli;
-    types[0] = PA_SERVICE_ROOT;
-    return 1;
 }
 
 mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
