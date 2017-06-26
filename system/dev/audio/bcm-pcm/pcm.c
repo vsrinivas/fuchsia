@@ -376,7 +376,10 @@ static mx_status_t pcm_set_stream_fmt(bcm_pcm_t* ctx, audio2_stream_cmd_set_form
     if (status != MX_OK)
         goto set_stream_fail;
 
-    status = mx_port_bind(ctx->pcm_port, (uint64_t)ctx->buffer_ch, ctx->buffer_ch, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
+    status = mx_object_wait_async(ctx->buffer_ch, ctx->pcm_port,
+                                  (uint64_t)ctx->buffer_ch,
+                                  MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                                  MX_WAIT_ASYNC_REPEATING);
     if (status == MX_OK)
         goto set_stream_done;
 
@@ -500,20 +503,20 @@ static int pcm_port_thread(void* arg) {
     bcm_pcm_t* ctx = arg;
     mx_status_t status;
 
-    mx_io_packet_t port_out;
+    mx_port_packet_t port_out;
 
     buffer_packet_t req;
     xprintf("Port thread running\n");
     while ((ctx->stream_ch != MX_HANDLE_INVALID) || (ctx->buffer_ch != MX_HANDLE_INVALID)) {
-        status = mx_port_wait(ctx->pcm_port, MX_TIME_INFINITE, &port_out, sizeof(port_out));
+        status = mx_port_wait(ctx->pcm_port, MX_TIME_INFINITE, &port_out, 0);
         if (status != MX_OK)
             break;
 
-        mx_handle_t channel = (mx_handle_t)port_out.hdr.key;
+        mx_handle_t channel = (mx_handle_t)port_out.key;
 
         uint32_t req_size;
 
-        if (port_out.signals == MX_CHANNEL_READABLE) {
+        if (port_out.signal.observed == MX_CHANNEL_READABLE) {
 
             status = mx_channel_read(channel, 0, &req, NULL, sizeof(req), 0, &req_size, NULL);
             if (status != MX_OK) {
@@ -545,7 +548,7 @@ static int pcm_port_thread(void* arg) {
                     break;
                 }
             }
-        } else if (port_out.signals == MX_CHANNEL_PEER_CLOSED) {
+        } else if (port_out.signal.observed== MX_CHANNEL_PEER_CLOSED) {
             if (channel == ctx->stream_ch) {
                 xprintf("stream channel closed by peer\n");
                 pcm_close_handle(&ctx->stream_ch);
@@ -597,16 +600,17 @@ static mx_status_t pcm_audio2_sink_ioctl(void* ctx, uint32_t op,
     }
     *reply = ret_handle;
 
-    status = mx_port_create(0, &pcm->pcm_port);
+    status = mx_port_create(MX_PORT_OPT_V2, &pcm->pcm_port);
     if (status != MX_OK) {
         xprintf("error creating port\n");
         mx_handle_close(pcm->stream_ch);
         goto pcm_ioctl_end;
     }
 
-    status = mx_port_bind(pcm->pcm_port, (uint64_t)pcm->stream_ch, pcm->stream_ch,
-                                MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-
+    status = mx_object_wait_async(pcm->stream_ch, pcm->pcm_port,
+                                  (uint64_t)pcm->stream_ch,
+                                  MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                                  MX_WAIT_ASYNC_REPEATING);
     if (status != MX_OK) {
         xprintf("error binding port to stream_ch\n");
         mx_handle_close(pcm->stream_ch);
