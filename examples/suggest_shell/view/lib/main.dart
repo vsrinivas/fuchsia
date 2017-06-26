@@ -153,7 +153,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             child: new Column(children: [
               new Text('[type and terminate input with <<]'),
               new Text('Active input: ${_state.value}'),
-              new Text('Next input: ${_value}')
+              new Text('Next input: $_value')
             ])));
   }
 
