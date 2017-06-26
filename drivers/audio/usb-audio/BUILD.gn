@@ -18,6 +18,7 @@ shared_library("usb-audio") {
     deps = [
         "//drivers/audio/audio-proto",
         "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+        "//magenta/system/ulib/ddktl",
         "//magenta/system/ulib/mx",
         "//magenta/system/ulib/mxtl",
     ]
