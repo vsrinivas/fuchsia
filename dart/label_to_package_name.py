@@ -6,26 +6,28 @@
 import string
 import sys
 
-
 # For target //foo/bar:blah, the package name will be foo.bar..blah.
 # For default targets //foo/bar:bar, the package name will be foo.bar.
-def main():
-  label = sys.argv[1]
+def convert(label):
   if not label.startswith("//"):
-      print "expected label to start with //, got %s" % label
+      sys.stderr.write("expected label to start with //, got %s\n" % label)
       return 1
   base = label[2:]
   separator_index = string.rfind(base, ":")
   if separator_index < 0:
-      print "could not find target name in label %s" % label
+      sys.stderr.write("could not find target name in label %s\n" % label)
       return 1
   path = base[:separator_index].split("/")
   name = base[separator_index+1:]
   if path[-1] == name:
-      print ".".join(path)
+      return ".".join(path)
   else:
-      print "%s..%s" % (".".join(path), name)
-  return 0
+      return "%s..%s" % (".".join(path), name)
+
+
+def main():
+  print convert(sys.argv[1])
+
 
 if __name__ == '__main__':
   sys.exit(main())

@@ -8,6 +8,8 @@ import os
 import string
 import sys
 
+import label_to_package_name
+
 def parse_dot_packages(dot_packages_path):
   deps = {}
   with open(dot_packages_path) as dot_packages:
@@ -41,8 +43,9 @@ def main():
                       help="Path to root of the build directory", required=True)
   parser.add_argument("--root-gen-dir",
                       help="Path to root of the gen directory", required=True)
-  parser.add_argument("--package-name", help="Name of this package",
-                      required=True)
+  parser.add_argument("--package-name", help="Name of this package")
+  parser.add_argument("--package-label", help="Label of target for this package"
+          "from which the package name is inferred")
   parser.add_argument("--source-dir", help="Path to package source",
                       required=True)
   parser.add_argument(
@@ -59,7 +62,11 @@ def main():
   dependent_files = []
 
   package_deps = {}
-  package_deps[args.package_name] = args.source_dir
+  if args.package_name:
+      package_name = args.package_name
+  else:
+      package_name = label_to_package_name.convert(args.package_label)
+  package_deps[package_name] = args.source_dir
   for dep in args.deps:
     if not dep.startswith("//"):
       print "Error, expected dependency label to start with //"
