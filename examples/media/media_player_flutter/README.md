@@ -9,13 +9,10 @@ Run the app as follows:
 
     launch media_player_flutter
 
-The initial screen is a menu of content items that can be played. Touch one of
-the items to play it. Note that the default config file contains only one item.
-
-Flutter apps can't currently process command line parameters, and supporting
-text entry is problematic. For these reasons, media_player_flutter relies on
-a config file to determine what content to play. The app allows the user to
-choose from a number of playable items.
+The initial screen is a menu of content items that can be played, unless the
+config file contains only one asset, in which case the chooser screen is
+skipped. Touch one of the items to play it. Note that the default config file
+contains only one item.
 
 The app will look for config files in two places, reading only the first file
 it finds:
@@ -120,21 +117,17 @@ field is required for remotes and prohibited for all other types.
 Specifies the name of the service (in the NetConnector sense) for a remote. This
 field is required for remotes and prohibited for all other types.
 
-## AUDIO SUPPORT
-
-Audio output works on e.g. Acer with a supported USB audio device. We currently
-have no drivers for non-USB audio devices. The media player will play audio-only
-files.
-
 ## FORMAT SUPPORT
 
 * Containers
   * MATROSKA (MKV)
   * OGG
+  * FLAC
   * WAV
 * Encodings
   * THEORA
   * VP3
   * VP8
   * VORBIS
+  * FLAC
   * PCM (various)

@@ -44,12 +44,6 @@ requires a touch to focus the keyboard. Touching anywhere but the progress bar
 toggles between play and pause. Touching the progress bar does a seek to that
 point. The space bar toggles between play and pause. 'q' quits.
 
-## AUDIO SUPPORT
-
-Audio output works on e.g. Acer with a supported USB audio device. We currently
-have no drivers for non-USB audio devices. The media player will play audio-only
-files.
-
 ## FORMAT SUPPORT
 
 Using the default ffmpeg profile, the following formats are supported.
@@ -57,6 +51,7 @@ Using the default ffmpeg profile, the following formats are supported.
 * Containers
   * MATROSKA (MKV)
   * OGG
+  * FLAC
   * WAV
 * Encodings
   * THEORA
@@ -64,4 +59,5 @@ Using the default ffmpeg profile, the following formats are supported.
   * VP8
   * VP9
   * VORBIS
+  * FLAC
   * PCM (various)
