@@ -41,6 +41,10 @@
             "bootfs_path": "apps/weather_forecast"
         },
         {
+            "binary": "weather_agent.dartx",
+            "bootfs_path": "apps/weather_agent"
+        },
+        {
             "binary": "gen/apps/modules/common/modules/usps/usps.flx",
             "bootfs_path": "apps/usps"
         },
