@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   int stderr_pipe;
   launchpad_create(0, argv[1], &launchpad);
   launchpad_load_from_file(launchpad, argv[1]);
-  launchpad_clone(launchpad, LP_CLONE_MXIO_ROOT);
+  launchpad_clone(launchpad, LP_CLONE_MXIO_NAMESPACE);
   launchpad_add_pipe(launchpad, &stdout_pipe, 1);
   launchpad_add_pipe(launchpad, &stderr_pipe, 2);
   launchpad_set_args(launchpad, argc - 1, argv + 1);
