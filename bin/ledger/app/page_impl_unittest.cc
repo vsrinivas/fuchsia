@@ -961,6 +961,18 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(value, ToString(actual_value));
+
+  fidl::Array<uint8_t> actual_inlined_value;
+  auto callback_get_inline = [this, &actual_inlined_value](
+                                 Status status, fidl::Array<uint8_t> value) {
+    EXPECT_EQ(Status::OK, status);
+    actual_inlined_value = std::move(value);
+    message_loop_.PostQuitTask();
+  };
+
+  snapshot->GetInline(convert::ToArray(key), callback_get_inline);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(value, convert::ToString(actual_inlined_value));
 }
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
@@ -990,6 +1002,14 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(value_string, ToString(actual_value));
+
+  auto callback_get_inline = [this](Status status, fidl::Array<uint8_t> value) {
+    EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
+    message_loop_.PostQuitTask();
+  };
+
+  snapshot->GetInline(convert::ToArray(key), callback_get_inline);
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
@@ -1012,6 +1032,14 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   mx::vmo actual_value;
   snapshot->Get(convert::ToArray(key),
                 ::callback::Capture(postquit_callback, &status, &actual_value));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::NEEDS_FETCH, status);
+
+  fidl::Array<uint8_t> actual_inlined_value;
+  snapshot->GetInline(
+      convert::ToArray(key),
+      ::callback::Capture(postquit_callback, &status, &actual_inlined_value));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);

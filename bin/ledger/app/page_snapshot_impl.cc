@@ -234,6 +234,36 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
   });
 }
 
+void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
+                                 const GetInlineCallback& callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_inline");
+
+  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
+    this, callback = std::move(timed_callback)
+  ](storage::Status status, storage::Entry entry) {
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+               nullptr);
+      return;
+    }
+    PageUtils::GetReferenceAsStringView(
+        page_storage_, entry.object_id, storage::PageStorage::Location::LOCAL,
+        Status::NEEDS_FETCH,
+        [callback = std::move(callback)](Status status,
+                                         ftl::StringView data_view) {
+          if (fidl_serialization::GetByteArraySize(data_view.size()) +
+                  // Size of the Status.
+                  fidl_serialization::kEnumSize >
+              fidl_serialization::kMaxInlineDataSize) {
+            callback(Status::VALUE_TOO_LARGE, nullptr);
+            return;
+          }
+          callback(status, convert::ToArray(data_view));
+        });
+  });
+}
+
 void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
                              const FetchCallback& callback) {
   auto timed_callback =

@@ -26,6 +26,7 @@ enum Status {
   NO_TRANSACTION_IN_PROGRESS,
   INTERNAL_ERROR,
   CONFIGURATION_ERROR,
+  VALUE_TOO_LARGE,
   UNKNOWN_ERROR = -1,
 };
 
@@ -216,6 +217,11 @@ interface PageSnapshot {
   // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
   // be retrieved over the network using a Fetch() call.
   Get(array<uint8> key) => (Status status, handle<vmo>? value);
+
+  // Returns the value of a given key if it fits in a FIDL message.
+  // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
+  // See |Get()| for additional information.
+  GetInline(array<uint8> key) => (Status status, array<uint8>? value);
 
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network

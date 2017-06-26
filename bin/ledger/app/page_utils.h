@@ -24,6 +24,14 @@ class PageUtils {
   static Status ConvertStatus(storage::Status status,
                               Status not_found_status = Status::INTERNAL_ERROR);
 
+  // Returns a Reference as a StringView with no offset.
+  static void GetReferenceAsStringView(
+      storage::PageStorage* storage,
+      convert::ExtendedStringView opaque_id,
+      storage::PageStorage::Location location,
+      Status not_found_status,
+      std::function<void(Status, ftl::StringView)> callback);
+
   // Returns a subset of a Reference contents as a buffer. |offset| can be
   // negative. In that case, the offset is understood as starting from the end
   // of the contents.

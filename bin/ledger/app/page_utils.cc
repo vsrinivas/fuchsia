@@ -30,7 +30,9 @@ Status ToBuffer(convert::ExtendedStringView value,
   return result ? Status::OK : Status::UNKNOWN_ERROR;
 }
 
-void GetReferenceAsStringView(
+}  // namespace
+
+void PageUtils::GetReferenceAsStringView(
     storage::PageStorage* storage,
     convert::ExtendedStringView opaque_id,
     storage::PageStorage::Location location,
@@ -57,8 +59,6 @@ void GetReferenceAsStringView(
         callback(Status::OK, data);
       });
 }
-
-}  // namespace
 
 Status PageUtils::ConvertStatus(storage::Status status,
                                 Status not_found_status) {

@@ -14,7 +14,7 @@ size_t GetByteArraySize(size_t array_length) {
 size_t GetEntrySize(size_t key_length) {
   size_t key_size = key_length + kArrayHeaderSize;
   size_t object_size = kHandleSize;
-  return kPointerSize + key_size + object_size + kPrioritySize;
+  return kPointerSize + key_size + object_size + kEnumSize;
 }
 
 }  // namespace fidl_serialization

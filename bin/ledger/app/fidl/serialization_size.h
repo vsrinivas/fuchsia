@@ -19,7 +19,7 @@ constexpr size_t kMaxMessageHandles = MX_CHANNEL_MAX_MSG_HANDLES;
 
 const size_t kArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
 const size_t kPointerSize = sizeof(uint64_t);
-const size_t kPrioritySize = sizeof(int32_t);
+const size_t kEnumSize = sizeof(int32_t);
 const size_t kHandleSize = sizeof(int32_t);
 
 // The overhead for storing the pointer, the timestamp (int64) and the two
