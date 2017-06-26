@@ -4,6 +4,8 @@
 
 #include "lib/mtl/vfs/vfs_serve.h"
 
+#include <fcntl.h>
+
 namespace mtl {
 
 bool VFSServe(mxtl::RefPtr<fs::Vnode> directory, mx::channel request) {
