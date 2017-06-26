@@ -103,7 +103,9 @@ MODULE := $(LOCAL_DIR).vmos
 
 MODULE_TYPE := userapp
 
-MODULE_SRCS += $(LOCAL_DIR)/vmos.cpp
+MODULE_SRCS += \
+    $(LOCAL_DIR)/vmos.cpp \
+    $(LOCAL_DIR)/vmo-utils.c
 
 MODULE_NAME := vmos
 

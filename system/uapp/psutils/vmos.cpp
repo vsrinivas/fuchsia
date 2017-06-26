@@ -15,40 +15,7 @@
 #include <pretty/sizes.h>
 #include <task-utils/get.h>
 
-// Reads the mx_info_vmo_t entries for the process.
-// Caller is responsible for the |out_vmos| pointer.
-mx_status_t get_vmos(mx_koid_t koid, mx_handle_t process,
-                     mx_info_vmo_t** out_vmos, size_t* out_count,
-                     size_t* out_avail) {
-    size_t count = 4096; // Should be more than enough.
-    mx_info_vmo_t* vmos = NULL;
-    int pass = 3;
-    while (true) {
-        vmos = (mx_info_vmo_t*)realloc(vmos, count * sizeof(mx_info_vmo_t));
-
-        size_t actual;
-        size_t avail;
-        mx_status_t s = mx_object_get_info(process, MX_INFO_PROCESS_VMOS,
-                                           vmos, count * sizeof(mx_info_vmo_t),
-                                           &actual, &avail);
-        if (s != MX_OK) {
-            fprintf(stderr,
-                    "ERROR: couldn't get vmos for process with koid %" PRIu64
-                    ": %s (%d)\n",
-                    koid, mx_status_get_string(s), s);
-            free(vmos);
-            return s;
-        }
-        if (actual < avail && pass-- > 0) {
-            count = (avail * 10) / 9;
-            continue;
-        }
-        *out_vmos = vmos;
-        *out_count = actual;
-        *out_avail = avail;
-        return MX_OK;
-    }
-}
+#include "vmo-utils.h"
 
 static constexpr size_t kRightsStrLen = sizeof("rwxmdt");
 
@@ -220,9 +187,13 @@ int main(int argc, char** argv) {
     mx_info_vmo_t* vmos;
     size_t count;
     size_t avail;
-    s = get_vmos(koid, process, &vmos, &count, &avail);
+    s = get_vmos(process, &vmos, &count, &avail);
     mx_handle_close(process);
     if (s != MX_OK) {
+        fprintf(stderr,
+                "ERROR: couldn't get vmos for process with koid %" PRIu64
+                ": %s (%d)\n",
+                koid, mx_status_get_string(s), s);
         return 1;
     }
     print_vmos(vmos, count, avail);
