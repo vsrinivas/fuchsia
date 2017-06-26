@@ -15,7 +15,7 @@
         {
             "binary" : "amber-keys",
             "bootfs_path" : "data/amber/keys"
-	}
+        }
     ],
     "imports": [
         "golibs"

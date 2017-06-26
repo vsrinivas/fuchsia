@@ -1,0 +1,8 @@
+{
+    "resources": [
+        {
+            "file": "apps/amber/startup.config",
+            "bootfs_path": "data/bootstrap/amber.config"
+        }
+    ]
+}
