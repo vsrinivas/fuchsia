@@ -476,7 +476,12 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
 #endif
 
     if (status != MX_OK) {
-        fprintf(stderr, "Unsupported instruction\n");
+        fprintf(stderr, "Unsupported instruction:");
+#if __x86_64__
+        for (uint8_t i = 0; i < mem_trap->instruction_length; i++)
+            fprintf(stderr, " %x", mem_trap->instruction_buffer[i]);
+#endif // __x86_64__
+        fprintf(stderr, "\n");
     } else {
         status = MX_ERR_UNAVAILABLE;
         guest_state_t* guest_state = context->guest_state;

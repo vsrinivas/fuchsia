@@ -441,6 +441,22 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     }
 }
 
+/* Returns the page address for a given page table entry.
+ *
+ * If the page address is for a large page, we additionally calculate the offset
+ * to the correct guest physical page that backs the large page.
+ */
+static paddr_t page_addr(paddr_t pt_addr, size_t level, vaddr_t guest_vaddr) {
+    if (IS_LARGE_PAGE(pt_addr)) {
+        if (level == 1) {
+            pt_addr += guest_vaddr & PAGE_OFFSET_MASK_HUGE;
+        } else if (level == 2) {
+            pt_addr += guest_vaddr & PAGE_OFFSET_MASK_LARGE;
+        }
+    }
+    return pt_addr & X86_PG_FRAME;
+}
+
 static status_t get_page(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
                          paddr_t* host_paddr) {
     size_t indices[X86_PAGING_LEVELS] = {
@@ -451,18 +467,16 @@ static status_t get_page(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
     };
     paddr_t pt_addr = vmcs_read(VmcsFieldXX::GUEST_CR3);
     paddr_t pa;
-    for (size_t i = 0; i <= X86_PAGING_LEVELS; i++) {
-        status_t status = gpas->GetPage(pt_addr & X86_PG_FRAME, &pa);
+    for (size_t level = 0; level <= X86_PAGING_LEVELS; level++) {
+        status_t status = gpas->GetPage(page_addr(pt_addr, level - 1, guest_vaddr), &pa);
         if (status != MX_OK)
             return status;
-        if (i == X86_PAGING_LEVELS)
+        if (level == X86_PAGING_LEVELS || IS_LARGE_PAGE(pt_addr))
             break;
         pt_entry_t* pt = static_cast<pt_entry_t*>(paddr_to_kvaddr(pa));
-        pt_addr = pt[indices[i]];
+        pt_addr = pt[indices[level]];
         if (!IS_PAGE_PRESENT(pt_addr))
             return MX_ERR_NOT_FOUND;
-        if (IS_LARGE_PAGE(pt_addr))
-            break;
     }
     *host_paddr = pa;
     return MX_OK;
