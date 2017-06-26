@@ -8,7 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/hid.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/hid-fifo.c \
+    $(LOCAL_DIR)/hid.c
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 

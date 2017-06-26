@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/common/hid-fifo.c \
     $(LOCAL_DIR)/common/usb.c \
     $(LOCAL_DIR)/protocol/input.c \
     $(LOCAL_DIR)/protocol/platform-device.c \
