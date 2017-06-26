@@ -46,8 +46,12 @@ static atomic_bool my_loader_service_ok = false;
 static atomic_int my_loader_service_calls = 0;
 
 static mx_handle_t my_loader_service(void* arg, uint32_t load_op,
+                                     mx_handle_t request_handle,
                                      const char* name) {
     ++my_loader_service_calls;
+
+    EXPECT_EQ(request_handle, MX_HANDLE_INVALID,
+              "called with a request handle");
 
     int cmp = strcmp(name, TEST_NAME);
     EXPECT_EQ(cmp, 0, "called with unexpected name");

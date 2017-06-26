@@ -62,6 +62,7 @@ static mx_handle_t load_object_fd(int fd, const char* fn) {
 
 static mx_handle_t default_load_object(void* ignored,
                                        uint32_t load_op,
+                                       mx_handle_t request_handle,
                                        const char* fn) {
     switch (load_op) {
     case LOADER_SVC_OP_LOAD_OBJECT:
@@ -85,6 +86,13 @@ static mx_handle_t default_load_object(void* ignored,
         if (fd >= 0)
             return load_object_fd(fd, fn);
         break;
+    case LOADER_SVC_OP_PUBLISH_DATA_SINK:
+        // TODO(mcgrathr): Implement something.
+        fprintf(stderr, "dlsvc: ignoring data sink request for '%s'\n", fn);
+        mx_status_t status = mx_handle_close(request_handle);
+        if (status == MX_OK)
+            status = MX_ERR_NOT_SUPPORTED;
+        return status;
     default:
         __builtin_trap();
     }
@@ -100,20 +108,27 @@ struct startup {
     mx_handle_t syslog_handle;
 };
 
-static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function_t loader,
+static mx_status_t handle_loader_rpc(mx_handle_t h,
+                                     mxio_loader_service_function_t loader,
                                      void* loader_arg, mx_handle_t sys_log) {
     uint8_t data[1024];
     mx_loader_svc_msg_t* msg = (void*) data;
     uint32_t sz = sizeof(data);
-    mx_status_t r;
-    if ((r = mx_channel_read(h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
+    mx_handle_t request_handle;
+    uint32_t nhandles;
+    mx_status_t r =
+        mx_channel_read(h, 0, msg, &request_handle, sz, 1, &sz, &nhandles);
+    if (r != MX_OK) {
         // This is the normal error for the other end going away,
         // which happens when the process dies.
         if (r != MX_ERR_PEER_CLOSED)
             fprintf(stderr, "dlsvc: msg read error %d: %s\n", r, mx_status_get_string(r));
         return r;
     }
+    if (nhandles == 0)
+        request_handle = MX_HANDLE_INVALID;
     if ((sz <= sizeof(mx_loader_svc_msg_t))) {
+        mx_handle_close(request_handle);
         fprintf(stderr, "dlsvc: runt message\n");
         return MX_ERR_IO;
     }
@@ -125,9 +140,12 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     switch (msg->opcode) {
     case LOADER_SVC_OP_LOAD_OBJECT:
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+    case LOADER_SVC_OP_PUBLISH_DATA_SINK:
         // TODO(MG-491): Use a threadpool for loading, and guard against
         // other starvation attacks.
-        handle = (*loader)(loader_arg, msg->opcode, (const char*) msg->data);
+        handle = (*loader)(loader_arg, msg->opcode,
+                           request_handle, (const char*) msg->data);
+        request_handle = MX_HANDLE_INVALID;
         msg->arg = handle < 0 ? handle : MX_OK;
         break;
     case LOADER_SVC_OP_DEBUG_PRINT:
@@ -140,6 +158,11 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
         fprintf(stderr, "dlsvc: invalid opcode 0x%x\n", msg->opcode);
         msg->arg = MX_ERR_INVALID_ARGS;
         break;
+    }
+    if (request_handle != MX_HANDLE_INVALID) {
+        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
+                request_handle, msg->opcode, msg->data);
+        mx_handle_close(request_handle);
     }
 
     // msg->txid returned as received from the client.

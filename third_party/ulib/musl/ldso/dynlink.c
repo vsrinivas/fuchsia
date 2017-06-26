@@ -1987,6 +1987,7 @@ static mx_txid_t loader_svc_txid;
 
 __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
                                                  const void* data, size_t len,
+                                                 mx_handle_t request_handle,
                                                  mx_handle_t* result) {
     mx_status_t status;
     struct {
@@ -1997,6 +1998,7 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
     loader_svc_rpc_in_progress = true;
 
     if (len >= sizeof msg.data) {
+        _mx_handle_close(request_handle);
         error("message of %zu bytes too large for loader service protocol",
               len);
         status = MX_ERR_OUT_OF_RANGE;
@@ -2017,6 +2019,8 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
     mx_channel_call_args_t call = {
         .wr_bytes = &msg,
         .wr_num_bytes = sizeof(msg.header) + len + 1,
+        .wr_handles = &request_handle,
+        .wr_num_handles = request_handle == MX_HANDLE_INVALID ? 0 : 1,
         .rd_bytes = &msg,
         .rd_num_bytes = sizeof(msg),
         .rd_handles = result,
@@ -2034,7 +2038,9 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
               "%d (%s), read %d (%s)",
               call.wr_num_bytes, status, _mx_status_get_string(status),
               read_status, _mx_status_get_string(read_status));
-        if (status == MX_ERR_CALL_FAILED && read_status != MX_OK)
+        if (status != MX_ERR_CALL_FAILED)
+            _mx_handle_close(request_handle);
+        else if (read_status != MX_OK)
             status = read_status;
         goto out;
     }
@@ -2046,6 +2052,10 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
         goto out;
     }
     if (msg.header.opcode != LOADER_SVC_OP_STATUS) {
+        if (handle_count > 0) {
+            _mx_handle_close(*result);
+            *result = MX_HANDLE_INVALID;
+        }
         error("loader service reply opcode %u != %u",
               msg.header.opcode, LOADER_SVC_OP_STATUS);
         status = MX_ERR_INVALID_ARGS;
@@ -2075,7 +2085,7 @@ __NO_SAFESTACK static mx_status_t get_library_vmo(const char* name,
         return MX_ERR_UNAVAILABLE;
     }
     return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name),
-                          result);
+                          MX_HANDLE_INVALID, result);
 }
 
 __NO_SAFESTACK static void log_write(const void* buf, size_t len) {
@@ -2088,7 +2098,8 @@ __NO_SAFESTACK static void log_write(const void* buf, size_t len) {
     if (logger != MX_HANDLE_INVALID)
         status = _mx_log_write(logger, len, buf, 0);
     else if (!loader_svc_rpc_in_progress && loader_svc != MX_HANDLE_INVALID)
-        status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len, NULL);
+        status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len,
+                                MX_HANDLE_INVALID, NULL);
     else {
         int n = _mx_debug_write(buf, len);
         status = n < 0 ? n : MX_OK;
@@ -2143,4 +2154,18 @@ __NO_SAFESTACK static void error(const char* fmt, ...) {
     }
     __dl_vseterr(fmt, ap);
     va_end(ap);
+}
+
+// We piggy-back on the loader service to publish data from sanitizers.
+void __sanitizer_publish_data(const char* sink_name, mx_handle_t vmo) {
+    pthread_rwlock_rdlock(&lock);
+    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_PUBLISH_DATA_SINK,
+                                        sink_name, strlen(sink_name),
+                                        vmo, NULL);
+    if (status != MX_OK) {
+        // TODO(mcgrathr): Send this whereever sanitizer logging goes.
+        debugmsg("Failed to publish data sink \"%s\" (%s): %s\n",
+                 sink_name, _mx_status_get_string(status), dlerror());
+    }
+    pthread_rwlock_unlock(&lock);
 }
