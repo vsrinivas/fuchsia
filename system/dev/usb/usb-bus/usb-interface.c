@@ -30,17 +30,13 @@ static int callback_thread(void* arg) {
 
         // copy completed txns to a temp list so we can process them outside of our lock
         list_node_t temp_list = LIST_INITIAL_VALUE(temp_list);
-        list_node_t* temp;
-        while ((temp = list_remove_head(&intf->completed_txns))) {
-            list_add_tail(&temp_list, temp);
-        }
+        list_move(&intf->completed_txns, &temp_list);
 
         mtx_unlock(&intf->callback_lock);
 
         // call completion callbacks outside of the lock
         iotxn_t* txn;
-        iotxn_t* temp_txn;
-        list_for_every_entry_safe(&temp_list, txn, temp_txn, iotxn_t, node) {
+        while ((txn = list_remove_head_type(&temp_list, iotxn_t, node))) {
             iotxn_complete(txn, txn->status, txn->actual);
         }
     }
