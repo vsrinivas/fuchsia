@@ -58,7 +58,7 @@ template("fidl") {
   if (defined(invoker.sources)) {
     legacy_gen_path =
         rebase_path("${root_out_dir}/legacy_generators/run_code_generators.py")
-    fidl_tool = rebase_path("${root_out_dir}/fidl")
+    fidl_tool = rebase_path("${root_build_dir}/host_x64/fidl")
 
     generator_cpp_outputs = [
       "{{source_gen_dir}}/{{source_file_part}}-common.cc",
@@ -74,7 +74,7 @@ template("fidl") {
           [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
     }
     if (generate_fidl_for_go) {
-      go_gen_path = rebase_path("${root_out_dir}/fidl-go")
+      go_gen_path = rebase_path("${root_build_dir}/host_x64/fidl-go")
       generator_go_outputs = [ "${root_gen_dir}/go/src/{{source_dir}}/{{source_name_part}}/{{source_name_part}}.core.go" ]
     }
 
@@ -84,7 +84,7 @@ template("fidl") {
     generator_python_outputs =
         [ "{{source_gen_dir}}/{{source_name_part}}_fidl.py" ]
     if (generate_fidl_for_rust) {
-      rust_gen_path = rebase_path("${root_out_dir}/fidl-rust")
+      rust_gen_path = rebase_path("${root_build_dir}/host_x64/fidl-rust")
       generator_rust_outputs =
           # "{{source_gen_dir}}/${target_name}/src/{{source_name_part}}.rs" would be
           # a cleaner directory structure for the generated crate, but would require
@@ -103,19 +103,19 @@ template("fidl") {
     action_foreach(generator_target_name) {
       script = "/usr/bin/env"
       public_deps = [
-        "//lib/fidl/compiler:fidl",
+        "//lib/fidl/compiler:fidl(//build/toolchain:host_x64)",
       ]
       deps = [
-        "//lib/fidl/compiler/legacy_generators",
+        "//lib/fidl/compiler/legacy_generators(//build/toolchain:host_x64)",
       ]
       if (generate_fidl_for_rust) {
         deps += [
           ":$map_target",
-          "//lib/fidl/compiler:fidl-rust",
+          "//lib/fidl/compiler:fidl-rust(//build/toolchain:host_x64)",
         ]
       }
       if (generate_fidl_for_go) {
-        deps += [ "//lib/fidl/compiler:fidl-go" ]
+        deps += [ "//lib/fidl/compiler:fidl-go(//build/toolchain:host_x64)" ]
       }
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
         deps += [ "//lib/fidl/compiler/interfaces:interfaces" ]
