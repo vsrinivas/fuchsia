@@ -6,7 +6,7 @@
 
 #include <errno.h>
 #include <netdb.h>
-#include <sys/epoll.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -123,7 +123,7 @@ void MessageTransceiver::MaybeWaitToSend() {
             send_tasks_.pop();
             task();
           },
-          socket_fd_.get(), EPOLLOUT)) {
+          socket_fd_.get(), POLLOUT)) {
     // Wait failed because the fd is no longer valid. We need to clear
     // |send_tasks_| before we proceeed, because a non-empty send_tasks_
     // implies the need to cancel the wait.
@@ -177,7 +177,7 @@ void MessageTransceiver::WaitToReceive() {
             fd_recv_waiter_waiting_ = false;
             ReceiveMessage();
           },
-          socket_fd_.get(), EPOLLIN)) {
+          socket_fd_.get(), POLLIN)) {
     fd_recv_waiter_waiting_ = false;
     CloseConnection();
   }

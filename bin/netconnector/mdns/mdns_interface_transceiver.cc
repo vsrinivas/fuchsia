@@ -6,7 +6,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <sys/epoll.h>
+#include <poll.h>
 #include <sys/socket.h>
 
 #include "apps/netconnector/src/mdns/dns_formatting.h"
@@ -136,7 +136,7 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
 void MdnsInterfaceTransceiver::WaitForInbound() {
   fd_waiter_.Wait([this](mx_status_t status,
                          uint32_t events) { InboundReady(status, events); },
-                  socket_fd_.get(), EPOLLIN);
+                  socket_fd_.get(), POLLIN);
 }
 
 void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
