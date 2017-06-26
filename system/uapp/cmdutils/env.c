@@ -106,7 +106,7 @@ int main(int argc, char* const argv[]) {
     int num_args = (argc - next_arg);
     launchpad_set_args(lp, num_args, (const char* const*) &argv[next_arg]);
     launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD |
+    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD |
                         LP_CLONE_MXIO_STDIO);
     mx_handle_t proc;
     const char* errmsg;

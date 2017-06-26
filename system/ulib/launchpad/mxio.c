@@ -36,7 +36,7 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     uint32_t types[MXIO_MAX_HANDLES];
     mx_status_t status;
 
-    if (what & LP_CLONE_MXIO_ROOT) {
+    if (what & LP_CLONE_MXIO_NAMESPACE) {
         mxio_flat_namespace_t* flat;
         status = mxio_ns_export_root(&flat);
         if (status == MX_OK) {

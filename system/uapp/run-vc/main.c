@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
 
     launchpad_t* lp;
     launchpad_create(0, pname, &lp);
-    launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_ENVIRON);
+    launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_ENVIRON);
     launchpad_add_handles(lp, 2, handles, types);
     launchpad_set_args(lp, argc, (const char* const*) argv);
     launchpad_load_from_file(lp, argv[0]);

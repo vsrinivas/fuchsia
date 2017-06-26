@@ -197,8 +197,8 @@ int main(int argc, char** argv) {
     check("launchpad_environ", status);
 
     if (send_root) {
-        status = launchpad_clone(lp, LP_CLONE_MXIO_ROOT);
-        check("launchpad_clone_mxio_root", status);
+        status = launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE);
+        check("launchpad_clone(LP_CLONE_MXIO_NAMESPACE)", status);
     }
 
     for (size_t i = 0; i < nfds; ++i) {
