@@ -256,7 +256,7 @@ public:
     AutoVmcsLoad(const VmxPage* page);
     ~AutoVmcsLoad();
 
-    void reload();
+    void reload(bool interruptible);
 
 private:
     const VmxPage* page_;

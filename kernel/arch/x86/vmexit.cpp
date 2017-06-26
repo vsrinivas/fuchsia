@@ -161,7 +161,7 @@ void interrupt_window_exiting(bool enable) {
 
 static status_t handle_external_interrupt(AutoVmcsLoad* vmcs_load,
                                           LocalApicState* local_apic_state) {
-    vmcs_load->reload();
+    vmcs_load->reload(true);
     local_apic_maybe_interrupt(local_apic_state);
     return MX_OK;
 }
@@ -238,12 +238,14 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
-static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic_state) {
+static status_t handle_hlt(AutoVmcsLoad* vmcs_load, const ExitInfo& exit_info,
+                           LocalApicState* local_apic_state) {
     // TODO(abdulla): Use an interruptible sleep here, so that we can:
     // a) Continue to deliver interrupts to the guest.
     // b) Kill the hypervisor while a guest is halted.
     do {
         event_wait(&local_apic_state->event);
+        vmcs_load->reload(false);
     } while (!local_apic_issue_interrupt(local_apic_state));
     next_rip(exit_info);
     return MX_OK;
@@ -607,7 +609,7 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return handle_cpuid(exit_info, guest_state);
     case ExitReason::HLT:
         LTRACEF("handling HLT instruction\n\n");
-        return handle_hlt(exit_info, local_apic_state);
+        return handle_hlt(vmcs_load, exit_info, local_apic_state);
     case ExitReason::VMCALL:
         LTRACEF("handling VMCALL instruction\n\n");
         return MX_ERR_STOP;

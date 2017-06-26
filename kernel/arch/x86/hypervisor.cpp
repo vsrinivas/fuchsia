@@ -280,13 +280,15 @@ AutoVmcsLoad::~AutoVmcsLoad() {
     arch_enable_ints();
 }
 
-void AutoVmcsLoad::reload() {
-    // When we VM exit due to an external interrupt, we want to handle that
-    // interrupt. To do that, we temporarily re-enable interrupts. However, we
-    // must then reload the VMCS, in case it has been changed in the interim.
+void AutoVmcsLoad::reload(bool interruptible) {
     DEBUG_ASSERT(arch_ints_disabled());
-    arch_enable_ints();
-    arch_disable_ints();
+    if (interruptible) {
+        // When we VM exit due to an external interrupt, we want to handle that
+        // interrupt. To do that, we temporarily re-enable interrupts. However,
+        // we must then reload the VMCS, in case it was changed in the interim.
+        arch_enable_ints();
+        arch_disable_ints();
+    }
     __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
     DEBUG_ASSERT(status == MX_OK);
 }
