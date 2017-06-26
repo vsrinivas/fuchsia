@@ -44,8 +44,8 @@ NamespaceBuilder::NamespaceBuilder() = default;
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
-void NamespaceBuilder::AddRoot(mx::channel root) {
-  PushDirectoryFromChannel("/", std::move(root));
+void NamespaceBuilder::AddRoot() {
+  PushDirectoryFromPath("/", O_RDWR);
 }
 
 void NamespaceBuilder::AddPackage(mx::channel package) {

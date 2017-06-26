@@ -20,7 +20,7 @@ class NamespaceBuilder {
   NamespaceBuilder();
   ~NamespaceBuilder();
 
-  void AddRoot(mx::channel root);
+  void AddRoot();
   void AddPackage(mx::channel package);
   void AddServices(mx::channel services);
   void AddSandbox(const SandboxMetadata& sandbox);

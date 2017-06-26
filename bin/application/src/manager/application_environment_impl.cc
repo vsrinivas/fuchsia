@@ -59,26 +59,6 @@ mx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
   return mx::channel();
 }
 
-mx_handle_t GetMxioRoot() {
-  static mx_handle_t mxio_root = MX_HANDLE_INVALID;
-  if (mxio_root == MX_HANDLE_INVALID) {
-    mx_handle_t handles[MXIO_MAX_HANDLES] = {
-        MX_HANDLE_INVALID, MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-    uint32_t types[MXIO_MAX_HANDLES] = {0, 0, 0};
-    mx_status_t status = mxio_clone_root(handles, types);
-    if (status < MX_OK)
-      return MX_HANDLE_INVALID;
-    FTL_CHECK(status == 1);
-    FTL_CHECK(types[0] == PA_MXIO_ROOT);
-    mxio_root = handles[0];
-  }
-  return mxio_root;
-}
-
-mx::channel CloneMxioRoot() {
-  return mx::channel(mxio_service_clone(GetMxioRoot()));
-}
-
 // The very first nested environment process we create gets the
 // PA_SERVICE_REQUEST given to us by our parent. It's slightly awkward that we
 // don't publish the root environment's services. We should consider
@@ -434,18 +414,12 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  // TODO(abarth): We'll need to update this code when we switch the parent to
-  // namespaces.
-  mx::channel root = CloneMxioRoot();
-  if (!root)
-    return;
-
   mx::channel svc = services_.OpenAsDirectory();
   if (!svc)
     return;
 
   NamespaceBuilder builder;
-  builder.AddRoot(std::move(root));
+  builder.AddRoot();
   builder.AddServices(std::move(svc));
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
