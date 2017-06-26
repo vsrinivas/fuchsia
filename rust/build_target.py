@@ -193,7 +193,7 @@ def main():
             raise Exception("Need to specify entry point for %s" % args.name)
         relative_path = base["path"]
         new_path = os.path.join(args.crate_root, relative_path)
-        base["path"] = new_path
+        base["path"] = os.path.relpath(new_path, args.gen_dir)
 
         # Add or edit dependency sections for local deps.
         if "dependencies" not in config:
@@ -208,7 +208,7 @@ def main():
                 artifact_name = artifact_file.read()
             if artifact_name not in dependencies:
                 dependencies[artifact_name] = {}
-            dependencies[artifact_name]["path"] = base_path
+            dependencies[artifact_name]["path"] = os.path.relpath(base_path, args.gen_dir)
 
         # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
