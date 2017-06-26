@@ -1,4 +1,8 @@
 {
+    "imports": [
+        "ftl",
+        "mtl"
+    ],
     "labels": [
         "//bin/listen"
     ],
