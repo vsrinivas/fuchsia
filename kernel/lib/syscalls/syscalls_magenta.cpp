@@ -16,6 +16,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 
+#include <explicit-memory/bytes.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
@@ -253,8 +254,7 @@ mx_status_t sys_cprng_draw(user_ptr<void> _buffer, size_t len, user_ptr<size_t> 
         return MX_ERR_INVALID_ARGS;
 
     // Get rid of the stack copy of the random data
-    memset(kernel_buf, 0, sizeof(kernel_buf));
-
+    mandatory_memset(kernel_buf, 0, sizeof(kernel_buf));
     return MX_OK;
 }
 
@@ -271,7 +271,6 @@ mx_status_t sys_cprng_add_entropy(user_ptr<const void> _buffer, size_t len) {
     prng->AddEntropy(kernel_buf, static_cast<int>(len));
 
     // Get rid of the stack copy of the random data
-    memset(kernel_buf, 0, sizeof(kernel_buf));
-
+    mandatory_memset(kernel_buf, 0, sizeof(kernel_buf));
     return MX_OK;
 }

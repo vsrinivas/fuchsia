@@ -13,6 +13,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
+#include <explicit-memory/bytes.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/sched.h>
 #include <kernel/timer.h>
@@ -502,8 +503,7 @@ static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
     size_t page_offset = guest_vaddr & PAGE_OFFSET_MASK_4KB;
     uint8_t* page = static_cast<uint8_t*>(paddr_to_kvaddr(pa));
     size_t from_page = mxtl::min(size, PAGE_SIZE - page_offset);
-    // TODO(security): This should be a volatile memcpy.
-    memcpy(data, page + page_offset, from_page);
+    mandatory_memcpy(data, page + page_offset, from_page);
 
     // If the fetch is not split across pages, return.
     if (from_page == size)
@@ -514,7 +514,7 @@ static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
         return status;
 
     page = static_cast<uint8_t*>(paddr_to_kvaddr(pa));
-    memcpy(data + from_page, page, size - from_page);
+    mandatory_memcpy(data + from_page, page, size - from_page);
     return MX_OK;
 }
 
