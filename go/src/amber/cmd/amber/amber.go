@@ -33,7 +33,7 @@ var (
 	demo  = flag.Bool("demo", false, "run demo mode, writes an entry to /data/pkgs/needs")
 
 	demoNeed  = "lib-usb-audio.so"
-	needsPath = "/data/pkgs/needs"
+	needsPath = "/pkgfs/needs"
 )
 
 func main() {
@@ -139,11 +139,6 @@ func loadKeys(path string) ([]*data.Key, error) {
 }
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
-	if err := os.MkdirAll(daemon.DstUpdate, os.ModePerm); err != nil {
-		// TODO(jmatt) retry for some time period?
-		fmt.Printf("Error creating update destination directory %v\n", err)
-	}
-
 	files := []string{
 		"/system/apps/amber"}
 	reqSet := daemon.NewPackageSet()

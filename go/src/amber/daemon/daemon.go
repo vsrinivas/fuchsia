@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-var DstUpdate = "/data/driver"
-var DstBlob = "/data/pkgs/incoming"
+var DstUpdate = "/pkgfs/incoming"
+var DstBlob = DstUpdate
 var newTicker = time.NewTicker
 
 // ErrSrcNotFound is returned when a request is made to RemoveSource, but the
@@ -55,11 +55,6 @@ func NewDaemon(r *PackageSet, f func(*Package, *Package, Source, *PackageSet) er
 		srcMons:    []*SourceMonitor{},
 		processor:  f,
 		repos:      []BlobRepo{}}
-
-	err := os.MkdirAll(DstBlob, os.ModePerm)
-	if err != nil {
-		log.Printf("Error making blob output directory\n")
-	}
 	return d
 }
 
