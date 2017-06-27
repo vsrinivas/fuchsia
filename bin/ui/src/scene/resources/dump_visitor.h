@@ -24,6 +24,7 @@ class DumpVisitor : public ResourceVisitor {
   void Visit(GpuMemory* r) override;
   void Visit(HostMemory* r) override;
   void Visit(Image* r) override;
+  void Visit(ImagePipe* r) override;
   void Visit(EntityNode* r) override;
   void Visit(ShapeNode* r) override;
   void Visit(TagNode* r) override;

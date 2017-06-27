@@ -226,6 +226,9 @@ package("mozart") {
       name = "vkcube_mozart"
     },
     {
+      name = "vkcube_image_pipe"
+    },
+    {
       name = "hello_compositor"
     },
     {

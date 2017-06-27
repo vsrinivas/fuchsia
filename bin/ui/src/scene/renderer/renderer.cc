@@ -6,13 +6,13 @@
 
 #include "apps/mozart/src/scene/frame_scheduler.h"
 #include "apps/mozart/src/scene/resources/camera.h"
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
-#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
@@ -86,6 +86,10 @@ void Renderer::Visitor::Visit(Image* r) {
   FTL_CHECK(false);
 }
 
+void Renderer::Visitor::Visit(ImagePipe* r) {
+  FTL_CHECK(false);
+}
+
 void Renderer::Visitor::Visit(EntityNode* r) {
   VisitNode(r);
 }
@@ -113,6 +117,7 @@ void Renderer::Visitor::Visit(Scene* r) {
 void Renderer::Visitor::Visit(ShapeNode* r) {
   auto& shape = r->shape();
   auto& material = r->material();
+  material->Accept(this);
   if (shape && material) {
     display_list_.push_back(shape->GenerateRenderObject(
         r->GetGlobalTransform(), material->escher_material()));
@@ -134,7 +139,7 @@ void Renderer::Visitor::Visit(RoundedRectangleShape* r) {
 }
 
 void Renderer::Visitor::Visit(Material* r) {
-  FTL_CHECK(false);
+  r->UpdateEscherMaterial();
 }
 
 void Renderer::Visitor::Visit(Import* r) {

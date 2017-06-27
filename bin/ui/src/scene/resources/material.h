@@ -10,8 +10,8 @@
 namespace mozart {
 namespace scene {
 
-class Image;
-using ImagePtr = ftl::RefPtr<Image>;
+class ImageBase;
+using ImageBasePtr = ftl::RefPtr<ImageBase>;
 
 class Material;
 using MaterialPtr = ftl::RefPtr<Material>;
@@ -23,7 +23,7 @@ class Material : public Resource {
   Material(Session* session);
 
   void SetColor(float red, float green, float blue, float alpha);
-  void SetTexture(const ImagePtr& texture_image);
+  void SetTexture(ImageBasePtr texture_image);
 
   float red() const { return escher_material_->color().x; }
   float green() const { return escher_material_->color().y; }
@@ -38,9 +38,12 @@ class Material : public Resource {
 
   void Accept(class ResourceVisitor* visitor) override;
 
+  // Called at presentation time to allow ImagePipes to update current image.
+  void UpdateEscherMaterial();
+
  private:
   escher::MaterialPtr escher_material_;
-  ImagePtr texture_;
+  ImageBasePtr texture_;
 };
 
 }  // namespace scene

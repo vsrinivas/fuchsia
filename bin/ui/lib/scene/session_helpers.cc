@@ -60,6 +60,17 @@ mozart2::OpPtr NewCreateImageOp(uint32_t id,
   return NewCreateResourceOp(id, std::move(resource));
 }
 
+mozart2::OpPtr NewCreateImagePipeOp(
+    uint32_t id,
+    ::fidl::InterfaceRequest<mozart2::ImagePipe> request) {
+  auto image_pipe = mozart2::ImagePipeArgs::New();
+  image_pipe->image_pipe_request = std::move(request);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_image_pipe(std::move(image_pipe));
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
 mozart2::OpPtr NewCreateBufferOp(uint32_t id,
                                  uint32_t memory_id,
                                  uint32_t memory_offset,

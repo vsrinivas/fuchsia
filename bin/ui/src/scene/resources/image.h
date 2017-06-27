@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene/resources/image.h"
-
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
+#include "apps/mozart/src/scene/resources/image_base.h"
 #include "apps/mozart/src/scene/resources/memory.h"
 #include "apps/mozart/src/scene/resources/resource.h"
 #include "escher/renderer/image.h"
@@ -18,7 +17,7 @@ namespace scene {
 class Image;
 using ImagePtr = ftl::RefPtr<Image>;
 
-class Image : public Resource {
+class Image : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
@@ -56,7 +55,11 @@ class Image : public Resource {
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
+  static ImagePtr NewForTesting(Session* session, MemoryPtr memory);
+
   void Accept(class ResourceVisitor* visitor) override;
+
+  ImagePtr GetPresentedImage() override;
 
   const escher::ImagePtr& escher_image() const { return image_; }
 
@@ -78,7 +81,7 @@ class Image : public Resource {
   //
   // TODO: We might not want to hold on to the memory since we're uploading
   // its contents to the GPU and using the uploaded copy.
-  Image(Session* session, escher::ImagePtr image, HostMemoryPtr memory);
+  Image(Session* session, escher::ImagePtr image, MemoryPtr memory);
 
   MemoryPtr memory_;
   escher::ImagePtr image_;

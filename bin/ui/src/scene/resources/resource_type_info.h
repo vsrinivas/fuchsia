@@ -18,15 +18,17 @@ enum ResourceType {
   kMemory = 1 << 1,
   kHostMemory = 1 << 2,
   kGpuMemory = 1 << 3,
-  kImage = 1 << 4,
-  kBuffer = 1 << 5,
+  kImageBase = 1 << 4,
+  kImage = 1 << 5,
+  kImagePipe = 1 << 6,
+  kBuffer = 1 << 7,
 
   // Shapes.
-  kShape = 1 << 6,
-  kRectangle = 1 << 7,
-  kRoundedRectangle = 1 << 8,
-  kCircle = 1 << 9,
-  kMesh = 1 << 10,
+  kShape = 1 << 8,
+  kRectangle = 1 << 9,
+  kRoundedRectangle = 1 << 10,
+  kCircle = 1 << 11,
+  kMesh = 1 << 12,
 
   // Materials.
   kMaterial = 1 << 13,

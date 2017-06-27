@@ -9,6 +9,7 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
+#include "apps/mozart/src/scene/resources/image_pipe.h"
 #include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
@@ -51,6 +52,17 @@ void DumpVisitor::Visit(Image* r) {
   WriteProperty("format") << static_cast<int>(r->escher_image()->format());
   WriteProperty("has_depth") << r->escher_image()->has_depth();
   WriteProperty("has_stencil") << r->escher_image()->has_stencil();
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(ImagePipe* r) {
+  BeginItem("ImagePipe");
+  if (r->GetPresentedImage()) {
+    BeginSection("currently presented image");
+    r->GetPresentedImage()->Accept(this);
+    EndSection();
+  }
   VisitResource(r);
   EndItem();
 }

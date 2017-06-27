@@ -10,6 +10,7 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
+#include "apps/mozart/src/scene/resources/image_pipe.h"
 #include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/lights/directional_light.h"
 #include "apps/mozart/src/scene/resources/material.h"
@@ -35,6 +36,10 @@ void HostMemory::Accept(ResourceVisitor* visitor) {
 }
 
 void Image::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void ImagePipe::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

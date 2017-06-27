@@ -2,15 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("vkcube_mozart") {
+source_set("vkcube_common") {
   include_dirs = [ "//magma/tests/vkcube" ]
   cflags_cc = [ "-Wno-unused-function" ]
   defines = [ "NO_SWAPCHAIN" ]
   sources = [
     "//magma/third_party/vkcube/cube.cc",
-    "vkcube_app.cc",
   ]
-  deps = [
+  public_deps = [
     "//application/lib/app",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
@@ -23,5 +22,22 @@ executable("vkcube_mozart") {
     "//magma:vulkan",
     "//magma/src/magma_util",
     "//magma/src/magma_util/platform:trace",
+  ]
+}
+executable("vkcube_mozart") {
+  sources = [
+    "vkcube_app.cc",
+  ]
+  deps = [
+    ":vkcube_common",
+  ]
+}
+
+executable("vkcube_image_pipe") {
+  sources = [
+    "vkcube_image_pipe_app.cc",
+  ]
+  deps = [
+    ":vkcube_common",
   ]
 }

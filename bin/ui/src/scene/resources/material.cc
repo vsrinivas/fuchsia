@@ -5,6 +5,8 @@
 #include "apps/mozart/src/scene/resources/material.h"
 
 #include "apps/mozart/src/scene/resources/image.h"
+#include "apps/mozart/src/scene/resources/image_base.h"
+#include "apps/mozart/src/scene/resources/image_pipe.h"
 #include "apps/mozart/src/scene/session/session.h"
 
 namespace mozart {
@@ -22,13 +24,29 @@ void Material::SetColor(float red, float green, float blue, float alpha) {
   escher_material_->set_color(escher::vec3(red, green, blue));
 }
 
-void Material::SetTexture(const ImagePtr& texture_image) {
-  texture_ = texture_image;
-  escher_material_->SetTexture(
-      texture_image ? ftl::MakeRefCounted<escher::Texture>(
-                          session()->context()->escher_resource_recycler(),
-                          texture_image->escher_image(), vk::Filter::eLinear)
-                    : escher::TexturePtr());
+void Material::SetTexture(ImageBasePtr texture_image) {
+  texture_ = std::move(texture_image);
+}
+
+void Material::UpdateEscherMaterial() {
+  // Update our escher::Material if our texture's presented image changed.
+  escher::ImagePtr escher_image;
+  if (texture_) {
+    const ImagePtr& image = texture_->GetPresentedImage();
+    if (image)
+      escher_image = image->escher_image();
+  }
+  const escher::TexturePtr& escher_texture = escher_material_->texture();
+
+  if (!escher_texture || escher_image != escher_texture->image()) {
+    escher::TexturePtr texture;
+    if (escher_image) {
+      texture = ftl::MakeRefCounted<escher::Texture>(
+          session()->context()->escher_resource_recycler(), escher_image,
+          vk::Filter::eLinear);
+    }
+    escher_material_->SetTexture(std::move(texture));
+  }
 }
 
 }  // namespace scene

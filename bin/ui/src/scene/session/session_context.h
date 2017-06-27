@@ -77,6 +77,12 @@ class SessionContext : public FrameSchedulerListener {
   // via OnPrepareFrame().
   void ScheduleSessionUpdate(uint64_t presentation_time,
                              ftl::RefPtr<Session> session);
+
+  // Tell the FrameScheduler to schedule a frame. This is used for updates
+  // triggered by something other than a Session update i.e. an ImagePipe with
+  // a new Image to present.
+  void ScheduleUpdate(uint64_t presentation_time);
+
   FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
 
  protected:

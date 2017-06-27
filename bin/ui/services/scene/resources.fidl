@@ -17,6 +17,7 @@ union Resource {
   // Memory resources.
   Memory memory;
   Image image;
+  ImagePipeArgs image_pipe;
   Buffer buffer;
 
   // Shapes (see shapes.fidl).
@@ -45,6 +46,10 @@ union Resource {
 
   // A value that can be used in place of a constant value.
   Variable variable;
+};
+
+struct ImagePipeArgs {
+  ImagePipe& image_pipe_request;
 };
 
 // |Memory| is a |Resource| that wraps a client-provided Magenta vmo to register
@@ -130,8 +135,9 @@ struct DirectionalLight {
 // Simple texture-mapped material.
 //
 // Operations that can be performed later:
-//   SetTextureOp will set the texture, or it can be left as zero (no texture).
-//   SetColorOp will set the color.
+// SetTextureOp will set the texture, or it can be left as zero (no texture).
+//   The texture can be an Image or ImagePipe.
+// SetColorOp will set the color.
 struct Material {
 };
 

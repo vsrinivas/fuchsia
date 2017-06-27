@@ -28,6 +28,9 @@ mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t width,
                                 uint32_t height,
                                 uint32_t stride);
+mozart2::OpPtr NewCreateImagePipeOp(
+    uint32_t id,
+    ::fidl::InterfaceRequest<mozart2::ImagePipe> request);
 mozart2::OpPtr NewCreateBufferOp(uint32_t id,
                                  uint32_t memory_id,
                                  uint32_t memory_offset,

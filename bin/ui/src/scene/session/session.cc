@@ -10,6 +10,8 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
+#include "apps/mozart/src/scene/resources/image_pipe.h"
+#include "apps/mozart/src/scene/resources/image_pipe_handler.h"
 #include "apps/mozart/src/scene/resources/lights/directional_light.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
@@ -113,6 +115,8 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateMemory(id, op->resource->get_memory());
     case mozart2::Resource::Tag::IMAGE:
       return ApplyCreateImage(id, op->resource->get_image());
+    case mozart2::Resource::Tag::IMAGE_PIPE:
+      return ApplyCreateImagePipe(id, op->resource->get_image_pipe());
     case mozart2::Resource::Tag::BUFFER:
       return ApplyCreateBuffer(id, op->resource->get_buffer());
     case mozart2::Resource::Tag::SCENE:
@@ -264,7 +268,8 @@ bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
     if (op->texture_id == 0) {
       material->SetTexture(nullptr);
       return true;
-    } else if (auto image = resources_.FindResource<Image>(op->texture_id)) {
+    } else if (auto image =
+                   resources_.FindResource<ImageBase>(op->texture_id)) {
       material->SetTexture(std::move(image));
       return true;
     }
@@ -341,6 +346,13 @@ bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
   }
 
   return false;
+}
+
+bool Session::ApplyCreateImagePipe(ResourceId id,
+                                   const mozart2::ImagePipeArgsPtr& args) {
+  auto image_pipe =
+      ftl::MakeRefCounted<ImagePipe>(this, std::move(args->image_pipe_request));
+  return resources_.AddResource(id, image_pipe);
 }
 
 bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {

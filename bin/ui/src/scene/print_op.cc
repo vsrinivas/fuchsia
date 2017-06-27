@@ -31,6 +31,9 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::IMAGE:
       stream << "Image";
       break;
+    case Resource::Tag::IMAGE_PIPE:
+      stream << "ImagePipe";
+      break;
     case Resource::Tag::BUFFER:
       stream << "Buffer";
       break;

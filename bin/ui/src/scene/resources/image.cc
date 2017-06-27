@@ -12,16 +12,17 @@
 namespace mozart {
 namespace scene {
 
-const ResourceTypeInfo Image::kTypeInfo = {ResourceType::kImage, "Image"};
+const ResourceTypeInfo Image::kTypeInfo = {
+    ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
-Image::Image(Session* session, escher::ImagePtr image, HostMemoryPtr memory)
-    : Resource(session, Image::kTypeInfo), memory_(memory), image_(image) {}
+Image::Image(Session* session, escher::ImagePtr image, MemoryPtr memory)
+    : ImageBase(session, Image::kTypeInfo), memory_(memory), image_(image) {}
 
 Image::Image(Session* session,
              escher::ImageInfo image_info,
              vk::Image vk_image,
              GpuMemoryPtr memory)
-    : Resource(session, Image::kTypeInfo),
+    : ImageBase(session, Image::kTypeInfo),
       memory_(memory),
       image_(ftl::MakeRefCounted<escher::Image>(
           session->context()->escher_resource_recycler(),
@@ -158,6 +159,14 @@ ImagePtr Image::New(Session* session,
     FTL_CHECK(false);
     return nullptr;
   }
+}
+
+ImagePtr Image::NewForTesting(Session* session, MemoryPtr host_memory) {
+  return ftl::AdoptRef(new Image(session, escher::ImagePtr(), host_memory));
+}
+
+ImagePtr Image::GetPresentedImage() {
+  return ftl::AdoptRef(this);
 }
 
 }  // namespace scene

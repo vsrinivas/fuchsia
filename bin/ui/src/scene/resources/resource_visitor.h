@@ -11,6 +11,7 @@ class Import;
 class GpuMemory;
 class HostMemory;
 class Image;
+class ImagePipe;
 class EntityNode;
 class Node;
 class ShapeNode;
@@ -31,6 +32,7 @@ class ResourceVisitor {
   virtual void Visit(GpuMemory* r) = 0;
   virtual void Visit(HostMemory* r) = 0;
   virtual void Visit(Image* r) = 0;
+  virtual void Visit(ImagePipe* r) = 0;
 
   // Nodes.
   virtual void Visit(EntityNode* r) = 0;

@@ -72,9 +72,7 @@ void SessionContext::OnImportResolvedForResource(
 
 void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
                                            ftl::RefPtr<Session> session) {
-  updatable_sessions_.push(
-      std::make_pair(presentation_time, std::move(session)));
-
+  updatable_sessions_.push({presentation_time, std::move(session)});
   if (frame_scheduler_) {
     frame_scheduler_->RequestFrame(presentation_time);
   } else {
@@ -85,6 +83,10 @@ void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
   }
 }
 
+void SessionContext::ScheduleUpdate(uint64_t presentation_time) {
+  ScheduleSessionUpdate(presentation_time, nullptr);
+}
+
 bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
   bool needs_render = false;
@@ -92,8 +94,14 @@ bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
          updatable_sessions_.top().first <= presentation_time) {
     auto session = std::move(updatable_sessions_.top().second);
     updatable_sessions_.pop();
-    needs_render |= session->ApplyScheduledUpdates(presentation_time,
-                                                   presentation_interval);
+    if (session) {
+      needs_render |= session->ApplyScheduledUpdates(presentation_time,
+                                                     presentation_interval);
+    } else {
+      // Corresponds to a call to ScheduleUpdate(), which always triggers a
+      // render.
+      needs_render = true;
+    }
   }
   return needs_render;
 }

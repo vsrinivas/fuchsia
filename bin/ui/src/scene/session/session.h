@@ -21,6 +21,9 @@ using SessionId = uint64_t;
 class Image;
 using ImagePtr = ::ftl::RefPtr<Image>;
 
+class ImageBase;
+using ImageBasePtr = ::ftl::RefPtr<ImageBase>;
+
 class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
@@ -98,6 +101,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // Resource creation functions, called by ApplyCreateResourceOp().
   bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
   bool ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args);
+  bool ApplyCreateImagePipe(ResourceId id,
+                            const mozart2::ImagePipeArgsPtr& args);
   bool ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args);
   bool ApplyCreateScene(ResourceId id, const mozart2::ScenePtr& args);
   bool ApplyCreateCamera(ResourceId id, const mozart2::CameraPtr& args);
