@@ -21,6 +21,8 @@ source_set("stateful_sources") {
   visibility = [ ":*" ]
 
   sources = [
+    "build_config.h",
+    "ftl_export.h",
     "log_level.h",
     "log_settings.h",
     "log_settings_state.cc",
@@ -32,7 +34,6 @@ source_set("ftl_lib") {
 
   sources = [
     "arraysize.h",
-    "build_config.h",
     "command_line.cc",
     "command_line.h",
     "compiler_specific.h",
@@ -53,7 +54,6 @@ source_set("ftl_lib") {
     "files/symlink.h",
     "files/unique_fd.cc",
     "files/unique_fd.h",
-    "ftl_export.h",
     "functional/apply.h",
     "functional/cancelable_callback.h",
     "functional/closure.h",
