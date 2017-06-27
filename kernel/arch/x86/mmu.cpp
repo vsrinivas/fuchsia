@@ -10,7 +10,6 @@
 #include <trace.h>
 
 #include <arch/arch_ops.h>
-#include <arch/guest_mmu.h>
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
@@ -1142,12 +1141,11 @@ static status_t mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t cou
 
 status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count,
                         size_t* unmapped) {
-    return mmu_unmap<PageTable>(aspace, vaddr, count, unmapped);
-}
-
-status_t guest_mmu_unmap(guest_paspace_t* paspace, vaddr_t vaddr, const size_t count,
-                         size_t* unmapped) {
-    return mmu_unmap<ExtendedPageTable>(paspace, vaddr, count, unmapped);
+    if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+        return mmu_unmap<ExtendedPageTable>(aspace, vaddr, count, unmapped);
+    } else {
+        return mmu_unmap<PageTable>(aspace, vaddr, count, unmapped);
+    }
 }
 
 template <template <int> class PageTable>
@@ -1193,14 +1191,15 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
 
 status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
                       uint mmu_flags, size_t* mapped) {
-    return mmu_map<PageTable>(aspace, vaddr, paddr, count, mmu_flags, mapped);
-}
+    if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+        if (mmu_flags & ~kValidEptFlags)
+            return MX_ERR_INVALID_ARGS;
+        return mmu_map<ExtendedPageTable>(aspace, vaddr, paddr, count, mmu_flags, mapped);
+    } else {
+        return mmu_map<PageTable>(aspace, vaddr, paddr, count, mmu_flags, mapped);
+    }
 
-status_t guest_mmu_map(guest_paspace_t* paspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
-                       uint mmu_flags, size_t* mapped) {
-    if (mmu_flags & ~kValidEptFlags)
-        return MX_ERR_INVALID_ARGS;
-    return mmu_map<ExtendedPageTable>(paspace, vaddr, paddr, count, mmu_flags, mapped);
+
 }
 
 template <template <int> class PageTable>
@@ -1235,13 +1234,13 @@ static status_t mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, 
 }
 
 status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint mmu_flags) {
-    return mmu_protect<PageTable>(aspace, vaddr, count, mmu_flags);
-}
-
-status_t guest_mmu_protect(guest_paspace_t* paspace, vaddr_t vaddr, size_t count, uint mmu_flags) {
-    if (mmu_flags & ~kValidEptFlags)
-        return MX_ERR_INVALID_ARGS;
-    return mmu_protect<ExtendedPageTable>(paspace, vaddr, count, mmu_flags);
+    if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+        if (mmu_flags & ~kValidEptFlags)
+            return MX_ERR_INVALID_ARGS;
+        return mmu_protect<ExtendedPageTable>(aspace, vaddr, count, mmu_flags);
+    } else {
+        return mmu_protect<PageTable>(aspace, vaddr, count, mmu_flags);
+    }
 }
 
 void x86_mmu_early_init() {
@@ -1289,6 +1288,16 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
         aspace->pt_virt = (pt_entry_t*)X86_PHYS_TO_VIRT(aspace->pt_phys);
         LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys,
                 aspace->pt_virt);
+    } else if (mmu_flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+        vm_page_t* p = pmm_alloc_page(0, &aspace->pt_phys);
+        if (p == nullptr) {
+            TRACEF("error allocating top level page directory\n");
+            return MX_ERR_NO_MEMORY;
+        }
+        p->state = VM_PAGE_STATE_MMU;
+        aspace->pt_virt = static_cast<pt_entry_t*>(paddr_to_kvaddr(aspace->pt_phys));
+        memset(aspace->pt_virt, 0, sizeof(pt_entry_t) * NO_OF_PT_ENTRIES);
+        LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
     } else {
         /* allocate a top level page table for the new address space */
         paddr_t pa;
@@ -1315,32 +1324,6 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
     aspace->io_bitmap = nullptr;
     aspace->active_cpus = 0;
     spin_lock_init(&aspace->io_bitmap_lock);
-
-    return MX_OK;
-}
-
-status_t guest_mmu_init_paspace(guest_paspace_t* paspace, size_t size) {
-    DEBUG_ASSERT(paspace);
-    DEBUG_ASSERT(paspace->magic != ARCH_ASPACE_MAGIC);
-    LTRACEF("paspace %p, size 0x%zx\n", paspace, size);
-
-    paspace->magic = ARCH_ASPACE_MAGIC;
-    vm_page_t* p = pmm_alloc_page(0, &paspace->pt_phys);
-    if (p == nullptr) {
-        TRACEF("error allocating top level page directory\n");
-        return MX_ERR_NO_MEMORY;
-    }
-    p->state = VM_PAGE_STATE_MMU;
-    paspace->pt_virt = static_cast<pt_entry_t*>(paddr_to_kvaddr(paspace->pt_phys));
-    memset(paspace->pt_virt, 0, sizeof(pt_entry_t) * NO_OF_PT_ENTRIES);
-    LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", paspace->pt_phys, paspace->pt_virt);
-
-    paspace->flags = ARCH_MMU_FLAG_GUEST_PASPACE;
-    paspace->base = 0;
-    paspace->size = size;
-    paspace->active_cpus = 0;
-    paspace->io_bitmap = nullptr;
-    spin_lock_init(&paspace->io_bitmap_lock);
 
     return MX_OK;
 }
@@ -1381,11 +1364,10 @@ status_t mmu_destroy_aspace(arch_aspace_t* aspace) {
 }
 
 status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
-    return mmu_destroy_aspace<PageTable>(aspace);
-}
-
-status_t guest_mmu_destroy_paspace(guest_paspace_t* paspace) {
-    return mmu_destroy_aspace<ExtendedPageTable>(paspace);
+    if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE)
+        return mmu_destroy_aspace<ExtendedPageTable>(aspace);
+    else
+        return mmu_destroy_aspace<PageTable>(aspace);
 }
 
 void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
@@ -1478,11 +1460,10 @@ static status_t mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, 
 }
 
 status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
-    return mmu_query<PageTable>(aspace, vaddr, paddr, mmu_flags, x86_mmu_flags);
-}
-
-status_t guest_mmu_query(guest_paspace_t* paspace, vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
-    return mmu_query<ExtendedPageTable>(paspace, vaddr, paddr, mmu_flags, ept_mmu_flags);
+    if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE)
+        return mmu_query<ExtendedPageTable>(aspace, vaddr, paddr, mmu_flags, ept_mmu_flags);
+    else
+        return mmu_query<PageTable>(aspace, vaddr, paddr, mmu_flags, x86_mmu_flags);
 }
 
 void x86_mmu_percpu_init(void) {

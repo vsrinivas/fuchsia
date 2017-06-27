@@ -31,6 +31,7 @@
 typedef struct arch_aspace arch_aspace_t;
 
 #define ARCH_ASPACE_FLAG_KERNEL         (1 << 0)
+#define ARCH_ASPACE_FLAG_GUEST_PASPACE  (1 << 1)
 
 /* initialize per address space */
 status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, uint mmu_flags) __NONNULL((1));

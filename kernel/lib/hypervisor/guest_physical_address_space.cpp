@@ -23,7 +23,9 @@ status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    status_t status = guest_mmu_init_paspace(&gpas->paspace_, kAddressSpaceSize);
+    status_t status = arch_mmu_init_aspace(&gpas->paspace_, /* base */ 0L,
+                                           kAddressSpaceSize,
+                                           ARCH_ASPACE_FLAG_GUEST_PASPACE);
     if (status != MX_OK)
         return status;
 
@@ -40,14 +42,14 @@ GuestPhysicalAddressSpace::GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> gues
     : guest_phys_mem_(guest_phys_mem) {}
 
 GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
-    __UNUSED status_t status = guest_mmu_destroy_paspace(&paspace_);
+    __UNUSED status_t status = arch_mmu_destroy_aspace(&paspace_);
     DEBUG_ASSERT(status == MX_OK);
 }
 
-static status_t map_page(guest_paspace_t* paspace, vaddr_t guest_paddr, paddr_t host_paddr,
+static status_t map_page(arch_aspace_t* paspace, vaddr_t guest_paddr, paddr_t host_paddr,
                          uint mmu_flags) {
     size_t mapped;
-    status_t status = guest_mmu_map(paspace, guest_paddr, host_paddr, 1, mmu_flags, &mapped);
+    status_t status = arch_mmu_map(paspace, guest_paddr, host_paddr, 1, mmu_flags, &mapped);
     if (status != MX_OK)
         return status;
     return mapped != 1 ? MX_ERR_NO_MEMORY : MX_OK;
@@ -59,7 +61,7 @@ status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t hos
 
 status_t GuestPhysicalAddressSpace::MapRange(vaddr_t guest_paddr, size_t size) {
     auto mmu_map = [](void* context, size_t offset, size_t index, paddr_t pa) -> status_t {
-        guest_paspace_t* paspace = static_cast<guest_paspace_t*>(context);
+        arch_aspace_t* paspace = static_cast<arch_aspace_t*>(context);
         return map_page(paspace, offset, pa, kMmuFlags);
     };
     return guest_phys_mem_->Lookup(guest_paddr, size, kPfFlags, mmu_map, &paspace_);
@@ -68,7 +70,7 @@ status_t GuestPhysicalAddressSpace::MapRange(vaddr_t guest_paddr, size_t size) {
 status_t GuestPhysicalAddressSpace::UnmapRange(vaddr_t guest_paddr, size_t size) {
     size_t num_pages = size / PAGE_SIZE;
     size_t unmapped;
-    status_t status = guest_mmu_unmap(&paspace_, guest_paddr, num_pages, &unmapped);
+    status_t status = arch_mmu_unmap(&paspace_, guest_paddr, num_pages, &unmapped);
     if (status != MX_OK)
         return status;
     return unmapped != num_pages ? MX_ERR_BAD_STATE : MX_OK;
@@ -76,5 +78,5 @@ status_t GuestPhysicalAddressSpace::UnmapRange(vaddr_t guest_paddr, size_t size)
 
 status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* host_paddr) {
     uint mmu_flags;
-    return guest_mmu_query(&paspace_, guest_paddr, host_paddr, &mmu_flags);
+    return arch_mmu_query(&paspace_, guest_paddr, host_paddr, &mmu_flags);
 }

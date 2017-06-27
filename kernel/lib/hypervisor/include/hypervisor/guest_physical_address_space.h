@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <arch/guest_mmu.h>
+#include <arch/mmu.h>
 #include <kernel/vm/vm_object.h>
 #include <mxtl/unique_ptr.h>
 
@@ -26,7 +26,7 @@ public:
     status_t GetPage(vaddr_t guest_paddr, paddr_t* host_paddr);
 
 private:
-    guest_paspace_t paspace_;
+    arch_aspace_t paspace_;
     mxtl::RefPtr<VmObject> guest_phys_mem_;
 
     explicit GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> guest_phys_mem);
