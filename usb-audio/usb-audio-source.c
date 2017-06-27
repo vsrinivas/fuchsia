@@ -378,7 +378,7 @@ mx_status_t usb_audio_source_create(mx_device_t* device, int index,
 
 
     char name[MX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-audio-source-%d\n", index);
+    snprintf(name, sizeof(name), "usb-audio-source-%d", index);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
