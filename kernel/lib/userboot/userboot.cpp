@@ -34,6 +34,10 @@
 #include <magenta/vm_address_region_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
+#if ENABLE_ENTROPY_COLLECTOR_TEST
+#include <lib/crypto/global_prng.h>
+#endif
+
 static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
 #define STACK_VMO_NAME "userboot-initial-stack"
@@ -184,6 +188,9 @@ enum bootstrap_handle_index {
     BOOTSTRAP_THREAD,
     BOOTSTRAP_JOB,
     BOOTSTRAP_VMAR_ROOT,
+#if ENABLE_ENTROPY_COLLECTOR_TEST
+    BOOTSTRAP_ENTROPY_FILE,
+#endif
     BOOTSTRAP_HANDLES
 };
 
@@ -237,6 +244,11 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
         case BOOTSTRAP_VMAR_ROOT:
             info = PA_HND(PA_VMAR_ROOT, 0);
             break;
+#if ENABLE_ENTROPY_COLLECTOR_TEST
+        case BOOTSTRAP_ENTROPY_FILE:
+            info = PA_HND(PA_VMO_KERNEL_FILE, 0);
+            break;
+#endif
         case BOOTSTRAP_HANDLES:
             __builtin_unreachable();
         }
@@ -290,6 +302,18 @@ static int attempt_userboot() {
     if (status == MX_OK)
         status = get_job_handle(&handles[BOOTSTRAP_JOB]);
 
+#if ENABLE_ENTROPY_COLLECTOR_TEST
+    if (status == MX_OK) {
+        if (crypto::GlobalPRNG::internal::entropy_was_lost) {
+            status = MX_ERR_INTERNAL;
+        } else {
+            status = get_vmo_handle(
+                    crypto::GlobalPRNG::internal::entropy_vmo,
+                    /* readonly */ true, /* disp_ptr */ nullptr,
+                    &handles[BOOTSTRAP_ENTROPY_FILE]);
+        }
+    }
+#endif
     if (status != MX_OK)
         return status;
 

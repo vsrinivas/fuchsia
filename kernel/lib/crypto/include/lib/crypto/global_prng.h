@@ -8,6 +8,11 @@
 
 #include <lib/crypto/prng.h>
 
+#if ENABLE_ENTROPY_COLLECTOR_TEST
+#include <kernel/vm/vm_object.h>
+#include <mxtl/ref_ptr.h>
+#endif
+
 namespace crypto {
 
 namespace GlobalPRNG {
@@ -15,6 +20,15 @@ namespace GlobalPRNG {
 // Returns a pointer to the global PRNG singleton.  The pointer is
 // guaranteed to be non-null.
 PRNG* GetInstance();
+
+#if ENABLE_ENTROPY_COLLECTOR_TEST
+namespace internal {
+
+extern mxtl::RefPtr<VmObject> entropy_vmo;
+extern bool entropy_was_lost;
+
+} // namespace internal
+#endif
 
 } //namespace GlobalPRNG
 
