@@ -245,6 +245,8 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
     if (++on_delete_called_ == 1) {
       on_delete_called_once_.Pass();
     }
+
+    deleted_stories_.emplace(story_id);
   }
 
   modular::testing::TestPoint on_starting_called_once_{"OnChange() STARTING Called"};
@@ -266,6 +268,12 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
                   << " id " << story_info->id
                   << " state " << story_state
                   << " url " << story_info->url;
+
+    if (deleted_stories_.find(story_info->id) != deleted_stories_.end()) {
+      FTL_LOG(ERROR) << "Status change notification for deleted story "
+                     << story_info->id;
+      modular::testing::Fail("Status change notification for deleted story");
+    }
 
     // Just check that all states are covered at least once, proving that we get
     // state notifications at all from the story provider.
@@ -301,6 +309,11 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   }
 
   fidl::Binding<modular::StoryProviderWatcher> binding_;
+
+  // Remember deleted stories. After a story is deleted, there must be no state
+  // change notifications for it.
+  std::set<std::string> deleted_stories_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherImpl);
 };
 

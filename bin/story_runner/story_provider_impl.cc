@@ -279,6 +279,8 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
       story_controller_impls_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
+
+      // TODO(mesch): We must delete the story page too.
     });
   }
 
@@ -387,9 +389,14 @@ class StoryProviderImpl::TeardownCall : Operation<> {
     for (auto& it : story_provider_impl_->story_controller_impls_) {
       // Each callback has a copy of |flow| which only goes out-of-scope once
       // the story corresponding to |it| stops.
+      //
+      // TODO(mesch): If a DeleteCall is executing in front of
+      // StopForTeardown(), then the StopCall in StopForTeardown() never
+      // executes because the StoryController instance is deleted after the
+      // DeleteCall finishes. This will then block unless it runs in a timeout.
       it.second.impl->StopForTeardown([ this, story_id = it.first, flow ] {
         // It is okay to erase story_id because story provider binding has been
-        // closed and this callback cannot be invoked asynchronously.
+        // closed and this callback cannot be invoked synchronously.
         story_provider_impl_->story_controller_impls_.erase(story_id);
       });
     }

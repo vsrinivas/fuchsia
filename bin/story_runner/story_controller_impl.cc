@@ -286,9 +286,11 @@ class StoryControllerImpl::StopCall : Operation<> {
  public:
   StopCall(OperationContainer* const container,
            StoryControllerImpl* const story_controller_impl,
+           const bool notify,
            std::function<void()> done)
       : Operation(container, done),
-        story_controller_impl_(story_controller_impl) {
+        story_controller_impl_(story_controller_impl),
+        notify_(notify) {
     Ready();
   }
 
@@ -297,7 +299,7 @@ class StoryControllerImpl::StopCall : Operation<> {
   void Run() {
     // At this point, we don't need to monitor the external modules for state
     // changes anymore, because the next state change of the story is triggered
-    // by the Stop() call below.
+    // by the Cleanup() call below.
     story_controller_impl_->external_modules_.clear();
 
     // At this point, we don't need notifications from disconnected
@@ -384,12 +386,19 @@ class StoryControllerImpl::StopCall : Operation<> {
     story_controller_impl_->connections_.clear();
 
     story_controller_impl_->state_ = StoryState::STOPPED;
-    story_controller_impl_->NotifyStateChange();
+
+    // If this StopCall is part of a DeleteCall, then we don't notify story
+    // state changes; the pertinent state change will be the delete notification
+    // instead.
+    if (notify_) {
+      story_controller_impl_->NotifyStateChange();
+    }
 
     Done();
   };
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
+  const bool notify_;  // Whether to notify state change; false in DeleteCall.
   int connections_count_{};
   int links_count_{};
 
@@ -508,7 +517,8 @@ class StoryControllerImpl::DeleteCall : Operation<> {
   void Run() {
     // No call to Done(), in order to block all further operations on the queue
     // until the instance is deleted.
-    new StopCall(&operation_queue_, story_controller_impl_, done_);
+    new StopCall(&operation_queue_, story_controller_impl_,
+                 false /* notify */, done_);
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -825,7 +835,7 @@ void StoryControllerImpl::StopForDelete(const StopCallback& done) {
 }
 
 void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
-  new StopCall(&operation_queue_, this, done);
+  new StopCall(&operation_queue_, this, false /* notify */, done);
 }
 
 void StoryControllerImpl::AddForCreate(const fidl::String& module_name,
@@ -1050,7 +1060,7 @@ void StoryControllerImpl::Start(
 
 // |StoryController|
 void StoryControllerImpl::Stop(const StopCallback& done) {
-  new StopCall(&operation_queue_, this, done);
+  new StopCall(&operation_queue_, this, true /* notify */, done);
 }
 
 // |StoryController|
