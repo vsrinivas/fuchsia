@@ -29,11 +29,28 @@ static int vcpu_thread(void* arg) {
     return vcpu_loop((vcpu_context_t*)arg) != MX_OK ? thrd_error : thrd_success;
 }
 
+static mx_status_t usage(const char* cmd) {
+    fprintf(stderr, "usage: %s [-b block.bin] kernel.bin [ramdisk.bin]\n", cmd);
+    return MX_ERR_INVALID_ARGS;
+}
+
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        fprintf(stderr, "usage: %s kernel.bin [ramdisk.bin]\n", basename(argv[0]));
-        return MX_ERR_INVALID_ARGS;
+    const char* cmd = basename(argv[0]);
+    const char* block_path = NULL;
+    int opt;
+    while ((opt = getopt(argc, argv, "b:")) != -1) {
+        switch (opt) {
+        case 'b':
+            block_path = optarg;
+            break;
+        default:
+            return usage(cmd);
+        }
     }
+    if (optind >= argc)
+        return usage(cmd);
+    argc -= optind;
+    argv += optind;
 
     mx_handle_t hypervisor;
     mx_status_t status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
@@ -60,6 +77,22 @@ int main(int argc, char** argv) {
     // Setup guest memory.
     guest_state.mem_addr = (void*)addr;
     guest_state.mem_size = kVmoSize;
+    // Setup guest block.
+    guest_state.block_fd = -1;
+    guest_state.block_size = 1u << 30;
+    if (block_path != NULL) {
+        guest_state.block_fd = open(block_path, O_RDONLY);
+        if (guest_state.block_fd < 0) {
+            fprintf(stderr, "Failed to open block file \"%s\"\n", block_path);
+            return MX_ERR_IO;
+        }
+        off_t ret = lseek(guest_state.block_fd, 0, SEEK_END);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to read size of block file \"%s\"\n", block_path);
+            return MX_ERR_IO;
+        }
+        guest_state.block_size = ret;
+    }
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];
@@ -91,9 +124,9 @@ int main(int argc, char** argv) {
     }
 
     // Prepare the OS image
-    int fd = open(argv[1], O_RDONLY);
+    int fd = open(argv[0], O_RDONLY);
     if (fd < 0) {
-        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[1]);
+        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[0]);
         return MX_ERR_IO;
     }
 
@@ -108,7 +141,7 @@ int main(int argc, char** argv) {
 
     uintptr_t guest_ip;
     uintptr_t bootdata_off = 0;
-    const char* ramdisk_path = argc >= 3 ? argv[2] : NULL;
+    const char* ramdisk_path = argc >= 2 ? argv[1] : NULL;
     status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path, NULL,
                            &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {

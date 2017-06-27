@@ -87,6 +87,10 @@ typedef struct guest_state {
     void* mem_addr;
     size_t mem_size;
 
+    // Guest block.
+    int block_fd;
+    uint64_t block_size;
+
     io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;
     pci_device_state_t pci_device_state[PCI_MAX_DEVICES];

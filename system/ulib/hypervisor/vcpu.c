@@ -227,7 +227,8 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         uint16_t port_off;
         switch (pci_device(context->guest_state->pci_device_state, port_in->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK:
-            status = handle_virtio_block_read(port_off, &input_size, &packet.port_in_ret);
+            status = handle_virtio_block_read(context->guest_state, port_off, &input_size,
+                                              &packet.port_in_ret);
             break;
         default:
             fprintf(stderr, "Unhandled port in %#x\n", port_in->port);
