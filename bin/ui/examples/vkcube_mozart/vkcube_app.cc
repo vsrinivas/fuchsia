@@ -237,6 +237,7 @@ class VulkanCubeApp {
       ResourceId buffer_image_id = NewResourceId();
       ops.push_back(NewCreateImageOp(buffer_image_id, buffer_memory_id, 0,
                                      mozart2::ImageInfo::PixelFormat::BGRA_8,
+                                     mozart2::ImageInfo::ColorSpace::SRGB,
                                      mozart2::ImageInfo::Tiling::LINEAR,
                                      kCubeBufferWidth, kCubeBufferHeight,
                                      kCubeBufferWidth));

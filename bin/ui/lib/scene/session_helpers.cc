@@ -38,6 +38,7 @@ mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,
                                 mozart2::ImageInfo::PixelFormat format,
+                                mozart2::ImageInfo::ColorSpace color_space,
                                 mozart2::ImageInfo::Tiling tiling,
                                 uint32_t width,
                                 uint32_t height,
@@ -47,6 +48,7 @@ mozart2::OpPtr NewCreateImageOp(uint32_t id,
   image->memory_offset = memory_offset;
   image->info = mozart2::ImageInfo::New();
   image->info->pixel_format = format;
+  image->info->color_space = color_space;
   image->info->tiling = tiling;
   image->info->width = width;
   image->info->height = height;

@@ -108,6 +108,7 @@ class HelloSceneManagerApp {
     ops.push_back(
         NewCreateImageOp(checkerboard_image_id, checkerboard_memory_id, 0,
                          mozart2::ImageInfo::PixelFormat::BGRA_8,
+                         mozart2::ImageInfo::ColorSpace::SRGB,
                          mozart2::ImageInfo::Tiling::LINEAR, checkerboard_width,
                          checkerboard_height, checkerboard_width));
 
