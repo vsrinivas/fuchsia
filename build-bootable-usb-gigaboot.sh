@@ -117,8 +117,8 @@ echo "[format_usb] Deleting all partition info on USB, creating new GPT"
 sudo sgdisk -og "$DEVICE_PATH"
 
 SECTOR_SIZE=`cat "/sys/block/$DEVICE/queue/hw_sector_size"`
-echo "[format_usb] Creating 1GB EFI System Partition"
-sudo sgdisk -n 1:0:1GB -c 1:"EFI System Partition" -t 1:ef00 "$DEVICE_PATH"
+echo "[format_usb] Creating 2GB EFI System Partition"
+sudo sgdisk -n 1:0:2GB -c 1:"EFI System Partition" -t 1:ef00 "$DEVICE_PATH"
 EFI_PARTITION_PATH="${DEVICE_PATH}1"
 sudo mkfs.vfat "$EFI_PARTITION_PATH"
 echo "[format_usb] Creating FAT data partition"
