@@ -102,7 +102,8 @@ void TimerDispatcher::CancelLocked() {
     if (deadline_) {
         // The timer is active and needs to be canceled.
         // Refcount is at least 2 because there is a pending timer that we need to cancel.
-        if (timer_cancel(&timer_) || dpc_cancel(&timer_dpc_)) {
+        bool timer_canceled = timer_cancel(&timer_);
+        if (timer_canceled) {
             // Managed to cancel before OnTimerFired() ran. So we need to decrement the
             // ref count here.
             ASSERT(!Release());
@@ -118,6 +119,11 @@ void TimerDispatcher::CancelLocked() {
 
             while (deadline_ != kTimerCanceled) {
                 lock_.Release();
+                // TODO: find a more reliable way to interlock with the dpc thread.
+                // This only works because the dpc thread is implicitly running at a higher
+                // priority and/or there are multiple cpus in the system. If we happen to be
+                // at dpc or higher priority, or if the dpc system changed such that it didn't
+                // run at a high priority, we'd potentially livelock the system.
                 thread_reschedule();
                 lock_.Acquire();
             }
