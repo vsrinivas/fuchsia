@@ -115,7 +115,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
+#include <poll.h>
 
 #ifdef __Fuchsia__
 #include <magenta/device/console.h>
@@ -295,6 +295,12 @@ static int getCursorPosition(int ifd, int ofd) {
 
     /* Read the response: ESC [ rows ; cols R */
     while (i < sizeof(buf)-1) {
+        struct pollfd p = {
+            .fd = ifd,
+            .events = POLLIN,
+            .revents = 0,
+        };
+        if (poll(&p, 1, 250) != 1) return -1;
         if (read(ifd,buf+i,1) != 1) break;
         if (buf[i] == 'R') break;
         i++;
@@ -312,7 +318,7 @@ static int getCursorPosition(int ifd, int ofd) {
 static int getColumns(int ifd, int ofd) {
 #ifdef __Fuchsia__
     ioctl_console_dimensions_t dims;
-    ssize_t r = mxio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS, NULL, 0, &dims,
+    ssize_t r = mxio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS,NULL, 0, &dims,
         sizeof(dims));
     if (r != sizeof(dims)) {
 #else
