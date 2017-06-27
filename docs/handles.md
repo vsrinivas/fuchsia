@@ -102,5 +102,5 @@ is destroyed, the handle is closed.
 get access to handles.
 
 ## See Also
-[Kernel Objects](kernel_objects.md),
+[Objects](objects.md),
 [Rights](rights.md)

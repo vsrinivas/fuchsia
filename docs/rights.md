@@ -21,5 +21,5 @@ default rights for each object type, which can be reduced via
 | **MX_RIGHT_DEBUG** | Placeholder for debugger use, pending audit of all rights usage |
 
 ## See also
-[Kernel Objects](kernel_objects.md),
+[Objects](objects.md),
 [Magenta Handles](handles.md)
