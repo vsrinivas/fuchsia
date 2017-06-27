@@ -192,7 +192,7 @@ class ChannelMultiProcess : public benchmark::Fixture {
     if (process < 0) {
       return;
     }
-    mx_status_t status = mx_object_wait_one(process, MX_PROCESS_SIGNALED,
+    mx_status_t status = mx_object_wait_one(process, MX_PROCESS_TERMINATED,
                                             MX_TIME_INFINITE, nullptr);
     if (status != MX_OK) {
       state.SkipWithError("Failed to wait for process termination");
