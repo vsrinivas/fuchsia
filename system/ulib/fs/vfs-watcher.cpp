@@ -65,7 +65,7 @@ mx_status_t WatcherContainer::WatchDirV2(const vfs_watch_dir_t* cmd) {
     return MX_OK;
 }
 
-void WatcherContainer::NotifyAdd(const char* name, size_t len) {
+void WatcherContainer::Notify(const char* name, size_t len, unsigned event) {
     if (len > VFS_WATCH_NAME_MAX) {
         return;
     }
@@ -78,12 +78,12 @@ void WatcherContainer::NotifyAdd(const char* name, size_t len) {
 
     uint8_t msg[sizeof(vfs_watch_msg_t) + len];
     vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
-    vmsg->event = VFS_WATCH_EVT_ADDED;
+    vmsg->event = static_cast<uint8_t>(event);
     vmsg->len = static_cast<uint8_t>(len);
     memcpy(vmsg->name, name, len);
 
     for (auto it = watch_list_.begin(); it != watch_list_.end();) {
-        if (!(it->mask & VFS_WATCH_MASK_ADDED)) {
+        if (!(it->mask & VFS_WATCH_EVT_MASK(event))) {
             continue;
         }
 

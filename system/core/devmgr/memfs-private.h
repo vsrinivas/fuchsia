@@ -89,7 +89,7 @@ public:
                               mx_off_t len);
 
     // Use the watcher container to implement a directory watcher
-    void NotifyAdd(const char* name, size_t len) final;
+    void Notify(const char* name, size_t len, unsigned event) final;
     mx_status_t WatchDir(mx_handle_t* out) final;
     mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) final;
 

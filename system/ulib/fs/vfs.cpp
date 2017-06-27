@@ -130,7 +130,7 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
             }
             return r;
         }
-        vndir->NotifyAdd(path, len);
+        vndir->Notify(path, len, VFS_WATCH_EVT_ADDED);
     } else {
     try_open:
         r = vndir->Lookup(&vn, path, len);
@@ -204,7 +204,7 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
     if (r != MX_OK) {
         return r;
     }
-    newparent->NotifyAdd(newname, newlen);
+    newparent->Notify(newname, newlen, VFS_WATCH_EVT_ADDED);
     return MX_OK;
 }
 
@@ -227,7 +227,7 @@ mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpa
     if (r != MX_OK) {
         return r;
     }
-    newparent->NotifyAdd(newname, newlen);
+    newparent->Notify(newname, newlen, VFS_WATCH_EVT_ADDED);
     return MX_OK;
 }
 

@@ -88,7 +88,7 @@ class WatcherContainer {
 public:
     mx_status_t WatchDir(mx_handle_t* out);
     mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd);
-    void NotifyAdd(const char* name, size_t len);
+    void Notify(const char* name, size_t len, unsigned event);
 private:
     mxtl::Mutex lock_;
     mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
@@ -149,7 +149,7 @@ public:
     virtual mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) {
         return MX_ERR_NOT_SUPPORTED;
     }
-    virtual void NotifyAdd(const char* name, size_t len) {}
+    virtual void Notify(const char* name, size_t len, unsigned event) {}
 
     // Ensure that it is valid to open vn.
     virtual mx_status_t Open(uint32_t flags) = 0;

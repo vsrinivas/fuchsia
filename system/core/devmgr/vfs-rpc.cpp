@@ -33,7 +33,7 @@ namespace memfs {
 
 static VnodeMemfs* global_vfs_root;
 
-void VnodeDir::NotifyAdd(const char* name, size_t len) { watcher_.NotifyAdd(name, len); }
+void VnodeDir::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
 mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
 mx_status_t VnodeDir::WatchDirV2(const vfs_watch_dir_t* cmd) { return watcher_.WatchDirV2(cmd); }
 
