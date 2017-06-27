@@ -47,6 +47,11 @@ struct Transform {
                   anchor) {}
 
   Transform() : scale(vec3(1, 1, 1)) {}
+
+  bool IsIdentity() const {
+    return translation == vec3() && scale == vec3(1, 1, 1) &&
+           rotation == quat() && anchor == vec3();
+  }
 };
 
 // Debugging.
