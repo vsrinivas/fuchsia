@@ -59,6 +59,8 @@ __END_CDECLS
 
 namespace fs {
 
+class Vnode;
+
 // RemoteContainer adds support for mounting remote handles on nodes.
 class RemoteContainer {
 public:
@@ -87,7 +89,7 @@ public:
 class WatcherContainer {
 public:
     mx_status_t WatchDir(mx_handle_t* out);
-    mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd);
+    mx_status_t WatchDirV2(Vnode* vn, const vfs_watch_dir_t* cmd);
     void Notify(const char* name, size_t len, unsigned event);
 private:
     mxtl::Mutex lock_;

@@ -35,7 +35,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-sync.c \
     $(LOCAL_DIR)/test-truncate.cpp \
     $(LOCAL_DIR)/test-unlink.c \
-    $(LOCAL_DIR)/test-watcher.c \
+    $(LOCAL_DIR)/test-watcher.cpp \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir

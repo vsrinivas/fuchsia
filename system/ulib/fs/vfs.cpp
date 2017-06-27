@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <mxio/remoteio.h>
+#include <mxio/watcher.h>
 #include <mxtl/auto_call.h>
 
 #ifdef __Fuchsia__
@@ -241,7 +242,6 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         }
         const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
         return vn->WatchDirV2(request);
-
     }
     case IOCTL_VFS_MOUNT_FS: {
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
