@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   status =
-      mx_object_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
+      mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
 
   gettimeofday(&endtimeval, NULL);
 
