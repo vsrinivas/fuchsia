@@ -42,7 +42,7 @@ int main(void) {
         return status;
     }
 
-    status = mx_object_wait_one(proc, MX_PROCESS_SIGNALED,
+    status = mx_object_wait_one(proc, MX_PROCESS_TERMINATED,
                                 MX_TIME_INFINITE, NULL);
     if (status != MX_OK) {
         printf("mx_object_wait_one: %s\n", mx_status_get_string(status));
