@@ -8,6 +8,7 @@
 #include "application/services/application_environment.fidl.h"
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/src/scene/display.h"
+#include "apps/mozart/src/scene/scene_manager_impl.h"
 #include "lib/escher/examples/common/demo.h"
 #include "lib/escher/examples/common/demo_harness_fuchsia.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -15,8 +16,6 @@
 
 namespace mozart {
 namespace scene {
-
-class SceneManagerImpl;
 
 // TODO(MZ-142): SceneManagerApp shouldn't inherit from Demo.
 class SceneManagerApp : public Demo {
@@ -35,8 +34,8 @@ class SceneManagerApp : public Demo {
 
   app::ApplicationContext* const application_context_;
 
-  fidl::BindingSet<mozart2::SceneManager, std::unique_ptr<SceneManagerImpl>>
-      bindings_;
+  SceneManagerImpl scene_manager_;
+  fidl::BindingSet<mozart2::SceneManager, SceneManagerImpl*> bindings_;
 
   Display display_;
 
