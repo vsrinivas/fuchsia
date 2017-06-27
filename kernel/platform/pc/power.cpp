@@ -16,6 +16,7 @@
 
 #include <lib/console.h>
 #include <lib/version.h>
+#include <arch/x86/apic.h>
 
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
@@ -45,6 +46,11 @@ static void halt_other_cpus(void) {
             __asm volatile ("nop");
         }
     }
+}
+
+void platform_halt_cpu(void)
+{
+    apic_send_self_ipi(0x00, DELIVERY_MODE_INIT);
 }
 
 void platform_panic_start(void) {
