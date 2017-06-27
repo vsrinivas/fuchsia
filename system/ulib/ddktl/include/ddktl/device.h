@@ -324,7 +324,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         return res;
     }
 
-    const char* name() const { return device_get_name(mxdev()); }
+    const char* name() const { return mxdev() ? device_get_name(mxdev()) : nullptr; }
 
     // The opaque pointer representing this device.
     mx_device_t* mxdev() const { return mxdev_; }
