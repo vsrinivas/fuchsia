@@ -315,6 +315,13 @@ void dlog_bluescreen_init(void) {
     dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
             current_time() / LK_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
+
+    // Log the ELF build ID in the format the symbolizer scripts understand.
+    if (version.elf_build_id[0] != '\0') {
+        vaddr_t base = KERNEL_BASE + KERNEL_LOAD_OFFSET;
+        dprintf(INFO, "dso: id=%s base=%#lx name=magenta.elf\n",
+                version.elf_build_id, base);
+    }
 }
 
 static void dlog_init_hook(uint level) {
