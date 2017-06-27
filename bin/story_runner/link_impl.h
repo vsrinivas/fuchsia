@@ -16,6 +16,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace modular {
@@ -28,6 +29,7 @@ using CrtJsonValue = CrtJsonDoc::ValueType;
 using CrtJsonPointer = rapidjson::GenericPointer<CrtJsonValue>;
 
 class LinkConnection;
+class LinkWatcherConnection;
 
 // A Link is a mutable and observable value shared between modules.
 //
@@ -45,18 +47,15 @@ class LinkConnection;
 // LinkConnection instances.
 class LinkImpl {
  public:
-  // Connects a new LinkConnection object for the given Link interface
-  // request. The |module_path| is the series of module names (where
-  // the last element is the module that created this Link) that this
-  // Link is namespaced under.
+  // The |module_path| is the series of module names (where the last element is
+  // the module that created this Link) that this Link is namespaced under.
   LinkImpl(StoryStorageImpl* story_storage, const LinkPathPtr& link_path);
 
   ~LinkImpl();
 
-  // Creates a new LinkConnection for the given request.
-  // LinkConnection instances are deleted when their connections
-  // close, and they are all deleted and close their connections when
-  // LinkImpl is destroyed.
+  // Creates a new LinkConnection for the given request. LinkConnection
+  // instances are deleted when their connections close, and they are all
+  // deleted and close their connections when LinkImpl is destroyed.
   void Connect(fidl::InterfaceRequest<Link> request);
 
   // Used by LinkConnection.
@@ -67,11 +66,17 @@ class LinkImpl {
   void Set(fidl::Array<fidl::String> path,
            const fidl::String& json,
            LinkConnection* src);
+  void Get(fidl::Array<fidl::String> path,
+           const std::function<void(fidl::String)>& callback);
   void Erase(fidl::Array<fidl::String> path, LinkConnection* src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
-  const CrtJsonDoc& doc() const { return doc_; }
   void Sync(const std::function<void()>& callback);
+  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
+             ftl::WeakPtr<LinkConnection> connection);
+
+  // Used by LinkWatcherConnection.
+  void RemoveConnection(LinkWatcherConnection* conn);
 
   // Used by StoryControllerImpl.
   const LinkPathPtr& link_path() const { return link_path_; }
@@ -99,14 +104,43 @@ class LinkImpl {
   bool ready_{};
   std::vector<fidl::InterfaceRequest<Link>> requests_;
 
+  // The value of this Link instance.
   CrtJsonDoc doc_;
+
+  // Fidl connections to this Link instance. We need to explicitly keep track of
+  // connections so we can give some watchers only notifications on changes
+  // coming from *other* connections than the one the watcher was registered on.
   std::vector<std::unique_ptr<LinkConnection>> connections_;
+
+  // Some watchers do not want notifications for changes made through the
+  // connection they were registered on. Therefore, the connection they were
+  // registered on is kept associated with them. The connection may still go
+  // down before the watcher connection.
+  //
+  // Some watchers want all notifications, even from changes made through the
+  // connection they were registered on. Therefore, they are not associated with
+  // a connection, and the connection is recorded as nullptr. These watchers
+  // obviously also may survive the connections they were registered on.
+  std::vector<std::unique_ptr<LinkWatcherConnection>> watchers_;
+
+  // The hierarchical identifier of this Link instance within its Story.
   const LinkPathPtr link_path_;
+
+  // Link values are stored here.
   StoryStorageImpl* const story_storage_;
+
+  // When the Link instance loses all its Link connections, this callback is
+  // invoked. It will cause the Link instance to be deleted. Remaining
+  // LinkWatcher connections do not retain the Link instance, but instead can
+  // watch it being deleted (through their connection error handler).
   std::function<void()> orphaned_handler_;
 
+  // A JSON schema to be applied to the Link value.
   std::unique_ptr<rapidjson::SchemaDocument> schema_doc_;
 
+  // Helps to defer asynchronous notification of updated values until after they
+  // have been written to Ledger, and not have been updated while they were
+  // written.
   Bottleneck write_link_data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
@@ -124,8 +158,6 @@ class LinkConnection : Link {
     new LinkConnection(impl, std::move(request));
   }
 
-  void NotifyWatchers(const CrtJsonDoc& doc, const bool self_notify);
-
  private:
   // Private so it cannot be created on the stack.
   LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> request);
@@ -142,19 +174,36 @@ class LinkConnection : Link {
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Sync(const SyncCallback& callback) override;
 
-  // Used by Watch() and WatchAll().
-  void AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
-                  const bool self_notify);
-
   LinkImpl* const impl_;
   fidl::Binding<Link> binding_;
 
-  // These watchers do not want self notifications.
-  fidl::InterfacePtrSet<LinkWatcher> watchers_;
-  // These watchers want all notifications.
-  fidl::InterfacePtrSet<LinkWatcher> all_watchers_;
+  ftl::WeakPtrFactory<LinkConnection> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
+};
+
+class LinkWatcherConnection {
+ public:
+  LinkWatcherConnection(LinkImpl* impl, ftl::WeakPtr<LinkConnection> conn,
+                        LinkWatcherPtr watcher);
+  ~LinkWatcherConnection();
+
+  // Notifies the LinkWatcher in this connection, unless src is the
+  // LinkConnection associated with this.
+  void Notify(const fidl::String& value, LinkConnection* src);
+
+ private:
+  // The LinkImpl this instance belongs to.
+  LinkImpl* const impl_;
+
+  // The LinkConnection through which the LinkWatcher was registered. It is a
+  // weak pointer because it may be deleted before the LinkWatcher is
+  // disconnected.
+  ftl::WeakPtr<LinkConnection> conn_;
+
+  LinkWatcherPtr watcher_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherConnection);
 };
 
 }  // namespace modular

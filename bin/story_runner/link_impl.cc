@@ -126,6 +126,16 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
   // FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
 }
 
+void LinkImpl::Get(fidl::Array<fidl::String> path,
+                   const std::function<void(fidl::String)>& callback) {
+  auto p = CreatePointerFromArray(doc_, path.begin(), path.end()).Get(doc_);
+  if (p == nullptr) {
+    callback(fidl::String());
+  } else {
+    callback(fidl::String(JsonValueToString(*p)));
+  }
+}
+
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
                             const fidl::String& json,
                             LinkConnection* const src) {
@@ -288,9 +298,9 @@ void LinkImpl::OnChange(const fidl::String& json) {
 }
 
 void LinkImpl::NotifyWatchers(LinkConnection* const src) {
-  for (auto& dst : connections_) {
-    const bool self_notify = (dst.get() != src);
-    dst->NotifyWatchers(doc_, self_notify);
+  fidl::String value = JsonValueToString(doc_);
+  for (auto& dst : watchers_) {
+    dst->Notify(value, src);
   }
 }
 
@@ -324,9 +334,34 @@ void LinkImpl::RemoveConnection(LinkConnection* const connection) {
   }
 }
 
+void LinkImpl::RemoveConnection(LinkWatcherConnection* const connection) {
+  auto i = std::remove_if(
+      watchers_.begin(), watchers_.end(),
+      [connection](const std::unique_ptr<LinkWatcherConnection>& p) {
+        return p.get() == connection;
+      });
+  FTL_DCHECK(i != watchers_.end());
+  watchers_.erase(i, watchers_.end());
+}
+
+void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
+                     ftl::WeakPtr<LinkConnection> conn) {
+  LinkWatcherPtr watcher_ptr;
+  watcher_ptr.Bind(std::move(watcher));
+
+  // TODO(jimbe) We need to send an initial notification of state until
+  // there is snapshot information that can be used by clients to query the
+  // state at this instant. Otherwise there is no sequence information about
+  // total state versus incremental changes.
+  watcher_ptr->Notify(JsonValueToString(doc_));
+
+  watchers_.emplace_back(std::make_unique<LinkWatcherConnection>(
+                             this, std::move(conn), std::move(watcher_ptr)));
+}
+
 LinkConnection::LinkConnection(LinkImpl* const impl,
                                fidl::InterfaceRequest<Link> link_request)
-    : impl_(impl), binding_(this, std::move(link_request)) {
+    : impl_(impl), binding_(this, std::move(link_request)), weak_ptr_factory_(this) {
   impl_->AddConnection(this);
   binding_.set_connection_error_handler(
       [this] { impl_->RemoveConnection(this); });
@@ -335,39 +370,20 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
 LinkConnection::~LinkConnection() = default;
 
 void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
-  AddWatcher(std::move(watcher), false);
+  // This watcher stays associated with the connection it was registered
+  // through. The pointer is used to block notifications for updates that
+  // originate at the same connection. If the connection goes away, the weak
+  // pointer becomes null and protects against another LinkConnection getting
+  // allocated at the same address.
+  impl_->Watch(std::move(watcher), weak_ptr_factory_.GetWeakPtr());
 }
 
 void LinkConnection::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
-  AddWatcher(std::move(watcher), true);
-}
-
-void LinkConnection::AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
-                                const bool self_notify) {
-  LinkWatcherPtr watcher_ptr;
-  watcher_ptr.Bind(std::move(watcher));
-
-  // TODO(jimbe) We need to send an initial notification of state until
-  // there is snapshot information that can be used by clients to query the
-  // state at this instant. Otherwise there is no sequence information about
-  // total state versus incremental changes.
-  auto& doc = impl_->doc();
-  watcher_ptr->Notify(JsonValueToString(doc));
-
-  auto& watcher_set = self_notify ? all_watchers_ : watchers_;
-  watcher_set.AddInterfacePtr(std::move(watcher_ptr));
-}
-
-void LinkConnection::NotifyWatchers(const CrtJsonDoc& doc,
-                                    const bool self_notify) {
-  fidl::String json(JsonValueToString(impl_->doc()));
-
-  if (self_notify) {
-    watchers_.ForAllPtrs(
-        [&json](LinkWatcher* const watcher) { watcher->Notify(json); });
-  }
-  all_watchers_.ForAllPtrs(
-      [&json](LinkWatcher* const watcher) { watcher->Notify(json); });
+  // This watcher is not associated with the connection it was registered
+  // through. The connection is recorded as null (see above for why it's a weak
+  // pointer), which never equals any connection that originates an update, so
+  // no update notification is ever blocked.
+  impl_->Watch(std::move(watcher), ftl::WeakPtr<LinkConnection>());
 }
 
 void LinkConnection::Sync(const SyncCallback& callback) {
@@ -394,12 +410,24 @@ void LinkConnection::Erase(fidl::Array<fidl::String> path) {
 
 void LinkConnection::Get(fidl::Array<fidl::String> path,
                          const GetCallback& callback) {
-  auto p = CreatePointerFromArray(impl_->doc(), path.begin(), path.end())
-               .Get(impl_->doc());
-  if (p == nullptr) {
-    callback(fidl::String());
-  } else {
-    callback(fidl::String(JsonValueToString(*p)));
+  impl_->Get(std::move(path), callback);
+}
+
+LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
+                                             ftl::WeakPtr<LinkConnection> conn,
+                                             LinkWatcherPtr watcher)
+    : impl_(impl),
+      conn_(std::move(conn)),
+      watcher_(std::move(watcher)) {
+  watcher_.set_connection_error_handler([this] { impl_->RemoveConnection(this); });
+}
+
+LinkWatcherConnection::~LinkWatcherConnection() = default;
+
+void LinkWatcherConnection::Notify(const fidl::String& value,
+                                   LinkConnection* const src) {
+  if (conn_.get() != src) {
+    watcher_->Notify(value);
   }
 }
 
