@@ -27,6 +27,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include <unistd.h>
 
 #include <inttypes.h>
@@ -38,6 +39,7 @@
 static void early_init(void);
 static void error(const char*, ...);
 static void debugmsg(const char*, ...);
+static void log_write(const void* buf, size_t len);
 static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
 
 #define MAXP2(a, b) (-(-(a) & -(b)))
@@ -65,6 +67,11 @@ struct dso {
     char* name;
     ElfW(Dyn)* dynv;
     struct dso *next, *prev;
+
+    union {
+        const struct gnu_note* build_id_note; // Written by map_library.
+        struct iovec build_id_log;      // Written by format_build_id_log.
+    };
 
     const char* soname;
     Phdr* phdr;
@@ -101,6 +108,19 @@ struct dso {
 struct symdef {
     Sym* sym;
     struct dso* dso;
+};
+
+union gnu_note_name {
+    char name[sizeof("GNU")];
+    uint32_t word;
+};
+#define GNU_NOTE_NAME ((union gnu_note_name){.name = "GNU"})
+_Static_assert(sizeof(GNU_NOTE_NAME.name) == sizeof(GNU_NOTE_NAME.word), "");
+
+struct gnu_note {
+    Elf64_Nhdr nhdr;
+    union gnu_note_name name;
+    alignas(4) uint8_t desc[];
 };
 
 #define MIN_TLS_ALIGN alignof(struct pthread)
@@ -538,6 +558,88 @@ __NO_SAFESTACK static void unmap_library(struct dso* dso) {
     }
 }
 
+// Locate the build ID note just after mapping the segments in.
+// This is called from dls2, so it cannot use any non-static functions.
+__NO_SAFESTACK NO_ASAN static bool find_buildid_note(struct dso* dso,
+                                                     const Phdr* seg) {
+    const char* end = laddr(dso, seg->p_vaddr + seg->p_filesz);
+    for (const struct gnu_note* n = laddr(dso, seg->p_vaddr);
+         (const char*)n < end;
+         n = (const void*)(n->name.name +
+                           ((n->nhdr.n_namesz + 3) & -4) +
+                           ((n->nhdr.n_descsz + 3) & -4))) {
+        if (n->nhdr.n_type == NT_GNU_BUILD_ID &&
+            n->nhdr.n_namesz == sizeof(GNU_NOTE_NAME) &&
+            n->name.word == GNU_NOTE_NAME.word) {
+            dso->build_id_note = n;
+            return true;
+        }
+    }
+    return false;
+}
+
+// We pre-format the log line for each DSO early so that we can log it
+// without running any nontrivial code.  We use hand-rolled formatting
+// code to avoid using large and complex code like the printf engine.
+// Each line looks like "dso: id=... base=0x... name=...\n".
+#define BUILD_ID_LOG_1 "dso: id="
+#define BUILD_ID_LOG_NONE "none"
+#define BUILD_ID_LOG_2 " base=0x"
+#define BUILD_ID_LOG_3 " name="
+
+__NO_SAFESTACK static size_t build_id_log_size(struct dso* dso,
+                                               size_t namelen) {
+    size_t id_size = (dso->build_id_note == NULL ?
+                      sizeof(BUILD_ID_LOG_NONE) - 1 :
+                      dso->build_id_note->nhdr.n_descsz * 2);
+    return (sizeof(BUILD_ID_LOG_1) - 1 + id_size +
+            sizeof(BUILD_ID_LOG_2) - 1 + (sizeof(size_t) * 2) +
+            sizeof(BUILD_ID_LOG_3) - 1 + namelen + 1);
+}
+
+__NO_SAFESTACK static void format_build_id_log(
+    struct dso* dso, char *buffer, const char *name, size_t namelen) {
+#define HEXDIGITS "0123456789abcdef"
+    const struct gnu_note* note = dso->build_id_note;
+    dso->build_id_log.iov_base = buffer;
+    memcpy(buffer, BUILD_ID_LOG_1, sizeof(BUILD_ID_LOG_1) - 1);
+    char *p = buffer + sizeof(BUILD_ID_LOG_1) - 1;
+    if (note == NULL) {
+        memcpy(p, BUILD_ID_LOG_NONE, sizeof(BUILD_ID_LOG_NONE) - 1);
+        p += sizeof(BUILD_ID_LOG_NONE) - 1;
+    } else {
+        for (Elf64_Word i = 0; i < note->nhdr.n_descsz; ++i) {
+            uint8_t byte = note->desc[i];
+            *p++ = HEXDIGITS[byte >> 4];
+            *p++ = HEXDIGITS[byte & 0xf];
+        }
+    }
+    memcpy(p, BUILD_ID_LOG_2, sizeof(BUILD_ID_LOG_2) - 1);
+    p += sizeof(BUILD_ID_LOG_2) - 1;
+    uintptr_t base = (uintptr_t)dso->base;
+    unsigned int shift = sizeof(uintptr_t) * 8;
+    do {
+        shift -= 4;
+        *p++ = HEXDIGITS[(base >> shift) & 0xf];
+    } while (shift > 0);
+    memcpy(p, BUILD_ID_LOG_3, sizeof(BUILD_ID_LOG_3) - 1);
+    p += sizeof(BUILD_ID_LOG_3) - 1;
+    memcpy(p, name, namelen);
+    p += namelen;
+    *p++ = '\n';
+    dso->build_id_log.iov_len = p - buffer;
+#undef HEXDIGITS
+}
+
+__NO_SAFESTACK static void allocate_and_format_build_id_log(struct dso* dso) {
+    const char* name = dso->name;
+    if (name[0] == '\0')
+        name = dso->soname == NULL ? "<application>" : dso->soname;
+    size_t namelen = strlen(name);
+    char *buffer = dl_alloc(build_id_log_size(dso, namelen));
+    format_build_id_log(dso, buffer, name, namelen);
+}
+
 __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
                                                       struct dso* dso) {
     struct {
@@ -582,26 +684,37 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
     } else {
         ph = ph0 = (void*)((char*)&buf + eh->e_phoff);
     }
+    const Phdr* first_note = NULL;
+    const Phdr* last_note = NULL;
     for (i = eh->e_phnum; i; i--, ph = (void*)((char*)ph + eh->e_phentsize)) {
-        if (ph->p_type == PT_DYNAMIC) {
+        switch (ph->p_type) {
+        case PT_LOAD:
+            nsegs++;
+            if (ph->p_vaddr < addr_min) {
+                addr_min = ph->p_vaddr;
+            }
+            if (ph->p_vaddr + ph->p_memsz > addr_max) {
+                addr_max = ph->p_vaddr + ph->p_memsz;
+            }
+            break;
+        case PT_DYNAMIC:
             dyn = ph->p_vaddr;
-        } else if (ph->p_type == PT_TLS) {
+            break;
+        case PT_TLS:
             tls_image = ph->p_vaddr;
             dso->tls.align = ph->p_align;
             dso->tls.len = ph->p_filesz;
             dso->tls.size = ph->p_memsz;
-        } else if (ph->p_type == PT_GNU_RELRO) {
+            break;
+        case PT_GNU_RELRO:
             dso->relro_start = ph->p_vaddr & -PAGE_SIZE;
             dso->relro_end = (ph->p_vaddr + ph->p_memsz) & -PAGE_SIZE;
-        }
-        if (ph->p_type != PT_LOAD)
-            continue;
-        nsegs++;
-        if (ph->p_vaddr < addr_min) {
-            addr_min = ph->p_vaddr;
-        }
-        if (ph->p_vaddr + ph->p_memsz > addr_max) {
-            addr_max = ph->p_vaddr + ph->p_memsz;
+            break;
+        case PT_NOTE:
+            if (first_note == NULL)
+                first_note = ph;
+            last_note = ph;
+            break;
         }
     }
     if (!dyn)
@@ -731,6 +844,12 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
     dso->dynv = laddr(dso, dyn);
     if (dso->tls.size)
         dso->tls.image = laddr(dso, tls_image);
+
+    for (const Phdr* seg = first_note; seg <= last_note; ++seg) {
+        if (seg->p_type == PT_NOTE && find_buildid_note(dso, seg))
+            break;
+    }
+
     return MX_OK;
 noexec:
     // We overload this to translate into ENOEXEC later.
@@ -986,7 +1105,10 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
      * threads to obtain copies of both the new TLS, and an
      * extended DTV capable of storing an additional slot for
      * the newly-loaded DSO. */
-    alloc_size = sizeof *p + ndeps * sizeof(p->deps[0]) + strlen(name) + 1;
+    size_t namelen = strlen(name) + 1;
+    size_t build_id_log_len = build_id_log_size(&temp_dso, namelen - 1);
+    alloc_size = (sizeof *p + ndeps * sizeof(p->deps[0]) +
+                  namelen + build_id_log_len);
     if (runtime && temp_dso.tls.image) {
         size_t per_th = temp_dso.tls.size + temp_dso.tls.align + sizeof(void*) * (tls_cnt + 3);
         n_th = atomic_load(&libc.thread_count);
@@ -1004,7 +1126,9 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
     p->refcnt = 1;
     p->needed_by = needed_by;
     p->name = (void*)&p->buf[ndeps];
-    strcpy(p->name, name);
+    memcpy(p->name, name, namelen);
+    format_build_id_log(p, p->name + namelen, p->name, namelen);
+    char* tls_buffer = p->name + namelen + build_id_log_len;
     if (p->tls.image) {
         p->tls_id = ++tls_cnt;
         tls_align = MAXP2(tls_align, p->tls.align);
@@ -1016,8 +1140,8 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
         tls_offset -= (tls_offset + (uintptr_t)p->tls.image) & (p->tls.align - 1);
         p->tls.offset = tls_offset;
 #endif
-        p->new_dtv =
-            (void*)(-sizeof(size_t) & (uintptr_t)(p->name + strlen(p->name) + sizeof(size_t)));
+        p->new_dtv = (void*)(-sizeof(size_t) &
+                             (uintptr_t)(tls_buffer + sizeof(size_t)));
         p->new_tls = (void*)(p->new_dtv + n_th * (tls_cnt + 1));
         if (tls_tail)
             tls_tail->next = &p->tls;
@@ -1168,20 +1292,27 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
 
 __NO_SAFESTACK NO_ASAN static void kernel_mapped_dso(struct dso* p) {
     size_t min_addr = -1, max_addr = 0, cnt;
-    Phdr* ph = p->phdr;
+    const Phdr* ph = p->phdr;
     for (cnt = p->phnum; cnt--; ph = (void*)((char*)ph + p->phentsize)) {
-        if (ph->p_type == PT_DYNAMIC) {
+        switch (ph->p_type) {
+        case PT_LOAD:
+            if (ph->p_vaddr < min_addr)
+                min_addr = ph->p_vaddr;
+            if (ph->p_vaddr + ph->p_memsz > max_addr)
+                max_addr = ph->p_vaddr + ph->p_memsz;
+            break;
+        case PT_DYNAMIC:
             p->dynv = laddr(p, ph->p_vaddr);
-        } else if (ph->p_type == PT_GNU_RELRO) {
+            break;
+        case PT_GNU_RELRO:
             p->relro_start = ph->p_vaddr & -PAGE_SIZE;
             p->relro_end = (ph->p_vaddr + ph->p_memsz) & -PAGE_SIZE;
+            break;
+        case PT_NOTE:
+            if (p->build_id_note == NULL)
+                find_buildid_note(p, ph);
+            break;
         }
-        if (ph->p_type != PT_LOAD)
-            continue;
-        if (ph->p_vaddr < min_addr)
-            min_addr = ph->p_vaddr;
-        if (ph->p_vaddr + ph->p_memsz > max_addr)
-            max_addr = ph->p_vaddr + ph->p_memsz;
     }
     min_addr &= -PAGE_SIZE;
     max_addr = (max_addr + PAGE_SIZE - 1) & -PAGE_SIZE;
@@ -1467,6 +1598,11 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     app.global = 1;
     decode_dyn(&app);
 
+    // Format the build ID log lines for the three special cases.
+    allocate_and_format_build_id_log(&ldso);
+    allocate_and_format_build_id_log(&vdso);
+    allocate_and_format_build_id_log(&app);
+
     /* Initial dso chain consists only of the app. */
     head = tail = &app;
 
@@ -1523,21 +1659,7 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     if (log_libs) {
         for (struct dso* p = &app; p != NULL; p = p->next) {
-            const char* name = p->name[0] == '\0' ? "<application>" : p->name;
-            const char* a = "";
-            const char* b = "";
-            const char* c = "";
-            if (p->soname != NULL && strcmp(name, p->soname)) {
-                a = " (";
-                b = p->soname;
-                c = ")";
-            }
-            if (p->base == p->map)
-                debugmsg("Loaded at [%p,%p): %s%s%s%s\n",
-                         p->map, p->map + p->map_len, name, a, b, c);
-            else
-                debugmsg("Loaded at [%p,%p) bias %p: %s%s%s%s\n",
-                         p->map, p->map + p->map_len, p->base, name, a, b, c);
+            log_write(p->build_id_log.iov_base, p->build_id_log.iov_len);
         }
     }
 
