@@ -18,23 +18,33 @@ mx_status_t mx_object_wait_async(mx_handle_t handle,
 
 ## DESCRIPTION
 
-**object_wait_async**() is a non-blocking syscall which causes packet
-delivery on *port* when the object state changes and matches *signals*. Use **port_wait**() to
-retrieve the packets.
+**object_wait_async**() is a non-blocking syscall which causes packets to be
+enqueued on *port* when the the specified condition is met.
+Use **port_wait**() to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
-The *options* argument can be either:
-+ **MX_WAIT_ASYNC_ONCE**: a single packet will be delivered when any of the specified *signals*
-    are asserted on *handle*. To receive further packets **object_wait_async**() needs to be
-    issued again.
-+ **MX_WAIT_ASYNC_REPEATING**: a single packet will be delivered when any of the
-    specified *signals* are asserted on *handle*. To receive further packets the previously
-    enqueued packet needs to be dequeued via **port_wait**().
+The *options* argument can be either **MX_WAIT_ASYNC_ONCE** or **MX_WAIT_ASYNC_REPEATING**.
 
-To stop packet delivery on either mode, close *handle* or use **port_cancel**(). For both
-modes, if any of the specified signals are currently asserted on the object at the time of
-the **object_wait_async**() call, a packet (or packets) will be delivered immediately.
+In both cases, *signals* indicates which signals on the object specified by *handle*
+will cause a packet to be enqueued, and if **any** of those signals are active when
+**object_wait_async**() is called, or become asserted afterwards, a packet will be
+enqueued on *port*.
+
+In the case of **MX_WAIT_ASYNC_ONCE**, once a packet has been enqueued the asynchronous
+waiting ends.  No further packets will be enqueued.
+
+In the case of **MX_WAIT_ASYNC_REPEATING** the asynchronous waiting continues until
+canceled.  If any of *signals* are asserted and a packet is not currently in *port*'s
+queue on behalf of this wait, a packet is enqueued.  If a packet is already in the
+queue, the packet's *observed* field is updated.  This mode acts in an edge-triggered
+fashion.
+
+In either mode, **port_cancel**() will terminate the operation and if a packet was
+in the queue on behalf of the operation, that packet will be removed from the queue.
+
+If the handle is closed, the operation will also be terminated, but packets already
+in the queue are not affected.
 
 See [port_wait](port_wait.md) for more information about each type
 of packet and their semantics.
@@ -58,8 +68,14 @@ does not have **MX_RIGHT_WRITE**.
 
 **MX_ERR_NO_MEMORY**  Temporary out of memory condition.
 
+## NOTES
+
+See [signals](../signals.md) for more information about signals and their terminology.
+
+
 ## SEE ALSO
 
 [port_cancel](port_cancel.md).
 [port_queue](port_queue.md).
 [port_wait](port_wait.md).
+

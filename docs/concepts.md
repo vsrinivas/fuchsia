@@ -116,8 +116,7 @@ for example, may be READABLE or WRITABLE.  Processes or Threads may be TERMINATE
 
 Threads may wait for signals to become active on one or more Objects.
 
-There is a set of signals avaiable for all waitable objects. See
-[generic_signals](generic_signals.md) for more information.
+See [signals](signals.md) for more information.
 
 ## Waiting: Wait One, Wait Many, and Ports
 
