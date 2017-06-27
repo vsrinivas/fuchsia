@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"fuchsia.googlesource.com/pm/merkle"
 	tuf "github.com/flynn/go-tuf"
@@ -146,7 +147,7 @@ func addTUFFile(repo *tuf.Repo, rPath string, fPath string, name string) error {
 	if err := repo.Snapshot(tuf.CompressionTypeNone); err != nil {
 		return NewAddErr("problem snapshotting repository", err)
 	}
-	if err := repo.Timestamp(); err != nil {
+	if err := repo.TimestampWithExpires(time.Now().AddDate(0, 0, 7)); err != nil {
 		return NewAddErr("problem timestamping repository", err)
 	}
 	if err := repo.Commit(); err != nil {
