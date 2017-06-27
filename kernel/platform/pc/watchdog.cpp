@@ -49,16 +49,18 @@ void platform_handle_watchdog(void)
 
 static enum handler_return checkin_callback(struct timer *t, lk_time_t now, void *arg)
 {
+    timer_set_oneshot(t, watchdog_last_time + WATCHDOG_CHECKIN_PERIOD_NS, checkin_callback, nullptr);
     watchdog_last_time = now;
     return INT_NO_RESCHEDULE;
 }
 
-static timer_t watchdog_timer = TIMER_INITIAL_VALUE(watchdog_timer);
 static void install_watchdog_timer(uint level)
 {
+    static timer_t watchdog_timer = TIMER_INITIAL_VALUE(watchdog_timer);
+
     if (cmdline_get_bool("kernel.watchdog", false)) {
         watchdog_last_time = current_time();
-        timer_set_periodic(&watchdog_timer, WATCHDOG_CHECKIN_PERIOD_NS, checkin_callback, NULL);
+        timer_set_oneshot(&watchdog_timer, watchdog_last_time + WATCHDOG_CHECKIN_PERIOD_NS, checkin_callback, nullptr);
 
         platform_configure_watchdog(20); // 50ms granularity
     }

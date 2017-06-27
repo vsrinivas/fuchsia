@@ -259,9 +259,6 @@ static inline bool thread_is_real_time_or_idle(thread_t *t)
     return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE));
 }
 
-/* called on every timer tick for the scheduler to do quantum expiration */
-enum handler_return thread_timer_tick(void);
-
 /* the current thread */
 #include <arch/current_thread.h>
 thread_t *get_current_thread(void);

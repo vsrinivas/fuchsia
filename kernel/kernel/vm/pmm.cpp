@@ -18,6 +18,7 @@
 #include <lib/console.h>
 #include <list.h>
 #include <lk/init.h>
+#include <platform.h>
 #include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
@@ -362,7 +363,8 @@ void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]) {
     }
 }
 
-extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_time_t, void*) TA_REQ(arena_lock) {
+extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_time_t now, void*) TA_REQ(arena_lock) {
+    timer_set_oneshot(t, now + LK_SEC(1), &pmm_dump_timer, nullptr);
     pmm_dump_free();
     return INT_NO_RESCHEDULE;
 }
@@ -416,7 +418,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         if (!show_mem) {
             printf("pmm free: issue the same command to stop.\n");
             timer_initialize(&timer);
-            timer_set_periodic(&timer, LK_SEC(1), &pmm_dump_timer, nullptr);
+            timer_set_oneshot(&timer, current_time() + LK_SEC(1), &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {
             timer_cancel(&timer);

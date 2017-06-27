@@ -160,6 +160,8 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         last_idle_time[i] = idle_time;
     }
 
+    timer_set_oneshot(t, now + LK_SEC(1), &threadload, NULL);
+
     /* reschedule here to allow the debuglog a chance to run */
     return INT_RESCHEDULE;
 }
@@ -172,7 +174,7 @@ static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
     if (showthreadload == false) {
         // start the display
         timer_initialize(&tltimer);
-        timer_set_periodic(&tltimer, LK_SEC(1), &threadload, NULL);
+        timer_set_oneshot(&tltimer, current_time() + LK_SEC(1), &threadload, NULL);
         showthreadload = true;
     } else {
         timer_cancel(&tltimer);

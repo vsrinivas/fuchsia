@@ -62,6 +62,7 @@ spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
 static int idle_thread_routine(void *) __NO_RETURN;
 static void thread_exit_locked(thread_t *current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
+static enum handler_return thread_timer_tick(struct timer *t, lk_time_t now, void *arg);
 
 static void init_thread_struct(thread_t *t, const char *name)
 {
@@ -815,7 +816,7 @@ void _thread_resched_internal(void)
          * set up a periodic timer to run our preemption tick. */
         TRACE_CONTEXT_SWITCH("start preempt, cpu %u, old %p (%s), new %p (%s)\n",
                 cpu, oldthread, oldthread->name, newthread, newthread->name);
-        timer_set_periodic(&percpu[cpu].preempt_timer, THREAD_TICK_RATE, (timer_callback)thread_timer_tick, NULL);
+        timer_set_oneshot(&percpu[cpu].preempt_timer, now + THREAD_TICK_RATE, thread_timer_tick, NULL);
     }
 
     /* set some optional target debug leds */
@@ -935,8 +936,10 @@ void thread_reschedule(void)
     THREAD_UNLOCK(state);
 }
 
-enum handler_return thread_timer_tick(void)
+static enum handler_return thread_timer_tick(struct timer *t, lk_time_t now, void *arg)
 {
+    timer_set_oneshot(t, now + THREAD_TICK_RATE, thread_timer_tick, NULL);
+
     thread_t *current_thread = get_current_thread();
 
     if (thread_is_real_time_or_idle(current_thread))
