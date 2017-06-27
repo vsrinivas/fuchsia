@@ -53,7 +53,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer)
 
     DEBUG_ASSERT(arch_ints_disabled());
 
-    LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 ", periodic %" PRIu64 "\n", timer, cpu, timer->scheduled_time, timer->period);
+    LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 "\n", timer, cpu, timer->scheduled_time);
 
     list_for_every_entry(&percpu[cpu].timer_queue, entry, timer_t, node) {
         if (TIME_GT(entry->scheduled_time, timer->scheduled_time)) {
@@ -66,9 +66,9 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer)
     list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
-static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, timer_callback callback, void *arg)
+static void timer_set(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
 {
-    LTRACEF("timer %p, deadline %" PRIu64 ", period %" PRIu64 ", callback %p, arg %p\n", timer, deadline, period, callback, arg);
+    LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
 
@@ -81,7 +81,8 @@ static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, time
 
     uint cpu = arch_curr_cpu_num();
 
-    if (unlikely(timer->active_cpu == (int)cpu)) {
+    bool currently_active = (timer->active_cpu == (int)cpu);
+    if (unlikely(currently_active)) {
         /* the timer is active on our own cpu, we must be inside the callback */
         if (timer->cancel)
             goto out;
@@ -91,11 +92,13 @@ static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, time
 
     /* set up the structure */
     timer->scheduled_time = deadline;
-    timer->period = period;
     timer->callback = callback;
     timer->arg = arg;
-    timer->active_cpu = -1;
     timer->cancel = false;
+
+    /* if we're currently active don't reset the active cpu to -1, the timer callback will do this */
+    if (!currently_active)
+        timer->active_cpu = -1;
 
     LTRACEF("scheduled time %" PRIu64 "\n", timer->scheduled_time);
 
@@ -127,28 +130,7 @@ out:
  */
 void timer_set_oneshot(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
 {
-    timer_set(timer, deadline, 0, callback, arg);
-}
-
-/**
- * @brief  Set up a timer that executes repeatedly
- *
- * This function specifies a callback function to be called repeatedly at fixed
- * intervals.
- *
- * @param  timer The timer to use
- * @param  period The interval time, in ns, after which the timer is executed
- * @param  callback  The function to call when the timer expires
- * @param  arg  The argument to pass to the callback
- *
- * The timer function is declared as:
- *   enum handler_return callback(struct timer *, lk_time_t now, void *arg) { ... }
- */
-void timer_set_periodic(timer_t *timer, lk_time_t period, timer_callback callback, void *arg)
-{
-    if (period == 0)
-        period = 1;
-    timer_set(timer, current_time() + period, period, callback, arg);
+    timer_set(timer, deadline, callback, arg);
 }
 
 /**
@@ -180,7 +162,6 @@ bool timer_cancel(timer_t *timer)
         /* zero it out */
         timer->callback = NULL;
         timer->arg = NULL;
-        timer->period = 0;
 
         /* we're done, so return back to the callback */
         spin_unlock_irqrestore(&timer_lock, state);
@@ -225,7 +206,6 @@ bool timer_cancel(timer_t *timer)
     /* zero it out */
     timer->callback = NULL;
     timer->arg = NULL;
-    timer->period = 0;
 
     return callback_not_running;
 }
@@ -269,7 +249,7 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
         /* we pulled it off the list, release the list lock to handle it */
         spin_unlock(&timer_lock);
 
-        LTRACEF("dequeued timer %p, scheduled %" PRIu64 " periodic %" PRIu64 "\n", timer, timer->scheduled_time, timer->period);
+        LTRACEF("dequeued timer %p, scheduled %" PRIu64 "\n", timer, timer->scheduled_time);
 
         CPU_STATS_INC(timers);
 
@@ -278,11 +258,8 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
             ret = INT_RESCHEDULE;
 
         DEBUG_ASSERT(arch_ints_disabled());
-        /* it may have been requeued or periodic, grab the lock so we can safely inspect it */
+        /* it may have been requeued, grab the lock so we can safely inspect it */
         spin_lock(&timer_lock);
-
-        /* record whether or not we've been cancelled in the meantime */
-        bool cancelled = timer->cancel;
 
         /* mark it not busy */
         timer->active_cpu = -1;
@@ -290,18 +267,6 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
         /* make sure any spinners wake up */
         arch_spinloop_signal();
-
-        /* if we've been cancelled, it's not okay to touch the timer structure from now on out */
-        if (!cancelled) {
-            /* if it is a periodic timer and it hasn't been requeued
-             * by the callback put it back in the list
-             */
-            if (timer->period > 0 && !list_in_list(&timer->node)) {
-                LTRACEF("periodic timer, period %" PRIu64 "\n", timer->period);
-                timer->scheduled_time = now + timer->period;
-                insert_timer_in_queue(cpu, timer);
-            }
-        }
     }
 
     /* reset the timer to the next event */

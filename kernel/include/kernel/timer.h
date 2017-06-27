@@ -27,7 +27,6 @@ typedef struct timer {
     struct list_node node;
 
     lk_time_t scheduled_time;
-    lk_time_t period;
 
     timer_callback callback;
     void *arg;
@@ -41,7 +40,6 @@ typedef struct timer {
     .magic = TIMER_MAGIC, \
     .node = LIST_INITIAL_CLEARED_VALUE, \
     .scheduled_time = 0, \
-    .period = 0, \
     .callback = NULL, \
     .arg = NULL, \
     .active_cpu = -1, \
@@ -57,7 +55,6 @@ typedef struct timer {
 */
 void timer_initialize(timer_t *);
 void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg);
-void timer_set_periodic(timer_t *, lk_time_t period, timer_callback, void *arg);
 bool timer_cancel(timer_t *);
 
 void timer_transition_off_cpu(uint old_cpu);

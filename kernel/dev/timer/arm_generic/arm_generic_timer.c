@@ -225,7 +225,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg,
     // straddles a counter tick.
     const uint64_t cntpct_deadline = lk_time_to_cntpct(deadline) + 1;
 
-    ASSERT(arg == NULL);
+    DEBUG_ASSERT(arg == NULL);
 
     t_callback = callback;
     // Even if the deadline has already passed, the ARMv8-A timer will fire the

@@ -12,11 +12,9 @@
 
 __BEGIN_CDECLS
 
-typedef enum handler_return (*platform_timer_callback)(void *arg, lk_time_t now);
+typedef enum handler_return(*platform_timer_callback)(void *arg, lk_time_t now);
 
-status_t platform_set_periodic_timer(platform_timer_callback callback, void *arg, lk_time_t interval);
-
-status_t platform_set_oneshot_timer (platform_timer_callback callback, void *arg, lk_time_t deadline);
+status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg, lk_time_t deadline);
 void     platform_stop_timer(void);
 
 __END_CDECLS
