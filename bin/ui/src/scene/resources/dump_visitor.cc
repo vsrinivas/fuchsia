@@ -91,6 +91,10 @@ void DumpVisitor::Visit(Scene* r) {
 }
 
 void DumpVisitor::VisitNode(Node* r) {
+  escher::Transform identity;
+  if (!r->transform().IsIdentity()) {
+    WriteProperty("transform") << r->transform();
+  }
   if (!r->children().empty()) {
     BeginSection("children");
     for (auto& child : r->children()) {
@@ -152,7 +156,7 @@ void DumpVisitor::Visit(Material* r) {
 void DumpVisitor::Visit(ProxyResource* r) {
   BeginItem("ProxyResource");
   WriteProperty("import_spec") << r->import_spec();
-  WriteProperty("is_bound") << (r->bound_resource() != nullptr);
+  WriteProperty("is_bound") << r->is_bound();
   BeginSection("delegate");
   r->delegate()->Accept(this);
   EndSection();

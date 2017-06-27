@@ -58,7 +58,7 @@ TEST_F(ProxyResourceTest, ImportsUnlinkedProxyResourceViaOp) {
   ASSERT_TRUE(proxy_node);
 
   // No one has exported a resource so there should be no binding.
-  ASSERT_EQ(proxy_node->bound_resource(), nullptr);
+  ASSERT_EQ(proxy_node->imported_resource(), nullptr);
 
   // Import specs should match.
   ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
@@ -90,7 +90,7 @@ TEST_F(ProxyResourceTest, PerformsFullLinking) {
     ASSERT_TRUE(proxy_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->bound_resource(), nullptr);
+    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
@@ -116,16 +116,16 @@ TEST_F(ProxyResourceTest, PerformsFullLinking) {
     ASSERT_TRUE(proxy_node);
 
     // Bindings should be resolved by now.
-    ASSERT_NE(proxy_node->bound_resource(), nullptr);
+    ASSERT_NE(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
 
     // Check that it was bound to the right object.
-    ASSERT_NE(proxy_node->bound_resource(), nullptr);
+    ASSERT_NE(proxy_node->imported_resource(), nullptr);
     auto entity = FindResource<EntityNode>(2);
     ASSERT_TRUE(entity);
-    ASSERT_EQ(proxy_node->bound_resource(), entity.get());
+    ASSERT_EQ(proxy_node->imported_resource(), entity.get());
     ASSERT_TRUE(proxy_node->delegate());
     ASSERT_EQ(proxy_node->delegate()->type_info().flags,
               entity->type_info().flags);
@@ -178,7 +178,7 @@ TEST_F(ProxyResourceThreadedTest,
     ASSERT_TRUE(proxy_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->bound_resource(), nullptr);
+    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
@@ -222,7 +222,7 @@ TEST_F(ProxyResourceTest,
     ASSERT_TRUE(proxy_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->bound_resource(), nullptr);
+    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
@@ -264,7 +264,7 @@ TEST_F(ProxyResourceTest, UnlinkedImportedResourceCanAcceptOps) {
     ASSERT_TRUE(proxy_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->bound_resource(), nullptr);
+    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
@@ -307,7 +307,7 @@ TEST_F(ProxyResourceTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(proxy_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->bound_resource(), nullptr);
+    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
@@ -333,7 +333,7 @@ TEST_F(ProxyResourceTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(proxy_node);
 
     // Bindings should be resolved by now.
-    ASSERT_NE(proxy_node->bound_resource(), nullptr);
+    ASSERT_NE(proxy_node->imported_resource(), nullptr);
 
     // Import specs should match.
     ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);

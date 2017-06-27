@@ -20,7 +20,7 @@ Resource::Resource(Session* session, const ResourceTypeInfo& type_info)
 
 Resource::~Resource() {
   for (auto& proxy : imports_) {
-    proxy->ClearBoundResource();
+    proxy->UnbindImportedResource();
   }
   session_->DecrementResourceCount();
 }
@@ -29,7 +29,7 @@ ErrorReporter* Resource::error_reporter() const {
   return session_->error_reporter();
 }
 
-void Resource::BindToProxy(ProxyResource* proxy) const {
+void Resource::AddImport(ProxyResource* proxy) {
   // Make sure the types of the resource and the proxy are compatible.
   if (type_info_.IsKindOf(proxy->type_info())) {
     error_reporter()->WARN() << "Type mismatch on proxy resolution.";
@@ -40,10 +40,10 @@ void Resource::BindToProxy(ProxyResource* proxy) const {
   auto insertion_result = imports_.insert(proxy);
   FTL_DCHECK(insertion_result.second)
       << "Proxy must not already be bound to this resource.";
-  proxy->SetBoundResource(this);
+  proxy->BindImportedResource(this);
 }
 
-void Resource::UnbindFromProxy(ProxyResource* proxy) const {
+void Resource::RemoveImport(ProxyResource* proxy) {
   auto erased = imports_.erase(proxy);
   FTL_DCHECK(erased == 1)
       << "Proxy must not already be unbound from this resource.";

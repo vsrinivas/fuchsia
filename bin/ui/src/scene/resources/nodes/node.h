@@ -39,9 +39,9 @@ class Node : public Resource {
 
   Node* parent() const { return parent_; }
 
-  const std::set<NodePtr>& children() { return children_; }
+  const std::set<NodePtr>& children() const { return children_; }
 
-  const std::set<NodePtr>& parts() { return parts_; }
+  const std::set<NodePtr>& parts() const { return parts_; }
 
   /// Convert a point that is in the coordinate space of the supplied node into
   /// the coordinate space of the callee.
@@ -51,6 +51,9 @@ class Node : public Resource {
   /// Returns if the given point (that is already in the coordinate space of the
   /// node being queried) lies within its bounds.
   virtual bool ContainsPoint(const escher::vec2& point) const;
+
+  void AddImport(ProxyResource* proxy) override;
+  void RemoveImport(ProxyResource* proxy) override;
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);

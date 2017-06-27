@@ -49,9 +49,12 @@ class ProxyResource final : public Resource {
   /// export the resource in the resource linker.
   const mx::eventpair& import_token() const { return import_token_; }
 
-  /// If an active binding exists between this proxy and a resource, returns
-  /// that resource. If no binding exists, returns nullptr.
-  const Resource* bound_resource() { return bound_resource_; }
+  /// If an active binding exists between this proxy and an imported resource,
+  // returns that resource. If no binding exists, returns nullptr.
+  Resource* imported_resource() const { return imported_resource_; }
+
+  /// Returns true if the imported resource has been bound.
+  bool is_bound() const { return imported_resource_ != nullptr; }
 
  private:
   // TODO(MZ-132): Don't hold onto the token for the the duration of the
@@ -59,22 +62,23 @@ class ProxyResource final : public Resource {
   mx::eventpair import_token_;
   const mozart2::ImportSpec import_spec_;
   const ResourcePtr delegate_;
-  const Resource* bound_resource_;
+  Resource* imported_resource_;
 
   // |Resource|.
   Resource* GetDelegate(const ResourceTypeInfo& type_info) override;
 
+  // Needed by |Resource::AddImport()| and |Resource::RemoveImport()|.
   friend class Resource;
 
   /// Establish a binding between the resource and this proxy. The type of the
   /// resource being bound to is compatible with the import spec specified when
   /// creating the proxy resource.
-  void SetBoundResource(const Resource* resource);
+  void BindImportedResource(Resource* resource);
 
   /// Clear a previous binding to an imported resource. This usually happens
   /// when the imported resource has been collected in the session that exported
   /// that resource.
-  void ClearBoundResource();
+  void UnbindImportedResource();
 
   FRIEND_MAKE_REF_COUNTED(ProxyResource);
   FRIEND_REF_COUNTED_THREAD_SAFE(ProxyResource);

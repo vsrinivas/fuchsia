@@ -64,12 +64,11 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   /// The list of proxy resource that currently have a binding to this resource.
   const std::unordered_set<ProxyResource*>& imports() const { return imports_; }
 
-  /// Establish a binding between this resource and a proxy resource (possibly
-  /// in another session).
-  void BindToProxy(ProxyResource* proxy) const;
+  /// Adds the proxy resource to the list of importers of this resource.
+  virtual void AddImport(ProxyResource* proxy);
 
-  /// Clear an existing binding beteen this resource and a proxy resource.
-  void UnbindFromProxy(ProxyResource* proxy) const;
+  /// Removes the proxy resource from the list of importers of this resource.
+  virtual void RemoveImport(ProxyResource* proxy);
 
  protected:
   Resource(Session* session, const ResourceTypeInfo& type_info);
@@ -85,7 +84,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
  private:
   Session* const session_;
   const ResourceTypeInfo& type_info_;
-  mutable std::unordered_set<ProxyResource*> imports_;
+  std::unordered_set<ProxyResource*> imports_;
 };
 
 using ResourcePtr = ftl::RefPtr<Resource>;

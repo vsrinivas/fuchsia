@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 
+#include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/util/error_reporter.h"
 #include "lib/escher/escher/geometry/types.h"
 
@@ -129,6 +130,9 @@ void Node::InvalidateGlobalTransform() {
     for (auto& node : children_) {
       node->InvalidateGlobalTransform();
     }
+    for (auto& import : imports()) {
+      static_cast<Node*>(import->delegate())->InvalidateGlobalTransform();
+    }
   }
 }
 
@@ -162,6 +166,24 @@ bool Node::ContainsPoint(const escher::vec2& point) const {
     return true;
   });
   return inside;
+}
+
+void Node::AddImport(ProxyResource* proxy) {
+  Resource::AddImport(proxy);
+
+  auto delegate = static_cast<Node*>(proxy->delegate());
+  FTL_DCHECK(!delegate->parent_);
+  delegate->parent_ = this;
+  delegate->InvalidateGlobalTransform();
+}
+
+void Node::RemoveImport(ProxyResource* proxy) {
+  Resource::RemoveImport(proxy);
+
+  auto delegate = static_cast<Node*>(proxy->delegate());
+  FTL_DCHECK(delegate->parent_);
+  delegate->parent_ = nullptr;
+  delegate->InvalidateGlobalTransform();
 }
 
 void Node::ApplyOnDescendants(std::function<bool(const Node&)> applier) const {

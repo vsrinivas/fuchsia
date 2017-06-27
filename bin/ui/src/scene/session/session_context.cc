@@ -63,7 +63,7 @@ void SessionContext::OnImportResolvedForResource(
     ResourcePtr actual,
     ResourceLinker::ResolutionResult resolution_result) {
   if (resolution_result == ResourceLinker::ResolutionResult::kSuccess) {
-    actual->BindToProxy(proxy);
+    actual->AddImport(proxy);
   }
 }
 

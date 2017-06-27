@@ -40,9 +40,9 @@ ProxyResource::ProxyResource(Session* session,
 }
 
 ProxyResource::~ProxyResource() {
-  if (bound_resource_ != nullptr) {
-    bound_resource_->UnbindFromProxy(this);
-    bound_resource_ = nullptr;
+  if (imported_resource_ != nullptr) {
+    imported_resource_->RemoveImport(this);
+    imported_resource_ = nullptr;
   }
 }
 
@@ -53,12 +53,12 @@ Resource* ProxyResource::GetDelegate(const ResourceTypeInfo& type_info) {
   return delegate_->GetDelegate(type_info);
 }
 
-void ProxyResource::SetBoundResource(const Resource* resource) {
-  bound_resource_ = resource;
+void ProxyResource::BindImportedResource(Resource* resource) {
+  imported_resource_ = resource;
 }
 
-void ProxyResource::ClearBoundResource() {
-  bound_resource_ = nullptr;
+void ProxyResource::UnbindImportedResource() {
+  imported_resource_ = nullptr;
 }
 
 }  // namespace scene
