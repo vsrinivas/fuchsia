@@ -8,15 +8,15 @@
             "bootfs_path": "data/appmgr/initial.config"
         },
         {
-            "file": "apps/modular/src/bootstrap/services.config",
+            "file": "application/src/bootstrap/services.config",
             "bootfs_path": "data/bootstrap/services.config"
         },
         {
-            "file": "apps/modular/src/bootstrap/loaders.config",
+            "file": "application/src/bootstrap/loaders.config",
             "bootfs_path": "data/bootstrap/loaders.config"
         },
         {
-            "file": "apps/modular/src/bootstrap/apps.config",
+            "file": "application/src/bootstrap/apps.config",
             "bootfs_path": "data/bootstrap/apps.config",
             "default": "true"
         }

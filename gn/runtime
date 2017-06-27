@@ -3,8 +3,7 @@
         "mtl"
     ],
     "labels": [
-        "//application",
-        "//apps/modular/src/bootstrap"
+        "//application"
     ],
     "binaries": [
         {
