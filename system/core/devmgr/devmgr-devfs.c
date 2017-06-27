@@ -463,7 +463,7 @@ static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t fla
     devnode_t* dn = dirdn;
     mx_status_t r = devfs_walk(&dn, path, &path);
 
-    bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
+    bool pipeline = flags & O_PIPELINE;
 
     if (r == MX_ERR_NEXT) {
         // we only partially matched -- there's more path to walk

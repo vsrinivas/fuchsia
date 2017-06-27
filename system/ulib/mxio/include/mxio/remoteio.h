@@ -160,12 +160,6 @@ static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough
 #define READDIR_CMD_NONE  0
 #define READDIR_CMD_RESET 1
 
-// Top 4 bits of open flags are reserved for
-// the protocol, and not accepted by open()
-// in O_* flags
-#define MXRIO_OFLAG_MASK     0xF0000000
-#define MXRIO_OFLAG_PIPELINE 0x10000000
-
 // - msg.datalen is the size of data sent or received and must be <= MXIO_CHUNK_SIZE
 // - msg.arg is the return code on replies
 

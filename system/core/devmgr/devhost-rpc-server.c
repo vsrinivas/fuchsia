@@ -55,8 +55,8 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
 
     // detect pipeline directive and discard all other
     // protocol flags
-    bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
-    flags &= (~MXRIO_OFLAG_MASK);
+    bool pipeline = flags & O_PIPELINE;
+    flags &= (~O_PIPELINE);
 
     newios->flags = flags;
 
@@ -298,7 +298,7 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie) {
             }
         } else {
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
-            flags = ios->flags | (flags & MXRIO_OFLAG_MASK);
+            flags = ios->flags | (flags & O_PIPELINE);
         }
         devhost_get_handles(msg->handle[0], dev, path, flags);
         return ERR_DISPATCHER_INDIRECT;

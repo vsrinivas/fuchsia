@@ -58,8 +58,8 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, cons
     // The pipeline directive instructs the VFS layer to open the vnode
     // immediately, rather than describing the VFS object to the caller.
     // We check it early so we can throw away the protocol part of flags.
-    bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
-    uint32_t open_flags = flags & (~MXRIO_OFLAG_MASK);
+    bool pipeline = flags & O_PIPELINE;
+    uint32_t open_flags = flags & (~O_PIPELINE);
 
     {
         mxtl::AutoLock lock(&vfs_lock);
@@ -228,7 +228,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         return status;
     }
     case MXRIO_CLONE: {
-        if (!(arg & MXRIO_OFLAG_PIPELINE)) {
+        if (!(arg & O_PIPELINE)) {
             mxrio_object_t obj;
             memset(&obj, 0, MXRIO_OBJECT_MINSIZE);
             obj.type = MXIO_PROTOCOL_REMOTE;
