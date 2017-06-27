@@ -19,7 +19,7 @@ class CircleShape;
 class RectangleShape;
 class RoundedRectangleShape;
 class Material;
-class ProxyResource;
+class Import;
 
 class ResourceVisitor {
  public:
@@ -34,7 +34,7 @@ class ResourceVisitor {
   virtual void Visit(RectangleShape* r) = 0;
   virtual void Visit(RoundedRectangleShape* r) = 0;
   virtual void Visit(Material* r) = 0;
-  virtual void Visit(ProxyResource* r) = 0;
+  virtual void Visit(Import* r) = 0;
 };
 
 }  // namespace scene

@@ -40,30 +40,30 @@ bool SessionContext::ExportResource(ResourcePtr resource,
                                          std::move(endpoint));
 }
 
-void SessionContext::ImportResource(ProxyResourcePtr proxy,
+void SessionContext::ImportResource(ImportPtr import,
                                     mozart2::ImportSpec spec,
                                     const mx::eventpair& endpoint) {
-  // The proxy is not captured in the OnImportResolvedCallback because we don't
-  // want the reference in the bind to prevent the proxy from being collected.
-  // However, when the proxy dies, its handle is collected which will cause the
+  // The import is not captured in the OnImportResolvedCallback because we don't
+  // want the reference in the bind to prevent the import from being collected.
+  // However, when the import dies, its handle is collected which will cause the
   // resource to expire within the resource linker. In that case, we will never
   // receive the callback with |ResolutionResult::kSuccess|.
   ResourceLinker::OnImportResolvedCallback import_resolved_callback =
       std::bind(&SessionContext::OnImportResolvedForResource,  // method
                 this,                                          // target
-                proxy.get(),  // the proxy that will be resolved by the linker
-                std::placeholders::_1,  // the acutal object to link to proxy
+                import.get(),  // the import that will be resolved by the linker
+                std::placeholders::_1,  // the acutal object to link to import
                 std::placeholders::_2   // result of the linking
                 );
   resource_linker_.ImportResource(spec, endpoint, import_resolved_callback);
 }
 
 void SessionContext::OnImportResolvedForResource(
-    ProxyResource* proxy,
+    Import* import,
     ResourcePtr actual,
     ResourceLinker::ResolutionResult resolution_result) {
   if (resolution_result == ResourceLinker::ResolutionResult::kSuccess) {
-    actual->AddImport(proxy);
+    actual->AddImport(import);
   }
 }
 

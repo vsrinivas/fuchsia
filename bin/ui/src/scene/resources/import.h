@@ -11,37 +11,37 @@
 namespace mozart {
 namespace scene {
 
-class ProxyResource;
-using ProxyResourcePtr = ftl::RefPtr<ProxyResource>;
+class Import;
+using ImportPtr = ftl::RefPtr<Import>;
 
 /// Acts as a placeholder for resources imported from other sessions. Once a
-/// binding between the proxy and the resource has been established, the
+/// binding between the import and the resource has been established, the
 /// |imports()| collection of that resource will contain a reference to this
-/// proxy. The proxy also holds a reference to the import token used for the
+/// import. The import also holds a reference to the import token used for the
 /// resolution of the binding between the exported resource and the imported
-/// proxy.
-class ProxyResource final : public Resource {
+/// import.
+class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ProxyResource(Session* session,
+  Import(Session* session,
                 mozart2::ImportSpec spec,
                 mx::eventpair import_token);
 
-  ~ProxyResource() override;
+  ~Import() override;
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
   /// Returns the resource that is a suitable standin for the resource being
-  /// bound to by the proxy. Imported resources are never modified by the
-  /// importing session. Ops directed at the proxy resource are instead applied
+  /// bound to by the import. Imported resources are never modified by the
+  /// importing session. Ops directed at the import resource are instead applied
   /// to this delegate. This delegate also holds the side-effects of these
   /// operations such as the list of children which were attached.
   Resource* delegate() { return delegate_.get(); }
 
   /// The specification used to represent the underlying type of the resource
-  /// being bound to the proxy.
+  /// being bound to the import.
   mozart2::ImportSpec import_spec() const { return import_spec_; }
 
   /// The import token that is currently used by the resource linker to bind to
@@ -49,7 +49,7 @@ class ProxyResource final : public Resource {
   /// export the resource in the resource linker.
   const mx::eventpair& import_token() const { return import_token_; }
 
-  /// If an active binding exists between this proxy and an imported resource,
+  /// If an active binding exists between this import and an imported resource,
   // returns that resource. If no binding exists, returns nullptr.
   Resource* imported_resource() const { return imported_resource_; }
 
@@ -58,7 +58,7 @@ class ProxyResource final : public Resource {
 
  private:
   // TODO(MZ-132): Don't hold onto the token for the the duration of the
-  // lifetime of the proxy resource. This bloats kernel handle tables.
+  // lifetime of the import resource. This bloats kernel handle tables.
   mx::eventpair import_token_;
   const mozart2::ImportSpec import_spec_;
   const ResourcePtr delegate_;
@@ -70,9 +70,9 @@ class ProxyResource final : public Resource {
   // Needed by |Resource::AddImport()| and |Resource::RemoveImport()|.
   friend class Resource;
 
-  /// Establish a binding between the resource and this proxy. The type of the
+  /// Establish a binding between the resource and this import. The type of the
   /// resource being bound to is compatible with the import spec specified when
-  /// creating the proxy resource.
+  /// creating the import resource.
   void BindImportedResource(Resource* resource);
 
   /// Clear a previous binding to an imported resource. This usually happens
@@ -80,9 +80,9 @@ class ProxyResource final : public Resource {
   /// that resource.
   void UnbindImportedResource();
 
-  FRIEND_MAKE_REF_COUNTED(ProxyResource);
-  FRIEND_REF_COUNTED_THREAD_SAFE(ProxyResource);
-  FTL_DISALLOW_COPY_AND_ASSIGN(ProxyResource);
+  FRIEND_MAKE_REF_COUNTED(Import);
+  FRIEND_REF_COUNTED_THREAD_SAFE(Import);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Import);
 };
 
 }  // namespace scene

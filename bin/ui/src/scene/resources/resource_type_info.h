@@ -31,7 +31,7 @@ enum ResourceType {
   kLinkNode = 1 << 15,
   kShapeNode = 1 << 16,
   kTagNode = 1 << 17,
-  kProxy = 1 << 18,
+  kImport = 1 << 18,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

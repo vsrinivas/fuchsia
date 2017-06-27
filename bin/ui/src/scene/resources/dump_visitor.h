@@ -32,7 +32,7 @@ class DumpVisitor : public ResourceVisitor {
   void Visit(RectangleShape* r) override;
   void Visit(RoundedRectangleShape* r) override;
   void Visit(Material* r) override;
-  void Visit(ProxyResource* r) override;
+  void Visit(Import* r) override;
 
  private:
   void VisitNode(Node* r);

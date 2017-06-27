@@ -148,10 +148,10 @@ bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
 }
 
 bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
-  ProxyResourcePtr proxy =
-      ftl::MakeRefCounted<ProxyResource>(this, op->spec, std::move(op->token));
-  context_->ImportResource(proxy, op->spec, proxy->import_token());
-  return resources_.AddResource(op->id, std::move(proxy));
+  ImportPtr import =
+      ftl::MakeRefCounted<Import>(this, op->spec, std::move(op->token));
+  context_->ImportResource(import, op->spec, import->import_token());
+  return resources_.AddResource(op->id, std::move(import));
 }
 
 bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {

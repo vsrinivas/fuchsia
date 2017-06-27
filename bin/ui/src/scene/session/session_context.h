@@ -5,8 +5,8 @@
 #pragma once
 
 #include "apps/mozart/src/scene/frame_scheduler.h"
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
-#include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/resources/resource_linker.h"
 #include "escher/escher.h"
 #include "escher/impl/gpu_uploader.h"
@@ -37,10 +37,10 @@ class SessionContext : public FrameSchedulerListener {
   // are invalid.
   bool ExportResource(ResourcePtr resource, mx::eventpair endpoint);
 
-  // Return a new resource in the importing session that acts as a proxy for
+  // Return a new resource in the importing session that acts as a import for
   // a resource that was exported by another session.  Return nullptr if the
   // params are invalid.
-  void ImportResource(ProxyResourcePtr proxy,
+  void ImportResource(ImportPtr import,
                       mozart2::ImportSpec spec,
                       const mx::eventpair& endpoint);
 
@@ -97,7 +97,7 @@ class SessionContext : public FrameSchedulerListener {
       updatable_sessions_;
 
   void OnImportResolvedForResource(
-      ProxyResource* proxy,
+      Import* import,
       ResourcePtr actual,
       ResourceLinker::ResolutionResult resolution_result);
 

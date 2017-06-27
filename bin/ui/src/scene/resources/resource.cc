@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "apps/mozart/src/scene/resources/resource.h"
-#include "apps/mozart/src/scene/resources/proxy_resource.h"
+
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/session/session.h"
 
 namespace mozart {
@@ -19,8 +20,8 @@ Resource::Resource(Session* session, const ResourceTypeInfo& type_info)
 }
 
 Resource::~Resource() {
-  for (auto& proxy : imports_) {
-    proxy->UnbindImportedResource();
+  for (auto& import : imports_) {
+    import->UnbindImportedResource();
   }
   session_->DecrementResourceCount();
 }
@@ -29,24 +30,24 @@ ErrorReporter* Resource::error_reporter() const {
   return session_->error_reporter();
 }
 
-void Resource::AddImport(ProxyResource* proxy) {
-  // Make sure the types of the resource and the proxy are compatible.
-  if (type_info_.IsKindOf(proxy->type_info())) {
-    error_reporter()->WARN() << "Type mismatch on proxy resolution.";
+void Resource::AddImport(Import* import) {
+  // Make sure the types of the resource and the import are compatible.
+  if (type_info_.IsKindOf(import->type_info())) {
+    error_reporter()->WARN() << "Type mismatch on import resolution.";
     return;
   }
 
   // Perform the binding.
-  auto insertion_result = imports_.insert(proxy);
+  auto insertion_result = imports_.insert(import);
   FTL_DCHECK(insertion_result.second)
-      << "Proxy must not already be bound to this resource.";
-  proxy->BindImportedResource(this);
+      << "Import must not already be bound to this resource.";
+  import->BindImportedResource(this);
 }
 
-void Resource::RemoveImport(ProxyResource* proxy) {
-  auto erased = imports_.erase(proxy);
+void Resource::RemoveImport(Import* import) {
+  auto erased = imports_.erase(import);
   FTL_DCHECK(erased == 1)
-      << "Proxy must not already be unbound from this resource.";
+      << "Import must not already be unbound from this resource.";
 }
 
 Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {

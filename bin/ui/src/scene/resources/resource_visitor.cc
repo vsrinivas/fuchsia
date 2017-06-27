@@ -7,13 +7,13 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
-#include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
@@ -66,7 +66,7 @@ void Material::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void ProxyResource::Accept(ResourceVisitor* visitor) {
+void Import::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

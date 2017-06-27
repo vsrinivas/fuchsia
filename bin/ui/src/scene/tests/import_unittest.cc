@@ -16,10 +16,10 @@ namespace mozart {
 namespace scene {
 namespace test {
 
-using ProxyResourceTest = SessionTest;
-using ProxyResourceThreadedTest = SessionThreadedTest;
+using ImportTest = SessionTest;
+using ImportThreadedTest = SessionThreadedTest;
 
-TEST_F(ProxyResourceTest, ExportsResourceViaOp) {
+TEST_F(ImportTest, ExportsResourceViaOp) {
   // Create the event pair.
   mx::eventpair source, destination;
   ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
@@ -37,34 +37,34 @@ TEST_F(ProxyResourceTest, ExportsResourceViaOp) {
   ASSERT_TRUE(Apply(NewExportResourceOp(resource_id, std::move(source))));
 }
 
-TEST_F(ProxyResourceTest, ImportsUnlinkedProxyResourceViaOp) {
+TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   // Create the event pair.
   mx::eventpair source, destination;
   ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   // Apply the import op.
-  ASSERT_TRUE(Apply(NewImportResourceOp(1 /* proxy resource ID */,
+  ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                         mozart2::ImportSpec::NODE, /* spec */
                                         std::move(destination)) /* endpoint */
                     ));
 
-  // Assert that the proxy node was correctly mapped in. It has not been linked
+  // Assert that the import node was correctly mapped in. It has not been linked
   // yet.
   ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
 
-  // Assert that the proxy node was setup with the correct properties.
-  auto proxy_node = FindResource<ProxyResource>(1);
+  // Assert that the import node was setup with the correct properties.
+  auto import_node = FindResource<Import>(1);
 
-  ASSERT_TRUE(proxy_node);
+  ASSERT_TRUE(import_node);
 
   // No one has exported a resource so there should be no binding.
-  ASSERT_EQ(proxy_node->imported_resource(), nullptr);
+  ASSERT_EQ(import_node->imported_resource(), nullptr);
 
   // Import specs should match.
-  ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+  ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
 }
 
-TEST_F(ProxyResourceTest, PerformsFullLinking) {
+TEST_F(ImportTest, PerformsFullLinking) {
   // Create the event pair.
   mx::eventpair source, destination;
   ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
@@ -72,28 +72,28 @@ TEST_F(ProxyResourceTest, PerformsFullLinking) {
   // Perform the import
   {
     // Apply the import op.
-    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* proxy resource ID */,
+    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
                       ));
 
-    // Assert that the proxy node was correctly mapped in. It has not been
+    // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
     ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
   }
 
   // Bindings not yet resolved.
   {
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
+    ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
   }
 
   // Perform the export
@@ -110,27 +110,27 @@ TEST_F(ProxyResourceTest, PerformsFullLinking) {
 
   // Bindings should have been resolved.
   {
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // Bindings should be resolved by now.
-    ASSERT_NE(proxy_node->imported_resource(), nullptr);
+    ASSERT_NE(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
 
     // Check that it was bound to the right object.
-    ASSERT_NE(proxy_node->imported_resource(), nullptr);
+    ASSERT_NE(import_node->imported_resource(), nullptr);
     auto entity = FindResource<EntityNode>(2);
     ASSERT_TRUE(entity);
-    ASSERT_EQ(proxy_node->imported_resource(), entity.get());
-    ASSERT_TRUE(proxy_node->delegate());
-    ASSERT_EQ(proxy_node->delegate()->type_info().flags,
+    ASSERT_EQ(import_node->imported_resource(), entity.get());
+    ASSERT_TRUE(import_node->delegate());
+    ASSERT_EQ(import_node->delegate()->type_info().flags,
               entity->type_info().flags);
     ASSERT_EQ(entity->imports().size(), 1u);
-    ASSERT_EQ(*(entity->imports().begin()), proxy_node.get());
+    ASSERT_EQ(*(entity->imports().begin()), import_node.get());
   }
 }
 
@@ -140,7 +140,7 @@ TEST_F(ProxyResourceTest, PerformsFullLinking) {
 // resource linker. Currently, the notification is only for the expiry of the
 // export token on peer death. So it likely that the expiry API will be modified
 // slightly.
-TEST_F(ProxyResourceThreadedTest,
+TEST_F(ImportThreadedTest,
        DISABLED_KillingImportedResourceEvictsFromResourceLinker) {
   // Setup a latch on the resource expiring in the linker.
   ftl::AutoResetWaitableEvent import_expired_latch;
@@ -159,12 +159,12 @@ TEST_F(ProxyResourceThreadedTest,
     ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
     // Apply the import op.
-    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* proxy resource ID */,
+    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
                       ));
 
-    // Assert that the proxy node was correctly mapped in. It has not been
+    // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
     ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
 
@@ -172,19 +172,19 @@ TEST_F(ProxyResourceThreadedTest,
     // resource.
     ASSERT_EQ(session_context_.GetResourceLinker().UnresolvedImports(), 1u);
 
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
+    ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
 
-    // Release the proxy resource.
-    ASSERT_TRUE(Apply(NewReleaseResourceOp(1 /* proxy resource ID */)));
+    // Release the import resource.
+    ASSERT_TRUE(Apply(NewReleaseResourceOp(1 /* import resource ID */)));
   });
 
   // Make sure the expiry handle tells us that the resource has expired.
@@ -196,78 +196,78 @@ TEST_F(ProxyResourceThreadedTest,
   ASSERT_EQ(session_context_.GetResourceLinker().UnresolvedImports(), 0u);
 }
 
-TEST_F(ProxyResourceTest,
+TEST_F(ImportTest,
        ProxiesCanBeFoundByTheirContainerOrTheirUnderlyingEntityType) {
-  // Create an unlinked proxy resource.
+  // Create an unlinked import resource.
   mx::eventpair source, destination;
 
   ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
   // Apply the import op.
-  ASSERT_TRUE(Apply(NewImportResourceOp(1 /* proxy resource ID */,
+  ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                         mozart2::ImportSpec::NODE, /* spec */
                                         std::move(destination)) /* endpoint */
                     ));
 
-  // Assert that the proxy node was correctly mapped in. It has not been
+  // Assert that the import node was correctly mapped in. It has not been
   // linked yet.
   ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
 
-  // Resolve by the proxy container.
+  // Resolve by the import container.
 
   {
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
+    ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
   }
 
-  // Resolve by the resource owned by the proxy container.
+  // Resolve by the resource owned by the import container.
   {
-    // Assert that the proxy node contains a node with the correct properties.
-    auto proxy_node_backing = FindResource<EntityNode>(1);
+    // Assert that the import node contains a node with the correct properties.
+    auto import_node_backing = FindResource<EntityNode>(1);
 
-    ASSERT_TRUE(proxy_node_backing);
+    ASSERT_TRUE(import_node_backing);
 
     // Since the entity node is not owned by the resource map, its ID is
     // ResourceId::MAX.
-    ASSERT_EQ(proxy_node_backing->resource_id(),
+    ASSERT_EQ(import_node_backing->resource_id(),
               std::numeric_limits<ResourceId>::max());
   }
 }
 
-TEST_F(ProxyResourceTest, UnlinkedImportedResourceCanAcceptOps) {
-  // Create an unlinked proxy resource.
+TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
+  // Create an unlinked import resource.
   mx::eventpair source, destination;
   {
     ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
 
     // Apply the import op.
-    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* proxy resource ID */,
+    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
                       ));
 
-    // Assert that the proxy node was correctly mapped in. It has not been
+    // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
     ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
 
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
+    ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
   }
 
   // Attempt to add an entity node as a child to an unlinked resource.
@@ -275,13 +275,13 @@ TEST_F(ProxyResourceTest, UnlinkedImportedResourceCanAcceptOps) {
     // Create the entity node.
     ASSERT_TRUE(Apply(NewCreateEntityNodeOp(2 /* child resource id */)));
 
-    // Add the entity node to the proxy.
-    ASSERT_TRUE(Apply(NewAddChildOp(1 /* unlinked proxy resource */,
+    // Add the entity node to the import.
+    ASSERT_TRUE(Apply(NewAddChildOp(1 /* unlinked import resource */,
                                     2 /* child resource */)));
   }
 }
 
-TEST_F(ProxyResourceTest, LinkedResourceShouldBeAbleToAcceptOps) {
+TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
   // Create the event pair.
   mx::eventpair source, destination;
   ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
@@ -289,28 +289,28 @@ TEST_F(ProxyResourceTest, LinkedResourceShouldBeAbleToAcceptOps) {
   // Perform the import
   {
     // Apply the import op.
-    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* proxy resource ID */,
+    ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
                       ));
 
-    // Assert that the proxy node was correctly mapped in. It has not been
+    // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
     ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
   }
 
   // Bindings not yet resolved.
   {
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(proxy_node->imported_resource(), nullptr);
+    ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
   }
 
   // Perform the export
@@ -327,16 +327,16 @@ TEST_F(ProxyResourceTest, LinkedResourceShouldBeAbleToAcceptOps) {
 
   // Bindings should have been resolved.
   {
-    // Assert that the proxy node was setup with the correct properties.
-    auto proxy_node = FindResource<ProxyResource>(1);
+    // Assert that the import node was setup with the correct properties.
+    auto import_node = FindResource<Import>(1);
 
-    ASSERT_TRUE(proxy_node);
+    ASSERT_TRUE(import_node);
 
     // Bindings should be resolved by now.
-    ASSERT_NE(proxy_node->imported_resource(), nullptr);
+    ASSERT_NE(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(proxy_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
   }
 
   // Attempt to add an entity node as a child to an linked resource.
@@ -344,13 +344,13 @@ TEST_F(ProxyResourceTest, LinkedResourceShouldBeAbleToAcceptOps) {
     // Create the entity node.
     ASSERT_TRUE(Apply(NewCreateEntityNodeOp(3 /* child resource id */)));
 
-    // Add the entity node to the proxy.
-    ASSERT_TRUE(Apply(NewAddChildOp(1 /* unlinked proxy resource */,
+    // Add the entity node to the import.
+    ASSERT_TRUE(Apply(NewAddChildOp(1 /* unlinked import resource */,
                                     3 /* child resource */)));
   }
 }
 
-TEST_F(ProxyResourceTest, EmbedderCanEmbedNodesFromElsewhere) {
+TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
   // Create the token pain.
   mx::eventpair import_token, export_token;
   ASSERT_EQ(mx::eventpair::create(0, &import_token, &export_token), MX_OK);
@@ -361,7 +361,7 @@ TEST_F(ProxyResourceTest, EmbedderCanEmbedNodesFromElsewhere) {
   //    | 1  |
   //    +----+
   //       |
-  //       +----------+ Proxy
+  //       +----------+ Import
   //       |          |
   //       v          v
   //    +----+     +----+

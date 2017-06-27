@@ -16,7 +16,7 @@ namespace scene {
 
 class ErrorReporter;
 class Session;
-class ProxyResource;
+class Import;
 
 // Resource is the base class for all client-created objects (i.e. those that
 // are created in response to a CreateResourceOp operation).
@@ -61,30 +61,31 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
     return ftl::RefPtr<T>(static_cast<T*>(this));
   }
 
-  /// The list of proxy resource that currently have a binding to this resource.
-  const std::unordered_set<ProxyResource*>& imports() const { return imports_; }
+  /// The list of import resource that currently have a binding to this
+  /// resource.
+  const std::unordered_set<Import*>& imports() const { return imports_; }
 
-  /// Adds the proxy resource to the list of importers of this resource.
-  virtual void AddImport(ProxyResource* proxy);
+  /// Adds the import resource to the list of importers of this resource.
+  virtual void AddImport(Import* import);
 
-  /// Removes the proxy resource from the list of importers of this resource.
-  virtual void RemoveImport(ProxyResource* proxy);
+  /// Removes the import resource from the list of importers of this resource.
+  virtual void RemoveImport(Import* import);
 
  protected:
   Resource(Session* session, const ResourceTypeInfo& type_info);
 
   friend class ResourceMap;
-  friend class ProxyResource;
+  friend class Import;
   /// For the given resource type info, returns the resource that will act as
   /// the target for ops directed at this resource. Subclasses (notably the
-  /// |ProxyResource| since their binding are not mutable) may return alternate
+  /// |Import| since their binding are not mutable) may return alternate
   /// resources to act as the recipients of ops.
   virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
 
  private:
   Session* const session_;
   const ResourceTypeInfo& type_info_;
-  std::unordered_set<ProxyResource*> imports_;
+  std::unordered_set<Import*> imports_;
 };
 
 using ResourcePtr = ftl::RefPtr<Resource>;

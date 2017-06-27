@@ -52,8 +52,8 @@ class Node : public Resource {
   /// node being queried) lies within its bounds.
   virtual bool ContainsPoint(const escher::vec2& point) const;
 
-  void AddImport(ProxyResource* proxy) override;
-  void RemoveImport(ProxyResource* proxy) override;
+  void AddImport(Import* import) override;
+  void RemoveImport(Import* import) override;
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);

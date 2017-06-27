@@ -58,8 +58,8 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "import_unittest.cc",
     "node_unittest.cc",
-    "proxy_resource_unittest.cc",
     "release_fence_signaller_unittest.cc",
     "resource_linker_unittest.cc",
     "session_test.cc",

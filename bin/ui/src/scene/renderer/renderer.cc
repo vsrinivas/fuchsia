@@ -11,7 +11,7 @@
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
-#include "apps/mozart/src/scene/resources/proxy_resource.h"
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
@@ -117,7 +117,7 @@ void Renderer::Visitor::Visit(Material* r) {
   FTL_CHECK(false);
 }
 
-void Renderer::Visitor::Visit(ProxyResource* r) {
+void Renderer::Visitor::Visit(Import* r) {
   FTL_CHECK(false);
 }
 

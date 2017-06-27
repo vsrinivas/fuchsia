@@ -9,12 +9,12 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
-#include "apps/mozart/src/scene/resources/proxy_resource.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
@@ -153,8 +153,8 @@ void DumpVisitor::Visit(Material* r) {
   EndItem();
 }
 
-void DumpVisitor::Visit(ProxyResource* r) {
-  BeginItem("ProxyResource");
+void DumpVisitor::Visit(Import* r) {
+  BeginItem("Import");
   WriteProperty("import_spec") << r->import_spec();
   WriteProperty("is_bound") << r->is_bound();
   BeginSection("delegate");

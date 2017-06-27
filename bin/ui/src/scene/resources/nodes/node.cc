@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 
-#include "apps/mozart/src/scene/resources/proxy_resource.h"
+#include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/util/error_reporter.h"
 #include "lib/escher/escher/geometry/types.h"
 
@@ -168,19 +168,19 @@ bool Node::ContainsPoint(const escher::vec2& point) const {
   return inside;
 }
 
-void Node::AddImport(ProxyResource* proxy) {
-  Resource::AddImport(proxy);
+void Node::AddImport(Import* import) {
+  Resource::AddImport(import);
 
-  auto delegate = static_cast<Node*>(proxy->delegate());
+  auto delegate = static_cast<Node*>(import->delegate());
   FTL_DCHECK(!delegate->parent_);
   delegate->parent_ = this;
   delegate->InvalidateGlobalTransform();
 }
 
-void Node::RemoveImport(ProxyResource* proxy) {
-  Resource::RemoveImport(proxy);
+void Node::RemoveImport(Import* import) {
+  Resource::RemoveImport(import);
 
-  auto delegate = static_cast<Node*>(proxy->delegate());
+  auto delegate = static_cast<Node*>(import->delegate());
   FTL_DCHECK(delegate->parent_);
   delegate->parent_ = nullptr;
   delegate->InvalidateGlobalTransform();
