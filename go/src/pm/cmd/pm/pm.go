@@ -19,7 +19,8 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/verify"
 )
 
-const usage = `%s [command]
+const usage = `Usage: %s [-k] [-m] [-o] [-t] <command>
+Commands
     init    - initialize a package meta directory in the standard form
     genkey  - generate a new private key
 
