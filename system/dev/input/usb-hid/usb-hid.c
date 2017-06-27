@@ -30,6 +30,7 @@ typedef struct usb_hid_device {
 
     hid_info_t info;
     iotxn_t* txn;
+    bool txn_queued;
 
     mtx_t lock;
     hidbus_ifc_t* ifc;
@@ -69,6 +70,8 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
 
     if (requeue) {
         iotxn_queue(hid->usbdev, txn);
+    } else {
+        hid->txn_queued = false;
     }
 }
 
@@ -92,11 +95,17 @@ static mx_status_t usb_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
     }
     hid->ifc = ifc;
     hid->cookie = cookie;
+    if (!hid->txn_queued) {
+        hid->txn_queued = true;
+        iotxn_queue(hid->usbdev, hid->txn);
+    }
     mtx_unlock(&hid->lock);
     return MX_OK;
 }
 
 static void usb_hid_stop(void* ctx) {
+    // TODO(tkilbourn) set flag to stop requeueing the interrupt request when we start using
+    // this callback
     usb_hid_device_t* hid = ctx;
     mtx_lock(&hid->lock);
     hid->ifc = NULL;
@@ -294,7 +303,6 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
             free(usbhid);
             return status;
         }
-        iotxn_queue(usbhid->usbdev, usbhid->txn);
 
 next_interface:
         // move on to next interface
