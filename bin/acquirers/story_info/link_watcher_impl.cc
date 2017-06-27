@@ -49,27 +49,21 @@ LinkWatcherImpl::LinkWatcherImpl(StoryWatcherImpl* const owner,
       story_id_(story_id),
       link_path_(link_path->Clone()),
       link_watcher_binding_(this) {
+  modular::LinkPtr link;
   story_controller_->GetLink(
       link_path_->module_path.Clone(),
       link_path_->link_name,
-      link_.NewRequest());
+      link.NewRequest());
 
-  link_->Watch(link_watcher_binding_.NewBinding());
+  link->Watch(link_watcher_binding_.NewBinding());
 
   // If the link becomes inactive, we stop watching it. It might still receive
   // updates from other devices, but nothing can tell us as it isn't kept in
   // memory on the current device.
   //
-  // TODO(mesch): Because we retain the link connection here, the link will not
-  // get unused while the Story is alive. We would like to be able to release
-  // the Link earlier, when no *modules* use it anymore. A possible solution
-  // would be to expose link inspection and tracking through another interface
-  // than Link to clients that are not modules, like this one here. Another
-  // solution would be for the LinkWatcher to optionally not be tied to its
-  // connection and stay alive past its Link connection (but still go down with
-  // its Link instance, obviously). This would easily be possible for a
-  // WatchAll() watcher.
-  link_.set_connection_error_handler([this] {
+  // The Link itself is not kept here, because otherwise it never becomes
+  // inactive (i.e. loses all its Link connections).
+  link_watcher_binding_.set_connection_error_handler([this] {
       owner_->DropLink(MakeLinkKey(link_path_));
     });
 }
