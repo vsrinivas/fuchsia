@@ -1,0 +1,12 @@
+{
+    "imports": [
+        "magma",
+        "ftl",
+        "mtl",
+        "runtime_config"
+    ],
+    "packages": {
+        "magma-fidl": "//magma/vulkan:magma-fidl",
+        "magma-fidl-tests": "//magma/vulkan:magma-fidl-tests"
+    }
+}
