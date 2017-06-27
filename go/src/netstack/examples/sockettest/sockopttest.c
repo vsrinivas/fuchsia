@@ -57,7 +57,7 @@ union val {
   int i_val;
   struct linger linger_val;
   struct timeval timeval_val;
-} val;
+};
 
 static char strres[128];
 
@@ -143,6 +143,32 @@ struct sock_opts {
     {NULL, 0, 0, NULL}
 };
 
+int test_setsockopt(int fd, struct sock_opts* ptr, union val *valp, socklen_t len) {
+  if (setsockopt(fd, ptr->opt_level, ptr->opt_name, valp, len) == -1) {
+    printf("setsockopt error (%d)", errno);
+  } else {
+    union val new_val;
+    new_val.i_val = 0xdeadbeef;
+    socklen_t new_len = sizeof(new_val);
+    if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &new_len) == -1) {
+      printf("getsockopt error (%d)", errno);
+    } else if (new_val.i_val == (int)0xdeadbeef) {
+      printf("setsockopt unchanged");
+    } else if (len != new_len) {
+      printf("getsockopt returned a different size (%d) than expected (%d)",
+             new_len, len);
+    } else if (memcmp(valp, &new_val, len) != 0) {
+      printf("getsockopt returned a different val (%s)",
+             ptr->opt_val_str(&new_val, new_len));
+      printf(" than expected (%s)", ptr->opt_val_str(valp, len));
+    } else {
+      printf("setsockopt success = %s", ptr->opt_val_str(valp, len));
+      return 0;
+    }
+  }
+  return -1;
+}
+
 int main(int argc, char** argv) {
   socklen_t len;
   struct sock_opts* ptr;
@@ -167,33 +193,27 @@ int main(int argc, char** argv) {
     if (ptr->opt_val_str == NULL)
       printf("(undefined)\n");
     else {
-      len = sizeof(val);
-      if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &val, &len) == -1) {
+      union val ini_val;
+      len = sizeof(ini_val);
+      if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &ini_val, &len) == -1) {
         printf("getsockopt error (%d)... ", errno);
       } else {
-        printf("default = %s... ", (*ptr->opt_val_str)(&val, len));
+        printf("initial = %s... ", ptr->opt_val_str(&ini_val, len));
       }
 
       // Change the option and see if it was successful.
+      union val val = ini_val;
       if (ptr->opt_val_str == sock_str_flag) {
         val.i_val = !val.i_val;
       } else if (ptr->opt_val_str == sock_str_int) {
         val.i_val += 42;
       }
-
-      if (setsockopt(fd, ptr->opt_level, ptr->opt_name, &val, len) == -1) {
-        printf("setsockopt error (%d)\n", errno);
-      } else {
-        union val new_val;
-        new_val.i_val = 0xdeadbeef;
-        if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &len) == -1) {
-          printf("getsockopt error (%d)\n", errno);
-        } else if (new_val.i_val != (int)0xdeadbeef) {
-          printf("setsockopt success = %s\n", (*ptr->opt_val_str)(&val, len));
-        } else {
-          printf("setsockopt unchanged\n");
-        }
+      if (test_setsockopt(fd, ptr, &val, len) == 0) {
+        printf("... ");
+        // Change the option back to the initial value.
+        test_setsockopt(fd, ptr, &ini_val, len);
       }
+      printf ("\n");
     }
   }
 
