@@ -105,13 +105,13 @@ static bool guest_enter(void) {
     uint32_t num_packets;
     ASSERT_EQ(mx_fifo_read(test.guest_ctl_fifo, packet, sizeof(packet), &num_packets),
               MX_OK, "");
-    ASSERT_EQ(num_packets, 2u, "");
-    ASSERT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
-    ASSERT_EQ(packet[0].port_out.access_size, 1u, "");
-    ASSERT_EQ(packet[0].port_out.data[0], 'm', "");
-    ASSERT_EQ(packet[1].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
-    ASSERT_EQ(packet[1].port_out.access_size, 1u, "");
-    ASSERT_EQ(packet[1].port_out.data[0], 'x', "");
+    EXPECT_EQ(num_packets, 2u, "");
+    EXPECT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
+    EXPECT_EQ(packet[0].port_out.access_size, 1u, "");
+    EXPECT_EQ(packet[0].port_out.data[0], 'm', "");
+    EXPECT_EQ(packet[1].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
+    EXPECT_EQ(packet[1].port_out.access_size, 1u, "");
+    EXPECT_EQ(packet[1].port_out.data[0], 'x', "");
 
     ASSERT_TRUE(teardown(&test), "");
 
@@ -164,23 +164,23 @@ static bool guest_get_set_gpr(void) {
               MX_OK, "");
 
 #if __x86_64__
-    ASSERT_EQ(guest_gpr.rax, 2u, "");
-    ASSERT_EQ(guest_gpr.rcx, 4u, "");
-    ASSERT_EQ(guest_gpr.rdx, 6u, "");
-    ASSERT_EQ(guest_gpr.rbx, 8u, "");
-    ASSERT_EQ(guest_gpr.rsp, 10u, "");
-    ASSERT_EQ(guest_gpr.rbp, 12u, "");
-    ASSERT_EQ(guest_gpr.rsi, 14u, "");
-    ASSERT_EQ(guest_gpr.rdi, 16u, "");
-    ASSERT_EQ(guest_gpr.r8, 18u, "");
-    ASSERT_EQ(guest_gpr.r9, 20u, "");
-    ASSERT_EQ(guest_gpr.r10, 22u, "");
-    ASSERT_EQ(guest_gpr.r11, 24u, "");
-    ASSERT_EQ(guest_gpr.r12, 26u, "");
-    ASSERT_EQ(guest_gpr.r13, 28u, "");
-    ASSERT_EQ(guest_gpr.r14, 30u, "");
-    ASSERT_EQ(guest_gpr.r15, 32u, "");
-    ASSERT_EQ(guest_gpr.flags, 1u, "");
+    EXPECT_EQ(guest_gpr.rax, 2u, "");
+    EXPECT_EQ(guest_gpr.rcx, 4u, "");
+    EXPECT_EQ(guest_gpr.rdx, 6u, "");
+    EXPECT_EQ(guest_gpr.rbx, 8u, "");
+    EXPECT_EQ(guest_gpr.rsp, 10u, "");
+    EXPECT_EQ(guest_gpr.rbp, 12u, "");
+    EXPECT_EQ(guest_gpr.rsi, 14u, "");
+    EXPECT_EQ(guest_gpr.rdi, 16u, "");
+    EXPECT_EQ(guest_gpr.r8, 18u, "");
+    EXPECT_EQ(guest_gpr.r9, 20u, "");
+    EXPECT_EQ(guest_gpr.r10, 22u, "");
+    EXPECT_EQ(guest_gpr.r11, 24u, "");
+    EXPECT_EQ(guest_gpr.r12, 26u, "");
+    EXPECT_EQ(guest_gpr.r13, 28u, "");
+    EXPECT_EQ(guest_gpr.r14, 30u, "");
+    EXPECT_EQ(guest_gpr.r15, 32u, "");
+    EXPECT_EQ(guest_gpr.flags, 1u, "");
 #endif // __x86_64__
 
     ASSERT_TRUE(teardown(&test), "");
