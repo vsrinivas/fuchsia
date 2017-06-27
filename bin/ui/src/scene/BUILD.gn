@@ -38,8 +38,11 @@ config("common_include_dirs") {
 
 source_set("common") {
   sources = [
+    "acquire_fence.cc",
+    "acquire_fence.h",
     "display.cc",
     "display.h",
+    "fence.h",
     "frame_scheduler.cc",
     "frame_scheduler.h",
     "print_op.cc",

@@ -5,6 +5,7 @@
 #include "escher/impl/command_buffer_sequencer.h"
 #include "gtest/gtest.h"
 
+#include "apps/mozart/src/scene/fence.h"
 #include "apps/mozart/src/scene/release_fence_signaller.h"
 #include "apps/mozart/src/scene/tests/util.h"
 
@@ -36,22 +37,22 @@ TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence3));
 
   // Assert that none of the fences are signalled.
-  ASSERT_FALSE(IsEventSignalled(fence1, kReleaseFenceSignal));
-  ASSERT_FALSE(IsEventSignalled(fence2, kReleaseFenceSignal));
+  ASSERT_FALSE(IsEventSignalled(fence1, kFenceSignalled));
+  ASSERT_FALSE(IsEventSignalled(fence2, kFenceSignalled));
 
   // Mark the sequence numbers so far as finished. (Do it out of order for fun).
   sequencer.CommandBufferFinished(seq_num2);
   sequencer.CommandBufferFinished(seq_num1);
 
-  ASSERT_TRUE(IsEventSignalled(fence1, kReleaseFenceSignal));
-  ASSERT_TRUE(IsEventSignalled(fence2, kReleaseFenceSignal));
-  ASSERT_FALSE(IsEventSignalled(fence3, kReleaseFenceSignal));
+  ASSERT_TRUE(IsEventSignalled(fence1, kFenceSignalled));
+  ASSERT_TRUE(IsEventSignalled(fence2, kFenceSignalled));
+  ASSERT_FALSE(IsEventSignalled(fence3, kFenceSignalled));
 
   sequencer.CommandBufferFinished(seq_num3);
 
-  ASSERT_TRUE(IsEventSignalled(fence1, kReleaseFenceSignal));
-  ASSERT_TRUE(IsEventSignalled(fence2, kReleaseFenceSignal));
-  ASSERT_TRUE(IsEventSignalled(fence3, kReleaseFenceSignal));
+  ASSERT_TRUE(IsEventSignalled(fence1, kFenceSignalled));
+  ASSERT_TRUE(IsEventSignalled(fence2, kFenceSignalled));
+  ASSERT_TRUE(IsEventSignalled(fence3, kFenceSignalled));
 }
 
 }  // namespace test

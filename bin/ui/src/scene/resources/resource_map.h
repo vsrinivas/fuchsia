@@ -33,6 +33,9 @@ class ResourceMap {
   // Attempt to find the resource within the map.  If it is found, verify that
   // it has the correct type, and return it.  Return nullptr if it is not found,
   // or if type validation fails.
+  //
+  // example:
+  // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
   ftl::RefPtr<ResourceT> FindResource(ResourceId id) {
     auto it = resources_.find(id);

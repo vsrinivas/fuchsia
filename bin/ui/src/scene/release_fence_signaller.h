@@ -11,10 +11,10 @@
 #include "escher/impl/command_buffer_sequencer.h"
 #include "lib/ftl/logging.h"
 
+#include "apps/mozart/src/scene/fence.h"
+
 namespace mozart {
 namespace scene {
-
-const uint32_t kReleaseFenceSignal = MX_USER_SIGNAL_0;
 
 // Signals a fence when all CommandBuffers started before the time of the
 // fence's submission are finished. Used to ensure it is safe to release
@@ -22,7 +22,7 @@ const uint32_t kReleaseFenceSignal = MX_USER_SIGNAL_0;
 class ReleaseFenceSignaller
     : public escher::impl::CommandBufferSequencerListener {
  public:
-  ReleaseFenceSignaller(
+  explicit ReleaseFenceSignaller(
       escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
   ~ReleaseFenceSignaller();
@@ -31,7 +31,7 @@ class ReleaseFenceSignaller
   void AddVulkanReleaseFence(mx::event fence);
 
   // Must be called on the same thread that we're submitting frames to Escher.
-  void AddCPUReleaseFence(mx::event fence);
+  virtual void AddCPUReleaseFence(mx::event fence);
 
  private:
   // The sequence number for the most recently finished CommandBuffer.

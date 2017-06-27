@@ -36,7 +36,7 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(mx::event fence) {
   } else if (last_finished_sequence_number_ == fence_sequence_number) {
     // Signal the fence immediately if its sequence number has already been
     // marked finished.
-    fence.signal(0u, kReleaseFenceSignal);
+    fence.signal(0u, kFenceSignalled);
   } else {
     FTL_CHECK(false) << "ReleaseFenceSignaller::AddCPUReleaseFence: sequence "
                         "numbers are in an invalid state";
@@ -50,7 +50,7 @@ void ReleaseFenceSignaller::CommandBufferFinished(uint64_t sequence_number) {
 
   while (!pending_fences_.empty() &&
          pending_fences_.front().sequence_number <= sequence_number) {
-    pending_fences_.front().fence.signal(0u, kReleaseFenceSignal);
+    pending_fences_.front().fence.signal(0u, kFenceSignalled);
     pending_fences_.pop();
   }
 };
