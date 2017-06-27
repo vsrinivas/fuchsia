@@ -160,6 +160,13 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
                                    std::move(on_next), std::move(on_done));
 }
 
+void PageSnapshotImpl::GetEntriesInline(
+    fidl::Array<uint8_t> key_start,
+    fidl::Array<uint8_t> token,
+    const GetEntriesInlineCallback& callback) {
+  FTL_NOTIMPLEMENTED() << "GetEntriesInline not yet implemented.";
+}
+
 void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
                                fidl::Array<uint8_t> token,
                                const GetKeysCallback& callback) {

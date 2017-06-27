@@ -180,6 +180,17 @@ struct Entry {
   Priority priority;
 };
 
+// A pair of key and an inlined value.
+struct InlinedEntry {
+  array<uint8> key;
+  // |value| is null if the value requested has the LAZY priority and is not
+  // present on the device. Clients must use a Fetch call to retrieve the
+  // contents.
+  array<uint8>? value;
+  Priority priority;
+};
+
+
 // The content of a page at a given time. Closing the connection to a |Page|
 // interface closes all |PageSnapshot| interfaces it created. The contents
 // provided by this interface are limited to the prefix provided to the
@@ -199,6 +210,12 @@ interface PageSnapshot {
   // The returned |entries| are sorted by |key|.
   GetEntries(array<uint8>? key_start, array<uint8>? token)
       => (Status status, array<Entry>? entries, array<uint8>? next_token);
+
+  // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
+  // fit in a FIDL message.
+  GetEntriesInline(array<uint8>? key_start, array<uint8>? token)
+      => (Status status, array<InlinedEntry>? entries,
+          array<uint8>? next_token);
 
   // Returns the keys of all entries in the page starting from the provided
   // key. If |key_start| is NULL, all entries are returned. If the result fits

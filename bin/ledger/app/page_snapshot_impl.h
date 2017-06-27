@@ -27,6 +27,9 @@ class PageSnapshotImpl : public PageSnapshot {
   void GetEntries(fidl::Array<uint8_t> key_start,
                   fidl::Array<uint8_t> token,
                   const GetEntriesCallback& callback) override;
+  void GetEntriesInline(fidl::Array<uint8_t> key_start,
+                        fidl::Array<uint8_t> token,
+                        const GetEntriesInlineCallback& callback) override;
   void GetKeys(fidl::Array<uint8_t> key_start,
                fidl::Array<uint8_t> token,
                const GetKeysCallback& callback) override;
