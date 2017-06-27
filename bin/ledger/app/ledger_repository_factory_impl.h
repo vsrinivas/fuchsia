@@ -60,9 +60,11 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
   void CreateRepository(LedgerRepositoryContainer* container,
                         std::string sanitized_path,
+                        std::string repository_name,
                         cloud_sync::UserConfig user_config);
 
-  void OnVersionMismatch(std::string repository_path);
+  void OnVersionMismatch(std::string repository_name,
+                         std::string repository_path);
 
   Delegate* const delegate_;
   ledger::Environment* const environment_;

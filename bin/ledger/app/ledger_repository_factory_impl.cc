@@ -278,7 +278,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   container->BindRepository(std::move(repository_request), std::move(callback));
 
   auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
-    this, sanitized_path = std::move(sanitized_path),
+    this, sanitized_path = std::move(sanitized_path), name = std::move(name),
     firebase_config = std::move(firebase_config), auth_provider_ptr, container
   ](std::string user_id) {
     if (user_id.empty()) {
@@ -286,7 +286,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     }
     cloud_sync::UserConfig user_config = GetUserConfig(
         firebase_config, user_id, sanitized_path, auth_provider_ptr);
-    CreateRepository(container, std::move(sanitized_path),
+    CreateRepository(container, std::move(sanitized_path), std::move(name),
                      std::move(user_config));
 
   }));
@@ -343,6 +343,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
 void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     std::string repository_path,
+    std::string repository_name,
     cloud_sync::UserConfig user_config) {
   const std::string temp_dir = ftl::Concatenate({repository_path, "/tmp"});
   if (config_persistence_ == ConfigPersistence::PERSIST &&
@@ -356,8 +357,10 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     FTL_LOG(WARNING) << "Failed to save the current configuration.";
   }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
-  ftl::Closure on_version_mismatch = [this, repository_path]() mutable {
-    OnVersionMismatch(std::move(repository_path));
+  ftl::Closure on_version_mismatch = [
+    this, repository_path, repository_name = std::move(repository_name)
+  ]() mutable {
+    OnVersionMismatch(std::move(repository_path), std::move(repository_name));
   };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
@@ -365,11 +368,13 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
       std::move(on_version_mismatch));
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_path, environment_, std::move(watchers), std::move(user_sync));
+      std::move(repository_path), environment_, std::move(watchers),
+      std::move(user_sync));
   container->SetRepository(Status::OK, std::move(repository));
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(
+    std::string repository_name,
     std::string repository_path) {
   FTL_LOG(ERROR)
       << "Data in the cloud is incompatible with the local state, "
@@ -381,7 +386,7 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(
 
   // First, shut down the repository so that we can delete the files while it's
   // not running.
-  auto find_repository = repositories_.find(repository_path);
+  auto find_repository = repositories_.find(repository_name);
   FTL_DCHECK(find_repository != repositories_.end());
   repositories_.erase(find_repository);
 
