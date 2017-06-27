@@ -78,7 +78,7 @@ static int server(const char* service) {
   const char* argv[2] = {kProgram, "ECHO"};
   launchpad_load_from_file(lp, kProgram);
   launchpad_set_args(lp, 2, argv);
-  launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD);
+  launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD);
 #ifdef CAN_CLONE_SOCKETS
   launchpad_clone_fd(lp, conn, STDIN_FILENO);
   launchpad_transfer_fd(lp, conn, STDOUT_FILENO);
