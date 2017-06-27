@@ -10,7 +10,6 @@
 #include <utility>
 
 #include "application/services/application_launcher.fidl.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {

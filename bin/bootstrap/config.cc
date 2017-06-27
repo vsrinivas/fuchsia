@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "lib/ftl/files/file.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace bootstrap {
 namespace {
@@ -15,7 +16,8 @@ constexpr char kAppLoaders[] = "loaders";
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 
-app::ApplicationLaunchInfoPtr GetLaunchInfo(const modular::JsonValue& value) {
+app::ApplicationLaunchInfoPtr GetLaunchInfo(
+    const rapidjson::Document::ValueType& value) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   if (value.IsString()) {
     launch_info->url = value.GetString();
@@ -35,7 +37,7 @@ app::ApplicationLaunchInfoPtr GetLaunchInfo(const modular::JsonValue& value) {
   return launch_info;
 }
 
-bool ParseServiceMap(const modular::JsonDoc& document,
+bool ParseServiceMap(const rapidjson::Document& document,
                      const std::string& key,
                      Config::ServiceMap* services) {
   auto it = document.FindMember(key);
@@ -69,7 +71,7 @@ bool Config::ReadFrom(const std::string& config_file) {
 }
 
 bool Config::Parse(const std::string& string, const std::string& config_file) {
-  modular::JsonDoc document;
+  rapidjson::Document document;
   document.Parse(string);
   FTL_CHECK(!document.HasParseError())
       << "Could not parse file at " << config_file;

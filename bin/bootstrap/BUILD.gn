@@ -16,10 +16,10 @@ executable("bootstrap") {
   deps = [
     "//application/lib/app",
     "//application/lib/svc",
-    "//apps/modular/lib/rapidjson",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
     "//lib/url",
+    "//third_party/rapidjson",
   ]
 }
