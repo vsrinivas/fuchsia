@@ -40,7 +40,7 @@ be run by `test.sh`.
 All `test.sh` scripts require setting up the fuchsia environment by
 sourcing [scripts/env.sh][env_sh].
 
-## Starting the test suite directly under fuchisa
+## Starting the test suite directly under fuchsia
 
 `run_modular_tests` is a command that runs all of the Modular tests. It is based
 on the [Test Runner][test_runner] framework.
