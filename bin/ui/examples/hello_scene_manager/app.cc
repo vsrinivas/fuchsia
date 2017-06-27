@@ -105,12 +105,13 @@ class HelloSceneManagerApp {
 
     // Create an Image to wrap the checkerboard.
     ResourceId checkerboard_image_id = NewResourceId();
-    ops.push_back(
-        NewCreateImageOp(checkerboard_image_id, checkerboard_memory_id, 0,
-                         mozart2::ImageInfo::PixelFormat::BGRA_8,
-                         mozart2::ImageInfo::ColorSpace::SRGB,
-                         mozart2::ImageInfo::Tiling::LINEAR, checkerboard_width,
-                         checkerboard_height, checkerboard_width));
+    const size_t bytes_per_pixel = 4u;
+    ops.push_back(NewCreateImageOp(
+        checkerboard_image_id, checkerboard_memory_id, 0,
+        mozart2::ImageInfo::PixelFormat::BGRA_8,
+        mozart2::ImageInfo::ColorSpace::SRGB,
+        mozart2::ImageInfo::Tiling::LINEAR, checkerboard_width,
+        checkerboard_height, checkerboard_width * bytes_per_pixel));
 
     // Create a Material with the checkerboard image.
     ResourceId material_id = NewResourceId();

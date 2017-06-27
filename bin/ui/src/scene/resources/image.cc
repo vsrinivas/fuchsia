@@ -43,13 +43,16 @@ ImagePtr Image::New(Session* session,
                     uint64_t memory_offset,
                     ErrorReporter* error_reporter) {
   vk::Format pixel_format = vk::Format::eUndefined;
-  size_t pixel_size;
+  size_t bytes_per_pixel;
+  size_t pixel_alignment;
   switch (image_info->pixel_format) {
     case mozart2::ImageInfo::PixelFormat::BGRA_8:
       pixel_format = vk::Format::eB8G8R8A8Unorm;
-      pixel_size = sizeof(uint8_t);
+      bytes_per_pixel = 4u;
+      pixel_alignment = 4u;
       break;
   }
+
   if (image_info->width <= 0) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): width must be greater than 0.";
@@ -60,10 +63,14 @@ ImagePtr Image::New(Session* session,
         << "Image::CreateFromMemory(): height must be greater than 0.";
     return nullptr;
   }
-  // TODO: handle stride that does not match width
-  if (image_info->width != image_info->stride) {
+  if (image_info->stride < image_info->width * bytes_per_pixel) {
     error_reporter->ERROR()
-        << "Image::CreateFromMemory(): stride must match width.";
+        << "Image::CreateFromMemory(): stride too small for width.";
+    return nullptr;
+  }
+  if (image_info->stride % pixel_alignment != 0) {
+    error_reporter->ERROR()
+        << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
     return nullptr;
   }
 
@@ -78,7 +85,7 @@ ImagePtr Image::New(Session* session,
       return nullptr;
     }
 
-    size_t image_size = pixel_size * image_info->width * image_info->height;
+    size_t image_size = image_info->height * image_info->stride;
     if (memory_offset >= host_memory->size()) {
       error_reporter->ERROR()
           << "Image::CreateFromMemory(): the offset of the Image must be "
@@ -93,11 +100,18 @@ ImagePtr Image::New(Session* session,
       return nullptr;
     }
 
+    // TODO(MZ-141): Support non-minimal strides.
+    if (image_info->stride != image_info->width * bytes_per_pixel) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): the stride must be minimal (MZ-141)";
+      return nullptr;
+    }
+
     auto escher_image = escher::image_utils::NewImageFromPixels(
         session->context()->escher_image_factory(),
         session->context()->escher_gpu_uploader(), pixel_format,
         image_info->width, image_info->height,
-        (uint8_t*)host_memory->memory_base());
+        static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset);
     return ftl::AdoptRef(new Image(session, escher_image, host_memory));
 
     // Create from GPU memory.
