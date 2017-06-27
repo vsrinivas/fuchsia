@@ -9,6 +9,7 @@ group("application") {
     "lib/farfs",
     "src/archiver",
     "src/archiver($host_toolchain)",
+    "src/bootstrap",
     "src/manager",
     "src/manager:tests",
   ]
