@@ -149,10 +149,6 @@ typedef uint32_t mx_signals_t;
 // Timer
 #define MX_TIMER_SIGNALED           __MX_OBJECT_SIGNALED
 
-// Compatibility Definitions
-// TODO: remove when safe. Magenta should not be using them.
-#define MX_PROCESS_SIGNALED         MX_PROCESS_TERMINATED
-
 // global kernel object id.
 typedef uint64_t mx_koid_t;
 #define MX_KOID_INVALID ((uint64_t) 0)
