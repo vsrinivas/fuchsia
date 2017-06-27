@@ -55,7 +55,7 @@ mx_status_t MagentaOutput::SyncDriverCall(const mx::channel& channel,
                                           const ReqType& req,
                                           RespType* resp,
                                           mx_handle_t* resp_handle_out) {
-  constexpr mx_time_t CALL_TIMEOUT = 100000000u;
+  constexpr mx_time_t CALL_TIMEOUT = MX_MSEC(500u);
   mx_channel_call_args_t args;
 
   FTL_DCHECK((resp_handle_out == nullptr) ||
