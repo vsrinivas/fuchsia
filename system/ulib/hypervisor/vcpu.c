@@ -32,6 +32,7 @@
 
 /* Local APIC register addresses. */
 #define LOCAL_APIC_REGISTER_ID                  0x0020
+#define LOCAL_APIC_REGISTER_VERSION             0x0030
 #define LOCAL_APIC_REGISTER_SVR                 0x00f0
 #define LOCAL_APIC_REGISTER_ESR                 0x0280
 #define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
@@ -288,6 +289,16 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
     switch (offset) {
     case LOCAL_APIC_REGISTER_ID:
         return inst_read32(inst, 0);
+    case LOCAL_APIC_REGISTER_VERSION: {
+        // From Intel Volume 3, Section 10.4.8.
+        //
+        // We choose 15H as it causes us to be seen as a modern APIC by Linux,
+        // and is the highest non-reserved value.
+        const uint32_t version = 0x15;
+        const uint32_t max_lvt_entry = 0x6; // LVT entries minus 1.
+        const uint32_t eoi_suppression = 0; // Disable support for EOI-broadcast suppression.
+        return inst_read32(inst, version | (max_lvt_entry << 16) | (eoi_suppression << 24));
+    }
     case LOCAL_APIC_REGISTER_ESR:
         // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
         // ESR, software should first write to it.
