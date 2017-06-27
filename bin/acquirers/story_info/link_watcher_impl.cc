@@ -49,24 +49,27 @@ LinkWatcherImpl::LinkWatcherImpl(StoryWatcherImpl* const owner,
       story_id_(story_id),
       link_path_(link_path->Clone()),
       link_watcher_binding_(this) {
-  // Link is reset after we use to register a link watcher so that it can be
-  // disposed when it's no longer in use. If we would keep the Link connection
-  // the link would never be considered unused.
-  modular::LinkPtr link;
   story_controller_->GetLink(
       link_path_->module_path.Clone(),
       link_path_->link_name,
-      link.NewRequest());
+      link_.NewRequest());
 
-  link->Watch(link_watcher_binding_.NewBinding());
+  link_->Watch(link_watcher_binding_.NewBinding());
 
   // If the link becomes inactive, we stop watching it. It might still receive
   // updates from other devices, but nothing can tell us as it isn't kept in
   // memory on the current device.
   //
-  // In order for the link to ever become unused, we must give up our Link
-  // connection, below.
-  link_watcher_binding_.set_connection_error_handler([this] {
+  // TODO(mesch): Because we retain the link connection here, the link will not
+  // get unused while the Story is alive. We would like to be able to release
+  // the Link earlier, when no *modules* use it anymore. A possible solution
+  // would be to expose link inspection and tracking through another interface
+  // than Link to clients that are not modules, like this one here. Another
+  // solution would be for the LinkWatcher to optionally not be tied to its
+  // connection and stay alive past its Link connection (but still go down with
+  // its Link instance, obviously). This would easily be possible for a
+  // WatchAll() watcher.
+  link_.set_connection_error_handler([this] {
       owner_->DropLink(MakeLinkKey(link_path_));
     });
 }
@@ -115,6 +118,8 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
 
   std::string json = modular::JsonValueToString(doc);
   publisher_->Publish(context.topic, json);
+
+  FTL_LOG(INFO) << "Context published: " << json << std::endl << "Original link value: " << value;
 }
 
 }  // namespace maxwell
