@@ -540,8 +540,30 @@ function fbuild() {
     && fbuild-internal "$@"
 }
 
+function __fbuild_make_batch() {
+  # parse a bootfs manifest, compare inputs to a stamp file and append
+  # sftp commands to a batch file to update changed files.
+  local manifest stamp batch_file userfs_path build_path
+  manifest=$1
+  stamp=$2
+  batch_file=$3
+
+  while IFS=\= read userfs_path build_path; do
+    if [[ -z "${build_path}" ]]; then
+      continue
+    fi
+
+    if [[ $build_path -nt $stamp ]]; then
+      local device_path=/system/${userfs_path}
+      echo "Updating ${device_path} with ${build_path}"
+      echo "-rm ${device_path}" >> "$batch_file"
+      echo "put ${build_path} ${device_path}" >> "$batch_file"
+    fi
+  done < "$manifest"
+}
+
 function fbuild-sync() {
-  local stamp status_file userfs_path build_path host
+  local stamp status_file batch_file package host
 
   stamp="${FUCHSIA_BUILD_DIR}/.fbuild-sync-stamp"
   status_file="${FUCHSIA_BUILD_DIR}/.fbuild-sync-status"
@@ -561,18 +583,15 @@ function fbuild-sync() {
 
   echo -n > "$batch_file"
 
-  while IFS=\= read userfs_path build_path; do
-    if [[ -z "${build_path}" ]]; then
-      continue
-    fi
+  __fbuild_make_batch \
+    "${FUCHSIA_BUILD_DIR}/gen/packages/gn/system.bootfs.manifest" \
+    "$stamp" "$batch_file"
 
-    if [[ $build_path -nt $stamp ]]; then
-      local device_path=/system/${userfs_path}
-      echo "Updating ${device_path} with ${build_path}"
-      echo "-rm ${device_path}" >> "$batch_file"
-      echo "put ${build_path} ${device_path}" >> "$batch_file"
-    fi
-  done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/system.bootfs.manifest"
+  while read package; do
+    __fbuild_make_batch \
+      "${FUCHSIA_BUILD_DIR}/package/$package/system_manifest" \
+      "$stamp" "$batch_file"
+  done < ${FUCHSIA_BUILD_DIR}/gen/packages/gn/packages
 
   echo "Syncing changed system.bootfs files..."
   host="$(netaddr --fuchsia)"
