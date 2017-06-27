@@ -373,6 +373,10 @@ include kernel/arch/$(ARCH)/rules.mk
 include kernel/top/rules.mk
 include make/sysgen.mk
 
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+GLOBAL_COMPILEFLAGS += --target=$(CLANG_ARCH)-fuchsia
+endif
+
 # recursively include any modules in the MODULE variable, leaving a trail of included
 # modules in the ALLMODULES list
 include make/recurse.mk

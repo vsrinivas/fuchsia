@@ -90,6 +90,7 @@ TOOLCHAIN_PREFIX := $(ARCH_$(ARCH)_TOOLCHAIN_PREFIX)
 
 ARCH_COMPILEFLAGS += $(ARCH_$(ARCH)_COMPILEFLAGS)
 
+CLANG_ARCH := aarch64
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_LDFLAGS += -m aarch64elf
 GLOBAL_MODULE_LDFLAGS += -m aarch64elf
@@ -104,11 +105,6 @@ KERNEL_DEFINES += WITH_NO_FP=1
 KEEP_FRAME_POINTER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-
-ifndef ARCH_arm64_CLANG_TARGET
-ARCH_arm64_CLANG_TARGET := aarch64-fuchsia
-endif
-GLOBAL_COMPILEFLAGS += --target=$(ARCH_arm64_CLANG_TARGET)
 
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 

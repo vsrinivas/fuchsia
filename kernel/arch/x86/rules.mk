@@ -110,6 +110,7 @@ cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`";
 # disable SSP if the compiler supports it; it will break stuff
 GLOBAL_CFLAGS += $(call cc-option,$(CC),-fno-stack-protector,)
 
+CLANG_ARCH := x86_64
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_LDFLAGS += -m elf_x86_64
 GLOBAL_MODULE_LDFLAGS += -m elf_x86_64
@@ -125,13 +126,6 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
 KERNEL_DEFINES += WITH_NO_FP=1
-
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-ifndef ARCH_x86_64_CLANG_TARGET
-ARCH_x86_64_CLANG_TARGET := x86_64-fuchsia
-endif
-GLOBAL_COMPILEFLAGS += --target=$(ARCH_x86_64_CLANG_TARGET)
-endif
 
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 KERNEL_COMPILEFLAGS += -mno-red-zone
