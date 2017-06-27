@@ -414,6 +414,14 @@ void xhci_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
     }
 }
 
+void xhci_wait_bits64(volatile uint64_t* ptr, uint64_t bits, uint64_t expected) {
+    uint64_t value = XHCI_READ64(ptr);
+    while ((value & bits) != expected) {
+        usleep(1000);
+        value = XHCI_READ64(ptr);
+    }
+}
+
 void xhci_start(xhci_t* xhci) {
     volatile uint32_t* usbcmd = &xhci->op_regs->usbcmd;
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
@@ -433,7 +441,9 @@ void xhci_start(xhci_t* xhci) {
     xhci_op_regs_t* op_regs = xhci->op_regs;
     // initialize command ring
     uint64_t crcr = xhci_transfer_ring_start_phys(&xhci->command_ring);
-    crcr |= CRCR_RCS;
+    if (xhci->command_ring.pcs) {
+        crcr |= CRCR_RCS;
+    }
     XHCI_WRITE64(&op_regs->crcr, crcr);
 
     XHCI_WRITE64(&op_regs->dcbaap, xhci->dcbaa_phys);
@@ -480,6 +490,13 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
             (event_trb->control >> TRB_SLOT_ID_START), trb_get_type(command_trb), cc);
 
     int index = command_trb - xhci->command_ring.start;
+
+    if (cc == TRB_CC_COMMAND_RING_STOPPED) {
+        // TRB_CC_COMMAND_RING_STOPPED is generated after aborting a command.
+        // Ignore this, since it is unrelated to the next command in the command ring.
+        return;
+    }
+
     mtx_lock(&xhci->command_ring_lock);
     xhci_command_context_t* context = xhci->command_contexts[index];
     xhci->command_contexts[index] = NULL;

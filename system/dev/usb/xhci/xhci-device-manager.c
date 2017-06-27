@@ -143,20 +143,19 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     XHCI_WRITE64(&xhci->dcbaa[slot_id], io_buffer_phys(&slot->buffer));
     // then send the address device command
 
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
-                      (slot_id << TRB_SLOT_ID_START), &command.context);
-    int cc = xhci_sync_command_wait(&command);
+    for (int i = 0; i < 5; i++) {
+        status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
+                                   (slot_id << TRB_SLOT_ID_START));
+        if (status != MX_ERR_TIMED_OUT) {
+            break;
+        }
+    }
     mtx_unlock(&xhci->input_context_lock);
 
-    if (cc == TRB_CC_SUCCESS) {
+    if (status == MX_OK) {
         ep->enabled = true;
-        return MX_OK;
-    } else {
-        printf("xhci_address_device failed cc: %d\n", cc);
-        return MX_ERR_INTERNAL;
     }
+    return status;
 }
 
 #define BOUNDS_CHECK(i, min, max) (i < min ? min : (i > max ? max : i))
@@ -200,10 +199,7 @@ static int compute_interval(usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
 }
 
 static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_DISABLE_SLOT, 0, (slot_id << TRB_SLOT_ID_START), &command.context);
-    xhci_sync_command_wait(&command);
+    xhci_send_command(xhci, TRB_CMD_DISABLE_SLOT, 0, (slot_id << TRB_SLOT_ID_START));
 
     xprintf("cleaning up slot %d\n", slot_id);
     xhci_slot_t* slot = &xhci->slots[slot_id];
@@ -280,21 +276,19 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     mtx_lock(&xhci->input_context_lock);
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
     mx_paddr_t icc_phys = xhci->input_context_phys;
-    xhci_endpoint_context_t* ep0c = (xhci_endpoint_context_t*)&xhci->input_context[2 * xhci->context_size];
+    xhci_endpoint_context_t* ep0c = (xhci_endpoint_context_t*)
+                                            &xhci->input_context[2 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
     memset((void*)ep0c, 0, xhci->context_size);
 
     XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_EP_FLAG(0));
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, mps);
 
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
-                      (slot_id << TRB_SLOT_ID_START), &command.context);
-    cc = xhci_sync_command_wait(&command);
+    result = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
+                               (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
-    if (cc != TRB_CC_SUCCESS) {
+    if (result != MX_OK) {
         printf("TRB_CMD_EVAL_CONTEXT failed\n");
-        result = MX_ERR_INTERNAL;
         goto disable_slot_exit;
     }
 
@@ -402,14 +396,11 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
     memset((void*)icc, 0, xhci->context_size);
     XHCI_WRITE32(&icc->drop_context_flags, drop_flags);
 
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
-                      (slot_id << TRB_SLOT_ID_START), &command.context);
-    int cc = xhci_sync_command_wait(&command);
+    mx_status_t status = xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
+                                           (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
-    if (cc != TRB_CC_SUCCESS) {
-        printf("TRB_CMD_EVAL_CONTEXT failed\n");
+    if (status != MX_OK) {
+        printf("TRB_CMD_CONFIGURE_EP failed\n");
     }
 
     xhci_disable_slot(xhci, slot_id);
@@ -565,38 +556,40 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
         mx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->eps[index].transfer_ring);
 
-        XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS, compute_interval(ep_desc, speed));
-        XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START, EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
+        XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS,
+                        compute_interval(ep_desc, speed));
+        XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START,
+                        EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
                         max_esit_payload >> EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS);
         XHCI_SET_BITS32(&epc->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, cerr);
         XHCI_SET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS, ep_index);
-        XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, max_packet_size);
+        XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS,
+                        max_packet_size);
 
         XHCI_WRITE32(&epc->epc2, ((uint32_t)tr_dequeue & EP_CTX_TR_DEQUEUE_LO_MASK) | EP_CTX_DCS);
         XHCI_WRITE32(&epc->tr_dequeue_hi, (uint32_t)(tr_dequeue >> 32));
-        XHCI_SET_BITS32(&epc->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS, avg_trb_length);
-        XHCI_SET_BITS32(&epc->epc4, EP_CTX_MAX_ESIT_PAYLOAD_LO_START, EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS, max_esit_payload);
+        XHCI_SET_BITS32(&epc->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS,
+                        avg_trb_length);
+        XHCI_SET_BITS32(&epc->epc4, EP_CTX_MAX_ESIT_PAYLOAD_LO_START,
+                        EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS, max_esit_payload);
 
         XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG | XHCI_ICC_EP_FLAG(index));
         XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0));
         XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
         XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
-        XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS, index + 1);
+        XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS,
+                        index + 1);
     } else {
         xhci_stop_endpoint(xhci, slot_id, index, MX_ERR_BAD_STATE);
         XHCI_WRITE32(&icc->drop_context_flags, XHCI_ICC_EP_FLAG(index));
     }
 
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
-                      (slot_id << TRB_SLOT_ID_START), &command.context);
-
-    xhci_sync_command_wait(&command);
+    mx_status_t status = xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
+                                           (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
 
     // xhci_stop_endpoint() will handle the !enable case
-    if (enable) {
+    if (status == MX_OK && enable) {
         ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
         if (!ep->transfer_state) {
             return MX_ERR_NO_MEMORY;
@@ -604,7 +597,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         ep->enabled = true;
     }
 
-    return MX_OK;
+    return status;
 }
 
 mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
@@ -635,19 +628,18 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
     XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
 
-    XHCI_SET_BITS32(&sc->sc1, SLOT_CTX_ROOT_NUM_PORTS_START, SLOT_CTX_ROOT_NUM_PORTS_BITS, num_ports);
+    XHCI_SET_BITS32(&sc->sc1, SLOT_CTX_ROOT_NUM_PORTS_START, SLOT_CTX_ROOT_NUM_PORTS_BITS,
+                    num_ports);
     XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TTT_START, SLOT_CTX_TTT_BITS, ttt);
 
-    xhci_sync_command_t command;
-    xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
-                      (slot_id << TRB_SLOT_ID_START), &command.context);
-    int cc = xhci_sync_command_wait(&command);
+
+    mx_status_t status = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
+                                           (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
 
-    if (cc != TRB_CC_SUCCESS) {
+    if (status != MX_OK) {
         printf("TRB_CMD_EVAL_CONTEXT failed\n");
-        return -1;
+        return status;
     }
 
     if (speed == USB_SPEED_SUPER) {

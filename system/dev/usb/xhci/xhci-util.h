@@ -25,3 +25,6 @@ int xhci_sync_command_wait(xhci_sync_command_t* command);
 inline int xhci_sync_command_slot_id(xhci_sync_command_t* command) {
     return (command->control & XHCI_MASK(TRB_SLOT_ID_START, TRB_SLOT_ID_BITS)) >> TRB_SLOT_ID_START;
 }
+
+// executes a command with a 1 second timeout
+mx_status_t xhci_send_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits);
