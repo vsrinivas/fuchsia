@@ -193,20 +193,23 @@ bool timer_cancel(timer_t *timer)
     if (list_in_list(&timer->node)) {
         callback_not_running = true;
 
+        /* save a copy of the old head of the queue */
         timer_t *oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 
-        /* remove it from the queue */
+        /* remove our timer from the queue */
         list_delete(&timer->node);
 
         /* see if we've just modified the head of this cpu's timer queue */
         /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
-        timer_t *newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
-        if (newhead == NULL) {
-            LTRACEF("clearing old hw timer, nothing in the queue\n");
-            platform_stop_timer();
-        } else if (newhead != oldhead) {
-            LTRACEF("setting new timer to %" PRIu64 "\n", newhead->scheduled_time);
-            platform_set_oneshot_timer(timer_tick, NULL, newhead->scheduled_time);
+        if (unlikely(oldhead == timer)) {
+            timer_t *newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
+            if (newhead) {
+                LTRACEF("setting new timer to %" PRIu64 "\n", newhead->scheduled_time);
+                platform_set_oneshot_timer(timer_tick, NULL, newhead->scheduled_time);
+            } else {
+                LTRACEF("clearing old hw timer, nothing in the queue\n");
+                platform_stop_timer();
+            }
         }
     } else {
         callback_not_running = false;
