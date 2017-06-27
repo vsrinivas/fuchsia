@@ -152,7 +152,6 @@ typedef uint32_t mx_signals_t;
 // Compatibility Definitions
 // TODO: remove when safe. Magenta should not be using them.
 #define MX_PROCESS_SIGNALED         MX_PROCESS_TERMINATED
-#define MX_THREAD_SIGNALED          MX_THREAD_TERMINATED
 
 // global kernel object id.
 typedef uint64_t mx_koid_t;
