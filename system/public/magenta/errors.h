@@ -134,6 +134,14 @@
 // unloaded)
 #define MX_ERR_IO_NOT_PRESENT (-44)
 
+// MX_ERR_IO_OVERRUN: More data was received from the device than expected.
+// Example: a USB "babble" error due to a device sending more data than
+// the host queued to receive.
+#define MX_ERR_IO_OVERRUN (-45)
+
+// MX_ERR_IO_MISSED_DEADLINE: An operation did not complete within the required timeframe.
+// Example: A USB isochronous transfer that failed to complete due to an overrun or underrun.
+#define MX_ERR_IO_MISSED_DEADLINE (-46)
 
 // ======== Filesystem Errors ========
 // MX_ERR_BAD_PATH: Path name is too long.

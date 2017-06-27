@@ -546,6 +546,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_SHORT_PACKET:
             result = length;
             break;
+        case TRB_CC_BABBLE_DETECTED_ERROR:
+            xprintf("TRB_CC_BABBLE_DETECTED_ERROR\n");
+            result = MX_ERR_IO_OVERRUN;
+            break;
         case TRB_CC_USB_TRANSACTION_ERROR:
         case TRB_CC_TRB_ERROR:
         case TRB_CC_STALL_ERROR: {
@@ -566,6 +570,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             // non-fatal error that happens when no transfers are available for isochronous endpoint
             xprintf("TRB_CC_RING_OVERRUN\n");
             return;
+       case TRB_CC_MISSED_SERVICE_ERROR:
+            xprintf("TRB_CC_MISSED_SERVICE_ERROR\n");
+            result = MX_ERR_IO_MISSED_DEADLINE;
+            break;
         case TRB_CC_STOPPED:
         case TRB_CC_STOPPED_LENGTH_INVALID:
         case TRB_CC_STOPPED_SHORT_PACKET:
