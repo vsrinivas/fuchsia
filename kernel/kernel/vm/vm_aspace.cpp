@@ -136,9 +136,12 @@ status_t VmAspace::Init() {
 
     LTRACEF("%p '%s'\n", this, name_);
 
-    // intialize the architectually specific part
+    // initialize the architecturally specific part
     bool is_high_kernel = (flags_ & TYPE_MASK) == TYPE_KERNEL;
-    uint arch_aspace_flags = is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0;
+    bool is_guest       = (flags_ & TYPE_MASK) == TYPE_GUEST_PHYS;
+    uint arch_aspace_flags =
+        (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL        : 0u) |
+        (is_guest       ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
     status_t status = arch_mmu_init_aspace(&arch_aspace_, base_, size_, arch_aspace_flags);
     if (status != MX_OK) {
         return status;
@@ -169,6 +172,10 @@ mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     case TYPE_LOW_KERNEL:
         base = 0;
         size = USER_ASPACE_BASE + USER_ASPACE_SIZE;
+        break;
+    case TYPE_GUEST_PHYS:
+        base = GUEST_PHYSICAL_ASPACE_BASE;
+        size = GUEST_PHYSICAL_ASPACE_SIZE;
         break;
     default:
         panic("Invalid aspace type");
