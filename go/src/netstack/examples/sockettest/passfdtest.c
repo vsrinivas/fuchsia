@@ -99,7 +99,7 @@ static int server(const char* service) {
 
   printf("launched %s %s, waiting for it to exit...\n", argv[0], argv[1]);
   mx_signals_t observed;
-  mx_object_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, &observed);
+  mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, &observed);
 
   printf("child exited.\n");
 
