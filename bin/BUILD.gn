@@ -6,7 +6,6 @@ group("src") {
   testonly = true
 
   deps = [
-    "bootstrap",
     "component_manager",
     "device_runner:all",
     "oauth_token_manager:all",
