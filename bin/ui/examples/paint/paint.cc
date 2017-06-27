@@ -22,7 +22,12 @@
 #include "third_party/skia/include/core/SkPath.h"
 #include "third_party/skia/include/core/SkRect.h"
 #ifdef MOZART_EXAMPLES_USE_SCENE_MANAGER
-#include "apps/mozart/examples/paint/session_manager_includes.h"
+#include "application/lib/app/connect.h"                    // nogncheck
+#include "apps/mozart/lib/scene/session_helpers.h"          // nogncheck
+#include "apps/mozart/lib/scene/types.h"                    // nogncheck
+#include "apps/mozart/services/scene/ops.fidl.h"            // nogncheck
+#include "apps/mozart/services/scene/scene_manager.fidl.h"  // nogncheck
+#include "apps/mozart/services/scene/session.fidl.h"        // nogncheck
 #endif  // MOZART_EXAMPLES_USE_SCENE_MANAGER
 
 namespace examples {
@@ -186,11 +191,11 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 #ifdef MOZART_EXAMPLES_USE_SCENE_MANAGER
   void ConnectToSceneManager(app::ApplicationContext* application_context) {
     // Connect to the SceneManager service.
-    scene_manager_ = application_context_
+    scene_manager_ = application_context
                          ->ConnectToEnvironmentService<mozart2::SceneManager>();
     scene_manager_.set_connection_error_handler([this] {
       FTL_LOG(INFO) << "Lost connection to SceneManager service.";
-      loop_->QuitNow();
+      mtl::MessageLoop::GetCurrent()->QuitNow();
     });
   }
 
@@ -209,18 +214,19 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
   fidl::Array<mozart2::OpPtr> PopulateSceneManagerSession() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
-    // Create a Link to attach ourselves to.
-    mx::eventpair link_handle1;
-    mx::eventpair link_handle2;
-    mx_status_t status = mx::eventpair::create(0, &link_handle1, &link_handle2);
-    if (status != MX_OK) {
-      FTL_LOG(ERROR)
-          << "PopulateSceneManagerSession: Creating eventpair failed.";
-      mtl::MessageLoop::GetCurrent()->QuitNow();
-      return nullptr;
-    }
-    mozart::ResourceId link_id = NewResourceId();
-    ops.push_back(mozart::NewCreateLinkOp(link_id, std::move(link_handle1)));
+    // Create a Scene to attach ourselves to.
+    mozart::ResourceId scene_id = NewResourceId();
+    ops.push_back(mozart::NewCreateSceneOp(scene_id));
+
+    // Create a Camera to view the Scene.
+    mozart::ResourceId camera_id = NewResourceId();
+    ops.push_back(mozart::NewCreateCameraOp(camera_id, scene_id));
+
+    // Create a DisplayRenderer that renders the Scene from the viewpoint of the
+    // Camera that we just created.
+    mozart::ResourceId renderer_id = NewResourceId();
+    ops.push_back(mozart::NewCreateDisplayRendererOp(renderer_id));
+    ops.push_back(mozart::NewSetCameraOp(renderer_id, camera_id));
 
     // Create a shape node.
     mozart::ResourceId node_id = NewResourceId();
@@ -228,7 +234,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     ops.push_back(mozart::NewCreateShapeNodeOp(node_id));
 
     // Create a material on the shape.
-    mozart::ResourceId material_id_ = material_id_ = NewResourceId();
+    mozart::ResourceId material_id = material_id_ = NewResourceId();
     ops.push_back(
         mozart::NewCreateMaterialOp(material_id_, 255, 100, 100, 255));
     ops.push_back(mozart::NewSetMaterialOp(node_id_, material_id));
@@ -250,9 +256,9 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
         mozart::kOnesFloat3,        // scale
         mozart::kZeroesFloat3,      // anchor point
         mozart::kQuaternionDefault  // rotation
-        ));
-    // Attach the circle to the Link.
-    ops.push_back(mozart::NewAddChildOp(link_id, node_id));
+    ));
+    // Attach the circle to the Scene.
+    ops.push_back(mozart::NewAddChildOp(scene_id, node_id));
 
     return ops;
   }
@@ -287,12 +293,14 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
                                             mozart2::MemoryType::HOST_MEMORY));
 
     mozart::ResourceId image_id = NewResourceId();
+    const size_t pixel_size = 4;
     ops.push_back(mozart::NewCreateImageOp(
         image_id, memory_id, 0, mozart2::ImageInfo::PixelFormat::BGRA_8,
+        mozart2::ImageInfo::ColorSpace::SRGB,
         mozart2::ImageInfo::Tiling::LINEAR, size.width, size.height,
-        size.width));
+        pixel_size * size.width));
 
-    ops.push_back(NewSetTextureOp(material_id_, image_id));
+    ops.push_back(mozart::NewSetTextureOp(material_id_, image_id));
 
     previous_memory_id_ = memory_id;
     previous_image_id_ = image_id;
