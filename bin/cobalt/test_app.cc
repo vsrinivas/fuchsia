@@ -48,8 +48,8 @@ using cobalt::encoder::EnvelopeMaker;
 using cobalt::encoder::ProjectContext;
 using cobalt::encoder::ShufflerClient;
 
-const char kLocalShufflerUri[] = "100.101.108.140:5001";
-//const char kCloudShufflerUri[] = "104.197.78.123:5001";
+// const char kLocalShufflerUri[] = "100.101.108.140:5001";
+const char kCloudShufflerUri[] = "130.211.233.218:5001";
 
 const int kFuchsiaCustomerId = 1;
 const int kLedgerProjectId = 1;
@@ -133,16 +133,16 @@ int main(int argc, char* argv[]) {
   EnvelopeMaker envelope_maker("", EncryptedMessage::NONE, "",
                                EncryptedMessage::NONE);
 
-  // Add 100 observations of rare event 1 to the envelope.
-  for (int i = 0; i < 100; i++) {
+  // Add 7 observations of rare event 1 to the envelope.
+  for (int i = 0; i < 7; i++) {
     auto result = encoder.EncodeString(kDailyRareEventCountMetric,
       kDailyRareEventCountEncoding, kRareEvent1Name);
     FTL_CHECK(Encoder::kOK == result.status);
     envelope_maker.AddObservation(*result.observation, std::move(result.metadata));
   }
 
-  // Add 50 observations of rare event 3 to the envelope.
-  for (int i = 0; i < 50; i++) {
+  // Add 1 observation of rare event 3 to the envelope.
+  for (int i = 0; i < 1; i++) {
     auto result = encoder.EncodeString(kDailyRareEventCountMetric,
       kDailyRareEventCountEncoding, kRareEvent3Name);
     FTL_CHECK(Encoder::kOK == result.status);
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
   FTL_CHECK(envelope_maker.MakeEncryptedEnvelope(&encrypted_envelope));
 
   // Create a ShufflerClient
-  ShufflerClient shuffler_client(kLocalShufflerUri, false);
+  ShufflerClient shuffler_client(kCloudShufflerUri, false);
 
   // Send the encrypted envelope to the Shuffler.
   std::unique_ptr<grpc::ClientContext> context(new grpc::ClientContext());
