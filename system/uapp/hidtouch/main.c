@@ -57,7 +57,7 @@ void acer12_touch_dump(acer12_touch_t* rpt) {
     printf("contact count: %u\n", rpt->contact_count);
 }
 
-inline uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
+static uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
     return (z * screen_dim) / rpt_dim;
 }
 
@@ -77,7 +77,7 @@ void draw_points(uint32_t* pixels, uint32_t color, uint32_t x, uint32_t y, uint8
     }
 }
 
-inline uint32_t get_color(uint8_t c) {
+static uint32_t get_color(uint8_t c) {
     return colors[c];
 }
 

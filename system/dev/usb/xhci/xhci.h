@@ -187,7 +187,7 @@ uint8_t xhci_endpoint_index(uint8_t ep_address);
 // returns index into xhci->root_hubs[], or -1 if not a root hub
 int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id);
 
-inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
+static inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
     return xhci_get_root_hub_index(xhci, device_id) >= 0;
 }
 

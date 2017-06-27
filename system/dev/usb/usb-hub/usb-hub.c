@@ -51,11 +51,11 @@ typedef struct usb_hub {
     uint8_t enabled_ports[128 / 8];
 } usb_hub_t;
 
-inline bool usb_hub_is_port_enabled(usb_hub_t* hub, int port) {
+static bool usb_hub_is_port_enabled(usb_hub_t* hub, int port) {
     return (hub->enabled_ports[port / 8] & (1 << (port % 8))) != 0;
 }
 
-inline void usb_hub_set_port_enabled(usb_hub_t* hub, int port, bool enabled) {
+static void usb_hub_set_port_enabled(usb_hub_t* hub, int port, bool enabled) {
     if (enabled) {
         hub->enabled_ports[port / 8] |= (1 << (port % 8));
     } else {

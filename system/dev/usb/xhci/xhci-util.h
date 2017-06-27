@@ -22,7 +22,7 @@ void xhci_sync_command_init(xhci_sync_command_t* command);
 // returns condition code
 int xhci_sync_command_wait(xhci_sync_command_t* command);
 
-inline int xhci_sync_command_slot_id(xhci_sync_command_t* command) {
+static inline int xhci_sync_command_slot_id(xhci_sync_command_t* command) {
     return (command->control & XHCI_MASK(TRB_SLOT_ID_START, TRB_SLOT_ID_BITS)) >> TRB_SLOT_ID_START;
 }
 
