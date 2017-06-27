@@ -401,7 +401,15 @@ static mx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
         if (dev->flags & DEV_CTX_SHADOW) {
             dev = dev->parent;
         }
-        const char* name = dev->parent ? dev->name : "dev";
+        const char* name;
+
+        if (dev->parent) {
+            name = dev->name;
+        } else if (!strcmp(misc_device.name, dev->name)) {
+            name = "dev/misc";
+        } else {
+            name = "dev";
+        }
         size_t len = strlen(name) + 1;
         if (len > (max - total)) {
             return MX_ERR_BUFFER_TOO_SMALL;

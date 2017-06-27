@@ -314,7 +314,57 @@ static bool umount_test_evil(void) {
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;
+}
 
+static bool mount_get_device(void) {
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_get_device";
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(512, 1 << 16, ramdisk_path), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
+
+    int mountfd = open(mount_path, O_RDONLY | O_ADMIN);
+    ASSERT_GT(mountfd, 0, "");
+    char device_path[1024];
+    ssize_t path_len = ioctl_vfs_get_device_path(mountfd, device_path, sizeof(device_path));
+    ASSERT_LT(path_len, 0, "");
+    ASSERT_EQ(close(mountfd), 0, "");
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+              MX_OK, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+
+    mountfd = open(mount_path, O_RDONLY | O_ADMIN);
+    ASSERT_GT(mountfd, 0, "");
+    path_len = ioctl_vfs_get_device_path(mountfd, device_path, sizeof(device_path));
+    ASSERT_GT(path_len, 0, "Device path not found");
+    ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
+    ASSERT_EQ(close(mountfd), 0, "");
+
+    mountfd = open(mount_path, O_RDONLY);
+    ASSERT_GT(mountfd, 0, "");
+    path_len = ioctl_vfs_get_device_path(mountfd, device_path, sizeof(device_path));
+    ASSERT_LT(path_len, 0, "");
+    ASSERT_EQ(close(mountfd), 0, "");
+
+    ASSERT_EQ(umount(mount_path), MX_OK, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
+
+    mountfd = open(mount_path, O_RDONLY | O_ADMIN);
+    ASSERT_GT(mountfd, 0, "");
+    path_len = ioctl_vfs_get_device_path(fd, device_path, sizeof(device_path));
+    ASSERT_LT(path_len, 0, "");
+    ASSERT_EQ(close(mountfd), 0, "");
+
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+    END_TEST;
 }
 
 BEGIN_TEST_CASE(fs_management_tests)
@@ -326,6 +376,7 @@ RUN_TEST_MEDIUM(mount_evil_minfs)
 RUN_TEST_MEDIUM(umount_test_evil)
 RUN_TEST_MEDIUM(mount_remount)
 RUN_TEST_MEDIUM(mount_fsck)
+RUN_TEST_MEDIUM(mount_get_device)
 END_TEST_CASE(fs_management_tests)
 
 int main(int argc, char** argv) {

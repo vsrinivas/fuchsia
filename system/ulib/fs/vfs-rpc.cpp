@@ -436,6 +436,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         }
         case IOCTL_VFS_UNMOUNT_NODE:
         case IOCTL_VFS_UNMOUNT_FS:
+        case IOCTL_VFS_GET_DEVICE_PATH:
             // Unmounting ioctls require iostate privileges
             if (!(ios->io_flags & O_ADMIN)) {
                 r = MX_ERR_ACCESS_DENIED;

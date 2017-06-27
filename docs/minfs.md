@@ -98,3 +98,9 @@ Total: 0 partitions
 > dm reboot
 > ls /data
 ```
+
+ * To find out which block device/file system is mounted at each subdirectory
+   under a given path, use the following command:
+```
+> lsfs -b <PATH>
+```

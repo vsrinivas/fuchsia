@@ -577,6 +577,7 @@ mx_status_t devhost_get_topo_path(mx_device_t* dev, char* path, size_t max, size
     if (len > max) {
         return MX_ERR_BUFFER_TOO_SMALL;
     }
+
     memcpy(path, reply.path, len);
     *actual = len;
     return MX_OK;

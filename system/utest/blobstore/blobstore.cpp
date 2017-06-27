@@ -1215,6 +1215,30 @@ static bool RootDirectory(void) {
     END_TEST;
 }
 
+static bool QueryDevicePath(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+
+    int dirfd = open(MOUNT_PATH "/.", O_RDONLY | O_ADMIN);
+    ASSERT_GT(dirfd, 0, "Cannot open root directory");
+
+    char device_path[1024];
+    ssize_t path_len = ioctl_vfs_get_device_path(dirfd, device_path, sizeof(device_path));
+    ASSERT_GT(path_len, 0, "Device path not found");
+    ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
+    ASSERT_EQ(close(dirfd), 0, "");
+
+    dirfd = open(MOUNT_PATH "/.", O_RDONLY);
+    ASSERT_GT(dirfd, 0, "Cannot open root directory");
+    path_len = ioctl_vfs_get_device_path(dirfd, device_path, sizeof(device_path));
+    ASSERT_LT(path_len, 0, "");
+    ASSERT_EQ(close(dirfd), 0, "");
+
+    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(blobstore_tests)
 RUN_TEST_MEDIUM(TestBasic)
 RUN_TEST_MEDIUM(TestMmap)
@@ -1236,6 +1260,7 @@ RUN_TEST_MEDIUM(RootDirectory)
 RUN_TEST_LARGE(CreateUmountRemountLargeMultithreaded)
 RUN_TEST_LARGE(CreateUmountRemountLarge)
 RUN_TEST_LARGE(NoSpace)
+RUN_TEST_MEDIUM(QueryDevicePath)
 END_TEST_CASE(blobstore_tests)
 
 int main(int argc, char** argv) {

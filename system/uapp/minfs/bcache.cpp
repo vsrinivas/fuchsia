@@ -12,6 +12,7 @@
 #include <mxalloc/new.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
+#include <magenta/device/device.h>
 
 #include "minfs.h"
 #include "minfs-private.h"
@@ -78,6 +79,10 @@ mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t block
 }
 
 #ifdef __Fuchsia__
+ssize_t Bcache::GetDevicePath(char* out, size_t out_len) {
+    return ioctl_device_get_topo_path(fd_, out, out_len);
+}
+
 mx_status_t Bcache::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
     mx_handle_t xfer_vmo;
     mx_status_t status = mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo);

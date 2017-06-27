@@ -45,6 +45,10 @@
 // TODO: Remove this when the renaming deprecation is complete.
 #define IOCTL_VFS_WATCH_DIR_V2 IOCTL_VFS_WATCH_DIR
 
+// Return path of block device underlying the filesystem. Requires O_ADMIN.
+#define IOCTL_VFS_GET_DEVICE_PATH \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_VFS, 9)
+
 typedef struct {
     mx_handle_t channel; // Channel to which watch events will be sent
     uint32_t mask;       // Bitmask of desired events (1 << WATCH_EVT_*)
@@ -125,6 +129,9 @@ IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir, IOCTL_VFS_WATCH_DIR_V2, vfs_watch_dir_t);
 // ssize_t ioctl_vfs_watch_dir_v2(int fd, vfs_watch_dir_t* in);
 __attribute__((deprecated("This has been renamed to ioctl_vfs_watch_dir")))
 IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir_v2, IOCTL_VFS_WATCH_DIR_V2, vfs_watch_dir_t);
+
+// ssize_t ioctl_vfs_get_device_path(int fd, char* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_vfs_get_device_path, IOCTL_VFS_GET_DEVICE_PATH, char);
 
 #define MOUNT_MKDIR_FLAG_REPLACE 1
 

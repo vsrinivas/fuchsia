@@ -179,6 +179,7 @@ public:
     uint32_t Maxblk() const { return blockmax_; };
 
 #ifdef __Fuchsia__
+    ssize_t GetDevicePath(char* out, size_t out_len);
     mx_status_t AttachVmo(mx_handle_t vmo, vmoid_t* out);
     mx_status_t Txn(block_fifo_request_t* requests, size_t count) {
         return block_fifo_txn(fifo_client_, requests, count);

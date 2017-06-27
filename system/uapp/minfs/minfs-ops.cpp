@@ -1209,6 +1209,17 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
             // 'fs_' is deleted after Unmount is called.
             return fs_->Unmount();
         }
+#ifdef __Fuchsia__
+        case IOCTL_VFS_GET_DEVICE_PATH: {
+            ssize_t len = fs_->bc_->GetDevicePath(static_cast<char*>(out_buf), out_len);
+
+            if ((ssize_t)out_len < len) {
+                return MX_ERR_INVALID_ARGS;
+            }
+
+            return len;
+        }
+#endif
         default: {
             return MX_ERR_NOT_SUPPORTED;
         }

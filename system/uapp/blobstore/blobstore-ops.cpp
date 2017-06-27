@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
 
 #include <magenta/syscalls.h>
@@ -161,6 +162,17 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
         }
         return blobstore_->Unmount();
     }
+#ifdef __Fuchsia__
+    case IOCTL_VFS_GET_DEVICE_PATH: {
+        ssize_t len = ioctl_device_get_topo_path(blobstore_->blockfd_, static_cast<char*>(out_buf), out_len);
+
+        if ((ssize_t)out_len < len) {
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        return len;
+    }
+#endif
     default: {
         return MX_ERR_NOT_SUPPORTED;
     }
