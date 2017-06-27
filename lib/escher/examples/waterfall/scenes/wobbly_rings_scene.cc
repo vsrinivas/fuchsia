@@ -70,7 +70,8 @@ void WobblyRingsScene::Init(escher::Stage* stage) {
   TexturePtr checkerboard = escher()->NewTexture(
       escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
   auto checkerboard_color = checkerboard_material_->color();
-  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
+  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
+  checkerboard_material_->SetTexture(checkerboard);
   checkerboard_material_->set_color(checkerboard_color);
 }
 

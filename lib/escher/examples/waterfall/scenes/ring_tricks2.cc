@@ -35,7 +35,8 @@ void RingTricks2::Init(escher::Stage* stage) {
   color1_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
   color2_->set_color(vec3(143.f / 255.f, 143.f / 255.f, 143.f / 255.f));
 
-  gradient_ = ftl::MakeRefCounted<escher::Material>(escher()->NewTexture(
+  gradient_ = ftl::MakeRefCounted<escher::Material>();
+  gradient_->SetTexture(escher()->NewTexture(
       escher()->NewGradientImage(128, 128), vk::Filter::eLinear));
   gradient_->set_color(vec3(0.98f, 0.15f, 0.15f));
 

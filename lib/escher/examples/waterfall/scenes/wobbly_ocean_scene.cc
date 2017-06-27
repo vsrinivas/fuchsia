@@ -40,7 +40,8 @@ void WobblyOceanScene::Init(escher::Stage* stage) {
 
   TexturePtr checkerboard = escher()->NewTexture(
       escher()->NewCheckerboardImage(14, 4), vk::Filter::eNearest);
-  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
+  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
+  checkerboard_material_->SetTexture(checkerboard);
 
   checkerboard_material_->set_color(
       escher::SrgbToLinear(vec3(.164f, .254f, 0.278f)));

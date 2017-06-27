@@ -15,7 +15,7 @@ namespace escher {
 
 class Material : public ftl::RefCountedThreadSafe<Material> {
  public:
-  explicit Material(TexturePtr texture = nullptr);
+  explicit Material();
   ~Material();
 
   const TexturePtr& texture() const { return texture_; }
@@ -25,6 +25,7 @@ class Material : public ftl::RefCountedThreadSafe<Material> {
   vec3 color() const { return color_; }
 
   void set_color(vec3 color) { color_ = color; }
+  void SetTexture(TexturePtr texture);
 
  protected:
   TexturePtr texture_;
