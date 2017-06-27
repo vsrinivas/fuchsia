@@ -452,14 +452,15 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
  * to the correct guest physical page that backs the large page.
  */
 static paddr_t page_addr(paddr_t pt_addr, size_t level, vaddr_t guest_vaddr) {
+    paddr_t off = 0;
     if (IS_LARGE_PAGE(pt_addr)) {
         if (level == 1) {
-            pt_addr += guest_vaddr & PAGE_OFFSET_MASK_HUGE;
+            off = guest_vaddr & PAGE_OFFSET_MASK_HUGE;
         } else if (level == 2) {
-            pt_addr += guest_vaddr & PAGE_OFFSET_MASK_LARGE;
+            off = guest_vaddr & PAGE_OFFSET_MASK_LARGE;
         }
     }
-    return pt_addr & X86_PG_FRAME;
+    return (pt_addr & X86_PG_FRAME) + (off & X86_PG_FRAME);
 }
 
 static status_t get_page(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
