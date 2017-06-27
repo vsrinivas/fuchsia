@@ -23,6 +23,11 @@
 
 #include "sdmmc.h"
 
+// TODO:
+// * close ended transfers
+// * DMA mode
+// * HS200/HS400
+
 // Various transfer states that the card can be in.
 #define SDMMC_STATE_TRAN 0x4
 #define SDMMC_STATE_RECV 0x5

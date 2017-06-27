@@ -36,6 +36,9 @@ typedef struct sdhci_regs {
 #define SDHCI_HOSTCTRL_EXT_DATA_WIDTH      (1 << 5)
 #define SDHCI_PWRCTRL_SD_BUS_POWER         (1 << 8)
 #define SDHCI_PWRCTRL_SD_BUS_VOLTAGE_MASK  (7 << 9)
+#define SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P3V  (7 << 9)
+#define SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P0V  (6 << 9)
+#define SDHCI_PWRCTRL_SD_BUS_VOLTAGE_1P8V  (5 << 9)
 #define SDHCI_EMMC_HW_RESET                (1 << 12)
     uint32_t ctrl1;         // 2Ch
 #define SDHCI_INTERNAL_CLOCK_ENABLE        (1 << 0)
@@ -86,7 +89,14 @@ typedef struct sdhci_regs {
 #define SDHCI_IRQ_ERR_VS_3          (1 << 30)
 #define SDHCI_IRQ_ERR_VS_4          (1 << 31)
     uint32_t ctrl2;         // 3Ch
-#define SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA (1 << 19)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_MASK    (7 << 16)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR12   (0 << 16)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR25   (1 << 16)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR50   (2 << 16)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR104  (3 << 16)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_DDR50   (4 << 16)
+#define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_HS400   (5 << 16)
+#define SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA     (1 << 19)
     uint32_t caps0;         // 40h
 #define SDHCI_CORECFG_8_BIT_SUPPORT    (1 << 18)
 #define SDHCI_CORECFG_3P3_VOLT_SUPPORT (1 << 24)

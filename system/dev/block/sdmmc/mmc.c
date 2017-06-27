@@ -94,6 +94,113 @@ static mx_status_t mmc_switch(sdmmc_t* sdmmc, iotxn_t* txn, uint8_t index, uint8
     return sdmmc_do_command(sdmmc->host_mxdev, MMC_SWITCH, arg, txn);
 }
 
+static mx_status_t mmc_send_status(sdmmc_t* sdmmc, iotxn_t* txn, uint32_t* status) {
+    sdmmc_protocol_data_t* pdata = iotxn_pdata(txn, sdmmc_protocol_data_t);
+    mx_status_t st = sdmmc_do_command(sdmmc->host_mxdev, MMC_SEND_STATUS, sdmmc->rca << 16, txn);
+    if (st == MX_OK) {
+        *status = pdata->response[0];
+    }
+    return st;
+}
+
+static uint8_t mmc_select_bus_width(sdmmc_t* sdmmc, iotxn_t* txn) {
+    mx_status_t st;
+    // TODO verify host 8-bit support
+    unsigned bus_widths[] = { SDMMC_BUS_WIDTH_8, MMC_EXT_CSD_BUS_WIDTH_8,
+                              SDMMC_BUS_WIDTH_4, MMC_EXT_CSD_BUS_WIDTH_4 };
+    for (unsigned i = 0; i < sizeof(bus_widths)/sizeof(unsigned); i += 2) {
+        // Switch the card to the new bus width
+        if ((st = mmc_switch(sdmmc, txn, MMC_EXT_CSD_BUS_WIDTH, bus_widths[i+1])) != MX_OK) {
+            xprintf("sdmmc: failed to MMC_SWITCH bus width to EXT_CSD %d, retcode = %d\n", bus_widths[i+1], st);
+            continue;
+        }
+
+        // Check status after MMC_SWITCH
+        uint32_t status;
+        if ((st = mmc_send_status(sdmmc, txn, &status)) != MX_OK) {
+            xprintf("sdmmc: failed to MMC_SEND_STATUS (bus width %d), retcode = %d\n", bus_widths[i], st);
+            continue;
+        }
+        if (status & MMC_STATUS_SWITCH_ERR) {
+            xprintf("sdmmc: mmc status error after MMC_SWITCH (bus width %d), status = 0x%08x\n", bus_widths[i], status);
+            continue;
+        }
+
+        // Switch the host to the new bus width
+        uint32_t new_bus_width = bus_widths[i];
+        if ((st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_BUS_WIDTH, &new_bus_width, sizeof(new_bus_width), NULL, 0, NULL)) != MX_OK) {
+            xprintf("sdmmc: failed to switch the host bus width to %d, retcode = %d\n", bus_widths[i], st);
+            continue;
+        }
+
+        // Read EXT_CSD again with the new bus width and compare
+        uint8_t new_ext_csd[512];
+        if ((st = mmc_send_ext_csd(sdmmc, txn, new_ext_csd)) != MX_OK) {
+            xprintf("sdmmc: failed to get EXT_CSD after switching bus width to %d, retcode = %d\n", bus_widths[i], st);
+            continue;
+        }
+        // Don't compare the BUS_WIDTH field because we just wrote to it
+        // TODO just compare the read-only fields
+        bool err = false;
+        for (unsigned j = 0; j < sizeof(new_ext_csd); j++) {
+            if (j == MMC_EXT_CSD_BUS_WIDTH) {
+                continue;
+            }
+            if (new_ext_csd[j] != sdmmc->raw_ext_csd[j]) {
+                err = true;
+                break;
+            }
+        }
+        if (err) {
+            xprintf("sdmmc: failed to switch to bus width %d\n", bus_widths[i]);
+            continue;
+        }
+
+        sdmmc->bus_width = bus_widths[i];
+        break; // successfully set bus width so no need to loop
+    }
+    return sdmmc->bus_width;
+}
+
+static mx_status_t mmc_switch_timing(sdmmc_t* sdmmc, iotxn_t* txn, uint8_t new_timing) {
+    if (new_timing > MMC_EXT_CSD_HS_TIMING_HS400) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    // Switch the device timing
+    uint8_t ext_csd_timing[] = {
+        MMC_EXT_CSD_HS_TIMING_LEGACY,
+        MMC_EXT_CSD_HS_TIMING_HS,
+        MMC_EXT_CSD_HS_TIMING_HS200,
+        MMC_EXT_CSD_HS_TIMING_HS400
+    };
+    mx_status_t st = mmc_switch(sdmmc, txn, MMC_EXT_CSD_HS_TIMING, ext_csd_timing[new_timing]);
+    if (st != MX_OK) {
+        xprintf("sdmmc: failed to switch device timing to %d\n", new_timing);
+        return st;
+    }
+
+    // Switch the host timing
+    uint32_t arg = new_timing;
+    if ((st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_TIMING, &arg, sizeof(arg), NULL, 0, NULL)) != MX_OK) {
+        xprintf("sdmmc: failed to switch host timing to %d\n", new_timing);
+        return st;
+    }
+
+    // Check status after MMC_SWITCH
+    uint32_t status;
+    if ((st = mmc_send_status(sdmmc, txn, &status)) != MX_OK) {
+        return st;
+    }
+    if (status & MMC_STATUS_SWITCH_ERR) {
+        xprintf("sdmmc: mmc status error after MMC_SWITCH, status = 0x%08x\n", status);
+        return MX_ERR_INTERNAL;
+    }
+
+    sdmmc->timing = new_timing;
+    return st;
+}
+
 static mx_status_t mmc_decode_cid(sdmmc_t* sdmmc, const uint8_t* raw_cid) {
     printf("sdmmc: product name=%c%c%c%c%c%c\n",
             raw_cid[6], raw_cid[7], raw_cid[8], raw_cid[9], raw_cid[10], raw_cid[11]);
@@ -132,6 +239,23 @@ static mx_status_t mmc_decode_ext_csd(sdmmc_t* sdmmc, const uint8_t* raw_ext_csd
     return MX_OK;
 }
 
+static bool mmc_supports_hs(sdmmc_t* sdmmc) {
+    uint8_t device_type = sdmmc->raw_ext_csd[MMC_EXT_CSD_DEVICE_TYPE];
+    return (device_type & (1 << 1));
+}
+
+static bool mmc_supports_hsddr(sdmmc_t* sdmmc) {
+    uint8_t device_type = sdmmc->raw_ext_csd[MMC_EXT_CSD_DEVICE_TYPE];
+    // Only support HSDDR @ 1.8V/3V
+    return (device_type & (1 << 2));
+}
+
+static bool mmc_supports_hs200(sdmmc_t* sdmmc) {
+    uint8_t device_type = sdmmc->raw_ext_csd[MMC_EXT_CSD_DEVICE_TYPE];
+    // Only support HS200 @ 1.8V
+    return (device_type & (1 << 4));
+}
+
 mx_status_t sdmmc_probe_mmc(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
     mx_status_t st;
 
@@ -163,10 +287,8 @@ mx_status_t sdmmc_probe_mmc(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
 
     mmc_decode_cid(sdmmc, (const uint8_t*)sdmmc->raw_cid);
 
-    sdmmc->type = SDMMC_TYPE_MMC;
-    sdmmc->rca = 1;
-
     // Set relative card address
+    sdmmc->rca = 1;
     if ((st = mmc_set_relative_addr(sdmmc, setup_txn, sdmmc->rca)) != MX_OK) {
         xprintf("sdmmc: MMC_SET_RELATIVE_ADDR failed, retcode = %d\n", st);
         goto err;
@@ -198,13 +320,53 @@ mx_status_t sdmmc_probe_mmc(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
         goto err;
     }
 
-    // Set the bus frequency to legacy timing
-    // TODO switch to HS200/HS400 timing
-    uint32_t bus_freq = 25000000;
-    if ((st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_BUS_FREQ, &bus_freq, sizeof(bus_freq), NULL, 0, NULL)) != MX_OK) {
-        xprintf("sdmmc: failed to set host bus frequency, retcode = %d\n", st);
-        goto err;
+    sdmmc->type = SDMMC_TYPE_MMC;
+    sdmmc->bus_width = SDMMC_BUS_WIDTH_1;
+    sdmmc->signal_voltage = SDMMC_SIGNAL_VOLTAGE_330; // TODO verify with host
+
+    // Switch to high-speed timing
+    if (mmc_supports_hs(sdmmc)) {
+        // Switch to 1.8V signal voltage
+        const uint32_t new_voltage = SDMMC_SIGNAL_VOLTAGE_180;
+        if ((st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_SIGNAL_VOLTAGE, &new_voltage,
+                               sizeof(new_voltage), NULL, 0, NULL)) != MX_OK) {
+            xprintf("sdmmc: failed to switch to 1.8V signalling, retcode = %d\n", st);
+            goto err;
+        }
+        sdmmc->signal_voltage = new_voltage;
+
+        // Switch to widest supported bus width
+        uint32_t new_bus_width = mmc_select_bus_width(sdmmc, setup_txn);
+        if (new_bus_width == SDMMC_BUS_WIDTH_1) {
+            xprintf("sdmmc: failed to select bus width\n");
+            goto err;
+        }
+
+        // If successfully switched to 4- or 8-bit bus, switch to high-speed timing
+        if ((st = mmc_switch_timing(sdmmc, setup_txn, SDMMC_TIMING_HS)) != MX_OK) {
+            xprintf("sdmmc: failed to switch to high-speed timing\n");
+            goto err;
+        }
+
+        // Set the bus frequency to high-speed timing
+        uint32_t hs_freq = 52000000; // 52 mhz
+        if ((st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_BUS_FREQ, &hs_freq, sizeof(hs_freq), NULL, 0, NULL)) != MX_OK) {
+            xprintf("sdmmc: failed to set host bus frequency, retcode = %d\n", st);
+            goto err;
+        }
+        sdmmc->clock_rate = hs_freq;
+    } else {
+        // Set the bus frequency to legacy timing
+        uint32_t bus_freq = 25000000; // 25 mhz
+        if ((st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_BUS_FREQ, &bus_freq, sizeof(bus_freq), NULL, 0, NULL)) != MX_OK) {
+            xprintf("sdmmc: failed to set host bus frequency, retcode = %d\n", st);
+            goto err;
+        }
+        sdmmc->clock_rate = bus_freq;
+        sdmmc->timing = SDMMC_TIMING_LEGACY;
     }
+
+    xprintf("sdmmc: initialized mmc @ %u mhz bus width %d\n", sdmmc->clock_rate, sdmmc->bus_width);
 
 err:
     return st;

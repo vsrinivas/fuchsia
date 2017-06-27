@@ -375,6 +375,33 @@ static mx_status_t sdhci_set_bus_frequency(sdhci_device_t* dev, uint32_t target_
     return MX_OK;
 }
 
+static mx_status_t sdhci_set_timing(sdhci_device_t* dev, uint32_t timing) {
+    // Toggle high-speed
+    if (timing != SDMMC_TIMING_LEGACY) {
+        dev->regs->ctrl0 |= SDHCI_HOSTCTRL_HIGHSPEED_ENABLE;
+    } else {
+        dev->regs->ctrl0 &= ~SDHCI_HOSTCTRL_HIGHSPEED_ENABLE;
+    }
+
+    // Disable SD clock before changing UHS timing
+    dev->regs->ctrl1 &= ~SDHCI_SD_CLOCK_ENABLE;
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
+
+    uint32_t ctrl2 = dev->regs->ctrl2 & ~SDHCI_HOSTCTRL2_UHS_MODE_SELECT_MASK;
+    if (timing == SDMMC_TIMING_HS200) {
+        ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR104;
+    } else if (timing == SDMMC_TIMING_HS400) {
+        ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_HS400;
+    }
+    dev->regs->ctrl2 = ctrl2;
+
+    // Turn the SD clock back on.
+    dev->regs->ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
+
+    return MX_OK;
+}
+
 static void sdhci_hw_reset(sdhci_device_t* dev) {
     if (dev->sdhci.ops->hw_reset) {
         dev->sdhci.ops->hw_reset(dev->sdhci.ctx);
@@ -406,22 +433,11 @@ static mx_status_t sdhci_set_bus_width(sdhci_device_t* dev, const uint32_t new_b
     return MX_OK;
 }
 
-static void __sdhci_set_voltage(sdhci_device_t* dev, uint32_t new_voltage) {
-    // Cut voltage to the card
-    dev->regs->ctrl0 &= ~SDHCI_PWRCTRL_SD_BUS_POWER;
-
-    dev->regs->ctrl0 |= new_voltage;
-
-    // Restore voltage to the card.
-    dev->regs->ctrl0 |= SDHCI_PWRCTRL_SD_BUS_POWER;
-}
-
-static mx_status_t sdhci_set_voltage(sdhci_device_t* dev, uint32_t new_voltage) {
+static mx_status_t sdhci_set_signal_voltage(sdhci_device_t* dev, uint32_t new_voltage) {
 
     switch (new_voltage) {
-        case SDMMC_VOLTAGE_33:
-        case SDMMC_VOLTAGE_30:
-        case SDMMC_VOLTAGE_18:
+        case SDMMC_SIGNAL_VOLTAGE_330:
+        case SDMMC_SIGNAL_VOLTAGE_180:
             break;
         default:
             return MX_ERR_INVALID_ARGS;
@@ -433,25 +449,37 @@ static mx_status_t sdhci_set_voltage(sdhci_device_t* dev, uint32_t new_voltage) 
     regs->ctrl1 &= ~SDHCI_SD_CLOCK_ENABLE;
     mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
-    // Wait for the DAT lines to settle
-    const mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_SEC(1);
-    while (true) {
-        if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
-            return MX_ERR_TIMED_OUT;
+    if (new_voltage == SDMMC_SIGNAL_VOLTAGE_180) {
+        regs->ctrl2 |= SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA;
+        // 1.8V regulator out should be stable within 5ms
+        mx_nanosleep(mx_deadline_after(MX_MSEC(5)));
+#if TRACE
+        if (!(regs->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA)) {
+            xprintf("sdhci: 1.8V regulator output did not become stable\n");
         }
-
-        uint8_t dat_lines = ((regs->state) >> 20) & 0xf;
-        if (dat_lines == 0) break;
-
-        xprintf("Waiting for dat lines to go to 0 (0x%x)\n", dat_lines);
-        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
+#endif
+    } else {
+        regs->ctrl2 &= ~SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA;
+        // 3.3V regulator out should be stable within 5ms
+        mx_nanosleep(mx_deadline_after(MX_MSEC(5)));
+#if TRACE
+        if (regs->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA) {
+            xprintf("sdhci: 3.3V regulator output did not become stable\n");
+        }
+#endif
     }
 
-    __sdhci_set_voltage(dev, new_voltage);
-
     // Make sure our changes are acknolwedged.
-    const uint32_t expected_mask = (SDHCI_PWRCTRL_SD_BUS_POWER) | (new_voltage);
-    if ((regs->ctrl0 & expected_mask) != expected_mask) return MX_ERR_INTERNAL;
+    uint32_t expected_mask = SDHCI_PWRCTRL_SD_BUS_POWER;
+    if (new_voltage == SDMMC_SIGNAL_VOLTAGE_180) {
+        expected_mask |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_1P8V;
+    } else {
+        expected_mask |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P3V;
+    }
+    if ((regs->ctrl0 & expected_mask) != expected_mask) {
+        xprintf("sdhci: after voltage switch ctrl0=0x%08x, expected=0x%08x\n", regs->ctrl0, expected_mask);
+        return MX_ERR_INTERNAL;
+    }
 
     // Turn the clock back on
     regs->ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
@@ -467,11 +495,11 @@ static mx_status_t sdhci_ioctl(void* ctx, uint32_t op,
     uint32_t* arg = (uint32_t*)in_buf;
 
     switch (op) {
-    case IOCTL_SDMMC_SET_VOLTAGE:
+    case IOCTL_SDMMC_SET_SIGNAL_VOLTAGE:
         if (in_len < sizeof(*arg)) {
             return MX_ERR_INVALID_ARGS;
         } else {
-            return sdhci_set_voltage(dev, *arg);
+            return sdhci_set_signal_voltage(dev, *arg);
         }
     case IOCTL_SDMMC_SET_BUS_WIDTH:
         if (in_len < sizeof(*arg)) {
@@ -484,6 +512,12 @@ static mx_status_t sdhci_ioctl(void* ctx, uint32_t op,
             return MX_ERR_INVALID_ARGS;
         } else {
             return sdhci_set_bus_frequency(dev, *arg);
+        }
+    case IOCTL_SDMMC_SET_TIMING:
+        if (in_len < sizeof(*arg)) {
+            return MX_ERR_INVALID_ARGS;
+        } else {
+            return sdhci_set_timing(dev, *arg);
         }
     case IOCTL_SDMMC_HW_RESET:
         sdhci_hw_reset(dev);
@@ -575,15 +609,23 @@ static mx_status_t sdhci_controller_init(sdhci_device_t* dev) {
     dev->regs->ctrl1 = ctrl1;
     mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
+    // Cut voltage to the card
+    dev->regs->ctrl0 &= ~SDHCI_PWRCTRL_SD_BUS_POWER;
+
     // Set SD bus voltage to maximum supported by the host controller
     const uint32_t caps = dev->regs->caps0;
+    uint32_t ctrl0 = dev->regs->ctrl0 & ~SDHCI_PWRCTRL_SD_BUS_VOLTAGE_MASK;
     if (caps & SDHCI_CORECFG_3P3_VOLT_SUPPORT) {
-        __sdhci_set_voltage(dev, SDMMC_VOLTAGE_33);
+        ctrl0 |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P3V;
     } else if (caps & SDHCI_CORECFG_3P0_VOLT_SUPPORT) {
-        __sdhci_set_voltage(dev, SDMMC_VOLTAGE_30);
+        ctrl0 |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P0V;
     } else {
-        __sdhci_set_voltage(dev, SDMMC_VOLTAGE_18);
+        ctrl0 |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_1P8V;
     }
+    dev->regs->ctrl0 = ctrl0;
+
+    // Restore voltage to the card.
+    dev->regs->ctrl0 |= SDHCI_PWRCTRL_SD_BUS_POWER;
 
     // Disable all interrupts
     dev->regs->irqen = 0;

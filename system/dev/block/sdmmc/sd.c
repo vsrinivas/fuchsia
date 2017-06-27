@@ -113,8 +113,8 @@ mx_status_t sdmmc_probe_sd(sdmmc_t* sdmmc, iotxn_t* setup_txn) {
             goto err;
         }
 
-        const uint32_t new_voltage = SDMMC_VOLTAGE_18;
-        st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_VOLTAGE, &new_voltage,
+        const uint32_t new_voltage = SDMMC_SIGNAL_VOLTAGE_180;
+        st = device_ioctl(sdmmc->host_mxdev, IOCTL_SDMMC_SET_SIGNAL_VOLTAGE, &new_voltage,
                           sizeof(new_voltage), NULL, 0, NULL);
         if (st != MX_OK) {
             xprintf("sdmmc: Card supports 1.8v signalling but was unable to "

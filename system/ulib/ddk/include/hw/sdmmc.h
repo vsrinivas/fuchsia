@@ -14,14 +14,6 @@ __BEGIN_CDECLS;
 //
 #define SDHC_BLOCK_SIZE 512
 
-#define SDMMC_VOLTAGE_18            (5 << 9)
-#define SDMMC_VOLTAGE_30            (6 << 9)
-#define SDMMC_VOLTAGE_33            (7 << 9)
-
-#define SDMMC_BUS_WIDTH_1   (1 << 0)
-#define SDMMC_BUS_WIDTH_4   (1 << 1)
-#define SDMMC_BUS_WIDTH_8   (1 << 2)
-
 #define SDMMC_RESP_LEN_EMPTY (0x0 << 16)
 #define SDMMC_RESP_LEN_136   (0x1 << 16)
 #define SDMMC_RESP_LEN_48    (0x2 << 16)
@@ -109,11 +101,49 @@ __BEGIN_CDECLS;
 #define MMC_SELECT_CARD               (SDMMC_COMMAND(7) | SDMMC_RESP_R1)
 #define MMC_SEND_EXT_CSD              (SDMMC_COMMAND(8) | SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ)
 #define MMC_SEND_CSD                  (SDMMC_COMMAND(9) | SDMMC_RESP_R2)
+#define MMC_SEND_STATUS               (SDMMC_COMMAND(13) | SDMMC_RESP_R1)
+#define MMC_SEND_TUNING_BLOCK         (SDMMC_COMMAND(21) | SDMMC_RESP_R1)
 
 // CID fields (SD/MMC)
 #define MMC_CID_SPEC_VRSN_40    3
 
 // EXT_CSD fields (MMC)
 #define MMC_EXT_CSD_BUS_WIDTH   183
+#define MMC_EXT_CSD_BUS_WIDTH_8_DDR 6
+#define MMC_EXT_CSD_BUS_WIDTH_4_DDR 5
+#define MMC_EXT_CSD_BUS_WIDTH_8     2
+#define MMC_EXT_CSD_BUS_WIDTH_4     1
+#define MMC_EXT_CSD_BUS_WIDTH_1     0
+
+#define MMC_EXT_CSD_HS_TIMING   185
+#define MMC_EXT_CSD_HS_TIMING_LEGACY    0
+#define MMC_EXT_CSD_HS_TIMING_HS        1
+#define MMC_EXT_CSD_HS_TIMING_HS200     2
+#define MMC_EXT_CSD_HS_TIMING_HS400     3
+
+#define MMC_EXT_CSD_DEVICE_TYPE 196
+
+// Device register (CMD13 response) fields (SD/MMC)
+#define MMC_STATUS_ADDR_OUT_OF_RANGE    (1 << 31)
+#define MMC_STATUS_ADDR_MISALIGN        (1 << 30)
+#define MMC_STATUS_BLOCK_LEN_ERR        (1 << 29)
+#define MMC_STATUS_ERASE_SEQ_ERR        (1 << 28)
+#define MMC_STATUS_ERASE_PARAM          (1 << 27)
+#define MMC_STATUS_WP_VIOLATION         (1 << 26)
+#define MMC_STATUS_DEVICE_LOCKED        (1 << 25)
+#define MMC_STATUS_LOCK_UNLOCK_FAILED   (1 << 24)
+#define MMC_STATUS_COM_CRC_ERR          (1 << 23)
+#define MMC_STATUS_ILLEGAL_COMMAND      (1 << 22)
+#define MMC_STATUS_DEVICE_ECC_FAILED    (1 << 21)
+#define MMC_STATUS_CC_ERR               (1 << 20)
+#define MMC_STATUS_ERR                  (1 << 19)
+#define MMC_STATUS_CXD_OVERWRITE        (1 << 16)
+#define MMC_STATUS_WP_ERASE_SKIP        (1 << 15)
+#define MMC_STATUS_ERASE_RESET          (1 << 13)
+#define MMC_STATUS_CURRENT_STATE_MASK   (0xf << 9)
+#define MMC_STATUS_READY_FOR_DATA       (1 << 8)
+#define MMC_STATUS_SWITCH_ERR           (1 << 7)
+#define MMC_STATUS_EXCEPTION_EVENT      (1 << 6)
+#define MMC_STATUS_APP_CMD              (1 << 5)
 
 __END_CDECLS;
