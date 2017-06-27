@@ -84,7 +84,6 @@ func processUpdate(known map[Package]struct{}, oldBlobs map[string]struct{}, muB
 	current := make(map[Package]struct{})
 	names, err := ioutil.ReadDir(needsPath)
 	if err != nil {
-		fmt.Println("Couldn't read directory")
 		return nil, nil
 	}
 
