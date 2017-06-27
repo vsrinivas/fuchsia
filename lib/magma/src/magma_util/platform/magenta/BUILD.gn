@@ -160,10 +160,9 @@ source_set("trace") {
 
   if (magma_enable_tracing) {
     deps += [
-      "//apps/tracing",
       "//apps/tracing/lib/trace:provider",
       "//apps/tracing/services",
-      "//lib/mtl/tasks:tasks",
+      "//lib/mtl",
     ]
   }
 
