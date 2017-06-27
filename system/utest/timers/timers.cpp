@@ -107,12 +107,32 @@ static bool periodic() {
     END_TEST;
 }
 
+// furiously spin resetting the timer, trying to race with it going off to look for
+// race conditions.
+static bool restart_race() {
+    BEGIN_TEST;
+
+    const mx_time_t kTestDuration = MX_SEC(5);
+    auto start = mx_time_get(MX_CLOCK_MONOTONIC);
+
+    mx::handle timer;
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), MX_OK, "");
+    while (mx_time_get(MX_CLOCK_MONOTONIC) - start < kTestDuration) {
+        ASSERT_EQ(mx_timer_start(timer.get(), MX_TIMER_MIN_DEADLINE, MX_TIMER_MIN_PERIOD, 0u), MX_OK, "");
+    }
+
+    EXPECT_EQ(mx_timer_cancel(timer.get()), MX_OK, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(timers_test)
 RUN_TEST(basic_test)
 RUN_TEST(restart_test)
 RUN_TEST(invalid_calls)
 RUN_TEST(edge_cases)
 RUN_TEST(periodic)
+RUN_TEST(restart_race)
 END_TEST_CASE(timers_test)
 
 int main(int argc, char** argv) {
