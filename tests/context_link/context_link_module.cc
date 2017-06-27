@@ -8,6 +8,8 @@
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
@@ -38,7 +40,24 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
 
     module_context_->GetLink(kLink, link_.NewRequest());
 
-    link_->Set(nullptr, "{\"@context\":{\"topic\":\"/context_link_test\"}}");
+    Set1();
+  }
+
+  void Set1() {
+    link_->Set(nullptr,
+               "{\"link_value\":\"1\",\"@context\":{\"topic\":\"/context_link_test\"}}");
+
+    // TODO(mesch): If we set values on a Link too fast, they get swallowed by
+    // syncing old values back from the ledger. FW-208.
+    link_->Sync([this] {
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this] { Set2(); }, ftl::TimeDelta::FromSeconds(5));
+      });
+  }
+
+  void Set2() {
+    link_->Set(nullptr,
+               "{\"link_value\":\"2\",\"@context\":{\"topic\":\"/context_link_test\"}}");
   }
 
   TestPoint stopped_{"Child module stopped"};

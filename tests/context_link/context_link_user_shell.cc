@@ -66,11 +66,8 @@ class ContextListenerImpl : maxwell::ContextListener {
  private:
   // |ContextListener|
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << i.GetKey() << " "
-                    << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
   }
@@ -165,12 +162,17 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
     start_story_exit_.Pass();
   }
 
-  TestPoint get_context_topic_{"GetContextTopic()"};
+  TestPoint get_context_topic_1_{"GetContextTopic() value=1"};
+  int get_context_topic_1_called_{};
+  TestPoint get_context_topic_2_{"GetContextTopic() value=2"};
+  int get_context_topic_2_called_{};
 
   void GetContextTopic(const fidl::String& topic, const fidl::String& value) {
     if (topic != kTopic) {
       return;
     }
+
+    FTL_LOG(INFO) << "Context value for topic " << kTopic << " is: " << value;
 
     modular::JsonDoc doc;
     doc.Parse(value);
@@ -219,14 +221,42 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
       return;
     }
 
-    get_context_topic_.Pass();
+    if (!doc.HasMember("link_value")) {
+      FTL_LOG(ERROR) << "JSON missing property link_value (set by module)";
+      Logout();
+      return;
+    }
 
-    context_listener_.Reset();
-    context_listener_.Handle(
-        [this](const fidl::String& key, const fidl::String& value) {
-        });
+    if (!doc["link_value"].IsString()) {
+      FTL_LOG(ERROR) << "JSON link_value (set by module) not a String";
+      Logout();
+      return;
+    }
 
-    Logout();
+    const std::string link_value{doc["link_value"].GetString()};
+    if (link_value != std::string{"1"} && link_value != std::string{"2"}) {
+      FTL_LOG(ERROR) << "JSON link_value (set by module) wrong: " << link_value;
+      Logout();
+      return;
+    }
+
+    if (link_value == std::string{"1"}) {
+      if (++get_context_topic_1_called_ == 1) {
+        get_context_topic_1_.Pass();
+      }
+
+    } else {
+      if (++get_context_topic_2_called_ == 1) {
+        get_context_topic_2_.Pass();
+
+        context_listener_.Reset();
+        context_listener_.Handle(
+            [this](const fidl::String& key, const fidl::String& value) {
+            });
+
+        Logout();
+      }
+    }
   }
 
   void Logout() { user_context_->Logout(); }
