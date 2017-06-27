@@ -137,14 +137,14 @@ class Service : private mtl::MessageLoopHandler {
     }
 
     auto handler_key = mtl::MessageLoop::GetCurrent()->AddHandler(
-        this, proc, MX_PROCESS_SIGNALED);
+        this, proc, MX_PROCESS_TERMINATED);
     FTL_CHECK(handler_key != 0);
     process_handler_key_.insert(std::make_pair(proc, handler_key));
   }
 
   // mtl::MessageLoopHandler
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-    FTL_CHECK(pending & MX_PROCESS_SIGNALED);
+    FTL_CHECK(pending & MX_PROCESS_TERMINATED);
     auto iter = process_handler_key_.find(handle);
     FTL_CHECK(iter != process_handler_key_.end());
     process_handler_key_.erase(iter);
