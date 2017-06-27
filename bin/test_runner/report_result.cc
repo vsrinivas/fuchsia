@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
   ReadPipe(stderr_pipe, &stream);
 
   status =
-      mx_object_wait_one(handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
+      mx_object_wait_one(handle, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
   if (status != MX_OK) {
     reporter.Finish(true, "Failed to wait for exit");
     return 1;
