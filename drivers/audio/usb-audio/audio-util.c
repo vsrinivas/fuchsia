@@ -59,16 +59,23 @@ mx_status_t usb_audio_set_volume(mx_device_t* device, uint8_t interface_number, 
     status = usb_control(device, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_GET_MIN, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
                          fu_id << 8, &volume_min, sizeof(volume_min));
-    if (status != sizeof(volume_min)) return status;
+    if (status != sizeof(volume_min)) goto out;
     status = usb_control(device, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_GET_MAX, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
                          fu_id << 8, &volume_max, sizeof(volume_max));
-    if (status != sizeof(volume_min)) return status;
+    if (status != sizeof(volume_min)) goto out;
     if (volume_min >= volume_max) return MX_ERR_INTERNAL;
 
     // TODO (voydanoff) - maybe this should be logarithmic?
     uint16_t volume16 = volume_min + ((volume_max - volume_min) * volume) / 100;
-    return usb_control(device, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                USB_AUDIO_SET_CUR, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                fu_id << 8, &volume16, sizeof(volume16));
+    status = usb_control(device, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                         USB_AUDIO_SET_CUR, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
+                         fu_id << 8, &volume16, sizeof(volume16));
+
+out:
+    if (status == MX_ERR_IO_REFUSED) {
+        // clear the stall
+        usb_reset_endpoint(device, 0);
+    }
+    return status;
 }
