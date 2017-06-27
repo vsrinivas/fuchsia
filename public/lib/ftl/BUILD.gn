@@ -53,6 +53,7 @@ source_set("ftl_lib") {
     "files/symlink.h",
     "files/unique_fd.cc",
     "files/unique_fd.h",
+    "ftl_export.h",
     "functional/apply.h",
     "functional/cancelable_callback.h",
     "functional/closure.h",
