@@ -89,6 +89,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetCameraProjectionOp(op->get_set_camera_projection());
     case mozart2::Op::Tag::SET_LIGHT_INTENSITY:
       return ApplySetLightIntensityOp(op->get_set_light_intensity());
+    case mozart2::Op::Tag::SET_TEXTURE:
+      return ApplySetTextureOp(op->get_set_texture());
     case mozart2::Op::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FTL_CHECK(false);
@@ -249,6 +251,19 @@ bool Session::ApplySetCameraOp(const mozart2::SetCameraOpPtr& op) {
       return true;
     } else if (auto camera = resources_.FindResource<Camera>(op->camera_id)) {
       renderer->SetCamera(std::move(camera));
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
+  if (auto material = resources_.FindResource<Material>(op->material_id)) {
+    if (op->texture_id == 0) {
+      material->SetTexture(nullptr);
+      return true;
+    } else if (auto image = resources_.FindResource<Image>(op->texture_id)) {
+      material->SetTexture(std::move(image));
       return true;
     }
   }
@@ -445,14 +460,7 @@ bool Session::ApplyCreateMaterial(ResourceId id,
     blue = static_cast<float>(color->blue) / 255.f;
     alpha = static_cast<float>(color->alpha) / 255.f;
   }
-  ImagePtr image;
-  if (args->texture_id != 0) {
-    image = resources_.FindResource<Image>(args->texture_id);
-    if (!image) {
-      return false;
-    }
-  }
-  auto material = CreateMaterial(id, image, red, green, blue, alpha);
+  auto material = CreateMaterial(id, red, green, blue, alpha);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
@@ -592,12 +600,11 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
 }
 
 ResourcePtr Session::CreateMaterial(ResourceId id,
-                                    ImagePtr image,
                                     float red,
                                     float green,
                                     float blue,
                                     float alpha) {
-  return ftl::MakeRefCounted<Material>(this, red, green, blue, alpha, image);
+  return ftl::MakeRefCounted<Material>(this, red, green, blue, alpha);
 }
 
 void Session::TearDown() {
@@ -607,10 +614,11 @@ void Session::TearDown() {
   }
   is_valid_ = false;
   resources_.Clear();
-  // TODO(MZ-134): Shutting down the session must eagerly collect any exported
-  // resources from the resource linker. Currently, the only way to evict an
-  // exported entry is to shut down its peer. But this does not handle session
-  // shutdown. Fix that bug and turn this log into an assertion.
+  // TODO(MZ-134): Shutting down the session must eagerly collect any
+  // exported resources from the resource linker. Currently, the only way
+  // to evict an exported entry is to shut down its peer. But this does
+  // not handle session shutdown. Fix that bug and turn this log into an
+  // assertion.
   if (resource_count_ != 0) {
     error_reporter()->ERROR()
         << "Session::TearDown(): Not all resources have been "
@@ -674,15 +682,15 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       scheduled_updates_.front().present_callback(std::move(info));
       scheduled_updates_.pop();
 
-      // TODO: gather statistics about how close the actual presentation_time
-      // was to the requested time.
+      // TODO: gather statistics about how close the actual
+      // presentation_time was to the requested time.
     } else {
       // An error was encountered while applying the update.
-      FTL_LOG(WARNING)
-          << "mozart::Session::ApplySessionUpdates() initiating teardown.";
+      FTL_LOG(WARNING) << "mozart::Session::ApplySessionUpdates() "
+                          "initiating teardown.";
       TearDown();
-      // Tearing down a session will very probably result in changes to the
-      // global scene-graph.
+      // Tearing down a session will very probably result in changes to
+      // the global scene-graph.
       return true;
     }
   }

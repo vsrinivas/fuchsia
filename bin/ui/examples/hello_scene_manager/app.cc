@@ -110,8 +110,8 @@ class HelloSceneManagerApp {
 
     // Create a Material with the checkerboard image.
     ResourceId material_id = NewResourceId();
-    ops.push_back(NewCreateMaterialOp(material_id, checkerboard_image_id, 255,
-                                      100, 100, 255));
+    ops.push_back(NewCreateMaterialOp(material_id, 255, 100, 100, 255));
+    ops.push_back(NewSetTextureOp(material_id, checkerboard_image_id));
 
     // Make a circle, and attach it and the material to a node.
     ResourceId circle_id = NewResourceId();

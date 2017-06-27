@@ -66,7 +66,6 @@ mozart2::OpPtr NewCreateVarRoundedRectangleOp(
     uint32_t bottom_right_radius_var_id);
 
 mozart2::OpPtr NewCreateMaterialOp(uint32_t id,
-                                   uint32_t texture_id,
                                    uint8_t red,
                                    uint8_t green,
                                    uint8_t blue,
@@ -115,5 +114,8 @@ mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
 // Value specification.
 mozart2::ValuePtr NewValue(const escher::vec3& v);
 mozart2::ValuePtr NewValue(const escher::mat4& m);
+
+// Material operations.
+mozart2::OpPtr NewSetTextureOp(uint32_t node_id, uint32_t image_id);
 
 }  // namespace mozart

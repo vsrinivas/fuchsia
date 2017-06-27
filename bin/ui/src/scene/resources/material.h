@@ -20,12 +20,9 @@ class Material : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Material(Session* session,
-           float red,
-           float green,
-           float blue,
-           float alpha,
-           ImagePtr texture_image = nullptr);
+  Material(Session* session, float red, float green, float blue, float alpha);
+
+  void SetTexture(const ImagePtr& texture_image);
 
   float red() const { return escher_material_->color().x; }
   float green() const { return escher_material_->color().y; }
@@ -41,13 +38,6 @@ class Material : public Resource {
   void Accept(class ResourceVisitor* visitor) override;
 
  private:
-  Material(Session* session,
-           ImagePtr image,
-           escher::TexturePtr escher_texture,
-           float red,
-           float green,
-           float blue,
-           float alpha);
   escher::MaterialPtr escher_material_;
   ImagePtr texture_;
 };

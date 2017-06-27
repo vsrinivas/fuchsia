@@ -17,33 +17,20 @@ Material::Material(Session* session,
                    float red,
                    float green,
                    float blue,
-                   float alpha,
-                   ImagePtr texture_image)
-    : Material(session,
-               texture_image,
-               texture_image
-                   ? ftl::MakeRefCounted<escher::Texture>(
-                         session->context()->escher_resource_recycler(),
-                         texture_image->escher_image(),
-                         vk::Filter::eLinear)
-                   : escher::TexturePtr(),
-               red,
-               green,
-               blue,
-               alpha) {}
-
-Material::Material(Session* session,
-                   ImagePtr image,
-                   escher::TexturePtr escher_texture,
-                   float red,
-                   float green,
-                   float blue,
                    float alpha)
     : Resource(session, Material::kTypeInfo),
-      escher_material_(ftl::MakeRefCounted<escher::Material>(escher_texture)),
-      texture_(image) {
+      escher_material_(ftl::MakeRefCounted<escher::Material>()) {
   // TODO: need to add alpha into escher material
   escher_material_->set_color(escher::vec3(red, green, blue));
+}
+
+void Material::SetTexture(const ImagePtr& texture_image) {
+  texture_ = texture_image;
+  escher_material_->SetTexture(
+      texture_image ? ftl::MakeRefCounted<escher::Texture>(
+                          session()->context()->escher_resource_recycler(),
+                          texture_image->escher_image(), vk::Filter::eLinear)
+                    : escher::TexturePtr());
 }
 
 }  // namespace scene

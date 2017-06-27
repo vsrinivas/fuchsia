@@ -227,15 +227,23 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     node_id_ = node_id;
     ops.push_back(mozart::NewCreateShapeNodeOp(node_id));
 
+    // Create a material on the shape.
+    mozart::ResourceId material_id_ = material_id_ = NewResourceId();
+    ops.push_back(
+        mozart::NewCreateMaterialOp(material_id_, 255, 100, 100, 255));
+    ops.push_back(mozart::NewSetMaterialOp(node_id_, material_id));
+
+    const float kScreenWidth = 2160.f;
+    const float kScreenHeight = 1440.f;
+
     // Make the shape a circle.
     mozart::ResourceId shape_id = NewResourceId();
-    ops.push_back(mozart::NewCreateCircleOp(shape_id, 500.f));
+    ops.push_back(mozart::NewCreateRoundedRectangleOp(
+        shape_id, kScreenWidth, kScreenHeight, 40.f, 40.f, 40.f, 40.f));
 
     ops.push_back(mozart::NewSetShapeOp(node_id, shape_id));
 
     // Translate the circle.
-    const float kScreenWidth = 2160.f;
-    const float kScreenHeight = 1440.f;
     float translation[3] = {kScreenWidth / 2, kScreenHeight / 2, 10.f};
     ops.push_back(mozart::NewSetTransformOp(
         node_id, translation,
@@ -263,9 +271,6 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     if (previous_image_id_ != 0) {
       ops.push_back(mozart::NewReleaseResourceOp(previous_image_id_));
     }
-    if (previous_material_id_ != 0) {
-      ops.push_back(mozart::NewReleaseResourceOp(previous_material_id_));
-    }
     mozart::ResourceId memory_id = NewResourceId();
 
     mx::vmo vmo_copy;
@@ -276,9 +281,8 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     }
 
     // Update Scene Manager with the image. In our case this requires creating
-    // a new Memory object, Image object, and Material object. In general,
-    // however, it would be best to create these upfront and then cycle through
-    // them.
+    // a new Memory object and Image object. In general, however, it would be
+    // best to create these upfront and then cycle through them.
     ops.push_back(mozart::NewCreateMemoryOp(memory_id, std::move(vmo_copy),
                                             mozart2::MemoryType::HOST_MEMORY));
 
@@ -288,14 +292,10 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
         mozart2::ImageInfo::Tiling::LINEAR, size.width, size.height,
         size.width));
 
-    mozart::ResourceId material_id = NewResourceId();
-    ops.push_back(
-        mozart::NewCreateMaterialOp(material_id, image_id, 255, 100, 100, 255));
+    ops.push_back(NewSetTextureOp(material_id_, image_id));
+
     previous_memory_id_ = memory_id;
     previous_image_id_ = image_id;
-    previous_material_id_ = material_id;
-
-    ops.push_back(mozart::NewSetMaterialOp(node_id_, material_id));
 
     session_->Enqueue(std::move(ops));
     session_->Present(0, fidl::Array<mx::event>::New(0),
@@ -322,9 +322,11 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
   // The ID of the circle we are texturing
   mozart::ResourceId node_id_;
 
+  // The ID of the material on the circle.
+  mozart::ResourceId material_id_ = 0;
+
   mozart::ResourceId previous_memory_id_ = 0;
   mozart::ResourceId previous_image_id_ = 0;
-  mozart::ResourceId previous_material_id_ = 0;
   mozart::ResourceId resource_id_counter_ = 0;
 #endif  // MOZART_EXAMPLES_USE_SCENE_MANAGER
 

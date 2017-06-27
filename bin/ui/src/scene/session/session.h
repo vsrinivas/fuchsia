@@ -92,6 +92,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetCameraOp(const mozart2::SetCameraOpPtr& op);
   bool ApplySetCameraProjectionOp(const mozart2::SetCameraProjectionOpPtr& op);
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
+  bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
   bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
@@ -147,7 +148,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                                      float bottom_right_radius,
                                      float bottom_left_radius);
   ResourcePtr CreateMaterial(ResourceId id,
-                             ImagePtr image,
                              float red,
                              float green,
                              float blue,

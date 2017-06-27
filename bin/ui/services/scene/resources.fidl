@@ -127,11 +127,10 @@ struct DirectionalLight {
   Value intensity;  // float
 };
 
-// Simple texture-mapped material.  If no texture is provided (i.e. |texture_id|
-// is zero), a solid color is used.  If a texture is provided, then the value sampled from the texture is
-// multiplied by the color.
+// Simple texture-mapped material.
+// SetTextureOp can be used subsequently to set the texture, or it can be left
+// as zero (no texture).
 struct Material {
-  uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
   // TODO: use Value instead of ColorRgba.
   ColorRgba color;
 };
