@@ -37,7 +37,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
         return MX_ERR_NO_RESOURCES;
     }
     ssize_t r;
-    if ((r = ioctl_vfs_watch_dir_v2(dirfd, &wd)) < 0) {
+    if ((r = ioctl_vfs_watch_dir(dirfd, &wd)) < 0) {
         //TODO: if MASK_EXISTING was rejected, set NEED_DIR_SCAN and try without
         mx_handle_close(wd.channel);
         mx_handle_close(watcher->h);

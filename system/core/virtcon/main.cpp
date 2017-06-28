@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
         wd.mask = VFS_WATCH_MASK_ALL;
         wd.options = 0;
         if (mx_channel_create(0, &wd.channel, &input_ph.handle) == MX_OK) {
-            if ((ioctl_vfs_watch_dir_v2(input_dir_fd, &wd)) == MX_OK) {
+            if ((ioctl_vfs_watch_dir(input_dir_fd, &wd)) == MX_OK) {
                 input_ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
                 input_ph.func = input_cb;
                 port_wait(&port, &input_ph);
