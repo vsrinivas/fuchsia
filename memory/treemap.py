@@ -4,7 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Visualizes the output of Magenta's "ps --json" output.
+"""Visualizes the output of Magenta's "memgraph" tool.
 
 Run "treemap.py --help" for a list of arguments.
 
