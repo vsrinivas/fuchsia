@@ -9,8 +9,7 @@ MODULE := $(LOCAL_DIR).ps
 MODULE_TYPE := userapp
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/ps.c \
-    $(LOCAL_DIR)/resources.c
+    $(LOCAL_DIR)/ps.c
 
 MODULE_NAME := ps
 

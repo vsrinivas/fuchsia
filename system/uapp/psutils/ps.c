@@ -11,36 +11,12 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <math.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "resources.h"
-
 #define MAX_STATE_LEN (7 + 1) // +1 for trailing NUL
 #define MAX_KOID_LEN sizeof("18446744073709551616") // 1<<64 + NUL
-
-static const char kJSONSchema[] =
-    "{\n"
-    "    \"type\": \"array\",\n"
-    "    \"items\": {\n"
-    "        \"type\": \"object\",\n"
-    "        \"required\": [\"id\", \"type\", \"parent\", \"name\" ],\n"
-    "        \"properties\": {\n"
-    "            \"id\": { \"type\": \"string\" },\n"
-    "            \"type\": { \"type\": \"string\" },\n"
-    "            \"koid\": { \"type\": \"integer\" },\n"
-    "            \"parent\": { \"type\": \"string\" },\n"
-    "            \"name\": { \"type\": \"string\" },\n"
-    "            \"private_bytes\": { \"type\": \"integer\" },\n"
-    "            \"shared_bytes\": { \"type\": \"integer\" },\n"
-    "            \"pss_bytes\": { \"type\": \"integer\" },\n"
-    "            \"state\": { \"type\": \"string\" }\n"
-    "        }\n"
-    "    }\n"
-    "}\n";
 
 // A single task (job or process).
 typedef struct {
@@ -269,161 +245,25 @@ static void print_table(task_table_t* table, bool with_threads) {
     print_header(id_w, with_threads);
 }
 
-static void print_kernel_json(const char* name, const char* parent,
-                              uint64_t size_bytes) {
-    printf("  {"
-           "\"id\": \"kernel/%s\", "
-           "\"type\": \"kernel\", "
-           "\"parent\": \"%s\", "
-           "\"name\": \"%s\", "
-           "\"size_bytes\": %zu"
-           "},\n",
-           name,
-           parent,
-           name,
-           size_bytes);
-}
-
-// Update kJSONSchema if you change the output format.
-static mx_status_t print_json(task_table_t* table) {
-    mx_handle_t root_resource;
-    mx_status_t s = get_root_resource(&root_resource);
-    if (s != MX_OK) {
-        return s;
-    }
-    mx_info_kmem_stats_t stats;
-    s = mx_object_get_info(
-        root_resource, MX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
-    mx_handle_close(root_resource);
-    if (s != MX_OK) {
-        fprintf(stderr, "ERROR: MX_INFO_KMEM_STATS returns %d (%s)\n",
-                s, mx_status_get_string(s));
-        return s;
-    }
-
-    printf("[\n");
-
-    // Kernel memory info.
-    // TODO(dbort): Add a non-JSON way to see these, although
-    // they're also available via |kstats -m|.
-    print_kernel_json("physmem", "", stats.total_bytes);
-    print_kernel_json("free", "kernel/physmem", stats.free_bytes);
-    print_kernel_json("vmo", "kernel/physmem", stats.vmo_bytes);
-    print_kernel_json("heap", "kernel/physmem", stats.total_heap_bytes);
-    print_kernel_json("heap/allocated", "kernel/heap",
-                      stats.total_heap_bytes - stats.free_heap_bytes);
-    print_kernel_json("heap/free", "kernel/heap", stats.free_heap_bytes);
-    print_kernel_json("wired", "kernel/physmem", stats.wired_bytes);
-    print_kernel_json("mmu", "kernel/physmem", stats.mmu_overhead_bytes);
-    print_kernel_json("other", "kernel/physmem", stats.other_bytes);
-
-    // Task info.
-    for (size_t i = 0; i < table->num_entries; i++) {
-        const task_entry_t* e = table->entries + i;
-        const char* delimiter = i + 1 == table->num_entries ? "" : ",";
-
-        if (e->type == 'j') {
-            char parent[64];
-            if (strcmp(e->parent_koid_str, "0") == 0) {
-                // This is the root job, which we treat as a child
-                // of the vmo node.
-                snprintf(parent, sizeof(parent), "kernel/vmo");
-            } else {
-                snprintf(parent, sizeof(parent), "j/%s", e->parent_koid_str);
-            }
-            printf("  {"
-                   "\"id\": \"%c/%s\", "
-                   "\"type\": \"%c\", "
-                   "\"koid\": %s, "
-                   "\"parent\": \"%s\", "
-                   "\"name\": \"%s\", "
-                   "\"private_bytes\": %zu, "
-                   "\"pss_bytes\": %zu"
-                   "}%s\n",
-                   e->type, e->koid_str,
-                   e->type,
-                   e->koid_str,
-                   parent,
-                   e->name,
-                   e->private_bytes,
-                   e->pss_bytes,
-                   delimiter);
-        } else if (e->type == 'p') {
-            printf("  {"
-                   "\"id\": \"%c/%s\", "
-                   "\"type\": \"%c\", "
-                   "\"koid\": %s, "
-                   "\"parent\": \"j/%s\", "
-                   "\"name\": \"%s\", "
-                   "\"private_bytes\": %zu, "
-                   "\"shared_bytes\": %zu, "
-                   "\"pss_bytes\": %zu"
-                   "}%s\n",
-                   e->type, e->koid_str,
-                   e->type,
-                   e->koid_str,
-                   e->parent_koid_str,
-                   e->name,
-                   e->private_bytes,
-                   e->shared_bytes,
-                   e->pss_bytes,
-                   delimiter);
-        } else if (e->type == 't') {
-            printf("  {"
-                   "\"id\": \"%c/%s\", "
-                   "\"type\": \"%c\", "
-                   "\"koid\": %s, "
-                   "\"parent\": \"p/%s\", "
-                   "\"name\": \"%s\", "
-                   "\"state\": \"%s\""
-                   "}%s\n",
-                   e->type, e->koid_str,
-                   e->type,
-                   e->koid_str,
-                   e->parent_koid_str,
-                   e->name,
-                   e->state_str,
-                   delimiter);
-        } else {
-            fprintf(stderr, "ERROR: unknown task type: %c\n", e->type);
-        }
-    }
-
-    printf("]\n");
-
-    return MX_OK;
-}
-
 static void print_help(FILE* f) {
     fprintf(f, "Usage: ps [options]\n");
     fprintf(f, "Options:\n");
     // -T for compatibility with linux ps
     fprintf(f, " -T             Include threads in the output\n");
-    // TODO(dbort): Remove all JSON and kernel mem output from this tool;
-    // memgraph now handles it all. Also update treemap.py docs.
-    fprintf(f, " --json         Print output in JSON\n");
-    fprintf(f, " --json-schema  Print a schema for the JSON output format\n");
     fprintf(f, " --units=?      Fix all sizes to the named unit\n");
     fprintf(f, "                where ? is one of [BkMGTPE]\n");
 }
 
 int main(int argc, char** argv) {
     bool with_threads = false;
-    bool use_json = false;
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
         if (!strcmp(arg, "--help")) {
             print_help(stdout);
             return 0;
         }
-        if (!strcmp(arg, "--json-schema")) {
-            printf(kJSONSchema);
-            return 0;
-        }
         if (!strcmp(arg, "-T")) {
             with_threads = true;
-        } else if (!strcmp(arg, "--json")) {
-            use_json = true;
         } else if (!strncmp(arg, "--units=", sizeof("--units=") - 1)) {
             format_unit = arg[sizeof("--units=") - 1];
         } else {
@@ -442,11 +282,7 @@ int main(int argc, char** argv) {
                 mx_status_get_string(status), status);
         ret = 1;
     }
-    if (use_json) {
-        ret = print_json(&tasks);
-    } else {
-        print_table(&tasks, with_threads);
-    }
+    print_table(&tasks, with_threads);
     free(tasks.entries);
     return ret;
 }

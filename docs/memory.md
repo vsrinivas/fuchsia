@@ -67,11 +67,12 @@ the system.
  2. Also on your host machine, run the following command from the root of your
     Fuchsia checkout:
 
-    ```fcmd ps --json | ./scripts/memory/treemap.py > mem.html```
+    ```fcmd memgraph -vt | ./scripts/memory/treemap.py > mem.html```
  3. Open `mem.html` in a browser.
 
-The `--json` flag instructs `ps` to produce output in JSON, which is then
-parsed by the `treemap.py` script.
+The `memgraph` tool generates a JSON description of system task and memory
+information, which is then parsed by the `treemap.py` script. `-vt` says
+to include VMOs and threads in the output.
 
 ### Dump a process's detailed memory maps
 
