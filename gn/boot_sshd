@@ -1,0 +1,7 @@
+{
+    "imports": [
+        "magentix",
+        "runtime_config",
+        "listen"
+    ]
+}
