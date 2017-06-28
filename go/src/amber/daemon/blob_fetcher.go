@@ -28,12 +28,12 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 	httpC := &http.Client{}
 
 	for i, _ := range repos {
-		reader, err := FetchBlobFromRepo(repos[i], blob, httpC)
+		reader, sz, err := FetchBlobFromRepo(repos[i], blob, httpC)
 		if err != nil {
 			log.Printf("Got error trying to get blob\n")
 			continue
 		}
-		err = WriteBlob(filepath.Join(outputDir, blob), reader)
+		err = WriteBlob(filepath.Join(outputDir, blob), sz, reader)
 		reader.Close()
 		if err == nil {
 			return nil
@@ -45,10 +45,10 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 
 // FetchBlob attempts to pull the set of blobs requested from the supplied
 // BlobRepo. FetchBlob returns the list of blobs successfully stored.
-func FetchBlobFromRepo(r BlobRepo, blob string, client *http.Client) (io.ReadCloser, error) {
+func FetchBlobFromRepo(r BlobRepo, blob string, client *http.Client) (io.ReadCloser, int64, error) {
 	u, err := url.Parse(r.Address)
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 
 	tmp := *u
@@ -56,27 +56,32 @@ func FetchBlobFromRepo(r BlobRepo, blob string, client *http.Client) (io.ReadClo
 	srcAddr, err := url.Parse(tmp.String())
 
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 
 	if r, err := client.Get(srcAddr.String()); err == nil {
 		if r.StatusCode == 200 {
-			return r.Body, nil
+			return r.Body, r.ContentLength, nil
 		} else {
 			r.Body.Close()
-			return nil, fmt.Errorf("fetch failed with status %s", r.StatusCode)
+			return nil, -1, fmt.Errorf("fetch failed with status %s", r.StatusCode)
 		}
 	} else {
-		return nil, err
+		return nil, -1, err
 	}
 }
 
-func WriteBlob(name string, con io.ReadCloser) error {
+func WriteBlob(name string, sz int64, con io.ReadCloser) error {
 	f, err := os.Create(name)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
+	err = f.Truncate(sz)
+	if err != nil {
+		return err
+	}
 
 	_, err = io.Copy(f, con)
 	return err

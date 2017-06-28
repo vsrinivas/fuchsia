@@ -178,20 +178,22 @@ func ProcessPackage(update *Package, orig *Package, src Source, pkgs *PackageSet
 	defer file.Close()
 	defer os.Remove(file.Name())
 
-	// take the long way to truncate in case this is a VMO filesystem
-	// which doesn't support truncate
 	dstPath := filepath.Join(DstUpdate, update.Name)
-	e = os.Remove(dstPath)
-	if e != nil && !os.IsNotExist(e) {
-		return NewErrProcessPackage("couldn't remove old file %v", e)
-	}
-
-	dst, e := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE, 0666)
+	dst, e := os.Create(dstPath)
 	if e != nil {
-		return NewErrProcessPackage("couldn't open file to replace %v", e)
+		return NewErrProcessPackage("couldn't open file to write update %v", e)
 	}
 	defer dst.Close()
 
+	i, err := file.Stat()
+	if err != nil {
+		return NewErrProcessPackage("couldn't stat temp file", e)
+	}
+
+	err = dst.Truncate(i.Size())
+	if err != nil {
+		return NewErrProcessPackage("couldn't truncate file destination", e)
+	}
 	_, e = io.Copy(dst, file)
 	// TODO(jmatt) validate file on disk, size, hash, etc
 	if e != nil {
