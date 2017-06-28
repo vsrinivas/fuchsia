@@ -12,21 +12,22 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/dispatcher.c \
+    $(LOCAL_DIR)/get-vmo.c \
+    $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/pipe.c \
-    $(LOCAL_DIR)/vmofile.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/remotesocket.c \
-    $(LOCAL_DIR)/unistd.c \
     $(LOCAL_DIR)/service.c \
+    $(LOCAL_DIR)/socketpair.c \
     $(LOCAL_DIR)/stubs.c \
-    $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/uname.c \
+    $(LOCAL_DIR)/unistd.c \
+    $(LOCAL_DIR)/vmofile.c \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
-    $(LOCAL_DIR)/get-vmo.c \
 
 MODULE_EXPORT := so
 

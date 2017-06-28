@@ -54,25 +54,6 @@ static int checkfd(int fd, int err) {
     }
 }
 
-static int checksocket(int fd, int sock_err, int err) {
-    mxio_t* io = fd_to_io(fd);
-    if (io == NULL) {
-        errno = EBADF;
-        return -1;
-    }
-    int32_t is_socket = io->flags & MXIO_FLAG_SOCKET;
-    mxio_release(io);
-    if (!is_socket) {
-        errno = sock_err;
-        return -1;
-    }
-    if (err) {
-        errno = err;
-        return -1;
-    }
-    return 0;
-}
-
 // not supported by any filesystems yet
 int symlink(const char* existing, const char* new) {
     errno = ENOSYS;
@@ -144,27 +125,4 @@ int ttyname_r(int fd, char* name, size_t size) {
     }
 
     return checkfd(fd, ENOSYS);
-}
-
-// Socket stubbing.
-
-int socketpair(int domain, int type, int protocol, int fd[2]) {
-    errno = ENOSYS;
-    return -1;
-}
-
-// So far just a bit of plumbing around checking whether the fds are
-// indeed fds, and if so, are indeed sockets.
-
-int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags, struct timespec* timeout) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-int sockatmark(int fd) {
-    // ENOTTY is sic.
-    return checksocket(fd, ENOTTY, ENOSYS);
 }
