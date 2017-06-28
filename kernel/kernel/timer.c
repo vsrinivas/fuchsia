@@ -23,6 +23,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
@@ -352,3 +353,63 @@ void timer_init(void)
         list_initialize(&percpu[i].timer_queue);
     }
 }
+
+// print a timer queue dump into the passed in buffer
+static void dump_timer_queues(char *buf, size_t len)
+{
+    size_t ptr = 0;
+    lk_time_t now = current_time();
+
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&timer_lock, state);
+
+    for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+        if (mp_is_cpu_online(i)) {
+            ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);
+
+            timer_t *t;
+            lk_time_t last = now;
+            list_for_every_entry(&percpu[i].timer_queue, t, timer_t, node) {
+                lk_time_t delta_now = (t->scheduled_time > now) ? (t->scheduled_time - now) : 0;
+                lk_time_t delta_last = (t->scheduled_time > last) ? (t->scheduled_time - last) : 0;
+                ptr += snprintf(buf + ptr, len - ptr,
+                        "\ttime %" PRIu64 " delta_now %" PRIu64 " delta_last %" PRIu64 " func %p arg %p\n",
+                        t->scheduled_time, delta_now, delta_last, t->callback, t->arg);
+                last = t->scheduled_time;
+            }
+        }
+    }
+
+    spin_unlock_irqrestore(&timer_lock, state);
+}
+
+#if WITH_LIB_CONSOLE
+#include <lib/console.h>
+
+static int cmd_timers(int argc, const cmd_args *argv, uint32_t flags)
+{
+    const size_t timer_buffer_size = PAGE_SIZE;
+
+    // allocate a buffer to dump the timer queue into to avoid reentrancy issues with the
+    // timer spinlock
+    char *buf = malloc(timer_buffer_size);
+    if (!buf)
+        return MX_ERR_NO_MEMORY;
+
+    dump_timer_queues(buf, timer_buffer_size);
+
+    printf("%s", buf);
+
+    free(buf);
+
+    return 0;
+}
+
+STATIC_COMMAND_START
+#if LK_DEBUGLEVEL > 1
+STATIC_COMMAND_MASKED("timers", "dump the current kernel timer queues", &cmd_timers, CMD_AVAIL_NORMAL)
+#endif
+STATIC_COMMAND_END(kernel);
+
+#endif // WITH_LIB_CONSOLE
+
