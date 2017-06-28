@@ -58,29 +58,28 @@ typedef struct tftp_options_t {
 } tftp_options;
 
 /**
-TODO: update this after refactoring
  Sender
  NONE -(tftp_generate_write_request)-> WRITE_REQUESTED
- WRITE_REQUESTED -(tftp_handle_msg = OPCODE_OACK)-> TRANSMITTING
- WRITE_REQUESTED -(tftp_handle_msg = OPCODE_ACK)-> TRANSMITTING
- WRITE_REQUESTED -(tftp_handle_msg = OPCODE_ERROR)-> ERROR
- TRANSMITTING -(tftp_handle_msg = OPCODE_ACK)-> TRANSMITTING
- TRANSMITTING -(tftp_handle_msg = OPCODE_ERROR)-> ERROR
+ WRITE_REQUESTED -(tftp_process_msg = OPCODE_OACK)-> TRANSMITTING
+ WRITE_REQUESTED -(tftp_process_msg = OPCODE_ACK)-> TRANSMITTING
+ WRITE_REQUESTED -(tftp_process_msg = OPCODE_ERROR)-> ERROR
+ TRANSMITTING -(tftp_process_msg = OPCODE_ACK)-> TRANSMITTING
+ TRANSMITTING -(tftp_process_msg = OPCODE_ERROR)-> ERROR
  TRANSMITTING -(last packet)-> LAST_PACKET
- LAST_PACKET -(tftp_handle_msg = OPCODE_ERROR)-> ERROR
- LAST_PACKET -(tftp_handle_msg = OPCODE_ACK last packet)-> COMPLETED
- LAST_PACKET -(tftp_handle_msg = OPCODE_ACK not last packet)-> TRANSMITTING
- COMPLETED -(tftp_handle_msg)-> ERROR
+ LAST_PACKET -(tftp_process_msg = OPCODE_ERROR)-> ERROR
+ LAST_PACKET -(tftp_process_msg = OPCODE_ACK last packet)-> COMPLETED
+ LAST_PACKET -(tftp_process_msg = OPCODE_ACK not last packet)-> TRANSMITTING
+ COMPLETED -(tftp_process_msg)-> ERROR
 
  Receiver
- NONE -(tftp_handle_msg = OPCODE_WRQ)-> WRITE_REQUESTED
- NONE -(tftp_handle_msg != OPCODE_WRQ)-> ERROR
- WRITE_REQUESTED -(tftp_handle_msg = OPCODE_DATA) -> TRANSMITTING
- WRITE_REQUESTED -(tftp_handle_msg != OPCODE_DATA) -> ERROR
- TRANSMITTING -(tftp_handle_msg = OPCODE_DATA)-> TRANSMITTING
- TRANSMITTING -(tftp_handle_msg != OPCODE_DATA)-> ERROR
+ NONE -(tftp_process_msg = OPCODE_WRQ)-> WRITE_REQUESTED
+ NONE -(tftp_process_msg != OPCODE_WRQ)-> ERROR
+ WRITE_REQUESTED -(tftp_process_msg = OPCODE_DATA) -> TRANSMITTING
+ WRITE_REQUESTED -(tftp_process_msg != OPCODE_DATA) -> ERROR
+ TRANSMITTING -(tftp_process_msg = OPCODE_DATA)-> TRANSMITTING
+ TRANSMITTING -(tftp_process_msg != OPCODE_DATA)-> ERROR
  TRANSMITTING -(last packet)-> COMPLETED
- COMPLETED -(tftp_handle_msg)-> ERROR
+ COMPLETED -(tftp_process_msg)-> ERROR
 **/
 
 typedef enum {
@@ -109,10 +108,70 @@ struct tftp_session_t {
     uint8_t timeout;
 
     // Callbacks
-    tftp_open_file open_fn;
-    tftp_read read_fn;
-    tftp_write write_fn;
+    tftp_file_interface file_interface;
+    tftp_transport_interface transport_interface;
 };
+
+// tftp_session_has_pending returns true if the tftp_session has more data to
+// send before waiting for an ack. It is recommended that the caller do a
+// non-blocking read to see if an out-of-order ACK was sent by the remote host
+// before sending additional data packets.
+bool tftp_session_has_pending(tftp_session* session);
+
+// Generates a write request to send to a tftp server. |filename| is the name
+// sent to the server. |datalen| is the size of the data to be sent.
+// |block_size|, |timeout|, and |window_size| negotiate tftp options with the
+// server. |outgoing| must point to a scratch buffer the library can
+// use to assemble the request. |outlen| is the size of the outgoing scratch
+// buffer, and will be set to the size of the request. |timeout_ms| is set to
+// the next timeout value the user of the library should use when waiting for a
+// response.
+tftp_status tftp_generate_write_request(tftp_session* session,
+                                        const char* filename,
+                                        tftp_mode mode,
+                                        size_t datalen,
+                                        size_t block_size,
+                                        uint8_t timeout,
+                                        uint8_t window_size,
+                                        void* outgoing,
+                                        size_t* outlen,
+                                        uint32_t* timeout_ms);
+
+// Handle an incoming tftp packet. |incoming| must point to the packet of size
+// |inlen|. |outgoing| must point to a scratch buffer the library can use to
+// assemble the next packet to send. |outlen| is the size of the outgoing
+// scratch buffer. |timeout_ms| is set to the next timeout value the user of the
+// library should use when waiting for a response. |cookie| will be passed to
+// the tftp callback functions.
+tftp_status tftp_process_msg(tftp_session* session,
+                             void* incoming,
+                             size_t inlen,
+                             void* outgoing,
+                             size_t* outlen,
+                             uint32_t* timeout_ms,
+                             void* cookie);
+
+// Prepare a DATA packet to send to the remote host. This is only required when
+// tftp_session_has_pending(session) returns true, as tftp_process_msg() will
+// prepare the first DATA message in each window.
+tftp_status tftp_prepare_data(tftp_session* session,
+                              void* outgoing,
+                              size_t* outlen,
+                              uint32_t* timeout_ms,
+                              void* cookie);
+
+// If no response from the peer is received before the most recent timeout_ms
+// value, this function should be called to take the next appropriate action
+// (e.g., retransmit or cancel). |outgoing| must point to a scratch buffer the
+// library can use to assemble the next packet to send. |outlen| is the size of
+// the outgoing scratch buffer. |timeout_ms| is set to the next timeout value
+// the user of the library should use when waiting for a response. |cookie| will
+// be passed to the tftp callback functions.
+tftp_status tftp_timeout(tftp_session* session,
+                         void* outgoing,
+                         size_t* outlen,
+                         uint32_t* timeout_ms,
+                         void* cookie);
 
 // Internal handlers
 tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, void* cookie);

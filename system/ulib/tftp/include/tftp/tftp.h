@@ -30,11 +30,12 @@
  *
  * In the case of the passive side of the connection, the receive method should
  * be called repeatedly as well. Upon reception of the first packet the
- * |tftp_open_file| callback will be called to prepare for receiving the file.
+ * |tftp_file_open_cb| callback will be called to prepare for receiving the
+ * file.
  *
  * A timeout value is returned when calling |tftp_generate_write_request| and
- * |tftp_handle_msg| and should be used to notify the library that the expected
- * packet was not receive within the value returned.
+ * |tftp_process_msg| and should be used to notify the library that the
+ * expected packet was not receive within the value returned.
  **/
 
 enum {
@@ -66,24 +67,112 @@ typedef enum {
     MODE_MAIL,
 } tftp_mode;
 
-// tftp_open_file is called by the library to prepare for writing. |cookie| will
-// be passed to this function from the argument to tftp_handle_msg.
+// These are the default values used when sending a tftp request
+#define TFTP_DEFAULT_CLIENT_BLOCKSZ 1024
+#define TFTP_DEFAULT_CLIENT_TIMEOUT 0
+#define TFTP_DEFAULT_CLIENT_WINSZ 64
+#define TFTP_DEFAULT_CLIENT_MODE MODE_OCTET
+
+typedef struct {
+   char* inbuf;          // required - buffer for assembling incoming msgs
+   size_t inbuf_sz;      // required
+   char* outbuf;         // required - buffer for assembling outgoing msgs
+   size_t outbuf_sz;     // required
+   tftp_mode* mode;
+   size_t* block_size;
+   uint8_t* window_size;
+   uint8_t* timeout;
+   char* err_msg;
+   size_t err_msg_sz;
+} tftp_request_opts;
+
+typedef struct {
+    char* inbuf;         // required - buffer for assembling incoming msgs
+    size_t inbuf_sz;     // required
+    char* outbuf;        // required - buffer for assembling outgoing msgs
+    size_t outbuf_sz;    // required
+    char* err_msg;
+    size_t err_msg_sz;
+} tftp_handler_opts;
+
+// tftp_file_open_read_cb is called by the library to prepare for reading.
+// |file_cookie| will be passed to this function from the argument to
+// tftp_process_msg.
 //
-// This function should return TFTP_NO_ERROR on success, or negative values on
-// error.
-typedef tftp_status (*tftp_open_file)(const char* filename,
-                                      size_t size,
-                                      void* cookie);
+// This function should return the size of the file on success, or a TFTP_ERR_*
+// error code on failure.
+typedef ssize_t (*tftp_file_open_read_cb)(const char* filename,
+                                          void* file_cookie);
 
-// tftp_read is called by the library to read |length| bytes, starting at
-// |offset|, into |data|. |cookie| will be passed to this function from the
-// argument to tftp_handle_msg.
-typedef tftp_status (*tftp_read)(void* data, size_t* length, off_t offset, void* cookie);
+// tftp_file_open_write_cb is called by the library to prepare a file for
+// writing. |file_cookie| will be passed to this function from the argument to
+// tftp_process_msg. |size| indicates the size of the file that will be
+// created (it may be ignored if this information is not needed on opening).
+typedef tftp_status (*tftp_file_open_write_cb)(const char* filename,
+                                               size_t size,
+                                               void* file_cookie);
 
-// tftp_write is called by the library to write |length| bytes, starting at
-// |offset|, into the destination. |cookie| will be passed to this function from
-// the argument to tftp_handle_msg.
-typedef tftp_status (*tftp_write)(const void* data, size_t* length, off_t offset, void* cookie);
+// tftp_file_read_cb is called by the library to read |length| bytes, starting
+// at |offset|, into |data|. |file_cookie| will be passed to this function from
+// the argument to tftp_process_msg.
+typedef tftp_status (*tftp_file_read_cb)(void* data,
+                                         size_t* length,
+                                         off_t offset,
+                                         void* file_cookie);
+
+// tftp_file_write_cb is called by the library to write |length| bytes,
+// starting at |offset|, into the destination. |file_cookie| will be passed to
+// this function from the argument to tftp_process_msg.
+typedef tftp_status (*tftp_file_write_cb)(const void* data,
+                                          size_t* length,
+                                          off_t offset,
+                                          void* file_cookie);
+
+// tftp_file_close_cb is called by the library to finish a file read or write
+// operation. |file_cookie| will be passed to this function from the argument to
+// tftp_process_msg.
+typedef void (*tftp_file_close_cb)(void* file_cookie);
+
+typedef struct {
+    tftp_file_open_read_cb open_read;
+    tftp_file_open_write_cb open_write;
+    tftp_file_read_cb read;
+    tftp_file_write_cb write;
+    tftp_file_close_cb close;
+} tftp_file_interface;
+
+// tftp_transport_send_cb is called by the library to send |len| bytes from
+// |data| over a previously-established connection. On success, the function
+// should return the number of bytes sent. On error, it should return a
+// tftp_status error code.
+typedef int (*tftp_transport_send_cb)(void* data,
+                                      size_t len,
+                                      void* transport_cookie);
+
+// tftp_transport_recv_cb is called by the library to read from the transport
+// interface. It will read values into |data|, up to |len| bytes. If |block| is
+// set, the operation will block until data is received or a timeout happens.
+// (For starting communication, the timeout should be set by the user if
+// desired. Once communication has been established, the timeout is set by the
+// tftp library using the timeout_set callback).
+// On success, the function should return the number of bytes received. On
+// failure it should return a tftp_status error code.
+typedef int (*tftp_transport_recv_cb)(void* data,
+                                      size_t len,
+                                      bool block,
+                                      void* transport_cookie);
+
+// tftp_transport_timeout_set_cb is called by the library to set the timeout
+// length of the transport interface. This function should return 0 on success
+// or -1 on failure.
+typedef int (*tftp_transport_timeout_set_cb)(uint32_t timeout_ms,
+                                             void* transport_cookie);
+
+typedef struct {
+    tftp_transport_send_cb send;
+    tftp_transport_recv_cb recv;
+    tftp_transport_timeout_set_cb timeout_set;
+} tftp_transport_interface;
 
 // Returns the number of bytes needed to hold a tftp_session.
 size_t tftp_sizeof_session(void);
@@ -92,75 +181,46 @@ size_t tftp_sizeof_session(void);
 // |size|. Returns TFTP_ERR_BUFFER_TOO_SMALL if |size| is too small.
 tftp_status tftp_init(tftp_session** session, void* buffer, size_t size);
 
-// Sets the session callback for opening files for transfer.
-int tftp_session_set_open_cb(tftp_session* session, tftp_open_file cb);
+// Specifies the callback functions to use when reading or writing files.
+tftp_status tftp_session_set_file_interface(tftp_session* session,
+                                            tftp_file_interface* callbacks);
 
-// Sets the session callback for reading files to send.
-int tftp_session_set_read_cb(tftp_session* session, tftp_read cb);
+// Specifies the callback functions to use for the network interface. Note that
+// setting up the transport must be performed outside of the purview of the
+// library, since the initial configuration options are highly interface-
+// dependent.
+tftp_status tftp_session_set_transport_interface(tftp_session* session,
+                                                 tftp_transport_interface* callbacks);
 
-// Sets the session callback for writing files that are received.
-int tftp_session_set_write_cb(tftp_session* session, tftp_write cb);
+// Request to send the file |local_filename| across an existing session
+// to |remote_filename| on the target. If |options| is NULL, all values are
+// set to some (semi-)reasonable defaults. Otherwise, all non-NULL members of
+// |options| are used to override defaults. Before calling this function, the
+// client transport interface should be configured as needed.
+tftp_status tftp_push_file(tftp_session* session,
+                           void* transport_cookie,
+                           void* file_cookie,
+                           const char* local_filename,
+                           const char* remote_filename,
+                           tftp_request_opts* options);
 
-// tftp_session_has_pending returns true if the tftp_session has more data to
-// send before waiting for an ack. It is recommended that the caller do a
-// non-blocking read to see if an out-of-order ACK was sent by the remote host
-// before sending additional data packets.
-bool tftp_session_has_pending(tftp_session* session);
+// Wait for a client to request an operation, then service that request.
+// Returns (with TFTP_TRANSFER_COMPLETED) after each successful operation, or
+// on error. This function will call the transport send, recv, and timeout_set
+// operations as needed to facilitate communication with the requestor.
+tftp_status tftp_handle_request(tftp_session* session,
+                                void* transport_cookie,
+                                void* file_cookie,
+                                tftp_handler_opts* opts);
 
-// Generates a write request to send to a tftp server. |filename| is the name
-// sent to the server. |datalen| is the size of the data to be sent.
-// |block_size|, |timeout|, and |window_size| negotiate tftp options with the
-// server. |outgoing| must point to a scratch buffer the library can
-// use to assemble the request. |outlen| is the size of the outgoing scratch
-// buffer, and will be set to the size of the request. |timeout_ms| is set to
-// the next timeout value the user of the library should use when waiting for a
-// response.
-tftp_status tftp_generate_write_request(tftp_session* session,
-                                        const char* filename,
-                                        tftp_mode mode,
-                                        size_t datalen,
-                                        size_t block_size,
-                                        uint8_t timeout,
-                                        uint8_t window_size,
-                                        void* outgoing,
-                                        size_t* outlen,
-                                        uint32_t* timeout_ms);
-
-// Handle an incoming tftp packet. |incoming| must point to the packet of size
-// |inlen|. |outgoing| must point to a scratch buffer the library can use to
-// assemble the next packet to send. |outlen| is the size of the outgoing
-// scratch buffer. |timeout_ms| is set to the next timeout value the user of the
-// library should use when waiting for a response. |cookie| will be passed to
-// the tftp callback functions.
+// Processes a single message from the requestor, which is passed in as the
+// inbuf component of |opts|. Responds to the request and updates the
+// connection timeout using the appropriate transport send and timeout_set
+// functions.
 tftp_status tftp_handle_msg(tftp_session* session,
-                            void* incoming,
-                            size_t inlen,
-                            void* outgoing,
-                            size_t* outlen,
-                            uint32_t* timeout_ms,
-                            void* cookie);
-
-// Prepare a DATA packet to send to the remote host. This is only required when
-// tftp_session_has_pending(session) returns true, as tftp_handle_msg() will
-// prepare the first DATA message in each window.
-tftp_status tftp_prepare_data(tftp_session* session,
-                              void* outgoing,
-                              size_t* outlen,
-                              uint32_t* timeout_ms,
-                              void* cookie);
-
-// If no response from the peer is received before the most recent timeout_ms
-// value, this function should be called to take the next appropriate action
-// (e.g., retransmit or cancel). |outgoing| must point to a scratch buffer the
-// library can use to assemble the next packet to send. |outlen| is the size of
-// the outgoing scratch buffer. |timeout_ms| is set to the next timeout value
-// the user of the library should use when waiting for a response. |cookie| will
-// be passed to the tftp callback functions.
-tftp_status tftp_timeout(tftp_session* session,
-                         void* outgoing,
-                         size_t* outlen,
-                         uint32_t* timeout_ms,
-                         void* cookie);
+                            void* transport_cookie,
+                            void* file_cookie,
+                            tftp_handler_opts* opts);
 
 // TODO: tftp_error() for client errors that need to be sent to the remote host
 

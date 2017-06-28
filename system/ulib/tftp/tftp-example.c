@@ -25,10 +25,10 @@
 
 #define BLOCKSZ 1024
 #define WINSZ   64
-#define SCRATCHSZ 2048
 
 #define DROPRATE 20
 
+#define SCRATCHSZ 2048
 static char scratch[SCRATCHSZ];
 static char out_scratch[SCRATCHSZ];
 static char in_scratch[SCRATCHSZ];
@@ -47,11 +47,14 @@ struct connection {
     uint32_t previous_timeout_ms;
 };
 
-int connection_send(connection_t* connection, void* data, size_t len) {
+int connection_send(void* data, size_t len, void* transport_cookie) {
+    connection_t* connection = (connection_t*)transport_cookie;
+#if DROPRATE != 0
     if (rand() % DROPRATE == 0) {
         fprintf(stderr, "DROP\n");
         return len;
     }
+#endif
     uint8_t* msg = data;
     uint16_t opcode = ntohs(*(uint16_t*)msg);
     fprintf(stderr, "sending opcode=%u\n", opcode);
@@ -59,7 +62,8 @@ int connection_send(connection_t* connection, void* data, size_t len) {
             sizeof(struct sockaddr_in));
 }
 
-int connection_receive(connection_t* connection, void* data, size_t len, bool block) {
+int connection_receive(void* data, size_t len, bool block, void* transport_cookie) {
+    connection_t* connection = (connection_t*)transport_cookie;
     socklen_t server_len;
     int fl = fcntl(connection->socket, F_GETFL, 0);
     if (fl < 0) {
@@ -80,10 +84,20 @@ int connection_receive(connection_t* connection, void* data, size_t len, bool bl
         errno = e;
         return -1;
     }
-    return recvfrom(connection->socket, data, len, 0, (struct sockaddr*)&connection->in_addr, &server_len);
+    ssize_t recv_result = recvfrom(connection->socket, data, len, 0,
+                                   (struct sockaddr*)&connection->in_addr,
+                                   &server_len);
+    if (recv_result < 0) {
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+            return TFTP_ERR_TIMED_OUT;
+        fprintf(stderr, "failed during recvfrom: errno=%d\n", (int) errno);
+        return TFTP_ERR_INTERNAL;
+    }
+    return recv_result;
 }
 
-int connection_set_timeout(connection_t* connection, uint32_t timeout_ms) {
+int connection_set_timeout(uint32_t timeout_ms, void* transport_cookie) {
+    connection_t* connection = (connection_t*)transport_cookie;
     if (connection->previous_timeout_ms != timeout_ms && timeout_ms > 0) {
         fprintf(stdout, "Setting timeout to %dms\n", timeout_ms);
         connection->previous_timeout_ms = timeout_ms;
@@ -135,28 +149,44 @@ err:
     return NULL;
 }
 
-void print_usage() {
-    fprintf(stdout, "tftp (-s filename|-r filename)\n");
+void print_usage(void) {
+    fprintf(stdout, "tftp (-s filename|-r)\n");
     fprintf(stdout, "\t -s filename to send the provided file\n");
-    fprintf(stdout, "\t -r filename to receive a file\n");
+    fprintf(stdout, "\t -r to receive a file\n");
 }
 
-tftp_status receive_open_file(const char* filename,
-                              size_t size,
-                              void* cookie) {
-    fprintf(stdout, "Opening %s\n", filename);
-    int fd = open(filename, O_RDWR);
+ssize_t open_read_file(const char* filename, void* file_cookie) {
+    fprintf(stdout, "Opening %s for reading\n", filename);
+    int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "could not open file: err=%d\n", errno);
-        return fd;
+        return TFTP_ERR_IO;
     }
-    struct tftp_file* f = cookie;
+    struct tftp_file* f = (struct tftp_file*)file_cookie;
+    f->fd = fd;
+    struct stat st;
+    if (fstat(f->fd, &st) < 0) {
+        fprintf(stderr, "could not get file size: err=%d\n", errno);
+        return TFTP_ERR_IO;
+    }
+    return st.st_size;
+}
+
+tftp_status open_write_file(const char* filename, size_t size, void* file_cookie) {
+    fprintf(stdout, "Opening %s for writing\n", filename);
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC,
+                            S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (fd < 0) {
+        fprintf(stderr, "could not open file: err=%d\n", errno);
+        return TFTP_ERR_IO;
+    }
+    struct tftp_file* f = (struct tftp_file*)file_cookie;
     f->fd = fd;
     return TFTP_NO_ERROR;
 }
 
-tftp_status read_file(void* data, size_t* length, off_t offset, void* cookie) {
-    int fd = ((struct tftp_file*)cookie)->fd;
+tftp_status read_file(void* data, size_t* length, off_t offset, void* file_cookie) {
+    int fd = ((struct tftp_file*)file_cookie)->fd;
     ssize_t n = pread(fd, data, *length, offset);
     if (n < 0) {
         fprintf(stderr, "could not read file: offset %jd, err=%d\n", (intmax_t)offset, errno);
@@ -166,8 +196,8 @@ tftp_status read_file(void* data, size_t* length, off_t offset, void* cookie) {
     return TFTP_NO_ERROR;
 }
 
-tftp_status write_file(const void* data, size_t* length, off_t offset, void* cookie) {
-    struct tftp_file* f = cookie;
+tftp_status write_file(const void* data, size_t* length, off_t offset, void* file_cookie) {
+    struct tftp_file* f = file_cookie;
     int fd = f->fd;
     ssize_t n = pwrite(fd, data, *length, offset);
     if (n < 0) {
@@ -179,248 +209,54 @@ tftp_status write_file(const void* data, size_t* length, off_t offset, void* coo
     return TFTP_NO_ERROR;
 }
 
-tftp_status tftp_send_file(tftp_session* session,
-                           const char* hostname,
-                           int incoming_port,
-                           int outgoing_port,
-                           const char* filename) {
-    connection_t* connection = create_connection(hostname, incoming_port, outgoing_port);
-    if (!connection) {
-        return -1;
-    }
-
-    struct tftp_file f;
-    f.fd = open(filename, O_RDONLY);
-    if (f.fd < 0) {
-        fprintf(stderr, "failed to open %s: err=%d\n", filename, errno);
-        return -1;
-    }
-    struct stat st;
-    if (fstat(f.fd, &st) < 0) {
-        fprintf(stderr, "could not get file size: err=%d\n", errno);
-        return -1;
-    }
-    long file_size = st.st_size;
-
-    fprintf(stdout, "Sending %s of size %ld\n", filename, file_size);
-
-
-    size_t out = SCRATCHSZ;
-    size_t in = SCRATCHSZ;
-    void* outgoing = (void*)out_scratch;
-    void* incoming = (void*)in_scratch;
-    uint32_t timeout_ms = 60000;
-
-    tftp_status s =
-        tftp_generate_write_request(session,
-                                    "magenta.bin",
-                                    MODE_OCTET,
-                                    file_size,
-                                    BLOCKSZ, // block_size
-                                    0,   // timeout
-                                    WINSZ,  // window_size
-                                    outgoing,
-                                    &out,
-                                    &timeout_ms);
-    if (s < 0) {
-        fprintf(stderr, "Failed to generate write request\n");
-        return -1;
-    }
-    if (!out) {
-        fprintf(stderr, "no write request generated!\n");
-        return -1;
-    }
-
-    int n = connection_send(connection, outgoing, out);
-    if (n < 0) {
-        fprintf(stderr, "could not send data\n");
-        return -1;
-    }
-    fprintf(stdout, "Sent %d\n", n);
-
-    int ret;
-    bool block = true;
-    int pending = 0;
-    do {
-        connection_set_timeout(connection, timeout_ms);
-
-        in = SCRATCHSZ;
-        n = connection_receive(connection, incoming, in, block);
-        if (n < 0) {
-            if (pending && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-                out = SCRATCHSZ;
-                ret = tftp_prepare_data(session,
-                                        outgoing,
-                                        &out,
-                                        &timeout_ms,
-                                        &f);
-                if (out) {
-                    n = connection_send(connection, outgoing, out);
-                    if (n < 0) {
-                        fprintf(stderr, "could not send data\n");
-                        return -1;
-                    }
-                }
-                if (ret < 0) {
-                    fprintf(stderr, "failed to prepare data to send\n");
-                    return -1;
-                }
-                if (!tftp_session_has_pending(session)) {
-                    pending = 0;
-                    block = true;
-                }
-                continue;
-            }
-            if (errno == EAGAIN) {
-                fprintf(stdout, "Timed out\n");
-                ret = tftp_timeout(session,
-                                   outgoing,
-                                   &out,
-                                   &timeout_ms,
-                                   connection);
-                if (out) {
-                    n = connection_send(connection, outgoing, out);
-                    if (n < 0) {
-                        fprintf(stderr, "could not send data\n");
-                        return -1;
-                    }
-                }
-                if (ret < 0) {
-                    fprintf(stderr, "Failed to parse request (%d)\n", ret);
-                    return -1;
-                }
-                continue;
-            }
-            fprintf(stdout, "Failed %d\n", errno);
-            return -1;
-        }
-        fprintf(stdout, "Received %d\n", n);
-        in = n;
-
-        out = SCRATCHSZ;
-        ret = tftp_handle_msg(session,
-                              incoming,
-                              in,
-                              outgoing,
-                              &out,
-                              &timeout_ms,
-                              &f);
-        if (out) {
-            n = connection_send(connection, outgoing, out);
-            if (n < 0) {
-                fprintf(stderr, "could not send data\n");
-                return -1;
-            }
-        }
-        if (ret < 0) {
-            fprintf(stderr, "Failed to parse request (%d)\n", ret);
-            return -1;
-        } else if (ret == TFTP_TRANSFER_COMPLETED) {
-            fprintf(stderr, "Completed\n");
-            return 0;
-        }
-        if (tftp_session_has_pending(session)) {
-            pending = 1;
-            block = false;
-        } else {
-            pending = 0;
-            block = true;
-        }
-    } while (1);
-
-    return 0;
+void close_file(void* file_cookie) {
+    struct tftp_file* f = file_cookie;
+    close(f->fd);
 }
 
-tftp_status tftp_receive_file(tftp_session* session,
-                              const char* hostname,
-                              int incoming_port,
-                              int outgoing_port,
-                              const char* filename) {
-    connection_t* connection = create_connection(hostname, incoming_port, outgoing_port);
-    size_t in = SCRATCHSZ;
-    void* incoming = (void*)in_scratch;
-    size_t out = SCRATCHSZ;
-    void* outgoing = (void*)out_scratch;
-    uint32_t timeout_ms = 60000;
-
-    if (!connection) {
-        return -1;
+int tftp_send_file_wrapper(tftp_session* session,
+                           connection_t* connection,
+                           const char* filename) {
+    struct tftp_file file_cookie;
+    char err_msg[128];
+    tftp_request_opts options = { 0 };
+    options.inbuf = in_scratch;
+    options.inbuf_sz = sizeof(in_scratch);
+    options.outbuf = out_scratch;
+    options.outbuf_sz = sizeof(out_scratch);
+    options.err_msg = err_msg;
+    options.err_msg_sz = sizeof(err_msg);
+    tftp_status send_result =
+        tftp_push_file(session, connection, &file_cookie, filename,
+                       "magenta.bin", &options);
+    if (send_result == TFTP_NO_ERROR) {
+        return 0;
     }
+    fprintf(stderr, "%s\n", err_msg);
+    return -1;
+}
 
-    struct tftp_file f;
-    f.fd = open(filename, O_WRONLY | O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    if (f.fd < 0) {
-        fprintf(stderr, "failed to open %s: err=%d\n", filename, errno);
-        return -1;
-    }
+int tftp_receive_file_wrapper(tftp_session* session,
+                              connection_t* connection) {
+    struct tftp_file file_cookie;
+    char err_msg[128];
+    tftp_handler_opts options = { 0 };
+    options.inbuf = in_scratch;
+    options.inbuf_sz = sizeof(in_scratch);
+    options.outbuf = out_scratch;
+    options.outbuf_sz = sizeof(out_scratch);
+    options.err_msg = err_msg;
+    options.err_msg_sz = sizeof(err_msg);
 
-    fprintf(stdout, "Waiting for traffic.\n");
-
-    int n, ret;
-    int wrq_received = 0;
+    tftp_status status;
     do {
-        in = SCRATCHSZ;
-        n = connection_receive(connection, incoming, in, true);
-        if (n < 0) {
-            if (errno == EAGAIN) {
-                fprintf(stdout, "Timed out\n");
-                if (wrq_received) {
-                    out = SCRATCHSZ;
-                    ret = tftp_timeout(session,
-                                       outgoing,
-                                       &out,
-                                       &timeout_ms,
-                                       &f);
-                    if (out) {
-                        n = connection_send(connection, outgoing, out);
-                        if (n < 0) {
-                            fprintf(stderr, "could not send data\n");
-                            return -1;
-                        }
-                    }
-                    if (ret < 0) {
-                        fprintf(stderr, "Failed to parse request (%d)\n", ret);
-                        return -1;
-                    }
-                }
-                continue;
-            } else {
-                fprintf(stdout, "Failed to receive: -%d\n", errno);
-                return -1;
-            }
-        } else {
-            fprintf(stdout, "Received: %d\n", n);
-            in = n;
-            wrq_received = 1;
-        }
-
-        out = SCRATCHSZ;
-        ret = tftp_handle_msg(session,
-                              incoming,
-                              in,
-                              outgoing,
-                              &out,
-                              &timeout_ms,
-                              &f);
-        if (out) {
-            n = connection_send(connection, outgoing, out);
-            if (n < 0) {
-                fprintf(stderr, "could not send data\n");
-                return -1;
-            }
-        }
-        if (ret < 0) {
-            fprintf(stderr, "Failed to parse request (%d)\n", ret);
-            return -1;
-        } else if (ret == TFTP_TRANSFER_COMPLETED) {
-            fprintf(stderr, "Completed %zu ... ", f.size);
-            close(f.fd);
-            fprintf(stderr, "Flushed to disk\n");
-            return 0;
-        }
-        connection_set_timeout(connection, timeout_ms);
-    } while (1);
-    return 0;
+        status = tftp_handle_request(session, connection, &file_cookie,
+                                     &options);
+    } while (status == TFTP_NO_ERROR || status == TFTP_ERR_TIMED_OUT);
+    if (status == TFTP_TRANSFER_COMPLETED)
+        return 0;
+    fprintf(stderr, "%s\n", err_msg);
+    return 1;
 }
 
 int main(int argc, char* argv[]) {
@@ -429,7 +265,7 @@ int main(int argc, char* argv[]) {
 
     srand(time(NULL));
 
-    if (argc < 3) {
+    if (argc < 2) {
         print_usage();
         return 1;
     }
@@ -445,14 +281,34 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    tftp_session_set_open_cb(session, receive_open_file);
-    tftp_session_set_read_cb(session, read_file);
-    tftp_session_set_write_cb(session, write_file);
+    tftp_file_interface file_interface = {open_read_file,
+                                          open_write_file,
+                                          read_file,
+                                          write_file,
+                                          close_file};
+    tftp_session_set_file_interface(session, &file_interface);
+    tftp_transport_interface transport_interface = {connection_send,
+                                                    connection_receive,
+                                                    connection_set_timeout};
+    tftp_session_set_transport_interface(session, &transport_interface);
 
+    connection_t* connection;
     if (!strncmp(argv[1], "-s", 2)) {
-        return tftp_send_file(session, hostname, port, port + 1, argv[2]);
+        if (argc < 3) {
+            print_usage();
+            return 1;
+        }
+        connection = create_connection(hostname, port, port + 1);
+        if (!connection) {
+            return -1;
+        }
+        return tftp_send_file_wrapper(session, connection, argv[2]);
     } else if (!strncmp(argv[1], "-r", 2)) {
-        return tftp_receive_file(session, hostname, port + 1, port, argv[2]);
+        connection = create_connection(hostname, port + 1, port);
+        if (!connection) {
+            return -1;
+        }
+        return tftp_receive_file_wrapper(session, connection);
     } else {
         print_usage();
         return 2;

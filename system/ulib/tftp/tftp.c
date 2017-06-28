@@ -145,7 +145,7 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
                 session->block_number + session->window_index, len, session->block_size,
                 session->offset, session->file_size, session->window_index, session->window_size);
         // TODO(tkilbourn): assert that these function pointers are set
-        tftp_status s = session->read_fn(resp->data, &len, session->offset, cookie);
+        tftp_status s = session->file_interface.read(resp->data, &len, session->offset, cookie);
         if (s < 0) {
             xprintf("Err reading: %d\n", s);
             return s;
@@ -191,27 +191,22 @@ int tftp_init(tftp_session** session, void* buffer, size_t size) {
     return TFTP_NO_ERROR;
 }
 
-int tftp_session_set_open_cb(tftp_session* session, tftp_open_file cb) {
+tftp_status tftp_session_set_file_interface(tftp_session* session,
+                                            tftp_file_interface* callbacks) {
     if (session == NULL) {
         return TFTP_ERR_INVALID_ARGS;
     }
-    session->open_fn = cb;
+
+    session->file_interface = *callbacks;
     return TFTP_NO_ERROR;
 }
 
-int tftp_session_set_read_cb(tftp_session* session, tftp_read cb) {
+tftp_status tftp_session_set_transport_interface(tftp_session* session,
+                                                 tftp_transport_interface* callbacks) {
     if (session == NULL) {
         return TFTP_ERR_INVALID_ARGS;
     }
-    session->read_fn = cb;
-    return TFTP_NO_ERROR;
-}
-
-int tftp_session_set_write_cb(tftp_session* session, tftp_write cb) {
-    if (session == NULL) {
-        return TFTP_ERR_INVALID_ARGS;
-    }
-    session->write_fn = cb;
+    session->transport_interface = *callbacks;
     return TFTP_NO_ERROR;
 }
 
@@ -454,8 +449,8 @@ tftp_status tftp_handle_wrq(tftp_session* session,
         append_option(&body, &left, kWindowSize, "%d", session->options.window_size);
         session->window_size = session->options.window_size;
     }
-    if (!session->open_fn ||
-            session->open_fn(session->options.filename, session->options.file_size, cookie)) {
+    if (!session->file_interface.open_write ||
+            session->file_interface.open_write(session->options.filename, session->options.file_size, cookie)) {
         xprintf("Could not open file on write request\n");
         set_error(session, OPCODE_ERROR, resp, resp_len);
         return TFTP_ERR_BAD_STATE;
@@ -509,7 +504,7 @@ tftp_status tftp_handle_data(tftp_session* session,
         xprintf("Advancing normally + 1\n");
         size_t wr = msg_len - sizeof(tftp_data_msg);
         // TODO(tkilbourn): assert that these function pointers are set
-        tftp_status ret = session->write_fn(data->data, &wr,
+        tftp_status ret = session->file_interface.write(data->data, &wr,
                 session->block_number * session->block_size, cookie);
         if (ret < 0) {
             xprintf("Error writing: %d\n", ret);
@@ -724,13 +719,13 @@ tftp_status tftp_handle_oerror(tftp_session* session,
     return TFTP_ERR_INTERNAL;
 }
 
-tftp_status tftp_handle_msg(tftp_session* session,
-                            void* incoming,
-                            size_t inlen,
-                            void* outgoing,
-                            size_t* outlen,
-                            uint32_t* timeout_ms,
-                            void* cookie) {
+tftp_status tftp_process_msg(tftp_session* session,
+                             void* incoming,
+                             size_t inlen,
+                             void* outgoing,
+                             size_t* outlen,
+                             uint32_t* timeout_ms,
+                             void* cookie) {
     tftp_msg* msg = incoming;
     tftp_msg* resp = outgoing;
 
@@ -790,3 +785,243 @@ tftp_status tftp_timeout(tftp_session* session,
     // TODO: really handle timeouts
     return TFTP_NO_ERROR;
 }
+
+#define REPORT_ERR(opts,...)                                     \
+    if (opts->err_msg) {                                         \
+        snprintf(opts->err_msg, opts->err_msg_sz, __VA_ARGS__);  \
+    }
+
+tftp_status tftp_push_file(tftp_session* session,
+                           void* transport_cookie,
+                           void* file_cookie,
+                           const char* local_filename,
+                           const char* remote_filename,
+                           tftp_request_opts* opts) {
+    if (!opts || !opts->inbuf || !opts->outbuf) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    ssize_t file_size;
+    file_size = session->file_interface.open_read(local_filename, file_cookie);
+    if (file_size < 0) {
+        REPORT_ERR(opts, "failed during file open callback");
+        return file_size;
+    }
+
+    size_t in_buf_sz = opts->inbuf_sz;
+    void* incoming = (void*)opts->inbuf;
+    size_t out_buf_sz = opts->outbuf_sz;
+    void* outgoing = (void*)opts->outbuf;
+    uint8_t timeout = opts->timeout ? *opts->timeout : TFTP_DEFAULT_CLIENT_TIMEOUT;
+    tftp_mode mode = opts->mode ? *opts->mode : TFTP_DEFAULT_CLIENT_MODE;
+    uint16_t block_size = opts->block_size ? *opts->block_size : TFTP_DEFAULT_CLIENT_BLOCKSZ;
+    uint32_t window_size = opts->window_size ? *opts->window_size : TFTP_DEFAULT_CLIENT_WINSZ;
+
+    size_t out_sz = out_buf_sz;
+    uint32_t timeout_ms;
+    tftp_status s =
+        tftp_generate_write_request(session,
+                                    remote_filename,
+                                    mode,
+                                    file_size,
+                                    block_size,
+                                    timeout,
+                                    window_size,
+                                    outgoing,
+                                    &out_sz,
+                                    &timeout_ms);
+    if (s < 0) {
+        REPORT_ERR(opts, "failed to generate write request");
+        return s;
+    }
+    if (!out_sz) {
+        REPORT_ERR(opts, "no write request generated");
+        return TFTP_ERR_INTERNAL;
+    }
+
+    int n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+    if (n < 0) {
+        REPORT_ERR(opts, "failed during transport send callback");
+        return (tftp_status)n;
+    }
+
+    int ret;
+    bool pending = false;
+    do {
+        ret = session->transport_interface.timeout_set(timeout_ms, transport_cookie);
+        if (ret < 0) {
+            REPORT_ERR(opts, "failed during transport timeout set callback");
+            return ret;
+        }
+
+        n = session->transport_interface.recv(incoming, in_buf_sz, !pending, transport_cookie);
+        if (n < 0) {
+            if (pending && (n == TFTP_ERR_TIMED_OUT)) {
+                out_sz = out_buf_sz;
+                ret = tftp_prepare_data(session,
+                                        outgoing,
+                                        &out_sz,
+                                        &timeout_ms,
+                                        file_cookie);
+                if (out_sz) {
+                    n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+                    if (n < 0) {
+                        REPORT_ERR(opts, "failed during transport send callback");
+                        return n;
+                    }
+                }
+                if (ret < 0) {
+                    REPORT_ERR(opts, "failed to prepare data to send");
+                    return ret;
+                }
+                if (!tftp_session_has_pending(session)) {
+                    pending = false;
+                }
+                continue;
+            }
+            if (n == TFTP_ERR_TIMED_OUT) {
+                ret = tftp_timeout(session,
+                                   outgoing,
+                                   &out_sz,
+                                   &timeout_ms,
+                                   transport_cookie);
+                if (out_sz) {
+                    n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+                    if (n < 0) {
+                        REPORT_ERR(opts, "failed during transport send callback");
+                        return n;
+                    }
+                }
+                if (ret < 0) {
+                    REPORT_ERR(opts, "failed to parse request");
+                    return ret;
+                }
+                continue;
+            }
+            REPORT_ERR(opts, "failed during transport recv callback");
+            return n;
+        }
+
+        out_sz = out_buf_sz;
+        ret = tftp_process_msg(session,
+                               incoming,
+                               n,
+                               outgoing,
+                               &out_sz,
+                               &timeout_ms,
+                               file_cookie);
+        if (out_sz) {
+            n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+            if (n < 0) {
+                REPORT_ERR(opts, "failed during transport send callback");
+                return n;
+            }
+        }
+        if (ret < 0) {
+            REPORT_ERR(opts, "failed to parse request");
+            return ret;
+        } else if (ret == TFTP_TRANSFER_COMPLETED) {
+            break;
+        }
+        if (tftp_session_has_pending(session)) {
+            pending = true;
+        } else {
+            pending = false;
+        }
+    } while (1);
+
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_request(tftp_session* session,
+                                void* transport_cookie,
+                                void* file_cookie,
+                                tftp_handler_opts* opts) {
+    if (!opts || !opts->inbuf || !opts->outbuf) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    size_t in_buf_sz = opts->inbuf_sz;
+    void* incoming = (void*)opts->inbuf;
+    size_t out_buf_sz = opts->outbuf_sz;
+    void* outgoing = (void*)opts->outbuf;
+
+    int n, ret;
+    bool transfer_in_progress = false;
+    do {
+        size_t in_sz = in_buf_sz;
+        n = session->transport_interface.recv(incoming, in_sz, true, transport_cookie);
+        if (n < 0) {
+            if (n == TFTP_ERR_TIMED_OUT) {
+                if (transfer_in_progress) {
+                    uint32_t timeout_ms;
+                    size_t out_sz = out_buf_sz;
+                    ret = tftp_timeout(session,
+                                       outgoing,
+                                       &out_sz,
+                                       &timeout_ms,
+                                       file_cookie);
+                    if (out_sz) {
+                        n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+                        if (n < 0) {
+                            REPORT_ERR(opts, "failed during transport send callback");
+                            return (tftp_status)n;
+                        }
+                    }
+                    if (ret < 0) {
+                        REPORT_ERR(opts, "failed to parse request");
+                        return ret;
+                    }
+                }
+                continue;
+            }
+            REPORT_ERR(opts, "failed during transport recv callback");
+            return n;
+        } else {
+            in_sz = n;
+            transfer_in_progress = true;
+        }
+
+        tftp_handler_opts send_opts;
+        send_opts = *opts;
+        send_opts.inbuf_sz = in_sz;
+        tftp_status status = tftp_handle_msg(session, transport_cookie,
+                                             file_cookie, &send_opts);
+        if (status != TFTP_NO_ERROR) {
+            return status;
+        }
+    } while (1);
+
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_msg(tftp_session* session,
+                            void* transport_cookie,
+                            void* file_cookie,
+                            tftp_handler_opts* opts) {
+    if (!opts || !opts->inbuf || !opts->outbuf) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    uint32_t timeout_ms;
+    tftp_status ret;
+    size_t out_sz = opts->outbuf_sz;
+    ret = tftp_process_msg(session, opts->inbuf, opts->inbuf_sz,
+                           opts->outbuf, &out_sz, &timeout_ms, file_cookie);
+    if (out_sz) {
+        int n = session->transport_interface.send(opts->outbuf, out_sz, transport_cookie);
+        if (n < 0) {
+            REPORT_ERR(opts, "failed during transport send callback");
+            return n;
+        }
+    }
+    if (ret < 0) {
+        REPORT_ERR(opts, "failed to parse request");
+    } else if (ret == TFTP_TRANSFER_COMPLETED) {
+        session->file_interface.close(file_cookie);
+    } else {
+        ret = session->transport_interface.timeout_set(timeout_ms, transport_cookie);
+        if (ret < 0) {
+            REPORT_ERR(opts, "failed during transport timeout set callback");
+        }
+    }
+    return ret;
+}
+
