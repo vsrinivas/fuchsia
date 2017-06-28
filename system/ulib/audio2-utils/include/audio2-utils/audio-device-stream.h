@@ -10,6 +10,9 @@
 #include <mx/vmo.h>
 #include <mxtl/unique_ptr.h>
 
+namespace audio2 {
+namespace utils {
+
 class AudioDeviceStream {
 public:
     static mxtl::unique_ptr<AudioDeviceStream> Create(bool input, uint32_t dev_id);
@@ -55,3 +58,6 @@ protected:
     uint32_t rb_sz_       = 0;
     void*    rb_virt_     = nullptr;
 };
+
+}  // namespace utils
+}  // namespace audio2

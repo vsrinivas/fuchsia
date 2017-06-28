@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <audio2-utils/audio-device-stream.h>
+#include <audio2-utils/audio-input.h>
+#include <audio2-utils/audio-output.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <magenta/assert.h>
@@ -19,9 +22,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "audio-device-stream.h"
-#include "audio-input.h"
-#include "audio-output.h"
+namespace audio2 {
+namespace utils {
 
 template <typename ReqType, typename RespType>
 mx_status_t DoCallImpl(const mx::channel& channel,
@@ -493,3 +495,7 @@ mx_status_t AudioDeviceStream::StopRingBuffer() {
 
     return DoCall(rb_ch_, req, &resp);
 }
+
+
+}  // namespace utils
+}  // namespace audio2

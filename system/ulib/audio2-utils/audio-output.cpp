@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <audio2-utils/audio-output.h>
+#include <audio2-utils/audio-stream.h>
 #include <magenta/device/audio2.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/limits.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "audio-output.h"
-#include "audio-stream.h"
+namespace audio2 {
+namespace utils {
 
 mx_status_t AudioOutput::Play(AudioSource& source) {
     mx_status_t res;
@@ -175,3 +177,6 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
 
     return res;
 }
+
+}  // namespace utils
+}  // namespace audio2

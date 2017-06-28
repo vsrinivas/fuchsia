@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <audio2-utils/audio-device-stream.h>
+#include <audio2-utils/audio-input.h>
+#include <audio2-utils/audio-output.h>
 #include <magenta/types.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "audio-input.h"
-#include "audio-output.h"
-#include "audio-stream.h"
 #include "sine-source.h"
 #include "wav-sink.h"
 #include "wav-source.h"
@@ -217,7 +217,7 @@ int main(int argc, const char** argv) {
     print_usage.cancel();
 
     // Open the selected stream.
-    auto stream = AudioDeviceStream::Create(input, dev_num);
+    auto stream = audio2::utils::AudioDeviceStream::Create(input, dev_num);
     if (stream == nullptr) {
         printf("Out of memory!\n");
         return MX_ERR_NO_MEMORY;
@@ -244,7 +244,7 @@ int main(int argc, const char** argv) {
 
         SineSource sine_source(tone_freq, 1.0, duration);
         printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
-        return static_cast<AudioOutput*>(stream.get())->Play(sine_source);
+        return static_cast<audio2::utils::AudioOutput*>(stream.get())->Play(sine_source);
     }
 
     case Command::PLAY: {
@@ -258,7 +258,7 @@ int main(int argc, const char** argv) {
         if (res != MX_OK)
             return res;
 
-        return static_cast<AudioOutput*>(stream.get())->Play(wav_source);
+        return static_cast<audio2::utils::AudioOutput*>(stream.get())->Play(wav_source);
     }
 
     case Command::RECORD: {
@@ -284,7 +284,7 @@ int main(int argc, const char** argv) {
         if (res != MX_OK)
             return res;
 
-        return static_cast<AudioInput*>(stream.get())->Record(wav_sink, duration);
+        return static_cast<audio2::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
     }
 
     default:

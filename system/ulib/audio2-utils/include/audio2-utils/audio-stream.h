@@ -7,6 +7,9 @@
 #include <magenta/types.h>
 #include <magenta/device/audio2.h>
 
+namespace audio2 {
+namespace utils {
+
 class AudioStream {
 public:
     struct Format {
@@ -29,3 +32,6 @@ public:
     virtual mx_status_t PutFrames(const void* buffer, uint32_t amt) = 0;
     virtual mx_status_t Finalize() = 0;
 };
+
+}  // namespace utils
+}  // namespace audio2

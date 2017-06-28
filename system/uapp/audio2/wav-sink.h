@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include <audio2-utils/audio-stream.h>
 #include <magenta/types.h>
 
-#include "audio-stream.h"
 #include "wav-common.h"
 
 class WAVSink : public WAVCommon,
-                public AudioSink {
+                public audio2::utils::AudioSink {
 public:
     WAVSink() { }
     ~WAVSink() { Finalize(); }

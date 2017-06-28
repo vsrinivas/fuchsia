@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <audio2-utils/audio-device-stream.h>
 #include <magenta/types.h>
 
-#include "audio-device-stream.h"
+namespace audio2 {
+namespace utils {
 
 class AudioSink;
 
@@ -20,3 +22,6 @@ private:
 
     explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(true, dev_id) { }
 };
+
+}  // namespace utils
+}  // namespace audio2

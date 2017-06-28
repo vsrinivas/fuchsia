@@ -3,26 +3,20 @@
 # found in the LICENSE file.
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
+
 MODULE := $(LOCAL_DIR)
-MODULE_TYPE := userapp
+
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/audio2.cpp \
-    $(LOCAL_DIR)/sine-source.cpp \
-    $(LOCAL_DIR)/wav-common.cpp \
-    $(LOCAL_DIR)/wav-sink.cpp \
-    $(LOCAL_DIR)/wav-source.cpp
+    $(LOCAL_DIR)/audio-device-stream.cpp \
+    $(LOCAL_DIR)/audio-input.cpp \
+    $(LOCAL_DIR)/audio-output.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/audio2-utils \
     system/ulib/mx \
     system/ulib/mxalloc \
-    system/ulib/mxcpp \
-    system/ulib/mxtl
-
-MODULE_LIBS := \
     system/ulib/mxio \
-    system/ulib/magenta \
-    system/ulib/c
+    system/ulib/mxtl
 
 include make/module.mk

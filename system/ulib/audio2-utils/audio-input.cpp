@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <audio2-utils/audio-input.h>
+#include <audio2-utils/audio-stream.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/limits.h>
 
-#include "audio-input.h"
-#include "audio-stream.h"
+namespace audio2 {
+namespace utils {
 
 static constexpr mx_time_t CHUNK_TIME = MX_MSEC(100);
 static constexpr float MIN_DURATION = 0.100f;
@@ -146,3 +148,6 @@ mx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     mx_status_t finalize_res = sink.Finalize();
     return (res == MX_OK) ? finalize_res : res;
 }
+
+}  // namespace utils
+}  // namespace audio2
