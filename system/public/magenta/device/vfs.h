@@ -39,10 +39,11 @@
 // { uint8_t event; uint8_t namelen; uint8_t name[namelen]; }
 // Multiple events may arrive in one message, one after another.
 // Names do not include a terminating null.
-//
-// TODO: Rename to IOCTL_VFS_WATCH_DIR
-#define IOCTL_VFS_WATCH_DIR_V2 \
+#define IOCTL_VFS_WATCH_DIR \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 8)
+
+// TODO: Remove this when the renaming deprecation is complete.
+#define IOCTL_VFS_WATCH_DIR_V2 IOCTL_VFS_WATCH_DIR
 
 typedef struct {
     mx_handle_t channel; // Channel to which watch events will be sent
@@ -118,7 +119,11 @@ IOCTL_WRAPPER_VAROUT(ioctl_vfs_query_fs, IOCTL_VFS_QUERY_FS, vfs_query_info_t);
 // ssize_t ioctl_vfs_get_token(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_vfs_get_token, IOCTL_VFS_GET_TOKEN, mx_handle_t);
 
-// ssize_t ioctl_vfs_watch_dir_v2(int fd, vfs_watch_dir_t* in;
+// ssize_t ioctl_vfs_watch_dir(int fd, vfs_watch_dir_t* in);
+IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir, IOCTL_VFS_WATCH_DIR_V2, vfs_watch_dir_t);
+
+// ssize_t ioctl_vfs_watch_dir_v2(int fd, vfs_watch_dir_t* in);
+__attribute__((deprecated("This has been renamed to ioctl_vfs_watch_dir")))
 IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir_v2, IOCTL_VFS_WATCH_DIR_V2, vfs_watch_dir_t);
 
 #define MOUNT_MKDIR_FLAG_REPLACE 1
