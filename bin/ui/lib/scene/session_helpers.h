@@ -65,11 +65,7 @@ mozart2::OpPtr NewCreateVarRoundedRectangleOp(
     uint32_t bottom_left_radius_var_id,
     uint32_t bottom_right_radius_var_id);
 
-mozart2::OpPtr NewCreateMaterialOp(uint32_t id,
-                                   uint8_t red,
-                                   uint8_t green,
-                                   uint8_t blue,
-                                   uint8_t alpha);
+mozart2::OpPtr NewCreateMaterialOp(uint32_t id);
 mozart2::OpPtr NewCreateClipNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateEntityNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id);
@@ -117,5 +113,10 @@ mozart2::ValuePtr NewValue(const escher::mat4& m);
 
 // Material operations.
 mozart2::OpPtr NewSetTextureOp(uint32_t node_id, uint32_t image_id);
+mozart2::OpPtr NewSetColorOp(uint32_t node_id,
+                             uint8_t red,
+                             uint8_t green,
+                             uint8_t blue,
+                             uint8_t alpha);
 
 }  // namespace mozart

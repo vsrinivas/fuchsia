@@ -21,7 +21,9 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   const ResourceId kShapeId = 3;
 
   EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
-  EXPECT_TRUE(Apply(NewCreateMaterialOp(kMaterialId, 255, 100, 100, 255)));
+  EXPECT_TRUE(Apply(NewCreateMaterialOp(kMaterialId)));
+  EXPECT_TRUE(Apply(NewSetTextureOp(kMaterialId, 0)));
+  EXPECT_TRUE(Apply(NewSetColorOp(kMaterialId, 255, 100, 100, 255)));
   EXPECT_TRUE(Apply(NewCreateCircleOp(kShapeId, 50.f)));
   EXPECT_TRUE(Apply(NewSetMaterialOp(kNodeId, kMaterialId)));
   EXPECT_TRUE(Apply(NewSetShapeOp(kNodeId, kShapeId)));

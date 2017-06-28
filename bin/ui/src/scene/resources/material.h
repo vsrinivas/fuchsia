@@ -20,8 +20,9 @@ class Material : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Material(Session* session, float red, float green, float blue, float alpha);
+  Material(Session* session);
 
+  void SetColor(float red, float green, float blue, float alpha);
   void SetTexture(const ImagePtr& texture_image);
 
   float red() const { return escher_material_->color().x; }

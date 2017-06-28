@@ -86,6 +86,19 @@ std::ostream& operator<<(std::ostream& stream,
   return stream << ")";
 }
 
+std::ostream& operator<<(std::ostream& stream,
+                         const mozart2::SetTextureOpPtr& op) {
+  stream << "SetTextureOp(id:" << op->material_id
+         << " texture: " << op->texture_id;
+  return stream << ")";
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const mozart2::SetColorOpPtr& op) {
+  stream << "SetColorOp(id:" << op->material_id;
+  return stream << ")";
+}
+
 std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag) {
   switch (tag) {
     case Value::Tag::VECTOR1:

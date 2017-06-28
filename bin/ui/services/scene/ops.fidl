@@ -24,13 +24,15 @@ union Op {
   DetachChildrenOp detach_children;
   SetShapeOp set_shape;
   SetMaterialOp set_material;
-  SetTextureOp set_texture;
   SetClipOp set_clip;
 
   // Camera and lighting operations.
   SetCameraOp set_camera;
   SetCameraProjectionOp set_camera_projection;
   SetLightIntensityOp set_light_intensity;
+
+  SetTextureOp set_texture;
+  SetColorOp set_color;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -263,7 +265,7 @@ struct SetLightIntensityOp {
 // Sets/clears a material's texture.
 //
 // Constraints:
-// - |id| refs a |Material|.
+// - |material_id| refs a |Material|.
 // - |texture_id| refs a |Image|, or nothing.
 //
 // If no texture is provided (i.e. |texture_id| is zero), a solid color is used.
@@ -272,4 +274,17 @@ struct SetLightIntensityOp {
 struct SetTextureOp {
   uint32 material_id;
   uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
+};
+
+// Sets a material's color.
+//
+// Constraints:
+// - |material_id| refs a |Material|.
+//
+// If a texture is set on the material, then the value sampled from the texture
+// is multiplied by the color.
+struct SetColorOp {
+  uint32 material_id;
+  // TODO: use Value instead of ColorRgba.
+  ColorRgba color;
 };

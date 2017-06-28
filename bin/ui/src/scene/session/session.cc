@@ -91,6 +91,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetLightIntensityOp(op->get_set_light_intensity());
     case mozart2::Op::Tag::SET_TEXTURE:
       return ApplySetTextureOp(op->get_set_texture());
+    case mozart2::Op::Tag::SET_COLOR:
+      return ApplySetColorOp(op->get_set_color());
     case mozart2::Op::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FTL_CHECK(false);
@@ -266,6 +268,25 @@ bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
       material->SetTexture(std::move(image));
       return true;
     }
+  }
+  return false;
+}
+
+bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
+  if (auto material = resources_.FindResource<Material>(op->material_id)) {
+    float red = 1.f;
+    float green = 1.f;
+    float blue = 1.f;
+    float alpha = 1.f;
+    if (op->color) {
+      auto& color = op->color;
+      red = static_cast<float>(color->red) / 255.f;
+      green = static_cast<float>(color->green) / 255.f;
+      blue = static_cast<float>(color->blue) / 255.f;
+      alpha = static_cast<float>(color->alpha) / 255.f;
+    }
+    material->SetColor(red, green, blue, alpha);
+    return true;
   }
   return false;
 }
@@ -449,18 +470,7 @@ bool Session::ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args) {
 
 bool Session::ApplyCreateMaterial(ResourceId id,
                                   const mozart2::MaterialPtr& args) {
-  float red = 1.f;
-  float green = 1.f;
-  float blue = 1.f;
-  float alpha = 1.f;
-  if (args->color) {
-    auto& color = args->color;
-    red = static_cast<float>(color->red) / 255.f;
-    green = static_cast<float>(color->green) / 255.f;
-    blue = static_cast<float>(color->blue) / 255.f;
-    alpha = static_cast<float>(color->alpha) / 255.f;
-  }
-  auto material = CreateMaterial(id, red, green, blue, alpha);
+  auto material = CreateMaterial(id);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
@@ -599,12 +609,8 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
       this, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
 }
 
-ResourcePtr Session::CreateMaterial(ResourceId id,
-                                    float red,
-                                    float green,
-                                    float blue,
-                                    float alpha) {
-  return ftl::MakeRefCounted<Material>(this, red, green, blue, alpha);
+ResourcePtr Session::CreateMaterial(ResourceId id) {
+  return ftl::MakeRefCounted<Material>(this);
 }
 
 void Session::TearDown() {

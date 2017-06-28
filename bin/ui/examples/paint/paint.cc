@@ -235,8 +235,8 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 
     // Create a material on the shape.
     mozart::ResourceId material_id = material_id_ = NewResourceId();
-    ops.push_back(
-        mozart::NewCreateMaterialOp(material_id_, 255, 100, 100, 255));
+    ops.push_back(mozart::NewCreateMaterialOp(material_id_));
+    ops.push_back(mozart::NewSetColorOp(material_id_, 255, 100, 100, 255));
     ops.push_back(mozart::NewSetMaterialOp(node_id_, material_id));
 
     const float kScreenWidth = 2160.f;
@@ -256,7 +256,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
         mozart::kOnesFloat3,        // scale
         mozart::kZeroesFloat3,      // anchor point
         mozart::kQuaternionDefault  // rotation
-    ));
+        ));
     // Attach the circle to the Scene.
     ops.push_back(mozart::NewAddChildOp(scene_id, node_id));
 

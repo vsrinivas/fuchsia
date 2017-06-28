@@ -128,11 +128,11 @@ struct DirectionalLight {
 };
 
 // Simple texture-mapped material.
-// SetTextureOp can be used subsequently to set the texture, or it can be left
-// as zero (no texture).
+//
+// Operations that can be performed later:
+//   SetTextureOp will set the texture, or it can be left as zero (no texture).
+//   SetColorOp will set the color.
 struct Material {
-  // TODO: use Value instead of ColorRgba.
-  ColorRgba color;
 };
 
 struct Variable {

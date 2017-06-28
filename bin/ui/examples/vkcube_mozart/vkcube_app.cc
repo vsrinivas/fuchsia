@@ -242,7 +242,8 @@ class VulkanCubeApp {
 
       // Create a Material with the buffer image.
       ResourceId material_id = NewResourceId();
-      ops.push_back(NewCreateMaterialOp(material_id, 255, 255, 255, 255));
+      ops.push_back(NewCreateMaterialOp(material_id));
+      ops.push_back(NewSetColorOp(material_id, 255, 255, 255, 255));
       ops.push_back(NewSetTextureOp(material_id, buffer_image_id));
       material_resource_ids_[i] = material_id;
     }

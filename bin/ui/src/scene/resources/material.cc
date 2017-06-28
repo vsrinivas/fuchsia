@@ -13,13 +13,11 @@ namespace scene {
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
 
-Material::Material(Session* session,
-                   float red,
-                   float green,
-                   float blue,
-                   float alpha)
+Material::Material(Session* session)
     : Resource(session, Material::kTypeInfo),
-      escher_material_(ftl::MakeRefCounted<escher::Material>()) {
+      escher_material_(ftl::MakeRefCounted<escher::Material>()) {}
+
+void Material::SetColor(float red, float green, float blue, float alpha) {
   // TODO: need to add alpha into escher material
   escher_material_->set_color(escher::vec3(red, green, blue));
 }

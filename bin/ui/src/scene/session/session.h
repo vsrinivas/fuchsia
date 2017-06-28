@@ -93,6 +93,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetCameraProjectionOp(const mozart2::SetCameraProjectionOpPtr& op);
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
   bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
+  bool ApplySetColorOp(const mozart2::SetColorOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
   bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
@@ -147,11 +148,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);
-  ResourcePtr CreateMaterial(ResourceId id,
-                             float red,
-                             float green,
-                             float blue,
-                             float alpha);
+  ResourcePtr CreateMaterial(ResourceId id);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does

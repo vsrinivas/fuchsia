@@ -246,19 +246,8 @@ mozart2::OpPtr NewCreateVarRoundedRectangleOp(
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateMaterialOp(uint32_t id,
-                                   uint8_t red,
-                                   uint8_t green,
-                                   uint8_t blue,
-                                   uint8_t alpha) {
-  auto color = mozart2::ColorRgba::New();
-  color->red = red;
-  color->green = green;
-  color->blue = blue;
-  color->alpha = alpha;
-
+mozart2::OpPtr NewCreateMaterialOp(uint32_t id) {
   auto material = mozart2::Material::New();
-  material->color = std::move(color);
 
   auto resource = mozart2::Resource::New();
   resource->set_material(std::move(material));
@@ -498,6 +487,26 @@ mozart2::OpPtr NewSetTextureOp(uint32_t material_id, uint32_t texture_id) {
 
   auto op = mozart2::Op::New();
   op->set_set_texture(std::move(set_texture));
+  return op;
+}
+
+mozart2::OpPtr NewSetColorOp(uint32_t material_id,
+                             uint8_t red,
+                             uint8_t green,
+                             uint8_t blue,
+                             uint8_t alpha) {
+  auto color = mozart2::ColorRgba::New();
+  color->red = red;
+  color->green = green;
+  color->blue = blue;
+  color->alpha = alpha;
+  auto set_color = mozart2::SetColorOp::New();
+  set_color->material_id = material_id;
+  set_color->color = std::move(color);
+
+  auto op = mozart2::Op::New();
+  op->set_set_color(std::move(set_color));
+
   return op;
 }
 
