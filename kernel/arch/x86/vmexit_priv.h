@@ -44,6 +44,16 @@ struct ExitInfo {
     ExitInfo();
 };
 
+/* Stores ept violation info from the VMCS exit qualification field. */
+struct EptViolationInfo {
+    bool read;
+    bool write;
+    bool instruction;
+    bool present;
+
+    EptViolationInfo(uint64_t qualification);
+};
+
 /* Stores IO instruction info from the VMCS exit qualification field. */
 struct IoInfo {
     uint8_t access_size;

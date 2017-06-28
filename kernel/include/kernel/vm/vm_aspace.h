@@ -169,6 +169,8 @@ private:
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
     status_t PageFault(vaddr_t va, uint flags);
     friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
+    friend status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags,
+                                                 mxtl::RefPtr<VmAspace> aspace);
 
     void InitializeAslr();
 

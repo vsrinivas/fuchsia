@@ -12,11 +12,12 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
-#include <arch/x86/mmu.h>
 #include <explicit-memory/bytes.h>
+#include <hypervisor/fault.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/sched.h>
 #include <kernel/timer.h>
+#include <kernel/vm/fault.h>
 #include <kernel/vm/pmm.h>
 #include <mxtl/algorithm.h>
 #include <platform/pc/timer.h>
@@ -81,6 +82,14 @@ IoInfo::IoInfo(uint64_t qualification) {
 ApicAccessInfo::ApicAccessInfo(uint64_t qualification) {
     offset = static_cast<uint16_t>(BITS(qualification, 11, 0));
     access_type = static_cast<ApicAccessType>(BITS_SHIFT(qualification, 15, 12));
+}
+
+EptViolationInfo::EptViolationInfo(uint64_t qualification) {
+    // From Volume 3C, Table 27-7.
+    read = BIT(qualification, 0);
+    write = BIT(qualification, 1);
+    instruction = BIT(qualification, 2);
+    present = BITS(qualification, 5, 3);
 }
 
 static void next_rip(const ExitInfo& exit_info) {
@@ -593,6 +602,23 @@ static status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcsLoad* vm
                                      GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
 #if WITH_LIB_MAGENTA
     vaddr_t guest_paddr = exit_info.guest_physical_address;
+    EptViolationInfo ept_violation_info(exit_info.exit_qualification);
+
+    uint pf_flags = VMM_PF_FLAG_HW_FAULT;
+    if (ept_violation_info.write)
+        pf_flags |= VMM_PF_FLAG_WRITE;
+    if (ept_violation_info.instruction)
+        pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+    if (!ept_violation_info.present)
+        pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+
+    // TODO(tjdetwiler): We'll always call the page fault handler for addresses
+    // that userspace wants to handle (ex: MMIO). We should be able to optimize
+    // for this use case.
+    status_t result = vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
+    if (result != MX_ERR_NOT_FOUND)
+        return result;
+
     return handle_mem_trap(exit_info, vmcs_load, guest_paddr, gpas, ctl_fifo);
 #else // WITH_LIB_MAGENTA
     return MX_ERR_NOT_SUPPORTED;

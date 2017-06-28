@@ -68,12 +68,6 @@ status_t GuestPhysicalAddressSpace::Init(mxtl::RefPtr<VmObject> root_vmo) {
     if (result != MX_OK)
         return result;
 
-    // Commit memory and popuate the page tables.
-    // TODO(tjdetwiler): Figure out how to do this on-demand.
-    result = mapping->MapRange(0, root_vmo->size(), true);
-    if (result != MX_OK)
-        return result;
-
     return MX_OK;
 }
 
