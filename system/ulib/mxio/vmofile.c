@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -161,6 +162,21 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
             return status;
         }
         return out;
+    }
+    case MXRIO_FCNTL: {
+        uint32_t cmd = maxreply;
+        switch (cmd) {
+        case F_GETFL: {
+            uint32_t* flags = (uint32_t*) ptr;
+            if (flags) {
+                *flags = 0;
+            }
+        }
+        case F_SETFL:
+            return MX_OK;
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
     }
     default:
         return MX_ERR_INVALID_ARGS;
