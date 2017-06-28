@@ -153,6 +153,7 @@ static void print_help(FILE* f) {
     fprintf(f, " -c              Print system CPU stats\n");
     fprintf(f, " -m              Print system memory stats\n");
     fprintf(f, " -d <delay>      Delay in seconds (default 1 second)\n");
+    fprintf(f, " -n <times>      Run this many times and then exit\n");
     fprintf(f, " -t              Print timestamp for each report\n");
     fprintf(f, "\nCPU stats columns:\n");
     fprintf(f, "\tcpu:  cpu #\n");
@@ -179,11 +180,11 @@ int main(int argc, char** argv) {
     bool cpu_stats = false;
     bool mem_stats = false;
     mx_time_t delay = MX_SEC(1);
+    int num_loops = -1;
     bool timestamp = false;
 
-
     int c;
-    while ((c = getopt(argc, argv, "cd:hmt")) > 0) {
+    while ((c = getopt(argc, argv, "cd:n:hmt")) > 0) {
         switch (c) {
             case 'c':
                 cpu_stats = true;
@@ -191,7 +192,15 @@ int main(int argc, char** argv) {
             case 'd':
                 delay = MX_SEC(atoi(optarg));
                 if (delay == 0) {
-                    fprintf(stderr, "Bad delay\n");
+                    fprintf(stderr, "Bad -d value '%s'\n", optarg);
+                    print_help(stderr);
+                    return 1;
+                }
+                break;
+            case 'n':
+                num_loops = atoi(optarg);
+                if (num_loops == 0) {
+                    fprintf(stderr, "Bad -n value '%s'\n", optarg);
                     print_help(stderr);
                     return 1;
                 }
@@ -253,12 +262,18 @@ int main(int argc, char** argv) {
         if (ret != MX_OK)
             break;
 
-        // TODO: replace once ctrl-c works in the shell
-        char c;
-        int err;
-        while ((err = read(STDIN_FILENO, &c, 1)) > 0) {
-            if (c == 0x3)
-                return 0;
+        if (num_loops > 0) {
+            if (--num_loops == 0) {
+                break;
+            }
+        } else {
+            // TODO: replace once ctrl-c works in the shell
+            char c;
+            int err;
+            while ((err = read(STDIN_FILENO, &c, 1)) > 0) {
+                if (c == 0x3)
+                    return 0;
+            }
         }
 
         mx_nanosleep(next_deadline);
