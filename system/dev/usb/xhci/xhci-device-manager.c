@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <endian.h>
+#include <magenta/assert.h>
 #include <magenta/hw/usb.h>
 #include <magenta/hw/usb-hub.h>
 #include <stdio.h>
@@ -307,15 +308,29 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index, mx_
     xhci_endpoint_t* ep =  &slot->eps[ep_index];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
+    mtx_lock(&ep->lock);
+
     if (!ep->enabled) {
+        mtx_unlock(&ep->lock);
         return false;
     }
+
+    ep->enabled = false;
+    ep->stopped_reason = status;
+
+    list_node_t queued_copy;
+    list_initialize(&queued_copy);
+    list_move(&ep->queued_txns, &queued_copy);
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
     // command expects device context index, so increment ep_index by 1
     uint32_t control = (slot_id << TRB_SLOT_ID_START) | ((ep_index + 1) << TRB_ENDPOINT_ID_START);
     xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
+
+    // can't wait for command to complete while holding ep->lock
+    mtx_unlock(&ep->lock);
+
     int cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS && cc != TRB_CC_CONTEXT_STATE_ERROR) {
         // TRB_CC_CONTEXT_STATE_ERROR is normal here in the case of a disconnected device,
@@ -324,34 +339,19 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index, mx_
         return false;
     }
 
+    // Stopping the endpoint should have completed all pending transactions
+    // before TRB_CMD_STOP_ENDPOINT completes
+    MX_DEBUG_ASSERT(list_is_empty(&ep->pending_txns) && ep->current_txn == NULL);
+
     free(ep->transfer_state);
     ep->transfer_state = NULL;
-
-    list_node_t pending_copy;
-    list_node_t queued_copy;
-    list_initialize(&pending_copy);
-    list_initialize(&queued_copy);
-
-    mtx_lock(&ep->lock);
-
-    // move pending_txns and queued_txns to a different list so we can complete them outside of the mutex
-    list_move(&ep->pending_txns, &pending_copy);
-    list_move(&ep->queued_txns, &queued_copy);
-
-    ep->enabled = false;
-
-    mtx_unlock(&ep->lock);
-
-    // complete pending requests
-    iotxn_t* txn;
-    iotxn_t* temp;
-    list_for_every_entry_safe(&pending_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, status, 0);
-    }
-    list_for_every_entry_safe(&queued_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, status, 0);
-    }
     xhci_transfer_ring_free(transfer_ring);
+
+    // complete queued requests
+    iotxn_t* txn;
+    while ((txn = list_remove_head_type(&queued_copy, iotxn_t, node))) {
+        iotxn_complete(txn, txn->status, txn->actual);
+    }
 
     return true;
 }

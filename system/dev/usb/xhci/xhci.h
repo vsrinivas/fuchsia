@@ -48,6 +48,7 @@ typedef struct xhci_endpoint {
     iotxn_t* current_txn;       // iotxn currently being processed
     list_node_t pending_txns;   // processed txns waiting for completion, including current_txn
     xhci_transfer_state_t* transfer_state;  // transfer state for current_txn
+    mx_status_t stopped_reason; // status to return for txns on stopped endpoint
     mtx_t lock;
     bool enabled;
     bool halted;                // set if endpoint is in HALTED or ERROR state

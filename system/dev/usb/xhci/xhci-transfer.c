@@ -531,11 +531,6 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     xhci_endpoint_t* ep =  &slot->eps[ep_index];
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
 
-    if (!ep->enabled) {
-        // endpoint shutting down. device manager thread will complete all pending transations
-        return;
-    }
-
     uint32_t cc = READ_FIELD(status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
     uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
     iotxn_t* txn = NULL;
@@ -577,10 +572,12 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_STOPPED:
         case TRB_CC_STOPPED_LENGTH_INVALID:
         case TRB_CC_STOPPED_SHORT_PACKET:
-            // for these errors the transfer ring may no longer exist,
-            // so it is not safe to attempt to retrieve our transfer context
-            xprintf("ignoring transfer event with cc: %d\n", cc);
-            return;
+            result = ep->stopped_reason;
+            if (result != MX_ERR_IO_NOT_PRESENT && result != MX_ERR_BAD_STATE) {
+                printf("xhci_handle_transfer_event: bad stopped_reason %d\n", result);
+                result = MX_ERR_INTERNAL;
+            }
+            break;
         default: {
             int ep_state = xhci_get_ep_state(ep);
             printf("xhci_handle_transfer_event: unhandled transfer event condition code %d "
@@ -659,7 +656,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     if (result == MX_ERR_IO_REFUSED) {
         ep->halted = true;
-    } else {
+    } else if (ep->enabled) {
         xhci_process_transactions_locked(xhci, ep, &completed_txns);
     }
 
