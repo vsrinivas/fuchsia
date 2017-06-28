@@ -52,11 +52,14 @@ bool pipe_test(void) {
     ASSERT_EQ(status, 0, "pipe() failed");
 
     status = fcntl(fds[0], F_GETFL);
-    ASSERT_GE(status, 0, "fcntl(F_GETFL) failed");
+    ASSERT_EQ(status, 0, "fcntl(F_GETFL) failed");
 
     status |= O_NONBLOCK;
     status = fcntl(fds[0], F_SETFL, status);
-    ASSERT_GE(status, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
+    ASSERT_EQ(status, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
+
+    status = fcntl(fds[0], F_GETFL);
+    ASSERT_EQ(status, O_NONBLOCK, "fcntl(F_GETFL) failed");
 
     int message[2] = {-6, 1};
     ssize_t written = write(fds[1], message, sizeof(message));

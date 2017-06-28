@@ -107,6 +107,13 @@ static mx_status_t mx_pipe_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
         *attr_out = attr;
         return sizeof(attr);
     }
+    case MXRIO_FCNTL: {
+        uint32_t* flags = (uint32_t*) data;
+        if (flags) {
+            *flags = 0;
+        }
+        return 0;
+    }
     }
 }
 

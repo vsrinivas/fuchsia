@@ -1066,29 +1066,34 @@ int fcntl(int fd, int cmd, ...) {
         return 0;
     }
     case F_GETFL: {
-        // TODO(kulakowski) File status flags and access modes.
         mxio_t* io = fd_to_io(fd);
         if (io == NULL) {
             return ERRNO(EBADF);
         }
-        int status = 0;
-        if (io->flags & MXIO_FLAG_NONBLOCK) {
-            status |= O_NONBLOCK;
+        uint32_t flags = 0;
+        int status = STATUS(io->ops->misc(io, MXRIO_FCNTL, 0, F_GETFL, &flags, 0));
+        if (status == MX_OK) {
+            status |= flags;
+            if (io->flags & MXIO_FLAG_NONBLOCK) {
+                status |= O_NONBLOCK;
+            }
         }
         mxio_release(io);
         return status;
     }
     case F_SETFL: {
-        // TODO(kulakowski) File status flags and access modes.
         mxio_t* io = fd_to_io(fd);
         if (io == NULL) {
             return ERRNO(EBADF);
         }
         GET_INT_ARG(status);
-        if (status & O_NONBLOCK) {
-            io->flags |= MXIO_FLAG_NONBLOCK;
-        } else {
-            io->flags &= ~MXIO_FLAG_NONBLOCK;
+        int r = STATUS(io->ops->misc(io, MXRIO_FCNTL, status, F_SETFL, NULL, 0));
+        if (r == MX_OK) {
+            if (status & O_NONBLOCK) {
+                io->flags |= MXIO_FLAG_NONBLOCK;
+            } else {
+                io->flags &= ~MXIO_FLAG_NONBLOCK;
+            }
         }
         mxio_release(io);
         return 0;

@@ -631,6 +631,15 @@ mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
         memcpy(ptr, msg.data, msg.datalen);
         break;
     }
+    case MXRIO_FCNTL:
+        // This is a bit of a hack, but for this case, we
+        // return 'msg.arg2.mode' in the data field to simplify
+        // this call for the client.
+        discard_handles(msg.handle, msg.hcount);
+        if (ptr) {
+            memcpy(ptr, &msg.arg2.mode, sizeof(msg.arg2.mode));
+        }
+        break;
     default:
         // Ops which don't receive handles:
         discard_handles(msg.handle, msg.hcount);

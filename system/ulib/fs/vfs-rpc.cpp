@@ -344,6 +344,20 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         mx_status_t r = vn->Setattr((vnattr_t*)msg->data);
         return r;
     }
+    case MXRIO_FCNTL: {
+        uint32_t cmd = msg->arg;
+        constexpr uint32_t kStatusFlags = O_APPEND;
+        switch (cmd) {
+        case F_GETFL:
+            msg->arg2.mode = ios->io_flags & (kStatusFlags | O_ACCMODE);
+            return MX_OK;
+        case F_SETFL:
+            ios->io_flags = (ios->io_flags & ~kStatusFlags) | (msg->arg2.mode & kStatusFlags);
+            return MX_OK;
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+    }
     case MXRIO_READDIR: {
         if (arg > MXIO_CHUNK_SIZE) {
             return MX_ERR_INVALID_ARGS;
