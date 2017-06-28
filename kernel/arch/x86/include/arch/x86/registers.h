@@ -34,6 +34,9 @@
 #define X86_MSR_IA32_TSC_ADJUST         0x0000003b /* TSC adjust */
 #define X86_MSR_IA32_BIOS_SIGN_ID       0x0000008b /* BIOS update signature */
 #define X86_MSR_IA32_MTRRCAP            0x000000fe /* MTRR capability */
+#define X86_MSR_IA32_SYSENTER_CS        0x00000174 /* SYSENTER CS */
+#define X86_MSR_IA32_SYSENTER_ESP       0x00000175 /* SYSENTER ESP */
+#define X86_MSR_IA32_SYSENTER_EIP       0x00000176 /* SYSENTER EIP */
 #define X86_MSR_IA32_MISC_ENABLE        0x000001a0 /* enable/disable misc processor features */
 #define X86_MSR_IA32_MTRR_PHYSBASE0     0x00000200 /* MTRR PhysBase0 */
 #define X86_MSR_IA32_MTRR_PHYSMASK0     0x00000201 /* MTRR PhysMask0 */
@@ -49,6 +52,7 @@
 #define X86_MSR_IA32_EFER               0xc0000080 /* EFER */
 #define X86_MSR_IA32_STAR               0xc0000081 /* system call address */
 #define X86_MSR_IA32_LSTAR              0xc0000082 /* long mode call address */
+#define X86_MSR_IA32_CSTAR              0xc0000083 /* ia32-e compat call address */
 #define X86_MSR_IA32_FMASK              0xc0000084 /* system call flag mask */
 #define X86_MSR_IA32_FS_BASE            0xc0000100 /* fs base address */
 #define X86_MSR_IA32_GS_BASE            0xc0000101 /* gs base address */
