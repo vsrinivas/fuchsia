@@ -16,13 +16,10 @@
 
 typedef struct mxio_watcher {
     mx_handle_t h;
-    uint32_t flags;
     watchdir_func_t func;
     void* cookie;
     int fd;
 } mxio_watcher_t;
-
-#define FLAG_NEED_DIR_SCAN    1
 
 mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     mxio_watcher_t* watcher;
@@ -44,17 +41,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
         //TODO: if MASK_EXISTING was rejected, set NEED_DIR_SCAN and try without
         mx_handle_close(wd.channel);
         mx_handle_close(watcher->h);
-
-        // Try V1 Protocl
-        if ((r = ioctl_vfs_watch_dir(dirfd, &watcher->h)) < 0) {
-            free(watcher);
-            return r;
-        }
-
-        // V1 Protocol does not handle EXISTING events
-        watcher->flags = FLAG_NEED_DIR_SCAN;
-    } else {
-        watcher->flags = 0;
+        return r;
     }
 
     *out = watcher;
@@ -139,47 +126,6 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, mx_time_t deadli
     mx_status_t status;
     if ((status = mxio_watcher_create(dirfd, &watcher)) < 0) {
         return status;
-    }
-
-    if (watcher->flags & FLAG_NEED_DIR_SCAN) {
-        DIR* dir;
-
-        {
-            // Limit the scope of 'fd'.  Once we hand it off to 'dir', we are no
-            // longer permitted to use it.
-            int fd;
-            if ((fd = openat(dirfd, ".", O_RDONLY | O_DIRECTORY)) < 0) {
-                status = MX_ERR_IO;
-                goto done;
-            }
-
-            if ((dir = fdopendir(fd)) == NULL) {
-                status = MX_ERR_NO_MEMORY;
-                close(fd);
-                goto done;
-            }
-        }
-
-        struct dirent* de;
-        while ((de = readdir(dir)) != NULL) {
-            if (de->d_name[0] == '.') {
-                if (de->d_name[1] == 0) {
-                    continue;
-                }
-                if ((de->d_name[1] == '.') && (de->d_name[2] == 0)) {
-                    continue;
-                }
-            }
-            if ((status = cb(dirfd, WATCH_EVENT_ADD_FILE, de->d_name, cookie)) != MX_OK) {
-                closedir(dir);
-                goto done;
-            }
-        }
-        closedir(dir);
-
-        if ((status = cb(dirfd, WATCH_EVENT_IDLE, NULL, cookie)) != MX_OK) {
-            goto done;
-        }
     }
 
     watcher->func = cb;

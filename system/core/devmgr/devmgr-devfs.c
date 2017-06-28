@@ -663,15 +663,6 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
         }
         break;
     case MXRIO_IOCTL:
-        if (msg->arg2.op == IOCTL_VFS_WATCH_DIR) {
-            mx_status_t r = devfs_watch(dn, msg->handle);
-            if (r == MX_OK) {
-                msg->datalen = sizeof(mx_handle_t);
-                msg->hcount = 1;
-                return msg->datalen;
-            }
-            return r;
-        }
         break;
     }
 
