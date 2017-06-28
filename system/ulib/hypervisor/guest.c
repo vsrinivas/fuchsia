@@ -3,20 +3,11 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <stdio.h>
-#include <string.h>
 
 #include <hypervisor/guest.h>
-#include <magenta/boot/bootdata.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
-
-typedef struct e820entry {
-    uint64_t addr;
-    uint64_t size;
-    uint32_t type;
-} __PACKED e820entry_t;
 
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
@@ -114,19 +105,15 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
 #endif // __x86_64__
 }
 
-static mx_status_t num_e820_entries(size_t size) {
-    return size > kAddr4000mb ? 4 : 3;
+size_t guest_e820_size(size_t size) {
+    return (size > kAddr4000mb ? 4 : 3) * sizeof(e820entry_t);
 }
 
-mx_status_t guest_create_e820_memory_map(uintptr_t addr, size_t size, uintptr_t e820_off,
-                                         int* num_entries) {
-    size_t e820_size = num_e820_entries(size) * sizeof(e820entry_t);
-    if (e820_off + e820_size > size) {
+mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
+    if (e820_off + guest_e820_size(size) > size)
         return MX_ERR_BUFFER_TOO_SMALL;
-    }
 
     e820entry_t* entry = (e820entry_t*)(addr + e820_off);
-    memset(entry, 0, e820_size);
     // 0 to 1mb is reserved.
     entry[0].addr = 0;
     entry[0].size = kAddr1mb;
@@ -144,54 +131,7 @@ mx_status_t guest_create_e820_memory_map(uintptr_t addr, size_t size, uintptr_t 
         entry[3].addr = kAddr4000mb;
         entry[3].size = size - kAddr4000mb;
         entry[3].type = kE820Ram;
-        *num_entries = 4;
-    } else {
-        *num_entries = 3;
     }
-
-    return MX_OK;
-}
-
-mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
-                                  uintptr_t bootdata_off) {
-    if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
-        return MX_ERR_INVALID_ARGS;
-
-    size_t e820_size = num_e820_entries(size) * sizeof(e820entry_t);
-    const uint32_t max_bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
-                                      sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
-    if (bootdata_off + max_bootdata_len > size)
-        return MX_ERR_BUFFER_TOO_SMALL;
-
-    // Bootdata container.
-    bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
-    header->type = BOOTDATA_CONTAINER;
-    header->extra = BOOTDATA_MAGIC;
-    header->length = max_bootdata_len;
-
-    // ACPI root table pointer.
-    bootdata_off += sizeof(bootdata_t);
-    bootdata_t* bootdata = (bootdata_t*)(addr + bootdata_off);
-    bootdata->type = BOOTDATA_ACPI_RSDP;
-    bootdata->length = sizeof(uint64_t);
-
-    bootdata_off += sizeof(bootdata_t);
-    uint64_t* acpi_rsdp = (uint64_t*)(addr + bootdata_off);
-    *acpi_rsdp = acpi_off;
-
-    // E820 memory map.
-    bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
-    bootdata = (bootdata_t*)(addr + bootdata_off);
-    bootdata->type = BOOTDATA_E820_TABLE;
-    bootdata->length = e820_size;
-
-    bootdata_off += sizeof(bootdata_t);
-    int num_entries = 0;
-    mx_status_t status = guest_create_e820_memory_map(addr, size, bootdata_off, &num_entries);
-    if (status != MX_OK)
-        return status;
-    if (num_entries != num_e820_entries(size))
-        return MX_ERR_BAD_STATE;
 
     return MX_OK;
 }

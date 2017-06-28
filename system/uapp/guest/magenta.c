@@ -104,6 +104,43 @@ static mx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
     return MX_OK;
 }
 
+static mx_status_t create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
+                                   uintptr_t bootdata_off) {
+    if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
+        return MX_ERR_INVALID_ARGS;
+
+    const size_t e820_size = guest_e820_size(size);
+    const uint32_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
+                                  sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
+    if (bootdata_off + bootdata_len > size)
+        return MX_ERR_BUFFER_TOO_SMALL;
+
+    // Bootdata container.
+    bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
+    header->type = BOOTDATA_CONTAINER;
+    header->extra = BOOTDATA_MAGIC;
+    header->length = bootdata_len;
+
+    // ACPI root table pointer.
+    bootdata_off += sizeof(bootdata_t);
+    bootdata_t* bootdata = (bootdata_t*)(addr + bootdata_off);
+    bootdata->type = BOOTDATA_ACPI_RSDP;
+    bootdata->length = sizeof(uint64_t);
+
+    bootdata_off += sizeof(bootdata_t);
+    uint64_t* acpi_rsdp = (uint64_t*)(addr + bootdata_off);
+    *acpi_rsdp = acpi_off;
+
+    // E820 memory map.
+    bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
+    bootdata = (bootdata_t*)(addr + bootdata_off);
+    bootdata->type = BOOTDATA_E820_TABLE;
+    bootdata->length = e820_size;
+
+    bootdata_off += sizeof(bootdata_t);
+    return guest_create_e820(addr, size, bootdata_off);
+}
+
 static bool is_magenta(const uintptr_t first_page) {
     magenta_kernel_t* header = (magenta_kernel_t*)first_page;
     return container_is_valid(&header->hdr_file);
@@ -116,7 +153,7 @@ mx_status_t setup_magenta(const uintptr_t addr, const size_t size, const uintptr
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mx_status_t status = guest_create_bootdata(addr, size, acpi_off, kBootdataOffset);
+    mx_status_t status = create_bootdata(addr, size, acpi_off, kBootdataOffset);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create bootdata\n");
         return status;

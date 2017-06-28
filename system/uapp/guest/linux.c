@@ -69,7 +69,8 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     if (!is_linux(first_page))
         return MX_ERR_NOT_SUPPORTED;
 
-    if ((ZP16(first_page, ZP_SH_16_XLOADFLAGS) & XLF_KERNEL_64) == 0) {
+    bool has_legacy_entry = ZP16(first_page, ZP_SH_16_XLOADFLAGS) & XLF_KERNEL_64;
+    if (!has_legacy_entry) {
         fprintf(stderr, "Kernel lacks the legacy 64-bit entry point\n");
         return MX_ERR_NOT_SUPPORTED;
     }
@@ -78,7 +79,7 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     uint8_t loadflags = ZP8(first_page, ZP_SH_8_LOAD_FLAGS);
     bool is_bzimage = (protocol >= MIN_BOOT_PROTOCOL) && (loadflags & LF_LOAD_HIGH);
     if (!is_bzimage) {
-        fprintf(stderr, "Kernel is not a bzimage. Use a newer kernel\n");
+        fprintf(stderr, "Kernel is not a bzImage. Use a newer kernel\n");
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -110,19 +111,20 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     ZP8(zero_page, ZP_SI_8_VIDEO_COLS) = 0;
     ZP8(zero_page, ZP_SI_8_VIDEO_LINES) = 0;
 
-    // Add e820 entries.
-    int num_entries = 0;
+    // Setup e820 memory map.
+    int e820_entries = guest_e820_size(size) / sizeof(e820entry_t);
+    if (e820_entries > MAX_E820_ENTRIES) {
+        fprintf(stderr, "Not enough space for e820 memory map\n");
+        return MX_ERR_BAD_STATE;
+    }
+    ZP8(zero_page, ZP_SH_8_E820_COUNT) = e820_entries;
+
     uintptr_t e820_off = boot_params_off + ZP_SH_XX_E820_MAP;
-    mx_status_t status = guest_create_e820_memory_map(addr, size, e820_off, &num_entries);
+    mx_status_t status = guest_create_e820(addr, size, e820_off);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create the e820 memory map\n");
         return status;
     }
-    if (num_entries > MAX_E820_ENTRIES) {
-        fprintf(stderr, "Too many e820 entries created\n");
-        return MX_ERR_BAD_STATE;
-    }
-    ZP8(zero_page, ZP_SH_8_E820_COUNT) = num_entries;
 
     int setup_sects = ZP8(zero_page, ZP_SH_8_SETUP_SECTS);
     if (setup_sects == 0) {
@@ -132,16 +134,16 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
 
     // Read the rest of the bzImage into the protected_mode_kernel location.
     int protected_mode_off = (setup_sects + 1) * SECTOR_SIZE;
-    if (lseek(fd, protected_mode_off, SEEK_SET) < 0) {
+    off_t ret = lseek(fd, protected_mode_off, SEEK_SET);
+    if (ret < 0) {
         fprintf(stderr, "Failed seek to protected mode kernel\n");
         return MX_ERR_IO;
     }
 
-    size_t remaining = (ZP32(zero_page, ZP_SH_32_SYSSIZE) << 4);
-    int ret = read(fd, (void*)(addr + runtime_start), remaining);
-
+    size_t remaining = ZP32(zero_page, ZP_SH_32_SYSSIZE) << 4;
+    ret = read(fd, (void*)(addr + runtime_start), remaining);
     if ((size_t)ret != remaining) {
-        fprintf(stderr, "Failed to read linux image\n");
+        fprintf(stderr, "Failed to read Linux image\n");
         return MX_ERR_IO;
     }
 
