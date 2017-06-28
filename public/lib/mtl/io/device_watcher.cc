@@ -51,7 +51,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
   if (mx_channel_create(0, &wd.channel, &dir_watch_handle) < 0) {
     return nullptr;
   }
-  ssize_t ioctl_result = ioctl_vfs_watch_dir_v2(dir_fd.get(), &wd);
+  ssize_t ioctl_result = ioctl_vfs_watch_dir(dir_fd.get(), &wd);
   if (ioctl_result < 0) {
     mx_handle_close(wd.channel);
     mx_handle_close(dir_watch_handle);
