@@ -43,20 +43,20 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 
     mtx_lock(&ep->lock);
 
-    if (!ep->halted) {
+    if (ep->state != EP_STATE_HALTED) {
         mtx_unlock(&ep->lock);
         return MX_OK;
     }
 
-    int ep_state = xhci_get_ep_state(ep);
-    xprintf("xhci_reset_endpoint %d %d ep_state %d\n", slot_id, endpoint, ep_state);
+    int ep_ctx_state = xhci_get_ep_ctx_state(ep);
+    xprintf("xhci_reset_endpoint %d %d ep_ctx_state %d\n", slot_id, endpoint, ep_ctx_state);
 
-    if (ep_state == EP_STATE_STOPPED || ep_state == EP_STATE_RUNNING) {
-        ep->halted = false;
+    if (ep_ctx_state == EP_CTX_STATE_STOPPED || ep_ctx_state == EP_CTX_STATE_RUNNING) {
+        ep->state = EP_STATE_RUNNING;
         mtx_unlock(&ep->lock);
         return MX_OK;
     }
-    if (ep_state == EP_STATE_HALTED) {
+    if (ep_ctx_state == EP_CTX_STATE_HALTED) {
         // reset the endpoint to move from Halted to Stopped state
         xhci_sync_command_t command;
         xhci_sync_command_init(&command);
@@ -74,7 +74,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 
     // resetting the dequeue pointer gets us out of ERROR state, and is also necessary
     // after TRB_CMD_RESET_ENDPOINT.
-    if (ep_state == EP_STATE_ERROR || ep_state == EP_STATE_HALTED) {
+    if (ep_ctx_state == EP_CTX_STATE_ERROR || ep_ctx_state == EP_CTX_STATE_HALTED) {
         // move transfer ring's dequeue pointer passed the failed transaction
         xhci_sync_command_t command;
         xhci_sync_command_init(&command);
@@ -93,14 +93,14 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         transfer_ring->dequeue_ptr = transfer_ring->current;
     }
 
-    ep_state = xhci_get_ep_state(ep);
-    if (ep_state != EP_STATE_STOPPED && ep_state != EP_STATE_RUNNING) {
-        printf("xhci_reset_endpoint still halted, state %d\n", ep_state);
+    ep_ctx_state = xhci_get_ep_ctx_state(ep);
+    if (ep_ctx_state != EP_CTX_STATE_STOPPED && ep_ctx_state != EP_CTX_STATE_RUNNING) {
+        printf("xhci_reset_endpoint still halted, ep_ctx_state %d\n", ep_ctx_state);
         mtx_unlock(&ep->lock);
         return MX_ERR_INTERNAL;
     }
 
-    ep->halted = false;
+    ep->state = EP_STATE_RUNNING;
 
     // start processing transactions again
     list_node_t completed_txns = LIST_INITIAL_VALUE(completed_txns);
@@ -120,8 +120,8 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 // locked on ep->lock
 static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
-    if (!ep->enabled) {
-        printf("ep not enabled in xhci_start_transfer_locked\n");
+    if (ep->state != EP_STATE_RUNNING) {
+        printf("xhci_start_transfer_locked bad ep->state %d\n", ep->state);
         return MX_ERR_BAD_STATE;
     }
 
@@ -348,7 +348,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
 
     XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
     // it seems we need to ring the doorbell a second time when transitioning from STOPPED
-    while (xhci_get_ep_state(ep) == EP_STATE_STOPPED) {
+    while (xhci_get_ep_ctx_state(ep) == EP_CTX_STATE_STOPPED) {
         mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
         XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
     }
@@ -431,14 +431,30 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     }
 
     mtx_lock(&ep->lock);
-    if (!ep->enabled) {
-        mtx_unlock(&ep->lock);
-        printf("ep not enabled in xhci_queue_transfer\n");
-        return MX_ERR_BAD_STATE;
+
+    mx_status_t status;
+    switch (ep->state) {
+    case EP_STATE_DEAD:
+        status = MX_ERR_IO_NOT_PRESENT;
+        break;
+    case EP_STATE_RUNNING:
+    case EP_STATE_PAUSED:
+        status = MX_OK;
+        break;
+    case EP_STATE_HALTED:
+        status = MX_ERR_IO_REFUSED;
+        break;
+    case EP_STATE_DISABLED:
+        status = MX_ERR_BAD_STATE;
+        break;
+    default:
+        status = MX_ERR_INTERNAL;
+        break;
     }
-    if (ep->halted) {
+
+    if (status != MX_OK) {
         mtx_unlock(&ep->lock);
-        return MX_ERR_IO_REFUSED;
+        return status;
     }
 
     list_add_tail(&ep->queued_txns, &txn->node);
@@ -548,9 +564,9 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_USB_TRANSACTION_ERROR:
         case TRB_CC_TRB_ERROR:
         case TRB_CC_STALL_ERROR: {
-            int ep_state = xhci_get_ep_state(ep);
-            printf("xhci_handle_transfer_event cc %d ep_state %d\n", cc, ep_state);
-            if (ep_state == EP_STATE_HALTED || ep_state == EP_STATE_ERROR) {
+            int ep_ctx_state = xhci_get_ep_ctx_state(ep);
+            xprintf("xhci_handle_transfer_event cc %d ep_ctx_state %d\n", cc, ep_ctx_state);
+            if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
                 result = MX_ERR_IO_REFUSED;
             } else {
                 result = MX_ERR_IO;
@@ -572,18 +588,24 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         case TRB_CC_STOPPED:
         case TRB_CC_STOPPED_LENGTH_INVALID:
         case TRB_CC_STOPPED_SHORT_PACKET:
-            result = ep->stopped_reason;
-            if (result != MX_ERR_IO_NOT_PRESENT && result != MX_ERR_BAD_STATE) {
-                printf("xhci_handle_transfer_event: bad stopped_reason %d\n", result);
+            switch (ep->state) {
+            case EP_STATE_DISABLED:
+                result = MX_ERR_BAD_STATE;
+                break;
+            case EP_STATE_DEAD:
+                result = MX_ERR_IO_NOT_PRESENT;
+                break;
+            default:
+                printf("xhci_handle_transfer_event: bad state for stopped txn: %d\n", ep->state);
                 result = MX_ERR_INTERNAL;
             }
             break;
         default: {
-            int ep_state = xhci_get_ep_state(ep);
+            int ep_ctx_state = xhci_get_ep_ctx_state(ep);
             printf("xhci_handle_transfer_event: unhandled transfer event condition code %d "
-                   "ep_state %d:  %08X %08X %08X %08X\n", cc, ep_state,
+                   "ep_ctx_state %d:  %08X %08X %08X %08X\n", cc, ep_ctx_state,
                     ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
-            if (ep_state == EP_STATE_HALTED || ep_state == EP_STATE_ERROR) {
+            if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
                 result = MX_ERR_IO_REFUSED;
             } else {
                 result = MX_ERR_IO;
@@ -593,7 +615,8 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     }
 
     // TRB pointer is zero in these cases
-    if (cc != TRB_CC_RING_UNDERRUN && cc != TRB_CC_RING_OVERRUN) {
+    if (cc != TRB_CC_RING_UNDERRUN && cc != TRB_CC_RING_OVERRUN &&
+        !list_is_empty(&ep->pending_txns)) {
         if (control & EVT_TRB_ED) {
             txn = (iotxn_t *)trb_get_ptr(trb);
         } else {
@@ -608,13 +631,16 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
     }
 
-    int ep_state = xhci_get_ep_state(ep);
-    if (ep_state != EP_STATE_RUNNING) {
-        xprintf("xhci_handle_transfer_event: ep state %d cc %d\n", ep_state, cc);
+    int ep_ctx_state = xhci_get_ep_ctx_state(ep);
+    if (ep_ctx_state != EP_CTX_STATE_RUNNING) {
+        xprintf("xhci_handle_transfer_event: ep ep_ctx_state %d cc %d\n", ep_ctx_state, cc);
     }
 
     if (!txn) {
-        printf("xhci_handle_transfer_event: unable to find iotxn to complete!\n");
+        // no txn expected for this condition code
+        if (cc != TRB_CC_STOPPED_LENGTH_INVALID) {
+            printf("xhci_handle_transfer_event: unable to find iotxn to complete!\n");
+        }
         return;
     }
 
@@ -632,7 +658,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
     }
     if (!found_txn) {
-        printf("ignoring transfer event for completed transfer\n");
+        xprintf("ignoring transfer event for completed transfer\n");
         mtx_unlock(&ep->lock);
         return;
     }
@@ -655,8 +681,8 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     list_add_head(&completed_txns, &txn->node);
 
     if (result == MX_ERR_IO_REFUSED) {
-        ep->halted = true;
-    } else if (ep->enabled) {
+        ep->state = EP_STATE_HALTED;
+    } else if (ep->state == EP_STATE_RUNNING) {
         xhci_process_transactions_locked(xhci, ep, &completed_txns);
     }
 
