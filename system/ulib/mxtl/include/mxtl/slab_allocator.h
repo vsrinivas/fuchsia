@@ -410,7 +410,13 @@ public:
     ~SlabAllocatorBase() {
 #if MX_DEBUG_ASSERT_IMPLEMENTED
         size_t allocated_count = 0;
+        size_t free_list_size = this->free_list_.size_slow();
 #endif
+        // null out the free list so that it does not assert that we left
+        // unmanaged pointers on it as we destruct, and so that the free list
+        // does not attempt to auto-destruct the managed objects which were
+        // present on it after the slab memory has been freed
+        this->free_list_.clear_unsafe();
 
         while (!slab_list_.is_empty()) {
             Slab* free_me = slab_list_.pop_front();
@@ -425,11 +431,7 @@ public:
 
         // Make sure that everything which was ever allocated had been returned
         // to the free list before we were destroyed.
-        MX_DEBUG_ASSERT_COND(this->free_list_.size_slow() == allocated_count);
-
-        // null out the free list so that it does not assert that we left
-        // unmanaged pointers on it as we destruct.
-        this->free_list_.clear_unsafe();
+        MX_DEBUG_ASSERT_COND(free_list_size == allocated_count);
     }
 
     size_t max_slabs() const { return max_slabs_; }
