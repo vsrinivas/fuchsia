@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//lib/escher/build_linux:examples",
         "//lib/escher/build_linux:tests"

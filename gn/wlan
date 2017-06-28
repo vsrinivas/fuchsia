@@ -1,7 +1,11 @@
 {
-    "labels": [
-        "//drivers/wifi/mediatek/rt5370:rt5370-with-firmware",
-        "//drivers/wifi/wlan"
+    "languages": [
+        "cpp"
+    ],
+    "gopaths": [
+        {
+            "apps/wlan": "apps/wlan"
+        }
     ],
     "drivers": [
         {
@@ -17,7 +21,8 @@
             "bootfs_path": "driver/wlan.so"
         }
     ],
-    "gopaths": [
-        { "apps/wlan": "apps/wlan" }
+    "labels": [
+        "//drivers/wifi/mediatek/rt5370:rt5370-with-firmware",
+        "//drivers/wifi/wlan"
     ]
 }

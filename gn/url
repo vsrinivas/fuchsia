@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//lib/url",
         "//lib/url:url_apptests"

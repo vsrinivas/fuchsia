@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//lib/ftl:ftl_unittests(//build/toolchain:host_x64)"
     ],

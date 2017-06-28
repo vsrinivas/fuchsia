@@ -1,6 +1,15 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//apps/netconnector"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/netconnector/netconnector.config",
+            "file": "apps/netconnector/src/netconnector.config"
+        }
     ],
     "binaries": [
         {
@@ -10,12 +19,6 @@
         {
             "binary": "netconnector_example",
             "bootfs_path": "apps/netconnector_example"
-        }
-    ],
-    "resources": [
-        {
-            "file": "apps/netconnector/src/netconnector.config",
-            "bootfs_path": "data/netconnector/netconnector.config"
         }
     ]
 }

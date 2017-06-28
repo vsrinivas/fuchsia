@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//bin/gdbserver",
         "//bin/gdbserver:tests"

@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # list of modules
-  modules = "default"
+import("//packages/gn/packages.gni")
 
+declare_args() {
   # list of files omitted from user.bootfs
   omit_files = ""
 

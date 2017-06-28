@@ -1,4 +1,13 @@
 {
+    "languages": [
+        "cpp",
+        "go"
+    ],
+    "gopaths": [
+        {
+            "lib/fidl/go/src/fidl": "fidl"
+        }
+    ],
     "labels": [
         "//lib/fidl",
         "//magenta/system/host/fidl:fidl2(//build/toolchain:host_x64)"
@@ -8,8 +17,5 @@
             "binary": "lib_fidl_cpp_tests",
             "bootfs_path": "test/lib_fidl_cpp_tests"
         }
-    ],
-    "gopaths": [
-        { "lib/fidl/go/src/fidl": "fidl" }
     ]
 }

@@ -1,15 +1,19 @@
 {
-  "labels": [
-    "//apps/modules/todo"
-  ],
-  "binaries": [
-    {
-      "binary": "gen/apps/modules/todo/modules/story/todo_story.flx",
-      "bootfs_path": "apps/todo_story"
-    },
-    {
-      "binary": "todo_content_provider",
-      "bootfs_path": "apps/todo_content_provider"
-    }
-  ]
+    "languages": [
+        "cpp",
+        "dart"
+    ],
+    "labels": [
+        "//apps/modules/todo"
+    ],
+    "binaries": [
+        {
+            "binary": "gen/apps/modules/todo/modules/story/todo_story.flx",
+            "bootfs_path": "apps/todo_story"
+        },
+        {
+            "binary": "todo_content_provider",
+            "bootfs_path": "apps/todo_content_provider"
+        }
+    ]
 }

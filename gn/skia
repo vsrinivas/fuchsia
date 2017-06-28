@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "imports": [
         "magma",
         "zlib"

@@ -1,7 +1,18 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "labels": [
         "//apps/media",
         "//apps/media:tests"
+    ],
+    "resources": [
+        {
+            "default": "true",
+            "bootfs_path": "data/media_player_flutter/media_player_flutter.config",
+            "file": "apps/media/examples/media_player_flutter/media_player_flutter.config"
+        }
     ],
     "binaries": [
         {
@@ -79,13 +90,6 @@
         {
             "binary": "vu_meter",
             "bootfs_path": "apps/vu_meter"
-        }
-    ],
-    "resources": [
-        {
-            "file": "apps/media/examples/media_player_flutter/media_player_flutter.config",
-            "bootfs_path": "data/media_player_flutter/media_player_flutter.config",
-            "default": "true"
         }
     ]
 }

@@ -1,19 +1,22 @@
 {
-  "labels": [
-    "//apps/modules/video",
-    "//apps/modules/video:test"
-  ],
-  "binaries": [
-    {
-      "binary": "gen/apps/modules/video/modules/video/video.flx",
-      "bootfs_path": "apps/video/video"
-    }
-  ],
-  "resources": [
-    {
-      "bootfs_path": "data/modules/video.mp4",
-      "default": "true",
-      "file": "apps/modules/video/modules/video/assets/video.mp4"
-    }
-  ]
+    "languages": [
+        "dart"
+    ],
+    "labels": [
+        "//apps/modules/video",
+        "//apps/modules/video:test"
+    ],
+    "resources": [
+        {
+            "default": "true",
+            "bootfs_path": "data/modules/video.mp4",
+            "file": "apps/modules/video/modules/video/assets/video.mp4"
+        }
+    ],
+    "binaries": [
+        {
+            "binary": "gen/apps/modules/video/modules/video/video.flx",
+            "bootfs_path": "apps/video/video"
+        }
+    ]
 }

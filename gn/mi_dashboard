@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "dart"
+    ],
     "binaries": [
         {
             "binary": "agents/mi_dashboard.dartx",
@@ -7,24 +10,24 @@
     ],
     "resources": [
         {
-            "file": "apps/maxwell/src/agents/mi_dashboard/dashboard.config",
-            "bootfs_path": "data/mi_dashboard/dashboard.config"
+            "bootfs_path": "data/mi_dashboard/dashboard.config",
+            "file": "apps/maxwell/src/agents/mi_dashboard/dashboard.config"
         },
         {
-            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/index.html",
-            "bootfs_path": "data/mi_dashboard/webroot/index.html"
+            "bootfs_path": "data/mi_dashboard/webroot/index.html",
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/index.html"
         },
         {
-            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/logo.png",
-            "bootfs_path": "data/mi_dashboard/webroot/logo.png"
+            "bootfs_path": "data/mi_dashboard/webroot/logo.png",
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/logo.png"
         },
         {
-            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.js",
-            "bootfs_path": "data/mi_dashboard/webroot/dashboard.js"
+            "bootfs_path": "data/mi_dashboard/webroot/dashboard.js",
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.js"
         },
         {
-            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.css",
-            "bootfs_path": "data/mi_dashboard/webroot/dashboard.css"
+            "bootfs_path": "data/mi_dashboard/webroot/dashboard.css",
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.css"
         }
     ]
 }

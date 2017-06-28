@@ -1,4 +1,8 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "labels": [
         "//apps/maxwell",
         "//apps/maxwell/src:integration_tests",

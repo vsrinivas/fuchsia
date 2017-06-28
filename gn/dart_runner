@@ -1,4 +1,8 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "packages": {
         "dart_runner": "//apps/dart_content_handler:dart_runner"
     }

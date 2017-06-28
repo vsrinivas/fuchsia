@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "packages": {
         "lua": "//third_party/lua"
     }

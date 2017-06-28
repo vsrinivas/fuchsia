@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "packages": {
         "zlib": "//third_party/zlib:package"
     }

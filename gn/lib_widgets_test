@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "dart"
+    ],
     "labels": [
         "//lib/widgets/packages/widgets:test"
     ]

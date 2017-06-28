@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "go"
+    ],
     "labels": [
         "//apps/pm:pm",
         "//apps/pm:pm(//build/toolchain:host_x64)"

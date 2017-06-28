@@ -1,5 +1,8 @@
 {
-  "packages": {
-    "cairo": "//third_party/cairo:package"
-  }
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "cairo": "//third_party/cairo:package"
+    }
 }

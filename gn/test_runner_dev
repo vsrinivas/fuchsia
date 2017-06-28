@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "imports": [
         "boot_test_runner"
     ],

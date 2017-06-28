@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//third_party/boringssl:crypto"
     ],

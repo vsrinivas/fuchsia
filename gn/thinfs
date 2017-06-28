@@ -1,4 +1,13 @@
 {
+    "languages": [
+        "cpp",
+        "go"
+    ],
+    "gopaths": [
+        {
+            "apps/thinfs": "fuchsia.googlesource.com/thinfs"
+        }
+    ],
     "labels": [
         "//apps/thinfs"
     ],
@@ -7,8 +16,5 @@
             "binary": "thinfs",
             "bootfs_path": "bin/thinfs"
         }
-    ],
-    "gopaths": [
-        { "apps/thinfs": "fuchsia.googlesource.com/thinfs" }
     ]
 }

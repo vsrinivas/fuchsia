@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "packages": {
         "re2_tests": "//third_party/re2:re2_tests"
     }

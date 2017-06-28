@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "go"
+    ],
     "labels": [
         "//apps/amber:amber",
         "//apps/amber:amber-keys",
@@ -10,8 +13,8 @@
             "bootfs_path": "apps/amber"
         },
         {
-            "binary" : "amber-keys",
-            "bootfs_path" : "data/amber/keys"
+            "binary": "amber-keys",
+            "bootfs_path": "data/amber/keys"
         }
     ]
 }

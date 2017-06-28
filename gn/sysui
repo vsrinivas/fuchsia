@@ -1,241 +1,244 @@
 {
-  "binaries": [
-    {
-      "binary": "gen/apps/sysui/armadillo_user_shell/armadillo_user_shell.flx",
-      "bootfs_path": "apps/armadillo_user_shell"
-    },
-    {
-      "binary": "gen/apps/sysui/capybara_user_shell/capybara_user_shell.flx",
-      "bootfs_path": "apps/capybara_user_shell"
-    },
-    {
-      "binary": "gen/apps/sysui/kernel_panic/kernel_panic.flx",
-      "bootfs_path": "apps/kernel_panic"
-    },
-    {
-      "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
-      "bootfs_path": "apps/userpicker_device_shell"
-    },
-    {
-      "binary": "gen/apps/sysui/spinning_cube/spinning_cube.flx",
-      "bootfs_path": "apps/spinning_cube"
-    },
-    {
-      "binary": "gen/apps/sysui/infinite_scroller/infinite_scroller.flx",
-      "bootfs_path": "apps/infinite_scroller"
-    },
-    {
-      "binary": "home_work_agent.dartx",
-      "bootfs_path": "apps/agents/home_work_agent"
-    },
-    {
-      "binary": "walking_agent.dartx",
-      "bootfs_path": "apps/agents/walking_agent"
-    }
-  ],
-  "labels": [
-    "//apps/sysui",
-    "//apps/sysui:test"
-  ],
-  "resources": [
-    {
-      "bootfs_path": "data/sysui/contextual_location_proposals.json",
-      "default": "true",
-      "file": "apps/sysui/agents/home_work_agent/assets/contextual_location_proposals.json"
-    },
-    {
-      "bootfs_path": "data/sysui/contextual_config.json",
-      "default": "true",
-      "file": "apps/sysui/armadillo_user_shell/assets/contextual_config.json"
-    },
-    {
-      "bootfs_path": "data/sysui/WallpaperImage_001.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_001.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/WallpaperImage_002.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_002.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/WallpaperImage_003.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_003.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/WallpaperImage_004.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_004.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/aparna-home.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/aparna-home.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/aparna-sf.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/aparna-sf.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/aparna-work.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/aparna-work.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/danielle-home.jpg",
-      "file": "apps/sysui/armadillo_user_shell/assets/danielle-home.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/ask_proposals.json",
-      "default": "true",
-      "file": "apps/sysui/agents/home_work_agent/assets/ask_proposals.json"
-    },
-    {
-      "bootfs_path": "data/sysui/google_photos.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/google_photos.png"
-    },
-    {
-      "bootfs_path": "data/sysui/panda.png.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/panda.png.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/pavlova.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/pavlova.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/shamra.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/shamra.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/slides.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/slides.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_fluxMemories.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_fluxMemories.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_googleIO.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_googleIO.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_hype.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_hype.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_natureSense.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_natureSense.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_topcook.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_topcook.png"
-    },
-    {
-      "bootfs_path": "data/sysui/1-portugal-the-man.jpeg",
-      "file": "apps/sysui/agents/home_work_agent/assets/1-portugal-the-man.jpeg"
-    },
-    {
-      "bootfs_path": "data/sysui/9-hotel.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/9-hotel.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/9-nonch-harpin.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/9-nonch-harpin.png"
-    },
-    {
-      "bootfs_path": "data/sysui/danielle_cc0.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/danielle_cc0.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/ic_stat_3_googblue_2x_web_24dp.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/ic_stat_3_googblue_2x_web_24dp.png"
-    },
-    {
-      "bootfs_path": "data/sysui/calendar.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/calendar.png"
-    },
-    {
-      "bootfs_path": "data/sysui/docs.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/docs.png"
-    },
-    {
-      "bootfs_path": "data/sysui/drawing.jpeg",
-      "file": "apps/sysui/agents/home_work_agent/assets/drawing.jpeg"
-    },
-    {
-      "bootfs_path": "data/sysui/logo_mostly_sunny_light_color_96dp.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/logo_mostly_sunny_light_color_96dp.png"
-    },
-    {
-      "bootfs_path": "data/sysui/miguel_cc0.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/miguel_cc0.png"
-    },
-    {
-      "bootfs_path": "data/sysui/sophie_cc0.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/sophie_cc0.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/threepeaks.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/threepeaks.png"
-    },
-    {
-      "bootfs_path": "data/sysui/truefood.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/truefood.png"
-    },
-    {
-      "bootfs_path": "data/sysui/cinefilm_96.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/cinefilm_96.png"
-    },
-    {
-      "bootfs_path": "data/sysui/expenses_96.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/expenses_96.png"
-    },
-    {
-      "bootfs_path": "data/sysui/logo_fitness_color_2x_web_96.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/logo_fitness_color_2x_web_96.png"
-    },
-    {
-      "bootfs_path": "data/sysui/simon_96.jpg",
-      "file": "apps/sysui/agents/home_work_agent/assets/simon_96.jpg"
-    },
-    {
-      "bootfs_path": "data/sysui/story_calendar.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_calendar.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_cinefilm.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_cinefilm.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_expense.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_expense.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_marketing.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_marketing.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_overthrough.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_overthrough.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_phonecall.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_phonecall.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_steps.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_steps.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_threepeaks.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_threepeaks.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_toetheline.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_toetheline.png"
-    },
-    {
-      "bootfs_path": "data/sysui/story_truefoods.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/story_truefoods.png"
-    },
-    {
-      "bootfs_path": "data/sysui/istanbul_240.png",
-      "file": "apps/sysui/agents/home_work_agent/assets/istanbul_240.png"
-    }
-  ]
+    "languages": [
+        "dart"
+    ],
+    "labels": [
+        "//apps/sysui",
+        "//apps/sysui:test"
+    ],
+    "resources": [
+        {
+            "default": "true",
+            "bootfs_path": "data/sysui/contextual_location_proposals.json",
+            "file": "apps/sysui/agents/home_work_agent/assets/contextual_location_proposals.json"
+        },
+        {
+            "default": "true",
+            "bootfs_path": "data/sysui/contextual_config.json",
+            "file": "apps/sysui/armadillo_user_shell/assets/contextual_config.json"
+        },
+        {
+            "bootfs_path": "data/sysui/WallpaperImage_001.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_001.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/WallpaperImage_002.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_002.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/WallpaperImage_003.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_003.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/WallpaperImage_004.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_004.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/aparna-home.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/aparna-home.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/aparna-sf.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/aparna-sf.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/aparna-work.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/aparna-work.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/danielle-home.jpg",
+            "file": "apps/sysui/armadillo_user_shell/assets/danielle-home.jpg"
+        },
+        {
+            "default": "true",
+            "bootfs_path": "data/sysui/ask_proposals.json",
+            "file": "apps/sysui/agents/home_work_agent/assets/ask_proposals.json"
+        },
+        {
+            "bootfs_path": "data/sysui/google_photos.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/google_photos.png"
+        },
+        {
+            "bootfs_path": "data/sysui/panda.png.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/panda.png.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/pavlova.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/pavlova.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/shamra.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/shamra.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/slides.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/slides.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_fluxMemories.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_fluxMemories.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_googleIO.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_googleIO.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_hype.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_hype.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_natureSense.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_natureSense.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_topcook.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_topcook.png"
+        },
+        {
+            "bootfs_path": "data/sysui/1-portugal-the-man.jpeg",
+            "file": "apps/sysui/agents/home_work_agent/assets/1-portugal-the-man.jpeg"
+        },
+        {
+            "bootfs_path": "data/sysui/9-hotel.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/9-hotel.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/9-nonch-harpin.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/9-nonch-harpin.png"
+        },
+        {
+            "bootfs_path": "data/sysui/danielle_cc0.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/danielle_cc0.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/ic_stat_3_googblue_2x_web_24dp.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/ic_stat_3_googblue_2x_web_24dp.png"
+        },
+        {
+            "bootfs_path": "data/sysui/calendar.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/calendar.png"
+        },
+        {
+            "bootfs_path": "data/sysui/docs.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/docs.png"
+        },
+        {
+            "bootfs_path": "data/sysui/drawing.jpeg",
+            "file": "apps/sysui/agents/home_work_agent/assets/drawing.jpeg"
+        },
+        {
+            "bootfs_path": "data/sysui/logo_mostly_sunny_light_color_96dp.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/logo_mostly_sunny_light_color_96dp.png"
+        },
+        {
+            "bootfs_path": "data/sysui/miguel_cc0.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/miguel_cc0.png"
+        },
+        {
+            "bootfs_path": "data/sysui/sophie_cc0.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/sophie_cc0.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/threepeaks.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/threepeaks.png"
+        },
+        {
+            "bootfs_path": "data/sysui/truefood.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/truefood.png"
+        },
+        {
+            "bootfs_path": "data/sysui/cinefilm_96.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/cinefilm_96.png"
+        },
+        {
+            "bootfs_path": "data/sysui/expenses_96.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/expenses_96.png"
+        },
+        {
+            "bootfs_path": "data/sysui/logo_fitness_color_2x_web_96.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/logo_fitness_color_2x_web_96.png"
+        },
+        {
+            "bootfs_path": "data/sysui/simon_96.jpg",
+            "file": "apps/sysui/agents/home_work_agent/assets/simon_96.jpg"
+        },
+        {
+            "bootfs_path": "data/sysui/story_calendar.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_calendar.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_cinefilm.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_cinefilm.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_expense.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_expense.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_marketing.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_marketing.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_overthrough.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_overthrough.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_phonecall.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_phonecall.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_steps.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_steps.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_threepeaks.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_threepeaks.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_toetheline.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_toetheline.png"
+        },
+        {
+            "bootfs_path": "data/sysui/story_truefoods.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/story_truefoods.png"
+        },
+        {
+            "bootfs_path": "data/sysui/istanbul_240.png",
+            "file": "apps/sysui/agents/home_work_agent/assets/istanbul_240.png"
+        }
+    ],
+    "binaries": [
+        {
+            "binary": "gen/apps/sysui/armadillo_user_shell/armadillo_user_shell.flx",
+            "bootfs_path": "apps/armadillo_user_shell"
+        },
+        {
+            "binary": "gen/apps/sysui/capybara_user_shell/capybara_user_shell.flx",
+            "bootfs_path": "apps/capybara_user_shell"
+        },
+        {
+            "binary": "gen/apps/sysui/kernel_panic/kernel_panic.flx",
+            "bootfs_path": "apps/kernel_panic"
+        },
+        {
+            "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
+            "bootfs_path": "apps/userpicker_device_shell"
+        },
+        {
+            "binary": "gen/apps/sysui/spinning_cube/spinning_cube.flx",
+            "bootfs_path": "apps/spinning_cube"
+        },
+        {
+            "binary": "gen/apps/sysui/infinite_scroller/infinite_scroller.flx",
+            "bootfs_path": "apps/infinite_scroller"
+        },
+        {
+            "binary": "home_work_agent.dartx",
+            "bootfs_path": "apps/agents/home_work_agent"
+        },
+        {
+            "binary": "walking_agent.dartx",
+            "bootfs_path": "apps/agents/walking_agent"
+        }
+    ]
 }

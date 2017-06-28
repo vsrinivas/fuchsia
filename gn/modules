@@ -1,15 +1,30 @@
 {
+    "imports": [
+        "calendar",
+        "chat",
+        "contacts",
+        "email",
+        "music",
+        "video"
+    ],
     "labels": [
         "//apps/modules/common",
         "//apps/modules/common:test"
     ],
-    "imports": [
-      "calendar",
-      "chat",
-      "contacts",
-      "email",
-      "music",
-      "video"
+    "languages": [
+        "dart"
+    ],
+    "components": [
+        "apps/modules/common/modules/gallery/gallery_component.json",
+        "apps/modules/common/modules/interactive_receipt/interactive_receipt_component.json",
+        "apps/modules/common/modules/map/map_component.json",
+        "apps/modules/common/modules/usps/usps_component.json",
+        "apps/modules/common/modules/youtube_related_videos/youtube_related_videos_component.json",
+        "apps/modules/common/modules/youtube_story/youtube_story_component.json",
+        "apps/modules/common/modules/youtube_thumbnail/youtube_thumbnail_component.json",
+        "apps/modules/common/modules/youtube_video/youtube_video_component.json",
+        "apps/modules/music/modules/music_album/music_album_component.json",
+        "apps/modules/music/modules/music_artist/music_artist_component.json"
     ],
     "binaries": [
         {
@@ -76,8 +91,8 @@
             "binary": "gen/apps/modules/common/modules/youtube_video/youtube_video.flx",
             "bootfs_path": "apps/youtube_video"
         }
-  ],
-  "resources": [
+    ],
+    "resources": [
         {
             "default": "true",
             "bootfs_path": "data/modules/config.json",
@@ -88,17 +103,5 @@
             "bootfs_path": "data/modules/contacts.json",
             "file": "apps/modules/chat/agents/content_provider/assets/contacts.json"
         }
-  ],
-  "components": [
-      "apps/modules/common/modules/gallery/gallery_component.json",
-      "apps/modules/common/modules/interactive_receipt/interactive_receipt_component.json",
-      "apps/modules/common/modules/map/map_component.json",
-      "apps/modules/common/modules/usps/usps_component.json",
-      "apps/modules/common/modules/youtube_related_videos/youtube_related_videos_component.json",
-      "apps/modules/common/modules/youtube_story/youtube_story_component.json",
-      "apps/modules/common/modules/youtube_thumbnail/youtube_thumbnail_component.json",
-      "apps/modules/common/modules/youtube_video/youtube_video_component.json",
-      "apps/modules/music/modules/music_album/music_album_component.json",
-      "apps/modules/music/modules/music_artist/music_artist_component.json"
-  ]
+    ]
 }

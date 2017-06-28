@@ -1,4 +1,8 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "imports": [
         "zlib"
     ],

@@ -1,4 +1,8 @@
 {
+    "languages": [
+        "cpp",
+        "go"
+    ],
     "gopaths": [
         {
             "apps/netstack": "apps/netstack",

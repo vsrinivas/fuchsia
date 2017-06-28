@@ -1,12 +1,15 @@
 {
+    "languages": [
+        "dart"
+    ],
     "labels": [
         "//apps/modules/music",
         "//apps/modules/music:test"
     ],
     "binaries": [
         {
-          "binary": "concert_agent.dartx",
-          "bootfs_path": "apps/concert_agent"
+            "binary": "concert_agent.dartx",
+            "bootfs_path": "apps/concert_agent"
         },
         {
             "binary": "gen/apps/modules/music/modules/concert_event/concert_event.flx",
@@ -37,8 +40,8 @@
             "bootfs_path": "apps/music_artist"
         },
         {
-          "binary": "music_artist_agent.dartx",
-          "bootfs_path": "apps/music_artist_agent"
+            "binary": "music_artist_agent.dartx",
+            "bootfs_path": "apps/music_artist_agent"
         },
         {
             "binary": "gen/apps/modules/music/modules/music_playback/music_playback.flx",

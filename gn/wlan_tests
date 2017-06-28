@@ -1,13 +1,24 @@
 {
-    "labels": [
-        "//apps/wlan:wlanstack_test",
-        "//drivers/wifi/wlan/tests",
-        "//drivers/wifi/testing"
+    "languages": [
+        "cpp",
+        "go"
     ],
     "drivers": [
         {
             "binary": "wlan-testdev.so",
             "bootfs_path": "driver/wlan-testdev.so"
+        }
+    ],
+    "labels": [
+        "//apps/wlan:wlanstack_test",
+        "//drivers/wifi/wlan/tests",
+        "//drivers/wifi/testing"
+    ],
+    "resources": [
+        {
+            "default": "true",
+            "bootfs_path": "data/wlanstack/config.json",
+            "file": "apps/wlan/default.json"
         }
     ],
     "binaries": [
@@ -26,13 +37,6 @@
         {
             "binary": "wlan-testutil",
             "bootfs_path": "bin/wlan-testutil"
-        }
-    ],
-    "resources": [
-        {
-            "file": "apps/wlan/default.json",
-            "bootfs_path": "data/wlanstack/config.json",
-            "default": "true"
         }
     ]
 }

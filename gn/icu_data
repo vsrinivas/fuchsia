@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "packages": {
         "icu_data": "//apps/icu_data"
     }

@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "labels": [
         "//third_party/speccpu2000(//build/toolchain:host_x64)"
     ],

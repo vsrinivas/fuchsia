@@ -1,8 +1,11 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "packages": {
-        "trace_manager": "//apps/tracing:trace_manager",
-        "ktrace_provider": "//apps/tracing:ktrace_provider",
+        "trace": "//apps/tracing:trace",
         "trace_tests": "//apps/tracing:trace_tests",
-        "trace": "//apps/tracing:trace"
+        "ktrace_provider": "//apps/tracing:ktrace_provider",
+        "trace_manager": "//apps/tracing:trace_manager"
     }
 }

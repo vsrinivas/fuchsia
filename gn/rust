@@ -1,7 +1,9 @@
 {
-    "packages": {
-      "rust_sample_module": "//rust/rust_sample_module:package"
-    },
+    "languages": [
+        "cpp",
+        "dart",
+        "rust"
+    ],
     "imports": [
         "cairo"
     ],
@@ -11,6 +13,9 @@
         "//rust/magenta-rs/examples",
         "//rust/rust_sample_module"
     ],
+    "packages": {
+        "rust_sample_module": "//rust/rust_sample_module:package"
+    },
     "binaries": [
         {
             "binary": "mx_toy",

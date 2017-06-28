@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "imports": [
         "ftl",
         "mtl"
@@ -13,4 +16,3 @@
         }
     ]
 }
-

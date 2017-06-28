@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "dart"
+    ],
     "labels": [
         "//apps/mondrian"
     ],

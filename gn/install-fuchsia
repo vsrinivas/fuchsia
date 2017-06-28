@@ -1,17 +1,19 @@
 {
-
-  "labels": [
-      "//apps/install-fuchsia/app:install-fuchsia",
-      "//apps/install-fuchsia/tests:install-fuchsia-tests"
-  ],
-  "binaries": [
-      {
-          "binary" : "install-fuchsia",
-          "bootfs_path" : "apps/install-fuchsia"
-      },
-      {
-          "binary" : "install-fuchsia-tests",
-          "bootfs_path" : "test/install-fuchsia-tests"
-      }
-  ]
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//apps/install-fuchsia/app:install-fuchsia",
+        "//apps/install-fuchsia/tests:install-fuchsia-tests"
+    ],
+    "binaries": [
+        {
+            "binary": "install-fuchsia",
+            "bootfs_path": "apps/install-fuchsia"
+        },
+        {
+            "binary": "install-fuchsia-tests",
+            "bootfs_path": "test/install-fuchsia-tests"
+        }
+    ]
 }

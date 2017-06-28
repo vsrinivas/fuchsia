@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "packages": {
         "netstack_examples": "//apps/netstack/examples:netstack_examples"
     }

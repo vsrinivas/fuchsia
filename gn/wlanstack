@@ -1,4 +1,12 @@
 {
+    "languages": [
+        "go"
+    ],
+    "gopaths": [
+        {
+            "lib/fidl/go/src/fidl": "fidl"
+        }
+    ],
     "labels": [
         "//apps/wlan"
     ],
@@ -7,8 +15,5 @@
             "binary": "wlanstack",
             "bootfs_path": "bin/wlanstack"
         }
-    ],
-    "gopaths": [
-        { "lib/fidl/go/src/fidl": "fidl" }
     ]
 }

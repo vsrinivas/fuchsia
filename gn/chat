@@ -1,7 +1,17 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "labels": [
         "//apps/modules/chat",
         "//apps/modules/chat:test"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "apps/chat_tests/chat_tests.json",
+            "file": "apps/modules/chat/tests/chat_tests.json"
+        }
     ],
     "binaries": [
         {
@@ -19,12 +29,6 @@
         {
             "binary": "gen/apps/modules/chat/modules/conversation_list/chat_conversation_list.flx",
             "bootfs_path": "apps/chat_conversation_list"
-        }
-    ],
-    "resources": [
-        {
-            "bootfs_path": "apps/chat_tests/chat_tests.json",
-            "file": "apps/modules/chat/tests/chat_tests.json"
         }
     ]
 }

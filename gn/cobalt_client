@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "cpp"
+    ],
     "imports": [
         "boringssl_libssl"
     ],

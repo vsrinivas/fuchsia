@@ -1,4 +1,8 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "labels": [
         "//lib/escher:examples",
         "//lib/escher:tests"

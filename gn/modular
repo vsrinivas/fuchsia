@@ -1,8 +1,16 @@
 {
+    "languages": [
+        "cpp",
+        "dart"
+    ],
     "labels": [
         "//apps/modular",
         "//apps/modular/lib/util:modular_util_unittests",
         "//apps/web_runner/services"
+    ],
+    "components": [
+        "apps/modular/src/component_manager/component_manager.json",
+        "apps/modular/examples/hello_component/hello_component.json"
     ],
     "binaries": [
         {
@@ -193,9 +201,5 @@
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
         }
-    ],
-    "components": [
-        "apps/modular/src/component_manager/component_manager.json",
-        "apps/modular/examples/hello_component/hello_component.json"
     ]
 }
