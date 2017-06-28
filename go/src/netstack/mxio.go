@@ -1145,6 +1145,24 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
+func (s *socketServer) opFcntl(ios *iostate, msg *rio.Msg) mx.Status {
+	cmd := uint32(msg.Arg)
+	if debug2 {
+		log.Printf("fcntl: cmd %v, flags %v", cmd, msg.FcntlFlags())
+	}
+	switch cmd {
+	case rio.OpFcntlCmdGetFL:
+		// Set flags to 0 as O_NONBLOCK is handled on the client side.
+		msg.SetFcntlFlags(0)
+	case rio.OpFcntlCmdSetFL:
+		// Do nothing.
+	default:
+		return mx.ErrNotSupported
+	}
+	msg.Datalen = 0
+	return mx.ErrOk
+}
+
 func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 	s.mu.Lock()
 	delete(s.io, cookie)
@@ -1274,6 +1292,8 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		return s.opGetSockOpt(ios, msg)
 	case rio.OpSetSockOpt:
 		return s.opSetSockOpt(ios, msg)
+	case rio.OpFcntl:
+		return s.opFcntl(ios, msg)
 	default:
 		log.Printf("unknown socket op: %v", op)
 		return mx.ErrNotSupported
