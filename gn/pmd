@@ -2,16 +2,10 @@
     "labels": [
         "//apps/pm:pmd"
     ],
-    "imports": [
-        "golibs"
-    ],
     "binaries": [
         {
             "binary": "pmd",
             "bootfs_path": "apps/pmd"
         }
-    ],
-    "gopaths": [
-        { "apps/pm": "fuchsia.googlesource.com/pm" }
     ]
 }

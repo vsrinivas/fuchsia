@@ -2,9 +2,6 @@
     "labels": [
         "//apps/pm:pkgfs_test"
     ],
-    "imports": [
-        "pm"
-    ],
     "binaries": [
         {
             "binary": "pkgfs_test",
