@@ -46,7 +46,7 @@ On success, **process_create**() returns **MX_OK**, a handle to the new process
 
 **MX_ERR_WRONG_TYPE**  *job* is not a job handle.
 
-**MX_ERR_ACCESS_DENIED**  *job* does not have the **MX_WRITE_RIGHT** right
+**MX_ERR_ACCESS_DENIED**  *job* does not have the **MX_RIGHT_WRITE** right
 (only when not **MX_HANDLE_INVALID**).
 
 **MX_ERR_INVALID_ARGS**  *name*, *proc_handle*, or *vmar_handle*  was an invalid pointer,
