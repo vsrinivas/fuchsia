@@ -37,9 +37,8 @@ void StatusCallback(ftl::Closure complete_cb, bluetooth::hci::CommandChannel::Tr
 hci::CommandChannel::TransactionId SendCommand(
     const CommandData* cmd_data, std::unique_ptr<hci::CommandPacket> packet,
     const hci::CommandChannel::CommandCompleteCallback& cb, const ftl::Closure& complete_cb) {
-  return cmd_data->cmd_channel()->SendCommand(std::move(packet),
-                                              std::bind(&StatusCallback, complete_cb, _1, _2), cb,
-                                              cmd_data->task_runner());
+  return cmd_data->cmd_channel()->SendCommand(std::move(packet), cmd_data->task_runner(), cb,
+                                              std::bind(&StatusCallback, complete_cb, _1, _2));
 }
 
 void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {

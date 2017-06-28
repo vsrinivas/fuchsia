@@ -104,9 +104,9 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
     RunNextQueuedCommand();
   });
 
-  if (!transport_->command_channel()->SendCommand(std::move(next.first),
-                                                  status_callback_.callback(),
-                                                  complete_callback_.callback(), task_runner_)) {
+  if (!transport_->command_channel()->SendCommand(std::move(next.first), task_runner_,
+                                                  complete_callback_.callback(),
+                                                  status_callback_.callback())) {
     NotifyResultAndReset(false);
   }
 }

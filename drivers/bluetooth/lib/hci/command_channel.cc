@@ -25,10 +25,12 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id,
                                              const CommandStatusCallback& status_callback,
                                              const CommandCompleteCallback& complete_callback,
                                              ftl::RefPtr<ftl::TaskRunner> task_runner,
-                                             const EventCode complete_event_code) {
+                                             const EventCode complete_event_code,
+                                             const EventMatcher& complete_event_matcher) {
   transaction_data.id = id;
   transaction_data.opcode = command_packet->opcode();
   transaction_data.complete_event_code = complete_event_code;
+  transaction_data.complete_event_matcher = complete_event_matcher;
   transaction_data.status_callback = status_callback;
   transaction_data.complete_callback = complete_callback;
   transaction_data.task_runner = task_runner;
@@ -123,9 +125,9 @@ void CommandChannel::ShutDown() {
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
-    std::unique_ptr<CommandPacket> command_packet, const CommandStatusCallback& status_callback,
-    const CommandCompleteCallback& complete_callback, ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const EventCode complete_event_code) {
+    std::unique_ptr<CommandPacket> command_packet, ftl::RefPtr<ftl::TaskRunner> task_runner,
+    const CommandCompleteCallback& complete_callback, const CommandStatusCallback& status_callback,
+    const EventCode complete_event_code, const EventMatcher& complete_event_matcher) {
   if (!is_initialized_) {
     FTL_VLOG(1) << "hci: CommandChannel: Cannot send commands while uninitialized";
     return 0u;
@@ -138,7 +140,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
   if (next_transaction_id_ == 0u) next_transaction_id_++;
   TransactionId id = next_transaction_id_++;
   send_queue_.push(QueuedCommand(id, std::move(command_packet), status_callback, complete_callback,
-                                 task_runner, complete_event_code));
+                                 task_runner, complete_event_code, complete_event_matcher));
   io_task_runner_->PostTask(std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
 
   return id;
@@ -259,8 +261,10 @@ void CommandChannel::TrySendNextQueuedCommand() {
     FTL_DCHECK(pending_cmd);
     FTL_DCHECK(pending_cmd->id == id);
 
-    pending_cmd->task_runner->PostTask(
-        std::bind(pending_cmd->status_callback, id, Status::kCommandTimeout));
+    if (pending_cmd->status_callback) {
+      pending_cmd->task_runner->PostTask(
+          std::bind(pending_cmd->status_callback, id, Status::kCommandTimeout));
+    }
     SetPendingCommand(nullptr);
     TrySendNextQueuedCommand();
   });
@@ -269,7 +273,7 @@ void CommandChannel::TrySendNextQueuedCommand() {
                                    ftl::TimeDelta::FromMilliseconds(kCommandTimeoutMs));
 }
 
-void CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket> event) {
+bool CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket>&& event) {
   FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   PendingTransactionData* pending_command = GetPendingCommand();
@@ -286,7 +290,7 @@ void CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket> e
         "0x%04x, pending: 0x%04x",
         le16toh(event->view().payload<CommandCompleteEventParams>().command_opcode),
         pending_command->opcode);
-    return;
+    return false;
   }
 
   // In case that this is a CommandComplete event, make sure that the command
@@ -299,7 +303,12 @@ void CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket> e
         "0x%04x, pending: 0x%04x",
         le16toh(event->view().payload<CommandStatusEventParams>().command_opcode),
         pending_command->opcode);
-    return;
+    return false;
+  }
+
+  // Do not handle the event if it does not pass the matcher (if one was provided).
+  if (pending_command->complete_event_matcher && !pending_command->complete_event_matcher(*event)) {
+    return false;
   }
 
   // Clear the pending command and process the next queued command when this goes out of scope.
@@ -308,17 +317,22 @@ void CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket> e
     TrySendNextQueuedCommand();
   });
 
+  // If no command complete callback was provided, then the caller does not care about the result.
+  if (!pending_command->complete_callback) return true;
+
   // If the command callback needs to run on the I/O thread (i.e. the current thread), then no need
   // for an async task; invoke the callback immediately.
-  if (pending_command->task_runner.get() == io_task_runner_.get()) {
+  if (pending_command->task_runner->RunsTasksOnCurrentThread()) {
     pending_command->complete_callback(pending_command->id, *event);
-    return;
+    return true;
   }
 
   pending_command->task_runner->PostTask(ftl::MakeCopyable([
     event = std::move(event), complete_callback = pending_command->complete_callback,
     transaction_id = pending_command->id
   ]() mutable { complete_callback(transaction_id, *event); }));
+
+  return true;
 }
 
 void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
@@ -336,15 +350,17 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
     return;
   }
 
-  auto status_cb =
-      std::bind(pending_command->status_callback, pending_command->id,
-                static_cast<Status>(event.view().payload<CommandStatusEventParams>().status));
+  if (pending_command->status_callback) {
+    auto status_cb =
+        std::bind(pending_command->status_callback, pending_command->id,
+                  static_cast<Status>(event.view().payload<CommandStatusEventParams>().status));
 
-  // If the command callback needs to run on the I/O thread, then invoke it immediately.
-  if (pending_command->task_runner.get() == io_task_runner_.get()) {
-    status_cb();
-  } else {
-    pending_command->task_runner->PostTask(status_cb);
+    // If the command callback needs to run on the I/O thread, then invoke it immediately.
+    if (pending_command->task_runner->RunsTasksOnCurrentThread()) {
+      status_cb();
+    } else {
+      pending_command->task_runner->PostTask(status_cb);
+    }
   }
 
   // Success in this case means that the command will be completed later when we
@@ -482,16 +498,16 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   PendingTransactionData* pending_command = GetPendingCommand();
   if (pending_command) {
     if (pending_command->complete_event_code == packet->event_code()) {
-      HandlePendingCommandComplete(std::move(packet));
-      return;
-    }
+      if (HandlePendingCommandComplete(std::move(packet))) return;
 
-    // For CommandStatus we fall through if the event does not match the
-    // currently pending command.
-    if (packet->event_code() == kCommandStatusEventCode) {
+      // |packet| should not have been moved in this case. It will be accessed below.
+      FTL_DCHECK(packet);
+    } else if (packet->event_code() == kCommandStatusEventCode) {
       HandlePendingCommandStatus(*packet);
       return;
     }
+
+    // Fall through if the event did not match the currently pending command.
   }
 
   // The event did not match a pending command OR no command is currently

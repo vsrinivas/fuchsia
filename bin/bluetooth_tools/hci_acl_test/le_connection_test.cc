@@ -64,13 +64,13 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress
 
   // Read Buffer Size
   hci_->command_channel()->SendCommand(hci::CommandPacket::New(hci::kReadBufferSize),
-                                       GetStatusCallback("Read Buffer Size"), read_buf_size_cb,
-                                       message_loop_.task_runner());
+                                       message_loop_.task_runner(), read_buf_size_cb,
+                                       GetStatusCallback("Read Buffer Size"));
 
   // LE Read Buffer Size
   hci_->command_channel()->SendCommand(hci::CommandPacket::New(hci::kLEReadBufferSize),
-                                       GetStatusCallback("LE Read Buffer Size"),
-                                       le_read_buf_size_cb, message_loop_.task_runner());
+                                       message_loop_.task_runner(), le_read_buf_size_cb,
+                                       GetStatusCallback("LE Read Buffer Size"));
 
   message_loop_.Run();
 
@@ -170,9 +170,8 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   FTL_LOG(INFO) << "Sending LE connection request";
 
   // The status callback will never get called but we pass one in anyway.
-  hci_->command_channel()->SendCommand(std::move(cmd), GetStatusCallback("LE Create Connection"),
-                                       le_conn_status_cb, message_loop_.task_runner(),
-                                       hci::kCommandStatusEventCode);
+  hci_->command_channel()->SendCommand(std::move(cmd), message_loop_.task_runner(),
+                                       le_conn_status_cb, nullptr, hci::kCommandStatusEventCode);
 }
 
 void LEConnectionTest::SendNotifications(hci::ConnectionHandle connection_handle) {

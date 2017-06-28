@@ -20,14 +20,6 @@ using ::bluetooth::testing::CommandTransaction;
 
 using TestingBase = ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
 
-void NopStatusCallback(CommandChannel::TransactionId, Status) {}
-void NopCompleteCallback(CommandChannel::TransactionId, const EventPacket&) {}
-
-#define NOP_STATUS_CB() std::bind(&NopStatusCallback, std::placeholders::_1, std::placeholders::_2)
-
-#define NOP_COMPLETE_CB() \
-  std::bind(&NopCompleteCallback, std::placeholders::_1, std::placeholders::_2)
-
 constexpr uint8_t UpperBits(const OpCode opcode) {
   return opcode >> 8;
 }
@@ -59,11 +51,13 @@ class CommandChannelTest : public TestingBase {
 
 TEST_F(CommandChannelTest, CommandTimeout) {
   // Set up expectations:
+  // clang-format off
   // HCI_Reset
   auto req = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
       0x00                                   // parameter_total_size
       );
+  // clang-format on
 
   // No reply.
   test_device()->QueueCommandTransaction(CommandTransaction(req, {}));
@@ -80,7 +74,7 @@ TEST_F(CommandChannelTest, CommandTimeout) {
 
   auto reset = CommandPacket::New(kReset);
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
-      std::move(reset), status_cb, NOP_COMPLETE_CB(), message_loop()->task_runner());
+      std::move(reset), message_loop()->task_runner(), nullptr, status_cb);
 
   RunMessageLoop();
 
@@ -90,6 +84,7 @@ TEST_F(CommandChannelTest, CommandTimeout) {
 
 TEST_F(CommandChannelTest, SingleRequestResponse) {
   // Set up expectations:
+  // clang-format off
   // HCI_Reset
   auto req = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
@@ -102,6 +97,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
       kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset),  // HCI_Reset opcode
       Status::kHardwareFailure);
+  // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
   test_device()->Start();
 
@@ -113,7 +109,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
 
   auto reset = CommandPacket::New(kReset);
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
-      std::move(reset), [test_obj](CommandChannel::TransactionId, Status) {},
+      std::move(reset), message_loop()->task_runner(),
       [&id, this, test_obj](CommandChannel::TransactionId callback_id, const EventPacket& event) {
         EXPECT_EQ(id, callback_id);
         EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
@@ -126,8 +122,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
 
         // Quit the message loop to continue the test.
         message_loop()->QuitNow();
-      },
-      message_loop()->task_runner());
+      });
 
   test_obj = nullptr;
   EXPECT_FALSE(test_obj_deleted);
@@ -137,6 +132,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
 
 TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
   // Set up expectations:
+  // clang-format off
   // HCI_Reset
   auto req = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
@@ -156,6 +152,7 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
       kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset),  // HCI_Reset opcode
       Status::kSuccess);
+  // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp0, &rsp1}));
   test_device()->Start();
 
@@ -179,14 +176,15 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
   };
 
   auto reset = CommandPacket::New(kReset);
-  id = cmd_channel()->SendCommand(std::move(reset), status_cb, complete_cb,
-                                  message_loop()->task_runner());
+  id = cmd_channel()->SendCommand(std::move(reset), message_loop()->task_runner(), complete_cb,
+                                  status_cb);
   RunMessageLoop();
   EXPECT_EQ(1, status_cb_count);
 }
 
 TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
   // Set up expectations
+  // clang-format off
   // HCI_Reset for the sake of testing
   auto req = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
@@ -199,6 +197,7 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
       Status::kSuccess, kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset)  // HCI_Reset opcode
       );
+  // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
   test_device()->Start();
 
@@ -220,8 +219,8 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
   };
 
   auto reset = CommandPacket::New(kReset);
-  id = cmd_channel()->SendCommand(std::move(reset), status_cb, complete_cb,
-                                  message_loop()->task_runner(), kCommandStatusEventCode);
+  id = cmd_channel()->SendCommand(std::move(reset), message_loop()->task_runner(), complete_cb,
+                                  status_cb, kCommandStatusEventCode);
   RunMessageLoop();
 
   // |status_cb| shouldn't have been called since it was used as the completion
@@ -229,8 +228,88 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
   EXPECT_EQ(0, status_cb_count);
 }
 
+TEST_F(CommandChannelTest, SingleRequestWithCustomResponseAndMatcher) {
+  constexpr EventCode kTestEventCode = 0xFF;
+  constexpr size_t kExpectedEventCount = 3;
+  constexpr size_t kExpectedCommandCompleteCount = 1;
+
+  // Set up expectations
+  // clang-format off
+  // HCI_Reset for the sake of testing
+  auto req = common::CreateStaticByteBuffer(
+      LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
+      0x00                                   // parameter_total_size
+      );
+  // clang-format on
+
+  // Custom completion events. We send two events that match the matcher below and two events that
+  // do not. We expect |rsp1| to complete the HCI command while the rest to be routed to the event
+  // handler.
+  auto rsp0 = common::CreateStaticByteBuffer(kTestEventCode, 0x00);
+  auto rsp1 = common::CreateStaticByteBuffer(kTestEventCode, 0x01, 0x00);
+  auto rsp2 = common::CreateStaticByteBuffer(kTestEventCode, 0x01, 0x00);
+  auto rsp3 = common::CreateStaticByteBuffer(kTestEventCode, 0x00);
+
+  test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp0, &rsp1, &rsp2, &rsp3}));
+  test_device()->Start();
+
+  // Send HCI_Reset
+  CommandChannel::TransactionId id;
+  unsigned int complete_cb_count = 0;
+  auto complete_cb = [&id, &complete_cb_count, kTestEventCode](
+                         CommandChannel::TransactionId callback_id, const EventPacket& event) {
+    EXPECT_EQ(callback_id, id);
+    EXPECT_EQ(kTestEventCode, event.event_code());
+    EXPECT_EQ(1u, event.view().payload_size());
+
+    complete_cb_count++;
+  };
+
+  unsigned int event_count_payload0 = 0;
+  unsigned int event_count_payload1 = 0;
+  auto event_cb = [&event_count_payload0, &event_count_payload1, kTestEventCode,
+                   this](const EventPacket& event) {
+    EXPECT_EQ(kTestEventCode, event.event_code());
+
+    if (event.view().payload_size() == 0u)
+      event_count_payload0++;
+    else if (event.view().payload_size() == 1u)
+      event_count_payload1++;
+
+    // Quit the message loop to continue the test after we reach the expected event count.
+    if (event_count_payload0 + event_count_payload1 < kExpectedEventCount) return;
+
+    message_loop()->PostQuitTask();
+  };
+  auto event_handler_id =
+      cmd_channel()->AddEventHandler(kTestEventCode, event_cb, message_loop()->task_runner());
+  ASSERT_NE(0u, event_handler_id);
+
+  // Below we send a Reset command with a custom completion event code and matcher. The matcher is
+  // set up to match only one of the events that we sent above.
+  auto matcher = [](const EventPacket& event) -> bool {
+    // This will match |rsp1| and |rsp2| above (but should never be called on |rsp2| since the
+    // command should complete before then).
+    return event.view().payload_size() == 1;
+  };
+
+  auto reset = CommandPacket::New(kReset);
+  id = cmd_channel()->SendCommand(std::move(reset), message_loop()->task_runner(), complete_cb,
+                                  nullptr, kTestEventCode, matcher);
+  RunMessageLoop();
+
+  // |status_cb| shouldn't have been called since it was used as the completion
+  // callback.
+  EXPECT_EQ(2u, event_count_payload0);
+  EXPECT_EQ(1u, event_count_payload1);
+  EXPECT_EQ(kExpectedCommandCompleteCount, complete_cb_count);
+
+  cmd_channel()->RemoveEventHandler(event_handler_id);
+}
+
 TEST_F(CommandChannelTest, MultipleQueuedRequests) {
   // Set up expectations:
+  // clang-format off
   // Transaction 1:
   // HCI_Reset
   auto req0 = common::CreateStaticByteBuffer(
@@ -263,6 +342,7 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
       kNumHCICommandPackets, LowerBits(kReadBDADDR), UpperBits(kReadBDADDR),
       Status::kSuccess, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06  // BD_ADDR
       );
+  // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req0, {&rsp0}));
   test_device()->QueueCommandTransaction(CommandTransaction(req1, {&rsp1, &rsp2}));
   test_device()->Start();
@@ -298,11 +378,11 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
   };
 
   auto reset = CommandPacket::New(kReset);
-  id0 = cmd_channel()->SendCommand(std::move(reset), status_cb, complete_cb,
-                                   message_loop()->task_runner());
+  id0 = cmd_channel()->SendCommand(std::move(reset), message_loop()->task_runner(), complete_cb,
+                                   status_cb);
   auto read_bdaddr = CommandPacket::New(kReadBDADDR);
-  id1 = cmd_channel()->SendCommand(std::move(read_bdaddr), status_cb, complete_cb,
-                                   message_loop()->task_runner());
+  id1 = cmd_channel()->SendCommand(std::move(read_bdaddr), message_loop()->task_runner(),
+                                   complete_cb, status_cb);
   RunMessageLoop();
   EXPECT_EQ(2, status_cb_count);
   EXPECT_EQ(1, complete_cb_count);
@@ -385,6 +465,7 @@ TEST_F(CommandChannelTest, EventHandlerBasic) {
 }
 
 TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
+  // clang-format off
   // HCI_Reset
   auto req = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
@@ -397,6 +478,7 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
       Status::kSuccess, 0x01, LowerBits(kReset),
       UpperBits(kReset)  // HCI_Reset opcode
       );
+  // clang-format on
 
   constexpr EventCode kTestEventCode = 0xFF;
   auto event0 = common::CreateStaticByteBuffer(kTestEventCode, 0x00);
@@ -423,8 +505,8 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   cmd_channel()->AddEventHandler(kTestEventCode, event_cb, message_loop()->task_runner());
 
   auto reset = CommandPacket::New(kReset);
-  cmd_channel()->SendCommand(std::move(reset), NOP_STATUS_CB(), NOP_COMPLETE_CB(),
-                             message_loop()->task_runner(), kTestEventCode);
+  cmd_channel()->SendCommand(std::move(reset), message_loop()->task_runner(), nullptr, nullptr,
+                             kTestEventCode);
 
   RunMessageLoop();
 

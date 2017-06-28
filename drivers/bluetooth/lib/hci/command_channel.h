@@ -34,6 +34,9 @@ class Transport;
 
 // Represents the HCI Bluetooth command channel. Manages HCI command and event
 // packet control flow.
+//
+// TODO(armansito): I don't imagine many cases in which we will want to queue up HCI commands from
+// the data thread. Consider making this class fully single threaded and removing the locks.
 class CommandChannel final : public ::mtl::MessageLoopHandler {
  public:
   // |hci_command_channel| is a Magenta channel construct that can receive
@@ -79,6 +82,12 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // however some command sequences use different events, as specified in the
   // Bluetooth Core Specification.
   //
+  // When a caller provides a value for |complete_event_code| the caller can also
+  // optionally provide a filter |complete_event_matcher| which will be used to determine whether
+  // the event should match this command sequence. If a filter rejects the event (by returning
+  // false), the event will be passed to the handler registered via AddEventHander(). This callback
+  // will be run on the I/O thread and must complete synchronously.
+  //
   // Returns a transaction ID that is unique to the initiated command sequence.
   // This can be used to identify the command sequence by comparing it to the
   // |id| parameter in a CommandCompleteCallback.
@@ -90,11 +99,13 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
+  using EventMatcher = std::function<bool(const EventPacket& event)>;
   TransactionId SendCommand(std::unique_ptr<CommandPacket> command_packet,
-                            const CommandStatusCallback& status_callback,
-                            const CommandCompleteCallback& complete_callback,
                             ftl::RefPtr<ftl::TaskRunner> task_runner,
-                            const EventCode complete_event_code = kCommandCompleteEventCode);
+                            const CommandCompleteCallback& complete_callback,
+                            const CommandStatusCallback& status_callback = {},
+                            const EventCode complete_event_code = kCommandCompleteEventCode,
+                            const EventMatcher& complete_event_matcher = {});
 
   // Used to identify an individual HCI event handler that was registered with
   // this CommandChannel.
@@ -155,6 +166,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     TransactionId id;
     OpCode opcode;
     EventCode complete_event_code;
+    EventMatcher complete_event_matcher;
     CommandStatusCallback status_callback;
     CommandCompleteCallback complete_callback;
     ftl::RefPtr<ftl::TaskRunner> task_runner;
@@ -165,7 +177,8 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     QueuedCommand(TransactionId id, std::unique_ptr<CommandPacket> command_packet,
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
-                  ftl::RefPtr<ftl::TaskRunner> task_runner, EventCode complete_event_code);
+                  ftl::RefPtr<ftl::TaskRunner> task_runner, EventCode complete_event_code,
+                  const EventMatcher& complete_event_matcher);
     QueuedCommand() = default;
 
     QueuedCommand(QueuedCommand&& other) = default;
@@ -190,8 +203,9 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
   // If the given event packet corresponds to the currently pending command,
   // this method completes the transaction and sends the next queued command, if
-  // any.
-  void HandlePendingCommandComplete(std::unique_ptr<EventPacket> event);
+  // any. Returns false if the event needs to be handled by an event handler and does not take
+  // ownership of it.
+  bool HandlePendingCommandComplete(std::unique_ptr<EventPacket>&& event);
 
   // If the given CommandStatus event packet corresponds to the currently
   // pending command and notifes the transaction's |status_callback|.
