@@ -20,7 +20,7 @@ MagentaDeviceWrapper::MagentaDeviceWrapper(ftl::UniqueFD device_fd)
 
 mx::channel MagentaDeviceWrapper::GetCommandChannel() {
   mx::channel channel;
-  ssize_t status = ioctl_bt_hci_get_command_channel(device_fd_.get(), channel.get_address());
+  ssize_t status = ioctl_bt_hci_get_command_channel(device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
     FTL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
                    << mx_status_get_string(status);
@@ -32,7 +32,7 @@ mx::channel MagentaDeviceWrapper::GetCommandChannel() {
 
 mx::channel MagentaDeviceWrapper::GetACLDataChannel() {
   mx::channel channel;
-  ssize_t status = ioctl_bt_hci_get_acl_data_channel(device_fd_.get(), channel.get_address());
+  ssize_t status = ioctl_bt_hci_get_acl_data_channel(device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
     FTL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
                    << mx_status_get_string(status);
