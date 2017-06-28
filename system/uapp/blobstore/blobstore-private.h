@@ -174,13 +174,13 @@ private:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobstoreBlockSize
     mxtl::unique_ptr<MappedVmo> blob_{};
-    vmoid_t vmoid_ = 0;
+    vmoid_t vmoid_{};
 
     mx::event readable_event_{};
-    uint64_t bytes_written_ = 0;
+    uint64_t bytes_written_{};
     uint8_t digest_[Digest::kLength]{};
 
-    size_t map_index_ = 0;
+    size_t map_index_{};
 };
 
 // We need to define this structure to allow the Blob to be indexable by a key
@@ -276,14 +276,14 @@ private:
                                             VnodeBlob::TypeWavlTraits>;
     WAVLTreeByMerkle hash_{}; // Map of all 'in use' blobs
 
-    fifo_client_t* fifo_client_ = nullptr;
-    txnid_t txnid_ = 0;
+    fifo_client_t* fifo_client_{};
+    txnid_t txnid_{};
     RawBitmap block_map_{};
-    vmoid_t block_map_vmoid_ = 0;
+    vmoid_t block_map_vmoid_{};
     mxtl::unique_ptr<MappedVmo> node_map_{};
-    vmoid_t node_map_vmoid_ = 0;
+    vmoid_t node_map_vmoid_{};
     mxtl::unique_ptr<MappedVmo> info_vmo_{};
-    vmoid_t info_vmoid_ = 0;
+    vmoid_t info_vmoid_{};
 };
 
 class BlobstoreChecker {
