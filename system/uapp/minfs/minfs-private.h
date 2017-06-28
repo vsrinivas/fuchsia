@@ -97,8 +97,8 @@ public:
         MX_DEBUG_ASSERT(bno < info_.block_count);
     }
 
-    mxtl::unique_ptr<Bcache> bc_;
-    minfs_info_t info_;
+    mxtl::unique_ptr<Bcache> bc_{};
+    minfs_info_t info_{};
 
 private:
     // Fsck can introspect Minfs
@@ -110,25 +110,25 @@ private:
     // Enqueues an update for allocated inode/block counts
     mx_status_t CountUpdate(WriteTxn* txn);
 #ifdef __Fuchsia__
-    mxtl::unique_ptr<fs::Dispatcher> dispatcher_;
+    mxtl::unique_ptr<fs::Dispatcher> dispatcher_{nullptr};
 #endif
-    uint32_t abmblks_;
-    uint32_t ibmblks_;
-    RawBitmap inode_map_;
-    RawBitmap block_map_;
+    uint32_t abmblks_{};
+    uint32_t ibmblks_{};
+    RawBitmap inode_map_{};
+    RawBitmap block_map_{};
 #ifdef __Fuchsia__
-    mxtl::unique_ptr<MappedVmo> inode_table_;
-    mxtl::unique_ptr<MappedVmo> info_vmo_;
-    vmoid_t inode_map_vmoid_;
-    vmoid_t block_map_vmoid_;
-    vmoid_t inode_table_vmoid_;
-    vmoid_t info_vmoid_;
+    mxtl::unique_ptr<MappedVmo> inode_table_{};
+    mxtl::unique_ptr<MappedVmo> info_vmo_{};
+    vmoid_t inode_map_vmoid_{};
+    vmoid_t block_map_vmoid_{};
+    vmoid_t inode_table_vmoid_{};
+    vmoid_t info_vmoid_{};
 #endif
 
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
     using HashTable = mxtl::HashTable<uint32_t, VnodeMinfs*>;
-    HashTable vnode_hash_;
+    HashTable vnode_hash_{};
 };
 
 struct DirArgs {
@@ -187,9 +187,9 @@ public:
     // Lookup which can traverse '..'
     mx_status_t LookupInternal(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len);
 
-    Minfs* fs_;
-    uint32_t ino_;
-    minfs_inode_t inode_;
+    Minfs* fs_{};
+    uint32_t ino_{};
+    minfs_inode_t inode_{};
 
     ~VnodeMinfs();
 
@@ -253,10 +253,10 @@ private:
     // it can properly handle pages faults on a vnode's contents, then we can
     // avoid reading the entire file up-front. Until then, read the contents of
     // a VMO into memory when it is read/written.
-    mx::vmo vmo_;
-    mxtl::unique_ptr<MappedVmo> vmo_indirect_;
-    vmoid_t vmoid_;
-    vmoid_t vmoid_indirect_;
+    mx::vmo vmo_{};
+    mxtl::unique_ptr<MappedVmo> vmo_indirect_{};
+    vmoid_t vmoid_{};
+    vmoid_t vmoid_indirect_{};
 
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
@@ -270,8 +270,8 @@ private:
     virtual mx_handle_t GetRemote() const final;
     virtual void SetRemote(mx_handle_t remote) final;
 
-    fs::RemoteContainer remoter_;
-    fs::WatcherContainer watcher_;
+    fs::RemoteContainer remoter_{};
+    fs::WatcherContainer watcher_{};
 #endif
 };
 
