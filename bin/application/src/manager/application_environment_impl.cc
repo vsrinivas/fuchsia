@@ -249,45 +249,6 @@ ApplicationEnvironmentImpl::ExtractApplication(
   return application;
 }
 
-ApplicationEnvironmentImpl* ApplicationEnvironmentImpl::FindByLabel(
-    ftl::StringView label) {
-  if (label_ == label)
-    return this;
-  for (const auto& child : children_) {
-    ApplicationEnvironmentImpl* env =
-        child.second->environment()->FindByLabel(label);
-    if (env)
-      return env;
-  }
-  return nullptr;
-}
-
-void ApplicationEnvironmentImpl::Describe(std::ostream& out) {
-  out << "Environment " << label_ << " [" << this << "]" << std::endl;
-
-  if (!applications_.empty()) {
-    out << "  applications:" << std::endl;
-    for (const auto& pair : applications_) {
-      ApplicationControllerImpl* app = pair.second.get();
-      out << "    - " << app->path() << " [" << app << "]" << std::endl;
-    }
-  }
-
-  if (!children_.empty()) {
-    out << "  children:" << std::endl;
-    for (const auto& pair : children_) {
-      ApplicationEnvironmentImpl* env = pair.second->environment();
-      out << "    - " << env->label() << " [" << env << "]" << std::endl;
-    }
-  }
-
-  if (!children_.empty()) {
-    for (const auto& pair : children_) {
-      pair.second->environment()->Describe(out);
-    }
-  }
-}
-
 void ApplicationEnvironmentImpl::AddBinding(
     fidl::InterfaceRequest<ApplicationEnvironment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));

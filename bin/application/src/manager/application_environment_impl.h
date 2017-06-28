@@ -48,14 +48,6 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   std::unique_ptr<ApplicationControllerImpl> ExtractApplication(
       ApplicationControllerImpl* controller);
 
-  // Finds the environment with the specified label.
-  // Returns this environment if it matches the specified label, otherwise
-  // returns the first child which does or null if none.
-  ApplicationEnvironmentImpl* FindByLabel(ftl::StringView label);
-
-  // Writes a diagnostic description of the environment to the stream.
-  void Describe(std::ostream& out);
-
   void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
 
   // ApplicationEnvironment implementation:
