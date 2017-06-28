@@ -14,7 +14,7 @@ and the sysroot:
 
 ```
 (cd magenta; make -j32 magenta-pc-x86-64)
-./scripts/build-sysroot.sh
+./scripts/build-magenta.sh
 ```
 
 ### Build Fuchsia
