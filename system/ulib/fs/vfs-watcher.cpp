@@ -25,6 +25,36 @@ VnodeWatcher::VnodeWatcher(mx::channel h, uint32_t mask) : h(mxtl::move(h)),
 
 VnodeWatcher::~VnodeWatcher() {}
 
+mx_status_t WatchBuffer::AddMsg(const mx::channel& c, unsigned event, const char* name) {
+    size_t slen = strlen(name);
+    size_t mlen = sizeof(vfs_watch_msg_t) + slen;
+    if (mlen + watch_buf_size_ > sizeof(watch_buf_)) {
+        // This message won't fit in the watch_buf; transmit first.
+        mx_status_t status = Send(c);
+        if (status != MX_OK) {
+            return status;
+        }
+    }
+    vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>((uintptr_t)watch_buf_ + watch_buf_size_);
+    vmsg->event = static_cast<uint8_t>(event);
+    vmsg->len = static_cast<uint8_t>(slen);
+    memcpy(vmsg->name,name, slen);
+    watch_buf_size_ += mlen;
+    return MX_OK;
+}
+
+mx_status_t WatchBuffer::Send(const mx::channel& c) {
+    if (watch_buf_size_ > 0) {
+        // Only write if we have something to write
+        mx_status_t status = c.write(0, watch_buf_, static_cast<uint32_t>(watch_buf_size_), nullptr, 0);
+        watch_buf_size_ = 0;
+        if (status != MX_OK) {
+            return status;
+        }
+    }
+    return MX_OK;
+}
+
 mx_status_t WatcherContainer::WatchDir(mx_handle_t* out) {
     AllocChecker ac;
     mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
@@ -66,26 +96,21 @@ mx_status_t WatcherContainer::WatchDirV2(Vnode* vn, const vfs_watch_dir_t* cmd) 
     if (cmd->mask & VFS_WATCH_MASK_EXISTING) {
         vdircookie_t dircookie;
         memset(&dircookie, 0, sizeof(dircookie));
-        char buf[MXIO_CHUNK_SIZE];
+        char readdir_buf[MXIO_CHUNK_SIZE];
+        WatchBuffer wb;
         {
             // Send "VFS_WATCH_EVT_EXISTING" for all entries in readdir
             mxtl::AutoLock lock(&vfs_lock);
             while (true) {
-                mx_status_t status = vn->Readdir(&dircookie, &buf, sizeof(buf));
+                mx_status_t status = vn->Readdir(&dircookie, &readdir_buf, sizeof(readdir_buf));
                 if (status <= 0) {
                     break;
                 }
-                void* ptr = buf;
+                void* ptr = readdir_buf;
                 while (status > 0) {
                     auto dirent = reinterpret_cast<vdirent_t*>(ptr);
                     if (dirent->name[0]) {
-                        size_t len = strlen(dirent->name);
-                        uint8_t msg[sizeof(vfs_watch_msg_t) + len];
-                        vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
-                        vmsg->event = static_cast<uint8_t>(VFS_WATCH_EVT_EXISTING);
-                        vmsg->len = static_cast<uint8_t>(len);
-                        memcpy(vmsg->name, dirent->name, len);
-                        watcher->h.write(0, msg, static_cast<uint32_t>(sizeof(msg)), nullptr, 0);
+                        wb.AddMsg(watcher->h, VFS_WATCH_EVT_EXISTING, dirent->name);
                     }
                     status -= dirent->size;
                     ptr = reinterpret_cast<void*>(
@@ -97,12 +122,10 @@ mx_status_t WatcherContainer::WatchDirV2(Vnode* vn, const vfs_watch_dir_t* cmd) 
 
         // Send VFS_WATCH_EVT_IDLE to signify that readdir has completed
         if (cmd->mask & VFS_WATCH_MASK_IDLE) {
-            uint8_t msg[sizeof(vfs_watch_msg_t)];
-            vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
-            vmsg->event = static_cast<uint8_t>(VFS_WATCH_EVT_IDLE);
-            vmsg->len = 0;
-            watcher->h.write(0, msg, static_cast<uint32_t>(sizeof(msg)), nullptr, 0);
+            wb.AddMsg(watcher->h, VFS_WATCH_EVT_IDLE, "");
         }
+
+        wb.Send(watcher->h);
     }
 
     mxtl::AutoLock lock(&lock_);

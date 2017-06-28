@@ -86,6 +86,22 @@ public:
     uint32_t mask;
 };
 
+// Transmission buffer for sending directory watcher notifications to clients.
+// Allows enqueueing multiple messages in a buffer before sending an IPC message
+// to a client.
+class WatchBuffer {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
+    WatchBuffer() = default;
+
+    mx_status_t AddMsg(const mx::channel& c, unsigned event, const char* name);
+    mx_status_t Send(const mx::channel& c);
+
+private:
+    size_t watch_buf_size_ = 0;
+    char watch_buf_[VFS_WATCH_MSG_MAX]{};
+};
+
 class WatcherContainer {
 public:
     mx_status_t WatchDir(mx_handle_t* out);
