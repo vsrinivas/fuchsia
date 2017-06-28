@@ -70,6 +70,10 @@ body {
   background-color: white;
 }
 
+.mdc-list {
+  padding-bottom: 20px;
+}
+
 .mdc-list-divider {
   padding-top: 10px;
 }
@@ -136,4 +140,9 @@ td.wrappable {
   overflow: hidden;
   max-width: 450px;
   word-wrap: break-word;
+}
+
+span.ask-query {
+  font-family: serif;
+  font-size: x-large;
 }

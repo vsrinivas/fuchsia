@@ -1,14 +1,15 @@
 const RECONNECT_INTERVAL = 500;
 const MAX_RECONNECT_INTERVAL = 2000;
 
-var _webSocket = null;
-var _reconnectInterval = RECONNECT_INTERVAL;
+var _activeAskQueryFlag = false;
 var _entities = {};
 var _focusedStoryId = null;
 var _modules = {};
+var _reconnectInterval = RECONNECT_INTERVAL;
 var _stories = {};
 var _toolbar = null;
 var _tabBar = null;
+var _webSocket = null;
 
 $(function() {
   mdc.autoInit();
@@ -122,6 +123,9 @@ function updateLastQuery(query) {
 function handleSuggestionsUpdate(suggestions) {
   updateProposals('#askProposals', suggestions.ask_proposals);
   updateProposals('#nextProposals', suggestions.next_proposals);
+  if (_activeAskQueryFlag) {
+    updateProposals('#askSuggestionsOverview', suggestions.ask_proposals);
+  }
   if (suggestions.selection) {
     updateLastSelection(suggestions.selection);
   }
@@ -129,7 +133,7 @@ function handleSuggestionsUpdate(suggestions) {
 }
 
 function handleContextUpdate(context) {
-  updateOverview(context);
+  updateOverviewFromContext(context);
 
   $.each(context, function(topic, rawValue) {
     // make a pretty string for the topic's value
@@ -267,7 +271,7 @@ function attemptReconnect() {
   }
 }
 
-function updateOverview(context) {
+function updateOverviewFromContext(context) {
   $.each(context, function(topic, rawValue) {
     // loop through the context updates and modify anything related
     // on the overview panel
@@ -309,10 +313,13 @@ function updateOverview(context) {
       _focusedStoryId = newFocusedStoryId;
     } else if (topic == '/suggestion_engine/current_query') {
       var query = JSON.parse(rawValue);
-      if (query.length == 0) {
-        $('#askQueryOverview').empty().append($('<i/>').text('No Query'));
+      _activeAskQueryFlag = (query.length > 0);
+      if (_activeAskQueryFlag) {
+        $('#askQueryOverview').empty()
+          .append($('<span/>').addClass('ask-query').text('"' + query + '"'));
       } else {
-        $('#askQueryOverview').empty().text(query);
+        $('#askQueryOverview').empty().append($('<i/>').text('No Query'));
+        $('#askSuggestionsOverview').empty();
       }
     }
   });
