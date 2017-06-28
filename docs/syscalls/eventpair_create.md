@@ -26,7 +26,7 @@ counterpart).
 When all the handles to one of the objects have been closed, the *MX_EPAIR_PEER_CLOSED*
 signal will be asserted on the opposing object.
 
-The newly-created handles will have the *MX_RIGHT_TRANSER*,
+The newly-created handles will have the *MX_RIGHT_TRANSFER*,
 *MX_RIGHT_DUPLICATE*, *MX_RIGHT_READ*, and *MX_RIGHT_WRITE* rights.
 
 Currently, no options are supported, so *options* must be set to 0.

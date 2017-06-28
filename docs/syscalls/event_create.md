@@ -18,7 +18,7 @@ mx_status_t mx_event_create(uint32_t options, mx_handle_t* out);
 is, its *MX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
 manipulated using **object_signal**().
 
-The newly-created handle will have the *MX_RIGHT_TRANSER*, *MX_RIGHT_DUPLICATE*,
+The newly-created handle will have the *MX_RIGHT_TRANSFER*, *MX_RIGHT_DUPLICATE*,
 *MX_RIGHT_READ*, and *MX_RIGHT_WRITE* rights.
 
 ## RETURN VALUE
