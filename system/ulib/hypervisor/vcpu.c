@@ -47,6 +47,7 @@
 /* IO APIC register addresses. */
 #define IO_APIC_REGISTER_ID                     0x00
 #define IO_APIC_REGISTER_VER                    0x01
+#define IO_APIC_REGISTER_ARBITRATION            0x02
 
 /* IO APIC configuration constants. */
 #define IO_APIC_VERSION                         0x11
@@ -345,6 +346,10 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
             //
             // From Intel 82093AA, Section 3.2.2.
             return inst_read32(inst, (IO_APIC_REDIRECT_OFFSETS / 2 - 1) << 16 | IO_APIC_VERSION);
+        case IO_APIC_REGISTER_ARBITRATION:
+            // Since we have a single I/O APIC, it is always the winner
+            // of arbitration and its arbitration register is always 0.
+            return inst_read32(inst, 0);
         case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
             uint32_t i = io_apic_state->select - FIRST_REDIRECT_OFFSET;
             return inst_rw32(inst, io_apic_state->redirect + i);
