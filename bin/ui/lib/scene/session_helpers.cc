@@ -37,22 +37,11 @@ mozart2::OpPtr NewCreateMemoryOp(uint32_t id,
 mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,
-                                mozart2::ImageInfo::PixelFormat format,
-                                mozart2::ImageInfo::ColorSpace color_space,
-                                mozart2::ImageInfo::Tiling tiling,
-                                uint32_t width,
-                                uint32_t height,
-                                uint32_t stride) {
+                                mozart2::ImageInfoPtr info) {
   auto image = mozart2::Image::New();
   image->memory_id = memory_id;
   image->memory_offset = memory_offset;
-  image->info = mozart2::ImageInfo::New();
-  image->info->pixel_format = format;
-  image->info->color_space = color_space;
-  image->info->tiling = tiling;
-  image->info->width = width;
-  image->info->height = height;
-  image->info->stride = stride;
+  image->info = std::move(info);
 
   auto resource = mozart2::Resource::New();
   resource->set_image(std::move(image));
@@ -69,6 +58,25 @@ mozart2::OpPtr NewCreateImagePipeOp(
   auto resource = mozart2::Resource::New();
   resource->set_image_pipe(std::move(image_pipe));
   return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateImageOp(uint32_t id,
+                                uint32_t memory_id,
+                                uint32_t memory_offset,
+                                mozart2::ImageInfo::PixelFormat format,
+                                mozart2::ImageInfo::ColorSpace color_space,
+                                mozart2::ImageInfo::Tiling tiling,
+                                uint32_t width,
+                                uint32_t height,
+                                uint32_t stride) {
+  auto info = mozart2::ImageInfo::New();
+  info->pixel_format = format;
+  info->color_space = color_space;
+  info->tiling = tiling;
+  info->width = width;
+  info->height = height;
+  info->stride = stride;
+  return NewCreateImageOp(id, memory_id, memory_offset, std::move(info));
 }
 
 mozart2::OpPtr NewCreateBufferOp(uint32_t id,
@@ -329,6 +337,8 @@ mozart2::OpPtr NewReleaseResourceOp(uint32_t id) {
 
 mozart2::OpPtr NewExportResourceOp(uint32_t resource_id,
                                    mx::eventpair export_token) {
+  FTL_DCHECK(export_token);
+
   auto export_resource = mozart2::ExportResourceOp::New();
   export_resource->id = resource_id;
   export_resource->token = std::move(export_token);
@@ -342,6 +352,8 @@ mozart2::OpPtr NewExportResourceOp(uint32_t resource_id,
 mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
                                    mozart2::ImportSpec spec,
                                    mx::eventpair import_token) {
+  FTL_DCHECK(import_token);
+
   auto import_resource = mozart2::ImportResourceOp::New();
   import_resource->id = resource_id;
   import_resource->token = std::move(import_token);
@@ -353,8 +365,11 @@ mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
   return op;
 }
 
-mozart2::OpPtr NewBoundExportResourceOp(uint32_t resource_id,
-                                        mx::eventpair* out_import_token) {
+mozart2::OpPtr NewExportResourceOpAsRequest(uint32_t resource_id,
+                                            mx::eventpair* out_import_token) {
+  FTL_DCHECK(out_import_token);
+  FTL_DCHECK(!*out_import_token);
+
   mx::eventpair export_token;
   mx_status_t status =
       mx::eventpair::create(0u, &export_token, out_import_token);
@@ -362,9 +377,12 @@ mozart2::OpPtr NewBoundExportResourceOp(uint32_t resource_id,
   return NewExportResourceOp(resource_id, std::move(export_token));
 }
 
-mozart2::OpPtr NewBoundImportResourceOp(uint32_t resource_id,
-                                        mozart2::ImportSpec import_spec,
-                                        mx::eventpair* out_export_token) {
+mozart2::OpPtr NewImportResourceOpAsRequest(uint32_t resource_id,
+                                            mozart2::ImportSpec import_spec,
+                                            mx::eventpair* out_export_token) {
+  FTL_DCHECK(out_export_token);
+  FTL_DCHECK(!*out_export_token);
+
   mx::eventpair import_token;
   mx_status_t status =
       mx::eventpair::create(0u, &import_token, out_export_token);
@@ -517,6 +535,37 @@ mozart2::OpPtr NewSetColorOp(uint32_t material_id,
 
   auto op = mozart2::Op::New();
   op->set_set_color(std::move(set_color));
+
+  return op;
+}
+
+mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
+                                        const float matrix[4][4]) {
+  // TODO(MZ-154): Remove the dependency on Escher below.
+  mozart2::mat4Ptr val = mozart2::mat4::New();
+  val->matrix[0] = matrix[0][0];
+  val->matrix[1] = matrix[0][1];
+  val->matrix[2] = matrix[0][2];
+  val->matrix[3] = matrix[0][3];
+  val->matrix[4] = matrix[1][0];
+  val->matrix[5] = matrix[1][1];
+  val->matrix[6] = matrix[1][2];
+  val->matrix[7] = matrix[1][3];
+  val->matrix[8] = matrix[2][0];
+  val->matrix[9] = matrix[2][1];
+  val->matrix[10] = matrix[2][2];
+  val->matrix[11] = matrix[2][3];
+  val->matrix[12] = matrix[3][0];
+  val->matrix[13] = matrix[3][1];
+  val->matrix[14] = matrix[3][2];
+  val->matrix[15] = matrix[3][3];
+  auto set_camera_projection = mozart2::SetCameraProjectionOp::New();
+  set_camera_projection->camera_id = camera_id;
+  set_camera_projection->matrix = mozart2::Value::New();
+  set_camera_projection->matrix->set_matrix4x4(std::move(val));
+
+  auto op = mozart2::Op::New();
+  op->set_set_camera_projection(std::move(set_camera_projection));
 
   return op;
 }

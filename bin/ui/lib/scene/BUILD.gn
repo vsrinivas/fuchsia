@@ -9,11 +9,27 @@ source_set("session_helpers") {
     "session_helpers.cc",
     "session_helpers.h",
   ]
-  deps = [
+
+  public_deps = [
     "//apps/mozart/services/scene",
     "//lib/escher/escher",
   ]
   include_dirs = [
     "//lib/escher",
+  ]
+}
+
+source_set("client") {
+  sources = [
+    "client/host_memory.cc",
+    "client/host_memory.h",
+    "client/resources.cc",
+    "client/resources.h",
+    "client/session.cc",
+    "client/session.h",
+  ]
+
+  public_deps = [
+    ":session_helpers",
   ]
 }

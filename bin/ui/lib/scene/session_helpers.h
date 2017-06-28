@@ -10,15 +10,19 @@
 
 namespace mozart {
 
-const float kZeroesFloat3[3] = {0.f, 0.f, 0.f};
-const float kOnesFloat3[3] = {1.f, 1.f, 1.f};
+constexpr float kZeroesFloat3[3] = {0.f, 0.f, 0.f};
+constexpr float kOnesFloat3[3] = {1.f, 1.f, 1.f};
 // A quaterion that has no rotation.
-const float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
+constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
 // Resource creation.
 mozart2::OpPtr NewCreateMemoryOp(uint32_t id,
                                  mx::vmo vmo,
                                  mozart2::MemoryType memory_type);
+mozart2::OpPtr NewCreateImageOp(uint32_t id,
+                                uint32_t memory_id,
+                                uint32_t memory_offset,
+                                mozart2::ImageInfoPtr info);
 mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,
@@ -84,12 +88,16 @@ mozart2::OpPtr NewImportResourceOp(uint32_t resource_id,
                                    mozart2::ImportSpec spec,
                                    mx::eventpair import_token);
 
-// Creates an event pair, binds one end to the operation, and returns the other.
-mozart2::OpPtr NewBoundExportResourceOp(uint32_t resource_id,
-                                        mx::eventpair* out_import_token);
-mozart2::OpPtr NewBoundImportResourceOp(uint32_t resource_id,
-                                        mozart2::ImportSpec import_spec,
-                                        mx::eventpair* out_export_token);
+// Exports the resource and returns an import token in |out_import_token|
+// which allows it to be imported into other sessions.
+mozart2::OpPtr NewExportResourceOpAsRequest(uint32_t resource_id,
+                                            mx::eventpair* out_import_token);
+
+// Imports the resource and returns an export token in |out_export_token|
+// by which another session can export a resource to associate with this import.
+mozart2::OpPtr NewImportResourceOpAsRequest(uint32_t resource_id,
+                                            mozart2::ImportSpec import_spec,
+                                            mx::eventpair* out_export_token);
 
 // Node operations.
 mozart2::OpPtr NewAddChildOp(uint32_t node_id, uint32_t child_id);
@@ -107,6 +115,8 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
 
 // Camera and lighting operations.
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id);
+mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
+                                        const float matrix[4][4]);
 mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
                                         const escher::mat4& matrix);
 
