@@ -242,7 +242,7 @@ mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
         mp.path = mountpath;
     } else {
         // Open mountpoint; use it directly
-        if ((mp.fd = open(mountpath, O_RDONLY | O_DIRECTORY)) < 0) {
+        if ((mp.fd = open(mountpath, O_RDONLY | O_DIRECTORY | O_ADMIN)) < 0) {
             return MX_ERR_BAD_STATE;
         }
     }
@@ -266,7 +266,7 @@ mx_status_t fumount(int mountfd) {
 }
 
 mx_status_t umount(const char* mountpath) {
-    int fd = open(mountpath, O_DIRECTORY | O_NOREMOTE);
+    int fd = open(mountpath, O_DIRECTORY | O_NOREMOTE | O_ADMIN);
     if (fd < 0) {
         fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
         return MX_ERR_BAD_STATE;

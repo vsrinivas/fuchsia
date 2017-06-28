@@ -56,7 +56,7 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
         return r;
     }
 
-    if ((r = vn->Serve(h1, 0)) < 0) { // Consumes 'h1'
+    if ((r = vn->Serve(h1, O_ADMIN)) < 0) { // Consumes 'h1'
         vn->Close();
         mx_handle_close(h2);
         return r;

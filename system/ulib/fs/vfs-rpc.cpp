@@ -395,6 +395,16 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         memcpy(in_buf + sizeof(mx_handle_t), msg->data + sizeof(mx_handle_t),
                len - sizeof(mx_handle_t));
 
+        switch (msg->arg2.op) {
+        case IOCTL_VFS_MOUNT_FS:
+            // Mounting requires iostate privileges
+            if (!(ios->io_flags & O_ADMIN)) {
+                vfs_unmount_handle(msg->handle[0], 0);
+                mx_handle_close(msg->handle[0]);
+                return MX_ERR_ACCESS_DENIED;
+            }
+            // If our permissions validate, fall through to the VFS ioctl
+        }
         ssize_t r = fs::Vfs::Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
 
         if (r == MX_ERR_NOT_SUPPORTED) {
@@ -424,14 +434,14 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
             }
             break;
         }
-        case IOCTL_VFS_UNMOUNT_FS: {
-            // Ioctls which require iostate privileges
+        case IOCTL_VFS_UNMOUNT_NODE:
+        case IOCTL_VFS_UNMOUNT_FS:
+            // Unmounting ioctls require iostate privileges
             if (!(ios->io_flags & O_ADMIN)) {
                 r = MX_ERR_ACCESS_DENIED;
                 break;
             }
             // If our permissions validate, fall through to the VFS ioctl
-        }
         default:
             r = fs::Vfs::Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
         }

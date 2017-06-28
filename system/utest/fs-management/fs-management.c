@@ -91,7 +91,7 @@ static bool fmount_funmount(void) {
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
 
-    int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
@@ -116,7 +116,7 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
 
-    int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
 
     // Everything *would* be perfect to call fmount, when suddenly...
@@ -143,11 +143,21 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     ASSERT_EQ(close(mountfd), 0, "Couldn't close file not-mount point");
     ASSERT_EQ(unlink(mount_path), 0, "");
 
-    // Okay, fine, let's mount successfully...
+    // Re-acquire the ramdisk mount point again...
     fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    // Try mounting without O_ADMIN (which is disallowed)
     mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(mountfd, 0, "Couldn't open mount point");
+    ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                     launch_stdio_async), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(close(mountfd), 0, "Couldn't close the unpriviledged mount point");
+
+    // Okay, fine, let's mount successfully...
+    fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
@@ -159,6 +169,22 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
                     launch_stdio_async),
                MX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+
+    // Let's try telling the target filesystem to shut down
+    // WITHOUT O_ADMIN
+    int badfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(badfd, 0, "");
+    ASSERT_EQ(ioctl_vfs_unmount_fs(badfd), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(close(badfd), 0, "");
+
+    // Let's try unmounting the filesystem WITHOUT O_ADMIN
+    // (unpinning the remote handle from the parent FS).
+    badfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    mx_handle_t h;
+    ASSERT_EQ(ioctl_vfs_unmount_node(badfd, &h), MX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(close(badfd), 0, "");
+
+    // When we unmount with an O_ADMIN handle, it should successfully detach.
     ASSERT_EQ(fumount(mountfd), MX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, parentfs_name, strlen(parentfs_name)), "");
     ASSERT_EQ(close(mountfd), 0, "");
@@ -182,7 +208,7 @@ static bool mount_evil_minfs(void) {
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), MX_OK, "");
     const char* parent_path = "/tmp/parent";
     ASSERT_EQ(mkdir(parent_path, 0666), 0, "");
-    int mountfd = open(parent_path, O_RDONLY | O_DIRECTORY);
+    int mountfd = open(parent_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     int ramdiskfd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(ramdiskfd, 0, "");
@@ -279,11 +305,7 @@ static bool umount_test_evil(void) {
     // Try opening a new directory with O_ADMIN. It shouldn't open.
     weak_subdir_fd = openat(weak_root_fd, "subdir", O_RDONLY | O_DIRECTORY | O_ADMIN);
     ASSERT_LT(weak_subdir_fd, 0, "");
-
-    // Try re-opening the root with O_ADMIN. It shouldn't open.
     ASSERT_EQ(close(weak_root_fd), 0, "");
-    weak_root_fd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
-    ASSERT_LT(weak_root_fd, 0, "");
 
     // Finally, umount using O_NOREMOTE and acquiring the connection
     // that has "O_ADMIN" set.
