@@ -177,7 +177,6 @@ uint64_t VnodeBlob::SizeData() const {
 
 VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs, const Digest& digest)
     : blobstore_(mxtl::move(bs)),
-      bytes_written_(0),
       flags_(kBlobStateEmpty) {
 
     digest.CopyTo(digest_, sizeof(digest_));
@@ -185,7 +184,6 @@ VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs, const Digest& digest)
 
 VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs)
     : blobstore_(mxtl::move(bs)),
-      bytes_written_(0),
       flags_(kBlobStateEmpty | kBlobFlagDirectory) {}
 
 void VnodeBlob::BlobCloseHandles() {

@@ -165,22 +165,22 @@ private:
     void* GetData() const;
     void* GetMerkle() const;
 
-    WAVLTreeNodeState type_wavl_state_;
+    WAVLTreeNodeState type_wavl_state_{};
 
     const mxtl::RefPtr<Blobstore> blobstore_;
+    BlobFlags flags_;
+
     // The blob_ here consists of:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobstoreBlockSize
-    mxtl::unique_ptr<MappedVmo> blob_;
-    vmoid_t vmoid_;
+    mxtl::unique_ptr<MappedVmo> blob_{};
+    vmoid_t vmoid_ = 0;
 
-    mx::event readable_event_;
-    uint64_t bytes_written_;
+    mx::event readable_event_{};
+    uint64_t bytes_written_ = 0;
+    uint8_t digest_[Digest::kLength]{};
 
-    BlobFlags flags_;
-    uint8_t digest_[Digest::kLength];
-
-    size_t map_index_;
+    size_t map_index_ = 0;
 };
 
 // We need to define this structure to allow the Blob to be indexable by a key
@@ -274,16 +274,16 @@ private:
                                             VnodeBlob*,
                                             MerkleRootTraits,
                                             VnodeBlob::TypeWavlTraits>;
-    WAVLTreeByMerkle hash_; // Map of all 'in use' blobs
+    WAVLTreeByMerkle hash_{}; // Map of all 'in use' blobs
 
-    fifo_client_t* fifo_client_;
-    txnid_t txnid_;
-    RawBitmap block_map_;
-    vmoid_t block_map_vmoid_;
-    mxtl::unique_ptr<MappedVmo> node_map_;
-    vmoid_t node_map_vmoid_;
-    mxtl::unique_ptr<MappedVmo> info_vmo_;
-    vmoid_t info_vmoid_;
+    fifo_client_t* fifo_client_ = nullptr;
+    txnid_t txnid_ = 0;
+    RawBitmap block_map_{};
+    vmoid_t block_map_vmoid_ = 0;
+    mxtl::unique_ptr<MappedVmo> node_map_{};
+    vmoid_t node_map_vmoid_ = 0;
+    mxtl::unique_ptr<MappedVmo> info_vmo_{};
+    vmoid_t info_vmoid_ = 0;
 };
 
 class BlobstoreChecker {
