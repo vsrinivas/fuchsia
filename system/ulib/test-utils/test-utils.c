@@ -8,6 +8,7 @@
 #include <launchpad/vmo.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 #include <magenta/status.h>
 #include <runtime/thread.h>
 #include <test-utils/test-utils.h>
@@ -244,10 +245,10 @@ int tu_process_wait_exit(mx_handle_t process)
     return tu_process_get_return_code(process);
 }
 
-mx_handle_t tu_io_port_create(uint32_t options)
+mx_handle_t tu_io_port_create(void)
 {
     mx_handle_t handle;
-    mx_status_t status = mx_port_create(options, &handle);
+    mx_status_t status = mx_port_create(MX_PORT_OPT_V2, &handle);
     if (status < 0)
         tu_fatal(__func__, status);
     return handle;

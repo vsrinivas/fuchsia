@@ -62,4 +62,4 @@ does not have **MX_RIGHT_WRITE**.
 
 [port_cancel](port_cancel.md).
 [port_queue](port_queue.md).
-[port_wait](port_wait2.md).
+[port_wait](port_wait.md).

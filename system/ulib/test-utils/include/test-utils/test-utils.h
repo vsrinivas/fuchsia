@@ -109,7 +109,7 @@ int tu_process_wait_exit(mx_handle_t process);
 
 // Create an io port.
 
-mx_handle_t tu_io_port_create(uint32_t options);
+mx_handle_t tu_io_port_create(void);
 
 // Set the system exception port.
 

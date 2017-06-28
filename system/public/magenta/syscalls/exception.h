@@ -9,14 +9,6 @@
 
 __BEGIN_CDECLS
 
-typedef struct mx_exception_packet {
-    mx_packet_header_t hdr;
-    uint64_t pid;
-    uint64_t tid;
-    uint64_t reserved0;
-    uint64_t reserved1;
-} mx_exception_packet_t;
-
 // ask clang format not to mess up the indentation:
 // clang-format off
 

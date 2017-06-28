@@ -11,7 +11,7 @@
 #include <magenta/exception.h>
 #include <magenta/excp_port.h>
 #include <magenta/magenta.h>
-#include <magenta/port_dispatcher.h>
+#include <magenta/port_dispatcher_v2.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_thread.h>
@@ -22,28 +22,27 @@
 
 #define LOCAL_TRACE 0
 
-static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report) {
-    auto pk = IOP_Packet::Alloc(sizeof(mx_exception_packet_t));
-    if (!pk)
+static PortPacket* MakePacket(uint64_t key, const mx_exception_report_t* report) {
+    if (!MX_PKT_IS_EXCEPTION(report->header.type))
         return nullptr;
 
-    auto pkt_data = reinterpret_cast<mx_exception_packet_t*>(
-        reinterpret_cast<char*>(pk) + sizeof(IOP_Packet));
+    AllocChecker ac;
+    auto port_packet = new (&ac) PortPacket();
+    if (!ac.check())
+        return nullptr;
 
-    pkt_data->hdr.key = key;
-    pkt_data->hdr.type = report->header.type;
-    pkt_data->hdr.extra = 0; // currently unused
+    port_packet->packet.key = key;
+    port_packet->packet.type = report->header.type | PKT_FLAG_EPHEMERAL;
+    port_packet->packet.exception.pid = report->context.pid;
+    port_packet->packet.exception.tid = report->context.tid;
+    port_packet->packet.exception.reserved0 = 0;
+    port_packet->packet.exception.reserved1 = 0;
 
-    pkt_data->pid = report->context.pid;
-    pkt_data->tid = report->context.tid;
-    pkt_data->reserved0 = 0;
-    pkt_data->reserved1 = 0;
-
-    return pk;
+    return port_packet;
 }
 
 // static
-mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
+mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcherV2> port, uint64_t port_key,
                                   mxtl::RefPtr<ExceptionPort>* out_eport) {
     AllocChecker ac;
     auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
@@ -56,7 +55,7 @@ mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, 
     return MX_OK;
 }
 
-ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
+ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcherV2> port, uint64_t port_key)
     : type_(type), port_key_(port_key), port_(port) {
     LTRACE_ENTRY_OBJ;
     DEBUG_ASSERT(port_ != nullptr);
@@ -179,7 +178,7 @@ void ExceptionPort::OnTargetUnbind() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    mxtl::RefPtr<PortDispatcher> port;
+    mxtl::RefPtr<PortDispatcherV2> port;
     {
         AutoLock lock(&lock_);
         if (port_ == nullptr) {
@@ -227,7 +226,7 @@ mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
     if (!iopk)
         return MX_ERR_NO_MEMORY;
 
-    return port_->Queue(iopk);
+    return port_->Queue(iopk, 0, 0);
 }
 
 void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type,

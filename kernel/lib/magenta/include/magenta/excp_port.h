@@ -15,7 +15,7 @@
 
 class UserThread;
 class ProcessDispatcher;
-class PortDispatcher;
+class PortDispatcherV2;
 
 // Represents the binding of an exception port to a specific target
 // (system/process/thread). Multiple ExceptionPorts may exist for a
@@ -25,7 +25,7 @@ class ExceptionPort : public mxtl::DoublyLinkedListable<mxtl::RefPtr<ExceptionPo
 public:
     enum class Type { NONE, DEBUGGER, THREAD, PROCESS, SYSTEM };
 
-    static mx_status_t Create(Type type, mxtl::RefPtr<PortDispatcher> port,
+    static mx_status_t Create(Type type, mxtl::RefPtr<PortDispatcherV2> port,
                               uint64_t port_key,
                               mxtl::RefPtr<ExceptionPort>* eport);
     ~ExceptionPort();
@@ -54,9 +54,9 @@ public:
     void OnTargetUnbind();
 
 private:
-    friend class PortDispatcher;
+    friend class PortDispatcherV2;
 
-    ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key);
+    ExceptionPort(Type type, mxtl::RefPtr<PortDispatcherV2> port, uint64_t port_key);
 
     ExceptionPort(const ExceptionPort&) = delete;
     ExceptionPort& operator=(const ExceptionPort&) = delete;
@@ -68,7 +68,7 @@ private:
 #if DEBUG_ASSERT_IMPLEMENTED
     // Lets PortDispatcher assert that this eport is associated
     // with the right instance.
-    bool PortMatches(const PortDispatcher *port, bool allow_null) {
+    bool PortMatches(const PortDispatcherV2 *port, bool allow_null) {
         AutoLock lock(&lock_);
         return (allow_null && port_ == nullptr) || port_.get() == port;
     }
@@ -93,7 +93,7 @@ private:
     const uint64_t port_key_;
 
     // The underlying ioport. If null, the ExceptionPort has been unbound.
-    mxtl::RefPtr<PortDispatcher> port_ TA_GUARDED(lock_);
+    mxtl::RefPtr<PortDispatcherV2> port_ TA_GUARDED(lock_);
 
     // The target of the exception port.
     // The system exception port doesn't have a Dispatcher, hence the bool.

@@ -12,7 +12,7 @@
 #include <string.h>
 #include <trace.h>
 
-#include <magenta/port_dispatcher.h>
+#include <magenta/port_dispatcher_v2.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
@@ -64,7 +64,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
     //TODO: check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> ioport;
+    mxtl::RefPtr<PortDispatcherV2> ioport;
     mx_status_t status = up->GetDispatcher(eport_handle, &ioport);
     if (status != MX_OK)
         return status;

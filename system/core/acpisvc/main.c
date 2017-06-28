@@ -9,6 +9,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/resource.h>
+#include <magenta/syscalls/port.h>
 
 #include "ec.h"
 #include "pci.h"
@@ -45,7 +46,7 @@ int main(int argc, char** argv) {
     printf("Initialized ACPI\n");
 
     mx_handle_t port;
-    mx_status_t mx_status = mx_port_create(0, &port);
+    mx_status_t mx_status = mx_port_create(MX_PORT_OPT_V2, &port);
     if (mx_status != MX_OK) {
         printf("Failed to construct resource port\n");
         return 4;

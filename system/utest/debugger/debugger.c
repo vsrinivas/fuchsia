@@ -25,7 +25,7 @@
 #include "utils.h"
 
 typedef bool (wait_inferior_exception_handler_t)(mx_handle_t inferior,
-                                                 const mx_exception_packet_t* packet);
+                                                 const mx_port_packet_t* packet);
 
 // Sleep interval in the watchdog thread. Make this short so we don't need to
 // wait too long when tearing down in the success case.  This is especially
@@ -149,18 +149,18 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior,
     while (true) {
         unittest_printf("wait-inf: waiting on inferior\n");
 
-        mx_exception_packet_t packet;
+        mx_port_packet_t packet;
         mx_exception_report_t report;
         if (!read_exception(eport, inferior, &packet, &report))
             return false;
-        mx_koid_t tid = packet.tid;
+        mx_koid_t tid = packet.exception.tid;
 
-        if (packet.hdr.type == MX_EXCP_THREAD_STARTING) {
+        if (packet.type == MX_EXCP_THREAD_STARTING) {
             unittest_printf("wait-inf: inferior started\n");
             if (!resume_inferior(inferior, tid))
                 return false;
             continue;
-        } else if (packet.hdr.type == MX_EXCP_THREAD_EXITING) {
+        } else if (packet.type == MX_EXCP_THREAD_EXITING) {
             mx_handle_t thread;
             mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
             // If the process has exited then the kernel may have reaped the
@@ -189,7 +189,7 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior,
             if (!resume_inferior(inferior, tid))
                 return false;
             continue;
-        } else if (packet.hdr.type == MX_EXCP_GONE) {
+        } else if (packet.type == MX_EXCP_GONE) {
             if (tid == 0) {
                 // process is gone
                 unittest_printf("wait-inf: inferior gone\n");
@@ -282,14 +282,14 @@ static bool expect_debugger_attached_eq(
 // N.B. This runs on the wait-inferior thread.
 
 static bool debugger_test_exception_handler(mx_handle_t inferior,
-                                            const mx_exception_packet_t* packet)
+                                            const mx_port_packet_t* packet)
 {
-    ASSERT_EQ(packet->hdr.type, (unsigned) MX_EXCP_FATAL_PAGE_FAULT,
+    ASSERT_EQ(packet->type, (unsigned) MX_EXCP_FATAL_PAGE_FAULT,
               "wait-inf: unexpected exception type");
 
     unittest_printf("wait-inf: got page fault exception\n");
 
-    mx_koid_t tid = packet->tid;
+    mx_koid_t tid = packet->exception.tid;
     mx_handle_t thread = tu_get_thread(inferior, tid);
 
     dump_inferior_regs(thread);

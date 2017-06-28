@@ -12,29 +12,6 @@ __BEGIN_CDECLS
 #define MX_PORT_OPT_V1 0u
 #define MX_PORT_OPT_V2 1u
 
-// mx_port V1 packet structures.
-
-#define MX_PORT_MAX_PKT_SIZE       128u
-
-#define MX_PORT_PKT_TYPE_KERN        0u
-#define MX_PORT_PKT_TYPE_IOSN        1u
-#define MX_PORT_PKT_TYPE_USER        2u
-#define MX_PORT_PKT_TYPE_EXCEPTION   3u
-
-typedef struct mx_packet_header {
-    uint64_t key;
-    uint32_t type;
-    uint32_t extra;
-} mx_packet_header_t;
-
-typedef struct mx_io_packet {
-    mx_packet_header_t hdr;
-    mx_time_t timestamp;
-    size_t bytes;
-    mx_signals_t signals;
-    uint32_t reserved;
-} mx_io_packet_t;
-
 // mx_port V2 packet structures.
 
 #define MX_WAIT_ASYNC_ONCE          0u
@@ -68,6 +45,13 @@ typedef struct mx_packet_signal {
     uint64_t count;
 } mx_packet_signal_t;
 
+typedef struct mx_packet_exception {
+    uint64_t pid;
+    uint64_t tid;
+    uint64_t reserved0;
+    uint64_t reserved1;
+} mx_packet_exception_t;
+
 typedef struct mx_port_packet {
     uint64_t key;
     uint32_t type;
@@ -75,6 +59,7 @@ typedef struct mx_port_packet {
     union {
         mx_packet_user_t user;
         mx_packet_signal_t signal;
+        mx_packet_exception_t exception;
     };
 } mx_port_packet_t;
 

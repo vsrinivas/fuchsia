@@ -34,15 +34,15 @@ static bool get_koid(mx_handle_t handle, mx_koid_t* koid) {
 }
 
 static bool check_reported_pid_and_tid(mx_handle_t thread,
-                                       mx_exception_packet_t* packet) {
+                                       mx_port_packet_t* packet) {
     mx_koid_t pid;
     mx_koid_t tid;
     if (!get_koid(mx_process_self(), &pid))
         return false;
     if (!get_koid(thread, &tid))
         return false;
-    EXPECT_EQ(packet->pid, pid, "");
-    EXPECT_EQ(packet->tid, tid, "");
+    EXPECT_EQ(packet->exception.pid, pid, "");
+    EXPECT_EQ(packet->exception.tid, tid, "");
     return true;
 }
 
@@ -87,7 +87,7 @@ static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
 }
 
 static bool set_debugger_exception_port(mx_handle_t* eport_out) {
-    ASSERT_EQ(mx_port_create(0, eport_out), MX_OK, "");
+    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, eport_out), MX_OK, "");
     mx_handle_t self = mx_process_self();
     ASSERT_EQ(mx_task_bind_exception_port(self, *eport_out, kExceptionPortKey,
                                           MX_EXCEPTION_PORT_DEBUGGER),
@@ -353,11 +353,11 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(mx_task_suspend(thread_h), MX_OK, "");
 
     // Wait for the thread to suspend
-    mx_exception_packet_t packet;
-    ASSERT_EQ(mx_port_wait(eport, mx_deadline_after(MX_SEC(1)), &packet, sizeof(packet)), MX_OK, "");
+    mx_port_packet_t packet;
+    ASSERT_EQ(mx_port_wait(eport, mx_deadline_after(MX_SEC(1)), &packet, 0), MX_OK, "");
     EXPECT_TRUE(check_reported_pid_and_tid(thread_h, &packet), "");
-    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.hdr.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
+    ASSERT_EQ(packet.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
 
     // Verify thread is suspended
     ASSERT_EQ(mx_object_get_info(thread_h, MX_INFO_THREAD,
@@ -581,13 +581,11 @@ static bool test_kill_suspended_thread(void) {
     ASSERT_EQ(mx_task_suspend(thread_h), MX_OK, "");
 
     // Wait for the thread to suspend.
-    mx_exception_packet_t packet;
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
-              MX_OK, "");
+    mx_port_packet_t packet;
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
     EXPECT_TRUE(check_reported_pid_and_tid(thread_h, &packet), "");
-    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
-              "");
+    ASSERT_EQ(packet.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED, "");
 
     // Reset the test memory location.
     arg.v = 100;
@@ -600,11 +598,9 @@ static bool test_kill_suspended_thread(void) {
     EXPECT_EQ(arg.v, 100, "");
 
     // Check that the thread is reported as exiting and not as resumed.
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
-              MX_OK, "");
-    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_THREAD_EXITING,
-              "");
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
+    ASSERT_EQ(packet.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_THREAD_EXITING, "");
 
     // Clean up.
     ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
@@ -655,19 +651,16 @@ static bool test_noncanonical_rip_address(void) {
     ASSERT_EQ(mx_task_suspend(thread_handle), MX_OK, "");
 
     // Wait for the thread to suspend.
-    mx_exception_packet_t packet;
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
-              MX_OK, "");
+    mx_port_packet_t packet;
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
     EXPECT_TRUE(check_reported_pid_and_tid(thread_handle, &packet), "");
-    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
-              "");
+    ASSERT_EQ(packet.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED, "");
 
     struct mx_x86_64_general_regs regs;
     uint32_t size_read;
     ASSERT_EQ(mx_thread_read_state(thread_handle, MX_THREAD_STATE_REGSET0,
-                                   &regs, sizeof(regs), &size_read),
-              MX_OK, "");
+                                   &regs, sizeof(regs), &size_read), MX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
 
     // Example addresses to test.

@@ -12,6 +12,7 @@
 #include <pow2.h>
 
 #include <magenta/compiler.h>
+#include <magenta/excp_port.h>
 #include <magenta/rights.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/port.h>
@@ -120,6 +121,16 @@ void PortDispatcherV2::on_zero_handles() {
     {
         AutoLock al(&lock_);
         zero_handles_ = true;
+
+        // Unlink and unbind exception ports.
+        while (!eports_.is_empty()) {
+            auto eport = eports_.pop_back();
+
+            // Tell the eport to unbind itself, then drop our ref to it.
+            lock_.Release();  // The eport may call our ::UnlinkExceptionPort
+            eport->OnPortZeroHandles();
+            lock_.Acquire();
+        }
     }
     while (DeQueue(0ull, nullptr) == MX_OK) {}
 }
@@ -133,7 +144,7 @@ mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
         return MX_ERR_NO_MEMORY;
 
     port_packet->packet = packet;
-    port_packet->packet.type = MX_PKT_TYPE_USER;
+    port_packet->packet.type = MX_PKT_TYPE_USER | PKT_FLAG_EPHEMERAL;
 
     auto status = Queue(port_packet, 0u, 0u);
     if (status < 0)
@@ -187,7 +198,7 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t deadline, mx_port_packet_t* pack
 
         if (observer)
             delete observer;
-        else if (packet && packet->type == MX_PKT_TYPE_USER)
+        else if (packet && (packet->type & PKT_FLAG_EPHEMERAL))
             delete port_packet;
         return MX_OK;
 
@@ -202,7 +213,7 @@ PortObserver* PortDispatcherV2::CopyLocked(PortPacket* port_packet, mx_port_pack
     if (packet)
         *packet = port_packet->packet;
 
-    return (port_packet->type() == MX_PKT_TYPE_USER) ? nullptr : port_packet->observer;
+    return (port_packet->type() & PKT_FLAG_EPHEMERAL) ? nullptr : port_packet->observer;
 }
 
 bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) {
@@ -287,4 +298,24 @@ bool PortDispatcherV2::CancelQueued(const void* handle, uint64_t key) {
     }
 
     return packet_removed;
+}
+
+
+void PortDispatcherV2::LinkExceptionPort(ExceptionPort* eport) {
+    canary_.Assert();
+
+    AutoLock al(&lock_);
+    DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
+    DEBUG_ASSERT(!eport->InContainer());
+    eports_.push_back(mxtl::move(AdoptRef(eport)));
+}
+
+void PortDispatcherV2::UnlinkExceptionPort(ExceptionPort* eport) {
+    canary_.Assert();
+
+    AutoLock al(&lock_);
+    DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ true));
+    if (eport->InContainer()) {
+        eports_.erase(*eport);
+    }
 }

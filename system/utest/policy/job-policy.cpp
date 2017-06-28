@@ -260,7 +260,7 @@ static bool test_exception_on_new_event(uint32_t base_policy,
     ASSERT_NEQ(ctrl, MX_HANDLE_INVALID, "");
 
     mx_handle_t exc_port;
-    ASSERT_EQ(mx_port_create(0, &exc_port), MX_OK, "");
+    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &exc_port), MX_OK, "");
     ASSERT_EQ(mx_task_bind_exception_port(
                   proc.get(), exc_port, kExceptionPortKey,
                   MX_EXCEPTION_PORT_DEBUGGER),
@@ -275,20 +275,19 @@ static bool test_exception_on_new_event(uint32_t base_policy,
               MX_ERR_TIMED_OUT, "");
 
     // Check that we receive an exception message.
-    mx_exception_packet_t packet;
-    ASSERT_EQ(mx_port_wait(exc_port, MX_TIME_INFINITE, &packet, sizeof(packet)),
-              MX_OK, "");
+    mx_port_packet_t packet;
+    ASSERT_EQ(mx_port_wait(exc_port, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
 
     // Check the exception message contents.
-    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_GENERAL, "");
+    ASSERT_EQ(packet.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_GENERAL, "");
 
     mx_koid_t pid;
     mx_koid_t tid;
     ASSERT_TRUE(get_koid(proc.get(), &pid), "");
     ASSERT_TRUE(get_koid(thread.get(), &tid), "");
-    ASSERT_EQ(packet.pid, pid, "");
-    ASSERT_EQ(packet.tid, tid, "");
+    ASSERT_EQ(packet.exception.pid, pid, "");
+    ASSERT_EQ(packet.exception.tid, tid, "");
 
     // Check that we can read the thread's register state.
     mx_general_regs_t regs;

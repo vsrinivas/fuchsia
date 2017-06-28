@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <magenta/compiler.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/syscalls/port.h>
@@ -42,12 +43,17 @@ typedef struct {
 // more: GPE, exception, SCI, Fixed
 
 typedef struct {
-    mx_packet_header_t hdr;
+    uint64_t pkt_key;
+    uint32_t pkt_type;
+    int32_t pkt_status;
     uint8_t version; // Protocol version, currently only 0 defined.
-    uint8_t reserved;
+    uint8_t reserved0;
     uint16_t type;   // event type
     uint32_t arg;    // event argument
+    uint32_t reserved1[6];
 } __PACKED acpi_event_packet_t;
+
+static_assert(sizeof(mx_port_packet_t) == sizeof(acpi_event_packet_t), "");
 
 // List all children of the node associated with the handle used to issue the
 // request.

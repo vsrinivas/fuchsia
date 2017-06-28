@@ -361,9 +361,9 @@ int self_dump_func(void* arg) {
     // TODO: There may be exceptions we can recover from, but for now KISS
     // and just terminate on any exception.
 
-    mx_exception_packet_t packet;
-    mx_port_wait(ex_port, MX_TIME_INFINITE, &packet, sizeof(packet));
-    if (packet.hdr.key != kSelfExceptionKey) {
+    mx_port_packet_t packet;
+    mx_port_wait(ex_port, MX_TIME_INFINITE, &packet, 0);
+    if (packet.key != kSelfExceptionKey) {
         print_error("invalid crash key");
         return 1;
     }
@@ -402,7 +402,7 @@ int self_dump_func(void* arg) {
     // situation crashlogger,libunwind,libbacktrace are compiled with frame
     // pointers. This decision needs to be revisited if/when we need/want
     // to compile any of these without frame pointers.
-    process_report(packet.pid, packet.tid, packet.hdr.type, false);
+    process_report(packet.exception.pid, packet.exception.tid, packet.type, false);
 
     exit(1);
 }
@@ -497,7 +497,7 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t self_dump_port;
-    if ((status = mx_port_create(0u, &self_dump_port)) < 0) {
+    if ((status = mx_port_create(MX_PORT_OPT_V2, &self_dump_port)) < 0) {
         print_mx_error("mx_port_create failed", status);
         return 1;
     }
@@ -526,7 +526,7 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t ex_port;
-    if ((status = mx_port_create(0u, &ex_port)) < 0) {
+    if ((status = mx_port_create(MX_PORT_OPT_V2, &ex_port)) < 0) {
         print_mx_error("mx_port_create failed", status);
         return 1;
     }
@@ -540,14 +540,14 @@ int main(int argc, char** argv) {
     printf("crashlogger service ready\n");
 
     while (true) {
-        mx_exception_packet_t packet;
-        mx_port_wait(ex_port, MX_TIME_INFINITE, &packet, sizeof(packet));
-        if (packet.hdr.key != kSysExceptionKey) {
+        mx_port_packet_t packet;
+        mx_port_wait(ex_port, MX_TIME_INFINITE, &packet, 0);
+        if (packet.key != kSysExceptionKey) {
             print_error("invalid crash key");
             return 1;
         }
 
-        process_report(packet.pid, packet.tid, packet.hdr.type, use_libunwind);
+        process_report(packet.exception.pid, packet.exception.tid, packet.type, use_libunwind);
     }
 
     return 0;

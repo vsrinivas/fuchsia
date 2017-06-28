@@ -82,14 +82,12 @@ static void notify_handler(ACPI_HANDLE node, uint32_t value, void* _ctx) {
         return;
     }
     acpi_event_packet_t pkt = {
-        .hdr = {
-            .key = ctx->event_key,
-        },
+        .pkt_key = ctx->event_key,
         .version = 0,
         .type = type,
         .arg = value,
     };
-    mx_port_queue(ctx->notify, &pkt, sizeof(pkt));
+    mx_port_queue(ctx->notify, &pkt, 0);
 }
 
 static mxio_dispatcher_t* dispatcher;

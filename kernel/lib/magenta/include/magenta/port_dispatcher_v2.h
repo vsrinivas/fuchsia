@@ -79,6 +79,9 @@
 class PortDispatcherV2;
 class PortObserver;
 
+#define PKT_FLAG_EPHEMERAL  0x10000000u
+#define PKT_FLAG_MASK       0x0FFFFFFFu
+
 struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
     mx_port_packet_t packet;
     PortObserver* observer;
@@ -156,12 +159,24 @@ public:
     bool CancelQueued(const void* handle, uint64_t key);
 
 private:
+    friend class ExceptionPort;
+
     PortDispatcherV2(uint32_t options);
     PortObserver* CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
+
+    // Adopts a RefPtr to |eport|, and adds it to |eports_|.
+    // Called by ExceptionPort.
+    void LinkExceptionPort(ExceptionPort* eport);
+
+    // Removes |eport| from |eports_|, dropping its RefPtr.
+    // Does nothing if |eport| is not on the list.
+    // Called by ExceptionPort.
+    void UnlinkExceptionPort(ExceptionPort* eport);
 
     mxtl::Canary<mxtl::magic("POR2")> canary_;
     Mutex lock_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
+    mxtl::DoublyLinkedList<mxtl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(lock_);
 };

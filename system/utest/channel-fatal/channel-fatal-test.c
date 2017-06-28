@@ -148,7 +148,7 @@ static bool bad_channel_call_contract_violation(void) {
 
     // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED
     mx_handle_t eport;
-    ASSERT_EQ(mx_port_create(0, &eport), MX_OK, "");
+    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &eport), MX_OK, "");
     ASSERT_EQ(mx_task_bind_exception_port(proc, eport, 0,
                                           MX_EXCEPTION_PORT_DEBUGGER),
               MX_OK, "");
@@ -156,9 +156,9 @@ static bool bad_channel_call_contract_violation(void) {
     ASSERT_EQ(mx_task_suspend(thread), MX_OK, "");
 
     // Wait for the thread to suspend
-    mx_exception_packet_t packet;
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)), MX_OK, "");
-    ASSERT_EQ(packet.hdr.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
+    mx_port_packet_t packet;
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
+    ASSERT_EQ(packet.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
     ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
 
     // Resume the thread

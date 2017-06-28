@@ -79,7 +79,7 @@ extern bool resume_inferior(mx_handle_t inferior, mx_koid_t tid);
 extern bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior);
 
 extern bool read_exception(mx_handle_t eport, mx_handle_t inferior,
-                           mx_exception_packet_t* packet, mx_exception_report_t* report);
+                           mx_port_packet_t* packet, mx_exception_report_t* report);
 
 extern bool verify_exception(const mx_exception_report_t* report,
                              mx_handle_t process,

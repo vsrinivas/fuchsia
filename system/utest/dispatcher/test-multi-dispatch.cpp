@@ -42,7 +42,7 @@ public:
 
     Msg(unsigned _idx, const char* _str, unsigned _worker):
         idx(_idx), worker(_worker) {
-        type = MX_PORT_PKT_TYPE_USER;
+        type = MX_PKT_TYPE_USER;
         strcpy(str, _str);
     }
 };
