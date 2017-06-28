@@ -177,6 +177,27 @@ class LinkConnection : Link {
   LinkImpl* const impl_;
   fidl::Binding<Link> binding_;
 
+  // Weak pointers are used to identify a LinkConnection during notifications of
+  // LinkWatchers about value changes, if a LinkWatcher requests to be notified
+  // only of changes to the Link value made through other LinkConnections than
+  // the one the LinkWatcher was registered through.
+  //
+  // A weak pointer from this factory is never dereferenced, only compared to
+  // the naked pointer of the LinkConnection of an incoming change in order to
+  // establish whether a value upate is from the same LinkConnection or not.
+  //
+  // The only reason to use a weak pointer and not a naked pointer is the
+  // possibility that a LinkConnection could be deleted, and another
+  // LinkConnection instance could be created at the same address as the
+  // previous one. During comparison, we must recognize the such a new instance
+  // as different from the old instance, and a weak pointer to the old instance
+  // becomes null in that situation, thus allowing to recognize the instances as
+  // different.
+  //
+  // A value update will never originate from a deleted LinkConnection instance,
+  // so deleted LinkConnection instances don't need to be distinguishable from
+  // each other, only from non-deleted LinkConnection instances, and a weak
+  // nullptr allows to make that distinction too.
   ftl::WeakPtrFactory<LinkConnection> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
