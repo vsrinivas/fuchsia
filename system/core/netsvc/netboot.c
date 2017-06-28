@@ -72,7 +72,6 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
         target->file.data = 0;
     }
 
-    size = PAGE_ROUNDUP(size);
     st = mx_vmo_create(size, 0, &target->data);
     if (st != MX_OK) {
         printf("netbootloader: Could not create a netboot vmo of size = %lu "

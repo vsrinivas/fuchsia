@@ -154,32 +154,41 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t
 
     mxtl::RefPtr<VmObject> vmo = vmo_dispatcher->vmo();
 
-    const size_t num_pages = vmo->AllocatedPages();
+    const size_t vmo_size = vmo->size();
+
+    const size_t num_pages = ROUNDUP(vmo_size, PAGE_SIZE) / PAGE_SIZE;
 
     paddr_t base_addr;
     const size_t allocated = pmm_alloc_contiguous(num_pages, PMM_ALLOC_FLAG_ANY,
                                                   0, &base_addr, nullptr);
-    if (allocated < num_pages)
-        return MX_ERR_NO_MEMORY;
-
-    for (size_t page_offset = 0; page_offset < num_pages; ++page_offset) {
-        const off_t byte_offset = page_offset * PAGE_SIZE;
-
-        const paddr_t page_addr = base_addr + byte_offset;
-
-        void* virtual_addr = paddr_to_kvaddr(page_addr);
-
-        size_t bytes_read;
-        st = vmo->Read(virtual_addr, byte_offset, PAGE_SIZE, &bytes_read);
-        if (st != MX_OK || bytes_read != PAGE_SIZE) {
-            return MX_ERR_INTERNAL;
-        }
-
-        vmo->CleanInvalidateCache(byte_offset, PAGE_SIZE);
-        arch_clean_invalidate_cache_range((addr_t)virtual_addr, PAGE_SIZE);
+    if (allocated < num_pages) {
+        // TODO(gkalsi): Free pages allocated by pmm_alloc_contiguous pages
+        //               and return an error.
+        panic("Failed to allocate contiguous memory");
     }
 
-    *size = (num_pages * PAGE_SIZE);
+    uint8_t* dst_addr = (uint8_t*)paddr_to_kvaddr(base_addr);
+
+    size_t bytes_remaining = vmo_size;
+    size_t offset = 0;
+    while (bytes_remaining) {
+        size_t bytes_read;
+
+        st = vmo->Read(dst_addr + offset, offset, bytes_remaining, &bytes_read);
+
+        if (st != MX_OK || bytes_read == 0) {
+            // TODO(gkalsi): Free pages allocated by pmm_alloc_contiguous pages
+            //               and return an error.
+            panic("Failed to read to contiguous vmo");
+        }
+
+        bytes_remaining -= bytes_read;
+        offset += bytes_read;
+    }
+
+    arch_clean_invalidate_cache_range((addr_t)dst_addr, vmo_size);
+
+    *size = vmo_size;
     *addr = base_addr;
 
     return MX_OK;
@@ -289,8 +298,9 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     ops[0].dst = (void*)KERNEL_LOAD_OFFSET;
     ops[0].len = new_kernel_len;
 
-    // Op to move the new bootimage into place (put 64MiB after the Kernel)
-    void* dst_addr = (void*)(new_kernel_addr + new_kernel_len + (16 * 1024u * 1024u));
+    // Op to move the new bootimage into place (put 16MiB after the Kernel)
+    void* dst_addr = (void*)(ROUNDUP(new_kernel_addr + new_kernel_len, PAGE_SIZE) +
+                             (16 * 1024u * 1024u));
     ops[1].src = (void*)new_bootimage_addr;
     ops[1].dst = dst_addr;
     ops[1].len = new_bootimage_len;
