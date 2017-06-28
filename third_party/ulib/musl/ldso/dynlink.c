@@ -72,6 +72,7 @@ struct dso {
         const struct gnu_note* build_id_note; // Written by map_library.
         struct iovec build_id_log;      // Written by format_build_id_log.
     };
+    atomic_flag logged;
 
     const char* soname;
     Phdr* phdr;
@@ -141,6 +142,8 @@ static struct tls_module* tls_tail;
 static size_t tls_cnt, tls_offset, tls_align = MIN_TLS_ALIGN;
 static size_t static_tls_cnt;
 static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
+
+static atomic_uintptr_t unlogged_tail;
 
 static mx_handle_t loader_svc = MX_HANDLE_INVALID;
 static mx_handle_t logger = MX_HANDLE_INVALID;
@@ -638,6 +641,31 @@ __NO_SAFESTACK static void allocate_and_format_build_id_log(struct dso* dso) {
     size_t namelen = strlen(name);
     char *buffer = dl_alloc(build_id_log_size(dso, namelen));
     format_build_id_log(dso, buffer, name, namelen);
+}
+
+__NO_SAFESTACK void _dl_log_unlogged(void) {
+    // The first thread to successfully swap in 0 and get an old value
+    // for unlogged_tail is responsible for logging all the unlogged
+    // DSOs up through that pointer.  If dlopen calls move the tail
+    // and another thread then calls into here, we can race with that
+    // thread.  So we use a separate atomic_flag on each 'struct dso'
+    // to ensure only one thread prints each one.
+    uintptr_t last_unlogged =
+        atomic_load_explicit(&unlogged_tail, memory_order_acquire);
+    do {
+        if (last_unlogged == 0)
+            return;
+    } while (!atomic_compare_exchange_weak_explicit(&unlogged_tail,
+                                                    &last_unlogged, 0,
+                                                    memory_order_acq_rel,
+                                                    memory_order_relaxed));
+    for (struct dso* p = head; true; p = p->next) {
+        if (!atomic_flag_test_and_set_explicit(
+                &p->logged, memory_order_relaxed))
+            log_write(p->build_id_log.iov_base, p->build_id_log.iov_len);
+        if ((struct dso*)last_unlogged == p)
+            break;
+    }
 }
 
 __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
@@ -1638,6 +1666,8 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
      * error. */
     runtime = 1;
 
+    atomic_init(&unlogged_tail, (uintptr_t)tail);
+
     debug.ver = 1;
     debug.bp = dl_debug_state;
     debug.head = head;
@@ -1657,11 +1687,8 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     _dl_debug_state();
 
-    if (log_libs) {
-        for (struct dso* p = &app; p != NULL; p = p->next) {
-            log_write(p->build_id_log.iov_base, p->build_id_log.iov_len);
-        }
-    }
+    if (log_libs)
+        _dl_log_unlogged();
 
     if (trace_maps) {
         for (struct dso* p = &app; p != NULL; p = p->next) {
@@ -1917,6 +1944,11 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     // alone are responsible for making sure that do_init_fini
     // starts with the first object we just added.
     struct dso* new_tail = tail;
+
+    // The next _dl_log_unlogged can safely read the 'struct dso' list from
+    // head up through new_tail.  Most fields will never change again.
+    atomic_store_explicit(&unlogged_tail, (uintptr_t)new_tail,
+                          memory_order_release);
 
     pthread_rwlock_unlock(&lock);
 

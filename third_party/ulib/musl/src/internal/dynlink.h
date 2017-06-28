@@ -84,3 +84,5 @@ dl_start_return_t __dls2(void* start_arg, void* vdso)
 // the lowest address in the DSO image.
 extern const ElfW(Ehdr) __ehdr_start[] __attribute__((visibility("hidden")));
 extern ElfW(Dyn) _DYNAMIC[] __attribute__((visibility("hidden")));
+
+void _dl_log_unlogged(void) __attribute__((__visibility__("hidden")));

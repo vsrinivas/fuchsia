@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <threads.h>
 
+#include "dynlink.h"
+
 // TODO(mcgrathr): For now, just use kernel log channels.
 // They do the timestamp, process/thread tagging for us.
 static mx_handle_t sanitizer_log;
@@ -24,7 +26,7 @@ static void create_sanitizer_log(void) {
 void __sanitizer_log_write(const char *buffer, size_t len) {
     call_once(&once, &create_sanitizer_log);
 
-    // TODO(mcgrathr): Call into a dynlink.c hook to print layout info.
+    _dl_log_unlogged();
 
     while (len > 0) {
         size_t chunk = len < MAX_DATA ? len : MAX_DATA;
