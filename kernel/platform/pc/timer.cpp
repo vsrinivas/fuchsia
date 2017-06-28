@@ -64,9 +64,6 @@ const char *clock_name[] = {
 static_assert(countof(clock_name) == CLOCK_COUNT, "");
 
 
-static platform_timer_callback t_callback[SMP_MAX_CPUS] = {NULL};
-static void *callback_arg[SMP_MAX_CPUS] = {NULL};
-
 // PIT time accounting info
 static struct fp_32_64 us_per_pit;
 static volatile uint64_t pit_ticks;
@@ -174,19 +171,7 @@ static enum handler_return pit_timer_tick(void *arg)
 
 // The APIC timers will call this when they fire
 enum handler_return platform_handle_apic_timer_tick(void) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    uint cpu = arch_curr_cpu_num();
-
-    lk_time_t time = current_time();
-    //lk_time_t btime = current_time();
-    //printf_xy(71, 0, WHITE, "%08u", (uint32_t) time);
-    //printf_xy(63, 1, WHITE, "%016llu", (uint64_t) btime);
-
-    if (t_callback[cpu]) {
-        return t_callback[cpu](callback_arg[cpu], time);
-    } else {
-        return INT_NO_RESCHEDULE;
-    }
+    return timer_tick(current_time());
 }
 
 static void set_pit_frequency(uint32_t frequency)
@@ -569,14 +554,9 @@ static void platform_init_timer(uint level)
 }
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
-status_t platform_set_oneshot_timer(platform_timer_callback callback,
-                                    void *arg, lk_time_t deadline)
+status_t platform_set_oneshot_timer(lk_time_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
-    uint cpu = arch_curr_cpu_num();
-
-    t_callback[cpu] = callback;
-    callback_arg[cpu] = arg;
 
     deadline = discrete_time_roundup(deadline);
 

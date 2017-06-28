@@ -37,8 +37,6 @@
 
 static spin_lock_t timer_lock;
 
-static enum handler_return timer_tick(void *arg, lk_time_t now);
-
 /**
  * @brief  Initialize a timer object
  */
@@ -107,7 +105,7 @@ static void timer_set(timer_t *timer, lk_time_t deadline, timer_callback callbac
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
-        platform_set_oneshot_timer(timer_tick, NULL, deadline);
+        platform_set_oneshot_timer(deadline);
     }
 
 out:
@@ -186,7 +184,7 @@ bool timer_cancel(timer_t *timer)
             timer_t *newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
             if (newhead) {
                 LTRACEF("setting new timer to %" PRIu64 "\n", newhead->scheduled_time);
-                platform_set_oneshot_timer(timer_tick, NULL, newhead->scheduled_time);
+                platform_set_oneshot_timer(newhead->scheduled_time);
             } else {
                 LTRACEF("clearing old hw timer, nothing in the queue\n");
                 platform_stop_timer();
@@ -211,7 +209,7 @@ bool timer_cancel(timer_t *timer)
 }
 
 /* called at interrupt time to process any pending timers */
-static enum handler_return timer_tick(void *arg, lk_time_t now)
+enum handler_return timer_tick(lk_time_t now)
 {
     timer_t *timer;
     enum handler_return ret = INT_NO_RESCHEDULE;
@@ -277,7 +275,7 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
         LTRACEF("setting new timer for %" PRIu64 " nsecs for event %p\n", timer->scheduled_time,
                 timer);
-        platform_set_oneshot_timer(timer_tick, NULL, timer->scheduled_time);
+        platform_set_oneshot_timer(timer->scheduled_time);
     }
 
     /* we're done manipulating the timer queue */
@@ -323,7 +321,7 @@ void timer_transition_off_cpu(uint old_cpu)
     if (new_head != NULL && new_head != old_head) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", new_head->scheduled_time);
-        platform_set_oneshot_timer(timer_tick, NULL, new_head->scheduled_time);
+        platform_set_oneshot_timer(new_head->scheduled_time);
     }
 
     spin_unlock_irqrestore(&timer_lock, state);
@@ -341,7 +339,7 @@ void timer_thaw_percpu(void)
     timer_t *t = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (t) {
         LTRACEF("rescheduling timer for %" PRIu64 " nsecs\n", t->scheduled_time);
-        platform_set_oneshot_timer(timer_tick, NULL, t->scheduled_time);
+        platform_set_oneshot_timer(t->scheduled_time);
     }
 
     spin_unlock(&timer_lock);

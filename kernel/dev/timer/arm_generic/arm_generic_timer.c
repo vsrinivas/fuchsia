@@ -46,7 +46,6 @@
 #define TIMER_REG_CNTV_TVAL cntv_tval_el0
 #define TIMER_REG_CNTVCT    cntvct_el0
 
-static platform_timer_callback t_callback;
 static int timer_irq;
 
 struct fp_32_64 cntpct_per_ns;
@@ -210,14 +209,10 @@ static uint64_t read_ct(void)
 static enum handler_return platform_tick(void *arg)
 {
     write_ctl(0);
-    if (t_callback) {
-        return t_callback(arg, current_time());
-    } else {
-        return INT_NO_RESCHEDULE;
-    }
+    return timer_tick(current_time());
 }
 
-status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg, lk_time_t deadline)
+status_t platform_set_oneshot_timer(lk_time_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
 
@@ -225,9 +220,6 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg,
     // straddles a counter tick.
     const uint64_t cntpct_deadline = lk_time_to_cntpct(deadline) + 1;
 
-    DEBUG_ASSERT(arg == NULL);
-
-    t_callback = callback;
     // Even if the deadline has already passed, the ARMv8-A timer will fire the
     // interrupt.
     write_cval(cntpct_deadline);
