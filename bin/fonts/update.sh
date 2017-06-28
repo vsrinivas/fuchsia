@@ -65,3 +65,4 @@ download_font material zip
 download_font roboto tar.bz2
 download_font robotocondensed tar.bz2
 download_font robotomono tar.bz2
+download_font robotoslab tar.bz2

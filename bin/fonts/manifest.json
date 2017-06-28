@@ -143,6 +143,26 @@
           "slant": "italic"
         }
       ]
+    },
+    {
+      "family": "RobotoSlab",
+      "fonts": [
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Regular.ttf"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Thin.ttf",
+          "weight": 100
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Bold.ttf",
+          "weight": 700
+        }
+      ]
     }
   ]
 }

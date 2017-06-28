@@ -157,5 +157,21 @@ package("fonts") {
       path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Thin.ttf")
       dest = "fonts/RobotoMono-Thin.ttf"
     },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotoslab/RobotoSlab-Bold.ttf")
+      dest = "fonts/RobotoSlab-Bold.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotoslab/RobotoSlab-Light.ttf")
+      dest = "fonts/RobotoSlab-Light.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf")
+      dest = "fonts/RobotoSlab-Regular.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotoslab/RobotoSlab-Thin.ttf")
+      dest = "fonts/RobotoSlab-Thin.ttf"
+    },
   ]
 }
