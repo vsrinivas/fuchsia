@@ -9,6 +9,10 @@ go_binary("pm") {
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
 }
 
+go_binary("pmd") {
+  gopackage = "fuchsia.googlesource.com/pm/cmd/pmd"
+}
+
 go_test("pkgfs_test") {
   gopackage = "fuchsia.googlesource.com/pm/pkgfs"
 }
