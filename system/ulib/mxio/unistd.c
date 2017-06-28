@@ -1072,7 +1072,7 @@ int fcntl(int fd, int cmd, ...) {
         }
         uint32_t flags = 0;
         int status = STATUS(io->ops->misc(io, MXRIO_FCNTL, 0, F_GETFL, &flags, 0));
-        if (status == MX_OK) {
+        if (status == 0) {
             status |= flags;
             if (io->flags & MXIO_FLAG_NONBLOCK) {
                 status |= O_NONBLOCK;
@@ -1088,7 +1088,7 @@ int fcntl(int fd, int cmd, ...) {
         }
         GET_INT_ARG(status);
         int r = STATUS(io->ops->misc(io, MXRIO_FCNTL, status, F_SETFL, NULL, 0));
-        if (r == MX_OK) {
+        if (r == 0) {
             if (status & O_NONBLOCK) {
                 io->flags |= MXIO_FLAG_NONBLOCK;
             } else {
