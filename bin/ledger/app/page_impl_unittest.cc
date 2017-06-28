@@ -108,7 +108,15 @@ class PageImplTest : public test::TestWithMessageLoop {
     return result;
   }
 
-  void AddEntries(int entry_count, size_t min_key_size = 0u) {
+  std::string GetValue(size_t index, size_t min_value_size = 0u) {
+    std::string result = ftl::StringPrintf("val %zu", index);
+    result.resize(std::max(result.size(), min_value_size));
+    return result;
+  }
+
+  void AddEntries(int entry_count,
+                  size_t min_key_size = 0u,
+                  size_t min_value_size = 0u) {
     FTL_DCHECK(entry_count <= 10000);
     auto callback_statusok = [this](Status status) {
       EXPECT_EQ(Status::OK, status);
@@ -119,7 +127,7 @@ class PageImplTest : public test::TestWithMessageLoop {
 
     for (int i = 0; i < entry_count; ++i) {
       page_ptr_->Put(convert::ToArray(GetKey(i, min_key_size)),
-                     convert::ToArray(ftl::StringPrintf("val %04d", i)),
+                     convert::ToArray(GetValue(i, min_value_size)),
                      callback_statusok);
       EXPECT_FALSE(RunLoopWithTimeout());
     }
@@ -530,6 +538,49 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
 }
 
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
+  std::string eager_key("a_key");
+  std::string eager_value("an eager value");
+  std::string lazy_key("another_key");
+  std::string lazy_value("a lazy value");
+
+  Status status;
+
+  page_ptr_->Put(
+      convert::ToArray(eager_key), convert::ToArray(eager_value),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  page_ptr_->PutWithPriority(
+      convert::ToArray(lazy_key), convert::ToArray(lazy_value), Priority::LAZY,
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  PageSnapshotPtr snapshot = GetSnapshot();
+
+  fidl::Array<uint8_t> next_token;
+  fidl::Array<InlinedEntryPtr> actual_entries;
+  snapshot->GetEntriesInline(
+      nullptr, nullptr,
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &actual_entries, &next_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(next_token.is_null());
+
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+  EXPECT_EQ(eager_value, convert::ToString(actual_entries[0]->value));
+  EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
+
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+  EXPECT_EQ(lazy_value, convert::ToString(actual_entries[1]->value));
+  EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
+}
+
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   const size_t entry_count = 20;
   const size_t min_key_size =
@@ -573,8 +624,49 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
     ASSERT_EQ(GetKey(i, min_key_size),
               convert::ToString(actual_entries[i]->key));
-    ASSERT_EQ(ftl::StringPrintf("val %04d", i),
-              ToString(actual_entries[i]->value));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries[i]->value));
+  }
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
+  const size_t entry_count = 20;
+  const size_t min_value_size =
+      fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count;
+  AddEntries(entry_count, 0, min_value_size);
+  PageSnapshotPtr snapshot = GetSnapshot();
+
+  // Call GetEntries and find a partial result.
+  Status status;
+  fidl::Array<InlinedEntryPtr> actual_entries;
+  fidl::Array<uint8_t> actual_next_token;
+  snapshot->GetEntriesInline(
+      nullptr, nullptr,
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &actual_entries, &actual_next_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::PARTIAL_RESULT, status);
+  EXPECT_FALSE(actual_next_token.is_null());
+
+  // Call GetEntries with the previous token and receive the remaining results.
+  fidl::Array<InlinedEntryPtr> actual_entries2;
+  snapshot->GetEntriesInline(
+      nullptr, std::move(actual_next_token),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &actual_entries2, &actual_next_token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(actual_next_token.is_null());
+  for (size_t i = 0; i < actual_entries2.size(); ++i) {
+    actual_entries.push_back(std::move(actual_entries2[i]));
+  }
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+
+  // Check that the correct values of the keys are all present in the result and
+  // in the correct order.
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries[i]->key));
+    ASSERT_EQ(GetValue(i, min_value_size),
+              convert::ToString(actual_entries[i]->value));
   }
 }
 
@@ -618,8 +710,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
     ASSERT_EQ(GetKey(i), convert::ToString(actual_entries[i]->key));
-    ASSERT_EQ(ftl::StringPrintf("val %04d", i),
-              ToString(actual_entries[i]->value));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries[i]->value));
   }
 }
 

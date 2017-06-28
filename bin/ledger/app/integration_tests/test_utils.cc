@@ -115,7 +115,8 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
         [&result, &next_token, &num_queries](
             Status status, fidl::Array<EntryPtr> entries,
             fidl::Array<uint8_t> new_next_token) {
-          EXPECT_TRUE(status == Status::OK || status == Status::PARTIAL_RESULT);
+          EXPECT_TRUE(status == Status::OK || status == Status::PARTIAL_RESULT)
+              << "Actual status: " << status;
           if (num_queries) {
             (*num_queries)++;
           }

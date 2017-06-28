@@ -24,8 +24,9 @@
 namespace ledger {
 namespace {
 
-EntryPtr CreateEntry(const storage::Entry& entry) {
-  EntryPtr entry_ptr = Entry::New();
+template <typename EntryType>
+fidl::StructPtr<EntryType> CreateEntry(const storage::Entry& entry) {
+  fidl::StructPtr<EntryType> entry_ptr = EntryType::New();
   entry_ptr->key = convert::ToArray(entry.key);
   entry_ptr->priority = entry.priority == storage::KeyPriority::EAGER
                             ? Priority::EAGER
@@ -33,39 +34,82 @@ EntryPtr CreateEntry(const storage::Entry& entry) {
   return entry_ptr;
 }
 
-}  // namespace
+// Returns the number of handles used by an entry of the given type. Specialized
+// for each entry type.
+template <class EntryType>
+size_t HandleUsed();
 
-PageSnapshotImpl::PageSnapshotImpl(
+template <>
+size_t HandleUsed<Entry>() {
+  return 1;
+}
+
+template <>
+size_t HandleUsed<InlinedEntry>() {
+  return 0;
+}
+
+// Computes the size of an Entry.
+size_t ComputeEntrySize(const EntryPtr& entry) {
+  return fidl_serialization::GetEntrySize(entry->key.size());
+}
+
+// Computes the size of an InlinedEntry.
+size_t ComputeEntrySize(const InlinedEntryPtr& entry) {
+  return fidl_serialization::GetInlinedEntrySize(entry);
+}
+
+// Fills an Entry from the content of object.
+storage::Status FillSingleEntry(const storage::Object& object,
+                                EntryPtr* entry) {
+  return object.GetVmo(&(*entry)->value);
+}
+
+// Fills an InlinedEntry from the content of object.
+storage::Status FillSingleEntry(const storage::Object& object,
+                                InlinedEntryPtr* entry) {
+  ftl::StringView data;
+  storage::Status status = object.GetData(&data);
+  (*entry)->value = convert::ToArray(data);
+  return status;
+}
+
+// Calls |callback| with filled entries of the provided type per
+// GetEntries/GetEntriesInline semantics.
+// |fill_value| is a callback that fills the entry pointer with the content of
+// the provided object.
+template <typename EntryType>
+void FillEntries(
     storage::PageStorage* page_storage,
-    std::unique_ptr<const storage::Commit> commit,
-    std::string key_prefix)
-    : page_storage_(page_storage),
-      commit_(std::move(commit)),
-      key_prefix_(std::move(key_prefix)) {}
-
-PageSnapshotImpl::~PageSnapshotImpl() {}
-
-void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
-                                  fidl::Array<uint8_t> token,
-                                  const GetEntriesCallback& callback) {
+    const std::string& key_prefix,
+    const storage::Commit* commit,
+    fidl::Array<uint8_t> key_start,
+    fidl::Array<uint8_t> token,
+    const std::function<void(Status,
+                             fidl::Array<fidl::StructPtr<EntryType>>,
+                             fidl::Array<uint8_t>)>& callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
-  // Iteration stops if either all entries were found, or if the serialization
-  // size of entries, including the value, exceeds
-  // fidl_serialization::kMaxInlineDataSize, or if the number of entries exceeds
-  // fidl_serialization::kMaxMessageHandles. In the second and third case
-  // callback will run with PARTIAL_RESULT status.
+  // Iteration stops if either all entries were found, or if the estimated
+  // serialization size of entries exceeds the maximum size of a FIDL message
+  // (fidl_serialization::kMaxInlineDataSize), or if the number of entries
+  // exceeds fidl_serialization::kMaxMessageHandles. If inline entries are
+  // requested, then the actual size of the message is computed as the values
+  // are added to the entries. This may result in less entries sent than
+  // initially planned. In the case when not all entries have been sent,
+  // callback will run with a PARTIAL_RESULT status and a token appropriate for
+  // resuming the iteration at the right place.
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
-    fidl::Array<EntryPtr> entries;
+    fidl::Array<fidl::StructPtr<EntryType>> entries;
     // The serialization size of all entries.
     size_t size = fidl_serialization::kArrayHeaderSize;
-    // The number of entries.
-    size_t entry_count = 0u;
+    // The number of handles used.
+    size_t handle_count = 0u;
     // If |entries| array size exceeds kMaxInlineDataSize, |next_token| will
     // have the value of the following entry's key.
-    std::string next_token = "";
+    fidl::Array<uint8_t> next_token;
   };
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_entries");
@@ -78,22 +122,23 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
   // Use |token| for the first key if present.
   std::string start = token
                           ? convert::ToString(token)
-                          : std::max(key_prefix_, convert::ToString(key_start));
-  auto on_next = ftl::MakeCopyable([ this, context = context.get(),
-                                     waiter ](storage::Entry entry) {
-    if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
+                          : std::max(key_prefix, convert::ToString(key_start));
+  auto on_next = ftl::MakeCopyable([
+    page_storage, &key_prefix, context = context.get(), waiter
+  ](storage::Entry entry) {
+    if (!PageUtils::MatchesPrefix(entry.key, key_prefix)) {
       return false;
     }
     context->size += fidl_serialization::GetEntrySize(entry.key.size());
-    ++context->entry_count;
+    context->handle_count += HandleUsed<EntryType>();
     if ((context->size > fidl_serialization::kMaxInlineDataSize ||
-         context->entry_count > fidl_serialization::kMaxMessageHandles) &&
+         context->handle_count > fidl_serialization::kMaxMessageHandles) &&
         context->entries.size()) {
-      context->next_token = std::move(entry.key);
+      context->next_token = convert::ToArray(entry.key);
       return false;
     }
-    context->entries.push_back(CreateEntry(entry));
-    page_storage_->GetObject(
+    context->entries.push_back(CreateEntry<EntryType>(entry));
+    page_storage->GetObject(
         entry.object_id, storage::PageStorage::Location::LOCAL,
         [ priority = entry.priority, waiter_callback = waiter->NewCallback() ](
             storage::Status status,
@@ -128,9 +173,17 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
             return;
           }
           FTL_DCHECK(context->entries.size() == results.size());
-
-          for (size_t i = 0; i < results.size(); i++) {
+          size_t real_size = 0;
+          size_t i = 0;
+          for (; i < results.size(); i++) {
+            fidl::StructPtr<EntryType>& entry_ptr = context->entries[i];
             if (!results[i]) {
+              size_t entry_size = ComputeEntrySize(entry_ptr);
+              if (real_size + entry_size >
+                  fidl_serialization::kMaxInlineDataSize) {
+                break;
+              }
+              real_size += entry_size;
               // We don't have the object locally, but we decided not to abort.
               // This means this object is a value of a lazy key and the client
               // should ask to retrieve it over the network if they need it.
@@ -138,8 +191,14 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
               continue;
             }
 
-            EntryPtr& entry_ptr = context->entries[i];
-            storage::Status read_status = results[i]->GetVmo(&entry_ptr->value);
+            storage::Status read_status =
+                FillSingleEntry(*results[i], &entry_ptr);
+            size_t entry_size = ComputeEntrySize(entry_ptr);
+            if (real_size + entry_size >
+                fidl_serialization::kMaxInlineDataSize) {
+              break;
+            }
+            real_size += entry_size;
             if (read_status != storage::Status::OK) {
               callback(
                   PageUtils::ConvertStatus(read_status, Status::INTERNAL_ERROR),
@@ -147,24 +206,53 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
               return;
             }
           }
+          if (i != results.size()) {
+            if (i == 0) {
+              callback(Status::VALUE_TOO_LARGE, nullptr, nullptr);
+              return;
+            }
+            // We had to bail out early because the result would be too big
+            // otherwise.
+            context->next_token = std::move(context->entries[i]->key);
+            context->entries.resize(i);
+          }
           if (!context->next_token.empty()) {
             callback(Status::PARTIAL_RESULT, std::move(context->entries),
-                     convert::ToArray(context->next_token));
+                     std::move(context->next_token));
             return;
           }
           callback(Status::OK, std::move(context->entries), nullptr);
         });
     waiter->Finalize(result_callback);
   });
-  page_storage_->GetCommitContents(*commit_, std::move(start),
-                                   std::move(on_next), std::move(on_done));
+  page_storage->GetCommitContents(*commit, std::move(start), std::move(on_next),
+                                  std::move(on_done));
+}
+}  // namespace
+
+PageSnapshotImpl::PageSnapshotImpl(
+    storage::PageStorage* page_storage,
+    std::unique_ptr<const storage::Commit> commit,
+    std::string key_prefix)
+    : page_storage_(page_storage),
+      commit_(std::move(commit)),
+      key_prefix_(std::move(key_prefix)) {}
+
+PageSnapshotImpl::~PageSnapshotImpl() {}
+
+void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
+                                  fidl::Array<uint8_t> token,
+                                  const GetEntriesCallback& callback) {
+  FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
+                     std::move(key_start), std::move(token), callback);
 }
 
 void PageSnapshotImpl::GetEntriesInline(
     fidl::Array<uint8_t> key_start,
     fidl::Array<uint8_t> token,
     const GetEntriesInlineCallback& callback) {
-  FTL_NOTIMPLEMENTED() << "GetEntriesInline not yet implemented.";
+  FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
+                            std::move(key_start), std::move(token), callback);
 }
 
 void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,

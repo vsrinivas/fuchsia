@@ -17,5 +17,11 @@ size_t GetEntrySize(size_t key_length) {
   return kPointerSize + key_size + object_size + kEnumSize;
 }
 
+size_t GetInlinedEntrySize(const InlinedEntryPtr& entry) {
+  size_t key_size = entry->key.size() + kArrayHeaderSize;
+  size_t object_size = entry->value.size() + kArrayHeaderSize;
+  return kPointerSize + key_size + object_size + kEnumSize;
+}
+
 }  // namespace fidl_serialization
 }  //  namespace ledger

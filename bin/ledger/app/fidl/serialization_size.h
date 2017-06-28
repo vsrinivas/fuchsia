@@ -33,6 +33,9 @@ size_t GetByteArraySize(size_t array_length);
 // Returns the fidl size of an Entry holding a key with the given length.
 size_t GetEntrySize(size_t key_length);
 
+// Returns the fidl size of an InlinedEntry.
+size_t GetInlinedEntrySize(const InlinedEntryPtr& entry);
+
 }  // namespace fidl_serialization
 }  //  namespace ledger
 
