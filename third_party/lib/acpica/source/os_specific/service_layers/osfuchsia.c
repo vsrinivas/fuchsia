@@ -47,51 +47,6 @@ const size_t PCIE_MAX_DEVICES_PER_BUS = 32;
 const size_t PCIE_MAX_FUNCTIONS_PER_DEVICE = 8;
 const size_t PCIE_EXTENDED_CONFIG_SIZE = 4096;
 
-// TODO(cja) The next major CL should move these into some common place so that
-// PciConfig and userspace code can use them.
-#define PCI_CONFIG_ADDRESS (0xCF8)
-#define PCI_CONFIG_DATA    (0xCFC)
-#define PCI_BDF_ADDR(bus, dev, func, off) \
-    ((1 << 31) | ((bus & 0xFF) << 16) | ((dev & 0x1F) << 11) | ((func & 0x7) << 8) | (off & 0xFC))
-
-static void pci_x86_pio_cfg_read(uint8_t bus, uint8_t dev, uint8_t func,
-                                uint8_t offset, uint32_t* val, size_t width) {
-        size_t shift = (offset & 0x3) * 8;
-
-        if (shift + width > 32) {
-            printf("ACPI: error, pio cfg read width %zu not aligned to reg %#2x\n", width, offset);
-            return;
-        }
-
-        uint32_t addr = PCI_BDF_ADDR(bus, dev, func, offset);
-        outpd(PCI_CONFIG_ADDRESS, addr);
-        uint32_t tmp_val = inpd(PCI_CONFIG_DATA);
-        uint32_t width_mask = (1 << width) - 1;
-
-        // Align the read to the correct offset, then mask based on byte width
-        *val = (tmp_val >> shift) & width_mask;
-}
-
-static void pci_x86_pio_cfg_write(uint16_t bus, uint16_t dev, uint16_t func,
-                              uint8_t offset, uint32_t val, size_t width) {
-        size_t shift = (offset & 0x3) * 8;
-        uint32_t width_mask = (1 << width) - 1;
-        uint32_t write_mask = width_mask << shift;
-
-        if (shift + width > 32) {
-            printf("ACPI: error, pio cfg write width %zu not aligned to reg %#2x\n", width, offset);
-        }
-
-        uint32_t addr = PCI_BDF_ADDR(bus, dev, func, offset);
-        outpd(PCI_CONFIG_ADDRESS, addr);
-        uint32_t tmp_val = inpd(PCI_CONFIG_DATA);
-
-        val &= width_mask;
-        tmp_val &= ~write_mask;
-        tmp_val |= (val << shift);
-        outpd(PCI_CONFIG_DATA, tmp_val);
-}
-
 // Standard MMIO configuration
 static ACPI_STATUS acpi_pci_ecam_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
                                 UINT64* val, uint32_t width, bool write) {
@@ -150,18 +105,12 @@ static ACPI_STATUS acpi_pci_ecam_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
 }
 
 // x86 PIO configuration support
-#if __x86_64__
 static ACPI_STATUS acpi_pci_x86_pio_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
                                 uint32_t* val, uint32_t width, bool write) {
-    if (write) {
-        pci_x86_pio_cfg_write(PciId->Bus, PciId->Device, PciId->Function, reg, *val, width);
-    } else {
-        pci_x86_pio_cfg_read(PciId->Bus, PciId->Device, PciId->Function, reg, val, width);
-    }
-
-    return AE_OK;
+    mx_status_t s = mx_pci_cfg_pio_rw(root_resource_handle, PciId->Bus, PciId->Device,
+                                      PciId->Function, reg, val, width, write);
+    return (s == MX_OK) ? AE_OK : AE_NOT_FOUND;
 }
-#endif
 
 static mx_status_t mmap_physical(mx_paddr_t phys, size_t size, uint32_t cache_policy,
                                  mx_handle_t* out_vmo, mx_vaddr_t* out_vaddr) {
@@ -257,18 +206,15 @@ static mx_status_t acpi_probe_ecam(void) {
 
 static mx_status_t acpi_probe_legacy_pci(void) {
     mx_status_t status = MX_ERR_NOT_FOUND;
-#if __x86_64__
     // Check for a Legacy PCI root complex at 00:00:0. For now, this assumes we
     // only care about segment 0. We'll cross that segmented bridge when we
     // come to it.
     uint16_t vendor_id;
-    pci_x86_pio_cfg_read(0, 0, 0, 0, (uint32_t*)&vendor_id, 16);
-    if (vendor_id != 0xFFFF) {
+    status = mx_pci_cfg_pio_rw(root_resource_handle,0, 0, 0, 0, (uint32_t*)&vendor_id, 16, false);
+    if (status == MX_OK && vendor_id != 0xFFFF) {
         acpi_pci_tbl.has_legacy = true;
         printf("ACPI: Found legacy PCI.\n");
-        status = MX_OK;
     }
-#endif
 
     return status;
 }
