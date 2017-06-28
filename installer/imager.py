@@ -98,6 +98,9 @@ parser.add_argument('--mkbootfs', action='store', required=False,
 parser.add_argument('--file_manifest', action='store', required=False,
                     help="""Location of the primary file manifest, if not
                     provided it will be assumed to be relative to build_dir""")
+parser.add_argument('--boot_manifest', action='store', required=False,
+                    help="""Location of the boot partition image manifest, if
+                    not provided it will be assumed to be relative to build_dir""")
 parser.add_argument('--minfs_path', action='store', required=True,
                     help="The location of the host-compiled minfs binary")
 parser.add_argument('--build_dir_magenta', action='store', required=False,
@@ -187,8 +190,9 @@ build_gen_dir = os.path.join(args.build_dir, "gen", "packages", "gn")
 primary_manifest = args.file_manifest
 if primary_manifest is None:
   primary_manifest = os.path.join(build_gen_dir, "system.bootfs.manifest")
-# TODO: Allow configuring this with a command line argument.
-boot_manifest = os.path.join(build_gen_dir, "boot.bootfs.manifest")
+boot_manifest = args.boot_manifest
+if not boot_manifest:
+  boot_manifest = os.path.join(build_gen_dir, "boot.bootfs.manifest")
 package_list = os.path.join(build_gen_dir, "packages")
 
 mkbootfs_path = args.mkbootfs

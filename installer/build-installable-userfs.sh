@@ -51,8 +51,9 @@ device_type="pc"
 kernel_cmdline=""
 bootdata=""
 kernel_args=""
+boot_manifest=""
 
-while getopts ":u:hrdp:b:m:e:a:t:c:x:o:" opt; do
+while getopts ":u:hrdp:b:m:e:a:t:c:x:o:w:" opt; do
   case $opt in
     u)
       bytes_sys=$(($OPTARG * 1024 * 1024 * 1024))
@@ -77,6 +78,7 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:o:" opt; do
         "contains spaces, the string should be quoted. If both this and -c are" \
         "supplied, these options will be appended to the command line file."
       echo "-x: bootdata location"
+      echo "-w: location of the boot partition manifest"
       exit 0
       ;;
     r)
@@ -111,6 +113,9 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:o:" opt; do
       ;;
     x)
       bootdata=$OPTARG
+      ;;
+    w)
+      boot_manifest=$OPTARG
       ;;
     \?)
       echo "Unknown option -$OPTARG"
@@ -265,6 +270,6 @@ fi
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
   --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
-  --kernel_cmdline="$kernel_cmd_staging" --bootdata="$bootdata"
+  --kernel_cmdline="$kernel_cmd_staging" --bootdata="$bootdata" --boot_manifest="$boot_manifest"
 
 echo "Built disks: $disk_path_efi & $disk_path"
