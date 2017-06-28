@@ -5,149 +5,154 @@
 package daemon
 
 import (
-	"fmt"
-	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
 
-// WatchNeeds listens to the supplied channels to run monitor for, and retrieve
-// new packages. When an event arrives on the 'shrt' channel, any new needs are
-// immediately requested from the Daemon. When an event is received on the 'lng'
-// channel any previously new needs which have not be fulfilled are requested
-// from the Daemon. When an event is received on the 'stp' channel or the
-// channel is closed, this function will return.
-func WatchNeeds(d *Daemon, shrt <-chan time.Time, lng <-chan time.Time,
-	stp <-chan struct{}, needsPath string) {
-	oldPkgs := make(map[Package]struct{})
-	oldBlobs := make(map[string]struct{})
-	muBlob := &sync.Mutex{}
+// Watcher implements a basic filesystem watcher that polls /pkgfs/needs for new
+// entries that amber needs to fetch.
+type Watcher struct {
+	d *Daemon
 
+	pollDelay  time.Duration
+	retryDelay time.Duration
+
+	mu       sync.Mutex
+	packages map[string]struct{}
+	blobs    map[string]struct{}
+	failures map[string]struct{}
+}
+
+// NewWatcher initializes a new Watcher
+func NewWatcher(d *Daemon) *Watcher {
+	return &Watcher{
+		d: d,
+
+		pollDelay:  time.Second,
+		retryDelay: 5 * time.Minute,
+
+		packages: map[string]struct{}{},
+		blobs:    map[string]struct{}{},
+		failures: map[string]struct{}{},
+	}
+}
+
+// Watch watches path for new packages and path/blobs for new blobs to request.
+func (w *Watcher) Watch(path string) {
+	lastClear := time.Now()
 	for {
-		select {
-		case _, ok := <-shrt:
-			if ok {
-				newPkgs, newBlobs := processUpdate(oldPkgs, oldBlobs, muBlob, needsPath)
-				if newPkgs != nil {
-					d.GetUpdates(newPkgs)
-				}
+		time.Sleep(w.pollDelay) // TODO(raggi): configurable polling rate
 
-				for _, blob := range newBlobs {
-					go getBlob(d, blob, muBlob, oldBlobs)
-				}
-			}
-		case _, ok := <-lng:
-			if ok {
-				if len(oldPkgs) > 0 {
-					getPkgs(d, oldPkgs)
-				}
-			}
-		case _, _ = <-stp:
-			return
-
+		if time.Since(lastClear) > w.retryDelay {
+			w.mu.Lock()
+			w.failures = map[string]struct{}{}
+			w.mu.Unlock()
+			lastClear = time.Now()
 		}
-	}
-}
 
-func getBlob(d *Daemon, newBlob string, muBlob *sync.Mutex,
-	currentBlobs map[string]struct{}) {
-	// TODO(jmatt) Consider using shorter delay if no error
-	d.GetBlob(newBlob)
-
-	go func(mu *sync.Mutex, blobSet map[string]struct{}, targ string) {
-		time.Sleep(5 * time.Minute)
-		mu.Lock()
-		defer mu.Unlock()
-		delete(blobSet, targ)
-	}(muBlob, currentBlobs, newBlob)
-}
-
-// getPkgs requests the supplied set of Packages from the supplied Daemon.
-func getPkgs(d *Daemon, known map[Package]struct{}) {
-	ps := NewPackageSet()
-	for k, _ := range known {
-		tuf_name := fmt.Sprintf("/%s", k.Name)
-		ps.Add(&Package{Name: tuf_name, Version: k.Version})
-	}
-	d.GetUpdates(ps)
-}
-
-// processUpdate looks the pacakge needs directory and compares this against the
-// passed in Package set. Any new needs are added to the set and any entries in
-// map not represented in the directory are removed. New needs are also returned
-// as a PackageSet which is returned. If there are no new needs nil is returned.
-func processUpdate(known map[Package]struct{}, oldBlobs map[string]struct{}, muBlobs *sync.Mutex, needsPath string) (*PackageSet, []string) {
-	muBlobs.Lock()
-	defer muBlobs.Unlock()
-	current := make(map[Package]struct{})
-	names, err := ioutil.ReadDir(needsPath)
-	if err != nil {
-		return nil, nil
-	}
-
-	blobReqs := make(map[string]struct{})
-
-	for _, entName := range names {
-		if entName.IsDir() {
-			pkgPath := filepath.Join(needsPath, entName.Name())
-			versions, err := ioutil.ReadDir(pkgPath)
-			if err != nil {
-				fmt.Printf("Error reading contents of directory '%s'\n", pkgPath)
+		d, err := os.Open(path)
+		if err != nil {
+			log.Printf("unable to open %s: %s", path, err)
+			continue
+		}
+		names, err := d.Readdirnames(-1)
+		d.Close()
+		if err != nil {
+			log.Printf("unable to readdirnames %s: %s", path, err)
+			continue
+		}
+		for _, name := range names {
+			w.mu.Lock()
+			_, ok := w.failures[name]
+			w.mu.Unlock()
+			if ok {
 				continue
 			}
-			for _, version := range versions {
-				pkg := Package{Name: entName.Name(), Version: version.Name()}
-				current[pkg] = struct{}{}
+
+			w.mu.Lock()
+			_, ok = w.packages[name]
+			if !ok {
+				w.packages[name] = struct{}{}
 			}
-		} else {
-			if strings.Contains(entName.Name(), ".") {
-				pkg := Package{Name: entName.Name(), Version: ""}
-				current[pkg] = struct{}{}
-			} else {
-				// TODO(jmatt) validate only hex characters
-				blobReqs[entName.Name()] = struct{}{}
+			w.mu.Unlock()
+
+			if ok {
+				continue
 			}
+			if name == "blobs" {
+				continue
+			}
+
+			go w.getPackage(name)
 		}
-	}
 
-	for k, _ := range known {
-		if _, ok := current[k]; !ok {
-			delete(known, k)
-		} else {
-			delete(current, k)
+		d, err = os.Open(filepath.Join(path, "blobs"))
+		if err != nil {
+			log.Printf("unable to open %s: %s", path, err)
+			continue
 		}
-	}
-
-	newBlobs := []string{}
-
-	for k, _ := range oldBlobs {
-		// IF a previously seen blob went away, remove it
-		// ELSE remove previously seen from new request set
-		if _, ok := blobReqs[k]; !ok {
-			delete(oldBlobs, k)
-		} else {
-			delete(blobReqs, k)
+		names, err = d.Readdirnames(-1)
+		d.Close()
+		if err != nil {
+			log.Printf("unable to readdirnames %s: %s", path, err)
+			continue
 		}
-	}
+		for _, name := range names {
+			w.mu.Lock()
+			_, ok := w.failures[name]
+			w.mu.Unlock()
+			if ok {
+				continue
+			}
 
-	// Add any remaining new blob requests to the old blob set and list
-	// to be returned
-	for k, _ := range blobReqs {
-		oldBlobs[k] = struct{}{}
-		newBlobs = append(newBlobs, k)
-	}
+			w.mu.Lock()
+			_, ok = w.blobs[name]
+			if !ok {
+				w.blobs[name] = struct{}{}
+			}
+			w.mu.Unlock()
 
-	var ps *PackageSet = nil
-	if len(current) > 0 {
-		ps = NewPackageSet()
-		for k, _ := range current {
-			tuf_name := fmt.Sprintf("/%s", k.Name)
-			ps.Add(&Package{Name: tuf_name, Version: k.Version})
-			known[k] = struct{}{}
+			if ok {
+				continue
+			}
+
+			go w.getBlob(name)
 		}
-	}
 
-	return ps, newBlobs
+	}
+}
+
+func (w *Watcher) getPackage(name string) {
+	defer func() {
+		w.mu.Lock()
+		delete(w.packages, name)
+		w.mu.Unlock()
+	}()
+
+	ps := NewPackageSet()
+	ps.Add(&Package{Name: "/" + name})
+	if !w.d.GetUpdates(ps) {
+		w.mu.Lock()
+		w.failures[name] = struct{}{}
+		w.mu.Unlock()
+	}
+}
+
+func (w *Watcher) getBlob(name string) {
+	defer func() {
+		w.mu.Lock()
+		delete(w.blobs, name)
+		w.mu.Unlock()
+	}()
+
+	if err := w.d.GetBlob(name); err != nil {
+		w.mu.Lock()
+		w.failures[name] = struct{}{}
+		w.mu.Unlock()
+
+		log.Printf("amber: failed to fetch blob %q: %s", name, err)
+	}
 }

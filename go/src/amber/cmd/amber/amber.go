@@ -171,12 +171,8 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	return checker
 }
 
-func pmMonitor(d *daemon.Daemon) error {
-	s := time.NewTicker(200 * time.Millisecond)
-	l := time.NewTicker(5 * time.Minute)
-	end := make(chan struct{})
-	go daemon.WatchNeeds(d, s.C, l.C, end, needsPath)
-	return nil
+func pmMonitor(d *daemon.Daemon) {
+	go daemon.NewWatcher(d).Watch(needsPath)
 }
 
 func digest(name string, hash hash.Hash) ([]byte, error) {
