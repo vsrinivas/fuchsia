@@ -23,6 +23,12 @@
 
 #define PAGE_ROUNDUP(x) ((x + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
+// The Interrupter Moderation Interval prevents the controller from sending interrupts too often.
+// According to XHCI Rev 1.1 4.17.2, the default is 4000 (= 1 ms). We set it to 1000 (= 250 us) to
+// get better latency on completions for bulk transfers; setting it too low seems to destabilize the
+// system.
+#define XHCI_IMODI_VAL      1000
+
 uint8_t xhci_endpoint_index(uint8_t ep_address) {
     if (ep_address == 0) return 0;
     uint32_t index = 2 * (ep_address & ~USB_ENDPOINT_DIR_MASK);
@@ -402,6 +408,7 @@ static void xhci_interruptor_init(xhci_t* xhci, int interruptor) {
     xhci_update_erdp(xhci, interruptor);
 
     XHCI_SET32(&intr_regs->iman, IMAN_IE, IMAN_IE);
+    XHCI_SET32(&intr_regs->imod, IMODI_MASK, XHCI_IMODI_VAL);
     XHCI_SET32(&intr_regs->erstsz, ERSTSZ_MASK, ERST_ARRAY_SIZE);
     XHCI_WRITE64(&intr_regs->erstba, xhci->erst_arrays_phys[interruptor]);
 }

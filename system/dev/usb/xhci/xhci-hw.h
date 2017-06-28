@@ -273,6 +273,8 @@ typedef volatile struct {
 // Interruptor register bits
 #define IMAN_IP         (1 << 0)    // Interrupt Pending
 #define IMAN_IE         (1 << 1)    // Interrupt Enable
+#define IMODI_MASK      0x0000FFFF  // Interrupter Moderation Interval
+#define IMODC_MASK      0xFFFF0000  // Interrupter Moderation Counter
 #define ERSTSZ_MASK     0x0000FFFF
 #define ERDP_DESI_START 0           // First bit of Dequeue ERST Segment Index
 #define ERDP_DESI_BITS  2           // Bit length of Dequeue ERST Segment Index
