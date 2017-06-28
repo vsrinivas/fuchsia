@@ -13,10 +13,10 @@ __BEGIN_CDECLS;
 
 #define OP_ABORT  0x0 // if (cond) return no-match
 #define OP_MATCH  0x1 // if (cond) return match
-#define OP_GOTO   0x2 // if (cond) advance to next LABEL(Value)
+#define OP_GOTO   0x2 // if (cond) advance to next LABEL(paramA)
 #define OP_SET    0x3 // if (cond) flags |= paramA
 #define OP_CLEAR  0x4 // if (cond) flags &= (~paramA)
-#define OP_LABEL  0x5 // no-op, labels line with Value
+#define OP_LABEL  0x5 // no-op, labels line with paramA
 
 #define COND_AL   0x0 // true
 #define COND_EQ   0x1 // bind(paramB) == Value

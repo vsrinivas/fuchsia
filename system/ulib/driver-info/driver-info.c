@@ -182,11 +182,11 @@ void di_dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len) {
     case OP_CLEAR:
         break;
     case OP_LABEL:
-        snprintf(buf + off, buf_len - off, "L.%u:\n", b->arg);
+        snprintf(buf + off, buf_len - off, "L.%u:", pa);
         return;
     default:
         snprintf(buf + off, buf_len - off,
-                "Unknown Op 0x%1x [0x%08x, 0x%08x]\n", op, b->op, b->arg);
+                "Unknown Op 0x%1x [0x%08x, 0x%08x]", op, b->op, b->arg);
         return;
     }
 
