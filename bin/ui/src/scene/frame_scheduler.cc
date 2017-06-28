@@ -147,8 +147,15 @@ void FrameScheduler::MaybeUpdateSceneAndDrawFrame() {
 
   // A frame should be drawn now.  Notify listeners to update the global scene.
   UpdateScene();
-  DrawFrame();
 
+  if (!renderers_.empty()) {
+    DrawFrame();
+  } else {
+    // The only renderer could have been destroyed, if the session holding it
+    // threw an error.
+    FTL_LOG(ERROR) << "FrameScheduler::MaybeUpdateSceneAndDrawFrame: No "
+                      "renderers available.";
+  }
   // The frame is in flight, and will be presented.  Check if another frame
   // needs to be scheduled.
   last_presentation_time_ = next_presentation_time_;

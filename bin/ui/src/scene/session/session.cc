@@ -739,8 +739,9 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       // presentation_time was to the requested time.
     } else {
       // An error was encountered while applying the update.
-      FTL_LOG(WARNING) << "mozart::Session::ApplySessionUpdates() "
-                          "initiating teardown.";
+      FTL_LOG(WARNING) << "mozart::Session::ApplyScheduledUpdates(): "
+                          "An error was encountered while applying the update. "
+                          "Initiating teardown.";
       TearDown();
       // Tearing down a session will very probably result in changes to
       // the global scene-graph.
