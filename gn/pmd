@@ -1,14 +1,14 @@
 {
     "labels": [
-        "//apps/pm:pm"
+        "//apps/pm:pmd"
     ],
     "imports": [
         "golibs"
     ],
     "binaries": [
         {
-            "binary": "pm",
-            "bootfs_path": "apps/pm"
+            "binary": "pmd",
+            "bootfs_path": "apps/pmd"
         }
     ],
     "gopaths": [
