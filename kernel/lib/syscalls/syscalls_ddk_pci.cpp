@@ -13,6 +13,7 @@
 #include <trace.h>
 
 #include <dev/interrupt.h>
+#include <lib/pci/pio.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <kernel/vm/vm_object_physical.h>
@@ -179,6 +180,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     if (win_count != 1) {
         return MX_ERR_INVALID_ARGS;
     }
+
     if (arg->ecam_windows[0].bus_start != 0) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -309,6 +311,34 @@ mx_status_t sys_pci_get_nth_device(mx_handle_t hrsrc,
 
     up->AddHandle(mxtl::move(handle));
     return MX_OK;
+}
+
+/* This is a transitional method to bootstrap legacy PIO access before
+ * PCI moves to userspace.
+ */
+mx_status_t sys_pci_cfg_pio_rw(mx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
+                               uint8_t offset, user_ptr<uint32_t> val, size_t width, bool write) {
+#if ARCH_X86
+    uint32_t val_;
+    mx_status_t status = validate_resource(handle, MX_RSRC_KIND_ROOT);
+    if (status != MX_OK) {
+        return status;
+    }
+
+    if (write) {
+        val.copy_from_user(&val_);
+        status = Pci::PioCfgWrite(bus, dev, func, offset, val_, width);
+    } else {
+        status = Pci::PioCfgRead(bus, dev, func, offset, &val_, width);
+        if (status == MX_OK) {
+            val.copy_to_user(val_);
+        }
+    }
+
+    return status;
+#else
+    return MX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 mx_status_t sys_pci_enable_bus_master(mx_handle_t dev_handle, bool enable) {
