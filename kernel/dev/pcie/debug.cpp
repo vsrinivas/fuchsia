@@ -18,8 +18,6 @@
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 
-static constexpr unsigned int kPciDumpRowLen = 0x10u;
-
 class PcieDebugConsole {
 public:
     static int CmdLsPci(int argc, const cmd_args *argv, uint32_t flags);
@@ -278,45 +276,6 @@ static void do_lspci_indent(uint level) {
         printf(_fmt, ##__VA_ARGS__);           \
     } while (0)
 
-/*
- * PCI address spaces are not necessarily mapped in a manner such that
- * the address hexdump8 uses is useful, so implement one that supports
- * PIO and MMIO.
- */
-static void pci_cfg_hexdump8(const PciConfig* cfg, uint16_t off, uint amt)
-{
-    uint8_t buf[kPciDumpRowLen];
-    for (uint buf_off = off; buf_off < amt; buf_off += kPciDumpRowLen) {
-        uint len = MIN(amt - buf_off, kPciDumpRowLen);
-
-        printf("%#" PRIxPTR ": ", cfg->base() + buf_off);
-        for (uint i = 0; i < len; i++)
-            buf[i] = cfg->Read(PciReg8(static_cast<uint16_t>(buf_off + i)));
-
-        for (uint i = 0; i < kPciDumpRowLen; i++ ) {
-            if (i < len) {
-                printf("%02x ", buf[i]);
-            } else {
-                printf("   ");
-            }
-        }
-
-        printf("|");
-
-        for (uint i = 0; i < len; i++) {
-            if (i < len) {
-                if (isgraph(buf[i]))
-                    printf("%c", buf[i]);
-                else
-                    printf(".");
-            } else {
-                printf(" ");
-            }
-        }
-
-        printf("\n");
-    }
-}
 
 static void dump_pcie_hdr(const PcieDevice& dev, lspci_params_t* params)
 {
@@ -436,10 +395,7 @@ static void dump_pcie_bridge(const PcieBridge& bridge, lspci_params_t* params)
 static void dump_pcie_raw_config(uint amt, const PciConfig* cfg)
 {
     DEBUG_ASSERT(amt == PCIE_BASE_CONFIG_SIZE || amt == PCIE_EXTENDED_CONFIG_SIZE);
-    printf("%u bytes of raw config (base %s:%#" PRIxPTR ")\n",
-           amt, (cfg->addr_space() == PciAddrSpace::MMIO) ? "MMIO" : "PIO", cfg->base());
-
-    pci_cfg_hexdump8(cfg, 0, amt);
+    cfg->DumpConfig(static_cast<uint16_t>(amt & 0xFFFF));
 }
 
 #define CAP_TBL_ENTRY(s) (s, #s)

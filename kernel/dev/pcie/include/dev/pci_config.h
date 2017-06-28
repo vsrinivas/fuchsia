@@ -116,6 +116,7 @@ public:
     inline PciAddrSpace addr_space() const { return addr_space_; }
 
     // Virtuals
+    void DumpConfig(uint16_t len) const;
     virtual uint8_t Read(const PciReg8 addr) const = 0;
     virtual uint16_t Read(const PciReg16 addr) const = 0;
     virtual uint32_t Read(const PciReg32 addr) const = 0;

@@ -7,6 +7,7 @@
 #include <dev/pci_config.h>
 
 #include <assert.h>
+#include <debug.h>
 #include <inttypes.h>
 #include <trace.h>
 
@@ -159,4 +160,26 @@ mxtl::RefPtr<PciConfig> PciConfig::Create(uintptr_t base, PciAddrSpace addr_type
     }
 
     return cfg;
+}
+
+void PciConfig::DumpConfig(uint16_t len) const {
+    printf("%u bytes of raw config (base %s:%#" PRIxPTR ")\n",
+           len, (addr_space_ == PciAddrSpace::MMIO) ? "MMIO" : "PIO", base_);
+    if (addr_space_ == PciAddrSpace::MMIO) {
+        hexdump8(reinterpret_cast<const void*>(base_), len);
+    } else {
+        // PIO space can't be dumped directly so we read a row at a time
+        constexpr uint8_t row_len = 16;
+        uint32_t pos = 0;
+        uint8_t buf[row_len];
+
+        do {
+            for (uint16_t i = 0; i < row_len; i++) {
+                buf[i] = Read(PciReg8(static_cast<uint8_t>(pos + i)));
+            }
+
+            hexdump8_ex(buf, row_len, base_ + pos);
+            pos += row_len;
+        } while (pos < PCIE_BASE_CONFIG_SIZE);
+    }
 }
