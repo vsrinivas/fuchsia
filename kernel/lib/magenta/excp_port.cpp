@@ -22,18 +22,22 @@
 
 #define LOCAL_TRACE 0
 
-static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report, size_t size) {
-    auto pk = IOP_Packet::Alloc(size + sizeof(mx_packet_header_t));
+static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report) {
+    auto pk = IOP_Packet::Alloc(sizeof(mx_exception_packet_t));
     if (!pk)
         return nullptr;
 
     auto pkt_data = reinterpret_cast<mx_exception_packet_t*>(
         reinterpret_cast<char*>(pk) + sizeof(IOP_Packet));
 
-    memcpy(&pkt_data->report, report, size);
     pkt_data->hdr.key = key;
-    pkt_data->hdr.type = MX_PORT_PKT_TYPE_EXCEPTION;
+    pkt_data->hdr.type = report->header.type;
     pkt_data->hdr.extra = 0; // currently unused
+
+    pkt_data->pid = report->context.pid;
+    pkt_data->tid = report->context.tid;
+    pkt_data->reserved0 = 0;
+    pkt_data->reserved1 = 0;
 
     return pk;
 }
@@ -219,7 +223,7 @@ mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
         return MX_ERR_PEER_CLOSED;
     }
 
-    auto iopk = MakePacket(port_key_, report, sizeof(*report));
+    auto iopk = MakePacket(port_key_, report);
     if (!iopk)
         return MX_ERR_NO_MEMORY;
 

@@ -231,37 +231,49 @@ void resume_thread_from_exception(mx_handle_t thread,
     resume_thread(thread, false);
 }
 
-void process_report(const mx_exception_report_t* report, bool use_libunwind) {
-    if (!MX_EXCP_IS_ARCH(report->header.type))
+void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwind) {
+    if (!MX_EXCP_IS_ARCH(type))
         return;
 
-    auto context = report->context;
-    const char* fatal = "fatal ";
-    // This won't print "fatal" in the case where this is a s/w bkpt but
-    // CRASHLOGGER_RESUME_MAGIC isn't set. Big deal.
-    if (is_resumable_swbreak(report))
-        fatal = "";
-    printf("<== %sexception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", fatal, context.pid, context.tid);
-    printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
-
     mx_handle_t process;
-    mx_status_t status = mx_object_get_child(0, context.pid, MX_RIGHT_SAME_RIGHTS, &process);
+    mx_status_t status = mx_object_get_child(0, pid, MX_RIGHT_SAME_RIGHTS, &process);
     if (status < 0) {
-        printf("failed to get a handle to [%" PRIu64 "] : error %d\n", context.pid, status);
+        printf("failed to get a handle to [%" PRIu64 "] : error %d\n", pid, status);
         return;
     }
     mx_handle_t thread;
-    status = mx_object_get_child(process, context.tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    status = mx_object_get_child(process, tid, MX_RIGHT_SAME_RIGHTS, &thread);
     if (status < 0) {
-        printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, status);
+        printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid, tid, status);
         mx_handle_close(process);
         return;
     }
 
+    mx_exception_report_t report;
+    status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT,
+                                &report, sizeof(report), NULL, NULL);
+    if (status < 0) {
+        printf("failed to get exception report for [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid, tid, status);
+        mx_handle_close(process);
+        mx_handle_close(thread);
+        return;
+    }
+
+    auto context = report.context;
+
+    const char* fatal = "fatal ";
+    // This won't print "fatal" in the case where this is a s/w bkpt but
+    // CRASHLOGGER_RESUME_MAGIC isn't set. Big deal.
+    if (is_resumable_swbreak(&report))
+        fatal = "";
+    printf("<== %sexception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", fatal, context.pid, context.tid);
+    printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), context.arch.pc);
+
+
     // Record the crashed thread so that if we crash then self_dump_func
     // can (try to) "resume" the thread so that it's not left hanging.
     crashed_thread = thread;
-    crashed_thread_report = *report;
+    crashed_thread_report = report;
 
     gregs_type reg_buf;
     gregs_type *regs = nullptr;
@@ -287,7 +299,7 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
         output_frame_arm64(context.arch.u.arm_64, *regs);
 
         // Only output the Fault address register if there's a data fault.
-        if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type)
+        if (MX_EXCP_FATAL_PAGE_FAULT == report.header.type)
             printf(" far %#18" PRIx64 "\n", context.arch.u.arm_64.far);
 
         pc = regs->pc;
@@ -320,7 +332,7 @@ Fail:
 
     // allow the thread (and then process) to die, unless the exception is
     // to just trigger a backtrace (if enabled)
-    resume_thread_from_exception(thread, report, regs);
+    resume_thread_from_exception(thread, &report, regs);
     crashed_thread = MX_HANDLE_INVALID;
     crashed_thread_report = { };
 
@@ -390,7 +402,7 @@ int self_dump_func(void* arg) {
     // situation crashlogger,libunwind,libbacktrace are compiled with frame
     // pointers. This decision needs to be revisited if/when we need/want
     // to compile any of these without frame pointers.
-    process_report(&packet.report, false);
+    process_report(packet.pid, packet.tid, packet.hdr.type, false);
 
     exit(1);
 }
@@ -535,7 +547,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        process_report(&packet.report, use_libunwind);
+        process_report(packet.pid, packet.tid, packet.hdr.type, use_libunwind);
     }
 
     return 0;

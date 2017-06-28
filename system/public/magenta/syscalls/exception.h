@@ -5,8 +5,17 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <magenta/syscalls/port.h>
 
 __BEGIN_CDECLS
+
+typedef struct mx_exception_packet {
+    mx_packet_header_t hdr;
+    uint64_t pid;
+    uint64_t tid;
+    uint64_t reserved0;
+    uint64_t reserved1;
+} mx_exception_packet_t;
 
 // ask clang format not to mess up the indentation:
 // clang-format off
@@ -17,14 +26,14 @@ typedef enum {
     // Further information can be found in report.context.arch.
 
     // General exception not covered by another value.
-    MX_EXCP_GENERAL = 0,
-    MX_EXCP_FATAL_PAGE_FAULT = 1,
-    MX_EXCP_UNDEFINED_INSTRUCTION = 2,
-    MX_EXCP_SW_BREAKPOINT = 3,
-    MX_EXCP_HW_BREAKPOINT = 4,
-    MX_EXCP_UNALIGNED_ACCESS = 5,
+    MX_EXCP_GENERAL = MX_PKT_TYPE_EXCEPTION(0),
+    MX_EXCP_FATAL_PAGE_FAULT = MX_PKT_TYPE_EXCEPTION(1),
+    MX_EXCP_UNDEFINED_INSTRUCTION = MX_PKT_TYPE_EXCEPTION(2),
+    MX_EXCP_SW_BREAKPOINT = MX_PKT_TYPE_EXCEPTION(3),
+    MX_EXCP_HW_BREAKPOINT = MX_PKT_TYPE_EXCEPTION(4),
+    MX_EXCP_UNALIGNED_ACCESS = MX_PKT_TYPE_EXCEPTION(5),
 
-    MX_EXCP_MAX_ARCH = 99,
+    MX_EXCP_MAX_ARCH = MX_PKT_TYPE_EXCEPTION(0x7F),
 
     // Synthetic exceptions.
 
@@ -32,7 +41,7 @@ typedef enum {
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
     // The thread is paused until it is resumed by the debugger
     // with mx_task_resume.
-    MX_EXCP_THREAD_STARTING = 100,
+    MX_EXCP_THREAD_STARTING = MX_PKT_TYPE_EXCEPTION(0x80),
 
     // A thread has suspended.
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
@@ -42,7 +51,7 @@ typedef enum {
     // A note on the word tense here: This is named "suspended" and not
     // "suspending" because the thread has completely suspended at this point.
     // N.B. This notification is not replied to.
-    MX_EXCP_THREAD_SUSPENDED = 101,
+    MX_EXCP_THREAD_SUSPENDED = MX_PKT_TYPE_EXCEPTION(0x81),
 
     // A thread has resumed after being suspended.
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
@@ -50,7 +59,7 @@ typedef enum {
     // A note on the word tense here: This is named "resumed" and not
     // "resuming" because the thread has completely resumed at this point.
     // N.B. This notification is not replied to.
-    MX_EXCP_THREAD_RESUMED = 102,
+    MX_EXCP_THREAD_RESUMED = MX_PKT_TYPE_EXCEPTION(0x82),
 
     // A thread is exiting.
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
@@ -58,7 +67,7 @@ typedef enum {
     // still examine thread state.
     // The thread is paused until it is resumed by the debugger
     // with mx_task_resume.
-    MX_EXCP_THREAD_EXITING = 103,
+    MX_EXCP_THREAD_EXITING = MX_PKT_TYPE_EXCEPTION(0x83),
 
     // A thread or process has exited or otherwise terminated.
     // At this point thread/process state is no longer available.
@@ -67,7 +76,7 @@ typedef enum {
     // Thread gone notifications are only sent to the thread exception port
     // (if one is registered).
     // N.B. This notification is not replied to.
-    MX_EXCP_GONE = 104,
+    MX_EXCP_GONE = MX_PKT_TYPE_EXCEPTION(0x84),
 } mx_excp_type_t;
 
 #define MX_EXCP_IS_ARCH(excp) ((excp) <= MX_EXCP_MAX_ARCH)

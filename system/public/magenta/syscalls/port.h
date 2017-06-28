@@ -5,7 +5,6 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <magenta/syscalls/exception.h>
 
 __BEGIN_CDECLS
 
@@ -36,20 +35,23 @@ typedef struct mx_io_packet {
     uint32_t reserved;
 } mx_io_packet_t;
 
-typedef struct mx_exception_packet {
-    mx_packet_header_t hdr;
-    mx_exception_report_t report;
-} mx_exception_packet_t;
-
 // mx_port V2 packet structures.
 
 #define MX_WAIT_ASYNC_ONCE          0u
 #define MX_WAIT_ASYNC_REPEATING     1u
 
 // packet types.
-#define MX_PKT_TYPE_USER            0u
-#define MX_PKT_TYPE_SIGNAL_ONE      1u
-#define MX_PKT_TYPE_SIGNAL_REP      2u
+#define MX_PKT_TYPE_USER            0x00u
+#define MX_PKT_TYPE_SIGNAL_ONE      0x01u
+#define MX_PKT_TYPE_SIGNAL_REP      0x02u
+#define MX_PKT_TYPE_EXCEPTION(n)    (0x03u | (((n) & 0xFFu) << 8))
+
+#define MX_PKT_TYPE_MASK            0xFFu
+
+#define MX_PKT_IS_USER(type)        ((type) == MX_PKT_TYPE_USER)
+#define MX_PKT_IS_SIGNAL_ONE(type)  ((type) == MX_PKT_TYPE_SIGNAL_ONE)
+#define MX_PKT_IS_SIGNAL_REP(type)  ((type) == MX_PKT_TYPE_SIGNAL_REP)
+#define MX_PKT_IS_EXCEPTION(type)   (((type) & MX_PKT_TYPE_MASK) == MX_PKT_TYPE_EXCEPTION(0))
 
 // port_packet_t::type MX_PKT_TYPE_USER.
 typedef union mx_packet_user {

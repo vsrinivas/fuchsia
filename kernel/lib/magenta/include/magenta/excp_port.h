@@ -5,6 +5,7 @@
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>
 
 #include <mxtl/canary.h>

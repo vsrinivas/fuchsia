@@ -150,16 +150,17 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior,
         unittest_printf("wait-inf: waiting on inferior\n");
 
         mx_exception_packet_t packet;
-        if (!read_exception(eport, &packet))
+        mx_exception_report_t report;
+        if (!read_exception(eport, inferior, &packet, &report))
             return false;
-        mx_koid_t tid = packet.report.context.tid;
+        mx_koid_t tid = packet.tid;
 
-        if (packet.report.header.type == MX_EXCP_THREAD_STARTING) {
+        if (packet.hdr.type == MX_EXCP_THREAD_STARTING) {
             unittest_printf("wait-inf: inferior started\n");
             if (!resume_inferior(inferior, tid))
                 return false;
             continue;
-        } else if (packet.report.header.type == MX_EXCP_THREAD_EXITING) {
+        } else if (packet.hdr.type == MX_EXCP_THREAD_EXITING) {
             mx_handle_t thread;
             mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
             // If the process has exited then the kernel may have reaped the
@@ -188,7 +189,7 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior,
             if (!resume_inferior(inferior, tid))
                 return false;
             continue;
-        } else if (packet.report.header.type == MX_EXCP_GONE) {
+        } else if (packet.hdr.type == MX_EXCP_GONE) {
             if (tid == 0) {
                 // process is gone
                 unittest_printf("wait-inf: inferior gone\n");
@@ -283,12 +284,12 @@ static bool expect_debugger_attached_eq(
 static bool debugger_test_exception_handler(mx_handle_t inferior,
                                             const mx_exception_packet_t* packet)
 {
-    ASSERT_EQ(packet->report.header.type, (unsigned) MX_EXCP_FATAL_PAGE_FAULT,
+    ASSERT_EQ(packet->hdr.type, (unsigned) MX_EXCP_FATAL_PAGE_FAULT,
               "wait-inf: unexpected exception type");
 
     unittest_printf("wait-inf: got page fault exception\n");
 
-    mx_koid_t tid = packet->report.context.tid;
+    mx_koid_t tid = packet->tid;
     mx_handle_t thread = tu_get_thread(inferior, tid);
 
     dump_inferior_regs(thread);

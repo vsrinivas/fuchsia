@@ -19,6 +19,7 @@
 
 #include <magenta/process.h>
 #include <magenta/syscalls/debug.h>
+#include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/policy.h>
 #include <magenta/syscalls/port.h>
 
@@ -280,22 +281,14 @@ static bool test_exception_on_new_event(uint32_t base_policy,
 
     // Check the exception message contents.
     ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.report.header.type, (uint32_t)MX_EXCP_GENERAL, "");
-    ASSERT_EQ(packet.report.context.arch_id, ARCH_ID, "");
+    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_GENERAL, "");
+
     mx_koid_t pid;
     mx_koid_t tid;
     ASSERT_TRUE(get_koid(proc.get(), &pid), "");
     ASSERT_TRUE(get_koid(thread.get(), &tid), "");
-    ASSERT_EQ(packet.report.context.pid, pid, "");
-    ASSERT_EQ(packet.report.context.tid, tid, "");
-    // TODO(mseaborn): Implement reporting the pc register via this message.
-    ASSERT_EQ(packet.report.context.arch.pc, 0, "");
-    // Check that all of these other fields are zero.
-    for (uint32_t idx = 0; idx < sizeof(packet.report.context.arch.u); ++idx) {
-        EXPECT_EQ(
-            reinterpret_cast<uint8_t*>(&packet.report.context.arch.u)[idx],
-            0, "");
-    }
+    ASSERT_EQ(packet.pid, pid, "");
+    ASSERT_EQ(packet.tid, tid, "");
 
     // Check that we can read the thread's register state.
     mx_general_regs_t regs;

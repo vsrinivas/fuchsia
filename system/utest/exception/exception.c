@@ -152,11 +152,9 @@ static bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
 {
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), MX_OK, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
-    const mx_exception_report_t* report = &packet->report;
     unittest_printf("exception received: pid %"
                     PRIu64 ", tid %" PRIu64 ", type %d\n",
-                    report->context.pid, report->context.tid,
-                    report->header.type);
+                    packet->pid, packet->tid, packet->hdr.type);
     return true;
 }
 
@@ -172,19 +170,17 @@ static bool verify_exception(const mx_exception_packet_t* packet,
                              bool test_not_enough_buffer,
                              mx_koid_t* tid)
 {
-    const mx_exception_report_t* report = &packet->report;
-
-    EXPECT_EQ(report->header.type, expected_type, "unexpected exception type");
+    EXPECT_EQ(packet->hdr.type, expected_type, "unexpected exception type");
 
     if (strcmp(kind, "process") == 0) {
         // Test mx_object_get_child: Verify it returns the correct process.
         mx_handle_t debug_child;
-        mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, report->context.pid, MX_RIGHT_SAME_RIGHTS, &debug_child);
+        mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, packet->pid, MX_RIGHT_SAME_RIGHTS, &debug_child);
         if (status < 0)
             tu_fatal("mx_process_debug", status);
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(debug_child, &process_info);
-        EXPECT_EQ(process_info.koid, report->context.pid, "mx_process_debug got pid mismatch");
+        EXPECT_EQ(process_info.koid, packet->pid, "mx_process_debug got pid mismatch");
         tu_handle_close(debug_child);
     } else if (strcmp(kind, "thread") == 0) {
         // TODO(dje): Verify exception was from expected thread.
@@ -198,10 +194,10 @@ static bool verify_exception(const mx_exception_packet_t* packet,
     if (process != MX_HANDLE_INVALID) {
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(process, &process_info);
-        EXPECT_EQ(process_info.koid, report->context.pid, "wrong process in exception report");
+        EXPECT_EQ(process_info.koid, packet->pid, "wrong process in exception report");
     }
 
-    *tid = report->context.tid;
+    *tid = packet->tid;
     return true;
 }
 
@@ -234,7 +230,7 @@ static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
         if (!read_exception(eport, &packet))
             return false;
         // If we get a process gone report then all threads have exited.
-        if (packet.report.header.type == MX_EXCP_GONE)
+        if (packet.hdr.type == MX_EXCP_GONE)
             break;
         if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
                               false, &tid))
@@ -275,7 +271,7 @@ static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t proce
         if (!read_exception(eport, &packet))
             return false;
         // If we get a process gone report then all threads have exited.
-        if (packet.report.header.type == MX_EXCP_GONE)
+        if (packet.hdr.type == MX_EXCP_GONE)
             break;
         if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
                               false, &tid2))
@@ -1004,7 +1000,7 @@ static bool trigger_test(void)
             // However, when the process exits it kills all threads which will
             // kick them out of the ExceptionHandlerExchange. Thus there's no
             // need to resume them here.
-            if (packet.report.header.type != MX_EXCP_THREAD_EXITING) {
+            if (packet.hdr.type != MX_EXCP_THREAD_EXITING) {
                 verify_exception(&packet, excp_name, child, excp_type, false, &tid);
                 resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
                 mx_koid_t tid2;
@@ -1120,11 +1116,9 @@ static bool unbind_rebind_while_stopped_test(void)
     status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), NULL, NULL);
     if (status < 0)
         tu_fatal("mx_object_get_info(MX_INFO_THREAD_EXCEPTION_REPORT)", status);
-    EXPECT_EQ(report.header.size, start_packet.report.header.size, "size mismatch");
-    EXPECT_EQ(report.header.type, start_packet.report.header.type, "type mismatch");
-    EXPECT_EQ(report.context.arch_id, start_packet.report.context.arch_id, "arch_id mismatch");
-    EXPECT_EQ(report.context.pid, start_packet.report.context.pid, "pid mismatch");
-    EXPECT_EQ(report.context.tid, start_packet.report.context.tid, "tid mismatch");
+    EXPECT_EQ(report.header.type, start_packet.hdr.type, "type mismatch");
+    EXPECT_EQ(report.context.pid, start_packet.pid, "pid mismatch");
+    EXPECT_EQ(report.context.tid, start_packet.tid, "tid mismatch");
     // The "thread-start" report is a synthetic exception and doesn't contain
     // any arch info yet, so we can't test report.context.arch.
 

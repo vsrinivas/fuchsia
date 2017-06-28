@@ -13,6 +13,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -436,26 +437,35 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
 
 // Wait for and receive an exception on |eport|.
 
-bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
+bool read_exception(mx_handle_t eport, mx_handle_t inferior,
+                    mx_exception_packet_t* packet, mx_exception_report_t* report)
 {
     BEGIN_HELPER;
 
     unittest_printf("Waiting for exception on eport %d\n", eport);
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), MX_OK, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, exception_port_key, "bad report key");
-    unittest_printf("read_exception: got exception %d\n", packet->report.header.type);
+    mx_handle_t thread;
+
+    // This is called multiple times by the callers, and the last time the
+    // thread has often been destroyed already, which under the old system
+    // where the report was bundled with the packet wouldn't make a difference
+    // but does here.
+    if ((mx_object_get_child(inferior, packet->tid, MX_RIGHT_SAME_RIGHTS, &thread) != MX_OK) ||
+        (mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT, report, sizeof(*report), NULL, NULL) != MX_OK)) {
+        memset(report, 0, sizeof(*report));
+    }
+    unittest_printf("read_exception: got exception %d\n", packet->hdr.type);
 
     END_HELPER;
 }
 
-bool verify_exception(const mx_exception_packet_t* packet,
+bool verify_exception(const mx_exception_report_t* report,
                       mx_handle_t process,
                       mx_excp_type_t expected_type,
                       mx_koid_t* tid)
 {
     BEGIN_HELPER;
-
-    const mx_exception_report_t* report = &packet->report;
 
 #ifdef __x86_64__
     if (MX_EXCP_IS_ARCH (report->header.type))
@@ -488,7 +498,8 @@ bool read_and_verify_exception(mx_handle_t eport,
                                mx_koid_t* tid)
 {
     mx_exception_packet_t packet;
-    if (!read_exception(eport, &packet))
+    mx_exception_report_t report;
+    if (!read_exception(eport, process, &packet, &report))
         return false;
-    return verify_exception(&packet, process, expected_type, tid);
+    return verify_exception(&report, process, expected_type, tid);
 }

@@ -41,8 +41,8 @@ static bool check_reported_pid_and_tid(mx_handle_t thread,
         return false;
     if (!get_koid(thread, &tid))
         return false;
-    EXPECT_EQ(packet->report.context.pid, pid, "");
-    EXPECT_EQ(packet->report.context.tid, tid, "");
+    EXPECT_EQ(packet->pid, pid, "");
+    EXPECT_EQ(packet->tid, tid, "");
     return true;
 }
 
@@ -357,7 +357,7 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(mx_port_wait(eport, mx_deadline_after(MX_SEC(1)), &packet, sizeof(packet)), MX_OK, "");
     EXPECT_TRUE(check_reported_pid_and_tid(thread_h, &packet), "");
     ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.report.header.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
+    ASSERT_EQ(packet.hdr.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
 
     // Verify thread is suspended
     ASSERT_EQ(mx_object_get_info(thread_h, MX_INFO_THREAD,
@@ -586,7 +586,7 @@ static bool test_kill_suspended_thread(void) {
               MX_OK, "");
     EXPECT_TRUE(check_reported_pid_and_tid(thread_h, &packet), "");
     ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.report.header.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
+    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
               "");
 
     // Reset the test memory location.
@@ -603,7 +603,7 @@ static bool test_kill_suspended_thread(void) {
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
               MX_OK, "");
     ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.report.header.type, (uint32_t)MX_EXCP_THREAD_EXITING,
+    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_THREAD_EXITING,
               "");
 
     // Clean up.
@@ -660,7 +660,7 @@ static bool test_noncanonical_rip_address(void) {
               MX_OK, "");
     EXPECT_TRUE(check_reported_pid_and_tid(thread_handle, &packet), "");
     ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.report.header.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
+    ASSERT_EQ(packet.hdr.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
               "");
 
     struct mx_x86_64_general_regs regs;

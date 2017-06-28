@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/exception.h>
 
 enum message {
     // Force the type to be signed, avoids mismatch clashes in unittest macros.
@@ -77,9 +78,10 @@ extern bool resume_inferior(mx_handle_t inferior, mx_koid_t tid);
 
 extern bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior);
 
-extern bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet);
+extern bool read_exception(mx_handle_t eport, mx_handle_t inferior,
+                           mx_exception_packet_t* packet, mx_exception_report_t* report);
 
-extern bool verify_exception(const mx_exception_packet_t* packet,
+extern bool verify_exception(const mx_exception_report_t* report,
                              mx_handle_t process,
                              mx_excp_type_t expected_type,
                              mx_koid_t* tid);
