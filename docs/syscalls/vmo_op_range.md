@@ -9,9 +9,9 @@ vmo_op_range - perform an operation on a range of a VMO
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t vmo_op_range(mx_handle_t handle, uint32_t op,
-                         uint64_t offset, uint64_t size,
-                         void* buffer, size_t buffer_size);
+mx_status_t mx_vmo_op_range(mx_handle_t handle, uint32_t op,
+                            uint64_t offset, uint64_t size,
+                            void* buffer, size_t buffer_size);
 
 ```
 
