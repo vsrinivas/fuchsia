@@ -66,7 +66,7 @@ bool test_watcher_add(void) {
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK, "");
     request.mask = VFS_WATCH_MASK_ADDED;
     request.options = 0;
-    ASSERT_EQ(ioctl_vfs_watch_dir_v2(dirfd(dir), &request), MX_OK, "");
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK, "");
 
     // The channel should be empty
     ASSERT_TRUE(check_for_empty(h), "");
@@ -125,7 +125,7 @@ bool test_watcher_existing(void) {
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK, "");
     request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE;
     request.options = 0;
-    ASSERT_EQ(ioctl_vfs_watch_dir_v2(dirfd(dir), &request), MX_OK, "");
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK, "");
 
     // The channel should see the contents of the directory
     ASSERT_TRUE(check_for_event(h, ".", VFS_WATCH_EVT_EXISTING), "");
@@ -146,7 +146,7 @@ bool test_watcher_existing(void) {
     // see all files in the directory, but the first watcher won't see anything.
     mx_handle_t h2;
     ASSERT_EQ(mx_channel_create(0, &h2, &request.channel), MX_OK, "");
-    ASSERT_EQ(ioctl_vfs_watch_dir_v2(dirfd(dir), &request), MX_OK, "");
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK, "");
     ASSERT_TRUE(check_for_event(h2, ".", VFS_WATCH_EVT_EXISTING), "");
     ASSERT_TRUE(check_for_event(h2, "foo", VFS_WATCH_EVT_EXISTING), "");
     ASSERT_TRUE(check_for_event(h2, "bar", VFS_WATCH_EVT_EXISTING), "");
@@ -189,7 +189,7 @@ bool test_watcher_unsupported(void) {
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK, "");
     request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_DELETED;
     request.options = 0;
-    ASSERT_NEQ(ioctl_vfs_watch_dir_v2(dirfd(dir), &request), MX_OK, "");
+    ASSERT_NEQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK, "");
     mx_handle_close(h);
 
     ASSERT_EQ(closedir(dir), 0, "");
