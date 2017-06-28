@@ -7,12 +7,47 @@ import("//build/go/go_test.gni")
 
 go_binary("pm") {
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/pm"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    }
+  ]
 }
 
 go_binary("pmd") {
   gopackage = "fuchsia.googlesource.com/pm/cmd/pmd"
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/pm"
+    },
+    {
+      package = "fuchsia.googlesource.com/thinfs"
+      source = "//apps/thinfs"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    }
+  ]
 }
 
 go_test("pkgfs_test") {
   gopackage = "fuchsia.googlesource.com/pm/pkgfs"
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/pm"
+    },
+    {
+      package = "fuchsia.googlesource.com/thinfs"
+      source = "//apps/thinfs"
+    },
+    {
+      package = "golang.org/x/crypto"
+      source = "//third_party/golang/crypto"
+    }
+  ]
 }
