@@ -17,6 +17,7 @@ mxio_t* __mxio_fd_to_io(int fd);
 
 #define fd_to_io(n) __mxio_fd_to_io(n)
 
+mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, uint32_t mode);
 mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_t mode);
 
 int mxio_status_to_errno(mx_status_t status);

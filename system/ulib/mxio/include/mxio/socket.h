@@ -17,7 +17,6 @@
 
 __BEGIN_CDECLS
 
-#define MXRIO_SOCKET_ROOT       "/dev/socket"
 #define MXRIO_SOCKET_DIR_NONE   "none"
 #define MXRIO_SOCKET_DIR_SOCKET "socket"
 #define MXRIO_SOCKET_DIR_ACCEPT "accept"
