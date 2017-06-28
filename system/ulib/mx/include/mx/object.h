@@ -143,7 +143,19 @@ public:
     //
     // BE CAREFUL!  Misuse of this method on mx::object<> instances whose
     // current handle is valid can result in leaking handles.
+    __attribute__((deprecated("Please use reset_and_get_address instead")))
     mx_handle_t* get_address() { return &value_; }
+
+    // Reset the underlying handle, and then get the address of the
+    // underlying internal handle storage.
+    //
+    // Note: The intended purpose is to facilitate interactions with C
+    // APIs which expect to be provided a pointer to a handle used as
+    // an out parameter.
+    mx_handle_t* reset_and_get_address() {
+        reset();
+        return &value_;
+    }
 
     __attribute__((warn_unused_result)) mx_handle_t release() {
         mx_handle_t result = value_;

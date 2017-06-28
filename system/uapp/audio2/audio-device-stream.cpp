@@ -39,7 +39,7 @@ mx_status_t DoCallImpl(const mx::channel& channel,
     args.wr_num_handles = 0;
     args.rd_bytes       = resp;
     args.rd_num_bytes   = sizeof(RespType);
-    args.rd_handles     = resp_handle_out ? resp_handle_out->get_address() : nullptr;
+    args.rd_handles     = resp_handle_out ? resp_handle_out->reset_and_get_address() : nullptr;
     args.rd_num_handles = resp_handle_out ? 1 : 0;
 
     uint32_t bytes, handles;

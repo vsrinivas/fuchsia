@@ -24,7 +24,8 @@ public:
         EXPECT_EQ(mx_process_create(
                       mx_job_default(),
                       name, static_cast<uint32_t>(strlen(name)), 0,
-                      process_.get_address(), root_vmar_.get_address()),
+                      process_.reset_and_get_address(),
+                      root_vmar_.reset_and_get_address()),
                   MX_OK, "mx_process_create");
     }
 
@@ -60,7 +61,7 @@ public:
                 if (really_load) {
                     status = elf_load_map_segments(
                         root_vmar_.get(), &header, phdrs.get(), vdso_vmo.get(),
-                        segments_vmar ? segments_vmar->get_address() : nullptr,
+                        segments_vmar ? segments_vmar->reset_and_get_address() : nullptr,
                         &vdso_base_, nullptr);
                 }
             }
