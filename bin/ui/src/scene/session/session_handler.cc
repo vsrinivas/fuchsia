@@ -23,7 +23,6 @@ SessionHandler::SessionHandler(
   FTL_DCHECK(scene_manager_);
 
   bindings_.set_on_empty_set_handler([this]() {
-    FTL_DCHECK(session_->is_valid());
     scene_manager_->TearDownSession(session_->id());
     FTL_DCHECK(!session_->is_valid());
   });
