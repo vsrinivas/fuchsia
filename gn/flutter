@@ -1,6 +1,7 @@
 {
     "imports": [
         "fonts",
+        "icu",
         "mozart",
         "icu_data",
         "zlib"

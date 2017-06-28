@@ -19,6 +19,7 @@
         "ftl",
         "gdbserver",
         "go_stdlib_tests",
+        "icu",
         "icu_data",
         "install-fuchsia",
         "iperf",

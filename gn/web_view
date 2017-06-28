@@ -3,6 +3,7 @@
         "cairo",
         "curl",
         "fonts",
+        "icu",
         "libxml2",
         "mozart",
         "sqlite",
