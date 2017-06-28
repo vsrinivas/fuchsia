@@ -36,6 +36,7 @@
 #define LOCAL_APIC_REGISTER_SVR                 0x00f0
 #define LOCAL_APIC_REGISTER_ESR                 0x0280
 #define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
+#define LOCAL_APIC_REGISTER_LVT_THERMAL         0x0330
 #define LOCAL_APIC_REGISTER_LVT_ERROR           0x0370
 #define LOCAL_APIC_REGISTER_INITIAL_COUNT       0x0380
 
@@ -308,8 +309,9 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
             return MX_OK;
     case LOCAL_APIC_REGISTER_SVR:
     case LOCAL_APIC_REGISTER_LVT_TIMER:
+    case LOCAL_APIC_REGISTER_LVT_THERMAL:
     case LOCAL_APIC_REGISTER_LVT_ERROR:
-        return inst_rw32(inst, local_apic_state->apic_addr + offset);;
+        return inst_rw32(inst, local_apic_state->apic_addr + offset);
     case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
         uint32_t initial_count;
         mx_status_t status = inst_write32(inst, &initial_count);
