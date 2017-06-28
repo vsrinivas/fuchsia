@@ -17,6 +17,24 @@ body {
   grid-column-end: span 4;
 }
 
+.entity-list-item {
+  padding-left: 30px;
+}
+
+.entity-name {
+  font-size: smaller;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.entity-value {
+  font-size: smaller;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .last-query-card {
   .grid-column-end: span 5;
 }
@@ -33,16 +51,35 @@ body {
   grid-column-end: span 5;
 }
 
-.next-proposals-card {
-  grid-column-end: span 5;
+.module-list-item {
+  padding-left: 20px;
+}
+
+.module-path {
+  font-size: smaller;
+}
+
+.module-url {
+  font-size: smaller;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .mdc-card {
   background-color: white;
 }
 
+.mdc-list-divider {
+  padding-top: 10px;
+}
+
 .mdc-tab-bar {
   padding-left: 24px;
+}
+
+.next-proposals-card {
+  grid-column-end: span 5;
 }
 
 .overview-action-log-card {
@@ -82,7 +119,9 @@ body {
 }
 
 .story-name {
-
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .story-status {

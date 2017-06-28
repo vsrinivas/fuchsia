@@ -3,7 +3,9 @@ const MAX_RECONNECT_INTERVAL = 2000;
 
 var _webSocket = null;
 var _reconnectInterval = RECONNECT_INTERVAL;
+var _entities = {};
 var _focusedStoryId = null;
+var _modules = {};
 var _stories = {};
 var _toolbar = null;
 var _tabBar = null;
@@ -279,20 +281,21 @@ function updateOverview(context) {
 
       switch(storyRegexResults[2]) {
         case "url":
-          setStoryName(rawValue, overviewStoryElems);
+          setStoryName(JSON.parse(rawValue), overviewStoryElems);
           break;
 
         case "state":
           setStoryState(rawValue, overviewStoryElems);
           break;
+
+        default:
+          processComplexStoryTopic(storyId,storyRegexResults[2],rawValue);
+          break;
       }
 
       // move this story to the top of the list
-      // TODO(jwnichols): Figure out the right thing to do here
-      var divider = overviewStoryElems.prev();
       $('#story-overview-list')
-        .prepend(overviewStoryElems)
-        .prepend(divider);
+        .prepend(overviewStoryElems);
     } else if (topic == '/story/focused_id') {
       if (_focusedStoryId != null) {
         var oldFocusedStoryElems = getOrCreateStoryOverviewElements(_focusedStoryId);
@@ -305,7 +308,7 @@ function updateOverview(context) {
       }
       _focusedStoryId = newFocusedStoryId;
     } else if (topic == '/suggestion_engine/current_query') {
-      var query = rawValue;
+      var query = JSON.parse(rawValue);
       if (query.length == 0) {
         $('#askQueryOverview').empty().append($('<i/>').text('No Query'));
       } else {
@@ -315,10 +318,144 @@ function updateOverview(context) {
   });
 }
 
+function processComplexStoryTopic(storyId,complexTopic,rawValue) {
+  var moduleRegex = /module\/([^\/]+)\/(.+)/;
+  var moduleRegexResults = complexTopic.match(moduleRegex);
+
+  if (moduleRegexResults != null && moduleRegexResults[1] != null) {
+    var moduleHash = moduleRegexResults[1];
+    var moduleTopic = moduleRegexResults[2];
+
+    if (moduleTopic == 'meta') {
+      // This topic contains information about the module
+      updateModuleInStory(storyId,moduleHash,rawValue);
+    } else if (moduleTopic.startsWith('explicit')) {
+      // This topic contains informationa about a focal entity
+      updateFocalEntityInStory(storyId,moduleHash,moduleTopic,rawValue);
+    }
+  }
+}
+
+function updateModuleInStory(storyId,moduleHash,rawData) {
+  var moduleData = JSON.parse(rawData);
+  var moduleElems = getOrCreateModuleOverviewElements(storyId,moduleHash);
+  if (moduleData['url'] != null) {
+    setModuleUrl(moduleData['url'],moduleElems);
+  }
+  if (moduleData['module_path'] != null) {
+    var modulePath = moduleData['module_path'][0];
+    for(var i = 1; i < moduleData['module_path'].length; i++) {
+      modulePath += ' ' + moduleData['module_path'][i];
+    }
+    setModulePath(modulePath,moduleElems);
+  }
+}
+
+function getOrCreateModuleOverviewElements(storyId,moduleHash) {
+  var moduleElemId = storyId + '-' + moduleHash;
+  var moduleElems = _modules[moduleElemId];
+  if (moduleElems == null) {
+    // <li id="b234kj2jn5j34342l3k3-mdece" class="mdc-list-item module-list-item">
+    //   <span class="module-url mdc-list-item__text">
+    //     file:///system/apps/maxwell_btr
+    //     <span class="module-path mdc-list-item__text__secondary">
+    //       root
+    //     </span>
+    //   </span>
+    // </li>
+    var moduleListElem = $('<li/>').attr('id',moduleElemId)
+      .addClass('mdc-list-item')
+      .addClass('module-list-item');
+
+    var modulePathElem = $('<span/>').addClass('module-path')
+      .addClass('mdc-list-item__text__secondary')
+      .text('module-path');
+
+    var moduleUrlElem = $('<span/>').addClass('module-url')
+      .addClass('mdc-list-item__text')
+      .text('file://a/module/url')
+      .append(' ')
+      .append(modulePathElem);
+
+    moduleListElem.append(moduleUrlElem);
+
+    var storyElems = getOrCreateStoryOverviewElements(storyId);
+    storyElems.append(moduleListElem);
+
+    moduleElems = _modules[moduleElemId] = moduleListElem;
+  }
+  return moduleElems;
+}
+
+function setModuleUrl(moduleUrl,moduleElems) {
+  moduleElems.find('span')[0].firstChild.textContent = moduleUrl;
+}
+
+function setModulePath(modulePath,moduleElems) {
+  moduleElems.find('span')[1].firstChild.textContent = modulePath;
+}
+
+function updateFocalEntityInStory(storyId,moduleHash,entityTopic,rawValue) {
+  var entityTopicRegex = /explicit\/(.+)/;
+  var entityTopicRegexResults = entityTopic.match(entityTopicRegex);
+
+  if (entityTopicRegexResults != null && entityTopicRegexResults[1] != null) {
+    var entityElems = getOrCreateEntityOverviewElements(storyId,
+                        moduleHash,
+                        entityTopicRegexResults[1]);
+    setEntityValue(rawValue,entityElems);
+  }
+}
+
+function getOrCreateEntityOverviewElements(storyId,moduleHash,entityTopic) {
+  var entityElemId = storyId + '-' + moduleHash + '-' + entityTopic;
+  var entityElems = _entities[entityElemId];
+  if (entityElems == null) {
+    // <li id="b234kj2jn5j34342l3k3-mdece-raw/text" class="mdc-list-item entity-list-item">
+    //   <span class="entity-name mdc-list-item__text">
+    //     raw/text
+    //     <span class="entity-value mdc-list-item__text__secondary">
+    //       TODO: value
+    //     </span>
+    //   </span>
+    // </li>
+    var entityListElem = $('<li/>').attr('id',entityElemId)
+      .addClass('mdc-list-item')
+      .addClass('entity-list-item');
+
+    var entityValueElem = $('<span/>').addClass('entity-value')
+      .addClass('mdc-list-item__text__secondary')
+      .text('entity value');
+
+    var entityNameElem = $('<span/>').addClass('entity-name')
+      .addClass('mdc-list-item__text')
+      .text(entityTopic)
+      .append(' ')
+      .append(entityValueElem);
+
+    entityListElem.append(entityNameElem);
+
+    var moduleElems = getOrCreateModuleOverviewElements(storyId,moduleHash);
+    entityListElem.insertAfter(moduleElems);
+
+    entityElems = _entities[entityElemId] = entityListElem;
+  }
+  return entityElems;
+}
+
+function setEntityName(entityName,entityElems) {
+  entityElems.find('span')[0].firstChild.textContent = entityName;
+}
+
+function setEntityValue(entityValue,entityElems) {
+  entityElems.find('span')[1].firstChild.textContent = entityValue;
+}
+
 function getOrCreateStoryOverviewElements(storyId) {
   var storyElems = _stories[storyId];
   if (storyElems == null) {
     // we need to create the story elements
+    // <div class="story-list-group">
     // <li id="b234kj2jn5j34342l3k3" class="mdc-list-item story-list-item story-visible">
     //   <span class="story-name mdc-list-item__text">
     //     Story Name
@@ -327,8 +464,11 @@ function getOrCreateStoryOverviewElements(storyId) {
     //     </span>
     //   </span>
     // </li>
-    var storyListItem = $('<li/>').attr('id',storyId)
-      .addClass('mdc-list-item')
+    // </div>
+    var storyDivItem = $('<div/>').addClass('story-list-group')
+      .attr('id',storyId);
+
+    var storyListItem = $('<li/>').addClass('mdc-list-item')
       .addClass('story-list-item');
 
     var storyIdElem = $('<span/>').addClass('story-id')
@@ -341,13 +481,15 @@ function getOrCreateStoryOverviewElements(storyId) {
       .append(' ')
       .append(storyIdElem);
 
-    storyListItem.append(storyNameElem);
+    var divider = $('<li/>').addClass('mdc-list-divider').attr('role','divider');
 
-    $('#story-overview-list')
-      .append($('<li/>').addClass('mdc-list-divider').attr('role','divider'))
+    storyListItem.append(storyNameElem);
+    storyDivItem.append(divider)
       .append(storyListItem);
 
-    storyElems = _stories[storyId] = storyListItem;
+    $('#story-overview-list').append(storyDivItem);
+
+    storyElems = _stories[storyId] = storyDivItem;
   }
   return storyElems;
 }
