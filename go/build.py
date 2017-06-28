@@ -86,7 +86,8 @@ def main():
       cmd += ['test', '-c']
     else:
       cmd += ['build']
-    cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o', args.binname, args.package]
+    cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o',
+            os.path.join(args.root_out_dir, args.binname), args.package]
 
     retcode = subprocess.call(cmd, env=env)
 
