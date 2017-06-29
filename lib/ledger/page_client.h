@@ -47,7 +47,24 @@ class PageClient : ledger::PageWatcher {
                       const char* prefix);
   ~PageClient();
 
-  // Returns the current page snapshot.
+  // Returns the current page snapshot. It is returned as a shared_ptr, so that
+  // it can be used in an asynchronous operation. In that case, the page
+  // snapshot might be replaced by a new one from an incoming page watcher
+  // notification, but the client needs to hold onto the previous one until its
+  // operation completes.
+  //
+  // CAVEAT. To use this snapshot does not make sense for most clients (in fact
+  // it's no longer used in the modular code base). If the client implements
+  // page write operations and page read operations, an invariant normally
+  // maintained is that a read operation returns a value from *after* a
+  // preceding write (which might be a differnet value than the one written when
+  // there were merges from network sync), but never from *before* the preceding
+  // write. This invariant is maintained when the read operation uses a fresh
+  // snapshot, but not when the read operation uses the latest watcher snapshot
+  // (because the watcher notification from the write might not yet have arrived
+  // when the read is executed). Since all modular page clients have read and
+  // write operations where this invariant is desired, they all use fresh page
+  // snapshots.
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot() {
     return page_snapshot_;
   }
