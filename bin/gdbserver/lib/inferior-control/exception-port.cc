@@ -63,7 +63,7 @@ bool ExceptionPort::Run() {
   FTL_DCHECK(!keep_running_);
 
   // Create an I/O port.
-  mx_status_t status = mx::port::create(MX_PORT_OPT_V2, &eport_handle_);
+  mx_status_t status = mx::port::create(0, &eport_handle_);
   if (status < 0) {
     FTL_LOG(ERROR) << "Failed to create the exception port: "
                    << util::MxErrorString(status);
