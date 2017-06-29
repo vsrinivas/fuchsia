@@ -22,4 +22,4 @@ BENCHMARK_DEFINE_F(Port, Create)(benchmark::State& state) {
 }
 BENCHMARK_REGISTER_F(Port, Create)
     ->Arg(0)
-    ->Arg(MX_PORT_OPT_V2);
+    ->Arg(0);
