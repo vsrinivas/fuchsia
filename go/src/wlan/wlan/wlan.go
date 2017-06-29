@@ -22,7 +22,7 @@ const MX_SOCKET_READABLE = mx.SignalObject0
 const DefaultScanInterval = 5 * time.Second
 const ScanTimeout = 30 * time.Second
 
-const debug = true
+const debug = false
 
 type State int
 
