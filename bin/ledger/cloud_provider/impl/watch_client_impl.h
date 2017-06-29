@@ -29,6 +29,7 @@ class WatchClientImpl : public firebase::WatchClient {
   // firebase::WatchClient:
   void OnPut(const std::string& path, const rapidjson::Value& value) override;
   void OnPatch(const std::string& path, const rapidjson::Value& value) override;
+  void OnCancel() override;
   void OnAuthRevoked(const std::string& reason) override;
   void OnMalformedEvent() override;
   void OnConnectionError() override;

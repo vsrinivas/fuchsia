@@ -15,21 +15,22 @@ class WatchClient {
 
   // See
   // https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-streaming
-  virtual void OnPut(const std::string& path, const rapidjson::Value& value) {}
-  virtual void OnPatch(const std::string& path, const rapidjson::Value& value) {
-  }
-  virtual void OnCancel() {}
-  virtual void OnAuthRevoked(const std::string& reason) {}
+  virtual void OnPut(const std::string& path,
+                     const rapidjson::Value& value) = 0;
+  virtual void OnPatch(const std::string& path,
+                       const rapidjson::Value& value) = 0;
+  virtual void OnCancel() = 0;
+  virtual void OnAuthRevoked(const std::string& reason) = 0;
 
   // Called when a Firebase event of incorrect format is received. Such
   // notification is ignored, further events continue to be processed after this
   // call (but clients might choose to close the stream themselves).
-  virtual void OnMalformedEvent() {}
+  virtual void OnMalformedEvent() = 0;
 
   // Called when the stream of events can't be established, or is interrupted,
   // or the server closes the connection. No further calls will be made on this
   // WatchClient.
-  virtual void OnConnectionError() {}
+  virtual void OnConnectionError() = 0;
 };
 
 }  // namespace firebase
