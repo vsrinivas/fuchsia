@@ -12,7 +12,7 @@
 
 #include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
-#include <magenta/port_dispatcher_v2.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
@@ -39,7 +39,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
-    mx_status_t result = PortDispatcherV2::Create(options, &dispatcher, &rights);
+    mx_status_t result = PortDispatcher::Create(options, &dispatcher, &rights);
 
     if (result != MX_OK)
         return result;
@@ -68,7 +68,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, siz
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcherV2> port;
+    mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != MX_OK)
         return status;
@@ -89,7 +89,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcherV2> port;
+    mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &port);
     if (status != MX_OK)
         return status;
@@ -116,7 +116,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
 mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcherV2> port;
+    mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != MX_OK)
         return status;

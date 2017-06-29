@@ -76,7 +76,7 @@
 //   when cancelation happens and the port still owns the packet.
 //
 
-class PortDispatcherV2;
+class PortDispatcher;
 class PortObserver;
 
 #define PKT_FLAG_EPHEMERAL  0x10000000u
@@ -98,7 +98,7 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
 // callbacks.
 class PortObserver final : public StateObserver {
 public:
-    PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
+    PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcher> port,
                  uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
 
@@ -126,19 +126,19 @@ private:
     const uint64_t key_;
     const mx_signals_t trigger_;
     const Handle* const handle_;
-    mxtl::RefPtr<PortDispatcherV2> const port_;
+    mxtl::RefPtr<PortDispatcher> const port_;
 
     PortPacket packet_;
 };
 
-class PortDispatcherV2 final : public Dispatcher {
+class PortDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t options,
                            mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
-    ~PortDispatcherV2() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_IOPORT2; }
+    ~PortDispatcher() final;
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_IOPORT; }
 
     void on_zero_handles() final;
 
@@ -161,7 +161,7 @@ public:
 private:
     friend class ExceptionPort;
 
-    PortDispatcherV2(uint32_t options);
+    PortDispatcher(uint32_t options);
     PortObserver* CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     // Adopts a RefPtr to |eport|, and adds it to |eports_|.

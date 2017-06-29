@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/port_dispatcher_v2.h>
+#include <magenta/port_dispatcher.h>
 
 #include <assert.h>
 #include <err.h>
@@ -25,7 +25,7 @@ PortPacket::PortPacket() : packet{}, observer(nullptr) {
     // Note that packet is initialized to zeros.
 }
 
-PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
+PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcher> port,
                            uint64_t key, mx_signals_t signals)
     : type_(type),
       key_(key),
@@ -93,12 +93,12 @@ StateObserver::Flags PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t c
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-mx_status_t PortDispatcherV2::Create(uint32_t options,
+mx_status_t PortDispatcher::Create(uint32_t options,
                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                      mx_rights_t* rights) {
     DEBUG_ASSERT(options == MX_PORT_OPT_V2);
     AllocChecker ac;
-    auto disp = new (&ac) PortDispatcherV2(options);
+    auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -107,15 +107,15 @@ mx_status_t PortDispatcherV2::Create(uint32_t options,
     return MX_OK;
 }
 
-PortDispatcherV2::PortDispatcherV2(uint32_t /*options*/)
+PortDispatcher::PortDispatcher(uint32_t /*options*/)
     : zero_handles_(false) {
 }
 
-PortDispatcherV2::~PortDispatcherV2() {
+PortDispatcher::~PortDispatcher() {
     DEBUG_ASSERT(zero_handles_);
 }
 
-void PortDispatcherV2::on_zero_handles() {
+void PortDispatcher::on_zero_handles() {
     canary_.Assert();
 
     {
@@ -135,7 +135,7 @@ void PortDispatcherV2::on_zero_handles() {
     while (DeQueue(0ull, nullptr) == MX_OK) {}
 }
 
-mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
+mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
     canary_.Assert();
 
     AllocChecker ac;
@@ -152,7 +152,7 @@ mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
     return status;
 }
 
-mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
+mx_status_t PortDispatcher::Queue(PortPacket* port_packet,
                                     mx_signals_t observed,
                                     uint64_t count) {
     canary_.Assert();
@@ -180,7 +180,7 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
     return MX_OK;
 }
 
-mx_status_t PortDispatcherV2::DeQueue(mx_time_t deadline, mx_port_packet_t* packet) {
+mx_status_t PortDispatcher::DeQueue(mx_time_t deadline, mx_port_packet_t* packet) {
     canary_.Assert();
 
     PortPacket* port_packet = nullptr;
@@ -209,14 +209,14 @@ wait:
     }
 }
 
-PortObserver* PortDispatcherV2::CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
+PortObserver* PortDispatcher::CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
     if (packet)
         *packet = port_packet->packet;
 
     return (port_packet->type() & PKT_FLAG_EPHEMERAL) ? nullptr : port_packet->observer;
 }
 
-bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) {
+bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
     canary_.Assert();
 
     AutoLock al(&lock_);
@@ -228,7 +228,7 @@ bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) 
     return false;
 }
 
-mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
+mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle,
                                             uint64_t key, mx_signals_t signals) {
     canary_.Assert();
 
@@ -243,7 +243,7 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
         MX_PKT_TYPE_SIGNAL_ONE : MX_PKT_TYPE_SIGNAL_REP;
 
     auto observer = new (&ac) PortObserver(type,
-            handle, mxtl::RefPtr<PortDispatcherV2>(this), key, signals);
+            handle, mxtl::RefPtr<PortDispatcher>(this), key, signals);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -251,7 +251,7 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
     return MX_OK;
 }
 
-bool PortDispatcherV2::CancelQueued(const void* handle, uint64_t key) {
+bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     canary_.Assert();
 
     AutoLock al(&lock_);
@@ -301,7 +301,7 @@ bool PortDispatcherV2::CancelQueued(const void* handle, uint64_t key) {
 }
 
 
-void PortDispatcherV2::LinkExceptionPort(ExceptionPort* eport) {
+void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();
 
     AutoLock al(&lock_);
@@ -310,7 +310,7 @@ void PortDispatcherV2::LinkExceptionPort(ExceptionPort* eport) {
     eports_.push_back(mxtl::move(AdoptRef(eport)));
 }
 
-void PortDispatcherV2::UnlinkExceptionPort(ExceptionPort* eport) {
+void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();
 
     AutoLock al(&lock_);

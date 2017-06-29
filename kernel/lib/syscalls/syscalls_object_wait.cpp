@@ -15,7 +15,7 @@
 #include <lib/user_copy/user_ptr.h>
 
 #include <magenta/magenta.h>
-#include <magenta/port_dispatcher_v2.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/wait_event.h>
 #include <magenta/wait_state_observer.h>
@@ -171,7 +171,7 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcherV2> port;
+    mxtl::RefPtr<PortDispatcher> port;
     auto status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
     if (status != MX_OK)
         return status;

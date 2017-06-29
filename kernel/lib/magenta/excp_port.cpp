@@ -11,7 +11,7 @@
 #include <magenta/exception.h>
 #include <magenta/excp_port.h>
 #include <magenta/magenta.h>
-#include <magenta/port_dispatcher_v2.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_thread.h>
@@ -42,7 +42,7 @@ static PortPacket* MakePacket(uint64_t key, const mx_exception_report_t* report)
 }
 
 // static
-mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcherV2> port, uint64_t port_key,
+mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
                                   mxtl::RefPtr<ExceptionPort>* out_eport) {
     AllocChecker ac;
     auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
@@ -55,7 +55,7 @@ mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcherV2> port
     return MX_OK;
 }
 
-ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcherV2> port, uint64_t port_key)
+ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
     : type_(type), port_key_(port_key), port_(port) {
     LTRACE_ENTRY_OBJ;
     DEBUG_ASSERT(port_ != nullptr);
@@ -178,7 +178,7 @@ void ExceptionPort::OnTargetUnbind() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    mxtl::RefPtr<PortDispatcherV2> port;
+    mxtl::RefPtr<PortDispatcher> port;
     {
         AutoLock lock(&lock_);
         if (port_ == nullptr) {
