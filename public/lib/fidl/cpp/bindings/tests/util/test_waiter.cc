@@ -109,7 +109,7 @@ void ClearAsyncWaiter() {
 const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
   if (!g_port) {
     g_port = new mx::port;
-    auto result = mx::port::create(MX_PORT_OPT_V2, g_port);
+    auto result = mx::port::create(0, g_port);
     FTL_CHECK(result == MX_OK) << result;
   }
   return &kDefaultAsyncWaiter;
