@@ -194,11 +194,11 @@ private:
     Bcache(int fd, uint32_t blockmax);
 
 #ifdef __Fuchsia__
-    fifo_client_t* fifo_client_; // Fast path to interact with block device
-    txnid_t txnid_; // TODO(smklein): One per thread
+    fifo_client_t* fifo_client_{}; // Fast path to interact with block device
+    txnid_t txnid_{}; // TODO(smklein): One per thread
 #endif
-    int fd_;
-    uint32_t blockmax_;
+    int fd_ = -1;
+    uint32_t blockmax_{};
 };
 
 } // namespace minfs
