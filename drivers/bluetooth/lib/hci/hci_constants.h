@@ -4,6 +4,8 @@
 
 #pragma once
 
+// clang-format off
+
 #include <cstddef>
 #include <cstdint>
 
@@ -64,7 +66,7 @@ enum Status : uint8_t {
   kConnectionTimeout                            = 0x08,
   kConnectionLimitExceeded                      = 0x09,
   kSynchronousConnectionLimitExceeded           = 0x0A,
-  kACLConnectionAlreadyExists                   = 0x0B,
+  kConnectionAlreadyExists                      = 0x0B,
   kCommandDisallowed                            = 0x0C,
   kConnectionRejectedLimitedResources           = 0x0D,
   kConnectionRejectedSecurity                   = 0x0E,

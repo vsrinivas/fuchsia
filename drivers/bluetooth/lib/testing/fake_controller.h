@@ -13,6 +13,7 @@
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "apps/bluetooth/lib/testing/fake_controller_base.h"
+#include "lib/ftl/functional/cancelable_callback.h"
 #include "lib/ftl/macros.h"
 
 namespace bluetooth {
@@ -99,11 +100,18 @@ class FakeController : public FakeControllerBase {
   void SetScanStateCallback(const ScanStateCallback& callback,
                             ftl::RefPtr<ftl::TaskRunner> task_runner);
 
+  // Sends a LE Meta event with the given parameters.
+  void SendLEMetaEvent(hci::EventCode subevent_code, const void* params, uint8_t params_size);
+
  private:
   // Sends a HCI_Command_Complete event in response to the command with |opcode| and using the given
   // data as the parameter payload.
-  void RespondWithCommandComplete(hci::OpCode opcode, void* return_params,
+  void RespondWithCommandComplete(hci::OpCode opcode, const void* return_params,
                                   uint8_t return_params_size);
+
+  // Sends a HCI_Command_Status event in response to the command with |opcode| and using the given
+  // data as the parameter payload.
+  void RespondWithCommandStatus(hci::OpCode opcode, hci::Status status);
 
   // If a default status has been configured for the given opcode, sends back an error response and
   // returns true. Returns false if no response was set.
@@ -112,6 +120,9 @@ class FakeController : public FakeControllerBase {
   // Sends LE advertising reports for known LE devices, if a scan is currently enabled.
   void SendAdvertisingReports();
 
+  // Called when a HCI_LE_Create_Connection command is received.
+  void OnLECreateConnectionCommandReceived(const hci::LECreateConnectionCommandParams& params);
+
   // FakeControllerBase overrides:
   void OnCommandPacketReceived(
       const common::PacketView<hci::CommandHeader>& command_packet) override;
@@ -119,6 +130,11 @@ class FakeController : public FakeControllerBase {
 
   Settings settings_;
   LEScanState le_scan_state_;
+
+  // Variables used for HCI_LE_Create_Connection/HCI_LE_Create_Connection_Cancel.
+  uint16_t next_conn_handle_;
+  ftl::CancelableClosure pending_le_connect_rsp_;
+  common::DeviceAddress pending_le_connect_addr_;
 
   std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;

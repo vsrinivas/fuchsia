@@ -8,6 +8,7 @@
 
 #include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/util.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
 #include "lib/ftl/strings/string_printf.h"
 
@@ -18,6 +19,23 @@ namespace {
 template <typename NUM_TYPE, typename ENUM_TYPE>
 void SetBit(NUM_TYPE* num_type, ENUM_TYPE bit) {
   *num_type |= static_cast<NUM_TYPE>(bit);
+}
+
+hci::LEPeerAddressType ToPeerAddrType(common::DeviceAddress::Type type) {
+  hci::LEPeerAddressType result = hci::LEPeerAddressType::kAnonymous;
+
+  switch (type) {
+    case common::DeviceAddress::Type::kLEPublic:
+      result = hci::LEPeerAddressType::kPublic;
+      break;
+    case common::DeviceAddress::Type::kLERandom:
+      result = hci::LEPeerAddressType::kRandom;
+      break;
+    default:
+      break;
+  }
+
+  return result;
 }
 
 }  // namespace
@@ -52,6 +70,8 @@ void FakeController::Settings::ApplyLEOnlyDefaults() {
   SetBit(supported_commands + 25, hci::SupportedCommand::kLESetEventMask);
   SetBit(supported_commands + 25, hci::SupportedCommand::kLEReadBufferSize);
   SetBit(supported_commands + 25, hci::SupportedCommand::kLEReadLocalSupportedFeatures);
+  SetBit(supported_commands + 26, hci::SupportedCommand::kLECreateConnection);
+  SetBit(supported_commands + 26, hci::SupportedCommand::kLECreateConnectionCancel);
 }
 
 void FakeController::Settings::ApplyLegacyLEConfig() {
@@ -78,7 +98,8 @@ FakeController::LEScanState::LEScanState()
       filter_policy(hci::LEScanFilterPolicy::kNoWhiteList) {}
 
 FakeController::FakeController(mx::channel cmd_channel, mx::channel acl_data_channel)
-    : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)) {}
+    : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)),
+      next_conn_handle_(0u) {}
 
 FakeController::~FakeController() {
   if (IsStarted()) Stop();
@@ -106,7 +127,7 @@ void FakeController::SetScanStateCallback(const ScanStateCallback& callback,
   scan_state_cb_task_runner_ = task_runner;
 }
 
-void FakeController::RespondWithCommandComplete(hci::OpCode opcode, void* return_params,
+void FakeController::RespondWithCommandComplete(hci::OpCode opcode, const void* return_params,
                                                 uint8_t return_params_size) {
   // Either both are zero or neither is.
   FTL_DCHECK(!!return_params == !!return_params_size);
@@ -122,6 +143,40 @@ void FakeController::RespondWithCommandComplete(hci::OpCode opcode, void* return
   payload->num_hci_command_packets = settings_.num_hci_command_packets;
   payload->command_opcode = htole16(opcode);
   std::memcpy(payload->return_parameters, return_params, return_params_size);
+
+  SendCommandChannelPacket(buffer);
+}
+
+void FakeController::RespondWithCommandStatus(hci::OpCode opcode, hci::Status status) {
+  common::StaticByteBuffer<sizeof(hci::EventHeader) + sizeof(hci::CommandStatusEventParams)> buffer;
+  common::MutablePacketView<hci::EventHeader> event(&buffer,
+                                                    buffer.size() - sizeof(hci::EventHeader));
+  event.mutable_header()->event_code = hci::kCommandStatusEventCode;
+  event.mutable_header()->parameter_total_size = buffer.size() - sizeof(hci::EventHeader);
+
+  auto payload = event.mutable_payload<hci::CommandStatusEventParams>();
+  payload->status = status;
+  payload->num_hci_command_packets = settings_.num_hci_command_packets;
+  payload->command_opcode = htole16(opcode);
+
+  SendCommandChannelPacket(buffer);
+}
+
+void FakeController::SendLEMetaEvent(hci::EventCode subevent_code, const void* params,
+                                     uint8_t params_size) {
+  FTL_DCHECK(!!params == !!params_size);
+
+  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
+                                   params_size);
+  common::MutablePacketView<hci::EventHeader> event(&buffer,
+                                                    buffer.size() - sizeof(hci::EventHeader));
+
+  event.mutable_header()->event_code = hci::kLEMetaEventCode;
+  event.mutable_header()->parameter_total_size = event.payload_size();
+
+  auto payload = event.mutable_payload<hci::LEMetaEventParams>();
+  payload->subevent_code = subevent_code;
+  std::memcpy(payload->subevent_parameters, params, params_size);
 
   SendCommandChannelPacket(buffer);
 }
@@ -161,6 +216,89 @@ void FakeController::SendAdvertisingReports() {
   if (!le_scan_state_.filter_duplicates) {
     task_runner()->PostTask([this] { SendAdvertisingReports(); });
   }
+}
+
+void FakeController::OnLECreateConnectionCommandReceived(
+    const hci::LECreateConnectionCommandParams& params) {
+  common::DeviceAddress::Type addr_type = hci::AddressTypeFromHCI(params.peer_address_type);
+  FTL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
+
+  const common::DeviceAddress peer_address(addr_type, params.peer_address);
+
+  // Find the device that matches the requested address.
+  FakeDevice* device = nullptr;
+  for (const auto& dev : le_devices_) {
+    if (dev->address() == peer_address) {
+      device = dev.get();
+      break;
+    }
+  }
+
+  hci::Status status = hci::Status::kSuccess;
+
+  if (device) {
+    if (device->connected())
+      status = hci::Status::kConnectionAlreadyExists;
+    else
+      status = device->connect_status();
+  }
+
+  // First send the Command Status response.
+  RespondWithCommandStatus(hci::kLECreateConnection, status);
+
+  // If we just sent back an error status then the operation is complete.
+  if (status != hci::Status::kSuccess) return;
+
+  // The procedure was initiated successfully but the device cannot be connected because it either
+  // doesn't exist or isn't connectable.
+  if (!device || !device->connectable()) {
+    FTL_LOG(INFO) << "Requested fake device cannot be connected; request will time out";
+    return;
+  }
+
+  if (next_conn_handle_ == 0x0FFF) {
+    // Ran out of handles
+    status = hci::Status::kConnectionLimitExceeded;
+  } else {
+    status = device->connect_response();
+  }
+
+  hci::LEConnectionCompleteSubeventParams response;
+  std::memset(&response, 0, sizeof(response));
+
+  response.status = status;
+  response.peer_address = params.peer_address;
+  response.peer_address_type = ToPeerAddrType(addr_type);
+
+  if (status == hci::Status::kSuccess) {
+    uint16_t interval_min = le16toh(params.conn_interval_min);
+    uint16_t interval_max = le16toh(params.conn_interval_max);
+    uint16_t interval = interval_min + ((interval_max - interval_min) / 2);
+
+    hci::Connection::LowEnergyParameters conn_params(interval_min, interval_max, interval,
+                                                     le16toh(params.conn_latency),
+                                                     le16toh(params.supervision_timeout));
+    device->set_le_params(conn_params);
+
+    response.conn_latency = params.conn_latency;
+    response.conn_interval = le16toh(interval);
+    response.supervision_timeout = params.supervision_timeout;
+
+    response.role = hci::LEConnectionRole::kMaster;
+    response.connection_handle = htole16(++next_conn_handle_);
+
+    device->set_connected(true);
+  }
+
+  pending_le_connect_addr_ = peer_address;
+  pending_le_connect_rsp_.Reset([response, this] {
+    SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &response, sizeof(response));
+  });
+
+  // Allow enough time for the request to be canceled.
+  // TODO(armansito): Make the period configurable?
+  task_runner()->PostDelayedTask(pending_le_connect_rsp_.callback(),
+                                 ftl::TimeDelta::FromMilliseconds(100));
 }
 
 void FakeController::OnCommandPacketReceived(
@@ -204,6 +342,35 @@ void FakeController::OnCommandPacketReceived(
       params.hc_acl_data_packet_length = htole16(settings_.acl_data_packet_length);
       params.hc_total_num_acl_data_packets = settings_.total_num_acl_data_packets;
       RespondWithCommandComplete(hci::kReadBufferSize, &params, sizeof(params));
+      break;
+    }
+    case hci::kLECreateConnection: {
+      OnLECreateConnectionCommandReceived(
+          command_packet.payload<hci::LECreateConnectionCommandParams>());
+      break;
+    }
+    case hci::kLECreateConnectionCancel: {
+      hci::SimpleReturnParams params;
+      params.status = hci::Status::kSuccess;
+
+      if (pending_le_connect_rsp_.IsCanceled()) {
+        // No request is currently pending.
+        params.status = hci::Status::kCommandDisallowed;
+        RespondWithCommandComplete(hci::kLECreateConnectionCancel, &params, sizeof(params));
+        return;
+      }
+
+      pending_le_connect_rsp_.Cancel();
+
+      hci::LEConnectionCompleteSubeventParams response;
+      std::memset(&response, 0, sizeof(response));
+
+      response.status = hci::Status::kUnknownConnectionId;
+      response.peer_address = pending_le_connect_addr_.value();
+      response.peer_address_type = ToPeerAddrType(pending_le_connect_addr_.type());
+
+      RespondWithCommandComplete(hci::kLECreateConnectionCancel, &params, sizeof(params));
+      SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &response, sizeof(response));
       break;
     }
     case hci::kLEReadLocalSupportedFeatures: {

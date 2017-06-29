@@ -6,6 +6,7 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/device_address.h"
+#include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "lib/ftl/macros.h"
 
@@ -28,6 +29,15 @@ class FakeDevice {
   // advertising data (see comments for should_batch_reports()).
   void SetScanResponse(bool should_batch_reports, const common::ByteBuffer& data);
 
+  // Generates and returns a LE Advertising Report Event payload. If |include_scan_rsp| is true,
+  // then the returned PDU will contain two reports including the SCAN_IND report.
+  common::DynamicByteBuffer CreateAdvertisingReportEvent(bool include_scan_rsp) const;
+
+  // Generates a LE Advertising Report Event payload containing the scan response.
+  common::DynamicByteBuffer CreateScanResponseReportEvent() const;
+
+  const common::DeviceAddress& address() const { return address_; }
+
   // Indicates whether or not this device should include the scan response and the advertising data
   // in the same HCI LE Advertising Report Event. This is used to test that the host stack can
   // correctly consolidate advertising reports when the payloads are spread across events and when
@@ -41,19 +51,37 @@ class FakeDevice {
   // should send scan response PDUs.
   bool scannable() const { return scannable_; }
 
-  // Generates and returns a LE Advertising Report Event payload. If |include_scan_rsp| is true,
-  // then the returned PDU will contain two reports including the SCAN_IND report.
-  common::DynamicByteBuffer CreateAdvertisingReportEvent(bool include_scan_rsp) const;
+  bool connectable() const { return connectable_; }
 
-  // Generates a LE Advertising Report Event payload containing the scan response.
-  common::DynamicByteBuffer CreateScanResponseReportEvent() const;
+  bool connected() const { return connected_; }
+  void set_connected(bool connected) { connected_ = connected; }
+
+  const hci::Connection::LowEnergyParameters& le_params() const { return le_params_; }
+  void set_le_params(const hci::Connection::LowEnergyParameters& value) { le_params_ = value; }
+
+  // The response status that will be returned when this device receives a LE Create Connection
+  // command.
+  hci::Status connect_response() const { return connect_response_; }
+  void set_connect_response(hci::Status response) { connect_response_ = response; }
+
+  // The status that will be returned in the Command Status event in response to a LE Create
+  // Connection command. If this is set to anything other than hci::Status::kSuccess, then
+  // connect_response() will have no effect.
+  hci::Status connect_status() const { return connect_status_; }
+  void set_connect_status(hci::Status status) { connect_status_ = status; }
 
  private:
   void WriteScanResponseReport(hci::LEAdvertisingReportData* report) const;
 
   common::DeviceAddress address_;
+  bool connected_;
   bool connectable_;
   bool scannable_;
+
+  hci::Status connect_status_;
+  hci::Status connect_response_;
+
+  hci::Connection::LowEnergyParameters le_params_;
 
   bool should_batch_reports_;
   common::DynamicByteBuffer adv_data_;

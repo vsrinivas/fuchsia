@@ -27,8 +27,11 @@ void WriteRandomRSSI(int8_t* out_mem) {
 
 FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable, bool scannable)
     : address_(address),
+      connected_(false),
       connectable_(connectable),
       scannable_(scannable),
+      connect_status_(hci::Status::kSuccess),
+      connect_response_(hci::Status::kSuccess),
       should_batch_reports_(false) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
@@ -73,6 +76,7 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_
     report->event_type = hci::LEAdvertisingEventType::kAdvNonConnInd;
   }
 
+  // TODO(armansito): Use the resolved address types for <5.0 LE Privacy.
   report->address_type = (address_.type() == common::DeviceAddress::Type::kLERandom)
                              ? hci::LEAddressType::kRandom
                              : hci::LEAddressType::kPublic;

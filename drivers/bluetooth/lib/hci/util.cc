@@ -62,5 +62,40 @@ bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
   return true;
 }
 
+common::DeviceAddress::Type AddressTypeFromHCI(LEAddressType type) {
+  common::DeviceAddress::Type result;
+  switch (type) {
+    case LEAddressType::kPublic:
+    case LEAddressType::kPublicIdentity:
+      result = common::DeviceAddress::Type::kLEPublic;
+      break;
+    case LEAddressType::kRandom:
+    case LEAddressType::kRandomIdentity:
+    case LEAddressType::kRandomUnresolved:
+      result = common::DeviceAddress::Type::kLERandom;
+      break;
+    case LEAddressType::kAnonymous:
+      result = common::DeviceAddress::Type::kLEAnonymous;
+      break;
+  }
+  return result;
+}
+
+common::DeviceAddress::Type AddressTypeFromHCI(LEPeerAddressType type) {
+  common::DeviceAddress::Type result;
+  switch (type) {
+    case LEPeerAddressType::kPublic:
+      result = common::DeviceAddress::Type::kLEPublic;
+      break;
+    case LEPeerAddressType::kRandom:
+      result = common::DeviceAddress::Type::kLERandom;
+      break;
+    case LEPeerAddressType::kAnonymous:
+      result = common::DeviceAddress::Type::kLEAnonymous;
+      break;
+  }
+  return result;
+}
+
 }  // namespace hci
 }  // namespace adapter

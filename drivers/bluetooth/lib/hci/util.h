@@ -21,5 +21,8 @@ std::string HCIVersionToString(hci::HCIVersion version);
 bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
                                 common::DeviceAddress* out_address);
 
+common::DeviceAddress::Type AddressTypeFromHCI(LEAddressType type);
+common::DeviceAddress::Type AddressTypeFromHCI(LEPeerAddressType type);
+
 }  // namespace hci
 }  // namespace adapter
