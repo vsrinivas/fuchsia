@@ -14,20 +14,23 @@
 
 /* Adapted from the public domain, estream code by D. Bernstein. */
 
-#include <boring-crypto/chacha.h>
+#include <openssl/chacha.h>
 
 #include <assert.h>
 #include <string.h>
+
+#include <openssl/cpu.h>
+
+#include "../internal.h"
+
 
 #define U8TO32_LITTLE(p)                              \
   (((uint32_t)((p)[0])) | ((uint32_t)((p)[1]) << 8) | \
    ((uint32_t)((p)[2]) << 16) | ((uint32_t)((p)[3]) << 24))
 
-// TODO(aarongreen): For now, we explicitly disable the ASM version.
-#if 0
-/* #if !defined(OPENSSL_NO_ASM) &&                         \
-     (defined(OPENSSL_X86) || defined(OPENSSL_X86_64) || \
-      defined(OPENSSL_ARM) || defined(OPENSSL_AARCH64)) */
+#if !defined(OPENSSL_NO_ASM) &&                         \
+    (defined(OPENSSL_X86) || defined(OPENSSL_X86_64) || \
+     defined(OPENSSL_ARM) || defined(OPENSSL_AARCH64))
 
 /* ChaCha20_ctr32 is defined in asm/chacha-*.pl. */
 void ChaCha20_ctr32(uint8_t *out, const uint8_t *in, size_t in_len,
@@ -93,7 +96,7 @@ static void chacha_core(uint8_t output[64], const uint32_t input[16]) {
   uint32_t x[16];
   int i;
 
-  memcpy(x, input, sizeof(uint32_t) * 16);
+  OPENSSL_memcpy(x, input, sizeof(uint32_t) * 16);
   for (i = 20; i > 0; i -= 2) {
     QUARTERROUND(0, 4, 8, 12)
     QUARTERROUND(1, 5, 9, 13)
@@ -116,7 +119,7 @@ static void chacha_core(uint8_t output[64], const uint32_t input[16]) {
 void CRYPTO_chacha_20(uint8_t *out, const uint8_t *in, size_t in_len,
                       const uint8_t key[32], const uint8_t nonce[12],
                       uint32_t counter) {
-  assert(out + in_len <= in || in + in_len <= out || in == out);
+  assert(!buffers_alias(out, in_len, in, in_len) || in == out);
 
   uint32_t input[16];
   uint8_t buf[64];

@@ -9,11 +9,11 @@
 #include <assert.h>
 #include <string.h>
 
-#include <boring-crypto/chacha.h>
 #include <err.h>
 #include <kernel/auto_lock.h>
 #include <lib/crypto/cryptolib.h>
 #include <magenta/compiler.h>
+#include <openssl/chacha.h>
 #include <pow2.h>
 
 namespace crypto {

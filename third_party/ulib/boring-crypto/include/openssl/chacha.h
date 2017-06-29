@@ -12,20 +12,26 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
-#pragma once
+#ifndef OPENSSL_HEADER_CHACHA_H
+#define OPENSSL_HEADER_CHACHA_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include <openssl/base.h>
 
-#include <magenta/compiler.h>
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
-__BEGIN_CDECLS
 
 /* CRYPTO_chacha_20 encrypts |in_len| bytes from |in| with the given key and
  * nonce and writes the result to |out|. If |in| and |out| alias, they must be
  * equal. The initial block counter is specified by |counter|. */
-void CRYPTO_chacha_20(uint8_t* out, const uint8_t* in,
-                      size_t in_len, const uint8_t key[32],
-                      const uint8_t nonce[12], uint32_t counter);
+OPENSSL_EXPORT void CRYPTO_chacha_20(uint8_t *out, const uint8_t *in,
+                                     size_t in_len, const uint8_t key[32],
+                                     const uint8_t nonce[12], uint32_t counter);
 
-__END_CDECLS
+
+#if defined(__cplusplus)
+}  /* extern C */
+#endif
+
+#endif  /* OPENSSL_HEADER_CHACHA_H */
