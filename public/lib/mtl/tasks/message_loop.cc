@@ -158,9 +158,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   if (next_run_time == ftl::TimePoint::Max()) {
     deadline = MX_TIME_INFINITE;
   } else if (next_run_time > now) {
-    // TODO(teisenbe): Once we switch to real deadlines, make this a simple
-    // assignment.
-    deadline = mx::deadline_after((next_run_time - now).ToNanoseconds());
+    deadline = next_run_time.ToEpochDelta().ToNanoseconds();
   }
 
   // TODO(abarth): Use a priority queue to track the nearest deadlines.
@@ -168,9 +166,11 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     const HandlerData& handler_data = entry.second;
     if (handler_data.deadline <= now) {
       deadline = 0;
+      break;
     } else if (handler_data.deadline != ftl::TimePoint::Max()) {
-      mx_time_t handle_deadline = mx::deadline_after((handler_data.deadline - now).ToNanoseconds());
-      deadline = std::min(deadline , handle_deadline);
+      mx_time_t handle_deadline =
+          handler_data.deadline.ToEpochDelta().ToNanoseconds();
+      deadline = std::min(deadline, handle_deadline);
     }
   }
 
