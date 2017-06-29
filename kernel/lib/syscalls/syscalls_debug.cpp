@@ -97,28 +97,6 @@ mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t
     return console_run_script(buf);
 }
 
-mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) {
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<ProcessDispatcher> process;
-    mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_READ | MX_RIGHT_WRITE,
-                                                     &process);
-    if (status != MX_OK)
-        return status;
-
-    // Disallow this call on self.
-    if (process.get() == up)
-        return MX_ERR_INVALID_ARGS;
-
-    HandleOwner handle = up->RemoveHandle(src_handle);
-    if (!handle)
-        return MX_ERR_BAD_HANDLE;
-
-    auto dest_hv = process->MapHandleToValue(handle);
-    process->AddHandle(mxtl::move(handle));
-    return dest_hv;
-}
-
 mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> _data,
                             uint32_t offset, uint32_t len,
                             user_ptr<uint32_t> _actual) {

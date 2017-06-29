@@ -448,12 +448,6 @@ syscall mtrace_control no_wrap
         ptr: any[size] INOUT, size: uint32_t)
     returns (mx_status_t);
 
-# Syscalls to be removed / refactored
-
-syscall debug_transfer_handle
-    (proc: mx_handle_t, handle: mx_handle_t)
-    returns (mx_handle_t);
-
 # Legacy LK debug syscalls
 
 syscall debug_read no_wrap
