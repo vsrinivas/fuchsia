@@ -261,6 +261,34 @@ class ImportNode : public ContainerTraits<Node> {
   bool is_bound_;
 };
 
+// Creates a node that clips the contents of its hierarchy to the specified clip
+// shape.
+class ClipNode : public ContainerTraits<Node> {
+ public:
+  explicit ClipNode(Session* session);
+  ~ClipNode();
+
+  // The shape to clip the contents of the hierarchy rooted at this node.
+  void SetClip(const Shape& shape);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(ClipNode);
+};
+
+// Creates a node that renders its hierarchy with the specified opacity.
+class OpacityNode : public ContainerTraits<Node> {
+ public:
+  explicit OpacityNode(Session* session);
+  ~OpacityNode();
+
+  // The opacity with which to render the contents of the hierarchy rooted at
+  // this node. The opacity values are clamped 0.0 to 1.0.
+  void SetOpacity(double opacity);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);
+};
+
 // Represents a scene resource is a session.
 class Scene : public ContainerTraits<Resource> {
  public:

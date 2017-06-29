@@ -181,6 +181,36 @@ void ImportNode::BindAsRequest(mx::eventpair* out_export_token) {
   is_bound_ = true;
 }
 
+ClipNode::ClipNode(Session* session) : ContainerTraits(session) {
+  session->Enqueue(mozart::NewCreateClipNodeOp(id()));
+}
+
+ClipNode::~ClipNode() = default;
+
+void ClipNode::SetClip(const Shape& shape) {
+  ShapeNode shape_node(session());
+  shape_node.SetShape(shape.id());
+  AddChild(shape_node.id());
+  session()->Enqueue(mozart::NewSetClipOp(id(), shape_node.id()));
+}
+
+OpacityNode::OpacityNode(Session* session) : ContainerTraits(session) {
+  // TODO(MZ-139): Opacities are not currently implemented. Create an entity
+  // node for now.
+  session->Enqueue(mozart::NewCreateEntityNodeOp(id()));
+}
+
+OpacityNode::~OpacityNode() = default;
+
+void OpacityNode::SetOpacity(double opacity) {
+  if (opacity < 0.0) {
+    opacity = 0.0;
+  } else if (opacity > 1.0) {
+    opacity = 1.0;
+  }
+  // TODO(MZ-139): Opacities are not currently implemented.
+}
+
 Scene::Scene(Session* session) : ContainerTraits(session) {
   session->Enqueue(mozart::NewCreateSceneOp(id()));
 }
