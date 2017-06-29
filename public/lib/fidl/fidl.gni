@@ -6,15 +6,17 @@
 # generators. Sever this, and have generators consume compiled output from an
 # intermediate file.
 
+import("//packages/gn/packages.gni")
+
 declare_args() {
   # Generate Dart code from fidl bindings.
-  generate_fidl_for_dart = true
+  generate_fidl_for_dart = packages_have_dart
 
   # Generate Go code from fidl bindings.
-  generate_fidl_for_go = true
+  generate_fidl_for_go = packages_have_go
 
   # Generate Rust code from fidl bindings.
-  generate_fidl_for_rust = true
+  generate_fidl_for_rust = packages_have_rust
 }
 
 if (generate_fidl_for_dart) {
