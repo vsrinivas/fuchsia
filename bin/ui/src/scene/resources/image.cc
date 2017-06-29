@@ -166,7 +166,7 @@ ImagePtr Image::NewForTesting(Session* session, MemoryPtr host_memory) {
 }
 
 ImagePtr Image::GetPresentedImage() {
-  return ftl::AdoptRef(this);
+  return ImagePtr(this);
 }
 
 }  // namespace scene
