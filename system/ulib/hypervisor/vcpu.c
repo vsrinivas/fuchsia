@@ -54,6 +54,9 @@
 #define FIRST_REDIRECT_OFFSET                   0x10
 #define LAST_REDIRECT_OFFSET                    (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
 
+/* PIC configuration constants. */
+#define PIC_INVALID                             UINT8_MAX
+
 /* UART configuration flags. */
 #define UART_STATUS_EMPTY                       (1u << 5)
 #define UART_STATUS_IDLE                        (1u << 6)
@@ -216,8 +219,8 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         packet.port_in_ret.u16 = io_port_state->pm1_enable;
         break;
     case PIC1_DATA_PORT:
-        // Ignore writes to PIC. We don't support the legacy PIC.
         input_size = 1;
+        packet.port_in_ret.u8 = PIC_INVALID;
         break;
 #endif // __x86_64__
     default: {
