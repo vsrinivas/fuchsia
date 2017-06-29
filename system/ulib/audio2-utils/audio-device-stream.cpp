@@ -14,7 +14,6 @@
 #include <mx/channel.h>
 #include <mx/handle.h>
 #include <mx/vmo.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/limits.h>
@@ -30,7 +29,7 @@ mx_status_t DoCallImpl(const mx::channel& channel,
                        const ReqType&     req,
                        RespType*          resp,
                        mx::handle*        resp_handle_out) {
-    constexpr mx_duration_t CALL_TIMEOUT = MX_MSEC(100);
+    constexpr mx_duration_t CALL_TIMEOUT = MX_MSEC(500);
     mx_channel_call_args_t args;
 
     MX_DEBUG_ASSERT((resp_handle_out == nullptr) || !resp_handle_out->is_valid());
@@ -85,23 +84,17 @@ mx_status_t DoNoFailCall(const mx::channel& channel,
     return DoCallImpl(channel, req, resp, resp_handle_out);
 }
 
-mxtl::unique_ptr<AudioDeviceStream> AudioDeviceStream::Create(bool input, uint32_t dev_id) {
-    AllocChecker ac;
-    mxtl::unique_ptr<AudioDeviceStream>
-        res(input ? static_cast<AudioDeviceStream*>(new (&ac) AudioInput(dev_id))
-                  : static_cast<AudioDeviceStream*>(new (&ac) AudioOutput(dev_id)));
-    if (!ac.check())
-       return nullptr;
-
-    return res;
-}
-
 AudioDeviceStream::AudioDeviceStream(bool input, uint32_t dev_id)
-    : input_(input),
-      dev_id_(dev_id) {
+    : input_(input) {
     snprintf(name_, sizeof(name_), "/dev/class/audio2-%s/%03u",
              input_ ? "input" : "output",
-             dev_id_);
+             dev_id);
+}
+
+AudioDeviceStream::AudioDeviceStream(bool input, const char* dev_path)
+    : input_(input) {
+    strncpy(name_, dev_path, sizeof(name_));
+    name_[sizeof(name_) - 1] = 0;
 }
 
 mx_status_t AudioDeviceStream::Open() {
@@ -129,8 +122,8 @@ mx_status_t AudioDeviceStream::Open() {
 
 mx_status_t AudioDeviceStream::DumpInfo() {
     mx_status_t res;
-    printf("Info for audio %s stream #%03u (%s)\n",
-            input_ ? "input" : "output", dev_id_, name_);
+    printf("Info for audio %s at \"%s\"\n",
+            input_ ? "input" : "output", name_);
 
     {   // Current gain settings and caps
         audio2_stream_cmd_get_gain_req  req;
@@ -402,35 +395,54 @@ mx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second,
 }
 
 mx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {
+    mx_status_t res;
+
     if(!frames)
         return MX_ERR_INVALID_ARGS;
 
     if (!rb_ch_.is_valid() || rb_vmo_.is_valid() || !frame_sz_)
         return MX_ERR_BAD_STATE;
 
-    // Get a VMO representing the ring buffer we will share with the audio driver.
-    audio2_rb_cmd_get_buffer_req_t  req;
-    audio2_rb_cmd_get_buffer_resp_t resp;
+    // Stash the FIFO depth, in case users need to know it.
+    {
+        audio2_rb_cmd_get_fifo_depth_req_t  req;
+        audio2_rb_cmd_get_fifo_depth_resp_t resp;
 
-    req.hdr.cmd                = AUDIO2_RB_CMD_GET_BUFFER;
-    req.hdr.transaction_id     = 1;
-    req.min_ring_buffer_frames = frames;
-    req.notifications_per_ring = irqs_per_ring;
+        req.hdr.cmd = AUDIO2_RB_CMD_GET_FIFO_DEPTH;
+        req.hdr.transaction_id = 1;
+        res = DoCall(rb_ch_, req, &resp);
+        if (res != MX_OK) {
+            printf("Failed to fetch fifo depth (res %d)\n", res);
+            return res;
+        }
 
-    mx::handle tmp;
-    mx_status_t res;
-    res = DoCall(rb_ch_, req, &resp, &tmp);
-
-    if ((res == MX_OK) && (resp.result != MX_OK))
-        res = resp.result;
-
-    if (res != MX_OK) {
-        printf("Failed to get driver ring buffer VMO (res %d)\n", res);
-        return res;
+        fifo_depth_ = resp.fifo_depth;
     }
 
-    // TODO(johngro) : Verify the type of this handle before transferring it to our VMO handle.
-    rb_vmo_.reset(tmp.release());
+    {
+        // Get a VMO representing the ring buffer we will share with the audio driver.
+        audio2_rb_cmd_get_buffer_req_t  req;
+        audio2_rb_cmd_get_buffer_resp_t resp;
+
+        req.hdr.cmd                = AUDIO2_RB_CMD_GET_BUFFER;
+        req.hdr.transaction_id     = 1;
+        req.min_ring_buffer_frames = frames;
+        req.notifications_per_ring = irqs_per_ring;
+
+        mx::handle tmp;
+        res = DoCall(rb_ch_, req, &resp, &tmp);
+
+        if ((res == MX_OK) && (resp.result != MX_OK))
+            res = resp.result;
+
+        if (res != MX_OK) {
+            printf("Failed to get driver ring buffer VMO (res %d)\n", res);
+            return res;
+        }
+
+        // TODO(johngro) : Verify the type of this handle before transferring it to our VMO handle.
+        rb_vmo_.reset(tmp.release());
+    }
 
     // We have the buffer, fetch the size the driver finally decided on.
     uint64_t rb_sz;
@@ -480,12 +492,20 @@ mx_status_t AudioDeviceStream::StartRingBuffer() {
     req.hdr.cmd = AUDIO2_RB_CMD_START;
     req.hdr.transaction_id = 1;
 
-    return DoCall(rb_ch_, req, &resp);
+    mx_status_t res = DoCall(rb_ch_, req, &resp);
+
+    if (res == MX_OK) {
+        start_ticks_ = resp.start_ticks;
+    }
+
+    return res;
 }
 
 mx_status_t AudioDeviceStream::StopRingBuffer() {
     if (rb_ch_ == MX_HANDLE_INVALID)
         return MX_ERR_BAD_STATE;
+
+    start_ticks_ = 0;
 
     audio2_rb_cmd_stop_req_t  req;
     audio2_rb_cmd_stop_resp_t resp;
@@ -494,6 +514,22 @@ mx_status_t AudioDeviceStream::StopRingBuffer() {
     req.hdr.transaction_id = 1;
 
     return DoCall(rb_ch_, req, &resp);
+}
+
+void AudioDeviceStream::ResetRingBuffer() {
+    rb_ch_.reset();
+    rb_vmo_.reset();
+    rb_sz_ = 0;
+    rb_virt_ = nullptr;
+}
+
+
+bool AudioDeviceStream::IsChannelConnected(const mx::channel& ch) {
+    if (!ch.is_valid())
+        return false;
+
+    mx_signals_t junk;
+    return ch.wait_one(MX_CHANNEL_PEER_CLOSED, 0u, &junk) != MX_ERR_TIMED_OUT;
 }
 
 

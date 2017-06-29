@@ -15,8 +15,6 @@ namespace utils {
 
 class AudioDeviceStream {
 public:
-    static mxtl::unique_ptr<AudioDeviceStream> Create(bool input, uint32_t dev_id);
-
     mx_status_t Open();
     mx_status_t DumpInfo();
     mx_status_t SetMute(bool mute);
@@ -25,36 +23,52 @@ public:
     mx_status_t SetFormat(uint32_t frames_per_second,
                           uint16_t channels,
                           audio2_sample_format_t sample_format);
+    mx_status_t GetBuffer(uint32_t frames, uint32_t irqs_per_ring);
+    mx_status_t StartRingBuffer();
+    mx_status_t StopRingBuffer();
+    void        ResetRingBuffer();
 
-    const char* name()  const { return name_; }
-    bool        input() const { return input_; }
+    bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_); }
+    bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_); }
+
+    const char* name()              const { return name_; }
+    bool        input()             const { return input_; }
+    uint32_t    frame_rate()        const { return frame_rate_; }
+    uint32_t    sample_size()       const { return sample_size_; }
+    uint32_t    channel_cnt()       const { return channel_cnt_; }
+    uint32_t    frame_sz()          const { return frame_sz_; }
+    uint64_t    fifo_depth()        const { return fifo_depth_; }
+    uint64_t    start_ticks()       const { return start_ticks_; }
+    uint32_t    ring_buffer_bytes() const { return rb_sz_; }
+    void*       ring_buffer()       const { return rb_virt_; }
 
 protected:
     friend class mxtl::unique_ptr<AudioDeviceStream>;
 
+    static bool IsChannelConnected(const mx::channel& ch);
+
     mx_status_t GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
                              bool enable_notify = false);
     void        DisablePlugNotifications();
-    mx_status_t GetBuffer(uint32_t frames, uint32_t irqs_per_ring);
-    mx_status_t StartRingBuffer();
-    mx_status_t StopRingBuffer();
 
     AudioDeviceStream(bool input, uint32_t dev_id);
+    AudioDeviceStream(bool input, const char* dev_path);
     virtual ~AudioDeviceStream() { }
 
     mx::channel stream_ch_;
     mx::channel rb_ch_;
     mx::vmo     rb_vmo_;
 
-    const bool     input_;
-    const uint32_t dev_id_;
-    char           name_[64] = { 0 };
+    const bool  input_;
+    char        name_[64] = { 0 };
 
     audio2_sample_format_t sample_format_;
     uint32_t frame_rate_  = 0;
     uint32_t sample_size_ = 0;
     uint32_t channel_cnt_ = 0;
     uint32_t frame_sz_    = 0;
+    uint32_t fifo_depth_  = 0;
+    uint64_t start_ticks_ = 0;
     uint32_t rb_sz_       = 0;
     void*    rb_virt_     = nullptr;
 };

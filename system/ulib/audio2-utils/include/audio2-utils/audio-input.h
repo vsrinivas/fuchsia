@@ -14,6 +14,8 @@ class AudioSink;
 
 class AudioInput : public AudioDeviceStream {
 public:
+    static mxtl::unique_ptr<AudioInput> Create(uint32_t dev_id);
+    static mxtl::unique_ptr<AudioInput> Create(const char* dev_path);
     mx_status_t Record(AudioSink& sink, float duration_seconds);
 
 private:
@@ -21,6 +23,7 @@ private:
     friend class AudioDeviceStream;
 
     explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(true, dev_id) { }
+    explicit AudioInput(const char* dev_path) : AudioDeviceStream(true, dev_path) { }
 };
 
 }  // namespace utils
