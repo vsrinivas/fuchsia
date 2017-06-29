@@ -77,22 +77,22 @@ static bool abs_then_rel() {
 
     auto job = make_job();
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_OK, "");
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_OK);
 
     // A contradictory policy should fail.
     policy[0].policy = MX_POL_ACTION_EXCEPTION | MX_POL_ACTION_DENY;
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_ERR_ALREADY_EXISTS, "");
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_ERR_ALREADY_EXISTS);
 
     // The same again will succeed.
     policy[0].policy = MX_POL_ACTION_KILL;
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_OK, "");
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_OK);
 
     // A contradictory relative policy will succeed, but is a no-op
     policy[0].policy = MX_POL_ACTION_ALLOW;
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_RELATIVE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_OK, "");
+        MX_JOB_POL_RELATIVE, MX_JOB_POL_BASIC, policy, countof(policy)), MX_OK);
 
     mx_policy_basic_t more[] = {
         { MX_POL_NEW_CHANNEL, MX_POL_ACTION_ALLOW | MX_POL_ACTION_EXCEPTION },
@@ -101,7 +101,7 @@ static bool abs_then_rel() {
     // An additional absolute policy that doesn't contradict existing
     // policy can be added.
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, more, countof(more)), MX_OK, "");
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, more, countof(more)), MX_OK);
 
     END_TEST;
 }
@@ -111,36 +111,36 @@ static bool invalid_calls(uint32_t options) {
 
     auto job = make_job();
 
-    EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, nullptr, 0u), MX_ERR_INVALID_ARGS, "");
+    EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, nullptr, 0u), MX_ERR_INVALID_ARGS);
 
-    EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, nullptr, 5u), MX_ERR_INVALID_ARGS, "");
+    EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, nullptr, 5u), MX_ERR_INVALID_ARGS);
 
     mx_policy_basic_t policy1[] = {
         { MX_POL_BAD_HANDLE, MX_POL_ACTION_KILL },
     };
 
-    EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, policy1, 0u), MX_ERR_INVALID_ARGS, "");
+    EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, policy1, 0u), MX_ERR_INVALID_ARGS);
 
     mx_policy_basic_t policy2[] = {
         { 100001u, MX_POL_ACTION_KILL },
     };
 
     EXPECT_EQ(job.set_policy(
-        options, MX_JOB_POL_BASIC, policy2, countof(policy2)), MX_ERR_INVALID_ARGS, "");
+        options, MX_JOB_POL_BASIC, policy2, countof(policy2)), MX_ERR_INVALID_ARGS);
 
     mx_policy_basic_t policy3[] = {
         { MX_POL_BAD_HANDLE, 100001u },
     };
 
     EXPECT_EQ(job.set_policy(
-        options, MX_JOB_POL_BASIC, policy3, countof(policy2)), MX_ERR_NOT_SUPPORTED, "");
+        options, MX_JOB_POL_BASIC, policy3, countof(policy2)), MX_ERR_NOT_SUPPORTED);
 
     // The job will still accept a valid combination:
     mx_policy_basic_t policy4[] = {
         { MX_POL_BAD_HANDLE, MX_POL_ACTION_KILL } };
 
     EXPECT_EQ(job.set_policy(
-        options, MX_JOB_POL_BASIC, policy4, countof(policy4)), MX_OK, "");
+        options, MX_JOB_POL_BASIC, policy4, countof(policy4)), MX_OK);
 
     END_TEST;
 }
@@ -159,16 +159,16 @@ static bool enforce_creation_pol(
     auto job = make_job();
 
     ASSERT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, pol, pol_count), MX_OK, "");
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, pol, pol_count), MX_OK);
 
     mx_handle_t ctrl;
     auto proc = make_test_process(job, nullptr, &ctrl);
     ASSERT_TRUE(proc.is_valid(), "");
-    ASSERT_NEQ(ctrl, MX_HANDLE_INVALID, "");
+    ASSERT_NEQ(ctrl, MX_HANDLE_INVALID);
 
     mx_handle_t obj;
-    EXPECT_EQ(mini_process_cmd(ctrl, minip_cmd, &obj), expect, "");
-    EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), MX_ERR_PEER_CLOSED, "");
+    EXPECT_EQ(mini_process_cmd(ctrl, minip_cmd, &obj), expect);
+    EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), MX_ERR_PEER_CLOSED);
 
     mx_handle_close(ctrl);
     END_TEST;
@@ -213,7 +213,7 @@ static bool get_koid(mx_handle_t handle, mx_koid_t* koid) {
     mx_info_handle_basic_t info;
     ASSERT_EQ(mx_object_get_info(
                   handle, MX_INFO_HANDLE_BASIC, &info, sizeof(info),
-                  nullptr, nullptr), MX_OK, "");
+                  nullptr, nullptr), MX_OK);
     *koid = info.koid;
     return true;
 }
@@ -251,75 +251,75 @@ static bool test_exception_on_new_event(uint32_t base_policy,
     };
     auto job = make_job();
     ASSERT_EQ(job.set_policy(MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy,
-                             countof(policy)), MX_OK, "");
+                             countof(policy)), MX_OK);
 
     mx_handle_t ctrl;
     mx::thread thread;
     auto proc = make_test_process(job, &thread, &ctrl);
     ASSERT_TRUE(proc.is_valid(), "");
-    ASSERT_NEQ(ctrl, MX_HANDLE_INVALID, "");
+    ASSERT_NEQ(ctrl, MX_HANDLE_INVALID);
 
     mx_handle_t exc_port;
-    ASSERT_EQ(mx_port_create(0, &exc_port), MX_OK, "");
+    ASSERT_EQ(mx_port_create(0, &exc_port), MX_OK);
     ASSERT_EQ(mx_task_bind_exception_port(
                   proc.get(), exc_port, kExceptionPortKey,
                   MX_EXCEPTION_PORT_DEBUGGER),
-              MX_OK, "");
+              MX_OK);
 
-    EXPECT_EQ(mini_process_cmd_send(ctrl, MINIP_CMD_CREATE_EVENT), MX_OK, "");
+    EXPECT_EQ(mini_process_cmd_send(ctrl, MINIP_CMD_CREATE_EVENT), MX_OK);
 
     // Check that the subprocess did not return a reply yet (indicating
     // that it was suspended).
     EXPECT_EQ(mx_object_wait_one(ctrl, MX_CHANNEL_READABLE,
                                  mx_deadline_after(MX_MSEC(1)), nullptr),
-              MX_ERR_TIMED_OUT, "");
+              MX_ERR_TIMED_OUT);
 
     // Check that we receive an exception message.
     mx_port_packet_t packet;
-    ASSERT_EQ(mx_port_wait(exc_port, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
+    ASSERT_EQ(mx_port_wait(exc_port, MX_TIME_INFINITE, &packet, 0), MX_OK);
 
     // Check the exception message contents.
-    ASSERT_EQ(packet.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_GENERAL, "");
+    ASSERT_EQ(packet.key, kExceptionPortKey);
+    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_GENERAL);
 
     mx_koid_t pid;
     mx_koid_t tid;
     ASSERT_TRUE(get_koid(proc.get(), &pid), "");
     ASSERT_TRUE(get_koid(thread.get(), &tid), "");
-    ASSERT_EQ(packet.exception.pid, pid, "");
-    ASSERT_EQ(packet.exception.tid, tid, "");
+    ASSERT_EQ(packet.exception.pid, pid);
+    ASSERT_EQ(packet.exception.tid, tid);
 
     // Check that we can read the thread's register state.
     mx_general_regs_t regs;
     uint32_t size_read;
     ASSERT_EQ(mx_thread_read_state(thread.get(), MX_THREAD_STATE_REGSET0,
                                    &regs, sizeof(regs), &size_read),
-              MX_OK, "");
-    ASSERT_EQ(size_read, sizeof(regs), "");
-    ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result, "");
+              MX_OK);
+    ASSERT_EQ(size_read, sizeof(regs));
+    ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
     // TODO(mseaborn): Check the values of other registers.  We could check
     // that rip/pc is within the VDSO, which will require figuring out
     // where the VDSO is mapped.  We could check that unwinding the stack
     // using crashlogger gives a correct backtrace.
 
     // Resume the thread.
-    ASSERT_EQ(mx_task_resume(thread.get(), MX_RESUME_EXCEPTION), MX_OK, "");
+    ASSERT_EQ(mx_task_resume(thread.get(), MX_RESUME_EXCEPTION), MX_OK);
     // Check that the read-ready state of the channel changed compared with
     // the earlier check.
     EXPECT_EQ(mx_object_wait_one(ctrl, MX_CHANNEL_READABLE, MX_TIME_INFINITE,
                                  nullptr),
-              MX_OK, "");
+              MX_OK);
 
     // Check that we receive a reply message from the resumed thread.
     mx_handle_t obj;
     EXPECT_EQ(mini_process_cmd_read_reply(ctrl, &obj),
-              expected_syscall_result, "");
+              expected_syscall_result);
     if (expected_syscall_result == MX_OK)
-        EXPECT_EQ(mx_handle_close(obj), MX_OK, "");
+        EXPECT_EQ(mx_handle_close(obj), MX_OK);
 
     // Clean up: Tell the subprocess to exit.
     EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr),
-              MX_ERR_PEER_CLOSED, "");
+              MX_ERR_PEER_CLOSED);
 
     mx_handle_close(ctrl);
 

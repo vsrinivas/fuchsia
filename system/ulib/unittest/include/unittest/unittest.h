@@ -57,6 +57,21 @@
 
 #define PRINT_BUFFER_SIZE (512)
 
+// The following helper function makes the "msg" argument optional in
+// C++, so that you can write either of the following:
+//   ASSERT_EQ(x, y, "Check that x equals y");
+//   ASSERT_EQ(x, y);
+// (We could allow the latter in C by making unittest_get_message() a
+// var-args function, but that would be less type safe.)
+static inline const char* unittest_get_message(const char* arg) {
+    return arg;
+}
+#ifdef __cplusplus
+static inline const char* unittest_get_message() {
+    return "<no message>";
+}
+#endif
+
 __BEGIN_CDECLS
 
 extern int utest_verbosity_level;
@@ -249,7 +264,7 @@ int unittest_set_verbosity_level(int new_level);
 #define RET_FALSE return false
 #define DONOT_RET
 
-#define UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, ret)             \
+#define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)             \
     do {                                                             \
         UT_ASSERT_VALID_TEST_STATE;                                  \
         const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                   \
@@ -259,7 +274,8 @@ int unittest_set_verbosity_level(int new_level);
                 "%s:\n"                                              \
                 "        Comparison failed: %s %s %s is false\n"     \
                 "        Specifically, %lld %s %lld is false\n",     \
-                msg, lhs_str, #op, rhs_str, (long long int)_lhs_val, \
+                unittest_get_message(__VA_ARGS__),                   \
+                lhs_str, #op, rhs_str, (long long int)_lhs_val,      \
                 #op, (long long int)_rhs_val);                       \
             current_test_info->all_ok = false;                       \
             ret;                                                     \
@@ -365,17 +381,18 @@ int unittest_set_verbosity_level(int new_level);
         }                                                                     \
     } while (0)
 
-#define EXPECT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, DONOT_RET)
+#define EXPECT_CMP(op, lhs, rhs, lhs_str, rhs_str, ...) \
+    UT_CMP(op, lhs, rhs, lhs_str, rhs_str, DONOT_RET, ##__VA_ARGS__)
 
 /*
  * Use the EXPECT_* macros to check test results.
  */
-#define EXPECT_EQ(lhs, rhs, msg) EXPECT_CMP(==, msg, lhs, rhs, #lhs, #rhs)
-#define EXPECT_NEQ(lhs, rhs, msg) EXPECT_CMP(!=, msg, lhs, rhs, #lhs, #rhs)
-#define EXPECT_LE(lhs, rhs, msg) EXPECT_CMP(<=, msg, lhs, rhs, #lhs, #rhs)
-#define EXPECT_GE(lhs, rhs, msg) EXPECT_CMP(>=, msg, lhs, rhs, #lhs, #rhs)
-#define EXPECT_LT(lhs, rhs, msg) EXPECT_CMP(<, msg, lhs, rhs, #lhs, #rhs)
-#define EXPECT_GT(lhs, rhs, msg) EXPECT_CMP(>, msg, lhs, rhs, #lhs, #rhs)
+#define EXPECT_EQ(lhs, rhs, ...) EXPECT_CMP(==, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define EXPECT_NEQ(lhs, rhs, ...) EXPECT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define EXPECT_LE(lhs, rhs, ...) EXPECT_CMP(<=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define EXPECT_GE(lhs, rhs, ...) EXPECT_CMP(>=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define EXPECT_LT(lhs, rhs, ...) EXPECT_CMP(<, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define EXPECT_GT(lhs, rhs, ...) EXPECT_CMP(>, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 
 #define EXPECT_TRUE(actual, msg) UT_TRUE(actual, msg, DONOT_RET)
 #define EXPECT_FALSE(actual, msg) UT_FALSE(actual, msg, DONOT_RET)
@@ -402,14 +419,15 @@ int unittest_set_verbosity_level(int new_level);
         }                                             \
     } while (0)
 
-#define ASSERT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, RET_FALSE)
+#define ASSERT_CMP(op, lhs, rhs, lhs_str, rhs_str, ...) \
+    UT_CMP(op, lhs, rhs, lhs_str, rhs_str, RET_FALSE, ##__VA_ARGS__)
 
-#define ASSERT_EQ(lhs, rhs, msg) ASSERT_CMP(==, msg, lhs, rhs, #lhs, #rhs)
-#define ASSERT_NEQ(lhs, rhs, msg) ASSERT_CMP(!=, msg, lhs, rhs, #lhs, #rhs)
-#define ASSERT_LE(lhs, rhs, msg) ASSERT_CMP(<=, msg, lhs, rhs, #lhs, #rhs)
-#define ASSERT_GE(lhs, rhs, msg) ASSERT_CMP(>=, msg, lhs, rhs, #lhs, #rhs)
-#define ASSERT_LT(lhs, rhs, msg) ASSERT_CMP(<, msg, lhs, rhs, #lhs, #rhs)
-#define ASSERT_GT(lhs, rhs, msg) ASSERT_CMP(>, msg, lhs, rhs, #lhs, #rhs)
+#define ASSERT_EQ(lhs, rhs, ...) ASSERT_CMP(==, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define ASSERT_NEQ(lhs, rhs, ...) ASSERT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define ASSERT_LE(lhs, rhs, ...) ASSERT_CMP(<=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define ASSERT_GE(lhs, rhs, ...) ASSERT_CMP(>=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define ASSERT_LT(lhs, rhs, ...) ASSERT_CMP(<, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define ASSERT_GT(lhs, rhs, ...) ASSERT_CMP(>, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 
 #define ASSERT_TRUE(actual, msg) UT_TRUE(actual, msg, RET_FALSE)
 #define ASSERT_FALSE(actual, msg) UT_FALSE(actual, msg, RET_FALSE)
