@@ -67,13 +67,10 @@
 #define RTC_REGISTER_YEAR                       9u
 #define RTC_REGISTER_A                          10u
 #define RTC_REGISTER_B                          11u
-#define RTC_REGISTER_C                          12u
-#define RTC_REGISTER_D                          13u
 
 /* RTC register B flags. */
 #define RTC_REGISTER_B_DAYLIGHT_SAVINGS         (1u << 0)
 #define RTC_REGISTER_B_HOUR_FORMAT              (1u << 1)
-#define RTC_REGISTER_B_DATA_MODE                (1u << 2)
 
 /* I8042 status flags. */
 #define I8042_STATUS_OUTPUT_FULL                (1u << 0)
@@ -113,6 +110,10 @@ static const uint16_t kPciDeviceBarSize[] = {
     0x40,   // PCI_DEVICE_VIRTIO_BLOCK
 };
 
+static uint8_t to_bcd(uint8_t binary) {
+    return ((binary / 10) << 4) | (binary % 10);
+}
+
 static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     time_t now = time(NULL);
     struct tm tm;
@@ -120,26 +121,30 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
         return MX_ERR_INTERNAL;
     switch (rtc_index) {
     case RTC_REGISTER_SECONDS:
-        *value = tm.tm_sec;
+        *value = to_bcd(tm.tm_sec);
         break;
     case RTC_REGISTER_MINUTES:
-        *value = tm.tm_min;
+        *value = to_bcd(tm.tm_min);
         break;
     case RTC_REGISTER_HOURS:
-        *value = tm.tm_hour;
+        *value = to_bcd(tm.tm_hour);
         break;
     case RTC_REGISTER_DAY_OF_MONTH:
-        *value = tm.tm_mday;
+        *value = to_bcd(tm.tm_mday);
         break;
     case RTC_REGISTER_MONTH:
-        *value = tm.tm_mon;
+        *value = to_bcd(tm.tm_mon);
         break;
     case RTC_REGISTER_YEAR:
         // RTC expects the number of years since 2000.
-        *value = tm.tm_year - 100;
+        *value = to_bcd(tm.tm_year - 100);
+        break;
+     case RTC_REGISTER_A:
+        // Ensure that UIP is 0. Other values (clock frequency) are obsolete.
+        *value = 0;
         break;
     case RTC_REGISTER_B:
-        *value = RTC_REGISTER_B_HOUR_FORMAT | RTC_REGISTER_B_DATA_MODE;
+        *value = RTC_REGISTER_B_HOUR_FORMAT;
         if (tm.tm_isdst)
             *value |= RTC_REGISTER_B_DAYLIGHT_SAVINGS;
         break;
