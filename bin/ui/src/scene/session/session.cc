@@ -676,13 +676,13 @@ bool Session::AssertValueIsOfType(const mozart2::ValuePtr& value,
 void Session::ScheduleUpdate(
     uint64_t presentation_time,
     ::fidl::Array<mozart2::OpPtr> ops,
-    ::fidl::Array<mx::event> wait_events,
-    ::fidl::Array<mx::event> signal_events,
+    ::fidl::Array<mx::event> acquire_fences,
+    ::fidl::Array<mx::event> release_events,
     const mozart2::Session::PresentCallback& callback) {
   if (is_valid()) {
     scheduled_updates_.push({presentation_time, std::move(ops),
-                             std::move(wait_events), std::move(signal_events),
-                             callback});
+                             std::move(acquire_fences),
+                             std::move(release_events), callback});
     context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
   }
 }
@@ -725,7 +725,7 @@ bool Session::ApplyUpdate(Session::Update* update) {
   }
   return true;
 
-  // TODO: wait_events and signal_events should be added to a list that is
+  // TODO: acquire_fences and release_fences should be added to a list that is
   // consumed by the FrameScheduler.
 }
 

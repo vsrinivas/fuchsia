@@ -67,8 +67,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // TODO: nothing is currently done with the acquire and release fences.
   void ScheduleUpdate(uint64_t presentation_time,
                       ::fidl::Array<mozart2::OpPtr> ops,
-                      ::fidl::Array<mx::event> wait_events,
-                      ::fidl::Array<mx::event> signal_events,
+                      ::fidl::Array<mx::event> acquire_fences,
+                      ::fidl::Array<mx::event> release_fences,
                       const mozart2::Session::PresentCallback& callback);
 
   // Called by SessionContext() when it is notified by the FrameScheduler that
@@ -176,8 +176,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
     uint64_t presentation_time;
 
     ::fidl::Array<mozart2::OpPtr> ops;
-    ::fidl::Array<mx::event> wait_events;
-    ::fidl::Array<mx::event> signal_events;
+    ::fidl::Array<mx::event> acquire_fences;
+    ::fidl::Array<mx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.

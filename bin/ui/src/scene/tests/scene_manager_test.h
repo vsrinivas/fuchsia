@@ -25,8 +25,8 @@ class SessionHandlerForTest : public SessionHandler {
   // mozart2::Session interface methods.
   void Enqueue(::fidl::Array<mozart2::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
-               ::fidl::Array<mx::event> wait_events,
-               ::fidl::Array<mx::event> signal_events,
+               ::fidl::Array<mx::event> acquire_fences,
+               ::fidl::Array<mx::event> release_fences,
                const PresentCallback& callback) override;
   void Connect(
       ::fidl::InterfaceRequest<mozart2::Session> session,
