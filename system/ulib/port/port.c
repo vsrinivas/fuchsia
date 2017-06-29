@@ -21,7 +21,7 @@
 #endif
 
 mx_status_t port_init(port_t* port) {
-    mx_status_t r = mx_port_create(MX_PORT_OPT_V2, &port->handle);
+    mx_status_t r = mx_port_create(0, &port->handle);
     zprintf("port_init(%p) port=%x\n", port, port->handle);
     return r;
 }

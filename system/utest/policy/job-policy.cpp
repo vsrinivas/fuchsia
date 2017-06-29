@@ -260,7 +260,7 @@ static bool test_exception_on_new_event(uint32_t base_policy,
     ASSERT_NEQ(ctrl, MX_HANDLE_INVALID, "");
 
     mx_handle_t exc_port;
-    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &exc_port), MX_OK, "");
+    ASSERT_EQ(mx_port_create(0, &exc_port), MX_OK, "");
     ASSERT_EQ(mx_task_bind_exception_port(
                   proc.get(), exc_port, kExceptionPortKey,
                   MX_EXCEPTION_PORT_DEBUGGER),

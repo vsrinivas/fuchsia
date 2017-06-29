@@ -160,7 +160,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     list_initialize(&md->list);
     mtx_init(&md->lock, mtx_plain);
     mx_status_t status;
-    if ((status = mx_port_create(MX_PORT_OPT_V2, &md->ioport)) < 0) {
+    if ((status = mx_port_create(0, &md->ioport)) < 0) {
         free(md);
         return status;
     }

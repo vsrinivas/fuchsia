@@ -497,7 +497,7 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t self_dump_port;
-    if ((status = mx_port_create(MX_PORT_OPT_V2, &self_dump_port)) < 0) {
+    if ((status = mx_port_create(0, &self_dump_port)) < 0) {
         print_mx_error("mx_port_create failed", status);
         return 1;
     }
@@ -526,7 +526,7 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t ex_port;
-    if ((status = mx_port_create(MX_PORT_OPT_V2, &ex_port)) < 0) {
+    if ((status = mx_port_create(0, &ex_port)) < 0) {
         print_mx_error("mx_port_create failed", status);
         return 1;
     }

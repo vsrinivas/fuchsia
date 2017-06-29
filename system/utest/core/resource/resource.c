@@ -48,7 +48,7 @@ static bool test_resource_actions(void) {
     // test port notifications
     mx_handle_t ph;
     mx_port_packet_t pkt;
-    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &ph), MX_OK, "");
+    ASSERT_EQ(mx_port_create(0, &ph), MX_OK, "");
     ASSERT_EQ(mx_object_wait_async(rrh, ph, 0, MX_RESOURCE_CHILD_ADDED,
                                    MX_WAIT_ASYNC_ONCE), MX_OK, "");
     ASSERT_EQ(mx_port_wait(ph, 0, &pkt, 0), MX_ERR_TIMED_OUT, "");

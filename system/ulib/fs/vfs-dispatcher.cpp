@@ -178,7 +178,7 @@ mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
     dispatcher->t_.reset(t, pool_size);
 
     mx_status_t status;
-    if ((status = mx::port::create(MX_PORT_OPT_V2, &dispatcher->ioport_)) != MX_OK) {
+    if ((status = mx::port::create(0, &dispatcher->ioport_)) != MX_OK) {
         return status;
     }
     if ((status = mx::event::create(0u, &dispatcher->shutdown_event_)) != MX_OK) {

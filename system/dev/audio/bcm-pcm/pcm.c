@@ -600,7 +600,7 @@ static mx_status_t pcm_audio2_sink_ioctl(void* ctx, uint32_t op,
     }
     *reply = ret_handle;
 
-    status = mx_port_create(MX_PORT_OPT_V2, &pcm->pcm_port);
+    status = mx_port_create(0, &pcm->pcm_port);
     if (status != MX_OK) {
         xprintf("error creating port\n");
         mx_handle_close(pcm->stream_ch);

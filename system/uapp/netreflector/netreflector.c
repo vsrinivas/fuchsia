@@ -256,7 +256,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    if (mx_port_create(MX_PORT_OPT_V2, &port) != MX_OK) {
+    if (mx_port_create(0, &port) != MX_OK) {
         fprintf(stderr, "netreflector: failed to create port\n");
         return -1;
     }

@@ -158,7 +158,7 @@ static bool vmar_test() {
 static bool port_v2_test() {
     BEGIN_TEST;
     mx::port port;
-    ASSERT_EQ(mx::port::create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    ASSERT_EQ(mx::port::create(0, &port), MX_OK, "");
     ASSERT_EQ(validate_handle(port.get()), MX_OK, "");
 
     mx::channel channel[2];

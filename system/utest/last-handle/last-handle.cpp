@@ -71,7 +71,7 @@ static bool replace_test() {
     EXPECT_EQ(new_ev.duplicate(MX_RIGHT_SAME_RIGHTS, &dup), MX_OK, "");
 
     mx::port port;
-    ASSERT_EQ(mx::port::create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    ASSERT_EQ(mx::port::create(0, &port), MX_OK, "");
 
     EXPECT_EQ(new_ev.wait_async(
         port, 1u, MX_SIGNAL_LAST_HANDLE, MX_WAIT_ASYNC_ONCE), MX_OK, "");
@@ -108,7 +108,7 @@ static bool channel_test() {
     ASSERT_EQ(mx::channel::create(0u, &channel[0], &channel[1]), MX_OK, "");
 
     mx::port port;
-    ASSERT_EQ(mx::port::create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    ASSERT_EQ(mx::port::create(0, &port), MX_OK, "");
 
     mx_handle_t dup_ev;
     EXPECT_EQ(mx_handle_duplicate(event.get(), MX_RIGHT_SAME_RIGHTS, &dup_ev), MX_OK, "");

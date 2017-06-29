@@ -96,7 +96,7 @@ StateObserver::Flags PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t c
 mx_status_t PortDispatcher::Create(uint32_t options,
                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                      mx_rights_t* rights) {
-    DEBUG_ASSERT(options == MX_PORT_OPT_V2);
+    DEBUG_ASSERT(options == 0);
     AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())

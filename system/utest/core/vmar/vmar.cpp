@@ -92,7 +92,7 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
 
     // Create an exception port and bind it to the thread to prevent the
     // thread's illegal access from killing the process.
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     if (status != MX_OK) {
         goto err;
     }

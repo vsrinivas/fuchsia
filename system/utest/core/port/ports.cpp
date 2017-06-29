@@ -15,7 +15,7 @@ static bool basic_test(void) {
     mx_status_t status;
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, 0, "could not create port v2");
 
     const mx_port_packet_t in = {
@@ -53,7 +53,7 @@ static bool queue_and_close_test(void) {
     mx_status_t status;
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, MX_OK, "could not create port v2");
 
     mx_port_packet_t out0 = {};
@@ -83,7 +83,7 @@ static bool async_wait_channel_test(void) {
     const uint64_t key0 = 6567ull;
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ch[2];
@@ -143,7 +143,7 @@ static bool async_wait_close_order(const int order[3], uint32_t wait_option) {
     const uint64_t key0 = 1122ull;
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ch[2];
@@ -207,7 +207,7 @@ static bool async_wait_event_test_single(void) {
     mx_status_t status;
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ev;
@@ -253,7 +253,7 @@ static bool async_wait_event_test_repeat(void) {
     mx_status_t status;
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ev;
@@ -279,7 +279,7 @@ static bool async_wait_event_test_repeat(void) {
         ASSERT_EQ(out.signal.count, 1u, "");
         count[0] += (out.signal.observed & MX_EVENT_SIGNALED) ? 1 : 0;
         count[1] += (out.signal.observed & MX_USER_SIGNAL_2) ? 1 : 0;
-        count[2] += (out.signal.observed & 
+        count[2] += (out.signal.observed &
             ~(MX_EVENT_SIGNALED|MX_USER_SIGNAL_2|MX_SIGNAL_LAST_HANDLE)) ? 1 : 0;
     }
 
@@ -317,7 +317,7 @@ static bool pre_writes_channel_test(uint32_t mode) {
     EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t port;
-    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    status = mx_port_create(0, &port);
     EXPECT_EQ(status, MX_OK, "");
 
     status = mx_object_wait_async(ch[1], port, key0,
@@ -366,7 +366,7 @@ static bool cancel_event(uint32_t wait_mode) {
     mx_handle_t port;
     mx_handle_t ev;
 
-    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    EXPECT_EQ(mx_port_create(0, &port), MX_OK, "");
     EXPECT_EQ(mx_event_create(0u, &ev), MX_OK, "");
 
     // Notice repeated key below.
@@ -426,7 +426,7 @@ static bool cancel_event_after(uint32_t wait_mode) {
     mx_status_t status;
     mx_handle_t port;
 
-    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    EXPECT_EQ(mx_port_create(0, &port), MX_OK, "");
 
     mx_handle_t ev[3];
     const uint64_t keys[] = {128u, 3u, 3u};
@@ -503,7 +503,7 @@ static bool threads_event(uint32_t wait_mode) {
     mx_handle_t port;
     mx_handle_t ev;
 
-    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    EXPECT_EQ(mx_port_create(0, &port), MX_OK, "");
     EXPECT_EQ(mx_event_create(0u, &ev), MX_OK, "");
 
     thrd_t threads[3];

@@ -8,12 +8,10 @@
 
 __BEGIN_CDECLS
 
-// mx_port_create() options.
-#define MX_PORT_OPT_V1 0u
-#define MX_PORT_OPT_V2 1u
+typedef int _MX_PORT_OPT_V2 __attribute__((deprecated("use 0 instead")));
+#define MX_PORT_OPT_V2 ((_MX_PORT_OPT_V2) 0)
 
-// mx_port V2 packet structures.
-
+// mx_object_wait_async() options
 #define MX_WAIT_ASYNC_ONCE          0u
 #define MX_WAIT_ASYNC_REPEATING     1u
 

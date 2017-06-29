@@ -248,7 +248,7 @@ int tu_process_wait_exit(mx_handle_t process)
 mx_handle_t tu_io_port_create(void)
 {
     mx_handle_t handle;
-    mx_status_t status = mx_port_create(MX_PORT_OPT_V2, &handle);
+    mx_status_t status = mx_port_create(0, &handle);
     if (status < 0)
         tu_fatal(__func__, status);
     return handle;

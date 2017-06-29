@@ -87,7 +87,7 @@ static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
 }
 
 static bool set_debugger_exception_port(mx_handle_t* eport_out) {
-    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, eport_out), MX_OK, "");
+    ASSERT_EQ(mx_port_create(0, eport_out), MX_OK, "");
     mx_handle_t self = mx_process_self();
     ASSERT_EQ(mx_task_bind_exception_port(self, *eport_out, kExceptionPortKey,
                                           MX_EXCEPTION_PORT_DEBUGGER),
@@ -476,8 +476,8 @@ static bool test_suspend_port_call(void) {
 
     mxr_thread_t thread;
     mx_handle_t port[2];
-    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &port[0]), MX_OK, "");
-    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &port[1]), MX_OK, "");
+    ASSERT_EQ(mx_port_create(0, &port[0]), MX_OK, "");
+    ASSERT_EQ(mx_port_create(0, &port[1]), MX_OK, "");
 
     mx_handle_t thread_h;
     ASSERT_TRUE(start_thread(threads_test_port_fn, port, &thread, &thread_h), "");
