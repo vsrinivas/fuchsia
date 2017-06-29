@@ -24,6 +24,8 @@
 #define PM1_CONTROL_PORT        0x2000
 
 /* Miscellaneous ports. */
-#define PIC1_PORT               0x20
-#define PIC2_PORT               0xa0
+#define PIC1_COMMAND_PORT       0x20
+#define PIC1_DATA_PORT          0x21
+#define PIC2_COMMAND_PORT       0xa0
+#define PIC2_DATA_PORT          0xa1
 #define I8253_CONTROL_PORT      0x43

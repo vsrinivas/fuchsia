@@ -210,6 +210,10 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         input_size = 2;
         packet.port_in_ret.u16 = io_port_state->pm1_enable;
         break;
+    case PIC1_DATA_PORT:
+        // Ignore writes to PIC. We don't support the legacy PIC.
+        input_size = 1;
+        break;
 #endif // __x86_64__
     default: {
         uint16_t port_off;
@@ -234,8 +238,8 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
 static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_out_t* port_out) {
     io_port_state_t* io_port_state = &context->guest_state->io_port_state;
     switch (port_out->port) {
-    case PIC1_PORT ... PIC1_PORT + 1:
-    case PIC2_PORT ... PIC2_PORT + 2:
+    case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
+    case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
     case I8253_CONTROL_PORT:
     case I8042_DATA_PORT:
     case UART_RECEIVE_IO_PORT + 1 ... UART_LINE_CONTROL_IO_PORT - 1:
