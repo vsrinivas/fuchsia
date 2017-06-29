@@ -33,7 +33,7 @@ public:
     virtual mx_status_t Setattr(vnattr_t* a) final;
     virtual mx_status_t Sync() final;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
-                  size_t in_len, void* out_buf, size_t out_len) final;
+                  size_t in_len, void* out_buf, size_t out_len) override;
     mx_status_t AttachRemote(mx_handle_t h) final;
     fs::Dispatcher* GetDispatcher() final;
 
@@ -59,6 +59,7 @@ protected:
 class VnodeFile final : public VnodeMemfs {
 public:
     VnodeFile();
+    VnodeFile(mx_handle_t vmo, mx_off_t length);
     ~VnodeFile();
 
     virtual mx_status_t Open(uint32_t flags) final;
@@ -85,8 +86,8 @@ public:
     // Create a vnode from a VMO.
     // Fails if the vnode already exists.
     // Passes the vmo to the Vnode; does not duplicate it.
-    mx_status_t CreateFromVmo(const char* name, size_t namelen, mx_handle_t vmo, mx_off_t off,
-                              mx_off_t len);
+    mx_status_t CreateFromVmo(bool vmofile, const char* name, size_t namelen, mx_handle_t vmo,
+                              mx_off_t off, mx_off_t len);
 
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
@@ -119,6 +120,8 @@ private:
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
     mx_status_t Getattr(vnattr_t* a) final;
+    ssize_t Ioctl(uint32_t op, const void* in_buf,
+                  size_t in_len, void* out_buf, size_t out_len) final;
 
     fs::RemoteContainer remoter_;
     fs::WatcherContainer watcher_;

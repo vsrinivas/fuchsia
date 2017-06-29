@@ -59,6 +59,8 @@ fs::Dispatcher* VnodeMemfs::GetDispatcher() {
 }
 
 VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}
+VnodeFile::VnodeFile(mx_handle_t vmo, mx_off_t length) : vmo_(vmo), length_(length) {}
+
 VnodeFile::~VnodeFile() {
     if (vmo_ != MX_HANDLE_INVALID) {
         mx_handle_close(vmo_);
@@ -528,6 +530,43 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 }
 
+ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                        void* out_buf, size_t out_len) {
+    switch (op) {
+    case IOCTL_VFS_VMO_CREATE: {
+        const auto* config = reinterpret_cast<const vmo_create_config_t*>(in_buf);
+        size_t namelen = in_len - sizeof(vmo_create_config_t) - 1;
+        const char* name = config->name;
+        if (in_len <= sizeof(vmo_create_config_t) || (namelen > NAME_MAX) ||
+            (name[namelen] != 0)) {
+            mx_handle_close(config->vmo);
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        // Ensure this is the last handle to this VMO; otherwise, the size
+        // may change from underneath us.
+        mx_signals_t observed;
+        mx_status_t status = mx_object_wait_one(config->vmo, MX_SIGNAL_LAST_HANDLE, 0u, &observed);
+        if ((status != MX_OK) || (observed != MX_SIGNAL_LAST_HANDLE)) {
+            mx_handle_close(config->vmo);
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        uint64_t size;
+        if ((status = mx_vmo_get_size(config->vmo, &size)) != MX_OK) {
+            mx_handle_close(config->vmo);
+            return status;
+        }
+
+        mxtl::AutoLock lock(&vfs_lock);
+        bool vmofile = false;
+        return CreateFromVmo(vmofile, name, namelen, config->vmo, 0, size);
+    }
+    default:
+        return VnodeMemfs::Ioctl(op, in_buf, in_len, out_buf, out_len);
+    }
+}
+
 mx_status_t VnodeMemfs::AttachRemote(mx_handle_t h) {
     if (!IsDirectory()) {
         return MX_ERR_NOT_DIR;
@@ -559,7 +598,7 @@ static void memfs_mount_locked(mxtl::RefPtr<VnodeDir> parent, mxtl::RefPtr<Vnode
     Dnode::AddChild(parent->dnode_, subtree->dnode_);
 }
 
-mx_status_t VnodeDir::CreateFromVmo(const char* name, size_t namelen,
+mx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
                                     mx_handle_t vmo, mx_off_t off, mx_off_t len) {
     mx_status_t status;
     if ((status = CanCreate(name, namelen)) != MX_OK) {
@@ -567,7 +606,12 @@ mx_status_t VnodeDir::CreateFromVmo(const char* name, size_t namelen,
     }
 
     AllocChecker ac;
-    mxtl::RefPtr<VnodeMemfs> vn = mxtl::AdoptRef(new (&ac) VnodeVmo(vmo, off, len));
+    mxtl::RefPtr<VnodeMemfs> vn;
+    if (vmofile) {
+        vn = mxtl::AdoptRef(new (&ac) VnodeVmo(vmo, off, len));
+    } else {
+        vn = mxtl::AdoptRef(new (&ac) VnodeFile(vmo, len));
+    }
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }

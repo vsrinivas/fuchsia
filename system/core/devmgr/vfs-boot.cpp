@@ -34,7 +34,8 @@ static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_han
             if (path[0] == 0) {
                 return MX_ERR_INVALID_ARGS;
             }
-            return vnb->CreateFromVmo(path, strlen(path), vmo, off, len);
+            bool vmofile = true;
+            return vnb->CreateFromVmo(vmofile, path, strlen(path), vmo, off, len);
         } else {
             if (nextpath == path) {
                 return MX_ERR_INVALID_ARGS;

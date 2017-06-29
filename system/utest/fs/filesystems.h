@@ -26,6 +26,7 @@ typedef struct fs_info {
     bool can_mount_sub_filesystems;
     bool supports_hardlinks;
     bool supports_watchers;
+    bool supports_create_by_vmo;
     int64_t nsec_granularity;
 } fs_info_t;
 
