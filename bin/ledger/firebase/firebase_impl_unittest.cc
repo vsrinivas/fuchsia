@@ -327,7 +327,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
 TEST_F(FirebaseImplTest, WatchAuthRevoked) {
   std::string stream_body = std::string(
       "event: auth_revoked\n"
-      "data: \"bazinga!\"\n"
+      "data: credential is no longer valid\n"
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
@@ -340,7 +340,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
   EXPECT_EQ(1u, auth_revoked_count_);
   EXPECT_EQ(0u, malformed_event_count_);
 
-  EXPECT_EQ("bazinga!", auth_revoked_reasons_[0]);
+  EXPECT_EQ("credential is no longer valid", auth_revoked_reasons_[0]);
 }
 
 TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {

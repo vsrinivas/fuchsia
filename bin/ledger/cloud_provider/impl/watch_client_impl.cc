@@ -135,6 +135,12 @@ void WatchClientImpl::CommitBatch() {
   batch_size_ = 0;
 }
 
+void WatchClientImpl::OnAuthRevoked(const std::string& reason) {
+  FTL_LOG(WARNING) << "Auth credential no longer valid: " << reason;
+  HandleError();
+  commit_watcher_->OnConnectionError();
+}
+
 void WatchClientImpl::OnMalformedEvent() {
   // Firebase already prints out debug info before calling here.
   HandleError();

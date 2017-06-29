@@ -530,6 +530,15 @@ TEST_F(CloudProviderImplTest, WatchConnectionError) {
   EXPECT_EQ(1u, unwatch_count_);
 }
 
+// Verifies that auth revoked errors are reported to the client as connection
+// errors, so that they can retry setting the watcher.
+TEST_F(CloudProviderImplTest, WatchAuthRevoked) {
+  EXPECT_EQ(0u, connection_error_calls_);
+  cloud_provider_->WatchCommits("", "", this);
+  watch_client_->OnAuthRevoked("token no longer valid");
+  EXPECT_EQ(1u, connection_error_calls_);
+}
+
 TEST_F(CloudProviderImplTest, GetCommits) {
   std::string get_response_content =
       "{\"id1V\":"

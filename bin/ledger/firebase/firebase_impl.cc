@@ -312,21 +312,7 @@ void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
   } else if (event == "cancel") {
     watch_client->OnCancel();
   } else if (event == "auth_revoked") {
-    rapidjson::Document parsed_payload;
-    parsed_payload.Parse(payload.c_str(), payload.size());
-    if (parsed_payload.HasParseError()) {
-      HandleMalformedEvent(watch_client, event, payload,
-                           "can't parse the event payload.");
-      return;
-    }
-
-    std::string reason;
-    if (!parsed_payload.IsString()) {
-      HandleMalformedEvent(watch_client, event, payload,
-                           "event payload doesn't appear to be a string");
-      return;
-    }
-    watch_client->OnAuthRevoked(parsed_payload.GetString());
+    watch_client->OnAuthRevoked(payload);
   } else {
     HandleMalformedEvent(watch_client, event, payload,
                          "unrecognized event type");
