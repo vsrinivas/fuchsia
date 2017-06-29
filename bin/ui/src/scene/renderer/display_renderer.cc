@@ -5,11 +5,12 @@
 #include "apps/mozart/src/scene/renderer/display_renderer.h"
 
 #include "apps/mozart/src/scene/resources/camera.h"
-
+#include "apps/mozart/src/scene/resources/dump_visitor.h"
 #include "escher/escher.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
+#include "lib/ftl/logging.h"
 
 namespace mozart {
 namespace scene {
@@ -28,6 +29,13 @@ DisplayRenderer::~DisplayRenderer() {}
 void DisplayRenderer::DrawFrame() {
   float width = static_cast<float>(swapchain_helper_.swapchain().width);
   float height = static_cast<float>(swapchain_helper_.swapchain().height);
+
+  if (FTL_VLOG_IS_ON(3)) {
+    std::ostringstream output;
+    DumpVisitor visitor(output);
+    Accept(&visitor);
+    FTL_VLOG(3) << "Renderer dump\n" << output.str();
+  }
 
   FTL_DCHECK(camera());
   FTL_DCHECK(camera()->scene());

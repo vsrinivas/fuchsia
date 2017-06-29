@@ -33,6 +33,9 @@ class DumpVisitor : public ResourceVisitor {
   void Visit(RectangleShape* r) override;
   void Visit(RoundedRectangleShape* r) override;
   void Visit(Material* r) override;
+  void Visit(Camera* r) override;
+  void Visit(Renderer* r) override;
+  void Visit(DirectionalLight* r) override;
   void Visit(Import* r) override;
 
  private:

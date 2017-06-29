@@ -6,11 +6,14 @@
 
 #include <ostream>
 
+#include "apps/mozart/src/scene/renderer/renderer.h"
+#include "apps/mozart/src/scene/resources/camera.h"
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 #include "apps/mozart/src/scene/resources/host_memory.h"
 #include "apps/mozart/src/scene/resources/image.h"
 #include "apps/mozart/src/scene/resources/image_pipe.h"
 #include "apps/mozart/src/scene/resources/import.h"
+#include "apps/mozart/src/scene/resources/lights/directional_light.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
@@ -161,6 +164,34 @@ void DumpVisitor::Visit(Material* r) {
     WriteProperty("texture.height")
         << r->escher_material()->texture()->height();
   }
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(Camera* r) {
+  BeginItem("Camera");
+  BeginSection("scene");
+  r->scene()->Accept(this);
+  EndSection();
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(Renderer* r) {
+  BeginItem("Renderer");
+  if (r->camera()) {
+    BeginSection("camera");
+    r->camera()->Accept(this);
+    EndSection();
+  }
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(DirectionalLight* r) {
+  BeginItem("DirectionalLight");
+  escher::operator<<(WriteProperty("direction"), r->direction());
+  WriteProperty("intensity") << r->intensity();
   VisitResource(r);
   EndItem();
 }
