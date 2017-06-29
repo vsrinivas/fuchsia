@@ -45,7 +45,7 @@ LegacyLowEnergyScanner::LegacyLowEnergyScanner(Delegate* delegate, ftl::RefPtr<T
                                                ftl::RefPtr<ftl::TaskRunner> task_runner)
     : LowEnergyScanner(delegate, hci, task_runner), active_scanning_(false) {
   event_handler_id_ = transport()->command_channel()->AddLEMetaEventHandler(
-      hci::kLEAdvertisingReportSubeventCode,
+      kLEAdvertisingReportSubeventCode,
       std::bind(&LegacyLowEnergyScanner::OnAdvertisingReportEvent, this, std::placeholders::_1),
       this->task_runner());
 }
@@ -55,14 +55,13 @@ LegacyLowEnergyScanner::~LegacyLowEnergyScanner() {
 }
 
 bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint16_t scan_window,
-                                       bool filter_duplicates,
-                                       hci::LEScanFilterPolicy filter_policy, int64_t period_ms,
-                                       const StatusCallback& callback) {
+                                       bool filter_duplicates, LEScanFilterPolicy filter_policy,
+                                       int64_t period_ms, const StatusCallback& callback) {
   FTL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
   FTL_DCHECK(callback);
   FTL_DCHECK(period_ms == kPeriodInfinite || period_ms > 0);
-  FTL_DCHECK(scan_interval <= hci::kLEScanIntervalMax && scan_interval >= hci::kLEScanIntervalMin);
-  FTL_DCHECK(scan_window <= hci::kLEScanIntervalMax && scan_window >= hci::kLEScanIntervalMin);
+  FTL_DCHECK(scan_interval <= kLEScanIntervalMax && scan_interval >= kLEScanIntervalMin);
+  FTL_DCHECK(scan_window <= kLEScanIntervalMax && scan_window >= kLEScanIntervalMin);
   FTL_DCHECK(scan_window < scan_interval);
 
   if (state() != State::kIdle) {
@@ -98,7 +97,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint
   auto enable_params = command->mutable_view()->mutable_payload<LESetScanEnableCommandParams>();
   enable_params->scanning_enabled = GenericEnableParam::kEnable;
   enable_params->filter_duplicates =
-      filter_duplicates ? hci::GenericEnableParam::kEnable : hci::GenericEnableParam::kDisable;
+      filter_duplicates ? GenericEnableParam::kEnable : GenericEnableParam::kDisable;
 
   hci_cmd_runner()->QueueCommand(std::move(command));
   hci_cmd_runner()->RunCommands([this, period_ms](bool success) {
@@ -198,41 +197,41 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
   });
 }
 
-void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const hci::EventPacket& event) {
+void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const EventPacket& event) {
   // Drop the event if not requested to scan.
   if (!IsScanning()) return;
 
-  hci::AdvertisingReportParser parser(event);
-  const hci::LEAdvertisingReportData* report;
+  AdvertisingReportParser parser(event);
+  const LEAdvertisingReportData* report;
   int8_t rssi;
   while (parser.GetNextReport(&report, &rssi)) {
     bool needs_scan_rsp = false;
     bool connectable = false;
     switch (report->event_type) {
-      case hci::LEAdvertisingEventType::kAdvDirectInd:
+      case LEAdvertisingEventType::kAdvDirectInd:
         // TODO(armansito): Forward this to a subroutine that can be shared with the LE Directed
         // Advertising eport event handler.
         FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: ignoring ADV_DIRECT_IND";
         continue;
-      case hci::LEAdvertisingEventType::kAdvInd:
+      case LEAdvertisingEventType::kAdvInd:
         connectable = true;
-      case hci::LEAdvertisingEventType::kAdvScanInd:
+      case LEAdvertisingEventType::kAdvScanInd:
         if (active_scanning_) needs_scan_rsp = true;
         break;
-      case hci::LEAdvertisingEventType::kScanRsp:
+      case LEAdvertisingEventType::kScanRsp:
         if (active_scanning_) HandleScanResponse(*report, rssi);
         continue;
       default:
         break;
     }
 
-    if (report->length_data > hci::kMaxLEAdvertisingDataLength) {
+    if (report->length_data > kMaxLEAdvertisingDataLength) {
       FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: advertising data too long! Ignoring";
       continue;
     }
 
     common::DeviceAddress address;
-    if (!hci::DeviceAddressFromAdvReport(*report, &address)) continue;
+    if (!DeviceAddressFromAdvReport(*report, &address)) continue;
 
     LowEnergyScanResult result(address, connectable, rssi);
 
@@ -254,10 +253,10 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(const hci::EventPacket& ev
   }
 }
 
-void LegacyLowEnergyScanner::HandleScanResponse(const hci::LEAdvertisingReportData& report,
+void LegacyLowEnergyScanner::HandleScanResponse(const LEAdvertisingReportData& report,
                                                 int8_t rssi) {
   common::DeviceAddress address;
-  if (!hci::DeviceAddressFromAdvReport(report, &address)) return;
+  if (!DeviceAddressFromAdvReport(report, &address)) return;
 
   auto iter = pending_results_.find(address);
   if (iter == pending_results_.end()) {
@@ -265,7 +264,7 @@ void LegacyLowEnergyScanner::HandleScanResponse(const hci::LEAdvertisingReportDa
     return;
   }
 
-  if (report.length_data > hci::kMaxLEAdvertisingDataLength) {
+  if (report.length_data > kMaxLEAdvertisingDataLength) {
     FTL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: scan response too long! Ignoring";
     return;
   }

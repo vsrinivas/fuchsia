@@ -5,7 +5,6 @@
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
 #include "apps/bluetooth/lib/testing/test_controller.h"
 
