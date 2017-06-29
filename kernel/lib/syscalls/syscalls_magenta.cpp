@@ -243,6 +243,9 @@ mx_status_t sys_cprng_draw(user_ptr<void> _buffer, size_t len, user_ptr<size_t> 
         return MX_ERR_INVALID_ARGS;
 
     uint8_t kernel_buf[kMaxCPRNGDraw];
+    // Ensure we get rid of the stack copy of the random data as this function
+    // returns.
+    explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
 
     auto prng = crypto::GlobalPRNG::GetInstance();
     ASSERT(prng->is_thread_safe());
@@ -253,8 +256,6 @@ mx_status_t sys_cprng_draw(user_ptr<void> _buffer, size_t len, user_ptr<size_t> 
     if (_actual.copy_to_user(len) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    // Get rid of the stack copy of the random data
-    mandatory_memset(kernel_buf, 0, sizeof(kernel_buf));
     return MX_OK;
 }
 
@@ -263,6 +264,10 @@ mx_status_t sys_cprng_add_entropy(user_ptr<const void> _buffer, size_t len) {
         return MX_ERR_INVALID_ARGS;
 
     uint8_t kernel_buf[kMaxCPRNGSeed];
+    // Ensure we get rid of the stack copy of the entropy as this function
+    // returns.
+    explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
+
     if (_buffer.copy_array_from_user(kernel_buf, len) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
@@ -270,7 +275,5 @@ mx_status_t sys_cprng_add_entropy(user_ptr<const void> _buffer, size_t len) {
     ASSERT(prng->is_thread_safe());
     prng->AddEntropy(kernel_buf, static_cast<int>(len));
 
-    // Get rid of the stack copy of the random data
-    mandatory_memset(kernel_buf, 0, sizeof(kernel_buf));
     return MX_OK;
 }

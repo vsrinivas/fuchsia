@@ -11,7 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/bytes.c \
 
-MODULE_HEADER_DEPS += system/ulib/c
+MODULE_HEADER_DEPS += system/ulib/c system/ulib/mxtl
 
 MODULE_EXPORT := explicit-memory
 

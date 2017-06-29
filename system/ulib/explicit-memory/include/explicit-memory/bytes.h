@@ -25,3 +25,28 @@ void* mandatory_memcpy(void* dst, const void* src, size_t n);
 void* mandatory_memset(void* dst, int c, size_t n);
 
 __END_CDECLS
+
+#ifdef __cplusplus
+#include <mxtl/type_support.h>
+
+namespace explicit_memory {
+
+// This class guarantees that the wrapped array will be filled with zeroes when
+// the wrapping ZeroDtor object goes out of scope.  See mandatory_memset() for
+// discussion on what this guarantee entails.
+template <typename T, typename = typename mxtl::enable_if<mxtl::is_pod<T>::value>::type>
+class ZeroDtor {
+public:
+    ZeroDtor(T* array, size_t len) : array_(array), len_(len) { }
+    ~ZeroDtor() {
+        mandatory_memset(static_cast<void*>(array_), 0, sizeof(T) * len_);
+    }
+    DISALLOW_COPY_ASSIGN_AND_MOVE(ZeroDtor);
+private:
+     T* const array_;
+     const size_t len_;
+};
+
+} // namespace explicit_memory
+
+#endif
