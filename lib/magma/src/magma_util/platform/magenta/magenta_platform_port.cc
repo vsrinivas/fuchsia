@@ -32,7 +32,7 @@ Status MagentaPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
 std::unique_ptr<PlatformPort> PlatformPort::Create()
 {
     mx::port port;
-    mx_status_t status = mx::port::create(MX_PORT_OPT_V2, &port);
+    mx_status_t status = mx::port::create(0, &port);
     if (status != MX_OK)
         return DRETP(nullptr, "port::create failed: %d", status);
 
