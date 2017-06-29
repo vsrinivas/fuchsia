@@ -143,7 +143,8 @@ void MediaPacketConsumerBase::Fail() {
 
 void MediaPacketConsumerBase::OnPacketReturning() {}
 
-void MediaPacketConsumerBase::OnFlushRequested(const FlushCallback& callback) {
+void MediaPacketConsumerBase::OnFlushRequested(bool hold_frame,
+                                               const FlushCallback& callback) {
   callback();
 }
 
@@ -227,7 +228,8 @@ void MediaPacketConsumerBase::SupplyPacket(
       label, std::move(media_packet), payload, callback, counter_)));
 }
 
-void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
+void MediaPacketConsumerBase::Flush(bool hold_frame,
+                                    const FlushCallback& callback) {
   FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FLOG(log_channel_, FlushRequested());
 
@@ -236,7 +238,7 @@ void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
 
   flush_pending_ = true;
 
-  OnFlushRequested([this, callback]() {
+  OnFlushRequested(hold_frame, [this, callback]() {
     FLOG(log_channel_, CompletingFlush());
     flush_pending_ = false;
     callback();

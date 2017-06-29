@@ -329,13 +329,15 @@ void MediaPlayerImpl::Update() {
           // when the operation is complete.
           state_ = State::kWaiting;
           FLOG(log_channel_, Flushing());
-          source_->Flush([this]() {
-            state_ = State::kFlushed;
-            FLOG(log_channel_, Flushed());
-            // Now we're in |kFlushed|. Call |Update| to see if there's further
-            // action to be taken.
-            Update();
-          });
+          source_->Flush(
+              target_state_ != State::kFlushed && !reader_transition_pending_,
+              [this]() {
+                state_ = State::kFlushed;
+                FLOG(log_channel_, Flushed());
+                // Now we're in |kFlushed|. Call |Update| to see if there's
+                // further action to be taken.
+                Update();
+              });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.

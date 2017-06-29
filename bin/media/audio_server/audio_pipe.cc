@@ -145,7 +145,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   }
 }
 
-void AudioPipe::OnFlushRequested(const FlushCallback& cbk) {
+void AudioPipe::OnFlushRequested(bool hold_frame, const FlushCallback& cbk) {
   FTL_DCHECK(owner_);
   next_pts_known_ = false;
   owner_->OnFlushRequested(cbk);

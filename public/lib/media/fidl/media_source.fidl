@@ -27,8 +27,10 @@ interface MediaSource {
   GetStatus(uint64 version_last_seen)
       => (uint64 version, MediaSourceStatus status);
 
-  // Flushes the source and downstream components.
-  Flush() => ();
+  // Flushes the source and downstream components. |hold_frame| indicates
+  // whether a video renderer (if any) should continue to display the last
+  // displayed frame.
+  Flush(bool hold_frame) => ();
 
   // Seeks to the specified position, specified in nanoseconds.
   Seek(int64 position) => ();

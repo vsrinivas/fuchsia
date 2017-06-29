@@ -82,7 +82,7 @@ class AudioPipe : public MediaPacketConsumerBase {
 
  protected:
   void OnPacketSupplied(SuppliedPacketPtr supplied_packet) override;
-  void OnFlushRequested(const FlushCallback& cbk) override;
+  void OnFlushRequested(bool hold_frame, const FlushCallback& cbk) override;
 
  private:
   static constexpr uint32_t kDemandMinPacketsOutstanding = 4;

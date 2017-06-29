@@ -160,7 +160,7 @@ void MediaDemuxImpl::GetStatus(uint64_t version_last_seen,
   status_publisher_.Get(version_last_seen, callback);
 }
 
-void MediaDemuxImpl::Flush(const FlushCallback& callback) {
+void MediaDemuxImpl::Flush(bool hold_frame, const FlushCallback& callback) {
   RCHECK(init_complete_.occurred());
 
   graph_.FlushAllOutputs(demux_part_);
@@ -168,7 +168,7 @@ void MediaDemuxImpl::Flush(const FlushCallback& callback) {
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
   for (std::unique_ptr<Stream>& stream : streams_) {
-    stream->FlushConnection(callback_joiner->NewCallback());
+    stream->FlushConnection(hold_frame, callback_joiner->NewCallback());
   }
 
   callback_joiner->WhenJoined(callback);
@@ -202,9 +202,10 @@ void MediaDemuxImpl::Stream::BindPacketProducer(
 }
 
 void MediaDemuxImpl::Stream::FlushConnection(
+    bool hold_frame,
     const FidlPacketProducer::FlushConnectionCallback callback) {
   FTL_DCHECK(producer_);
-  producer_->FlushConnection(callback);
+  producer_->FlushConnection(hold_frame, callback);
 }
 
 }  // namespace media

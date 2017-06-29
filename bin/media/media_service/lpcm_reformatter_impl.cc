@@ -56,10 +56,11 @@ LpcmReformatterImpl::LpcmReformatterImpl(
   graph_.ConnectParts(reformatter_ref, producer_ref);
 
   consumer_->SetFlushRequestedCallback(
-      [this, consumer_ref](const MediaPacketConsumer::FlushCallback& callback) {
+      [this, consumer_ref](bool hold_frame,
+                           const MediaPacketConsumer::FlushCallback& callback) {
         FTL_DCHECK(producer_);
         graph_.FlushOutput(consumer_ref.output());
-        producer_->FlushConnection(callback);
+        producer_->FlushConnection(hold_frame, callback);
       });
 
   graph_.Prepare();

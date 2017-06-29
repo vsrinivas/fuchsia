@@ -75,7 +75,8 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
   void OnPacketSupplied(
       std::unique_ptr<SuppliedPacket> supplied_packet) override;
 
-  void OnFlushRequested(const FlushCallback& callback) override;
+  void OnFlushRequested(bool hold_frame,
+                        const FlushCallback& callback) override;
 
   void OnFailure() override;
 
@@ -97,6 +98,7 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
 
   fidl::Binding<MediaRenderer> media_renderer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
+  std::unique_ptr<SuppliedPacket> held_packet_;
   TimelineFunction current_timeline_function_;
   int64_t pts_ = kUnspecifiedTime;
   VideoConverter converter_;

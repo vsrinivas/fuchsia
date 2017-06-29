@@ -111,6 +111,7 @@ interface MediaPacketConsumer {
   SupplyPacket(MediaPacket packet) => (MediaPacketDemand? demand);
 
   // Flushes the stream. The callback signals that the flush operation is
-  // complete.
-  Flush() => ();
+  // complete. |hold_frame| indicates whether a video renderer (if any) should
+  // continue to display the last displayed frame.
+  Flush(bool hold_frame) => ();
 };

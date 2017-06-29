@@ -39,9 +39,10 @@ void FidlPacketConsumer::OnPacketReturning() {
   SetDemand(demand);
 }
 
-void FidlPacketConsumer::OnFlushRequested(const FlushCallback& callback) {
+void FidlPacketConsumer::OnFlushRequested(bool hold_frame,
+                                          const FlushCallback& callback) {
   if (flush_requested_callback_) {
-    flush_requested_callback_(callback);
+    flush_requested_callback_(hold_frame, callback);
   } else {
     FTL_DLOG(WARNING) << "flush requested but no callback registered";
     callback();

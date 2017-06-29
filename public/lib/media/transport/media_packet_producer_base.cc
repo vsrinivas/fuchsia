@@ -49,6 +49,7 @@ void MediaPacketProducerBase::Reset() {
 }
 
 void MediaPacketProducerBase::FlushConsumer(
+    bool hold_frame,
     const MediaPacketConsumer::FlushCallback& callback) {
   FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FTL_DCHECK(consumer_.is_bound());
@@ -66,7 +67,7 @@ void MediaPacketProducerBase::FlushConsumer(
   UpdateDemand(demand);
 
   flush_in_progress_ = true;
-  consumer_->Flush([this, callback]() {
+  consumer_->Flush(hold_frame, [this, callback]() {
     flush_in_progress_ = false;
     FLOG(log_channel_, FlushCompleted());
     callback();

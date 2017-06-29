@@ -99,7 +99,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
   // Called when the consumer is asked to flush. The default implementation
   // just runs the callback.
-  virtual void OnFlushRequested(const FlushCallback& callback);
+  virtual void OnFlushRequested(bool hold_frame, const FlushCallback& callback);
 
   // Called when the binding is unbound. The default implementation does
   // nothing. Subclasses may delete themselves in overrides of |OnUnbind|.
@@ -124,7 +124,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   void SupplyPacket(MediaPacketPtr packet,
                     const SupplyPacketCallback& callback) final;
 
-  void Flush(const FlushCallback& callback) final;
+  void Flush(bool hold_frame, const FlushCallback& callback) final;
 
   // Counts oustanding supplied packets and uses their callbacks to deliver
   // demand updates. This class is referenced using shared_ptrs so that no

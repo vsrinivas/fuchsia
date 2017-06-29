@@ -13,7 +13,8 @@ namespace media {
 // Implements MediaPacketConsumer to receive a stream from across fidl.
 class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
  public:
-  using FlushRequestedCallback = std::function<void(const FlushCallback&)>;
+  using FlushRequestedCallback =
+      std::function<void(bool hold_frame, const FlushCallback&)>;
 
   static std::shared_ptr<FidlPacketConsumer> Create() {
     return std::shared_ptr<FidlPacketConsumer>(new FidlPacketConsumer());
@@ -38,7 +39,8 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 
   void OnPacketReturning() override;
 
-  void OnFlushRequested(const FlushCallback& callback) override;
+  void OnFlushRequested(bool hold_frame,
+                        const FlushCallback& callback) override;
 
   void OnUnbind() override;
 

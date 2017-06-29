@@ -40,7 +40,8 @@ class MediaPacketProducerBase {
   void Reset();
 
   // Flushes the consumer.
-  void FlushConsumer(const MediaPacketConsumer::FlushCallback& callback);
+  void FlushConsumer(bool hold_frame,
+                     const MediaPacketConsumer::FlushCallback& callback);
 
   // Allocates a payload buffer of the specified size.
   void* AllocatePayloadBuffer(size_t size);

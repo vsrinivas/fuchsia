@@ -8,8 +8,8 @@
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/src/framework/models/active_sink.h"
 #include "apps/media/src/framework/payload_allocator.h"
-#include "lib/ftl/tasks/task_runner.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace media {
 
@@ -33,12 +33,13 @@ class FidlPacketProducer
   // Binds.
   void Bind(fidl::InterfaceRequest<MediaPacketProducer> request);
 
-    // Sets a callback called whenever the connection state changes.
+  // Sets a callback called whenever the connection state changes.
   void SetConnectionStateChangedCallback(
       const ConnectionStateChangedCallback& callback);
 
   // Flushes and tells the connected consumer to flush.
-  void FlushConnection(const FlushConnectionCallback& callback);
+  void FlushConnection(bool hold_frame,
+                       const FlushConnectionCallback& callback);
 
   // ActiveSink implementation.
   PayloadAllocator* allocator() override;

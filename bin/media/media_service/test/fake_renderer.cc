@@ -153,7 +153,8 @@ void FakeRenderer::OnPacketSupplied(
   }
 }
 
-void FakeRenderer::OnFlushRequested(const FlushCallback& callback) {
+void FakeRenderer::OnFlushRequested(bool hold_frame,
+                                    const FlushCallback& callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.pop();
   }

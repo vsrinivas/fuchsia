@@ -31,8 +31,10 @@ VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
         }
       });
 
-  timeline_control_point_.SetProgressStartedCallback(
-      [this]() { InvalidateViews(); });
+  timeline_control_point_.SetProgressStartedCallback([this]() {
+    held_packet_.reset();
+    InvalidateViews();
+  });
 
   status_publisher_.SetCallbackRunner(
       [this](const VideoRenderer::GetStatusCallback& callback,
@@ -84,14 +86,18 @@ void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
 
 void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
                                     const mozart::Size& rgba_buffer_size) {
-  if (packet_queue_.empty()) {
-    memset(rgba_buffer, 0,
-           rgba_buffer_size.width * rgba_buffer_size.height * 4);
-  } else {
+  if (held_packet_) {
+    converter_.ConvertFrame(rgba_buffer, rgba_buffer_size.width,
+                            rgba_buffer_size.height, held_packet_->payload(),
+                            held_packet_->payload_size());
+  } else if (!packet_queue_.empty()) {
     converter_.ConvertFrame(rgba_buffer, rgba_buffer_size.width,
                             rgba_buffer_size.height,
                             packet_queue_.front()->payload(),
                             packet_queue_.front()->payload_size());
+  } else {
+    memset(rgba_buffer, 0,
+           rgba_buffer_size.width * rgba_buffer_size.height * 4);
   }
 }
 
@@ -198,7 +204,7 @@ void VideoFrameSource::OnPacketSupplied(
     // determine whether we're done priming.
     packet_queue_.push(std::move(supplied_packet));
 
-    if (packet_queue_.size() >= kPacketDemand) {
+    if (packet_queue_.size() + (held_packet_ ? 1 : 0) >= kPacketDemand) {
       prime_callback_();
       prime_callback_ = nullptr;
     }
@@ -211,9 +217,16 @@ void VideoFrameSource::OnPacketSupplied(
   }
 }
 
-void VideoFrameSource::OnFlushRequested(const FlushCallback& callback) {
-  while (!packet_queue_.empty()) {
-    packet_queue_.pop();
+void VideoFrameSource::OnFlushRequested(bool hold_frame,
+                                        const FlushCallback& callback) {
+  if (!packet_queue_.empty()) {
+    if (hold_frame) {
+      held_packet_ = std::move(packet_queue_.front());
+    }
+
+    while (!packet_queue_.empty()) {
+      packet_queue_.pop();
+    }
   }
 
   timeline_control_point_.ClearEndOfStream();

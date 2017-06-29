@@ -44,7 +44,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
 
-  void Flush(const FlushCallback& callback) override;
+  void Flush(bool hold_frame, const FlushCallback& callback) override;
 
   void Seek(int64_t position, const SeekCallback& callback) override;
 
@@ -75,6 +75,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
 
     // Tells the producer to flush its connection.
     void FlushConnection(
+        bool hold_frame,
         const FidlPacketProducer::FlushConnectionCallback callback);
 
    private:

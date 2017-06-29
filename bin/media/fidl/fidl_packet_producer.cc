@@ -32,9 +32,9 @@ void FidlPacketProducer::SetConnectionStateChangedCallback(
 }
 
 void FidlPacketProducer::FlushConnection(
-    const FlushConnectionCallback& callback) {
+    bool hold_frame, const FlushConnectionCallback& callback) {
   if (is_connected()) {
-    FlushConsumer(callback);
+    FlushConsumer(hold_frame, callback);
   } else {
     callback();
   }
