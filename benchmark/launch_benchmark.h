@@ -17,14 +17,20 @@
 //   --test-arg=<argument to test> the argument of the app to be tested
 //   --min-value=<int> the initial (minimum) value for the test-arg
 //   --max-value=<int> the final (maximum) value for the test-arg
-//   --step=<int> the step increasing the test-arg value after each execution
+//   --step=<int> used for arithmetic sequence updates in the value: the
+//     test-arg value will be increased by |step| after each execution
+//   --mult=<int> used for geometric sequence updates in the value: the test-arg
+//     value will be multiplied by |mult| after each execution
 //   --append-args=<args> comma separated additional arguments for the app
 class LaunchBenchmark {
  public:
+  enum class SequenceType { ARITHMETIC, GEOMETRIC };
+
   LaunchBenchmark(std::string app_url,
                   std::string test_arg,
                   int min_value,
                   int max_value,
+                  SequenceType sequence_type,
                   int step,
                   std::vector<std::string> args);
 
@@ -35,6 +41,7 @@ class LaunchBenchmark {
   std::string test_arg_;
   int current_value_;
   int max_value_;
+  SequenceType sequence_type_;
   int step_;
   std::vector<std::string> args_;
 

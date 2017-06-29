@@ -22,15 +22,16 @@ constexpr ftl::StringView kTestArgFlag = "test-arg";
 constexpr ftl::StringView kMinValueFlag = "min-value";
 constexpr ftl::StringView kMaxValueFlag = "max-value";
 constexpr ftl::StringView kStepFlag = "step";
+constexpr ftl::StringView kMultFlag = "mult";
 
 constexpr ftl::StringView kAppendArgsFlag = "append-args";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kAppUrlFlag
             << "=<app url> --" << kTestArgFlag << "=<argument to test> --"
-            << kMinValueFlag << "=<int> --" << kMaxValueFlag << "=<int> --"
-            << kStepFlag << "=<int> --" << kAppendArgsFlag
-            << "<extra arguments for the app>" << std::endl;
+            << kMinValueFlag << "=<int> --" << kMaxValueFlag << "=<int> (--"
+            << kStepFlag << "=<int>|" << kMultFlag << "=<int>) --"
+            << kAppendArgsFlag << "<extra arguments for the app>" << std::endl;
 }
 
 bool GetPositiveIntValue(const ftl::CommandLine& command_line,
@@ -54,12 +55,14 @@ LaunchBenchmark::LaunchBenchmark(std::string app_url,
                                  std::string test_arg,
                                  int min_value,
                                  int max_value,
+                                 SequenceType sequence_type,
                                  int step,
                                  std::vector<std::string> args)
     : app_url_(std::move(app_url)),
       test_arg_(std::move(test_arg)),
       current_value_(min_value),
       max_value_(max_value),
+      sequence_type_(sequence_type),
       step_(step),
       args_(std::move(args)),
       context_(app::ApplicationContext::CreateFromStartupInfo()) {
@@ -86,7 +89,14 @@ void LaunchBenchmark::StartNext() {
                                           GetProxy(&application_controller_));
 
   application_controller_.set_connection_error_handler([this] {
-    current_value_ += step_;
+    switch (sequence_type_) {
+      case SequenceType::ARITHMETIC:
+        current_value_ += step_;
+        break;
+      case SequenceType::GEOMETRIC:
+        current_value_ *= step_;
+        break;
+    }
     StartNext();
   });
 }
@@ -111,11 +121,33 @@ int main(int argc, const char** argv) {
   int max_value;
   int step;
   if (!GetPositiveIntValue(command_line, kMinValueFlag, &min_value) ||
-      !GetPositiveIntValue(command_line, kMaxValueFlag, &max_value) ||
-      !GetPositiveIntValue(command_line, kStepFlag, &step)) {
+      !GetPositiveIntValue(command_line, kMaxValueFlag, &max_value)) {
     PrintUsage(argv[0]);
     return -1;
   }
+
+  LaunchBenchmark::SequenceType sequence_type;
+  std::string value_str;
+  if (command_line.GetOptionValue(kStepFlag.ToString(), &value_str) ==
+      command_line.GetOptionValue(kMultFlag.ToString(), &value_str)) {
+    // Either both step and mult flags are given or they are both missing.
+    std::cout << "Exactly one of the  " << kStepFlag << " or " << kMultFlag
+              << " arguments must be provided." << std::endl;
+  }
+  if (command_line.GetOptionValue(kStepFlag.ToString(), &value_str)) {
+    sequence_type = LaunchBenchmark::SequenceType::ARITHMETIC;
+    if (!GetPositiveIntValue(command_line, kStepFlag, &step)) {
+      PrintUsage(argv[0]);
+      return -1;
+    }
+  } else {
+    sequence_type = LaunchBenchmark::SequenceType::GEOMETRIC;
+    if (!GetPositiveIntValue(command_line, kMultFlag, &step)) {
+      PrintUsage(argv[0]);
+      return -1;
+    }
+  }
+
   if (max_value < min_value) {
     std::cout << kMaxValueFlag << " should be >= " << kMinValueFlag
               << " (Found: " << max_value << " < " << min_value << ")";
@@ -133,7 +165,7 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
   LaunchBenchmark launch_benchmark(std::move(app_url), std::move(test_arg),
-                                   min_value, max_value, step,
+                                   min_value, max_value, sequence_type, step,
                                    std::move(append_args));
   loop.task_runner()->PostTask(
       [&launch_benchmark] { launch_benchmark.StartNext(); });
