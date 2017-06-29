@@ -45,7 +45,7 @@ Device::~Device() {
 mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     debugfn();
 
-    mx_status_t status = mx::port::create(MX_PORT_OPT_V2, &port_);
+    mx_status_t status = mx::port::create(0, &port_);
     if (status != MX_OK) {
         errorf("could not create port: %d\n", status);
         return status;
