@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import itertools
 import json
 import os
 import string
@@ -38,6 +39,44 @@ def get_target(label):
         name = base[base.rfind("/")+1:]
         path = base
     return path, name
+
+
+# Gathers build metadata from the given dependencies.
+def gather_dependency_infos(root_gen_dir, deps):
+    result = []
+    for dep in deps:
+        path, name = get_target(dep)
+        base_path = os.path.join(root_gen_dir, path, "%s.rust" % name)
+        # Read the information attached to the target.
+        info_path = os.path.join(base_path, "%s.info.toml" % name)
+        with open(info_path, "r") as info_file:
+            result.append(toml.load(info_file))
+    return result
+
+
+# Write some metadata about the target.
+def write_target_info(label, gen_dir, package_name, native_libs,
+                      has_generated_code=True):
+    _, target_name = get_target(label)
+    # Note: gen_dir already contains the "target.rust" directory.
+    info_path = os.path.join(gen_dir, "%s.info.toml" % target_name)
+    create_base_directory(info_path)
+    info = {
+        "name": package_name,
+        "native_libs": native_libs,
+        "base_path": gen_dir,
+        "has_generated_code": has_generated_code,
+    }
+    with open(info_path, "w") as info_file:
+        toml.dump(info, info_file)
+
+
+# Returns the list of native libs inherited from the given dependencies.
+def extract_native_libs(dependency_infos):
+    all_libs = itertools.chain.from_iterable(map(lambda i: i["native_libs"],
+                                                 dependency_infos))
+    return list(set(all_libs))
+
 
 # Writes a cargo config file.
 def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
@@ -133,9 +172,6 @@ def main():
     parser.add_argument("--deps",
                         help="List of dependencies",
                         nargs="*")
-    parser.add_argument("--native-libs",
-                        help="List of native libraries to link to",
-                        nargs="*")
     parser.add_argument("--shared-libs-root",
                         help="Path to the location of shared libraries",
                         required=True)
@@ -143,6 +179,8 @@ def main():
                         help="Whether to generate unit tests too",
                         action="store_true")
     args = parser.parse_args()
+
+    dependency_infos = gather_dependency_infos(args.root_gen_dir, args.deps)
 
     env = os.environ.copy()
     if args.linker is not None:
@@ -199,35 +237,34 @@ def main():
         if "dependencies" not in config:
             config["dependencies"] = {}
         dependencies = config["dependencies"]
-        for dep in args.deps:
-            path, name = get_target(dep)
-            base_path = os.path.join(args.root_gen_dir, path, "%s.rust" % name)
-            # Read the name of the Rust artifact.
-            artifact_path = os.path.join(base_path, "%s.rust_name" % name)
-            with open(artifact_path, "r") as artifact_file:
-                artifact_name = artifact_file.read()
+        for info in dependency_infos:
+            if not info["has_generated_code"]:
+                # This is a third-party dependency, cargo already knows how to
+                # find it.
+                continue
+            artifact_name = info["name"]
+            base_path = info["base_path"]
             if artifact_name not in dependencies:
                 dependencies[artifact_name] = {}
-            dependencies[artifact_name]["path"] = os.path.relpath(base_path, args.gen_dir)
+            dependencies[artifact_name]["path"] = os.path.relpath(base_path,
+                                                                  args.gen_dir)
 
         # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
             toml.dump(config, generated_config)
 
+    # Gather the set of native libraries that will need to be linked.
+    native_libs = extract_native_libs(dependency_infos)
+
     if args.type == "lib":
-        # Write a file mapping target name to Rust artifact name.
+        # Write a file mapping target name to some metadata about the target.
         # This will be used to set up dependencies.
-        _, target_name = get_target(args.label)
-        # Note: gen_dir already contains the "target.rust" directory.
-        name_path = os.path.join(args.gen_dir, "%s.rust_name" % target_name)
-        create_base_directory(name_path)
-        with open(name_path, "w") as name_file:
-            name_file.write(package_name)
+        write_target_info(args.label, args.gen_dir, package_name, native_libs)
 
     # Write a config file to allow cargo to find the vendored crates.
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
     write_cargo_config(config_path, args.vendor_directory, args.target_triple,
-                       args.shared_libs_root, args.native_libs)
+                       args.shared_libs_root, native_libs)
 
     if args.type == "lib":
         # Since the generated .rlib artifact won't actually be used (for now),

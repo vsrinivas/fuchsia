@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/toolchain/shared.gni")
-import("//third_party/rust-crates/libraries.gni")
 
 # Defines a Rust artifact
 #
@@ -31,7 +30,11 @@ template("rust_artifact") {
 
   rust_deps = []
   if (defined(invoker.deps)) {
-    rust_deps = invoker.deps
+    foreach(dep, invoker.deps) {
+      rust_deps += [
+        get_label_info(dep, "label_no_toolchain"),
+      ]
+    }
   }
 
   source_dir = "."
@@ -120,7 +123,7 @@ template("rust_artifact") {
     ]
     if (type == "lib") {
       outputs += [
-        "$base_gen_dir/$main_target_name.rust_name",
+        "$base_gen_dir/$main_target_name.info.toml",
       ]
     }
 
@@ -128,7 +131,6 @@ template("rust_artifact") {
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
-    deps += rust_native_libs_targets
     if (is_fuchsia) {
       clang_wrapper_target = "//rust/magenta-rs/tools:clang_wrapper($host_toolchain)"
       deps += [
@@ -166,7 +168,6 @@ template("rust_artifact") {
       "--deps",
     ] + rust_deps
 
-    args += [ "--native-libs" ] + rust_native_libs_names
     args += [
       "--shared-libs-root",
       rebase_path(shared_toolchain_out_dir),
