@@ -27,6 +27,9 @@ Renderer::Renderer(Session* session,
     : Resource(session, Renderer::kTypeInfo),
       frame_scheduler_(frame_scheduler) {
   FTL_DCHECK(frame_scheduler);
+  escher::MaterialPtr default_material_ =
+      ftl::MakeRefCounted<escher::Material>();
+  default_material_->set_color(escher::vec3(0.f, 0.f, 0.f));
 }
 
 Renderer::~Renderer() {
@@ -39,7 +42,7 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
     const ScenePtr& scene,
     escher::vec2 screen_dimensions) {
   // Construct a display list from the tree.
-  Visitor v;
+  Visitor v(default_material_);
   scene->Accept(&v);
   std::vector<escher::Object> objects = v.TakeDisplayList();
 
@@ -68,6 +71,9 @@ void Renderer::SetCamera(CameraPtr camera) {
     frame_scheduler_->RemoveRenderer(this);
   }
 }
+
+Renderer::Visitor::Visitor(const escher::MaterialPtr& default_material)
+    : default_material_(default_material) {}
 
 std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
   return std::move(display_list_);
@@ -112,10 +118,13 @@ void Renderer::Visitor::Visit(Scene* r) {
 void Renderer::Visitor::Visit(ShapeNode* r) {
   auto& shape = r->shape();
   auto& material = r->material();
-  material->Accept(this);
-  if (shape && material) {
+  if (material) {
+    material->Accept(this);
+  }
+  if (shape) {
     display_list_.push_back(shape->GenerateRenderObject(
-        r->GetGlobalTransform(), material->escher_material()));
+        r->GetGlobalTransform(),
+        material ? material->escher_material() : default_material_));
   }
   // We don't need to call |VisitNode| because shape nodes don't have
   // children or parts.

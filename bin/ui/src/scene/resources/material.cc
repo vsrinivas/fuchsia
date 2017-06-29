@@ -32,9 +32,7 @@ void Material::UpdateEscherMaterial() {
   // Update our escher::Material if our texture's presented image changed.
   escher::ImagePtr escher_image;
   if (texture_) {
-    const ImagePtr& image = texture_->GetPresentedImage();
-    if (image)
-      escher_image = image->escher_image();
+    escher_image = texture_->GetEscherImage();
   }
   const escher::TexturePtr& escher_texture = escher_material_->texture();
 

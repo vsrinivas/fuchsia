@@ -112,7 +112,7 @@ void ImagePipe::PresentImage(uint32_t image_id,
       [this] { session()->context()->ScheduleUpdate(0); });
 };
 
-ImagePtr ImagePipe::GetPresentedImage() {
+const escher::ImagePtr& ImagePipe::GetEscherImage() {
   // TODO: What should the behavior here be? If a particular frame was not
   // signalled, but subsequent ones were, then should we skip it? For now, we
   // follow a strict queue order and wait for frames to be acquired before
@@ -139,10 +139,11 @@ ImagePtr ImagePipe::GetPresentedImage() {
   if (frames_.size() > 0 && frames_.front().acquire_fence->is_ready()) {
     ImagePtr image = images_.FindResource<Image>(frames_.front().image_id);
     FTL_DCHECK(image);
-    return image;
+    return image->GetEscherImage();
   }
 
-  return nullptr;
+  static const escher::ImagePtr kNullEscherImage;
+  return kNullEscherImage;
 };
 
 }  // namespace scene

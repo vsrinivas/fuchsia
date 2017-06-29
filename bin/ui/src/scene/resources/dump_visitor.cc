@@ -47,22 +47,26 @@ void DumpVisitor::Visit(HostMemory* r) {
   EndItem();
 }
 
+void DumpVisitor::VisitEscherImage(escher::Image* i) {
+  WriteProperty("width") << i->width();
+  WriteProperty("height") << i->height();
+  WriteProperty("format") << static_cast<int>(i->format());
+  WriteProperty("has_depth") << i->has_depth();
+  WriteProperty("has_stencil") << i->has_stencil();
+}
+
 void DumpVisitor::Visit(Image* r) {
   BeginItem("Image");
-  WriteProperty("width") << r->escher_image()->width();
-  WriteProperty("height") << r->escher_image()->height();
-  WriteProperty("format") << static_cast<int>(r->escher_image()->format());
-  WriteProperty("has_depth") << r->escher_image()->has_depth();
-  WriteProperty("has_stencil") << r->escher_image()->has_stencil();
+  VisitEscherImage(r->GetEscherImage().get());
   VisitResource(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(ImagePipe* r) {
   BeginItem("ImagePipe");
-  if (r->GetPresentedImage()) {
+  if (r->GetEscherImage()) {
     BeginSection("currently presented image");
-    r->GetPresentedImage()->Accept(this);
+    VisitEscherImage(r->GetEscherImage().get());
     EndSection();
   }
   VisitResource(r);

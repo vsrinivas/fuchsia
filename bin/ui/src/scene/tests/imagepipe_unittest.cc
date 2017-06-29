@@ -159,14 +159,14 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
   ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
-  ASSERT_FALSE(image_pipe->GetPresentedImage());
+  ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Signal on the acquire fence.
   acquire_fence1.signal(0u, kFenceSignalled);
 
   // Run until image1 is presented.
-  RUN_MESSAGE_LOOP_UNTIL(image_pipe->GetPresentedImage());
-  ImagePtr image1 = image_pipe->GetPresentedImage();
+  RUN_MESSAGE_LOOP_UNTIL(image_pipe->GetEscherImage());
+  escher::ImagePtr image1 = image_pipe->GetEscherImage();
 
   // Image should now be presented.
   ASSERT_TRUE(image1);
@@ -205,14 +205,14 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
   ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
-  ASSERT_EQ(image_pipe->GetPresentedImage(), image1);
+  ASSERT_EQ(image_pipe->GetEscherImage(), image1);
 
   // Signal on the acquire fence.
   acquire_fence2.signal(0u, kFenceSignalled);
 
   // There should be a new image presented.
-  RUN_MESSAGE_LOOP_UNTIL(image1 != image_pipe->GetPresentedImage());
-  ImagePtr image2 = image_pipe->GetPresentedImage();
+  RUN_MESSAGE_LOOP_UNTIL(image1 != image_pipe->GetEscherImage());
+  escher::ImagePtr image2 = image_pipe->GetEscherImage();
   ASSERT_TRUE(image2);
   ASSERT_NE(image1, image2);
 

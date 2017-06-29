@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <iosfwd>
 
+#include "escher/renderer/image.h"
+
 #include "apps/mozart/src/scene/resources/resource_visitor.h"
 
 namespace mozart {
@@ -40,6 +42,7 @@ class DumpVisitor : public ResourceVisitor {
  private:
   void VisitNode(Node* r);
   void VisitResource(Resource* r);
+  void VisitEscherImage(escher::Image* i);
 
   void BeginItem(const char* type, uint32_t resource_id = 0u);
   std::ostream& WriteProperty(const char* label);

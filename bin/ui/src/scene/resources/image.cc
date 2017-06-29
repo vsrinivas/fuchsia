@@ -170,9 +170,5 @@ ImagePtr Image::NewForTesting(Session* session,
   return ftl::AdoptRef(new Image(session, escher_image, host_memory));
 }
 
-ImagePtr Image::GetPresentedImage() {
-  return ImagePtr(this);
-}
-
 }  // namespace scene
 }  // namespace mozart

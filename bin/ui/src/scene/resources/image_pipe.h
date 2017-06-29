@@ -50,13 +50,14 @@ class ImagePipe : public ImageBase {
 
   // Returns the image that should be presented at the current time. Can be
   // null.
-  ImagePtr GetPresentedImage() override;
+  const escher::ImagePtr& GetEscherImage() override;
 
   // Returns true if the connection to the ImagePipe has not closed.
   bool is_valid() { return is_valid_; };
 
  private:
   friend class ImagePipeHandler;
+
   // Called when the image pipe connection is closed.
   void OnConnectionError();
 

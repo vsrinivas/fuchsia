@@ -72,14 +72,20 @@ class Renderer : public Resource {
     void Visit(DirectionalLight* r) override;
     void Visit(Import* r) override;
 
+   protected:
    private:
+    friend class Renderer;
+    Visitor(const escher::MaterialPtr& default_material);
+
     void VisitNode(Node* r);
 
     std::vector<escher::Object> display_list_;
+    const escher::MaterialPtr& default_material_;
   };
 
   FrameScheduler* const frame_scheduler_;
   CameraPtr camera_;
+  escher::MaterialPtr default_material_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };

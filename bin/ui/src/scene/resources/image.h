@@ -61,9 +61,7 @@ class Image : public ImageBase {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  ImagePtr GetPresentedImage() override;
-
-  const escher::ImagePtr& escher_image() const { return image_; }
+  const escher::ImagePtr& GetEscherImage() override { return image_; }
 
  private:
   // Create an Image object from a VkImage.
