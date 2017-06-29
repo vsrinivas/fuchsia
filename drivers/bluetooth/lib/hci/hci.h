@@ -98,8 +98,6 @@ constexpr OpCode kNoOp = 0x0000;
 // (e.g. BR/EDR, LE, AMP) will also contain that definition.
 //
 // NOTE(armansito): This list is incomplete. Entries will be added as needed.
-// TODO(armansito): Complete the HCI LE commands and events even if we don't
-// use them right away..
 
 // ======= Link Control Commands =======
 // Core Spec v5.0, Vol 2, Part E, Section 7.1

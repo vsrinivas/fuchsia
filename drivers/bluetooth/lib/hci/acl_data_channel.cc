@@ -19,8 +19,6 @@ namespace hci {
 
 DataBufferInfo::DataBufferInfo(size_t max_data_length, size_t max_num_packets)
     : max_data_length_(max_data_length), max_num_packets_(max_num_packets) {
-  FTL_DCHECK(max_data_length_);
-  FTL_DCHECK(max_num_packets_);
 }
 
 DataBufferInfo::DataBufferInfo() : max_data_length_(0u), max_num_packets_(0u) {}
