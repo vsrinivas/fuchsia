@@ -225,14 +225,14 @@ class EntityNode : public ContainerTraits<Node> {
 // Represents a tag node resource in a session.
 class TagNode : public ContainerTraits<Node> {
  public:
-  explicit TagNode(Session* session, int32_t tag_value);
+  explicit TagNode(Session* session, uint32_t tag_value);
   ~TagNode();
 
   // Gets the node's tag value.
-  int32_t tag_value() const { return tag_value_; }
+  uint32_t tag_value() const { return tag_value_; }
 
  private:
-  int32_t const tag_value_;
+  uint32_t const tag_value_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TagNode);
 };

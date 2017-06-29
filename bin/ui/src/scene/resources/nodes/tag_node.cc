@@ -12,8 +12,8 @@ namespace scene {
 const ResourceTypeInfo TagNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kTagNode, "TagNode"};
 
-TagNode::TagNode(Session* session, ResourceId node_id, int32_t tag)
-    : Node(session, node_id, TagNode::kTypeInfo), tag_value_(tag) {}
+TagNode::TagNode(Session* session, ResourceId node_id, uint32_t tag_value)
+    : Node(session, node_id, TagNode::kTypeInfo), tag_value_(tag_value) {}
 
 HitTestResults TagNode::HitTest(const escher::vec2& point) const {
   HitTestResults results;

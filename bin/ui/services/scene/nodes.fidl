@@ -51,5 +51,5 @@ struct ShapeNode {};
 // Characteristics:
 // - has_children
 struct TagNode {
-  int32 tag_value;
+  uint32 tag_value;
 };

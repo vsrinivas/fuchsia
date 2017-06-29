@@ -301,7 +301,7 @@ mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, int32_t tag_value) {
+mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, uint32_t tag_value) {
   auto node = mozart2::TagNode::New();
   node->tag_value = tag_value;
 

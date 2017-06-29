@@ -15,11 +15,11 @@ using TagTest = SessionTest;
 
 TEST_F(TagTest, TagCreation) {
   ResourceId resource_id = 1;
-  int32_t tag_value = 999;
+  uint32_t tag_value = 999;
   ASSERT_TRUE(Apply(NewCreateTagNodeOp(resource_id, tag_value)));
   auto tag_node = FindResource<TagNode>(resource_id);
   ASSERT_TRUE(tag_node);
-  ASSERT_EQ(tag_node->tag(), tag_value);
+  ASSERT_EQ(tag_node->tag_value(), tag_value);
 }
 
 TEST_F(TagTest, SimpleHierarchyCreation) {

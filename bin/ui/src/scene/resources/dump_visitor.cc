@@ -94,7 +94,7 @@ void DumpVisitor::Visit(ShapeNode* r) {
 
 void DumpVisitor::Visit(TagNode* r) {
   BeginItem("TagNode", r->resource_id());
-  WriteProperty("tag") << r->tag();
+  WriteProperty("tag_value") << r->tag_value();
   VisitNode(r);
   EndItem();
 }

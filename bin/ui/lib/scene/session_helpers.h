@@ -74,7 +74,7 @@ mozart2::OpPtr NewCreateMaterialOp(uint32_t id);
 mozart2::OpPtr NewCreateClipNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateEntityNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id);
-mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, int32_t tag_value);
+mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, uint32_t tag_value);
 mozart2::OpPtr NewCreateVariableFloatOp(uint32_t id, float inital_val);
 
 mozart2::OpPtr NewReleaseResourceOp(uint32_t id);

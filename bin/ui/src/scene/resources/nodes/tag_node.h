@@ -15,9 +15,9 @@ class TagNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  TagNode(Session* session, ResourceId node_id, int32_t tag);
+  TagNode(Session* session, ResourceId node_id, uint32_t tag_value);
 
-  int32_t tag() const { return tag_value_; }
+  uint32_t tag_value() const { return tag_value_; }
 
   /// Returns the list of tag nodes whose children have accepted the hit test.
   /// The hit test results are in the coordinate space of the nearest tag
@@ -28,7 +28,7 @@ class TagNode final : public Node {
   void Accept(class ResourceVisitor* visitor) override;
 
  private:
-  int32_t tag_value_;
+  uint32_t tag_value_;
 
   bool HitTestVisitNode(const Node& child_node,
                         HitTestResults& results,
