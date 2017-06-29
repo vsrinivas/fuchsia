@@ -26,6 +26,9 @@ namespace debugserver {
 namespace {
 
 std::string IOPortPacketTypeToString(const mx_packet_header_t& header) {
+  if (MX_PKT_IS_EXCEPTION(header.type)) {
+    return "MX_PORT_PKT_TYPE_EXCEPTION";
+  }
 #define CASE_TO_STR(x) \
   case x:              \
     return #x
@@ -33,7 +36,6 @@ std::string IOPortPacketTypeToString(const mx_packet_header_t& header) {
     CASE_TO_STR(MX_PORT_PKT_TYPE_KERN);
     CASE_TO_STR(MX_PORT_PKT_TYPE_IOSN);
     CASE_TO_STR(MX_PORT_PKT_TYPE_USER);
-    CASE_TO_STR(MX_PORT_PKT_TYPE_EXCEPTION);
     default:
       break;
   }
@@ -179,15 +181,15 @@ void ExceptionPort::Worker() {
                 << " type: " << IOPortPacketTypeToString(packet.hdr);
 
     // TODO(armansito): How to handle this?
-    if (packet.hdr.type != MX_PORT_PKT_TYPE_EXCEPTION)
+    if (!MX_PKT_IS_EXCEPTION(packet.hdr.type))
       continue;
 
     FTL_VLOG(1) << "Exception received: "
                 << util::ExceptionName(static_cast<const mx_excp_type_t>(
-                       packet.report.header.type))
-                << " (" << packet.report.header.type
-                << "), pid: " << packet.report.context.pid
-                << ", tid: " << packet.report.context.tid;
+                       packet.hdr.type))
+                << " (" << packet.hdr.type
+                << "), pid: " << packet.pid
+                << ", tid: " << packet.tid;
 
     // Handle the exception on the main thread.
     origin_task_runner_->PostTask([packet, this] {
@@ -197,9 +199,28 @@ void ExceptionPort::Worker() {
         return;
       }
 
+      mx_handle_t thread;
+      mx_status_t status = mx_object_get_child(iter->second.process_handle,
+                                               packet.tid,
+                                               MX_RIGHT_SAME_RIGHTS, &thread);
+      if (status < 0) {
+        FTL_VLOG(1) << "Failed to get a handle to [" << packet.pid
+                    << "." << packet.tid << "]";
+        return;
+      }
+      mx_exception_report_t report;
+      status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT,
+                                  &report, sizeof(report), NULL, NULL);
+      mx_handle_close(thread);
+      if (status < 0) {
+        FTL_VLOG(1) << "Failed to get exception report for [" << packet.pid
+                    << "." << packet.tid << "]";
+        return;
+      }
+
       iter->second.callback(
-          static_cast<const mx_excp_type_t>(packet.report.header.type),
-          packet.report.context);
+          static_cast<const mx_excp_type_t>(packet.hdr.type),
+          report.context);
     });
   }
 
