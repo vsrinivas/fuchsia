@@ -28,7 +28,7 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
  public:
   static ftl::RefPtr<HandleWaiter> Create(std::string stack);
 
-  void asyncWait(mx_handle_t handle, mx_signals_t signals, mx_time_t timeout);
+  void asyncWait(uint64_t handle, mx_signals_t signals, mx_time_t timeout);
   void cancelWait();
 
   static void RegisterNatives(tonic::DartLibraryNatives* natives);

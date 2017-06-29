@@ -9,6 +9,7 @@
 #include "lib/tonic/dart_args.h"
 #include "lib/tonic/dart_binding_macros.h"
 #include "lib/tonic/dart_library_natives.h"
+#include "lib/tonic/handle_table.h"
 #include "lib/tonic/logging/dart_invoke.h"
 
 using tonic::DartInvokeField;
@@ -61,10 +62,11 @@ HandleWaiter::~HandleWaiter() {
   }
 }
 
-void HandleWaiter::asyncWait(mx_handle_t handle,
+void HandleWaiter::asyncWait(uint64_t handle,
                              mx_signals_t signals,
                              mx_time_t timeout) {
   cancelWait();
+  handle = tonic::HandleTable::Current().Unwrap(handle);
   wait_id_ = waiter_->AsyncWait(handle, signals, timeout,
                                 HandleWaiter::CallOnWaitComplete, this);
 }
