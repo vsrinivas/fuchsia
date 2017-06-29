@@ -34,7 +34,7 @@ mx_status_t DispatcherThread::AddClientLocked() {
     // If we have never added any clients, we will need to start by creating the
     // central port.
     if (!port_.is_valid()) {
-        res = mx::port::create(MX_PORT_OPT_V2, &port_);
+        res = mx::port::create(0, &port_);
         if (res != MX_OK) {
             printf("Failed to create client therad pool port (res %d)!\n", res);
             return res;
