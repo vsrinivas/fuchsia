@@ -35,15 +35,24 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
 
 class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
  public:
-  void Start() { start_called = true; }
+  void Start() override { start_called = true; }
 
-  void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded_callback) {
+  void SetOnBacklogDownloaded(
+      ftl::Closure on_backlog_downloaded_callback) override {
     this->on_backlog_downloaded_callback =
         std::move(on_backlog_downloaded_callback);
   }
 
+  void SetOnIdle(ftl::Closure on_idle) override { this->on_idle = on_idle; }
+
+  void SetSyncWatcher(cloud_sync::SyncStateWatcher* watcher) override {
+    this->watcher = watcher;
+  }
+
   bool start_called = false;
+  cloud_sync::SyncStateWatcher* watcher = nullptr;
   ftl::Closure on_backlog_downloaded_callback;
+  ftl::Closure on_idle;
 };
 
 class PageManagerTest : public test::TestWithMessageLoop {
@@ -175,12 +184,14 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(&environment_, storage.get());
 
+  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(page_sync_context), std::move(merger));
 
+  EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -220,6 +231,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(&environment_, storage.get());
 
+  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -227,6 +239,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
                            std::move(page_sync_context), std::move(merger),
                            ftl::TimeDelta::FromSeconds(0));
 
+  EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
@@ -240,6 +253,37 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
+}
+
+TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
+  auto fake_page_sync = std::make_unique<FakePageSync>();
+  auto fake_page_sync_ptr = fake_page_sync.get();
+  auto page_sync_context = std::make_unique<cloud_sync::PageSyncContext>();
+  page_sync_context->page_sync = std::move(fake_page_sync);
+  auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
+  auto merger = GetDummyResolver(&environment_, storage.get());
+
+  EXPECT_EQ(nullptr, fake_page_sync_ptr->watcher);
+  EXPECT_FALSE(fake_page_sync_ptr->start_called);
+  EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
+
+  PageManager page_manager(&environment_, std::move(storage),
+                           std::move(page_sync_context), std::move(merger),
+                           ftl::TimeDelta::FromSeconds(0));
+
+  EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
+
+  bool called = false;
+
+  page_manager.set_on_empty([this, &called] {
+    called = true;
+    message_loop_.PostQuitTask();
+  });
+
+  message_loop_.task_runner()->PostTask(
+      [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
+
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 }  // namespace

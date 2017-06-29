@@ -25,12 +25,10 @@ PageManager::PageManager(
       weak_factory_(this) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
-  if (page_sync_context) {
-    page_sync_context_->page_sync->SetSyncWatcher(&watchers_);
-    page_sync_context_->page_sync->SetOnIdle([this] { CheckEmpty(); });
-  }
 
   if (page_sync_context_) {
+    page_sync_context_->page_sync->SetSyncWatcher(&watchers_);
+    page_sync_context_->page_sync->SetOnIdle([this] { CheckEmpty(); });
     page_sync_context_->page_sync->SetOnBacklogDownloaded(
         [this] { OnSyncBacklogDownloaded(); });
     page_sync_context_->page_sync->Start();
