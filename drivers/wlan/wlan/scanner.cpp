@@ -397,7 +397,7 @@ mx_status_t Scanner::SendScanResponse() {
         }
     }
 
-    size_t buf_len = sizeof(Header) + resp_->GetSerializedSize();
+    size_t buf_len = sizeof(ServiceHeader) + resp_->GetSerializedSize();
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;

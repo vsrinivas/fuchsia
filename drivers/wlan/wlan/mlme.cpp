@@ -229,7 +229,7 @@ mx_status_t Mlme::HandleEthPacket(const Packet* packet) {
 mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     debugfn();
     const uint8_t* p = packet->data();
-    auto h = FromBytes<Header>(p, packet->len());
+    auto h = FromBytes<ServiceHeader>(p, packet->len());
     if (h == nullptr) {
         errorf("short service packet len=%zu\n", packet->len());
         return MX_OK;

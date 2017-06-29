@@ -547,7 +547,7 @@ mx_status_t Station::SendJoinResponse() {
                         JoinResultCodes::JOIN_FAILURE_TIMEOUT :
                         JoinResultCodes::SUCCESS;
 
-    size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
@@ -574,7 +574,7 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     resp->auth_type = AuthenticationTypes::OPEN_SYSTEM;
     resp->result_code = code;
 
-    size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
@@ -599,7 +599,7 @@ mx_status_t Station::SendDeauthIndication(uint16_t code) {
     std::memcpy(ind->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
     ind->reason_code = code;
 
-    size_t buf_len = sizeof(Header) + ind->GetSerializedSize();
+    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
@@ -623,7 +623,7 @@ mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     resp->result_code = code;
     resp->association_id = aid_;
 
-    size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
@@ -648,7 +648,7 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
     std::memcpy(ind->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
     ind->reason_code = code;
 
-    size_t buf_len = sizeof(Header) + ind->GetSerializedSize();
+    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;

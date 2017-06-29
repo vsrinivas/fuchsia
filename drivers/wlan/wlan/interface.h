@@ -8,9 +8,9 @@
 
 namespace wlan {
 
-// Header is the method header that is prepended to method calls over the channel.
+// ServiceHeader is the method header that is prepended to method calls over the channel.
 // This will be removed when FIDL2 is available.
-struct Header {
+struct ServiceHeader {
     uint64_t len;
     uint64_t txn_id;
     uint32_t flags;
