@@ -12,10 +12,6 @@ source_set("session_helpers") {
 
   public_deps = [
     "//apps/mozart/services/scene",
-    "//lib/escher/escher",
-  ]
-  include_dirs = [
-    "//lib/escher",
   ]
 }
 
@@ -48,4 +44,3 @@ source_set("skia") {
     "//third_party/skia",
   ]
 }
-

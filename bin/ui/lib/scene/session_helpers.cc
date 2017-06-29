@@ -541,7 +541,6 @@ mozart2::OpPtr NewSetColorOp(uint32_t material_id,
 
 mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
                                         const float matrix[4][4]) {
-  // TODO(MZ-154): Remove the dependency on Escher below.
   mozart2::mat4Ptr val = mozart2::mat4::New();
   val->matrix[0] = matrix[0][0];
   val->matrix[1] = matrix[0][1];
@@ -568,55 +567,6 @@ mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
   op->set_set_camera_projection(std::move(set_camera_projection));
 
   return op;
-}
-
-mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
-                                        const escher::mat4& matrix) {
-  auto set_camera_projection = mozart2::SetCameraProjectionOp::New();
-  set_camera_projection->camera_id = camera_id;
-  set_camera_projection->matrix = NewValue(matrix);
-
-  auto op = mozart2::Op::New();
-  op->set_set_camera_projection(std::move(set_camera_projection));
-
-  return op;
-}
-
-mozart2::ValuePtr NewValue(const escher::vec3& v) {
-  mozart2::vec3Ptr val = mozart2::vec3::New();
-  val->x = v.x;
-  val->y = v.y;
-  val->z = v.z;
-
-  auto result = mozart2::Value::New();
-  result->set_vector3(std::move(val));
-
-  return result;
-}
-
-mozart2::ValuePtr NewValue(const escher::mat4& m) {
-  mozart2::mat4Ptr val = mozart2::mat4::New();
-  val->matrix[0] = m[0][0];
-  val->matrix[1] = m[0][1];
-  val->matrix[2] = m[0][2];
-  val->matrix[3] = m[0][3];
-  val->matrix[4] = m[1][0];
-  val->matrix[5] = m[1][1];
-  val->matrix[6] = m[1][2];
-  val->matrix[7] = m[1][3];
-  val->matrix[8] = m[2][0];
-  val->matrix[9] = m[2][1];
-  val->matrix[10] = m[2][2];
-  val->matrix[11] = m[2][3];
-  val->matrix[12] = m[3][0];
-  val->matrix[13] = m[3][1];
-  val->matrix[14] = m[3][2];
-  val->matrix[15] = m[3][3];
-
-  auto result = mozart2::Value::New();
-  result->set_matrix4x4(std::move(val));
-
-  return result;
 }
 
 }  // namespace mozart

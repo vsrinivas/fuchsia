@@ -6,8 +6,6 @@
 
 #include "apps/mozart/services/scene/session.fidl.h"
 
-#include "escher/geometry/types.h"
-
 namespace mozart {
 
 constexpr float kZeroesFloat3[3] = {0.f, 0.f, 0.f};
@@ -117,12 +115,6 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id);
 mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
                                         const float matrix[4][4]);
-mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
-                                        const escher::mat4& matrix);
-
-// Value specification.
-mozart2::ValuePtr NewValue(const escher::vec3& v);
-mozart2::ValuePtr NewValue(const escher::mat4& m);
 
 // Material operations.
 mozart2::OpPtr NewSetTextureOp(uint32_t node_id, uint32_t image_id);
