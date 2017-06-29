@@ -49,6 +49,7 @@ source_set("tests") {
     "acl_data_channel_unittest.cc",
     "advertising_report_parser_unittest.cc",
     "command_channel_unittest.cc",
+    "connection_unittest.cc",
     "legacy_low_energy_scanner_unittest.cc",
     "packet_unittest.cc",
     "sequential_command_runner_unittest.cc",

@@ -4,6 +4,11 @@
 
 #include "connection.h"
 
+#include <endian.h>
+
+#include "apps/bluetooth/lib/hci/control_packets.h"
+#include "apps/bluetooth/lib/hci/defaults.h"
+#include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/logging.h"
 
 namespace bluetooth {
@@ -20,15 +25,104 @@ Connection::LowEnergyParameters::LowEnergyParameters(uint16_t interval_min, uint
   FTL_DCHECK(interval_min_ <= interval_max_);
 }
 
+Connection::LowEnergyParameters::LowEnergyParameters()
+    : interval_min_(defaults::kLEConnectionIntervalMin),
+      interval_max_(defaults::kLEConnectionIntervalMax),
+      interval_(0x0000),
+      latency_(0x0000),
+      supervision_timeout_(defaults::kLESupervisionTimeout) {}
+
+bool Connection::LowEnergyParameters::operator==(const LowEnergyParameters& other) const {
+  return other.interval_min_ == interval_min_ && other.interval_max_ == interval_max_ &&
+         other.interval_ == interval_ && other.latency_ == latency_ &&
+         other.supervision_timeout_ == supervision_timeout_;
+}
+
 Connection::Connection(ConnectionHandle handle, Role role,
-                       const common::DeviceAddress& peer_address, const LowEnergyParameters& params)
+                       const common::DeviceAddress& peer_address, const LowEnergyParameters& params,
+                       ftl::RefPtr<Transport> hci)
     : ll_type_(LinkType::kLE),
       handle_(handle),
       role_(role),
+      is_open_(true),
       peer_address_(peer_address),
-      le_params_(std::make_unique<LowEnergyParameters>(params)) {
+      le_params_(params),
+      hci_(hci),
+      weak_ptr_factory_(this) {
   FTL_DCHECK(handle);
-  FTL_DCHECK(params.interval());
+  FTL_DCHECK(le_params_.interval());
+  FTL_DCHECK(hci_);
+}
+
+Connection::~Connection() {
+  Close();
+}
+
+void Connection::MarkClosed() {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FTL_DCHECK(is_open_);
+  is_open_ = false;
+}
+
+void Connection::Close(Status reason, const ftl::Closure& callback) {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  if (!is_open()) return;
+
+  // The connection is immediately marked as closed as there is no reasonable way for a Disconnect
+  // procedure to fail, i.e. it always succeeds. If the controller reports failure in the
+  // Disconnection Complete event, it should be because we gave it an already disconnected handle
+  // which we would treat as success.
+  //
+  // TODO(armansito): The procedure could also fail if "the command was not presently allowed".
+  // Retry in that case?
+  is_open_ = false;
+
+  FTL_DCHECK(!close_cb_);
+  close_cb_ = callback;
+
+  // Here we send a HCI_Disconnect command. We use a matcher so that this command completes when we
+  // receive a HCI Disconnection Complete event with the connection handle that belongs to this
+  // connection.
+
+  auto matcher = [handle = handle_](const EventPacket& event)->bool {
+    FTL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
+    return handle ==
+           le16toh(event.view().payload<DisconnectionCompleteEventParams>().connection_handle);
+  };
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+
+  auto status_cb = [self](auto id, Status status) {
+    if (status != Status::kSuccess) {
+      if (status == Status::kCommandTimeout && self) {
+        self->NotifyClosed();
+        return;
+      }
+
+      FTL_LOG(WARNING) << "Ignoring failed disconnect command status: 0x" << std::hex << status;
+    }
+  };
+
+  auto complete_cb = [ handle = handle_, self ](auto id, const EventPacket& event) {
+    FTL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
+    const auto& params = event.view().payload<DisconnectionCompleteEventParams>();
+    FTL_DCHECK(handle == le16toh(params.connection_handle));
+
+    if (params.status != Status::kSuccess) {
+      FTL_LOG(WARNING) << "Ignoring failed disconnection status: 0x" << std::hex << params.status;
+    }
+
+    if (self) self->NotifyClosed();
+  };
+
+  auto disconn = CommandPacket::New(kDisconnect, sizeof(DisconnectCommandParams));
+  auto params = disconn->mutable_view()->mutable_payload<DisconnectCommandParams>();
+  params->connection_handle = htole16(handle_);
+  params->reason = reason;
+
+  hci_->command_channel()->SendCommand(std::move(disconn),
+                                       mtl::MessageLoop::GetCurrent()->task_runner(), complete_cb,
+                                       status_cb, kDisconnectionCompleteEventCode, matcher);
 }
 
 }  // namespace hci

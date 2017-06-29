@@ -4,32 +4,35 @@
 
 #pragma once
 
-#include <memory>
-
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
-
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/synchronization/thread_checker.h"
 
 namespace bluetooth {
 namespace hci {
 
-// Represents a logical link connection to a remote device.
+class Transport;
+
+// Represents a logical link connection to a remote device. This class is not thread-safe. Instances
+// should only be accessed on their creation thread.
 class Connection final {
  public:
   // This defines the various connection types. These do not exactly correspond to the baseband
   // logical/physical link types but instead provide a high-level abstraction.
   enum class LinkType {
-    // Represents a BR/EDR baseband link. While LE-U logical links are also considered ACL links, we
-    // keep separate declarations here.
+    // Represents a BR/EDR baseband link (ACL-U).
     kACL,
 
-    // BR/EDR isochronous links.
+    // BR/EDR isochronous links (SCO-S, eSCO-S).
     kSCO,
     kESCO,
 
-    // An LE logical link.
+    // A LE logical link (LE-U).
     kLE,
   };
 
@@ -44,6 +47,9 @@ class Connection final {
    public:
     LowEnergyParameters(uint16_t interval_min, uint16_t interval_max, uint16_t interval,
                         uint16_t latency, uint16_t supervision_timeout);
+
+    // Default constructor initializes values to HCI defaults. This is intended for unit tests.
+    LowEnergyParameters();
 
     // The minimum and maximum allowed connection intervals. The connection interval indicates the
     // frequency of link layer connection events over which data channel PDUs can be transmitted.
@@ -65,6 +71,8 @@ class Connection final {
     // centiseconds and must be within the range 100 ms - 32 s (10 cs - 3200 cs).
     uint16_t supervision_timeout() const { return supervision_timeout_; }
 
+    bool operator==(const LowEnergyParameters& other) const;
+
    private:
     uint16_t interval_min_;
     uint16_t interval_max_;
@@ -73,9 +81,12 @@ class Connection final {
     uint16_t supervision_timeout_;
   };
 
-  // Initializes this as a LE connection.
+  // Initializes this as a LE ACL connection.
   Connection(ConnectionHandle handle, Role role, const common::DeviceAddress& peer_address,
-             const LowEnergyParameters& params);
+             const LowEnergyParameters& params, ftl::RefPtr<Transport> hci);
+
+  // The destructor closes this connection.
+  ~Connection();
 
   // The type of the connection.
   LinkType ll_type() const { return ll_type_; }
@@ -91,22 +102,64 @@ class Connection final {
   // link type LinkType::kLE.
   const LowEnergyParameters& low_energy_parameters() const {
     FTL_DCHECK(ll_type_ == LinkType::kLE);
-    FTL_DCHECK(le_params_);
-    return *le_params_;
+    return le_params_;
   }
 
+  // The identity address of the peer device.
+  // TODO(armansito): Implement mechanism to store identity address here after address resolution.
+  const common::DeviceAddress& peer_address() const { return peer_address_; }
+
+  // Returns true if this connection is currently open.
+  bool is_open() const { return is_open_; }
+
+  // Marks a previously active (open) connection as no longer active. This can happen when a
+  // connection is terminated without an explicit call to Close(), e.g. because the remote end
+  // terminated the connection.
+  //
+  // After a connection has been marked as closed, the Close() method will become a no-op.
+  void MarkClosed();
+
+  // Closes this connection by sending the HCI_Disconnect command to the controller. If this
+  // connection has been marked as closed, this method does nothing. If a |callback| is provided, it
+  // will be invoked when the procedure has been completed.
+  void Close(Status reason = Status::kRemoteUserTerminatedConnection,
+             const ftl::Closure& callback = nullptr);
+
  private:
+  // Clears and runs |close_cb| if it was set.
+  inline void NotifyClosed() {
+    if (close_cb_) {
+      auto callback = close_cb_;
+      close_cb_ = nullptr;
+      callback();
+    }
+  }
+
   LinkType ll_type_;
   ConnectionHandle handle_;
   Role role_;
+  bool is_open_;
+
+  ftl::ThreadChecker thread_checker_;
 
   // The address of the peer device.
   common::DeviceAddress peer_address_;
 
   // Connection parameters for a LE link. Not nullptr if the link type is LE.
-  std::unique_ptr<LowEnergyParameters> le_params_;
+  LowEnergyParameters le_params_;
+
+  // Callback used during Close().
+  ftl::Closure close_cb_;
+
+  // The underlying HCI transport. We use this to terminate the connection by sending the
+  // HCI_Disconnect command.
+  ftl::RefPtr<Transport> hci_;
 
   // TODO(armansito): Add a BREDRParameters struct.
+
+  // Keep this as the last member to make sure that all weak pointers are invalidated before other
+  // members get destroyed.
+  ftl::WeakPtrFactory<Connection> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Connection);
 };
