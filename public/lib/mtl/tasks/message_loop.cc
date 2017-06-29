@@ -28,7 +28,7 @@ MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : task_runner_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
-  FTL_CHECK(mx::port::create(MX_PORT_OPT_V2, &port_) == MX_OK);
+  FTL_CHECK(mx::port::create(0, &port_) == MX_OK);
   MessageLoop::incoming_tasks()->InitDelegate(this);
   g_current = this;
 }
