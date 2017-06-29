@@ -374,10 +374,18 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
                     iotxn_queue(eth->usb_device, req);
                 }
                 xprintf("ax88179 now online\n");
-                eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+                mtx_lock(&eth->mutex);
+                if (eth->ifc) {
+                    eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+                }
+                mtx_unlock(&eth->mutex);
             } else if (!online && was_online) {
                 xprintf("ax88179 now offline\n");
-                eth->ifc->status(eth->cookie, 0);
+                mtx_lock(&eth->mutex);
+                if (eth->ifc) {
+                    eth->ifc->status(eth->cookie, 0);
+                }
+                mtx_unlock(&eth->mutex);
             }
         }
     }
@@ -528,6 +536,8 @@ static mx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
+        // TODO(hahnr): we need to notify the ifc of initial link status, but we need to work out
+        // the locking between this driver and the ethernet driver
     }
     mtx_unlock(&eth->mutex);
 
