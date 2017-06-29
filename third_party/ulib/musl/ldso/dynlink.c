@@ -2143,14 +2143,17 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
                                                  const void* data, size_t len,
                                                  mx_handle_t request_handle,
                                                  mx_handle_t* result) {
-    mx_status_t status;
-    struct {
+    // Use a static buffer rather than one on the stack to avoid growing
+    // the stack size too much.  Calls to this function are always
+    // serialized anyway, so there is no danger of collision.
+    static struct {
         mx_loader_svc_msg_t header;
         uint8_t data[LOADER_SVC_MSG_MAX - sizeof(mx_loader_svc_msg_t)];
     } msg;
 
     loader_svc_rpc_in_progress = true;
 
+    mx_status_t status;
     if (len >= sizeof msg.data) {
         _mx_handle_close(request_handle);
         error("message of %zu bytes too large for loader service protocol",
