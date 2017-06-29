@@ -33,3 +33,19 @@ source_set("client") {
     ":session_helpers",
   ]
 }
+
+source_set("skia") {
+  sources = [
+    "skia/image_info.cc",
+    "skia/image_info.h",
+    "skia/host_surfaces.cc",
+    "skia/host_surfaces.h",
+  ]
+
+  public_deps = [
+    ":client",
+    "//lib/ftl",
+    "//third_party/skia",
+  ]
+}
+
