@@ -229,9 +229,6 @@ package("mozart") {
       name = "vkcube_image_pipe"
     },
     {
-      name = "hello_compositor"
-    },
-    {
       name = "gen/apps/mozart/examples/hello_material/hello_material.flx"
     },
     {

@@ -5,7 +5,6 @@
 group("examples") {
   public_deps = [
     "basic_wm",
-    "hello_compositor",
     "hello_material",
     "hello_scene_manager",
     "jank",
