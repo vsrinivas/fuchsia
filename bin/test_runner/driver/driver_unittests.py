@@ -173,6 +173,12 @@ class DriverTest(unittest.TestCase):
     with self.assertRaisesRegexp(BadOpCode, 'party'):
       driver.wait_for_teardown(['111 party !'])
 
+  def test_missing_teardown(self):
+    driver = Driver()
+    driver.start_test('111', self.TEST)
+    with self.assertRaises(MissingTeardown):
+      driver.wait_for_teardown([])
+
 
 if __name__ == '__main__':
     unittest.main()

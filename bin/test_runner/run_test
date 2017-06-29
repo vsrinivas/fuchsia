@@ -134,7 +134,8 @@ def main(argv):
     try:
       sock.send(driver.start_test(id_, test) + '\n')
       driver.wait_for_teardown(sock.makefile())
-    except socket.error:
+    except (socket.error, MissingTeardown):
+      # MissingTeardown is likely caused by a closed connection.
       print ('Lost connection to Fuchsia. '
           'Check the log from the device or emulator.')
       return 1

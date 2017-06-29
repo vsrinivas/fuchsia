@@ -157,6 +157,7 @@ class FuchsiaTools(object):
 
 class BadOpCode(Exception): pass
 class WrongTestId(Exception): pass
+class MissingTeardown(Exception): pass
 
 
 class Driver(object):
@@ -208,7 +209,7 @@ class Driver(object):
           # just run an entire command and then send a teardown message. Make
           # sure something gets displayed and counted in that case.
           self._on_empty_result(data == 'fail')
-        break
+        return
       elif op == 'result':
         any_results = True
         self._on_result(json.loads(data))
@@ -216,6 +217,8 @@ class Driver(object):
         Log.line('log', data)
       else:
         raise BadOpCode(op)
+
+    raise MissingTeardown()
 
   def print_summary(self):
     Log.print_('')
