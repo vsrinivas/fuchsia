@@ -27,7 +27,7 @@ constexpr ftl::StringView kRefsAutoFlag = "auto";
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
             << "=<int> --" << kTransactionSizeFlag << "=<int> --"
-            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int>"
+            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int> --"
             << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << "|"
             << kRefsAutoFlag << ") [" << kSeedFlag << "=<int>] [" << kUpdateFlag
             << "]" << std::endl;
@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
   } else if (ref_strategy_str == kRefsAutoFlag) {
     ref_strategy = benchmark::PutBenchmark::ReferenceStrategy::AUTO;
   } else {
-    std::cout << "Unknown option " << ref_strategy_str << " for "
+    std::cerr << "Unknown option " << ref_strategy_str << " for "
               << kRefsFlag.ToString() << std::endl;
     PrintUsage(argv[0]);
     return -1;

@@ -31,7 +31,7 @@ void PrintUsage(const char* executable_name) {
             << "=<app url> --" << kTestArgFlag << "=<argument to test> --"
             << kMinValueFlag << "=<int> --" << kMaxValueFlag << "=<int> (--"
             << kStepFlag << "=<int>|" << kMultFlag << "=<int>) --"
-            << kAppendArgsFlag << "<extra arguments for the app>" << std::endl;
+            << kAppendArgsFlag << "=<extra arguments for the app>" << std::endl;
 }
 
 bool GetPositiveIntValue(const ftl::CommandLine& command_line,
@@ -42,7 +42,7 @@ bool GetPositiveIntValue(const ftl::CommandLine& command_line,
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
       !ftl::StringToNumberWithError(value_str, &found_value) ||
       found_value <= 0) {
-    std::cout << "Missing or invalid " << flag << " argument." << std::endl;
+    std::cerr << "Missing or invalid " << flag << " argument." << std::endl;
     return false;
   }
   *value = found_value;
@@ -106,13 +106,13 @@ int main(int argc, const char** argv) {
 
   std::string app_url;
   if (!command_line.GetOptionValue(kAppUrlFlag.ToString(), &app_url)) {
-    std::cout << "Missing " << kAppUrlFlag << " argument." << std::endl;
+    std::cerr << "Missing " << kAppUrlFlag << " argument." << std::endl;
     PrintUsage(argv[0]);
     return -1;
   }
   std::string test_arg;
   if (!command_line.GetOptionValue(kTestArgFlag.ToString(), &test_arg)) {
-    std::cout << "Missing " << kTestArgFlag << " argument." << std::endl;
+    std::cerr << "Missing " << kTestArgFlag << " argument." << std::endl;
     PrintUsage(argv[0]);
     return -1;
   }
@@ -131,8 +131,10 @@ int main(int argc, const char** argv) {
   if (command_line.GetOptionValue(kStepFlag.ToString(), &value_str) ==
       command_line.GetOptionValue(kMultFlag.ToString(), &value_str)) {
     // Either both step and mult flags are given or they are both missing.
-    std::cout << "Exactly one of the  " << kStepFlag << " or " << kMultFlag
+    std::cerr << "Exactly one of the " << kStepFlag << " or " << kMultFlag
               << " arguments must be provided." << std::endl;
+    PrintUsage(argv[0]);
+    return -1;
   }
   if (command_line.GetOptionValue(kStepFlag.ToString(), &value_str)) {
     sequence_type = LaunchBenchmark::SequenceType::ARITHMETIC;
@@ -149,7 +151,7 @@ int main(int argc, const char** argv) {
   }
 
   if (max_value < min_value) {
-    std::cout << kMaxValueFlag << " should be >= " << kMinValueFlag
+    std::cerr << kMaxValueFlag << " should be >= " << kMinValueFlag
               << " (Found: " << max_value << " < " << min_value << ")";
     PrintUsage(argv[0]);
     return -1;

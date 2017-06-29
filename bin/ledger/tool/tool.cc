@@ -61,7 +61,8 @@ std::unique_ptr<Command> ToolApp::CommandFromArgs(
   // `doctor` is the default command.
   if (args.empty() || args[0] == "doctor") {
     if (args.size() > 1) {
-      FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
+      std::cerr << "Too many arguments for the " << args[0] << " command"
+                << std::endl;
       return nullptr;
     }
     if (!user_config_.use_sync) {
@@ -72,8 +73,8 @@ std::unique_ptr<Command> ToolApp::CommandFromArgs(
   }
 
   if (args[0] == "clean") {
-    FTL_LOG(ERROR) << "The `clean` command is gone, please refer to the "
-                   << "User Guide at " << kUserGuideUrl;
+    std::cerr << "The `clean` command is gone, please refer to the "
+              << "User Guide at " << kUserGuideUrl << std::endl;
     return nullptr;
   }
 
@@ -96,7 +97,7 @@ bool ToolApp::Initialize() {
 
   for (auto& option : command_line_.options()) {
     if (known_options.count(option.name) == 0) {
-      FTL_LOG(ERROR) << "Unknown option: " << option.name << std::endl;
+      std::cerr << "Unknown option: " << option.name << std::endl;
       PrintUsage();
       return false;
     }
@@ -106,15 +107,15 @@ bool ToolApp::Initialize() {
                                                     "inspect"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (args.size() && valid_commands.count(args[0]) == 0) {
-    FTL_LOG(ERROR) << "Unknown command: " << args[0];
+    std::cerr << "Unknown command: " << args[0] << std::endl;
     PrintUsage();
     return false;
   }
 
   std::string repository_path;
   if (!ReadConfig()) {
-    std::cout << "Failed to retrieve user configuration" << std::endl;
-    std::cout << "Hint: refer to the User Guide at " << kUserGuideUrl
+    std::cerr << "Failed to retrieve user configuration" << std::endl;
+    std::cerr << "Hint: refer to the User Guide at " << kUserGuideUrl
               << std::endl;
     return false;
   }
@@ -138,7 +139,7 @@ bool ToolApp::Initialize() {
 
   command_ = CommandFromArgs(args);
   if (command_ == nullptr) {
-    std::cout << "Failed to initialize the selected command." << std::endl;
+    std::cerr << "Failed to initialize the selected command." << std::endl;
     PrintUsage();
     return false;
   }
@@ -148,7 +149,7 @@ bool ToolApp::Initialize() {
 bool ToolApp::ReadConfig() {
   if (command_line_.GetOptionValue(kUserIdFlag.ToString(),
                                    &user_config_.user_id)) {
-    FTL_LOG(INFO) << "using the user id passed on the command line";
+    std::cout << "using the user id passed on the command line" << std::endl;
     user_repository_path_ =
         ftl::Concatenate({"/data/ledger/", user_config_.user_id});
   } else if (files::IsFile(ledger::kLastUserIdPath.ToString()) &&
@@ -157,11 +158,11 @@ bool ToolApp::ReadConfig() {
              files::IsFile(ledger::kLastUserRepositoryPath.ToString()) &&
              files::ReadFileToString(ledger::kLastUserRepositoryPath.ToString(),
                                      &user_repository_path_)) {
-    FTL_LOG(INFO) << "using the user id of the most recent Ledger run";
+    std::cout << "using the user id of the most recent Ledger run" << std::endl;
   } else {
-    FTL_LOG(ERROR) << "Failed to identify the most recent user ID, "
-                   << "pick the user in Device Shell UI or pass the user ID "
-                   << "to use in the --" << kUserIdFlag << " flag";
+    std::cerr << "Failed to identify the most recent user ID, "
+              << "pick the user in Device Shell UI or pass the user ID "
+              << "to use in the --" << kUserIdFlag << " flag" << std::endl;
     return false;
   }
 
@@ -169,8 +170,9 @@ bool ToolApp::ReadConfig() {
       ftl::Concatenate({user_repository_path_, "/", ledger::kServerIdFilename});
   if (!files::IsFile(server_id_path) ||
       !files::ReadFileToString(server_id_path, &user_config_.server_id)) {
-    FTL_LOG(WARNING)
-        << "Failed to read server id of the user, assuming no sync.";
+    std::cerr
+        << "[WARNING] Failed to read server id of the user, assuming no sync."
+        << std::endl;
     user_config_.use_sync = false;
   } else {
     user_config_.use_sync = true;

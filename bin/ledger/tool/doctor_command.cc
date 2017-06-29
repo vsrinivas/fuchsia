@@ -52,15 +52,15 @@ void ok(ftl::TimeDelta request_time) {
 }
 
 void error(ftl::StringView message) {
-  std::cout << "   [FAILED] ";
+  std::cerr << "   [FAILED] ";
   if (message.size()) {
-    std::cout << " " << message;
+    std::cerr << " " << message;
   }
-  std::cout << std::endl;
+  std::cerr << std::endl;
 }
 
 void error(cloud_provider::Status status) {
-  std::cout << "   [FAILED] with cloud provider status " << status << std::endl;
+  std::cerr << "   [FAILED] with cloud provider status " << status << std::endl;
 }
 
 void hint(ftl::StringView hint) {
