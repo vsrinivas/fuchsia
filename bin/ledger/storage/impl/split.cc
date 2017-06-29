@@ -24,7 +24,7 @@ constexpr size_t kMaxChunkSize = std::numeric_limits<uint16_t>::max();
 constexpr size_t kBitsPerLevel = 4;
 // The max number of indentifiers that an index can contain so that the file
 // size is less than |kMaxChunkSize|.
-constexpr size_t kMaxIdentifiersPerIndex = kMaxChunkSize / 57;
+constexpr size_t kMaxIdentifiersPerIndex = kMaxChunkSize / 61;
 
 struct ObjectIdAndSize {
   ObjectId id;
@@ -210,7 +210,7 @@ class SplitContext {
                       builder->CreateVector(children.data(), children.size())));
 
     auto chunk = DataSource::DataChunk::Create(std::move(builder));
-    FTL_DCHECK(chunk->Get().size() <= kMaxChunkSize);
+    FTL_DCHECK(chunk->Get().size() <= kMaxChunkSize) << chunk->Get().size();
     ObjectId object_id = ComputeObjectId(ObjectType::INDEX, chunk->Get());
     callback_(SplitStatus::IN_PROGRESS, object_id, std::move(chunk));
     return {std::move(object_id), total_size};

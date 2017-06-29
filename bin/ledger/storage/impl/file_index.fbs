@@ -6,7 +6,7 @@ namespace storage;
 
 // An entry for the identifier of a part of a file.
 table ObjectChild {
-  size: ushort;
+  size: ulong;
   object_id: [ubyte];
 }
 

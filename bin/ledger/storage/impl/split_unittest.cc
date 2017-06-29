@@ -103,7 +103,8 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
 ::testing::AssertionResult ReadFile(
     const ObjectId& id,
     const std::map<ObjectId, std::unique_ptr<DataSource::DataChunk>>& data,
-    std::string* result) {
+    std::string* result, size_t expected_size) {
+  size_t start_size = result->size();
   switch (GetObjectIdType(id)) {
     case ObjectIdType::INLINE: {
       auto content = ExtractObjectIdData(id);
@@ -125,13 +126,18 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
       auto content = data.at(id)->Get();
       const FileIndex* file_index = GetFileIndex(content.data());
       for (const auto* child : *file_index->children()) {
-        auto r = ReadFile(convert::ToString(child->object_id()), data, result);
+        auto r = ReadFile(convert::ToString(child->object_id()), data, result, child->size());
         if (!r) {
           return r;
         }
       }
       break;
     }
+  }
+  if (result->size() - start_size != expected_size) {
+    return ::testing::AssertionFailure()
+           << "Expected an object of size: " << expected_size
+           << " but found an object of size: " << (result->size() - start_size);
   }
   return ::testing::AssertionSuccess();
 }
@@ -156,7 +162,7 @@ TEST_P(SplitSmallValueTest, SmallValue) {
 
   std::string found_content;
   ASSERT_TRUE(ReadFile(split_result.calls.back().id, split_result.data,
-                       &found_content));
+                       &found_content, content.size()));
   EXPECT_EQ(content, found_content);
 }
 
@@ -188,7 +194,7 @@ TEST_P(SplitBigValueTest, BigValues) {
 
   std::string found_content;
   ASSERT_TRUE(ReadFile(split_result.calls.back().id, split_result.data,
-                       &found_content));
+                       &found_content, content.size()));
   EXPECT_EQ(content, found_content);
 }
 
