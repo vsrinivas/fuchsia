@@ -25,17 +25,17 @@ namespace debugserver {
 
 namespace {
 
-std::string IOPortPacketTypeToString(const mx_packet_header_t& header) {
-  if (MX_PKT_IS_EXCEPTION(header.type)) {
-    return "MX_PORT_PKT_TYPE_EXCEPTION";
+std::string IOPortPacketTypeToString(const mx_port_packet_t& pkt) {
+  if (MX_PKT_IS_EXCEPTION(pkt.type)) {
+    return "MX_PKT_TYPE_EXCEPTION";
   }
 #define CASE_TO_STR(x) \
   case x:              \
     return #x
-  switch (header.type) {
-    CASE_TO_STR(MX_PORT_PKT_TYPE_KERN);
-    CASE_TO_STR(MX_PORT_PKT_TYPE_IOSN);
-    CASE_TO_STR(MX_PORT_PKT_TYPE_USER);
+  switch (pkt.type) {
+    CASE_TO_STR(MX_PKT_TYPE_USER);
+    CASE_TO_STR(MX_PKT_TYPE_SIGNAL_ONE);
+    CASE_TO_STR(MX_PKT_TYPE_SIGNAL_REP);
     default:
       break;
   }
@@ -63,7 +63,7 @@ bool ExceptionPort::Run() {
   FTL_DCHECK(!keep_running_);
 
   // Create an I/O port.
-  mx_status_t status = mx::port::create(0u, &eport_handle_);
+  mx_status_t status = mx::port::create(MX_PORT_OPT_V2, &eport_handle_);
   if (status < 0) {
     FTL_LOG(ERROR) << "Failed to create the exception port: "
                    << util::MxErrorString(status);
@@ -92,10 +92,10 @@ void ExceptionPort::Quit() {
 
     // The only way it seems possible to make the I/O thread return from
     // mx_port_wait is to queue a dummy packet on the port.
-    mx_packet_header_t packet;
+    mx_port_packet_t packet;
     memset(&packet, 0, sizeof(packet));
-    packet.type = MX_PORT_PKT_TYPE_USER;
-    eport_handle_.queue(&packet, sizeof(packet));
+    packet.type = MX_PKT_TYPE_USER;
+    eport_handle_.queue(&packet, 0);
   }
 
   io_thread_.join();
@@ -169,31 +169,31 @@ void ExceptionPort::Worker() {
     eport = eport_handle_.get();
   }
   while (keep_running_) {
-    mx_exception_packet_t packet;
+    mx_port_packet_t packet;
     mx_status_t status =
-        mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet));
+        mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0);
     if (status < 0) {
       FTL_LOG(ERROR) << "mx_port_wait returned error: "
                      << util::MxErrorString(status);
     }
 
-    FTL_VLOG(2) << "IO port packet received - key: " << packet.hdr.key
-                << " type: " << IOPortPacketTypeToString(packet.hdr);
+    FTL_VLOG(2) << "IO port packet received - key: " << packet.key
+                << " type: " << IOPortPacketTypeToString(packet);
 
     // TODO(armansito): How to handle this?
-    if (!MX_PKT_IS_EXCEPTION(packet.hdr.type))
+    if (!MX_PKT_IS_EXCEPTION(packet.type))
       continue;
 
     FTL_VLOG(1) << "Exception received: "
                 << util::ExceptionName(static_cast<const mx_excp_type_t>(
-                       packet.hdr.type))
-                << " (" << packet.hdr.type
-                << "), pid: " << packet.pid
-                << ", tid: " << packet.tid;
+                       packet.type))
+                << " (" << packet.type
+                << "), pid: " << packet.exception.pid
+                << ", tid: " << packet.exception.tid;
 
     // Handle the exception on the main thread.
     origin_task_runner_->PostTask([packet, this] {
-      const auto& iter = callbacks_.find(packet.hdr.key);
+      const auto& iter = callbacks_.find(packet.key);
       if (iter == callbacks_.end()) {
         FTL_VLOG(1) << "No handler registered for exception";
         return;
@@ -201,11 +201,11 @@ void ExceptionPort::Worker() {
 
       mx_handle_t thread;
       mx_status_t status = mx_object_get_child(iter->second.process_handle,
-                                               packet.tid,
+                                               packet.exception.tid,
                                                MX_RIGHT_SAME_RIGHTS, &thread);
       if (status < 0) {
-        FTL_VLOG(1) << "Failed to get a handle to [" << packet.pid
-                    << "." << packet.tid << "]";
+        FTL_VLOG(1) << "Failed to get a handle to [" << packet.exception.pid
+                    << "." << packet.exception.tid << "]";
         return;
       }
       mx_exception_report_t report;
@@ -213,13 +213,13 @@ void ExceptionPort::Worker() {
                                   &report, sizeof(report), NULL, NULL);
       mx_handle_close(thread);
       if (status < 0) {
-        FTL_VLOG(1) << "Failed to get exception report for [" << packet.pid
-                    << "." << packet.tid << "]";
+        FTL_VLOG(1) << "Failed to get exception report for [" << packet.exception.pid
+                    << "." << packet.exception.tid << "]";
         return;
       }
 
       iter->second.callback(
-          static_cast<const mx_excp_type_t>(packet.hdr.type),
+          static_cast<const mx_excp_type_t>(packet.type),
           report.context);
     });
   }
