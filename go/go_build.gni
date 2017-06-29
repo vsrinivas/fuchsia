@@ -43,11 +43,11 @@ template("go_build") {
       output_name = invoker.output_name
     }
 
-    outputs = [ "${root_out_dir}/${output_name}" ]
+    output_path = "${root_out_dir}/${output_name}"
+    outputs = [ output_path ]
 
     script = rebase_path("//build/go/build.py")
-    depfile_path = "${output_name}.d"
-    depfile = "${root_out_dir}/${depfile_path}"
+    depfile = "${output_path}.d"
     console = true # only run one gobuild.py at once
 
     go_dependencies = []
@@ -60,9 +60,9 @@ template("go_build") {
       "--fuchsia-root",
       rebase_path("//."),
       "--root-out-dir",
-      rebase_path(root_out_dir),
+      rebase_path(root_out_dir, root_build_dir),
       "--depfile",
-      depfile_path,
+      rebase_path(depfile),
       "--current-cpu",
       current_cpu,
       "--current-os",

@@ -46,9 +46,10 @@ def main():
         'win': 'windows',
     }[args.current_os]
 
+    output_name = os.path.join(args.root_out_dir, args.binname)
+
     # Project path is a package specific gopath, also known as a "project" in go parlance.
-    project_path = os.path.join(args.root_out_dir, 'gen', 'gopaths',
-                                os.path.relpath(args.binname, args.root_out_dir))
+    project_path = os.path.join(args.root_out_dir, 'gen', 'gopaths', args.binname)
 
     # Clean up any old project path to avoid leaking old dependencies
     shutil.rmtree(os.path.join(project_path, 'src'), ignore_errors=True)
@@ -74,12 +75,14 @@ def main():
       # NOTE(raggi): can be removed once all gopath entries are removed from //packages/gn/*
       gopath = args.root_out_dir
 
+    gopath = os.path.abspath(gopath)
+
     env = {}
     if args.current_os == 'fuchsia':
         env['CGO_ENABLED'] = '1'
     env['GOARCH'] = goarch
     env['GOOS'] = goos
-    env['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
+    env['GOPATH'] = gopath + ":" + os.path.abspath(os.path.join(args.root_out_dir, "gen/go"))
 
     cmd = [args.go_tool]
     if args.is_test:
@@ -87,7 +90,7 @@ def main():
     else:
       cmd += ['build']
     cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o',
-            os.path.join(args.root_out_dir, args.binname), args.package]
+            output_name, args.package]
 
     retcode = subprocess.call(cmd, env=env)
 
@@ -96,7 +99,7 @@ def main():
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
                 env['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
-                subprocess.Popen([godepfile, '-o', args.binname, args.package], stdout=out, env=env)
+                subprocess.Popen([godepfile, '-o', output_name, args.package], stdout=out, env=env)
     return retcode
 
 
