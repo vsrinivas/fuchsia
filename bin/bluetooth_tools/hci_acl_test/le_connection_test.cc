@@ -21,7 +21,8 @@ namespace hci_acl_test {
 
 LEConnectionTest::LEConnectionTest() : le_conn_complete_handler_id_(0u), disconn_handler_id_(0u) {}
 
-bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr) {
+bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr,
+                           bool cancel_right_away) {
   FTL_DCHECK(hci_dev_fd.is_valid());
 
   auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
@@ -59,7 +60,7 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress
     hci::DataBufferInfo le_buffer_info(le16toh(return_params->hc_le_acl_data_packet_length),
                                        le16toh(return_params->hc_total_num_le_acl_data_packets));
 
-    InitializeDataChannelAndCreateConnection(bredr_buffer_info, le_buffer_info);
+    InitializeDataChannelAndCreateConnection(bredr_buffer_info, le_buffer_info, cancel_right_away);
   };
 
   // Read Buffer Size
@@ -79,7 +80,7 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress
 
 void LEConnectionTest::InitializeDataChannelAndCreateConnection(
     const bluetooth::hci::DataBufferInfo& bredr_buffer_info,
-    const bluetooth::hci::DataBufferInfo& le_buffer_info) {
+    const bluetooth::hci::DataBufferInfo& le_buffer_info, bool cancel_right_away) {
   if (!hci_->InitializeACLDataChannel(bredr_buffer_info, le_buffer_info)) {
     FTL_LOG(ERROR) << "Failed to initialize ACL data channel";
     message_loop_.QuitNow();
@@ -172,6 +173,19 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   // The status callback will never get called but we pass one in anyway.
   hci_->command_channel()->SendCommand(std::move(cmd), message_loop_.task_runner(),
                                        le_conn_status_cb, nullptr, hci::kCommandStatusEventCode);
+
+  if (cancel_right_away) {
+    auto cancel = hci::CommandPacket::New(hci::kLECreateConnectionCancel);
+    auto cancel_complete_cb = [this](auto id, const hci::EventPacket& event) {
+      auto status = event.return_params<hci::SimpleReturnParams>()->status;
+      if (status != hci::Status::kSuccess) {
+        LogErrorStatusAndQuit("LE Create Connection Cancel (failed)", status);
+      }
+    };
+    hci_->command_channel()->SendCommand(std::move(cancel), message_loop_.task_runner(),
+                                         cancel_complete_cb,
+                                         GetStatusCallback("LE Create Connection Cancel"));
+  }
 }
 
 void LEConnectionTest::SendNotifications(hci::ConnectionHandle connection_handle) {

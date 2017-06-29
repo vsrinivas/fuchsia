@@ -29,14 +29,15 @@ namespace hci_acl_test {
 class LEConnectionTest final {
  public:
   LEConnectionTest();
-  bool Run(ftl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddress& dst_addr);
+  bool Run(ftl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddress& dst_addr,
+           bool cancel_right_away = false);
 
  private:
   // Initializes the data channel and sends a LE connection request to |dst_addr_|. Exits the
   // run loop if an error occurs.
   void InitializeDataChannelAndCreateConnection(
       const bluetooth::hci::DataBufferInfo& bredr_buffer_info,
-      const bluetooth::hci::DataBufferInfo& le_buffer_info);
+      const bluetooth::hci::DataBufferInfo& le_buffer_info, bool cancel_right_away);
 
   // Called after the connection has been successfully established. Sends 3 times the maximum number
   // of LE packets that can be stored in the controller's buffers. Sends ATT protocol Handle-Value
