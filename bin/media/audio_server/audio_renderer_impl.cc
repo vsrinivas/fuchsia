@@ -85,9 +85,14 @@ AudioRendererImpl::AudioRendererImpl(
     }
   });
 
+  timeline_control_point_.SetProgramRangeSetCallback(
+      [this](uint64_t program, int64_t min_pts, int64_t max_pts) {
+        pipe_.ProgramRangeSet(program, min_pts, max_pts);
+      });
+
   timeline_control_point_.SetPrimeRequestedCallback(
-      [this](int64_t pts, const TimelineControlPoint::PrimeCallback& callback) {
-        pipe_.PrimeRequested(pts, callback);
+      [this](const TimelineControlPoint::PrimeCallback& callback) {
+        pipe_.PrimeRequested(callback);
       });
 }
 

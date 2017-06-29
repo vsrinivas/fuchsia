@@ -141,6 +141,9 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // seek to if there is.
   int64_t transform_subject_time_ = kUnspecifiedTime;
 
+  // The minimum program range PTS to be used for SetProgramRange.
+  int64_t program_range_min_pts_ = kMinTime;
+
   // A function that translates local time into presentation time in ns.
   TimelineFunction timeline_function_;
 

@@ -145,22 +145,19 @@ void TimelineControlPoint::GetTimelineConsumer(
   consumer_binding_.Bind(std::move(timeline_consumer));
 }
 
+void TimelineControlPoint::SetProgramRange(uint64_t program,
+                                           int64_t min_pts,
+                                           int64_t max_pts) {
+  if (program_range_set_callback_) {
+    program_range_set_callback_(program, min_pts, max_pts);
+  }
+}
+
 void TimelineControlPoint::Prime(const PrimeCallback& callback) {
   FLOG(log_channel_, PrimeRequested());
 
   if (prime_requested_callback_) {
-    int64_t pts;
-
-    {
-      ftl::MutexLocker locker(&mutex_);
-      if (TimelineFunctionPending()) {
-        pts = pending_timeline_function_.subject_time();
-      } else {
-        pts = current_timeline_function_.subject_time();
-      }
-    }
-
-    prime_requested_callback_(pts, [this, callback]() {
+    prime_requested_callback_([this, callback]() {
       FLOG(log_channel_, CompletingPrime());
       callback();
     });

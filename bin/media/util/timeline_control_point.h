@@ -20,8 +20,9 @@ namespace media {
 class TimelineControlPoint : public MediaTimelineControlPoint,
                              public TimelineConsumer {
  public:
-  using PrimeRequestedCallback =
-      std::function<void(int64_t pts, const PrimeCallback&)>;
+  using ProgramRangeSetCallback =
+      std::function<void(uint64_t, int64_t, int64_t)>;
+  using PrimeRequestedCallback = std::function<void(const PrimeCallback&)>;
   using ProgressStartedCallback = std::function<void()>;
 
   TimelineControlPoint();
@@ -36,6 +37,11 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 
   // Unbinds from clients and resets to initial state.
   void Reset();
+
+  // Sets a callback to be called when priming is requested.
+  void SetProgramRangeSetCallback(const ProgramRangeSetCallback& callback) {
+    program_range_set_callback_ = callback;
+  }
 
   // Sets a callback to be called when priming is requested.
   void SetPrimeRequestedCallback(const PrimeRequestedCallback& callback) {
@@ -73,6 +79,10 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 
   void GetTimelineConsumer(
       fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
+
+  void SetProgramRange(uint64_t program,
+                       int64_t min_pts,
+                       int64_t max_pts) override;
 
   void Prime(const PrimeCallback& callback) override;
 
@@ -112,6 +122,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
   fidl::Binding<TimelineConsumer> consumer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
+  ProgramRangeSetCallback program_range_set_callback_;
   PrimeRequestedCallback prime_requested_callback_;
   ProgressStartedCallback progress_started_callback_;
 

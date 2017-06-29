@@ -191,6 +191,10 @@ void FakeRenderer::GetTimelineConsumer(
   timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
 }
 
+void FakeRenderer::SetProgramRange(uint64_t program,
+                                   int64_t min_pts,
+                                   int64_t max_pts) {}
+
 void FakeRenderer::Prime(const PrimeCallback& callback) {
   SetDemand(demand_min_packets_outstanding_);
   callback();

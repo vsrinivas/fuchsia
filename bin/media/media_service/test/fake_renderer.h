@@ -93,6 +93,10 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void GetTimelineConsumer(fidl::InterfaceRequest<TimelineConsumer>
                                timeline_consumer_request) override;
 
+  void SetProgramRange(uint64_t program,
+                       int64_t min_pts,
+                       int64_t max_pts) override;
+
   void Prime(const PrimeCallback& callback) override;
 
   // TimelineConsumer implementation.

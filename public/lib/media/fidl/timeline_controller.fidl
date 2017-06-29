@@ -28,6 +28,10 @@ interface MediaTimelineControlPoint {
   // Gets a timeline consumer interface for the control point.
   GetTimelineConsumer(TimelineConsumer& timeline_consumer);
 
+  // Specifies the range of PTS values to be accepted at this control point for
+  // the given program.
+  SetProgramRange(uint64 program, int64 min_pts, int64 max_pts);
+
   // Signals that the control point should prepare for a timeline transition
   // away from zero rate (stopped). The response indicates that the control
   // point is ready for the transition.

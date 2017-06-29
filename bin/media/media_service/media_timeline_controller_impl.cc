@@ -86,6 +86,16 @@ void MediaTimelineControllerImpl::GetTimelineConsumer(
   consumer_binding_.Bind(std::move(timeline_consumer));
 }
 
+void MediaTimelineControllerImpl::SetProgramRange(uint64_t program,
+                                                  int64_t min_pts,
+                                                  int64_t max_pts) {
+  for (const std::unique_ptr<ControlPointState>& control_point_state :
+       control_point_states_) {
+    control_point_state->control_point_->SetProgramRange(program, min_pts,
+                                                         max_pts);
+  }
+}
+
 void MediaTimelineControllerImpl::Prime(const PrimeCallback& callback) {
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 

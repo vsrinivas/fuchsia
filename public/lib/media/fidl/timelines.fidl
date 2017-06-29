@@ -4,10 +4,14 @@
 
 module media;
 
-// TODO(dalesat): Move out of media to somewhere more generic.
-
-// Used as a placefolder for unspecified time values.
+// Used as a placeholder for unspecified time values.
 const int64 kUnspecifiedTime = 0x7fffffffffffffff;
+
+// Minimum time value.
+const int64 kMinTime = -0x7fffffffffffffff;
+
+// Maximum time value.
+const int64 kMaxTime = 0x7ffffffffffffffe;
 
 // Represents the relationship between and subject timeline and a reference
 // timeline.

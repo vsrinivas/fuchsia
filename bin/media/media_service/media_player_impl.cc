@@ -258,10 +258,12 @@ void MediaPlayerImpl::Update() {
           for (auto& pair : streams_by_medium_) {
             pair.second.connected_ = false;
           }
-          // Setting |transform_subject_time_| ensures that we tell the
-          // renderers to start with PTS 0 when we transition to |kPlay|. It
-          // doesn't cause a seek on the source, which should already be at
-          // 0 anyway.
+
+          // The new source will start at position 0 unless a seek is requested.
+          // We set |program_range_min_pts_| and |transform_subject_time_| so
+          // the program range and timeline will be set properly.
+          // TODO(dalesat): Should |program_range_min_pts_| be kMinTime?
+          program_range_min_pts_ = 0;
           transform_subject_time_ = 0;
           status_publisher_.SendUpdates();
           MaybeCreateSource();
@@ -272,8 +274,11 @@ void MediaPlayerImpl::Update() {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
-          // Make sure the renderers have the right timeline so post-seek
-          // packets don't get discarded.
+          // |program_range_min_pts_| will be delivered in the |SetProgramRange|
+          // call, ensuring that the renderers discard packets with PTS values
+          // less than the target position. |transform_subject_time_| is used
+          // when setting the timeline.
+          program_range_min_pts_ = target_position_;
           transform_subject_time_ = target_position_;
           SetTimelineTransform(0.0f, Timeline::local_now(),
                                [this](bool completed) {
@@ -298,9 +303,12 @@ void MediaPlayerImpl::Update() {
             target_state_ == State::kPrimed) {
           // We want to transition to |kPrimed| or to |kPlaying|, for which
           // |kPrimed| is a prerequisite. We enter |kWaiting| state, issue the
-          // |Prime| request and transition to |kPrimed| when the operation is
-          // complete.
+          // |SetProgramRange| and |Prime| requests and transition to |kPrimed|
+          // when the operation is complete.
           state_ = State::kWaiting;
+          timeline_control_point_->SetProgramRange(0, program_range_min_pts_,
+                                                   kMaxTime);
+
           FLOG(log_channel_, Priming());
           timeline_control_point_->Prime([this]() {
             state_ = State::kPrimed;

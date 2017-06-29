@@ -75,10 +75,12 @@ class AudioPipe : public MediaPacketConsumerBase {
   AudioPipe(AudioRendererImpl* owner, AudioServerImpl* server);
   ~AudioPipe() override;
 
+  // Indicates a program range was set.
+  void ProgramRangeSet(uint64_t program, int64_t min_pts, int64_t max_pts);
+
   // Indicates the priming was requested. The pipe is responsible for calling
   // the callback when priming is complete.
-  void PrimeRequested(int64_t pts,
-                      const MediaTimelineControlPoint::PrimeCallback& callback);
+  void PrimeRequested(const MediaTimelineControlPoint::PrimeCallback& callback);
 
  protected:
   void OnPacketSupplied(SuppliedPacketPtr supplied_packet) override;
@@ -91,7 +93,7 @@ class AudioPipe : public MediaPacketConsumerBase {
   AudioServerImpl* server_;
 
   MediaTimelineControlPoint::PrimeCallback prime_callback_;
-  int64_t prime_pts_;
+  int64_t min_pts_ = kMinTime;
 
   // State used for timestamp interpolation
   bool next_pts_known_ = 0;

@@ -101,6 +101,7 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
   std::unique_ptr<SuppliedPacket> held_packet_;
   TimelineFunction current_timeline_function_;
   int64_t pts_ = kUnspecifiedTime;
+  int64_t min_pts_ = kMinTime;
   VideoConverter converter_;
   std::unordered_set<mozart::BaseView*> views_;
   FidlPublisher<VideoRenderer::GetStatusCallback> status_publisher_;
