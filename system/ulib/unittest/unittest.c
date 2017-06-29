@@ -96,7 +96,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                              bool* all_success) {
     if (utest_test_type & test_type) {
         unittest_printf_critical("    %-51s [RUNNING]", name);
-        struct test_info test_info;
+        struct test_info test_info = { .all_ok = true };
         *current_test_info = &test_info;
 
         if (!test())

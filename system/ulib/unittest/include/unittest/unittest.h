@@ -205,7 +205,6 @@ int unittest_set_verbosity_level(int new_level);
 #define BEGIN_TEST                        \
     do {                                  \
         UT_ASSERT_VALID_TEST_STATE;       \
-        current_test_info->all_ok = true; \
     } while (0)
 
 #define END_TEST                          \
@@ -234,9 +233,8 @@ int unittest_set_verbosity_level(int new_level);
 // Intentionally shadows the global current_test_info to avoid accidentally
 // leaking dangling stack pointers.
 #define BEGIN_HELPER \
-    struct test_info _ut_helper_test_info; \
+    struct test_info _ut_helper_test_info = { .all_ok = true }; \
     struct test_info* current_test_info = &_ut_helper_test_info; \
-    current_test_info->all_ok = true
 // By referring to _ut_helper_test_info, we guarantee that
 // END_HELPER is matched with BEGIN_HELPER.
 #define END_HELPER \
