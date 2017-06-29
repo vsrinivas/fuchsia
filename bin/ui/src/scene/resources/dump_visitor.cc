@@ -217,10 +217,10 @@ void DumpVisitor::VisitResource(Resource* r) {
   }
 }
 
-void DumpVisitor::BeginItem(const char* type, int32_t key) {
+void DumpVisitor::BeginItem(const char* type, uint32_t resource_id) {
   BeginLine();
-  if (key >= 0)
-    output_ << key << "> ";
+  if (resource_id)
+    output_ << resource_id << "> ";
   output_ << type;
   indentation_ += 2;
 }

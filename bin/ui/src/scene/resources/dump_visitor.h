@@ -42,7 +42,7 @@ class DumpVisitor : public ResourceVisitor {
   void VisitNode(Node* r);
   void VisitResource(Resource* r);
 
-  void BeginItem(const char* type, int32_t key = -1);
+  void BeginItem(const char* type, uint32_t resource_id = 0u);
   std::ostream& WriteProperty(const char* label);
   void EndItem();
 
