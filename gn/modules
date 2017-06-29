@@ -53,6 +53,10 @@
             "bootfs_path": "apps/location_agent"
         },
         {
+            "binary": "gen/apps/modules/common/modules/travel_info/travel_info.flx",
+            "bootfs_path": "apps/travel_info"
+        },
+        {
             "binary": "gen/apps/modules/common/modules/usps/usps.flx",
             "bootfs_path": "apps/usps"
         },
