@@ -13,5 +13,7 @@ KERNEL_INCLUDES += $(ULIB_DIR)/include
 
 MODULE_SRCS := \
     $(SRC_DIR)/chacha/chacha.c \
+    $(SRC_DIR)/sha/sha256.c \
+    $(SRC_DIR)/sha/sha512.c \
 
 include make/module.mk

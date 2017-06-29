@@ -17,13 +17,20 @@ MODULE_SRCS += \
     $(SRC_DIR)/chacha/chacha.c \
     $(SRC_DIR)/cpu-intel.c \
     $(SRC_DIR)/crypto.c \
+    $(SRC_DIR)/mem.c \
+    $(SRC_DIR)/sha/sha256.c \
+    $(SRC_DIR)/sha/sha512.c \
 
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \
-    $(ASM_DIR)/chacha-arm64.S
+    $(ASM_DIR)/chacha-arm64.S \
+    $(ASM_DIR)/sha256-arm64.S \
+    $(ASM_DIR)/sha512-arm64.S
 else ifeq ($(ARCH),x86)
 MODULE_SRCS += \
-    $(ASM_DIR)/chacha-x86-64.S
+    $(ASM_DIR)/chacha-x86-64.S \
+    $(ASM_DIR)/sha256-x86-64.S \
+    $(ASM_DIR)/sha512-x86-64.S
 endif
 
 MODULE_NAME := boring-crypto
