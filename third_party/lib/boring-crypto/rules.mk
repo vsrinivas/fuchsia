@@ -12,11 +12,6 @@ SRC_DIR := $(ULIB_DIR)/crypto
 KERNEL_INCLUDES += $(ULIB_DIR)/include
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/chacha_unittest.cpp \
-    $(LOCAL_DIR)/all_tests.cpp \
-
-MODULE_SRCS += \
     $(SRC_DIR)/chacha/chacha.c \
-
 
 include make/module.mk

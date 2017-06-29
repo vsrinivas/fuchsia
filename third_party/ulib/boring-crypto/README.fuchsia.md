@@ -29,6 +29,10 @@ Care should be taken to minimize the differences between files in boring-crypto
 and BoringSSL.  Only the minimum number of changes necessary to limit pulling in
 excessive dependencies should be added.
 
+This subset does not include tests from BoringSSL.  When updating from
+[BoringSSL][boringssl], maintainers should first ensure the unit tests in that
+package pass on Fuchsia before updating the subset for Magenta.
+
 Finally, maintainers should update this file with the new [revision][revision]
 of BoringSSL to provide an easy way to confirm boring-crypto was checked.
 

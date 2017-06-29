@@ -4,13 +4,27 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 SRC_DIR := $(LOCAL_DIR)/crypto
+ASM_DIR := $(LOCAL_DIR)/asm
 
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_SRCS := \
+    $(SRC_DIR)/cpu-aarch64-magenta.cpp \
+
 MODULE_SRCS += \
     $(SRC_DIR)/chacha/chacha.c \
+    $(SRC_DIR)/cpu-intel.c \
+    $(SRC_DIR)/crypto.c \
+
+ifeq ($(ARCH),arm64)
+MODULE_SRCS += \
+    $(ASM_DIR)/chacha-arm64.S
+else ifeq ($(ARCH),x86)
+MODULE_SRCS += \
+    $(ASM_DIR)/chacha-x86-64.S
+endif
 
 MODULE_NAME := boring-crypto
 
