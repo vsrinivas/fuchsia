@@ -270,11 +270,7 @@ class VulkanCubeApp {
     const float kScreenWidth = 2160.f;
     const float kScreenHeight = 1440.f;
     float translation[3] = {kScreenWidth / 2, kScreenHeight / 2, 10.f};
-    ops.push_back(NewSetTransformOp(node_id, translation,
-                                    kOnesFloat3,        // scale
-                                    kZeroesFloat3,      // anchor point
-                                    kQuaternionDefault  // rotation
-                                    ));
+    ops.push_back(NewSetTranslationOp(node_id, translation));
 
     // Create a Scene, and attach to it the Nodes created above.
     ResourceId scene_id = NewResourceId();

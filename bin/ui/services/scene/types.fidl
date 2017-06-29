@@ -65,15 +65,77 @@ union Value {
   uint32 variable_id;
 };
 
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a float, and |value| is ignored.
+struct FloatValue {
+  float value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec2, and |value| is ignored.
+struct Vector2Value {
+  vec2 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec3, and |value| is ignored.
+struct Vector3Value {
+  vec3 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec4, and |value| is ignored.
+struct Vector4Value {
+  vec4 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec4, and |value| is ignored.
+struct Matrix4Value {
+  mat4 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a ColorRgba, and |value| is ignored.
+struct ColorRgbaValue {
+  ColorRgba value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a Quaternion, and |value| is ignored.
+struct QuaternionValue {
+  Quaternion value;
+  uint32 variable_id;
+};
+
 enum ValueType {
   kNone = 0,
   kVector1,
   kVector2,
   kVector3,
   kVector4,
-  kMatrix4x4,
+  kMatrix4,
   kColorRgba,
-  kDegrees,
   kQuaternion,
   kTransform,
 };

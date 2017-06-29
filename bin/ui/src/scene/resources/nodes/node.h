@@ -29,8 +29,18 @@ class Node : public Resource {
   bool AddPart(NodePtr part_node);
 
   bool SetTransform(const escher::Transform& transform);
+  bool SetTranslation(const escher::vec3& translation);
+  bool SetScale(const escher::vec3& scale);
+  bool SetRotation(const escher::quat& rotation);
+  bool SetAnchor(const escher::vec3& anchor);
+
   const escher::mat4& GetGlobalTransform() const;
+
   const escher::Transform& transform() const { return transform_; }
+  const escher::vec3& translation() const { return transform_.translation; }
+  const escher::vec3& scale() const { return transform_.scale; }
+  const escher::quat& rotation() const { return transform_.rotation; }
+  const escher::vec3& anchor() const { return transform_.anchor; }
 
   // This is a static method so that it can be passed a NodePtr&, to facilitate
   // look-up in the node's parent.  No-op if node has no parent.  Always returns

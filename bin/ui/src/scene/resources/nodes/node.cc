@@ -121,6 +121,50 @@ bool Node::SetTransform(const escher::Transform& transform) {
   return true;
 }
 
+bool Node::SetTranslation(const escher::vec3& translation) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR() << "scene::Node::SetTranslation(): node of type "
+                              << type_name() << " cannot have translation set.";
+    return false;
+  }
+  transform_.translation = translation;
+  InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetScale(const escher::vec3& scale) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR() << "scene::Node::SetScale(): node of type "
+                              << type_name() << " cannot have scale set.";
+    return false;
+  }
+  transform_.scale = scale;
+  InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetRotation(const escher::quat& rotation) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR() << "scene::Node::SetRotation(): node of type "
+                              << type_name() << " cannot have rotation set.";
+    return false;
+  }
+  transform_.rotation = rotation;
+  InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetAnchor(const escher::vec3& anchor) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR() << "scene::Node::SetAnchor(): node of type "
+                              << type_name() << " cannot have anchor set.";
+    return false;
+  }
+  transform_.anchor = anchor;
+  InvalidateGlobalTransform();
+  return true;
+}
+
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;

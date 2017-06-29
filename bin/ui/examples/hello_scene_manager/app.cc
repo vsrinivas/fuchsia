@@ -132,21 +132,13 @@ class HelloSceneManagerApp {
     // Translate the circle.
     {
       float translation[3] = {50.f, 50.f, 10.f};
-      ops.push_back(NewSetTransformOp(circle_node_id, translation,
-                                      kOnesFloat3,        // scale
-                                      kZeroesFloat3,      // anchor point
-                                      kQuaternionDefault  // rotation
-                                      ));
+      ops.push_back(NewSetTranslationOp(circle_node_id, translation));
     }
 
     // Translate the EntityNode root.
     {
       float translation[3] = {900.f, 800.f, 10.f};
-      ops.push_back(NewSetTransformOp(entity_node_id, translation,
-                                      kOnesFloat3,        // scale
-                                      kZeroesFloat3,      // anchor point
-                                      kQuaternionDefault  // rotation
-                                      ));
+      ops.push_back(NewSetTranslationOp(entity_node_id, translation));
     }
 
     // Create a Scene, and attach to it the Nodes created above.
@@ -215,10 +207,8 @@ class HelloSceneManagerApp {
       rotation[2] = quaternion.z;
       rotation[3] = quaternion.w;
 
-      ops.push_back(NewSetTransformOp(rrect_node_id_, translation,
-                                      kOnesFloat3,    // scale
-                                      kZeroesFloat3,  // anchor point
-                                      rotation));
+      ops.push_back(NewSetTranslationOp(rrect_node_id_, translation));
+      ops.push_back(NewSetRotationOp(rrect_node_id_, rotation));
     }
 
     session_->Enqueue(std::move(ops));

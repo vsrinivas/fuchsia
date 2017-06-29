@@ -87,8 +87,10 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyAddPartOp(const mozart2::AddPartOpPtr& op);
   bool ApplyDetachOp(const mozart2::DetachOpPtr& op);
   bool ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op);
-  bool ApplySetTransformOp(const mozart2::SetTransformOpPtr& op);
+  bool ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op);
+  bool ApplySetScaleOp(const mozart2::SetScaleOpPtr& op);
   bool ApplySetRotationOp(const mozart2::SetRotationOpPtr& op);
+  bool ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op);
   bool ApplySetShapeOp(const mozart2::SetShapeOpPtr& op);
   bool ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op);
   bool ApplySetClipOp(const mozart2::SetClipOpPtr& op);

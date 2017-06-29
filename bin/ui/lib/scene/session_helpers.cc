@@ -432,36 +432,72 @@ mozart2::OpPtr NewDetachChildrenOp(uint32_t node_id) {
   return op;
 }
 
-mozart2::OpPtr NewSetTransformOp(uint32_t node_id,
-                                 const float translation[3],
-                                 const float scale[3],
-                                 const float anchor[3],
-                                 const float quaternion[4]) {
-  auto set_transform = mozart2::SetTransformOp::New();
-  set_transform->id = node_id;
-  set_transform->transform = mozart2::Value::New();
-  set_transform->transform->set_transform(mozart2::Transform::New());
-  auto& transform = set_transform->transform->get_transform();
-  transform->translation = mozart2::vec3::New();
-  transform->translation->x = translation[0];
-  transform->translation->y = translation[1];
-  transform->translation->z = translation[2];
-  transform->scale = mozart2::vec3::New();
-  transform->scale->x = scale[0];
-  transform->scale->y = scale[1];
-  transform->scale->z = scale[2];
-  transform->anchor = mozart2::vec3::New();
-  transform->anchor->x = anchor[0];
-  transform->anchor->y = anchor[1];
-  transform->anchor->z = anchor[2];
-  transform->rotation = mozart2::Quaternion::New();
-  transform->rotation->x = quaternion[0];
-  transform->rotation->y = quaternion[1];
-  transform->rotation->z = quaternion[2];
-  transform->rotation->w = quaternion[3];
+mozart2::OpPtr NewSetTranslationOp(uint32_t node_id,
+                                   const float translation[3]) {
+  auto set_translation = mozart2::SetTranslationOp::New();
+  set_translation->id = node_id;
+  set_translation->value = mozart2::Vector3Value::New();
+  set_translation->value->value = mozart2::vec3::New();
+  auto& value = set_translation->value->value;
+  value->x = translation[0];
+  value->y = translation[1];
+  value->z = translation[2];
+  set_translation->value->variable_id = 0;
 
   auto op = mozart2::Op::New();
-  op->set_set_transform(std::move(set_transform));
+  op->set_set_translation(std::move(set_translation));
+
+  return op;
+}
+
+mozart2::OpPtr NewSetScaleOp(uint32_t node_id, const float scale[3]) {
+  auto set_scale = mozart2::SetScaleOp::New();
+  set_scale->id = node_id;
+  set_scale->value = mozart2::Vector3Value::New();
+  set_scale->value->value = mozart2::vec3::New();
+  auto& value = set_scale->value->value;
+  value->x = scale[0];
+  value->y = scale[1];
+  value->z = scale[2];
+  set_scale->value->variable_id = 0;
+
+  auto op = mozart2::Op::New();
+  op->set_set_scale(std::move(set_scale));
+
+  return op;
+}
+
+mozart2::OpPtr NewSetRotationOp(uint32_t node_id, const float quaternion[4]) {
+  auto set_rotation = mozart2::SetRotationOp::New();
+  set_rotation->id = node_id;
+  set_rotation->value = mozart2::QuaternionValue::New();
+  set_rotation->value->value = mozart2::Quaternion::New();
+  auto& value = set_rotation->value->value;
+  value->x = quaternion[0];
+  value->y = quaternion[1];
+  value->z = quaternion[2];
+  value->w = quaternion[3];
+  set_rotation->value->variable_id = 0;
+
+  auto op = mozart2::Op::New();
+  op->set_set_rotation(std::move(set_rotation));
+
+  return op;
+}
+
+mozart2::OpPtr NewSetAnchorOp(uint32_t node_id, const float anchor[3]) {
+  auto set_anchor = mozart2::SetAnchorOp::New();
+  set_anchor->id = node_id;
+  set_anchor->value = mozart2::Vector3Value::New();
+  set_anchor->value->value = mozart2::vec3::New();
+  auto& value = set_anchor->value->value;
+  value->x = anchor[0];
+  value->y = anchor[1];
+  value->z = anchor[2];
+  set_anchor->value->variable_id = 0;
+
+  auto op = mozart2::Op::New();
+  op->set_set_anchor(std::move(set_anchor));
 
   return op;
 }
@@ -524,11 +560,13 @@ mozart2::OpPtr NewSetColorOp(uint32_t material_id,
                              uint8_t green,
                              uint8_t blue,
                              uint8_t alpha) {
-  auto color = mozart2::ColorRgba::New();
-  color->red = red;
-  color->green = green;
-  color->blue = blue;
-  color->alpha = alpha;
+  auto color = mozart2::ColorRgbaValue::New();
+  color->value = mozart2::ColorRgba::New();
+  color->value->red = red;
+  color->value->green = green;
+  color->value->blue = blue;
+  color->value->alpha = alpha;
+  color->variable_id = 0;
   auto set_color = mozart2::SetColorOp::New();
   set_color->material_id = material_id;
   set_color->color = std::move(color);

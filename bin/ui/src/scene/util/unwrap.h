@@ -61,6 +61,15 @@ inline bool IsVariable(const mozart2::ValuePtr& val) {
   return val->which() == mozart2::Value::Tag::VARIABLE_ID;
 }
 
+inline bool IsVariable(const mozart2::FloatValuePtr& val) {
+  return val->variable_id != 0;
+}
+
+template <typename ValuePtrT>
+inline bool IsVariable(const ValuePtrT& val) {
+  return val->variable_id != 0;
+}
+
 // Caller must verify that the value is a Matrix4x4 before calling this.
 inline escher::mat4 UnwrapMatrix4x4(const mozart2::ValuePtr& val) {
   FTL_DCHECK(IsMatrix4x4(val));
@@ -71,6 +80,31 @@ inline escher::mat4 UnwrapMatrix4x4(const mozart2::ValuePtr& val) {
 inline escher::Transform UnwrapTransform(const mozart2::ValuePtr& val) {
   FTL_DCHECK(IsTransform(val));
   return Unwrap(val->get_transform());
+}
+
+inline float UnwrapFloat(const mozart2::FloatValuePtr& val) {
+  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  return val->value;
+}
+
+inline escher::vec2 UnwrapVector2(const mozart2::Vector2ValuePtr& val) {
+  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  return Unwrap(val->value);
+}
+
+inline escher::vec3 UnwrapVector3(const mozart2::Vector3ValuePtr& val) {
+  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  return Unwrap(val->value);
+}
+
+inline escher::vec4 UnwrapVector4(const mozart2::Vector4ValuePtr& val) {
+  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  return Unwrap(val->value);
+}
+
+inline escher::quat UnwrapQuaternion(const mozart2::QuaternionValuePtr& val) {
+  FTL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  return Unwrap(val->value);
 }
 
 }  // namespace scene

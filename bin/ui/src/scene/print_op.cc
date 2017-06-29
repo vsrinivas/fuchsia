@@ -15,9 +15,47 @@ using mozart2::Value;
 std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
   switch (op->which()) {
     case Op::Tag::CREATE_RESOURCE:
-      return stream << "[" << op->get_create_resource() << "]";
-    default:
-      return stream << "PRINTING NOT IMPLEMENTED FOR ALL OP TYPES";
+      return stream << op->get_create_resource();
+    case Op::Tag::EXPORT_RESOURCE:
+      return stream << "EXPORT_RESOURCE";
+    case Op::Tag::IMPORT_RESOURCE:
+      return stream << "IMPORT_RESOURCE";
+    case Op::Tag::RELEASE_RESOURCE:
+      return stream << "RELEASE_RESOURCE";
+    case Op::Tag::SET_TRANSLATION:
+      return stream << "SET_TRANSLATION";
+    case Op::Tag::SET_SCALE:
+      return stream << "SET_SCALE";
+    case Op::Tag::SET_ROTATION:
+      return stream << "SET_ROTATION";
+    case Op::Tag::SET_ANCHOR:
+      return stream << "SET_ANCHOR";
+    case Op::Tag::ADD_CHILD:
+      return stream << "ADD_CHILD";
+    case Op::Tag::ADD_PART:
+      return stream << "ADD_PART";
+    case Op::Tag::DETACH:
+      return stream << "DETACH";
+    case Op::Tag::DETACH_CHILDREN:
+      return stream << "DETACH_CHILDREN";
+    case Op::Tag::SET_SHAPE:
+      return stream << "SET_SHAPE";
+    case Op::Tag::SET_MATERIAL:
+      return stream << "SET_MATERIAL";
+    case Op::Tag::SET_CLIP:
+      return stream << "SET_CLIP";
+    case Op::Tag::SET_CAMERA:
+      return stream << "SET_CAMERA";
+    case Op::Tag::SET_CAMERA_PROJECTION:
+      return stream << "SET_CAMERA_PROJECTION";
+    case Op::Tag::SET_LIGHT_INTENSITY:
+      return stream << "SET_LIGHT_INTENSITY";
+    case Op::Tag::SET_TEXTURE:
+      return stream << "SET_TEXTURE";
+    case Op::Tag::SET_COLOR:
+      return stream << "SET_COLOR";
+    case Op::Tag::__UNKNOWN__:
+      return stream << "__UNKNOWN__";
   }
 }
 

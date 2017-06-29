@@ -75,10 +75,14 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplyDetachOp(op->get_detach());
     case mozart2::Op::Tag::DETACH_CHILDREN:
       return ApplyDetachChildrenOp(op->get_detach_children());
-    case mozart2::Op::Tag::SET_TRANSFORM:
-      return ApplySetTransformOp(op->get_set_transform());
+    case mozart2::Op::Tag::SET_TRANSLATION:
+      return ApplySetTranslationOp(op->get_set_translation());
+    case mozart2::Op::Tag::SET_SCALE:
+      return ApplySetScaleOp(op->get_set_scale());
     case mozart2::Op::Tag::SET_ROTATION:
       return ApplySetRotationOp(op->get_set_rotation());
+    case mozart2::Op::Tag::SET_ANCHOR:
+      return ApplySetAnchorOp(op->get_set_anchor());
     case mozart2::Op::Tag::SET_SHAPE:
       return ApplySetShapeOp(op->get_set_shape());
     case mozart2::Op::Tag::SET_MATERIAL:
@@ -211,17 +215,51 @@ bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetTransformOp(const mozart2::SetTransformOpPtr& op) {
+bool Session::ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
-    node->SetTransform(UnwrapTransform(op->transform));
-    return true;
+    if (IsVariable(op->value)) {
+      error_reporter_->ERROR() << "scene::Session::ApplySetTranslationOp(): "
+                                  "unimplemented for variable value.";
+      return false;
+    }
+    return node->SetTranslation(UnwrapVector3(op->value));
+  }
+  return false;
+}
+
+bool Session::ApplySetScaleOp(const mozart2::SetScaleOpPtr& op) {
+  if (auto node = resources_.FindResource<Node>(op->id)) {
+    if (IsVariable(op->value)) {
+      error_reporter_->ERROR() << "scene::Session::ApplySetScaleOp(): "
+                                  "unimplemented for variable value.";
+      return false;
+    }
+    return node->SetScale(UnwrapVector3(op->value));
   }
   return false;
 }
 
 bool Session::ApplySetRotationOp(const mozart2::SetRotationOpPtr& op) {
-  error_reporter_->ERROR()
-      << "scene::Session::ApplySetRotationOp(): unimplemented";
+  if (auto node = resources_.FindResource<Node>(op->id)) {
+    if (IsVariable(op->value)) {
+      error_reporter_->ERROR() << "scene::Session::ApplySetRotationOp(): "
+                                  "unimplemented for variable value.";
+      return false;
+    }
+    return node->SetRotation(UnwrapQuaternion(op->value));
+  }
+  return false;
+}
+
+bool Session::ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op) {
+  if (auto node = resources_.FindResource<Node>(op->id)) {
+    if (IsVariable(op->value)) {
+      error_reporter_->ERROR() << "scene::Session::ApplySetAnchorOp(): "
+                                  "unimplemented for variable value.";
+      return false;
+    }
+    return node->SetAnchor(UnwrapVector3(op->value));
+  }
   return false;
 }
 
@@ -279,17 +317,17 @@ bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
 
 bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
   if (auto material = resources_.FindResource<Material>(op->material_id)) {
-    float red = 1.f;
-    float green = 1.f;
-    float blue = 1.f;
-    float alpha = 1.f;
-    if (op->color) {
-      auto& color = op->color;
-      red = static_cast<float>(color->red) / 255.f;
-      green = static_cast<float>(color->green) / 255.f;
-      blue = static_cast<float>(color->blue) / 255.f;
-      alpha = static_cast<float>(color->alpha) / 255.f;
+    if (IsVariable(op->color)) {
+      error_reporter_->ERROR() << "scene::Session::ApplySetColorOp(): "
+                                  "unimplemented for variable color.";
+      return false;
     }
+
+    auto& color = op->color->value;
+    float red = static_cast<float>(color->red) / 255.f;
+    float green = static_cast<float>(color->green) / 255.f;
+    float blue = static_cast<float>(color->blue) / 255.f;
+    float alpha = static_cast<float>(color->alpha) / 255.f;
     material->SetColor(red, green, blue, alpha);
     return true;
   }
@@ -719,6 +757,8 @@ bool Session::ApplyUpdate(Session::Update* update) {
   if (is_valid()) {
     for (auto& op : update->ops) {
       if (!ApplyOp(op)) {
+        error_reporter_->ERROR()
+            << "scene::Session::ApplyOp() failed to apply Op: " << op;
         return false;
       }
     }

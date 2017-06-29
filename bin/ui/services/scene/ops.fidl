@@ -14,8 +14,10 @@ union Op {
   ReleaseResourceOp release_resource;
 
   // Spatial operations.
-  SetTransformOp set_transform;
+  SetTranslationOp set_translation;
+  SetScaleOp set_scale;
   SetRotationOp set_rotation;
+  SetAnchorOp set_anchor;
 
   // Node-specific operations.
   AddChildOp add_child; // TODO: Should we require a DetachOp before re-parenting?
@@ -143,28 +145,40 @@ struct DetachChildrenOp {
   uint32 node_id;
 };
 
-// Sets a Resource's (typically a Node's) transform.
+// Sets a Resource's (typically a Node's) translation.
 //
 // Constraints:
 // - |id| refs a Resource with the has_transform characteristic.
-struct SetTransformOp {
+struct SetTranslationOp {
   uint32 id;
-  Value transform;  // type: kTransform
+  Vector3Value value;
+};
+
+// Sets a Resource's (typically a Node's) scale.
+//
+// Constraints:
+// - |id| refs a Resource with the has_transform characteristic.
+struct SetScaleOp {
+  uint32 id;
+  Vector3Value value;
 };
 
 // Sets a Resource's (typically a Node's) rotation.
 //
 // Constraints:
-// - |id| refs a Resource with the has_rotation or has_transform characteristic.
-//
-// TODO: it's not quite clear how to apply this to a Resource with the
-// has_transform characteristic, when the resource already has a Variable
-// transform.  When the resource's transform is not a variable, then there is an
-// obvious interpretation: only the rotation is set (the translation, scale,
-// etc. are left unchanged).
+// - |id| refs a Resource with the has_transform characteristic.
 struct SetRotationOp {
   uint32 id;
-  Value rotation;  // type: kQuaternion
+  QuaternionValue value;
+};
+
+// Sets a Resource's (typically a Node's) anchor point.
+//
+// Constraints:
+// - |id| refs a Resource with the has_transform characteristic.
+struct SetAnchorOp {
+  uint32 id;
+  Vector3Value value;
 };
 
 // Sets/clears a node's shape.
@@ -285,6 +299,5 @@ struct SetTextureOp {
 // is multiplied by the color.
 struct SetColorOp {
   uint32 material_id;
-  // TODO: use Value instead of ColorRgba.
-  ColorRgba color;
+  ColorRgbaValue color;
 };
