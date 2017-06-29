@@ -231,7 +231,7 @@ int unittest_printf(const char* format, ...);
 #define UTCHECK_BYTES_EQ(expected, actual, length, msg, term)                  \
     if (!unittest_expect_bytes((expected), #expected,                          \
                                (actual), #actual,                              \
-                               (len), msg, __PRETTY_FUNCTION__, __LINE__,      \
+                               (length), msg, __PRETTY_FUNCTION__, __LINE__,   \
                                true)) {                                        \
         if (term) return false; else all_ok = false;                           \
     }
@@ -239,7 +239,7 @@ int unittest_printf(const char* format, ...);
 #define UTCHECK_BYTES_NE(expected, actual, length, msg, term)                  \
     if (!unittest_expect_bytes((expected), #expected,                          \
                                (actual), #actual,                              \
-                               (len), msg, __PRETTY_FUNCTION__, __LINE__,      \
+                               (length), msg, __PRETTY_FUNCTION__, __LINE__,   \
                                false)) {                                       \
         if (term) return false; else all_ok = false;                           \
     }

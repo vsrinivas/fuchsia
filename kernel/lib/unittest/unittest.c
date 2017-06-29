@@ -49,20 +49,17 @@ bool unittest_expect_bytes(const uint8_t* expected,
                            bool expect_eq) {
     if (!memcmp(expected, actual, len) != expect_eq) {
 
-        unittest_printf(UNITTEST_TRACEF_FORMAT "%s:\n%s %s %s, but should not!\n",
+        unittest_printf(UNITTEST_TRACEF_FORMAT "%s:\n%s %s %s, but %s!\n",
                         func, line, msg,
                         expected_name,
                         expect_eq ? "does not match" : "matches",
-                        actual_name);
+                        actual_name,
+                        expect_eq ? "should" : "should not");
 
-        if (expect_eq) {
-            hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
-        } else {
-            unittest_printf("expected (%s)\n", expected_name);
-            hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
-            unittest_printf("actual (%s)\n", actual_name);
-            hexdump8_very_ex(actual, len, (uint64_t)((addr_t)actual), unittest_printf);
-        }
+        unittest_printf("expected (%s)\n", expected_name);
+        hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
+        unittest_printf("actual (%s)\n", actual_name);
+        hexdump8_very_ex(actual, len, (uint64_t)((addr_t)actual), unittest_printf);
 
         return false;
     }
