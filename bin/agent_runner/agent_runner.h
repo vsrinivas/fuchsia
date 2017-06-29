@@ -15,7 +15,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_client.h"
+#include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"

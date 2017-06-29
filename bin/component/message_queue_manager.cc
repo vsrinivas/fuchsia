@@ -9,7 +9,7 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/fidl/page_client.h"
+#include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "apps/modular/src/component/persistent_queue.h"

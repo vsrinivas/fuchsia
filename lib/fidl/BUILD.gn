@@ -63,21 +63,6 @@ source_set("json_xdr") {
   ]
 }
 
-source_set("ledger") {
-  sources = [
-    "page_client.cc",
-    "page_client.h",
-  ]
-
-  deps = [
-    ":array_to_string",
-    "//apps/ledger/services/public",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-    "//lib/mtl",
-  ]
-}
-
 source_set("operation") {
   sources = [
     "operation.cc",

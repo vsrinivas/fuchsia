@@ -7,7 +7,6 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/remote/remote_invoker.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

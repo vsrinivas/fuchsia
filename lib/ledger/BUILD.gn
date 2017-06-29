@@ -17,6 +17,21 @@ source_set("operations") {
   ]
 }
 
+source_set("page_client") {
+  sources = [
+    "page_client.cc",
+    "page_client.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
 source_set("storage") {
   sources = [
     "storage.cc",

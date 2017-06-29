@@ -9,7 +9,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_client.h"
+#include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/per_device_story_info.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
