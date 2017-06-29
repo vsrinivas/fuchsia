@@ -18,6 +18,11 @@ static void usb_control_complete(iotxn_t* txn, void* cookie) {
 
 mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
                         uint16_t value, uint16_t index, void* data, size_t length) {
+    usb_protocol_t usb;
+    if (device_get_protocol(device, MX_PROTOCOL_USB, &usb)) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
     iotxn_t* txn;
 
     uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
@@ -51,9 +56,19 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
     txn->complete_cb = usb_control_complete;
     txn->cookie = &completion;
     iotxn_queue(device, txn);
-    completion_wait(&completion, MX_TIME_INFINITE);
-
-    status = txn->status;
+    // TODO(voydanoff) Make the timeout value a parameter.
+    // We can wait until the next time we rearrange the USB APIs.
+    status = completion_wait(&completion, MX_SEC(5));
+    if (status == MX_OK) {
+        status = txn->status;
+    } else if (status == MX_ERR_TIMED_OUT) {
+        completion_reset(&completion);
+        status = usb.ops->iotxn_cancel(usb.ctx, txn);
+        if (status == MX_OK) {
+            completion_wait(&completion, MX_TIME_INFINITE);
+            status = MX_ERR_TIMED_OUT;
+        }
+    }
     if (status == MX_OK) {
         status = txn->actual;
 

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/iotxn.h>
 #include <magenta/compiler.h>
 #include <magenta/hw/usb.h>
 #include <magenta/hw/usb-hub.h>
@@ -30,6 +31,7 @@ typedef struct usb_hci_protocol_ops {
     mx_status_t (*hub_device_removed)(void* ctx, uint32_t device_id, int port);
     mx_status_t (*reset_endpoint)(void* ctx, uint32_t device_id, uint8_t ep_address);
     size_t (*get_max_transfer_size)(void* ctx, uint32_t device_id, uint8_t ep_address);
+    mx_status_t (*iotxn_cancel)(void* ctx, iotxn_t* txn);
 } usb_hci_protocol_ops_t;
 
 typedef struct usb_hci_protocol {

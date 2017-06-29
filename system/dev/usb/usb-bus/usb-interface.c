@@ -223,10 +223,16 @@ static uint32_t _usb_interface_get_device_id(void* ctx) {
     return intf->device_id;
 }
 
+static mx_status_t usb_interface_iotxn_cancel(void* ctx, iotxn_t* txn) {
+    usb_interface_t* intf = ctx;
+    return intf->hci.ops->iotxn_cancel(intf->hci.ctx, txn);
+}
+
 static usb_protocol_ops_t _usb_protocol = {
     .reset_endpoint = usb_interface_reset_endpoint,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = _usb_interface_get_device_id,
+    .iotxn_cancel = usb_interface_iotxn_cancel,
 };
 
 mx_status_t usb_device_add_interface(usb_device_t* device,

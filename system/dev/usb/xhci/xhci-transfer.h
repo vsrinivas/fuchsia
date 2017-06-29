@@ -13,6 +13,7 @@ typedef struct xhci xhci_t;
 typedef void (*xhci_transfer_complete_cb)(mx_status_t result, void* data);
 
 mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn);
+mx_status_t xhci_cancel_transfer(xhci_t* xhci, iotxn_t* txn);
 void xhci_cancel_transfers(xhci_t* xhci, xhci_transfer_ring_t* ring);
 int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, uint8_t request,
                          uint16_t value, uint16_t index, void* data, uint16_t length);
