@@ -178,6 +178,62 @@
       "file": "apps/sysui/agents/home_work_agent/assets/truefood.png"
     },
     {
+      "bootfs_path": "data/sysui/cinefilm_96.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/cinefilm_96.png"
+    },
+    {
+      "bootfs_path": "data/sysui/expenses_96.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/expenses_96.png"
+    },
+    {
+      "bootfs_path": "data/sysui/logo_fitness_color_2x_web_96.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/logo_fitness_color_2x_web_96.png"
+    },
+    {
+      "bootfs_path": "data/sysui/simon_96.jpg",
+      "file": "apps/sysui/agents/home_work_agent/assets/simon_96.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/story_calendar.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_calendar.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_cinefilm.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_cinefilm.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_expense.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_expense.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_marketing.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_marketing.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_overthrough.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_overthrough.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_phonecall.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_phonecall.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_steps.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_steps.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_threepeaks.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_threepeaks.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_toetheline.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_toetheline.png"
+    },
+    {
+      "bootfs_path": "data/sysui/story_truefoods.png",
+      "file": "apps/sysui/agents/home_work_agent/assets/story_truefoods.png"
+    },
+    {
       "bootfs_path": "data/sysui/istanbul_240.png",
       "file": "apps/sysui/agents/home_work_agent/assets/istanbul_240.png"
     }
