@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
   auto context = app::ApplicationContext::CreateFromStartupInfo();
 
   tracing::App app(context.get());
-  app.Run(command_line);
+  loop.task_runner()->PostTask([&app, &command_line]{app.Run(command_line);});
   loop.Run();
   return 0;
 }
