@@ -374,18 +374,14 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
                     iotxn_queue(eth->usb_device, req);
                 }
                 xprintf("ax88179 now online\n");
-                mtx_lock(&eth->mutex);
                 if (eth->ifc) {
                     eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
                 }
-                mtx_unlock(&eth->mutex);
             } else if (!online && was_online) {
                 xprintf("ax88179 now offline\n");
-                mtx_lock(&eth->mutex);
                 if (eth->ifc) {
                     eth->ifc->status(eth->cookie, 0);
                 }
-                mtx_unlock(&eth->mutex);
             }
         }
     }
