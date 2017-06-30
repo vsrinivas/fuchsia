@@ -175,13 +175,13 @@ impl Port {
 /// Options for creating a port.
 #[repr(u32)]
 pub enum PortOpts {
-    V1 = sys::MX_PORT_OPT_V1,
-    V2 = sys::MX_PORT_OPT_V2,
+    /// Default options.
+    Default = 0,
 }
 
 impl Default for PortOpts {
     fn default() -> Self {
-        PortOpts::V2
+        PortOpts::Default
     }
 }
 
@@ -203,7 +203,7 @@ mod tests {
     fn port_basic() {
         let ten_ms: Duration = 10_000_000;
 
-        let port = Port::create(PortOpts::V2).unwrap();
+        let port = Port::create(PortOpts::Default).unwrap();
 
         // Waiting now should time out.
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
@@ -226,7 +226,7 @@ mod tests {
         let ten_ms: Duration = 10_000_000;
         let key = 42;
 
-        let port = Port::create(PortOpts::V2).unwrap();
+        let port = Port::create(PortOpts::Default).unwrap();
         let event = Event::create(EventOpts::Default).unwrap();
 
         assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,
@@ -285,7 +285,7 @@ mod tests {
         let ten_ms: Duration = 10_000_000;
         let key = 42;
 
-        let port = Port::create(PortOpts::V2).unwrap();
+        let port = Port::create(PortOpts::Default).unwrap();
         let event = Event::create(EventOpts::Default).unwrap();
 
         assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,

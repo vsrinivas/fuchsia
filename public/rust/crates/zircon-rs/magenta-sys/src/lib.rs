@@ -284,9 +284,6 @@ pub struct mx_pci_resource_t {
 // TODO: Actually a union
 pub type mx_rrec_t = [u8; 64];
 
-pub const MX_PORT_OPT_V1: u32 = 0;
-pub const MX_PORT_OPT_V2: u32 = 1;
-
 // Ports V2
 #[repr(u32)]
 #[derive(Debug, Eq, PartialEq)]
