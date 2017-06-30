@@ -219,28 +219,6 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return MX_ERR_INVALID_ARGS;
             return MX_OK;
         }
-        case MX_INFO_RESOURCE_CHILDREN:
-        case MX_INFO_RESOURCE_RECORDS: {
-            mxtl::RefPtr<ResourceDispatcher> resource;
-            mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_ENUMERATE, &resource);
-            if (status < 0)
-                return status;
-
-            auto records = _buffer.reinterpret<mx_rrec_t>();
-            size_t count = buffer_size / sizeof(mx_rrec_t);
-            size_t avail = 0;
-            if (topic == MX_INFO_RESOURCE_CHILDREN) {
-                status = resource->GetChildren(records, count, &count, &avail);
-            } else {
-                status = resource->GetRecords(records, count, &count, &avail);
-            }
-
-            if (_actual && (_actual.copy_to_user(count) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            if (_avail && (_avail.copy_to_user(avail) != MX_OK))
-                return MX_ERR_INVALID_ARGS;
-            return status;
-        }
         case MX_INFO_THREAD: {
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
@@ -750,24 +728,6 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
             return MX_OK;
         }
         return MX_ERR_NOT_FOUND;
-    }
-
-    auto resource = DownCastDispatcher<ResourceDispatcher>(&dispatcher);
-    if (resource) {
-        auto child = resource->LookupChildById(koid);
-        if (!child)
-            return MX_ERR_NOT_FOUND;
-        auto cd = mxtl::RefPtr<Dispatcher>(child.get());
-        if (!cd)
-            return MX_ERR_NOT_FOUND;
-        HandleOwner child_h(MakeHandle(cd, rights));
-        if (!child_h)
-            return MX_ERR_NO_MEMORY;
-
-        if (_out.copy_to_user(up->MapHandleToValue(child_h)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        up->AddHandle(mxtl::move(child_h));
-        return MX_OK;
     }
 
     return MX_ERR_WRONG_TYPE;

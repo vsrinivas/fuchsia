@@ -52,12 +52,8 @@
    MX_RIGHT_ENUMERATE | MX_RIGHT_DESTROY | MX_RIGHT_GET_PROPERTY |           \
    MX_RIGHT_SET_PROPERTY)
 
-// WRITE: ability to add child resources to a resource
-// EXECUTE: ability to get_handle() and do_action()
-// ENUMERATE: ability to list children, list records, and get children
-#define MX_DEFAULT_RESOURCE_RIGHTS                                        \
-  (MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_DESTROY | \
-   MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_ENUMERATE)
+#define MX_DEFAULT_RESOURCE_RIGHTS \
+  (MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER)
 
 #define MX_DEFAULT_SOCKET_RIGHTS \
   (MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE)

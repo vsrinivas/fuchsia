@@ -118,12 +118,6 @@ typedef uint32_t mx_signals_t;
 // Port
 #define MX_PORT_READABLE            __MX_OBJECT_READABLE
 
-// Resource
-#define MX_RESOURCE_DESTROYED       __MX_OBJECT_SIGNALED
-#define MX_RESOURCE_READABLE        __MX_OBJECT_READABLE
-#define MX_RESOURCE_WRITABLE        __MX_OBJECT_WRITABLE
-#define MX_RESOURCE_CHILD_ADDED     __MX_OBJECT_SIGNAL_4
-
 // Fifo
 #define MX_FIFO_READABLE            __MX_OBJECT_READABLE
 #define MX_FIFO_WRITABLE            __MX_OBJECT_WRITABLE

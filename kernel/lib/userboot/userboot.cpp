@@ -140,8 +140,7 @@ static mx_status_t get_job_handle(Handle** ptr) {
 static mx_status_t get_resource_handle(Handle** ptr) {
     mx_rights_t rights;
     mxtl::RefPtr<ResourceDispatcher> root;
-    mx_status_t result = ResourceDispatcher::Create(&root, &rights, "root", MX_RREC_SELF_ROOT);
-    root->MakeRoot();
+    mx_status_t result = ResourceDispatcher::Create(&root, &rights, MX_RSRC_KIND_ROOT, 0, 0);
     if (result == MX_OK)
         *ptr = MakeHandle(mxtl::RefPtr<Dispatcher>(root.get()), rights);
     return result;

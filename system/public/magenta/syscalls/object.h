@@ -18,8 +18,6 @@ typedef enum {
     MX_INFO_HANDLE_BASIC               = 2,  // mx_info_handle_basic_t[1]
     MX_INFO_PROCESS                    = 3,  // mx_info_process_t[1]
     MX_INFO_PROCESS_THREADS            = 4,  // mx_koid_t[n]
-    MX_INFO_RESOURCE_CHILDREN          = 5,  // mx_rrec_t[n]
-    MX_INFO_RESOURCE_RECORDS           = 6,  // mx_rrec_t[n]
     MX_INFO_VMAR                       = 7,  // mx_info_vmar_t[1]
     MX_INFO_JOB_CHILDREN               = 8,  // mx_koid_t[n]
     MX_INFO_JOB_PROCESSES              = 9,  // mx_koid_t[n]

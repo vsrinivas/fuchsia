@@ -587,28 +587,8 @@ syscall acpi_cache_flush
 # Resources
 
 syscall resource_create
-    (parent_handle: mx_handle_t, records: mx_rrec_t[count] IN, count: uint32_t)
+    (parent_handle: mx_handle_t, kind: uint32_t, low: uint64_t, high: uint64_t)
     returns (mx_status_t, resource_out: mx_handle_t);
-
-syscall resource_destroy
-    (handle: mx_handle_t)
-    returns (mx_status_t);
-
-syscall resource_get_handle
-    (handle: mx_handle_t, index: uint32_t, options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
-
-syscall resource_do_action
-    (handle: mx_handle_t, index: uint32_t, action: uint32_t, arg0: uint32_t, arg1: uint32_t)
-    returns (mx_status_t);
-
-syscall resource_connect
-    (handle: mx_handle_t, channel: mx_handle_t)
-    returns (mx_status_t);
-
-syscall resource_accept
-    (handle: mx_handle_t)
-    returns (mx_status_t, channel: mx_handle_t);
 
 # Hypervisor
 

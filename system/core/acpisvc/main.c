@@ -8,7 +8,6 @@
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls/resource.h>
 #include <magenta/syscalls/port.h>
 
 #include "ec.h"
@@ -50,30 +49,6 @@ int main(int argc, char** argv) {
     if (mx_status != MX_OK) {
         printf("Failed to construct resource port\n");
         return 4;
-    }
-
-    // TODO(teisenbe): In the future, devmgr should create this and hand it to
-    // us.
-    mx_handle_t acpi_bus_resource;
-    {
-        mx_rrec_t records[1] = { { 0 } };
-        records[0].self.type = MX_RREC_SELF;
-        records[0].self.subtype = MX_RREC_SELF_GENERIC;
-        records[0].self.options = 0;
-        records[0].self.record_count = 1;
-        strncpy(records[0].self.name, "ACPI-BUS", sizeof(records[0].self.name));
-        mx_status = mx_resource_create(root_resource_handle, records, countof(records),
-                                       &acpi_bus_resource);
-        if (mx_status != MX_OK) {
-            printf("Failed to create ACPI-BUS resource\n");
-            return 6;
-        }
-    }
-
-    mx_status = resource_tree_init(port, acpi_bus_resource);
-    if (mx_status != MX_OK) {
-        printf("Failed to initialize resource tree\n");
-        return 5;
     }
 
     ec_init();
