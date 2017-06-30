@@ -62,7 +62,6 @@ class Renderer : public Resource {
     void Visit(ImagePipe* r) override;
     void Visit(EntityNode* r) override;
     void Visit(ShapeNode* r) override;
-    void Visit(TagNode* r) override;
     void Visit(CircleShape* r) override;
     void Visit(RectangleShape* r) override;
     void Visit(RoundedRectangleShape* r) override;

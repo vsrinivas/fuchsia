@@ -39,9 +39,3 @@ struct EntityNode {};
 // - has_shape
 // - has_material
 struct ShapeNode {};
-
-// Characteristics:
-// - has_children
-struct TagNode {
-  uint32 tag_value;
-};

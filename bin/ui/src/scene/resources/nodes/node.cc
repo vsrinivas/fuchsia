@@ -14,7 +14,7 @@ namespace scene {
 namespace {
 
 constexpr ResourceTypeFlags kHasChildren =
-    ResourceType::kEntityNode | ResourceType::kScene | ResourceType::kTagNode;
+    ResourceType::kEntityNode | ResourceType::kScene;
 constexpr ResourceTypeFlags kHasParts =
     ResourceType::kEntityNode | ResourceType::kClipNode;
 constexpr ResourceTypeFlags kHasTransform =
@@ -107,6 +107,11 @@ bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
     node_to_detach_from_parent->parent_ = nullptr;
     node_to_detach_from_parent->InvalidateGlobalTransform();
   }
+  return true;
+}
+
+bool Node::SetTagValue(uint32_t tag_value) {
+  tag_value_ = tag_value;
   return true;
 }
 

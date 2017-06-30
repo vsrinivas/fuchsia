@@ -15,7 +15,6 @@ class ImagePipe;
 class EntityNode;
 class Node;
 class ShapeNode;
-class TagNode;
 class Scene;
 class CircleShape;
 class RectangleShape;
@@ -37,7 +36,6 @@ class ResourceVisitor {
   // Nodes.
   virtual void Visit(EntityNode* r) = 0;
   virtual void Visit(ShapeNode* r) = 0;
-  virtual void Visit(TagNode* r) = 0;
 
   // Shapes.
   virtual void Visit(CircleShape* r) = 0;

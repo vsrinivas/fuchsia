@@ -30,6 +30,8 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
       return stream << "SET_ROTATION";
     case Op::Tag::SET_ANCHOR:
       return stream << "SET_ANCHOR";
+    case Op::Tag::SET_TAG:
+      return stream << "SET_TAG";
     case Op::Tag::ADD_CHILD:
       return stream << "ADD_CHILD";
     case Op::Tag::ADD_PART:
@@ -113,9 +115,6 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case Resource::Tag::SHAPE_NODE:
       stream << "ShapeNode";
-      break;
-    case Resource::Tag::TAG_NODE:
-      stream << "TagNode";
       break;
     case Resource::Tag::VARIABLE:
       stream << "Variable";

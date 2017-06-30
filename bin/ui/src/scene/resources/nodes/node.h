@@ -28,6 +28,9 @@ class Node : public Resource {
   bool AddChild(NodePtr child_node);
   bool AddPart(NodePtr part_node);
 
+  bool SetTagValue(uint32_t tag_value);
+  uint32_t tag_value() const { return tag_value_; }
+
   bool SetTransform(const escher::Transform& transform);
   bool SetTranslation(const escher::vec3& translation);
   bool SetScale(const escher::vec3& scale);
@@ -78,6 +81,7 @@ class Node : public Resource {
   void ComputeGlobalTransform() const;
 
   const ResourceId resource_id_;
+  uint32_t tag_value_ = 0u;
   bool is_part_ = false;
   Node* parent_ = nullptr;
   std::set<NodePtr> children_;

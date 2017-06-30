@@ -17,7 +17,6 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
-#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
@@ -75,6 +74,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplyDetachOp(op->get_detach());
     case mozart2::Op::Tag::DETACH_CHILDREN:
       return ApplyDetachChildrenOp(op->get_detach_children());
+    case mozart2::Op::Tag::SET_TAG:
+      return ApplySetTagOp(op->get_set_tag());
     case mozart2::Op::Tag::SET_TRANSLATION:
       return ApplySetTranslationOp(op->get_set_translation());
     case mozart2::Op::Tag::SET_SCALE:
@@ -153,8 +154,6 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateEntityNode(id, op->resource->get_entity_node());
     case mozart2::Resource::Tag::SHAPE_NODE:
       return ApplyCreateShapeNode(id, op->resource->get_shape_node());
-    case mozart2::Resource::Tag::TAG_NODE:
-      return ApplyCreateTagNode(id, op->resource->get_tag_node());
     case mozart2::Resource::Tag::VARIABLE:
       return ApplyCreateVariable(id, op->resource->get_variable());
     case mozart2::Resource::Tag::__UNKNOWN__:
@@ -212,6 +211,13 @@ bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
 bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
   error_reporter_->ERROR()
       << "scene::Session::ApplyDetachChildrenOp(): unimplemented";
+  return false;
+}
+
+bool Session::ApplySetTagOp(const mozart2::SetTagOpPtr& op) {
+  if (auto node = resources_.FindResource<Node>(op->node_id)) {
+    return node->SetTagValue(op->tag_value);
+  }
   return false;
 }
 
@@ -541,12 +547,6 @@ bool Session::ApplyCreateShapeNode(ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateTagNode(ResourceId id,
-                                 const mozart2::TagNodePtr& args) {
-  auto node = CreateTagNode(id, args);
-  return node ? resources_.AddResource(id, std::move(node)) : false;
-}
-
 bool Session::ApplyCreateVariable(ResourceId id,
                                   const mozart2::VariablePtr& args) {
   error_reporter_->ERROR()
@@ -619,11 +619,6 @@ ResourcePtr Session::CreateEntityNode(ResourceId id,
 ResourcePtr Session::CreateShapeNode(ResourceId id,
                                      const mozart2::ShapeNodePtr& args) {
   return ftl::MakeRefCounted<ShapeNode>(this, id);
-}
-
-ResourcePtr Session::CreateTagNode(ResourceId id,
-                                   const mozart2::TagNodePtr& args) {
-  return ftl::MakeRefCounted<TagNode>(this, id, args->tag_value);
 }
 
 ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {

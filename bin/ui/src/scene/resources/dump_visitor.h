@@ -27,7 +27,6 @@ class DumpVisitor : public ResourceVisitor {
   void Visit(ImagePipe* r) override;
   void Visit(EntityNode* r) override;
   void Visit(ShapeNode* r) override;
-  void Visit(TagNode* r) override;
   void Visit(Scene* r) override;
   void Visit(CircleShape* r) override;
   void Visit(RectangleShape* r) override;

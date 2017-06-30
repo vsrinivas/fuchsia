@@ -18,7 +18,6 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
-#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
@@ -48,10 +47,6 @@ void EntityNode::Accept(ResourceVisitor* visitor) {
 }
 
 void ShapeNode::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
-
-void TagNode::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

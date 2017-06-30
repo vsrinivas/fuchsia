@@ -138,6 +138,10 @@ void Node::SetAnchor(const float anchor[3]) {
   session()->Enqueue(mozart::NewSetAnchorOp(id(), anchor));
 }
 
+void Node::SetTag(uint32_t tag_value) {
+  session()->Enqueue(mozart::NewSetTagOp(id(), tag_value));
+}
+
 void Node::Detach() {
   session()->Enqueue(mozart::NewDetachOp(id()));
 }
@@ -161,13 +165,6 @@ EntityNode::EntityNode(Session* session) : ContainerTraits(session) {
 }
 
 EntityNode::~EntityNode() = default;
-
-TagNode::TagNode(Session* session, uint32_t tag_value)
-    : ContainerTraits(session), tag_value_(tag_value) {
-  session->Enqueue(mozart::NewCreateTagNodeOp(id(), tag_value));
-}
-
-TagNode::~TagNode() = default;
 
 ImportNode::ImportNode(Session* session) : ContainerTraits(session) {}
 

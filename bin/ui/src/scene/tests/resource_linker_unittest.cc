@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/scene/resources/resource_linker.h"
 #include "apps/mozart/lib/scene/session_helpers.h"
-#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
+#include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/tests/session_test.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"

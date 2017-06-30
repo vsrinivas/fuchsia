@@ -67,7 +67,6 @@ executable("unittests") {
     "session_test.h",
     "session_unittest.cc",
     "shape_unittest.cc",
-    "tag_unittest.cc",
   ]
 
   deps = [

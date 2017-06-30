@@ -74,7 +74,6 @@ mozart2::OpPtr NewCreateMaterialOp(uint32_t id);
 mozart2::OpPtr NewCreateClipNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateEntityNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id);
-mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, uint32_t tag_value);
 mozart2::OpPtr NewCreateVariableFloatOp(uint32_t id, float inital_val);
 
 mozart2::OpPtr NewReleaseResourceOp(uint32_t id);
@@ -111,6 +110,7 @@ mozart2::OpPtr NewSetAnchorOp(uint32_t node_id, const float anchor[3]);
 mozart2::OpPtr NewSetShapeOp(uint32_t node_id, uint32_t shape_id);
 mozart2::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id);
 mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
+mozart2::OpPtr NewSetTagOp(uint32_t node_id, uint32_t tag_value);
 
 // Camera and lighting operations.
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id);

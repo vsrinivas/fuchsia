@@ -18,7 +18,6 @@
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
-#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
@@ -78,6 +77,7 @@ void DumpVisitor::Visit(EntityNode* r) {
 
 void DumpVisitor::Visit(ShapeNode* r) {
   BeginItem("ShapeNode", r->resource_id());
+  VisitNode(r);
   if (r->shape()) {
     BeginSection("shape");
     r->shape()->Accept(this);
@@ -88,14 +88,6 @@ void DumpVisitor::Visit(ShapeNode* r) {
     r->material()->Accept(this);
     EndSection();
   }
-  VisitNode(r);
-  EndItem();
-}
-
-void DumpVisitor::Visit(TagNode* r) {
-  BeginItem("TagNode", r->resource_id());
-  WriteProperty("tag_value") << r->tag_value();
-  VisitNode(r);
   EndItem();
 }
 
@@ -106,7 +98,9 @@ void DumpVisitor::Visit(Scene* r) {
 }
 
 void DumpVisitor::VisitNode(Node* r) {
-  escher::Transform identity;
+  if (r->tag_value()) {
+    WriteProperty("tag_value") << r->tag_value();
+  }
   if (!r->transform().IsIdentity()) {
     WriteProperty("transform") << r->transform();
   }

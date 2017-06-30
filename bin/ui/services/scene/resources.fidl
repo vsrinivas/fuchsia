@@ -33,7 +33,6 @@ union Resource {
   ClipNode clip_node;
   EntityNode entity_node;
   ShapeNode shape_node;
-  TagNode tag_node;
 
   // Scene representation and display.
   Scene scene;

@@ -13,6 +13,9 @@ union Op {
   ImportResourceOp import_resource;
   ReleaseResourceOp release_resource;
 
+  // Tagging operations.
+  SetTagOp set_tag;
+
   // Spatial operations.
   SetTranslationOp set_translation;
   SetScaleOp set_scale;
@@ -143,6 +146,25 @@ struct DetachOp {
 // Detaches all of a node's children (but not its parts).
 struct DetachChildrenOp {
   uint32 node_id;
+};
+
+// Sets/clears a node's tag value.
+//
+// A session can apply a tag value to any node to which it has access, including
+// imported nodes.  These tags are private to the session and cannot be read
+// or modified by other sessions.  When multiple sessions import the same node,
+// each session will only observe its own tag values.
+//
+// Hit test results for a session only include nodes which the session has
+// tagged with a non-zero value.  Therefore a session can use tag values to
+// associate nodes with their functional purpose when picked.
+//
+// Constraints:
+// - |node_id| refs a |Node|.
+// - |tag_value| is the tag value to assign, or 0 to remove the tag.
+struct SetTagOp {
+  uint32 node_id;
+  uint32 tag_value;
 };
 
 // Sets a Resource's (typically a Node's) translation.

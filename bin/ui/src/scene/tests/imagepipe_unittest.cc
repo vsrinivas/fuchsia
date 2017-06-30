@@ -10,7 +10,6 @@
 #include "apps/mozart/src/scene/acquire_fence.h"
 #include "apps/mozart/src/scene/fence.h"
 #include "apps/mozart/src/scene/resources/image_pipe.h"
-#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/tests/session_test.h"
 #include "apps/mozart/src/scene/tests/util.h"
 

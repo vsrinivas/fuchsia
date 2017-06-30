@@ -12,7 +12,6 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
-#include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
@@ -91,10 +90,6 @@ void Renderer::Visitor::Visit(ImagePipe* r) {
 }
 
 void Renderer::Visitor::Visit(EntityNode* r) {
-  VisitNode(r);
-}
-
-void Renderer::Visitor::Visit(TagNode* r) {
   VisitNode(r);
 }
 

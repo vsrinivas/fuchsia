@@ -15,6 +15,18 @@ namespace test {
 
 using NodeTest = SessionTest;
 
+TEST_F(NodeTest, Tagging) {
+  const ResourceId kNodeId = 1;
+
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
+  auto shape_node = FindResource<ShapeNode>(kNodeId);
+  EXPECT_EQ(0u, shape_node->tag_value());
+  EXPECT_TRUE(Apply(NewSetTagOp(kNodeId, 42u)));
+  EXPECT_EQ(42u, shape_node->tag_value());
+  EXPECT_TRUE(Apply(NewSetTagOp(kNodeId, 0u)));
+  EXPECT_EQ(0u, shape_node->tag_value());
+}
+
 TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   const ResourceId kNodeId = 1;
   const ResourceId kMaterialId = 2;
@@ -49,24 +61,17 @@ TEST_F(NodeTest, NodesWithChildren) {
   const ResourceId kEntityNodeId = 10;
   const ResourceId kShapeNodeId = 11;
   // TODO: const ResourceId kClipNodeId = 12;
-  // TODO: const ResourceId kTagNodeId = 13;
-
   EXPECT_TRUE(Apply(NewCreateEntityNodeOp(kEntityNodeId)));
   EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kShapeNodeId)));
   // TODO: EXPECT_TRUE(Apply(NewCreateClipNodeOp(kClipNodeId)));
-  // TODO: EXPECT_TRUE(Apply(NewCreateTagNodeOp(kTagNodeId)));
-  // auto clip_node = FindResource<ClipNode>(kClipNodeId);
   auto entity_node = FindResource<EntityNode>(kEntityNodeId);
   auto shape_node = FindResource<ShapeNode>(kShapeNodeId);
-  // TODO: auto tag_node = FindResource<TagNode>(kTagNodeId);
+  // auto clip_node = FindResource<ClipNode>(kClipNodeId);
 
   // We expect to be able to add children to these types.
   EXPECT_TRUE(Apply(NewAddChildOp(kEntityNodeId, kChildNodeId)));
   EXPECT_EQ(entity_node.get(), child_node->parent());
   EXPECT_TRUE(Apply(NewDetachOp(kChildNodeId)));
-  // TODO:
-  // EXPECT_TRUE(Apply(NewAddChildOp(kTagNodeId, kChildNodeId)));
-  // EXPECT_EQ(tag_node.get(), child_node->parent());
   // EXPECT_TRUE(Apply(NewDetachOp(kChildNodeId)));
 
   // We do not expect to be able to add children to these types.

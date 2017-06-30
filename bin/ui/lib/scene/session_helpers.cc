@@ -301,16 +301,6 @@ mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, uint32_t tag_value) {
-  auto node = mozart2::TagNode::New();
-  node->tag_value = tag_value;
-
-  auto resource = mozart2::Resource::New();
-  resource->set_tag_node(std::move(node));
-
-  return NewCreateResourceOp(id, std::move(resource));
-}
-
 mozart2::OpPtr NewCreateVariableFloatOp(uint32_t id, float initial_value) {
   auto value = mozart2::Value::New();
   value->set_vector1(initial_value);
@@ -534,6 +524,18 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id) {
 
   return op;
 }
+
+mozart2::OpPtr NewSetTagOp(uint32_t node_id, uint32_t tag_value) {
+  auto set_tag = mozart2::SetTagOp::New();
+  set_tag->node_id = node_id;
+  set_tag->tag_value = tag_value;
+
+  auto op = mozart2::Op::New();
+  op->set_set_tag(std::move(set_tag));
+
+  return op;
+}
+
 
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id) {
   auto set_camera = mozart2::SetCameraOp::New();

@@ -38,7 +38,6 @@ enum ResourceType {
   kClipNode = 1 << 16,
   kEntityNode = 1 << 17,
   kShapeNode = 1 << 18,
-  kTagNode = 1 << 19,
 
   // Scene, camera, lighting.
   kScene = 1 << 23,

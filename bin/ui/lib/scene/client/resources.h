@@ -166,6 +166,9 @@ class Node : public Resource {
   void SetRotation(const float quaternion[4]);
   void SetAnchor(const float anchor[3]);
 
+  // Sets the node's tag value.
+  void SetTag(uint32_t tag_value);
+
   // Detaches the node from its parent.
   void Detach();
 
@@ -220,21 +223,6 @@ class EntityNode : public ContainerTraits<Node> {
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(EntityNode);
-};
-
-// Represents a tag node resource in a session.
-class TagNode : public ContainerTraits<Node> {
- public:
-  explicit TagNode(Session* session, uint32_t tag_value);
-  ~TagNode();
-
-  // Gets the node's tag value.
-  uint32_t tag_value() const { return tag_value_; }
-
- private:
-  uint32_t const tag_value_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(TagNode);
 };
 
 // Represents an imported node resource in a session.

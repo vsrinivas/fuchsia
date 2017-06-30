@@ -87,6 +87,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyAddPartOp(const mozart2::AddPartOpPtr& op);
   bool ApplyDetachOp(const mozart2::DetachOpPtr& op);
   bool ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op);
+  bool ApplySetTagOp(const mozart2::SetTagOpPtr& op);
   bool ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op);
   bool ApplySetScaleOp(const mozart2::SetScaleOpPtr& op);
   bool ApplySetRotationOp(const mozart2::SetRotationOpPtr& op);
@@ -123,7 +124,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
   bool ApplyCreateEntityNode(ResourceId id, const mozart2::EntityNodePtr& args);
   bool ApplyCreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
-  bool ApplyCreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
   bool ApplyCreateVariable(ResourceId id, const mozart2::VariablePtr& args);
 
   // Actually create resources.
@@ -145,7 +145,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateEntityNode(ResourceId id,
                                const mozart2::EntityNodePtr& args);
   ResourcePtr CreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
-  ResourcePtr CreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(ResourceId id, float width, float height);
   ResourcePtr CreateRoundedRectangle(ResourceId id,
