@@ -393,12 +393,22 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
     // compute a page aligned end to do our searches in to make sure we cover all the pages
     uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
     DEBUG_ASSERT(end > offset);
+    offset = ROUNDDOWN(offset, PAGE_SIZE);
 
     // make a pass through the list, counting the number of pages we need to allocate
     size_t count = 0;
-    for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        if (!page_list_.GetPage(o))
-            count++;
+    uint64_t expected_next_off = offset;
+    page_list_.ForEveryPageInRange(
+            [&count, &expected_next_off](const auto p, uint64_t off) {
+
+                count += (off - expected_next_off) / PAGE_SIZE;
+                expected_next_off = off + PAGE_SIZE;
+                return MX_ERR_NEXT;
+            }, expected_next_off, end);
+
+    // If expected_next_off didn't advance, then no pages were present.
+    if (expected_next_off == offset) {
+        count = (end - offset) / PAGE_SIZE;
     }
     if (count == 0)
         return MX_OK;
@@ -835,19 +845,65 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     if (unlikely(!InRange(offset, len, size_)))
         return MX_ERR_OUT_OF_RANGE;
 
-    uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
-    uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
+    const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
+    const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-    size_t index = 0;
-    for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
-        paddr_t pa;
-        auto status = GetPageLocked(off, pf_flags, nullptr, &pa);
-        if (status < 0)
-            return MX_ERR_NO_MEMORY;
+    uint64_t expected_next_off = start_page_offset;
+    status_t status = page_list_.ForEveryPageInRange(
+            [&expected_next_off, this, pf_flags, lookup_fn, context,
+            start_page_offset](const auto p, uint64_t off) {
 
-        status = lookup_fn(context, off, index, pa);
-        if (unlikely(status < 0))
-            return status;
+                // If some page was missing from our list, run the more expensive
+                // GetPageLocked to see if our parent has it.
+                for (uint64_t missing_off = expected_next_off; missing_off < off;
+                     missing_off += PAGE_SIZE) {
+
+                    paddr_t pa;
+                    status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr, &pa);
+                    if (status != MX_OK) {
+                        return MX_ERR_NO_MEMORY;
+                    }
+                    const size_t index = (off - start_page_offset) / PAGE_SIZE;
+                    status = lookup_fn(context, missing_off, index, pa);
+                    if (status != MX_OK) {
+                        if (unlikely(status == MX_ERR_NEXT || status == MX_ERR_STOP)) {
+                            status = MX_ERR_INTERNAL;
+                        }
+                        return status;
+                    }
+                }
+
+                const size_t index = (off - start_page_offset) / PAGE_SIZE;
+                paddr_t pa = vm_page_to_paddr(p);
+                status_t status = lookup_fn(context, off, index, pa);
+                if (status != MX_OK) {
+                    if (unlikely(status == MX_ERR_NEXT || status == MX_ERR_STOP)) {
+                        status = MX_ERR_INTERNAL;
+                    }
+                    return status;
+                }
+
+                expected_next_off = off + PAGE_SIZE;
+                return MX_ERR_NEXT;
+            }, start_page_offset, end_page_offset);
+    if (status != MX_OK) {
+        return status;
+    }
+
+    // If expected_next_off didn't advance, no page was present.
+    if (expected_next_off == start_page_offset) {
+        for (uint64_t off = start_page_offset; off < end_page_offset; off += PAGE_SIZE) {
+            paddr_t pa;
+            status_t status = GetPageLocked(off, pf_flags, nullptr, &pa);
+            if (status != MX_OK) {
+                return MX_ERR_NO_MEMORY;
+            }
+            const size_t index = (off - start_page_offset) / PAGE_SIZE;
+            status = lookup_fn(context, off, index, pa);
+            if (status != MX_OK) {
+                return status;
+            }
+        }
     }
 
     return MX_OK;
