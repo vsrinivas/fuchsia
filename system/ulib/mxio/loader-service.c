@@ -10,7 +10,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <limits.h>
+#include <stdalign.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +23,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/device/dmctl.h>
+#include <magenta/device/vfs.h>
 #include <magenta/processargs.h>
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
@@ -60,6 +63,72 @@ static mx_handle_t load_object_fd(int fd, const char* fn) {
     return vmo;
 }
 
+// For now, just publish data-sink VMOs as files under /tmp/<sink-name>/.
+// The individual file is named by its VMO's name.
+static mx_status_t publish_data_sink(mx_handle_t vmo, const char* sink_name) {
+    union {
+        vmo_create_config_t header;
+        struct {
+            alignas(vmo_create_config_t) char h[sizeof(vmo_create_config_t)];
+            char name[MX_MAX_NAME_LEN];
+        };
+    } config;
+
+    mx_status_t status = mx_object_get_property(
+        vmo, MX_PROP_NAME, config.name, sizeof(config.name));
+    if (status != MX_OK)
+        return status;
+    if (config.name[0] == '\0') {
+        mx_info_handle_basic_t info;
+        status = mx_object_get_info(vmo, MX_INFO_HANDLE_BASIC,
+                                    &info, sizeof(info), NULL, NULL);
+        if (status != MX_OK)
+            return status;
+        snprintf(config.name, sizeof(config.name), "unnamed.%" PRIu64,
+                 info.koid);
+    }
+
+    int tmp_dir_fd = open("/tmp", O_DIRECTORY);
+    if (tmp_dir_fd < 0) {
+        fprintf(stderr, "dlsvc: cannot open /tmp for data-sink \"%s\": %m\n",
+                sink_name);
+        close(tmp_dir_fd);
+        mx_handle_close(vmo);
+        return MX_ERR_NOT_FOUND;
+    }
+    if (mkdirat(tmp_dir_fd, sink_name, 0777) != 0 && errno != EEXIST) {
+        fprintf(stderr, "dlsvc: cannot mkdir \"/tmp/%s\" for data-sink: %m\n",
+                sink_name);
+        close(tmp_dir_fd);
+        mx_handle_close(vmo);
+        return MX_ERR_NOT_FOUND;
+    }
+    int sink_dir_fd = openat(tmp_dir_fd, sink_name, O_RDONLY | O_DIRECTORY);
+    close(tmp_dir_fd);
+    if (sink_dir_fd < 0) {
+        fprintf(stderr,
+                "dlsvc: cannot open data-sink directory \"/tmp/%s\": %m\n",
+                sink_name);
+        mx_handle_close(vmo);
+        return MX_ERR_NOT_FOUND;
+    }
+
+    config.header.vmo = vmo;
+    ssize_t result = ioctl_vfs_vmo_create(
+        sink_dir_fd, &config.header,
+        sizeof(config.header) + strlen(config.name) + 1);
+    close(sink_dir_fd);
+
+    if (result < 0) {
+        fprintf(stderr,
+                "dlsvc: ioctl_vfs_vmo_create failed"
+                " for data-sink \"%s\" item \"%s\": %s\n",
+                sink_name, config.name, mx_status_get_string(result));
+        return result;
+    }
+    return MX_OK;
+}
+
 static mx_handle_t default_load_object(void* ignored,
                                        uint32_t load_op,
                                        mx_handle_t request_handle,
@@ -91,12 +160,7 @@ static mx_handle_t default_load_object(void* ignored,
             return load_object_fd(fd, fn);
         break;
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
-        // TODO(mcgrathr): Implement something.
-        fprintf(stderr, "dlsvc: ignoring data sink request for '%s'\n", fn);
-        mx_status_t status = mx_handle_close(request_handle);
-        if (status == MX_OK)
-            status = MX_ERR_NOT_SUPPORTED;
-        return status;
+        return publish_data_sink(request_handle, fn);
     default:
         __builtin_trap();
     }
