@@ -40,6 +40,7 @@ typedef struct ethdev0 {
     // shared state
     mx_device_t* macdev;
     ethmac_protocol_t mac;
+    uint32_t state;
 
     mtx_t lock;
 
@@ -66,6 +67,9 @@ typedef struct ethdev0 {
 
 // This client wants to observe loopback tx packets
 #define ETHDEV_TX_LISTEN (16u)
+
+// indicates the device is busy although its lock is released
+#define ETHDEV0_BUSY (1u)
 
 // ethernet instance device
 typedef struct ethdev {
@@ -157,7 +161,7 @@ static void eth0_status(void* cookie, uint32_t status) {
 
     ethdev_t* edev;
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
-        mx_object_signal_peer(edev->rx_fifo, 0, MX_USER_SIGNAL_0);
+        mx_object_signal_peer(edev->rx_fifo, 0, ETH_SIGNAL_STATUS);
     }
     mtx_unlock(&edev0->lock);
 }
@@ -378,7 +382,13 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
 
     mx_status_t status;
     if (list_is_empty(&edev0->list_active)) {
+        // Release the lock to allow other device operations in callback routine.
+        // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
+        edev0->state |= ETHDEV0_BUSY;
+        mtx_unlock(&edev0->lock);
         status = edev0->mac.ops->start(edev0->mac.ctx, &ethmac_ifc, edev0);
+        mtx_lock(&edev0->lock);
+        edev0->state &= ~ETHDEV0_BUSY;
     } else {
         status = MX_OK;
     }
@@ -403,7 +413,13 @@ static mx_status_t eth_stop_locked(ethdev_t* edev) {
         list_add_tail(&edev0->list_idle, &edev->node);
         if (list_is_empty(&edev0->list_active)) {
             if (!(edev->state & ETHDEV_DEAD)) {
+                // Release the lock to allow other device operations in callback routine.
+                // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
+                edev0->state |= ETHDEV0_BUSY;
+                mtx_unlock(&edev0->lock);
                 edev0->mac.ops->stop(edev0->mac.ctx);
+                mtx_lock(&edev0->lock);
+                edev0->state &= ~ETHDEV0_BUSY;
             }
         }
     }
@@ -411,7 +427,7 @@ static mx_status_t eth_stop_locked(ethdev_t* edev) {
     return MX_OK;
 }
 
-static ssize_t eth_set_client_name(ethdev_t* edev, const void* in_buf, size_t in_len) {
+static ssize_t eth_set_client_name_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
     if (in_len >= DEVICE_NAME_LEN) {
         in_len = DEVICE_NAME_LEN - 1;
     }
@@ -420,7 +436,7 @@ static ssize_t eth_set_client_name(ethdev_t* edev, const void* in_buf, size_t in
     return MX_OK;
 }
 
-static mx_status_t eth_get_status(ethdev_t* edev, void* out_buf, size_t out_len,
+static mx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t out_len,
                                   size_t* out_actual) {
     if (out_len < sizeof(uint32_t)) {
         return MX_ERR_INVALID_ARGS;
@@ -428,7 +444,7 @@ static mx_status_t eth_get_status(ethdev_t* edev, void* out_buf, size_t out_len,
     if (edev->rx_fifo == MX_HANDLE_INVALID) {
         return MX_ERR_BAD_STATE;
     }
-    if (mx_object_signal_peer(edev->rx_fifo, MX_USER_SIGNAL_0, 0) != MX_OK) {
+    if (mx_object_signal_peer(edev->rx_fifo, ETH_SIGNAL_STATUS, 0) != MX_OK) {
         return MX_ERR_INTERNAL;
     }
 
@@ -445,6 +461,13 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
     ethdev_t* edev = ctx;
     mtx_lock(&edev->edev0->lock);
     mx_status_t status;
+    if (edev->edev0->state & ETHDEV0_BUSY) {
+        printf("eth [%s]: cannot perform ioctl while device is busy. ioctl: %u\n",
+               edev->name, IOCTL_NUMBER(op));
+        status = MX_ERR_SHOULD_WAIT;
+        goto done;
+    }
+
     if (edev->state & ETHDEV_DEAD) {
         status = MX_ERR_BAD_STATE;
         goto done;
@@ -486,10 +509,10 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
         status = eth_tx_listen_locked(edev, false);
         break;
     case IOCTL_ETHERNET_SET_CLIENT_NAME:
-        status = eth_set_client_name(edev, in_buf, in_len);
+        status = eth_set_client_name_locked(edev, in_buf, in_len);
         break;
     case IOCTL_ETHERNET_GET_STATUS:
-        status = eth_get_status(edev, out_buf, out_len, out_actual);
+        status = eth_get_status_locked(edev, out_buf, out_len, out_actual);
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not

@@ -539,8 +539,7 @@ static mx_status_t ax88179_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
-        // TODO(hahnr): we need to notify the ifc of initial link status, but we need to work out
-        // the locking between this driver and the ethernet driver
+        eth->ifc->status(eth->cookie, eth->online ? ETH_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 
