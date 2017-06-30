@@ -139,7 +139,9 @@ static mx_status_t handle_virtio_queue(virtio_queue_t* queue, void* mem_addr, si
         volatile struct vring_used_elem* used =
             &queue->used->ring[ring_index(queue, queue->used->idx)];
         used->id = desc_index;
+
         void* req = NULL;
+        bool has_payload = false;
         uint8_t blk_status = VIRTIO_BLK_S_OK;
         while (true) {
             struct vring_desc desc = queue->desc[desc_index];
@@ -153,6 +155,7 @@ static mx_status_t handle_virtio_queue(virtio_queue_t* queue, void* mem_addr, si
                 req = mem_addr + desc.addr;
             } else if (desc.flags & VRING_DESC_F_NEXT) {
                 // Payload.
+                has_payload = true;
                 mx_status_t status = req_fn(ctx, req, mem_addr + desc.addr, desc.len);
                 if (status != MX_OK) {
                     fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n",
@@ -165,11 +168,12 @@ static mx_status_t handle_virtio_queue(virtio_queue_t* queue, void* mem_addr, si
                 // Status.
                 if (desc.len != sizeof(uint8_t))
                     return MX_ERR_INVALID_ARGS;
-                // We make a call to the request function, in case there was no
-                // payload.
-                mx_status_t status = req_fn(ctx, req, NULL, 0);
-                if (status != MX_OK)
-                    blk_status = VIRTIO_BLK_S_IOERR;
+                // If there was no payload, call the request function once.
+                if (!has_payload) {
+                    mx_status_t status = req_fn(ctx, req, NULL, 0);
+                    if (status != MX_OK)
+                        blk_status = VIRTIO_BLK_S_IOERR;
+                }
                 uint8_t* virtio_status = mem_addr + desc.addr;
                 *virtio_status = blk_status;
                 break;
@@ -184,8 +188,6 @@ mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
     virtio_blk_req_t* blk_req = req;
     switch (blk_req->type) {
     case VIRTIO_BLK_T_IN:
-        if (addr == NULL)
-            return MX_OK;
         memset(addr, 0, len);
         /* fallthrough */
     case VIRTIO_BLK_T_OUT:
@@ -223,13 +225,9 @@ mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
 
     switch (blk_req->type) {
     case VIRTIO_BLK_T_IN:
-        if (addr == NULL)
-            return MX_OK;
         ret = read(state->fd, addr, len);
         break;
     case VIRTIO_BLK_T_OUT:
-        if (addr == NULL)
-            return MX_OK;
         ret = write(state->fd, addr, len);
         break;
     case VIRTIO_BLK_T_FLUSH:
