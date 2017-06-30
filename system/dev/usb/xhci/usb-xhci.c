@@ -77,31 +77,31 @@ static uint64_t xhci_get_frame(void* ctx) {
     return xhci_get_current_frame(xhci);
 }
 
-static mx_status_t xhci_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
+mx_status_t xhci_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
                             usb_hub_descriptor_t* descriptor) {
     xhci_t* xhci = ctx;
     return xhci_configure_hub(xhci, device_id, speed, descriptor);
 }
 
-static mx_status_t xhci_hub_device_added(void* ctx, uint32_t hub_address, int port,
+mx_status_t xhci_hub_device_added(void* ctx, uint32_t hub_address, int port,
                                   usb_speed_t speed) {
     xhci_t* xhci = ctx;
     return xhci_enumerate_device(xhci, hub_address, port, speed);
 }
 
-static mx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
+mx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
     xhci_t* xhci = ctx;
     xhci_device_disconnected(xhci, hub_address, port);
     return MX_OK;
 }
 
-static mx_status_t xhci_reset_ep(void* ctx, uint32_t device_id, uint8_t ep_address) {
+mx_status_t xhci_reset_ep(void* ctx, uint32_t device_id, uint8_t ep_address) {
     xhci_t* xhci = ctx;
     uint8_t ep_index = xhci_endpoint_index(ep_address);
     return xhci_reset_endpoint(xhci, device_id, ep_index);
 }
 
-static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
+size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
     if (ep_address == 0) {
         // control requests have uint16 length field so we need to support UINT16_MAX
         // we require one setup, status and data event TRB in addition to data transfer TRBs
@@ -114,11 +114,6 @@ static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t 
     return PAGE_SIZE * (TRANSFER_RING_SIZE - 2);
 }
 
-static mx_status_t xhci_iotxn_cancel(void* ctx, iotxn_t* txn) {
-    xhci_t* xhci = ctx;
-    return xhci_cancel_transfer(xhci, txn);
-}
-
 usb_hci_protocol_ops_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
     .get_max_device_count = xhci_get_max_device_count,
@@ -129,7 +124,6 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .hub_device_removed = xhci_hub_device_removed,
     .reset_endpoint = xhci_reset_ep,
     .get_max_transfer_size = xhci_get_max_transfer_size,
-    .iotxn_cancel = xhci_iotxn_cancel,
 };
 
 static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {

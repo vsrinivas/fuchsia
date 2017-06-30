@@ -380,9 +380,9 @@ void xhci_endpoint_free(xhci_endpoint_t* ep) {
     ep->transfer_state = NULL;
 }
 
-int xhci_get_ep_ctx_state(xhci_endpoint_t* ep) {
+int xhci_get_ep_state(xhci_endpoint_t* ep) {
     if (!ep->epc) {
-        return EP_CTX_STATE_DISABLED;
+        return EP_STATE_DISABLED;
     }
     return XHCI_GET_BITS32(&ep->epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS);
 }

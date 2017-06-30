@@ -11,8 +11,6 @@
 
 __BEGIN_CDECLS;
 
-// Sends a USB control request.
-// Will return MX_ERR_TIMED_OUT if device does not respond within 5 seconds.
 mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
                                uint16_t value, uint16_t index, void* data, size_t length);
 
