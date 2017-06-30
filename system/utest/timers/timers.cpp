@@ -116,7 +116,7 @@ static bool restart_race() {
     auto start = mx_time_get(MX_CLOCK_MONOTONIC);
 
     mx::handle timer;
-    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), MX_OK, "");
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.reset_and_get_address()), MX_OK, "");
     while (mx_time_get(MX_CLOCK_MONOTONIC) - start < kTestDuration) {
         ASSERT_EQ(mx_timer_start(timer.get(), MX_TIMER_MIN_DEADLINE, MX_TIMER_MIN_PERIOD, 0u), MX_OK, "");
     }
