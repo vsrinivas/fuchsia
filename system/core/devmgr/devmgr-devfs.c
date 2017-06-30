@@ -629,7 +629,8 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
         }
         return r;
     case MXRIO_IOCTL_1H:
-        if (msg->arg2.op == IOCTL_VFS_MOUNT_FS) {
+        switch (msg->arg2.op) {
+        case IOCTL_VFS_MOUNT_FS: {
             mx_status_t r;
             if (len != sizeof(mx_handle_t)) {
                 r = MX_ERR_INVALID_ARGS;
@@ -647,7 +648,7 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
             }
             return r;
         }
-        if (msg->arg2.op == IOCTL_VFS_WATCH_DIR_V2) {
+        case IOCTL_VFS_WATCH_DIR_V2: {
             vfs_watch_dir_t* wd = (vfs_watch_dir_t*) msg->data;
             if ((len != sizeof(vfs_watch_dir_t)) ||
                 (wd->options != 0) ||
@@ -661,8 +662,21 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
             }
             return r;
         }
+        }
         break;
     case MXRIO_IOCTL:
+        switch (msg->arg2.op) {
+        case IOCTL_VFS_QUERY_FS: {
+            if (arg < (int32_t) sizeof(vfs_query_info_t)) {
+                return MX_ERR_INVALID_ARGS;
+            }
+            vfs_query_info_t* info = (vfs_query_info_t*) msg->data;
+            memset(info, 0, sizeof(*info));
+            strcpy(info->name, "devfs");
+            msg->datalen = sizeof(*info);
+            return sizeof(*info);
+        }
+        }
         break;
     }
 

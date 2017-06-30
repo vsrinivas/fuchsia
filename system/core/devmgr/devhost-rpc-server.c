@@ -19,6 +19,7 @@
 
 #include <ddk/iotxn.h>
 #include <magenta/device/device.h>
+#include <magenta/device/vfs.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -247,6 +248,15 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
         return dev_op_resume(dev, 0);
+    }
+    case IOCTL_VFS_QUERY_FS: {
+        if (out_len < sizeof(vfs_query_info_t)) {
+            return MX_ERR_INVALID_ARGS;
+        }
+        vfs_query_info_t* info = (vfs_query_info_t*) out_buf;
+        memset(info, 0, sizeof(*info));
+        strcpy(info->name, "devfs:host");
+        return sizeof(*info);
     }
     default: {
         size_t actual = 0;
