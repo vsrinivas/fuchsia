@@ -16,6 +16,7 @@
 #include <glm/glm.hpp>
 #endif
 
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include "application/lib/app/application_context.h"
@@ -147,14 +148,14 @@ class HelloSceneManagerApp {
     ops.push_back(NewAddChildOp(scene_id, entity_node_id));
 
     // Create a Camera to view the Scene.
-    ResourceId camera_id = NewResourceId();
-    ops.push_back(NewCreateCameraOp(camera_id, scene_id));
+    camera_id_ = NewResourceId();
+    ops.push_back(NewCreateCameraOp(camera_id_, scene_id));
 
     // Create a DisplayRenderer that renders the Scene from the viewpoint of the
     // Camera that we just created.
     ResourceId renderer_id = NewResourceId();
     ops.push_back(NewCreateDisplayRendererOp(renderer_id));
-    ops.push_back(NewSetCameraOp(renderer_id, camera_id));
+    ops.push_back(NewSetCameraOp(renderer_id, camera_id_));
 
     return ops;
   }
@@ -170,7 +171,7 @@ class HelloSceneManagerApp {
     });
 
     // Wait kSessionDuration seconds, and close the session.
-    constexpr int kSessionDuration = 20;
+    constexpr int kSessionDuration = 40;
     loop_->task_runner()->PostDelayedTask(
         [this] {
           // Allow SessionPtr to go out of scope, thus closing the
@@ -184,6 +185,7 @@ class HelloSceneManagerApp {
     session_->Enqueue(CreateExampleScene());
 
     start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+    camera_anim_start_time_ = start_time_;
     Update(start_time_);
   }
 
@@ -192,14 +194,15 @@ class HelloSceneManagerApp {
 
     // Translate / rotate the rounded rect.
     {
-      float translation[3] = {350.f, 150.f, 10.f};
-      float rotation[4];
-
       double secs = static_cast<double>(next_presentation_time - start_time_) /
                     1'000'000'000;
+
+      float translation[3] = {350.f, 150.f, 10.f};
+
       translation[0] += sin(secs) * 100.f;
       translation[1] += sin(secs) * 37.f;
 
+      float rotation[4];
       auto quaternion =
           glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));
       rotation[0] = quaternion.x;
@@ -209,6 +212,35 @@ class HelloSceneManagerApp {
 
       ops.push_back(NewSetTranslationOp(rrect_node_id_, translation));
       ops.push_back(NewSetRotationOp(rrect_node_id_, rotation));
+    }
+
+    // Move the camera.
+    {
+      double secs = static_cast<double>(next_presentation_time -
+                                        camera_anim_start_time_) /
+                    1'000'000'000;
+      const double kCameraModeDuration = 5.0;
+      float param = secs / kCameraModeDuration;
+      if (param > 1.0) {
+        param = 0.0;
+        camera_anim_returning_ = !camera_anim_returning_;
+        camera_anim_start_time_ = next_presentation_time;
+      }
+      if (camera_anim_returning_) {
+        param = 1.0 - param;
+      }
+
+      glm::vec3 eye_start(1080, 720, 6000);
+      glm::vec3 eye_end(0, 10000, 7000);
+      glm::vec3 eye =
+          glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
+
+      // Look at the middle of the stage.
+      float target[3] = {1080, 720, 0};
+      float up[3] = {0, 1, 0};
+
+      ops.push_back(NewSetCameraProjectionOp(camera_id_, glm::value_ptr(eye),
+                                             target, up, glm::radians(15.f)));
     }
 
     session_->Enqueue(std::move(ops));
@@ -230,7 +262,10 @@ class HelloSceneManagerApp {
   ResourceId resource_id_counter_ = 0;
   mozart2::SessionPtr session_;
   ResourceId rrect_node_id_ = 0;
+  ResourceId camera_id_ = 0;
   uint64_t start_time_ = 0;
+  uint64_t camera_anim_start_time_;
+  bool camera_anim_returning_ = false;
 };
 
 int main(int argc, const char** argv) {
@@ -240,14 +275,13 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
   HelloSceneManagerApp app;
-  loop.task_runner()->PostDelayedTask([&app] { app.Init(); },
-                                      ftl::TimeDelta::FromSeconds(2));
+  loop.task_runner()->PostTask([&app] { app.Init(); });
   loop.task_runner()->PostDelayedTask(
       [&loop] {
         FTL_LOG(INFO) << "Quitting.";
         loop.QuitNow();
       },
-      ftl::TimeDelta::FromSeconds(25));
+      ftl::TimeDelta::FromSeconds(50));
   loop.Run();
   return 0;
 }

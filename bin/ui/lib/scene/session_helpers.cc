@@ -578,33 +578,93 @@ mozart2::OpPtr NewSetColorOp(uint32_t material_id,
 }
 
 mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
-                                        const float matrix[4][4]) {
-  mozart2::mat4Ptr val = mozart2::mat4::New();
-  val->matrix[0] = matrix[0][0];
-  val->matrix[1] = matrix[0][1];
-  val->matrix[2] = matrix[0][2];
-  val->matrix[3] = matrix[0][3];
-  val->matrix[4] = matrix[1][0];
-  val->matrix[5] = matrix[1][1];
-  val->matrix[6] = matrix[1][2];
-  val->matrix[7] = matrix[1][3];
-  val->matrix[8] = matrix[2][0];
-  val->matrix[9] = matrix[2][1];
-  val->matrix[10] = matrix[2][2];
-  val->matrix[11] = matrix[2][3];
-  val->matrix[12] = matrix[3][0];
-  val->matrix[13] = matrix[3][1];
-  val->matrix[14] = matrix[3][2];
-  val->matrix[15] = matrix[3][3];
-  auto set_camera_projection = mozart2::SetCameraProjectionOp::New();
-  set_camera_projection->camera_id = camera_id;
-  set_camera_projection->matrix = mozart2::Value::New();
-  set_camera_projection->matrix->set_matrix4x4(std::move(val));
+                                        const float eye_position[3],
+                                        const float eye_look_at[3],
+                                        const float eye_up[3],
+                                        float fovy) {
+  auto set_op = mozart2::SetCameraProjectionOp::New();
+  set_op->camera_id = camera_id;
+  set_op->eye_position = NewVector3Value(eye_position);
+  set_op->eye_look_at = NewVector3Value(eye_look_at);
+  set_op->eye_up = NewVector3Value(eye_up);
+  set_op->fovy = NewFloatValue(fovy);
 
   auto op = mozart2::Op::New();
-  op->set_set_camera_projection(std::move(set_camera_projection));
+  op->set_set_camera_projection(std::move(set_op));
 
   return op;
 }
+
+mozart2::FloatValuePtr NewFloatValue(float value) {
+  auto val = mozart2::FloatValue::New();
+  val->variable_id = 0;
+  val->value = value;
+  return val;
+}
+
+mozart2::Vector2ValuePtr NewVector2Value(const float value[2]) {
+  auto val = mozart2::Vector2Value::New();
+  val->variable_id = 0;
+  val->value = mozart2::vec2::New();
+  val->value->x = value[0];
+  val->value->y = value[1];
+  return val;
+}
+
+mozart2::Vector3ValuePtr NewVector3Value(const float value[3]) {
+  auto val = mozart2::Vector3Value::New();
+  val->variable_id = 0;
+  val->value = mozart2::vec3::New();
+  val->value->x = value[0];
+  val->value->y = value[1];
+  val->value->z = value[2];
+  return val;
+}
+
+mozart2::Vector4ValuePtr NewVector4Value(const float value[4]) {
+  auto val = mozart2::Vector4Value::New();
+  val->variable_id = 0;
+  val->value = mozart2::vec4::New();
+  val->value->x = value[0];
+  val->value->y = value[1];
+  val->value->z = value[2];
+  val->value->w = value[3];
+  return val;
+}
+
+mozart2::Matrix4ValuePtr NewMatrix4Value(const float matrix[16]) {
+  auto val = mozart2::Matrix4Value::New();
+  val->variable_id = 0;
+  val->value = mozart2::mat4::New();
+  auto& m = val->value->matrix;
+  m[0] = matrix[0];
+  m[1] = matrix[1];
+  m[2] = matrix[2];
+  m[3] = matrix[3];
+  m[4] = matrix[4];
+  m[5] = matrix[5];
+  m[6] = matrix[6];
+  m[7] = matrix[7];
+  m[8] = matrix[8];
+  m[9] = matrix[9];
+  m[10] = matrix[10];
+  m[11] = matrix[11];
+  m[12] = matrix[12];
+  m[13] = matrix[13];
+  m[14] = matrix[14];
+  m[15] = matrix[15];
+
+  return val;
+}
+
+/*
+mozart2::ColorRgbaValuePtr NewColorRgbaValue(const glm::vec4& value) {
+  return foo;
+}
+
+mozart2::QuaternionValuePtr NewQuaternionValue(const glm::quat& value) {
+  return foo;
+}
+*/
 
 }  // namespace mozart

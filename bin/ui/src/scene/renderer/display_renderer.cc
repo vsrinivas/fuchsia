@@ -51,7 +51,8 @@ void DisplayRenderer::DrawFrame() {
       escher::vec2(1.5f * M_PI, 1.5f * M_PI), 0.15f * M_PI, 0.7f));
   stage.set_fill_light(escher::AmbientLight(0.3f));
 
-  swapchain_helper_.DrawFrame(stage, model);
+  swapchain_helper_.DrawFrame(
+      stage, model, camera()->GetEscherCamera(stage.viewing_volume()));
 }
 
 }  // namespace scene

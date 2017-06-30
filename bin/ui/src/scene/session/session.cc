@@ -337,16 +337,15 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
 bool Session::ApplySetCameraProjectionOp(
     const mozart2::SetCameraProjectionOpPtr& op) {
   // TODO(MZ-123): support variables.
-  if (IsVariable(op->matrix)) {
+  if (IsVariable(op->eye_position) || IsVariable(op->eye_look_at) ||
+      IsVariable(op->eye_up) || IsVariable(op->fovy)) {
     error_reporter_->ERROR() << "scene::Session::ApplySetCameraProjectionOp(): "
-                                "unimplemented: variable projection matrix.";
-    return false;
-  } else if (!IsMatrix4x4(op->matrix)) {
-    error_reporter_->ERROR() << "scene::Session::ApplySetCameraProjectionOp(): "
-                                "matrix is not a Matrix4x4.";
+                                "unimplemented: variable properties.";
     return false;
   } else if (auto camera = resources_.FindResource<Camera>(op->camera_id)) {
-    camera->SetProjectionMatrix(UnwrapMatrix4x4(op->matrix));
+    camera->SetProjection(UnwrapVector3(op->eye_position),
+                          UnwrapVector3(op->eye_look_at),
+                          UnwrapVector3(op->eye_up), UnwrapFloat(op->fovy));
     return true;
   }
   return false;

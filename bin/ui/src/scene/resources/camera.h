@@ -7,6 +7,8 @@
 #include "apps/mozart/src/scene/resources/nodes/scene.h"
 #include "apps/mozart/src/scene/resources/resource.h"
 
+#include "escher/scene/camera.h"
+
 namespace mozart {
 namespace scene {
 
@@ -21,11 +23,25 @@ class Camera final : public Resource {
 
   const ScenePtr& scene() const { return scene_; }
 
-  void SetProjectionMatrix(const escher::mat4& matrix);
+  void SetProjection(const glm::vec3& eye_position,
+                     const glm::vec3& eye_look_at,
+                     const glm::vec3& eye_up,
+                     float fovy);
+
+  const glm::vec3& eye_position() const { return eye_position_; }
+  const glm::vec3& eye_look_at() const { return eye_look_at_; }
+  const glm::vec3& eye_up() const { return eye_up_; }
+  float fovy() const { return fovy_; }
+
+  escher::Camera GetEscherCamera(const escher::ViewingVolume& volume) const;
 
  private:
   ScenePtr scene_;
-  escher::mat4 projection_matrix_;
+
+  glm::vec3 eye_position_;
+  glm::vec3 eye_look_at_;
+  glm::vec3 eye_up_;
+  float fovy_ = 0;
 };
 
 using CameraPtr = ftl::RefPtr<Camera>;

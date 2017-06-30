@@ -260,10 +260,19 @@ struct SetCameraOp {
 //
 // Constraints:
 // - |camera_id| refs a |Camera|.
-// - |matrix| is a value or variable of type kMatrix4x4.
+// - |eye_position| is the position of the eye.
+// - |eye_look_at| is the point is the scene the that eye is pointed at.
+// - |eye_up| defines the camera's "up" vector.
+// - |fovy| is the Y-axis field of view, in radians.
+//
+// NOTE: A default orthographic projection is specified by setting |fovy| to
+// zero.  In this case, all other parameters are ignored.
 struct SetCameraProjectionOp {
   uint32 camera_id;
-  Value matrix;  // type: kMatrix4x4
+  Vector3Value eye_position;
+  Vector3Value eye_look_at;
+  Vector3Value eye_up;
+  FloatValue fovy;  // Y-axis field of view, in radians.
 };
 
 // Sets the intensity of a Light.

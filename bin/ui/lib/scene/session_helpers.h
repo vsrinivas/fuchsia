@@ -115,7 +115,10 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
 // Camera and lighting operations.
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id);
 mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
-                                        const float matrix[4][4]);
+                                        const float eye_position[3],
+                                        const float eye_look_at[3],
+                                        const float eye_up[3],
+                                        float fovy);
 
 // Material operations.
 mozart2::OpPtr NewSetTextureOp(uint32_t node_id, uint32_t image_id);
@@ -124,5 +127,15 @@ mozart2::OpPtr NewSetColorOp(uint32_t node_id,
                              uint8_t green,
                              uint8_t blue,
                              uint8_t alpha);
+
+// Basic types.
+
+mozart2::FloatValuePtr NewFloatValue(float value);
+mozart2::Vector2ValuePtr NewVector2Value(const float value[2]);
+mozart2::Vector3ValuePtr NewVector3Value(const float value[3]);
+mozart2::Vector4ValuePtr NewVector4Value(const float value[4]);
+mozart2::Matrix4ValuePtr NewMatrix4Value(const float value[16]);
+mozart2::ColorRgbaValuePtr NewColorRgbaValue(const uint8_t value[4]);
+mozart2::QuaternionValuePtr NewQuaternionValue(const float value[4]);
 
 }  // namespace mozart

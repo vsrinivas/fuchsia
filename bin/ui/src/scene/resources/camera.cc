@@ -12,8 +12,24 @@ const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 Camera::Camera(Session* session, ResourceId id, ScenePtr scene)
     : Resource(session, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
-void Camera::SetProjectionMatrix(const escher::mat4& matrix) {
-  projection_matrix_ = matrix;
+void Camera::SetProjection(const glm::vec3& eye_position,
+                           const glm::vec3& eye_look_at,
+                           const glm::vec3& eye_up,
+                           float fovy) {
+  eye_position_ = eye_position;
+  eye_look_at_ = eye_look_at;
+  eye_up_ = eye_up;
+  fovy_ = fovy;
+}
+
+escher::Camera Camera::GetEscherCamera(
+    const escher::ViewingVolume& volume) const {
+  if (fovy_ == 0.f) {
+    return escher::Camera::NewOrtho(volume);
+  } else {
+    return escher::Camera::NewPerspective(
+        volume, glm::lookAt(eye_position_, eye_look_at_, eye_up_), fovy_);
+  }
 }
 
 }  // namespace scene
