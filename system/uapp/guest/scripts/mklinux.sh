@@ -16,10 +16,16 @@
 #
 # More additions to come as and when desired / needed.
 
+if [[ "$1" == debug ]]; then
+  DEBUG=true
+  shift
+fi
+
 SRCFILE="$PWD/${BASH_SOURCE[0]}"
 
 # Location of the patches that we'll apply to the default config
 PATCHFILE="${SRCFILE%/*}/alldefconfig_plus.patch"
+DEBUG_PATCHFILE="${SRCFILE%/*}/add_kernel_debug.patch"
 
 # Location of magenta and its build dir
 MAGENTADIR="${SRCFILE%magenta/*}magenta"
@@ -60,7 +66,13 @@ if [ ! -f "$LINUXDIR/vmlinux" ]; then
   make -C "$LINUXDOWNLOAD" O="$LINUXDIR" alldefconfig
 
   # Apply our patches
+  echo "Applying config patches..."
   patch "$LINUXDIR/.config" "$PATCHFILE"
+
+  if [ $DEBUG ]; then
+    echo "Patching in debug symbol config..."
+    patch "$LINUXDIR/.config" "$DEBUG_PATCHFILE"
+  fi
 
   make -C "$LINUXDOWNLOAD" O="$LINUXDIR" -j100
 else
