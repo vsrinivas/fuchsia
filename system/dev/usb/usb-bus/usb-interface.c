@@ -257,10 +257,19 @@ static mx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     txn->complete_cb = usb_control_complete;
     txn->cookie = &completion;
     iotxn_queue(intf->mxdev, txn);
-    // TODO(voydanoff) Use timeout argument after we implement cancelling USB transactions
-    completion_wait(&completion, MX_TIME_INFINITE);
+    status = completion_wait(&completion, timeout);
 
-    status = txn->status;
+    if (status == MX_OK) {
+        status = txn->status;
+    } else if (status == MX_ERR_TIMED_OUT) {
+        // cancel transactions and wait for txn to be completed
+        completion_reset(&completion);
+        status = usb_hci_cancel_all(&intf->hci, intf->device_id, 0);
+        if (status == MX_OK) {
+            completion_wait(&completion, MX_TIME_INFINITE);
+            status = MX_ERR_TIMED_OUT;
+        }
+    }
     if (status == MX_OK) {
         status = txn->actual;
 
@@ -313,7 +322,6 @@ static uint32_t _usb_interface_get_device_id(void* ctx) {
     return intf->device_id;
 }
 
-
 static mx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
                                                      size_t* out_length) {
     usb_interface_t* intf = ctx;
@@ -329,6 +337,11 @@ static mx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descr
     return MX_OK;
 }
 
+static mx_status_t usb_interface_cancel_all(void* ctx, uint8_t ep_address) {
+    usb_interface_t* intf = ctx;
+    return usb_hci_cancel_all(&intf->hci, intf->device_id, ep_address);
+}
+
 static usb_protocol_ops_t _usb_protocol = {
     .control = usb_interface_control,
     .queue = usb_interface_queue,
@@ -339,6 +352,7 @@ static usb_protocol_ops_t _usb_protocol = {
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = _usb_interface_get_device_id,
     .get_descriptor_list = usb_interface_get_descriptor_list,
+    .cancel_all = usb_interface_cancel_all,
 };
 
 mx_status_t usb_device_add_interface(usb_device_t* device,

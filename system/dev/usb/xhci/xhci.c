@@ -343,6 +343,19 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         goto fail;
     }
 
+    // initialize slots and endpoints
+    for (uint32_t i = 1; i <= xhci->max_slots; i++) {
+        xhci_slot_t* slot = &xhci->slots[i];
+        xhci_endpoint_t* eps = slot->eps;
+        for (int j = 0; j < XHCI_NUM_EPS; j++) {
+            xhci_endpoint_t* ep = &eps[j];
+            mtx_init(&ep->lock, mtx_plain);
+            list_initialize(&ep->queued_txns);
+            list_initialize(&ep->pending_txns);
+            ep->current_txn = NULL;
+        }
+    }
+
     // initialize virtual root hub devices
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         result = xhci_root_hub_init(xhci, i);
@@ -370,25 +383,9 @@ fail:
     return result;
 }
 
-mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count) {
-    mx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, ring_count);
-    if (status != MX_OK) return status;
-
-    mtx_init(&ep->lock, mtx_plain);
-    list_initialize(&ep->queued_txns);
-    list_initialize(&ep->pending_txns);
-    ep->current_txn = NULL;
-    return MX_OK;
-}
-
-void xhci_endpoint_free(xhci_endpoint_t* ep) {
-    free(ep->transfer_state);
-    ep->transfer_state = NULL;
-}
-
-int xhci_get_ep_state(xhci_endpoint_t* ep) {
+int xhci_get_ep_ctx_state(xhci_endpoint_t* ep) {
     if (!ep->epc) {
-        return EP_STATE_DISABLED;
+        return EP_CTX_STATE_DISABLED;
     }
     return XHCI_GET_BITS32(&ep->epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS);
 }

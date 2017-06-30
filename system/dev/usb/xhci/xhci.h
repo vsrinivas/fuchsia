@@ -32,7 +32,7 @@
 #define XHCI_RH_COUNT 2 // number of virtual root hub devices
 
 // state for endpoint's current transfer
-typedef struct xhci_transfer_state {
+typedef struct {
     iotxn_phys_iter_t   phys_iter;
     uint32_t            packet_count;       // remaining packets to send
     uint8_t             ep_type;
@@ -41,7 +41,15 @@ typedef struct xhci_transfer_state {
     bool                needs_status;       // true if we still need to queue status TRB
 } xhci_transfer_state_t;
 
-typedef struct xhci_endpoint {
+typedef enum {
+    EP_STATE_DEAD = 0,      // device does not exist or has been removed
+    EP_STATE_RUNNING,
+    EP_STATE_HALTED,        // halted due to stall or error condition
+    EP_STATE_PAUSED,        // temporarily stopped for canceling a transfer
+    EP_STATE_DISABLED,      // endpoint is not enabled
+} xhci_ep_state_t;
+
+typedef struct {
     xhci_endpoint_context_t* epc;
     xhci_transfer_ring_t transfer_ring;
     list_node_t queued_txns;    // iotxns waiting to be processed
@@ -49,8 +57,7 @@ typedef struct xhci_endpoint {
     list_node_t pending_txns;   // processed txns waiting for completion, including current_txn
     xhci_transfer_state_t* transfer_state;  // transfer state for current_txn
     mtx_t lock;
-    bool enabled;
-    bool halted;                // set if endpoint is in HALTED or ERROR state
+    xhci_ep_state_t state;
 } xhci_endpoint_t;
 
 typedef struct xhci_slot {
@@ -171,9 +178,7 @@ struct xhci {
 };
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
-mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);
-void xhci_endpoint_free(xhci_endpoint_t* ep);
-int xhci_get_ep_state(xhci_endpoint_t* ep);
+int xhci_get_ep_ctx_state(xhci_endpoint_t* ep);
 mx_status_t xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,

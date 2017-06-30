@@ -80,7 +80,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     uint8_t* device_context = (uint8_t *)io_buffer_virt(&slot->buffer);
 
     xhci_endpoint_t* ep = &slot->eps[0];
-    status = xhci_endpoint_init(ep, TRANSFER_RING_SIZE);
+    status = xhci_transfer_ring_init(&ep->transfer_ring, TRANSFER_RING_SIZE);
     if (status < 0) return status;
     ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
     if (!ep->transfer_state) {
@@ -153,7 +153,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     mtx_unlock(&xhci->input_context_lock);
 
     if (status == MX_OK) {
-        ep->enabled = true;
+        ep->state = EP_STATE_RUNNING;
     }
     return status;
 }
@@ -204,10 +204,18 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
     xprintf("cleaning up slot %d\n", slot_id);
     xhci_slot_t* slot = &xhci->slots[slot_id];
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
-        xhci_endpoint_free(&slot->eps[i]);
+        xhci_endpoint_t* ep = &slot->eps[i];
+        xhci_transfer_ring_free(&ep->transfer_ring);
+        free(ep->transfer_state);
+        ep->transfer_state = NULL;
+        ep->state = EP_STATE_DISABLED;
     }
     io_buffer_release(&slot->buffer);
-    memset(slot, 0, sizeof(*slot));
+    slot->sc = NULL;
+    slot->hub_address = 0;
+    slot->port = 0;
+    slot->rh_port = 0;
+    slot->port = USB_SPEED_UNDEFINED;
 }
 
 static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
@@ -226,8 +234,6 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
         printf("unable to get a slot\n");
         return MX_ERR_NO_RESOURCES;
     }
-    xhci_slot_t* slot = &xhci->slots[slot_id];
-    memset(slot, 0, sizeof(*slot));
 
     result = xhci_address_device(xhci, slot_id, hub_address, port, speed);
     if (result != MX_OK) {
@@ -301,15 +307,23 @@ disable_slot_exit:
     return result;
 }
 
-// returns true if endpoint was enabled
-static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index, mx_status_t status) {
+static mx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index,
+                                      xhci_ep_state_t new_state, mx_status_t complete_status) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep =  &slot->eps[ep_index];
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
-    if (!ep->enabled) {
-        return false;
+    if (new_state == EP_STATE_RUNNING) {
+        return MX_ERR_INTERNAL;
     }
+
+    mtx_lock(&ep->lock);
+    if (ep->state != EP_STATE_RUNNING) {
+        mtx_unlock(&ep->lock);
+        return MX_ERR_BAD_STATE;
+    }
+    ep->state = new_state;
+    mtx_unlock(&ep->lock);
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
@@ -321,39 +335,23 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index, mx_
         // TRB_CC_CONTEXT_STATE_ERROR is normal here in the case of a disconnected device,
         // since by then the endpoint would already be in error state.
         printf("TRB_CMD_STOP_ENDPOINT failed cc: %d\n", cc);
-        return false;
+        return MX_ERR_INTERNAL;
     }
 
     free(ep->transfer_state);
     ep->transfer_state = NULL;
-
-    list_node_t pending_copy;
-    list_node_t queued_copy;
-    list_initialize(&pending_copy);
-    list_initialize(&queued_copy);
-
-    mtx_lock(&ep->lock);
-
-    // move pending_txns and queued_txns to a different list so we can complete them outside of the mutex
-    list_move(&ep->pending_txns, &pending_copy);
-    list_move(&ep->queued_txns, &queued_copy);
-
-    ep->enabled = false;
-
-    mtx_unlock(&ep->lock);
-
-    // complete pending requests
-    iotxn_t* txn;
-    iotxn_t* temp;
-    list_for_every_entry_safe(&pending_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, status, 0);
-    }
-    list_for_every_entry_safe(&queued_copy, txn, temp, iotxn_t, node) {
-        iotxn_complete(txn, status, 0);
-    }
     xhci_transfer_ring_free(transfer_ring);
 
-    return true;
+    // complete any remaining requests
+    iotxn_t* txn;
+    while ((txn = list_remove_head_type(&ep->pending_txns, iotxn_t, node))) {
+        iotxn_complete(txn, complete_status, 0);
+    }
+    while ((txn = list_remove_head_type(&ep->queued_txns, iotxn_t, node))) {
+        iotxn_complete(txn, complete_status, 0);
+    }
+
+    return MX_OK;
 }
 
 static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
@@ -383,7 +381,12 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
     uint32_t drop_flags = 0;
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
-        if (xhci_stop_endpoint(xhci, slot_id, i, MX_ERR_IO_NOT_PRESENT)) {
+        if (slot->eps[i].state != EP_STATE_DEAD) {
+            mx_status_t status = xhci_stop_endpoint(xhci, slot_id, i, EP_STATE_DEAD,
+                                                    MX_ERR_IO_NOT_PRESENT);
+            if (status != MX_OK) {
+                printf("xhci_handle_disconnect_device: xhci_stop_endpoint failed: %d\n", status);
+            }
             drop_flags |= XHCI_ICC_EP_FLAG(i);
          }
     }
@@ -508,6 +511,13 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
     xhci_endpoint_t* ep = &slot->eps[index];
 
+    mtx_lock(&ep->lock);
+
+    if ((enable && ep->state == EP_STATE_RUNNING) || (!enable && ep->state == EP_STATE_DISABLED)) {
+        mtx_unlock(&ep->lock);
+        return MX_OK;
+    }
+
     mtx_lock(&xhci->input_context_lock);
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
     mx_paddr_t icc_phys = xhci->input_context_phys;
@@ -548,9 +558,10 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         xhci_endpoint_context_t* epc = (xhci_endpoint_context_t*)&xhci->input_context[(index + 2) * xhci->context_size];
         memset((void*)epc, 0, xhci->context_size);
         // allocate a transfer ring for the endpoint
-        mx_status_t status = xhci_endpoint_init(ep, TRANSFER_RING_SIZE);
+        mx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, TRANSFER_RING_SIZE);
         if (status < 0) {
             mtx_unlock(&xhci->input_context_lock);
+            mtx_unlock(&ep->lock);
             return status;
         }
 
@@ -580,7 +591,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS,
                         index + 1);
     } else {
-        xhci_stop_endpoint(xhci, slot_id, index, MX_ERR_BAD_STATE);
+        xhci_stop_endpoint(xhci, slot_id, index, EP_STATE_DISABLED, MX_ERR_BAD_STATE);
         XHCI_WRITE32(&icc->drop_context_flags, XHCI_ICC_EP_FLAG(index));
     }
 
@@ -592,10 +603,12 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     if (status == MX_OK && enable) {
         ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
         if (!ep->transfer_state) {
-            return MX_ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
+        } else {
+            ep->state = EP_STATE_RUNNING;
         }
-        ep->enabled = true;
     }
+    mtx_unlock(&ep->lock);
 
     return status;
 }

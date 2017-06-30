@@ -515,6 +515,10 @@ size_t dwc_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_addre
     return PAGE_SIZE;
 }
 
+static mx_status_t dwc_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_address) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+
 static void dwc_iotxn_queue(void* ctx, iotxn_t* txn) {
     dwc_usb_t* usb_dwc = ctx;
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
@@ -769,6 +773,7 @@ static usb_hci_protocol_ops_t dwc_hci_protocol = {
     .hub_device_removed = dwc_hub_device_removed,
     .reset_endpoint = dwc_reset_endpoint,
     .get_max_transfer_size = dwc_get_max_transfer_size,
+    .cancel_all = dwc_cancel_all,
 };
 
 static void dwc_handle_channel_irq(uint32_t channel, dwc_usb_t* dwc) {

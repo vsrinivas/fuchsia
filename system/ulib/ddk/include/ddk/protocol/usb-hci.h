@@ -32,6 +32,7 @@ typedef struct usb_hci_protocol_ops {
     mx_status_t (*hub_device_removed)(void* ctx, uint32_t device_id, int port);
     mx_status_t (*reset_endpoint)(void* ctx, uint32_t device_id, uint8_t ep_address);
     size_t (*get_max_transfer_size)(void* ctx, uint32_t device_id, uint8_t ep_address);
+    mx_status_t (*cancel_all)(void* ctx, uint32_t device_id, uint8_t ep_address);
 } usb_hci_protocol_ops_t;
 
 typedef struct usb_hci_protocol {
@@ -84,6 +85,11 @@ static inline mx_status_t usb_hci_reset_endpoint(usb_hci_protocol_t* hci, uint32
 static inline size_t usb_hci_get_max_transfer_size(usb_hci_protocol_t* hci, uint32_t device_id,
                                                    uint8_t ep_address) {
     return hci->ops->get_max_transfer_size(hci->ctx, device_id, ep_address);
+}
+
+static inline mx_status_t usb_hci_cancel_all(usb_hci_protocol_t* hci, uint32_t device_id,
+                                             uint8_t ep_address) {
+    return hci->ops->cancel_all(hci->ctx, device_id, ep_address);
 }
 
 __END_CDECLS;

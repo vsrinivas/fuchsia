@@ -32,6 +32,7 @@ typedef struct usb_protocol_ops {
     size_t (*get_max_transfer_size)(void* ctx, uint8_t ep_address);
     uint32_t (*get_device_id)(void* ctx);
     mx_status_t (*get_descriptor_list)(void* ctx, void** out_descriptors, size_t* out_length);
+    mx_status_t (*cancel_all)(void* ctx, uint8_t ep_address);
 } usb_protocol_ops_t;
 
 typedef struct usb_protocol {
@@ -113,6 +114,10 @@ static inline mx_status_t usb_get_device_id(usb_protocol_t* usb) {
 static inline mx_status_t usb_get_descriptor_list(usb_protocol_t* usb, void** out_descriptors,
                                                   size_t* out_length) {
     return usb->ops->get_descriptor_list(usb->ctx, out_descriptors, out_length);
+}
+
+static inline mx_status_t usb_cancel_all(usb_protocol_t* usb, uint8_t ep_address) {
+    return usb->ops->cancel_all(usb->ctx, ep_address);
 }
 
 __END_CDECLS;
