@@ -5,4 +5,7 @@
 import("//build/rust/rust_library.gni")
 
 rust_library("magenta-sys") {
+  deps = [
+    "//third_party/rust-crates:bitflags-0.7.0",
+  ]
 }
