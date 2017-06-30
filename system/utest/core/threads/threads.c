@@ -414,11 +414,12 @@ static bool test_suspend_sleeping(void) {
     ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)sleep_deadline, &thread, &thread_h), "");
 
     mx_nanosleep(sleep_deadline - MX_MSEC(50));
-    ASSERT_EQ(mx_task_suspend(thread_h), MX_OK, "");
 
-    // TODO(teisenbe): Once we wire in exceptions for suspend, check here that
-    // we receive it.
-    mx_nanosleep(sleep_deadline - MX_MSEC(50));
+    // Suspend the thread.  Use the debugger port to wait for the suspension.
+    mx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h, eport), "");
+    ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
 
     ASSERT_EQ(mx_task_resume(thread_h, 0), MX_OK, "");
 
@@ -449,9 +450,11 @@ static bool test_suspend_channel_call(void) {
     ASSERT_EQ(mx_object_wait_one(channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL),
               MX_OK, "");
 
-    ASSERT_EQ(mx_task_suspend(thread_h), MX_OK, "");
-    // TODO(teisenbe): Once we wire in exceptions for suspend, check here that
-    // we receive it.
+    // Suspend the thread.  Use the debugger port to wait for the suspension.
+    mx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h, eport), "");
+    ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
 
     // Read the message
     uint8_t buf[9];
