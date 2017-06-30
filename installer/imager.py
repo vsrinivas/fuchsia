@@ -187,6 +187,11 @@ enable_thread_exp = not args.disable_thread_exp
 mdir_path = args.mdir_path
 
 runtime_dir = args.runtime_dir
+
+arch = args.arch
+if arch is None:
+  arch = "X64"
+
 if not runtime_dir:
   runtime_dir = args.build_dir
 
@@ -220,7 +225,7 @@ if not bootdata:
 
 runtime_bootdata = bootdata
 
-if not os.path.exists(bootloader):
+if arch == "X64" and not os.path.exists(bootloader):
   print """EFI loader does not exist at path %s, please check the path and try
   again.""" % bootloader
   sys.exit(-1)
@@ -264,10 +269,6 @@ if not os.path.exists(minfs_bin):
   print "minfs path '%s' is not found, please supply a valid path" % minfs_bin
   sys.exit(-1)
 # FILE_BOOTLOADER = "%s/BOOTX64.EFI" % DIR_EFI_BOOT
-
-arch = args.arch
-if arch is None:
-  arch = "X64"
 
 if arch != "X64" and arch != "ARM" and arch != "AA64":
   print "Architecture '%s' is not recognized" % arch
@@ -367,3 +368,8 @@ except (subprocess.CalledProcessError):
 except (OSError):
   print "Unable to execute mkfs command"
   sys.exit(-1)
+
+# shift around the user.bootfs files
+user_bootfs = os.path.join(os.path.dirname(out_file), "user.bootfs")
+os.rename(user_bootfs, os.path.join(os.path.dirname(user_bootfs), "user-noinstaller.bootfs"))
+os.rename(out_file, user_bootfs)

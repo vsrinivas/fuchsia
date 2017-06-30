@@ -43,7 +43,7 @@ bytes_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024 * 1024))
 bytes_efi=$(($DEFAULT_SIZE_EFI * 1024 * 1024 * 1024))
 release=0
 debug=0
-platform=""
+platform="x86-64"
 build_dir_fuchsia=""
 minfs_path=""
 build_dir_magenta=""
@@ -152,10 +152,6 @@ if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = "" ]; then
     fi
   fi
 
-  if [ "$platform" = "" ]; then
-    platform=x86-64
-  fi
-
   if [ "$release" -eq 1 ]; then
     build_variant="release"
   else
@@ -164,23 +160,32 @@ if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = "" ]; then
 fi
 
 arch=""
+build_arch="x86_64"
 case $platform in
   x86-64)
     arch="X64"
-    ;;
-  arm)
-    arch="ARM"
+    build_arch="x86_64"
     ;;
   arm-64)
     arch="AA64"
+    device_type="qemu"
+    build_arch="aarch64"
     ;;
   \?)
-    echo "Platform is not valid, should be x86-64, arm, or arm-64!"
+    echo "Platform is not valid, should be x86-64, or arm-64!"
+    exit -1
 esac
+
+echo "Building magenta for installer"
+"$script_dir/../build-magenta.sh" -t "$build_arch"
+
+if [ "$build_arch" == "x86_64" ]; then
+  build_arch="x86-64"
+fi
 
 # if the build directory is not specified, infer it from other parameters
 if [ "$build_dir_fuchsia" = "" ]; then
-  build_dir_fuchsia=$script_dir/../../out/$build_variant-$platform
+  build_dir_fuchsia=$script_dir/../../out/$build_variant-$build_arch
 else
   if [ "$release" -ne 0 ] || [ "$debug" -ne 0 ]; then
     echo "build directory is specified release arg ignored"
@@ -188,7 +193,12 @@ else
 fi
 
 if [ "$build_dir_magenta" = "" ]; then
-  build_dir_magenta=$build_dir_fuchsia/../build-magenta/build-magenta-$device_type-$platform
+  build_dir_magenta="${script_dir}/../../out/build-magenta/build-magenta-${device_type}-"
+  if [ "$build_arch" = "aarch64" ]; then
+    build_dir_magenta="${build_dir_magenta}arm64"
+  elif [ "$build_arch" = "x86-64" ]; then
+    build_dir_magenta="${build_dir_magenta}${build_arch}"
+  fi
 else
   if [ "$device_type" != "" ]; then
     echo "build directory is specified, type arg ignored"
@@ -255,6 +265,15 @@ emptyfile() {
 }
 
 set -e
+
+echo "Building magentix for installer"
+gn_gen_path="packages/gn/gen.py"
+ninja_path="buildtools/ninja"
+
+"$script_dir/../../$gn_gen_path" --outdir out/magentix --target_cpu "$build_arch" --modules magentix,install-fuchsia
+
+mgtix_out="out/magentix-${build_arch}"
+"${script_dir}/../../${ninja_path}" -C "$mgtix_out"
 
 # create a suitably large file
 echo "Creating system disk image, this may take some time..."
