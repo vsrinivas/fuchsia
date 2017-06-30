@@ -30,8 +30,8 @@ class Dnode;
 
 class VnodeMemfs : public fs::Vnode {
 public:
-    virtual mx_status_t Setattr(vnattr_t* a) override;
-    virtual mx_status_t Sync() override;
+    virtual mx_status_t Setattr(vnattr_t* a) final;
+    virtual mx_status_t Sync() final;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) final;
     mx_status_t AttachRemote(mx_handle_t h) final;
@@ -61,7 +61,7 @@ public:
     VnodeFile();
     ~VnodeFile();
 
-    virtual mx_status_t Open(uint32_t flags) override;
+    virtual mx_status_t Open(uint32_t flags) final;
 
 private:
     ssize_t Read(void* data, size_t len, size_t off) final;
@@ -78,7 +78,7 @@ public:
     VnodeDir();
     virtual ~VnodeDir();
 
-    virtual mx_status_t Open(uint32_t flags) override;
+    virtual mx_status_t Open(uint32_t flags) final;
     mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
 
@@ -118,7 +118,7 @@ private:
                        const char* newname, size_t newlen,
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
-    mx_status_t Getattr(vnattr_t* a) override;
+    mx_status_t Getattr(vnattr_t* a) final;
 
     fs::RemoteContainer remoter_;
     fs::WatcherContainer watcher_;
