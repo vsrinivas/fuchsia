@@ -47,6 +47,10 @@ uint max_irqs = 0;
 
 static void arm_gic_init(void);
 
+static status_t gic_configure_interrupt(unsigned int vector,
+                                        enum interrupt_trigger_mode tm,
+                                        enum interrupt_polarity pol);
+
 static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd)
 {
 }
@@ -112,21 +116,6 @@ static int arm_gic_max_cpu(void)
     return (GICREG(0, GICD_TYPER) >> 5) & 0x7;
 }
 
-static void arm_gic_set_trigger_type(uint32_t irq, arm_gic_trig_type_t type)
-{
-    // This can only be set for SPI interrupts, not SGI, or PPI
-    assert(irq >= GIC_BASE_SPI);
-    assert(irq < max_irqs);
-
-    // type is encoded with two bits, MSB of the two determine type
-    // 16 irqs encoded per ICFGR register
-    uint32_t reg_ndx = irq >> 4;
-    uint32_t bit_shift = ((irq & 0xf) << 1) + 1;
-    uint32_t reg_val   = GICREG(0, GICD_ICFGR(reg_ndx));
-    reg_val |= (type << bit_shift);
-    GICREG(0, GICD_ICFGR(reg_ndx)) = reg_val;
-}
-
 static void arm_gic_init(void)
 {
     uint i;
@@ -148,7 +137,7 @@ static void arm_gic_init(void)
     }
     // Initialize all the SPIs to edge triggered
     for (i = GIC_BASE_SPI; i < max_irqs; i++)
-        arm_gic_set_trigger_type(i, ARM_GIC_TRIG_TYPE_EDGE);
+        gic_configure_interrupt(i, IRQ_TRIGGER_MODE_EDGE, IRQ_POLARITY_ACTIVE_HIGH);
 
     GICREG(0, GICD_CTLR) = 1; // enable GIC0
 
@@ -197,20 +186,24 @@ static status_t gic_configure_interrupt(unsigned int vector,
                                         enum interrupt_trigger_mode tm,
                                         enum interrupt_polarity pol)
 {
-    if (vector >= max_irqs)
+    //Only configurable for SPI interrupts
+    if ((vector >= max_irqs) || (vector < GIC_BASE_SPI))
         return MX_ERR_INVALID_ARGS;
-
-    if (tm != IRQ_TRIGGER_MODE_EDGE) {
-        // We don't currently support non-edge triggered interrupts via the GIC,
-        // and we pre-initialize everything to edge triggered.
-        // TODO: re-evaluate this.
-        return MX_ERR_NOT_SUPPORTED;
-    }
 
     if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
         // TODO: polarity should actually be configure through a GPIO controller
         return MX_ERR_NOT_SUPPORTED;
     }
+
+    // type is encoded with two bits, MSB of the two determine type
+    // 16 irqs encoded per ICFGR register
+    uint32_t reg_ndx = vector >> 4;
+    uint32_t bit_shift = ((vector & 0xf) << 1) + 1;
+    uint32_t type = (tm == IRQ_TRIGGER_MODE_EDGE) ? 1 : 0;
+
+    uint32_t reg_val   = GICREG(0, GICD_ICFGR(reg_ndx));
+    reg_val |= (type << bit_shift);
+    GICREG(0, GICD_ICFGR(reg_ndx)) = reg_val;
 
     return MX_OK;
 }

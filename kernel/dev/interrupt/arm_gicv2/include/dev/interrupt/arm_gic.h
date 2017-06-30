@@ -14,11 +14,6 @@
 #define GIC_BASE_PPI 16
 #define GIC_BASE_SPI 32
 
-typedef enum {
-	ARM_GIC_TRIG_TYPE_LEVEL = 0,
-	ARM_GIC_TRIG_TYPE_EDGE = 1,
-} arm_gic_trig_type_t;
-
 enum {
     /* Ignore cpu_mask and forward interrupt to all CPUs other than the current cpu */
     ARM_GIC_SGI_FLAG_TARGET_FILTER_NOT_SENDER = 0x1,
