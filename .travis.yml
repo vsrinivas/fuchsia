@@ -6,6 +6,7 @@ env:
     - PROJECT=magenta-qemu-arm64
     - PROJECT=magenta-rpi3-arm64
     - PROJECT=magenta-hikey960-arm64
+    - PROJECT=magenta-odroidc2-arm64
 
     # kernel only, no-magenta builds
     - PROJECT=pc-x86-64-test
