@@ -52,11 +52,22 @@ static bool suspend_thread_synchronous(mx_handle_t thread, mx_handle_t eport) {
     ASSERT_EQ(mx_task_suspend(thread), MX_OK, "");
 
     // Wait for the thread to suspend.
-    mx_port_packet_t packet;
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
-    EXPECT_TRUE(check_reported_pid_and_tid(thread, &packet), "");
-    ASSERT_EQ(packet.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED, "");
+    for (;;) {
+        mx_port_packet_t packet;
+        ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, 0), MX_OK, "");
+        if (packet.type == MX_EXCP_THREAD_EXITING) {
+            // Ignore this "thread exiting" event and retry.  This event
+            // was probably caused by a thread from an earlier test case.
+            // We can get these events even if the previous test case
+            // joined the thread or used mx_object_wait_one() to wait for
+            // the thread to terminate.
+            continue;
+        }
+        EXPECT_TRUE(check_reported_pid_and_tid(thread, &packet), "");
+        ASSERT_EQ(packet.key, kExceptionPortKey, "");
+        ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED, "");
+        break;
+    }
 
     return true;
 }
