@@ -45,19 +45,27 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   if (action_data.method.compare("ViewVideo") != 0) {
     return;
   }
-  // TODO(azani): Put information relevant to the video in the proposal.
+
   rapidjson::Document doc_params;
   if (doc_params.Parse(action_data.params).HasParseError()) {
     return;
   }
   rapidjson::Value* vid_value =
       rapidjson::Pointer("/youtube-doc/youtube-video-id").Get(doc_params);
+  rapidjson::Value* title_value =
+      rapidjson::Pointer("/youtube-doc/youtube-video-title").Get(doc_params);
 
   if (vid_value == nullptr || !vid_value->IsString()) {
     return;
   }
   std::string video_id = vid_value->GetString();
   std::string proposal_id = "Share Video " + action_data.story_id;
+
+  bool has_title = title_value != nullptr && title_value->IsString();
+  std::string video_title;
+  if (has_title) {
+    video_title = title_value->GetString();
+  }
 
   ProposalPtr proposal(Proposal::New());
   proposal->id = proposal_id;
@@ -89,7 +97,13 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   if (!last_email_rcpt_.empty()) {
     initial_data += "\"to\": [{\"email\": \"" + last_email_rcpt_ + "\"}],";
   }
-  initial_data += "\"subject\": \"Really cool video!!!!1one\",";
+  if (has_title) {
+    // TODO(youngseokyoon): The video_title should be correctly escaped here.
+    initial_data +=
+        "\"subject\": \"Watch \\\"" + video_title + "\\\" on YouTube\",";
+  } else {
+    initial_data += "\"subject\": \"Watch this video on YouTube\",";
+  }
   initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
   initial_data += video_id + "\"}}}";
   add_module->initial_data = initial_data;
@@ -108,18 +122,27 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   proposal->on_selected.push_back(std::move(action));
 
   SuggestionDisplayPtr display(SuggestionDisplay::New());
-  display->headline = "Share Video via email";
+  if (has_title) {
+    display->headline = "Share \"" + video_title + "\" Video via email";
+  } else {
+    display->headline = "Share Video via email";
+  }
   display->subheadline = "";
   display->details = "";
   display->color = 0xff42ebf4;
   display->icon_urls.push_back("");
-  display->image_url = "";
+  display->image_url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
   display->image_type = SuggestionImageType::OTHER;
   // If there is an email recipient already available, set an interrupt
   // suggestion.
   if (!last_email_rcpt_.empty()) {
     display->annoyance = AnnoyanceType::INTERRUPT;
-    display->headline = "Share Video with " + last_email_rcpt_;
+    if (has_title) {
+      display->headline =
+          "Share \"" + video_title + "\" Video with " + last_email_rcpt_;
+    } else {
+      display->headline = "Share Video with " + last_email_rcpt_;
+    }
   }
   proposal->display = std::move(display);
 
