@@ -117,6 +117,8 @@ private:
     // MsdIntelConnection::Owner
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
+    void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
+                       std::shared_ptr<MsdIntelBuffer> buffer) override;
     std::shared_ptr<GpuMappingCache> mapping_cache() override { return mapping_cache_; }
 
     void StartDeviceThread();
@@ -131,6 +133,8 @@ private:
 
     magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
+    magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
+                                       std::shared_ptr<MsdIntelBuffer> buffer);
     magma::Status
     ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
                 const magma_system_image_descriptor& image_desc,
@@ -200,6 +204,7 @@ private:
     class CommandBufferRequest;
     class FlipRequest;
     class DestroyContextRequest;
+    class ReleaseBufferRequest;
     class InterruptRequest;
     class DumpRequest;
 

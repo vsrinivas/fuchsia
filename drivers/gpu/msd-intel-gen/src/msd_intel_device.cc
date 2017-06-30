@@ -53,6 +53,25 @@ private:
     std::shared_ptr<ClientContext> client_context_;
 };
 
+class MsdIntelDevice::ReleaseBufferRequest : public DeviceRequest {
+public:
+    ReleaseBufferRequest(std::shared_ptr<AddressSpace> address_space,
+                         std::shared_ptr<MsdIntelBuffer> buffer)
+        : address_space_(std::move(address_space)), buffer_(std::move(buffer))
+    {
+    }
+
+protected:
+    magma::Status Process(MsdIntelDevice* device) override
+    {
+        return device->ProcessReleaseBuffer(std::move(address_space_), std::move(buffer_));
+    }
+
+private:
+    std::shared_ptr<AddressSpace> address_space_;
+    std::shared_ptr<MsdIntelBuffer> buffer_;
+};
+
 class MsdIntelDevice::FlipRequest : public DeviceRequest {
 public:
     FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
@@ -370,6 +389,16 @@ void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_contex
     EnqueueDeviceRequest(std::make_unique<DestroyContextRequest>(std::move(client_context)));
 }
 
+void MsdIntelDevice::ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
+                                   std::shared_ptr<MsdIntelBuffer> buffer)
+{
+    DLOG("ReleaseBuffer");
+    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
+
+    EnqueueDeviceRequest(
+        std::make_unique<ReleaseBufferRequest>(std::move(address_space), std::move(buffer)));
+}
+
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_image_descriptor* image_desc,
                           std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
@@ -635,6 +664,19 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
     // Just let it go out of scope
 
     TRACE_ASYNC_END("magma", "ProcessDestroyContext", nonce);
+    return MAGMA_STATUS_OK;
+}
+
+magma::Status MsdIntelDevice::ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
+                                                   std::shared_ptr<MsdIntelBuffer> buffer)
+{
+    DLOG("ProcessReleaseBuffer");
+    TRACE_NONCE_DECLARE(nonce);
+    TRACE_ASYNC_BEGIN("magma", "ProcessReleaseBuffer", nonce);
+
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+    TRACE_ASYNC_END("magma", "ProcessReleaseBuffer", nonce);
     return MAGMA_STATUS_OK;
 }
 

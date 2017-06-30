@@ -75,6 +75,19 @@ void MsdIntelBuffer::RemoveExpiredMappings()
     }
 }
 
+void MsdIntelBuffer::RemoveMappings(AddressSpace* address_space)
+{
+    for (auto iter = mapping_list_.begin(); iter != mapping_list_.end();) {
+        std::shared_ptr<GpuMapping> mapping = (*iter).lock();
+        std::shared_ptr<AddressSpace> mapping_address_space =
+            mapping ? mapping->address_space().lock() : nullptr;
+
+        if (mapping_address_space.get() == address_space)
+            printf("TODO: remove mapping %p for address_space %p buffer 0x%lx\n", mapping.get(),
+                   address_space, platform_buffer()->id());
+    }
+}
+
 void MsdIntelBuffer::DecrementInflightCounter()
 {
     DASSERT(inflight_counter_ > 0);

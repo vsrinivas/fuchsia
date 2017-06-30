@@ -55,6 +55,8 @@ public:
 
     void RemoveExpiredMappings();
 
+    void RemoveMappings(AddressSpace* address_space);
+
     uint32_t shared_mapping_count() { return mapping_list_.size(); }
 
 private:

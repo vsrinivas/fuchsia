@@ -19,6 +19,8 @@ public:
     public:
         virtual magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
+        virtual void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
+                                   std::shared_ptr<MsdIntelBuffer> buffer) = 0;
         virtual std::shared_ptr<GpuMappingCache> mapping_cache() = 0;
     };
 
@@ -32,6 +34,11 @@ public:
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->SubmitCommandBuffer(std::move(cmd_buf));
+    }
+
+    void ReleaseBuffer(std::shared_ptr<MsdIntelBuffer> buffer)
+    {
+        owner_->ReleaseBuffer(ppgtt_, std::move(buffer));
     }
 
     void DestroyContext(std::shared_ptr<ClientContext> client_context)
