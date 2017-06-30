@@ -36,7 +36,7 @@ func (f *Filesystem) Mount(path string) error {
 		return err
 	}
 
-	f.mountInfo.parentFd, err = os.Open(path)
+	f.mountInfo.parentFd, err = os.OpenFile(path, syscall.O_ADMIN, os.ModePerm)
 	if err != nil {
 		return err
 	}
