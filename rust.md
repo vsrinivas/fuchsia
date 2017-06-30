@@ -24,7 +24,7 @@ There are two types of dependencies:
 Third-party dependencies should be added to the manifest file just like in the
 normal Rust development workflow - see the next section for how third-party
 dependencies are inserted into the build.
-In-tree dependencies should be added to the build file as target dependencies.
+All dependencies should be added to the build file as target dependencies.
 
 Here's an example of a library depending on the third-party crate `bitflags`
 and on a FIDL library at `//apps/framework/services`:
@@ -34,6 +34,7 @@ BUILD.gn
 rust_library("my-library") {
   deps = [
     "//apps/framework/services:services_rust_library",
+    "//third_party/rust-crates:bitflags-0.7.0",
   ]
 }
 
@@ -84,6 +85,9 @@ If a crate is not available in the vendor directory, it needs to be added with t
 1. Add your crate root to `CONFIGS` in the [update script][update-script];
 1. Run the commands listed above.
 
+If a crate needs to link against a native library, the library needs to be
+present in the `NATIVE_LIBS` parameter in the [update script][update-script].
+
 
 ## GN build strategy
 
@@ -107,6 +111,10 @@ source tree, the Cargo-based approach made more sense:
 - extra build costs remain low overall;
 - maintenance of the build system is straightforward;
 - familiar workflow for existing Rust developers.
+
+Note that while Cargo knows how to use the vendor directory to build a single
+crate, some GN glue had to be added in order to properly integrate with native
+libraries built independently from the crate.
 
 
 [target-library]: https://fuchsia.googlesource.com/build/+/master/rust/rust_library.gni "Rust library"
