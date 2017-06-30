@@ -87,6 +87,36 @@ def mkdir_fat(mmd_path, target_disk, remote_path, working_dir):
 
   return True
 
+def build_manifest_lists(dir):
+  sys_manifests = []
+  boot_manifests = []
+
+  gen_dir = os.path.join(dir, "gen", "packages", "gn")
+  pkg_list = os.path.join(gen_dir, "packages")
+  with open(pkg_list) as pkg_list_file:
+    for pkg_name in pkg_list_file:
+      pkg_name = pkg_name.rstrip()
+      pkg_dir = os.path.join(dir, "package", pkg_name)
+
+      pkg_sys_man = os.path.join(pkg_dir, "system_manifest")
+      if is_non_empty_file(pkg_sys_man):
+        sys_manifests.append(pkg_sys_man)
+
+      pkg_boot_man = os.path.join(pkg_dir, "boot_manifest")
+      if is_non_empty_file(pkg_boot_man):
+        boot_manifests.append(pkg_boot_man)
+
+  return sys_manifests, boot_manifests
+
+def mk_bootdata_fs(bin_path, out_path, working_dir, orig_bootdata, aux_manifests):
+  if len(aux_manifests) != 0:
+    bootdata_mkfs_cmd = [bin_path, "-c", "--target=boot", "-o", out_path,
+                         orig_bootdata] + aux_manifests
+    subprocess.check_call(bootdata_mkfs_cmd, cwd=working_dir)
+    return out_path
+  else:
+    return orig_bootdata
+
 parser = argparse.ArgumentParser(description='Copy build files')
 parser.add_argument('--temp_dir', dest='temp_dir', action='store',
                     required=False,
@@ -142,6 +172,9 @@ parser.add_argument('--disable_thread_exp', action='store_const',
                     help="Whether to disable experimental thread priorization")
 parser.add_argument('--mdir_path', action='store', required=True,
                     help='Path to mdir binary')
+parser.add_argument('--runtime_dir', action='store', required=False,
+                    help="""Path to the output directory containing the runtime
+                    available when running the installer""")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -152,6 +185,10 @@ bootdata = args.bootdata
 kernel_cmdline = args.kernel_cmdline
 enable_thread_exp = not args.disable_thread_exp
 mdir_path = args.mdir_path
+
+runtime_dir = args.runtime_dir
+if not runtime_dir:
+  runtime_dir = args.build_dir
 
 # if bootloader was not supplied, find it relative to the magenta build dir
 if bootloader is None:
@@ -180,6 +217,8 @@ if not bootdata:
     print """You must supply either the magenta build dir or the path
     to the bootdata.bin"""
     sys.exit(-1)
+
+runtime_bootdata = bootdata
 
 if not os.path.exists(bootloader):
   print """EFI loader does not exist at path %s, please check the path and try
@@ -245,22 +284,10 @@ def is_non_empty_file(path):
 # Take the files referenced by primary_manifest and each package's system
 # manifests and write them into the minfs image at disk_path using the minfs
 # binary pointed to by minfs_bin.
-system_manifests = [ primary_manifest ]
-boot_manifests = []
+system_manifests, boot_manifests = build_manifest_lists(args.build_dir)
+system_manifests.append(primary_manifest)
 if is_non_empty_file(boot_manifest):
     boot_manifests.append(boot_manifest)
-
-with open(package_list) as package_list_file:
-    for name in package_list_file:
-        name = name.rstrip()
-        package_dir = os.path.join(args.build_dir, "package", name)
-        package_system_manifest = os.path.join(package_dir, "system_manifest")
-        if is_non_empty_file(package_system_manifest):
-            system_manifests.append(package_system_manifest)
-
-        package_boot_manifest = os.path.join(package_dir, "boot_manifest")
-        if is_non_empty_file(package_boot_manifest):
-            boot_manifests.append(package_boot_manifest)
 
 file_count = manifest.build_minfs_image(system_manifests, disk_path, minfs_bin)
 
@@ -276,13 +303,9 @@ if not (mkdir_fat(mmd_path, disk_path_efi, DIR_EFI, working_dir) and
         mkdir_fat(mmd_path, disk_path_efi, DIR_EFI_BOOT, working_dir)):
   sys.exit(-1)
 
-# Append contents of each boot_manifest to provided bootdata.
-if len(boot_manifests) != 0:
-    out_bootdata = os.path.join(args.build_dir, "installer.bootdata.bootfs")
-    bootdata_mkfs_cmd = [mkbootfs_path, "-c", "--target=boot", "-o",
-            out_bootdata, bootdata] + boot_manifests
-    subprocess.check_call(bootdata_mkfs_cmd, cwd=working_dir)
-    bootdata = out_bootdata
+bootdata = mk_bootdata_fs(mkbootfs_path,
+                          os.path.join(args.build_dir, "installer.bootdata.bootfs"),
+                          working_dir, bootdata, boot_manifests)
 
 if not (cp_fat(mcopy_path, mdir_path, disk_path_efi, bootloader,
                bootloader_remote_path, working_dir)
@@ -314,14 +337,26 @@ print "Compressing ESP disk image to %s" % compressed_disk_efi
 if not compress_file(lz4_path, disk_path_efi, compressed_disk_efi, working_dir):
   sys.exit(-1)
 
+runtime_sys_manifests, runtime_boot_manifests = build_manifest_lists(runtime_dir)
+gen_dir = os.path.join(runtime_dir, "gen", "packages", "gn")
+runtime_sys_man = os.path.join(gen_dir, "system.bootfs.manifest")
+if is_non_empty_file(runtime_sys_man):
+  runtime_sys_manifests.append(runtime_sys_man)
+runtime_boot_man = os.path.join(gen_dir, "boot.bootfs.manifest")
+if is_non_empty_file(runtime_boot_man):
+  runtime_boot_manifests.append(runtime_boot_man)
+runtime_bootdata = mk_bootdata_fs(mkbootfs_path,
+                                  os.path.join(runtime_dir, "installer.bootdata.bootfs"),
+                                  working_dir, runtime_bootdata, runtime_boot_manifests)
+
 # write out a manifest file so we include the compressed file system we created
 with open(aux_manifest, "w+") as manifest_file:
   manifest_file.write(BOOTFS_PREAMBLE);
   manifest_file.write("%s=%s\n" % (FUCHSIA_DISK_IMG_PATH, compressed_disk))
   manifest_file.write("%s=%s\n" % (EFI_DISK_IMG_PATH, compressed_disk_efi))
 
-mkfs_cmd = [mkbootfs_path, "-c", "--target=system", "-o", out_file, bootdata,
-            aux_manifest] + system_manifests
+mkfs_cmd = [mkbootfs_path, "-c", "--target=system", "-o", out_file, runtime_bootdata,
+            aux_manifest] + runtime_sys_manifests
 
 print "Creating installer bootfs"
 try:

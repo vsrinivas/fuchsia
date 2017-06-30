@@ -53,13 +53,15 @@ bootdata=""
 kernel_args=""
 boot_manifest=""
 enable_thread_exp=1
+extras=("")
 
-while getopts ":u:hrdp:b:m:e:a:t:c:x:o:w:j" opt; do
-  case $opt in
-    u)
-      bytes_sys=$(($OPTARG * 1024 * 1024 * 1024))
+while (( "$#")); do
+  case $1 in
+    "-u")
+      shift
+      bytes_sys=$(($1 * 1024 * 1024 * 1024))
       ;;
-    h)
+    "-h")
       echo "build-installable-usersfs.sh -u <SIZE> [-r|-d] [-p] [-b <BUILD DIR>]"
       echo "-u: size of system partition in GB"
       echo "-e: size of the EFI partition in GB"
@@ -83,48 +85,61 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:o:w:j" opt; do
       echo "-j: disable experimental thread prioritization"
       exit 0
       ;;
-    j)
+    "-j")
       enable_thread_exp=0
       ;;
-    r)
+    "-r")
       release=1
       ;;
-    d)
+    "-d")
       debug=1
       ;;
-    p)
-      platform=$OPTARG
+    "-p")
+      shift
+      platform=$1
       ;;
-    b)
-      build_dir_fuchsia=$OPTARG
+    "-b")
+      shift
+      build_dir_fuchsia=$1
       ;;
-    m)
-      minfs_path=$OPTARG
+    "-m")
+      shift
+      minfs_path=$1
       ;;
-    e)
-      bytes_efi=$(($OPTARG * 1024 * 1024 * 1024))
+    "-e")
+      shift
+      bytes_efi=$(($1 * 1024 * 1024 * 1024))
       ;;
-    a)
-      build_dir_magenta=$OPTARG
+    "-a")
+      shift
+      build_dir_magenta=$1
       ;;
-    t)
-      device_type=$OPTARG
+    "-t")
+      shift
+      device_type=$1
       ;;
-    c)
-      kernel_cmdline=$OPTARG
+    "-c")
+      shift
+      kernel_cmdline=$1
       ;;
-    o)
-      kernel_args=$OPTARG
+    "-o")
+      shift
+      kernel_args=$1
       ;;
-    x)
-      bootdata=$OPTARG
+    "-x")
+      shift
+      bootdata=$1
+      shift
       ;;
-    w)
-      boot_manifest=$OPTARG
+    "-w")
+      shift
+      boot_manifest=$1
       ;;
-    \?)
-      echo "Unknown option -$OPTARG"
+    *)
+      extras+=("$1")
+      ;;
   esac
+  shift
 done
 
 if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = "" ]; then
@@ -272,11 +287,12 @@ if [ "$kernel_args" != "" ]; then
   fi
 fi
 
-imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
-  --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
-  --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
-  --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
-  --bootdata="$bootdata" --boot_manifest="$boot_manifest" --mdir_path="$mdir_loc" )
+imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc"
+  --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia"
+  --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch"
+  --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta"
+  --bootdata="$bootdata" --boot_manifest="$boot_manifest"
+  --mdir_path="$mdir_loc" --runtime_dir="$mgtix_out" "${extras[@]}" )
 
 if [ "$enable_thread_exp" -eq 0 ]; then
   imager_cmd+=("--disable_thread_exp")
