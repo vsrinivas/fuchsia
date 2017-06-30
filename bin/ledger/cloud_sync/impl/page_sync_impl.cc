@@ -123,6 +123,7 @@ void PageSyncImpl::GetObject(
         ](cloud_provider::Status status, uint64_t size, mx::socket data) {
           if (status == cloud_provider::Status::NETWORK_ERROR) {
             FTL_LOG(WARNING)
+                << log_prefix_
                 << "GetObject() failed due to a connection error, retrying.";
             Retry([
               this, object_id = std::move(object_id),
@@ -134,6 +135,7 @@ void PageSyncImpl::GetObject(
           backoff_->Reset();
           if (status != cloud_provider::Status::OK) {
             FTL_LOG(WARNING)
+                << log_prefix_
                 << "Fetching remote object failed with status: " << status;
             callback(storage::Status::IO_ERROR, 0, mx::socket());
             return;
@@ -168,6 +170,7 @@ void PageSyncImpl::OnConnectionError() {
   cloud_provider_->UnwatchCommits(this);
   remote_watch_set_ = false;
   FTL_LOG(WARNING)
+      << log_prefix_
       << "Connection error in the remote commit watcher, retrying.";
   Retry([this] { SetRemoteWatcher(); });
 }
