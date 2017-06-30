@@ -7,6 +7,7 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -25,7 +26,8 @@ namespace testing {
 //    DeleteAndQuit() calls delete this.
 //
 // 2. Callbacks posted to the run loop that invoke DeleteAndQuit() MUST invoke
-//    it on a weak pointer obtained from GetWeakPtr().
+//    it on a weak pointer obtained from GetWeakPtr(). This can be done by
+//    wrapping them in a Protect() call (cf. below).
 //
 // Component is modular::Module, modular::Agent, modular::UserShell, etc.
 template <typename Component>
@@ -45,7 +47,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
 
   ~ComponentBase() override = default;
 
-  void TestInit(const char* file) {
+  void TestInit(const char* const file) {
     // We must not call testing::Init() in the base class constructor, because
     // that's before the test points are initialized. It's fine to call this
     // form the derived class constructor.
@@ -86,6 +88,48 @@ class ComponentBase : protected SingleServiceApp<Component> {
   ftl::WeakPtrFactory<ComponentBase> weak_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
+};
+
+// Same as ComponentBase, but for components that derive from from
+// SingleServiceViewApp. TODO(mesch): Reconcile better.
+template <typename Component>
+class ComponentViewBase : protected SingleServiceViewApp<Component> {
+ protected:
+  using Base = modular::SingleServiceViewApp<Component>;
+
+  ComponentViewBase() : weak_factory_(this) {}
+  ~ComponentViewBase() override = default;
+
+  void TestInit(const char* const file) {
+    modular::testing::Init(Base::application_context(), file);
+  }
+
+  std::function<void()> Protect(std::function<void()> callback) {
+    return
+        [ ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback) ] {
+      if (ptr) {
+        callback();
+      }
+    };
+  }
+
+  void Delete(const std::function<void()>& done) {
+    auto binding = Base::PassBinding();  // To invoke done() after delete this.
+    delete this;
+    modular::testing::Done(done);
+  }
+
+  void DeleteAndQuit(const std::function<void()>& done) {
+    Delete([done] {
+      done();
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    });
+  }
+
+ private:
+  ftl::WeakPtrFactory<ComponentViewBase> weak_factory_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentViewBase);
 };
 
 }  // namespace testing

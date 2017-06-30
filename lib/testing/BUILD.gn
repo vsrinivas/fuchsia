@@ -27,6 +27,7 @@ source_set("component_base") {
     ":testing",
     "//application/lib/app",
     "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/fidl:single_service_view_app",
     "//lib/ftl",
     "//lib/mtl",
   ]

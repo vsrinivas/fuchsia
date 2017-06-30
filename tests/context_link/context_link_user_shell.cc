@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -79,17 +80,17 @@ class ContextListenerImpl : maxwell::ContextListener {
 
 // Tests the context links machinery. We start a module that writes a context
 // link and listen for the expected context topic to show up.
-class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
+class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to
   // call delete this. Cf. Terminate().
   static void New() {
-    new TestApp();  // will delete itself in Terminate().
+    new TestApp;  // will delete itself in Terminate().
   }
 
  private:
-  TestApp() { modular::testing::Init(application_context(), __FILE__); }
+  TestApp() { TestInit(__FILE__); }
 
   ~TestApp() override = default;
 
@@ -266,22 +267,7 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   // |UserShell|
   void Terminate(const TerminateCallback& done) override {
     terminate_.Pass();
-
-    // A little acrobatics to allow TestPoints, which are data members of this,
-    // to post failure notices to the test runner in their destructors.
-    //
-    // We respond to done first, then asynchronously delete this, then
-    // asynchronously post Teardown() to the test runner, and finally
-    // asynchronously stop the message queue.
-
-    auto binding = PassBinding();  // To invoke done() after delete this.
-
-    delete this;
-
-    modular::testing::Done([done] {
-      done();
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    });
+    DeleteAndQuit(done);
   }
 
   std::unique_ptr<modular::ViewHost> view_;

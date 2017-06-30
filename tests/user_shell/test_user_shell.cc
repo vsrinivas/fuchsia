@@ -11,6 +11,7 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -321,7 +322,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
 // as a user shell from device runner and executes a predefined sequence of
 // steps, rather than to expose a UI to be driven by user interaction, as a user
 // shell normally would.
-class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
+class TestUserShellApp : modular::testing::ComponentViewBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to
@@ -332,7 +333,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
  private:
   TestUserShellApp(const Settings& settings) : settings_(settings) {
-    modular::testing::Init(application_context(), __FILE__);
+    TestInit(__FILE__);
   }
 
   ~TestUserShellApp() override = default;
@@ -672,22 +673,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   // |UserShell|
   void Terminate(const TerminateCallback& done) override {
     terminate_.Pass();
-
-    // A little acrobatics to allow TestPoints, which are data members of this,
-    // to post failure notices to the test runner in their destructors.
-    //
-    // We respond to done first, then asynchronously delete this, then
-    // asynchronously post Teardown() to the test runner, and finally
-    // asynchronously stop the message queue.
-
-    auto binding = PassBinding();  // To invoke done() after delete this.
-
-    delete this;
-
-    modular::testing::Done([done] {
-      done();
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    });
+    DeleteAndQuit(done);
   }
 
   void TeardownStoryController() {

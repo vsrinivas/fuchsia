@@ -23,6 +23,7 @@ executable("test_user_shell") {
     "//apps/modular/lib/fidl:view_host",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
