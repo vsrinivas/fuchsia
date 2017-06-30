@@ -1,0 +1,31 @@
+include "system/public/magenta/mdi/magenta.mdi"
+
+cpu-map = {
+    clusters = {
+        {
+            cpu-count = 4
+        }
+    }
+}
+
+kernel = {
+    s905-uart = {
+        irq = 225
+        base-phys = 0xc81004c0
+        base-virt = 0xffffffffc81004c0
+    }
+
+    arm-gic-v2 = {
+        base-virt = 0xffffffffc4300000
+        base-phys = 0xc4300000
+        gicc-offset = 0x002000
+        gicd-offset = 0x001000
+        ipi-base = 5
+    }
+    arm-psci = {
+        use-smc = true
+    }
+    arm-timer = {
+        irq-phys = 30
+    }
+}

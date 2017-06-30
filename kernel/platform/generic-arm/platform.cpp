@@ -530,6 +530,11 @@ void platform_early_init(void)
     } else {
         // on qemu we read arena size from the device tree
         read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
+        // Some legacy bootloaders do not properly set linux,initrd-end
+        // Pull the ramdisk size directly from the bootdata container
+        //   now that we have the base to ensure that the size is valid.
+        ramdisk_from_bootdata_container(ramdisk_base, &ramdisk_base,
+                                        &ramdisk_size);
     }
 
     if (!ramdisk_base || !ramdisk_size) {

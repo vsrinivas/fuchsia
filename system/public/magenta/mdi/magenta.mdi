@@ -74,3 +74,6 @@ uint64  kernel.arm-gic-v2.gicc-offset     MDI_ARM_GIC_V2_GICC_OFFSET            
 uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               1073
 uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1074
 uint64  kernel.arm-gic-v2.msi-frame-virt  MDI_ARM_GIC_V2_MSI_FRAME_VIRT         1075
+
+// AmLogic S905
+list    kernel.s905-uart                  MDI_S905_UART                         1080
