@@ -40,4 +40,19 @@ ESCHER_DEBUG_PRINTABLE(mat3);
 ESCHER_DEBUG_PRINTABLE(mat4);
 ESCHER_DEBUG_PRINTABLE(quat);
 
+// A ray with an origin and a direction of travel.
+struct ray4 {
+  // The ray's origin point in space.
+  // Must be homogeneous (last component must be non-zero).
+  glm::vec4 origin;
+
+  // The ray's direction vector in space.
+  // Last component must be zero.
+  glm::vec4 direction;
+};
+
+inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
+  return ray4{matrix * ray.origin, matrix * ray.direction};
+}
+
 }  // namespace escher
