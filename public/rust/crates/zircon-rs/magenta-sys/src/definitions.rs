@@ -1,5 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// This is a GENERATED file. The license governing this file can be found in the LICENSE file.
+// This is a GENERATED file, see //magenta/system/host/sysgen.
+// The license governing this file can be found in the LICENSE file.
 
 #[link(name = "magenta")]
 extern {
@@ -153,6 +154,25 @@ extern {
         num_bytes: u32,
         handles: *const mx_handle_t,
         num_handles: u32
+        ) -> mx_status_t;
+
+    pub fn mx_channel_call_noretry(
+        handle: mx_handle_t,
+        options: u32,
+        deadline: mx_time_t,
+        args: *const mx_channel_call_args_t,
+        actual_bytes: *mut u32,
+        actual_handles: *mut u32,
+        read_status: *mut mx_status_t
+        ) -> mx_status_t;
+
+    pub fn mx_channel_call_finish(
+        handle: mx_handle_t,
+        deadline: mx_time_t,
+        args: *const mx_channel_call_args_t,
+        actual_bytes: *mut u32,
+        actual_handles: *mut u32,
+        read_status: *mut mx_status_t
         ) -> mx_status_t;
 
     pub fn mx_channel_call(
@@ -323,30 +343,6 @@ extern {
         requeue_count: u32
         ) -> mx_status_t;
 
-    pub fn mx_waitset_create(
-        options: u32,
-        out: *mut mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_waitset_add(
-        waitset_handle: mx_handle_t,
-        cookie: u64,
-        handle: mx_handle_t,
-        signals: mx_signals_t
-        ) -> mx_status_t;
-
-    pub fn mx_waitset_remove(
-        waitset_handle: mx_handle_t,
-        cookie: u64
-        ) -> mx_status_t;
-
-    pub fn mx_waitset_wait(
-        waitset_handle: mx_handle_t,
-        deadline: mx_time_t,
-        results: *mut mx_waitset_result_t,
-        count: *mut u32
-        ) -> mx_status_t;
-
     pub fn mx_port_create(
         options: u32,
         out: *mut mx_handle_t
@@ -363,13 +359,6 @@ extern {
         deadline: mx_time_t,
         packet: *mut u8,
         size: usize
-        ) -> mx_status_t;
-
-    pub fn mx_port_bind(
-        handle: mx_handle_t,
-        key: u64,
-        source: mx_handle_t,
-        signals: mx_signals_t
         ) -> mx_status_t;
 
     pub fn mx_port_cancel(
@@ -528,8 +517,9 @@ extern {
     pub fn mx_futex_wake_handle_close_thread_exit(
         value_ptr: *const mx_futex_t,
         count: u32,
+        new_value: isize,
         handle: mx_handle_t
-        ) -> mx_status_t;
+        );
 
     pub fn mx_log_create(
         options: u32,
@@ -580,11 +570,6 @@ extern {
         ptr: *mut u8,
         size: u32
         ) -> mx_status_t;
-
-    pub fn mx_debug_transfer_handle(
-        proc_: mx_handle_t,
-        handle: mx_handle_t
-        ) -> mx_handle_t;
 
     pub fn mx_debug_read(
         handle: mx_handle_t,
@@ -687,10 +672,6 @@ extern {
         out_info: *mut mx_pcie_device_info_t
         ) -> mx_handle_t;
 
-    pub fn mx_pci_claim_device(
-        handle: mx_handle_t
-        ) -> mx_status_t;
-
     pub fn mx_pci_enable_bus_master(
         handle: mx_handle_t,
         enable: bool
@@ -703,13 +684,6 @@ extern {
 
     pub fn mx_pci_reset_device(
         handle: mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_pci_map_mmio(
-        handle: mx_handle_t,
-        bar_num: u32,
-        cache_policy: mx_cache_policy_t,
-        out_handle: *mut mx_handle_t
         ) -> mx_status_t;
 
     pub fn mx_pci_get_bar(
@@ -742,11 +716,6 @@ extern {
     pub fn mx_pci_map_interrupt(
         handle: mx_handle_t,
         which_irq: i32,
-        out_handle: *mut mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_pci_map_config(
-        handle: mx_handle_t,
         out_handle: *mut mx_handle_t
         ) -> mx_status_t;
 
