@@ -86,7 +86,7 @@ See [object_wait_async](object_wait_async.md) for more details.
 
 ## RETURN VALUE
 
-**port_wait**() returns **MX_OK** on successful packet dequeuing .
+**port_wait**() returns **MX_OK** on successful packet dequeuing.
 
 ## ERRORS
 
