@@ -76,8 +76,6 @@ typedef struct pci_device_state {
     uint16_t command;
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
-    // Virtio queue for the device.
-    virtio_queue_t queue;
 } pci_device_state_t;
 
 typedef struct guest_state {
@@ -90,6 +88,7 @@ typedef struct guest_state {
     // Guest block.
     int block_fd;
     uint64_t block_size;
+    virtio_queue_t block_queue;
 
     io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;

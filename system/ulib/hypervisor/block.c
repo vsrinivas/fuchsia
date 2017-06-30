@@ -63,7 +63,7 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* context, uint16_t port,
     void* mem_addr = context->guest_state->mem_addr;
     size_t mem_size = context->guest_state->mem_size;
     int block_fd = context->guest_state->block_fd;
-    virtio_queue_t* queue = &context->guest_state->pci_device_state[PCI_DEVICE_VIRTIO_BLOCK].queue;
+    virtio_queue_t* queue = &context->guest_state->block_queue;
     switch (port) {
     case VIRTIO_PCI_DEVICE_STATUS:
         if (port_out->access_size != 1)
