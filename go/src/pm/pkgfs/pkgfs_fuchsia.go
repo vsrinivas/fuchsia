@@ -7,6 +7,7 @@
 package pkgfs
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -45,7 +46,7 @@ func (f *Filesystem) Mount(path string) error {
 	if err != nil {
 		f.mountInfo.parentFd.Close()
 		f.mountInfo.parentFd = nil
-		return err
+		return fmt.Errorf("channel creation: %s", err)
 	}
 
 	if err := syscall.MXIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(mxio.IoctlVFSMountFS, f.mountInfo.serveChannel.Handle); err != nil {
@@ -53,7 +54,7 @@ func (f *Filesystem) Mount(path string) error {
 		f.mountInfo.serveChannel = nil
 		f.mountInfo.parentFd.Close()
 		f.mountInfo.parentFd = nil
-		return err
+		return fmt.Errorf("mount failure: %s", err)
 	}
 
 	vfs, err := rpc.NewServer(f, rpcChan.Handle)
@@ -62,7 +63,7 @@ func (f *Filesystem) Mount(path string) error {
 		f.mountInfo.serveChannel = nil
 		f.mountInfo.parentFd.Close()
 		f.mountInfo.parentFd = nil
-		return err
+		return fmt.Errorf("vfs server creation: %s", err)
 	}
 
 	// TODO(raggi): handle the exit case more cleanly.

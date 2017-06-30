@@ -28,11 +28,11 @@ func main() {
 
 	fs, err := pkgfs.New(*index, *blobstore)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}
 
 	if err := fs.Mount(*path); err != nil {
-		log.Fatal(err)
+		log.Fatalf("pkgfs: mount failed: %s", err)
 	}
 
 	log.Printf("pkgfs mouted at %s serving index %s from blobstore %s", *path, *index, *blobstore)
