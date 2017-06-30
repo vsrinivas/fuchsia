@@ -21,7 +21,7 @@ class MxioDispatcher final : public fs::Dispatcher {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MxioDispatcher);
     static mx_status_t Create(mxtl::unique_ptr<fs::Dispatcher>* out);
-    mx_status_t AddVFSHandler(mx_handle_t h, void* cb, void* iostate);
+    mx_status_t AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate);
 private:
     MxioDispatcher();
     mxio_dispatcher_t* dispatcher_;

@@ -234,7 +234,7 @@ mx_status_t VfsDispatcher::Start(const char* name) {
     return MX_OK;
 }
 
-mx_status_t VfsDispatcher::AddVFSHandler(mx_handle_t h, void* cb, void* cookie) {
+mx_status_t VfsDispatcher::AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* cookie) {
     AllocChecker ac;
     mxtl::unique_ptr<Handler> handler(new (&ac) Handler(h, cb, cookie));
     if (!ac.check()) {

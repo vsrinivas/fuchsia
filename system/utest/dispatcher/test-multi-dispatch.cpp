@@ -10,17 +10,14 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fs/dispatcher.h>
+#include <fs/vfs-dispatcher.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
-
 #include <mxalloc/new.h>
-
 #include <mxio/debug.h>
-
 #include <mxtl/unique_ptr.h>
-
-#include <fs/vfs-dispatcher.h>
 
 #include <unittest/unittest.h>
 
@@ -102,11 +99,11 @@ static bool signal_finished(mx_handle_t ch) {
     return true;
 }
 
+using cb_t = mx_status_t (*)(Msg* msg, Handler* cookie);
 
-typedef mx_status_t (*handler_cb_t)(Msg* msg, mx_handle_t h, void* cookie);
-static mx_status_t handler_cb(Msg* msg, mx_handle_t h, void* cookie)
-{
-    Handler* handler = (Handler*)cookie;
+static mx_status_t handler_cb(mxrio_msg_t* msg_, void* cookie) {
+    auto msg = reinterpret_cast<Msg*>(msg_);
+    auto handler = reinterpret_cast<Handler*>(cookie);
     if (strcmp(msg->str, STR_KILL) == 0) {
         // this is the dispatch from the last message sent. signal
         // that this part of the test is over.
@@ -119,7 +116,7 @@ static mx_status_t handler_cb(Msg* msg, mx_handle_t h, void* cookie)
         ASSERT_EQ(strcmp(msg->str, STR_DATA), 0, "channel read bad string payoad");
         xprintf("worker %u: inc %u\n", msg->worker, msg->idx);
         handler->counts[msg->idx]++;
-        // one thread can race through most of our callbacks; yeild to make
+        // one thread can race through most of our callbacks; yield to make
         // sure we mix things up a little
         thrd_yield();
     }
@@ -128,7 +125,7 @@ static mx_status_t handler_cb(Msg* msg, mx_handle_t h, void* cookie)
 }
 
 static mx_status_t disp_cb(mx_handle_t h, void* handler_cb, void* handler_data) {
-    handler_cb_t cb = (handler_cb_t)handler_cb;
+    auto cb = reinterpret_cast<fs::vfs_dispatcher_cb_t>(handler_cb);
 
     // read the message and call the handler
     ASSERT_NEQ(h, 0, "unexpected handle close in dispatcher");
@@ -140,7 +137,7 @@ static mx_status_t disp_cb(mx_handle_t h, void* handler_cb, void* handler_data) 
     ASSERT_EQ(dsz, sizeof(imsg), "channel read unexpected length");
     ASSERT_LT(imsg.idx, MAX_MSG, "channel read bad index payload");
 
-    r = cb(&imsg, h, handler_data);
+    r = cb((mxrio_msg_t*) &imsg, handler_data);
     ASSERT_EQ(r, MX_OK, "dispatch callback");
 
     r = mx_channel_write(h, 0, &imsg, sizeof(imsg), nullptr, 0);
@@ -170,7 +167,7 @@ bool test_multi_basic(void) {
 
     // associate a handler object that will track state
     Handler handler(1);
-    status = disp->AddVFSHandler(ch[1], (void*)handler_cb, (void*)&handler);
+    status = disp->AddVFSHandler(ch[1], handler_cb, &handler);
     ASSERT_EQ(status, MX_OK, "");
 
     // write MAX_MSG messages -- should result in all handler counts == 1
@@ -288,7 +285,7 @@ bool test_multi_multi(void) {
 
     // associate a handler object that will track state
     Handler handler(WRITER_POOL_SIZE);
-    status = disp->AddVFSHandler(ch[1], (void*)handler_cb, (void*)&handler);
+    status = disp->AddVFSHandler(ch[1], handler_cb, &handler);
     ASSERT_EQ(status, MX_OK, "");
 
     // make sure the counters get bumped in random order

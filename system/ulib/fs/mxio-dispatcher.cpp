@@ -29,8 +29,8 @@ mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::Dispatcher>* out) {
     return MX_OK;
 }
 
-mx_status_t MxioDispatcher::AddVFSHandler(mx_handle_t h, void* cb, void* iostate) {
-    return mxio_dispatcher_add(dispatcher_, h, cb, iostate);
+mx_status_t MxioDispatcher::AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) {
+    return mxio_dispatcher_add(dispatcher_, h, (void*) cb, iostate);
 }
 
 MxioDispatcher::MxioDispatcher() {}
