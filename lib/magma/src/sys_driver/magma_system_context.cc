@@ -161,3 +161,8 @@ MagmaSystemContext::ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> 
     return DRET_MSG(result, "ExecuteCommandBuffer: msd_context_execute_command_buffer failed: %d",
                     result);
 }
+
+void MagmaSystemContext::ReleaseBuffer(std::shared_ptr<MagmaSystemBuffer> buffer)
+{
+    msd_context_release_buffer(msd_ctx(), buffer->msd_buf());
+}

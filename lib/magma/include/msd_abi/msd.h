@@ -80,6 +80,10 @@ magma_status_t msd_context_execute_command_buffer(struct msd_context_t* ctx,
                                                   struct msd_semaphore_t** wait_semaphores,
                                                   struct msd_semaphore_t** signal_semaphores);
 
+// Signals that the given |buffer| is no longer in use on the given |context|.
+// May be used to free up resources such as a cached address space mapping for the given buffer.
+void msd_context_release_buffer(struct msd_context_t* context, struct msd_buffer_t* buffer);
+
 // Creates a buffer that owns the provided handle
 // The resulting msd_buffer_t is owned by the caller and must be destroyed
 // Returns NULL on failure.

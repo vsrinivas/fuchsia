@@ -152,6 +152,10 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to free invalid buffer id");
 
+    for (auto& pair : context_map_) {
+        pair.second->ReleaseBuffer(iter->second);
+    }
+
     buffer_map_.erase(iter);
     // Now that our shared reference has been dropped we tell our
     // device that we're done with the buffer
