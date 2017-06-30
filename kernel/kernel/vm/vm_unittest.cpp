@@ -730,7 +730,7 @@ static bool vmo_read_write_smoke_test(void* context) {
     END_TEST;
 }
 
-bool vmo_cache_test(void* context) {
+static bool vmo_cache_test(void* context) {
     BEGIN_TEST;
 
     paddr_t pa;
@@ -794,6 +794,59 @@ bool vmo_cache_test(void* context) {
     END_TEST;
 }
 
+static bool vmo_lookup_test(void* context) {
+    BEGIN_TEST;
+
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    size_t pages_seen = 0;
+    auto lookup_fn = [](void* context, size_t offset, size_t index, paddr_t pa) {
+        size_t* pages_seen = static_cast<size_t*>(context);
+        (*pages_seen)++;
+        return MX_OK;
+    };
+    status_t status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    EXPECT_EQ(MX_ERR_NO_MEMORY, status, "lookup on uncommitted pages\n");
+    EXPECT_EQ(0u, pages_seen, "lookup on uncommitted pages\n");
+    pages_seen = 0;
+
+    uint64_t committed;
+    status = vmo->CommitRange(PAGE_SIZE, PAGE_SIZE, &committed);
+    EXPECT_EQ(MX_OK, status, "committing vm object\n");
+    EXPECT_EQ(static_cast<size_t>(PAGE_SIZE), committed, "committing vm object\n");
+
+    // Should fail, since first page isn't mapped
+    status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    EXPECT_EQ(MX_ERR_NO_MEMORY, status, "lookup on partially committed pages\n");
+    EXPECT_EQ(0u, pages_seen, "lookup on partially committed pages\n");
+    pages_seen = 0;
+
+    // Should fail, but see the mapped page
+    status = vmo->Lookup(PAGE_SIZE, alloc_size - PAGE_SIZE, 0, lookup_fn, &pages_seen);
+    EXPECT_EQ(MX_ERR_NO_MEMORY, status, "lookup on partially committed pages\n");
+    EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
+    pages_seen = 0;
+
+    // Should succeed
+    status = vmo->Lookup(PAGE_SIZE, PAGE_SIZE, 0, lookup_fn, &pages_seen);
+    EXPECT_EQ(MX_OK, status, "lookup on partially committed pages\n");
+    EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
+    pages_seen = 0;
+
+    // Commit the rest
+    status = vmo->CommitRange(0, alloc_size, &committed);
+    EXPECT_EQ(MX_OK, status, "committing vm object\n");
+    EXPECT_EQ(alloc_size - PAGE_SIZE, committed, "committing vm object\n");
+
+    status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    EXPECT_EQ(MX_OK, status, "lookup on partially committed pages\n");
+    EXPECT_EQ(alloc_size / PAGE_SIZE, pages_seen, "lookup on partially committed pages\n");
+
+    END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -823,6 +876,7 @@ VM_UNITTEST(vmo_remap_test)
 VM_UNITTEST(vmo_double_remap_test)
 VM_UNITTEST(vmo_read_write_smoke_test)
 VM_UNITTEST(vmo_cache_test)
+VM_UNITTEST(vmo_lookup_test)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);
