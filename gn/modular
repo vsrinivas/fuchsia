@@ -186,6 +186,10 @@
             "bootfs_path": "apps/swap_recipe"
         },
         {
+            "binary": "test_last_focus_time",
+            "bootfs_path": "apps/test_last_focus_time"
+        },
+        {
             "binary": "test_story_importance",
             "bootfs_path": "apps/test_story_importance"
         },
