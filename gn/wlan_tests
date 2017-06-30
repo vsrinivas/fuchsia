@@ -14,13 +14,6 @@
         "//drivers/wifi/wlan/tests",
         "//drivers/wifi/testing"
     ],
-    "resources": [
-        {
-            "default": "true",
-            "bootfs_path": "data/wlanstack/config.json",
-            "file": "apps/wlan/default.json"
-        }
-    ],
     "binaries": [
         {
             "binary": "wlanstack_test",

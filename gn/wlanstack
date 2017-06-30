@@ -15,5 +15,12 @@
             "binary": "wlanstack",
             "bootfs_path": "bin/wlanstack"
         }
+    ],
+    "resources": [
+        {
+            "file": "apps/wlan/default.json",
+            "bootfs_path": "data/wlanstack/config.json",
+            "default": "true"
+        }
     ]
 }
