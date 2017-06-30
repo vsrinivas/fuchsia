@@ -77,6 +77,12 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyScheduledUpdates(uint64_t presentation_time,
                              uint64_t presentation_interval);
 
+  // Called by SessionHandler::HitTest().
+  void HitTest(uint32_t node_id,
+               mozart2::vec3Ptr ray_origin,
+               mozart2::vec3Ptr ray_direction,
+               const mozart2::Session::HitTestCallback& callback);
+
  private:
   // Operation application functions, called by ApplyOp().
   bool ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op);

@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene/resources/shapes/shape.h"
+#include "apps/mozart/src/scene/resources/shapes/planar_shape.h"
 
 namespace mozart {
 namespace scene {
 
-class RectangleShape final : public Shape {
+class RectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
@@ -21,7 +21,7 @@ class RectangleShape final : public Shape {
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
-  // |Shape|.
+  // |PlanarShape|.
   bool ContainsPoint(const escher::vec2& point) const override;
 
   // |Shape|.

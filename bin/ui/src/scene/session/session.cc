@@ -20,7 +20,9 @@
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene/resources/shapes/rounded_rectangle_shape.h"
+#include "apps/mozart/src/scene/session/hit_tester.h"
 #include "apps/mozart/src/scene/util/unwrap.h"
+#include "apps/mozart/src/scene/util/wrap.h"
 
 #include "escher/shape/mesh.h"
 #include "escher/shape/rounded_rect_factory.h"
@@ -761,6 +763,34 @@ bool Session::ApplyUpdate(Session::Update* update) {
 
   // TODO: acquire_fences and release_fences should be added to a list that is
   // consumed by the FrameScheduler.
+}
+
+void Session::HitTest(uint32_t node_id,
+                      mozart2::vec3Ptr ray_origin,
+                      mozart2::vec3Ptr ray_direction,
+                      const mozart2::Session::HitTestCallback& callback) {
+  fidl::Array<mozart2::HitPtr> wrapped_hits;
+  if (auto node = resources_.FindResource<Node>(node_id)) {
+    HitTester hit_tester;
+    std::vector<Hit> hits = hit_tester.HitTest(
+        node.get(), escher::ray4{escher::vec4(Unwrap(ray_origin), 1.f),
+                                 escher::vec4(Unwrap(ray_direction), 0.f)});
+    wrapped_hits.resize(hits.size());
+    for (size_t i = 0; i < hits.size(); i++) {
+      wrapped_hits[i] = mozart2::Hit::New();
+      wrapped_hits[i]->tag_value = hits[i].tag_value;
+      wrapped_hits[i]->inverse_transform = Wrap(hits[i].inverse_transform);
+      wrapped_hits[i]->distance = hits[i].distance;
+    }
+  } else {
+    // TODO(MZ-162): Currently the test fails if the node isn't presented yet.
+    // Perhaps we should given clients more control over which state of
+    // the scene graph will be consulted for hit testing purposes.
+    error_reporter_->WARN()
+        << "Cannot perform hit test because node " << node_id
+        << " does not exist in the currently presented content.";
+  }
+  callback(std::move(wrapped_hits));
 }
 
 }  // namespace scene

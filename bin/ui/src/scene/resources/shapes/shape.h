@@ -15,8 +15,16 @@ class Shape : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  /// Returns if the given point lies within its bounds of this shape.
-  virtual bool ContainsPoint(const escher::vec2& point) const = 0;
+  // Computes the closest point of intersection between the ray's origin
+  // and the front side of the shape.
+  //
+  // |out_distance| is set to the distance from the ray's origin to the
+  // closest point of intersection in multiples of the ray's direction vector.
+  //
+  // Returns true if there is an intersection, otherwise returns false and
+  // leaves |out_distance| unmodified.
+  virtual bool GetIntersection(const escher::ray4& ray,
+                               float* out_distance) const = 0;
 
   // Generate an object to add to an escher::Model.
   virtual escher::Object GenerateRenderObject(

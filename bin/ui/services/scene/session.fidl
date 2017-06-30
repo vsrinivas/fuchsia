@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: linking to other 'scenes'.
-// TODO: synchronization
-// TODO: materials
-
 module mozart2;
 
 import "apps/mozart/services/scene/ops.fidl";
+import "apps/mozart/services/scene/types.fidl";
 
 interface Session {
   // Enqueue a list of operations, which will not take effect until Present() is
@@ -142,6 +139,36 @@ interface Session {
   // The reason that this is an Op rather than  a Session::Connect() method is to
   // guarantee the sequencing.
   Connect(Session& session, SessionListener? listener);
+
+  // Performs a hit test along the specified ray.
+  //
+  // Returns a list of intersections of tagged nodes between the ray
+  // and the geometry of the subtree of nodes at |node_id|.  Results
+  // are sorted by increasing distance then by increasing node tree
+  // depth.  This ensures that containers will appear before their
+  // children in the result set.
+  //
+  // The session must associate a tag with any nodes it would like to
+  // observe in the result set.  Untagged nodes are still considered in
+  // hit tests and may cause hits to be reported for containing nodes
+  // which are tagged.
+  //
+  // The hit test only considers the currently presented content at
+  // the time of the request.  This means that content pending presentation
+  // may not be considered for hit testing until the scene manager begins
+  // preparing a frame which includes it.
+  //
+  // |ray_origin| is a point in the node's local coordinate system
+  // from which the hit test ray originates.
+  //
+  // |ray_direction| is a vector in the node's local coordinate system
+  // which expresses how the ray propagates from the origin.  It must
+  // be non-zero (otherwise nothing will be hit) but it does not need
+  // to be normalized.
+  //
+  // Returns a null hit array if |node_id| is unknown or not a node.
+  HitTest(uint32 node_id, vec3 ray_origin, vec3 ray_direction) =>
+      (array<Hit>? hits);
 };
 
 // Information returned by |Session.Present()| when the scene manager
@@ -163,6 +190,29 @@ struct PresentationInfo {
   // This value is non-zero.  It may vary from time to time, such as when
   // changing display modes.
   uint64 presentation_interval;
+};
+
+// Describes where a hit occurred within the content of a node tagged
+// by this session.
+//
+// To compute the point of intersection within the node's local coordinate
+// system, perform the following calculation using the ray which was
+// originally passed to |Session.HitTest()|.
+//
+//   hit_point = ray.origin + (hit.distance * ray.direction)
+//   local_point = hit.inverse_transform * hit_point
+struct Hit {
+  // The node's tag value.
+  uint32 tag_value;
+
+  // The inverse transformation matrix which maps the coordinate system of
+  // the node at which the hit test was initiated into the local coordinate
+  // system of the node which was hit.
+  mat4 inverse_transform;
+
+  // The distance from the ray's origin to the closest point of intersection
+  // in multiples of the ray's direction vector.
+  float distance;
 };
 
 interface SessionListener {

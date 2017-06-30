@@ -58,6 +58,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "hittest_unittest.cc",
     "imagepipe_unittest.cc",
     "import_unittest.cc",
     "node_unittest.cc",

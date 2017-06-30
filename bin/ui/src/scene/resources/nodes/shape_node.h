@@ -24,9 +24,10 @@ class ShapeNode final : public Node {
   const MaterialPtr& material() const { return material_; }
   const ShapePtr& shape() const { return shape_; }
 
-  bool ContainsPoint(const escher::vec2& point) const override;
-
   void Accept(class ResourceVisitor* visitor) override;
+
+  bool GetIntersection(const escher::ray4& ray,
+                       float* out_distance) const override;
 
  private:
   MaterialPtr material_;

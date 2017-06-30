@@ -13,7 +13,7 @@ const ResourceTypeInfo RectangleShape::kTypeInfo = {
 RectangleShape::RectangleShape(Session* session,
                                float initial_width,
                                float initial_height)
-    : Shape(session, RectangleShape::kTypeInfo),
+    : PlanarShape(session, RectangleShape::kTypeInfo),
       width_(initial_width),
       height_(initial_height) {}
 

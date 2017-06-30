@@ -60,6 +60,14 @@ void SessionHandler::Connect(
   }
 }
 
+void SessionHandler::HitTest(uint32_t node_id,
+                             mozart2::vec3Ptr ray_origin,
+                             mozart2::vec3Ptr ray_direction,
+                             const HitTestCallback& callback) {
+  session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
+                    callback);
+}
+
 void SessionHandler::ReportError(ftl::LogSeverity severity,
                                  std::string error_string) {
   switch (severity) {

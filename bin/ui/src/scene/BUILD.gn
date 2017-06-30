@@ -85,6 +85,7 @@ source_set("common") {
     "resources/nodes/scene.h",
     "resources/nodes/shape_node.cc",
     "resources/nodes/shape_node.h",
+    "resources/nodes/traversal.h",
     "resources/resource.cc",
     "resources/resource.h",
     "resources/resource_linker.cc",
@@ -96,6 +97,8 @@ source_set("common") {
     "resources/resource_visitor.h",
     "resources/shapes/circle_shape.cc",
     "resources/shapes/circle_shape.h",
+    "resources/shapes/planar_shape.cc",
+    "resources/shapes/planar_shape.h",
     "resources/shapes/rectangle_shape.cc",
     "resources/shapes/rectangle_shape.h",
     "resources/shapes/rounded_rectangle_shape.cc",
@@ -104,6 +107,9 @@ source_set("common") {
     "resources/shapes/shape.h",
     "scene_manager_impl.cc",
     "scene_manager_impl.h",
+    "session/hit.h",
+    "session/hit_tester.cc",
+    "session/hit_tester.h",
     "session/session.cc",
     "session/session.h",
     "session/session_context.cc",
@@ -112,6 +118,8 @@ source_set("common") {
     "session/session_handler.h",
     "util/error_reporter.cc",
     "util/error_reporter.h",
+    "util/unwrap.h",
+    "util/wrap.h",
   ]
 
   public_deps = [

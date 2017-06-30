@@ -56,25 +56,22 @@ class Node : public Resource {
 
   const std::set<NodePtr>& parts() const { return parts_; }
 
-  /// Convert a point that is in the coordinate space of the supplied node into
-  /// the coordinate space of the callee.
-  escher::vec2 ConvertPointFromNode(const escher::vec2& point,
-                                    const Node& node) const;
-
-  /// Returns if the given point (that is already in the coordinate space of the
-  /// node being queried) lies within its bounds.
-  virtual bool ContainsPoint(const escher::vec2& point) const;
-
   void AddImport(Import* import) override;
   void RemoveImport(Import* import) override;
 
+  // Computes the closest point of intersection between the ray's origin
+  // and the front side of the node's own content, excluding its descendents.
+  //
+  // |out_distance| is set to the distance from the ray's origin to the
+  // closest point of intersection in multiples of the ray's direction vector.
+  //
+  // Returns true if there is an intersection, otherwise returns false and
+  // leaves |out_distance| unmodified.
+  virtual bool GetIntersection(const escher::ray4& ray,
+                               float* out_distance) const;
+
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
-
-  /// Applies the lambda on the descendents of the given node. Returning false
-  /// from the lambda indicates that no further iteration is necessary. In that
-  /// case, the lambda will not be called again.
-  void ApplyOnDescendants(std::function<bool(const Node&)> applier) const;
 
  private:
   void InvalidateGlobalTransform();

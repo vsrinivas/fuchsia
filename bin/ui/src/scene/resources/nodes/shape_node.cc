@@ -23,12 +23,9 @@ void ShapeNode::SetShape(ShapePtr shape) {
   shape_ = std::move(shape);
 }
 
-bool ShapeNode::ContainsPoint(const escher::vec2& point) const {
-  if (!shape_) {
-    return false;
-  }
-
-  return shape_->ContainsPoint(point);
+bool ShapeNode::GetIntersection(const escher::ray4& ray,
+                                float* out_distance) const {
+  return shape_ && shape_->GetIntersection(ray, out_distance);
 }
 
 }  // namespace scene

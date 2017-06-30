@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 
 #include "apps/mozart/src/scene/resources/import.h"
+#include "apps/mozart/src/scene/resources/nodes/traversal.h"
 #include "apps/mozart/src/scene/util/error_reporter.h"
 #include "lib/escher/escher/geometry/types.h"
 
@@ -173,15 +176,8 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;
-    for (auto& node : parts_) {
-      node->InvalidateGlobalTransform();
-    }
-    for (auto& node : children_) {
-      node->InvalidateGlobalTransform();
-    }
-    for (auto& import : imports()) {
-      static_cast<Node*>(import->delegate())->InvalidateGlobalTransform();
-    }
+    ForEachDirectDescentant(
+        *this, [](Node* node) { node->InvalidateGlobalTransform(); });
   }
 }
 
@@ -192,29 +188,6 @@ void Node::ComputeGlobalTransform() const {
   } else {
     global_transform_ = static_cast<escher::mat4>(transform_);
   }
-}
-
-escher::vec2 Node::ConvertPointFromNode(const escher::vec2& point,
-                                        const Node& node) const {
-  auto inverted = glm::inverse(GetGlobalTransform());
-  auto adjusted =
-      glm::vec4{point.x, point.y, 0.0f, 1.0f} * node.GetGlobalTransform();
-  auto result = adjusted * inverted;
-  return {result.x, result.y};
-}
-
-bool Node::ContainsPoint(const escher::vec2& point) const {
-  bool inside = false;
-  ApplyOnDescendants([&inside, &point](const Node& descendant) -> bool {
-    if (descendant.ContainsPoint(point)) {
-      inside = true;
-      // At least one of our descendants has accepted the hit test. We no longer
-      // need to traverse to find the node. Return false and stop the iteration.
-      return false;
-    }
-    return true;
-  });
-  return inside;
 }
 
 void Node::AddImport(Import* import) {
@@ -235,22 +208,8 @@ void Node::RemoveImport(Import* import) {
   delegate->InvalidateGlobalTransform();
 }
 
-void Node::ApplyOnDescendants(std::function<bool(const Node&)> applier) const {
-  if (!applier) {
-    return;
-  }
-
-  for (const auto& node : children_) {
-    if (!applier(*node)) {
-      return;
-    }
-  }
-
-  for (const auto& node : parts_) {
-    if (!applier(*node)) {
-      return;
-    }
-  }
+bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const {
+  return false;
 }
 
 }  // namespace scene

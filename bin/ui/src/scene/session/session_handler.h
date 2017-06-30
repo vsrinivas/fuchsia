@@ -40,6 +40,10 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   void Connect(
       ::fidl::InterfaceRequest<mozart2::Session> session,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
+  void HitTest(uint32_t node_id,
+               mozart2::vec3Ptr ray_origin,
+               mozart2::vec3Ptr ray_direction,
+               const HitTestCallback& callback) override;
 
  private:
   friend class SceneManagerImpl;

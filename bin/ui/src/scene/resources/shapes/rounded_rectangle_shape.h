@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene/resources/shapes/shape.h"
+#include "apps/mozart/src/scene/resources/shapes/planar_shape.h"
 
 #include "escher/forward_declarations.h"
 #include "escher/shape/rounded_rect.h"
@@ -12,7 +12,7 @@
 namespace mozart {
 namespace scene {
 
-class RoundedRectangleShape final : public Shape {
+class RoundedRectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
@@ -30,7 +30,7 @@ class RoundedRectangleShape final : public Shape {
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
-  // |Shape|.
+  // |PlanarShape|.
   bool ContainsPoint(const escher::vec2& point) const override;
 
   // |Shape|.

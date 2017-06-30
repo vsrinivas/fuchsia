@@ -18,7 +18,7 @@ RoundedRectangleShape::RoundedRectangleShape(
     Session* session,
     const escher::RoundedRectSpec& spec,
     escher::MeshPtr mesh)
-    : Shape(session, RoundedRectangleShape::kTypeInfo),
+    : PlanarShape(session, RoundedRectangleShape::kTypeInfo),
       spec_(spec),
       mesh_(std::move(mesh)) {}
 
