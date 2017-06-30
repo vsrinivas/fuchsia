@@ -42,8 +42,8 @@
             "bootfs_path": "apps/agents/maxwell_btl"
         },
         {
-            "binary": "agents/maxwell_entity_focuser",
-            "bootfs_path": "apps/agents/maxwell_entity_focuser"
+            "binary": "agents/maxwell_entity_selector",
+            "bootfs_path": "apps/agents/maxwell_entity_selector"
         },
         {
             "binary": "agents/maxwell_proposal_maker",
