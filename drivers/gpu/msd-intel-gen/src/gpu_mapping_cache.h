@@ -29,7 +29,9 @@ private:
 
 // Memory footprint management
 #if defined(MSD_INTEL_ENABLE_MAPPING_CACHE)
-    static constexpr uint64_t kDefaultMemoryCap = 192 * 1024 * 1024;
+    // TODO(MA-288) get rid of mapping cache and replace with something that wont keep memory alive
+    // on its own
+    static constexpr uint64_t kDefaultMemoryCap = 2048ull * 1024 * 1024;
 #else
     static constexpr uint64_t kDefaultMemoryCap = 0;
 #endif
