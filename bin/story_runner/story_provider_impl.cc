@@ -718,11 +718,18 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
     return;
   }
 
-  i->second.current_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);
-  i->second.impl->Log(MakeLogEntry(StorySignal::FOCUSED));
-
   // Focusing changes importance, but the log needs to be written first.
+  i->second.impl->Log(MakeLogEntry(StorySignal::FOCUSED));
   i->second.impl->Sync([this] { NotifyImportanceWatchers(); });
+
+  // Last focus time is recorded in the ledger, and story provider watchers are
+  // notified through the page watcher.
+  auto mutate = [time = mx_time_get(MX_CLOCK_UTC)](StoryData* const story_data) {
+    story_data->story_info->last_focus_time = time;
+    return true;
+  };
+  new MutateStoryDataCall(&operation_queue_, root_page_, info->focused_story_id,
+                          mutate, [] {});
 }
 
 void StoryProviderImpl::OnContextChange() {

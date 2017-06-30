@@ -9,6 +9,7 @@ group("tests") {
     ":modular_tests.json",
     "component_context",
     "context_link",
+    "last_focus_time",
     "parent_child",
     "queue_persistence",
     "remote",
