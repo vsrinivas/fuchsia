@@ -100,12 +100,27 @@ again: // label here to catch filename=/path/to/new/directory/
         goto err;
     } else {
         strlcpy(netfile.filename, filename, sizeof(netfile.filename));
+        netfile.offset = 0;
     }
 
     return 0;
 err:
     netfile.filename[0] = '\0';
     return -errno;
+}
+
+int netfile_offset_read(void* data_out, off_t offset, size_t max_len) {
+    if (netfile.fd < 0) {
+        printf("netsvc: read, but no open file\n");
+        return -EBADF;
+    }
+    if (offset != netfile.offset) {
+        if (lseek(netfile.fd, offset, SEEK_SET) != offset) {
+            return -errno;
+        }
+        netfile.offset = offset;
+    }
+    return netfile_read(data_out, max_len);
 }
 
 int netfile_read(void *data_out, size_t data_sz) {
@@ -121,7 +136,22 @@ int netfile_read(void *data_out, size_t data_sz) {
         netfile.fd = -1;
         return result;
     }
+    netfile.offset += n;
     return n;
+}
+
+int netfile_offset_write(const char* data, off_t offset, size_t length) {
+    if (netfile.fd < 0) {
+        printf("netsvc: write, but no open file\n");
+        return -EBADF;
+    }
+    if (offset != netfile.offset) {
+        if (lseek(netfile.fd, offset, SEEK_SET) != offset) {
+            return -errno;
+        }
+        netfile.offset = offset;
+    }
+    return netfile_write(data, length);
 }
 
 int netfile_write(const char* data, size_t len) {
@@ -137,6 +167,7 @@ int netfile_write(const char* data, size_t len) {
         netfile.fd = -1;
         return result;
     }
+    netfile.offset += len;
     return len;
 }
 

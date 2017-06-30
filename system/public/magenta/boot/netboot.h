@@ -17,6 +17,8 @@
 #define NB_ADVERT_PORT        33331
 #define NB_CMD_PORT_START     33332
 #define NB_CMD_PORT_END       33339
+#define NB_TFTP_OUTGOING_PORT 33340
+#define NB_TFTP_INCOMING_PORT 33341
 
 
 #define NB_COMMAND           1   // arg=0, data=command

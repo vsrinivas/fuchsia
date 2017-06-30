@@ -88,30 +88,39 @@ static void run_server(const char* progname, const char* bin, mx_handle_t h) {
 
 const char* nodename = "magenta";
 
+static void debuglog_recv(void* data, size_t len, bool is_mcast) {
+    if ((len != 8) || is_mcast) {
+        return;
+    }
+    logpacket_t* pkt = data;
+    if ((pkt->magic != 0xaeae1123) || (pkt->seqno != seqno)) {
+        return;
+    }
+    if (pending) {
+        seqno++;
+        pending = 0;
+        // ensure we stop polling
+        netifc_set_timer(0);
+    }
+}
+
 void udp6_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
 
     bool mcast = (memcmp(daddr, &ip6_ll_all_nodes, sizeof(ip6_addr_t)) == 0);
 
-    if (dport == NB_SERVER_PORT) {
-        return netboot_recv(data, len, mcast, daddr, dport, saddr, sport);
-    }
-
-    if (dport == DEBUGLOG_ACK_PORT) {
-        if ((len != 8) || mcast) {
-            return;
-        }
-        logpacket_t* pkt = data;
-        if ((pkt->magic != 0xaeae1123) || (pkt->seqno != seqno)) {
-            return;
-        }
-        if (pending) {
-            seqno++;
-            pending = 0;
-            // ensure we stop polling
-            netifc_set_timer(0);
-        }
+    switch (dport) {
+    case NB_SERVER_PORT:
+        netboot_recv(data, len, mcast, daddr, dport, saddr, sport);
+        break;
+    case DEBUGLOG_ACK_PORT:
+        debuglog_recv(data, len, mcast);
+        break;
+    case NB_TFTP_INCOMING_PORT:
+    case NB_TFTP_OUTGOING_PORT:
+        tftp_recv(data, len, daddr, dport, saddr, sport);
+        break;
     }
 }
 

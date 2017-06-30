@@ -13,6 +13,7 @@
 
 typedef struct netfile_state_t {
     int      fd;
+    off_t    offset;
     // false: Filename is the open file and final destination
     // true : Filename is final destination; open file has a magic tmp suffix
     bool     needs_rename;
@@ -30,7 +31,11 @@ typedef struct netfilemsg_t {
 
 int netfile_open(const char* filename, uint32_t arg);
 
+int netfile_offset_read(void *data_out, off_t offset, size_t max_len);
+
 int netfile_read(void* data_out, size_t data_sz);
+
+int netfile_offset_write(const char *data, off_t offset, size_t length);
 
 int netfile_write(const char* data, size_t len);
 
@@ -43,3 +48,7 @@ void netboot_recv(void* data, size_t len, bool is_mcast,
                   const ip6_addr_t* saddr, uint16_t sport);
 
 void netboot_run_cmd(const char* cmd);
+
+void tftp_recv(void *data, size_t len,
+               const ip6_addr_t* daddr, uint16_t dport,
+               const ip6_addr_t* saddr, uint16_t sport);

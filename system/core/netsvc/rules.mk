@@ -14,9 +14,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \
     $(LOCAL_DIR)/netboot.c \
     $(LOCAL_DIR)/netfile.c \
-    $(LOCAL_DIR)/device_id.c
+    $(LOCAL_DIR)/device_id.c \
+    $(LOCAL_DIR)/tftp.c
 
-MODULE_STATIC_LIBS := system/ulib/inet6
+MODULE_STATIC_LIBS := system/ulib/inet6 system/ulib/tftp
 
 MODULE_LIBS := system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c
 
