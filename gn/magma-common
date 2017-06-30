@@ -2,9 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "boringssl_libcrypto"
-    ],
     "packages": {
         "magma-common": "//magma:magma-common"
     }
