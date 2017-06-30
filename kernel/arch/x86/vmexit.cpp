@@ -426,13 +426,18 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
     case X86_MSR_IA32_BIOS_SIGN_ID:
-    // Legacy syscall MSRs are unused, but may be cleared. Since we also clear
-    // them during VMCS setup, the writes can be ignored.
+    // From AMD64 Volume 2, Section 6.1.1: CSTAR is unused, but Linux likes to set
+    // a null handler, even when not in compatibility mode. Just ignore it.
+    case X86_MSR_IA32_CSTAR:
+        next_rip(exit_info);
+        return MX_OK;
+    // Legacy syscall MSRs are unused and we clear them in the VMCS.
+    // Allow guests to clear them too. Anything else is an error.
     case X86_MSR_IA32_SYSENTER_CS:
     case X86_MSR_IA32_SYSENTER_ESP:
     case X86_MSR_IA32_SYSENTER_EIP:
-    // From AMD64 Volume 2, Section 6.1.1: Compat Syscall MSR can safely be ignored.
-    case X86_MSR_IA32_CSTAR:
+        if (guest_state->rax != 0 || guest_state->rdx != 0)
+            return MX_ERR_NOT_SUPPORTED;
         next_rip(exit_info);
         return MX_OK;
     case X86_MSR_IA32_TSC_DEADLINE: {
