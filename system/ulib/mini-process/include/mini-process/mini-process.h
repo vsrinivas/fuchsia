@@ -31,7 +31,7 @@ __BEGIN_CDECLS
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.
-mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
+mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transferred_handle,
                                mx_handle_t* process, mx_handle_t* thread);
 
 // Like start_mini_process() but requires caller to create the process,
@@ -41,7 +41,7 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
 // that the new process is listening to for commands via mini_process_cmd().
 mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
                                    mx_handle_t vmar,
-                                   mx_handle_t transfered_handle,
+                                   mx_handle_t transferred_handle,
                                    mx_handle_t* cntrl_channel);
 
 // Execute in the mini process any set of the MINIP_CMD_ commands above.

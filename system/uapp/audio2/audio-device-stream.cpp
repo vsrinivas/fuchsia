@@ -388,7 +388,7 @@ mx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second,
                 frames_per_second, channels, sample_format, res);
     }
 
-    // TODO(johngro) : Verify the type of this handle before transfering it to
+    // TODO(johngro) : Verify the type of this handle before transferring it to
     // our ring buffer channel handle.
     rb_ch_.reset(tmp.release());
 
@@ -423,7 +423,7 @@ mx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
         return res;
     }
 
-    // TODO(johngro) : Verify the type of this handle before transfering it to our VMO handle.
+    // TODO(johngro) : Verify the type of this handle before transferring it to our VMO handle.
     rb_vmo_.reset(tmp.release());
 
     // We have the buffer, fetch the size the driver finally decided on.

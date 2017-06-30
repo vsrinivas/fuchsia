@@ -9,7 +9,7 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-// This example tests transfering channel handles through channels. To do so, it:
+// This example tests transferring channel handles through channels. To do so, it:
 //   Creates two channels, A and B, with handles A0-A1 and B0-B1, respectively
 //   Sends message "1" into A0
 //   Sends A1 to B0

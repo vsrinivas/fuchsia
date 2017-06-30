@@ -41,7 +41,7 @@ typedef struct {
 } minip_cmd_t;
 
 static mx_status_t write_ctx_message(
-    mx_handle_t channel, uintptr_t vdso_base, mx_handle_t transfered_handle) {
+    mx_handle_t channel, uintptr_t vdso_base, mx_handle_t transferred_handle) {
     minip_ctx_t ctx = {
         .object_wait_one = get_syscall_addr(&mx_object_wait_one, vdso_base),
         .object_signal = get_syscall_addr(&mx_object_signal, vdso_base),
@@ -51,7 +51,7 @@ static mx_status_t write_ctx_message(
         .channel_write = get_syscall_addr(&mx_channel_write, vdso_base),
         .process_exit = get_syscall_addr(&mx_process_exit, vdso_base)
     };
-    return mx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transfered_handle, 1u);
+    return mx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);
 }
 
 // This function is the entire program that the child process will execute. It
@@ -69,7 +69,7 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
     } else {
         // In this mode we do have a VDSO but we are not a real ELF program so
         // we need to receive from the parent the address of the syscalls we can
-        // use. So we can bootstrap, kernel has already transfered the address of
+        // use. So we can bootstrap, kernel has already transferred the address of
         // mx_channel_read() and the handle to one end of the channel which already
         // contains a message with the rest of the syscall addresses.
         __typeof(mx_channel_read)* read_fn = (__typeof(mx_channel_read)*)fnptr;
@@ -162,7 +162,7 @@ reply:
 
 mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
                                    mx_handle_t vmar,
-                                   mx_handle_t transfered_handle,
+                                   mx_handle_t transferred_handle,
                                    mx_handle_t* control_channel) {
     // Allocate a single VMO for the child. It doubles as the stack on the top and
     // as the executable code (minipr_thread_loop()) at the bottom. In theory, actual
@@ -200,7 +200,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
         // Simple mode /////////////////////////////////////////////////////////////
         // Don't map the VDSO, so the only thing the mini-process can do is busy-loop.
         // The handle sent to the process is just the caller's handle.
-        status = mx_process_start(process, thread, stack_base, sp, transfered_handle, 0);
+        status = mx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
 
     } else {
         // Complex mode ////////////////////////////////////////////////////////////
@@ -243,7 +243,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
         if (status != MX_OK)
             goto exit;
 
-        status = write_ctx_message(chn[0], vdso_base, transfered_handle);
+        status = write_ctx_message(chn[0], vdso_base, transferred_handle);
         if (status != MX_OK)
             goto exit;
 
@@ -322,7 +322,7 @@ mx_status_t mini_process_cmd(mx_handle_t cntrl_channel, uint32_t what, mx_handle
     return mini_process_cmd_read_reply(cntrl_channel, handle);
 }
 
-mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
+mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transferred_handle,
                                mx_handle_t* process, mx_handle_t* thread) {
     *process = MX_HANDLE_INVALID;
     mx_handle_t vmar = MX_HANDLE_INVALID;
@@ -337,12 +337,12 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
     if (status != MX_OK)
         goto exit;
 
-    status = start_mini_process_etc(*process, *thread, vmar, transfered_handle, &channel);
-    // On success the transfered_handle gets consumed.
+    status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
+    // On success the transferred_handle gets consumed.
 exit:
     if (status != MX_OK) {
-        if (transfered_handle != MX_HANDLE_INVALID)
-            mx_handle_close(transfered_handle);
+        if (transferred_handle != MX_HANDLE_INVALID)
+            mx_handle_close(transferred_handle);
         if (*process != MX_HANDLE_INVALID)
             mx_handle_close(*process);
         if (*thread != MX_HANDLE_INVALID)

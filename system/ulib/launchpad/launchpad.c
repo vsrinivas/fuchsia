@@ -150,7 +150,7 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 }
 
 // Create a new process and a launchpad that will set it up.
-mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t transfered_job,
+mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t transferred_job,
                                        const char* name, launchpad_t** result) {
     uint32_t name_len = strlen(name);
 
@@ -165,8 +165,8 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
     if (status < 0)
         lp_error(lp, status, "create: mx_process_create() failed");
 
-    if (transfered_job != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, transfered_job, PA_JOB_DEFAULT);
+    if (transferred_job != MX_HANDLE_INVALID) {
+        launchpad_add_handle(lp, transferred_job, PA_JOB_DEFAULT);
     }
 
     *result = lp;

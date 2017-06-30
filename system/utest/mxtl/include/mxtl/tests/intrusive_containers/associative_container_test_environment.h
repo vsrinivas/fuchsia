@@ -130,7 +130,7 @@ public:
                      : KeyTraits::LessThan(max_key_, obj_key) ? obj_key : max_key_;
 
             // Alternate whether or not we move the pointer, or "transfer" it.
-            // Transfering means different things for different pointer types.
+            // Transferring means different things for different pointer types.
             // For unmanaged, it just returns a reference to the pointer and
             // leaves the original unaltered.  For unique, it moves the pointer
             // (clearing the source).  For RefPtr, it makes a new RefPtr

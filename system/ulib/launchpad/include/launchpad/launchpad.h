@@ -67,11 +67,11 @@ mx_status_t launchpad_create(mx_handle_t job, const char* name,
 // The creation_job handle is used to create the process but is
 // not taken ownership of or closed.
 //
-// The transfered_job handle is optional.  If non-zero, it is
+// The transferred_job handle is optional.  If non-zero, it is
 // consumed by the launchpad and will be passed to the new process
 // on successful launch or closed on failure.
 mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job,
-                                       mx_handle_t transfered_job,
+                                       mx_handle_t transferred_job,
                                        const char* name,
                                        launchpad_t** result);
 
@@ -205,7 +205,7 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 // this fd.
 // Upon success, from the point of view of the calling process, the fd
 // will appear to have been closed.  The underlying "file" will continue
-// to exist until launch succeeds (and it is transfered) or fails (and
+// to exist until launch succeeds (and it is transferred) or fails (and
 // it is destroyed).
 mx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd);
 
