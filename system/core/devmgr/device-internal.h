@@ -18,6 +18,7 @@ struct mx_device {
     uint32_t refcount;
 
     mx_handle_t event;
+    mx_handle_t local_event;
     mx_handle_t rpc;
     mx_handle_t resource;
 

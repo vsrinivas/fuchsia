@@ -856,7 +856,7 @@ ssize_t read(int fd, void* buf, size_t count) {
         if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        mxio_wait_fd(fd, MXIO_EVT_READABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
     return STATUS(status);
@@ -877,7 +877,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
         if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
-        mxio_wait_fd(fd, MXIO_EVT_WRITABLE, NULL, MX_TIME_INFINITE);
+        mxio_wait_fd(fd, MXIO_EVT_WRITABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
     return STATUS(status);
@@ -919,7 +919,7 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
         if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+        mxio_wait_fd(fd, MXIO_EVT_READABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
     return STATUS(status);
@@ -961,7 +961,7 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
         if (status != MX_ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
-        mxio_wait_fd(fd, MXIO_EVT_WRITABLE, NULL, MX_TIME_INFINITE);
+        mxio_wait_fd(fd, MXIO_EVT_WRITABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
     return STATUS(status);

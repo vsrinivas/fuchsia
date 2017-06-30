@@ -204,7 +204,7 @@ mx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
     }
 
     vi->fh.func = vc_input_cb;
-    if ((r = port_fd_handler_init(&vi->fh, fd, POLLIN | POLLHUP)) < 0) {
+    if ((r = port_fd_handler_init(&vi->fh, fd, POLLIN | POLLHUP | POLLRDHUP)) < 0) {
         mx_handle_close(vi->timer);
         free(vi);
         return r;

@@ -152,6 +152,7 @@ void dev_ref_release(mx_device_t* dev) {
         }
 
         mx_handle_close(dev->event);
+        mx_handle_close(dev->local_event);
         mx_handle_close(dev->resource);
         DM_UNLOCK();
         dev_op_release(dev);
@@ -263,7 +264,7 @@ mx_status_t devhost_device_install(mx_device_t* dev) {
     }
     // Don't create an event handle if we alredy have one
     if ((dev->event == MX_HANDLE_INVALID) &&
-        ((status = mx_event_create(0, &dev->event)) < 0)) {
+        ((status = mx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
         dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
@@ -308,7 +309,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
 
     // Don't create an event handle if we alredy have one
     if ((dev->event == MX_HANDLE_INVALID) &&
-        ((status = mx_event_create(0, &dev->event)) < 0)) {
+        ((status = mx_eventpair_create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
         goto fail;
