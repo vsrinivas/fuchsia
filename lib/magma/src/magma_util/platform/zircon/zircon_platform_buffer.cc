@@ -303,6 +303,7 @@ bool ZirconPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_cou
 
 bool ZirconPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_count)
 {
+    TRACE_DURATION("magma", "UnPinPages");
     if (!page_count)
         return true;
 
@@ -354,6 +355,7 @@ bool ZirconPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_c
 
 void ZirconPlatformBuffer::ReleasePages()
 {
+    TRACE_DURATION("magma", "ReleasePages");
     if (pin_count_array_->total_pin_count()) {
         // Still have some pinned pages, unlock.
         zx_status_t status = vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, size(), nullptr, 0);
@@ -417,6 +419,7 @@ bool ZirconPlatformBuffer::UnmapPageCpu(uint32_t page_index)
 bool ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                                             uint64_t addr_out[])
 {
+    TRACE_DURATION("magma", "MapPageRangeBus");
     static_assert(sizeof(zx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(zx_paddr_t)");
 
     for (uint32_t i = start_page_index; i < start_page_index + page_count; i++) {
