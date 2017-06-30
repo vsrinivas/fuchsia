@@ -107,8 +107,6 @@ static bool abs_then_rel() {
 }
 
 static bool invalid_calls(uint32_t options) {
-    BEGIN_TEST;
-
     auto job = make_job();
 
     EXPECT_EQ(job.set_policy(options, MX_JOB_POL_BASIC, nullptr, 0u), MX_ERR_INVALID_ARGS);
@@ -142,20 +140,27 @@ static bool invalid_calls(uint32_t options) {
     EXPECT_EQ(job.set_policy(
         options, MX_JOB_POL_BASIC, policy4, countof(policy4)), MX_OK);
 
-    END_TEST;
+    return true;
 }
 
 static bool invalid_calls_abs() {
-    return invalid_calls(MX_JOB_POL_ABSOLUTE);
+    BEGIN_TEST;
+
+    invalid_calls(MX_JOB_POL_ABSOLUTE);
+
+    END_TEST;
 }
 
 static bool invalid_calls_rel() {
-    return invalid_calls(MX_JOB_POL_RELATIVE);
+    BEGIN_TEST;
+
+    invalid_calls(MX_JOB_POL_RELATIVE);
+
+    END_TEST;
 }
 
 static bool enforce_creation_pol(
     mx_policy_basic_t* pol, uint32_t pol_count, uint32_t minip_cmd, mx_status_t expect) {
-    BEGIN_TEST;
     auto job = make_job();
 
     ASSERT_EQ(job.set_policy(
@@ -171,42 +176,62 @@ static bool enforce_creation_pol(
     EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), MX_ERR_PEER_CLOSED);
 
     mx_handle_close(ctrl);
-    END_TEST;
+    return true;
 }
 
 static bool enforce_deny_event() {
+    BEGIN_TEST;
+
     mx_policy_basic_t policy[] = { { MX_POL_NEW_EVENT, MX_POL_ACTION_DENY } };
-    return enforce_creation_pol(
-        policy, countof(policy), MINIP_CMD_CREATE_EVENT, MX_ERR_ACCESS_DENIED);
+    enforce_creation_pol(policy, countof(policy), MINIP_CMD_CREATE_EVENT,
+                         MX_ERR_ACCESS_DENIED);
+
+    END_TEST;
 }
 
 static bool enforce_deny_channel() {
+    BEGIN_TEST;
+
     mx_policy_basic_t policy[] = { { MX_POL_NEW_CHANNEL, MX_POL_ACTION_DENY } };
-    return enforce_creation_pol(
-        policy, countof(policy), MINIP_CMD_CREATE_CHANNEL, MX_ERR_ACCESS_DENIED);
+    enforce_creation_pol(policy, countof(policy), MINIP_CMD_CREATE_CHANNEL,
+                         MX_ERR_ACCESS_DENIED);
+
+    END_TEST;
 }
 
 static bool enforce_deny_any() {
+    BEGIN_TEST;
+
     mx_policy_basic_t policy[] = { { MX_POL_NEW_ANY, MX_POL_ACTION_DENY } };
-    return enforce_creation_pol(
-        policy, countof(policy), MINIP_CMD_CREATE_EVENT, MX_ERR_ACCESS_DENIED);
+    enforce_creation_pol(policy, countof(policy), MINIP_CMD_CREATE_EVENT,
+                         MX_ERR_ACCESS_DENIED);
+
+    END_TEST;
 }
 
 static bool enforce_allow_any() {
+    BEGIN_TEST;
+
     mx_policy_basic_t policy[] = { { MX_POL_NEW_ANY, MX_POL_ACTION_ALLOW } };
-    return enforce_creation_pol(
-        policy, countof(policy), MINIP_CMD_CREATE_EVENT, MX_OK);
+    enforce_creation_pol(policy, countof(policy), MINIP_CMD_CREATE_EVENT,
+                         MX_OK);
+
+    END_TEST;
 }
 
 static bool enforce_deny_but_event() {
+    BEGIN_TEST;
+
     mx_policy_basic_t policy[] = {
         { MX_POL_NEW_ANY, MX_POL_ACTION_DENY },
         { MX_POL_NEW_EVENT, MX_POL_ACTION_ALLOW }
     };
-    auto res = enforce_creation_pol(
-        policy, countof(policy), MINIP_CMD_CREATE_EVENT, MX_OK);
-    return res && enforce_creation_pol(
-        policy, countof(policy), MINIP_CMD_CREATE_CHANNEL, MX_ERR_ACCESS_DENIED);
+    enforce_creation_pol(policy, countof(policy), MINIP_CMD_CREATE_EVENT,
+                         MX_OK);
+    enforce_creation_pol(policy, countof(policy), MINIP_CMD_CREATE_CHANNEL,
+                         MX_ERR_ACCESS_DENIED);
+
+    END_TEST;
 }
 
 static bool get_koid(mx_handle_t handle, mx_koid_t* koid) {
@@ -244,8 +269,6 @@ static uint64_t get_syscall_result(mx_general_regs_t* regs) {
 
 static bool test_exception_on_new_event(uint32_t base_policy,
                                         mx_status_t expected_syscall_result) {
-    BEGIN_TEST;
-
     mx_policy_basic_t policy[] = {
         { MX_POL_NEW_EVENT, base_policy | MX_POL_ACTION_EXCEPTION },
     };
@@ -323,16 +346,23 @@ static bool test_exception_on_new_event(uint32_t base_policy,
 
     mx_handle_close(ctrl);
 
-    END_TEST;
+    return true;
 }
 
 static bool test_exception_on_new_event_and_deny() {
-    return test_exception_on_new_event(MX_POL_ACTION_DENY,
-                                       MX_ERR_ACCESS_DENIED);
+    BEGIN_TEST;
+
+    test_exception_on_new_event(MX_POL_ACTION_DENY, MX_ERR_ACCESS_DENIED);
+
+    END_TEST;
 }
 
 static bool test_exception_on_new_event_but_allow() {
-    return test_exception_on_new_event(MX_POL_ACTION_ALLOW, MX_OK);
+    BEGIN_TEST;
+
+    test_exception_on_new_event(MX_POL_ACTION_ALLOW, MX_OK);
+
+    END_TEST;
 }
 
 BEGIN_TEST_CASE(job_policy)
