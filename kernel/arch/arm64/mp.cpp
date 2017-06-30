@@ -31,9 +31,13 @@ void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus) {
         uint cpus = *cluster_cpus++;
         ASSERT(cpus <= SMP_CPU_MAX_CLUSTER_CPUS);
         for (uint cpu = 0; cpu < cpus; cpu++) {
+            // given cluster:cpu, translate to global cpu id
             arm64_cpu_map[cluster][cpu] = cpu_id;
+
+            // given global gpu_id, translate to cluster and cpu number within cluster
             arm64_cpu_cluster_ids[cpu_id] = cluster;
-            arm64_cpu_cpu_ids[cpu_id] = cpu_id;
+            arm64_cpu_cpu_ids[cpu_id] = cpu;
+
             cpu_id++;
         }
     }
