@@ -50,7 +50,8 @@ public:
     // Returns the msd_semaphore for the given |id| if present in the semaphore map.
     std::shared_ptr<MagmaSystemSemaphore> LookupSemaphore(uint64_t id);
 
-    magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override;
+    magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle,
+                                       uint32_t context_id) override;
 
     bool CreateContext(uint32_t context_id) override;
     bool DestroyContext(uint32_t context_id) override;

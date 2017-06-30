@@ -41,9 +41,15 @@ magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t b
                          void** addr_out);
 magma_status_t magma_unmap(struct magma_connection_t* connection, magma_buffer_t buffer);
 
+magma_status_t magma_alloc_command_buffer(struct magma_connection_t* connection, uint64_t size,
+                                          magma_buffer_t* buffer_out);
+void magma_release_command_buffer(struct magma_connection_t* connection,
+                                  magma_buffer_t command_buffer);
+
 // Executes a command buffer.
 // Note that the buffer referred to by |command_buffer| must contain a valid
 // magma_system_command_buffer and all associated data structures
+// Transfers ownership of |command_buffer|.
 void magma_submit_command_buffer(struct magma_connection_t* connection,
                                  magma_buffer_t command_buffer, uint32_t context_id);
 

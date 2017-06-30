@@ -61,7 +61,7 @@ public:
         if (result != 0)
             return DRET(result);
 
-        result = magma_alloc(connection_, PAGE_SIZE, &size, &command_buffer);
+        result = magma_alloc_command_buffer(connection_, PAGE_SIZE, &command_buffer);
         if (result != 0)
             return DRET(result);
 
@@ -73,7 +73,6 @@ public:
 
         magma_destroy_context(connection_, context_id);
         magma_free(connection_, batch_buffer);
-        magma_free(connection_, command_buffer);
 
         result = magma_get_error(connection_);
         return DRET(result);

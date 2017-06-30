@@ -63,8 +63,7 @@ struct DestroyContextOp {
 
 struct ExecuteCommandBufferOp {
     const OpCode opcode = ExecuteCommandBuffer;
-    static constexpr uint32_t kNumHandles = 0;
-    uint64_t command_buffer_id;
+    static constexpr uint32_t kNumHandles = 1;
     uint32_t context_id;
 } __attribute__((packed));
 
@@ -206,8 +205,10 @@ public:
                         OpCast<DestroyContextOp>(bytes, actual_bytes, handles, actual_handles));
                     break;
                 case OpCode::ExecuteCommandBuffer:
-                    success = ExecuteCommandBuffer(OpCast<ExecuteCommandBufferOp>(
-                        bytes, actual_bytes, handles, actual_handles));
+                    success =
+                        ExecuteCommandBuffer(OpCast<ExecuteCommandBufferOp>(
+                                                 bytes, actual_bytes, handles, actual_handles),
+                                             handles);
                     break;
                 case OpCode::WaitRendering:
                     success = WaitRendering(
@@ -304,13 +305,12 @@ private:
         return true;
     }
 
-    bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op)
+    bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op, mx_handle_t* handle)
     {
         DLOG("Operation: ExecuteCommandBuffer");
         if (!op)
             return DRETF(false, "malformed message");
-        magma::Status status =
-            delegate_->ExecuteCommandBuffer(op->command_buffer_id, op->context_id);
+        magma::Status status = delegate_->ExecuteCommandBuffer(*handle, op->context_id);
         if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
             ShutdownEvent()->Signal();
         if (!status)
@@ -467,14 +467,17 @@ public:
             SetError(result);
     }
 
-    void ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override
+    void ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) override
     {
         ExecuteCommandBufferOp op;
-        op.command_buffer_id = command_buffer_id;
         op.context_id = context_id;
-        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != MAGMA_STATUS_OK)
+
+        mx_handle_t duplicate_handle_mx = command_buffer_handle;
+        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        if (result != MAGMA_STATUS_OK) {
+            mx_handle_close(command_buffer_handle);
             SetError(result);
+        }
     }
 
     void WaitRendering(uint64_t buffer_id) override

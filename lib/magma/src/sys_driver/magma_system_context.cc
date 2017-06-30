@@ -27,7 +27,7 @@ private:
 };
 
 magma::Status
-MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> command_buffer)
+MagmaSystemContext::ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> command_buffer)
 {
 
     // copy command buffer before validating to avoid tampering after validating
@@ -39,7 +39,7 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
                         "ExecuteCommandBuffer: failed to create command buffer copy");
 
     void* cmd_buf_src;
-    if (!command_buffer->platform_buffer()->MapCpu(&cmd_buf_src))
+    if (!command_buffer->MapCpu(&cmd_buf_src))
         return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR,
                         "ExecuteCommandBuffer: Failed to map command buffer for copying");
 
@@ -51,7 +51,7 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
     DASSERT(command_buffer->size() == command_buffer_copy->size());
     memcpy(cmd_buf_dst, cmd_buf_src, command_buffer->size());
 
-    if (!command_buffer->platform_buffer()->UnmapCpu())
+    if (!command_buffer->UnmapCpu())
         return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR,
                         "ExecuteCommandBuffer: Failed to unmap command buffer after copying");
 

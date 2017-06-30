@@ -43,7 +43,7 @@ public:
 
     virtual magma_status_t GetError() = 0;
 
-    virtual void ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) = 0;
+    virtual void ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) = 0;
 
     // Blocks until all gpu work currently queued that references the buffer
     // with |buffer_id| has completed.
@@ -80,7 +80,7 @@ public:
         virtual bool CreateContext(uint32_t context_id) = 0;
         virtual bool DestroyContext(uint32_t context_id) = 0;
 
-        virtual magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id,
+        virtual magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle,
                                                    uint32_t context_id) = 0;
         virtual magma::Status WaitRendering(uint64_t buffer_id) = 0;
 

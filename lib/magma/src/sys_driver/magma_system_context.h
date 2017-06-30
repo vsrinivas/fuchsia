@@ -33,7 +33,7 @@ public:
     {
     }
 
-    magma::Status ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> command_buffer);
+    magma::Status ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> command_buffer);
 
 private:
     msd_context_t* msd_ctx() { return msd_ctx_.get(); }

@@ -77,7 +77,11 @@ public:
 
     void TestExecuteCommandBuffer()
     {
-        ipc_connection_->ExecuteCommandBuffer(test_buffer_id, test_context_id);
+        auto buf = magma::PlatformBuffer::Create(1, "test");
+        test_buffer_id = buf->id();
+        uint32_t handle;
+        EXPECT_TRUE(buf->duplicate_handle(&handle));
+        ipc_connection_->ExecuteCommandBuffer(handle, test_context_id);
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
     void TestWaitRendering()
@@ -165,9 +169,10 @@ public:
         return true;
     }
 
-    magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override
+    magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) override
     {
-        EXPECT_EQ(command_buffer_id, TestPlatformConnection::test_buffer_id);
+        auto buffer = magma::PlatformBuffer::Import(command_buffer_handle);
+        EXPECT_EQ(buffer->id(), TestPlatformConnection::test_buffer_id);
         EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
         TestPlatformConnection::test_complete = true;
         return MAGMA_STATUS_OK;

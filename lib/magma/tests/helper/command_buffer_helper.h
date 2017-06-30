@@ -11,12 +11,6 @@
 // a class to create and own the command buffer were trying to execute
 class CommandBufferHelper {
 public:
-    ~CommandBufferHelper()
-    {
-        bool success = buffer_->platform_buffer()->UnmapCpu();
-        DASSERT(success);
-    }
-
     static std::unique_ptr<CommandBufferHelper>
     Create(magma::PlatformDevice* platform_device = nullptr)
     {
@@ -60,7 +54,11 @@ public:
 
     msd_context_t* ctx() { return ctx_->msd_ctx(); }
     MagmaSystemDevice* dev() { return dev_.get(); }
-    MagmaSystemBuffer* buffer() { return buffer_.get(); }
+    magma::PlatformBuffer* buffer()
+    {
+        DASSERT(buffer_);
+        return buffer_.get();
+    }
 
     msd_semaphore_t** msd_wait_semaphores() { return msd_wait_semaphores_.data(); }
     msd_semaphore_t** msd_signal_semaphores() { return msd_signal_semaphores_.data(); }
@@ -91,7 +89,10 @@ public:
 
     bool Execute()
     {
-        if (!ctx_->ExecuteCommandBuffer(buffer_))
+        uint32_t handle;
+        if (!buffer_->duplicate_handle(&handle))
+            return DRETF(false, "failed to dupe handle");
+        if (!ctx_->ExecuteCommandBuffer(magma::PlatformBuffer::Import(handle)))
             return false;
         for (uint32_t i = 0; i < wait_semaphores_.size(); i++) {
             wait_semaphores_[i]->Signal();
@@ -122,13 +123,12 @@ private:
                                sizeof(magma_system_exec_resource) * kNumResources +
                                sizeof(magma_system_relocation_entry) * (kNumResources - 1);
 
-        buffer_ = MagmaSystemBuffer::Create(
-            magma::PlatformBuffer::Create(buffer_size, "command-buffer-backing"));
+        buffer_ = magma::PlatformBuffer::Create(buffer_size, "command-buffer-backing");
         DASSERT(buffer_);
 
-        DLOG("CommandBuffer backing buffer: %p", buffer_->platform_buffer());
+        DLOG("CommandBuffer backing buffer: %p", buffer_.get());
 
-        bool success = buffer_->platform_buffer()->MapCpu(&buffer_data_);
+        bool success = buffer_->MapCpu(&buffer_data_);
         DASSERT(success);
         DASSERT(buffer_data_);
 
@@ -237,7 +237,7 @@ private:
     std::unique_ptr<MagmaSystemConnection> connection_;
     MagmaSystemContext* ctx_; // owned by the connection
 
-    std::shared_ptr<MagmaSystemBuffer> buffer_;
+    std::unique_ptr<magma::PlatformBuffer> buffer_;
     // mapped address of buffer_, do not free
     void* buffer_data_ = nullptr;
 

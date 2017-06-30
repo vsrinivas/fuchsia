@@ -64,17 +64,17 @@ public:
         ASSERT_NE(connection_, nullptr);
 
         uint64_t size;
-        magma_buffer_t batch_buffer, command_buffer;
+        magma_buffer_t batch_buffer;
 
         ASSERT_EQ(magma_alloc(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
-        ASSERT_EQ(magma_alloc(connection_, PAGE_SIZE, &size, &command_buffer), 0);
-
         void* vaddr;
         ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
 
         ASSERT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
-        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
 
+        magma_buffer_t command_buffer;
+        ASSERT_EQ(magma_alloc_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
+        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
         magma_submit_command_buffer(connection_, command_buffer, context_id_);
 
         // TODO(MA-129) - wait_rendering should return an error
@@ -98,7 +98,6 @@ public:
         EXPECT_EQ(magma_unmap(connection_, batch_buffer), 0);
 
         magma_free(connection_, batch_buffer);
-        magma_free(connection_, command_buffer);
     }
 
     bool InitBatchBuffer(void* vaddr, uint64_t size, bool hang)

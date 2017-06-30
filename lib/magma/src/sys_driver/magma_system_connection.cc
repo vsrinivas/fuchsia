@@ -85,24 +85,23 @@ MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id)
     return iter->second.get();
 }
 
-magma::Status MagmaSystemConnection::ExecuteCommandBuffer(uint64_t command_buffer_id,
+magma::Status MagmaSystemConnection::ExecuteCommandBuffer(uint32_t command_buffer_handle,
                                                           uint32_t context_id)
 {
     if (!has_render_capability_)
         return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
                         "Attempting to execute a command buffer without render capability");
 
-    auto command_buffer = LookupBuffer(command_buffer_id);
+    auto command_buffer = magma::PlatformBuffer::Import(command_buffer_handle);
     if (!command_buffer)
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                        "Attempting to execute invalid command buffer id");
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Failed to import command buffer");
 
     auto context = LookupContext(context_id);
     if (!context)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                         "Attempting to execute command buffer on invalid context");
 
-    return context->ExecuteCommandBuffer(command_buffer);
+    return context->ExecuteCommandBuffer(std::move(command_buffer));
 }
 
 magma::Status MagmaSystemConnection::WaitRendering(uint64_t buffer_id)

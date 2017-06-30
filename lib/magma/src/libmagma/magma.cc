@@ -143,13 +143,39 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_alloc_command_buffer(magma_connection_t* connection, uint64_t size,
+                                          magma_buffer_t* buffer_out)
+{
+    auto platform_buffer = magma::PlatformBuffer::Create(size, "magma_command_buffer");
+    if (!platform_buffer)
+        return DRET(MAGMA_STATUS_MEMORY_ERROR);
+
+    *buffer_out =
+        reinterpret_cast<magma_buffer_t>(platform_buffer.release()); // Ownership passed across abi
+
+    return MAGMA_STATUS_OK;
+}
+
+void magma_release_command_buffer(struct magma_connection_t* connection,
+                                  magma_buffer_t command_buffer)
+{
+    delete reinterpret_cast<magma::PlatformBuffer*>(command_buffer);
+}
+
 void magma_submit_command_buffer(magma_connection_t* connection, magma_buffer_t command_buffer,
                                  uint32_t context_id)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(command_buffer);
 
-    magma::PlatformIpcConnection::cast(connection)
-        ->ExecuteCommandBuffer(platform_buffer->id(), context_id);
+    uint32_t buffer_handle;
+    if (!platform_buffer->duplicate_handle(&buffer_handle)) {
+        DLOG("failed to duplicate handle");
+        return;
+    }
+
+    magma::PlatformIpcConnection::cast(connection)->ExecuteCommandBuffer(buffer_handle, context_id);
+
+    delete platform_buffer;
 }
 
 void magma_wait_rendering(magma_connection_t* connection, magma_buffer_t buffer)

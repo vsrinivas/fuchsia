@@ -87,8 +87,7 @@ public:
 
             EXPECT_TRUE(InitCommandBuffer(command_buffer.get(), id));
 
-            EXPECT_TRUE(context->ExecuteCommandBuffer(
-                MagmaSystemBuffer::Create(std::move(command_buffer))));
+            EXPECT_TRUE(context->ExecuteCommandBuffer(std::move(command_buffer)));
 
             if (wait_)
                 EXPECT_TRUE(connection->WaitRendering(id));

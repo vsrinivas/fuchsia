@@ -88,6 +88,17 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_alloc_command_buffer(magma_connection_t* connection, uint64_t size,
+                                          magma_buffer_t* buffer_out)
+{
+    return MAGMA_STATUS_INTERNAL_ERROR;
+}
+
+void magma_release_command_buffer(struct magma_connection_t* connection,
+                                  magma_buffer_t command_buffer)
+{
+}
+
 void magma_submit_command_buffer(struct magma_connection_t* connection, uint64_t command_buffer_id,
                                  uint32_t context_id)
 {
