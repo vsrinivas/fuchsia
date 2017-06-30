@@ -85,8 +85,10 @@ class ConflictResolverImpl : public ConflictResolver {
   explicit ConflictResolverImpl(
       fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {
-    binding_.set_connection_error_handler(
-        [this] { this->disconnected = true; });
+    binding_.set_connection_error_handler([this] {
+      this->disconnected = true;
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    });
   }
   ~ConflictResolverImpl() {}
 
@@ -855,13 +857,19 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
+  // Two runs of the loop: one for the conflict resolution request, one for the
+  // disconnect.
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // The previous resolver should have been disconnected.
   EXPECT_TRUE(resolver_impl->disconnected);
-  // We should ask again for a resolution.
+  // It shouldn't have been called again.
+  EXPECT_EQ(1u, resolver_impl->requests.size());
+
+  // We should ask again for a resolution on a new resolver.
   EXPECT_EQ(1u, resolver_factory2->resolvers.size());
-  EXPECT_NE(resolver_factory2->resolvers.end(),
+  ASSERT_NE(resolver_factory2->resolvers.end(),
             resolver_factory2->resolvers.find(convert::ToString(test_page_id)));
   ConflictResolverImpl* resolver_impl2 =
       &(resolver_factory2->resolvers.find(convert::ToString(test_page_id))
