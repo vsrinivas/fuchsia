@@ -282,41 +282,49 @@ int unittest_set_verbosity_level(int new_level);
         }                                                            \
     } while (0)
 
-#define UT_TRUE(actual, msg, ret)                               \
-    do {                                                        \
-        UT_ASSERT_VALID_TEST_STATE;                             \
-        if (!(actual)) {                                        \
-            UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
-            current_test_info->all_ok = false;                  \
-            ret;                                                \
-        }                                                       \
+#define UT_TRUE(actual, ret, ...)                                       \
+    do {                                                                \
+        UT_ASSERT_VALID_TEST_STATE;                                     \
+        if (!(actual)) {                                                \
+            UNITTEST_TRACEF("%s: %s is false\n",                        \
+                            unittest_get_message(__VA_ARGS__),          \
+                            #actual);                                   \
+            current_test_info->all_ok = false;                          \
+            ret;                                                        \
+        }                                                               \
     } while (0)
 
-#define UT_FALSE(actual, msg, ret)                             \
-    do {                                                       \
-        UT_ASSERT_VALID_TEST_STATE;                            \
-        if (actual) {                                          \
-            UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
-            current_test_info->all_ok = false;                 \
-            ret;                                               \
-        }                                                      \
+#define UT_FALSE(actual, ret, ...)                                      \
+    do {                                                                \
+        UT_ASSERT_VALID_TEST_STATE;                                     \
+        if (actual) {                                                   \
+            UNITTEST_TRACEF("%s: %s is true\n",                         \
+                            unittest_get_message(__VA_ARGS__),          \
+                            #actual);                                   \
+            current_test_info->all_ok = false;                          \
+            ret;                                                        \
+        }                                                               \
     } while (0)
 
-#define UT_NULL(actual, msg, ret)                                   \
+#define UT_NULL(actual, ret, ...)                                   \
     do {                                                            \
         UT_ASSERT_VALID_TEST_STATE;                                 \
         if (actual != NULL) {                                       \
-            UNITTEST_TRACEF("%s: %s is non-null!\n", msg, #actual); \
+            UNITTEST_TRACEF("%s: %s is non-null!\n",                \
+                            unittest_get_message(__VA_ARGS__),      \
+                            #actual);                               \
             current_test_info->all_ok = false;                      \
             ret;                                                    \
         }                                                           \
     } while (0)
 
-#define UT_NONNULL(actual, msg, ret)                            \
+#define UT_NONNULL(actual, ret, ...)                            \
     do {                                                        \
         UT_ASSERT_VALID_TEST_STATE;                             \
         if (actual == NULL) {                                   \
-            UNITTEST_TRACEF("%s: %s is null!\n", msg, #actual); \
+            UNITTEST_TRACEF("%s: %s is null!\n",                \
+                            unittest_get_message(__VA_ARGS__),  \
+                            #actual);                           \
             current_test_info->all_ok = false;                  \
             ret;                                                \
         }                                                       \
@@ -394,10 +402,10 @@ int unittest_set_verbosity_level(int new_level);
 #define EXPECT_LT(lhs, rhs, ...) EXPECT_CMP(<, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_GT(lhs, rhs, ...) EXPECT_CMP(>, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 
-#define EXPECT_TRUE(actual, msg) UT_TRUE(actual, msg, DONOT_RET)
-#define EXPECT_FALSE(actual, msg) UT_FALSE(actual, msg, DONOT_RET)
-#define EXPECT_NULL(actual, msg) UT_NULL(actual, msg, DONOT_RET)
-#define EXPECT_NONNULL(actual, msg) UT_NONNULL(actual, msg, DONOT_RET)
+#define EXPECT_TRUE(actual, ...) UT_TRUE(actual, DONOT_RET, ##__VA_ARGS__)
+#define EXPECT_FALSE(actual, ...) UT_FALSE(actual, DONOT_RET, ##__VA_ARGS__)
+#define EXPECT_NULL(actual, ...) UT_NULL(actual, DONOT_RET, ##__VA_ARGS__)
+#define EXPECT_NONNULL(actual, ...) UT_NONNULL(actual, DONOT_RET, ##__VA_ARGS__)
 #define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
 #define EXPECT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expected, actual, length, msg, DONOT_RET)
@@ -429,10 +437,10 @@ int unittest_set_verbosity_level(int new_level);
 #define ASSERT_LT(lhs, rhs, ...) ASSERT_CMP(<, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_GT(lhs, rhs, ...) ASSERT_CMP(>, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 
-#define ASSERT_TRUE(actual, msg) UT_TRUE(actual, msg, RET_FALSE)
-#define ASSERT_FALSE(actual, msg) UT_FALSE(actual, msg, RET_FALSE)
-#define ASSERT_NULL(actual, msg) UT_NULL(actual, msg, RET_FALSE)
-#define ASSERT_NONNULL(actual, msg) UT_NONNULL(actual, msg, RET_FALSE)
+#define ASSERT_TRUE(actual, ...) UT_TRUE(actual, RET_FALSE, ##__VA_ARGS__)
+#define ASSERT_FALSE(actual, ...) UT_FALSE(actual, RET_FALSE, ##__VA_ARGS__)
+#define ASSERT_NULL(actual, ...) UT_NULL(actual, RET_FALSE, ##__VA_ARGS__)
+#define ASSERT_NONNULL(actual, ...) UT_NONNULL(actual, RET_FALSE, ##__VA_ARGS__)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
 #define ASSERT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expecetd, actual, length, msg, RET_FALSE)

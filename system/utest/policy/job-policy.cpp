@@ -163,7 +163,7 @@ static bool enforce_creation_pol(
 
     mx_handle_t ctrl;
     auto proc = make_test_process(job, nullptr, &ctrl);
-    ASSERT_TRUE(proc.is_valid(), "");
+    ASSERT_TRUE(proc.is_valid());
     ASSERT_NEQ(ctrl, MX_HANDLE_INVALID);
 
     mx_handle_t obj;
@@ -256,7 +256,7 @@ static bool test_exception_on_new_event(uint32_t base_policy,
     mx_handle_t ctrl;
     mx::thread thread;
     auto proc = make_test_process(job, &thread, &ctrl);
-    ASSERT_TRUE(proc.is_valid(), "");
+    ASSERT_TRUE(proc.is_valid());
     ASSERT_NEQ(ctrl, MX_HANDLE_INVALID);
 
     mx_handle_t exc_port;
@@ -284,8 +284,8 @@ static bool test_exception_on_new_event(uint32_t base_policy,
 
     mx_koid_t pid;
     mx_koid_t tid;
-    ASSERT_TRUE(get_koid(proc.get(), &pid), "");
-    ASSERT_TRUE(get_koid(thread.get(), &tid), "");
+    ASSERT_TRUE(get_koid(proc.get(), &pid));
+    ASSERT_TRUE(get_koid(thread.get(), &tid));
     ASSERT_EQ(packet.exception.pid, pid);
     ASSERT_EQ(packet.exception.tid, tid);
 
