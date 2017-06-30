@@ -122,12 +122,20 @@ Node::Node(Session* session) : Resource(session) {}
 
 Node::~Node() = default;
 
-void Node::SetTransform(const float translation[3],
-                        const float scale[3],
-                        const float anchor[3],
-                        const float quaternion[4]) {
-  session()->Enqueue(
-      mozart::NewSetTransformOp(id(), translation, scale, anchor, quaternion));
+void Node::SetTranslation(const float translation[3]) {
+  session()->Enqueue(mozart::NewSetTranslationOp(id(), translation));
+}
+
+void Node::SetScale(const float scale[3]) {
+  session()->Enqueue(mozart::NewSetScaleOp(id(), scale));
+}
+
+void Node::SetRotation(const float quaternion[4]) {
+  session()->Enqueue(mozart::NewSetRotationOp(id(), quaternion));
+}
+
+void Node::SetAnchor(const float anchor[3]) {
+  session()->Enqueue(mozart::NewSetAnchorOp(id(), anchor));
 }
 
 void Node::Detach() {

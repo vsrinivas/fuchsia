@@ -160,11 +160,11 @@ class Material : public Resource {
 // This type cannot be instantiated, please see subclasses.
 class Node : public Resource {
  public:
-  // Sets the node's transform.
-  void SetTransform(const float translation[3],
-                    const float scale[3],
-                    const float anchor[3],
-                    const float quaternion[4]);
+  // Sets the node's transform properties.
+  void SetTranslation(const float translation[3]);
+  void SetScale(const float scale[3]);
+  void SetRotation(const float quaternion[4]);
+  void SetAnchor(const float anchor[3]);
 
   // Detaches the node from its parent.
   void Detach();
