@@ -19,11 +19,11 @@ VFSHandler::~VFSHandler() {
   if (key_) {
     mtl::MessageLoop::GetCurrent()->RemoveHandler(key_);
     key_ = 0;
-    mxrio_handler(MX_HANDLE_INVALID, callback_, iostate_);
+    mxrio_handler(MX_HANDLE_INVALID, (void*) callback_, iostate_);
   }
 }
 
-void VFSHandler::Start(mx::channel channel, void* callback, void* iostate) {
+void VFSHandler::Start(mx::channel channel, fs::vfs_dispatcher_cb_t callback, void* iostate) {
   FTL_DCHECK(!channel_);
   channel_ = std::move(channel);
   callback_ = callback;
@@ -34,7 +34,7 @@ void VFSHandler::Start(mx::channel channel, void* callback, void* iostate) {
 
 void VFSHandler::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   if (pending & MX_CHANNEL_READABLE) {
-    mx_status_t status = mxrio_handler(channel_.get(), callback_, iostate_);
+    mx_status_t status = mxrio_handler(channel_.get(), (void*) callback_, iostate_);
     if (status == MX_OK)
       return;
     Stop(status < 0);
@@ -54,7 +54,7 @@ void VFSHandler::Stop(bool needs_close) {
   mtl::MessageLoop::GetCurrent()->RemoveHandler(key_);
   key_ = 0;
   if (needs_close)
-    mxrio_handler(MX_HANDLE_INVALID, callback_, iostate_);
+    mxrio_handler(MX_HANDLE_INVALID, (void*) callback_, iostate_);
   dispatcher_->Stop(this);
   // We're deleted now.
 }

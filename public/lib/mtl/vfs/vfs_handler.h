@@ -20,7 +20,7 @@ class FTL_EXPORT VFSHandler : public MessageLoopHandler {
   explicit VFSHandler(VFSDispatcher* dispatcher);
   ~VFSHandler() override;
 
-  void Start(mx::channel channel, void* callback, void* iostate);
+  void Start(mx::channel channel, fs::vfs_dispatcher_cb_t callback, void* iostate);
 
  private:
   // |MessageLoopHandler| implementation:
@@ -32,7 +32,7 @@ class FTL_EXPORT VFSHandler : public MessageLoopHandler {
   VFSDispatcher* dispatcher_;
   MessageLoop::HandlerKey key_;
   mx::channel channel_;
-  void* callback_;
+  fs::vfs_dispatcher_cb_t callback_;
   void* iostate_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(VFSHandler);
