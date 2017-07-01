@@ -70,5 +70,8 @@ void eth_rx_ack(ethdev_t* eth);
 
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len);
 
+bool eth_status_online(ethdev_t* eth);
+
 #define ETH_IRQ_RX IE_INT_RXT0
+#define ETH_IRQ_LSC IE_INT_LSC
 unsigned eth_handle_irq(ethdev_t* eth);

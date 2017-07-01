@@ -10,6 +10,7 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
+#include <magenta/device/ethernet.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <stdio.h>
@@ -30,6 +31,7 @@ typedef struct ethernet_device {
     bool edge_triggered_irq;
     thrd_t thread;
     io_buffer_t buffer;
+    bool online;
 
     // callback interface to attached ethernet layer
     ethmac_ifc_t* ifc;
@@ -50,7 +52,8 @@ static int irq_thread(void* arg) {
             mx_interrupt_complete(edev->irqh);
 
         mtx_lock(&edev->lock);
-        if (eth_handle_irq(&edev->eth) & ETH_IRQ_RX) {
+        unsigned irq = eth_handle_irq(&edev->eth);
+        if (irq & ETH_IRQ_RX) {
             void* data;
             size_t len;
 
@@ -60,6 +63,17 @@ static int irq_thread(void* arg) {
                 }
                 eth_rx_ack(&edev->eth);
             }
+        }
+        if (irq & ETH_IRQ_LSC) {
+            bool was_online = edev->online;
+            bool online = eth_status_online(&edev->eth);
+            if (online != was_online) {
+                edev->online = online;
+                if (edev->ifc) {
+                    edev->ifc->status(edev->cookie, online ? ETH_STATUS_ONLINE : 0);
+                }
+            }
+
         }
         mtx_unlock(&edev->lock);
 
@@ -100,6 +114,7 @@ static mx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         edev->ifc = ifc;
         edev->cookie = cookie;
+        edev->ifc->status(edev->cookie, edev->online ? ETH_STATUS_ONLINE : 0);
     }
     mtx_unlock(&edev->lock);
 

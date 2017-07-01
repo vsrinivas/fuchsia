@@ -45,6 +45,10 @@ unsigned eth_handle_irq(ethdev_t* eth) {
     return readl(IE_ICR);
 }
 
+bool eth_status_online(ethdev_t* eth) {
+    return readl(IE_STATUS) & IE_STATUS_LU;
+}
+
 status_t eth_rx(ethdev_t* eth, void** data, size_t* len) {
     uint32_t n = eth->rx_rd_ptr;
     uint64_t info = eth->rxd[n].info;
@@ -174,6 +178,8 @@ void eth_init_hw(ethdev_t* eth) {
     writel(0xFFFF, IE_IMC);
     // enable rx irq (write to "set" mask)
     writel(IE_INT_RXT0, IE_IMS);
+    // enable link status change irq
+    writel(IE_INT_LSC, IE_IMS);
 }
 
 void eth_setup_buffers(ethdev_t* eth, void* iomem, mx_paddr_t iophys) {
