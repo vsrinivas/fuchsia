@@ -206,6 +206,7 @@ class AudioPlayerController {
             _progressNanoseconds.clamp(0, _durationNanoseconds) ~/ 1000);
   }
 
+  /// Gets current playback progress in nanoseconds.
   int get _progressNanoseconds {
     // Estimate FrameInfo::presentationTime.
     if (_timelineFunction == null) {
@@ -283,6 +284,7 @@ class AudioPlayerController {
 
       _hasVideo = status.contentHasVideo;
       _ended = status.endOfStream;
+
       _playing = !ended &&
           _timelineFunction != null &&
           _timelineFunction.subjectDelta != 0;
