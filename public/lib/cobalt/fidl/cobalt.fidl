@@ -1,0 +1,58 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module cobalt;
+
+// Cobalt is a service to record and report on metrics. This file contains
+// interfaces that allow clients to send metrics to Cobalt.
+
+// To use Cobalt, you must have a project id, metric id and encoding id.
+// See customers.fidl for more details.
+
+// To use these interfaces, first use CobaltEncoderFactory to get a
+// CobaltEncoder for your project. Then, you can add observations. Observations
+// are accumulated on the CobaltEncoder until they are successfully sent to the
+// using SendObservations.
+
+// Response codes for Cobalt encoder operations.
+enum Status {
+  OK = 0,
+
+  // The specified metric id, encoding id or observation value is invalid.
+  INVALID_ARGUMENTS,
+
+  // Sending observations failed too many times or with an unrecoverable error
+  // Retrying might work.
+  SEND_FAILED,
+
+  // The attempted operation failed because some precondition was not met.
+  FAILED_PRECONDITION,
+
+  // An error occured which could not be recovered from and which clients cannot
+  // do anything about.
+  INTERNAL_ERROR = -1
+};
+
+[ServiceName="cobalt.CobaltEncoderFactory"]
+// CobaltEncoderFactory creates a CobaltEncoder for a particular project.
+interface CobaltEncoderFactory {
+  // Creates a CobaltEncoder for the specified project.
+  // project_id: See customers.fidl.
+  GetEncoder(int32 project_id, CobaltEncoder& encoder);
+};
+
+// CobaltEncoder accumulates and sends observations.
+interface CobaltEncoder {
+  // Add a string observation.
+  // metric_id: See customers.fidl.
+  // encoding_id: See customers.fidl.
+  // observation: The string to be stored.
+  AddStringObservation(uint32 metric_id, uint32 encoding_id, string observation)
+      => (Status status);
+
+  // Send the observations that have been added to the encoder since the last
+  // send. Unless SendObservations returns OK, the observations remain enqueued.
+  // Will fail if no observations are ready to be sent.
+  SendObservations() => (Status status);
+};

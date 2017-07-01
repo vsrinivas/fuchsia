@@ -45,4 +45,23 @@ source_set("testapp") {
 
 }
 
+executable("cobalt_app") {
+  sources = [
+    "cobalt_main.cc",
+    "config.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/cobalt_client/services:cobalt",
+    "//cobalt/encoder",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/grpc:grpc++",
+    # TODO(rudominer) Change to protobuf_lite after we have a different way
+    # of deserializing a message from a human-readable string.
+    "//third_party/protobuf:protobuf_full",
+  ]
+}
+
 
