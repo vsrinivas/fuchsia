@@ -95,8 +95,8 @@ size_t DynamicByteBuffer::size() const {
   return buffer_size_;
 }
 
-void DynamicByteBuffer::SetToZeros() {
-  memset(buffer_.get(), 0, buffer_size_);
+void DynamicByteBuffer::Fill(uint8_t value) {
+  memset(buffer_.get(), value, buffer_size_);
 }
 
 ByteBuffer::const_iterator DynamicByteBuffer::cbegin() const {
@@ -172,8 +172,8 @@ uint8_t* MutableBufferView::mutable_data() {
   return bytes_;
 }
 
-void MutableBufferView::SetToZeros() {
-  memset(bytes_, 0, size_);
+void MutableBufferView::Fill(uint8_t value) {
+  memset(bytes_, value, size_);
 }
 
 }  // namespace common

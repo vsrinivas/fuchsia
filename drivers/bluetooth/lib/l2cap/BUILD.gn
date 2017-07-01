@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("l2cap") {
+  sources = [
+    "l2cap.h",
+    "pdu.cc",
+    "pdu.h",
+    "recombiner.cc",
+    "recombiner.h",
+  ]
+
+  deps = [
+    "//apps/bluetooth/lib/hci",
+    "//lib/ftl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "pdu_unittest.cc",
+    "recombiner_unittest.cc",
+  ]
+
+  deps = [
+    ":l2cap",
+    "//apps/bluetooth/lib/hci",
+    "//third_party/gtest",
+  ]
+}

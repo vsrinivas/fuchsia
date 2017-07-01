@@ -267,6 +267,12 @@ TEST(ByteBufferTest, AsString) {
   EXPECT_EQ("Test", buffer.AsString());
 }
 
+TEST(ByteBufferTest, Fill) {
+  StaticByteBuffer<5> buffer;
+  buffer.Fill('A');
+  EXPECT_EQ("AAAAA", buffer.AsString());
+}
+
 }  // namespace
 }  // namespace common
 }  // namespace bluetooth

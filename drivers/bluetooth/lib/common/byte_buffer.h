@@ -107,7 +107,10 @@ class MutableByteBuffer : public ByteBuffer {
                                  size_t size = std::numeric_limits<std::size_t>::max());
 
   // Sets the contents of the buffer to 0s.
-  virtual void SetToZeros() = 0;
+  void SetToZeros() { Fill(0); }
+
+  // Fills the contents of the buffer with the given value.
+  virtual void Fill(uint8_t value) = 0;
 };
 
 // A ByteBuffer with static storage duration. Instances of this class are
@@ -140,7 +143,7 @@ class StaticByteBuffer : public MutableByteBuffer {
 
   // MutableByteBuffer overrides:
   uint8_t* mutable_data() override { return buffer_.data(); }
-  void SetToZeros() override { buffer_.fill(0); }
+  void Fill(uint8_t value) override { buffer_.fill(value); }
 
  private:
   std::array<uint8_t, BufferSize> buffer_;
@@ -189,7 +192,7 @@ class DynamicByteBuffer : public MutableByteBuffer {
 
   // MutableByteBuffer overrides:
   uint8_t* mutable_data() override;
-  void SetToZeros() override;
+  void Fill(uint8_t value) override;
 
  private:
   // Pointer to the underlying buffer, which is owned and managed by us.
@@ -243,7 +246,7 @@ class MutableBufferView final : public MutableByteBuffer {
 
   // MutableByteBuffer overrides:
   uint8_t* mutable_data() override;
-  void SetToZeros() override;
+  void Fill(uint8_t value) override;
 
  private:
   size_t size_;

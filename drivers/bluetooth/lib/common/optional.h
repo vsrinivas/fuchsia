@@ -79,9 +79,10 @@ class Optional final {
   constexpr const T* operator->() const { return ptr_; }
   constexpr T* operator->() { return ptr_; }
 
-  // Operator for accessing the contained value. Behavior is undefined if |*this| does not contain
-  // a value. This can only be called in an immutable fashion on an lvalue.
+  // Operators for accessing the contained value. Behavior is undefined if |this| does not contain
+  // a value. These can only be called on a lvalue.
   constexpr const T& operator*() const & { return *ptr_; }
+  constexpr T& operator*() & { return *ptr_; }
 
   // Resets the contents.
   void Reset() {

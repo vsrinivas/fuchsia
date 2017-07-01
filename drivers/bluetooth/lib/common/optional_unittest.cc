@@ -39,6 +39,38 @@ TEST(OptionalTest, Copy) {
   EXPECT_EQ(5, *optional_int2);
 }
 
+struct TestObject {
+  TestObject() = default;
+  explicit TestObject(int value) : value(value) {}
+
+  TestObject(TestObject&& other) {
+    value = other.value;
+    other.value = 0;
+  }
+
+  TestObject& operator=(TestObject&& other) {
+    value = other.value;
+    other.value = 0;
+    return *this;
+  }
+
+  int value;
+};
+
+TEST(OptionalTest, Move) {
+  Optional<TestObject> optional_obj;
+  optional_obj = TestObject(5);
+  EXPECT_TRUE(optional_obj);
+  EXPECT_EQ(5, optional_obj->value);
+
+  auto obj = std::move(*optional_obj);
+
+  // |optional_obj| still contains a value even though its contents have been moved.
+  EXPECT_TRUE(optional_obj);
+  EXPECT_EQ(0, optional_obj->value);
+  EXPECT_EQ(5, obj.value);
+}
+
 TEST(OptionalTest, Reset) {
   Optional<int> optional_int1, optional_int2;
   EXPECT_FALSE(optional_int1);
