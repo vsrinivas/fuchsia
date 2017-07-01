@@ -44,6 +44,10 @@
             "bootfs_path": "apps/gallery"
         },
         {
+            "binary": "gen/apps/modules/common/modules/hotel_confirmation/hotel_confirmation.flx",
+            "bootfs_path": "apps/hotel_confirmation"
+        },
+        {
             "binary": "gen/apps/modules/common/modules/interactive_receipt/interactive_receipt.flx",
             "bootfs_path": "apps/interactive_receipt"
         },
