@@ -206,6 +206,17 @@ class AudioPlayerController {
             _progressNanoseconds.clamp(0, _durationNanoseconds) ~/ 1000);
   }
 
+  /// Gets current playback progress normalized to the range 0.0 to 1.0.
+  double get normalizedProgress {
+    int durationInMicroseconds = duration.inMicroseconds;
+
+    if (durationInMicroseconds == 0) {
+      return 0.0;
+    }
+
+    return progress.inMicroseconds / durationInMicroseconds;
+  }
+
   /// Gets current playback progress in nanoseconds.
   int get _progressNanoseconds {
     // Estimate FrameInfo::presentationTime.
@@ -258,6 +269,19 @@ class AudioPlayerController {
     if (!_playing) {
       play();
     }
+  }
+
+  /// Seeks to a position expressed as a normalized value in the range 0.0 to
+  /// 1.0.
+  void normalizedSeek(double normalizedPosition) {
+    int durationInMicroseconds = duration.inMicroseconds;
+
+    if (durationInMicroseconds == 0) {
+      return;
+    }
+
+    seek(new Duration(
+        microseconds: (normalizedPosition * durationInMicroseconds).round()));
   }
 
   // Handles a status update from the player and requests a new update. Call

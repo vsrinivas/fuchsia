@@ -86,29 +86,6 @@ class _MediaPlayerState extends State<MediaPlayer> {
     return '$hoursString$minutesString$secondsString';
   }
 
-  /// Returns progress as a value from 0.0 to 1.0 inclusive.
-  double get _unitProgress {
-    int durationInMicroseconds = widget.controller.duration.inMicroseconds;
-
-    if (durationInMicroseconds == 0) {
-      return 0.0;
-    }
-
-    return widget.controller.progress.inMicroseconds / durationInMicroseconds;
-  }
-
-  /// Seeks to a position given as a value from 0.0 to 1.0 inclusive.
-  void _unitSeek(double unitPosition) {
-    int durationInMicroseconds = widget.controller.duration.inMicroseconds;
-
-    if (durationInMicroseconds == 0) {
-      return;
-    }
-
-    widget.controller.seek(new Duration(
-        microseconds: (unitPosition * durationInMicroseconds).round()));
-  }
-
   /// Gets the desired size of this widget.
   Size get _layoutSize {
     Size size = widget.controller.videoPhysicalSize;
@@ -173,8 +150,9 @@ class _MediaPlayerState extends State<MediaPlayer> {
                       min: 0.0,
                       max: 1.0,
                       activeColor: Colors.red[900],
-                      value: _unitProgress,
-                      onChanged: (double value) => _unitSeek(value)),
+                      value: widget.controller.normalizedProgress,
+                      onChanged: (double value) =>
+                          widget.controller.normalizedSeek(value)),
                 ),
           ),
         ),
