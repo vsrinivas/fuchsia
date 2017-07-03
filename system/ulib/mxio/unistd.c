@@ -1077,32 +1077,51 @@ int fcntl(int fd, int cmd, ...) {
             return ERRNO(EBADF);
         }
         uint32_t flags = 0;
-        int status = STATUS(io->ops->misc(io, MXRIO_FCNTL, 0, F_GETFL, &flags, 0));
-        if (status == 0) {
-            status |= flags;
-            if (io->flags & MXIO_FLAG_NONBLOCK) {
-                status |= O_NONBLOCK;
-            }
+        mx_status_t r = io->ops->misc(io, MXRIO_FCNTL, 0, F_GETFL, &flags, 0);
+        if (r == MX_ERR_NOT_SUPPORTED) {
+            // We treat this as non-fatal, as it's valid for a remote to
+            // simply not support FCNTL, but we still want to correctly
+            // report the state of the (local) NONBLOCK flag
+            flags = 0;
+            r = MX_OK;
+        }
+        if (io->flags & MXIO_FLAG_NONBLOCK) {
+            flags |= O_NONBLOCK;
         }
         mxio_release(io);
-        return status;
+        if (r < 0) {
+            return STATUS(r);
+        }
+        return flags;
     }
     case F_SETFL: {
         mxio_t* io = fd_to_io(fd);
         if (io == NULL) {
             return ERRNO(EBADF);
         }
-        GET_INT_ARG(status);
-        int r = STATUS(io->ops->misc(io, MXRIO_FCNTL, status, F_SETFL, NULL, 0));
-        if (r == 0) {
-            if (status & O_NONBLOCK) {
+        GET_INT_ARG(n);
+
+        mx_status_t r;
+        if (n == O_NONBLOCK) {
+            // NONBLOCK is local, so we can avoid the rpc for it
+            // which is good in situations where the remote doesn't
+            // support FCNTL but it's still valid to set non-blocking
+            r = MX_OK;
+        } else {
+            r = io->ops->misc(io, MXRIO_FCNTL, n & (~O_NONBLOCK), F_SETFL, NULL, 0);
+        }
+        if (r != MX_OK) {
+            n = STATUS(r);
+        } else {
+            if (n & O_NONBLOCK) {
                 io->flags |= MXIO_FLAG_NONBLOCK;
             } else {
                 io->flags &= ~MXIO_FLAG_NONBLOCK;
             }
+            n = 0;
         }
         mxio_release(io);
-        return 0;
+        return n;
     }
     case F_GETOWN:
     case F_SETOWN:
