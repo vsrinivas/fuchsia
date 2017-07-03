@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/benchmark/lib/data_generator.h"
+#include "apps/ledger/src/test/data_generator.h"
 
 #include <algorithm>
 #include <functional>
@@ -13,7 +13,7 @@
 #include "lib/ftl/random/rand.h"
 #include "lib/ftl/strings/concatenate.h"
 
-namespace benchmark {
+namespace test {
 
 DataGenerator::DataGenerator() : generator_(ftl::RandUint64()) {}
 
@@ -36,4 +36,4 @@ fidl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {
   return data;
 }
 
-}  // namespace benchmark
+}  // namespace test

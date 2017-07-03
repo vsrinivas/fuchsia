@@ -1,0 +1,23 @@
+executable("ledger_sync_tests") {
+  testonly = true
+
+  sources = [
+    "convergence.cc",
+    "lib.cc",
+    "lib.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/test:lib",
+    "//apps/test_runner/lib/reporting",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

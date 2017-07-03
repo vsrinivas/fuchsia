@@ -3,18 +3,23 @@
 # found in the LICENSE file.
 
 group("sync") {
+  testonly = true
+
   deps = [
     ":ledger_benchmark_sync",
   ]
 }
 
 executable("ledger_benchmark_sync") {
+  testonly = true
+
   deps = [
     "//application/lib/app",
     "//apps/ledger/benchmark/lib",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/test:lib",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",

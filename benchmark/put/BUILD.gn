@@ -3,12 +3,16 @@
 # found in the LICENSE file.
 
 group("put") {
+  testonly = true
+
   deps = [
     ":ledger_benchmark_put",
   ]
 }
 
 source_set("lib") {
+  testonly = true
+
   sources = [
     "put.cc",
     "put.h",
@@ -23,6 +27,7 @@ source_set("lib") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/test:lib",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
@@ -32,6 +37,8 @@ source_set("lib") {
 }
 
 executable("ledger_benchmark_put") {
+  testonly = true
+
   deps = [
     ":lib",
     "//lib/ftl",

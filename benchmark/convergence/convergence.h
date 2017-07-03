@@ -9,9 +9,9 @@
 #include <unordered_set>
 
 #include "application/lib/app/application_context.h"
-#include "apps/ledger/benchmark/lib/data_generator.h"
-#include "apps/ledger/benchmark/lib/fake_token_provider.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/test/data_generator.h"
+#include "apps/ledger/src/test/fake_token_provider.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 
 namespace benchmark {
@@ -43,9 +43,9 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
 
   void ShutDown();
 
-  DataGenerator generator_;
+  test::DataGenerator generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  FakeTokenProvider token_provider_impl_;
+  test::FakeTokenProvider token_provider_impl_;
   const int entry_count_;
   const int value_size_;
   std::string server_id_;

@@ -6,18 +6,37 @@ source_set("lib") {
   testonly = true
 
   sources = [
+    "data_generator.cc",
+    "data_generator.h",
+    "fake_token_provider.cc",
+    "fake_token_provider.h",
+    "get_ledger.cc",
+    "get_ledger.h",
     "test_with_message_loop.cc",
     "test_with_message_loop.h",
   ]
 
   public_deps = [
+    "//application/lib/app",
+    "//apps/ledger/services/public",
+    "//apps/modular/services/auth",
+    "//lib/fidl/cpp/bindings:serialization",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]
 
+  deps = [
+    "//apps/ledger/services/internal",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+
   configs += [ "//apps/ledger/src:ledger_config" ]
 }
+
 
 source_set("unittests") {
   testonly = true

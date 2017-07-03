@@ -3,12 +3,16 @@
 # found in the LICENSE file.
 
 group("convergence") {
+  testonly = true
+
   deps = [
     ":ledger_benchmark_convergence",
   ]
 }
 
 executable("ledger_benchmark_convergence") {
+  testonly = true
+
   deps = [
     "//application/lib/app",
     "//apps/ledger/benchmark/lib",
@@ -16,6 +20,7 @@ executable("ledger_benchmark_convergence") {
     "//apps/ledger/services/public",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/test:lib",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",

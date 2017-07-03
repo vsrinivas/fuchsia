@@ -6,9 +6,9 @@
 
 #include <iostream>
 
-#include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/test/get_ledger.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/command_line.h"
@@ -77,32 +77,37 @@ void SyncBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FTL_DCHECK(ret);
 
-  ledger::LedgerPtr alpha = benchmark::GetLedger(
-      application_context_.get(), &alpha_controller_, &token_provider_impl_,
-      "sync", alpha_path, true, server_id_);
-  ledger::LedgerPtr beta = benchmark::GetLedger(
-      application_context_.get(), &beta_controller_, &token_provider_impl_,
-      "sync", beta_path, true, server_id_);
+  ledger::LedgerPtr alpha;
+  ledger::Status status = test::GetLedger(
+      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      &alpha_controller_, &token_provider_impl_, "sync", alpha_path,
+      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha);
+  QuitOnError(status, "alpha ledger");
 
-  benchmark::GetPageEnsureInitialized(
-      alpha.get(), nullptr,
-      ftl::MakeCopyable([ this, beta = std::move(beta) ](ledger::PagePtr page,
-                                                         auto id) {
-        page_id_ = id.Clone();
-        alpha_page_ = std::move(page);
-        beta->GetPage(std::move(id), beta_page_.NewRequest(),
-                      benchmark::QuitOnErrorCallback("GetPage"));
+  ledger::LedgerPtr beta;
+  status = test::GetLedger(
+      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      &beta_controller_, &token_provider_impl_, "sync", beta_path,
+      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta);
+  QuitOnError(status, "beta ledger");
 
-        ledger::PageSnapshotPtr snapshot;
-        beta_page_->GetSnapshot(
-            snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
-            [this](ledger::Status status) {
-              if (benchmark::QuitOnError(status, "GetSnapshot")) {
-                return;
-              }
-              RunSingle(0);
-            });
-      }));
+  fidl::Array<uint8_t> id;
+  status = test::GetPageEnsureInitialized(mtl::MessageLoop::GetCurrent(),
+                                          &alpha, nullptr, &alpha_page_, &id);
+  QuitOnError(status, "alpha page initialization");
+  page_id_ = id.Clone();
+  beta->GetPage(std::move(id), beta_page_.NewRequest(),
+                benchmark::QuitOnErrorCallback("GetPage"));
+
+  ledger::PageSnapshotPtr snapshot;
+  beta_page_->GetSnapshot(snapshot.NewRequest(), nullptr,
+                          page_watcher_binding_.NewBinding(),
+                          [this](ledger::Status status) {
+                            if (benchmark::QuitOnError(status, "GetSnapshot")) {
+                              return;
+                            }
+                            RunSingle(0);
+                          });
 }
 
 void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
@@ -155,9 +160,11 @@ void SyncBenchmark::Backlog() {
   bool ret = files::CreateDirectory(gamma_path);
   FTL_DCHECK(ret);
 
-  gamma_ = benchmark::GetLedger(application_context_.get(), &gamma_controller_,
-                                &token_provider_impl_, "sync", gamma_path, true,
-                                server_id_);
+  ledger::Status status = test::GetLedger(
+      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      &gamma_controller_, &token_provider_impl_, "sync", gamma_path,
+      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &gamma_);
+  QuitOnError(status, "backlog");
   TRACE_ASYNC_BEGIN("benchmark", "get and verify backlog", 0);
   gamma_->GetPage(page_id_.Clone(), gamma_page_.NewRequest(),
                   [this](ledger::Status status) {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_BENCHMARK_LIB_FAKE_TOKEN_PROVIDER_H_
-#define APPS_LEDGER_BENCHMARK_LIB_FAKE_TOKEN_PROVIDER_H_
+#ifndef APPS_LEDGER_SRC_TEST_FAKE_TOKEN_PROVIDER_H_
+#define APPS_LEDGER_SRC_TEST_FAKE_TOKEN_PROVIDER_H_
 
 #include <functional>
 
@@ -11,8 +11,9 @@
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
-namespace benchmark {
-
+namespace test {
+// FakeTokenProvider is a dummy implementation of a TokenProvider intended to be
+// used to connect to unauthenticated firebase instances.
 class FakeTokenProvider : public modular::auth::TokenProvider {
  public:
   FakeTokenProvider(std::string firebase_id_token,
@@ -39,6 +40,6 @@ class FakeTokenProvider : public modular::auth::TokenProvider {
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeTokenProvider);
 };
 
-}  // namespace benchmark
+}  // namespace test
 
-#endif  // APPS_LEDGER_BENCHMARK_LIB_FAKE_TOKEN_PROVIDER_H_
+#endif  // APPS_LEDGER_SRC_TEST_FAKE_TOKEN_PROVIDER_H_

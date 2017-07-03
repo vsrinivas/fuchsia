@@ -4,9 +4,9 @@
 
 #include "apps/ledger/benchmark/put/put.h"
 
-#include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/test/get_ledger.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -69,31 +69,31 @@ void PutBenchmark::Run() {
                 << " --transaction-size=" << transaction_size_
                 << " --key-size=" << key_size_
                 << " --value-size=" << value_size_ << (update_ ? "update" : "");
-  ledger::LedgerPtr ledger = benchmark::GetLedger(
-      application_context_.get(), &application_controller_,
-      &token_provider_impl_, "put", tmp_dir_.path(), false, "");
+  ledger::LedgerPtr ledger;
+  ledger::Status status = test::GetLedger(
+      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      &application_controller_, &token_provider_impl_, "put", tmp_dir_.path(),
+      test::SyncState::DISABLED, "", &ledger);
+  QuitOnError(status, "GetLedger");
 
   InitializeKeys(ftl::MakeCopyable([ this, ledger = std::move(ledger) ](
-      std::vector<fidl::Array<uint8_t>> keys) {
-    benchmark::GetPageEnsureInitialized(
-        ledger.get(), nullptr,
-        ftl::MakeCopyable([ this, keys = std::move(keys) ](ledger::PagePtr page,
-                                                           auto id) mutable {
-          page_ = std::move(page);
-          if (transaction_size_ > 1) {
-            page_->StartTransaction(ftl::MakeCopyable([
-              this, keys = std::move(keys)
-            ](ledger::Status status) mutable {
-              if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
-                return;
-              }
-              TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-              RunSingle(0, std::move(keys));
-            }));
-          } else {
+      std::vector<fidl::Array<uint8_t>> keys) mutable {
+    fidl::Array<uint8_t> id;
+    ledger::Status status = test::GetPageEnsureInitialized(
+        mtl::MessageLoop::GetCurrent(), &ledger, nullptr, &page_, &id);
+    QuitOnError(status, "GetPageEnsureInitialized");
+    if (transaction_size_ > 1) {
+      page_->StartTransaction(ftl::MakeCopyable(
+          [ this, keys = std::move(keys) ](ledger::Status status) mutable {
+            if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
+              return;
+            }
+            TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
             RunSingle(0, std::move(keys));
-          }
-        }));
+          }));
+    } else {
+      RunSingle(0, std::move(keys));
+    }
   }));
 }
 

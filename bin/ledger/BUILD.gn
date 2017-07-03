@@ -26,6 +26,7 @@ group("tests") {
   deps = [
     ":ledger_unittests",
     "//apps/ledger/src/app:tests",
+    "//apps/ledger/src/sync_tests:ledger_sync_tests",
   ]
 }
 

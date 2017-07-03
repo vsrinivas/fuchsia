@@ -64,7 +64,7 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
 }
 
 void EraseRemoteRepositoryOperation::EraseRemote() {
-  if (user_id_.empty() || auth_token_.empty()) {
+  if (user_id_.empty()) {
     FTL_LOG(ERROR) << "Missing credentials from the token provider, "
                    << "will not erase the remote state. (running as guest?)";
     on_done_(true);

@@ -3,26 +3,18 @@
 # found in the LICENSE file.
 
 source_set("lib") {
+  testonly = true
+
   sources = [
-    "data_generator.cc",
-    "data_generator.h",
-    "get_ledger.cc",
-    "get_ledger.h",
     "logging.cc",
     "logging.h",
-    "fake_token_provider.cc",
-    "fake_token_provider.h",
   ]
 
   public_deps = [
-    "//application/lib/app",
     "//apps/ledger/services/public",
-    "//apps/modular/services/auth",
   ]
 
   deps = [
-    "//apps/ledger/services/internal",
-    "//apps/ledger/src/convert",
     "//lib/ftl/",
     "//lib/mtl/",
   ]

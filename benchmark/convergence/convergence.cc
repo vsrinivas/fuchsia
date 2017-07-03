@@ -6,10 +6,10 @@
 
 #include <iostream>
 
-#include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/test/get_ledger.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/command_line.h"
@@ -69,39 +69,44 @@ void ConvergenceBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FTL_DCHECK(ret);
 
-  alpha_ledger_ = benchmark::GetLedger(
-      application_context_.get(), &alpha_controller_, &token_provider_impl_,
-      "sync", alpha_path, true, server_id_);
-  beta_ledger_ = benchmark::GetLedger(application_context_.get(),
-                                      &beta_controller_, &token_provider_impl_,
-                                      "sync", beta_path, true, server_id_);
+  ledger::Status status = test::GetLedger(
+      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      &alpha_controller_, &token_provider_impl_, "sync", alpha_path,
+      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha_ledger_);
+  QuitOnError(status, "alpha ledger");
+  status = test::GetLedger(
+      mtl::MessageLoop::GetCurrent(), application_context_.get(),
+      &beta_controller_, &token_provider_impl_, "sync", beta_path,
+      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta_ledger_);
+  QuitOnError(status, "beta ledger");
 
-  benchmark::GetPageEnsureInitialized(
-      alpha_ledger_.get(), nullptr,
-      ftl::MakeCopyable([this](ledger::PagePtr page, auto id) {
-        page_id_ = id.Clone();
-        alpha_page_ = std::move(page);
-        beta_ledger_->GetPage(std::move(id), beta_page_.NewRequest(),
-                              benchmark::QuitOnErrorCallback("GetPage"));
+  ledger::PagePtr page;
+  fidl::Array<uint8_t> id;
+  status = test::GetPageEnsureInitialized(mtl::MessageLoop::GetCurrent(),
+                                          &alpha_ledger_, nullptr, &page, &id);
+  QuitOnError(status, "alpha page initialization");
+  page_id_ = id.Clone();
+  alpha_page_ = std::move(page);
+  beta_ledger_->GetPage(std::move(id), beta_page_.NewRequest(),
+                        benchmark::QuitOnErrorCallback("GetPage"));
 
-        // Register both watchers. We don't actually need the snapshots.
-        auto waiter =
-            callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
-        ledger::PageSnapshotPtr alpha_snapshot;
-        alpha_page_->GetSnapshot(alpha_snapshot.NewRequest(), nullptr,
-                                 alpha_watcher_binding_.NewBinding(),
-                                 waiter->NewCallback());
-        ledger::PageSnapshotPtr beta_snapshot;
-        beta_page_->GetSnapshot(beta_snapshot.NewRequest(), nullptr,
-                                beta_watcher_binding_.NewBinding(),
-                                waiter->NewCallback());
-        waiter->Finalize([this](ledger::Status status) {
-          if (benchmark::QuitOnError(status, "GetSnapshot")) {
-            return;
-          }
-          Start(0);
-        });
-      }));
+  // Register both watchers. We don't actually need the snapshots.
+  auto waiter =
+      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+  ledger::PageSnapshotPtr alpha_snapshot;
+  alpha_page_->GetSnapshot(alpha_snapshot.NewRequest(), nullptr,
+                           alpha_watcher_binding_.NewBinding(),
+                           waiter->NewCallback());
+  ledger::PageSnapshotPtr beta_snapshot;
+  beta_page_->GetSnapshot(beta_snapshot.NewRequest(), nullptr,
+                          beta_watcher_binding_.NewBinding(),
+                          waiter->NewCallback());
+  waiter->Finalize([this](ledger::Status status) {
+    if (benchmark::QuitOnError(status, "GetSnapshot")) {
+      return;
+    }
+    Start(0);
+  });
 }
 
 void ConvergenceBenchmark::Start(int step) {

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/benchmark/lib/fake_token_provider.h"
+#include "apps/ledger/src/test/fake_token_provider.h"
 
-namespace benchmark {
+namespace test {
 
 FakeTokenProvider::FakeTokenProvider(std::string firebase_id_token,
                                      std::string firebase_local_id,
@@ -61,4 +61,4 @@ void FakeTokenProvider::GetClientId(const GetClientIdCallback& callback) {
   }
 }
 
-}  // namespace benchmark
+}  // namespace test

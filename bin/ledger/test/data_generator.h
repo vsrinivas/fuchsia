@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_BENCHMARK_LIB_DATA_GENERATOR_H_
-#define APPS_LEDGER_BENCHMARK_LIB_DATA_GENERATOR_H_
+#ifndef APPS_LEDGER_SRC_TEST_DATA_GENERATOR_H_
+#define APPS_LEDGER_SRC_TEST_DATA_GENERATOR_H_
 
 #include <climits>
 #include <random>
 
 #include "lib/fidl/cpp/bindings/array.h"
 
-namespace benchmark {
+namespace test {
 
 class DataGenerator {
  public:
@@ -33,6 +33,6 @@ class DataGenerator {
       generator_;
 };
 
-}  // namespace benchmark
+}  // namespace test
 
-#endif  // APPS_LEDGER_BENCHMARK_LIB_DATA_GENERATOR_H_
+#endif  // APPS_LEDGER_SRC_TEST_DATA_GENERATOR_H_
