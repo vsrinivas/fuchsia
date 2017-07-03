@@ -477,7 +477,8 @@ static ssize_t mxio_recvfrom(mxio_t* io, void* restrict buf, size_t buflen, int 
 
     struct msghdr msg;
     msg.msg_name = addr;
-    msg.msg_namelen = (addrlen == NULL) ? 0 : *addrlen;
+    // the caller (recvfrom) checks if addrlen is NULL.
+    msg.msg_namelen = (addr == NULL) ? 0 : *addrlen;
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     msg.msg_control = NULL;
@@ -485,7 +486,7 @@ static ssize_t mxio_recvfrom(mxio_t* io, void* restrict buf, size_t buflen, int 
     msg.msg_flags = 0;
 
     ssize_t r = mxio_recvmsg(io, &msg, flags);
-    if (addrlen != NULL)
+    if (addr != NULL)
         *addrlen = msg.msg_namelen;
     return r;
 }
@@ -538,6 +539,9 @@ ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct so
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
+    }
+    if (addr != NULL && addrlen == NULL) {
+        return ERRNO(EFAULT);
     }
     ssize_t r = mxio_recvfrom(io, buf, buflen, flags, addr, addrlen);
     mxio_release(io);
