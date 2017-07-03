@@ -7,9 +7,9 @@
 #include <utility>
 
 #include "application/lib/app/connect.h"
-#include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/ledger/src/convert/convert.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -51,7 +51,7 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
       repository.NewRequest(), QuitOnErrorCallback("GetRepository"));
 
   ledger::LedgerPtr ledger;
-  repository->GetLedger(ToArray(ledger_name), ledger.NewRequest(),
+  repository->GetLedger(convert::ToArray(ledger_name), ledger.NewRequest(),
                         QuitOnErrorCallback("GetLedger"));
   ledger.set_connection_error_handler([] {
     FTL_LOG(ERROR) << "The ledger connection was closed, quitting.";

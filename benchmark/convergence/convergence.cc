@@ -6,10 +6,10 @@
 
 #include <iostream>
 
-#include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "apps/ledger/src/convert/convert.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/command_line.h"
@@ -111,8 +111,8 @@ void ConvergenceBenchmark::Start(int step) {
     // Insert each key twice, as we will receive two notifications - one on the
     // sender side (each page client sees their own changes), and one on the
     // receiving side.
-    remaining_keys_.insert(benchmark::ToString(key));
-    remaining_keys_.insert(benchmark::ToString(key));
+    remaining_keys_.insert(convert::ToString(key));
+    remaining_keys_.insert(convert::ToString(key));
     fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
     alpha_page_->Put(std::move(key), std::move(value),
                      benchmark::QuitOnErrorCallback("Put"));
@@ -123,8 +123,8 @@ void ConvergenceBenchmark::Start(int step) {
     // Insert each key twice, as we will receive two notifications - one on the
     // sender side (each page client sees their own changes), and one on the
     // receiving side.
-    remaining_keys_.insert(benchmark::ToString(key));
-    remaining_keys_.insert(benchmark::ToString(key));
+    remaining_keys_.insert(convert::ToString(key));
+    remaining_keys_.insert(convert::ToString(key));
     fidl::Array<uint8_t> value = generator_.MakeValue(value_size_);
     beta_page_->Put(std::move(key), std::move(value),
                     benchmark::QuitOnErrorCallback("Put"));
@@ -141,7 +141,7 @@ void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
                                     const OnChangeCallback& callback) {
   FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
   for (auto& change : page_change->changes) {
-    auto find_one = remaining_keys_.find(benchmark::ToString(change->key));
+    auto find_one = remaining_keys_.find(convert::ToString(change->key));
     remaining_keys_.erase(find_one);
   }
   if (remaining_keys_.empty()) {

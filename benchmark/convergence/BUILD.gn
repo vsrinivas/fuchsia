@@ -15,6 +15,7 @@ executable("ledger_benchmark_convergence") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",

@@ -6,9 +6,9 @@
 
 #include <iostream>
 
-#include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
+#include "apps/ledger/src/convert/convert.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/command_line.h"
@@ -95,7 +95,7 @@ void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              const OnChangeCallback& callback) {
   FTL_DCHECK(page_change->changes.size() == 1);
   FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
-  int i = std::stoi(benchmark::ToString(page_change->changes[0]->key));
+  int i = std::stoi(convert::ToString(page_change->changes[0]->key));
   TRACE_ASYNC_END("benchmark", "sync latency", i);
   RunSingle(i + 1);
   callback(nullptr);

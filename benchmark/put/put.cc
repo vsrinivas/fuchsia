@@ -4,9 +4,9 @@
 
 #include "apps/ledger/benchmark/put/put.h"
 
-#include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
+#include "apps/ledger/src/convert/convert.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -114,7 +114,7 @@ void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
     return;
   }
   mx::vmo vmo;
-  FTL_CHECK(mtl::VmoFromString(ToString(value), &vmo));
+  FTL_CHECK(mtl::VmoFromString(convert::ToString(value), &vmo));
   page_->CreateReferenceFromVmo(
       std::move(vmo), ftl::MakeCopyable([
         this, key = std::move(key), put_callback = std::move(put_callback)

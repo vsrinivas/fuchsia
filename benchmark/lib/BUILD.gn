@@ -4,8 +4,6 @@
 
 source_set("lib") {
   sources = [
-    "convert.cc",
-    "convert.h",
     "data_generator.cc",
     "data_generator.h",
     "get_ledger.cc",
@@ -21,7 +19,7 @@ source_set("lib") {
 
   deps = [
     "//apps/ledger/services/internal",
-    "//apps/ledger/src/convert:convert",
+    "//apps/ledger/src/convert",
     "//lib/ftl/",
     "//lib/mtl/",
   ]

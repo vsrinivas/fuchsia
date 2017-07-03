@@ -8,7 +8,6 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/random/rand.h"
@@ -27,7 +26,7 @@ fidl::Array<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   FTL_DCHECK(i_str.size() + 1 <= size);
   auto rand_bytes = MakeValue(size - i_str.size() - 1);
 
-  return ToArray(
+  return convert::ToArray(
       ftl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
 }
 
