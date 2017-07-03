@@ -404,18 +404,6 @@ void PageSyncImpl::UploadStagedCommits() {
   batch_upload_->Start();
 }
 
-void PageSyncImpl::Retry(ftl::Closure callable) {
-  task_runner_->PostDelayedTask(
-      [
-        weak_this = weak_factory_.GetWeakPtr(), callable = std::move(callable)
-      ]() {
-        if (weak_this && !weak_this->errored_) {
-          callable();
-        }
-      },
-      backoff_->GetNext());
-}
-
 void PageSyncImpl::HandleError(const char error_description[]) {
   FTL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (local_watch_set_) {
@@ -448,6 +436,27 @@ void PageSyncImpl::BacklogDownloaded() {
   CheckIdle();
 }
 
+void PageSyncImpl::Retry(ftl::Closure callable) {
+  task_runner_->PostDelayedTask(
+      [
+        weak_this = weak_factory_.GetWeakPtr(), callable = std::move(callable)
+      ]() {
+        if (weak_this && !weak_this->errored_) {
+          callable();
+        }
+      },
+      backoff_->GetNext());
+}
+
+void PageSyncImpl::NotifyStateWatcher() {
+  if (ledger_watcher_) {
+    ledger_watcher_->Notify(download_state_, upload_state_);
+  }
+  if (page_watcher_) {
+    page_watcher_->Notify(download_state_, upload_state_);
+  }
+}
+
 void PageSyncImpl::SetDownloadState(DownloadSyncState sync_state) {
   download_state_ = sync_state;
   NotifyStateWatcher();
@@ -462,15 +471,6 @@ void PageSyncImpl::SetState(DownloadSyncState download_state,
   download_state_ = download_state;
   upload_state_ = upload_state;
   NotifyStateWatcher();
-}
-
-void PageSyncImpl::NotifyStateWatcher() {
-  if (ledger_watcher_) {
-    ledger_watcher_->Notify(download_state_, upload_state_);
-  }
-  if (page_watcher_) {
-    page_watcher_->Notify(download_state_, upload_state_);
-  }
 }
 
 void PageSyncImpl::GetAuthToken(std::function<void(std::string)> on_token_ready,
