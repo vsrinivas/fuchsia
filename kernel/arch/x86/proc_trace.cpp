@@ -7,13 +7,13 @@
 // TODO(dje): wip
 // The thought is to use resources (as in ResourceDispatcher), at which point
 // this will all get rewritten. Until such time, the goal here is KISS.
-
-// We currently only support Table of Physical Addresses mode currently,
-// so that we can have stop-on-full behavior rather than wrap-around.
-
 // This file contains the lower part of Intel Processor Trace support that must
 // be done in the kernel (so that we can read/write msrs).
 // The userspace driver is in system/udev/intel-pt/intel-pt.c.
+//
+// We currently only support Table of Physical Addresses mode:
+// it supports discontiguous buffers and supports stop-on-full behavior
+// in addition to wrap-around.
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
@@ -301,6 +301,9 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
     write_msr(IA32_RTIT_OUTPUT_MASK_PTRS, 0);
     if (supports_cr3_filtering)
         write_msr(IA32_RTIT_CR3_MATCH, 0);
+
+    // TODO(dje): Make it explicit that packets have been completely written.
+    // See Intel Vol 3 chapter 36.2.4.
 
     // TODO(teisenbe): Clear ADDR* MSRs depending on leaf 1
 }
