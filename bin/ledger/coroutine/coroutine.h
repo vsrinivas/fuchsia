@@ -64,30 +64,50 @@ template <typename A, typename... Args>
 bool SyncCall(CoroutineHandler* handler,
               const A& async_call,
               Args*... parameters) {
+  class TerminationSentinel
+      : public ftl::RefCountedThreadSafe<TerminationSentinel> {
+   public:
+    bool terminated = false;
+  };
+
+  auto termination_sentinel = ftl::AdoptRef(new TerminationSentinel());
+  auto on_return = ftl::MakeAutoCall(
+      [termination_sentinel] { termination_sentinel->terminated = true; });
+
   volatile bool sync_state = true;
   volatile bool callback_called = false;
   // Unblock the coroutine (by having it return early) if the asynchronous call
   // drops its callback without ever calling it.
-  auto unblocker = ftl::MakeAutoCall([&handler, &sync_state] {
-    if (sync_state) {
-      sync_state = false;
-      return;
-    }
-    handler->Continue(true);
-  });
-  async_call(callback::Capture(
-      ftl::MakeCopyable([
-        &sync_state, &callback_called, handler, unblocker = std::move(unblocker)
-      ]() mutable {
-        unblocker.cancel();
-        callback_called = true;
+  auto unblocker =
+      ftl::MakeAutoCall([termination_sentinel, &handler, &sync_state] {
+        if (termination_sentinel->terminated) {
+          return;
+        }
+
         if (sync_state) {
           sync_state = false;
           return;
         }
-        handler->Continue(false);
-      }),
-      parameters...));
+        handler->Continue(true);
+      });
+  async_call(
+      callback::Capture(ftl::MakeCopyable([
+                          termination_sentinel, &sync_state, &callback_called,
+                          handler, unblocker = std::move(unblocker)
+                        ]() mutable {
+                          if (termination_sentinel->terminated) {
+                            return;
+                          }
+
+                          unblocker.cancel();
+                          callback_called = true;
+                          if (sync_state) {
+                            sync_state = false;
+                            return;
+                          }
+                          handler->Continue(false);
+                        }),
+                        parameters...));
   // If sync_state is still true, the callback was not called. Yield until it
   // is.
   if (sync_state) {

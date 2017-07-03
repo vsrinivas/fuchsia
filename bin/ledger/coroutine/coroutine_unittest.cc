@@ -129,19 +129,59 @@ TEST(Coroutine, SynchronousAsyncCall) {
 TEST(Coroutine, DroppedAsyncCall) {
   CoroutineServiceImpl coroutine_service;
 
-  size_t received_value = 0;
-  bool called = false;
+  bool ended = false;
+  coroutine_service.StartCoroutine([&ended](CoroutineHandler* handler) {
+    EXPECT_TRUE(SyncCall(handler, [](std::function<void()> callback) {
+      // |callback| is dropped here.
+    }));
+    ended = true;
+  });
+  EXPECT_TRUE(ended);
+}
+
+TEST(Coroutine, DroppedAsyncCallAsynchronously) {
+  CoroutineServiceImpl coroutine_service;
+
+  bool ended = false;
+  std::function<void()> callback;
+
   coroutine_service.StartCoroutine(
-      [&received_value, &called](CoroutineHandler* handler) {
-        EXPECT_TRUE(SyncCall(handler,
-                             [&called](std::function<void(size_t)> callback) {
-                               // |callback| is dropped here.
-                               called = true;
-                             },
-                             &received_value));
+      [&ended, &callback](CoroutineHandler* handler) {
+        EXPECT_TRUE(SyncCall(
+            handler, [&callback](std::function<void()> received_callback) {
+              callback = received_callback;
+            }));
+        ended = true;
       });
-  EXPECT_EQ(0u, received_value);
-  EXPECT_TRUE(called);
+
+  EXPECT_FALSE(ended);
+  EXPECT_TRUE(callback);
+  callback = [] {};
+
+  EXPECT_TRUE(ended);
+}
+
+TEST(Coroutine, RunAndDroppedAsyncCallAfterCoroutineDeletion) {
+  bool ended = false;
+  std::function<void()> callback;
+  {
+    CoroutineServiceImpl coroutine_service;
+
+    coroutine_service.StartCoroutine(
+        [&ended, &callback](CoroutineHandler* handler) {
+          EXPECT_TRUE(SyncCall(
+              handler, [&callback](std::function<void()> received_callback) {
+                callback = received_callback;
+              }));
+          ended = true;
+        });
+
+    EXPECT_FALSE(ended);
+    EXPECT_TRUE(callback);
+  }
+
+  EXPECT_TRUE(ended);
+  callback();
 }
 
 TEST(Coroutine, Interrupt) {
