@@ -22,8 +22,8 @@
 
 #define LOCAL_TRACE 0
 
-static PortPacket* MakePacket(uint64_t key, const mx_exception_report_t* report) {
-    if (!MX_PKT_IS_EXCEPTION(report->header.type))
+static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koid_t tid) {
+    if (!MX_PKT_IS_EXCEPTION(type))
         return nullptr;
 
     AllocChecker ac;
@@ -32,9 +32,9 @@ static PortPacket* MakePacket(uint64_t key, const mx_exception_report_t* report)
         return nullptr;
 
     port_packet->packet.key = key;
-    port_packet->packet.type = report->header.type | PKT_FLAG_EPHEMERAL;
-    port_packet->packet.exception.pid = report->context.pid;
-    port_packet->packet.exception.tid = report->context.tid;
+    port_packet->packet.type = type | PKT_FLAG_EPHEMERAL;
+    port_packet->packet.exception.pid = pid;
+    port_packet->packet.exception.tid = tid;
     port_packet->packet.exception.reserved0 = 0;
     port_packet->packet.exception.reserved1 = 0;
 
@@ -209,43 +209,36 @@ void ExceptionPort::OnTargetUnbind() {
     LTRACE_EXIT_OBJ;
 }
 
-mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
-    canary_.Assert();
-
+mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koid_t tid) {
     AutoLock lock(&lock_);
     LTRACEF("%s, type %u, pid %" PRIu64 ", tid %" PRIu64 "\n",
             port_ == nullptr ? "Not sending exception report on unbound port"
                 : "Sending exception report",
-            report->header.type, report->context.pid, report->context.tid);
+            type, pid, tid);
     if (port_ == nullptr) {
         // The port has been unbound.
         return MX_ERR_PEER_CLOSED;
     }
 
-    auto iopk = MakePacket(port_key_, report);
+    auto iopk = MakePacket(port_key_, type, pid, tid);
     if (!iopk)
         return MX_ERR_NO_MEMORY;
 
     return port_->Queue(iopk, 0, 0);
 }
 
-void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type,
-                                mx_koid_t pid, mx_koid_t tid) {
+mx_status_t ExceptionPort::SendPacket(UserThread* thread, uint32_t type) {
+    canary_.Assert();
+
+    mx_koid_t pid = thread->process()->get_koid();
+    mx_koid_t tid = thread->get_koid();
+    return SendPacketWorker(type, pid, tid);
+}
+
+void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type) {
     memset(report, 0, sizeof(*report));
     report->header.size = sizeof(*report);
     report->header.type = type;
-    report->context.pid = pid;
-    report->context.tid = tid;
-}
-
-void ExceptionPort::BuildSuspendResumeReport(mx_exception_report_t* report,
-                                             uint32_t type,
-                                             UserThread* thread) {
-    mx_koid_t pid = thread->process()->get_koid();
-    mx_koid_t tid = thread->get_koid();
-    BuildReport(report, type, pid, tid);
-    // TODO(dje): IWBN to fill in pc
-    arch_fill_in_suspension_context(report);
 }
 
 void ExceptionPort::OnThreadStart(UserThread* thread) {
@@ -254,8 +247,9 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     mx_koid_t pid = thread->process()->get_koid();
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
+
     mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_THREAD_STARTING, pid, tid);
+    BuildReport(&report, MX_EXCP_THREAD_STARTING);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
@@ -283,10 +277,8 @@ void ExceptionPort::OnThreadSuspending(UserThread* thread) {
     // external context because once the debugger receives the "suspended"
     // report it can assume the thread is, for its purposes, suspended.
 
-    mx_exception_report_t report;
-    BuildSuspendResumeReport(&report, MX_EXCP_THREAD_SUSPENDED, thread);
     // The result is ignored, not much else we can do.
-    SendReport(&report);
+    SendPacket(thread, MX_EXCP_THREAD_SUSPENDED);
 }
 
 void ExceptionPort::OnThreadResuming(UserThread* thread) {
@@ -299,10 +291,8 @@ void ExceptionPort::OnThreadResuming(UserThread* thread) {
     // See OnThreadSuspending for a note on the tense of the words uses here:
     // suspending vs suspended.
 
-    mx_exception_report_t report;
-    BuildSuspendResumeReport(&report, MX_EXCP_THREAD_RESUMED, thread);
     // The result is ignored, not much else we can do.
-    SendReport(&report);
+    SendPacket(thread, MX_EXCP_THREAD_RESUMED);
 }
 
 // This isn't called for every process's destruction, only for processes that
@@ -313,10 +303,9 @@ void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
 
     mx_koid_t pid = process->get_koid();
     LTRACEF("process %" PRIu64 " gone\n", pid);
-    mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_GONE, pid, MX_KOID_INVALID);
+
     // The result is ignored, not much else we can do.
-    SendReport(&report);
+    SendPacketWorker(MX_EXCP_GONE, pid, MX_KOID_INVALID);
 }
 
 // This isn't called for every thread's destruction, only for threads that
@@ -328,10 +317,9 @@ void ExceptionPort::OnThreadExit(UserThread* thread) {
     mx_koid_t pid = thread->process()->get_koid();
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " gone\n", pid, tid);
-    mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_GONE, pid, tid);
+
     // The result is ignored, not much else we can do.
-    SendReport(&report);
+    SendPacket(thread, MX_EXCP_GONE);
 }
 
 // This isn't called for every thread's destruction, only when a debugger
@@ -343,8 +331,9 @@ void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
     mx_koid_t pid = thread->process()->get_koid();
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " exited\n", pid, tid);
+
     mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_THREAD_EXITING, pid, tid);
+    BuildReport(&report, MX_EXCP_THREAD_EXITING);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.

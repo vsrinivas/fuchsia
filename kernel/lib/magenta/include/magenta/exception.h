@@ -29,7 +29,4 @@ void arch_dump_exception_context(const arch_exception_context_t *);
 // request the arch code fill in the mx_exception_context report with arch specific information
 void arch_fill_in_exception_context(const arch_exception_context_t *, mx_exception_report_t *);
 
-// request the arch code fill in the mx_exception_context report with arch specific information
-void arch_fill_in_suspension_context(mx_exception_report_t *);
-
 __END_CDECLS

@@ -653,9 +653,9 @@ status_t UserThread::ExceptionHandlerExchange(
         // locking exception_wait_lock_ in places where the handler can see/modify
         // thread state.
 
-        status_t status = eport->SendReport(report);
+        status_t status = eport->SendPacket(this, report->header.type);
         if (status != MX_OK) {
-            LTRACEF("SendReport returned %d\n", status);
+            LTRACEF("SendPacket returned %d\n", status);
             // Treat the exception as unhandled.
             *out_estatus = ExceptionStatus::TRY_NEXT;
             return MX_OK;

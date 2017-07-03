@@ -84,23 +84,10 @@ typedef struct arm64_exc_data {
     uint64_t far;
 } arm64_exc_data_t;
 
-#define ARCH_ID_UNKNOWN        0u
-#define ARCH_ID_X86_64         1u
-#define ARCH_ID_ARM_64         2u
-
 // data associated with an exception (siginfo in linux parlance)
+// Things available from regsets (e.g., pc) are not included here.
 typedef struct mx_exception_context {
-    // One of ARCH_ID above.
-    uint32_t arch_id;
-    // The process of the thread with the exception.
-    mx_koid_t pid;
-
-    // The thread that got the exception.
-    // This is zero in "process gone" notifications.
-    mx_koid_t tid;
-
     struct {
-        mx_vaddr_t pc;
         union {
             x86_64_exc_data_t x86_64;
             arm64_exc_data_t  arm_64;
@@ -111,12 +98,8 @@ typedef struct mx_exception_context {
 } mx_exception_context_t;
 
 // The common header of all exception reports.
-// TODO(dje): For now we assume all exceptions are thread-related.
-// A reasonably safe assumption, but the intent is to not preclude
-// other kinds of exceptions should a need ever arise.
 typedef struct mx_exception_header {
-    // The actual size, in bytes, of the report (including this field),
-    // but *not* including mx_packet_header_t.
+    // The actual size, in bytes, of the report (including this field).
     uint32_t size;
 
     // While IWBN to use an enum here, it's still not portable in C.

@@ -446,8 +446,6 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
 {
     mx_exception_context_t* mx_context = &report->context;
 
-    mx_context->arch_id = ARCH_ID_ARM_64;
-
     mx_context->arch.u.arm_64.esr = arch_context->esr;
 
     // If there was a fatal page fault, fill in the address that caused the fault.
@@ -456,13 +454,6 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     } else {
         mx_context->arch.u.arm_64.far = 0;
     }
-}
-
-void arch_fill_in_suspension_context(mx_exception_report_t *report)
-{
-    mx_exception_context_t *mx_context = &report->context;
-
-    mx_context->arch_id = ARCH_ID_ARM_64;
 }
 
 status_t magenta_report_syscall_exception(void)

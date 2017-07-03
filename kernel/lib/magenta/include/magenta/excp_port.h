@@ -32,7 +32,7 @@ public:
 
     Type type() const { return type_; }
 
-    mx_status_t SendReport(const mx_exception_report_t* packet);
+    mx_status_t SendPacket(UserThread* thread, uint32_t type);
 
     void OnThreadStart(UserThread* thread);
 
@@ -61,6 +61,8 @@ private:
     ExceptionPort(const ExceptionPort&) = delete;
     ExceptionPort& operator=(const ExceptionPort&) = delete;
 
+    mx_status_t SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koid_t tid);
+
     // Unbinds from the target if bound, and drops the ref to |port_|.
     // Called by |port_| when it reaches zero handles.
     void OnPortZeroHandles();
@@ -79,11 +81,7 @@ private:
         return bound_to_system_ || (target_ != nullptr);
     }
 
-    static void BuildReport(mx_exception_report_t* report, uint32_t type,
-                            mx_koid_t pid, mx_koid_t tid);
-
-    static void BuildSuspendResumeReport(mx_exception_report_t* report,
-                                         uint32_t type, UserThread* thread);
+    static void BuildReport(mx_exception_report_t* report, uint32_t type);
 
     mxtl::Canary<mxtl::magic("EXCP")> canary_;
 

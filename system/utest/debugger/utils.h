@@ -80,13 +80,3 @@ extern bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior);
 
 extern bool read_exception(mx_handle_t eport, mx_handle_t inferior,
                            mx_port_packet_t* packet, mx_exception_report_t* report);
-
-extern bool verify_exception(const mx_exception_report_t* report,
-                             mx_handle_t process,
-                             mx_excp_type_t expected_type,
-                             mx_koid_t* tid);
-
-extern bool read_and_verify_exception(mx_handle_t eport,
-                                      mx_handle_t process,
-                                      mx_excp_type_t expected_type,
-                                      mx_koid_t* tid);

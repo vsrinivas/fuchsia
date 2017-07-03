@@ -38,27 +38,15 @@ static const char* excp_type_to_string(uint type) {
     }
 }
 
-static void build_arch_exception_context(mx_exception_report_t* report,
-                                         ulong ip,
-                                         const arch_exception_context_t* arch_context) {
-    report->context.arch.pc = ip;
-
-    arch_fill_in_exception_context(arch_context, report);
-}
-
 static void build_exception_report(mx_exception_report_t* report,
-                                   UserThread* thread,
                                    uint exception_type,
-                                   const arch_exception_context_t* arch_context,
-                                   ulong ip) {
+                                   const arch_exception_context_t* arch_context) {
     // TODO(dje): Move to ExceptionPort::BuildArchExceptionReport.
     memset(report, 0, sizeof(*report));
     // TODO(dje): wip, just make all reports the same maximum size for now
     report->header.size = sizeof(*report);
     report->header.type = exception_type;
-    report->context.pid = thread->process()->get_koid();
-    report->context.tid = thread->get_koid();
-    build_arch_exception_context(report, ip, arch_context);
+    arch_fill_in_exception_context(arch_context, report);
 }
 
 static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
@@ -152,7 +140,7 @@ status_t magenta_exception_handler(uint exception_type,
 
     bool processed = false;
     mx_exception_report_t report;
-    build_exception_report(&report, thread, exception_type, context, ip);
+    build_exception_report(&report, exception_type, context);
 
     for (size_t i = 0; i < countof(handlers); ++i) {
         // Initialize for paranoia's sake.

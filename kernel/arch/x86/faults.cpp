@@ -493,18 +493,9 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
 {
     mx_exception_context_t *mx_context = &report->context;
 
-    mx_context->arch_id = ARCH_ID_X86_64;
-
     mx_context->arch.u.x86_64.vector = arch_context->frame->vector;
     mx_context->arch.u.x86_64.err_code = arch_context->frame->err_code;
     mx_context->arch.u.x86_64.cr2 = arch_context->cr2;
-}
-
-void arch_fill_in_suspension_context(mx_exception_report_t *report)
-{
-    mx_exception_context_t *mx_context = &report->context;
-
-    mx_context->arch_id = ARCH_ID_X86_64;
 }
 
 status_t magenta_report_syscall_exception(void)
