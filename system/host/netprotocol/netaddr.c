@@ -22,6 +22,7 @@
 static const char* hostname;
 static struct sockaddr_in6 addr;
 static bool found = false;
+static char found_device_nodename[MAX_NODENAME_LENGTH];
 
 static bool on_device(device_info_t* device, void* cookie) {
     if (hostname != NULL && strcmp(hostname, device->nodename)) {
@@ -29,12 +30,14 @@ static bool on_device(device_info_t* device, void* cookie) {
         return true;
     }
 
-    if (found) {
-        fprintf(stderr, "Multiple devices found. Specify a hostname.\n");
+    if (found && strcmp(found_device_nodename, device->nodename) != 0) {
+        fprintf(stderr, "Multiple devices found, including %s and %s. Specify a hostname.\n",
+                found_device_nodename, device->nodename);
         exit(1);
     }
 
     addr = device->inet6_addr;
+    strncpy(found_device_nodename, device->nodename, MAX_NODENAME_LENGTH);
     found = true;
     return true;
 }
