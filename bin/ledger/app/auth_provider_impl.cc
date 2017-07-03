@@ -20,47 +20,50 @@ AuthProviderImpl::AuthProviderImpl(
       token_provider_(std::move(token_provider)) {}
 
 ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
-    std::function<void(std::string)> callback) {
+    std::function<void(cloud_sync::AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
   if (api_key_.empty()) {
-    task_runner_->PostTask(
-        [callback = cancellable->WrapCallback(callback)] { callback(""); });
+    task_runner_->PostTask([callback = cancellable->WrapCallback(callback)] {
+      callback(cloud_sync::AuthStatus::OK, "");
+    });
     return cancellable;
   }
 
   token_provider_->GetFirebaseAuthToken(
       api_key_, [callback = cancellable->WrapCallback(callback)](auto token) {
-        if (!token) {
+        if (!token || token->id_token.size() == 0) {
           // This should not happen - the token provider returns nullptr when
           // running in the guest mode, but in this case we don't initialize
           // sync and should never call auth provider.
           FTL_LOG(ERROR) << "Empty Firebase token returned by token provider.";
-          callback("");
+          callback(cloud_sync::AuthStatus::ERROR, "");
           return;
         }
-        callback(token->id_token);
+        callback(cloud_sync::AuthStatus::OK, token->id_token);
       });
   return cancellable;
 }
 
 void AuthProviderImpl::GetFirebaseUserId(
-    std::function<void(std::string)> callback) {
+    std::function<void(cloud_sync::AuthStatus, std::string)> callback) {
   if (api_key_.empty()) {
-    task_runner_->PostTask([callback = std::move(callback)] { callback(""); });
+    task_runner_->PostTask([callback = std::move(callback)] {
+      callback(cloud_sync::AuthStatus::OK, "");
+    });
     return;
   }
 
   token_provider_->GetFirebaseAuthToken(
       api_key_, [callback = std::move(callback)](auto token) {
-        if (!token) {
+        if (!token || token->local_id.size() == 0) {
           // This should not happen - the token provider returns nullptr when
           // running in the guest mode, but in this case we don't initialize
           // sync and should never call auth provider.
           FTL_LOG(ERROR) << "Empty Firebase token returned by token provider.";
-          callback("");
+          callback(cloud_sync::AuthStatus::ERROR, "");
           return;
         }
-        callback(token->local_id);
+        callback(cloud_sync::AuthStatus::OK, token->local_id);
       });
 }
 

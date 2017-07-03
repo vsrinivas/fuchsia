@@ -114,10 +114,9 @@ void PageSyncImpl::GetObject(
     storage::ObjectIdView object_id,
     std::function<void(storage::Status status, uint64_t size, mx::socket data)>
         callback) {
-  auto request =
-      auth_provider_->GetFirebaseToken([
-        this, object_id = object_id.ToString(), callback = std::move(callback)
-      ](std::string auth_token) {
+  GetAuthToken(
+      [ this, object_id = object_id.ToString(),
+        callback ](std::string auth_token) {
         cloud_provider_->GetObject(std::move(auth_token), object_id, [
           this, object_id = std::move(object_id), callback = std::move(callback)
         ](cloud_provider::Status status, uint64_t size, mx::socket data) {
@@ -143,8 +142,12 @@ void PageSyncImpl::GetObject(
 
           callback(storage::Status::OK, size, std::move(data));
         });
+      },
+      [this, callback] {
+        FTL_LOG(ERROR) << log_prefix_ << "Failed to retrieve the auth token, "
+                       << "cannot download the object.";
+        callback(storage::Status::IO_ERROR, 0, mx::socket());
       });
-  auth_token_requests_.emplace(request);
 }
 
 void PageSyncImpl::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
@@ -203,46 +206,51 @@ void PageSyncImpl::StartDownload() {
 
   SetState(CATCH_UP_DOWNLOAD, WAIT_CATCH_UP_DOWNLOAD);
 
-  auto request = auth_provider_->GetFirebaseToken([
-    this, last_commit_ts = std::move(last_commit_ts)
-  ](std::string auth_token) {
-    // TODO(ppi): handle pagination when the response is huge.
-    cloud_provider_->GetCommits(
-        std::move(auth_token), std::move(last_commit_ts),
-        [this](cloud_provider::Status cloud_status,
-               std::vector<cloud_provider::Record> records) {
-          if (cloud_status != cloud_provider::Status::OK) {
-            // Fetching the remote commits failed, schedule a retry.
-            FTL_LOG(WARNING)
-                << log_prefix_ << "fetching the remote commits failed due to a "
-                << "connection error, status: " << cloud_status
-                << ", retrying.";
-            Retry([this] { StartDownload(); });
-            return;
-          }
-          backoff_->Reset();
+  GetAuthToken(
+      [ this,
+        last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
+        // TODO(ppi): handle pagination when the response is huge.
+        cloud_provider_->GetCommits(
+            std::move(auth_token), std::move(last_commit_ts),
+            [this](cloud_provider::Status cloud_status,
+                   std::vector<cloud_provider::Record> records) {
+              if (cloud_status != cloud_provider::Status::OK) {
+                // Fetching the remote commits failed, schedule a retry.
+                FTL_LOG(WARNING)
+                    << log_prefix_
+                    << "fetching the remote commits failed due to a "
+                    << "connection error, status: " << cloud_status
+                    << ", retrying.";
+                Retry([this] { StartDownload(); });
+                return;
+              }
+              backoff_->Reset();
 
-          if (records.empty()) {
-            // If there is no remote commits to add, announce that we're done.
-            FTL_VLOG(1) << log_prefix_
-                        << "initial sync finished, no new remote commits";
-            BacklogDownloaded();
-          } else {
-            FTL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
-                        << " (possibly) new remote commits, "
-                        << "adding them to storage.";
-            // If not, fire the backlog download callback when the remote
-            // commits are downloaded.
-            const auto record_count = records.size();
-            DownloadBatch(std::move(records), [this, record_count] {
-              FTL_VLOG(1) << log_prefix_ << "initial sync finished, added "
-                          << record_count << " remote commits.";
-              BacklogDownloaded();
+              if (records.empty()) {
+                // If there is no remote commits to add, announce that we're
+                // done.
+                FTL_VLOG(1) << log_prefix_
+                            << "initial sync finished, no new remote commits";
+                BacklogDownloaded();
+              } else {
+                FTL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
+                            << " (possibly) new remote commits, "
+                            << "adding them to storage.";
+                // If not, fire the backlog download callback when the remote
+                // commits are downloaded.
+                const auto record_count = records.size();
+                DownloadBatch(std::move(records), [this, record_count] {
+                  FTL_VLOG(1) << log_prefix_ << "initial sync finished, added "
+                              << record_count << " remote commits.";
+                  BacklogDownloaded();
+                });
+              }
             });
-          }
-        });
-  });
-  auth_token_requests_.emplace(request);
+      },
+      [this] {
+        HandleError(
+            "Failed to retrieve the auth token to download commit backlog.");
+      });
 }
 
 void PageSyncImpl::StartUpload() {
@@ -315,13 +323,17 @@ void PageSyncImpl::SetRemoteWatcher() {
     return;
   }
 
-  auto request = auth_provider_->GetFirebaseToken([
-    this, last_commit_ts = std::move(last_commit_ts)
-  ](std::string auth_token) {
-    cloud_provider_->WatchCommits(std::move(auth_token), last_commit_ts, this);
-    remote_watch_set_ = true;
-  });
-  auth_token_requests_.emplace(request);
+  GetAuthToken(
+      [ this,
+        last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
+        cloud_provider_->WatchCommits(std::move(auth_token), last_commit_ts,
+                                      this);
+        remote_watch_set_ = true;
+      },
+      [this] {
+        HandleError(
+            "Failed to retrieve the auth token to set a cloud watcher.");
+      });
 }
 
 void PageSyncImpl::HandleLocalCommits(
@@ -459,6 +471,20 @@ void PageSyncImpl::NotifyStateWatcher() {
   if (page_watcher_) {
     page_watcher_->Notify(download_state_, upload_state_);
   }
+}
+
+void PageSyncImpl::GetAuthToken(std::function<void(std::string)> on_token_ready,
+                                ftl::Closure on_failed) {
+  auto request = auth_provider_->GetFirebaseToken([
+    on_token_ready = std::move(on_token_ready), on_failed = std::move(on_failed)
+  ](AuthStatus auth_status, std::string auth_token) {
+    if (auth_status != AuthStatus::OK) {
+      on_failed();
+      return;
+    }
+    on_token_ready(std::move(auth_token));
+  });
+  auth_token_requests_.emplace(request);
 }
 
 }  // namespace cloud_sync

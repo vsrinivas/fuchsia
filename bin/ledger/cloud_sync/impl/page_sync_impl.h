@@ -141,6 +141,11 @@ class PageSyncImpl : public PageSync,
   void SetUploadState(UploadSyncState sync_state);
   void SetState(DownloadSyncState download_state, UploadSyncState upload_state);
 
+  // Retrieves the auth token from token provider and executes the given
+  // callback. Fails hard and stops the sync if the token can't be retrieved.
+  void GetAuthToken(std::function<void(std::string)> on_token_ready,
+                    ftl::Closure on_failed);
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;

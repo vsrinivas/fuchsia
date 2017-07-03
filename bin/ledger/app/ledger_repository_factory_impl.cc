@@ -239,7 +239,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 
   if (!firebase_config) {
     FTL_LOG(WARNING) << "No sync configuration - Ledger will work locally but "
-                     << "not sync.";
+                     << "not sync. (running in Guest mode?)";
 
     auto ret = repositories_.emplace(std::piecewise_construct,
                                      std::forward_as_tuple(name),
@@ -280,8 +280,17 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
     this, sanitized_path = std::move(sanitized_path), name = std::move(name),
     firebase_config = std::move(firebase_config), auth_provider_ptr, container
-  ](std::string user_id) {
+  ](cloud_sync::AuthStatus auth_status, std::string user_id) {
+    if (auth_status != cloud_sync::AuthStatus::OK) {
+      FTL_LOG(ERROR) << "Failed to retrieve Firebase user ID from the token "
+                     << " manager, shutting down the repository.";
+      container->SetRepository(Status::AUTHENTICATION_ERROR, nullptr);
+      return;
+    }
+
     if (user_id.empty()) {
+      FTL_LOG(WARNING) << "Empty Firebase ID returned by the token manager, "
+                       << "falling back to using directory name as the id.";
       user_id = GetStorageDirectoryName(sanitized_path).ToString();
     }
     cloud_sync::UserConfig user_config = GetUserConfig(

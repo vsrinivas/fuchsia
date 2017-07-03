@@ -18,11 +18,14 @@ class TestAuthProvider : public AuthProvider {
 
   // AuthProvider:
   ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(std::string)> callback) override;
+      std::function<void(AuthStatus, std::string)> callback) override;
 
-  void GetFirebaseUserId(std::function<void(std::string)> callback) override;
+  void GetFirebaseUserId(
+      std::function<void(AuthStatus, std::string)> callback) override;
 
   std::string token_to_return;
+
+  AuthStatus status_to_return = AuthStatus::OK;
 
   std::string user_id_to_return;
 

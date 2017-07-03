@@ -118,6 +118,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "auth_provider_impl_unittest.cc",
     "ledger_manager_unittest.cc",
     "merging/common_ancestor_unittest.cc",
     "merging/conflict_resolver_client_unittest.cc",
@@ -140,6 +141,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
+    "//apps/modular/services/auth",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",

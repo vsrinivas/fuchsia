@@ -30,7 +30,7 @@ namespace cloud_sync {
 //
 // Usage: call Start() to kick off the upload. |on_done| is called after the
 // upload is successfully completed. |on_error| will be called at most once
-// after each network error. Each time after |on_error| is called the client can
+// after each error. Each time after |on_error| is called the client can
 // call Retry() once to retry the upload.
 // TODO(ppi): rather than DCHECK on storage errors, take separate callbacks for
 // network and disk errors and let PageSync decide on how to handle each.

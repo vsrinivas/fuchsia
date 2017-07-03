@@ -51,9 +51,24 @@ void EraseRepositoryOperation::Start(std::function<void(bool)> on_done) {
   }
   FTL_LOG(INFO) << "Erased local data at " << repository_path_;
 
-  auth_provider_->GetFirebaseUserId([this](std::string user_id) {
+  auth_provider_->GetFirebaseUserId([this](cloud_sync::AuthStatus auth_status,
+                                           std::string user_id) {
+    if (auth_status != cloud_sync::AuthStatus::OK) {
+      FTL_LOG(ERROR)
+          << "Failed to retrieve Firebase user id from token provider.";
+      on_done_(false);
+      return;
+    }
     user_id_ = std::move(user_id);
-    auth_provider_->GetFirebaseToken([this](std::string auth_token) {
+    auth_provider_->GetFirebaseToken([this](cloud_sync::AuthStatus auth_status,
+                                            std::string auth_token) {
+      if (auth_status != cloud_sync::AuthStatus::OK) {
+        FTL_LOG(ERROR)
+            << "Failed to retrieve the auth token to clean the remote state.";
+        on_done_(false);
+        return;
+      }
+
       auth_token_ = std::move(auth_token);
       EraseRemote();
     });
@@ -63,8 +78,8 @@ void EraseRepositoryOperation::Start(std::function<void(bool)> on_done) {
 void EraseRepositoryOperation::EraseRemote() {
   if (user_id_.empty() || auth_token_.empty()) {
     FTL_LOG(ERROR) << "Missing credentials from the token provider, "
-                   << "will not erase the remote state.";
-    on_done_(false);
+                   << "will not erase the remote state. (running as guest?)";
+    on_done_(true);
     return;
   }
 

@@ -98,7 +98,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   mx::vmo data;
   auto status = object->GetVmo(&data);
   // TODO(ppi): LE-225 Handle disk IO errors.
-  FTL_DCHECK (status == storage::Status::OK);
+  FTL_DCHECK(status == storage::Status::OK);
 
   storage::ObjectId id = object->GetId();
   cloud_provider_->AddObject(
@@ -204,11 +204,19 @@ void BatchUpload::UploadCommits() {
 }
 
 void BatchUpload::RefreshAuthToken(ftl::Closure on_refreshed) {
-  auth_token_requests_.emplace(auth_provider_->GetFirebaseToken(
-      [ this, on_refreshed = std::move(on_refreshed) ](std::string auth_token) {
-        auth_token_ = std::move(auth_token);
-        on_refreshed();
-      }));
+  auth_token_requests_.emplace(auth_provider_->GetFirebaseToken([
+    this, on_refreshed = std::move(on_refreshed)
+  ](AuthStatus auth_status, std::string auth_token) {
+    if (auth_status != AuthStatus::OK) {
+      FTL_LOG(ERROR) << "Failed to retrieve the auth token for upload.";
+      errored_ = true;
+      on_error_();
+      return;
+    }
+
+    auth_token_ = std::move(auth_token);
+    on_refreshed();
+  }));
 }
 
 }  // namespace cloud_sync

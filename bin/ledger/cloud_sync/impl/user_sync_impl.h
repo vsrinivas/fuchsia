@@ -42,6 +42,8 @@ class UserSyncImpl : public UserSync {
   // Checks that the version on the cloud is compatible with the local version
   // on the device.
   void CheckCloudVersion();
+  void DoCheckCloudVersion(std::string auth_token);
+
   // Enables sync upload.
   void EnableUpload();
 

@@ -365,8 +365,8 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
         &auth_provider_,
         std::make_unique<TestBackoff>(&backoff_get_next_calls_),
         [this] {
-          EXPECT_FALSE(error_callback_called_);
-          error_callback_called_ = true;
+          error_callback_calls_++;
+          message_loop_.PostQuitTask();
         },
         std::move(watcher));
   }
@@ -390,7 +390,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
   int backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
-  bool error_callback_called_ = false;
+  int error_callback_calls_ = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageSyncImplTest);
@@ -715,12 +715,11 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
 // of uploading commits in order)
 TEST_F(PageSyncImplTest, FailToListCommits) {
   EXPECT_FALSE(storage_.watcher_set);
-  EXPECT_FALSE(error_callback_called_);
+  EXPECT_EQ(0, error_callback_calls_);
   storage_.should_fail_get_unsynced_commits = true;
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_TRUE(error_callback_called_);
+  EXPECT_EQ(1, error_callback_calls_);
   EXPECT_FALSE(storage_.watcher_set);
   EXPECT_EQ(0u, cloud_provider_.received_commits.size());
 }
@@ -752,6 +751,20 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
   EXPECT_EQ(1, on_backlog_downloaded_calls);
   EXPECT_EQ(std::vector<std::string>{"some-token"},
+            cloud_provider_.get_commits_auth_tokens);
+}
+
+// Verifies that if auth provider fails to provide the auth token, the error
+// callback is called.
+TEST_F(PageSyncImplTest, DownloadBacklogAuthError) {
+  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.token_to_return = "";
+  EXPECT_EQ(0, error_callback_calls_);
+  StartPageSync();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1, error_callback_calls_);
+  EXPECT_EQ(std::vector<std::string>{},
             cloud_provider_.get_commits_auth_tokens);
 }
 
@@ -788,6 +801,18 @@ TEST_F(PageSyncImplTest, RegisterWatcher) {
             cloud_provider_.watch_commits_auth_tokens);
   ASSERT_EQ(1u, cloud_provider_.watch_call_min_timestamps.size());
   EXPECT_EQ("43", cloud_provider_.watch_call_min_timestamps.front());
+}
+
+// Verifies that if auth provider fails to provide the auth token, the watcher
+// is not set and the error callback is called.
+TEST_F(PageSyncImplTest, RegisterWatcherAuthError) {
+  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.token_to_return = "";
+  EXPECT_EQ(0, error_callback_calls_);
+  StartPageSync();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1, error_callback_calls_);
+  ASSERT_EQ(0u, cloud_provider_.watch_call_min_timestamps.size());
 }
 
 // Verifies that commit notifications about new commits in cloud provider are
@@ -922,22 +947,16 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
 // commits and calls the error callback.
 TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   EXPECT_FALSE(cloud_provider_.watcher_removed);
-  EXPECT_FALSE(error_callback_called_);
+  EXPECT_EQ(0, error_callback_calls_);
 
   cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
       cloud_provider::Commit("id1", "content1", {}), "42"));
   storage_.should_fail_add_commit_from_sync = true;
   StartPageSync();
-
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.watcher_removed) {
-      message_loop_.PostQuitTask();
-    }
-  });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(cloud_provider_.watcher_removed);
-  EXPECT_TRUE(error_callback_called_);
+  EXPECT_EQ(1, error_callback_calls_);
 }
 
 // Verifies that the on idle callback is called when there is no download in
@@ -996,6 +1015,32 @@ TEST_F(PageSyncImplTest, GetObject) {
   std::string content;
   EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &content));
   EXPECT_EQ("content", content);
+}
+
+// Verifies that if auth provider fails to provide the auth token, GetObject()
+// returns an error, but the sync is not stopped.
+TEST_F(PageSyncImplTest, GetObjectAuthError) {
+  cloud_provider_.objects_to_return["object_id"] = "content";
+  auth_provider_.token_to_return = "some-token";
+  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  StartPageSync();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.token_to_return = "";
+  storage::Status status;
+  uint64_t size;
+  mx::socket data;
+  page_sync_->GetObject(
+      storage::ObjectIdView("object_id"),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(0, error_callback_calls_);
+  EXPECT_EQ(storage::Status::IO_ERROR, status);
+  EXPECT_EQ(std::vector<std::string>{}, cloud_provider_.get_object_auth_tokens);
+  EXPECT_FALSE(data);
 }
 
 // Verifies that sync retries GetObject() attempts upon connection error.

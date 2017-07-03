@@ -350,6 +350,27 @@ TEST_F(BatchUploadTest, AuthTokens) {
             cloud_provider_.received_commit_tokens);
 }
 
+// Verifies that the error callback is called when the auth provider fails to
+// return a token.
+TEST_F(BatchUploadTest, AuthError) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content"));
+
+  storage_.unsynced_objects_to_return["obj_id1"] =
+      std::make_unique<TestObject>("obj_id1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_id2"] =
+      std::make_unique<TestObject>("obj_id2", "obj_data2");
+
+  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.token_to_return = "";
+
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+  batch_upload->Start();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(0u, done_calls_);
+}
+
 // Verifies that the number of concurrent object uploads is limited to
 // |max_concurrent_uploads|.
 TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
