@@ -199,6 +199,10 @@ void ExceptionPort::Worker() {
         return;
       }
 
+      // TODO(dje): We already maintain a table of threads plus their handles.
+      // Rewrite this to work with that table. Now would be a fine time to
+      // notice new threads, but for existing threads there's no point in
+      // doing a lookup to get a new handle.
       mx_handle_t thread;
       mx_status_t status = mx_object_get_child(iter->second.process_handle,
                                                packet.exception.tid,
