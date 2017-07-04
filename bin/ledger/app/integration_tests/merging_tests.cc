@@ -1034,7 +1034,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
-  // We should a have seen the first commit at this point
+  // We should have seen the first commit at this point.
   EXPECT_EQ(1u, watcher.changes_seen);
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -1255,6 +1255,108 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
   EXPECT_EQ("previous_city",
             convert::ExtendedStringView(final_entries[2]->key));
+}
+
+// Tests a merge in which the right side contains no change (e.g. a change was
+// made in a commit, then reverted in another commit).
+TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  Status status;
+  auto postQuitTaskCallback = [] {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  };
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId(callback::Capture(postQuitTaskCallback, &test_page_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  // Watch for changes.
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(GetProxy(&watcher_ptr), postQuitTaskCallback);
+  PageSnapshotPtr snapshot1;
+  page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher_ptr),
+                     callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page1->StartTransaction(callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page2->StartTransaction(callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page1->Commit(callback::Capture(postQuitTaskCallback, &status));
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  // We should have seen the first commit of page 1.
+  EXPECT_EQ(1u, watcher.changes_seen);
+
+  page1->StartTransaction(callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page1->Delete(convert::ToArray("name"),
+                callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page1->Commit(callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  // We should have seen the second commit of page 1.
+  EXPECT_EQ(2u, watcher.changes_seen);
+
+  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
+             callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  page2->Commit(callback::Capture(postQuitTaskCallback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have an automatically-resolved conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  ASSERT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  // We haven't been asked to resolve anything.
+  EXPECT_EQ(0u, resolver_impl->requests.size());
+
+  EXPECT_EQ(3u, watcher.changes_seen);
+
+  fidl::Array<EntryPtr> final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
+  ASSERT_EQ(1u, final_entries.size());
+  EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0]->key));
 }
 
 }  // namespace

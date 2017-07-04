@@ -141,6 +141,10 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
       return false;
     }
 
+    if (right_change->size() == 0) {
+      return false;
+    }
+
     while (change.entry.key > (*right_change)[index->entry_index].entry.key) {
       index->entry_index++;
       if (index->entry_index >= right_change->size()) {
