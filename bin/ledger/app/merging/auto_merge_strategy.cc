@@ -116,9 +116,14 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   }
 
   if (status != storage::Status::OK) {
-    FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
+    FTL_LOG(ERROR) << "Unable to compute right diff due to error " << status
                    << ", aborting.";
     Done();
+    return;
+  }
+
+  if (right_change->size() == 0) {
+    OnComparisonDone(storage::Status::OK, std::move(right_change), true);
     return;
   }
 
@@ -138,10 +143,6 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
     }
 
     if (weak_this->cancelled_) {
-      return false;
-    }
-
-    if (right_change->size() == 0) {
       return false;
     }
 
@@ -186,7 +187,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   }
 
   if (status != storage::Status::OK) {
-    FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
+    FTL_LOG(ERROR) << "Unable to compute left diff due to error " << status
                    << ", aborting.";
     Done();
     return;
