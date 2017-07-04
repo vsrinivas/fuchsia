@@ -9,7 +9,7 @@
     ],
     "labels": [
         "//apps/ledger",
-        "//apps/ledger/src:tests"
+        "//apps/ledger:tests"
     ],
     "resources": [
         {
@@ -89,6 +89,10 @@
         {
             "binary": "ledger_unittests",
             "bootfs_path": "test/ledger_unittests"
+        },
+        {
+            "binary": "ledger_sync_tests",
+            "bootfs_path": "test/ledger_sync_tests"
         }
     ]
 }
