@@ -420,8 +420,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   // TODO(ppi): how to avoid the wait?
   message_loop_.task_runner()->PostDelayedTask(
-      [this] { message_loop_.PostQuitTask(); },
-      ftl::TimeDelta::FromMilliseconds(100));
+      MakeQuitTask(), ftl::TimeDelta::FromMilliseconds(100));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, put_count_);

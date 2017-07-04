@@ -22,6 +22,9 @@ class TestWithMessageLoop : public ::testing::Test {
   bool RunLoopWithTimeout(
       ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
 
+  // Creates a closure that quits the test message loop when executed.
+  ftl::Closure MakeQuitTask();
+
   mtl::MessageLoop message_loop_;
 
  private:

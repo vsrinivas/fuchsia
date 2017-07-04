@@ -401,7 +401,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
 TEST_F(PageSyncImplTest, UploadBacklog) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -433,7 +433,7 @@ TEST_F(PageSyncImplTest, PageWatcher) {
   TestSyncStateWatcher watcher;
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   page_sync_->SetSyncWatcher(&watcher);
   StartPageSync();
 
@@ -461,7 +461,7 @@ TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
   storage_.head_count = 2;
   storage_.NewCommit("id0", "content0");
   storage_.NewCommit("id1", "content1");
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -493,7 +493,7 @@ TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
 TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   storage_.should_delay_add_commit_confirmation = true;
 
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
   std::vector<cloud_provider::Commit> commits;
@@ -527,7 +527,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
     EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
     backlog_downloaded_called = true;
   });
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -546,7 +546,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
 // watcher are uploaded to CloudProvider, with the exception of commits that
 // themselves come from sync.
 TEST_F(PageSyncImplTest, UploadNewCommits) {
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -584,7 +584,7 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
 // Verifies that new commits being added to storage are only uploaded while
 // there is only a single head.
 TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -640,7 +640,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
       page_sync_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
     });
   });
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
 
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -794,7 +794,7 @@ TEST_F(PageSyncImplTest, RegisterWatcher) {
       cloud_provider::Commit("id2", "content2", {}), "43"));
   auth_provider_.token_to_return = "some-token";
 
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(std::vector<std::string>{"some-token"},
@@ -1004,8 +1004,7 @@ TEST_F(PageSyncImplTest, GetObject) {
   mx::socket data;
   page_sync_->GetObject(
       storage::ObjectIdView("object_id"),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(storage::Status::OK, status);
@@ -1022,7 +1021,7 @@ TEST_F(PageSyncImplTest, GetObject) {
 TEST_F(PageSyncImplTest, GetObjectAuthError) {
   cloud_provider_.objects_to_return["object_id"] = "content";
   auth_provider_.token_to_return = "some-token";
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -1033,8 +1032,7 @@ TEST_F(PageSyncImplTest, GetObjectAuthError) {
   mx::socket data;
   page_sync_->GetObject(
       storage::ObjectIdView("object_id"),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0, error_callback_calls_);
@@ -1060,8 +1058,7 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
   mx::socket data;
   page_sync_->GetObject(
       storage::ObjectIdView("object_id"),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(6u, cloud_provider_.get_object_calls);
@@ -1076,7 +1073,7 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
 TEST_F(PageSyncImplTest, UploadIsPaused) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
 
   StartPageSync(UploadStatus::DISABLED);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1091,7 +1088,7 @@ TEST_F(PageSyncImplTest, UploadIsPaused) {
 
 // Verifies that already synced commit are not re-uploaded.
 TEST_F(PageSyncImplTest, DoNotUploadSyncedCommits) {
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
 
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1108,7 +1105,7 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommits) {
 // Verifies that commit that are received between the first upload and the retry
 // are not sent.
 TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
-  page_sync_->SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_->SetOnIdle(MakeQuitTask());
 
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());

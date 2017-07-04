@@ -195,9 +195,8 @@ TEST_F(CloudProviderImplTest, AddCommit) {
   commits.push_back(std::move(commit));
 
   Status status;
-  cloud_provider_->AddCommits(
-      "this-is-a-token", std::move(commits),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  cloud_provider_->AddCommits("this-is-a-token", std::move(commits),
+                              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -230,9 +229,8 @@ TEST_F(CloudProviderImplTest, AddMultipleCommits) {
   commits.push_back(std::move(commit2));
 
   Status status;
-  cloud_provider_->AddCommits(
-      "", std::move(commits),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  cloud_provider_->AddCommits("", std::move(commits),
+                              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -562,8 +560,7 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       "this-is-a-token", ServerTimestampToBytes(42),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &records));
+      callback::Capture(MakeQuitTask(), &status, &records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   const Commit expected_commit_1(
@@ -612,8 +609,7 @@ TEST_F(CloudProviderImplTest, GetCommitsBatch) {
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       "", ServerTimestampToBytes(42),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &records));
+      callback::Capture(MakeQuitTask(), &status, &records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   const Commit expected_commit_0("id_0", "some_content",
@@ -638,8 +634,7 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       "", ServerTimestampToBytes(42),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &records));
+      callback::Capture(MakeQuitTask(), &status, &records));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -651,9 +646,8 @@ TEST_F(CloudProviderImplTest, AddObject) {
   ASSERT_TRUE(mtl::VmoFromString("bazinga", &data));
 
   Status status;
-  cloud_provider_->AddObject(
-      "this-is-a-token", "object_id", std::move(data),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  cloud_provider_->AddObject("this-is-a-token", "object_id", std::move(data),
+                             callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -677,8 +671,7 @@ TEST_F(CloudProviderImplTest, GetObject) {
   mx::socket data;
   cloud_provider_->GetObject(
       "this-is-a-token", "object_id",
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -701,8 +694,7 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
   mx::socket data;
   cloud_provider_->GetObject(
       "", "object_id",
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);

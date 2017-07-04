@@ -28,4 +28,8 @@ bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
   return timed_out;
 }
 
+ftl::Closure TestWithMessageLoop::MakeQuitTask() {
+  return [this] { message_loop_.PostQuitTask(); };
+}
+
 }  // namespace test

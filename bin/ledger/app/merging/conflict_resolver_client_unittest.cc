@@ -40,8 +40,7 @@ class ConflictResolverClientTest : public test::TestWithMessageLoop {
             environment_.main_runner(), environment_.main_runner(),
             &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString());
     storage::Status status;
-    page_storage->Init(
-        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+    page_storage->Init(callback::Capture(MakeQuitTask(), &status));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     page_storage_ = page_storage.get();
@@ -50,7 +49,7 @@ class ConflictResolverClientTest : public test::TestWithMessageLoop {
         [] {}, &environment_, page_storage_,
         std::make_unique<testing::TestBackoff>(nullptr));
     resolver->SetMergeStrategy(nullptr);
-    resolver->set_on_empty([this] { message_loop_.PostQuitTask(); });
+    resolver->set_on_empty(MakeQuitTask());
     merge_resolver_ = resolver.get();
 
     page_manager_.reset(new PageManager(&environment_, std::move(page_storage),
@@ -70,8 +69,7 @@ class ConflictResolverClientTest : public test::TestWithMessageLoop {
     std::unique_ptr<const storage::Commit> actual_commit;
     page_storage_->CommitJournal(
         std::move(journal),
-        callback::Capture([this] { message_loop_.PostQuitTask(); },
-                          &actual_status, &actual_commit));
+        callback::Capture(MakeQuitTask(), &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit->GetId();
@@ -180,8 +178,7 @@ TEST_F(ConflictResolverClientTest, Error) {
 
   Status status;
   conflict_resolver_impl.requests[0].result_provider_ptr->Merge(
-      std::move(merged_values),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      std::move(merged_values), callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::KEY_NOT_FOUND, status);
 

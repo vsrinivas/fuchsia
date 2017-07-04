@@ -81,8 +81,8 @@ TEST_F(AuthProviderImplTest, GetFirebaseToken) {
 
   cloud_sync::AuthStatus auth_status;
   std::string firebase_token;
-  auth_provider.GetFirebaseToken(callback::Capture(
-      [this] { message_loop_.PostQuitTask(); }, &auth_status, &firebase_token));
+  auth_provider.GetFirebaseToken(
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
   EXPECT_EQ("this is a token", firebase_token);
@@ -96,14 +96,14 @@ TEST_F(AuthProviderImplTest, GetFirebaseTokenErrorIfEmpty) {
   token_provider_.Set("", "", "");
   cloud_sync::AuthStatus auth_status;
   std::string firebase_token;
-  auth_provider.GetFirebaseToken(callback::Capture(
-      [this] { message_loop_.PostQuitTask(); }, &auth_status, &firebase_token));
+  auth_provider.GetFirebaseToken(
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
 
   token_provider_.SetNull();
-  auth_provider.GetFirebaseToken(callback::Capture(
-      [this] { message_loop_.PostQuitTask(); }, &auth_status, &firebase_token));
+  auth_provider.GetFirebaseToken(
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
 }
@@ -118,8 +118,7 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserId) {
   cloud_sync::AuthStatus auth_status;
   std::string firebase_user_id;
   auth_provider.GetFirebaseUserId(
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &auth_status,
-                        &firebase_user_id));
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
   EXPECT_EQ("some id", firebase_user_id);
@@ -134,16 +133,14 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserIdErrorIfEmpty) {
   cloud_sync::AuthStatus auth_status;
   std::string firebase_user_id;
   auth_provider.GetFirebaseUserId(
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &auth_status,
-                        &firebase_user_id));
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
   EXPECT_EQ("", firebase_user_id);
 
   token_provider_.SetNull();
   auth_provider.GetFirebaseUserId(
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &auth_status,
-                        &firebase_user_id));
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
   EXPECT_EQ("", firebase_user_id);
@@ -158,16 +155,15 @@ TEST_F(AuthProviderImplTest, NoApiKey) {
 
   cloud_sync::AuthStatus auth_status;
   std::string firebase_token;
-  auth_provider.GetFirebaseToken(callback::Capture(
-      [this] { message_loop_.PostQuitTask(); }, &auth_status, &firebase_token));
+  auth_provider.GetFirebaseToken(
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
   EXPECT_EQ("", firebase_token);
 
   std::string firebase_user_id;
   auth_provider.GetFirebaseToken(
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &auth_status,
-                        &firebase_user_id));
+      callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
   EXPECT_EQ("", firebase_user_id);

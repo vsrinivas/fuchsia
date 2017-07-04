@@ -88,8 +88,7 @@ class BTreeUtilsTest : public StorageTest {
     ApplyChanges(
         &coroutine_service_, &fake_storage_, root_id,
         std::make_unique<EntryChangeIterator>(entries.begin(), entries.end()),
-        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                          &new_root_id, &new_nodes),
+        callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
         &kTestNodeLevelCalculator);
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
@@ -152,8 +151,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   ApplyChanges(
       &coroutine_service_, &fake_storage_, root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &new_root_id, &new_nodes),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -179,12 +177,12 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
   // Expected layout (XX is key "keyXX"):
   // [03]
 
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                                     golden_entries.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                            golden_entries.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, new_nodes.size());
@@ -210,12 +208,12 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                                     golden_entries.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                            golden_entries.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(4u, new_nodes.size());
@@ -238,12 +236,12 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
-  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_id,
-               std::make_unique<EntryChangeIterator>(new_change.begin(),
-                                                     new_change.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id2, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, new_root_id,
+      std::make_unique<EntryChangeIterator>(new_change.begin(),
+                                            new_change.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id2, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(new_root_id, new_root_id2);
@@ -282,12 +280,12 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                            update_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -334,12 +332,12 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                            update_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -384,12 +382,12 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                            update_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -425,12 +423,12 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                                     golden_entries.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                            golden_entries.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(root_id, new_root_id);
@@ -459,12 +457,12 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                            delete_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -509,12 +507,12 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                            delete_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -556,12 +554,12 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                            delete_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(root_id, new_root_id);
@@ -596,12 +594,12 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(update_changes.begin(),
+                                            update_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -629,12 +627,12 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
       CreateEntryChanges(std::vector<size_t>({75}), &delete_changes, true));
 
   ObjectId final_node_id;
-  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_id,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &final_node_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, new_root_id,
+      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                            delete_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &final_node_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(root_id, final_node_id);
@@ -654,12 +652,12 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &new_root_id, &new_nodes),
-               &kTestNodeLevelCalculator);
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, root_id,
+      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                            delete_changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &new_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_id, new_root_id);
@@ -675,8 +673,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
   Status status;
   std::set<ObjectId> object_ids;
   GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &object_ids));
+               callback::Capture(MakeQuitTask(), &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, object_ids.size());
@@ -691,8 +688,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   Status status;
   std::set<ObjectId> object_ids;
   GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &object_ids));
+               callback::Capture(MakeQuitTask(), &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(6u, object_ids.size());
@@ -710,8 +706,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdsBigTree) {
   Status status;
   std::set<ObjectId> object_ids;
   GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &object_ids));
+               callback::Capture(MakeQuitTask(), &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(99u + 12, object_ids.size());
@@ -733,9 +728,8 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   //          [03]
   //       /        \
   // [00, 01, 02]  [04]
-  GetObjectsFromSync(
-      &coroutine_service_, &fake_storage_, root_id,
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  GetObjectsFromSync(&coroutine_service_, &fake_storage_, root_id,
+                     callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
@@ -749,8 +743,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
 
   std::set<ObjectId> object_ids;
   GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
-               callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &object_ids));
+               callback::Capture(MakeQuitTask(), &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(3 + 5u, object_ids.size());
@@ -850,27 +843,26 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   ApplyChanges(
       &coroutine_service_, &fake_storage_, base_root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &other_root_id, &new_nodes),
+      callback::Capture(MakeQuitTask(), &status, &other_root_id, &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
   // ForEachDiff should return all changes just applied.
   size_t current_change = 0;
-  ForEachDiff(
-      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "",
-      [&changes, &current_change](EntryChange e) {
-        EXPECT_EQ(changes[current_change].deleted, e.deleted);
-        if (e.deleted) {
-          EXPECT_EQ(changes[current_change].entry.key, e.entry.key);
-        } else {
-          EXPECT_EQ(changes[current_change].entry, e.entry);
-        }
-        ++current_change;
-        return true;
-      },
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_id, other_root_id,
+              "",
+              [&changes, &current_change](EntryChange e) {
+                EXPECT_EQ(changes[current_change].deleted, e.deleted);
+                if (e.deleted) {
+                  EXPECT_EQ(changes[current_change].entry.key, e.entry.key);
+                } else {
+                  EXPECT_EQ(changes[current_change].entry, e.entry);
+                }
+                ++current_change;
+                return true;
+              },
+              callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(changes.size(), current_change);
@@ -902,33 +894,32 @@ TEST_F(BTreeUtilsTest, ForEachDiffWithMinKey) {
   ApplyChanges(
       &coroutine_service_, &fake_storage_, base_root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &other_root_id, &new_nodes),
+      callback::Capture(MakeQuitTask(), &status, &other_root_id, &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
   // ForEachDiff with a "key0" as min_key should return both changes.
   size_t current_change = 0;
-  ForEachDiff(
-      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "key0",
-      [&changes, &current_change](EntryChange e) {
-        EXPECT_EQ(changes[current_change++].entry, e.entry);
-        return true;
-      },
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_id, other_root_id,
+              "key0",
+              [&changes, &current_change](EntryChange e) {
+                EXPECT_EQ(changes[current_change++].entry, e.entry);
+                return true;
+              },
+              callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(changes.size(), current_change);
 
   // With "key60" as min_key, only key75 should be returned.
-  ForEachDiff(
-      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "key60",
-      [&changes](EntryChange e) {
-        EXPECT_EQ(changes[1].entry, e.entry);
-        return true;
-      },
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_id, other_root_id,
+              "key60",
+              [&changes](EntryChange e) {
+                EXPECT_EQ(changes[1].entry, e.entry);
+                return true;
+              },
+              callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 }
@@ -957,19 +948,18 @@ TEST_F(BTreeUtilsTest, ForEachDiffWithMinKeySkipNodes) {
   ApplyChanges(
       &coroutine_service_, &fake_storage_, base_root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &other_root_id, &new_nodes),
+      callback::Capture(MakeQuitTask(), &status, &other_root_id, &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
-  ForEachDiff(
-      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "key01",
-      [&changes](EntryChange e) {
-        EXPECT_EQ(changes[0].entry, e.entry);
-        return true;
-      },
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_id, other_root_id,
+              "key01",
+              [&changes](EntryChange e) {
+                EXPECT_EQ(changes[0].entry, e.entry);
+                return true;
+              },
+              callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 }

@@ -1267,44 +1267,41 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
           nullptr);
   LedgerPtr ledger_ptr = GetTestLedger();
   Status status;
-  auto postQuitTaskCallback = [] {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  };
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      callback::Capture(postQuitTaskCallback, &status));
+      callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
   PagePtr page1 = GetTestPage();
   fidl::Array<uint8_t> test_page_id;
-  page1->GetId(callback::Capture(postQuitTaskCallback, &test_page_id));
+  page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   PagePtr page2 = GetPage(test_page_id, Status::OK);
 
   // Watch for changes.
   PageWatcherPtr watcher_ptr;
-  Watcher watcher(GetProxy(&watcher_ptr), postQuitTaskCallback);
+  Watcher watcher(GetProxy(&watcher_ptr), MakeQuitTask());
   PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher_ptr),
-                     callback::Capture(postQuitTaskCallback, &status));
+                     callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
-  page1->StartTransaction(callback::Capture(postQuitTaskCallback, &status));
+  page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
-  page2->StartTransaction(callback::Capture(postQuitTaskCallback, &status));
+  page2->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(postQuitTaskCallback, &status));
+             callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
-  page1->Commit(callback::Capture(postQuitTaskCallback, &status));
+  page1->Commit(callback::Capture(MakeQuitTask(), &status));
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1313,16 +1310,16 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   // We should have seen the first commit of page 1.
   EXPECT_EQ(1u, watcher.changes_seen);
 
-  page1->StartTransaction(callback::Capture(postQuitTaskCallback, &status));
+  page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
   page1->Delete(convert::ToArray("name"),
-                callback::Capture(postQuitTaskCallback, &status));
+                callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
-  page1->Commit(callback::Capture(postQuitTaskCallback, &status));
+  page1->Commit(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
@@ -1331,11 +1328,11 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   EXPECT_EQ(2u, watcher.changes_seen);
 
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(postQuitTaskCallback, &status));
+             callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
-  page2->Commit(callback::Capture(postQuitTaskCallback, &status));
+  page2->Commit(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 

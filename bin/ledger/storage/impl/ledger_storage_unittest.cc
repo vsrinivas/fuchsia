@@ -52,8 +52,7 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   std::unique_ptr<PageStorage> page_storage;
   storage::Status status;
   storage_.CreatePageStorage(
-      page_id, callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &page_storage));
+      page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(page_id, page_storage->GetId());
@@ -73,8 +72,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   Status status;
   std::unique_ptr<PageStorage> page_storage;
   storage_.CreatePageStorage(
-      page_id, callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &page_storage));
+      page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(page_id, page_storage->GetId());

@@ -51,8 +51,7 @@ class CommonAncestorTest : public test::TestWithMessageLoop {
         message_loop_.task_runner(), message_loop_.task_runner(),
         &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString()));
     storage::Status status;
-    storage_->Init(
-        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+    storage_->Init(callback::Capture(MakeQuitTask(), &status));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
   }
@@ -69,8 +68,7 @@ class CommonAncestorTest : public test::TestWithMessageLoop {
     std::unique_ptr<const storage::Commit> actual_commit;
     storage_->CommitJournal(
         std::move(journal),
-        callback::Capture([this] { message_loop_.PostQuitTask(); },
-                          &actual_status, &actual_commit));
+        callback::Capture(MakeQuitTask(), &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit;
@@ -89,8 +87,7 @@ class CommonAncestorTest : public test::TestWithMessageLoop {
     std::unique_ptr<const storage::Commit> actual_commit;
     storage_->CommitJournal(
         std::move(journal),
-        callback::Capture([this] { message_loop_.PostQuitTask(); },
-                          &actual_status, &actual_commit));
+        callback::Capture(MakeQuitTask(), &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit;
@@ -99,10 +96,8 @@ class CommonAncestorTest : public test::TestWithMessageLoop {
   std::unique_ptr<const storage::Commit> GetRoot() {
     storage::Status status;
     std::unique_ptr<const storage::Commit> root;
-    storage_->GetCommit(
-        storage::kFirstPageCommitId,
-        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                          &root));
+    storage_->GetCommit(storage::kFirstPageCommitId,
+                        callback::Capture(MakeQuitTask(), &status, &root));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return root;
@@ -127,8 +122,7 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
                      std::move(commit_1), std::move(commit_2),
-                     callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &result));
+                     callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
@@ -144,8 +138,7 @@ TEST_F(CommonAncestorTest, RootAndChild) {
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
                      std::move(root), std::move(child),
-                     callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &result));
+                     callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
@@ -176,8 +169,7 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
                      std::move(commit_1), std::move(commit_merge),
-                     callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &result));
+                     callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
@@ -185,8 +177,7 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
   // Ancestor of (2) and (A).
   FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
                      std::move(commit_2), std::move(commit_a),
-                     callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &result));
+                     callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
@@ -212,8 +203,7 @@ TEST_F(CommonAncestorTest, LongChain) {
   std::unique_ptr<const storage::Commit> result;
   FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
                      std::move(last_commit), std::move(commit_b),
-                     callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &result));
+                     callback::Capture(MakeQuitTask(), &status, &result));
   // This test lasts ~2.5s on x86+qemu+kvm.
   EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
   EXPECT_EQ(Status::OK, status);

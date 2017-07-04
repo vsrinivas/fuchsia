@@ -61,8 +61,7 @@ StorageTest::~StorageTest(){};
   ObjectId object_id;
   GetStorage()->AddObjectFromLocal(
       DataSource::Create(std::move(value)),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object_id));
+      callback::Capture(MakeQuitTask(), &status, &object_id));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal callback was not executed. value: " << value;
@@ -74,10 +73,8 @@ StorageTest::~StorageTest(){};
   }
 
   std::unique_ptr<const Object> result;
-  GetStorage()->GetObject(
-      object_id, PageStorage::Location::LOCAL,
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &result));
+  GetStorage()->GetObject(object_id, PageStorage::Location::LOCAL,
+                          callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "GetObject callback was not executed. value: " << value
@@ -147,8 +144,7 @@ StorageTest::~StorageTest(){};
   Status status;
   ObjectId id;
   TreeNode::Empty(GetStorage(),
-                  callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &id));
+                  callback::Capture(MakeQuitTask(), &status, &id));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty callback was not executed.";
@@ -167,8 +163,7 @@ StorageTest::~StorageTest(){};
   Status status;
   std::unique_ptr<const TreeNode> result;
   TreeNode::FromId(GetStorage(), id,
-                   callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &result));
+                   callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromId callback was not executed.";
@@ -187,10 +182,8 @@ StorageTest::~StorageTest(){};
     std::unique_ptr<const TreeNode>* node) {
   Status status;
   ObjectId id;
-  TreeNode::FromEntries(
-      GetStorage(), 0u, entries, children,
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &id));
+  TreeNode::FromEntries(GetStorage(), 0u, entries, children,
+                        callback::Capture(MakeQuitTask(), &status, &id));
 
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()

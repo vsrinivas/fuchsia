@@ -81,8 +81,7 @@ class PageImplTest : public test::TestWithMessageLoop {
     storage::ObjectId object_id;
     fake_storage_->AddObjectFromLocal(
         storage::DataSource::Create(std::move(value_string)),
-        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                          &object_id));
+        callback::Capture(MakeQuitTask(), &status, &object_id));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object_id;
@@ -95,8 +94,7 @@ class PageImplTest : public test::TestWithMessageLoop {
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
         object_id, storage::PageStorage::Location::LOCAL,
-        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                          &object));
+        callback::Capture(MakeQuitTask(), &status, &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object;
@@ -546,16 +544,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
 
   Status status;
 
-  page_ptr_->Put(
-      convert::ToArray(eager_key), convert::ToArray(eager_value),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
+                 callback::Capture(MakeQuitTask(), &status));
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
-  page_ptr_->PutWithPriority(
-      convert::ToArray(lazy_key), convert::ToArray(lazy_value), Priority::LAZY,
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY,
+                             callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
@@ -565,8 +562,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   fidl::Array<InlinedEntryPtr> actual_entries;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &actual_entries, &next_token));
+      callback::Capture(MakeQuitTask(), &status, &actual_entries, &next_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(next_token.is_null());
@@ -641,8 +637,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   fidl::Array<uint8_t> actual_next_token;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &actual_entries, &actual_next_token));
+      callback::Capture(MakeQuitTask(), &status, &actual_entries,
+                        &actual_next_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::PARTIAL_RESULT, status);
   EXPECT_FALSE(actual_next_token.is_null());
@@ -651,8 +647,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   fidl::Array<InlinedEntryPtr> actual_entries2;
   snapshot->GetEntriesInline(
       nullptr, std::move(actual_next_token),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &actual_entries2, &actual_next_token));
+      callback::Capture(MakeQuitTask(), &status, &actual_entries2,
+                        &actual_next_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(actual_next_token.is_null());
@@ -1108,7 +1104,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   std::string value("a small value");
 
   Status status;
-  auto postquit_callback = [this] { message_loop_.PostQuitTask(); };
+  auto postquit_callback = MakeQuitTask();
   page_ptr_->PutWithPriority(convert::ToArray(key), convert::ToArray(value),
                              Priority::LAZY,
                              ::callback::Capture(postquit_callback, &status));
