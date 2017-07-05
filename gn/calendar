@@ -2,13 +2,7 @@
     "languages": [
         "dart"
     ],
-    "labels": [
-        "//apps/modules/calendar"
-    ],
-    "binaries": [
-        {
-            "binary": "gen/apps/modules/calendar/modules/calendar/calendar.flx",
-            "bootfs_path": "apps/calendar"
-        }
-    ]
+    "packages": {
+        "calendar": "//apps/modules/calendar"
+    }
 }
