@@ -660,6 +660,11 @@ fail:
 }
 
 static mx_status_t ums_bind(void* ctx, mx_device_t* device, void** cookie) {
+    usb_protocol_t usb;
+    if (device_get_protocol(device, MX_PROTOCOL_USB, &usb)) {
+        return 0;
+    }
+
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);
@@ -735,8 +740,8 @@ static mx_status_t ums_bind(void* ctx, mx_device_t* device, void** cookie) {
     ums->bulk_in_max_packet = bulk_in_max_packet;
     ums->bulk_out_max_packet = bulk_out_max_packet;
 
-    size_t max_in = usb_get_max_transfer_size(device, bulk_in_addr);
-    size_t max_out = usb_get_max_transfer_size(device, bulk_out_addr);
+    size_t max_in = usb_get_max_transfer_size(&usb, bulk_in_addr);
+    size_t max_out = usb_get_max_transfer_size(&usb, bulk_out_addr);
     ums->max_transfer = (max_in < max_out ? max_in : max_out);
 
     ums->cbw_iotxn = usb_alloc_iotxn(bulk_out_addr, sizeof(ums_cbw_t));

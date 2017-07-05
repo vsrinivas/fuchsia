@@ -27,6 +27,7 @@
 typedef struct usb_hid_device {
     mx_device_t* mxdev;
     mx_device_t* usbdev;
+    usb_protocol_t usb_proto;
 
     hid_info_t info;
     iotxn_t* txn;
@@ -170,7 +171,7 @@ static mx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration)
     if (status == MX_ERR_IO_REFUSED) {
         // The SET_IDLE command is optional, so this may stall.
         // If that occurs, reset the endpoint and ignore the error
-        status = usb_reset_endpoint(hid->usbdev, 0);
+        status = usb_reset_endpoint(&hid->usb_proto, 0);
     }
     return status;
 }
@@ -265,6 +266,12 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
             return MX_ERR_NO_MEMORY;
         }
 
+        mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_USB, &usbhid->usb_proto);
+        if (status != MX_OK) {
+            free(usbhid);
+            return status;
+        }
+
         usbhid->usbdev = dev;
         usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
         usbhid->hid_desc = hid_desc;
@@ -296,7 +303,7 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
             .proto_ops = &usb_hid_bus_ops,
         };
 
-        mx_status_t status = device_add(dev, &args, &usbhid->mxdev);
+        status = device_add(dev, &args, &usbhid->mxdev);
         if (status != MX_OK) {
             usb_desc_iter_release(&iter);
             iotxn_release(usbhid->txn);

@@ -173,7 +173,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     }
 
     xprintf("call hub_device_added for port %d\n", port);
-    hub->bus.ops->hub_device_added(hub->bus.ctx, hub->usb_device, port, speed);
+    usb_bus_hub_device_added(&hub->bus, hub->usb_device, port, speed);
     usb_hub_set_port_enabled(hub, port, true);
 }
 
@@ -195,7 +195,7 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     xprintf("port %d usb_hub_port_disconnected\n", port);
-    hub->bus.ops->hub_device_removed(hub->bus.ctx, hub->usb_device, port);
+    usb_bus_hub_device_removed(&hub->bus, hub->usb_device, port);
     usb_hub_set_port_enabled(hub, port, false);
 }
 
@@ -264,7 +264,7 @@ static int usb_hub_thread(void* arg) {
         return result;
     }
 
-    result = hub->bus.ops->configure_hub(hub->bus.ctx, hub->usb_device, hub->hub_speed, &desc);
+    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);
     if (result < 0) {
         printf("configure_hub failed: %d\n", result);
         return result;

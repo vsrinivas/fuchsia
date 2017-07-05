@@ -543,8 +543,7 @@ static void dwc_set_bus_device(void* ctx, mx_device_t* busdev) {
     dwc->bus_device = busdev;
     if (busdev) {
         device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, &dwc->bus);
-        dwc->bus.ops->add_device(dwc->bus.ctx, ROOT_HUB_DEVICE_ID, 0,
-                                      USB_SPEED_HIGH);
+        usb_bus_add_device(&dwc->bus, ROOT_HUB_DEVICE_ID, 0, USB_SPEED_HIGH);
     } else {
         dwc->bus.ops = NULL;
     }
@@ -741,7 +740,7 @@ mx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
 
     mtx_unlock(&dwc->usb_devices[dwc->next_device_address].devmtx);
 
-    dwc->bus.ops->add_device(dwc->bus.ctx, dwc->next_device_address, hub_address, speed);
+    usb_bus_add_device(&dwc->bus, dwc->next_device_address, hub_address, speed);
 
     dwc->next_device_address++;
 

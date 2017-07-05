@@ -165,7 +165,7 @@ static mx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
     case IOCTL_USB_GET_CURRENT_FRAME: {
         uint64_t* reply = out_buf;
         if (out_len < sizeof(*reply)) return MX_ERR_BUFFER_TOO_SMALL;
-        *reply = dev->hci.ops->get_current_frame(dev->hci.ctx);
+        *reply = usb_hci_get_current_frame(&dev->hci);
         *out_actual = sizeof(*reply);
         return MX_OK;
     }

@@ -30,15 +30,6 @@ mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int featu
 
 mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
 
-// Resets an endpoint that is in a halted or error state.
-// Endpoints will be halted if the device returns a STALL in response to a USB transaction.
-// When that occurs, the transaction will fail with ERR_IO_REFUSED.
-// usb_reset_endpoint() the endpoint to normal running state.
-mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address);
-
-// returns the maximum amount of data that can be transferred on an endpoint in a single transaction.
-size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address);
-
 // helper function for allocating iotxns for USB transfers
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size);
 

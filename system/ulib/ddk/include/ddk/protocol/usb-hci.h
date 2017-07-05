@@ -37,4 +37,53 @@ typedef struct usb_hci_protocol {
     void* ctx;
 } usb_hci_protocol_t;
 
+static inline void usb_hci_set_bus_device(usb_hci_protocol_t* hci, mx_device_t* busdev) {
+    hci->ops->set_bus_device(hci->ctx, busdev);
+}
+
+static inline size_t usb_hci_get_max_device_count(usb_hci_protocol_t* hci) {
+    return hci->ops->get_max_device_count(hci->ctx);
+
+}
+
+// enables or disables an endpoint using parameters derived from ep_desc
+static inline mx_status_t usb_hci_enable_endpoint(usb_hci_protocol_t* hci, uint32_t device_id,
+                                   usb_endpoint_descriptor_t* ep_desc,
+                                   usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
+    return hci->ops->enable_endpoint(hci->ctx, device_id, ep_desc, ss_comp_desc, enable);
+}
+
+// returns the current frame (in milliseconds), used for isochronous transfers
+static inline uint64_t usb_hci_get_current_frame(usb_hci_protocol_t* hci) {
+    return hci->ops->get_current_frame(hci->ctx);
+}
+
+
+
+static inline mx_status_t usb_hci_configure_hub(usb_hci_protocol_t* hci, uint32_t device_id,
+                                                usb_speed_t speed,
+                                                usb_hub_descriptor_t* descriptor) {
+    return hci->ops->configure_hub(hci->ctx, device_id, speed, descriptor);
+}
+
+static inline mx_status_t usb_hci_hub_device_added(usb_hci_protocol_t* hci, uint32_t device_id,
+                                                   int port, usb_speed_t speed) {
+    return hci->ops->hub_device_added(hci->ctx, device_id, port, speed);
+}
+
+static inline mx_status_t usb_hci_hub_device_removed(usb_hci_protocol_t* hci, uint32_t device_id,
+                                                     int port) {
+    return hci->ops->hub_device_removed(hci->ctx, device_id, port);
+}
+
+static inline mx_status_t usb_hci_reset_endpoint(usb_hci_protocol_t* hci, uint32_t device_id,
+                                                 uint8_t ep_address) {
+    return hci->ops->reset_endpoint(hci->ctx, device_id, ep_address);
+}
+
+static inline size_t usb_hci_get_max_transfer_size(usb_hci_protocol_t* hci, uint32_t device_id,
+                                                   uint8_t ep_address) {
+    return hci->ops->get_max_transfer_size(hci->ctx, device_id, ep_address);
+}
+
 __END_CDECLS;

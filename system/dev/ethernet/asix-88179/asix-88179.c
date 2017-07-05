@@ -49,6 +49,7 @@
 typedef struct {
     mx_device_t* device;
     mx_device_t* usb_device;
+    usb_protocol_t usb_proto;
 
     uint8_t mac_addr[6];
     uint8_t status[INTR_REQ_SIZE];
@@ -304,7 +305,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     mtx_lock(&eth->mutex);
     if (request->status == MX_ERR_IO_REFUSED) {
         printf("ax88179_read_complete usb_reset_endpoint\n");
-        usb_reset_endpoint(eth->usb_device, eth->bulk_in_addr);
+        usb_reset_endpoint(&eth->usb_proto, eth->bulk_in_addr);
     } else if ((request->status == MX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
     }
@@ -331,7 +332,7 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     list_add_tail(&eth->free_write_reqs, &request->node);
     if (request->status == MX_ERR_IO_REFUSED) {
         printf("ax88179_write_complete usb_reset_endpoint\n");
-        usb_reset_endpoint(eth->usb_device, eth->bulk_out_addr);
+        usb_reset_endpoint(&eth->usb_proto, eth->bulk_out_addr);
     }
 
     iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
@@ -775,6 +776,12 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     if (!eth) {
         printf("Not enough memory for ax88179_t\n");
         return MX_ERR_NO_MEMORY;
+    }
+
+    result = device_get_protocol(device, MX_PROTOCOL_USB, &eth->usb_proto);
+    if (result != MX_OK) {
+        free(eth);
+        return result;
     }
 
     list_initialize(&eth->free_read_reqs);

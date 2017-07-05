@@ -151,8 +151,8 @@ static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
                                                  usb_endpoint_descriptor_t* ep,
                                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                                  bool enable) {
-    mx_status_t status = intf->hci.ops->enable_endpoint(intf->hci.ctx, intf->device_id, ep,
-                                                        ss_comp_desc, enable);
+    mx_status_t status = usb_hci_enable_endpoint(&intf->hci, intf->device_id, ep, ss_comp_desc,
+                                                 enable);
     if (status != MX_OK) {
         printf("usb_interface_enable_endpoint failed\n");
     }
@@ -210,12 +210,12 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
 
 static mx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
-    return intf->hci.ops->reset_endpoint(intf->hci.ctx, intf->device_id, ep_address);
+    return usb_hci_reset_endpoint(&intf->hci, intf->device_id, ep_address);
 }
 
 static size_t usb_interface_get_max_transfer_size(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
-    return intf->hci.ops->get_max_transfer_size(intf->hci.ctx, intf->device_id, ep_address);
+    return usb_hci_get_max_transfer_size(&intf->hci, intf->device_id, ep_address);
 }
 
 static uint32_t _usb_interface_get_device_id(void* ctx) {
@@ -396,7 +396,7 @@ mx_status_t usb_interface_get_device_id(mx_device_t* device, uint32_t* out) {
     if (device_get_protocol(device, MX_PROTOCOL_USB, &usb) != MX_OK) {
         return MX_ERR_INTERNAL;
     }
-    *out = usb.ops->get_device_id(usb.ctx);
+    *out = usb_get_device_id(&usb);
     return MX_OK;
 }
 

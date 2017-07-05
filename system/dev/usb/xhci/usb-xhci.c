@@ -33,7 +33,7 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
         return MX_ERR_INTERNAL;
     }
 
-    return xhci->bus.ops->add_device(xhci->bus.ctx, slot_id, hub_address, speed);
+    return usb_bus_add_device(&xhci->bus, slot_id, hub_address, speed);
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
@@ -44,7 +44,7 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
         return;
     }
 
-    xhci->bus.ops->remove_device(xhci->bus.ctx, slot_id);
+    usb_bus_remove_device(&xhci->bus, slot_id);
 }
 
 static void xhci_set_bus_device(void* ctx, mx_device_t* busdev) {

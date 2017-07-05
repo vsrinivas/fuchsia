@@ -30,4 +30,21 @@ typedef struct usb_protocol {
     void* ctx;
 } usb_protocol_t;
 
+// Resets an endpoint that is in a halted or error state.
+// Endpoints will be halted if the device returns a STALL in response to a USB transaction.
+// When that occurs, the transaction will fail with ERR_IO_REFUSED.
+// usb_reset_endpoint() the endpoint to normal running state.
+static inline mx_status_t usb_reset_endpoint(usb_protocol_t* usb, uint8_t ep_address) {
+    return usb->ops->reset_endpoint(usb->ctx, ep_address);
+}
+
+// returns the maximum amount of data that can be transferred on an endpoint in a single transaction.
+static inline mx_status_t usb_get_max_transfer_size(usb_protocol_t* usb, uint8_t ep_address) {
+    return usb->ops->get_max_transfer_size(usb->ctx, ep_address);
+}
+
+static inline mx_status_t usb_get_device_id(usb_protocol_t* usb) {
+    return usb->ops->get_device_id(usb->ctx);
+}
+
 __END_CDECLS;
