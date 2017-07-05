@@ -15,6 +15,7 @@ group("all") {
   public_deps = [
     "examples",
     "lib/input",
+    "lib/scene",
     "lib/skia",
     "lib/view_framework",
     "services",

@@ -4,6 +4,14 @@
 
 import("//apps/mozart/config.gni")
 
+group("scene") {
+  deps = [
+    ":client",
+    ":session_helpers",
+    ":skia",
+  ]
+}
+
 source_set("session_helpers") {
   sources = [
     "session_helpers.cc",

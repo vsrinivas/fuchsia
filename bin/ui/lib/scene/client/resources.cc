@@ -231,8 +231,12 @@ Camera::Camera(Session* session, uint32_t scene_id) : Resource(session) {
 
 Camera::~Camera() = default;
 
-void Camera::SetProjection(const float matrix[4][4]) {
-  session()->Enqueue(mozart::NewSetCameraProjectionOp(id(), matrix));
+void Camera::SetProjection(const float eye_position[3],
+                           const float eye_look_at[3],
+                           const float eye_up[3],
+                           float fovy) {
+  session()->Enqueue(mozart::NewSetCameraProjectionOp(
+      id(), eye_position, eye_look_at, eye_up, fovy));
 }
 
 DisplayRenderer::DisplayRenderer(Session* session) : Resource(session) {

@@ -294,8 +294,11 @@ class Camera : public Resource {
   explicit Camera(Session* session, uint32_t scene_id);
   ~Camera();
 
-  // Sets the camera's projection matrix in row-major order.
-  void SetProjection(const float matrix[4][4]);
+  // Sets the camera's projection parameters.
+  void SetProjection(const float eye_position[3],
+                     const float eye_look_at[3],
+                     const float eye_up[3],
+                     float fovy);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Camera);
