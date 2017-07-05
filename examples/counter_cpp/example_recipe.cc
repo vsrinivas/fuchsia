@@ -340,7 +340,7 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
   // demonstrate the use of a service exchange.
   fidl::BindingSet<modular::examples::Adder> adder_clients_;
   AdderImpl adder_service_;
-  app::ServiceProviderImpl outgoing_services_;
+  app::ServiceNamespace outgoing_services_;
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.

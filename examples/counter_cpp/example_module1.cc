@@ -228,7 +228,7 @@ class Module1App : modular::SingleServiceViewApp<modular::Module> {
   // demonstrate the use of a service exchange.
   fidl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
   MultiplierImpl multiplier_service_;
-  app::ServiceProviderImpl outgoing_services_;
+  app::ServiceNamespace outgoing_services_;
 
   std::unique_ptr<Module1View> view_;
   modular::ModuleContextPtr module_context_;

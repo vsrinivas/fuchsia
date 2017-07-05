@@ -88,7 +88,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
   modular::ComponentContextPtr component_context_;
   modular::AgentControllerPtr agent2_controller_;
 
-  modular::ServiceProviderImpl agent1_services_;
+  app::ServiceNamespace agent1_services_;
   fidl::BindingSet<modular::testing::Agent1Interface> agent1_interface_;
 };
 

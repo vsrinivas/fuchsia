@@ -84,7 +84,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
-  modular::ServiceProviderImpl agent_services_;
+  app::ServiceNamespace agent_services_;
   fidl::BindingSet<modular::testing::TriggerAgentInterface>
       trigger_agent_interface_;
 

@@ -93,7 +93,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
-  modular::ServiceProviderImpl services_;
+  app::ServiceNamespace services_;
   fidl::BindingSet<modular::testing::QueuePersistenceAgentInterface>
       services_bindings_;
 };
