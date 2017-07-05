@@ -81,7 +81,7 @@ template("driver_module") {
     outputs = [
       "$root_out_dir/${_output_name}.${_output_extension}",
     ]
-    deps = [
+    public_deps = [
       target,
     ]
   }
