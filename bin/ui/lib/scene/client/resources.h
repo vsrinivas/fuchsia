@@ -246,7 +246,7 @@ class ImportNode : public ContainerTraits<Node> {
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(ImportNode);
 
-  bool is_bound_;
+  bool is_bound_ = false;
 };
 
 // Creates a node that clips the contents of its hierarchy to the specified clip
