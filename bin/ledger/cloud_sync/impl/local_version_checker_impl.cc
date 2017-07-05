@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/local_version_checker.h"
+#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
 
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
@@ -20,11 +20,11 @@ std::string GetMetaDataKey(ftl::StringView local_version) {
 }
 }  // namespace
 
-LocalVersionChecker::LocalVersionChecker() {}
+LocalVersionCheckerImpl::LocalVersionCheckerImpl() {}
 
-LocalVersionChecker::~LocalVersionChecker() {}
+LocalVersionCheckerImpl::~LocalVersionCheckerImpl() {}
 
-void LocalVersionChecker::CheckCloudVersion(
+void LocalVersionCheckerImpl::CheckCloudVersion(
     std::string auth_token,
     firebase::Firebase* user_firebase,
     std::string local_version_path,

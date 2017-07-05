@@ -30,6 +30,26 @@ UserSyncImpl::~UserSyncImpl() {
   FTL_DCHECK(active_ledger_syncs_.empty());
 }
 
+std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
+    ftl::StringView app_id) {
+  FTL_DCHECK(started_);
+
+  if (!user_config_.use_sync) {
+    return nullptr;
+  }
+
+  auto result = std::make_unique<LedgerSyncImpl>(
+      environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
+  result->set_on_delete([ this, ledger_sync = result.get() ]() {
+    active_ledger_syncs_.erase(ledger_sync);
+  });
+  active_ledger_syncs_.insert(result.get());
+  if (upload_enabled_) {
+    result->EnableUpload();
+  }
+  return result;
+}
+
 std::string UserSyncImpl::GetLocalVersionPath() {
   return ftl::Concatenate({user_config_.user_directory, "/local_version"});
 }
@@ -68,7 +88,7 @@ void UserSyncImpl::CheckCloudVersion() {
 }
 
 void UserSyncImpl::DoCheckCloudVersion(std::string auth_token) {
-  local_version_checker_.CheckCloudVersion(
+  user_config_.local_version_checker->CheckCloudVersion(
       std::move(auth_token), user_firebase_.get(), GetLocalVersionPath(),
       [this](LocalVersionChecker::Status status) {
         if (status == LocalVersionChecker::Status::OK) {
@@ -107,26 +127,6 @@ void UserSyncImpl::EnableUpload() {
   for (auto ledger_sync : active_ledger_syncs_) {
     ledger_sync->EnableUpload();
   }
-}
-
-std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    ftl::StringView app_id) {
-  FTL_DCHECK(started_);
-
-  if (!user_config_.use_sync) {
-    return nullptr;
-  }
-
-  auto result = std::make_unique<LedgerSyncImpl>(
-      environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
-  result->set_on_delete([ this, ledger_sync = result.get() ]() {
-    active_ledger_syncs_.erase(ledger_sync);
-  });
-  active_ledger_syncs_.insert(result.get());
-  if (upload_enabled_) {
-    result->EnableUpload();
-  }
-  return result;
 }
 
 }  // namespace cloud_sync

@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_TEST_TEST_WITH_MESSAGE_LOOP_H_
 #define APPS_LEDGER_SRC_TEST_TEST_WITH_MESSAGE_LOOP_H_
 
+#include <functional>
+
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
@@ -17,10 +19,16 @@ class TestWithMessageLoop : public ::testing::Test {
   TestWithMessageLoop() {}
 
  protected:
-  // Run the loop for at most |timeout|. Returns |true| if the timeout has been
+  // Runs the loop for at most |timeout|. Returns |true| if the timeout has been
   // reached.
   bool RunLoopWithTimeout(
       ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
+
+  // Runs the loop until the condition returns true or the timeout is reached.
+  // Returns |true| if the condition was met, and |false| if the timeout was
+  // reached.
+  bool RunLoopUntil(std::function<bool()> condition,
+                    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
 
   // Creates a closure that quits the test message loop when executed.
   ftl::Closure MakeQuitTask();

@@ -34,6 +34,8 @@ class LedgerSyncImpl : public LedgerSync {
   // Enables upload. Has no effect if this method has already been called.
   void EnableUpload();
 
+  bool IsUploadEnabled() const { return upload_enabled_; }
+
   // |on_delete| will be called when this class is deleted.
   void set_on_delete(std::function<void()> on_delete) {
     FTL_DCHECK(!on_delete_);

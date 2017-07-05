@@ -14,7 +14,7 @@
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_sync/impl/aggregator.h"
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
-#include "apps/ledger/src/cloud_sync/impl/local_version_checker.h"
+#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -33,6 +33,9 @@ class UserSyncImpl : public UserSync {
                ftl::Closure on_version_mismatch);
   ~UserSyncImpl() override;
 
+  // UserSync:
+  std::unique_ptr<LedgerSync> CreateLedgerSync(ftl::StringView app_id) override;
+
   // Starts UserSyncImpl. This method must be called before any other method.
   void Start();
 
@@ -47,17 +50,10 @@ class UserSyncImpl : public UserSync {
   // Enables sync upload.
   void EnableUpload();
 
-  // UserSync:
-  std::unique_ptr<LedgerSync> CreateLedgerSync(ftl::StringView app_id) override;
-
   ledger::Environment* environment_;
   const UserConfig user_config_;
   std::unique_ptr<backoff::Backoff> backoff_;
   ftl::Closure on_version_mismatch_;
-
-  // Utility to check that the local version is compatible with the cloud
-  // version.
-  LocalVersionChecker local_version_checker_;
 
   // UserSyncImpl must be started before it can be used.
   bool started_ = false;

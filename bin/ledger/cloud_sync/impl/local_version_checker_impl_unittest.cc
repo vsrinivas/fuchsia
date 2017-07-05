@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/local_version_checker.h"
+#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
 
 #include <unordered_map>
 
@@ -77,9 +77,9 @@ class FakeFirebase : public firebase::Firebase {
   std::vector<std::vector<std::string>> put_query_params;
 };
 
-class LocalVersionCheckerTest : public ::testing::Test {
+class LocalVersionCheckerImplTest : public ::testing::Test {
  public:
-  LocalVersionCheckerTest() {}
+  LocalVersionCheckerImplTest() {}
 
  protected:
   void SetUp() override {
@@ -95,7 +95,7 @@ class LocalVersionCheckerTest : public ::testing::Test {
   void ResetFirebase() { firebase = std::make_unique<FakeFirebase>(); }
 
   LocalVersionChecker::Status CheckCloudVersion() {
-    LocalVersionChecker checker;
+    LocalVersionCheckerImpl checker;
 
     auto result = LocalVersionChecker::Status::NETWORK_ERROR;
     checker.CheckCloudVersion(
@@ -116,7 +116,7 @@ class LocalVersionCheckerTest : public ::testing::Test {
   std::string auth_token;
 };
 
-TEST_F(LocalVersionCheckerTest, NoLocalVersionNoRemoteVersion) {
+TEST_F(LocalVersionCheckerImplTest, NoLocalVersionNoRemoteVersion) {
   EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
 
   EXPECT_TRUE(files::IsFile(local_version_file));
@@ -125,7 +125,7 @@ TEST_F(LocalVersionCheckerTest, NoLocalVersionNoRemoteVersion) {
             firebase->values.begin()->first.find(GetFileContent()));
 }
 
-TEST_F(LocalVersionCheckerTest, CompatibleLocalAndRemoteVersion) {
+TEST_F(LocalVersionCheckerImplTest, CompatibleLocalAndRemoteVersion) {
   ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
 
   EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
@@ -136,7 +136,7 @@ TEST_F(LocalVersionCheckerTest, CompatibleLocalAndRemoteVersion) {
             firebase->values.begin()->first.find(GetFileContent()));
 }
 
-TEST_F(LocalVersionCheckerTest, NoLocalVersionOtherRemoteVersion) {
+TEST_F(LocalVersionCheckerImplTest, NoLocalVersionOtherRemoteVersion) {
   ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
 
   ResetFile();
@@ -145,27 +145,27 @@ TEST_F(LocalVersionCheckerTest, NoLocalVersionOtherRemoteVersion) {
   EXPECT_EQ(2u, firebase->values.size());
 }
 
-TEST_F(LocalVersionCheckerTest, IncompatibleVersions) {
+TEST_F(LocalVersionCheckerImplTest, IncompatibleVersions) {
   ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
 
   ResetFirebase();
   EXPECT_EQ(LocalVersionChecker::Status::INCOMPATIBLE, CheckCloudVersion());
 }
 
-TEST_F(LocalVersionCheckerTest, IoErrorOnPut) {
+TEST_F(LocalVersionCheckerImplTest, IoErrorOnPut) {
   firebase->returned_status = firebase::Status::NETWORK_ERROR;
 
   EXPECT_EQ(LocalVersionChecker::Status::NETWORK_ERROR, CheckCloudVersion());
 }
 
-TEST_F(LocalVersionCheckerTest, IoErrorOnGet) {
+TEST_F(LocalVersionCheckerImplTest, IoErrorOnGet) {
   ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
 
   firebase->returned_status = firebase::Status::NETWORK_ERROR;
   EXPECT_EQ(LocalVersionChecker::Status::NETWORK_ERROR, CheckCloudVersion());
 }
 
-TEST_F(LocalVersionCheckerTest, Auth) {
+TEST_F(LocalVersionCheckerImplTest, Auth) {
   auth_token = "some-token";
   ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
   EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());

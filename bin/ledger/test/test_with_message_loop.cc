@@ -5,6 +5,7 @@
 #include "apps/ledger/src/test/test_with_message_loop.h"
 
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
 
 namespace test {
 
@@ -26,6 +27,18 @@ bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
     *canceled_ptr = true;
   }
   return timed_out;
+}
+
+bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
+                                       ftl::TimeDelta timeout) {
+  const ftl::TimePoint deadline = ftl::TimePoint::Now() + timeout;
+  while (ftl::TimePoint::Now() < deadline) {
+    if (condition()) {
+      return true;
+    }
+    RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10));
+  }
+  return condition();
 }
 
 ftl::Closure TestWithMessageLoop::MakeQuitTask() {

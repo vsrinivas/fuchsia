@@ -7,6 +7,7 @@
 #include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
+#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
@@ -39,6 +40,8 @@ cloud_sync::UserConfig GetUserConfig(const FirebaseConfigPtr& firebase_config,
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
   user_config.auth_provider = auth_provider;
+  user_config.local_version_checker =
+      std::make_unique<cloud_sync::LocalVersionCheckerImpl>();
   return user_config;
 }
 
