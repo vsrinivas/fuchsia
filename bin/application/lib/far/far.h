@@ -5,6 +5,7 @@
 #ifndef APPLICATION_LIB_FAR_C_FAR_H_
 #define APPLICATION_LIB_FAR_C_FAR_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
