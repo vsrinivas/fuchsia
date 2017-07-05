@@ -4,7 +4,10 @@
     ],
     "labels": [
         "//apps/install-fuchsia/app:install-fuchsia",
-        "//apps/install-fuchsia/tests:install-fuchsia-tests"
+        "//apps/install-fuchsia/tests:install-fuchsia-tests",
+        "//apps/install-fuchsia/app:sparser_host",
+        "//apps/install-fuchsia/app:sparser",
+        "//apps/install-fuchsia/tests:install-fuchsia-sparse-tests"
     ],
     "binaries": [
         {
@@ -14,6 +17,14 @@
         {
             "binary": "install-fuchsia-tests",
             "bootfs_path": "test/install-fuchsia-tests"
+        },
+        {
+            "binary": "sparser",
+            "bootfs_path": "apps/sparser"
+        },
+        {
+            "binary": "install-fuchsia-sparse-tests",
+            "bootfs_path": "test/install-fuchsia-sparse-tests"
         }
     ]
 }
