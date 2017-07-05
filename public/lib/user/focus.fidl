@@ -26,14 +26,11 @@ interface FocusController {
   WatchRequest(FocusRequestWatcher watcher);
 };
 
-// Implemented by user shell. OnRequest() gets called whenever there
+// Implemented by user shell. OnFocusRequest() gets called whenever there
 // is a new request to change focus on this device. Requests can be
 // made via FocusProvider.Request().
 interface FocusRequestWatcher {
-  // TODO(mesch): This should be OnFocusRequest(), analog to
-  // OnFocusChange(), such that multiple request watchers can be
-  // implemented by the same client class.
-  OnRequest(string story_id);
+  OnFocusRequest(string story_id);
 };
 
 // Implemented by user runner. Given to user shell in

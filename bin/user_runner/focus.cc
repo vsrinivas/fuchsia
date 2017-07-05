@@ -58,7 +58,7 @@ void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
 // |FocusProvider|
 void FocusHandler::Request(const fidl::String& story_id) {
   for (const auto& watcher : request_watchers_) {
-    watcher->OnRequest(story_id);
+    watcher->OnFocusRequest(story_id);
   }
 }
 
