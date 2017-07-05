@@ -2,31 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-shared_library("usb-audio") {
-    public = [ ]
+import("//build/toolchain/shared.gni")
 
-    sources = [
-        "audio-util.c",
-        "midi.c",
-        "usb-audio-source.c",
-        "usb-audio-stream.cpp",
-        "usb-audio.c",
-        "usb-midi-sink.c",
-        "usb-midi-source.c",
-    ]
+fuchsia_shared_library("usb-audio") {
+  public = []
 
-    deps = [
-        "//drivers/audio/audio-proto",
-        "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-        "//magenta/system/ulib/ddktl",
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxtl",
-    ]
+  sources = [
+    "audio-util.c",
+    "midi.c",
+    "usb-audio-source.c",
+    "usb-audio-stream.cpp",
+    "usb-audio.c",
+    "usb-midi-sink.c",
+    "usb-midi-source.c",
+  ]
 
-    libs = [
-      "ddk",
-      "driver",
-      "magenta",
-      "sync",
-    ]
+  deps = [
+    "//drivers/audio/audio-proto",
+    "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    "//magenta/system/ulib/ddktl",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "magenta",
+    "sync",
+  ]
 }
