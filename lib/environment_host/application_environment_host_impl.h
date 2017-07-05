@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "application/lib/app/service_provider_impl.h"
+#include "application/lib/svc/service_namespace.h"
 #include "application/services/application_environment.fidl.h"
 #include "application/services/application_environment_host.fidl.h"
 
@@ -12,7 +12,7 @@ namespace maxwell {
 
 // Environment surfacing only explicitly given environment services.
 class ApplicationEnvironmentHostImpl : public app::ApplicationEnvironmentHost,
-                                       public app::ServiceProviderImpl {
+                                       public app::ServiceNamespace {
  public:
   ApplicationEnvironmentHostImpl(app::ApplicationEnvironment* parent_env);
   void GetApplicationEnvironmentServices(

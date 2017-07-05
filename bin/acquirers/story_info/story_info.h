@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include "application/lib/app/service_provider_impl.h"
+#include "application/lib/svc/service_namespace.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/modular/services/agent/agent.fidl.h"
@@ -88,7 +88,7 @@ class StoryInfoAcquirer : public modular::Agent,
   // the StoryWatcher instances.
   std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
 
-  app::ServiceProviderImpl agent_services_;
+  app::ServiceNamespace agent_services_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };

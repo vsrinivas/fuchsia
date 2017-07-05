@@ -10,6 +10,7 @@ source_set("application_environment_host_impl") {
 
   public_deps = [
     "//application/lib/app",
+    "//application/lib/svc",
   ]
 }
 

@@ -39,9 +39,9 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
  private:
   using ServiceProviderInitializer =
       std::function<void(const std::string& url,
-                         app::ServiceProviderImpl* agent_host)>;
+                         app::ServiceNamespace* agent_host)>;
   void AddStandardServices(const std::string& url,
-                           app::ServiceProviderImpl* agent_host);
+                           app::ServiceNamespace* agent_host);
 
   app::ServiceProviderPtr StartServiceProviderApp(const std::string& url);
   void StartAgent(const std::string& url);

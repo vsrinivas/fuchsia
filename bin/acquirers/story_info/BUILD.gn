@@ -22,6 +22,7 @@ executable("story_info") {
   deps = [
     ":initializer",
     "//application/lib/app",
+    "//application/lib/svc",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:json_xdr",

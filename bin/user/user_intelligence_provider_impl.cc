@@ -114,7 +114,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   StartAgent(
       "file:///system/apps/agents/mi_dashboard.dartx",
-      [=](const std::string& url, app::ServiceProviderImpl* agent_host) {
+      [=](const std::string& url, app::ServiceNamespace* agent_host) {
         AddStandardServices(url, agent_host);
         agent_host->AddService<maxwell::ContextDebug>(
             [=](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
@@ -187,7 +187,7 @@ void UserIntelligenceProviderImpl::StartActionLog(
 
 void UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url,
-    app::ServiceProviderImpl* agent_host) {
+    app::ServiceNamespace* agent_host) {
   agent_host->AddService<maxwell::ContextPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
         auto scope = ComponentScope::New();

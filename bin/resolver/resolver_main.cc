@@ -7,7 +7,6 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "application/lib/app/service_provider_impl.h"
 #include "apps/modular/services/component/component.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"
