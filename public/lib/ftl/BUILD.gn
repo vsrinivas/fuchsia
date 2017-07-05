@@ -183,6 +183,7 @@ executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
+    "files/directory_unittest.cc",
     "files/file_unittest.cc",
     "files/path_unittest.cc",
     "files/scoped_temp_dir_unittest.cc",
