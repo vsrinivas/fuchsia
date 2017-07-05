@@ -32,8 +32,8 @@ bool generation_ge(uint64_t g1, uint64_t g2) {
 // Validate the metadata's hash value.
 // Returns 'true' if it matches, 'false' otherwise.
 bool fvm_check_hash(const void* metadata, size_t metadata_size) {
-    MX_DEBUG_ASSERT(metadata_size >= sizeof(fvm_t));
-    const fvm_t* header = static_cast<const fvm_t*>(metadata);
+    MX_DEBUG_ASSERT(metadata_size >= sizeof(fvm::fvm_t));
+    const fvm::fvm_t* header = static_cast<const fvm::fvm_t*>(metadata);
     const void* metadata_after_hash =
         reinterpret_cast<const void*>(header->hash + sizeof(header->hash));
     uint8_t empty_hash[sizeof(header->hash)];
@@ -41,10 +41,10 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 
     digest::Digest digest;
     digest.Init();
-    digest.Update(metadata, offsetof(fvm_t, hash));
+    digest.Update(metadata, offsetof(fvm::fvm_t, hash));
     digest.Update(empty_hash, sizeof(empty_hash));
     digest.Update(metadata_after_hash,
-                  metadata_size - (offsetof(fvm_t, hash) + sizeof(header->hash)));
+                  metadata_size - (offsetof(fvm::fvm_t, hash) + sizeof(header->hash)));
     digest.Final();
     return digest == header->hash;
 }
@@ -52,7 +52,7 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 } // namespace anonymous
 
 void fvm_update_hash(void* metadata, size_t metadata_size) {
-    fvm_t* header = static_cast<fvm_t*>(metadata);
+    fvm::fvm_t* header = static_cast<fvm::fvm_t*>(metadata);
     memset(header->hash, 0, sizeof(header->hash));
     digest::Digest digest;
     const uint8_t* hash = digest.Hash(metadata, metadata_size);
@@ -61,8 +61,8 @@ void fvm_update_hash(void* metadata, size_t metadata_size) {
 
 mx_status_t fvm_validate_header(const void* metadata, const void* backup,
                                 size_t metadata_size, const void** out) {
-    const fvm_t* primary_header = static_cast<const fvm_t*>(metadata);
-    const fvm_t* backup_header = static_cast<const fvm_t*>(backup);
+    const fvm::fvm_t* primary_header = static_cast<const fvm::fvm_t*>(metadata);
+    const fvm::fvm_t* backup_header = static_cast<const fvm::fvm_t*>(backup);
 
     bool primary_valid = fvm_check_hash(metadata, metadata_size);
     bool backup_valid = fvm_check_hash(backup, metadata_size);
@@ -81,7 +81,7 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
         use_primary = generation_ge(primary_header->generation, backup_header->generation);
     }
 
-    const fvm_t* header = use_primary ? primary_header : backup_header;
+    const fvm::fvm_t* header = use_primary ? primary_header : backup_header;
     if (header->magic != FVM_MAGIC) {
         fprintf(stderr, "fvm: Bad magic\n");
         return MX_ERR_BAD_STATE;
@@ -99,7 +99,11 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
     return MX_OK;
 }
 
-mx_status_t fvm_init(int fd) {
+mx_status_t fvm_init(int fd, size_t slice_size) {
+    if (slice_size % FVM_BLOCK_SIZE != 0) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
     // The metadata layout of the FVM is dependent on the
     // size of the FVM's underlying partition.
     block_info_t block_info;
@@ -108,12 +112,12 @@ mx_status_t fvm_init(int fd) {
         return static_cast<mx_status_t>(rc);
     } else if (rc != sizeof(block_info)) {
         return MX_ERR_BAD_STATE;
-    } else if (FVM_SLICE_SIZE % block_info.block_size) {
+    } else if (slice_size == 0 || slice_size % block_info.block_size) {
         return MX_ERR_BAD_STATE;
     }
 
     size_t disk_size = block_info.block_count * block_info.block_size;
-    size_t metadata_size = FVM_METADATA_SIZE(disk_size);
+    size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
 
     mxtl::unique_ptr<MappedVmo> mvmo;
     mx_status_t status = MappedVmo::Create(metadata_size * 2, "fvm-meta", &mvmo);
@@ -125,17 +129,17 @@ mx_status_t fvm_init(int fd) {
     memset(mvmo->GetData(), 0, metadata_size);
 
     // Superblock
-    fvm_t* sb = static_cast<fvm_t*>(mvmo->GetData());
+    fvm::fvm_t* sb = static_cast<fvm::fvm_t*>(mvmo->GetData());
     sb->magic = FVM_MAGIC;
     sb->version = FVM_VERSION;
-    sb->slice_count = (disk_size - metadata_size * 2) / FVM_SLICE_SIZE;
-    sb->slice_size = FVM_SLICE_SIZE;
+    sb->pslice_count = (disk_size - metadata_size * 2) / slice_size;
+    sb->slice_size = slice_size;
     sb->fvm_partition_size = disk_size;
-    sb->vpartition_table_size = FVM_VPART_TABLE_LENGTH;
-    sb->allocation_table_size = FVM_ALLOC_TABLE_LENGTH(disk_size);
+    sb->vpartition_table_size = fvm::kVPartTableLength;
+    sb->allocation_table_size = fvm::AllocTableLength(disk_size, slice_size);
     sb->generation = 0;
 
-    if (sb->slice_count == 0) {
+    if (sb->pslice_count == 0) {
         return MX_ERR_NO_SPACE;
     }
 
@@ -162,14 +166,16 @@ mx_status_t fvm_init(int fd) {
     }
 
     printf("fvm_init: Success\n");
-    printf("fvm_init: Slice Count: %zu, size: %zu\n", sb->slice_count, sb->slice_size);
+    printf("fvm_init: Slice Count: %zu, size: %zu\n", sb->pslice_count, sb->slice_size);
     printf("fvm_init: Vpart offset: %zu, length: %zu\n",
-           FVM_VPART_TABLE_OFFSET, FVM_VPART_TABLE_LENGTH);
+           fvm::kVPartTableOffset, fvm::kVPartTableLength);
     printf("fvm_init: Atable offset: %zu, length: %zu\n",
-           FVM_ALLOC_TABLE_OFFSET, FVM_ALLOC_TABLE_LENGTH(disk_size));
-    printf("fvm_init: Backup meta starts at: %zu\n", FVM_BACKUP_START(disk_size));
+           fvm::kAllocTableOffset, fvm::AllocTableLength(disk_size, slice_size));
+    printf("fvm_init: Backup meta starts at: %zu\n",
+           fvm::BackupStart(disk_size, slice_size));
     printf("fvm_init: Slices start at %zu, there are %zu of them\n",
-           FVM_SLICES_START(disk_size), FVM_USABLE_SLICES_COUNT(disk_size));
+           fvm::SlicesStart(disk_size, slice_size),
+           fvm::UsableSlicesCount(disk_size, slice_size));
 
     return MX_OK;
 }

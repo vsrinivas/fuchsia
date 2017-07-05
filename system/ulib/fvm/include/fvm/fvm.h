@@ -11,8 +11,6 @@
 #define FVM_MAGIC (0x54524150204d5646ull) // 'FVM PART'
 #define FVM_VERSION 0x00000001
 #define FVM_SLICE_FREE 0
-// TODO(smklein): Allow for a run-time configurable slice size.
-#define FVM_SLICE_SIZE (64lu * (1 << 20))
 #define FVM_BLOCK_SIZE 8192lu
 #define FVM_GUID_LEN GPT_GUID_LEN
 #define FVM_GUID_STRLEN GPT_GUID_STRLEN
@@ -20,14 +18,15 @@
 
 #ifdef __cplusplus
 
-static_assert(FVM_SLICE_SIZE % FVM_BLOCK_SIZE == 0,
-              "Slice size must be multiple of underlying block size");
+#include <mxtl/algorithm.h>
+
+namespace fvm {
 
 typedef struct {
     uint64_t magic;
     uint64_t version;
-    uint64_t slice_count; // Slices which can be used by vpartitions
-    uint64_t slice_size;  // All sizes in bytes
+    uint64_t pslice_count; // Slices which can be used by vpartitions
+    uint64_t slice_size;   // All sizes in bytes
     uint64_t fvm_partition_size;
     uint64_t vpartition_table_size;
     uint64_t allocation_table_size;
@@ -74,21 +73,36 @@ static_assert(sizeof(slice_entry_t) == 8, "Unexpected FVM slice entry size");
 static_assert(FVM_BLOCK_SIZE % sizeof(slice_entry_t) == 0,
               "FVM slice entry might cross block");
 
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
-#define FVM_VPART_TABLE_OFFSET (FVM_BLOCK_SIZE)
-#define FVM_VPART_TABLE_LENGTH (sizeof(vpart_entry_t) * FVM_MAX_ENTRIES)
-#define FVM_ALLOC_TABLE_OFFSET (FVM_VPART_TABLE_OFFSET + FVM_VPART_TABLE_LENGTH)
-#define FVM_ALLOC_TABLE_LENGTH(total_size)                           \
-    ROUNDUP(sizeof(slice_entry_t) * ((total_size) / FVM_SLICE_SIZE), \
-            FVM_BLOCK_SIZE)
-#define FVM_METADATA_SIZE(total_size) (FVM_ALLOC_TABLE_OFFSET + \
-                                       FVM_ALLOC_TABLE_LENGTH(total_size))
-#define FVM_BACKUP_START(total_size) (FVM_METADATA_SIZE(total_size))
-#define FVM_SLICES_START(total_size) (2 * FVM_METADATA_SIZE(total_size))
-#define FVM_USABLE_SLICES_COUNT(total_size) \
-    ((total_size - FVM_SLICES_START(total_size)) / FVM_SLICE_SIZE)
-#define FVM_SLICE_START(total_size, pslice) \
-    (FVM_SLICES_START(total_size) + (pslice - 1) * FVM_SLICE_SIZE)
+constexpr size_t kVPartTableOffset = FVM_BLOCK_SIZE;
+constexpr size_t kVPartTableLength = (sizeof(vpart_entry_t) * FVM_MAX_ENTRIES);
+constexpr size_t kAllocTableOffset = kVPartTableOffset + kVPartTableLength;
+
+constexpr size_t AllocTableLength(size_t total_size, size_t slice_size) {
+    return mxtl::roundup(sizeof(slice_entry_t) * (total_size / slice_size),
+                         FVM_BLOCK_SIZE);
+}
+
+constexpr size_t MetadataSize(size_t total_size, size_t slice_size) {
+    return kAllocTableOffset + AllocTableLength(total_size, slice_size);
+}
+
+constexpr size_t BackupStart(size_t total_size, size_t slice_size) {
+    return MetadataSize(total_size, slice_size);
+}
+
+constexpr size_t SlicesStart(size_t total_size, size_t slice_size) {
+    return 2 * MetadataSize(total_size, slice_size);
+}
+
+constexpr size_t UsableSlicesCount(size_t total_size, size_t slice_size) {
+    return (total_size - SlicesStart(total_size, slice_size)) / slice_size;
+}
+
+constexpr size_t SliceStart(size_t total_size, size_t slice_size, size_t pslice) {
+    return SlicesStart(total_size, slice_size) + (pslice - 1) * slice_size;
+}
+
+} // namespace fvm
 
 // Update's the metadata's hash field to accurately reflect
 // the contents of metadata.
@@ -104,6 +118,6 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
                                 size_t metadata_size, const void** out);
 
 // Format a block device to be an empty FVM.
-mx_status_t fvm_init(int fd);
+mx_status_t fvm_init(int fd, size_t slice_size);
 
 #endif //  __cplusplus

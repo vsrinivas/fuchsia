@@ -55,6 +55,8 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
 #define IOCTL_BLOCK_FVM_DESTROY \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 14)
+#define IOCTL_BLOCK_FVM_QUERY \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 15)
 
 // Block Core ioctls (specific to each block device):
 
@@ -135,6 +137,14 @@ IOCTL_WRAPPER_IN(ioctl_block_fvm_shrink, IOCTL_BLOCK_FVM_SHRINK, extend_request_
 
 // ssize_t ioctl_block_fvm_destroy(int fd);
 IOCTL_WRAPPER(ioctl_block_fvm_destroy, IOCTL_BLOCK_FVM_DESTROY);
+
+typedef struct {
+    size_t slice_size;   // Size of a single slice, in bytes
+    size_t vslice_count; // Number of addressable slices
+} fvm_info_t;
+
+// ssize_t ioctl_block_fvm_query(int fd, fvm_info_t* info);
+IOCTL_WRAPPER_OUT(ioctl_block_fvm_query, IOCTL_BLOCK_FVM_QUERY, fvm_info_t);
 
 // Multiple Block IO operations may be sent at once before a response is actually sent back.
 // Block IO ops may be sent concurrently to different vmoids, and they also may be sent

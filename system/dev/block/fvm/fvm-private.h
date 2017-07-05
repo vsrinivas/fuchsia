@@ -15,21 +15,13 @@
 #include <magenta/thread_annotations.h>
 #include <magenta/types.h>
 
-// TODO(smklein): Convert the physical --> virtual mapping structure to a
-// non-linear structure to expand this limit and exploit extent-like locality.
-//
-// This size is somewhat arbitrary; it allows for VPartitions which will
-// practically be large enough for usage while limiting memory costs. This may
-// be expanded later without causing on-disk structures to change.
-#define FVM_VPART_MAX_SIZE (4lu << 40)
-#define FVM_SLICES (FVM_VPART_MAX_SIZE / FVM_SLICE_SIZE)
-
 #ifdef __cplusplus
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <fs/mapped-vmo.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/array.h>
 #include <mxtl/mutex.h>
 #include <mxtl/unique_ptr.h>
 
@@ -67,10 +59,10 @@ public:
     slice_entry_t* GetSliceEntryLocked(size_t index) const TA_REQ(lock_) {
         MX_DEBUG_ASSERT(index >= 1);
         uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-        uintptr_t offset = static_cast<uintptr_t>(FVM_ALLOC_TABLE_OFFSET +
+        uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset +
                                                   index * sizeof(slice_entry_t));
-        MX_DEBUG_ASSERT(FVM_ALLOC_TABLE_OFFSET <= offset);
-        MX_DEBUG_ASSERT(offset < FVM_ALLOC_TABLE_OFFSET + FVM_ALLOC_TABLE_LENGTH(DiskSize()));
+        MX_DEBUG_ASSERT(kAllocTableOffset <= offset);
+        MX_DEBUG_ASSERT(offset < kAllocTableOffset + AllocTableLength(DiskSize(), SliceSize()));
         return reinterpret_cast<slice_entry_t*>(metadata_start + offset);
     }
 
@@ -87,6 +79,16 @@ public:
                                  size_t count) TA_REQ(lock_);
 
     size_t DiskSize() const { return info_.block_count * info_.block_size; }
+    size_t SliceSize() const { return slice_size_; }
+
+    // TODO(smklein): Convert the physical --> virtual mapping structure to a
+    // non-linear structure to expand this limit and exploit extent-like locality.
+    //
+    // This size is somewhat arbitrary; it allows for VPartitions which will
+    // practically be large enough for usage while limiting memory costs. This may
+    // be expanded later without causing on-disk structures to change.
+    static constexpr size_t kVPartMaxSize = (4lu << 40);
+    size_t VSliceCount() const { return kVPartMaxSize / SliceSize(); }
 
     mx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
                          void* reply, size_t max, size_t* out_actual);
@@ -111,19 +113,19 @@ private:
     vpart_entry_t* GetVPartEntryLocked(size_t index) const TA_REQ(lock_) {
         MX_DEBUG_ASSERT(index >= 1);
         uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-        uintptr_t offset = static_cast<uintptr_t>(FVM_VPART_TABLE_OFFSET +
+        uintptr_t offset = static_cast<uintptr_t>(kVPartTableOffset +
                                                   index * sizeof(vpart_entry_t));
-        MX_DEBUG_ASSERT(FVM_VPART_TABLE_OFFSET <= offset);
-        MX_DEBUG_ASSERT(offset < FVM_VPART_TABLE_OFFSET + FVM_VPART_TABLE_LENGTH);
+        MX_DEBUG_ASSERT(kVPartTableOffset <= offset);
+        MX_DEBUG_ASSERT(offset < kVPartTableOffset + kVPartTableLength);
         return reinterpret_cast<vpart_entry_t*>(metadata_start + offset);
     }
 
     size_t PrimaryOffsetLocked() const TA_REQ(lock_) {
-        return active_primary_ ? 0 : MetadataSize();
+        return first_metadata_is_primary_ ? 0 : MetadataSize();
     }
 
     size_t BackupOffsetLocked() const TA_REQ(lock_) {
-        return active_primary_ ? MetadataSize() : 0;
+        return first_metadata_is_primary_ ? MetadataSize() : 0;
     }
 
     size_t MetadataSize() const {
@@ -132,8 +134,9 @@ private:
 
     mxtl::Mutex lock_;
     mxtl::unique_ptr<MappedVmo> metadata_ TA_GUARDED(lock_);
-    bool active_primary_ TA_GUARDED(lock_);
-    const size_t metadata_size_;
+    bool first_metadata_is_primary_ TA_GUARDED(lock_);
+    size_t metadata_size_;
+    size_t slice_size_;
 };
 
 class VPartition : public PartitionDeviceType, public ddk::BlockProtocol<VPartition> {
@@ -159,23 +162,23 @@ public:
                     uint64_t dev_offset, void* cookie);
 
     uint32_t SliceGetLocked(size_t vslice) TA_REQ(lock_) {
-        MX_DEBUG_ASSERT(vslice < FVM_SLICES);
+        MX_DEBUG_ASSERT(vslice < mgr_->VSliceCount());
         return slice_map_[vslice];
     }
     void SliceSetUnsafe(size_t vslice, uint32_t pslice) TA_NO_THREAD_SAFETY_ANALYSIS {
         SliceSetLocked(vslice, pslice);
     }
     void SliceSetLocked(size_t vslice, uint32_t pslice) TA_REQ(lock_) {
-        MX_DEBUG_ASSERT(vslice < FVM_SLICES);
+        MX_DEBUG_ASSERT(vslice < mgr_->VSliceCount());
         MX_DEBUG_ASSERT(slice_map_[vslice] == 0);
         slice_map_[vslice] = pslice;
-        AddBlocksLocked((FVM_SLICE_SIZE / info_.block_size));
+        AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
     }
     void SliceFreeLocked(size_t vslice) TA_REQ(lock_) {
-        MX_DEBUG_ASSERT(vslice < FVM_SLICES);
+        MX_DEBUG_ASSERT(vslice < mgr_->VSliceCount());
         MX_DEBUG_ASSERT(slice_map_[vslice] != 0);
         slice_map_[vslice] = 0;
-        AddBlocksLocked(-(FVM_SLICE_SIZE / info_.block_size));
+        AddBlocksLocked(-(mgr_->SliceSize() / info_.block_size));
     }
 
     size_t BlockSize() const TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -190,7 +193,7 @@ public:
     void KillLocked() TA_REQ(lock_) { entry_index_ = 0; }
     bool IsKilledLocked() TA_REQ(lock_) { return entry_index_ == 0; }
 
-    VPartition(VPartitionManager* vpm, size_t entry_index);
+    VPartition(VPartitionManager* vpm, size_t entry_index, mxtl::Array<uint32_t> slice_map);
     ~VPartition();
     mxtl::Mutex lock_;
 
@@ -207,7 +210,7 @@ private:
     // Physical slice zero is reserved to mean "unmapped", so a zeroed slice_map
     // indicates that the vpartition is completely unmapped, and uses no
     // physical slices.
-    uint32_t slice_map_[FVM_SLICES] TA_GUARDED(lock_);
+    mxtl::Array<uint32_t> slice_map_ TA_GUARDED(lock_);
     block_info_t info_ TA_GUARDED(lock_);
 };
 
