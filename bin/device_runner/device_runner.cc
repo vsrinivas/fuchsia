@@ -65,8 +65,6 @@ class Settings {
     story_shell.url = command_line.GetOptionValueWithDefault(
         "story_shell", "file:///system/apps/mondrian");
 
-    ledger_repository_for_testing =
-        command_line.HasOption("ledger_repository_for_testing");
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
 
@@ -91,7 +89,6 @@ class Settings {
       --user_shell_args=SHELL_ARGS
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
-      --ledger_repository_for_testing
       --ignore_monitor
       --no_minfs
     DEVICE_NAME: Name which user shell uses to identify this device.
@@ -109,7 +106,6 @@ class Settings {
   AppConfig user_shell;
   AppConfig story_shell;
 
-  bool ledger_repository_for_testing;
   bool ignore_monitor;
   bool no_minfs;
 
@@ -232,7 +228,6 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
         app_context_, settings_.user_shell, settings_.story_shell,
         ledger_->primary_service().get(),
-        settings_.ledger_repository_for_testing,
         token_manager_->primary_service().get());
   }
 

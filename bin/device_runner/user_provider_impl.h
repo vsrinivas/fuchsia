@@ -25,7 +25,6 @@ class UserProviderImpl : UserProvider {
                    const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
                    ledger::LedgerRepositoryFactory* ledger_repository_factory,
-                   bool ledger_repository_for_testing,
                    auth::AccountProvider* account_provider);
 
   void Connect(fidl::InterfaceRequest<UserProvider> request);
@@ -59,7 +58,6 @@ class UserProviderImpl : UserProvider {
   const AppConfig& default_user_shell_;  // Neither owned nor copied.
   const AppConfig& story_shell_;         // Neither owned nor copied.
   ledger::LedgerRepositoryFactory* const ledger_repository_factory_;
-  const bool ledger_repository_for_testing_;
   auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;

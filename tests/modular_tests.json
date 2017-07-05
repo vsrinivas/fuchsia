@@ -2,7 +2,7 @@
   "tests":[
     {
       "name":"user_shell",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_user_shell --story_shell=dummy_story_shell",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_user_shell --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps":[
           "test_user_shell"
@@ -11,7 +11,7 @@
     },
     {
       "name":"story_importance",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_story_importance --story_shell=dummy_story_shell",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_story_importance --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps":[
           "test_story_importance"
@@ -20,7 +20,7 @@
     },
     {
       "name":"last_focus_time",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_last_focus_time --story_shell=dummy_story_shell",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_last_focus_time --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps":[
           "test_last_focus_time"
@@ -29,7 +29,7 @@
     },
     {
       "name":"parent_child",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
       "copy":{
         "/system/apps/modular_tests":[
           "parent_module",
@@ -39,7 +39,7 @@
     },
     {
       "name":"component_context",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
       "copy":{
         "/system/apps/modular_tests":[
           "component_context_test",
@@ -51,7 +51,7 @@
     },
     {
       "name":"context_link",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=/system/apps/modular_tests/context_link_user_shell --story_shell=dummy_story_shell",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=/system/apps/modular_tests/context_link_user_shell --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "context_link_user_shell",
@@ -61,7 +61,7 @@
     },
     {
       "name":"suggestion",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=suggestion_test_user_shell --story_shell=dummy_story_shell",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=suggestion_test_user_shell --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "suggestion_proposal_test_module"
@@ -73,7 +73,7 @@
     },
     {
       "name":"triggers",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test --story_shell=dummy_story_shell",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "agent_trigger_test",
@@ -83,7 +83,7 @@
     },
     {
       "name":"queue_persistence",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/queue_persistence_test_module",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/queue_persistence_test_module",
       "copy":{
         "/system/apps/modular_tests":[
           "queue_persistence_test_agent",
@@ -93,7 +93,7 @@
     },
     {
       "name":"remote",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/remote_invoker_test",
+      "exec":"device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/remote_invoker_test",
       "copy":{
         "/system/apps/modular_tests":[
           "remote_invoker_test"

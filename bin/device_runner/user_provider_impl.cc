@@ -69,13 +69,11 @@ UserProviderImpl::UserProviderImpl(
     const AppConfig& default_user_shell,
     const AppConfig& story_shell,
     ledger::LedgerRepositoryFactory* const ledger_repository_factory,
-    const bool ledger_repository_for_testing,
     auth::AccountProvider* const account_provider)
     : app_context_(app_context),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
       ledger_repository_factory_(ledger_repository_factory),
-      ledger_repository_for_testing_(ledger_repository_for_testing),
       account_provider_(account_provider) {
   // There might not be a file of users persisted. If config file doesn't
   // exist, move forward with no previous users.
@@ -159,21 +157,6 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   // we take it as input from the user. TODO(alhaad): Infer it from id token.
   std::string user_id = found_user->display_name()->str();
   std::string ledger_repository_path = LedgerRepositoryPath(user_id);
-
-  if (ledger_repository_for_testing_) {
-    unsigned random_number;
-    size_t random_size;
-    mx_status_t status =
-        mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-    FTL_CHECK(status == MX_OK);
-    FTL_CHECK(sizeof random_number == random_size);
-
-    ledger_repository_path +=
-        ftl::StringPrintf("_for_testing_%X", random_number);
-    FTL_LOG(INFO) << "Using testing ledger repository path: "
-                  << ledger_repository_path;
-  }
-
   FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
   LoginInternal(Convert(found_user), ledger_repository_path, std::move(params));
 }
