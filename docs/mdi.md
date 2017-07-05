@@ -27,15 +27,24 @@ MDI node values can be one of the following:
 
 MDI has a very simple syntax with a small number of tokens and reserved words.
 The syntax is so simple that no extra symbols are needed to determine the boundary between
-top-level statements or elements within lists and arrays.
-For this reason, there are no commas semicolons or other separator symbols in the syntax.
+top-level statements or elements within lists.
+The only exception is that commas are needed between elements in arrays.
 
 MDI supports C/C++ style comments. Whitespace is not significant,
 other than the fact that comments beginning with `//` are terminated by the end of the line.
 
+Integers can be expressed as literal values, either in decimal, octal or hexadecimal form.
+Octal integer literals start with a leading `0` and hexadecimal literals start with a leading
+`0x` or `0X`
+
+MDI also supports integer expressions. The arithmetic operators `+`, `-`, `*`, `/`, `%` are supported,
+as well as the bitwise operators `~`, `|`, `&`, `^`, `<<` and `>>`.
+The syntax and precedence rules are the same as in C.
+
 MDI source files can contain three types of top-level statements:
  * Includes
  * ID Definitions
+ * Constant Definitions
  * Node Definitions
 
 ### Includes
@@ -88,13 +97,22 @@ The purpose of using integer IDs rather than arbitrary string names for nodes is
  1. provide build time error checking when compiling MDI files, and
  2. provide better efficiency when traversing the MDI binary at runtime
 
+### Constant Definitions
+
+Integer constants can be defined for integer literals or expressions. For example:
+
+```
+const ONE = 1
+const THREE = 1 + 2
+```
+
 ### Node Definitions
 
 Node definitions define a top-level node in the MDI node tree.
 All top-level nodes are implicitly added to the MDI root node,
 which is an unnamed list that does not actually appear in the MDI source code.
 Node definitions are of the form `<identifier> = <value>`,
-where value can be an integer, boolean or string literal, a list or an array.
+where value can be an integer literal, expression, constant, a boolean or string literal, a list or an array.
 List values begin and end with `'{' and '}'`, while array values begin and end with `'[' and ']'`
 
 For example, the following MDI node definitions can be written using the ID definitions
@@ -107,7 +125,7 @@ bar = {
     baz = "Hi there"
 }
 
-boolean-array = [ true false true ]
+boolean-array = [ true, false, true ]
 ```
 
 Compiling this code will generate an MDI binary a root node with three children: `foo`, `bar`

@@ -16,6 +16,7 @@ struct ReservedWord {
 } reserved_words [] = {
     { TOKEN_TRUE,           "true" },
     { TOKEN_FALSE,          "false" },
+    { TOKEN_CONST,          "const" },
     { TOKEN_INCLUDE,        "include" },
     { TOKEN_UINT8_TYPE,     "uint8" },
     { TOKEN_INT32_TYPE,     "int32" },
@@ -64,6 +65,31 @@ mdi_type_t Token::get_type_name() {
     }
 }
 
+// returns precedence for binary operators
+int Token::get_precedence() {
+    switch (type) {
+    case TOKEN_OR:
+        return 1;
+    case TOKEN_XOR:
+        return 2;
+    case TOKEN_AND:
+        return 3;
+    case TOKEN_LSHIFT:
+    case TOKEN_RSHIFT:
+        return 4;
+    case TOKEN_PLUS:
+    case TOKEN_MINUS:
+        return 5;
+    case TOKEN_TIMES:
+    case TOKEN_DIV:
+    case TOKEN_MOD:
+        return 6;
+    default:
+        // not a binary operator
+        return -1;
+    }
+}
+
 void Token::print() {
     switch (type) {
     case TOKEN_INVALID:
@@ -74,9 +100,6 @@ void Token::print() {
         break;
     case TOKEN_INT_LITERAL:
         printf("TOKEN_INT_LITERAL %" PRId64 "\n", int_value);
-        break;
-    case TOKEN_NEG_INT_LITERAL:
-        printf("TOKEN_NEG_INT_LITERAL %" PRId64 "\n", int_value);
         break;
     case TOKEN_STRING_LITERAL:
         printf("TOKEN_STRING_LITERAL %s\n", string_value.c_str());
@@ -99,14 +122,59 @@ void Token::print() {
     case TOKEN_EQUALS:
         printf("TOKEN_EQUALS\n");
         break;
+    case TOKEN_COMMA:
+        printf("TOKEN_COMMA\n");
+        break;
     case TOKEN_DOT:
         printf("TOKEN_DOT\n");
+        break;
+    case TOKEN_LPAREN:
+        printf("TOKEN_LPAREN\n");
+        break;
+    case TOKEN_RPAREN:
+        printf("TOKEN_RPAREN\n");
+        break;
+    case TOKEN_PLUS:
+        printf("TOKEN_PLUS\n");
+        break;
+    case TOKEN_MINUS:
+        printf("TOKEN_MINUS\n");
+        break;
+    case TOKEN_TIMES:
+        printf("TOKEN_TIMES\n");
+        break;
+    case TOKEN_DIV:
+        printf("TOKEN_DIV\n");
+        break;
+    case TOKEN_MOD:
+        printf("TOKEN_MOD\n");
+        break;
+    case TOKEN_NOT:
+        printf("TOKEN_NOT\n");
+        break;
+    case TOKEN_AND:
+        printf("TOKEN_AND\n");
+        break;
+    case TOKEN_OR:
+        printf("TOKEN_OR\n");
+        break;
+    case TOKEN_XOR:
+        printf("TOKEN_XOR\n");
+        break;
+    case TOKEN_LSHIFT:
+        printf("TOKEN_LSHIFT\n");
+        break;
+    case TOKEN_RSHIFT:
+        printf("TOKEN_RSHIFT\n");
         break;
     case TOKEN_TRUE:
         printf("TOKEN_TRUE\n");
         break;
     case TOKEN_FALSE:
         printf("TOKEN_FALSE\n");
+        break;
+    case TOKEN_CONST:
+        printf("TOKEN_CONST\n");
         break;
     case TOKEN_INCLUDE:
         printf("TOKEN_INCLUDE\n");
@@ -259,22 +327,18 @@ bool Tokenizer::parse_identifier(Token& token, int ch) {
 }
 
 bool Tokenizer::parse_integer(Token& token, int ch) {
-    bool negative = false;
-    bool hexadecimal = false;
+    int base = 10;
     uint64_t value = 0;
 
     token.string_value.clear();
     token.string_value.append(1, ch);
 
-    if (ch == '-') {
-        negative = true;
-        ch = next_char();
-        token.string_value.append(1, ch);
-    } else if (ch == '0') {
-        ch = next_char();
-        token.string_value.append(1, ch);
-        if (ch == 'x' || ch == 'X') {
-            hexadecimal = true;
+    if (ch == '0') {
+        base = 8;
+        int peek = peek_char();
+        if (peek == 'x' || peek == 'X') {
+            base = 16;
+            next_char();
             ch = next_char();
             token.string_value.append(1, ch);
         }
@@ -287,7 +351,7 @@ bool Tokenizer::parse_integer(Token& token, int ch) {
 
         if (ch >= '0' && ch <= '9') {
             digit = ch - '0';
-        } else if (hexadecimal) {
+        } else if (base == 16) {
             if (ch >= 'A' && ch <= 'F') {
                 digit = ch - 'A' + 10;
             } else if (ch >= 'a' && ch <= 'f') {
@@ -299,11 +363,7 @@ bool Tokenizer::parse_integer(Token& token, int ch) {
             break;
         }
 
-        if (hexadecimal) {
-            value = 16 * value + digit;
-        } else {
-            value = 10 * value + digit;
-        }
+        value = base * value + digit;
 
         if (++digit_count > 16) {
             print_err("integer value too large\n");
@@ -311,7 +371,7 @@ bool Tokenizer::parse_integer(Token& token, int ch) {
         }
 
         ch = peek_char();
-        if (!isdigit(ch) && !(hexadecimal &&
+        if (!isdigit(ch) && !(base == 16 &&
                               ((ch >= 'A' && ch <= 'F') ||
                                (ch >= 'a' && ch <= 'f')))) {
             break;
@@ -320,11 +380,7 @@ bool Tokenizer::parse_integer(Token& token, int ch) {
         next_char();
     }
 
-    token.type = (negative ? TOKEN_NEG_INT_LITERAL : TOKEN_INT_LITERAL);
-    if (negative && value > (uint64_t) -INT64_MIN) {
-        print_err("integer value too small\n");
-        return false;
-    }
+    token.type = TOKEN_INT_LITERAL;
     token.int_value = value;
     return true;
 }
@@ -393,13 +449,19 @@ bool Tokenizer::parse_string(Token& token) {
     // returns false if we cannot parse the next token
     // EOF is not considered an error
 bool Tokenizer::next_token(Token& token) {
+    if (have_token_peek) {
+        token = token_peek;
+        have_token_peek = false;
+        return true;
+    }
+
     eat_whitespace();
     int ch = next_char();
     bool result = true;
 
     if (isalpha(ch)) {
        result = parse_identifier(token, ch);
-    } else if (isdigit(ch) || ch == '-') {
+    } else if (isdigit(ch)) {
         result = parse_integer(token, ch);
     } else if (ch == '\"') {
         result = parse_string(token);
@@ -423,8 +485,60 @@ bool Tokenizer::next_token(Token& token) {
         case '=':
             token.type = TOKEN_EQUALS;
             break;
+        case ',':
+            token.type = TOKEN_COMMA;
+            break;
         case '.':
             token.type = TOKEN_DOT;
+            break;
+        case '(':
+            token.type = TOKEN_LPAREN;
+            break;
+        case ')':
+            token.type = TOKEN_RPAREN;
+            break;
+        case '+':
+            token.type = TOKEN_PLUS;
+            break;
+        case '-':
+            token.type = TOKEN_MINUS;
+            break;
+        case '*':
+            token.type = TOKEN_TIMES;
+            break;
+        case '/':
+            token.type = TOKEN_DIV;
+            break;
+        case '%':
+            token.type = TOKEN_MOD;
+            break;
+        case '~':
+            token.type = TOKEN_NOT;
+            break;
+        case '&':
+            token.type = TOKEN_AND;
+            break;
+        case '|':
+            token.type = TOKEN_OR;
+            break;
+        case '^':
+            token.type = TOKEN_XOR;
+            break;
+        case '<':
+            if (next_char() == '<') {
+                token.type = TOKEN_LSHIFT;
+            } else {
+                print_err("unexpected token '<'\n");
+                result = false;
+            }
+            break;
+        case '>':
+            if (next_char() == '>') {
+                token.type = TOKEN_RSHIFT;
+            } else {
+                print_err("unexpected token '>'\n");
+                result = false;
+            }
             break;
         default:
             print_err("invalid token \'%c\'\n", ch);
@@ -441,6 +555,15 @@ bool Tokenizer::next_token(Token& token) {
 #endif
 
     return result;
+}
+
+bool Tokenizer::peek_token(Token& token) {
+    if (!have_token_peek && !next_token(token_peek)) {
+        return false;
+    }
+    token = token_peek;
+    have_token_peek = true;
+    return true;
 }
 
 void Tokenizer::print_err(const char* fmt, ...) {

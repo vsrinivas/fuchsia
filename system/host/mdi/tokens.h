@@ -14,20 +14,36 @@
 enum TokenType {
     TOKEN_INVALID = 0,
     TOKEN_EOF,              // returned at end of input
-    TOKEN_INT_LITERAL,      // non-negative integer
-    TOKEN_NEG_INT_LITERAL,  // negative integer
-    TOKEN_STRING_LITERAL,
+    TOKEN_INT_LITERAL,      // integer literal
+    TOKEN_STRING_LITERAL,   // string literal
     TOKEN_IDENTIFIER,
     TOKEN_LIST_START,       // '{'
     TOKEN_LIST_END,         // '{'
     TOKEN_ARRAY_START,      // '['
     TOKEN_ARRAY_END,        // ']'
     TOKEN_EQUALS,           // '='
+    TOKEN_COMMA,            // ','
     TOKEN_DOT,              // '.'
+    TOKEN_LPAREN,           // '('
+    TOKEN_RPAREN,           // ')'
+
+    // unary and binary operators
+    TOKEN_PLUS,             // '+'
+    TOKEN_MINUS,            // '-'
+    TOKEN_TIMES,            // '*'
+    TOKEN_DIV,              // '/'
+    TOKEN_MOD,              // '%'
+    TOKEN_NOT,              // '~'
+    TOKEN_AND,              // '&'
+    TOKEN_OR,               // '|'
+    TOKEN_XOR,              // '^'
+    TOKEN_LSHIFT,           // "<<"
+    TOKEN_RSHIFT,           // ">>"
 
     // reserved words
     TOKEN_TRUE,             // "true"
     TOKEN_FALSE,            // "false"
+    TOKEN_CONST,            // "const"
     TOKEN_INCLUDE,          // "include"
     TOKEN_UINT8_TYPE,       // "uint8"
     TOKEN_INT32_TYPE,       // "int32"
@@ -47,6 +63,14 @@ struct Token {
     // returns type for type name tokens
     mdi_type_t get_type_name();
 
+    // returns precedence for binary operators,
+    // or -1 if token is not a binary operator.
+    int get_precedence();
+
+    enum {
+        MAX_PRECEDENCE = 1000,
+    };
+
     void print();
 };
 
@@ -60,6 +84,7 @@ public:
     // returns false if we cannot parse the next token
     // TOKEN_EOF is returned at end of file
     bool next_token(Token& token);
+    bool peek_token(Token& token);
 
     void print_err(const char* fmt, ...);
 
@@ -78,4 +103,7 @@ private:
     int line_number;
     unsigned line_offset;
     int peek[2];
+
+    Token token_peek;
+    bool have_token_peek = false;
 };

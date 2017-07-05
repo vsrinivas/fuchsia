@@ -8,11 +8,12 @@ test-boolean-true = true
 test-boolean-false = false
 test-string = "hello"
 
-test-bool-array = [ true false true ]
-test-uint8-array = [ 1 2 3 ]
-test-int32-array = [ -1 -2 -3 ]
-test-uint32-array = [ 1 2 3 ]
-test-uint64-array = [ 0x100000000 0x200000000 0x300000000 ]
+test-bool-array = [ true, false, true ]
+test-empty-bool-array = []
+test-uint8-array = [ 1, 2, 3 ]
+test-int32-array = [ -1, -2, -3 ]
+test-uint32-array = [ 1, 2, 3 ]
+test-uint64-array = [ 0x100000000, 0x200000000, 0x300000000 ]
 
 test-list = {
     {
@@ -28,3 +29,92 @@ test-list = {
         str = "three"
     }
 }
+
+test-empty-list = {}
+
+const seven = 9 - 2
+const minus-seven = 2 - 9
+
+// test verifies that each pair of values are equal
+uint8-exprs = [
+    --3,                    3,
+    seven,                  7,
+    minus-seven,            -7,
+    1 + 2 * 3,              seven,
+    (1 + 2) * 3,            9,
+    1 + 4 / 2,              3,
+    1 + 2 % 4,              3,
+    1 + 2 - 3,              0,
+    10 - 2 + 4 - 2 * 3,     6,
+    255 + 1,                0, // should overflow to 0
+    ~255,                   0,
+    5 >> 2,                 1,
+    5 << 2,                 5 * 4,
+    --3,                    3,
+    0x55 | 0xAA,            0xFF,
+    0xFF & 0xAA,            0xAA,
+    0xFF ^ 0xAA,            0x55,
+]
+
+// test verifies that each pair of values are equal
+int32-exprs = [
+    --3,                    3,
+    seven,                  7,
+    minus-seven,            -7,
+    1 + 2 * 3,              seven,
+    (1 + 2) * 3,            9,
+    1 + 4 / 2,              3,
+    1 + 2 % 4,              3,
+    1 + 2 - 3,              0,
+    10 - 2 + 4 - 2 * 3,     6,
+    255 + 1,                256,
+    ~255,                   -256,
+    5 >> 2,                 1,
+    5 << 2,                 5 * 4,
+    --3,                    3,
+    0x55 | 0xAA,            0xFF,
+    0xFF & 0xAA,            0xAA,
+    0xFF ^ 0xAA,            0x55,
+]
+
+// test verifies that each pair of values are equal
+uint32-exprs = [
+    --3,                    3,
+    seven,                  7,
+    minus-seven,            -7,
+    1 + 2 * 3,              seven,
+    (1 + 2) * 3,            9,
+    1 + 4 / 2,              3,
+    1 + 2 % 4,              3,
+    1 + 2 - 3,              0,
+    10 - 2 + 4 - 2 * 3,     6,
+    255 + 1,                256,
+    ~255,                   0xFFFFFF00,
+    5 >> 2,                 1,
+    5 << 2,                 5 * 4,
+    --3,                    3,
+    0x55 | 0xAA,            0xFF,
+    0xFF & 0xAA,            0xAA,
+    0xFF ^ 0xAA,            0x55,
+]
+
+// test verifies that each pair of values are equal
+uint64-exprs = [
+    --3,                    3,
+    seven,                  7,
+    minus-seven,            -7,
+    1 + 2 * 3,              seven,
+    (1 + 2) * 3,            9,
+    1 + 4 / 2,              3,
+    1 + 2 % 4,              3,
+    1 + 2 - 3,              0,
+    10 - 2 + 4 - 2 * 3,     6,
+    255 + 1,                256,
+    ~255,                   0xFFFFFFFFFFFFFF00,
+    5 >> 2,                 1,
+    5 << 2,                 5 * 4,
+    --3,                    3,
+    0x55 | 0xAA,            0xFF,
+    0xFF & 0xAA,            0xAA,
+    0xFF ^ 0xAA,            0x55,
+]

@@ -19,6 +19,9 @@ static bool parse_node(Tokenizer& tokenizer, Token& token, Node& parent);
 // map of identifier names to mdi_id_t
 static std::map<std::string, mdi_id_t> id_map;
 
+// map of constant names to values
+static std::map<std::string, uint64_t> const_map;
+
 // map of ID numbers to identifier names
 static std::map<uint32_t, std::string> id_name_map;
 
@@ -219,36 +222,205 @@ static bool parse_include(Tokenizer& tokenizer, Node& root) {
     return process_file(&tokenizer, token.string_value.c_str(), root);
 }
 
+static bool parse_int_value(Tokenizer& tokenizer, Token& token, int precedence,
+                            uint64_t& out_value) {
+    auto token_type = token.type;
+    uint64_t lvalue;
+
+    // parenthesis have highest precedence
+    if (token_type == TOKEN_LPAREN) {
+        if (!tokenizer.next_token(token)) {
+            return false;
+        }
+        if (!parse_int_value(tokenizer, token, 0, lvalue)) {
+            return false;
+        }
+        if (!tokenizer.next_token(token)) {
+            return false;
+        }
+        if (token.type != TOKEN_RPAREN) {
+            tokenizer.print_err("Expected ')', got \"%s\"\n", token.string_value.c_str());
+        }
+    } else if (token_type == TOKEN_PLUS || token_type == TOKEN_MINUS || token_type == TOKEN_NOT) {
+        // unary operators have next highest precedence
+        if (!tokenizer.next_token(token)) {
+            return false;
+        }
+        if (!parse_int_value(tokenizer, token, Token::MAX_PRECEDENCE, lvalue)) {
+            return false;
+        }
+        if (token_type == TOKEN_MINUS) {
+            lvalue = (uint64_t)(-(int64_t)lvalue);
+        } else if (token_type == TOKEN_NOT) {
+            lvalue = ~lvalue;
+        }
+    } else if (token_type == TOKEN_IDENTIFIER) {
+        // handle constants
+        auto iter = const_map.find(token.string_value);
+        if (iter == const_map.end()) {
+            tokenizer.print_err("Unknown identifier \"%s\"\n", token.string_value.c_str());
+            return false;
+        }
+        lvalue = iter->second;
+    } else if (token_type == TOKEN_INT_LITERAL) {
+        lvalue = token.int_value;
+    } else {
+        tokenizer.print_err("expected integer value, got \"%s\"\n", token.string_value.c_str());
+        return false;
+    }
+
+    // process binary operators left to right
+    while (1) {
+        if (!tokenizer.peek_token(token)) {
+            return false;
+        }
+
+        int op_precedence = token.get_precedence();
+        if (op_precedence < 0) {
+            // not a binary operator, bail
+            break;
+        } else {
+            if (op_precedence < precedence) {
+                // we are handling higher precedence operator, so bail
+                break;
+            }
+            precedence = op_precedence;
+        }
+
+        auto op = token.type;
+        // consume the operator token that we peeked
+        tokenizer.next_token(token);
+        // and read the next token beyond that
+        if (!tokenizer.next_token(token)) {
+            return false;
+        }
+
+        uint64_t rvalue;
+        if (!parse_int_value(tokenizer, token, op_precedence + 1, rvalue)) {
+            return false;
+        }
+        switch (op) {
+        case TOKEN_PLUS:
+            lvalue += rvalue;
+            break;
+        case TOKEN_MINUS:
+            lvalue -= rvalue;
+            break;
+        case TOKEN_TIMES:
+            lvalue *= rvalue;
+            break;
+        case TOKEN_DIV:
+            if (rvalue == 0) {
+                tokenizer.print_err("Divide by zero\n");
+                return false;
+            }
+            lvalue /= rvalue;
+            break;
+        case TOKEN_MOD:
+            if ((int64_t)rvalue < 1) {
+                tokenizer.print_err("Attempt to mod by %d\n", (int64_t)rvalue);
+                return false;
+            }
+            lvalue %= (int64_t)rvalue;
+            break;
+        case TOKEN_AND:
+            lvalue &= rvalue;
+            break;
+        case TOKEN_OR:
+            lvalue |= rvalue;
+            break;
+        case TOKEN_XOR:
+            lvalue ^= rvalue;
+            break;
+        case TOKEN_LSHIFT:
+            if ((int64_t)rvalue < 0) {
+                tokenizer.print_err("Attempt to left shift by negative value\n");
+                return false;
+            }
+            lvalue <<= rvalue;
+            break;
+        case TOKEN_RSHIFT:
+            if ((int64_t)rvalue < 0) {
+                tokenizer.print_err("Attempt to right shift by negative value\n");
+                return false;
+            }
+            lvalue >>= rvalue;
+            break;
+        default:
+            tokenizer.print_err("MDI internal error: bad op %d in parse_int_value\n", op);
+        }
+    }
+
+    out_value = lvalue;
+    return true;
+}
+
+static bool parse_const(Tokenizer& tokenizer) {
+    Token token;
+
+    if (!tokenizer.next_token(token)) {
+        return false;
+    }
+    if (token.type == TOKEN_EOF) {
+        tokenizer.print_err("end of file while parsing ID constant definition\n");
+        return false;
+    }
+
+    if (token.type != TOKEN_IDENTIFIER) {
+        tokenizer.print_err("Expected identifier const definition, got token \"%s\"",
+                            token.string_value.c_str());
+        return false;
+    }
+    std::string name = token.string_value;
+    if (const_map.find(name) != const_map.end()) {
+        tokenizer.print_err("duplicate constant %s\n", name.c_str());
+        return false;
+    }
+
+    if (!tokenizer.next_token(token)) {
+        return false;
+    }
+    if (token.type != TOKEN_EQUALS) {
+        tokenizer.print_err("expected \'=\' in constant definiition %s, got token \"%s\"\n",
+                            token.string_value.c_str());
+        return false;
+    }
+    if (!tokenizer.next_token(token)) {
+        return false;
+    }
+    if (token.type == TOKEN_EOF) {
+        tokenizer.print_err("end of file while parsing node\n");
+        return false;
+    }
+
+    uint64_t value;
+    if (!parse_int_value(tokenizer, token, 0, value)) {
+        return false;
+    }
+
+    const_map[name] = value;
+    return true;
+}
+
 static bool parse_int_node(Tokenizer& tokenizer, Node& node, Token& token, Node& parent) {
-    if (token.type != TOKEN_INT_LITERAL && token.type != TOKEN_NEG_INT_LITERAL) {
-        tokenizer.print_err("expected integer value for node \"%s\", got \"%s\"\n",
-                node.get_id_name(), token.string_value.c_str());
+    uint64_t int_value;
+
+    if (!parse_int_value(tokenizer, token, 0, int_value)) {
         return false;
     }
 
     mdi_type_t type = node.get_type();
 
-    // signed version of our value
-    int64_t value = (int64_t)token.int_value;
-    if (token.type == TOKEN_NEG_INT_LITERAL) {
-        value = -value;
-    }
-
     switch (type) {
     case MDI_UINT8:
-        if (value > UINT8_MAX || value < 0) goto out_of_range;
-        node.int_value = value;
+        node.int_value = int_value & 0xFF;
         break;
     case MDI_INT32:
-        if (value > INT32_MAX || value < INT32_MIN) goto out_of_range;
-        node.int_value = value;
-        break;
     case MDI_UINT32:
-        if (value > UINT32_MAX || value < 0) goto out_of_range;
-        node.int_value = value;
+        node.int_value = int_value & 0xFFFFFFFF;
         break;
     case MDI_UINT64:
-        node.int_value = token.int_value;
+        node.int_value = int_value;
         break;
     default:
         assert(0);
@@ -257,12 +429,6 @@ static bool parse_int_node(Tokenizer& tokenizer, Node& node, Token& token, Node&
 
     parent.add_child(node);
     return true;
-
-out_of_range:
-    tokenizer.print_err("integer value %s%" PRId64 " out of range for \"%s\"\n",
-                        (token.type == TOKEN_NEG_INT_LITERAL ? "-" : ""),
-                        token.int_value, node.get_id_name());
-    return false;
 }
 
 static bool parse_string_node(Tokenizer& tokenizer, Node& node, Token& token, Node& parent) {
@@ -334,8 +500,7 @@ static bool parse_array_node(Tokenizer& tokenizer, Node& node, Token& token, Nod
         Token token;
         if (!tokenizer.next_token(token)) {
             return false;
-        }
-        if (token.type == TOKEN_EOF) {
+        } else if (token.type == TOKEN_EOF) {
             tokenizer.print_err("end of file while parsing list children\n");
             return false;
         } else if (token.type == TOKEN_ARRAY_END) {
@@ -361,6 +526,17 @@ static bool parse_array_node(Tokenizer& tokenizer, Node& node, Token& token, Nod
         default:
             assert(0);
             break;
+        }
+
+        if (!tokenizer.next_token(token)) {
+            return false;
+        }
+        if (token.type == TOKEN_ARRAY_END) {
+            break;
+        } else if (token.type != TOKEN_COMMA) {
+            tokenizer.print_err("expected comma after array element, got \"%s\"\n",
+                                token.string_value.c_str());
+            return false;
         }
     }
 
@@ -453,6 +629,10 @@ bool process_file(Tokenizer* container, const char* in_path, Node& root) {
         mdi_type_t type = token.get_type_name();
         if (type != MDI_INVALID_TYPE) {
             if (!parse_id_declaration(tokenizer, type)) {
+                return false;
+            }
+        } else if (token.type == TOKEN_CONST) {
+            if (!parse_const(tokenizer)) {
                 return false;
             }
         } else if (token.type == TOKEN_INCLUDE) {
