@@ -2,35 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "drivers": [
-        {
-            "binary": "ihda-controller.so",
-            "bootfs_path": "driver/ihda-controller.so"
-        },
-        {
-            "binary": "qemu-ihda-codec.so",
-            "bootfs_path": "driver/qemu-ihda-codec.so"
-        },
-        {
-            "binary": "realtek-ihda-codec.so",
-            "bootfs_path": "driver/realtek-ihda-codec.so"
-        },
-        {
-            "binary": "libaudio-dispatcher-pool.so",
-            "bootfs_path": "lib/libaudio-dispatcher-pool.so"
-        },
-        {
-            "binary": "libusb-audio.so",
-            "bootfs_path": "lib/driver/libusb-audio.so"
-        }
-    ],
-    "labels": [
-        "//drivers/audio"
-    ],
-    "binaries": [
-        {
-            "binary": "ihda",
-            "bootfs_path": "bin/ihda"
-        }
-    ]
+    "packages": {
+        "ihda": "//drivers/audio/intel-hda/ihda",
+        "audio": "//drivers/audio"
+    }
 }
