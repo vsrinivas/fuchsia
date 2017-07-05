@@ -1,6 +1,7 @@
 {
     "languages": [
-        "cpp"
+        "cpp",
+        "go"
     ],
     "packages": {
         "trace": "//apps/tracing:trace",
