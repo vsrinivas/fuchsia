@@ -28,13 +28,15 @@ package("audio") {
     {
       name = "realtek-ihda-codec.so"
     },
-
-    {
-      name = "libaudio-dispatcher-pool.so"
-    },
-
     {
       name = "libusb-audio.so"
-    },
+    }
+  ]
+
+  libraries = [
+    {
+      name = "libaudio-dispatcher-pool.so"
+      boot = true
+    }
   ]
 }
