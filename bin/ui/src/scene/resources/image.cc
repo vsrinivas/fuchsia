@@ -161,8 +161,13 @@ ImagePtr Image::New(Session* session,
   }
 }
 
-ImagePtr Image::NewForTesting(Session* session, MemoryPtr host_memory) {
-  return ftl::AdoptRef(new Image(session, escher::ImagePtr(), host_memory));
+ImagePtr Image::NewForTesting(Session* session,
+                              escher::ResourceManager* image_owner,
+                              MemoryPtr host_memory) {
+  escher::ImagePtr escher_image = ftl::MakeRefCounted<escher::Image>(
+      image_owner, escher::ImageInfo(), vk::Image(), nullptr);
+
+  return ftl::AdoptRef(new Image(session, escher_image, host_memory));
 }
 
 ImagePtr Image::GetPresentedImage() {

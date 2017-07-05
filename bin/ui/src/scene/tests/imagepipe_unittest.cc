@@ -37,9 +37,11 @@ class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
   uint32_t num_calls_to_add_cpu_release_fence_ = 0;
 };
 
-class ImagePipeTest : public SessionTest {
+class ImagePipeTest : public SessionTest, public escher::ResourceManager {
  public:
-  ImagePipeTest() : command_buffer_sequencer_() {}
+  ImagePipeTest()
+      : escher::ResourceManager(escher::VulkanContext()),
+        command_buffer_sequencer_() {}
 
   std::unique_ptr<SessionContext> CreateSessionContext() override {
     auto r = std::make_unique<ReleaseFenceSignallerForTest>(
@@ -47,6 +49,8 @@ class ImagePipeTest : public SessionTest {
     mock_release_fence_signaller_ = r.get();
     return std::make_unique<SessionContextForTest>(std::move(r));
   }
+
+  void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override {}
 
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
   ReleaseFenceSignallerForTest* mock_release_fence_signaller_;
@@ -94,7 +98,10 @@ ftl::RefPtr<mtl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
 
 class ImagePipeThatCreatesDummyImages : public ImagePipe {
  public:
-  ImagePipeThatCreatesDummyImages(Session* session) : ImagePipe(session) {}
+  ImagePipeThatCreatesDummyImages(
+      Session* session,
+      escher::ResourceManager* dummy_resource_manager)
+      : ImagePipe(session), dummy_resource_manager_(dummy_resource_manager) {}
 
  private:
   // Override to create an Image without a backing escher::Image.
@@ -103,8 +110,9 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
                        const mozart2::ImageInfoPtr& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
-    return Image::NewForTesting(session, memory);
+    return Image::NewForTesting(session, dummy_resource_manager_, memory);
   }
+  escher::ResourceManager* dummy_resource_manager_;
 };
 
 // How long to run the message loop when we want to allow a task in the
@@ -116,7 +124,8 @@ constexpr ftl::TimeDelta kPumpMessageLoopDuration =
 // listened to and release fences are signalled.
 TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ImagePipePtr image_pipe =
-      ftl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get());
+      ftl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+                                                           this);
 
   uint32_t imageId1 = 0;
 

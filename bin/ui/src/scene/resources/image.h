@@ -55,7 +55,9 @@ class Image : public ImageBase {
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
-  static ImagePtr NewForTesting(Session* session, MemoryPtr memory);
+  static ImagePtr NewForTesting(Session* session,
+                                escher::ResourceManager* image_owner,
+                                MemoryPtr host_memory);
 
   void Accept(class ResourceVisitor* visitor) override;
 
