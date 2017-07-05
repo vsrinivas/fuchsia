@@ -32,6 +32,13 @@ interface UserProvider {
   // |account_id| is received from either AddUser() or PreviousUsers().
   RemoveUser(string account_id);
 
+  // For development only.
+  //
+  // Developers need a convenient way to reset the Ledger state to a clean slate
+  // without requiring login. This method clears the Ledger state both locally
+  // and in the cloud.
+  ResetUserLedgerState(string account_id);
+
   // Uses the credentials provided in AddUser() to start a user session. This
   // would mean syncing with the user's ledger instance and displaying a user
   // shell with all of the user's stories.

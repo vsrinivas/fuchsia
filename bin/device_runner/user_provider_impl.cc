@@ -60,6 +60,13 @@ std::string GetRandomId() {
   return std::to_string(random_number);
 }
 
+ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
+  auto firebase_config = ledger::FirebaseConfig::New();
+  firebase_config->server_id = kFirebaseServerId;
+  firebase_config->api_key = kFirebaseApiKey;
+  return firebase_config;
+}
+
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
@@ -265,6 +272,30 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
   }
 }
 
+void UserProviderImpl::ResetUserLedgerState(
+    const fidl::String& account_id) {
+  // Get token provider factory for this user.
+  auth::TokenProviderFactoryPtr token_provider_factory;
+  account_provider_->GetTokenProviderFactory(
+      account_id, token_provider_factory.NewRequest());
+
+  // Get a token provider instance to pass to ledger.
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
+  token_provider_factory->GetTokenProvider(
+      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
+
+  auto firebase_config = GetLedgerFirebaseConfig();
+  ledger_repository_factory_->EraseRepository(
+      LedgerRepositoryPath(account_id),
+      std::move(firebase_config),
+      std::move(ledger_token_provider_for_erase),
+      [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "EraseRepository failed: " << status;
+        }
+      });
+}
+
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
                                     std::string* const error) {
   if (!Parse(serialized_users)) {
@@ -315,9 +346,7 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
 
   ledger::FirebaseConfigPtr firebase_config;
   if (account) {
-    firebase_config = ledger::FirebaseConfig::New();
-    firebase_config->server_id = kFirebaseServerId;
-    firebase_config->api_key = kFirebaseApiKey;
+    firebase_config = GetLedgerFirebaseConfig();
   }
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
@@ -343,9 +372,7 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
         ledger_token_provider_for_erase =
             std::move(ledger_token_provider_for_erase)
       ]() mutable {
-        auto firebase_config = ledger::FirebaseConfig::New();
-        firebase_config->server_id = kFirebaseServerId;
-        firebase_config->api_key = kFirebaseApiKey;
+        auto firebase_config = GetLedgerFirebaseConfig();
         ledger_repository_factory_->EraseRepository(
             local_ledger_path, std::move(firebase_config),
             std::move(ledger_token_provider_for_erase),
