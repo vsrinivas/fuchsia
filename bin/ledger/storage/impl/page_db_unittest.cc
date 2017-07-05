@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/db.h"
+#include "apps/ledger/src/storage/impl/page_db.h"
 
 #include <memory>
 #include <string>
@@ -13,8 +13,8 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/commit_random_impl.h"
-#include "apps/ledger/src/storage/impl/db_impl.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
+#include "apps/ledger/src/storage/impl/page_db_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -37,47 +37,47 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   }
 }
 
-class DBTest : public ::test::TestWithMessageLoop {
+class PageDbTest : public ::test::TestWithMessageLoop {
  public:
-  DBTest()
+  PageDbTest()
       : TestWithMessageLoop(),
         page_storage_(&coroutine_service_, tmp_dir_.path(), "page_id"),
-        db_(&coroutine_service_, &page_storage_, tmp_dir_.path()) {}
+        page_db_(&coroutine_service_, &page_storage_, tmp_dir_.path()) {}
 
-  ~DBTest() override {}
+  ~PageDbTest() override {}
 
   // Test:
   void SetUp() override {
     std::srand(0);
-    ASSERT_EQ(Status::OK, db_.Init());
+    ASSERT_EQ(Status::OK, page_db_.Init());
   }
 
  protected:
   files::ScopedTempDir tmp_dir_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   PageStorageImpl page_storage_;
-  DbImpl db_;
+  PageDbImpl page_db_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DBTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(PageDbTest);
 };
 
-TEST_F(DBTest, HeadCommits) {
+TEST_F(PageDbTest, HeadCommits) {
   std::vector<CommitId> heads;
-  EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
+  EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
   EXPECT_TRUE(heads.empty());
 
   CommitId cid = RandomCommitId();
-  EXPECT_EQ(Status::OK, db_.AddHead(cid, glue::RandUint64()));
-  EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
+  EXPECT_EQ(Status::OK, page_db_.AddHead(cid, glue::RandUint64()));
+  EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
   EXPECT_EQ(1u, heads.size());
   EXPECT_EQ(cid, heads[0]);
 
-  EXPECT_EQ(Status::OK, db_.RemoveHead(cid));
-  EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
+  EXPECT_EQ(Status::OK, page_db_.RemoveHead(cid));
+  EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
   EXPECT_TRUE(heads.empty());
 }
 
-TEST_F(DBTest, OrderHeadCommitsByTimestamp) {
+TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
   std::vector<int64_t> timestamps = {std::numeric_limits<int64_t>::min(),
                                      std::numeric_limits<int64_t>::max(), 0};
 
@@ -99,11 +99,11 @@ TEST_F(DBTest, OrderHeadCommitsByTimestamp) {
   std::map<int64_t, CommitId> commits;
   for (auto ts : random_ordered_timestamps) {
     commits[ts] = RandomCommitId();
-    EXPECT_EQ(Status::OK, db_.AddHead(commits[ts], ts));
+    EXPECT_EQ(Status::OK, page_db_.AddHead(commits[ts], ts));
   }
 
   std::vector<CommitId> heads;
-  EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
+  EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
   EXPECT_EQ(timestamps.size(), heads.size());
 
   for (size_t i = 0; i < heads.size(); ++i) {
@@ -111,7 +111,7 @@ TEST_F(DBTest, OrderHeadCommitsByTimestamp) {
   }
 }
 
-TEST_F(DBTest, Commits) {
+TEST_F(PageDbTest, Commits) {
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new test::CommitRandomImpl());
 
@@ -121,51 +121,52 @@ TEST_F(DBTest, Commits) {
       &page_storage_, RandomObjectId(), std::move(parents));
 
   EXPECT_EQ(Status::NOT_FOUND,
-            db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
+            page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
 
-  EXPECT_EQ(Status::OK, db_.AddCommitStorageBytes(commit->GetId(),
-                                                  commit->GetStorageBytes()));
+  EXPECT_EQ(Status::OK, page_db_.AddCommitStorageBytes(
+                            commit->GetId(), commit->GetStorageBytes()));
   EXPECT_EQ(Status::OK,
-            db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
+            page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
   EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
 
-  EXPECT_EQ(Status::OK, db_.RemoveCommit(commit->GetId()));
+  EXPECT_EQ(Status::OK, page_db_.RemoveCommit(commit->GetId()));
   EXPECT_EQ(Status::NOT_FOUND,
-            db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
+            page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
 }
 
-TEST_F(DBTest, Journals) {
+TEST_F(PageDbTest, Journals) {
   CommitId commit_id = RandomCommitId();
 
   std::unique_ptr<Journal> implicit_journal;
   std::unique_ptr<Journal> explicit_journal;
-  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::IMPLICIT, commit_id,
-                                          &implicit_journal));
-  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::EXPLICIT, commit_id,
-                                          &explicit_journal));
+  EXPECT_EQ(Status::OK, page_db_.CreateJournal(JournalType::IMPLICIT, commit_id,
+                                               &implicit_journal));
+  EXPECT_EQ(Status::OK, page_db_.CreateJournal(JournalType::EXPLICIT, commit_id,
+                                               &explicit_journal));
 
-  EXPECT_EQ(Status::OK, db_.RemoveExplicitJournals());
+  EXPECT_EQ(Status::OK, page_db_.RemoveExplicitJournals());
 
   // Removing explicit journals should not affect the implicit ones.
   std::vector<JournalId> journal_ids;
-  EXPECT_EQ(Status::OK, db_.GetImplicitJournalIds(&journal_ids));
+  EXPECT_EQ(Status::OK, page_db_.GetImplicitJournalIds(&journal_ids));
   EXPECT_EQ(1u, journal_ids.size());
 
   std::unique_ptr<Journal> found_journal;
-  EXPECT_EQ(Status::OK, db_.GetImplicitJournal(journal_ids[0], &found_journal));
-  EXPECT_EQ(Status::OK, db_.RemoveJournal(journal_ids[0]));
+  EXPECT_EQ(Status::OK,
+            page_db_.GetImplicitJournal(journal_ids[0], &found_journal));
+  EXPECT_EQ(Status::OK, page_db_.RemoveJournal(journal_ids[0]));
   EXPECT_EQ(Status::NOT_FOUND,
-            db_.GetImplicitJournal(journal_ids[0], &found_journal));
-  EXPECT_EQ(Status::OK, db_.GetImplicitJournalIds(&journal_ids));
+            page_db_.GetImplicitJournal(journal_ids[0], &found_journal));
+  EXPECT_EQ(Status::OK, page_db_.GetImplicitJournalIds(&journal_ids));
   EXPECT_EQ(0u, journal_ids.size());
 }
 
-TEST_F(DBTest, JournalEntries) {
+TEST_F(PageDbTest, JournalEntries) {
   CommitId commit_id = RandomCommitId();
 
   std::unique_ptr<Journal> implicit_journal;
-  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::IMPLICIT, commit_id,
-                                          &implicit_journal));
+  EXPECT_EQ(Status::OK, page_db_.CreateJournal(JournalType::IMPLICIT, commit_id,
+                                               &implicit_journal));
   EXPECT_EQ(Status::OK,
             implicit_journal->Put("add-key-1", "value1", KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
@@ -181,7 +182,7 @@ TEST_F(DBTest, JournalEntries) {
   };
   std::unique_ptr<Iterator<const EntryChange>> entries;
   EXPECT_EQ(Status::OK,
-            db_.GetJournalEntries(
+            page_db_.GetJournalEntries(
                 static_cast<JournalDBImpl*>(implicit_journal.get())->GetId(),
                 &entries));
   for (int i = 0; i < 3; ++i) {
@@ -193,149 +194,153 @@ TEST_F(DBTest, JournalEntries) {
   EXPECT_EQ(Status::OK, entries->GetStatus());
 }
 
-TEST_F(DBTest, ObjectStorage) {
+TEST_F(PageDbTest, ObjectStorage) {
   ObjectId object_id = RandomObjectId();
   std::string content = RandomString(32 * 1024);
   std::unique_ptr<const Object> object;
-  DB::ObjectStatus object_status;
+  PageDb::ObjectStatus object_status;
 
-  EXPECT_EQ(Status::NOT_FOUND, db_.ReadObject(object_id, &object));
-  ASSERT_EQ(Status::OK,
-            db_.WriteObject(object_id, DataSource::DataChunk::Create(content),
-                            DB::ObjectStatus::TRANSIENT));
-  db_.GetObjectStatus(object_id, &object_status);
-  EXPECT_EQ(DB::ObjectStatus::TRANSIENT, object_status);
-  ASSERT_EQ(Status::OK, db_.ReadObject(object_id, &object));
+  EXPECT_EQ(Status::NOT_FOUND, page_db_.ReadObject(object_id, &object));
+  ASSERT_EQ(Status::OK, page_db_.WriteObject(
+                            object_id, DataSource::DataChunk::Create(content),
+                            PageDb::ObjectStatus::TRANSIENT));
+  page_db_.GetObjectStatus(object_id, &object_status);
+  EXPECT_EQ(PageDb::ObjectStatus::TRANSIENT, object_status);
+  ASSERT_EQ(Status::OK, page_db_.ReadObject(object_id, &object));
   ftl::StringView object_content;
   EXPECT_EQ(Status::OK, object->GetData(&object_content));
   EXPECT_EQ(content, object_content);
-  EXPECT_EQ(Status::OK, db_.DeleteObject(object_id));
-  EXPECT_EQ(Status::NOT_FOUND, db_.ReadObject(object_id, &object));
+  EXPECT_EQ(Status::OK, page_db_.DeleteObject(object_id));
+  EXPECT_EQ(Status::NOT_FOUND, page_db_.ReadObject(object_id, &object));
 }
 
-TEST_F(DBTest, UnsyncedCommits) {
+TEST_F(PageDbTest, UnsyncedCommits) {
   CommitId commit_id = RandomCommitId();
   std::vector<CommitId> commit_ids;
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&commit_ids));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&commit_ids));
   EXPECT_TRUE(commit_ids.empty());
 
-  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_id, 0));
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&commit_ids));
+  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_id, 0));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&commit_ids));
   EXPECT_EQ(1u, commit_ids.size());
   EXPECT_EQ(commit_id, commit_ids[0]);
   bool is_synced;
-  EXPECT_EQ(Status::OK, db_.IsCommitSynced(commit_id, &is_synced));
+  EXPECT_EQ(Status::OK, page_db_.IsCommitSynced(commit_id, &is_synced));
   EXPECT_FALSE(is_synced);
 
-  EXPECT_EQ(Status::OK, db_.MarkCommitIdSynced(commit_id));
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&commit_ids));
+  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdSynced(commit_id));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&commit_ids));
   EXPECT_TRUE(commit_ids.empty());
-  EXPECT_EQ(Status::OK, db_.IsCommitSynced(commit_id, &is_synced));
+  EXPECT_EQ(Status::OK, page_db_.IsCommitSynced(commit_id, &is_synced));
   EXPECT_TRUE(is_synced);
 }
 
-TEST_F(DBTest, OrderUnsyncedCommitsByTimestamp) {
+TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
   CommitId commit_ids[] = {RandomCommitId(), RandomCommitId(),
                            RandomCommitId()};
   // Add three unsynced commits with timestamps 200, 300 and 100.
-  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_ids[0], 200));
-  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_ids[1], 300));
-  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_ids[2], 100));
+  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_ids[0], 200));
+  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_ids[1], 300));
+  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_ids[2], 100));
 
   // The result should be ordered by the given timestamps.
   std::vector<CommitId> found_ids;
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&found_ids));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&found_ids));
   EXPECT_EQ(3u, found_ids.size());
   EXPECT_EQ(found_ids[0], commit_ids[2]);
   EXPECT_EQ(found_ids[1], commit_ids[0]);
   EXPECT_EQ(found_ids[2], commit_ids[1]);
 }
 
-TEST_F(DBTest, UnsyncedPieces) {
+TEST_F(PageDbTest, UnsyncedPieces) {
   ObjectId object_id = RandomObjectId();
   std::vector<ObjectId> object_ids;
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedPieces(&object_ids));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_TRUE(object_ids.empty());
 
   EXPECT_EQ(Status::OK,
-            db_.WriteObject(object_id, DataSource::DataChunk::Create(""),
-                            DB::ObjectStatus::LOCAL));
+            page_db_.WriteObject(object_id, DataSource::DataChunk::Create(""),
+                                 PageDb::ObjectStatus::LOCAL));
   EXPECT_EQ(Status::OK,
-            db_.SetObjectStatus(object_id, DB::ObjectStatus::LOCAL));
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedPieces(&object_ids));
+            page_db_.SetObjectStatus(object_id, PageDb::ObjectStatus::LOCAL));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_EQ(1u, object_ids.size());
   EXPECT_EQ(object_id, object_ids[0]);
-  DB::ObjectStatus object_status;
-  EXPECT_EQ(Status::OK, db_.GetObjectStatus(object_id, &object_status));
-  EXPECT_EQ(DB::ObjectStatus::LOCAL, object_status);
+  PageDb::ObjectStatus object_status;
+  EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
+  EXPECT_EQ(PageDb::ObjectStatus::LOCAL, object_status);
 
   EXPECT_EQ(Status::OK,
-            db_.SetObjectStatus(object_id, DB::ObjectStatus::SYNCED));
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedPieces(&object_ids));
+            page_db_.SetObjectStatus(object_id, PageDb::ObjectStatus::SYNCED));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_TRUE(object_ids.empty());
-  EXPECT_EQ(Status::OK, db_.GetObjectStatus(object_id, &object_status));
-  EXPECT_EQ(DB::ObjectStatus::SYNCED, object_status);
+  EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
+  EXPECT_EQ(PageDb::ObjectStatus::SYNCED, object_status);
 }
 
-TEST_F(DBTest, Batch) {
-  std::unique_ptr<DB::Batch> batch = db_.StartBatch();
+TEST_F(PageDbTest, Batch) {
+  std::unique_ptr<PageDb::Batch> batch = page_db_.StartBatch();
 
   ObjectId object_id = RandomObjectId();
   EXPECT_EQ(Status::OK,
-            db_.WriteObject(object_id, DataSource::DataChunk::Create(""),
-                            DB::ObjectStatus::LOCAL));
+            page_db_.WriteObject(object_id, DataSource::DataChunk::Create(""),
+                                 PageDb::ObjectStatus::LOCAL));
 
   std::vector<ObjectId> object_ids;
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedPieces(&object_ids));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_TRUE(object_ids.empty());
 
   EXPECT_EQ(Status::OK, batch->Execute());
 
-  EXPECT_EQ(Status::OK, db_.GetUnsyncedPieces(&object_ids));
+  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_EQ(1u, object_ids.size());
   EXPECT_EQ(object_id, object_ids[0]);
 }
 
-TEST_F(DBTest, ObjectStatus) {
+TEST_F(PageDbTest, ObjectStatus) {
   ObjectId object_id = RandomObjectId();
-  DB::ObjectStatus object_status;
+  PageDb::ObjectStatus object_status;
 
-  ASSERT_EQ(Status::OK, db_.GetObjectStatus(object_id, &object_status));
-  EXPECT_EQ(DB::ObjectStatus::UNKNOWN, object_status);
+  ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
+  EXPECT_EQ(PageDb::ObjectStatus::UNKNOWN, object_status);
 
-  DB::ObjectStatus initial_statuses[] = {DB::ObjectStatus::TRANSIENT,
-                                         DB::ObjectStatus::LOCAL,
-                                         DB::ObjectStatus::SYNCED};
-  DB::ObjectStatus next_statuses[] = {DB::ObjectStatus::LOCAL,
-                                      DB::ObjectStatus::SYNCED};
+  PageDb::ObjectStatus initial_statuses[] = {PageDb::ObjectStatus::TRANSIENT,
+                                             PageDb::ObjectStatus::LOCAL,
+                                             PageDb::ObjectStatus::SYNCED};
+  PageDb::ObjectStatus next_statuses[] = {PageDb::ObjectStatus::LOCAL,
+                                          PageDb::ObjectStatus::SYNCED};
   for (auto initial_status : initial_statuses) {
     for (auto next_status : next_statuses) {
-      ASSERT_EQ(Status::OK, db_.DeleteObject(object_id));
-      ASSERT_EQ(Status::OK,
-                db_.WriteObject(object_id, DataSource::DataChunk::Create(""),
+      ASSERT_EQ(Status::OK, page_db_.DeleteObject(object_id));
+      ASSERT_EQ(Status::OK, page_db_.WriteObject(
+                                object_id, DataSource::DataChunk::Create(""),
                                 initial_status));
-      ASSERT_EQ(Status::OK, db_.GetObjectStatus(object_id, &object_status));
+      ASSERT_EQ(Status::OK,
+                page_db_.GetObjectStatus(object_id, &object_status));
       EXPECT_EQ(initial_status, object_status);
-      ASSERT_EQ(Status::OK, db_.SetObjectStatus(object_id, next_status));
+      ASSERT_EQ(Status::OK, page_db_.SetObjectStatus(object_id, next_status));
 
-      DB::ObjectStatus expected_status = std::max(initial_status, next_status);
-      ASSERT_EQ(Status::OK, db_.GetObjectStatus(object_id, &object_status));
+      PageDb::ObjectStatus expected_status =
+          std::max(initial_status, next_status);
+      ASSERT_EQ(Status::OK,
+                page_db_.GetObjectStatus(object_id, &object_status));
       EXPECT_EQ(expected_status, object_status);
     }
   }
 }
 
-TEST_F(DBTest, SyncMetadata) {
+TEST_F(PageDbTest, SyncMetadata) {
   std::vector<std::pair<ftl::StringView, ftl::StringView>> keys_and_values = {
       {"foo1", "foo2"}, {"bar1", " bar2 "}};
   for (auto key_and_value : keys_and_values) {
     auto key = key_and_value.first;
     auto value = key_and_value.second;
     std::string returned_value;
-    EXPECT_EQ(Status::NOT_FOUND, db_.GetSyncMetadata(key, &returned_value));
+    EXPECT_EQ(Status::NOT_FOUND,
+              page_db_.GetSyncMetadata(key, &returned_value));
 
-    EXPECT_EQ(Status::OK, db_.SetSyncMetadata(key, value));
-    EXPECT_EQ(Status::OK, db_.GetSyncMetadata(key, &returned_value));
+    EXPECT_EQ(Status::OK, page_db_.SetSyncMetadata(key, value));
+    EXPECT_EQ(Status::OK, page_db_.GetSyncMetadata(key, &returned_value));
     EXPECT_EQ(value, returned_value);
   }
 }

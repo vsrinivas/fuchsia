@@ -89,7 +89,7 @@ PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
 PageStorageImpl::~PageStorageImpl() {}
 
 void PageStorageImpl::Init(std::function<void(Status)> callback) {
-  // Initialize DB.
+  // Initialize PageDb.
   Status s = db_.Init();
   if (s != Status::OK) {
     callback(s);
@@ -347,7 +347,7 @@ void PageStorageImpl::GetUnsyncedPieces(
 }
 
 Status PageStorageImpl::MarkPieceSynced(ObjectIdView object_id) {
-  return db_.SetObjectStatus(object_id, DB::ObjectStatus::SYNCED);
+  return db_.SetObjectStatus(object_id, PageDb::ObjectStatus::SYNCED);
 }
 
 void PageStorageImpl::AddObjectFromLocal(
@@ -569,7 +569,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(std::vector<ObjectId> object_ids) {
     object_ids.pop_back();
     const ObjectId& object_id = *(it.first);
     FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-    db_.SetObjectStatus(object_id, DB::ObjectStatus::LOCAL);
+    db_.SetObjectStatus(object_id, PageDb::ObjectStatus::LOCAL);
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
       Status status = db_.ReadObject(object_id, &object);
@@ -612,7 +612,7 @@ void PageStorageImpl::AddCommits(
       << "New objects must only be used when adding local commit.";
 
   // Apply all changes atomically.
-  std::unique_ptr<DB::Batch> batch = db_.StartBatch();
+  std::unique_ptr<PageDb::Batch> batch = db_.StartBatch();
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
@@ -628,7 +628,7 @@ void PageStorageImpl::AddCommits(
       Status s;
 
       // Commits should arrive in order. Check that the parents are either
-      // present in the DB or in the list of already processed commits.
+      // present in PageDb or in the list of already processed commits.
       // If the commit arrive out of order, print an error, but skip it
       // temporarly so that the Ledger can recover if all the needed commits are
       // received in a single batch.
@@ -738,9 +738,9 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
   std::unique_ptr<const Object> object;
   Status status = db_.ReadObject(object_id, &object);
   if (status == Status::NOT_FOUND) {
-    DB::ObjectStatus object_status =
-        (source == ChangeSource::LOCAL ? DB::ObjectStatus::TRANSIENT
-                                       : DB::ObjectStatus::SYNCED);
+    PageDb::ObjectStatus object_status =
+        (source == ChangeSource::LOCAL ? PageDb::ObjectStatus::TRANSIENT
+                                       : PageDb::ObjectStatus::SYNCED);
     callback(db_.WriteObject(object_id, std::move(data), object_status));
     return;
   }
@@ -846,10 +846,10 @@ bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
     return false;
   }
 
-  DB::ObjectStatus object_status;
+  PageDb::ObjectStatus object_status;
   Status status = db_.GetObjectStatus(object_id, &object_status);
   FTL_DCHECK(status == Status::OK);
-  return object_status == DB::ObjectStatus::TRANSIENT;
+  return object_status == PageDb::ObjectStatus::TRANSIENT;
 }
 
 void PageStorageImpl::FillBufferWithObjectContent(

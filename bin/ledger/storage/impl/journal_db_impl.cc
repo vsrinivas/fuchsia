@@ -10,7 +10,7 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/impl/btree/builder.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
-#include "apps/ledger/src/storage/impl/db.h"
+#include "apps/ledger/src/storage/impl/page_db.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "lib/ftl/functional/make_copyable.h"
 
@@ -19,7 +19,7 @@ namespace storage {
 JournalDBImpl::JournalDBImpl(JournalType type,
                              coroutine::CoroutineService* coroutine_service,
                              PageStorageImpl* page_storage,
-                             DB* db,
+                             PageDb* db,
                              const JournalId& id,
                              const CommitId& base)
     : type_(type),
@@ -42,7 +42,7 @@ std::unique_ptr<Journal> JournalDBImpl::Simple(
     JournalType type,
     coroutine::CoroutineService* coroutine_service,
     PageStorageImpl* page_storage,
-    DB* db,
+    PageDb* db,
     const JournalId& id,
     const CommitId& base) {
   return std::unique_ptr<Journal>(
@@ -52,7 +52,7 @@ std::unique_ptr<Journal> JournalDBImpl::Simple(
 std::unique_ptr<Journal> JournalDBImpl::Merge(
     coroutine::CoroutineService* coroutine_service,
     PageStorageImpl* page_storage,
-    DB* db,
+    PageDb* db,
     const JournalId& id,
     const CommitId& base,
     const CommitId& other) {
@@ -162,7 +162,7 @@ Status JournalDBImpl::Put(convert::ExtendedStringView key,
   std::string prev_id;
   Status prev_entry_status = db_->GetJournalValue(id_, key, &prev_id);
 
-  std::unique_ptr<DB::Batch> batch = db_->StartBatch();
+  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch();
   Status s = db_->AddJournalEntry(id_, key, object_id, priority);
   if (s != Status::OK) {
     failed_operation_ = true;
@@ -184,7 +184,7 @@ Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   std::string prev_id;
   Status prev_entry_status = db_->GetJournalValue(id_, key, &prev_id);
 
-  std::unique_ptr<DB::Batch> batch = db_->StartBatch();
+  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch();
   Status s = db_->RemoveJournalEntry(id_, key);
   if (s != Status::OK) {
     failed_operation_ = true;

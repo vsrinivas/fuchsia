@@ -13,7 +13,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/db.h"
+#include "apps/ledger/src/storage/impl/page_db.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -31,7 +31,7 @@ class JournalDBImpl : public Journal {
       JournalType type,
       coroutine::CoroutineService* coroutine_service,
       PageStorageImpl* page_storage,
-      DB* db,
+      PageDb* db,
       const JournalId& id,
       const CommitId& base);
 
@@ -39,7 +39,7 @@ class JournalDBImpl : public Journal {
   static std::unique_ptr<Journal> Merge(
       coroutine::CoroutineService* coroutine_service,
       PageStorageImpl* page_storage,
-      DB* db,
+      PageDb* db,
       const JournalId& id,
       const CommitId& base,
       const CommitId& other);
@@ -68,7 +68,7 @@ class JournalDBImpl : public Journal {
   JournalDBImpl(JournalType type,
                 coroutine::CoroutineService* coroutine_service,
                 PageStorageImpl* page_storage,
-                DB* db,
+                PageDb* db,
                 const JournalId& id,
                 const CommitId& base);
 
@@ -83,7 +83,7 @@ class JournalDBImpl : public Journal {
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;
-  DB* const db_;
+  PageDb* const db_;
   const JournalId id_;
   CommitId base_;
   std::unique_ptr<CommitId> other_;

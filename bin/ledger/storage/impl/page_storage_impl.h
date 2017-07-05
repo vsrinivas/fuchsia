@@ -13,7 +13,7 @@
 #include "apps/ledger/src/callback/pending_operation.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/db_impl.h"
+#include "apps/ledger/src/storage/impl/page_db_impl.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/strings/string_view.h"
@@ -147,7 +147,7 @@ class PageStorageImpl : public PageStorage {
 
   coroutine::CoroutineService* const coroutine_service_;
   const PageId page_id_;
-  DbImpl db_;
+  PageDbImpl db_;
   std::vector<CommitWatcher*> watchers_;
   callback::PendingOperationManager pending_operation_manager_;
   PageSyncDelegate* page_sync_;

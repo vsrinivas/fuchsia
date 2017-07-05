@@ -19,10 +19,10 @@
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/commit_random_impl.h"
 #include "apps/ledger/src/storage/impl/constants.h"
-#include "apps/ledger/src/storage/impl/db_empty_impl.h"
 #include "apps/ledger/src/storage/impl/directory_reader.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/impl/object_id.h"
+#include "apps/ledger/src/storage/impl/page_db_empty_impl.h"
 #include "apps/ledger/src/storage/impl/split.h"
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
@@ -54,7 +54,7 @@ class PageStorageImplAccessorForTest {
                       std::move(callback));
   }
 
-  static DB& GetDb(const std::unique_ptr<PageStorageImpl>& storage) {
+  static PageDb& GetDb(const std::unique_ptr<PageStorageImpl>& storage) {
     return storage->db_;
   }
 };
@@ -109,10 +109,10 @@ class FakeSyncDelegate : public PageSyncDelegate {
 
 // Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
 // fails with a |NOT_IMPLEMENTED| error in all other cases.
-class FakeDbImpl : public DbEmptyImpl {
+class FakePageDbImpl : public PageDbEmptyImpl {
  public:
-  FakeDbImpl(coroutine::CoroutineService* coroutine_service,
-             PageStorageImpl* page_storage)
+  FakePageDbImpl(coroutine::CoroutineService* coroutine_service,
+                 PageStorageImpl* page_storage)
       : coroutine_service_(coroutine_service), page_storage_(page_storage) {}
 
   Status Init() override { return Status::OK; }
@@ -310,7 +310,7 @@ class PageStorageTest : public StorageTest {
 
   Status WriteObject(
       ObjectData* data,
-      DB::ObjectStatus object_status = DB::ObjectStatus::TRANSIENT) {
+      PageDb::ObjectStatus object_status = PageDb::ObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
         data->object_id, data->ToChunk(), object_status);
   }
@@ -661,12 +661,12 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 }
 
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
-  FakeDbImpl db(&coroutine_service_, storage_.get());
+  FakePageDbImpl db(&coroutine_service_, storage_.get());
 
   std::unique_ptr<Journal> journal;
   // Explicit journals.
-  // The first call will fail because FakeDBImpl::AddJournalEntry() returns an
-  // error. After a failed call all other Put/Delete/Commit operations should
+  // The first call will fail because FakePageDbImpl::AddJournalEntry() returns
+  // an error. After a failed call all other Put/Delete/Commit operations should
   // fail with ILLEGAL_STATE.
   db.CreateJournal(JournalType::EXPLICIT, RandomCommitId(), &journal);
   EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
@@ -677,8 +677,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE);
 
   // Implicit journals.
-  // All calls will fail because of FakeDBImpl implementation, not because of
-  // an ILLEGAL_STATE error.
+  // All calls will fail because of FakePageDbImpl implementation, not because
+  // of an ILLEGAL_STATE error.
   db.CreateJournal(JournalType::IMPLICIT, RandomCommitId(), &journal);
   EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
   Status put_status = journal->Put("key", "value", KeyPriority::EAGER);

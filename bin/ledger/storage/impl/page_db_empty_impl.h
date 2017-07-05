@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_DB_EMPTY_IMPL_H_
-#define APPS_LEDGER_SRC_STORAGE_IMPL_DB_EMPTY_IMPL_H_
+#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_EMPTY_IMPL_H_
+#define APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_EMPTY_IMPL_H_
 
-#include "apps/ledger/src/storage/impl/db.h"
+#include "apps/ledger/src/storage/impl/page_db.h"
 
 namespace storage {
 
-class DbEmptyImpl : public DB {
+class PageDbEmptyImpl : public PageDb {
  public:
-  DbEmptyImpl() {}
-  ~DbEmptyImpl() {}
+  PageDbEmptyImpl() {}
+  ~PageDbEmptyImpl() {}
 
   Status Init() override;
   Status CreateJournal(JournalType journal_type,
@@ -22,7 +22,7 @@ class DbEmptyImpl : public DB {
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override;
 
-  std::unique_ptr<Batch> StartBatch() override;
+  std::unique_ptr<PageDb::Batch> StartBatch() override;
   Status GetHeads(std::vector<CommitId>* heads) override;
   Status AddHead(CommitIdView head, int64_t timestamp) override;
   Status RemoveHead(CommitIdView head) override;
@@ -78,4 +78,4 @@ class DbEmptyImpl : public DB {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_DB_EMPTY_IMPL_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_EMPTY_IMPL_H_

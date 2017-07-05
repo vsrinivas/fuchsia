@@ -9,7 +9,6 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 
 #include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "mx/vmar.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"

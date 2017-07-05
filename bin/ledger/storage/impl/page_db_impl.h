@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_DB_IMPL_H_
-#define APPS_LEDGER_SRC_STORAGE_IMPL_DB_IMPL_H_
-
-#include <utility>
-
-#include "leveldb/db.h"
-#include "leveldb/write_batch.h"
+#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_IMPL_H_
+#define APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_IMPL_H_
 
 #include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/db.h"
+#include "apps/ledger/src/storage/impl/leveldb.h"
+#include "apps/ledger/src/storage/impl/page_db.h"
 #include "lib/ftl/functional/auto_call.h"
 
 namespace storage {
@@ -20,15 +16,15 @@ class PageStorageImpl;
 
 // TODO(qsr): LE-250 There must be a mechanism to clean the database from
 // TRANSIENT objects.
-class DbImpl : public DB {
+class PageDbImpl : public PageDb {
  public:
-  DbImpl(coroutine::CoroutineService* coroutine_service,
-         PageStorageImpl* page_storage,
-         std::string db_path);
-  ~DbImpl() override;
+  PageDbImpl(coroutine::CoroutineService* coroutine_service,
+             PageStorageImpl* page_storage,
+             std::string db_path);
+  ~PageDbImpl() override;
 
   Status Init() override;
-  std::unique_ptr<Batch> StartBatch() override;
+  std::unique_ptr<PageDb::Batch> StartBatch() override;
   Status GetHeads(std::vector<CommitId>* heads) override;
   Status AddHead(CommitIdView head, int64_t timestamp) override;
   Status RemoveHead(CommitIdView head) override;
@@ -88,32 +84,14 @@ class DbImpl : public DB {
   Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
 
  private:
-  std::unique_ptr<Batch> StartLocalBatch();
-  Status GetByPrefix(const leveldb::Slice& prefix,
-                     std::vector<std::string>* key_suffixes);
-  Status GetEntriesByPrefix(
-      const leveldb::Slice& prefix,
-      std::vector<std::pair<std::string, std::string>>* key_value_pairs);
-  Status DeleteByPrefix(const leveldb::Slice& prefix);
-  Status Get(convert::ExtendedStringView key, std::string* value);
-  Status Put(convert::ExtendedStringView key, ftl::StringView value);
-  Status Delete(convert::ExtendedStringView key);
-  Status GetIteratorAt(convert::ExtendedStringView key,
-                       std::unique_ptr<leveldb::Iterator>* iterator);
-  Status HasKey(convert::ExtendedStringView key, bool* has_key);
+  std::unique_ptr<PageDb::Batch> StartLocalBatch();
   bool CheckHasKey(convert::ExtendedStringView key);
 
   coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;
-  const std::string db_path_;
-  std::unique_ptr<leveldb::DB> db_;
-
-  const leveldb::WriteOptions write_options_;
-  const leveldb::ReadOptions read_options_;
-
-  std::unique_ptr<leveldb::WriteBatch> batch_;
+  LevelDb db_;
 };
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_DB_IMPL_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_IMPL_H_
