@@ -8,18 +8,27 @@
 #include <string>
 #include <thread>
 
+#include <magenta/device/audio2.h>
+#include <magenta/types.h>
+#include <mxtl/unique_ptr.h>
+
 #include "apps/media/src/framework/models/active_source.h"
 #include "apps/media/src/framework/types/audio_stream_type.h"
-#include "lib/ftl/files/unique_fd.h"
+
+namespace audio2 {
+namespace utils {
+class AudioInput;
+}  // namespace utils
+}  // namespace audio2
 
 namespace media {
-// USB audio input as an ActiveSource.
-class UsbAudioSource : public ActiveSource {
+// audio input as an ActiveSource.
+class AudioInput : public ActiveSource {
  public:
   // Creates a usb audio input.
-  static std::shared_ptr<UsbAudioSource> Create(const std::string& device_path);
+  static std::shared_ptr<AudioInput> Create(const std::string& device_path);
 
-  ~UsbAudioSource() override;
+  ~AudioInput() override;
 
   std::vector<std::unique_ptr<media::StreamTypeSet>> GetSupportedStreamTypes();
 
@@ -39,34 +48,31 @@ class UsbAudioSource : public ActiveSource {
   void SetDownstreamDemand(Demand demand) override;
 
  private:
-  static constexpr uint32_t kDefaultFrameRate = 48000;
-  static constexpr uint32_t kChannels = 2;
-  static constexpr uint32_t kBytesPerSample = 2;
-  static constexpr AudioStreamType::SampleFormat kSampleFormat =
-      AudioStreamType::SampleFormat::kSigned16;
+  static constexpr uint32_t kPacketsPerRingBuffer = 16;
   static constexpr uint32_t kPacketsPerSecond = 100;
-  static constexpr uint32_t kReadBufferSize = 500;
 
-  enum class State { kStopped, kStarted, kStopping };
+  enum class State { kUninitialized, kStopped, kStarted, kStopping };
 
-  UsbAudioSource(ftl::UniqueFD fd);
-
-  bool SetFrameRate(uint32_t frames_per_second);
+  AudioInput(const std::string& device_path);
+  mx_status_t Initalize();
 
   void Worker();
 
-  uint32_t frames_per_packet() {
-    return frames_per_second_ / kPacketsPerSecond;
+  uint32_t frames_per_packet() const {
+    return configured_frames_per_second_ / kPacketsPerSecond;
   }
 
-  uint32_t packet_size() {
-    return frames_per_packet() * kChannels * kBytesPerSample;
+  uint32_t packet_size() const {
+    return frames_per_packet() * configured_bytes_per_frame_;
   }
 
   // The fields below need to be stable while the worker thread is operating.
-  ftl::UniqueFD fd_;
+  mxtl::unique_ptr<audio2::utils::AudioInput> audio_input_;
   std::vector<uint32_t> frame_rates_;
-  uint32_t frames_per_second_;
+  uint32_t configured_frames_per_second_;
+  uint16_t configured_channels_;
+  audio2_sample_format_t configured_sample_format_;
+  uint32_t configured_bytes_per_frame_;
   SupplyCallback supply_callback_;
   PayloadAllocator* allocator_;
   TimelineRate pts_rate_;
@@ -74,14 +80,6 @@ class UsbAudioSource : public ActiveSource {
 
   std::atomic<State> state_;
   std::thread worker_thread_;
-
-  // The fields below are accessed only by the worker thread.
-  int64_t pts_;
-  // TODO(dalesat): Stop using this intermediate buffer.
-  std::vector<uint8_t> read_buf_;
-  uint8_t* remaining_read_buf_;
-  uint32_t remaining_read_buf_byte_count_ = 0;
-  // The fields above are accessed only by the worker thread.
 };
 
 }  // namespace media

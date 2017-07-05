@@ -9,12 +9,13 @@
 #include <vector>
 
 #include "apps/media/services/media_capturer.fidl.h"
-#include "apps/media/src/audio/usb_audio_source.h"
 #include "apps/media/src/fidl/fidl_packet_producer.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/framework/graph.h"
 
 namespace media {
+
+class AudioInput;
 
 // Fidl agent that captures audio.
 class AudioCapturerImpl : public MediaServiceImpl::Product<MediaCapturer>,
@@ -44,7 +45,7 @@ class AudioCapturerImpl : public MediaServiceImpl::Product<MediaCapturer>,
                     MediaServiceImpl* owner);
 
   Graph graph_;
-  std::shared_ptr<UsbAudioSource> source_;
+  std::shared_ptr<AudioInput> source_;
   std::shared_ptr<FidlPacketProducer> producer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AudioCapturerImpl);

@@ -9,26 +9,20 @@
 
 namespace media {
 
-// Enumerates USB audio inputs and outputs.
-class UsbAudioEnum {
+// Enumerates audio inputs.
+class AudioInputEnum {
  public:
-  UsbAudioEnum();
+  AudioInputEnum();
 
-  ~UsbAudioEnum();
+  ~AudioInputEnum();
 
   const std::vector<std::string>& input_device_paths() {
     return input_device_paths_;
   }
 
-  const std::vector<std::string>& output_device_paths() {
-    return output_device_paths_;
-  }
-
  private:
-  static const std::string kAudioDeviceClassPath;
-
+  static const std::string kAudioInputDeviceClassPath;
   std::vector<std::string> input_device_paths_;
-  std::vector<std::string> output_device_paths_;
 };
 
 }  // namespace media

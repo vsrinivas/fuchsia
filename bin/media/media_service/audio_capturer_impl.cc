@@ -5,7 +5,8 @@
 #include "apps/media/src/media_service/audio_capturer_impl.h"
 
 #include "apps/media/lib/timeline/timeline.h"
-#include "apps/media/src/audio/usb_audio_enum.h"
+#include "apps/media/src/audio/audio_input.h"
+#include "apps/media/src/audio/audio_input_enum.h"
 #include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "lib/ftl/logging.h"
 
@@ -24,15 +25,15 @@ AudioCapturerImpl::AudioCapturerImpl(
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaCapturer>(this, std::move(request), owner),
       producer_(FidlPacketProducer::Create()) {
-  UsbAudioEnum audio_enum;
+  AudioInputEnum audio_enum;
 
   if (audio_enum.input_device_paths().empty()) {
-    FTL_LOG(WARNING) << "No USB audio input devices found";
+    FTL_LOG(WARNING) << "No audio input devices found";
     RCHECK(false);
     return;
   }
 
-  source_ = UsbAudioSource::Create(audio_enum.input_device_paths().front());
+  source_ = AudioInput::Create(audio_enum.input_device_paths().front());
 
   graph_.ConnectNodes(graph_.Add(source_), graph_.Add(producer_));
   graph_.Prepare();

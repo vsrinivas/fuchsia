@@ -6,6 +6,10 @@ import("//apps/test_runner/test.gni")
 
 source_set("audio") {
   sources = [
+    "audio_input.cc",
+    "audio_input.h",
+    "audio_input_enum.cc",
+    "audio_input_enum.h",
     "gain.cc",
     "gain.h",
     "level.cc",
@@ -21,10 +25,6 @@ source_set("audio") {
     "mixer_input_impl.h",
     "resampler.cc",
     "resampler.h",
-    "usb_audio_enum.cc",
-    "usb_audio_enum.h",
-    "usb_audio_source.cc",
-    "usb_audio_source.h",
   ]
 
   deps = [
@@ -32,6 +32,7 @@ source_set("audio") {
     "//apps/media/src/framework",
     "//apps/media/src/util",
     "//lib/ftl",
+    "//magenta/system/ulib/audio2-utils",
   ]
 }
 
