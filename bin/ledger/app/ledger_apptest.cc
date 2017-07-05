@@ -6,7 +6,6 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "application/lib/app/service_provider_impl.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl-sync.h"
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
