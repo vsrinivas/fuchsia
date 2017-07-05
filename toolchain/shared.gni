@@ -9,11 +9,11 @@
 # shared_toolchain will go.
 
 if (current_toolchain == target_toolchain) {
-    shared_toolchain = "//build/toolchain/fuchsia:${target_cpu}-shared"
-    shared_toolchain_out_dir = "$root_build_dir/${target_cpu}-shared"
+  shared_toolchain = "//build/toolchain/fuchsia:${target_cpu}-shared"
+  shared_toolchain_out_dir = "$root_build_dir/${target_cpu}-shared"
 } else {
-    shared_toolchain = current_toolchain
-    shared_toolchain_out_dir = root_out_dir
+  shared_toolchain = current_toolchain
+  shared_toolchain_out_dir = root_out_dir
 }
 
 # Most shared libraries in the Fuchsia build should use this template rather
@@ -22,6 +22,11 @@ if (current_toolchain == target_toolchain) {
 # library twice (once in the default toolchain and once in the shared
 # toolchain).
 #
+
+set_defaults("fuchsia_shared_library") {
+  configs = default_shared_library_configs
+}
+
 # This template accepts the same variables as the built-in shared_library rule.
 # The public_configs, visibility, and testonly variables are copied to the
 # outer target. The inner target, which builds the shared library itself, is
@@ -34,53 +39,55 @@ template("fuchsia_shared_library") {
     public_deps = [
       ":$shlib_target($shared_toolchain)",
     ]
-    forward_variables_from(invoker, [
-      # Forward the public_configs even though they are used in the
-      # shared_library target as well because configs do not cross toolchain
-      # boundaries. Many shared libraries configure include_dirs in their
-      # public_configs that need to be forwarded to whatever toolchain is used
-      # to build this target.
-      "public_configs",
-      "testonly",
-      "visibility",
-    ])
+    forward_variables_from(
+        invoker,
+        [
+          # Forward the public_configs even though they are used in the
+          # shared_library target as well because configs do not cross toolchain
+          # boundaries. Many shared libraries configure include_dirs in their
+          # public_configs that need to be forwarded to whatever toolchain is used
+          # to build this target.
+          "public_configs",
+          "testonly",
+          "visibility",
+        ])
   }
 
   shared_library(shlib_target) {
     visibility = [ ":$group_target" ]
 
-    forward_variables_from(invoker, [
-      "all_dependent_configs",
-      "asmflags",
-      "cflags_c",
-      "cflags_cc",
-      "cflags_objc",
-      "cflags_objcc",
-      "cflags",
-      "check_includes",
-      "data_deps",
-      "data",
-      "defines",
-      "deps",
-      "include_dirs",
-      "inputs",
-      "ldflags",
-      "lib_dirs",
-      "libs",
-      "output_extension",
-      "output_name",
-      "precompiled_header",
-      "precompiled_source",
-      "public_configs",
-      "public_deps",
-      "public",
-      "sources",
-      "testonly",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "all_dependent_configs",
+                             "asmflags",
+                             "cflags_c",
+                             "cflags_cc",
+                             "cflags_objc",
+                             "cflags_objcc",
+                             "cflags",
+                             "check_includes",
+                             "data_deps",
+                             "data",
+                             "defines",
+                             "deps",
+                             "include_dirs",
+                             "inputs",
+                             "ldflags",
+                             "lib_dirs",
+                             "libs",
+                             "output_extension",
+                             "output_name",
+                             "precompiled_header",
+                             "precompiled_source",
+                             "public_configs",
+                             "public_deps",
+                             "public",
+                             "sources",
+                             "testonly",
+                           ])
 
-    if (defined(invoker.configs)) {
-      configs += invoker.configs
-    }
+    configs = []
+    configs = invoker.configs
 
     if (!defined(output_name)) {
       output_name = group_target
