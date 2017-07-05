@@ -3,6 +3,7 @@
         "cpp"
     ],
     "imports": [
+        "dart",
         "ftl",
         "magma",
         "mtl",
