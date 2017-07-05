@@ -6,8 +6,19 @@ executable("install-fuchsia-tests") {
     "magenta",
   ]
   deps = [
-    "//apps/install-fuchsia/lib",
+    "//apps/install-fuchsia/lib:lib",
     "//magenta/system/ulib/gpt",
     "//magenta/system/ulib/unittest"
    ]
+}
+
+executable("install-fuchsia-sparse-tests") {
+  sources = [ "sparse_tests.c" ]
+  libs = [
+    "magenta",
+  ]
+  deps = [
+    "//apps/install-fuchsia/lib:sparse",
+    "//magenta/system/ulib/unittest"
+  ]
 }

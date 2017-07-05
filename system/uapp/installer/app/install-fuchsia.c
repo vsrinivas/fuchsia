@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include <installer/installer.h>
+#include <installer/sparse.h>
 
 #define DEFAULT_BLOCKDEV "/dev/class/block/000"
 
@@ -46,7 +47,15 @@
 
 #define NUM_INSTALL_PARTS 2
 
-#define BLOCK_SIZE 65536
+// The size of memory blocks to use while decompressing the LZ4 file.
+// The LZ4 compressed file is expected to have 64K blocks. If the file being
+// decompressed is a sparsed file the 64K block may contain a sparse file header
+// and therefore the data in the decompressed section may not align to boundaries
+// of the block device we're writing to. If this is true, then we need to
+// keep a partial device block's worth of data and decompress a new section
+// from the LZ4 file. At most we expect device blocks to be 4K and therefore this
+// is the most we'd have left over
+#define DECOMP_BLOCK_SIZE ((64 + 4) * 1024)
 
 // TODO(jmatt): it is gross that we're hard-coding this here, we should take
 // from the user or somehow set in the environment
@@ -345,8 +354,8 @@ static mx_status_t unmount_all(void) {
 }
 
 static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
-  uint8_t read_buffer[BLOCK_SIZE];
-  uint8_t decomp_buffer[BLOCK_SIZE];
+  uint8_t read_buffer[DECOMP_BLOCK_SIZE];
+  uint8_t decomp_buffer[DECOMP_BLOCK_SIZE];
   *bytes_copied = 0;
 
   LZ4F_decompressionContext_t dc_context;
@@ -360,11 +369,16 @@ static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
   // we set special initial read parameters so we can read just the header
   // of the first frame to provide hints about how to proceed
   size_t to_read = 4;
-  size_t to_expand = BLOCK_SIZE;
+  size_t to_expand = DECOMP_BLOCK_SIZE;
   ssize_t to_consume;
   size_t MB_10s = 0;
   const uint32_t divisor = 1024 * 1024 * 10;
+  unsparse_ctx_t write_ctx;
+  init_unsparse_ctx(&write_ctx);
 
+  // remainder will be the amount of data decompressed, but not written out and
+  // therefore leftover in the decompression buffer
+  ssize_t remainder = 0;
   while ((to_consume = read(src, read_buffer, to_read)) > 0) {
     ssize_t consumed_count = 0;
     size_t chunk_size = 0;
@@ -379,34 +393,49 @@ static mx_status_t write_partition(int src, int dest, size_t *bytes_copied) {
     }
 
     while (consumed_count < to_consume) {
-      to_expand = BLOCK_SIZE;
+      // space available in the decompression buffer
+      to_expand = DECOMP_BLOCK_SIZE - remainder;
+
+      // bytes read from disk yet to decompressed
       size_t req_size = to_consume - consumed_count;
       chunk_size =
-          LZ4F_decompress(dc_context, decomp_buffer, &to_expand,
+          LZ4F_decompress(dc_context, decomp_buffer + remainder, &to_expand,
                           read_buffer + consumed_count, &req_size, NULL);
-
       if (LZ4F_isError(chunk_size)) {
         fprintf(stderr, "Error decompressing volume file.\n");
         return MX_ERR_INTERNAL;
       }
 
       if (to_expand > 0) {
-        ssize_t written = write(dest, decomp_buffer, to_expand);
-        if (written != (ssize_t)to_expand) {
-          fprintf(stderr, "Error writing to partition, it may be corrupt. %s\n",
+        // newly decompressed data, plus any left in decompression buffer from
+        // previous iteration
+        size_t unsparse_data = to_expand + remainder;
+
+        // unsparse the data and write it out, checking to see how much of the
+        // buffer was consumed
+        ssize_t written = unsparse_buf(decomp_buffer, unsparse_data,
+                                       &write_ctx, dest);
+        remainder = (ssize_t) unsparse_data - written;
+
+        if (written < 0) {
+          fprintf(stderr, "Error writing to partition, it may be corrupt %zi. %zu %zu %s\n", *bytes_copied, unsparse_data, remainder,
                   strerror(errno));
           LZ4F_freeDecompressionContext(dc_context);
           return MX_ERR_IO;
+        } else if ((size_t) written < unsparse_data) {
+          // unsparse_buf didn't consume the whole buffer, move remaining data
+          // to front of buffer
+          memmove(decomp_buffer, decomp_buffer + written, remainder);
         }
-        *bytes_copied += written;
+        *bytes_copied += (size_t) written;
       }
 
       consumed_count += req_size;
     }
 
     // set the next read request size
-    if (chunk_size > BLOCK_SIZE) {
-      to_read = BLOCK_SIZE;
+    if (chunk_size > DECOMP_BLOCK_SIZE) {
+      to_read = DECOMP_BLOCK_SIZE;
     } else {
       to_read = chunk_size;
     }

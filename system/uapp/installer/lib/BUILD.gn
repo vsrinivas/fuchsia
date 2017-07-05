@@ -12,3 +12,11 @@ static_library("lib") {
   ]
   public_configs = [ ":installerlib_config" ]
 }
+
+static_library("sparse") {
+  sources = [
+    "include/installer/sparse.h",
+    "sparse.c",
+  ]
+  public_configs = [ ":installerlib_config" ]
+}
