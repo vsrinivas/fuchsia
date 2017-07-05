@@ -3,32 +3,8 @@
         "cpp",
         "dart"
     ],
-    "labels": [
-        "//apps/modules/chat",
-        "//apps/modules/chat:test"
-    ],
-    "resources": [
-        {
-            "bootfs_path": "apps/chat_tests/chat_tests.json",
-            "file": "apps/modules/chat/tests/chat_tests.json"
-        }
-    ],
-    "binaries": [
-        {
-            "binary": "chat_content_provider.dartx",
-            "bootfs_path": "apps/chat_content_provider"
-        },
-        {
-            "binary": "chat_content_provider_test.dartx",
-            "bootfs_path": "apps/chat_tests/chat_content_provider_test.dartx"
-        },
-        {
-            "binary": "gen/apps/modules/chat/modules/conversation/chat_conversation.flx",
-            "bootfs_path": "apps/chat_conversation"
-        },
-        {
-            "binary": "gen/apps/modules/chat/modules/conversation_list/chat_conversation_list.flx",
-            "bootfs_path": "apps/chat_conversation_list"
-        }
-    ]
+    "packages": {
+        "chat_tests": "//apps/modules/chat:chat_tests",
+        "chat": "//apps/modules/chat"
+    }
 }
