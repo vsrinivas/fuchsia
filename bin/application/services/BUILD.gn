@@ -14,7 +14,6 @@ fidl("services") {
     "application_loader.fidl",
     "application_runner.fidl",
     "flat_namespace.fidl",
-    "service_registry.fidl",
   ]
 
   public_deps = [":service_provider"]
