@@ -569,7 +569,8 @@ ResourcePtr Session::CreateMemory(ResourceId, const mozart2::MemoryPtr& args) {
 ResourcePtr Session::CreateImage(ResourceId,
                                  MemoryPtr memory,
                                  const mozart2::ImagePtr& args) {
-  return Image::New(this, memory, args, error_reporter_);
+  return Image::New(this, memory, args->info, args->memory_offset,
+                    error_reporter_);
 }
 
 ResourcePtr Session::CreateScene(ResourceId id, const mozart2::ScenePtr& args) {
