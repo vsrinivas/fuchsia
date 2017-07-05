@@ -98,6 +98,10 @@ declare_args() {
 #       name (string, required)
 #         Name of the library
 #
+#       used_by_drivers (bool, optional)
+#         Set to true if this library is used by drivers. This will place the
+#         library in a location accessible to drivers as well as other programs.
+#
 #   resources (optional)
 #      List of scopes defining the resources in the package. A resource is a
 #      data file that may be produced by the build system, checked in to a
@@ -220,7 +224,11 @@ template("package") {
         source = rebase_path(library_path)
         sources += [ library_path ]
         dest = "lib/" + library.name
-        package_manifest_contents += [ "$dest=$source" ]
+        if (defined(library.used_by_drivers) && library.used_by_drivers) {
+            boot_manifest_contents += [ "$dest=$source" ]
+        k else {
+            package_manifest_contents += [ "$dest=$source" ]
+        }
       }
       foreach(resource, resources) {
         # Resource path are absolute.
