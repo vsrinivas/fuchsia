@@ -40,23 +40,23 @@ void register_int_handler(unsigned int vector, int_handler handler, void* arg)
 }
 
 static status_t default_mask(unsigned int vector) {
-    return ERR_NOT_CONFIGURED;
+    return MX_ERR_NOT_CONFIGURED;
 }
 
 static status_t default_unmask(unsigned int vector) {
-    return ERR_NOT_CONFIGURED;
+    return MX_ERR_NOT_CONFIGURED;
 }
 
 static status_t default_configure(unsigned int vector,
                           enum interrupt_trigger_mode tm,
                           enum interrupt_polarity pol) {
-    return ERR_NOT_CONFIGURED;
+    return MX_ERR_NOT_CONFIGURED;
 }
 
 static status_t default_get_config(unsigned int vector,
                            enum interrupt_trigger_mode* tm,
                            enum interrupt_polarity* pol) {
-    return ERR_NOT_CONFIGURED;
+    return MX_ERR_NOT_CONFIGURED;
 }
 
 static bool default_is_valid(unsigned int vector, uint32_t flags) {
@@ -67,7 +67,7 @@ static unsigned int default_remap(unsigned int vector) {
 }
 
 static status_t default_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
-    return ERR_NOT_CONFIGURED;
+    return MX_ERR_NOT_CONFIGURED;
 }
 
 static void default_init_percpu_early(void) {

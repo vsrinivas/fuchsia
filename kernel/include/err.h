@@ -16,7 +16,7 @@
 
 // TODO: This is used primarily by class drivers which are obsolete.
 // Re-examine when those are removed.
-#define ERR_NOT_CONFIGURED (-501)
+#define MX_ERR_NOT_CONFIGURED (-501)
 
 // MOVE to kernel internal used for thread teardown
 #define ERR_INTERRUPTED (-502)
