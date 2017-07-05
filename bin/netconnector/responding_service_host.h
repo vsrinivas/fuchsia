@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-#include "application/lib/app/service_provider_impl.h"
+#include "application/lib/svc/service_namespace.h"
 #include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
@@ -29,18 +29,18 @@ class RespondingServiceHost {
                         fidl::InterfaceHandle<app::ServiceProvider> handle);
 
   app::ServiceProvider* services() {
-    return static_cast<app::ServiceProvider*>(&service_provider_);
+    return static_cast<app::ServiceProvider*>(&service_namespace_);
   }
 
   // Adds a binding to the service provider.
   void AddBinding(fidl::InterfaceRequest<app::ServiceProvider> request) {
-    service_provider_.AddBinding(std::move(request));
+    service_namespace_.AddBinding(std::move(request));
   }
 
  private:
   std::unordered_map<std::string, app::ServiceProviderPtr>
       service_providers_by_name_;
-  app::ServiceProviderImpl service_provider_;
+  app::ServiceNamespace service_namespace_;
   app::ApplicationLauncherPtr launcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);

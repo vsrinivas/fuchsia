@@ -80,6 +80,7 @@ executable("netconnector") {
 
   deps = [
     "//application/lib/app",
+    "//application/lib/svc",
     "//application/services",
     "//apps/media/src/util",
     "//apps/netconnector/lib",

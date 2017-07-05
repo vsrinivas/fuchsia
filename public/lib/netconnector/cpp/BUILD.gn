@@ -13,6 +13,7 @@ source_set("lib") {
 
   deps = [
     "//application/lib/app",
+    "//application/lib/svc",
     "//apps/netconnector/services",
     "//lib/fidl/cpp/waiter",
     "//lib/ftl",

@@ -21,7 +21,7 @@ RespondingServiceHost::~RespondingServiceHost() {}
 void RespondingServiceHost::RegisterSingleton(
     const std::string& service_name,
     app::ApplicationLaunchInfoPtr launch_info) {
-  service_provider_.AddServiceForName(
+  service_namespace_.AddServiceForName(
       ftl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
@@ -78,7 +78,7 @@ void RespondingServiceHost::RegisterProvider(
 
   service_providers_by_name_.emplace(service_name, std::move(service_provider));
 
-  service_provider_.AddServiceForName(
+  service_namespace_.AddServiceForName(
       [this, service_name](mx::channel client_handle) {
         FTL_VLOG(2) << "Servicing provided service request for "
                     << service_name;

@@ -8,7 +8,7 @@
 #include <unordered_set>
 
 #include "application/lib/app/application_context.h"
-#include "application/lib/app/service_provider_impl.h"
+#include "application/lib/svc/service_namespace.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/macros.h"
 
@@ -28,7 +28,7 @@ class NetStubResponder {
     FTL_DCHECK(!service_name.empty());
     FTL_DCHECK(application_context);
 
-    service_provider_.AddServiceForName(
+    service_namespace_.AddServiceForName(
         [this](mx::channel channel) {
           stubs_.insert(std::shared_ptr<TStub>(
               new TStub(actual_, std::move(channel), this)));
@@ -40,19 +40,19 @@ class NetStubResponder {
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
     fidl::InterfaceHandle<app::ServiceProvider> handle;
-    service_provider_.AddBinding(handle.NewRequest());
+    service_namespace_.AddBinding(handle.NewRequest());
     FTL_DCHECK(handle);
 
     connector->RegisterServiceProvider(service_name, std::move(handle));
   }
 
-  ~NetStubResponder() { service_provider_.Close(); }
+  ~NetStubResponder() { service_namespace_.Close(); }
 
   void ReleaseStub(std::shared_ptr<TStub> stub) { stubs_.erase(stub); }
 
  private:
   TInterface* actual_;
-  app::ServiceProviderImpl service_provider_;
+  app::ServiceNamespace service_namespace_;
   std::unordered_set<std::shared_ptr<TStub>> stubs_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);
