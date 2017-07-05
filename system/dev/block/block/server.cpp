@@ -225,7 +225,7 @@ static block_callbacks_t cb = {
 
 mx_status_t BlockServer::Serve(block_protocol_t* proto) {
 
-    proto->ops->set_callbacks(proto->ctx, &cb);
+    block_set_callbacks(proto, &cb);
 
     mx_status_t status;
     block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
@@ -285,10 +285,10 @@ mx_status_t BlockServer::Serve(block_protocol_t* proto) {
                 }
 
                 if ((requests[i].opcode & BLOCKIO_OP_MASK) == BLOCKIO_READ) {
-                    proto->ops->read(proto->ctx, iobuf->io_vmo_.get(), requests[i].length,
+                    block_read(proto, iobuf->io_vmo_.get(), requests[i].length,
                                      requests[i].vmo_offset, requests[i].dev_offset, msg);
                 } else {
-                    proto->ops->write(proto->ctx, iobuf->io_vmo_.get(), requests[i].length,
+                    block_write(proto, iobuf->io_vmo_.get(), requests[i].length,
                                       requests[i].vmo_offset, requests[i].dev_offset, msg);
                 }
                 break;
