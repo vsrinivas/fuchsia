@@ -46,20 +46,17 @@ TEST_F(NodeTest, NodesWithChildren) {
   // OK to detach a child that hasn't been attached.
   EXPECT_TRUE(Apply(NewDetachOp(kChildNodeId)));
 
-  // TODO: const ResourceId kClipNodeId = 10;
-  const ResourceId kEntityNodeId = 11;
-  // TODO: const ResourceId kLinkNodeId = 12;
-  const ResourceId kShapeNodeId = 13;
-  // TODO: const ResourceId kTagNodeId = 14;
+  const ResourceId kEntityNodeId = 10;
+  const ResourceId kShapeNodeId = 11;
+  // TODO: const ResourceId kClipNodeId = 12;
+  // TODO: const ResourceId kTagNodeId = 13;
 
-  // TODO: EXPECT_TRUE(Apply(NewCreateClipNodeOp(kClipNodeId)));
   EXPECT_TRUE(Apply(NewCreateEntityNodeOp(kEntityNodeId)));
-  // TODO: EXPECT_TRUE(Apply(NewCreateLinkNodeOp(kLinkNodeId)));
   EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kShapeNodeId)));
+  // TODO: EXPECT_TRUE(Apply(NewCreateClipNodeOp(kClipNodeId)));
   // TODO: EXPECT_TRUE(Apply(NewCreateTagNodeOp(kTagNodeId)));
   // auto clip_node = FindResource<ClipNode>(kClipNodeId);
   auto entity_node = FindResource<EntityNode>(kEntityNodeId);
-  // TODO: auto link_node = FindResource<LinkNode>(kLinkNodeId);
   auto shape_node = FindResource<ShapeNode>(kShapeNodeId);
   // TODO: auto tag_node = FindResource<TagNode>(kTagNodeId);
 
@@ -76,7 +73,6 @@ TEST_F(NodeTest, NodesWithChildren) {
   // TODO:
   // EXPECT_FALSE(Apply(NewAddChildOp(kClipNodeId, kChildNodeId)));
   // EXPECT_EQ(nullptr, child_node->parent());
-  // EXPECT_FALSE(Apply(NewAddChildOp(kLinkNodeId, kChildNodeId)));
   // EXPECT_EQ(nullptr, child_node->parent());
   EXPECT_FALSE(Apply(NewAddChildOp(kShapeNodeId, kChildNodeId)));
   EXPECT_EQ(nullptr, child_node->parent());

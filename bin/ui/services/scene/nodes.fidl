@@ -36,14 +36,6 @@ struct EntityNode {};
 
 // Characteristics:
 // - has_transform
-// - has_clip
-// TODO: deprecated: use Import/ExportResourceOp.
-struct LinkNode {
-  handle<eventpair> token;
-};
-
-// Characteristics:
-// - has_transform
 // - has_shape
 // - has_material
 struct ShapeNode {};
