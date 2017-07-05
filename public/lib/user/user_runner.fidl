@@ -17,6 +17,7 @@ import "apps/mozart/services/views/view_token.fidl";
 [ServiceName="modular.UserRunnerFactory"]  // Created by user_runner application.
 interface UserRunnerFactory {
   // Launches a user runner instance for a user identified by |user_id|.
+  // TODO(alhaad): Fold paramters into |UserContext|.
   Create(auth.Account? account,
          AppConfig user_shell,
          AppConfig story_shell,

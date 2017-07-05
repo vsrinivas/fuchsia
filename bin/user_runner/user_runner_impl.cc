@@ -95,6 +95,7 @@ UserRunnerImpl::UserRunnerImpl(
     : binding_(
           new fidl::Binding<UserRunner>(this, std::move(user_runner_request))),
       user_shell_context_binding_(this),
+      user_context_(UserContextPtr::Create(std::move(user_context))),
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
       user_scope_(application_environment,
@@ -295,7 +296,7 @@ UserRunnerImpl::UserRunnerImpl(
       std::move(visible_stories_provider_request));
 
   user_shell_.primary_service()->Initialize(
-      std::move(user_context), user_shell_context_binding_.NewBinding());
+      user_shell_context_binding_.NewBinding());
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
@@ -383,6 +384,14 @@ void UserRunnerImpl::GetSuggestionProvider(
 void UserRunnerImpl::GetVisibleStoriesController(
     fidl::InterfaceRequest<VisibleStoriesController> request) {
   visible_stories_handler_->AddControllerBinding(std::move(request));
+}
+
+void UserRunnerImpl::Logout() {
+  user_context_->Logout();
+}
+
+void UserRunnerImpl::LogoutAndResetLedgerState() {
+  user_context_->LogoutAndResetLedgerState();
 }
 
 }  // namespace modular

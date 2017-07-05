@@ -18,8 +18,7 @@ import "apps/modular/services/user/user_context.fidl";
 // passed to it in Initialize() on startup.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
-  // TODO(mesch): UserContext should be folded into UserShellContext.
-  Initialize(UserContext user_context, UserShellContext user_shell_context);
+  Initialize(UserShellContext user_shell_context);
 
   // Signals UserShell to teardown itself. Upon response, the caller
   // may terminate the UserShell process if it hasn't done so already.
@@ -40,4 +39,16 @@ interface UserShellContext {
   GetStoryProvider(StoryProvider& request);
   GetSuggestionProvider(maxwell.SuggestionProvider& request);
   GetVisibleStoriesController(VisibleStoriesController& request);
+
+  // Requests logout of the user. This causes the device runner to tear down the
+  // |UserRunner| instance of the user.
+  Logout();
+
+  // For development only.
+  //
+  // Developers need a convenient way to reset the Ledger state to a clean slate
+  // without requiring reauthentication. This method clears the Ledger state
+  // both locally and in the cloud. The user is automatically logged out in the
+  // process.
+  LogoutAndResetLedgerState();
 };

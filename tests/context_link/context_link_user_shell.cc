@@ -17,7 +17,6 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/user/focus.fidl.h"
-#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
@@ -113,12 +112,10 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
-                  fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
-    user_context_.Bind(std::move(user_context));
     user_shell_context_.Bind(std::move(user_shell_context));
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -260,7 +257,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     }
   }
 
-  void Logout() { user_context_->Logout(); }
+  void Logout() { user_shell_context_->Logout(); }
 
   TestPoint terminate_{"Terminate()"};
 
@@ -272,7 +269,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   std::unique_ptr<modular::ViewHost> view_;
 
-  modular::UserContextPtr user_context_;
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
 

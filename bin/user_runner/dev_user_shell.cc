@@ -60,17 +60,14 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
-                  fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
-    user_context_.Bind(std::move(user_context));
-    auto user_shell_context_ptr =
-        modular::UserShellContextPtr::Create(std::move(user_shell_context));
-    user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
-    user_shell_context_ptr->GetSuggestionProvider(
+    user_shell_context_.Bind(std::move(user_shell_context));
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    user_shell_context_->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
-    user_shell_context_ptr->GetFocusController(focus_controller_.NewRequest());
-    user_shell_context_ptr->GetVisibleStoriesController(
+    user_shell_context_->GetFocusController(focus_controller_.NewRequest());
+    user_shell_context_->GetVisibleStoriesController(
         visible_stories_controller_.NewRequest());
 
     suggestion_provider_->SubscribeToInterruptions(
@@ -150,7 +147,7 @@ class DevUserShellApp : modular::StoryWatcher,
       FTL_LOG(INFO) << "DevUserShell STOP";
       story_watcher_binding_.Close();
       story_controller_.reset();
-      user_context_->Logout();
+      user_shell_context_->Logout();
     });
   }
 
@@ -182,7 +179,7 @@ class DevUserShellApp : modular::StoryWatcher,
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   std::unique_ptr<modular::ViewHost> view_;
 
-  modular::UserContextPtr user_context_;
+  modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::FocusControllerPtr focus_controller_;

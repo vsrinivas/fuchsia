@@ -8,7 +8,6 @@
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -37,15 +36,12 @@ class SuggestionTestUserShellApp
   ~SuggestionTestUserShellApp() override = default;
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
-                  fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
-    user_context_.Bind(std::move(user_context));
+    user_shell_context_.Bind(std::move(user_shell_context));
 
-    auto user_shell_context_ptr =
-        modular::UserShellContextPtr::Create(std::move(user_shell_context));
-    user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
-    user_shell_context_ptr->GetSuggestionProvider(
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    user_shell_context_->GetSuggestionProvider(
         suggestion_provider_.NewRequest());
 
     suggestion_provider_->SubscribeToNext(
@@ -86,7 +82,7 @@ class SuggestionTestUserShellApp
       story_watcher_binding_.Close();
       story_controller_.reset();
 
-      user_context_->Logout();
+      user_shell_context_->Logout();
     });
   }
 
@@ -115,7 +111,7 @@ class SuggestionTestUserShellApp
 
   mozart::ViewOwnerPtr view_owner_;
 
-  modular::UserContextPtr user_context_;
+  modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;

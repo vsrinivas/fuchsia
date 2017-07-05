@@ -81,6 +81,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
+  void Logout() override;
+  void LogoutAndResetLedgerState() override;
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
@@ -88,6 +90,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<fidl::Binding<UserRunner>> binding_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
+  UserContextPtr user_context_;
   ledger::LedgerRepositoryPtr ledger_repository_;
   ledger::LedgerPtr ledger_;
   ledger::PagePtr root_page_;
