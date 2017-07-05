@@ -274,10 +274,12 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   TestConflictResolverFactory(
       MergePolicy policy,
       fidl::InterfaceRequest<ConflictResolverFactory> request,
-      ftl::Closure on_get_policy_called_callback)
+      ftl::Closure on_get_policy_called_callback,
+      ftl::TimeDelta response_delay = ftl::TimeDelta::FromMilliseconds(0))
       : policy_(policy),
         binding_(this, std::move(request)),
-        callback_(on_get_policy_called_callback) {}
+        callback_(on_get_policy_called_callback),
+        response_delay_(response_delay) {}
 
   uint get_policy_calls = 0;
   std::unordered_map<storage::PageId, ConflictResolverImpl> resolvers;
@@ -287,10 +289,14 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   void GetPolicy(fidl::Array<uint8_t> page_id,
                  const GetPolicyCallback& callback) override {
     get_policy_calls++;
-    callback(policy_);
-    if (callback_) {
-      callback_();
-    }
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this, callback] {
+          callback(policy_);
+          if (callback_) {
+            callback_();
+          }
+        },
+        response_delay_);
   }
 
   void NewConflictResolver(
@@ -304,6 +310,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   MergePolicy policy_;
   fidl::Binding<ConflictResolverFactory> binding_;
   ftl::Closure callback_;
+  ftl::TimeDelta response_delay_;
 };
 
 ::testing::AssertionResult ChangesMatch(
@@ -852,6 +859,101 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2), nullptr);
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr2),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  // Two runs of the loop: one for the conflict resolution request, one for the
+  // disconnect.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // The previous resolver should have been disconnected.
+  EXPECT_TRUE(resolver_impl->disconnected);
+  // It shouldn't have been called again.
+  EXPECT_EQ(1u, resolver_impl->requests.size());
+
+  // We should ask again for a resolution on a new resolver.
+  EXPECT_EQ(1u, resolver_factory2->resolvers.size());
+  ASSERT_NE(resolver_factory2->resolvers.end(),
+            resolver_factory2->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl2 =
+      &(resolver_factory2->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl2->requests.size());
+
+  // Remove all references to a page:
+  page1 = nullptr;
+  page2 = nullptr;
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
+
+  // Resolution should not crash the Ledger
+  fidl::Array<MergedValuePtr> merged_values =
+      fidl::Array<MergedValuePtr>::New(0);
+
+  EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
+}
+
+// Tests for a race between setting the new conflict resolver and sending the
+// resolution request. Specifically, the resolution request must be sent to the
+// new resolver, not the old one.
+TEST_F(MergingIntegrationTest,
+       CustomConflictResolutionResetFactory_FactoryRace) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  EXPECT_FALSE(resolver_impl->disconnected);
+  EXPECT_EQ(1u, resolver_impl->requests.size());
+
+  // Change the factory.
+  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2), nullptr,
+          ftl::TimeDelta::FromMilliseconds(500));
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr2),
       [](Status status) { EXPECT_EQ(status, Status::OK); });

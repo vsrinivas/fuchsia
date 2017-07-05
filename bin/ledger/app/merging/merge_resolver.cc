@@ -50,6 +50,9 @@ bool MergeResolver::IsEmpty() {
 void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   if (merge_in_progress_) {
     FTL_DCHECK(strategy_);
+    // The new strategy can be the empty strategy (nullptr), so we need a
+    // separate boolean to know if we have a pending strategy change to make.
+    has_next_strategy_ = true;
     next_strategy_ = std::move(strategy);
     strategy_->Cancel();
     return;
@@ -105,9 +108,10 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     // |merge_in_progress_| must be reset before calling |on_empty_callback_|.
     merge_in_progress_ = false;
 
-    if (next_strategy_) {
+    if (has_next_strategy_) {
       strategy_ = std::move(next_strategy_);
       next_strategy_.reset();
+      has_next_strategy_ = false;
     }
     PostCheckConflicts();
     // Call on_empty_callback_ at the very end as this might delete this.
@@ -164,7 +168,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     }
 
     // If the strategy has been changed, bail early.
-    if (next_strategy_) {
+    if (has_next_strategy_) {
       return;
     }
 
@@ -184,7 +188,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
         ](Status status,
           std::unique_ptr<const storage::Commit> common_ancestor) mutable {
           // If the strategy has been changed, bail early.
-          if (next_strategy_) {
+          if (has_next_strategy_) {
             return;
           }
 
