@@ -78,9 +78,17 @@ static mx_status_t mmc_send_ext_csd(sdmmc_t* sdmmc, iotxn_t* txn, uint8_t ext_cs
     // EXT_CSD is send in a data stage
     pdata->blockcount = 1;
     pdata->blocksize = 512;
+    txn->length = 512;
     if ((st = sdmmc_do_command(sdmmc->host_mxdev, MMC_SEND_EXT_CSD, 0, txn)) == MX_OK) {
         iotxn_copyfrom(txn, ext_csd, 512, 0);
+#if 0
+        xprintf("EXT_CSD:\n");
+        hexdump8_ex(ext_csd, 512, 0);
+#endif
     }
+    pdata->blockcount = 0;
+    pdata->blocksize = 0;
+    txn->length = 0;
     return st;
 }
 

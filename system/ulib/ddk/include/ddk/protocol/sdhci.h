@@ -32,6 +32,11 @@ typedef struct sdhci_protocol_ops {
 // The higher level stack expects 136B responses to be packed in a
 // certain way so we shift all the fields back to their proper offsets.
 #define SDHCI_QUIRK_STRIP_RESPONSE_CRC (1 << 0)
+// BCM28xx quirk: The BCM28xx appears to use its internal DMA engine to
+// perform transfers against the SD card. Normally we would use SDMA or
+// ADMA (if the part supported it). Since this part doesn't appear to
+// support either, we just use PIO.
+#define SDHCI_QUIRK_NO_DMA             (1 << 1)
 
 typedef struct sdhci_protocol {
     sdhci_protocol_ops_t* ops;

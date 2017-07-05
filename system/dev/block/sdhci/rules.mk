@@ -11,7 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/sdhci.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/pretty
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c system/ulib/mxio
 

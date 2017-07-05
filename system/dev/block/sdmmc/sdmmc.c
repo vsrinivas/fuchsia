@@ -20,12 +20,12 @@
 // Magenta Includes
 #include <magenta/threads.h>
 #include <sync/completion.h>
+#include <pretty/hexdump.h>
 
 #include "sdmmc.h"
 
 // TODO:
 // * close ended transfers
-// * DMA mode
 // * HS200/HS400
 
 // Various transfer states that the card can be in.

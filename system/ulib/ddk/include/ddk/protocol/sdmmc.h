@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/iotxn.h>
 #include <magenta/compiler.h>
 
 __BEGIN_CDECLS;
@@ -17,8 +18,11 @@ typedef struct sdmmc_protocol_data {
     uint16_t blockcount;   // For IOps, number of blocks to read/write.
     uint16_t blocksize;    // For IOps, size of blocks to read/write.
 
+    uint16_t blockid;      // Current block to transfer in PIO
     uint32_t response[4];  // Response data.
 } sdmmc_protocol_data_t;
+
+static_assert(sizeof(sdmmc_protocol_data_t) <= sizeof(iotxn_proto_data_t), "sdmmc protocol data too large\n");
 
 #define SDMMC_SIGNAL_VOLTAGE_330   0
 #define SDMMC_SIGNAL_VOLTAGE_180   1
