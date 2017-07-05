@@ -21,9 +21,11 @@ namespace archive {
 constexpr ftl::StringView kCat = "cat";
 constexpr ftl::StringView kCreate = "create";
 constexpr ftl::StringView kList = "list";
+constexpr ftl::StringView kExtract = "extract";
 constexpr ftl::StringView kExtractFile = "extract-file";
 
-constexpr ftl::StringView kKnownCommands = "create, list, cat, or extract-file";
+constexpr ftl::StringView kKnownCommands =
+    "create, list, cat, extract, or extract-file";
 
 // Options
 constexpr ftl::StringView kArchive = "archive";
@@ -35,6 +37,8 @@ constexpr ftl::StringView kCatUsage = "cat --archive=<archive> --file=<path> ";
 constexpr ftl::StringView kCreateUsage =
     "create --archive=<archive> --manifest=<manifest>";
 constexpr ftl::StringView kListUsage = "list --archive=<archive>";
+constexpr ftl::StringView kExtractUsage =
+    "extract --archive=<archive> --output=<path>";
 constexpr ftl::StringView kExtractFileUsage =
     "extract-file --archive=<archive> --file=<path> --output=<path>";
 
@@ -91,6 +95,26 @@ int List(const ftl::CommandLine& command_line) {
   return 0;
 }
 
+int Extract(const ftl::CommandLine& command_line) {
+  std::string archive_path;
+  if (!GetOptionValue(command_line, kArchive, kExtractUsage, &archive_path))
+    return -1;
+
+  std::string output_dir;
+  if (!GetOptionValue(command_line, kOuput, kExtractUsage, &output_dir))
+    return -1;
+
+  ftl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
+  if (!fd.is_valid())
+    return -1;
+  archive::ArchiveReader reader(std::move(fd));
+  if (!reader.Read())
+    return -1;
+  if (!reader.Extract(output_dir))
+    return -1;
+  return 0;
+}
+
 int ExtractFile(const ftl::CommandLine& command_line) {
   std::string archive_path;
   if (!GetOptionValue(command_line, kArchive, kExtractFileUsage, &archive_path))
@@ -140,6 +164,8 @@ int RunCommand(std::string command, const ftl::CommandLine& command_line) {
     return archive::Create(command_line);
   } else if (command == kList) {
     return archive::List(command_line);
+  } else if (command == kExtract) {
+    return archive::Extract(command_line);
   } else if (command == kExtractFile) {
     return archive::ExtractFile(command_line);
   } else if (command == kCat) {

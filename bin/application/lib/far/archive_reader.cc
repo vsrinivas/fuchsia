@@ -12,6 +12,9 @@
 
 #include "application/lib/far/file_operations.h"
 #include "application/lib/far/format.h"
+#include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/path.h"
+#include "lib/ftl/strings/concatenate.h"
 
 namespace archive {
 namespace {
@@ -32,6 +35,27 @@ ArchiveReader::~ArchiveReader() = default;
 
 bool ArchiveReader::Read() {
   return ReadIndex() && ReadDirectory();
+}
+
+bool ArchiveReader::Extract(ftl::StringView output_dir) const {
+  for (const auto& entry : directory_table_) {
+    std::string path = ftl::Concatenate({output_dir, "/", GetPathView(entry)});
+    std::string dir = files::GetDirectoryName(path);
+    if (!dir.empty() && !files::IsDirectory(dir) &&
+        !files::CreateDirectory(dir)) {
+      fprintf(stderr, "error: Failed to create directory '%s'.\n", dir.c_str());
+      return false;
+    }
+    if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
+      fprintf(stderr, "error: Failed to seek to offset of file.\n");
+      return false;
+    }
+    if (!CopyFileToPath(fd_.get(), path.c_str(), entry.data_length)) {
+      fprintf(stderr, "error: Failed write contents to '%s'.\n", path.c_str());
+      return false;
+    }
+  }
+  return true;
 }
 
 bool ArchiveReader::ExtractFile(ftl::StringView archive_path,

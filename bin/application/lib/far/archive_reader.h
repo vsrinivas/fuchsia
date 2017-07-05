@@ -35,6 +35,7 @@ class ArchiveReader {
       callback(entry);
   }
 
+  bool Extract(ftl::StringView output_dir) const;
   bool ExtractFile(ftl::StringView archive_path, const char* output_path) const;
   bool CopyFile(ftl::StringView archive_path, int dst_fd) const;
 
