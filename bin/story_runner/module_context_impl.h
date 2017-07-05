@@ -50,7 +50,9 @@ class ModuleContextImpl : ModuleContext {
 
   const ModuleData& module_data() const { return *module_data_; }
 
-  const fidl::Array<fidl::String>& module_path() const { return module_data_->module_path; }
+  const fidl::Array<fidl::String>& module_path() const {
+    return module_data_->module_path;
+  }
 
   const std::string& module_url() const { return module_data_->module_url; }
 

@@ -6,8 +6,8 @@ group("context_link") {
   testonly = true
 
   deps = [
-    ":context_link_user_shell",
     ":context_link_module",
+    ":context_link_user_shell",
   ]
 }
 
@@ -51,4 +51,3 @@ executable("context_link_module") {
     "//lib/mtl",
   ]
 }
-

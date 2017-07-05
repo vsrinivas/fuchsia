@@ -45,19 +45,21 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
 
   void Set1() {
     link_->Set(nullptr,
-               "{\"link_value\":\"1\",\"@context\":{\"topic\":\"/context_link_test\"}}");
+               "{\"link_value\":\"1\",\"@context\":{\"topic\":\"/"
+               "context_link_test\"}}");
 
     // TODO(mesch): If we set values on a Link too fast, they get swallowed by
     // syncing old values back from the ledger. FW-208.
     link_->Sync([this] {
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this] { Set2(); }, ftl::TimeDelta::FromSeconds(5));
-      });
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+          [this] { Set2(); }, ftl::TimeDelta::FromSeconds(5));
+    });
   }
 
   void Set2() {
     link_->Set(nullptr,
-               "{\"link_value\":\"2\",\"@context\":{\"topic\":\"/context_link_test\"}}");
+               "{\"link_value\":\"2\",\"@context\":{\"topic\":\"/"
+               "context_link_test\"}}");
   }
 
   TestPoint stopped_{"Child module stopped"};

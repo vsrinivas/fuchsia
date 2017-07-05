@@ -54,9 +54,10 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->StartModule(
-      module_data_->module_path, name, query, link_name, std::move(outgoing_services),
-      std::move(incoming_services), std::move(module_controller),
-      std::move(view_owner), ModuleSource::INTERNAL);
+      module_data_->module_path, name, query, link_name,
+      std::move(outgoing_services), std::move(incoming_services),
+      std::move(module_controller), std::move(view_owner),
+      ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartModuleInShell(
@@ -69,9 +70,10 @@ void ModuleContextImpl::StartModuleInShell(
     SurfaceRelationPtr surface_relation,
     const bool focus) {
   story_controller_impl_->StartModuleInShell(
-      module_data_->module_path, name, query, link_name, std::move(outgoing_services),
-      std::move(incoming_services), std::move(module_controller),
-      std::move(surface_relation), focus, ModuleSource::INTERNAL);
+      module_data_->module_path, name, query, link_name,
+      std::move(outgoing_services), std::move(incoming_services),
+      std::move(module_controller), std::move(surface_relation), focus,
+      ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::GetComponentContext(

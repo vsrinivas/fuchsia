@@ -12,10 +12,10 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
@@ -34,7 +34,8 @@
 
 namespace {
 
-constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/context_link_module";
+constexpr char kModuleUrl[] =
+    "file:///system/apps/modular_tests/context_link_module";
 constexpr char kTopic[] = "/context_link_test";
 constexpr char kLink[] = "context_link";
 
@@ -123,8 +124,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     // HACK(mesch): If done here, context provider connection just closes.
-    //user_shell_context_->GetContextProvider(context_provider_.NewRequest());
-    //context_listener_.Listen(context_provider_.get());
+    // user_shell_context_->GetContextProvider(context_provider_.NewRequest());
+    // context_listener_.Listen(context_provider_.get());
 
     CreateStory();
   }
@@ -252,8 +253,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
         context_listener_.Reset();
         context_listener_.Handle(
-            [this](const fidl::String& key, const fidl::String& value) {
-            });
+            [this](const fidl::String& key, const fidl::String& value) {});
 
         Logout();
       }

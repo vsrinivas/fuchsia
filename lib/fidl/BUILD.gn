@@ -150,12 +150,12 @@ source_set("view_host") {
 
 source_set("message_receiver_client") {
   sources = [
-    "message_receiver_client.h",
     "message_receiver_client.cc",
+    "message_receiver_client.h",
   ]
 
   deps = [
-    "//lib/fidl/cpp/bindings",
     "//apps/modular/services/component",
+    "//lib/fidl/cpp/bindings",
   ]
 }

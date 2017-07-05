@@ -202,7 +202,9 @@ XdrContext::XdrCallbackOnReadError XdrContext::ReadErrorHandler(
 }
 
 XdrContext::XdrCallbackOnReadError::XdrCallbackOnReadError(
-    XdrContext* context, XdrOp op, std::string* error,
+    XdrContext* context,
+    XdrOp op,
+    std::string* error,
     std::function<void()> callback)
     : context_(context),
       op_(op),

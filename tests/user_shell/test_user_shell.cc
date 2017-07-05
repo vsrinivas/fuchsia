@@ -161,12 +161,13 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
   void Watch(modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)->GetActiveModules(
-        binding_.NewBinding(),
-        [this](fidl::Array<modular::ModuleDataPtr> data) {
-          FTL_LOG(INFO) << "StoryModulesWatcherImpl GetModules(): "
-                        << data.size() << " modules";
-        });
+    (*story_controller)
+        ->GetActiveModules(binding_.NewBinding(),
+                           [this](fidl::Array<modular::ModuleDataPtr> data) {
+                             FTL_LOG(INFO)
+                                 << "StoryModulesWatcherImpl GetModules(): "
+                                 << data.size() << " modules";
+                           });
   }
 
   // Deregisters itself from the watched story.
@@ -197,12 +198,12 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
   void Watch(modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)->GetActiveLinks(
-        binding_.NewBinding(),
-        [this](fidl::Array<modular::LinkPathPtr> data) {
-          FTL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
-                        << data.size() << " links";
-        });
+    (*story_controller)
+        ->GetActiveLinks(binding_.NewBinding(),
+                         [this](fidl::Array<modular::LinkPathPtr> data) {
+                           FTL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
+                                         << data.size() << " links";
+                         });
   }
 
   // Deregisters itself from the watched story.
@@ -235,7 +236,6 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   void Reset() { binding_.Close(); }
 
  private:
-
   modular::testing::TestPoint on_delete_called_once_{"OnDelete() Called"};
   int on_delete_called_{};
 
@@ -250,13 +250,16 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
     deleted_stories_.emplace(story_id);
   }
 
-  modular::testing::TestPoint on_starting_called_once_{"OnChange() STARTING Called"};
+  modular::testing::TestPoint on_starting_called_once_{
+      "OnChange() STARTING Called"};
   int on_starting_called_{};
 
-  modular::testing::TestPoint on_running_called_once_{"OnChange() RUNNING Called"};
+  modular::testing::TestPoint on_running_called_once_{
+      "OnChange() RUNNING Called"};
   int on_running_called_{};
 
-  modular::testing::TestPoint on_stopped_called_once_{"OnChange() STOPPED Called"};
+  modular::testing::TestPoint on_stopped_called_once_{
+      "OnChange() STOPPED Called"};
   int on_stopped_called_{};
 
   modular::testing::TestPoint on_done_called_once_{"OnChange() DONE Called"};
@@ -266,8 +269,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   void OnChange(const modular::StoryInfoPtr story_info,
                 const modular::StoryState story_state) override {
     FTL_LOG(INFO) << "StoryProviderWatcherImpl::OnChange() "
-                  << " id " << story_info->id
-                  << " state " << story_state
+                  << " id " << story_info->id << " state " << story_state
                   << " url " << story_info->url;
 
     if (deleted_stories_.find(story_info->id) != deleted_stories_.end()) {
@@ -279,33 +281,33 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
     // Just check that all states are covered at least once, proving that we get
     // state notifications at all from the story provider.
     switch (story_state) {
-    case modular::StoryState::INITIAL:
-      // Doesn't happen in this test, presumably because of the STOPPED
-      // StoryState HACK(jimbe) in StoryProviderImpl::OnChange().
-      break;
-    case modular::StoryState::STARTING:
-      if (++on_starting_called_ == 1) {
-        on_starting_called_once_.Pass();
-      }
-      break;
-    case modular::StoryState::RUNNING:
-      if (++on_running_called_ == 1) {
-        on_running_called_once_.Pass();
-      }
-      break;
-    case modular::StoryState::STOPPED:
-      if (++on_stopped_called_ == 1) {
-        on_stopped_called_once_.Pass();
-      }
-      break;
-    case modular::StoryState::DONE:
-      if (++on_done_called_ == 1) {
-        on_done_called_once_.Pass();
-      }
-      break;
-    case modular::StoryState::ERROR:
-      // Doesn't happen in this test.
-      break;
+      case modular::StoryState::INITIAL:
+        // Doesn't happen in this test, presumably because of the STOPPED
+        // StoryState HACK(jimbe) in StoryProviderImpl::OnChange().
+        break;
+      case modular::StoryState::STARTING:
+        if (++on_starting_called_ == 1) {
+          on_starting_called_once_.Pass();
+        }
+        break;
+      case modular::StoryState::RUNNING:
+        if (++on_running_called_ == 1) {
+          on_running_called_once_.Pass();
+        }
+        break;
+      case modular::StoryState::STOPPED:
+        if (++on_stopped_called_ == 1) {
+          on_stopped_called_once_.Pass();
+        }
+        break;
+      case modular::StoryState::DONE:
+        if (++on_done_called_ == 1) {
+          on_done_called_once_.Pass();
+        }
+        break;
+      case modular::StoryState::ERROR:
+        // Doesn't happen in this test.
+        break;
     }
   }
 
@@ -322,7 +324,8 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
 // as a user shell from device runner and executes a predefined sequence of
 // steps, rather than to expose a UI to be driven by user interaction, as a user
 // shell normally would.
-class TestUserShellApp : modular::testing::ComponentViewBase<modular::UserShell> {
+class TestUserShellApp
+    : modular::testing::ComponentViewBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to
@@ -594,7 +597,8 @@ class TestUserShellApp : modular::testing::ComponentViewBase<modular::UserShell>
 
           FTL_LOG(INFO) << "TestUserShell MODULES:";
           for (const auto& module_data : modules) {
-            FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->module_url;
+            FTL_LOG(INFO) << "TestUserShell MODULE: url="
+                          << module_data->module_url;
             FTL_LOG(INFO) << "TestUserShell         link="
                           << module_data->link_path->link_name;
             std::string path;
@@ -615,46 +619,51 @@ class TestUserShellApp : modular::testing::ComponentViewBase<modular::UserShell>
   TestPoint story2_run_{"Story2 Run"};
 
   void TestStory2_Run() {
-    story_controller_->GetInfo([this] (modular::StoryInfoPtr info, modular::StoryState state) {
-        story2_info_before_run_.Pass();
-        FTL_LOG(INFO) << "StoryState before Start(): " << state;
+    story_controller_->GetInfo(
+        [this](modular::StoryInfoPtr info, modular::StoryState state) {
+          story2_info_before_run_.Pass();
+          FTL_LOG(INFO) << "StoryState before Start(): " << state;
 
-        if (state != modular::StoryState::INITIAL &&
-            state != modular::StoryState::STOPPED) {
-          modular::testing::Fail("StoryState before Start() must be STARTING or RUNNING.");
-        }
-      });
+          if (state != modular::StoryState::INITIAL &&
+              state != modular::StoryState::STOPPED) {
+            modular::testing::Fail(
+                "StoryState before Start() must be STARTING or RUNNING.");
+          }
+        });
 
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
     view_->ConnectView(std::move(story_view));
 
-    story_controller_->GetInfo([this] (modular::StoryInfoPtr info, modular::StoryState state) {
-        story2_run_.Pass();
+    story_controller_->GetInfo(
+        [this](modular::StoryInfoPtr info, modular::StoryState state) {
+          story2_run_.Pass();
 
-        FTL_LOG(INFO) << "StoryState after Start(): " << state;
+          FTL_LOG(INFO) << "StoryState after Start(): " << state;
 
-        if (state != modular::StoryState::STARTING &&
-            state != modular::StoryState::RUNNING) {
-          modular::testing::Fail("StoryState after Start() must be STARTING or RUNNING.");
-        }
+          if (state != modular::StoryState::STARTING &&
+              state != modular::StoryState::RUNNING) {
+            modular::testing::Fail(
+                "StoryState after Start() must be STARTING or RUNNING.");
+          }
 
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this] { TestStory2_DeleteStory(); }, ftl::TimeDelta::FromSeconds(20));
-      });
+          mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+              [this] { TestStory2_DeleteStory(); },
+              ftl::TimeDelta::FromSeconds(20));
+        });
   }
 
   TestPoint story2_delete_{"Story2 Delete"};
 
   void TestStory2_DeleteStory() {
-    story_provider_->DeleteStory(story_info_->id, [this] {
-      story2_delete_.Pass();
-    });
+    story_provider_->DeleteStory(story_info_->id,
+                                 [this] { story2_delete_.Pass(); });
 
-    story_provider_->GetStoryInfo(story_info_->id, [this](modular::StoryInfoPtr info) {
-        TestStory2_InfoAfterDeleteIsNull(std::move(info));
-      });
+    story_provider_->GetStoryInfo(
+        story_info_->id, [this](modular::StoryInfoPtr info) {
+          TestStory2_InfoAfterDeleteIsNull(std::move(info));
+        });
   }
 
   TestPoint story2_info_after_delete_{"Story2 Info After Delete"};

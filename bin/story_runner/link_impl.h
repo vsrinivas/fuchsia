@@ -205,7 +205,8 @@ class LinkConnection : Link {
 
 class LinkWatcherConnection {
  public:
-  LinkWatcherConnection(LinkImpl* impl, ftl::WeakPtr<LinkConnection> conn,
+  LinkWatcherConnection(LinkImpl* impl,
+                        ftl::WeakPtr<LinkConnection> conn,
                         LinkWatcherPtr watcher);
   ~LinkWatcherConnection();
 

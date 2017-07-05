@@ -10,8 +10,8 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/fidl/proxy.h"
-#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/ledger/operations.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
@@ -49,17 +49,17 @@ void MakeGetStoryDataCall(OperationContainer* const container,
                           const fidl::String& story_id,
                           std::function<void(StoryDataPtr)> result_call) {
   new ReadDataCall<StoryData>(container, page, MakeStoryKey(story_id),
-                              true /* not_found_is_ok */,
-                              XdrStoryData, std::move(result_call));
+                              true /* not_found_is_ok */, XdrStoryData,
+                              std::move(result_call));
 };
 
 void MakeWriteStoryDataCall(OperationContainer* const container,
                             ledger::Page* const page,
                             StoryDataPtr story_data,
                             std::function<void()> result_call) {
-  new WriteDataCall<StoryData>(container, page, MakeStoryKey(story_data->story_info->id),
-                               XdrStoryData, std::move(story_data),
-                               std::move(result_call));
+  new WriteDataCall<StoryData>(
+      container, page, MakeStoryKey(story_data->story_info->id), XdrStoryData,
+      std::move(story_data), std::move(result_call));
 };
 
 }  // namespace
@@ -164,7 +164,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             auto* const story_info = story_data_->story_info.get();
             story_info->url = url_;
             story_info->id = story_id_;
-            story_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);;
+            story_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);
+            ;
             story_info->extra = std::move(extra_info_);
             story_info->extra.mark_non_null();
 
@@ -593,8 +594,8 @@ void StoryProviderImpl::RequestStoryFocus(const fidl::String& story_id) {
   focus_provider_->Request(story_id);
 }
 
-void StoryProviderImpl::NotifyStoryStateChange(
-    const fidl::String& story_id, const StoryState story_state) {
+void StoryProviderImpl::NotifyStoryStateChange(const fidl::String& story_id,
+                                               const StoryState story_state) {
   auto i = story_controller_impls_.find(story_id);
 
   if (i == story_controller_impls_.end()) {
@@ -619,9 +620,8 @@ void StoryProviderImpl::GetController(
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
   new ReadAllDataCall<StoryData>(
-      &operation_queue_, root_page_,
-      kStoryKeyPrefix, XdrStoryData,
-      [callback] (fidl::Array<StoryDataPtr> data) {
+      &operation_queue_, root_page_, kStoryKeyPrefix, XdrStoryData,
+      [callback](fidl::Array<StoryDataPtr> data) {
         fidl::Array<fidl::String> result;
         result.resize(0);
 
@@ -724,7 +724,8 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
 
   // Last focus time is recorded in the ledger, and story provider watchers are
   // notified through the page watcher.
-  auto mutate = [time = mx_time_get(MX_CLOCK_UTC)](StoryData* const story_data) {
+  auto mutate = [time =
+                     mx_time_get(MX_CLOCK_UTC)](StoryData* const story_data) {
     story_data->story_info->last_focus_time = time;
     return true;
   };

@@ -671,9 +671,8 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
     path.push_back('/');
     path.append(info.queue_token);
     path.append(".json");
-    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_name,
-                                                           info.queue_token,
-                                                           std::move(path));
+    auto new_queue = std::make_unique<MessageQueueStorage>(
+        info.queue_name, info.queue_token, std::move(path));
     std::tie(it, inserted) = message_queues_.insert(
         std::make_pair(info.queue_token, std::move(new_queue)));
     FTL_DCHECK(inserted);

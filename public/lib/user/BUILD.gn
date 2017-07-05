@@ -15,9 +15,9 @@ fidl("user") {
   public_deps = [
     ":focus",
     "//apps/modular/services/agent",
+    "//apps/modular/services/auth/account",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/modular/services/auth/account",
   ]
 
   deps = [

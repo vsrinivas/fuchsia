@@ -371,9 +371,9 @@ class XdrContext {
   class XdrCallbackOnReadError {
    public:
     XdrCallbackOnReadError(XdrContext* context,
-                       const XdrOp op,
-                       std::string* error,
-                       std::function<void()> callback);
+                           const XdrOp op,
+                           std::string* error,
+                           std::function<void()> callback);
     XdrCallbackOnReadError(XdrCallbackOnReadError&& rhs);
     ~XdrCallbackOnReadError();
 
@@ -399,7 +399,10 @@ class XdrContext {
   XdrCallbackOnReadError ReadErrorHandler(std::function<void()> callback);
 
  private:
-  XdrContext(XdrContext* parent, const char* name_, XdrOp op, JsonDoc* doc,
+  XdrContext(XdrContext* parent,
+             const char* name_,
+             XdrOp op,
+             JsonDoc* doc,
              JsonValue* value);
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
@@ -500,9 +503,7 @@ void XdrFilter(XdrContext* const xdr, V* const value) {
 // case it logs an error and returns false. Clients are expected to either crash
 // or recover e.g. by ignoring the value.
 template <typename D, typename V>
-bool XdrRead(JsonDoc* const doc,
-             D* const data,
-             XdrFilterType<V> const filter) {
+bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterType<V> const filter) {
   std::string error;
   XdrContext xdr(XdrOp::FROM_JSON, doc, &error);
   xdr.Value(data, filter);

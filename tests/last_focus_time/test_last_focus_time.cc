@@ -63,14 +63,14 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   using TestPoint = modular::testing::TestPoint;
 
   TestPoint last_focus_time_increased_{
-    "StoryProviderWatcher::OnChange() last_focus_time increased"};
+      "StoryProviderWatcher::OnChange() last_focus_time increased"};
 
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr story_info,
                 modular::StoryState story_state) override {
-    FTL_LOG(INFO) << "TestApp::OnChange() " << story_state
-                  << " id " << story_info->id << " url " << story_info->url
-                  << " focus " << story_info->last_focus_time;
+    FTL_LOG(INFO) << "TestApp::OnChange() " << story_state << " id "
+                  << story_info->id << " url " << story_info->url << " focus "
+                  << story_info->last_focus_time;
 
     // We test that we at least see one increase in the last focus time.
     bool cont{};
@@ -208,7 +208,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_watcher_.Watch(&story_provider_);
-    story_provider_watcher_.Continue([]{});
+    story_provider_watcher_.Continue([] {});
 
     user_shell_context_->GetFocusController(focus_controller_.NewRequest());
     user_shell_context_->GetFocusProvider(focus_provider_.NewRequest());
@@ -240,9 +240,9 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     view_->ConnectView(std::move(story_view));
 
     story_watcher_.Continue([this] {
-        start_story_.Pass();
-        Focus();
-      });
+      start_story_.Pass();
+      Focus();
+    });
   }
 
   TestPoint focus_{"Focus()"};
@@ -251,9 +251,9 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     focus_controller_->Set(story_id_);
 
     story_provider_watcher_.Continue([this] {
-        focus_.Pass();
-        Logout();
-      });
+      focus_.Pass();
+      Logout();
+    });
   }
 
   void Logout() {

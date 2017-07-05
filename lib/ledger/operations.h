@@ -58,36 +58,35 @@ class ReadDataCall : Operation<DataPtr> {
   }
 
   void Cont(FlowToken flow) {
-    page_snapshot_->Get(to_array(key_),
-                        [this, flow](ledger::Status status, mx::vmo value) {
-                          if (status != ledger::Status::OK) {
-                            if (status != ledger::Status::KEY_NOT_FOUND ||
-                                !not_found_is_ok_) {
-                              FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                                             << " PageSnapshot.Get() " << status;
-                            }
-                            return;
-                          }
+    page_snapshot_->Get(
+        to_array(key_), [this, flow](ledger::Status status, mx::vmo value) {
+          if (status != ledger::Status::OK) {
+            if (status != ledger::Status::KEY_NOT_FOUND || !not_found_is_ok_) {
+              FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                             << " PageSnapshot.Get() " << status;
+            }
+            return;
+          }
 
-                          if (!value) {
-                            FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                                           << " PageSnapshot.Get() null vmo";
-                          }
+          if (!value) {
+            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                           << " PageSnapshot.Get() null vmo";
+          }
 
-                          std::string value_as_string;
-                          if (!mtl::StringFromVmo(value, &value_as_string)) {
-                            FTL_LOG(ERROR) << "ReadDataCall() " << key_
-                                           << " Unable to extract data.";
-                            return;
-                          }
+          std::string value_as_string;
+          if (!mtl::StringFromVmo(value, &value_as_string)) {
+            FTL_LOG(ERROR) << "ReadDataCall() " << key_
+                           << " Unable to extract data.";
+            return;
+          }
 
-                          if (!XdrRead(value_as_string, &result_, filter_)) {
-                            result_.reset();
-                            return;
-                          }
+          if (!XdrRead(value_as_string, &result_, filter_)) {
+            result_.reset();
+            return;
+          }
 
-                          FTL_DCHECK(!result_.is_null());
-                        });
+          FTL_DCHECK(!result_.is_null());
+        });
   }
 
   ledger::Page* const page_;  // not owned

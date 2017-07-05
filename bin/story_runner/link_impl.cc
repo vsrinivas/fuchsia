@@ -356,12 +356,14 @@ void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
   watcher_ptr->Notify(JsonValueToString(doc_));
 
   watchers_.emplace_back(std::make_unique<LinkWatcherConnection>(
-                             this, std::move(conn), std::move(watcher_ptr)));
+      this, std::move(conn), std::move(watcher_ptr)));
 }
 
 LinkConnection::LinkConnection(LinkImpl* const impl,
                                fidl::InterfaceRequest<Link> link_request)
-    : impl_(impl), binding_(this, std::move(link_request)), weak_ptr_factory_(this) {
+    : impl_(impl),
+      binding_(this, std::move(link_request)),
+      weak_ptr_factory_(this) {
   impl_->AddConnection(this);
   binding_.set_connection_error_handler(
       [this] { impl_->RemoveConnection(this); });
@@ -416,10 +418,9 @@ void LinkConnection::Get(fidl::Array<fidl::String> path,
 LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
                                              ftl::WeakPtr<LinkConnection> conn,
                                              LinkWatcherPtr watcher)
-    : impl_(impl),
-      conn_(std::move(conn)),
-      watcher_(std::move(watcher)) {
-  watcher_.set_connection_error_handler([this] { impl_->RemoveConnection(this); });
+    : impl_(impl), conn_(std::move(conn)), watcher_(std::move(watcher)) {
+  watcher_.set_connection_error_handler(
+      [this] { impl_->RemoveConnection(this); });
 }
 
 LinkWatcherConnection::~LinkWatcherConnection() = default;

@@ -40,8 +40,8 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
     component_context_->ObtainMessageQueue("Test Queue",
                                            msg_queue_.NewRequest());
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-        msg_queue_.get(), [this] (const fidl::String& message,
-                                  std::function<void()> ack) {
+        msg_queue_.get(),
+        [this](const fidl::String& message, std::function<void()> ack) {
           ack();
           modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});

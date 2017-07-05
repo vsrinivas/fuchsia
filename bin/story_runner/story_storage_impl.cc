@@ -41,8 +41,7 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
       ->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
 
   // TODO(jimbe) Remove error handler after 2017-08-01
-  xdr->ReadErrorHandler(
-         [data] { data->module_stopped = false; })
+  xdr->ReadErrorHandler([data] { data->module_stopped = false; })
       ->Field("module_stopped", &data->module_stopped);
 }
 
@@ -181,10 +180,9 @@ void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
 void StoryStorageImpl::ReadModuleData(
     const fidl::Array<fidl::String>& module_path,
     const ModuleDataCallback& callback) {
-  new ReadDataCall<ModuleData>(&operation_queue_, story_page_,
-                               MakeModuleKey(module_path),
-                               false /* not_found_is_ok */, XdrModuleData,
-                               callback);
+  new ReadDataCall<ModuleData>(
+      &operation_queue_, story_page_, MakeModuleKey(module_path),
+      false /* not_found_is_ok */, XdrModuleData, callback);
 }
 
 void StoryStorageImpl::ReadAllModuleData(
@@ -212,12 +210,11 @@ void StoryStorageImpl::WriteModuleData(
   WriteModuleData(std::move(data), callback);
 }
 
-void StoryStorageImpl::WriteModuleData(
-    ModuleDataPtr data, const SyncCallback& callback) {
+void StoryStorageImpl::WriteModuleData(ModuleDataPtr data,
+                                       const SyncCallback& callback) {
   const std::string key{MakeModuleKey(data->module_path)};
-  new WriteDataCall<ModuleData>(&operation_queue_, story_page_,
-                                key, XdrModuleData,
-                                std::move(data), callback);
+  new WriteDataCall<ModuleData>(&operation_queue_, story_page_, key,
+                                XdrModuleData, std::move(data), callback);
 }
 
 void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
