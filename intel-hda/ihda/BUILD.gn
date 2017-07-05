@@ -2,22 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("ihda") {
-    sources = [
-        "ihda.cpp",
-        "intel_hda_codec.cpp",
-        "intel_hda_controller.cpp",
-        "intel_hda_device.cpp",
-        "magenta_device.cpp",
-        "print_codec_state.cpp",
-    ]
+import("//packages/package.gni")
 
-    deps = [
-        "//drivers/audio/intel-hda/utils:ihda-utils",
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxtl",
-    ]
+executable("ihda_bin") {
+  output_name = "ihda"
+  sources = [
+    "ihda.cpp",
+    "intel_hda_codec.cpp",
+    "intel_hda_controller.cpp",
+    "intel_hda_device.cpp",
+    "magenta_device.cpp",
+    "print_codec_state.cpp",
+  ]
 
-    cflags = [ "-Wno-address-of-packed-member" ]
+  deps = [
+    "//drivers/audio/intel-hda/utils:ihda-utils",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
+  ]
+
+  cflags = [ "-Wno-address-of-packed-member" ]
 }
 
+package("ihda") {
+  deps = [
+    ":ihda_bin",
+  ]
+  binaries = [ {
+        name = "ihda"
+      } ]
+}

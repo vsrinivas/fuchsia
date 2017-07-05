@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 group("codecs") {
-    deps = [
-        "//drivers/audio/intel-hda/codecs/qemu:qemu-ihda-codec",
-        "//drivers/audio/intel-hda/codecs/realtek:realtek-ihda-codec",
-        "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
-    ]
+  public_deps = [
+    "//drivers/audio/intel-hda/codecs/qemu:qemu-ihda-codec",
+    "//drivers/audio/intel-hda/codecs/realtek:realtek-ihda-codec",
+    "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
+  ]
 }

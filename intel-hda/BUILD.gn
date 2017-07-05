@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 group("intel-hda") {
-    deps = [
-        "//drivers/audio/intel-hda/codecs",
-        "//drivers/audio/intel-hda/controller:ihda-controller",
-        "//drivers/audio/intel-hda/ihda",
-        "//drivers/audio/intel-hda/utils:ihda-utils",
-    ]
+  public_deps = [
+    "//drivers/audio/intel-hda/codecs",
+    "//drivers/audio/intel-hda/controller:ihda-controller",
+    "//drivers/audio/intel-hda/utils:ihda-utils",
+  ]
 }
