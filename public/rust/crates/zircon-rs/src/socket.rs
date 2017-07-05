@@ -31,6 +31,7 @@ impl Peered for Socket {
 
 /// Options for creating a socket pair.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SocketOpts {
     /// Default options.
     Default = 0,
@@ -44,6 +45,7 @@ impl Default for SocketOpts {
 
 /// Options for writing into a socket.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SocketWriteOpts {
     /// Default options.
     Default = 0,
@@ -57,6 +59,7 @@ impl Default for SocketWriteOpts {
 
 /// Options for reading from a socket.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SocketReadOpts {
     /// Default options.
     Default = 0,

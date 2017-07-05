@@ -37,6 +37,7 @@ impl Event {
 
 /// Options for creating an event object.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum EventOpts {
     /// Default options.
     Default = 0,

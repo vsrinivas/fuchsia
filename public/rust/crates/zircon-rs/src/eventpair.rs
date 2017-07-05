@@ -43,6 +43,7 @@ impl EventPair {
 
 /// Options for creating an event pair.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum EventPairOpts {
     /// Default options.
     Default = 0,

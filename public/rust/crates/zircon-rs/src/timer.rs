@@ -54,6 +54,7 @@ impl Timer {
 
 /// Options for creating a timer.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TimerOpts {
     /// Default options.
     Default = 0,

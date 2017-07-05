@@ -72,6 +72,7 @@ impl Fifo {
 
 /// Options for creating a fifo pair.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum FifoOpts {
     /// Default options.
     Default = 0,

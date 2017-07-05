@@ -211,6 +211,7 @@ pub use magenta_sys::{
 /// A "wait item" containing a handle reference and information about what signals
 /// to wait on, and, on return from `object_wait_many`, which are pending.
 #[repr(C)]
+#[derive(Debug)]
 pub struct WaitItem<'a> {
     /// The handle to wait on.
     pub handle: HandleRef<'a>,
@@ -225,6 +226,7 @@ pub struct WaitItem<'a> {
 /// [mx_time_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/time_get.md)
 /// for more information about the possible values.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ClockId {
     /// The number of nanoseconds since the system was powered on. Corresponds to
     /// `MX_CLOCK_MONOTONIC`.
@@ -300,6 +302,7 @@ fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
 /// A borrowed reference to a `Handle`.
 ///
 /// Mostly useful as part of a `WaitItem`.
+#[derive(Debug)]
 pub struct HandleRef<'a> {
     handle: sys::mx_handle_t,
     phantom: PhantomData<&'a sys::mx_handle_t>,

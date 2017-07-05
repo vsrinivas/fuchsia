@@ -172,6 +172,7 @@ impl Channel {
 
 /// Options for creating a channel.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ChannelOpts {
     /// A normal channel.
     Normal = 0,
@@ -191,6 +192,7 @@ impl Default for ChannelOpts {
 /// Note that for sending messages to a channel, the caller manages the buffers,
 /// using a plain byte slice and `Vec<Handle>`.
 #[derive(Default)]
+#[derive(Debug)]
 pub struct MessageBuf {
     bytes: Vec<u8>,
     handles: Vec<sys::mx_handle_t>,

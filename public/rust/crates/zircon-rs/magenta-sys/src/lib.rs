@@ -199,6 +199,7 @@ pub const MX_VMO_OP_CACHE_CLEAN_INVALIDATE: u32 = 9;
 pub const MX_VMO_CLONE_COPY_ON_WRITE: u32 = 1;
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum mx_cache_policy_t {
     MX_CACHE_POLICY_CACHED = 0,
     MX_CACHE_POLICY_UNCACHED = 1,
@@ -286,7 +287,7 @@ pub type mx_rrec_t = [u8; 64];
 
 // Ports V2
 #[repr(u32)]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum mx_packet_type_t {
     MX_PKT_TYPE_USER = 0,
     MX_PKT_TYPE_SIGNAL_ONE = 1,
@@ -300,6 +301,7 @@ impl Default for mx_packet_type_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct mx_packet_signal_t {
     pub trigger: mx_signals_t,
     pub observed: mx_signals_t,
@@ -313,7 +315,7 @@ pub const MX_WAIT_ASYNC_REPEATING: u32 = 1;
 pub type mx_packet_user_t = [u8; 32];
 
 #[repr(C)]
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct mx_port_packet_t {
     pub key: u64,
     pub packet_type: mx_packet_type_t,

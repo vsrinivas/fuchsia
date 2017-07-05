@@ -125,6 +125,7 @@ impl Vmo {
 
 /// Options for creating virtual memory objects. None supported yet.
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum VmoOpts {
     /// Default options.
     Default = 0,
@@ -137,6 +138,7 @@ impl Default for VmoOpts {
 }
 
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum VmoOp {
     /// Commit `size` bytes worth of pages starting at byte `offset` for the VMO.
     Commit = sys::MX_VMO_OP_COMMIT,
@@ -157,6 +159,7 @@ pub enum VmoOp {
 }
 
 #[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum VmoCloneOpts {
     /// Create a copy-on-write clone.
     CopyOnWrite = sys::MX_VMO_CLONE_COPY_ON_WRITE,
