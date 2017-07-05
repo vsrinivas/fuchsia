@@ -120,7 +120,7 @@ mx::vmo FileSystem::GetFileAsVMO(ftl::StringView path) {
   if (!reader_)
     return mx::vmo();
   DirectoryTableEntry entry;
-  if (!reader_->GetDirectoryEntry(path, &entry))
+  if (!reader_->GetDirectoryEntryByPath(path, &entry))
     return mx::vmo();
   mx_handle_t result = MX_HANDLE_INVALID;
   mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
@@ -132,7 +132,7 @@ bool FileSystem::GetFileAsString(ftl::StringView path, std::string* result) {
   if (!reader_)
     return false;
   DirectoryTableEntry entry;
-  if (!reader_->GetDirectoryEntry(path, &entry))
+  if (!reader_->GetDirectoryEntryByPath(path, &entry))
     return false;
   std::string data;
   data.resize(entry.data_length);

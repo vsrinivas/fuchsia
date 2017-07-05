@@ -37,8 +37,14 @@ class ArchiveReader {
 
   bool ExtractFile(ftl::StringView archive_path, const char* output_path) const;
   bool CopyFile(ftl::StringView archive_path, int dst_fd) const;
-  bool GetDirectoryEntry(ftl::StringView archive_path,
-                         DirectoryTableEntry* entry) const;
+
+  bool GetDirectoryEntryByIndex(uint64_t index,
+                                DirectoryTableEntry* entry) const;
+  bool GetDirectoryEntryByPath(ftl::StringView archive_path,
+                               DirectoryTableEntry* entry) const;
+
+  bool GetDirectoryIndexByPath(ftl::StringView archive_path,
+                               uint64_t* index) const;
 
   ftl::UniqueFD TakeFileDescriptor();
 

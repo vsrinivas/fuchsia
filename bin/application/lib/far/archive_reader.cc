@@ -37,7 +37,7 @@ bool ArchiveReader::Read() {
 bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
                                 const char* output_path) const {
   DirectoryTableEntry entry;
-  if (!GetDirectoryEntry(archive_path, &entry))
+  if (!GetDirectoryEntryByPath(archive_path, &entry))
     return false;
   if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
     fprintf(stderr, "error: Failed to seek to offset of file.\n");
@@ -52,7 +52,7 @@ bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
 
 bool ArchiveReader::CopyFile(ftl::StringView archive_path, int dst_fd) const {
   DirectoryTableEntry entry;
-  if (!GetDirectoryEntry(archive_path, &entry))
+  if (!GetDirectoryEntryByPath(archive_path, &entry))
     return false;
   if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
     fprintf(stderr, "error: Failed to seek to offset of file.\n");
@@ -65,8 +65,23 @@ bool ArchiveReader::CopyFile(ftl::StringView archive_path, int dst_fd) const {
   return true;
 }
 
-bool ArchiveReader::GetDirectoryEntry(ftl::StringView archive_path,
-                                      DirectoryTableEntry* entry) const {
+bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index,
+                                             DirectoryTableEntry* entry) const {
+  if (index >= directory_table_.size())
+    return false;
+  *entry = directory_table_[index];
+  return true;
+}
+
+bool ArchiveReader::GetDirectoryEntryByPath(ftl::StringView archive_path,
+                                            DirectoryTableEntry* entry) const {
+  uint64_t index = 0;
+  return GetDirectoryIndexByPath(archive_path, &index) &&
+         GetDirectoryEntryByIndex(index, entry);
+}
+
+bool ArchiveReader::GetDirectoryIndexByPath(ftl::StringView archive_path,
+                                            uint64_t* index) const {
   PathComparator comparator;
   comparator.reader = this;
 
@@ -74,7 +89,7 @@ bool ArchiveReader::GetDirectoryEntry(ftl::StringView archive_path,
                              archive_path, comparator);
   if (it == directory_table_.end() || GetPathView(*it) != archive_path)
     return false;
-  *entry = *it;
+  *index = it - directory_table_.begin();
   return true;
 }
 

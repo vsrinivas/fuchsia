@@ -11,6 +11,8 @@ source_set("far") {
     "archive_reader.h",
     "archive_writer.cc",
     "archive_writer.h",
+    "far.cc",
+    "far.h",
     "file_operations.cc",
     "file_operations.h",
     "format.h",
@@ -19,6 +21,17 @@ source_set("far") {
   ]
 
   deps = [
+    "//lib/ftl",
+  ]
+}
+
+source_set("far_vmo") {
+  sources = [
+    "far_vmo.cc",
+  ]
+
+  deps = [
+    ":far",
     "//lib/ftl",
   ]
 }
