@@ -22,7 +22,8 @@ std::string GetCurrentDirectory() {
 
 bool IsDirectory(const std::string& path) {
   struct stat buf;
-  if (stat(path.c_str(), &buf) != 0) return false;
+  if (stat(path.c_str(), &buf) != 0)
+    return false;
   return S_ISDIR(buf.st_mode);
 }
 
@@ -32,21 +33,24 @@ bool CreateDirectory(const std::string& full_path) {
   // Collect a list of all parent directories.
   std::string last_path = full_path;
   subpaths.push_back(full_path);
-  for (std::string path = GetDirectoryName(full_path); path != last_path;
-       path = GetDirectoryName(path)) {
+  for (std::string path = GetDirectoryName(full_path);
+       !path.empty() && path != last_path; path = GetDirectoryName(path)) {
     subpaths.push_back(path);
     last_path = path;
   }
 
   // Iterate through the parents and create the missing ones.
-  for (auto pathIt = subpaths.rbegin(); pathIt != subpaths.rend(); ++pathIt) {
-    if (IsDirectory(*pathIt)) continue;
-    if (mkdir(pathIt->c_str(), 0700) == 0) continue;
+  for (auto it = subpaths.rbegin(); it != subpaths.rend(); ++it) {
+    if (IsDirectory(*it))
+      continue;
+    if (mkdir(it->c_str(), 0700) == 0)
+      continue;
     // Mkdir failed, but it might be due to the directory appearing out of thin
     // air. This can occur if two processes are trying to create the same file
     // system tree at the same time. Check to see if it exists and make sure it
     // is a directory.
-    if (!IsDirectory(*pathIt)) return false;
+    if (!IsDirectory(*it))
+      return false;
   }
   return true;
 }
