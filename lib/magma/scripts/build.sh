@@ -8,11 +8,30 @@ set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
 magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
-build=release
+build=debug
 bootfs=$fuchsia_root/out/user.bootfs
+
+if [ "$1" == "--debug" ]; then
+	build=debug
+else 
+if [ "$1" == "--release" ]; then
+	build=release
+else 
+if [ "$1" != "" ]; then
+	echo Unrecognized arg: $1
+	exit 1
+fi
+fi
+fi
+
 build_dir=$fuchsia_root/out/$build-x86-64
 
-args="msd_intel_wait_for_flip=true"
+if [ ! -d "$build_dir" ]; then
+	echo "Can't find build_dir: $build_dir"
+	exit 1
+fi
+
+args="msd_intel_wait_for_flip=false"
 args="$args magma_enable_tracing=false"
 
 modules="magma-dev"
