@@ -121,7 +121,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
 static void eth_release(void* ctx) {
     ethernet_device_t* edev = ctx;
     eth_reset_hw(&edev->eth);
-    edev->pci.ops->enable_bus_master(edev->pci.ctx, true);
+    pci_enable_bus_master(&edev->pci, true);
     mx_handle_close(edev->irqh);
     mx_handle_close(edev->ioh);
     free(edev);
@@ -147,12 +147,12 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     // Query whether we have MSI or Legacy interrupts.
     uint32_t irq_cnt = 0;
-    if ((edev->pci.ops->query_irq_mode_caps(edev->pci.ctx, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == MX_OK) &&
-        (edev->pci.ops->set_irq_mode(edev->pci.ctx, MX_PCIE_IRQ_MODE_MSI, 1) == MX_OK)) {
+    if ((pci_query_irq_mode_caps(&edev->pci, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == MX_OK) &&
+        (pci_set_irq_mode(&edev->pci, MX_PCIE_IRQ_MODE_MSI, 1) == MX_OK)) {
         edev->edge_triggered_irq = true;
         printf("eth: using MSI mode\n");
-    } else if ((edev->pci.ops->query_irq_mode_caps(edev->pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == MX_OK) &&
-               (edev->pci.ops->set_irq_mode(edev->pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1) == MX_OK)) {
+    } else if ((pci_query_irq_mode_caps(&edev->pci, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == MX_OK) &&
+               (pci_set_irq_mode(&edev->pci, MX_PCIE_IRQ_MODE_LEGACY, 1) == MX_OK)) {
         edev->edge_triggered_irq = false;
         printf("eth: using legacy irq mode\n");
     } else {
@@ -160,7 +160,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    mx_status_t r = edev->pci.ops->map_interrupt(edev->pci.ctx, 0, &edev->irqh);
+    mx_status_t r = pci_map_interrupt(&edev->pci, 0, &edev->irqh);
     if (r != MX_OK) {
         printf("eth: failed to map irq\n");
         goto fail;
@@ -170,7 +170,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     uint64_t sz;
     mx_handle_t h;
     void* io;
-    r = edev->pci.ops->map_resource(edev->pci.ctx, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    r = pci_map_resource(&edev->pci, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
     if (r != MX_OK) {
         printf("eth: cannot map io %d\n", h);
         goto fail;
@@ -178,7 +178,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     edev->eth.iobase = (uintptr_t)io;
     edev->ioh = h;
 
-    if ((r = edev->pci.ops->enable_bus_master(edev->pci.ctx, true)) < 0) {
+    if ((r = pci_enable_bus_master(&edev->pci, true)) < 0) {
         printf("eth: cannot enable bus master %d\n", r);
         goto fail;
     }
@@ -219,7 +219,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
 fail:
     io_buffer_release(&edev->buffer);
     if (edev->ioh) {
-        edev->pci.ops->enable_bus_master(edev->pci.ctx, true);
+        pci_enable_bus_master(&edev->pci, true);
         mx_handle_close(edev->irqh);
         mx_handle_close(edev->ioh);
     }

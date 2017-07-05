@@ -48,4 +48,42 @@ typedef struct pci_protocol {
     void* ctx;
 } pci_protocol_t;
 
+static inline mx_status_t pci_map_resource(pci_protocol_t* pci, uint32_t res_id,
+                                           uint32_t cache_policy, void** vaddr, size_t* size,
+                                           mx_handle_t* out_handle) {
+    return pci->ops->map_resource(pci->ctx, res_id, cache_policy, vaddr, size, out_handle);
+}
+
+static inline mx_status_t pci_enable_bus_master(pci_protocol_t* pci, bool enable) {
+    return pci->ops->enable_bus_master(pci->ctx, enable);
+}
+
+static inline mx_status_t pci_enable_pio(pci_protocol_t* pci, bool enable) {
+    return pci->ops->enable_pio(pci->ctx, enable);
+}
+
+static inline mx_status_t pci_reset_device(pci_protocol_t* pci) {
+    return pci->ops->reset_device(pci->ctx);
+}
+
+static inline mx_status_t pci_map_interrupt(pci_protocol_t* pci, int which_irq,
+                                            mx_handle_t* out_handle) {
+    return pci->ops->map_interrupt(pci->ctx, which_irq, out_handle);
+}
+
+static inline mx_status_t pci_query_irq_mode_caps(pci_protocol_t* pci, mx_pci_irq_mode_t mode,
+                                                  uint32_t* out_max_irqs) {
+    return pci->ops->query_irq_mode_caps(pci->ctx, mode, out_max_irqs);
+}
+
+static inline mx_status_t pci_set_irq_mode(pci_protocol_t* pci, mx_pci_irq_mode_t mode,
+                                           uint32_t requested_irq_count) {
+    return pci->ops->set_irq_mode(pci->ctx, mode, requested_irq_count);
+}
+
+static inline mx_status_t pci_get_device_info(pci_protocol_t* pci,
+                                              mx_pcie_device_info_t* out_info) {
+    return pci->ops->get_device_info(pci->ctx, out_info);
+}
+
 __END_CDECLS;

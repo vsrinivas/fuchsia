@@ -111,8 +111,8 @@ static mx_status_t intel_serialio_i2c_add_slave(
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t config_handle;
-    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   (void**)&pci_config, &config_size, &config_handle);
+    status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              (void**)&pci_config, &config_size, &config_handle);
     if (status != MX_OK) {
         xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail2;
@@ -657,31 +657,31 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t config_handle;
-    mx_status_t status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG,
-                                               MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                               (void**)&pci_config, &config_size,
-                                               &config_handle);
+    mx_status_t status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG,
+                                          MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                          (void**)&pci_config, &config_size,
+                                          &config_handle);
     if (status != MX_OK) {
         xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail;
     }
 
-    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   (void**)&device->regs, &device->regs_size, &device->regs_handle);
+    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != MX_OK) {
         xprintf("i2c: failed to mape pci bar 0: %d\n", status);
         goto fail;
     }
 
     // set msi irq mode
-    status = pci.ops->set_irq_mode(pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
+    status = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_LEGACY, 1);
     if (status < 0) {
         xprintf("i2c: failed to set irq mode: %d\n", status);
         goto fail;
     }
 
     // get irq handle
-    status = pci.ops->map_interrupt(pci.ctx, 0, &device->irq_handle);
+    status = pci_map_interrupt(&pci, 0, &device->irq_handle);
     if (status != MX_OK) {
         xprintf("i2c: failed to get irq handle: %d\n", status);
         goto fail;

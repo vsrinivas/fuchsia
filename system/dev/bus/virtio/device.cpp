@@ -62,8 +62,8 @@ mx_status_t Device::MapBar(uint8_t i) {
     uint64_t sz;
     mx_handle_t tmp_handle;
 
-    mx_status_t r = pci_.ops->map_resource(pci_.ctx, PCI_RESOURCE_BAR_0 + i, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                          (void**)&bar_[i].mmio_base, &sz, &tmp_handle);
+    mx_status_t r = pci_map_resource(&pci_, PCI_RESOURCE_BAR_0 + i, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                     (void**)&bar_[i].mmio_base, &sz, &tmp_handle);
     if (r != MX_OK) {
         VIRTIO_ERROR("cannot map io %d\n", bar_[i].mmio_handle.get());
         return r;
@@ -88,14 +88,14 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
     // enable bus mastering
     mx_status_t r;
-    if ((r = pci_.ops->enable_bus_master(pci_.ctx, true)) != MX_OK) {
+    if ((r = pci_enable_bus_master(&pci_, true)) != MX_OK) {
         VIRTIO_ERROR("cannot enable bus master %d\n", r);
         return r;
     }
 
     // try to set up our IRQ mode
-    if (pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_MSI, 1)) {
-        if (pci_.ops->set_irq_mode(pci_.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1)) {
+    if (pci_set_irq_mode(&pci_, MX_PCIE_IRQ_MODE_MSI, 1)) {
+        if (pci_set_irq_mode(&pci_, MX_PCIE_IRQ_MODE_LEGACY, 1)) {
             VIRTIO_ERROR("failed to set irq mode\n");
             return -1;
         } else {
@@ -103,7 +103,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
         }
     }
 
-    r = pci_.ops->map_interrupt(pci_.ctx, 0, &tmp_handle);
+    r = pci_map_interrupt(&pci_, 0, &tmp_handle);
     if (r != MX_OK) {
         VIRTIO_ERROR("failed to map irq %d\n", r);
         return r;
@@ -203,7 +203,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             }
 
             // enable pio access
-            if ((r = pci_.ops->enable_pio(pci_.ctx, true)) < 0) {
+            if ((r = pci_enable_pio(&pci_, true)) < 0) {
                 VIRTIO_ERROR("cannot enable PIO %d\n", r);
                 return -1;
             }

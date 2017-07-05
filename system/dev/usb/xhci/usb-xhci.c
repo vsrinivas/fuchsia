@@ -231,8 +231,8 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
-    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio, &mmio_len, &mmio_handle);
+    status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              &mmio, &mmio_len, &mmio_handle);
     if (status != MX_OK) {
         printf("usb_xhci_bind could not find bar\n");
         status = MX_ERR_INTERNAL;
@@ -240,16 +240,16 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // enable bus master
-    status = pci.ops->enable_bus_master(pci.ctx, true);
+    status = pci_enable_bus_master(&pci, true);
     if (status < 0) {
         printf("usb_xhci_bind enable_bus_master failed %d\n", status);
         goto error_return;
     }
 
     // select our IRQ mode
-    status = pci.ops->set_irq_mode(pci.ctx, MX_PCIE_IRQ_MODE_MSI, 1);
+    status = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
-        mx_status_t status_legacy = pci.ops->set_irq_mode(pci.ctx, MX_PCIE_IRQ_MODE_LEGACY, 1);
+        mx_status_t status_legacy = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_LEGACY, 1);
 
         if (status_legacy < 0) {
             printf("usb_xhci_bind Failed to set IRQ mode to either MSI "
@@ -262,7 +262,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // register for interrupts
-    status = pci.ops->map_interrupt(pci.ctx, 0, &irq_handle);
+    status = pci_map_interrupt(&pci, 0, &irq_handle);
     if (status != MX_OK) {
         printf("usb_xhci_bind map_interrupt failed %d\n", status);
         goto error_return;

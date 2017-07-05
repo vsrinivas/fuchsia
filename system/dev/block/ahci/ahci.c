@@ -711,12 +711,12 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // map register window
-    mx_status_t status = device->pci.ops->map_resource(device->pci.ctx,
-                                                       PCI_RESOURCE_BAR_5,
-                                                       MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                                       (void**)&device->regs,
-                                                       &device->regs_size,
-                                                       &device->regs_handle);
+    mx_status_t status = pci_map_resource(&device->pci,
+                                          PCI_RESOURCE_BAR_5,
+                                          MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                          (void**)&device->regs,
+                                          &device->regs_size,
+                                          &device->regs_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d mapping register window\n", status);
         goto fail;
@@ -725,7 +725,7 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     const pci_config_t* config;
     size_t config_size;
     mx_handle_t config_handle;
-    status = device->pci.ops->map_resource(device->pci.ctx,
+    status = device->pci.ops->map_resource(&device->pci,
                                            PCI_RESOURCE_CONFIG,
                                            MX_CACHE_POLICY_UNCACHED_DEVICE,
                                            (void**)&config,
@@ -745,21 +745,21 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_handle_close(config_handle);
 
     // ahci controller is bus master
-    status = device->pci.ops->enable_bus_master(device->pci.ctx, true);
+    status = pci_enable_bus_master(&device->pci, true);
     if (status < 0) {
         xprintf("ahci: error %d in enable bus master\n", status);
         goto fail;
     }
 
     // set msi irq mode
-    status = device->pci.ops->set_irq_mode(device->pci.ctx, MX_PCIE_IRQ_MODE_MSI, 1);
+    status = pci_set_irq_mode(&device->pci, MX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
         xprintf("ahci: error %d setting irq mode\n", status);
         goto fail;
     }
 
     // get irq handle
-    status = device->pci.ops->map_interrupt(device->pci.ctx, 0, &device->irq_handle);
+    status = pci_map_interrupt(&device->pci, 0, &device->irq_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d getting irq handle\n", status);
         goto fail;

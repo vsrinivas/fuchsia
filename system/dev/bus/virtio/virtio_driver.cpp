@@ -40,7 +40,7 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
     const pci_config_t* config;
     size_t config_size;
     mx_handle_t config_handle = MX_HANDLE_INVALID;
-    status = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                    (void**)&config, &config_size, &config_handle);
     if (status != MX_OK) {
         TRACEF("failed to grab config handle\n");

@@ -25,8 +25,8 @@ static mx_status_t intel_serialio_bind(void* ctx, mx_device_t* dev, void** cooki
     const pci_config_t* pci_config;
     size_t config_size;
     mx_handle_t config_handle = MX_HANDLE_INVALID;
-    res = pci.ops->map_resource(pci.ctx, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                (void**)&pci_config, &config_size, &config_handle);
+    res = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                           (void**)&pci_config, &config_size, &config_handle);
 
     if (res != MX_OK) {
         xprintf("serialio: failed to map pci config: %d\n", res);
