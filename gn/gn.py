@@ -14,7 +14,6 @@ GN_ARGS = [
     paths.GN_PATH,
     "--root=%s" % paths.FUCHSIA_ROOT,
     "--dotfile=%s" % DOTFILE_PATH,
-    "--script-executable=/usr/bin/env"
 ]
 
 
