@@ -32,6 +32,10 @@ struct ApplicationPackage {
   // application is intended to run in the Dart virtual machine, this data might
   // contain a dartx package.
   handle<vmo> data;
+
+  // Resolved URL of the application. This is the url specified in startup_info
+  // after following redirects and resolving relative paths.
+  string resolved_url;
 };
 
 // An interface for running applications.

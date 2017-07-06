@@ -11,6 +11,7 @@
 #include "application/src/manager/url_resolver.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/mtl/vmo/file.h"
 
 namespace app {
@@ -45,6 +46,7 @@ void RootApplicationLoader::LoadApplication(
     if (fd.is_valid() && mtl::VmoFromFd(std::move(fd), &data)) {
       ApplicationPackagePtr package = ApplicationPackage::New();
       package->data = std::move(data);
+      package->resolved_url = ftl::Concatenate({"file://", path});
       callback(std::move(package));
       return;
     }
