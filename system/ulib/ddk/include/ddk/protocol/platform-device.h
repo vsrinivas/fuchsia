@@ -20,6 +20,16 @@ typedef struct {
 } platform_device_protocol_t;
 
 // Looks for a platform device that implements a given protocol
-mx_status_t platform_device_find_protocol(mx_device_t* dev, uint32_t proto_id, void* out);
+static inline mx_status_t pdev_find_protocol(platform_device_protocol_t* pdev, uint32_t proto_id,
+                                             void* out_proto) {
+    return pdev->ops->find_protocol(pdev->ctx, proto_id, out_proto);
+}
+
+// Registers a protocol with the platform bus driver
+static inline mx_status_t pdev_register_protocol(platform_device_protocol_t* pdev,
+                                                 uint32_t proto_id, void* proto_ops,
+                                                 void* proto_ctx) {
+    return pdev->ops->register_protocol(pdev->ctx, proto_id, proto_ops, proto_ctx);
+}
 
 __END_CDECLS;

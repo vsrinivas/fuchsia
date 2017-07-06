@@ -125,8 +125,14 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
         return MX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status = platform_device_find_protocol(parent, MX_PROTOCOL_BCM_BUS,
-                                                       &display->bus_proto);
+   platform_device_protocol_t pdev;
+    mx_status_t status = device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (status !=  MX_OK) {
+        free(display);
+        return status;
+    }
+
+    status = pdev_find_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &display->bus_proto);
     if (status != MX_OK) {
         printf("bcm_display_bind can't find MX_PROTOCOL_BCM_BUS\n");
         free(display);

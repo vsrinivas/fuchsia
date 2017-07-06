@@ -56,6 +56,7 @@
 typedef struct emmc {
     mx_device_t* mxdev;
     mx_device_t* parent;
+   platform_device_protocol_t pdev;
 } emmc_t;
 
 static mx_handle_t emmc_sdhci_get_interrupt(void* ctx) {
@@ -73,7 +74,7 @@ static uint32_t emmc_sdhci_get_base_clock(void* ctx) {
     uint32_t base_clock = 0;
     emmc_t* emmc = ctx;
     bcm_bus_protocol_t bus_proto;
-    mx_status_t st = platform_device_find_protocol(emmc->parent, MX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
+    mx_status_t st = pdev_find_protocol(&emmc->pdev, MX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
     if (st != MX_OK) {
         xprintf("emmc: could not find MX_PROTOCOL_BCM_BUS\n");
         goto out;
@@ -124,6 +125,12 @@ static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
     if (!emmc) {
         return MX_ERR_NO_MEMORY;
     }
+    mx_status_t st = device_get_protocol(dev, MX_PROTOCOL_PLATFORM_DEV, &emmc->pdev);
+    if (st !=  MX_OK) {
+        free(emmc);
+        return st;
+    }
+
     emmc->parent = dev;
     // Create the device.
     device_add_args_t args = {
@@ -134,7 +141,7 @@ static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
         .proto_id = MX_PROTOCOL_SDHCI,
         .proto_ops = &emmc_sdhci_proto,
     };
-    mx_status_t st = device_add(emmc->parent, &args, &emmc->mxdev);
+    st = device_add(emmc->parent, &args, &emmc->mxdev);
     if (st != MX_OK) {
         goto fail;
     }

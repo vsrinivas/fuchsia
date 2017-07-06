@@ -537,12 +537,18 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
 
     // if we are on rpi, then try to find BCM bus device to fetch MAC address
     // TODO(voydanoff) come up with a better way of accessing the bus protocol
-    mx_device_t* pdev = eth->usb_device;
+    mx_device_t* dev = eth->usb_device;
     bcm_bus_protocol_t bus_proto = { NULL, NULL };
-    while (pdev && platform_device_find_protocol(pdev, MX_PROTOCOL_BCM_BUS,
-                                                 &bus_proto) != MX_OK) {
-        pdev = device_get_parent(pdev);
+    while (dev) {
+        platform_device_protocol_t pdev;
+
+        if (device_get_protocol(dev, MX_PROTOCOL_PLATFORM_DEV, &pdev) == MX_OK &&
+                pdev_find_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &bus_proto) == MX_OK) {
+            break;
+        }
+        dev = device_get_parent(dev);
     }
+
     if (bus_proto.ops) {
         uint8_t temp_mac[6];
         if (bus_proto.ops->get_macid(bus_proto.ctx, temp_mac) == MX_OK) {
@@ -560,11 +566,12 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
         printf("lan9514_reset could not find MX_PROTOCOL_BCM_BUS\n");
     }
 
-    if (lan9514_read_mac_address(eth) < 0)
+    if (lan9514_read_mac_address(eth) < 0) {
         goto fail;
-    printf("LAN9514 MAC Address %02x:%02x:%02x:%02x:%02x:%02x\n", eth->mac_addr[0], eth->mac_addr[1],
-           eth->mac_addr[2], eth->mac_addr[3],
-           eth->mac_addr[4], eth->mac_addr[5]);
+    }
+    printf("LAN9514 MAC Address %02x:%02x:%02x:%02x:%02x:%02x\n", eth->mac_addr[0],
+           eth->mac_addr[1], eth->mac_addr[2], eth->mac_addr[3], eth->mac_addr[4],
+           eth->mac_addr[5]);
 
     // Set Bulk IN empty response to 1=NAK   (0=ZLP)
     if (lan9514_read_register(eth, LAN9514_HW_CFG_REG, &retval) < 0)
