@@ -18,7 +18,6 @@
 #include "apps/modular/services/device/device_runner_monitor.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
-#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/src/device_runner/user_provider_impl.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"

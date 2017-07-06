@@ -23,7 +23,6 @@
 #include "apps/modular/services/auth/account/account.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
-#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/user_runner/conflict_resolver_impl.h"

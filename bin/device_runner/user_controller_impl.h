@@ -13,7 +13,6 @@
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
-#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"

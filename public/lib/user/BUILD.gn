@@ -8,7 +8,6 @@ import("//lib/fidl/fidl.gni")
 fidl("user") {
   sources = [
     "device_map.fidl",
-    "user_context.fidl",
     "user_shell.fidl",
   ]
 
