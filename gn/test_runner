@@ -11,6 +11,10 @@
             "bootfs_path": "bin/report_result"
         },
         {
+            "binary": "run_tests",
+            "bootfs_path": "test/run_tests"
+        },
+        {
             "binary": "test_runner",
             "bootfs_path": "apps/test_runner"
         }

@@ -150,10 +150,6 @@
             "bootfs_path": "apps/modular_tests/remote_invoker_test"
         },
         {
-            "binary": "run_modular_tests",
-            "bootfs_path": "test/run_modular_tests"
-        },
-        {
             "binary": "modular_util_unittests",
             "bootfs_path": "test/modular_util_unittests"
         },
