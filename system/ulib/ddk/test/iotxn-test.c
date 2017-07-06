@@ -202,6 +202,246 @@ static bool test_phys_iter(void) {
     END_TEST;
 }
 
+// Test behavior of merging adjacent single-page entries.
+static bool test_phys_iter_merge(void) {
+    BEGIN_TEST;
+
+    iotxn_t iotxn;
+    const size_t buf_size = 9 * PAGE_SIZE;
+    iotxn_init(&iotxn, MX_HANDLE_INVALID, PAGE_SIZE, buf_size);
+    iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 9);
+    ASSERT_NONNULL(iotxn.phys, "");
+    iotxn.phys_count = 9;
+    iotxn.phys[0] = 0x12345000;
+    iotxn.phys[1] = 0x12346000;
+    iotxn.phys[2] = 0x12347000;
+
+    iotxn.phys[3] = 0x12349000;
+
+    iotxn.phys[4] = 0x1234b000;
+
+    iotxn.phys[5] = 0x1234d000;
+    iotxn.phys[6] = 0x1234e000;
+    iotxn.phys[7] = 0x1234f000;
+    iotxn.phys[8] = 0x12350000;
+
+    iotxn_phys_iter_t iter;
+
+    // Try iterating 3 pages at a time
+    iotxn_phys_iter_init(&iter, &iotxn, 3 * PAGE_SIZE);
+    mx_paddr_t paddr;
+    size_t size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[0], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[3], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[4], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[5], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[8], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+
+    // Now try iterating with no cap
+    iotxn_phys_iter_init(&iter, &iotxn, 0);
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 3u * PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[0], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[3], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[4], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 4u * PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[5], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+
+    free(iotxn.phys);
+
+    END_TEST;
+}
+
+// Test processing of a non-page-aligned contiguous backing buffer.
+static bool test_phys_iter_unaligned_contig(void) {
+    BEGIN_TEST;
+
+    iotxn_t iotxn;
+    const size_t buf_size = 4 * PAGE_SIZE;
+    iotxn_init(&iotxn, MX_HANDLE_INVALID, 128, buf_size);
+    iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 5);
+    ASSERT_NONNULL(iotxn.phys, "");
+    iotxn.phys_count = 5;
+    iotxn.phys[0] = 0x12345000;
+    iotxn.phys[1] = 0x12346000;
+    iotxn.phys[2] = 0x12347000;
+    iotxn.phys[3] = 0x12348000;
+    iotxn.phys[4] = 0x12349000;
+
+    iotxn_phys_iter_t iter;
+
+    // Try iterating 3 pages at a time
+    iotxn_phys_iter_init(&iter, &iotxn, 3 * PAGE_SIZE);
+    mx_paddr_t paddr;
+    size_t size = iotxn_phys_iter_next(&iter, &paddr);
+    // TODO(teisenbe): This is the current behavior; I think this should be
+    // 3PS - 128 though?
+    ASSERT_EQ(size, 2u * PAGE_SIZE - 128, "");
+    ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 2u * PAGE_SIZE + 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[2], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+
+    // Now try iterating with no cap
+    iotxn_phys_iter_init(&iter, &iotxn, 0);
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    // TODO(teisenbe): This is the current behavior; I think this should be
+    // 4PS though?
+    ASSERT_EQ(size, 2u * PAGE_SIZE - 128, "");
+    ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 2u * PAGE_SIZE + 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[2], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+
+    free(iotxn.phys);
+
+    END_TEST;
+}
+
+// Test processing of a non-page-aligned non-contiguous backing buffer.
+static bool test_phys_iter_unaligned_noncontig(void) {
+    BEGIN_TEST;
+
+    iotxn_t iotxn;
+    const size_t buf_size = 2 * PAGE_SIZE;
+    iotxn_init(&iotxn, MX_HANDLE_INVALID, 128, buf_size);
+    iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 3);
+    ASSERT_NONNULL(iotxn.phys, "");
+    iotxn.phys_count = 3;
+    iotxn.phys[0] = 0x12345000;
+    iotxn.phys[1] = 0x12347000;
+    iotxn.phys[2] = 0x12349000;
+
+    iotxn_phys_iter_t iter;
+
+    iotxn_phys_iter_init(&iter, &iotxn, 0);
+    mx_paddr_t paddr;
+    size_t size = iotxn_phys_iter_next(&iter, &paddr);
+
+
+    // TODO(teisenbe): This is a bug.  The correct behavior is in the commented
+    // out block below.
+    ASSERT_EQ(size, 2u * PAGE_SIZE - 128, "");
+    ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[2], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+    /*
+    ASSERT_EQ(size, PAGE_SIZE - 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, (size_t)PAGE_SIZE, "");
+    ASSERT_EQ(paddr, iotxn.phys[1], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[2], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+    */
+
+    free(iotxn.phys);
+
+    END_TEST;
+}
+
+// Test processing of a tiny page-aligned buffer.
+static bool test_phys_iter_tiny_aligned(void) {
+    BEGIN_TEST;
+
+    iotxn_t iotxn;
+    const size_t buf_size = 128;
+    iotxn_init(&iotxn, MX_HANDLE_INVALID, 0, buf_size);
+    iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 1);
+    ASSERT_NONNULL(iotxn.phys, "");
+    iotxn.phys_count = 1;
+    iotxn.phys[0] = 0x12345000;
+
+    iotxn_phys_iter_t iter;
+
+    iotxn_phys_iter_init(&iter, &iotxn, 0);
+    mx_paddr_t paddr;
+    size_t size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[0], "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+
+    free(iotxn.phys);
+
+    END_TEST;
+}
+
+// Test processing of a tiny non-page-aligned buffer.
+static bool test_phys_iter_tiny_unaligned(void) {
+    BEGIN_TEST;
+
+    iotxn_t iotxn;
+    const size_t buf_size = 128;
+    iotxn_init(&iotxn, MX_HANDLE_INVALID, 128, buf_size);
+    iotxn.phys = malloc(sizeof(iotxn.phys[0]) * 1);
+    ASSERT_NONNULL(iotxn.phys, "");
+    iotxn.phys_count = 1;
+    iotxn.phys[0] = 0x12345000;
+
+    iotxn_phys_iter_t iter;
+
+    iotxn_phys_iter_init(&iter, &iotxn, 0);
+    mx_paddr_t paddr;
+    size_t size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
+
+    size = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(size, 0u, "");
+
+    free(iotxn.phys);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(iotxn_tests)
 RUN_TEST(test_physmap_simple)
 RUN_TEST(test_physmap_contiguous)
@@ -210,6 +450,11 @@ RUN_TEST(test_physmap_aligned_offset)
 RUN_TEST(test_physmap_unaligned_offset)
 RUN_TEST(test_physmap_unaligned_offset2)
 RUN_TEST(test_phys_iter)
+RUN_TEST(test_phys_iter_merge)
+RUN_TEST(test_phys_iter_unaligned_contig)
+RUN_TEST(test_phys_iter_unaligned_noncontig)
+RUN_TEST(test_phys_iter_tiny_aligned)
+RUN_TEST(test_phys_iter_tiny_unaligned)
 END_TEST_CASE(iotxn_tests)
 
 static void iotxn_test_output_func(const char* line, int len, void* arg) {
