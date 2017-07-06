@@ -13,7 +13,6 @@ group("tests") {
     "parent_child",
     "queue_persistence",
     "remote",
-    "run_modular_tests",
     "story_importance",
     "suggestion",
     "triggers",
