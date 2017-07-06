@@ -953,7 +953,7 @@ TEST_F(MergingIntegrationTest,
   std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2), nullptr,
-          ftl::TimeDelta::FromMilliseconds(500));
+          ftl::TimeDelta::FromMilliseconds(250));
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr2),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -977,18 +977,6 @@ TEST_F(MergingIntegrationTest,
       &(resolver_factory2->resolvers.find(convert::ToString(test_page_id))
             ->second);
   ASSERT_EQ(1u, resolver_impl2->requests.size());
-
-  // Remove all references to a page:
-  page1 = nullptr;
-  page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
-
-  // Resolution should not crash the Ledger
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
-
-  EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
