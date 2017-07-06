@@ -20,6 +20,7 @@
 
 #include "acpi.h"
 #include "devcoordinator.h"
+#include "devmgr.h"
 #include "log.h"
 #include "memfs-private.h"
 
@@ -71,6 +72,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         }
     }
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
+        devmgr_vfs_exit();
         devhost_acpi_reboot();
         return MX_OK;
     }
@@ -80,6 +82,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     }
     if (len == 8) {
         if (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8)) {
+            devmgr_vfs_exit();
             devhost_acpi_poweroff();
             return MX_OK;
         }
