@@ -74,8 +74,13 @@ mx_status_t usb_audio_set_volume(mx_device_t* device, uint8_t interface_number, 
 
 out:
     if (status == MX_ERR_IO_REFUSED) {
+        usb_protocol_t usb;
+        status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+        if (status != MX_OK) {
+            return status;
+        }
         // clear the stall
-        usb_reset_endpoint(device, 0);
+        usb_reset_endpoint(&usb, 0);
     }
     return status;
 }
