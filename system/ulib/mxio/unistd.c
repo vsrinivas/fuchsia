@@ -183,9 +183,14 @@ static mxio_t* mxio_iodir(const char** path, int dirfd) {
     mtx_lock(&mxio_lock);
     if (*path[0] == '/') {
         iodir = mxio_root_handle;
-        (*path)++;
-        if (*path[0] == 0) {
-            *path = ".";
+        // Since we are sending a request to the root handle, the
+        // rest of the path should be canonicalized as a relative
+        // path (relative to this root handle).
+        while (*path[0] == '/') {
+            (*path)++;
+            if (*path[0] == 0) {
+                *path = ".";
+            }
         }
     } else if (dirfd == AT_FDCWD) {
         iodir = mxio_cwd_handle;

@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/mxio_handle_fd.c \
+    $(LOCAL_DIR)/mxio_root.c \
     $(LOCAL_DIR)/mxio_path_canonicalize.c \
     $(LOCAL_DIR)/mxio_socketpair.c
 
