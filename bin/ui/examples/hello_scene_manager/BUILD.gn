@@ -11,6 +11,7 @@ executable("hello_scene_manager") {
 
   deps = [
     "//application/lib/app",
+    "//apps/mozart/lib/scene:client",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",

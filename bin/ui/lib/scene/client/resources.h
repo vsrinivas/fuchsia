@@ -302,7 +302,7 @@ class Scene : public ContainerTraits<Resource> {
 // Represents a camera resource is a session.
 class Camera : public Resource {
  public:
-  explicit Camera(Session* session, const Scene& scene);
+  explicit Camera(const Scene& scene);
   explicit Camera(Session* session, uint32_t scene_id);
   ~Camera();
 

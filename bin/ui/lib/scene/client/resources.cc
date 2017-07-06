@@ -222,8 +222,7 @@ Scene::Scene(Session* session) : ContainerTraits(session) {
 
 Scene::~Scene() = default;
 
-Camera::Camera(Session* session, const Scene& scene)
-    : Camera(session, scene.id()) {}
+Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
 
 Camera::Camera(Session* session, uint32_t scene_id) : Resource(session) {
   session->Enqueue(mozart::NewCreateCameraOp(id(), scene_id));

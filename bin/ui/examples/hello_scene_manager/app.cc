@@ -28,6 +28,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scene/client/session.h"
 #include "apps/mozart/lib/scene/session_helpers.h"
 #include "apps/mozart/lib/scene/types.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
@@ -37,6 +39,7 @@
 #include "apps/mozart/src/scene/tests/util.h"
 
 using namespace mozart;
+using namespace mozart::client;
 
 class HelloSceneManagerApp {
  public:
@@ -52,26 +55,20 @@ class HelloSceneManagerApp {
     });
   }
 
-  ResourceId NewResourceId() { return ++resource_id_counter_; }
+  void CreateExampleScene() {
+    auto session = session_.get();
 
-  fidl::Array<mozart2::OpPtr> CreateExampleScene() {
-    auto ops = fidl::Array<mozart2::OpPtr>::New(0);
-
-    ResourceId entity_node_id = NewResourceId();
-    ops.push_back(NewCreateEntityNodeOp(entity_node_id));
+    // Create an EntityNode to serve as the scene root.
+    EntityNode entity_node(session);
 
     // Create two shape nodes, one for a circle and one for a rounded-rect.
-    // Remember the ID of the rounded-rect node, because we're going to animate
-    // it.
-    ResourceId circle_node_id = NewResourceId();
-    ops.push_back(NewCreateShapeNodeOp(circle_node_id));
-
-    rrect_node_id_ = NewResourceId();
-    ops.push_back(NewCreateShapeNodeOp(rrect_node_id_));
+    // Remember the rounded-rect node, because we're going to animate it.
+    ShapeNode circle_node(session);
+    rrect_node_ = std::make_unique<ShapeNode>(session);
 
     // Immediately attach them to the root.
-    ops.push_back(NewAddChildOp(entity_node_id, circle_node_id));
-    ops.push_back(NewAddChildOp(entity_node_id, rrect_node_id_));
+    entity_node.AddChild(circle_node.id());
+    entity_node.AddChild(rrect_node_->id());
 
     // Generate a checkerboard.
     size_t checkerboard_width = 8;
@@ -86,86 +83,79 @@ class HelloSceneManagerApp {
     memcpy(shared_vmo->Map(), checkerboard_pixels.get(),
            checkerboard_pixels_size);
 
-    ResourceId checkerboard_memory_id = NewResourceId();
-
     // Duplicate the VMO handle.
     mx::vmo vmo_copy;
     auto status = shared_vmo->vmo().duplicate(MX_RIGHT_SAME_RIGHTS, &vmo_copy);
     if (status) {
       FTL_LOG(ERROR) << "Failed to duplicate vmo handle.";
-      return nullptr;
+      return;
     }
 
-    ops.push_back(NewCreateMemoryOp(checkerboard_memory_id, std::move(vmo_copy),
-                                    mozart2::MemoryType::HOST_MEMORY));
+    Memory checkerboard_memory(session, std::move(vmo_copy),
+                               mozart2::MemoryType::HOST_MEMORY);
 
     // Create an Image to wrap the checkerboard.
-    ResourceId checkerboard_image_id = NewResourceId();
-    const size_t bytes_per_pixel = 4u;
-    ops.push_back(NewCreateImageOp(
-        checkerboard_image_id, checkerboard_memory_id, 0,
-        mozart2::ImageInfo::PixelFormat::BGRA_8,
-        mozart2::ImageInfo::ColorSpace::SRGB,
-        mozart2::ImageInfo::Tiling::LINEAR, checkerboard_width,
-        checkerboard_height, checkerboard_width * bytes_per_pixel));
+    auto checkerboard_image_info = mozart2::ImageInfo::New();
+    checkerboard_image_info->width = checkerboard_width;
+    checkerboard_image_info->height = checkerboard_height;
+    const size_t kBytesPerPixel = 4u;
+    checkerboard_image_info->stride = checkerboard_width * kBytesPerPixel;
+    checkerboard_image_info->pixel_format =
+        mozart2::ImageInfo::PixelFormat::BGRA_8;
+    checkerboard_image_info->color_space = mozart2::ImageInfo::ColorSpace::SRGB;
+    checkerboard_image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
+
+    Image checkerboard_image(checkerboard_memory, 0,
+                             std::move(checkerboard_image_info));
 
     // Create a Material with the checkerboard image.
-    ResourceId material_id = NewResourceId();
-    ops.push_back(NewCreateMaterialOp(material_id));
-    ops.push_back(NewSetColorOp(material_id, 255, 100, 100, 255));
-    ops.push_back(NewSetTextureOp(material_id, checkerboard_image_id));
+    Material material(session);
+    material.SetColor(255, 100, 100, 255);
+    material.SetTexture(checkerboard_image.id());
 
     // Make a circle, and attach it and the material to a node.
-    ResourceId circle_id = NewResourceId();
-    ops.push_back(NewCreateCircleOp(circle_id, 50.f));
-
-    ops.push_back(NewSetMaterialOp(circle_node_id, material_id));
-    ops.push_back(NewSetShapeOp(circle_node_id, circle_id));
+    Circle circle(session, 50);
+    circle_node.SetMaterial(material);
+    circle_node.SetShape(circle);
 
     // Make a rounded rect, and attach it and the material to a node.
-    ResourceId rrect_id = NewResourceId();
-    ops.push_back(
-        NewCreateRoundedRectangleOp(rrect_id, 200, 300, 20, 20, 80, 10));
-
-    ops.push_back(NewSetMaterialOp(rrect_node_id_, material_id));
-    ops.push_back(NewSetShapeOp(rrect_node_id_, rrect_id));
+    RoundedRectangle rrect(session, 200, 300, 20, 20, 80, 10);
+    rrect_node_->SetMaterial(material);
+    rrect_node_->SetShape(rrect);
 
     // Translate the circle.
     {
       float translation[3] = {50.f, 50.f, 10.f};
-      ops.push_back(NewSetTranslationOp(circle_node_id, translation));
+      session->Enqueue(NewSetTranslationOp(circle_node.id(), translation));
     }
 
     // Translate the EntityNode root.
     {
       float translation[3] = {900.f, 800.f, 10.f};
-      ops.push_back(NewSetTranslationOp(entity_node_id, translation));
+      session->Enqueue(NewSetTranslationOp(entity_node.id(), translation));
     }
 
     // Create a Scene, and attach to it the Nodes created above.
-    ResourceId scene_id = NewResourceId();
-    ops.push_back(NewCreateSceneOp(scene_id));
-    ops.push_back(NewAddChildOp(scene_id, entity_node_id));
+    Scene scene(session);
+    scene.AddChild(entity_node.id());
 
     // Create a Camera to view the Scene.
-    camera_id_ = NewResourceId();
-    ops.push_back(NewCreateCameraOp(camera_id_, scene_id));
+    camera_ = std::make_unique<Camera>(scene);
 
     // Create a DisplayRenderer that renders the Scene from the viewpoint of the
     // Camera that we just created.
-    ResourceId renderer_id = NewResourceId();
-    ops.push_back(NewCreateDisplayRendererOp(renderer_id));
-    ops.push_back(NewSetCameraOp(renderer_id, camera_id_));
-
-    return ops;
+    renderer_ = std::make_unique<DisplayRenderer>(session);
+    renderer_->SetCamera(camera_->id());
   }
 
   void Init() {
     FTL_LOG(INFO) << "Creating new Session";
 
     // TODO: set up SessionListener.
-    scene_manager_->CreateSession(session_.NewRequest(), nullptr);
-    session_.set_connection_error_handler([this] {
+    mozart2::SessionPtr session;
+    scene_manager_->CreateSession(session.NewRequest(), nullptr);
+    session_ = std::make_unique<mozart::client::Session>(std::move(session));
+    session_->set_connection_error_handler([this] {
       FTL_LOG(INFO) << "Session terminated.";
       loop_->QuitNow();
     });
@@ -173,16 +163,11 @@ class HelloSceneManagerApp {
     // Wait kSessionDuration seconds, and close the session.
     constexpr int kSessionDuration = 40;
     loop_->task_runner()->PostDelayedTask(
-        [this] {
-          // Allow SessionPtr to go out of scope, thus closing the
-          // session.
-          mozart2::SessionPtr session(std::move(session_));
-          FTL_LOG(INFO) << "Closing session.";
-        },
+        [this] { ReleaseSessionResources(); },
         ftl::TimeDelta::FromSeconds(kSessionDuration));
 
     // Set up initial scene.
-    session_->Enqueue(CreateExampleScene());
+    CreateExampleScene();
 
     start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
     camera_anim_start_time_ = start_time_;
@@ -190,8 +175,6 @@ class HelloSceneManagerApp {
   }
 
   void Update(uint64_t next_presentation_time) {
-    auto ops = fidl::Array<mozart2::OpPtr>::New(0);
-
     // Translate / rotate the rounded rect.
     {
       double secs = static_cast<double>(next_presentation_time - start_time_) /
@@ -210,8 +193,8 @@ class HelloSceneManagerApp {
       rotation[2] = quaternion.z;
       rotation[3] = quaternion.w;
 
-      ops.push_back(NewSetTranslationOp(rrect_node_id_, translation));
-      ops.push_back(NewSetRotationOp(rrect_node_id_, rotation));
+      session_->Enqueue(NewSetTranslationOp(rrect_node_->id(), translation));
+      session_->Enqueue(NewSetRotationOp(rrect_node_->id(), rotation));
     }
 
     // Move the camera.
@@ -239,30 +222,36 @@ class HelloSceneManagerApp {
       float target[3] = {1080, 720, 0};
       float up[3] = {0, 1, 0};
 
-      ops.push_back(NewSetCameraProjectionOp(camera_id_, glm::value_ptr(eye),
-                                             target, up, glm::radians(15.f)));
+      session_->Enqueue(NewSetCameraProjectionOp(
+          camera_->id(), glm::value_ptr(eye), target, up, glm::radians(15.f)));
     }
 
-    session_->Enqueue(std::move(ops));
-
     // Present
-    session_->Present(
-        0, fidl::Array<mx::event>::New(0), fidl::Array<mx::event>::New(0),
-        [this](mozart2::PresentationInfoPtr info) {
-          Update(info->presentation_time + info->presentation_interval);
-        });
+    session_->Present(0, [this](mozart2::PresentationInfoPtr info) {
+      Update(info->presentation_time + info->presentation_interval);
+    });
   }
 
  private:
+  void ReleaseSessionResources() {
+    FTL_LOG(INFO) << "Closing session.";
+
+    renderer_.reset();
+    camera_.reset();
+    rrect_node_.reset();
+
+    session_.reset();
+  }
+
   std::unique_ptr<app::ApplicationContext> application_context_;
-  app::ApplicationControllerPtr controller_;
-  app::ServiceProviderPtr services_;
   mozart2::SceneManagerPtr scene_manager_;
   mtl::MessageLoop* loop_;
-  ResourceId resource_id_counter_ = 0;
-  mozart2::SessionPtr session_;
-  ResourceId rrect_node_id_ = 0;
-  ResourceId camera_id_ = 0;
+
+  std::unique_ptr<mozart::client::Session> session_;
+  std::unique_ptr<mozart::client::ShapeNode> rrect_node_;
+  std::unique_ptr<mozart::client::Camera> camera_;
+  std::unique_ptr<mozart::client::DisplayRenderer> renderer_;
+
   uint64_t start_time_ = 0;
   uint64_t camera_anim_start_time_;
   bool camera_anim_returning_ = false;
