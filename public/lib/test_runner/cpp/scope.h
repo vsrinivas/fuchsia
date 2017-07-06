@@ -22,16 +22,8 @@ namespace test_runner {
 // services are delegated to the parent environment.
 class Scope : public app::ApplicationEnvironmentHost {
  public:
-  Scope(const app::ApplicationEnvironmentPtr& parent_env, const std::string& label)
-      : binding_(this) {
-    app::ServiceProviderPtr parent_env_service_provider;
-    parent_env->GetServices(parent_env_service_provider.NewRequest());
-    service_provider_impl_.SetDefaultServiceProvider(
-        std::move(parent_env_service_provider));
-    parent_env->CreateNestedEnvironment(binding_.NewBinding(),
-                                        env_.NewRequest(),
-                                        env_controller_.NewRequest(), label);
-  }
+  Scope(const app::ApplicationEnvironmentPtr& parent_env,
+        const std::string& label);
 
   template <typename Interface>
   void AddService(
@@ -40,12 +32,7 @@ class Scope : public app::ApplicationEnvironmentHost {
     service_provider_impl_.AddService(handler, service_name);
   }
 
-  app::ApplicationLauncher* GetLauncher() {
-    if (!env_launcher_) {
-      env_->GetApplicationLauncher(env_launcher_.NewRequest());
-    }
-    return env_launcher_.get();
-  }
+  app::ApplicationLauncher* GetLauncher();
 
   app::ApplicationEnvironmentPtr& environment() { return env_; }
 
@@ -53,9 +40,7 @@ class Scope : public app::ApplicationEnvironmentHost {
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
       fidl::InterfaceRequest<app::ServiceProvider> environment_services)
-      override {
-    service_provider_impl_.AddBinding(std::move(environment_services));
-  }
+      override;
 
   fidl::Binding<app::ApplicationEnvironmentHost> binding_;
   app::ApplicationEnvironmentPtr env_;

@@ -4,6 +4,7 @@
 
 source_set("lib") {
   sources = [
+    "scope.cc",
     "scope.h",
     "test_runner.cc",
     "test_runner.h",
