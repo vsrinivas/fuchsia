@@ -29,6 +29,7 @@ typedef enum {
     MX_INFO_THREAD_STATS               = 15, // mx_info_thread_stats_t[1]
     MX_INFO_CPU_STATS                  = 16, // mx_info_cpu_stats_t[n]
     MX_INFO_KMEM_STATS                 = 17, // mx_info_kmem_stats_t[1]
+    MX_INFO_RESOURCE                   = 18, // mx_info_resource_t[1]
     MX_INFO_LAST
 } mx_object_info_topic_t;
 
@@ -333,6 +334,16 @@ typedef struct mx_info_kmem_stats {
     // Non-free memory that isn't accounted for in any other field.
     uint64_t other_bytes;
 } mx_info_kmem_stats_t;
+
+typedef struct mx_info_resource {
+    // The resource kind, one of:
+    // {MX_RSRC_KIND_ROOT, MX_RSRC_KIND_MMIO, MX_RSRC_KIND_IOPORT, MX_RSRC_KIND_IRQ}
+    uint32_t kind;
+    // Resource's low value (inclusive)
+    uint64_t low;
+    // Resource's high value (inclusive)
+    uint64_t high;
+} mx_info_resource_t;
 
 #define MX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)
 

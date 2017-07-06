@@ -23,11 +23,23 @@ static bool test_resource_actions(void) {
     // root resources can be used to create any resources
     ASSERT_EQ(mx_resource_create(rrh, MX_RSRC_KIND_ROOT, 1, 2, &h), MX_OK, "");
 
+    mx_info_resource_t info;
+
+    ASSERT_EQ(mx_object_get_info(h, MX_INFO_RESOURCE, &info, sizeof(info), NULL, NULL), MX_OK, "");
+    ASSERT_EQ(info.kind, MX_RSRC_KIND_ROOT, "");
+    ASSERT_EQ(info.low, 1u, "");
+    ASSERT_EQ(info.high, 2u, "");
+
     // but ranges may not be backwards for any resource
     ASSERT_EQ(mx_resource_create(rrh, MX_RSRC_KIND_ROOT, 2, 1, &h), MX_ERR_INVALID_ARGS, "");
 
     // create a non-root resource
     ASSERT_EQ(mx_resource_create(rrh, 0x12345678, 0x1000, 0x2000, &h), MX_OK, "");
+
+    ASSERT_EQ(mx_object_get_info(h, MX_INFO_RESOURCE, &info, sizeof(info), NULL, NULL), MX_OK, "");
+    ASSERT_EQ(info.kind, 0x12345678u, "");
+    ASSERT_EQ(info.low, 0x1000u, "");
+    ASSERT_EQ(info.high, 0x2000u, "");
 
     mx_handle_t h1;
 

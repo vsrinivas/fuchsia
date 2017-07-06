@@ -482,6 +482,21 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return single_record_result(
                 _buffer, buffer_size, _actual, _avail, &stats, sizeof(stats));
         }
+        case MX_INFO_RESOURCE: {
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ResourceDispatcher> resource;
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_NONE, &resource);
+            if (error < 0)
+                return error;
+
+            // build the info structure
+            mx_info_resource_t info = {};
+            info.kind = resource->get_kind();
+            resource->get_range(&info.low, &info.high);
+
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+        }
         default:
             return MX_ERR_NOT_SUPPORTED;
     }
