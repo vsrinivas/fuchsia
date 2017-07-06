@@ -13,9 +13,7 @@
 #include "apps/moterm/moterm_params.h"
 #include "apps/moterm/shell_controller.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/lib/view_framework/input_handler.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
+#include "apps/mozart/lib/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -25,9 +23,7 @@
 #include "third_party/skia/include/core/SkTypeface.h"
 
 namespace moterm {
-class MotermView : public mozart::BaseView,
-                   public mozart::InputListener,
-                   public MotermModel::Delegate {
+class MotermView : public mozart::SkiaView, public MotermModel::Delegate {
  public:
   MotermView(mozart::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -38,18 +34,17 @@ class MotermView : public mozart::BaseView,
 
  private:
   // |BaseView|:
-  void OnDraw() override;
   void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
+  void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info) override;
+  bool OnInputEvent(mozart::InputEventPtr event) override;
 
-  // |InputListener|:
-  void OnEvent(mozart::InputEventPtr event,
-               const OnEventCallback& callback) override;
   // |MotermModel::Delegate|:
   void OnResponse(const void* buf, size_t size) override;
   void OnSetKeypadMode(bool application_mode) override;
 
   void ScheduleDraw(bool force);
-  void DrawContent(SkCanvas* canvas, const mozart::Size& size);
+  void DrawContent(SkCanvas* canvas);
   void OnKeyPressed(mozart::InputEventPtr key_event);
 
   // stdin/stdout
@@ -62,8 +57,6 @@ class MotermView : public mozart::BaseView,
   void Resize();
   void OnCommandTerminated();
 
-  mozart::InputHandler input_handler_;
-
   // TODO(vtl): Consider the structure of this app. Do we really want the "view"
   // owning the model?
   // The terminal model.
@@ -75,7 +68,6 @@ class MotermView : public mozart::BaseView,
   // If we skip drawing despite being forced to, we should force the next draw.
   bool force_next_draw_;
 
-  mozart::BufferProducer buffer_producer_;
   app::ApplicationContext* context_;
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> regular_typeface_;
@@ -86,7 +78,6 @@ class MotermView : public mozart::BaseView,
   // Keyboard state.
   bool keypad_application_mode_;
 
-  ftl::WeakPtrFactory<MotermView> weak_ptr_factory_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ftl::TimePoint last_key_;
   bool blink_on_ = true;
@@ -98,8 +89,10 @@ class MotermView : public mozart::BaseView,
   MotermParams params_;
   std::unique_ptr<Command> command_;
 
+  ftl::WeakPtrFactory<MotermView> weak_ptr_factory_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(MotermView);
 };
-}
+}  // namespace moterm
 
 #endif  // APPS_MOTERM_MOTERM_VIEW_H_

@@ -10,7 +10,6 @@
 #include "apps/moterm/command.h"
 #include "apps/moterm/key_util.h"
 #include "apps/moterm/moterm_model.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -22,8 +21,6 @@
 namespace moterm {
 
 namespace {
-constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr ftl::TimeDelta kBlinkInterval = ftl::TimeDelta::FromMilliseconds(500);
 }  // namespace
 
@@ -33,18 +30,17 @@ MotermView::MotermView(
     app::ApplicationContext* context,
     History* history,
     const MotermParams& moterm_params)
-    : BaseView(std::move(view_manager),
+    : SkiaView(std::move(view_manager),
                std::move(view_owner_request),
                "Moterm"),
-      input_handler_(GetViewServiceProvider(), this),
       model_(MotermModel::Size(24, 80), this),
       context_(context),
       font_loader_(
           context_->ConnectToEnvironmentService<fonts::FontProvider>()),
-      weak_ptr_factory_(this),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       history_(history),
-      params_(moterm_params) {
+      params_(moterm_params),
+      weak_ptr_factory_(this) {
   FTL_DCHECK(context_);
   FTL_DCHECK(history_);
 
@@ -62,10 +58,13 @@ MotermView::MotermView(
 MotermView::~MotermView() {}
 
 void MotermView::ComputeMetrics() {
+  if (!regular_typeface_)
+    return;
+
   // TODO(vtl): This duplicates some code.
   SkPaint fg_paint;
   fg_paint.setTypeface(regular_typeface_);
-  fg_paint.setTextSize(params_.font_size);
+  fg_paint.setTextSize(params_.font_size * device_pixel_ratio());
   // Figure out appropriate metrics.
   SkPaint::FontMetrics fm = {};
   fg_paint.getFontMetrics(&fm);
@@ -102,7 +101,7 @@ void MotermView::StartCommand() {
   }
 
   Blink(++blink_timer_id_);
-  Invalidate();
+  InvalidateScene();
 }
 
 void MotermView::Blink(uint64_t blink_timer_id) {
@@ -113,7 +112,7 @@ void MotermView::Blink(uint64_t blink_timer_id) {
     ftl::TimeDelta delta = ftl::TimePoint::Now() - last_key_;
     if (delta > kBlinkInterval) {
       blink_on_ = !blink_on_;
-      Invalidate();
+      InvalidateScene();
     }
     task_runner_->PostDelayedTask(
         [ weak = weak_ptr_factory_.GetWeakPtr(), blink_timer_id ] {
@@ -125,65 +124,37 @@ void MotermView::Blink(uint64_t blink_timer_id) {
   }
 }
 
-// |BaseView|:
-void MotermView::OnDraw() {
-  FTL_DCHECK(properties());
+void MotermView::OnSceneInvalidated(
+    mozart2::PresentationInfoPtr presentation_info) {
+  if (!has_size() || !regular_typeface_)
+    return;
 
-  auto update = mozart::SceneUpdate::New();
-
-  const mozart::Size& size = *properties()->view_layout->size;
-  if (size.width > 0 && size.height > 0) {
-    mozart::RectF bounds;
-    bounds.width = size.width;
-    bounds.height = size.height;
-
-    // Draw the contents of the scene to a surface.
-    mozart::ImagePtr image;
-    sk_sp<SkSurface> surface =
-        mozart::MakeSkSurface(size, &buffer_producer_, &image);
-    FTL_CHECK(surface);
-    DrawContent(surface->getCanvas(), size);
-
-    // Update the scene contents.
-    auto content_resource = mozart::Resource::New();
-    content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = std::move(image);
-    update->resources.insert(kContentImageResourceId,
-                             std::move(content_resource));
-
-    auto root_node = mozart::Node::New();
-    root_node->hit_test_behavior = mozart::HitTestBehavior::New();
-    root_node->op = mozart::NodeOp::New();
-    root_node->op->set_image(mozart::ImageNodeOp::New());
-    root_node->op->get_image()->content_rect = bounds.Clone();
-    root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-    update->nodes.insert(kRootNodeId, std::move(root_node));
-  } else {
-    update->nodes.insert(kRootNodeId, mozart::Node::New());
+  SkCanvas* canvas = AcquireCanvas();
+  if (canvas) {
+    DrawContent(canvas);
+    ReleaseAndSwapCanvas();
   }
-
-  // Publish the updated scene contents.
-  scene()->Update(std::move(update));
-  scene()->Publish(CreateSceneMetadata());
-  buffer_producer_.Tick();
 }
 
-// |BaseView|:
 void MotermView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
+  ComputeMetrics();
   Resize();
 }
 
 void MotermView::Resize() {
-  uint32_t columns = properties()->view_layout->size->width / advance_width_;
-  uint32_t rows = properties()->view_layout->size->height / line_height_;
+  if (!has_size() || !regular_typeface_)
+    return;
+
+  uint32_t columns = std::max(size().width / advance_width_, 1);
+  uint32_t rows = std::max(size().height / line_height_, 1);
   MotermModel::Size current = model_.GetSize();
   if (current.columns != columns || current.rows != rows) {
     model_.SetSize(MotermModel::Size(rows, columns), false);
   }
+  InvalidateScene();
 }
 
-void MotermView::DrawContent(SkCanvas* canvas,
-                             const mozart::Size& texture_size) {
+void MotermView::DrawContent(SkCanvas* canvas) {
   canvas->clear(SK_ColorBLACK);
 
   SkPaint bg_paint;
@@ -191,7 +162,7 @@ void MotermView::DrawContent(SkCanvas* canvas,
 
   SkPaint fg_paint;
   fg_paint.setTypeface(regular_typeface_);
-  fg_paint.setTextSize(params_.font_size);
+  fg_paint.setTextSize(params_.font_size * device_pixel_ratio());
   fg_paint.setTextEncoding(SkPaint::kUTF32_TextEncoding);
 
   MotermModel::Size size = model_.GetSize();
@@ -248,8 +219,6 @@ void MotermView::DrawContent(SkCanvas* canvas,
                                       advance_width_, line_height_),
                      caret_paint);
   }
-
-  canvas->flush();
 }
 
 void MotermView::ScheduleDraw(bool force) {
@@ -260,7 +229,7 @@ void MotermView::ScheduleDraw(bool force) {
   }
 
   force_next_draw_ = false;
-  Invalidate();
+  InvalidateScene();
 }
 
 void MotermView::OnResponse(const void* buf, size_t size) {
@@ -271,9 +240,7 @@ void MotermView::OnSetKeypadMode(bool application_mode) {
   keypad_application_mode_ = application_mode;
 }
 
-// |InputListener|:
-void MotermView::OnEvent(mozart::InputEventPtr event,
-                         const OnEventCallback& callback) {
+bool MotermView::OnInputEvent(mozart::InputEventPtr event) {
   bool handled = false;
   if (event->is_keyboard()) {
     const mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
@@ -300,11 +267,11 @@ void MotermView::OnEvent(mozart::InputEventPtr event,
     if (focused_) {
       Blink(++blink_timer_id_);
     } else {
-      Invalidate();
+      InvalidateScene();
     }
     handled = true;
   }
-  callback(handled);
+  return handled;
 }
 
 void MotermView::OnKeyPressed(mozart::InputEventPtr key_event) {

@@ -16,7 +16,7 @@ struct MotermParams {
   bool Parse(const ftl::CommandLine& command_line);
 
   std::vector<std::string> command;
-  uint32_t font_size = 16;
+  uint32_t font_size = 12;
 };
 
 }  // namespace moterm
