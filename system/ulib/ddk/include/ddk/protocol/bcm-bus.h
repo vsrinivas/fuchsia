@@ -20,4 +20,17 @@ typedef struct {
     void* ctx;
 } bcm_bus_protocol_t;
 
+static inline mx_status_t bcm_bus_get_macid(bcm_bus_protocol_t* bus, uint8_t* out_mac) {
+    return bus->ops->get_macid(bus->ctx, out_mac);
+}
+
+static inline mx_status_t bcm_bus_get_clock_rate(bcm_bus_protocol_t* bus, uint32_t id,
+                                                 uint32_t* out_clock) {
+    return bus->ops->get_clock_rate(bus->ctx, id, out_clock);
+}
+
+static inline mx_status_t bcm_bus_set_framebuffer(bcm_bus_protocol_t* bus, mx_paddr_t addr) {
+    return bus->ops->set_framebuffer(bus->ctx, addr);
+}
+
 __END_CDECLS;

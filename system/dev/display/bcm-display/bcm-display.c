@@ -96,7 +96,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
         iotxn_copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
-        ret = display->bus_proto.ops->set_framebuffer(display->bus_proto.ctx, phys + offset);
+        ret = bcm_bus_set_framebuffer(&display->bus_proto, phys + offset);
         if (ret != MX_OK)
             return ret;
 

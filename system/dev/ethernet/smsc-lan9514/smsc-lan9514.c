@@ -551,7 +551,7 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
 
     if (bus_proto.ops) {
         uint8_t temp_mac[6];
-        if (bus_proto.ops->get_macid(bus_proto.ctx, temp_mac) == MX_OK) {
+        if (bcm_bus_get_macid(&bus_proto, temp_mac) == MX_OK) {
             uint32_t macword = (temp_mac[5] << 8) + temp_mac[4];
             if (lan9514_write_register(eth, LAN9514_ADDR_HI_REG, macword) < 0)
                 goto fail;

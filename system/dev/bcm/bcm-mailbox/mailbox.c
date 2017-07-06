@@ -234,24 +234,24 @@ cleanup_and_exit:
     return ret;
 }
 
-static mx_status_t bcm_get_macid(uint8_t* mac) {
-    mx_status_t ret = MX_OK;
+static mx_status_t bcm_get_macid(void* ctx, uint8_t* mac) {
+    if (!mac) return MX_ERR_INVALID_ARGS;
     property_tag_get_macid_t tag = BCM_MAILBOX_TAG_GET_MACID;
 
-    ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
+    mx_status_t ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
 
     memcpy(mac, tag.macid, 6);
 
     return ret;
 }
 
-static mx_status_t bcm_get_clock_rate(const uint32_t clockid, uint32_t* res) {
-    mx_status_t ret = MX_OK;
+static mx_status_t bcm_get_clock_rate(void* ctx, const uint32_t clockid, uint32_t* res) {
+    if (!res) return MX_ERR_INVALID_ARGS;
     property_tag_get_clock_rate_t tag = BCM_MAILBOX_TAG_GET_CLOCKRATE;
 
     tag.clockid = clockid;
 
-    ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
+    mx_status_t ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
 
     // Make sure that we're getting data back for the clock that we requested.
     if (tag.clockid != clockid) {
@@ -281,18 +281,7 @@ static mx_protocol_device_t mailbox_device_protocol = {
     .ioctl = mailbox_device_ioctl,
 };
 
-static mx_status_t bcm_bus_get_macid(void* ctx, uint8_t* out_mac) {
-    if (!out_mac) return MX_ERR_INVALID_ARGS;
-    bcm_get_macid(out_mac);
-    return MX_OK;
-}
-
-static mx_status_t bcm_bus_get_clock_rate(void* ctx, uint32_t id, uint32_t* out_clock) {
-    if (!out_clock) return MX_ERR_INVALID_ARGS;
-    return bcm_get_clock_rate(id, out_clock);
-}
-
-static mx_status_t bcm_bus_set_framebuffer(void* ctx, mx_paddr_t addr) {
+static mx_status_t bcm_set_framebuffer(void* ctx, mx_paddr_t addr) {
     mx_status_t ret = mailbox_write(ch_framebuffer, addr + BCM_SDRAM_BUS_ADDR_BASE);
     if (ret != MX_OK)
         return ret;
@@ -302,9 +291,9 @@ static mx_status_t bcm_bus_set_framebuffer(void* ctx, mx_paddr_t addr) {
 }
 
 static bcm_bus_protocol_ops_t bcm_bus_protocol = {
-    .get_macid = bcm_bus_get_macid,
-    .get_clock_rate = bcm_bus_get_clock_rate,
-    .set_framebuffer = bcm_bus_set_framebuffer,
+    .get_macid = bcm_get_macid,
+    .get_clock_rate = bcm_get_clock_rate,
+    .set_framebuffer = bcm_set_framebuffer,
 };
 
 static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {

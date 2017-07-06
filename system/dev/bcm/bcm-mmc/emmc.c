@@ -80,7 +80,7 @@ static uint32_t emmc_sdhci_get_base_clock(void* ctx) {
         goto out;
     }
     const uint32_t bcm28xX_core_clock_id = 1;
-    st = bus_proto.ops->get_clock_rate(bus_proto.ctx, bcm28xX_core_clock_id, &base_clock);
+    st = bcm_bus_get_clock_rate(&bus_proto, bcm28xX_core_clock_id, &base_clock);
      if (st < 0 || base_clock == 0) {
         xprintf("emmc: failed to get base clock rate, retcode = %d\n", st);
     }
