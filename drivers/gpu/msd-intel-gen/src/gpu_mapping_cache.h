@@ -6,39 +6,19 @@
 #define GPU_MAPPING_CACHE_H
 
 #include "gpu_mapping.h"
-#include <list>
-#include <memory>
 #include <unordered_map>
 
 class GpuMappingCache {
 public:
-    void CacheMapping(std::shared_ptr<GpuMapping> mapping);
+    static std::unique_ptr<GpuMappingCache> Create();
 
-    uint64_t memory_footprint() { return memory_footprint_; }
+    void AddMapping(std::shared_ptr<GpuMapping> mapping);
+    void RemoveMapping(std::shared_ptr<GpuMapping> mapping);
 
-    uint64_t memory_cap() { return memory_cap_; }
-
-    static std::unique_ptr<GpuMappingCache> Create(uint64_t memory_cap = kDefaultMemoryCap);
+    uint64_t mapping_count() { return map_.size(); }
 
 private:
-    GpuMappingCache(uint64_t memory_cap);
-    // LRU mapping cache
-    using cache_list_t = std::list<std::shared_ptr<GpuMapping>>;
-    cache_list_t cache_;
-    std::unordered_map<GpuMapping*, cache_list_t::iterator> cache_iterator_map_;
-
-// Memory footprint management
-#if defined(MSD_INTEL_ENABLE_MAPPING_CACHE)
-    // TODO(MA-288) get rid of mapping cache and replace with something that wont keep memory alive
-    // on its own
-    static constexpr uint64_t kDefaultMemoryCap = 2048ull * 1024 * 1024;
-#else
-    static constexpr uint64_t kDefaultMemoryCap = 0;
-#endif
-    uint64_t memory_cap_;
-    // Right now this tracks total gpu address space held across all address
-    // spaces. TODO(MA-153) make this track total pinned pages held by cache
-    uint64_t memory_footprint_ = 0;
+    std::unordered_map<GpuMapping*, std::shared_ptr<GpuMapping>> map_;
 };
 
 #endif // GPU_MAPPING_CACHE_H

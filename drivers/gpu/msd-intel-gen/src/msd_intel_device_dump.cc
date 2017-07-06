@@ -491,13 +491,11 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
         }
     }
 
-    fmt = "mapping cache footprint %.1f MB cap %.1f MB\n";
-    double footprint = (double)mapping_cache()->memory_footprint() / 1024 / 1024;
-    double cap = (double)mapping_cache()->memory_cap() / 1024 / 1024;
-    size = std::snprintf(nullptr, 0, fmt, footprint, cap);
-    buf = std::vector<char>(size + 1);
-    std::snprintf(buf.data(), buf.size(), fmt, footprint, cap);
-    dump_out.append(buf.data());
+#if MSD_INTEL_ENABLE_MAPPING_CACHE
+    dump_out.append("mapping cache: ENABLED\n");
+#else
+    dump_out.append("mapping cache: DISABLED\n");
+#endif
 
     dump_out.append("---- device dump end ----");
 }

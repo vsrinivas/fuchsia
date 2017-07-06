@@ -21,7 +21,6 @@ public:
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
         virtual void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                    std::shared_ptr<MsdIntelBuffer> buffer) = 0;
-        virtual std::shared_ptr<GpuMappingCache> mapping_cache() = 0;
     };
 
     static std::unique_ptr<MsdIntelConnection>

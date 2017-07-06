@@ -38,7 +38,7 @@ std::shared_ptr<GpuMapping> MsdIntelBuffer::ShareBufferMapping(std::unique_ptr<G
 
     std::shared_ptr<GpuMapping> shared_mapping = std::move(mapping);
 
-    mapping_list_.push_back(shared_mapping);
+    shared_mappings_[shared_mapping.get()] = shared_mapping;
 
     return shared_mapping;
 }
@@ -47,8 +47,8 @@ std::shared_ptr<GpuMapping>
 MsdIntelBuffer::FindBufferMapping(std::shared_ptr<AddressSpace> address_space, uint64_t offset,
                                   uint64_t length, uint32_t alignment)
 {
-    for (auto weak_mapping : mapping_list_) {
-        std::shared_ptr<GpuMapping> shared_mapping = weak_mapping.lock();
+    for (auto map_node : shared_mappings_) {
+        std::shared_ptr<GpuMapping> shared_mapping = map_node.second.lock();
         if (!shared_mapping || shared_mapping->address_space().expired())
             continue;
 
@@ -63,30 +63,31 @@ MsdIntelBuffer::FindBufferMapping(std::shared_ptr<AddressSpace> address_space, u
     return nullptr;
 }
 
-void MsdIntelBuffer::RemoveExpiredMappings()
+std::vector<std::shared_ptr<GpuMapping>>
+MsdIntelBuffer::GetSharedMappings(AddressSpace* address_space)
 {
-    for (auto iter = mapping_list_.begin(); iter != mapping_list_.end();) {
-        auto mapping = *iter;
-        if (!mapping.lock()) {
-            iter = mapping_list_.erase(iter);
-        } else {
-            iter++;
-        }
-    }
-}
+    std::vector<std::shared_ptr<GpuMapping>> mappings;
 
-void MsdIntelBuffer::RemoveMappings(AddressSpace* address_space)
-{
-    for (auto iter = mapping_list_.begin(); iter != mapping_list_.end();) {
-        std::shared_ptr<GpuMapping> mapping = (*iter).lock();
+    for (auto iter = shared_mappings_.begin(); iter != shared_mappings_.end();) {
+        std::shared_ptr<GpuMapping> mapping = iter->second.lock();
         std::shared_ptr<AddressSpace> mapping_address_space =
             mapping ? mapping->address_space().lock() : nullptr;
 
+        if (!mapping_address_space) {
+            iter = shared_mappings_.erase(iter);
+            continue;
+        }
+
         if (mapping_address_space.get() == address_space)
-            printf("TODO: remove mapping %p for address_space %p buffer 0x%lx\n", mapping.get(),
-                   address_space, platform_buffer()->id());
+            mappings.emplace_back(std::move(mapping));
+
+        iter++;
     }
+
+    return mappings;
 }
+
+void MsdIntelBuffer::RemoveSharedMapping(GpuMapping* mapping) { shared_mappings_.erase(mapping); }
 
 void MsdIntelBuffer::DecrementInflightCounter()
 {

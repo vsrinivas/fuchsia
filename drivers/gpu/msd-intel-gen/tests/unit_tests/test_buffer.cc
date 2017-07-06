@@ -61,7 +61,7 @@ public:
         std::shared_ptr<MockAddressSpace> address_space;
 
         // Verify Uncached Behavior
-        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, 0);
+        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, nullptr);
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
@@ -77,7 +77,8 @@ public:
         }
 
         // Basic Caching of a single buffer
-        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, kBufferSize);
+        address_space =
+            std::make_shared<MockAddressSpace>(0, kBufferSize * 16, GpuMappingCache::Create());
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
@@ -93,31 +94,30 @@ public:
         }
 
         // Buffer Eviction
-        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, kBufferSize);
+        address_space =
+            std::make_shared<MockAddressSpace>(0, kBufferSize * 16, GpuMappingCache::Create());
         {
             std::shared_ptr<MsdIntelBuffer> buffer0(MsdIntelBuffer::Create(kBufferSize, "test"));
             std::shared_ptr<MsdIntelBuffer> buffer1(MsdIntelBuffer::Create(kBufferSize, "test"));
-            std::shared_ptr<MsdIntelBuffer> buffer2(
-                MsdIntelBuffer::Create(2 * kBufferSize, "test"));
 
             EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
-            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
+
             AddressSpace::GetSharedGpuMapping(address_space, buffer0, PAGE_SIZE);
             EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
-            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
-            AddressSpace::GetSharedGpuMapping(address_space, buffer1, PAGE_SIZE);
-            // buffer1 should fit in the cache and therefore evict buffer0
-            EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
-            EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
-            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
 
-            AddressSpace::GetSharedGpuMapping(address_space, buffer2, PAGE_SIZE);
-            // buffer2 should not fit in the cache and therefore not evict buffer1
+            AddressSpace::GetSharedGpuMapping(address_space, buffer1, PAGE_SIZE);
+            EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
+            EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
+
+            address_space->RemoveCachedMappings(buffer0.get());
             EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
-            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
+
+            address_space->RemoveCachedMappings(buffer1.get());
+            EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
+            EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
         }
     }
 

@@ -19,7 +19,7 @@ GpuMapping::~GpuMapping()
     if (!buffer_->platform_buffer()->UnpinPages(offset_ / PAGE_SIZE, length_ / PAGE_SIZE))
         DLOG("failed to unpin pages");
 
-    buffer_->RemoveExpiredMappings();
+    buffer_->RemoveSharedMapping(this);
 
     std::shared_ptr<AddressSpace> address_space = address_space_.lock();
     if (!address_space) {

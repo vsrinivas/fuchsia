@@ -119,7 +119,6 @@ private:
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
     void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                        std::shared_ptr<MsdIntelBuffer> buffer) override;
-    std::shared_ptr<GpuMappingCache> mapping_cache() override { return mapping_cache_; }
 
     void StartDeviceThread();
 

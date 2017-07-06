@@ -11,9 +11,10 @@
 #include "platform_event.h"
 #include "types.h"
 #include <atomic>
-#include <list>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
+#include <vector>
 
 class GpuMapping;
 class AddressSpace;
@@ -46,6 +47,7 @@ public:
 
     CachingType caching_type() { return caching_type_; }
 
+    // Retains a weak reference to the given mapping so it can be reused.
     std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
 
     // Returns exact match mappings only.
@@ -53,11 +55,13 @@ public:
                                                   uint64_t offset, uint64_t length,
                                                   uint32_t alignment);
 
-    void RemoveExpiredMappings();
+    // Returns a vector containing retained mappings for the given address space.
+    std::vector<std::shared_ptr<GpuMapping>> GetSharedMappings(AddressSpace* address_space);
 
-    void RemoveMappings(AddressSpace* address_space);
+    // Removes the given |mapping| from the retained mappings list.
+    void RemoveSharedMapping(GpuMapping* mapping);
 
-    uint32_t shared_mapping_count() { return mapping_list_.size(); }
+    uint32_t shared_mapping_count() { return shared_mappings_.size(); }
 
 private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
@@ -73,7 +77,7 @@ private:
     std::unique_ptr<magma::PlatformEvent> wait_rendering_event_;
     std::mutex wait_rendering_mutex_;
 
-    std::list<std::weak_ptr<GpuMapping>> mapping_list_;
+    std::unordered_map<GpuMapping*, std::weak_ptr<GpuMapping>> shared_mappings_;
 };
 
 class MsdIntelAbiBuffer : public msd_buffer_t {

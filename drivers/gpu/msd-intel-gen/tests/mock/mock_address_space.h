@@ -11,9 +11,8 @@
 
 class MockAddressSpace : public AddressSpace {
 public:
-    MockAddressSpace(uint64_t base, uint64_t size, uint64_t cache_size = 0)
-        : AddressSpace(ADDRESS_SPACE_GGTT, GpuMappingCache::Create(cache_size)), size_(size),
-          next_addr_(base)
+    MockAddressSpace(uint64_t base, uint64_t size, std::shared_ptr<GpuMappingCache> cache = nullptr)
+        : AddressSpace(ADDRESS_SPACE_GGTT, std::move(cache)), size_(size), next_addr_(base)
     {
     }
 

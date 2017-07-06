@@ -106,7 +106,6 @@ public:
                                std::shared_ptr<MsdIntelBuffer> buffer) override
             {
             }
-            std::shared_ptr<GpuMappingCache> mapping_cache() override { return nullptr; }
 
             std::function<void(std::unique_ptr<CommandBuffer>)> callback_;
             std::unique_ptr<magma::PlatformSemaphore> semaphore_;

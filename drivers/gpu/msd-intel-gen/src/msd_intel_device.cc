@@ -233,7 +233,9 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     PerProcessGtt::InitPrivatePat(register_io_.get());
 
+#if MSD_INTEL_ENABLE_MAPPING_CACHE
     mapping_cache_ = GpuMappingCache::Create();
+#endif
 
     gtt_ = std::make_shared<Gtt>(mapping_cache_);
 
@@ -675,6 +677,7 @@ magma::Status MsdIntelDevice::ProcessReleaseBuffer(std::shared_ptr<AddressSpace>
     TRACE_ASYNC_BEGIN("magma", "ProcessReleaseBuffer", nonce);
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
+    address_space->RemoveCachedMappings(buffer.get());
 
     TRACE_ASYNC_END("magma", "ProcessReleaseBuffer", nonce);
     return MAGMA_STATUS_OK;

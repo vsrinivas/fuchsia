@@ -65,6 +65,8 @@ public:
 
     uint64_t GetMappedSize(uint64_t buffer_size) { return magma::round_up(buffer_size, PAGE_SIZE); }
 
+    void RemoveCachedMappings(MsdIntelBuffer* buffer);
+
 private:
     AddressSpaceType type_;
     std::shared_ptr<GpuMappingCache> cache_;
