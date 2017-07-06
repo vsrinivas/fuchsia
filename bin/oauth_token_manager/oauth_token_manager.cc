@@ -83,6 +83,10 @@ enum TokenType {
   FIREBASE_JWT_TOKEN = 2,
 };
 
+// Adjusts the token expiration window by a small amount to proactively refresh
+// tokens before the expiry time limit has reached.
+const uint64_t kPaddingForTokenExpiryInS = 300;
+
 // TODO(alhaad/ukode): Don't use a hand-rolled version of this.
 std::string UrlEncode(const std::string& value) {
   std::ostringstream escaped;
@@ -518,11 +522,12 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     }
 
     // check cache for existing firebase tokens.
-    bool cacheValid = HasCacheExpired();
+    bool cacheValid = IsCacheValid();
     if (!cacheValid) {
       FetchFirebaseToken(flow);
+    } else {
+      Success(flow);
     }
-    Success(flow);
     return;
   }
 
@@ -593,8 +598,9 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     return true;
   }
 
-  // Returns true if the access and idtokens stored in cache are expired.
-  bool HasCacheExpired() {
+  // Returns true if the firebase tokens stored in cache are still valid and
+  // not expired.
+  bool IsCacheValid() {
     FTL_DCHECK(app_);
     FTL_DCHECK(!account_id_.empty());
     FTL_DCHECK(!firebase_api_key_.empty());
@@ -611,7 +617,8 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
         app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_];
     uint64_t creation_ts = fb_token.creation_ts;
     uint64_t token_expiry = fb_token.expires_in;
-    if ((current_ts - creation_ts) < token_expiry) {
+    if ((current_ts - creation_ts) <
+        (token_expiry - kPaddingForTokenExpiryInS)) {
       FTL_VLOG(1) << "Returning firebase token for api key ["
                   << firebase_api_key_ << "] from cache. ";
       return true;
@@ -686,12 +693,13 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
       return;
     }
 
-    bool cacheValid = HasCacheExpired();
+    bool cacheValid = IsCacheValid();
     if (!cacheValid) {
       // fetching tokens from server.
       FetchAccessAndIdToken(refresh_token, flow);
+    } else {
+      Success(flow);  // fetching tokens from local cache.
     }
-    Success(flow);  // fetching tokens from local cache.
     return;
   }
 
@@ -784,8 +792,9 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     return true;
   }
 
-  // Returns true if the access and idtokens stored in cache are expired.
-  bool HasCacheExpired() {
+  // Returns true if the access and idtokens stored in cache are still valid and
+  // not expired.
+  bool IsCacheValid() {
     FTL_DCHECK(app_);
     FTL_DCHECK(!account_id_.empty());
 
@@ -797,7 +806,8 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
     uint64_t creation_ts = app_->oauth_tokens_[account_id_].creation_ts;
     uint64_t token_expiry = app_->oauth_tokens_[account_id_].expires_in;
-    if ((current_ts - creation_ts) < token_expiry) {
+    if ((current_ts - creation_ts) <
+        (token_expiry - kPaddingForTokenExpiryInS)) {
       FTL_VLOG(1) << "Returning access/id tokens for account [" << account_id_
                   << "] from cache. ";
       return true;
