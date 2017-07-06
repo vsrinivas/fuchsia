@@ -567,7 +567,8 @@ mx_status_t write_install_data(partition_flags parts_requested,
     printf("writing content to '%s'\n", paths_dest[part_idx]);
     int fd_src = open(paths_src[idx], O_RDONLY);
     if (fd_src == -1) {
-      fprintf(stderr, "ERROR: Could not open disk image, %s\n",
+      fprintf(stderr, "ERROR: Could not open disk image, %s, is this"
+              " the installer build?\n",
               strerror(errno));
       close(fd_dst);
       return MX_ERR_IO;
