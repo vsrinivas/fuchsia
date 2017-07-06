@@ -24,10 +24,8 @@ constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v5.db";
 
-// TODO(alhaad): Once ledger starts using user's firebase id to namespace the
-// user's cloud instance, use account id instead of display name for |user_id|.
-std::string LedgerRepositoryPath(const std::string& user_id) {
-  return kLedgerDataBaseDir + user_id;
+std::string LedgerRepositoryPath(const std::string& account_id) {
+  return kLedgerDataBaseDir + account_id;
 }
 
 auth::AccountPtr Convert(const UserStorage* user) {
@@ -152,12 +150,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     return;
   }
 
-  // Get the LedgerRepository for the user.
-  // |user_id| has to be something that is the same across devices. Currently,
-  // we take it as input from the user. TODO(alhaad): Infer it from id token.
-  std::string user_id = found_user->display_name()->str();
-  std::string ledger_repository_path = LedgerRepositoryPath(user_id);
-  FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
+  std::string ledger_repository_path = LedgerRepositoryPath(params->account_id);
+  FTL_LOG(INFO) << "UserProvider::Login() account: " << params->account_id;
   LoginInternal(Convert(found_user), ledger_repository_path, std::move(params));
 }
 
@@ -248,7 +242,7 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
     if (user->id()->str() == account_id) {
       // Delete the local ledger repository for this user too.
       std::string user_id = user->display_name()->str();
-      files::DeletePath(LedgerRepositoryPath(user_id), true);
+      files::DeletePath(LedgerRepositoryPath(account_id), true);
       continue;
     }
 
