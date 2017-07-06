@@ -89,10 +89,7 @@ void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
     waiters_.erase(*waiter);
 }
 
-// Thread safety analysis disabled as this accesses guarded member variables without holding
-// |lock_| after it knows there are no other references from other threads. See comment on last
-// statement.
-void ChannelDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
+void ChannelDispatcher::on_zero_handles() {
     canary_.Assert();
 
     // Detach other endpoint
