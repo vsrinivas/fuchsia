@@ -29,15 +29,14 @@ interface LedgerRepositoryFactory {
   //
   // Parameters:
   // |repository_path| absolute path of the disk directory where the
-  //     repository is stored. The name of the user is inferred as the name of
-  //     the innermost directory of |repository_path|. TODO(ppi): explicitly
-  //     retrieve user name from the framework.
+  //     repository is stored. At any given time, at most one repository
+  //     instance backed by the same disk directory can be running concurrently.
   // |firebase_config| sync configuration, passing null disables sync.
   // |token_provider| is used by the Ledger to get the appropriate auth tokens
   //     associated with user for whom |repository| is being created. Passing
   //     null will only sync with an unprotected cloud instance. If the
-  //     |token_provider| sent here is disconnected, all connection for the
-  //     repository will be disconnected by the Ledger.
+  //     |token_provider| sent here is disconnected, Ledger shuts down the
+  //     repository and disconnects all client connections to it.
   GetRepository(string repository_path,
                 FirebaseConfig? firebase_config,
                 modular.auth.TokenProvider? token_provider,
