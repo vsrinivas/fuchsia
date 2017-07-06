@@ -15,8 +15,6 @@ MODULE_SRCS += \
 MODULE_INCLUDES += \
 	$(LOCAL_DIR)/include
 
-MODULE_CFLAGS += -Wno-strict-aliasing
-
 MODULE_DEPS += \
 	kernel/lib/mxtl
 
