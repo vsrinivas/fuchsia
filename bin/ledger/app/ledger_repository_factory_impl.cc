@@ -372,7 +372,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   ftl::Closure on_version_mismatch = [
     this, repository_path, repository_name = std::move(repository_name)
   ]() mutable {
-    OnVersionMismatch(std::move(repository_path), std::move(repository_name));
+    OnVersionMismatch(std::move(repository_name), std::move(repository_path));
   };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
