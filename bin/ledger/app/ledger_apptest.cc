@@ -49,7 +49,7 @@ class LedgerAppTest : public ::testing::Test {
         ledger_repository_factory;
 
     auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/ledger";
+    launch_info->url = "ledger";
     launch_info->services = child_services.NewRequest();
     launch_info->arguments.push_back("--no_minfs_wait");
     launch_info->arguments.push_back("--no_persisted_config");
