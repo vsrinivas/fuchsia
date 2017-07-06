@@ -348,13 +348,11 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
 
 bool EngineCommandStreamer::SubmitContext(MsdIntelContext* context, uint32_t tail)
 {
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "SubmitContext", nonce);
+    TRACE_DURATION("magma", "SubmitContext");
     if (!UpdateContext(context, tail))
         return DRETF(false, "UpdateContext failed");
-    SubmitExeclists(context);
-    TRACE_ASYNC_END("magma", "SubmitContext", nonce);
 
+    SubmitExeclists(context);
     return true;
 }
 
@@ -383,8 +381,7 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
 
 void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
 {
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "SubmitExeclists", nonce);
+    TRACE_DURATION("magma", "SubmitExeclists");
     gpu_addr_t gpu_addr;
     if (!context->GetGpuAddress(id(), &gpu_addr)) {
         // Shouldn't happen.
@@ -401,7 +398,6 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
     uint64_t descriptor1 = 0;
 
     registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
-    TRACE_ASYNC_END("magma", "SubmitExeclists", nonce);
 }
 
 uint64_t EngineCommandStreamer::GetActiveHeadPointer()
@@ -503,8 +499,7 @@ bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> co
 
 bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_batch)
 {
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ExecBatch", nonce);
+    TRACE_DURATION("magma", "ExecBatch");
     auto context = mapped_batch->GetContext().lock();
     DASSERT(context);
 
@@ -539,8 +534,6 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     SubmitContext(context.get(), tail);
 
     batch_submitted(sequence_number);
-
-    TRACE_ASYNC_END("magma", "ExecBatch", nonce);
 
     return true;
 }

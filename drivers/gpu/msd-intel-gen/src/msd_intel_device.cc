@@ -351,11 +351,8 @@ int MsdIntelDevice::InterruptThreadLoop()
 
         EnqueueDeviceRequest(std::move(request), true);
 
-        TRACE_NONCE_DECLARE(nonce);
-
-        TRACE_ASYNC_BEGIN("magma", "Interrupt Request Wait", nonce);
+        TRACE_DURATION("magma", "Interrupt Request Wait");
         reply->Wait();
-        TRACE_ASYNC_END("magma", "Interrupt Request Wait", nonce);
     }
 
     DLOG("Interrupt thread exited");
@@ -515,14 +512,11 @@ int MsdIntelDevice::DeviceThreadLoop()
 void MsdIntelDevice::ProcessCompletedCommandBuffers()
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessCompletedCommandBuffers", nonce);
+    TRACE_DURATION("magma", "ProcessCompletedCommandBuffers");
 
     uint32_t sequence_number =
         hardware_status_page(RENDER_COMMAND_STREAMER)->read_sequence_number();
     render_engine_cs_->ProcessCompletedCommandBuffers(sequence_number);
-
-    TRACE_ASYNC_END("magma", "ProcessCompletedCommandBuffers", nonce);
 
     progress_->Completed(sequence_number);
 }
@@ -531,8 +525,7 @@ void MsdIntelDevice::ProcessDeviceRequests(std::list<std::unique_ptr<DeviceReque
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessDeviceRequests", nonce);
+    TRACE_DURATION("magma", "ProcessDeviceRequests");
 
     while (list.size()) {
         DLOG("list.size() %zu", list.size());
@@ -543,8 +536,6 @@ void MsdIntelDevice::ProcessDeviceRequests(std::list<std::unique_ptr<DeviceReque
         DASSERT(request);
         request->ProcessAndReply(this);
     }
-
-    TRACE_ASYNC_END("magma", "ProcessDeviceRequests", nonce);
 }
 
 magma::Status MsdIntelDevice::ProcessInterrupts()
@@ -552,8 +543,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts()
     uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
     DLOG("ProcessInterrupts 0x%08x", master_interrupt_control);
 
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessInterrupts", nonce);
+    TRACE_DURATION("magma", "ProcessInterrupts");
 
     registers::MasterInterruptControl::write(register_io_.get(), false);
 
@@ -597,7 +587,6 @@ magma::Status MsdIntelDevice::ProcessInterrupts()
 
     interrupt_->Complete();
     registers::MasterInterruptControl::write(register_io_.get(), true);
-    TRACE_ASYNC_END("magma", "ProcessInterrupts", nonce);
 
     return MAGMA_STATUS_OK;
 }
@@ -625,9 +614,7 @@ void MsdIntelDevice::SuspectedGpuHang()
 magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessCommandBuffer", nonce);
+    TRACE_DURATION("magma", "ProcessCommandBuffer");
 
     DLOG("preparing command buffer for execution");
 
@@ -638,34 +625,29 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     if (connection && connection->context_killed())
         return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Connection context killed");
 
-    TRACE_NONCE_DECLARE(nonce2);
-    TRACE_ASYNC_BEGIN("magma", "PrepareForExecution", nonce2);
+    TRACE_DURATION_BEGIN("magma", "PrepareForExecution");
     if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                         "Failed to prepare command buffer for execution");
-    TRACE_ASYNC_END("magma", "PrepareForExecution", nonce2);
+    TRACE_DURATION_END("magma", "PrepareForExecution");
 
-    TRACE_NONCE_DECLARE(nonce3);
-    TRACE_ASYNC_BEGIN("magma", "SubmitCommandBuffer", nonce3);
+    TRACE_DURATION_BEGIN("magma", "SubmitCommandBuffer");
     render_engine_cs_->SubmitCommandBuffer(std::move(command_buffer));
-    TRACE_ASYNC_END("magma", "SubmitCommandBuffer", nonce3);
+    TRACE_DURATION_END("magma", "SubmitCommandBuffer");
 
     RequestMaxFreq();
 
-    TRACE_ASYNC_END("magma", "ProcessCommandBuffer", nonce);
     return MAGMA_STATUS_OK;
 }
 
 magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContext> client_context)
 {
     DLOG("ProcessDestroyContext");
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessDestroyContext", nonce);
+    TRACE_DURATION("magma", "ProcessDestroyContext");
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     // Just let it go out of scope
 
-    TRACE_ASYNC_END("magma", "ProcessDestroyContext", nonce);
     return MAGMA_STATUS_OK;
 }
 
@@ -673,13 +655,11 @@ magma::Status MsdIntelDevice::ProcessReleaseBuffer(std::shared_ptr<AddressSpace>
                                                    std::shared_ptr<MsdIntelBuffer> buffer)
 {
     DLOG("ProcessReleaseBuffer");
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessReleaseBuffer", nonce);
+    TRACE_DURATION("magma", "ProcessReleaseBuffer");
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     address_space->RemoveCachedMappings(buffer.get());
 
-    TRACE_ASYNC_END("magma", "ProcessReleaseBuffer", nonce);
     return MAGMA_STATUS_OK;
 }
 
@@ -694,8 +674,7 @@ magma::Status MsdIntelDevice::ProcessFlip(
     fps_printer_.OnNewFrame();
 #endif
 
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessFlip", nonce);
+    TRACE_DURATION("magma", "ProcessFlip");
 
     // Error indicators are passed to the callback
     magma::Status status(MAGMA_STATUS_OK);
@@ -756,14 +735,12 @@ magma::Status MsdIntelDevice::ProcessFlip(
     if (!kWaitForFlip)
         ProcessFlipComplete();
 
-    TRACE_ASYNC_END("magma", "ProcessFlip", nonce);
     return status;
 }
 
 void MsdIntelDevice::ProcessFlipComplete()
 {
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "ProcessFlipComplete", nonce);
+    TRACE_DURATION("magma", "ProcessFlipComplete");
 
     for (auto& semaphore : signal_semaphores_[0]) {
         DLOG("signalling flip semaphore 0x%" PRIx64 "\n", semaphore->id());
@@ -774,8 +751,6 @@ void MsdIntelDevice::ProcessFlipComplete()
 
     if (kWaitForFlip)
         flip_ready_semaphore_->Signal();
-
-    TRACE_ASYNC_END("magma", "ProcessFlipComplete", nonce);
 }
 
 bool MsdIntelDevice::WaitIdle()

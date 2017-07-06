@@ -63,6 +63,10 @@ CommandBuffer::~CommandBuffer()
     if (!prepared_to_execute_)
         return;
 
+    uint64_t buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+    TRACE_FLOW_END("magma", "command_buffer", buffer_id);
+    (void)buffer_id;
+
     UnmapResourcesGpu();
 
     for (auto& semaphore : signal_semaphores_) {
@@ -165,6 +169,10 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
     exec_resource_mappings_.clear();
     exec_resource_mappings_.reserve(exec_resources_.size());
 
+    uint64_t buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+    TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
+    (void)buffer_id;
+
     if (!MapResourcesGpu(address_space, exec_resource_mappings_))
         return DRETF(false, "failed to map execution resources");
 
@@ -187,8 +195,7 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
 bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
                                     std::vector<std::shared_ptr<GpuMapping>>& mappings)
 {
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "MapResourcesGpu", nonce);
+    TRACE_DURATION("magma", "MapResourcesGpu");
 
     for (auto res : exec_resources_) {
         std::shared_ptr<GpuMapping> mapping = AddressSpace::GetSharedGpuMapping(
@@ -202,7 +209,6 @@ bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
         mappings.push_back(mapping);
     }
 
-    TRACE_ASYNC_END("magma", "MapResourcesGpu", nonce);
     return true;
 }
 
@@ -213,8 +219,7 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
          "target_offset 0x%x",
          relocation->offset, exec_resource->offset, target_gpu_address, relocation->target_offset);
 
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "PatchRelocation", nonce);
+    TRACE_DURATION("magma", "PatchRelocation");
 
     uint64_t dst_offset = exec_resource->offset + relocation->offset;
 
@@ -260,7 +265,6 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
     if (!exec_resource->buffer->platform_buffer()->UnmapPageCpu(reloc_page_index))
         return DRETF(false, "failed to unmap relocation page from CPU address space");
 
-    TRACE_ASYNC_END("magma", "PatchRelocation", nonce);
     return true;
 }
 
@@ -268,8 +272,7 @@ bool CommandBuffer::PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& m
 {
     DASSERT(mappings.size() == num_resources());
 
-    TRACE_NONCE_DECLARE(nonce);
-    TRACE_ASYNC_BEGIN("magma", "PatchRelocations", nonce);
+    TRACE_DURATION("magma", "PatchRelocations");
 
     for (uint32_t res_index = 0; res_index < num_resources(); res_index++) {
         auto resource = this->resource(res_index);
@@ -282,8 +285,6 @@ bool CommandBuffer::PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& m
                 return DRETF(false, "failed to patch relocation");
         }
     }
-
-    TRACE_ASYNC_END("magma", "PatchRelocations", nonce);
 
     return true;
 }
