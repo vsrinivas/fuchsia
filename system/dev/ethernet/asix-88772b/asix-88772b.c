@@ -5,8 +5,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
+#include <driver/usb.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
 
@@ -29,6 +29,7 @@
 typedef struct {
     mx_device_t* device;
     mx_device_t* usb_device;
+    usb_protocol_t usb;
 
     uint8_t phy_id;
     uint8_t mac_addr[6];
@@ -49,8 +50,8 @@ typedef struct {
 } ax88772b_t;
 
 static mx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
-    return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                       request, value, 0, NULL, 0);
+    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                       request, value, 0, NULL, 0, MX_TIME_INFINITE);
 }
 
 static mx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
@@ -60,9 +61,9 @@ static mx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
     }
-    status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_PHY_READ, eth->phy_id, offset,
-                         value, sizeof(*value));
+                         value, sizeof(*value), MX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
@@ -83,9 +84,9 @@ static mx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
     }
-    status = usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+    status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_PHY_WRITE, eth->phy_id, offset,
-                         &value, sizeof(value));
+                         &value, sizeof(value), MX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
@@ -376,8 +377,8 @@ static int ax88772b_start_thread(void* arg) {
 
     // select the PHY
     uint8_t phy_addr[2];
-    status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr));
+    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_PHY_ADDR, 0, 0, &phy_addr, sizeof(phy_addr), MX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_READ_PHY_ADDR failed\n");
         goto fail;
@@ -425,9 +426,9 @@ static int ax88772b_start_thread(void* arg) {
         goto fail;
     }
 
-    status = usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+    status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                          ASIX_REQ_IPG_WRITE, ASIX_IPG_DEFAULT | (ASIX_IPG1_DEFAULT << 8),
-                         ASIX_IPG2_DEFAULT, NULL, 0);
+                         ASIX_IPG2_DEFAULT, NULL, 0, MX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_IPG_WRITE failed\n");
         goto fail;
@@ -439,8 +440,9 @@ static int ax88772b_start_thread(void* arg) {
         goto fail;
     }
 
-    status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                         ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr));
+    status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                         ASIX_REQ_NODE_ID_READ, 0, 0, eth->mac_addr, sizeof(eth->mac_addr),
+                         MX_TIME_INFINITE);
     if (status < 0) {
         printf("ASIX_REQ_NODE_ID_READ failed\n");
         goto fail;
@@ -475,9 +477,15 @@ fail:
 }
 
 static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) {
+    usb_protocol_t usb;
+    mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (result != MX_OK) {
+        return result;
+    }
+
     // find our endpoints
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -523,6 +531,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     list_initialize(&eth->free_intr_reqs);
 
     eth->usb_device = device;
+    memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
     mx_status_t status = MX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {

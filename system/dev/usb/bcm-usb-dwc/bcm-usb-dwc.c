@@ -12,7 +12,6 @@
 
 // DDK includes
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>

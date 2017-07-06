@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/platform-device.h>
+#include <driver/usb.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
 #include <sync/completion.h>
@@ -37,6 +37,7 @@
 typedef struct {
     mx_device_t* device;
     mx_device_t* usb_device;
+    usb_protocol_t usb;
 
     uint8_t phy_id;
     uint8_t mac_addr[6];
@@ -61,14 +62,14 @@ typedef struct {
 
 static mx_status_t lan9514_write_register_locked(lan9514_t* eth, uint16_t reg, uint32_t value) {
 
-    return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                       LAN9514_REQ_REG_WRITE, 0, reg, &value, sizeof(value));
+    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                       LAN9514_REQ_REG_WRITE, 0, reg, &value, sizeof(value), MX_TIME_INFINITE);
 }
 
 static mx_status_t lan9514_read_register_locked(lan9514_t* eth, uint16_t reg, uint32_t* value) {
 
-    return usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                       LAN9514_REQ_REG_READ, 0, reg, value, sizeof(*value));
+    return usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                       LAN9514_REQ_REG_READ, 0, reg, value, sizeof(*value), MX_TIME_INFINITE);
 }
 
 static mx_status_t lan9514_write_register(lan9514_t* eth, uint16_t reg, uint32_t value) {
@@ -720,9 +721,16 @@ teardown:
 static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     printf("LAN9514 - attempting to bind\n");
 
+    usb_protocol_t usb;
+
+    mx_status_t status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (status != MX_OK) {
+        return status;
+    }
+
     // find our endpoints
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    mx_status_t result = usb_desc_iter_init(&usb, &iter);
     if (result < 0)
         return result;
 
@@ -774,8 +782,8 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     list_initialize(&eth->free_intr_reqs);
 
     eth->usb_device = device;
+    memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
-    mx_status_t status = MX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!req) {

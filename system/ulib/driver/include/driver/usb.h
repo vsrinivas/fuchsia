@@ -11,25 +11,6 @@
 
 __BEGIN_CDECLS;
 
-mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t request,
-                               uint16_t value, uint16_t index, void* data, size_t length);
-
-mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16_t type,
-                               uint16_t index, void* data, size_t length);
-
-usb_speed_t usb_get_speed(mx_device_t* device);
-
-mx_status_t usb_get_status(mx_device_t* device, uint8_t request_type, uint16_t index,
-                          void* data, size_t length);
-
-mx_status_t usb_set_configuration(mx_device_t* device, int config);
-
-mx_status_t usb_set_interface(mx_device_t* device, int interface_number, int alt_setting);
-
-mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
-
-mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
-
 // helper function for allocating iotxns for USB transfers
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size);
 
@@ -46,7 +27,7 @@ typedef struct {
 } usb_desc_iter_t;
 
 // initializes a usb_desc_iter_t
-mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter);
+mx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* iter);
 
 // releases resources in a usb_desc_iter_t
 void usb_desc_iter_release(usb_desc_iter_t* iter);
@@ -65,7 +46,5 @@ usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_t* iter, 
 
 // returns the next endpoint descriptor within the current interface
 usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t* iter);
-
-usb_configuration_descriptor_t* usb_desc_iter_get_config_desc(usb_desc_iter_t* iter);
 
 __END_CDECLS;

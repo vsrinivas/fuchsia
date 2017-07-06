@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-LOCAL_SRCS := system/core/devmgr
+DEVMGR_SRCS := system/core/devmgr
 
 MODULE := $(LOCAL_DIR)
 
@@ -18,11 +18,12 @@ MODULE_SO_NAME := driver
 MODULE_COMPILEFLAGS := -fvisibility=hidden
 
 MODULE_SRCS := \
-	$(LOCAL_SRCS)/devhost.c \
-	$(LOCAL_SRCS)/devhost-api.c \
-	$(LOCAL_SRCS)/devhost-core.c \
-	$(LOCAL_SRCS)/devhost-rpc-server.c \
-	$(LOCAL_SRCS)/devhost-shared.c \
+	$(LOCAL_DIR)/usb.c \
+	$(DEVMGR_SRCS)/devhost.c \
+	$(DEVMGR_SRCS)/devhost-api.c \
+	$(DEVMGR_SRCS)/devhost-core.c \
+	$(DEVMGR_SRCS)/devhost-rpc-server.c \
+	$(DEVMGR_SRCS)/devhost-shared.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/port
 

@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/common/usb.c \
     $(LOCAL_DIR)/io-buffer.c \
     $(LOCAL_DIR)/iotxn.c \
 

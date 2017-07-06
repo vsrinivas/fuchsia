@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <driver/usb.h>
 #include <magenta/device/bt-hci.h>
 #include <magenta/listnode.h>
 #include <magenta/status.h>
@@ -38,6 +38,7 @@
 typedef struct {
     mx_device_t* mxdev;
     mx_device_t* usb_mxdev;
+    usb_protocol_t usb;
 
     mx_handle_t cmd_channel;
     mx_handle_t acl_channel;
@@ -269,9 +270,8 @@ static bool hci_handle_cmd_read_events(hci_t* hci, mx_wait_item_t* cmd_item) {
             goto fail;
         }
 
-        status = usb_control(hci->usb_mxdev,
-                             USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                             0, 0, 0, buf, length);
+        status = usb_control(&hci->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                             0, 0, 0, buf, length, MX_TIME_INFINITE);
         if (status < 0) {
             printf("hci_read_thread: usb_control failed: %s\n", mx_status_get_string(status));
             goto fail;
@@ -530,9 +530,16 @@ static mx_protocol_device_t hci_device_proto = {
 };
 
 static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
+    usb_protocol_t usb;
+
+    mx_status_t status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (status != MX_OK) {
+        return status;
+    }
+
     // find our endpoints
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    mx_status_t result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -582,8 +589,7 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
     mtx_init(&hci->mutex, mtx_plain);
 
     hci->usb_mxdev = device;
-
-    mx_status_t status = MX_OK;
+    memcpy(&hci->usb, &usb, sizeof(hci->usb));
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet);

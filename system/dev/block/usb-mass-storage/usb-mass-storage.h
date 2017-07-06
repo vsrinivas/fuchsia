@@ -8,6 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <ddk/protocol/block.h>
+#include <ddk/protocol/usb.h>
 #include <magenta/listnode.h>
 #include <sync/completion.h>
 
@@ -37,6 +38,7 @@ typedef struct {
 typedef struct {
     mx_device_t* mxdev;         // root device we publish
     mx_device_t* usb_mxdev;     // USB device we are bound to
+    usb_protocol_t usb;
 
     uint32_t tag_send;          // next tag to send in CBW
     uint32_t tag_receive;       // next tag we expect to receive in CSW

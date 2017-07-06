@@ -36,3 +36,7 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
                            usb_speed_t speed, usb_device_t** out_device);
 
 void usb_device_remove(usb_device_t* dev);
+
+mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id,
+                                     uint8_t alt_setting);
+mx_status_t usb_device_set_configuration(usb_device_t* dev, int config);

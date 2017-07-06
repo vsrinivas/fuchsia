@@ -5,8 +5,8 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
+#include <driver/usb.h>
 #include <magenta/assert.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
@@ -49,7 +49,7 @@
 typedef struct {
     mx_device_t* device;
     mx_device_t* usb_device;
-    usb_protocol_t usb_proto;
+    usb_protocol_t usb;
 
     uint8_t mac_addr[6];
     uint8_t status[INTR_REQ_SIZE];
@@ -94,8 +94,9 @@ typedef struct {
 } ax88179_tx_hdr_t;
 
 static mx_status_t ax88179_read_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t reg_len, void* data) {
-    mx_status_t status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-            AX88179_REQ_MAC, reg_addr, reg_len, data, reg_len);
+    mx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                     AX88179_REQ_MAC, reg_addr, reg_len, data, reg_len,
+                                     MX_TIME_INFINITE);
 #if AX88179_DEBUG
     printf("read mac %#x:\n", reg_addr);
     if (status > 0) {
@@ -110,13 +111,14 @@ static mx_status_t ax88179_write_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t r
     printf("write mac %#x:\n", reg_addr);
     hexdump8(data, reg_len);
 #endif
-    return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-            AX88179_REQ_MAC, reg_addr, reg_len, data, reg_len);
+    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_MAC,
+                       reg_addr, reg_len, data, reg_len, MX_TIME_INFINITE);
 }
 
 static mx_status_t ax88179_read_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t* data) {
-    mx_status_t status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-            AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, data, sizeof(*data));
+    mx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                     AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, data, sizeof(*data),
+                                     MX_TIME_INFINITE);
 #if AX88179_DEBUG
     if (status == sizeof(*data)) {
         printf("read phy %#x: %#x\n", reg_addr, *data);
@@ -129,8 +131,8 @@ static mx_status_t ax88179_write_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t 
 #if AX88179_DEBUG
     printf("write phy %#x: %#x\n", reg_addr, data);
 #endif
-    return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-            AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, &data, sizeof(data));
+    return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
+                       AX88179_PHY_ID, reg_addr, &data, sizeof(data), MX_TIME_INFINITE);
 }
 
 static uint8_t ax88179_media_mode[6][2] = {
@@ -305,7 +307,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     mtx_lock(&eth->mutex);
     if (request->status == MX_ERR_IO_REFUSED) {
         printf("ax88179_read_complete usb_reset_endpoint\n");
-        usb_reset_endpoint(&eth->usb_proto, eth->bulk_in_addr);
+        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     } else if ((request->status == MX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
     }
@@ -332,7 +334,7 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     list_add_tail(&eth->free_write_reqs, &request->node);
     if (request->status == MX_ERR_IO_REFUSED) {
         printf("ax88179_write_complete usb_reset_endpoint\n");
-        usb_reset_endpoint(&eth->usb_proto, eth->bulk_out_addr);
+        usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
 
     iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
@@ -735,9 +737,16 @@ fail:
 
 static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     xprintf("ax88179_bind\n");
+
+    usb_protocol_t usb;
+    mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (result != MX_OK) {
+        return result;
+    }
+
     // find our endpoints
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -778,12 +787,6 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
         return MX_ERR_NO_MEMORY;
     }
 
-    result = device_get_protocol(device, MX_PROTOCOL_USB, &eth->usb_proto);
-    if (result != MX_OK) {
-        free(eth);
-        return result;
-    }
-
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
     list_initialize(&eth->pending_tx);
@@ -791,6 +794,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     mtx_init(&eth->mutex, mtx_plain);
 
     eth->usb_device = device;
+    memcpy(&eth->usb, &usb, sizeof(eth->usb));
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
 

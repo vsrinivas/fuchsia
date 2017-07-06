@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
 #include <magenta/device/ioctl-wrapper.h>
+#include <magenta/hw/usb.h>
 
 __BEGIN_CDECLS
 

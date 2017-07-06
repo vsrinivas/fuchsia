@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
+#include <ddk/protocol/usb.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -208,6 +208,87 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     return status;
 }
 
+static void usb_control_complete(iotxn_t* txn, void* cookie) {
+    completion_signal((completion_t*)cookie);
+}
+
+static mx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
+                                         uint16_t value, uint16_t index, void* data,
+                                         size_t length, mx_time_t timeout) {
+    usb_interface_t* intf = ctx;
+    iotxn_t* txn;
+
+    uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
+    mx_status_t status = iotxn_alloc(&txn, flags, length);
+    if (status != MX_OK) {
+        return status;
+    }
+    txn->protocol = MX_PROTOCOL_USB;
+
+    static_assert(sizeof(usb_protocol_data_t) <= sizeof(iotxn_proto_data_t), "");
+    usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+
+    // fill in protocol data
+    usb_setup_t* setup = &proto_data->setup;
+    setup->bmRequestType = request_type;
+    setup->bRequest = request;
+    setup->wValue = value;
+    setup->wIndex = index;
+    setup->wLength = length;
+    proto_data->ep_address = 0;
+    proto_data->frame = 0;
+
+    bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
+    if (length > 0 && out) {
+        iotxn_copyto(txn, data, length, 0);
+    }
+
+    completion_t completion = COMPLETION_INIT;
+
+    txn->length = length;
+    txn->complete_cb = usb_control_complete;
+    txn->cookie = &completion;
+    iotxn_queue(intf->mxdev, txn);
+    // TODO(voydanoff) Use timeout argument after we implement cancelling USB transactions
+    completion_wait(&completion, MX_TIME_INFINITE);
+
+    status = txn->status;
+    if (status == MX_OK) {
+        status = txn->actual;
+
+        if (length > 0 && !out) {
+            iotxn_copyfrom(txn, data, txn->actual, 0);
+        }
+    }
+    iotxn_release(txn);
+    return status;
+}
+
+static void usb_interface_queue(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame) {
+    usb_interface_t* intf = ctx;
+    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+
+    memset(data, 0, sizeof(*data));
+    data->ep_address = ep_address;
+    data->frame = frame;
+    iotxn_queue(intf->mxdev, txn);
+}
+
+static usb_speed_t usb_interface_get_speed(void* ctx) {
+    usb_interface_t* intf = ctx;
+    return intf->device->speed;
+}
+
+static mx_status_t usb_interface_set_interface(void* ctx, int interface_number, int alt_setting) {
+    usb_interface_t* intf = ctx;
+    return usb_device_set_interface(intf->device, interface_number, alt_setting);
+}
+
+static mx_status_t usb_interface_set_configuration(void* ctx, int configuration) {
+    usb_interface_t* intf = ctx;
+    return usb_device_set_configuration(intf->device, configuration);
+}
+
 static mx_status_t usb_interface_reset_endpoint(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return usb_hci_reset_endpoint(&intf->hci, intf->device_id, ep_address);
@@ -223,10 +304,32 @@ static uint32_t _usb_interface_get_device_id(void* ctx) {
     return intf->device_id;
 }
 
+
+static mx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descriptors,
+                                                     size_t* out_length) {
+    usb_interface_t* intf = ctx;
+    void* descriptors = malloc(intf->descriptor_length);
+    if (!descriptors) {
+        *out_descriptors = NULL;
+        *out_length = 0;
+        return MX_ERR_NO_MEMORY;
+    }
+    memcpy(descriptors, intf->descriptor, intf->descriptor_length);
+    *out_descriptors = descriptors;
+    *out_length = intf->descriptor_length;
+    return MX_OK;
+}
+
 static usb_protocol_ops_t _usb_protocol = {
+    .control = usb_interface_control,
+    .queue = usb_interface_queue,
+    .get_speed = usb_interface_get_speed,
+    .set_interface = usb_interface_set_interface,
+    .set_configuration = usb_interface_set_configuration,
     .reset_endpoint = usb_interface_reset_endpoint,
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = _usb_interface_get_device_id,
+    .get_descriptor_list = usb_interface_get_descriptor_list,
 };
 
 mx_status_t usb_device_add_interface(usb_device_t* device,

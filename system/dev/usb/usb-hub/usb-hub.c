@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
+#include <driver/usb.h>
 #include <magenta/hw/usb-hub.h>
 #include <sync/completion.h>
 #include <inttypes.h>
@@ -32,6 +33,7 @@ typedef struct usb_hub {
 
     // Underlying USB device
     mx_device_t* usb_device;
+    usb_protocol_t usb;
 
     mx_device_t* bus_device;
     usb_bus_protocol_t bus;
@@ -64,40 +66,49 @@ static void usb_hub_set_port_enabled(usb_hub_t* hub, int port, bool enabled) {
 }
 
 static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
-    mx_status_t result = usb_get_status(hub->usb_device, USB_RECIP_PORT, port, status, sizeof(*status));
+    mx_status_t result = usb_get_status(&hub->usb, USB_RECIP_PORT, port, status, sizeof(*status),
+                                        MX_TIME_INFINITE);
     if (result == sizeof(*status)) {
         xprintf("usb_hub_get_port_status port %d ", port);
         if (status->wPortChange & USB_C_PORT_CONNECTION) {
             xprintf("USB_C_PORT_CONNECTION ");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_PORT_ENABLE) {
             xprintf("USB_C_PORT_ENABLE ");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_PORT_SUSPEND) {
             xprintf("USB_C_PORT_SUSPEND ");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_PORT_OVER_CURRENT) {
             xprintf("USB_C_PORT_OVER_CURRENT ");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_PORT_RESET) {
             xprintf("USB_C_PORT_RESET");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_BH_PORT_RESET) {
             xprintf("USB_C_BH_PORT_RESET");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_PORT_LINK_STATE) {
             xprintf("USB_C_PORT_LINK_STATE");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port,
+                              MX_TIME_INFINITE);
         }
         if (status->wPortChange & USB_C_PORT_CONFIG_ERROR) {
             xprintf("USB_C_PORT_CONFIG_ERROR");
-            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port);
+            usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port,
+                              MX_TIME_INFINITE);
         }
         xprintf("\n");
 
@@ -144,7 +155,7 @@ static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
 }
 
 static void usb_hub_enable_port(usb_hub_t* hub, int port) {
-    usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_POWER, port);
+    usb_set_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_PORT_POWER, port, MX_TIME_INFINITE);
     usleep(hub->power_on_delay);
 }
 
@@ -189,7 +200,7 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
         return;
     }
 
-    usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port);
+    usb_set_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port, MX_TIME_INFINITE);
     usb_hub_port_enabled(hub, port);
 }
 
@@ -257,8 +268,8 @@ static int usb_hub_thread(void* arg) {
 
     usb_hub_descriptor_t desc;
     int desc_type = (hub->hub_speed == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
-    mx_status_t result = usb_get_descriptor(hub->usb_device, USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                            desc_type, 0, &desc, sizeof(desc));
+    mx_status_t result = usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                                            desc_type, 0, &desc, sizeof(desc), MX_TIME_INFINITE);
     if (result < 0) {
         printf("get hub descriptor failed: %d\n", result);
         return result;
@@ -342,6 +353,12 @@ static int usb_hub_thread(void* arg) {
 }
 
 static mx_status_t usb_hub_bind(void* ctx, mx_device_t* device, void** cookie) {
+    usb_protocol_t usb;
+    mx_status_t status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (status != MX_OK) {
+        return status;
+    }
+
     // search for the bus device
     mx_device_t* bus_device = device_get_parent(device);
     usb_bus_protocol_t bus = { NULL, NULL };
@@ -358,7 +375,7 @@ static mx_status_t usb_hub_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     // find our interrupt endpoint
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    mx_status_t result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -387,11 +404,11 @@ static mx_status_t usb_hub_bind(void* ctx, mx_device_t* device, void** cookie) {
     }
 
     hub->usb_device = device;
-    hub->hub_speed = usb_get_speed(device);
+    hub->hub_speed = usb_get_speed(&usb);
     hub->bus_device = bus_device;
+    memcpy(&hub->usb, &usb, sizeof(usb_protocol_t));
     memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
-    mx_status_t status = MX_OK;
     iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size);
     if (!txn) {
         status = MX_ERR_NO_MEMORY;

@@ -4,7 +4,7 @@
 
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
+#include <driver/usb.h>
 #include <magenta/assert.h>
 #include <magenta/hw/usb.h>
 
@@ -31,14 +31,14 @@ static mx_status_t ums_reset(ums_t* ums) {
     // value and index not used for first command, though index is supposed to be set to interface number
     // TODO: check interface number, see if index needs to be set
     DEBUG_PRINT(("UMS: performing reset recovery\n"));
-    mx_status_t status = usb_control(ums->usb_mxdev, USB_DIR_OUT | USB_TYPE_CLASS
-                                            | USB_RECIP_INTERFACE, USB_REQ_RESET, 0x00, 0x00, NULL, 0);
-    status = usb_control(ums->usb_mxdev, USB_DIR_OUT | USB_TYPE_CLASS
-                                           | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
-                                           ums->bulk_in_addr, NULL, 0);
-    status = usb_control(ums->usb_mxdev, USB_DIR_OUT | USB_TYPE_CLASS
-                                           | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
-                                           ums->bulk_out_addr, NULL, 0);
+    mx_status_t status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                                     USB_REQ_RESET, 0x00, 0x00, NULL, 0, MX_TIME_INFINITE);
+    status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                         USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT, ums->bulk_in_addr, NULL, 0,
+                         MX_TIME_INFINITE);
+    status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                         USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT, ums->bulk_out_addr, NULL, 0,
+                         MX_TIME_INFINITE);
     return status;
 }
 
@@ -667,7 +667,7 @@ static mx_status_t ums_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     // find our endpoints
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    mx_status_t result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -709,8 +709,9 @@ static mx_status_t ums_bind(void* ctx, mx_device_t* device, void** cookie) {
     }
 
     uint8_t max_lun;
-    mx_status_t status = usb_control(device, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                     USB_REQ_GET_MAX_LUN, 0x00, 0x00, &max_lun, sizeof(max_lun));
+    mx_status_t status = usb_control(&usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                                     USB_REQ_GET_MAX_LUN, 0x00, 0x00, &max_lun, sizeof(max_lun),
+                                     MX_TIME_INFINITE);
     if (status != sizeof(max_lun)) {
         return status;
     }
@@ -735,6 +736,7 @@ static mx_status_t ums_bind(void* ctx, mx_device_t* device, void** cookie) {
     mtx_init(&ums->iotxn_lock, mtx_plain);
 
     ums->usb_mxdev = device;
+    memcpy(&ums->usb, &usb, sizeof(ums->usb));
     ums->bulk_in_addr = bulk_in_addr;
     ums->bulk_out_addr = bulk_out_addr;
     ums->bulk_in_max_packet = bulk_in_max_packet;

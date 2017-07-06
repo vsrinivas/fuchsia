@@ -6,8 +6,8 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/iotxn.h>
-#include <ddk/common/usb.h>
 #include <ddk/protocol/hidbus.h>
+#include <driver/usb.h>
 #include <magenta/hw/usb-hid.h>
 
 #include <magenta/types.h>
@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <threads.h>
 
 #define USB_HID_SUBCLASS_BOOT   0x01
@@ -27,7 +28,7 @@
 typedef struct usb_hid_device {
     mx_device_t* mxdev;
     mx_device_t* usbdev;
-    usb_protocol_t usb_proto;
+    usb_protocol_t usb;
 
     hid_info_t info;
     iotxn_t* txn;
@@ -130,8 +131,10 @@ static mx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
 
     size_t desc_len = hid->hid_desc->descriptors[desc_idx].wDescriptorLength;
     uint8_t* desc_buf = malloc(desc_len);
-    mx_status_t status = usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
-            USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface, desc_buf, desc_len);
+    mx_status_t status = usb_control(&hid->usb,
+                                     (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
+                                     USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface,
+                                     desc_buf, desc_len, MX_TIME_INFINITE);
     if (status < 0) {
         printf("usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
         free(desc_buf);
@@ -146,46 +149,51 @@ static mx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
 static mx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
                                       void* data, size_t len) {
     usb_hid_device_t* hid = ctx;
-    return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len);
+    return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len,
+            MX_TIME_INFINITE);
 }
 
 static mx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
                                       void* data, size_t len) {
     usb_hid_device_t* hid = ctx;
-    return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len);
+    return usb_control(&hid->usb, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len,
+            MX_TIME_INFINITE);
 }
 
 static mx_status_t usb_hid_get_idle(void* ctx, uint8_t rpt_id, uint8_t* duration) {
     usb_hid_device_t* hid = ctx;
-    return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_GET_IDLE, rpt_id, hid->interface, duration, sizeof(*duration));
+    return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_GET_IDLE, rpt_id, hid->interface, duration, sizeof(*duration),
+            MX_TIME_INFINITE);
 }
 
 static mx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration) {
     mx_status_t status;
     usb_hid_device_t* hid = ctx;
-    status = usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0);
+    status = usb_control(&hid->usb, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0,
+            MX_TIME_INFINITE);
     if (status == MX_ERR_IO_REFUSED) {
         // The SET_IDLE command is optional, so this may stall.
         // If that occurs, reset the endpoint and ignore the error
-        status = usb_reset_endpoint(&hid->usb_proto, 0);
+        status = usb_reset_endpoint(&hid->usb, 0);
     }
     return status;
 }
 
 static mx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
     usb_hid_device_t* hid = ctx;
-    return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol));
+    return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol),
+            MX_TIME_INFINITE);
 }
 
 static mx_status_t usb_hid_set_protocol(void* ctx, uint8_t protocol) {
     usb_hid_device_t* hid = ctx;
-    return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0);
+    return usb_control(&hid->usb, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+            USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0,MX_TIME_INFINITE);
 }
 
 static hidbus_protocol_ops_t usb_hid_bus_ops = {
@@ -219,8 +227,15 @@ static mx_protocol_device_t usb_hid_dev_ops = {
 };
 
 static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
+    usb_protocol_t usb;
+
+    mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_USB, &usb);
+    if (status != MX_OK) {
+        return status;
+    }
+
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(dev, &iter);
+    mx_status_t result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -266,13 +281,8 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
             return MX_ERR_NO_MEMORY;
         }
 
-        mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_USB, &usbhid->usb_proto);
-        if (status != MX_OK) {
-            free(usbhid);
-            return status;
-        }
-
         usbhid->usbdev = dev;
+        memcpy(&usbhid->usb, &usb, sizeof(usbhid->usb));
         usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
         usbhid->hid_desc = hid_desc;
 

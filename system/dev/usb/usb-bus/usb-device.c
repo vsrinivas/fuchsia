@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/common/usb.h>
+#include <stdint.h>
 #include <magenta/hw/usb-audio.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,7 +15,8 @@
 static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
                                              usb_configuration_descriptor_t* config);
 
-static mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id, uint8_t alt_setting) {
+mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id,
+                                     uint8_t alt_setting) {
     usb_interface_t* intf;
     list_for_every_entry(&device->children, intf, usb_interface_t, node) {
         if (usb_interface_contains_interface(intf, interface_id)) {
@@ -36,7 +37,7 @@ static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int co
     return NULL;
 }
 
-static mx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
+mx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
     int num_configurations = dev->device_desc.bNumConfigurations;
     usb_configuration_descriptor_t* config_desc = NULL;
     int config_index = -1;
