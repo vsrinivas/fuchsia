@@ -18,6 +18,7 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/array.h>
 #include <mxtl/unique_ptr.h>
 #include <pretty/hexdump.h>
@@ -207,7 +208,7 @@ bool blkdev_test_fifo_basic(void) {
 
     fifo_client_t* client;
     ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], countof(requests)), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], mxtl::count_of(requests)), MX_OK, "");
 
     // Empty the vmo, then read the info we just wrote to the disk
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
@@ -216,7 +217,7 @@ bool blkdev_test_fifo_basic(void) {
     ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
     requests[0].opcode = BLOCKIO_READ;
     requests[1].opcode = BLOCKIO_READ;
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], countof(requests)), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], mxtl::count_of(requests)), MX_OK, "");
     ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
     ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 

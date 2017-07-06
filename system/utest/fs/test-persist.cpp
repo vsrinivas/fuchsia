@@ -15,6 +15,7 @@
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/array.h>
 #include <mxtl/string_piece.h>
 #include <mxtl/unique_ptr.h>
@@ -43,7 +44,7 @@ bool test_persist_simple(void) {
         "::jkl",
         "::mnopqrstuvxyz"
     };
-    for (size_t i = 0; i < countof(paths); i++) {
+    for (size_t i = 0; i < mxtl::count_of(paths); i++) {
         if (is_directory(paths[i])) {
             ASSERT_EQ(mkdir(paths[i], 0644), 0, "");
         } else {
@@ -56,7 +57,7 @@ bool test_persist_simple(void) {
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // The files should still exist when we remount
-    for (ssize_t i = countof(paths) - 1; i >= 0; i--) {
+    for (ssize_t i = mxtl::count_of(paths) - 1; i >= 0; i--) {
         if (is_directory(paths[i])) {
             ASSERT_EQ(rmdir(paths[i]), 0, "");
         } else {
@@ -67,7 +68,7 @@ bool test_persist_simple(void) {
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // But they should stay deleted!
-    for (ssize_t i = countof(paths) - 1; i >= 0; i--) {
+    for (ssize_t i = mxtl::count_of(paths) - 1; i >= 0; i--) {
         if (is_directory(paths[i])) {
             ASSERT_EQ(rmdir(paths[i]), -1, "");
         } else {
@@ -108,11 +109,11 @@ bool test_persist_with_data(void) {
         "::def",
         "::and-another-file-filled-with-data",
     };
-    mxtl::unique_ptr<uint8_t[]> buffers[countof(files)];
+    mxtl::unique_ptr<uint8_t[]> buffers[mxtl::count_of(files)];
     unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
     unittest_printf("Persistent data test using seed: %u\n", seed);
     AllocChecker ac;
-    for (size_t i = 0; i < countof(files); i++) {
+    for (size_t i = 0; i < mxtl::count_of(files); i++) {
         buffers[i].reset(new (&ac) uint8_t[BufferSize]);
         ASSERT_TRUE(ac.check(), "");
 
@@ -129,7 +130,7 @@ bool test_persist_with_data(void) {
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // Read files
-    for (size_t i = 0; i < countof(files); i++) {
+    for (size_t i = 0; i < mxtl::count_of(files); i++) {
         mxtl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
         ASSERT_TRUE(ac.check(), "");
         int fd = open(files[i], O_RDONLY, 0644);
@@ -151,7 +152,7 @@ bool test_persist_with_data(void) {
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // Delete all files
-    for (size_t i = 0; i < countof(files); i++) {
+    for (size_t i = 0; i < mxtl::count_of(files); i++) {
         ASSERT_EQ(unlink(files[i]), 0, "");
     }
 

@@ -13,6 +13,7 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/limits.h>
 #include <unittest/unittest.h>
 #include <sys/mman.h>
@@ -913,7 +914,7 @@ bool rights_drop_test() {
         { MX_RIGHT_READ | MX_RIGHT_WRITE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE },
         { MX_RIGHT_READ | MX_RIGHT_EXECUTE, MX_VM_FLAG_PERM_READ |  MX_VM_FLAG_PERM_EXECUTE },
     };
-    for (size_t i = 0; i < countof(test_rights); ++i) {
+    for (size_t i = 0; i < mxtl::count_of(test_rights); ++i) {
         uint32_t right = test_rights[i][0];
         uint32_t perm = test_rights[i][1];
 
@@ -968,7 +969,7 @@ bool protect_test() {
         { MX_RIGHT_READ | MX_RIGHT_WRITE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE },
         { MX_RIGHT_READ | MX_RIGHT_EXECUTE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE },
     };
-    for (size_t i = 0; i < countof(test_rights); ++i) {
+    for (size_t i = 0; i < mxtl::count_of(test_rights); ++i) {
         uint32_t right = test_rights[i][0];
         uint32_t perm = test_rights[i][1];
 
@@ -1028,7 +1029,7 @@ bool nested_region_perms_test() {
         { MX_VM_FLAG_CAN_MAP_EXECUTE, MX_VM_FLAG_PERM_EXECUTE },
     };
 
-    for (size_t i = 0; i < countof(test_perm); ++i) {
+    for (size_t i = 0; i < mxtl::count_of(test_perm); ++i) {
         const uint32_t excluded_alloc_perm = test_perm[i][0];
         const uint32_t excluded_map_perm = test_perm[i][1];
 

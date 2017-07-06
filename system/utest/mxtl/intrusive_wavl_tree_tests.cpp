@@ -351,7 +351,7 @@ static bool WAVLBalanceTest() {
         ASSERT_TRUE(ac.check(), "Failed to allocate test objects!");
     }
 
-    for (size_t seed_ndx = 0; seed_ndx < countof(seeds); ++seed_ndx) {
+    for (size_t seed_ndx = 0; seed_ndx < mxtl::count_of(seeds); ++seed_ndx) {
         auto seed = seeds[seed_ndx];
 
         // Seed the RNG and reset the observer stats.

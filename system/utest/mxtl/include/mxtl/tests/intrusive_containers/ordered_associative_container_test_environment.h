@@ -5,6 +5,7 @@
 #pragma once
 
 #include <unittest/unittest.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/tests/intrusive_containers/associative_container_test_environment.h>
 
 namespace mxtl {
@@ -174,7 +175,7 @@ public:
                 ASSERT_NONNULL(tmp, "");
                 KeyType tmp_key = KeyTraits::GetKey(*tmp);
 
-                for (size_t k = 0; k < countof(tests); ++k) {
+                for (size_t k = 0; k < mxtl::count_of(tests); ++k) {
                     auto& test = tests[k];
 
                     if (BoundTraits::BoundedBy(test.key, tmp_key) &&
@@ -185,7 +186,7 @@ public:
             }
 
             // Now perform the same searchs using upper_bound/lower_bound.
-            for (size_t k = 0; k < countof(tests); ++k) {
+            for (size_t k = 0; k < mxtl::count_of(tests); ++k) {
                 auto& test = tests[k];
                 auto  iter = BoundTraits::Search(container(), test.key);
 

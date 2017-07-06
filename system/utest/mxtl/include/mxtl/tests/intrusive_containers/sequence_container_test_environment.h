@@ -5,6 +5,7 @@
 #pragma once
 
 #include <unittest/unittest.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/tests/intrusive_containers/base_test_environments.h>
 
 namespace mxtl {
@@ -609,7 +610,7 @@ public:
         // Splice into end of empty target list.
         target.splice(target.end(), container());
         static const size_t expected_1[] = {0, 1};
-        EXPECT_TRUE(BidirectionalEquals(target, expected_1, countof(expected_1)), "");
+        EXPECT_TRUE(BidirectionalEquals(target, expected_1, mxtl::count_of(expected_1)), "");
         EXPECT_EQ(0u, Size(container()), "");
 
         // Populate the source list again.
@@ -619,7 +620,7 @@ public:
         // Splice into end of non-empty target list.
         target.splice(target.end(), container());
         static const size_t expected_2[] = {0, 1, 2, 3};
-        EXPECT_TRUE(BidirectionalEquals(target, expected_2, countof(expected_2)), "");
+        EXPECT_TRUE(BidirectionalEquals(target, expected_2, mxtl::count_of(expected_2)), "");
         EXPECT_EQ(0u, Size(container()), "");
 
         // Populate the source list again.
@@ -629,7 +630,7 @@ public:
         // Splice into start of non-empty target list.
         target.splice(target.begin(), container());
         static const size_t expected_3[] = {4, 5, 0, 1, 2, 3};
-        EXPECT_TRUE(BidirectionalEquals(target, expected_3, countof(expected_3)), "");
+        EXPECT_TRUE(BidirectionalEquals(target, expected_3, mxtl::count_of(expected_3)), "");
         EXPECT_EQ(0u, Size(container()), "");
 
         // Populate the source list again.
@@ -639,12 +640,12 @@ public:
         // Splice into second element of non-empty target list.
         target.splice(++target.begin(), container());
         static const size_t expected_4[] = {4, 6, 7, 5, 0, 1, 2, 3};
-        EXPECT_TRUE(BidirectionalEquals(target, expected_4, countof(expected_4)), "");
+        EXPECT_TRUE(BidirectionalEquals(target, expected_4, mxtl::count_of(expected_4)), "");
         EXPECT_EQ(0u, Size(container()), "");
 
         // Splice empty source into end of non-empty target list.
         target.splice(target.end(), container());
-        EXPECT_TRUE(BidirectionalEquals(target, expected_4, countof(expected_4)), "");
+        EXPECT_TRUE(BidirectionalEquals(target, expected_4, mxtl::count_of(expected_4)), "");
         EXPECT_EQ(0u, Size(container()), "");
 
         // Finally clear the target.

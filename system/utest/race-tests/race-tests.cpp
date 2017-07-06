@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/launchpad.h>
-#include <magenta/syscalls.h>
 #include <pthread.h>
 #include <stdlib.h>
+
+#include <launchpad/launchpad.h>
+#include <magenta/syscalls.h>
+#include <mxtl/algorithm.h>
 #include <unittest/unittest.h>
 
 // This file is for regression tests for race conditions where the test was
@@ -39,7 +41,7 @@ static bool test_process_exit_status_race() {
               MX_OK, "");
     ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), MX_OK, "");
     const char* args[] = { g_executable_filename, "--subprocess" };
-    ASSERT_EQ(launchpad_set_args(lp, countof(args), args), MX_OK, "");
+    ASSERT_EQ(launchpad_set_args(lp, mxtl::count_of(args), args), MX_OK, "");
     ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), MX_OK, "");
     mx_handle_t proc;
     const char* errmsg;

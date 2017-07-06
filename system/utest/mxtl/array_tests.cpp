@@ -5,6 +5,7 @@
 #include <mxtl/array.h>
 
 #include <mxalloc/new.h>
+#include <mxtl/algorithm.h>
 #include <unittest/unittest.h>
 
 namespace {

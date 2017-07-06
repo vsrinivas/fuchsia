@@ -20,6 +20,7 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm/vm_object.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -154,7 +155,7 @@ public:
         if (bar_ndx >= bar_count_)
             return nullptr;
 
-        DEBUG_ASSERT(bar_ndx < countof(bars_));
+        DEBUG_ASSERT(bar_ndx < mxtl::count_of(bars_));
 
         const pcie_bar_info_t* ret = &bars_[bar_ndx];
         return (!disabled_ && (ret->allocation != nullptr)) ? ret : nullptr;

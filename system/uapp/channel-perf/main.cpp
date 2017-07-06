@@ -12,6 +12,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 
 namespace {
@@ -214,7 +215,7 @@ int main(int argc, char** argv) {
                 {100, 0, 1},
                 {1000, 0, 1},
             };
-            for (size_t i = 0; i < countof(suite); i++)
+            for (size_t i = 0; i < mxtl::count_of(suite); i++)
                 do_test(duration, suite[i]);
         } else {
             do_test(duration, test_args);

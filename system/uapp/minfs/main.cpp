@@ -268,7 +268,7 @@ int usage() {
             "Try using the [mkfs,fsck,mount,umount] commands instead\n"
 #endif
             "\n");
-    for (unsigned n = 0; n < countof(CMDS); n++) {
+    for (unsigned n = 0; n < mxtl::count_of(CMDS); n++) {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
                 CMDS[n].name, CMDS[n].help);
     }
@@ -358,7 +358,7 @@ int main(int argc, char** argv) {
     fd = FS_FD_BLOCKDEVICE;
 #else
     uint32_t flags = O_RDWR;
-    for (unsigned i = 0; i < countof(CMDS); i++) {
+    for (unsigned i = 0; i < mxtl::count_of(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
             flags = CMDS[i].flags;
             goto found;
@@ -392,7 +392,7 @@ found:
         return -1;
     }
 
-    for (unsigned i = 0; i < countof(CMDS); i++) {
+    for (unsigned i = 0; i < mxtl::count_of(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
             return CMDS[i].func(mxtl::move(bc), argc - 3, argv + 3);
         }

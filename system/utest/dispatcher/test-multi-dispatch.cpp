@@ -17,6 +17,7 @@
 #include <magenta/syscalls/port.h>
 #include <mxalloc/new.h>
 #include <mxio/debug.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 
 #include <unittest/unittest.h>
@@ -290,10 +291,10 @@ bool test_multi_multi(void) {
 
     // make sure the counters get bumped in random order
     uint32_t idx[MAX_MSG];
-    for (uint32_t i=0; i<countof(idx); i++) {
+    for (uint32_t i=0; i<mxtl::count_of(idx); i++) {
         idx[i] = i;
     }
-    for (uint32_t i=0; i<countof(idx); i++) {
+    for (uint32_t i=0; i<mxtl::count_of(idx); i++) {
         auto i1 = rand() % MAX_MSG;
         auto i2 = rand() % MAX_MSG;
         auto tmp = idx[i1];
@@ -301,7 +302,7 @@ bool test_multi_multi(void) {
         idx[i2] = tmp;
     }
 
-    parallel_write(ch[0], &handler, idx, countof(idx), WRITER_POOL_SIZE, WRITE_ITER);
+    parallel_write(ch[0], &handler, idx, mxtl::count_of(idx), WRITER_POOL_SIZE, WRITE_ITER);
 
     // tear down the dispatcher object (closes and waits for thread pool)
     disp = nullptr;

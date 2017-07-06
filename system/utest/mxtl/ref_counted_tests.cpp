@@ -5,6 +5,7 @@
 #include <mxalloc/new.h>
 #include <pthread.h>
 #include <unittest/unittest.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
@@ -40,14 +41,14 @@ static bool ref_counted_test() {
         void* arg = reinterpret_cast<void*>(ptr.get());
 
         pthread_t threads[5];
-        for (size_t i = 0u; i < countof(threads); ++i) {
+        for (size_t i = 0u; i < mxtl::count_of(threads); ++i) {
             int res = pthread_create(&threads[i], NULL, &inc_and_dec, arg);
             ASSERT_LE(0, res, "Failed to create inc_and_dec thread!");
         }
 
         inc_and_dec(arg);
 
-        for (size_t i = 0u; i < countof(threads); ++i)
+        for (size_t i = 0u; i < mxtl::count_of(threads); ++i)
             pthread_join(threads[i], NULL);
 
         EXPECT_FALSE(destroyed, "should not be destroyed after inc/dec pairs");

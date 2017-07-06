@@ -11,6 +11,7 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>
@@ -162,7 +163,7 @@ mx_status_t BlockServer::AttachVmo(mx::vmo vmo, vmoid_t* out) {
 
 mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
     mxtl::AutoLock server_lock(&server_lock_);
-    for (size_t i = 0; i < countof(txns_); i++) {
+    for (size_t i = 0; i < mxtl::count_of(txns_); i++) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
             AllocChecker ac;
@@ -179,7 +180,7 @@ mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
 
 void BlockServer::FreeTxn(txnid_t txnid) {
     mxtl::AutoLock server_lock(&server_lock_);
-    if (txnid >= countof(txns_)) {
+    if (txnid >= mxtl::count_of(txns_)) {
         return;
     }
     MX_DEBUG_ASSERT(txns_[txnid] != nullptr);

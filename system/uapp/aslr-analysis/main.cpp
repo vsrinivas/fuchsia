@@ -14,6 +14,7 @@
 #include <magenta/types.h>
 #include <math.h>
 #include <mxio/io.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/array.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/unique_ptr.h>
@@ -234,8 +235,8 @@ mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
     hnd[0] = h;
     launchpad_create(job, "testrun", &lp);
     launchpad_load_from_file(lp, bin);
-    launchpad_set_args(lp, countof(args), args);
-    launchpad_add_handles(lp, countof(hnd), hnd, ids);
+    launchpad_set_args(lp, mxtl::count_of(args), args);
+    launchpad_add_handles(lp, mxtl::count_of(hnd), hnd, ids);
 
     status = launchpad_go(lp, &proc, &errmsg);
     if (status != MX_OK) {
