@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta event pairs.
 
-use {HandleBase, Handle, HandleRef, Peered, Status};
+use {Cookied, HandleBase, Handle, HandleRef, Peered, Status};
 use {sys, into_result};
 
 /// An object representing a Magenta
@@ -25,6 +25,9 @@ impl HandleBase for EventPair {
 }
 
 impl Peered for EventPair {
+}
+
+impl Cookied for EventPair {
 }
 
 impl EventPair {

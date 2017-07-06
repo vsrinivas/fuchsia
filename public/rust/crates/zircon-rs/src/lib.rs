@@ -432,6 +432,29 @@ pub trait Peered: HandleBase {
     }
 }
 
+/// A trait implemented by all handles for objects which can have a cookie attached.
+pub trait Cookied: HandleBase {
+    /// Get the cookie attached to this object, if any. Wraps the
+    /// [mx_object_get_cookie](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/object_get_cookie.md)
+    /// syscall.
+    fn get_cookie(&self, scope: &HandleRef) -> Result<u64, Status> {
+        let handle = self.get_ref().handle;
+        let mut cookie = 0;
+        let status = unsafe { sys::mx_object_get_cookie(handle, scope.handle, &mut cookie) };
+        into_result(status, || cookie)
+    }
+
+    /// Attach an opaque cookie to this object with the given scope. The cookie may be read or
+    /// changed in future only with the same scope. Wraps the
+    /// [mx_object_set_cookie](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/object_set_cookie.md)
+    /// syscall.
+    fn set_cookie(&self, scope: &HandleRef, cookie: u64) -> Result<(), Status> {
+        let handle = self.get_ref().handle;
+        let status = unsafe { sys::mx_object_set_cookie(handle, scope.handle, cookie) };
+        into_result(status, || ())
+    }
+}
+
 fn handle_drop(handle: sys::mx_handle_t) {
     let _ = unsafe { sys::mx_handle_close(handle) };
 }
@@ -652,5 +675,29 @@ mod tests {
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
         assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
         assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
+    }
+
+    #[test]
+    fn cookies() {
+        let event = Event::create(EventOpts::Default).unwrap();
+        let scope = Event::create(EventOpts::Default).unwrap();
+
+        // Getting a cookie when none has been set should fail.
+        assert_eq!(event.get_cookie(&scope.get_ref()), Err(Status::ErrAccessDenied));
+
+        // Set a cookie.
+        assert_eq!(event.set_cookie(&scope.get_ref(), 42), Ok(()));
+
+        // Should get it back....
+        assert_eq!(event.get_cookie(&scope.get_ref()), Ok(42));
+
+        // but not with the wrong scope!
+        assert_eq!(event.get_cookie(&event.get_ref()), Err(Status::ErrAccessDenied));
+
+        // Can change it, with the same scope...
+        assert_eq!(event.set_cookie(&scope.get_ref(), 123), Ok(()));
+
+        // but not with a different scope.
+        assert_eq!(event.set_cookie(&event.get_ref(), 123), Err(Status::ErrAccessDenied));
     }
 }

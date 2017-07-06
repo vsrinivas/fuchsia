@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta vmo objects.
 
-use {HandleBase, Handle, HandleRef, Status};
+use {Cookied, HandleBase, Handle, HandleRef, Status};
 use {sys, into_result};
 use std::{mem, ptr};
 
@@ -23,6 +23,9 @@ impl HandleBase for Vmo {
     fn from_handle(handle: Handle) -> Self {
         Vmo(handle)
     }
+}
+
+impl Cookied for Vmo {
 }
 
 impl Vmo {

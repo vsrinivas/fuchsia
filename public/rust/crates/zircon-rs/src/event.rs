@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta event objects.
 
-use {HandleBase, Handle, HandleRef, Status};
+use {Cookied, HandleBase, Handle, HandleRef, Status};
 use {sys, into_result};
 
 /// An object representing a Magenta
@@ -22,6 +22,9 @@ impl HandleBase for Event {
     fn from_handle(handle: Handle) -> Self {
         Event(handle)
     }
+}
+
+impl Cookied for Event {
 }
 
 impl Event {
