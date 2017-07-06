@@ -230,7 +230,7 @@ mx_status_t DispatcherChannel::Read(void*       buf,
     uint32_t rxed_handle_count = 0;
     return channel_.read(0,
                          buf, buf_len, bytes_read_out,
-                         rxed_handle ? rxed_handle->get_address() : nullptr,
+                         rxed_handle ? rxed_handle->reset_and_get_address() : nullptr,
                          rxed_handle ? 1 : 0,
                          &rxed_handle_count);
 }

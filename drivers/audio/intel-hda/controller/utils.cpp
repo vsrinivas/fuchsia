@@ -146,7 +146,10 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
     mx::vmo     vmo;
     mx_status_t res;
 
-    res = mx_vmo_create_contiguous(get_root_resource(), actual_size(), 0, vmo.get_address());
+    res = mx_vmo_create_contiguous(get_root_resource(),
+                                   actual_size(),
+                                   0,
+                                   vmo.reset_and_get_address());
     if (res != MX_OK)
         goto finished;
 
