@@ -37,6 +37,7 @@ class Node : public Resource {
   bool SetScale(const escher::vec3& scale);
   bool SetRotation(const escher::quat& rotation);
   bool SetAnchor(const escher::vec3& anchor);
+  bool SetClipToSelf(bool clip_to_self);
 
   const escher::mat4& GetGlobalTransform() const;
 
@@ -45,6 +46,7 @@ class Node : public Resource {
   const escher::vec3& scale() const { return transform_.scale; }
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
+  bool clip_to_self() const { return clip_to_self_; }
 
   // This is a static method so that it can be passed a NodePtr&, to facilitate
   // look-up in the node's parent.  No-op if node has no parent.  Always returns
@@ -91,6 +93,7 @@ class Node : public Resource {
   escher::Transform transform_;
   mutable escher::mat4 global_transform_;
   mutable bool global_transform_dirty_ = true;
+  bool clip_to_self_ = false;
 };
 
 // Inline functions.

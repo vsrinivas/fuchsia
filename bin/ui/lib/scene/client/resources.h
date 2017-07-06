@@ -36,6 +36,7 @@ class Resource {
   ~Resource();
 
   void AddChild(uint32_t child_node_id);
+  void AddPart(uint32_t part_node_id);
   void DetachChildren();
 
  private:
@@ -219,6 +220,9 @@ class ContainerTraits : public Base {
   void AddChild(const Node& child) { AddChild(child.id()); }
   void AddChild(uint32_t child_node_id) { Base::AddChild(child_node_id); }
 
+  void AddPart(const Node& child) { AddPart(child.id()); }
+  void AddPart(uint32_t child_node_id) { Base::AddPart(child_node_id); }
+
   // Detaches all children from the node.
   void DetachChildren() { Base::DetachChildren(); }
 
@@ -232,6 +236,8 @@ class EntityNode : public ContainerTraits<Node> {
  public:
   explicit EntityNode(Session* session);
   ~EntityNode();
+
+  void SetClip(uint32_t clip_id, bool clip_to_self);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(EntityNode);
@@ -267,9 +273,6 @@ class ClipNode : public ContainerTraits<Node> {
  public:
   explicit ClipNode(Session* session);
   ~ClipNode();
-
-  // The shape to clip the contents of the hierarchy rooted at this node.
-  void SetClip(const Shape& shape);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(ClipNode);

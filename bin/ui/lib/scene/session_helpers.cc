@@ -514,10 +514,13 @@ mozart2::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id) {
   return op;
 }
 
-mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id) {
+mozart2::OpPtr NewSetClipOp(uint32_t node_id,
+                            uint32_t clip_id,
+                            bool clip_to_self) {
   auto set_clip = mozart2::SetClipOp::New();
   set_clip->node_id = node_id;
   set_clip->clip_id = clip_id;
+  set_clip->clip_to_self = clip_to_self;
 
   auto op = mozart2::Op::New();
   op->set_set_clip(std::move(set_clip));
@@ -535,7 +538,6 @@ mozart2::OpPtr NewSetTagOp(uint32_t node_id, uint32_t tag_value) {
 
   return op;
 }
-
 
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id) {
   auto set_camera = mozart2::SetCameraOp::New();

@@ -28,6 +28,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+#include "apps/mozart/lib/scene/client/host_memory.h"
 #include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/lib/scene/client/session.h"
 #include "apps/mozart/lib/scene/session_helpers.h"
@@ -40,6 +41,13 @@
 
 using namespace mozart;
 using namespace mozart::client;
+
+static constexpr uint32_t kScreenWidth = 2160;
+static constexpr uint32_t kScreenHeight = 1440;
+
+static constexpr float kPaneMargin = 100.f;
+static constexpr float kPaneHeight = kScreenHeight - 2 * kPaneMargin;
+static constexpr float kPaneWidth = (kScreenWidth - 3 * kPaneMargin) / 2.f;
 
 class HelloSceneManagerApp {
  public:
@@ -55,44 +63,22 @@ class HelloSceneManagerApp {
     });
   }
 
-  void CreateExampleScene() {
-    auto session = session_.get();
-
-    // Create an EntityNode to serve as the scene root.
-    EntityNode entity_node(session);
-
-    // Create two shape nodes, one for a circle and one for a rounded-rect.
-    // Remember the rounded-rect node, because we're going to animate it.
-    ShapeNode circle_node(session);
-    rrect_node_ = std::make_unique<ShapeNode>(session);
-
-    // Immediately attach them to the root.
-    entity_node.AddChild(circle_node.id());
-    entity_node.AddChild(rrect_node_->id());
-
-    // Generate a checkerboard.
+  void InitCheckerboardMaterial(Material* uninitialized_material) {
+    // Generate a checkerboard material.  This is a multi-step process:
+    //   - generate pixels for the material.
+    //   - create a VMO that contains these pixels.
+    //   - duplicate the VMO handle and use it to create a Session Memory obj.
+    //   - use the Memory obj to create an Image obj.
+    //   - use the Image obj as a Material's texture.
     size_t checkerboard_width = 8;
     size_t checkerboard_height = 8;
     size_t checkerboard_pixels_size;
     auto checkerboard_pixels = escher::image_utils::NewGradientPixels(
         checkerboard_width, checkerboard_height, &checkerboard_pixels_size);
 
-    auto shared_vmo =
-        mozart::scene::test::CreateSharedVmo(checkerboard_pixels_size);
-
-    memcpy(shared_vmo->Map(), checkerboard_pixels.get(),
+    HostMemory checkerboard_memory(session_.get(), checkerboard_pixels_size);
+    memcpy(checkerboard_memory.data_ptr(), checkerboard_pixels.get(),
            checkerboard_pixels_size);
-
-    // Duplicate the VMO handle.
-    mx::vmo vmo_copy;
-    auto status = shared_vmo->vmo().duplicate(MX_RIGHT_SAME_RIGHTS, &vmo_copy);
-    if (status) {
-      FTL_LOG(ERROR) << "Failed to duplicate vmo handle.";
-      return;
-    }
-
-    Memory checkerboard_memory(session, std::move(vmo_copy),
-                               mozart2::MemoryType::HOST_MEMORY);
 
     // Create an Image to wrap the checkerboard.
     auto checkerboard_image_info = mozart2::ImageInfo::New();
@@ -105,39 +91,92 @@ class HelloSceneManagerApp {
     checkerboard_image_info->color_space = mozart2::ImageInfo::ColorSpace::SRGB;
     checkerboard_image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
 
-    Image checkerboard_image(checkerboard_memory, 0,
-                             std::move(checkerboard_image_info));
+    HostImage checkerboard_image(checkerboard_memory, 0,
+                                 std::move(checkerboard_image_info));
 
-    // Create a Material with the checkerboard image.
-    Material material(session);
-    material.SetColor(255, 100, 100, 255);
-    material.SetTexture(checkerboard_image.id());
+    uninitialized_material->SetTexture(checkerboard_image.id());
+  }
 
-    // Make a circle, and attach it and the material to a node.
-    Circle circle(session, 50);
-    circle_node.SetMaterial(material);
-    circle_node.SetShape(circle);
+  void CreateExampleScene() {
+    auto session = session_.get();
 
-    // Make a rounded rect, and attach it and the material to a node.
-    RoundedRectangle rrect(session, 200, 300, 20, 20, 80, 10);
-    rrect_node_->SetMaterial(material);
-    rrect_node_->SetShape(rrect);
+    // Create an EntityNode to serve as the scene root.
+    EntityNode root_node(session);
 
-    // Translate the circle.
-    {
-      float translation[3] = {50.f, 50.f, 10.f};
-      session->Enqueue(NewSetTranslationOp(circle_node.id(), translation));
-    }
+    // The root node will enclose two "panes", each with a rounded-rect part
+    // that acts as a background clipper.
+    RoundedRectangle pane_shape(session, kPaneWidth, kPaneHeight, 20, 20, 80,
+                                10);
+    Material pane_material(session);
+    pane_material.SetColor(120, 120, 255, 255);
 
-    // Translate the EntityNode root.
-    {
-      float translation[3] = {900.f, 800.f, 10.f};
-      session->Enqueue(NewSetTranslationOp(entity_node.id(), translation));
-    }
+    EntityNode pane_node_1(session);
+    ShapeNode pane_bg_1(session);
+    pane_bg_1.SetShape(pane_shape);
+    pane_bg_1.SetMaterial(pane_material);
+    pane_node_1.AddPart(pane_bg_1);
+    pane_node_1.SetTranslation(kPaneMargin + kPaneWidth * 0.5,
+                               kPaneMargin + kPaneHeight * 0.5, 20);
+    pane_node_1.SetClip(0, true);
+    root_node.AddChild(pane_node_1);
+
+    EntityNode pane_node_2(session);
+    ShapeNode pane_bg_2(session);
+    pane_bg_2.SetShape(pane_shape);
+    pane_bg_2.SetMaterial(pane_material);
+    pane_node_2.AddPart(pane_bg_2);
+    pane_node_2.SetTranslation(kPaneMargin * 2 + kPaneWidth * 1.5,
+                               kPaneMargin + kPaneHeight * 0.5, 20);
+    pane_node_2.SetClip(0, true);
+    root_node.AddChild(pane_node_2);
+
+    // Create a Material with the checkerboard image.  This will be used for
+    // the objects in each pane.
+    Material checkerboard_material(session);
+    InitCheckerboardMaterial(&checkerboard_material);
+    checkerboard_material.SetColor(255, 100, 100, 255);
+
+    Material green_material(session);
+    green_material.SetColor(50, 150, 50, 255);
+
+    // The first pane will contain an animated rounded-rect.
+    rrect_node_ = std::make_unique<ShapeNode>(session);
+    rrect_node_->SetMaterial(checkerboard_material);
+    rrect_node_->SetShape(RoundedRectangle(session, 200, 300, 20, 20, 80, 10));
+    pane_node_1.AddChild(rrect_node_->id());
+
+    // The second pane will contain two large circles that are clipped by a pair
+    // of smaller animated circles.
+    EntityNode pane_2_contents(session);
+
+    Circle clipper_circle(session, 200);
+    clipper_1_ = std::make_unique<ShapeNode>(session);
+    clipper_2_ = std::make_unique<ShapeNode>(session);
+    clipper_1_->SetShape(clipper_circle);
+    clipper_2_->SetShape(clipper_circle);
+
+    Circle clippee_circle(session, 400);
+    ShapeNode clippee1(session);
+    clippee1.SetShape(clippee_circle);
+    clippee1.SetMaterial(green_material);
+    clippee1.SetTranslation(0, 400, 0);
+    ShapeNode clippee2(session);
+    clippee2.SetShape(clippee_circle);
+    clippee2.SetMaterial(checkerboard_material);
+    clippee2.SetTranslation(0, -400, 0);
+
+    pane_2_contents.AddPart(clipper_1_->id());
+    pane_2_contents.AddPart(clipper_2_->id());
+    pane_2_contents.AddChild(clippee1);
+    pane_2_contents.AddChild(clippee2);
+    pane_2_contents.SetClip(0, true);
+
+    pane_node_2.AddChild(pane_2_contents);
+    pane_2_contents.SetTranslation(0, 0, 10);
 
     // Create a Scene, and attach to it the Nodes created above.
     Scene scene(session);
-    scene.AddChild(entity_node.id());
+    scene.AddChild(root_node.id());
 
     // Create a Camera to view the Scene.
     camera_ = std::make_unique<Camera>(scene);
@@ -180,21 +219,25 @@ class HelloSceneManagerApp {
       double secs = static_cast<double>(next_presentation_time - start_time_) /
                     1'000'000'000;
 
-      float translation[3] = {350.f, 150.f, 10.f};
+      rrect_node_->SetTranslation(sin(secs * 0.8) * 500.f,
+                                  sin(secs * 0.6) * 570.f, 10.f);
 
-      translation[0] += sin(secs) * 100.f;
-      translation[1] += sin(secs) * 37.f;
-
-      float rotation[4];
       auto quaternion =
           glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));
-      rotation[0] = quaternion.x;
-      rotation[1] = quaternion.y;
-      rotation[2] = quaternion.z;
-      rotation[3] = quaternion.w;
+      rrect_node_->SetRotation(quaternion.x, quaternion.y, quaternion.z,
+                               quaternion.w);
+    }
 
-      session_->Enqueue(NewSetTranslationOp(rrect_node_->id(), translation));
-      session_->Enqueue(NewSetRotationOp(rrect_node_->id(), rotation));
+    // Translate the clip-circles.
+    {
+      double secs = static_cast<double>(next_presentation_time - start_time_) /
+                    1'000'000'000;
+
+      float offset1 = sin(secs * 0.8) * 300.f;
+      float offset2 = cos(secs * 0.8) * 300.f;
+
+      clipper_1_->SetTranslation(offset1, offset2 * 3, -5);
+      clipper_2_->SetTranslation(offset2, offset1 * 2, -4);
     }
 
     // Move the camera.
@@ -213,17 +256,18 @@ class HelloSceneManagerApp {
         param = 1.0 - param;
       }
 
+      // Animate the eye position.
       glm::vec3 eye_start(1080, 720, 6000);
       glm::vec3 eye_end(0, 10000, 7000);
       glm::vec3 eye =
           glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
 
-      // Look at the middle of the stage.
+      // Always look at the middle of the stage.
       float target[3] = {1080, 720, 0};
       float up[3] = {0, 1, 0};
 
-      session_->Enqueue(NewSetCameraProjectionOp(
-          camera_->id(), glm::value_ptr(eye), target, up, glm::radians(15.f)));
+      camera_->SetProjection(glm::value_ptr(eye), target, up,
+                             glm::radians(15.f));
     }
 
     // Present
@@ -249,6 +293,8 @@ class HelloSceneManagerApp {
 
   std::unique_ptr<mozart::client::Session> session_;
   std::unique_ptr<mozart::client::ShapeNode> rrect_node_;
+  std::unique_ptr<mozart::client::ShapeNode> clipper_1_;
+  std::unique_ptr<mozart::client::ShapeNode> clipper_2_;
   std::unique_ptr<mozart::client::Camera> camera_;
   std::unique_ptr<mozart::client::DisplayRenderer> renderer_;
 

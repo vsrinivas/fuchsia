@@ -23,6 +23,7 @@ constexpr ResourceTypeFlags kHasParts =
 constexpr ResourceTypeFlags kHasTransform =
     ResourceType::kClipNode | ResourceType::kEntityNode | ResourceType::kScene |
     ResourceType::kShapeNode;
+constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode;
 
 }  // anonymous namespace
 
@@ -88,7 +89,7 @@ bool Node::AddPart(NodePtr part_node) {
   part_node->parent_ = this;
   part_node->InvalidateGlobalTransform();
 
-  auto insert_result = children_.insert(std::move(part_node));
+  auto insert_result = parts_.insert(std::move(part_node));
   FTL_DCHECK(insert_result.second);
 
   return true;
@@ -204,6 +205,16 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
   }
   transform_.anchor = anchor;
   InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetClipToSelf(bool clip_to_self) {
+  if (!(type_flags() & kHasClip)) {
+    error_reporter()->ERROR() << "scene::Node::SetClipToSelf(): node of type "
+                              << type_name() << " cannot have clip params set.";
+    return false;
+  }
+  clip_to_self_ = clip_to_self;
   return true;
 }
 

@@ -109,7 +109,9 @@ mozart2::OpPtr NewSetAnchorOp(uint32_t node_id, const float anchor[3]);
 
 mozart2::OpPtr NewSetShapeOp(uint32_t node_id, uint32_t shape_id);
 mozart2::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id);
-mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
+mozart2::OpPtr NewSetClipOp(uint32_t node_id,
+                            uint32_t clip_id,
+                            bool clip_to_self);
 mozart2::OpPtr NewSetTagOp(uint32_t node_id, uint32_t tag_value);
 
 // Camera and lighting operations.

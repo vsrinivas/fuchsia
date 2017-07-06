@@ -293,7 +293,17 @@ bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
 }
 
 bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
-  error_reporter_->ERROR() << "scene::Session::ApplySetClipOp(): unimplemented";
+  if (op->clip_id != 0) {
+    // TODO(MZ-167): Support non-zero clip_id.
+    error_reporter_->ERROR() << "scene::Session::ApplySetClipOp(): only "
+                                "clip_to_self is implemented.";
+    return false;
+  }
+
+  if (auto node = resources_.FindResource<Node>(op->node_id)) {
+    return node->SetClipToSelf(op->clip_to_self);
+  }
+
   return false;
 }
 

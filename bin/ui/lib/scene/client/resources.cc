@@ -30,6 +30,10 @@ void Resource::AddChild(uint32_t child_node_id) {
   session()->Enqueue(mozart::NewAddChildOp(id(), child_node_id));
 }
 
+void Resource::AddPart(uint32_t child_node_id) {
+  session()->Enqueue(mozart::NewAddPartOp(id(), child_node_id));
+}
+
 void Resource::DetachChildren() {
   session()->Enqueue(mozart::NewDetachChildrenOp(id()));
 }
@@ -166,6 +170,10 @@ EntityNode::EntityNode(Session* session) : ContainerTraits(session) {
 
 EntityNode::~EntityNode() = default;
 
+void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
+  session()->Enqueue(mozart::NewSetClipOp(id(), clip_id, clip_to_self));
+}
+
 ImportNode::ImportNode(Session* session) : ContainerTraits(session) {}
 
 ImportNode::~ImportNode() {
@@ -191,13 +199,6 @@ ClipNode::ClipNode(Session* session) : ContainerTraits(session) {
 }
 
 ClipNode::~ClipNode() = default;
-
-void ClipNode::SetClip(const Shape& shape) {
-  ShapeNode shape_node(session());
-  shape_node.SetShape(shape.id());
-  AddChild(shape_node.id());
-  session()->Enqueue(mozart::NewSetClipOp(id(), shape_node.id()));
-}
 
 OpacityNode::OpacityNode(Session* session) : ContainerTraits(session) {
   // TODO(MZ-139): Opacities are not currently implemented. Create an entity
