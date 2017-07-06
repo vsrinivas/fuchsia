@@ -29,8 +29,7 @@ UserControllerImpl::UserControllerImpl(
     fidl::InterfaceRequest<UserController> user_controller_request,
     std::function<void()> reset_ledger_callback,
     DoneCallback done)
-    : user_context_impl_(this),
-      user_context_binding_(&user_context_impl_),
+    : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
       reset_ledger_callback_(std::move(reset_ledger_callback)),
       done_(done) {
@@ -79,27 +78,23 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
   });
 }
 
-void UserControllerImpl::LogoutAndResetLedgerState(const LogoutCallback& done) {
-  Logout([this, done] {
-    reset_ledger_callback_();
-    done();
-  });
-}
-
 // |UserController|
 void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
   user_watchers_.AddInterfacePtr(UserWatcherPtr::Create(std::move(watcher)));
 }
 
 // |UserContext|
-void UserContextImpl::Logout() {
+// TODO(alhaad): Reconcile UserContext.Logout() and UserControllerImpl.Logout().
+void UserControllerImpl::Logout() {
   FTL_LOG(INFO) << "UserContext::Logout()";
-  controller_->Logout([] {});
+  Logout([] {});
 }
 
 // |UserContext|
-void UserContextImpl::LogoutAndResetLedgerState() {
-  controller_->LogoutAndResetLedgerState([] {});
+void UserControllerImpl::LogoutAndResetLedgerState() {
+  Logout([this] {
+    reset_ledger_callback_();
+  });
 }
 
 }  // namespace modular

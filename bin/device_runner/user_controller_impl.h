@@ -24,35 +24,11 @@
 
 namespace modular {
 
-class UserControllerImpl;
-
-// Public interface because bindings are outside the class.
-// TODO(mesch): Merge into UserControllerImpl.
-class UserContextImpl : public UserContext {
- public:
-  explicit UserContextImpl(UserControllerImpl* controller)
-      : controller_(controller) {}
-
- private:
-  // |UserContext|
-  void Logout() override;
-
-  // |UserContext|
-  void LogoutAndResetLedgerState() override;
-
-  UserControllerImpl* const controller_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserContextImpl);
-};
-
-// |UserControllerImpl| starts and manages a UserRunner (both the application
-// and its ApplicationEnvironment). The life time of a UserRunner is bound to
-// this class.  |UserControllerImpl| is not self-owned, but still drives its own
-// deletion: On logout, it signals its owner (DeviceRunnerApp) to delete it.
-// This class implements both |UserController| and |UserContext| (but for now,
-// since |UserContext| interface is a subset of |UserController|, we only
-// inherit one).
-class UserControllerImpl : UserController {
+// |UserControllerImpl| starts and manages a UserRunner. The life time of a
+// UserRunner is bound to this class.  |UserControllerImpl| is not self-owned,
+// but still drives its own deletion: On logout, it signals its
+// owner (DeviceRunnerApp) to delete it.
+class UserControllerImpl : UserController, UserContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
@@ -75,17 +51,21 @@ class UserControllerImpl : UserController {
   // This will effectively tear down the entire instance by calling |done|.
   // |UserController|
   void Logout(const LogoutCallback& done) override;
-  void LogoutAndResetLedgerState(const LogoutCallback& done);
 
  private:
   // |UserController|
   void Watch(fidl::InterfaceHandle<UserWatcher> watcher) override;
 
+  // |UserContext|
+  void Logout() override;
+
+  // |UserContext|
+  void LogoutAndResetLedgerState() override;
+
   std::unique_ptr<Scope> user_runner_scope_;
   app::ApplicationControllerPtr user_runner_controller_;
   UserRunnerPtr user_runner_;
 
-  UserContextImpl user_context_impl_;
   fidl::Binding<UserContext> user_context_binding_;
   fidl::Binding<UserController> user_controller_binding_;
 
