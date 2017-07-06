@@ -301,14 +301,12 @@ static bool test_phys_iter_unaligned_contig(void) {
     iotxn_phys_iter_init(&iter, &iotxn, 3 * PAGE_SIZE);
     mx_paddr_t paddr;
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
-    // TODO(teisenbe): This is the current behavior; I think this should be
-    // 3PS - 128 though?
-    ASSERT_EQ(size, 2u * PAGE_SIZE - 128, "");
+    ASSERT_EQ(size, 3u * PAGE_SIZE - 128, "");
     ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
 
     size = iotxn_phys_iter_next(&iter, &paddr);
-    ASSERT_EQ(size, 2u * PAGE_SIZE + 128u, "");
-    ASSERT_EQ(paddr, iotxn.phys[2], "");
+    ASSERT_EQ(size, PAGE_SIZE + 128u, "");
+    ASSERT_EQ(paddr, iotxn.phys[3], "");
 
     size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
@@ -316,14 +314,8 @@ static bool test_phys_iter_unaligned_contig(void) {
     // Now try iterating with no cap
     iotxn_phys_iter_init(&iter, &iotxn, 0);
     size = iotxn_phys_iter_next(&iter, &paddr);
-    // TODO(teisenbe): This is the current behavior; I think this should be
-    // 4PS though?
-    ASSERT_EQ(size, 2u * PAGE_SIZE - 128, "");
+    ASSERT_EQ(size, 4u * PAGE_SIZE, "");
     ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
-
-    size = iotxn_phys_iter_next(&iter, &paddr);
-    ASSERT_EQ(size, 2u * PAGE_SIZE + 128u, "");
-    ASSERT_EQ(paddr, iotxn.phys[2], "");
 
     size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");

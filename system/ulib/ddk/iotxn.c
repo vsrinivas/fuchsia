@@ -538,12 +538,14 @@ size_t iotxn_phys_iter_next(iotxn_phys_iter_t* iter, mx_paddr_t* out_paddr) {
         // alignment for subsequent iterations.
         *out_paddr = phys + align_adjust;
         return_length = PAGE_SIZE - align_adjust;
+        remaining -= return_length;
         iter->page = 1;
 
         if (iter->page > iter->last_page || phys + PAGE_SIZE != phys_addrs[iter->page]) {
             iter->offset += return_length;
             return return_length;
         }
+        phys = phys_addrs[iter->page];
     } else {
         *out_paddr = phys;
     }
@@ -551,31 +553,25 @@ size_t iotxn_phys_iter_next(iotxn_phys_iter_t* iter, mx_paddr_t* out_paddr) {
     // below is more complicated case where we need to watch for discontinuities
     // in the physical address space.
 
-    bool discontiguous = false;
-
     // loop through physical addresses looking for discontinuities
-    while (remaining > 0 && return_length < max_length && iter->page <= iter->last_page) {
-        size_t increment = (PAGE_SIZE > remaining ? remaining : PAGE_SIZE);
+    while (remaining > 0 && iter->page <= iter->last_page) {
+        const size_t increment = MIN(PAGE_SIZE, remaining);
+        if (return_length + increment > max_length) {
+            break;
+        }
         return_length += increment;
         remaining -= increment;
         iter->page++;
 
         if (iter->page > iter->last_page) {
-            discontiguous = true;
             break;
         }
 
         mx_paddr_t next = phys_addrs[iter->page];
         if (phys + PAGE_SIZE != next) {
-            discontiguous = true;
             break;
         }
         phys = next;
-    }
-
-    if (!discontiguous && remaining > 0) {
-        // if we did not hit a discontinuity, we can add any remaining length from last page
-        return_length += remaining;
     }
 
     if (return_length > max_length) {
