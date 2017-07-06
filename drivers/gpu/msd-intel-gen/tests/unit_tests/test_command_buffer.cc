@@ -175,16 +175,21 @@ private:
             DLOG("TestCommandBuffer: No platform device");
         DLOG("creating helper");
         helper_ = CommandBufferHelper::Create(platform_device);
+
         DLOG("creating command buffer");
+        uint32_t handle;
+        helper_->buffer()->duplicate_handle(&handle);
+        buffer_ = MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(handle));
         // It's important that the CommandBuffer created here match the serialized content
         // inside the command buffer provided by the helper.
         cmd_buf_ =
-            CommandBuffer::Create(helper_->buffer()->msd_buf(), helper_->msd_resources().data(),
+            CommandBuffer::Create(buffer_->msd_buf(), helper_->msd_resources().data(),
                                   MsdIntelAbiContext::cast(helper_->ctx())->ptr(),
                                   helper_->msd_wait_semaphores(), helper_->msd_signal_semaphores());
         DLOG("command buffer created");
     }
 
+    std::unique_ptr<MagmaSystemBuffer> buffer_;
     std::unique_ptr<CommandBuffer> cmd_buf_;
     std::unique_ptr<CommandBufferHelper> helper_;
 };
