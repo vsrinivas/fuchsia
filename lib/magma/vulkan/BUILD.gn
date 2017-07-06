@@ -36,10 +36,14 @@ package("magma-fidl-tests") {
 
   if (target_cpu == "x64") {
     deps = [
+      "tests/unit:test_vkcube_image_pipe_swapchain",
       "tests/vkcube:vkcube_image_pipe_swapchain",
     ]
     binaries = [ {
           name = "vkcube_image_pipe_swapchain"
+        } ]
+    tests = [ {
+          name = "test_vkcube_image_pipe_swapchain"
         } ]
   }
 }
