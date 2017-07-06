@@ -12,9 +12,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.cpp \
 	$(LOCAL_DIR)/bcm28xx-spin.S \
 
-GLOBAL_DEFINES += \
-	ARM_ARCH_WAIT_FOR_SECONDARIES=1
-
 LINKER_SCRIPT += \
 	$(BUILDDIR)/system-onesegment.ld
 
