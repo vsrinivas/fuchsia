@@ -13,15 +13,13 @@
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/media/services/net_media_player.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
+#include "apps/mozart/lib/scene/skia/host_canvas_cycler.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/lib/view_framework/input_handler.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/macros.h"
-#include "third_party/skia/include/core/SkCanvas.h"
 
 namespace examples {
 
-class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
+class MediaPlayerView : public mozart::BaseView {
  public:
   MediaPlayerView(mozart::ViewManagerPtr view_manager,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -34,15 +32,16 @@ class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
   enum class State { kPaused, kPlaying, kEnded };
 
   // |BaseView|:
-  void OnLayout() override;
-  void OnDraw() override;
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
+  void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info) override;
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
+  bool OnInputEvent(mozart::InputEventPtr event) override;
 
-  // |InputListener|:
-  void OnEvent(mozart::InputEventPtr event,
-               const OnEventCallback& callback) override;
+  // Perform a layout of the UI elements.
+  void Layout();
 
   // Draws the progress bar, etc, into the provided canvas.
   void DrawControls(SkCanvas* canvas, const SkISize& size);
@@ -74,19 +73,21 @@ class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
     return float(1000000000.0 / double(frame_time_ - prev_frame_time_));
   }
 
-  mozart::InputHandler input_handler_;
-  mozart::BufferProducer buffer_producer_;
+  mozart::client::ShapeNode background_node_;
+  mozart::skia::HostCanvasCycler controls_widget_;
+  std::unique_ptr<mozart::client::EntityNode> video_host_node_;
+
   media::NetMediaPlayerPtr net_media_player_;
   media::VideoRendererPtr video_renderer_;
-  mozart::ViewInfoPtr video_view_info_;
   mozart::ViewPropertiesPtr video_view_properties_;
   mozart::Size video_size_;
   mozart::Size pixel_aspect_ratio_;
-  uint32_t scene_version_ = 1u;
   State previous_state_ = State::kPaused;
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
   media::MediaMetadataPtr metadata_;
+  mozart::Rect content_rect_;
+  mozart::Rect controls_rect_;
   mozart::RectF progress_bar_rect_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;

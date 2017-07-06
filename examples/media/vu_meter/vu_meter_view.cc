@@ -11,33 +11,21 @@
 #include "application/lib/app/connect.h"
 #include "apps/media/examples/vu_meter/vu_meter_params.h"
 #include "apps/media/services/media_service.fidl.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
-#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
-#include "third_party/skia/include/core/SkSurface.h"
 
 namespace examples {
-
-namespace {
-constexpr uint32_t kContentImageResourceId = 1u;
-
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-
-}  // namespace
 
 VuMeterView::VuMeterView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     app::ApplicationContext* application_context,
     const VuMeterParams& params)
-    : mozart::BaseView(std::move(view_manager),
+    : mozart::SkiaView(std::move(view_manager),
                        std::move(view_owner_request),
                        "VU Meter"),
-      input_handler_(GetViewServiceProvider(), this),
       packet_consumer_(this),
       fast_left_(kFastDecay),
       fast_right_(kFastDecay),
@@ -76,8 +64,7 @@ VuMeterView::VuMeterView(
 
 VuMeterView::~VuMeterView() {}
 
-void VuMeterView::OnEvent(mozart::InputEventPtr event,
-                          const OnEventCallback& callback) {
+bool VuMeterView::OnInputEvent(mozart::InputEventPtr event) {
   FTL_DCHECK(event);
   bool handled = false;
   if (event->is_pointer()) {
@@ -103,72 +90,46 @@ void VuMeterView::OnEvent(mozart::InputEventPtr event,
       }
     }
   }
-  callback(handled);
+  return handled;
 }
 
-void VuMeterView::OnDraw() {
-  FTL_DCHECK(properties());
+void VuMeterView::OnPropertiesChanged(
+    mozart::ViewPropertiesPtr old_properties) {
+  if (has_size())
+    InvalidateScene();
+}
 
-  auto update = mozart::SceneUpdate::New();
-  const auto& view_size = *properties()->view_layout->size;
-
-  if (view_size.width == 0 || view_size.height == 0) {
-    // Nothing to show yet.
-    update->nodes.insert(kRootNodeId, mozart::Node::New());
-  } else {
-    mozart::RectF bounds;
-    bounds.width = view_size.width;
-    bounds.height = view_size.height;
-
-    mozart::ImagePtr image;
-    auto surface =
-        mozart::MakeSkSurface(view_size, &buffer_producer_, &image);
-    FTL_CHECK(surface);
-    DrawContent(view_size, surface->getCanvas());
-
-    auto content_resource = mozart::Resource::New();
-    content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = std::move(image);
-    update->resources.insert(kContentImageResourceId,
-                             std::move(content_resource));
-
-    auto root_node = mozart::Node::New();
-    root_node->op = mozart::NodeOp::New();
-    root_node->op->set_image(mozart::ImageNodeOp::New());
-    root_node->op->get_image()->content_rect = bounds.Clone();
-    root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-    root_node->hit_test_behavior = mozart::HitTestBehavior::New();
-    update->nodes.insert(kRootNodeId, std::move(root_node));
+void VuMeterView::OnSceneInvalidated(
+    mozart2::PresentationInfoPtr presentation_info) {
+  SkCanvas* canvas = AcquireCanvas();
+  if (canvas) {
+    DrawContent(canvas);
+    ReleaseAndSwapCanvas();
   }
-
-  scene()->Update(std::move(update));
-  scene()->Publish(CreateSceneMetadata());
-
-  Invalidate();
 }
 
-void VuMeterView::DrawContent(const mozart::Size& size, SkCanvas* canvas) {
+void VuMeterView::DrawContent(SkCanvas* canvas) {
   canvas->clear(SK_ColorBLACK);
 
   SkPaint paint;
   paint.setFlags(SkPaint::kAntiAlias_Flag);
 
   paint.setColor(SK_ColorCYAN);
-  canvas->drawCircle(size.width / 3.0f, size.height / 2,
-                     (fast_left_.current() * size.width / 2) / kVuFullWidth,
+  canvas->drawCircle(size().width / 3.0f, size().height / 2,
+                     (fast_left_.current() * size().width / 2) / kVuFullWidth,
                      paint);
-  canvas->drawCircle(2.0f * size.width / 3.0f, size.height / 2,
-                     (fast_right_.current() * size.width / 2) / kVuFullWidth,
+  canvas->drawCircle(2.0f * size().width / 3.0f, size().height / 2,
+                     (fast_right_.current() * size().width / 2) / kVuFullWidth,
                      paint);
 
   paint.setColor(SK_ColorWHITE);
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(SkIntToScalar(3));
-  canvas->drawCircle(size.width / 3.0f, size.height / 2,
-                     (slow_left_.current() * size.width / 2) / kVuFullWidth,
+  canvas->drawCircle(size().width / 3.0f, size().height / 2,
+                     (slow_left_.current() * size().width / 2) / kVuFullWidth,
                      paint);
-  canvas->drawCircle(2.0f * size.width / 3.0f, size.height / 2,
-                     (slow_right_.current() * size.width / 2) / kVuFullWidth,
+  canvas->drawCircle(2.0f * size().width / 3.0f, size().height / 2,
+                     (slow_right_.current() * size().width / 2) / kVuFullWidth,
                      paint);
 }
 
@@ -181,7 +142,7 @@ void VuMeterView::ToggleStartStop() {
     started_ = true;
   }
 
-  Invalidate();
+  InvalidateScene();
 }
 
 void VuMeterView::OnPacketSupplied(
@@ -204,6 +165,8 @@ void VuMeterView::OnPacketSupplied(
     slow_right_.Process(abs_sample);
     ++sample;
   }
+
+  InvalidateScene();
 }
 
 VuMeterView::PacketConsumer::PacketConsumer(VuMeterView* owner)

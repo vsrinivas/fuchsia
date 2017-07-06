@@ -14,10 +14,8 @@ executable("media_player") {
   deps = [
     "//apps/media/lib/timeline",
     "//apps/media/services",
-    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/view_framework:skia",
     "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/buffers/cpp",
-    "//apps/mozart/services/geometry/cpp",
     "//lib/mtl",
     "//third_party/skia",
   ]

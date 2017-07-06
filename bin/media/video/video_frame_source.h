@@ -92,7 +92,7 @@ class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
   // Calls Invalidate on all registered views.
   void InvalidateViews() {
     for (mozart::BaseView* view : views_) {
-      view->Invalidate();
+      view->InvalidateScene();
     }
   }
 

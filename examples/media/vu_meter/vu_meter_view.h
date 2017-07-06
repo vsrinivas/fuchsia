@@ -12,15 +12,12 @@
 #include "apps/media/lib/transport/media_packet_consumer_base.h"
 #include "apps/media/services/media_capturer.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/lib/view_framework/input_handler.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
+#include "apps/mozart/lib/view_framework/skia_view.h"
 #include "lib/ftl/macros.h"
-#include "third_party/skia/include/core/SkCanvas.h"
 
 namespace examples {
 
-class VuMeterView : public mozart::BaseView, public mozart::InputListener {
+class VuMeterView : public mozart::SkiaView {
  public:
   VuMeterView(mozart::ViewManagerPtr view_manager,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -69,14 +66,13 @@ class VuMeterView : public mozart::BaseView, public mozart::InputListener {
   };
 
   // |BaseView|:
-  void OnDraw() override;
-
-  // |InputListener|:
-  void OnEvent(mozart::InputEventPtr event,
-               const OnEventCallback& callback) override;
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
+  void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info) override;
+  bool OnInputEvent(mozart::InputEventPtr event) override;
 
   // Draws the UI.
-  void DrawContent(const mozart::Size& size, SkCanvas* canvas);
+  void DrawContent(SkCanvas* canvas);
 
   // Toggles between start and stop.
   void ToggleStartStop();
@@ -85,11 +81,9 @@ class VuMeterView : public mozart::BaseView, public mozart::InputListener {
       std::unique_ptr<media::MediaPacketConsumerBase::SuppliedPacket>
           supplied_packet);
 
-  mozart::InputHandler input_handler_;
   media::MediaCapturerPtr media_capturer_;
   media::MediaPacketProducerPtr packet_producer_;
   PacketConsumer packet_consumer_;
-  mozart::BufferProducer buffer_producer_;
   bool started_ = false;
   PeakFilter fast_left_;
   PeakFilter fast_right_;

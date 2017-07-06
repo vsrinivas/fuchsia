@@ -5,15 +5,10 @@
 #include "apps/media/src/media_service/video_renderer_impl.h"
 
 #include "apps/media/lib/timeline/timeline.h"
-#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
-
-namespace {
-constexpr uint32_t kVideoImageResourceId = 1;
-}  // namespace
 
 // static
 std::shared_ptr<VideoRendererImpl> VideoRendererImpl::Create(
@@ -58,7 +53,10 @@ VideoRendererImpl::View::View(
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),
                        "Video Renderer"),
-      video_frame_source_(video_frame_source) {
+      video_frame_source_(video_frame_source),
+      image_cycler_(session()) {
+  parent_node().AddChild(image_cycler_);
+
   FTL_DCHECK(video_frame_source_);
   video_frame_source_->RegisterView(this);
 }
@@ -67,109 +65,43 @@ VideoRendererImpl::View::~View() {
   video_frame_source_->UnregisterView(this);
 }
 
-void VideoRendererImpl::View::OnDraw() {
-  TRACE_DURATION("motown", "OnDraw");
-  FTL_DCHECK(properties());
+void VideoRendererImpl::View::OnPropertiesChanged(
+    mozart::ViewPropertiesPtr old_properties) {
+  InvalidateScene();
+}
 
-  auto update = mozart::SceneUpdate::New();
+void VideoRendererImpl::View::OnSceneInvalidated(
+    mozart2::PresentationInfoPtr presentation_info) {
+  TRACE_DURATION("motown", "OnSceneInvalidated");
 
   video_frame_source_->AdvanceReferenceTime(
-      frame_tracker().frame_info().presentation_time);
+      presentation_info->presentation_time);
 
-  const mozart::Size& view_size = *properties()->view_layout->size;
   mozart::Size video_size = video_frame_source_->GetSize();
+  if (!has_size() || video_size.width == 0 || video_size.height == 0)
+    return;
 
-  if (view_size.width == 0 || view_size.height == 0 || video_size.width == 0 ||
-      video_size.height == 0) {
-    // Nothing to show yet.
-    update->nodes.insert(mozart::kSceneRootNodeId, mozart::Node::New());
-  } else {
-    auto children = fidl::Array<uint32_t>::New(0);
+  // Update the image.
+  const mozart::client::HostImage* image = image_cycler_.AcquireImage(
+      video_size.width, video_size.height, video_size.width * 4u,
+      mozart2::ImageInfo::PixelFormat::BGRA_8,
+      mozart2::ImageInfo::ColorSpace::SRGB);
+  FTL_DCHECK(image);
+  video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
+                                    video_size);
+  image_cycler_.ReleaseAndSwapImage();
 
-    // Scale the video so it fills the view.
-    float width_scale = static_cast<float>(view_size.width) /
-                        static_cast<float>(video_size.width);
-    float height_scale = static_cast<float>(view_size.height) /
-                         static_cast<float>(video_size.height);
-
-    mozart::TransformPtr transform =
-        mozart::CreateScaleTransform(width_scale, height_scale);
-
-    // Create the image node and apply the transform to it to scale and
-    // position it properly.
-    auto video_node = MakeVideoNode(std::move(transform), update);
-    update->nodes.insert(children.size() + 1, std::move(video_node));
-    children.push_back(children.size() + 1);
-
-    // Create the root node.
-    auto root = mozart::Node::New();
-    root->child_node_ids = std::move(children);
-    update->nodes.insert(mozart::kSceneRootNodeId, std::move(root));
-  }
-
-  scene()->Update(std::move(update));
-  scene()->Publish(CreateSceneMetadata());
-
-  buffer_producer_.Tick();
+  // Scale the video so it fills the view.
+  float width_scale =
+      static_cast<float>(size().width) / static_cast<float>(video_size.width);
+  float height_scale =
+      static_cast<float>(size().height) / static_cast<float>(video_size.height);
+  image_cycler_.SetScale(width_scale, height_scale, 1.f);
+  image_cycler_.SetTranslation(size().width * .5f, size().height * .5f, 0.f);
 
   if (video_frame_source_->views_should_animate()) {
-    Invalidate();
+    InvalidateScene();
   }
-}
-
-mozart::NodePtr VideoRendererImpl::View::MakeVideoNode(
-    mozart::TransformPtr transform,
-    const mozart::SceneUpdatePtr& update) {
-  mozart::Size video_size = video_frame_source_->GetSize();
-
-  if (video_size.width == 0 || video_size.height == 0) {
-    return mozart::Node::New();
-  }
-
-  mozart::ResourcePtr vid_resource = DrawVideoTexture(video_size);
-  FTL_DCHECK(vid_resource);
-  update->resources.insert(kVideoImageResourceId, std::move(vid_resource));
-
-  auto video_node = mozart::Node::New();
-  video_node->content_transform = std::move(transform);
-  video_node->op = mozart::NodeOp::New();
-  video_node->op->set_image(mozart::ImageNodeOp::New());
-  video_node->op->get_image()->content_rect = mozart::RectF::New();
-  video_node->op->get_image()->content_rect->x = 0.0f;
-  video_node->op->get_image()->content_rect->y = 0.0f;
-  video_node->op->get_image()->content_rect->width = video_size.width;
-  video_node->op->get_image()->content_rect->height = video_size.height;
-  video_node->op->get_image()->image_resource_id = kVideoImageResourceId;
-
-  return video_node;
-}
-
-mozart::ResourcePtr VideoRendererImpl::View::DrawVideoTexture(
-    const mozart::Size& size) {
-  std::unique_ptr<mozart::ProducedBufferHolder> buffer_holder =
-      buffer_producer_.ProduceBuffer(size.height * size.width *
-                                     sizeof(uint32_t));
-
-  mozart::ImagePtr image = mozart::Image::New();
-  image->size = size.Clone();
-  image->stride = size.width * sizeof(uint32_t);
-  image->pixel_format = mozart::Image::PixelFormat::B8G8R8A8;
-  image->alpha_format = mozart::Image::AlphaFormat::OPAQUE;
-  image->buffer = buffer_holder->GetBuffer();
-
-  void* buffer = buffer_holder->shared_vmo()->Map();
-  if (buffer == nullptr) {
-    FTL_LOG(ERROR) << "Failed to map vmo for video frame";
-  } else {
-    video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(buffer), size);
-  }
-
-  buffer_holder->SetReadySignal();
-
-  mozart::ResourcePtr resource = mozart::Resource::New();
-  resource->set_image(mozart::ImageResource::New());
-  resource->get_image()->image = std::move(image);
-  return resource;
 }
 
 }  // namespace media
