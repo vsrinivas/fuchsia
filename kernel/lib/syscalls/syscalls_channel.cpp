@@ -135,7 +135,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
         return result;
 
     if (num_bytes > 0u) {
-        if (_bytes.copy_array_to_user(msg->data(), num_bytes) != MX_OK)
+        if (msg->CopyDataTo(_bytes) != MX_OK)
             return MX_ERR_INVALID_ARGS;
     }
 
@@ -216,14 +216,9 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
 
 
     mxtl::unique_ptr<MessagePacket> msg;
-    result = MessagePacket::Create(num_bytes, num_handles, &msg);
+    result = MessagePacket::Create(_bytes, num_bytes, num_handles, &msg);
     if (result != MX_OK)
         return result;
-
-    if (num_bytes > 0u) {
-        if (_bytes.copy_array_from_user(msg->mutable_data(), num_bytes) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-    }
 
     mx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
@@ -240,10 +235,11 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
         for (size_t ix = 0; ix != num_handles; ++ix) {
             up->UndoRemoveHandleLocked(handles[ix]);
         }
+        return result;
     }
 
     ktrace(TAG_CHANNEL_WRITE, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
-    return result;
+    return MX_OK;
 }
 
 mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
@@ -272,14 +268,10 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
 
     // Prepare a MessagePacket for writing
     mxtl::unique_ptr<MessagePacket> msg;
-    result = MessagePacket::Create(num_bytes, num_handles, &msg);
+    result = MessagePacket::Create(make_user_ptr<const void>(args.wr_bytes),
+                                   num_bytes, num_handles, &msg);
     if (result != MX_OK)
         return result;
-
-    if (num_bytes > 0u) {
-        if (make_user_ptr(args.wr_bytes).copy_array_from_user(msg->mutable_data(), num_bytes) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-    }
 
     mx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
@@ -289,6 +281,8 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
         if (result)
             return result;
     }
+
+    // TODO(dbort): ktrace channel calls; maybe two traces, maybe with txid.
 
     // Write message and wait for reply, deadline, or cancelation
     bool return_handles = false;
@@ -373,7 +367,7 @@ mx_status_t channel_call_epilogue(ProcessDispatcher* up,
     }
 
     if (num_bytes > 0u) {
-        if (make_user_ptr(args->rd_bytes).copy_array_to_user(reply->data(), num_bytes) != MX_OK) {
+        if (reply->CopyDataTo(make_user_ptr(args->rd_bytes)) != MX_OK) {
             call_status = MX_ERR_INVALID_ARGS;
             goto read_failed;
         }

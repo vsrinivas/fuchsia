@@ -194,16 +194,15 @@ struct bootstrap_message {
 };
 
 static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
-    mxtl::unique_ptr<MessagePacket> packet;
-    uint32_t data_size =
+    const uint32_t data_size =
         static_cast<uint32_t>(offsetof(struct bootstrap_message, cmdline)) +
         __kernel_cmdline_size;
-    uint32_t num_handles = BOOTSTRAP_HANDLES;
-    if (MessagePacket::Create(data_size, num_handles, &packet) != MX_OK)
-        return nullptr;
-
     bootstrap_message* msg =
-        reinterpret_cast<bootstrap_message*>(packet->mutable_data());
+        static_cast<bootstrap_message*>(malloc(data_size));
+    if (msg == nullptr) {
+        return nullptr;
+    }
+
     memset(&msg->header, 0, sizeof(msg->header));
     msg->header.protocol = MX_PROCARGS_PROTOCOL;
     msg->header.version = MX_PROCARGS_VERSION;
@@ -245,6 +244,14 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     }
     memcpy(msg->cmdline, __kernel_cmdline, __kernel_cmdline_size);
 
+    mxtl::unique_ptr<MessagePacket> packet;
+    uint32_t num_handles = BOOTSTRAP_HANDLES;
+    mx_status_t status =
+        MessagePacket::Create(msg, data_size, num_handles, &packet);
+    free(msg);
+    if (status != MX_OK) {
+        return nullptr;
+    }
     return packet;
 }
 

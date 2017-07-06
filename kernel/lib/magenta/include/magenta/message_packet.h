@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 
+#include <lib/user_copy/user_ptr.h>
 #include <magenta/types.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/unique_ptr.h>
@@ -23,19 +24,29 @@ class Handle;
 
 class MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
 public:
-    // Creates a message packet.
-    static mx_status_t Create(uint32_t data_size, uint32_t num_handles,
+    // Creates a message packet containing the provided data and space for
+    // |num_handles| handles. The handles array is uninitialized and must
+    // be completely overwritten by clients.
+    static mx_status_t Create(user_ptr<const void> data, uint32_t data_size,
+                              uint32_t num_handles,
+                              mxtl::unique_ptr<MessagePacket>* msg);
+    static mx_status_t Create(const void* data, uint32_t data_size,
+                              uint32_t num_handles,
                               mxtl::unique_ptr<MessagePacket>* msg);
 
     uint32_t data_size() const { return data_size_; }
+
+    // Copies the packet's |data_size()| bytes to |buf|.
+    // Returns an error if |buf| points to a bad user address.
+    mx_status_t CopyDataTo(user_ptr<void> buf) const {
+        return buf.copy_array_to_user(data(), data_size_);
+    }
+
     uint32_t num_handles() const { return num_handles_; }
-
-    void set_owns_handles(bool own_handles) { owns_handles_ = own_handles; }
-
-    const void* data() const { return static_cast<void*>(handles_ + num_handles_); }
-    void* mutable_data() { return static_cast<void*>(handles_ + num_handles_); }
     Handle* const* handles() const { return handles_; }
     Handle** mutable_handles() { return handles_; }
+
+    void set_owns_handles(bool own_handles) { owns_handles_ = own_handles; }
 
     // mx_channel_call treats the leading bytes of the payload as
     // a transaction id of type mx_txid_t.
@@ -51,13 +62,25 @@ private:
     MessagePacket(uint32_t data_size, uint32_t num_handles, Handle** handles);
     ~MessagePacket();
 
+    // Allocates a new packet that can hold the specified amount of
+    // data/handles.
+    static mx_status_t NewPacket(uint32_t data_size, uint32_t num_handles,
+                                 mxtl::unique_ptr<MessagePacket>* msg);
+
+    // Create() uses malloc(), so we must delete using free().
     static void operator delete(void* ptr) {
         free(ptr);
     }
     friend class mxtl::unique_ptr<MessagePacket>;
 
+    // Handles and data are stored in the same buffer: num_handles_ Handle*
+    // entries first, then the data buffer.
+    void* data() const { return static_cast<void*>(handles_ + num_handles_); }
+
+    // TODO(dbort): Could save space by packing owns_handles_ and num_handles_
+    // in the same 32-bit word.
     bool owns_handles_;
-    uint32_t data_size_;
-    uint32_t num_handles_;
-    Handle** handles_;
+    const uint32_t data_size_;
+    const uint32_t num_handles_;
+    Handle** const handles_;
 };
