@@ -170,8 +170,8 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    return new CustomSingleChildLayout(
-      delegate: new _MainLayout(_layoutSize),
+    return new AspectRatio(
+      aspectRatio: _layoutSize.width / _layoutSize.height,
       child: new Stack(
         children: <Widget>[
           new GestureDetector(
@@ -187,23 +187,4 @@ class _MediaPlayerState extends State<MediaPlayer> {
       ),
     );
   }
-}
-
-/// Layout Delegate that preserves aspect ratio if possible.
-class _MainLayout extends SingleChildLayoutDelegate {
-  Size _size;
-
-  _MainLayout(this._size);
-
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      new BoxConstraints.tight(
-          constraints.constrainSizeAndAttemptToPreserveAspectRatio(_size));
-
-  @override
-  Size getSize(BoxConstraints constraints) =>
-      constraints.constrainSizeAndAttemptToPreserveAspectRatio(_size);
-
-  @override
-  bool shouldRelayout(_MainLayout oldDelegate) => oldDelegate._size != _size;
 }
