@@ -49,7 +49,7 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
 
     // Obtain a channel handle from the device
     mx::channel channel;
-    res = proto.ops->get_driver_channel(proto.ctx, channel.get_address());
+    res = proto.ops->get_driver_channel(proto.ctx, channel.reset_and_get_address());
     if (res != MX_OK)
         return res;
 
