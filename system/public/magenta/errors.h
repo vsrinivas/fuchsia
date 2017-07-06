@@ -27,9 +27,9 @@
 // successfully.
 #define MX_ERR_CALL_FAILED (-5)
 
-// MX_ERR_INTERRUPTED_RETRY: The system call was interrupted, but should be
+// MX_ERR_INTERNAL_INTR_RETRY: The system call was interrupted, but should be
 // retried.  This should not be seen outside of the VDSO.
-#define MX_ERR_INTERRUPTED_RETRY (-6)
+#define MX_ERR_INTERNAL_INTR_RETRY (-6)
 
 // ======= Parameter errors =======
 // MX_ERR_INVALID_ARGS: an argument is invalid, ex. null pointer

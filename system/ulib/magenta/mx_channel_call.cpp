@@ -18,7 +18,7 @@ mx_status_t _mx_channel_call(mx_handle_t handle, uint32_t options,
         handle, options, deadline, args,
         actual_bytes, actual_handles, rd_status_p);
     while (unlikely(status == MX_ERR_CALL_FAILED) &&
-           unlikely(*rd_status_p == MX_ERR_INTERRUPTED_RETRY)) {
+           unlikely(*rd_status_p == MX_ERR_INTERNAL_INTR_RETRY)) {
         status = SYSCALL_mx_channel_call_finish(
             handle, deadline, args,
             actual_bytes, actual_handles, rd_status_p);

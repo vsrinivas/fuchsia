@@ -116,7 +116,7 @@ public:
     // Returns:
     // MX_OK: the exception was handled in some way, and |*out_estatus|
     // specifies how.
-    // ERR_INTERRUPTED: the thread was killed (probably via mx_task_kill)
+    // MX_ERR_INTERNAL_INTR_KILLED: the thread was killed (probably via mx_task_kill)
     status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context,

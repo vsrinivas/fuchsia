@@ -85,7 +85,7 @@ static void bad_channel_call(void) {
     mx_status_t rs = MX_OK;
     status = mx_channel_call_noretry(chan, 0, MX_TIME_INFINITE, &args,
                                      &act_bytes, &act_handles, &rs);
-    if (status != MX_ERR_CALL_FAILED || rs != MX_ERR_INTERRUPTED_RETRY) {
+    if (status != MX_ERR_CALL_FAILED || rs != MX_ERR_INTERNAL_INTR_RETRY) {
         mx_object_signal(event, 0, MX_USER_SIGNAL_0);
         __builtin_trap();
     }

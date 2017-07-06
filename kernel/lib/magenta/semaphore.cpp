@@ -42,7 +42,7 @@ status_t Semaphore::Wait(lk_time_t deadline) {
     if (unlikely(--count_ < 0)) {
         ret = wait_queue_block(&waitq_, deadline);
         if (ret < MX_OK) {
-            if ((ret == MX_ERR_TIMED_OUT) || (ret == ERR_INTERRUPTED))
+            if ((ret == MX_ERR_TIMED_OUT) || (ret == MX_ERR_INTERNAL_INTR_KILLED))
                 count_++;
         }
     }

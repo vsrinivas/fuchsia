@@ -213,7 +213,7 @@ static inline bool thread_stopped_in_exception(const thread_t* thread)
 }
 
 /* wait until after the specified deadline. interruptable may return early with
- * ERR_INTERRUPTED if thread is signaled for kill.
+ * MX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
  */
 status_t thread_sleep_etc(lk_time_t deadline, bool interruptable);
 

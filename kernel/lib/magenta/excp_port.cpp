@@ -265,7 +265,7 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     if (status != MX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
-        // killed (status == ERR_INTERRUPTED), the kernel will kill the
+        // killed (status == MX_ERR_INTERNAL_INTR_KILLED), the kernel will kill the
         // thread shortly.
     }
 }
@@ -352,7 +352,7 @@ void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
     UserThread::ExceptionStatus estatus;
     // N.B. If the process is exiting it will have killed all threads. That
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
-    // exchange will return immediately with ERR_INTERRUPTED.
+    // exchange will return immediately with MX_ERR_INTERNAL_INTR_KILLED.
     auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != MX_OK) {
         // Ignore any errors, we still want the thread to continue exiting.

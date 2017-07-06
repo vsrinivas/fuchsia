@@ -682,7 +682,7 @@ status_t UserThread::ExceptionHandlerExchange(
     status_t status;
     do {
         status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
-    } while (status == MX_ERR_INTERRUPTED_RETRY);
+    } while (status == MX_ERR_INTERNAL_INTR_RETRY);
 
     AutoLock lock(&exception_wait_lock_);
 
@@ -699,7 +699,7 @@ status_t UserThread::ExceptionHandlerExchange(
         DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE &&
                      exception_status_ != ExceptionStatus::UNPROCESSED);
         break;
-    case ERR_INTERRUPTED:
+    case MX_ERR_INTERNAL_INTR_KILLED:
         // Thread was killed.
         break;
     default:

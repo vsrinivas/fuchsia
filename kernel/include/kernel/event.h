@@ -54,7 +54,7 @@ void event_init(event_t *, bool initial, uint flags);
 void event_destroy(event_t *);
 
 /* Wait until deadline
- * Interruptable arg allows it to return early with ERR_INTERRUPTED if thread
+ * Interruptable arg allows it to return early with MX_ERR_INTERNAL_INTR_KILLED if thread
  * is signaled for kill.
  */
 status_t event_wait_deadline(event_t *, lk_time_t, bool interruptable);

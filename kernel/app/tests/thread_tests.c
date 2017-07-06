@@ -124,7 +124,7 @@ static int event_waiter(void *arg)
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
         status_t err = event_wait_deadline(&e, INFINITE_TIME, true);
-        if (err == ERR_INTERRUPTED) {
+        if (err == MX_ERR_INTERNAL_INTR_KILLED) {
             printf("thread %p: killed\n");
             return -1;
         } else if (err < 0) {

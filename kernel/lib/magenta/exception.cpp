@@ -161,7 +161,7 @@ status_t magenta_exception_handler(uint exception_type,
         LTRACEF("handler returned %d/%d\n",
                 static_cast<int>(status), static_cast<int>(estatus));
         switch (status) {
-        case ERR_INTERRUPTED:
+        case MX_ERR_INTERNAL_INTR_KILLED:
             // thread was killed, probably with mx_task_kill
             thread->Exit();
             __UNREACHABLE;

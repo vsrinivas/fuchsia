@@ -233,7 +233,7 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
     // (2) Wait for notification via waiter's event or for the
     // deadline to hit.
     mx_status_t status = waiter->Wait(deadline);
-    if (status == MX_ERR_INTERRUPTED_RETRY) {
+    if (status == MX_ERR_INTERNAL_INTR_RETRY) {
         // If we got interrupted, return out to usermode, but
         // do not clear the waiter.
         return status;

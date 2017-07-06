@@ -89,5 +89,5 @@ void BlockingRetryWrapper::preCall(ofstream& os, const Syscall& sc) const {
 
 void BlockingRetryWrapper::postCall(
     ofstream& os, const Syscall& sc, string return_var) const {
-    os << in << "} while (unlikely(" << return_var << " == MX_ERR_INTERRUPTED_RETRY));\n";
+    os << in << "} while (unlikely(" << return_var << " == MX_ERR_INTERNAL_INTR_RETRY));\n";
 }

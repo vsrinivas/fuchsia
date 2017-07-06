@@ -347,12 +347,12 @@ status_t thread_suspend(thread_t *t)
         case THREAD_BLOCKED:
             /* thread is blocked on something and marked interruptable */
             if (t->interruptable)
-                thread_unblock_from_wait_queue(t, MX_ERR_INTERRUPTED_RETRY);
+                thread_unblock_from_wait_queue(t, MX_ERR_INTERNAL_INTR_RETRY);
             break;
         case THREAD_SLEEPING:
             /* thread is sleeping */
             if (t->interruptable) {
-                t->blocked_status = MX_ERR_INTERRUPTED_RETRY;
+                t->blocked_status = MX_ERR_INTERNAL_INTR_RETRY;
 
                 sched_unblock(t);
             }
@@ -599,12 +599,12 @@ void thread_kill(thread_t *t, bool block)
         case THREAD_BLOCKED:
             /* thread is blocked on something and marked interruptable */
             if (t->interruptable)
-                thread_unblock_from_wait_queue(t, ERR_INTERRUPTED);
+                thread_unblock_from_wait_queue(t, MX_ERR_INTERNAL_INTR_KILLED);
             break;
         case THREAD_SLEEPING:
             /* thread is sleeping */
             if (t->interruptable) {
-                t->blocked_status = ERR_INTERRUPTED;
+                t->blocked_status = MX_ERR_INTERNAL_INTR_KILLED;
 
                 sched_unblock(t);
             }
@@ -1015,9 +1015,9 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable)
     /* if we've been killed and going in interruptable, abort here */
     if (interruptable && unlikely((current_thread->signals))) {
         if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            blocked_status = ERR_INTERRUPTED;
+            blocked_status = MX_ERR_INTERNAL_INTR_KILLED;
         } else {
-            blocked_status = MX_ERR_INTERRUPTED_RETRY;
+            blocked_status = MX_ERR_INTERNAL_INTR_RETRY;
         }
         goto out;
     }
@@ -1447,9 +1447,9 @@ status_t wait_queue_block(wait_queue_t *wait, lk_time_t deadline)
 
     if (current_thread->interruptable && unlikely(current_thread->signals)) {
         if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            return ERR_INTERRUPTED;
+            return MX_ERR_INTERNAL_INTR_KILLED;
         } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-            return MX_ERR_INTERRUPTED_RETRY;
+            return MX_ERR_INTERNAL_INTR_RETRY;
         }
     }
 

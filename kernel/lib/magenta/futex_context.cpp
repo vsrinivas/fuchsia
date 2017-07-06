@@ -77,8 +77,8 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     }
 
     // The following happens if we hit the deadline (MX_ERR_TIMED_OUT) or if
-    // the thread was killed (ERR_INTERRUPTED) or suspended
-    // (MX_ERR_INTERRUPTED_RETRY).
+    // the thread was killed (MX_ERR_INTERNAL_INTR_KILLED) or suspended
+    // (MX_ERR_INTERNAL_INTR_RETRY).
     //
     // We need to ensure that the thread's node is removed from the wait
     // queue, because FutexWake() probably didn't do that.
