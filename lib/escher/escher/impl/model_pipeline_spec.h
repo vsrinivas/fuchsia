@@ -32,6 +32,8 @@ struct ModelPipelineSpec {
   bool is_clippee = false;
   // TODO: this is a hack.
   bool use_depth_prepass = true;
+  // Set to true if an object has a material.
+  bool has_material = false;
 };
 #pragma pack(pop)
 
@@ -44,7 +46,8 @@ inline bool operator==(const ModelPipelineSpec& spec1,
          spec1.sample_count == spec2.sample_count &&
          spec1.clipper_state == spec2.clipper_state &&
          spec1.is_clippee == spec2.is_clippee &&
-         spec1.use_depth_prepass == spec2.use_depth_prepass;
+         spec1.use_depth_prepass == spec2.use_depth_prepass &&
+         spec1.has_material == spec2.has_material;
 }
 
 inline bool operator!=(const ModelPipelineSpec& spec1,

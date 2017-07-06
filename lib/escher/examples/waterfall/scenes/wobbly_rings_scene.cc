@@ -116,8 +116,20 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   ring2.set_shape_modifier_data(wobble_data);
   ring3.set_shape_modifier_data(wobble_data);
 
-  Object clip_circle(Object::NewCircle(
+  // Create two circles that will be part of a clip group.  One draws a
+  // background, and is orbited by a smaller circle that doesn't draw a
+  // background.
+  Object clip_circle1(Object::NewCircle(
       center - vec2(x_pos_offset, y_pos_offset), 400.f, 2.f, clip_color_));
+  x_pos_offset += cos(current_time_sec * 2.f) * 420.f;
+  y_pos_offset += sin(current_time_sec * 2.f) * 420.f;
+  Object clip_circle2(Object::NewCircle(
+      center - vec2(x_pos_offset, y_pos_offset), 180.f, 2.f, nullptr));
+
+  // Create a clip group where the two clip-circles are used to clip some of
+  // the other objects defined above.
+  Object clip_group({clip_circle1, clip_circle2},
+                    {ring1, ring2, ring3, circle1, circle2});
 
 // Create a wobbly rectangle
 #if 0
@@ -132,9 +144,8 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
       0.f, checkerboard_material_));
 #endif
 
-  clip_circle.set_clipped_children({ring1, ring2, ring3, circle1, circle2});
-
-  std::vector<Object> objects{clip_circle, circle3, circle4, rectangle};
+  std::vector<Object> objects{std::move(clip_group), circle3, circle4,
+                              rectangle};
 
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));

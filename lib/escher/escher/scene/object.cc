@@ -17,6 +17,13 @@ Object::Object(const mat4& transform, MeshPtr mesh, MaterialPtr material)
 Object::Object(const vec3& position, MeshPtr mesh, MaterialPtr material)
     : Object(glm::translate(position), std::move(mesh), std::move(material)) {}
 
+Object::Object(std::vector<Object> clippers, std::vector<Object> clippees)
+    : transform_(mat4(1)),
+      shape_(Shape(Shape::Type::kNone)),
+      material_(MaterialPtr()),
+      clippers_(std::move(clippers)),
+      clippees_(std::move(clippees)) {}
+
 Object::~Object() {}
 
 Object Object::NewRect(const vec2& top_left_position,

@@ -29,7 +29,7 @@ inline ShapeModifiers operator|(ShapeModifier bit0, ShapeModifier bit1) {
 // Describes a planar shape primitive to be drawn.
 class Shape {
  public:
-  enum class Type { kRect, kCircle, kMesh };
+  enum class Type { kRect, kCircle, kMesh, kNone };
 
   explicit Shape(Type type, ShapeModifiers modifiers = ShapeModifiers());
   explicit Shape(MeshPtr mesh, ShapeModifiers modifiers = ShapeModifiers());

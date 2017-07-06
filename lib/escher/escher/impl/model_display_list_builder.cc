@@ -33,6 +33,8 @@ static mat4 AdjustCameraTransform(const Stage& stage,
   return scale_adjustment * camera.projection() * camera.transform();
 }
 
+ModelDisplayListBuilder::~ModelDisplayListBuilder() = default;
+
 ModelDisplayListBuilder::ModelDisplayListBuilder(
     vk::Device device,
     const Stage& stage,
@@ -130,55 +132,121 @@ static size_t AlignedToNext(size_t position, size_t alignment) {
   return position;
 }
 
-void ModelDisplayListBuilder::AddObject(const Object& object) {
+void ModelDisplayListBuilder::AddClipperObject(const Object& object) {
+  if (object.shape().type() == Shape::Type::kNone) {
+    // The object has no shape to clip against.
+    return;
+  }
+
+  FTL_DCHECK(object.shape().modifiers() == ShapeModifiers());
+
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerObject),
                                      kMinUniformBufferOffsetAlignment);
   vk::DescriptorSet descriptor_set = ObtainPerObjectDescriptorSet();
   UpdateDescriptorSetForObject(object, descriptor_set);
 
-  const bool is_clipper = !object.clipped_children().empty();
-  const bool is_clippee = clip_depth_ > 0;
-
-  // We can immediately create the display list item, even before we have
-  // updated the descriptor set.
   ModelDisplayList::Item item;
-  item.descriptor_sets[0] = descriptor_set;
+  item.descriptor_set = descriptor_set;
   item.mesh = renderer_->GetMeshForShape(object.shape());
   pipeline_spec_.mesh_spec = item.mesh->spec();
   pipeline_spec_.shape_modifiers = object.shape().modifiers();
-  pipeline_spec_.is_clippee = is_clippee;
+  pipeline_spec_.is_clippee = clip_depth_ > 0;
   pipeline_spec_.clipper_state =
-      is_clipper ? ModelPipelineSpec::ClipperState::kBeginClipChildren
-                 : ModelPipelineSpec::ClipperState::kNoClipChildren;
+      ModelPipelineSpec::ClipperState::kBeginClipChildren;
+  pipeline_spec_.has_material = !!object.material();
   item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
   item.stencil_reference = clip_depth_;
 
-  if (is_clipper) {
-    // Drawing the item will increment the value in the stencil buffer.  Update
-    // |clip_depth_| so that children can test against the correct value.
-    items_.push_back(item);
-    ++clip_depth_;
+  items_.push_back(item);
+}
 
-    // Recursively draw clipped children.
-    for (auto& o : object.clipped_children()) {
-      AddObject(o);
-    }
+void ModelDisplayListBuilder::AddClipperAndClippeeObjects(
+    const Object& object) {
+  const bool is_clippee = clip_depth_ > 0;
 
-    // Revert the stencil buffer to the previous state.
-    // TODO: if we knew that no subsequent children were to be clipped, we
-    // could avoid this.
+  // Remember the beginning and end of clipper-items, so that we can later
+  // undo their effects upon the stencil buffer.
+  size_t clipper_start_index = items_.size();
+
+  // Drawing clippers will increment the values in the stencil buffer.  Update
+  // |clip_depth_| so that children can test against the correct value.
+  AddClipperObject(object);
+  for (auto& clipper : object.clippers()) {
+    FTL_DCHECK(clipper.clippers().empty());
+    FTL_DCHECK(clipper.clippees().empty());
+    AddClipperObject(clipper);
+  }
+  // Remember the beginning and end of clipper-items, so that we can later
+  // undo their effects upon the stencil buffer.
+  size_t clipper_end_index = items_.size();
+
+  ++clip_depth_;
+
+  // Recursively draw clipped children.
+  for (auto& o : object.clippees()) {
+    AddObject(o);
+  }
+
+  // Revert the stencil buffer to the previous state.
+  // TODO: if we knew that no subsequent children were to be clipped, we
+  // could avoid this.
+  for (size_t index = clipper_start_index; index < clipper_end_index; ++index) {
+    ModelDisplayList::Item item = items_[index];
     pipeline_spec_.mesh_spec = item.mesh->spec();
-    pipeline_spec_.shape_modifiers = object.shape().modifiers();
+    pipeline_spec_.shape_modifiers = ShapeModifiers();
     pipeline_spec_.is_clippee = is_clippee;
     pipeline_spec_.clipper_state =
         ModelPipelineSpec::ClipperState::kEndClipChildren;
+    // Even if the object has a material, we already drew it the first time;
+    // now we just need to clear the stencil buffer.
+    pipeline_spec_.has_material = false;
     item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
     item.stencil_reference = clip_depth_;
+
     items_.push_back(std::move(item));
-    --clip_depth_;
-  } else {
+  }
+
+  --clip_depth_;
+}
+
+void ModelDisplayListBuilder::AddNonClipperObject(const Object& object) {
+  FTL_DCHECK(object.clippees().empty());
+  if (object.material()) {
     // Simply push the item.
+    PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerObject),
+                                       kMinUniformBufferOffsetAlignment);
+    vk::DescriptorSet descriptor_set = ObtainPerObjectDescriptorSet();
+    UpdateDescriptorSetForObject(object, descriptor_set);
+
+    ModelDisplayList::Item item;
+    item.descriptor_set = descriptor_set;
+    item.mesh = renderer_->GetMeshForShape(object.shape());
+    pipeline_spec_.mesh_spec = item.mesh->spec();
+    pipeline_spec_.shape_modifiers = object.shape().modifiers();
+    pipeline_spec_.is_clippee = clip_depth_ > 0;
+    pipeline_spec_.clipper_state =
+        ModelPipelineSpec::ClipperState::kNoClipChildren;
+    pipeline_spec_.has_material = true;
+    item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
+    item.stencil_reference = clip_depth_;
+
     items_.push_back(std::move(item));
+  }
+}
+
+void ModelDisplayListBuilder::AddObject(const Object& object) {
+  const bool has_clippees = !object.clippees().empty();
+
+  if (has_clippees) {
+    AddClipperAndClippeeObjects(object);
+  } else {
+    // Some of these may need to be drawn (i.e. if they have both shape and
+    // material), even though there are no clippees to clip.  In this case,
+    // draw them without updating the stencil buffer.
+    AddNonClipperObject(object);
+    for (auto& clipper : object.clippers()) {
+      AddNonClipperObject(clipper);
+    }
   }
 }
 
@@ -189,15 +257,18 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
       &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   *per_object = ModelData::PerObject();  // initialize with default values
 
+  auto& mat = object.material();
+
   // Push uniforms for scale/translation and color.
   per_object->transform = camera_transform_ * object.transform();
-  per_object->color = vec4(object.material()->color(), 1.f);  // always opaque
+  per_object->color =
+      mat ? vec4(mat->color(), 1) : vec4(1, 1, 1, 1);  // always opaque
 
   // Find the texture to use, either the object's material's texture, or
   // the default texture if the material doesn't have one.
   vk::ImageView image_view;
   vk::Sampler sampler;
-  if (auto& texture = object.material()->texture()) {
+  if (auto& texture = mat ? mat->texture() : nullptr) {
     if (!use_material_textures_) {
       // The object's material has a texture, but we choose not to use it.
       image_view = white_texture_->image_view();

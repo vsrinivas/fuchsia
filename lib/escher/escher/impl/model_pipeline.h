@@ -23,6 +23,10 @@ class ModelPipeline {
   vk::Pipeline pipeline() const { return pipeline_; }
   vk::PipelineLayout pipeline_layout() const { return pipeline_layout_; }
 
+  // Return true if this pipeline was created with
+  // VK_DYNAMIC_STATE_STENCIL_REFERENCE.
+  bool HasDynamicStencilState() const { return spec_.is_clippee; }
+
  private:
   friend class ModelPipelineCache;
 

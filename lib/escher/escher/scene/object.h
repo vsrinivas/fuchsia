@@ -22,6 +22,7 @@ class Object {
   Object(const Transform& transform, MeshPtr mesh, MaterialPtr material);
   Object(const mat4& transform, MeshPtr mesh, MaterialPtr material);
   Object(const vec3& position, MeshPtr mesh, MaterialPtr material);
+  Object(std::vector<Object> clippers, std::vector<Object> clippees);
   Object(const Object& other) = default;
   Object(Object&& other) = default;
   static Object NewRect(const vec2& top_left_position,
@@ -71,13 +72,13 @@ class Object {
   template <typename DataT>
   void set_shape_modifier_data(const DataT& data);
 
-  const std::vector<Object>& clipped_children() const {
-    return clipped_children_;
-  }
+  // Return the list of objects whose shapes will be used to clip 'clippees()'.
+  // It is OK for these objects to not have a material; in this case the objects
+  // update the stencil buffer, but not the color/depth buffers.
+  const std::vector<Object>& clippers() const { return clippers_; }
 
-  void set_clipped_children(std::vector<Object> clipped_children) {
-    clipped_children_ = std::move(clipped_children);
-  }
+  // Return the list of objects whose shapes will be clipped by 'clippers()'.
+  const std::vector<Object>& clippees() const { return clippees_; }
 
  private:
   Object(mat4 transform, Shape shape, MaterialPtr material)
@@ -89,7 +90,8 @@ class Object {
   Shape shape_;
   MaterialPtr material_;
   std::unordered_map<ShapeModifier, std::vector<uint8_t>> shape_modifier_data_;
-  std::vector<Object> clipped_children_;
+  std::vector<Object> clippers_;
+  std::vector<Object> clippees_;
 };
 
 // Inline function definitions.

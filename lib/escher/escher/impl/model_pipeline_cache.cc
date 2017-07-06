@@ -288,7 +288,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
       case ModelPipelineSpec::ClipperState::kBeginClipChildren: {
         // We are clipped by some other object, and also want to clip our
         // children.  This is achieved by incrementing the stencil buffer.
-        // Therefore, test the stencil buffer, but do not update it.
+        // Therefore, test the stencil buffer, and update it if successful.
         op_state.failOp = vk::StencilOp::eKeep;
         op_state.passOp = vk::StencilOp::eIncrementAndWrap;
         op_state.depthFailOp = vk::StencilOp::eIncrementAndWrap;
@@ -414,10 +414,15 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   // The depth-only pre-pass uses a different renderpass and a cheap fragment
   // shader.
   vk::RenderPass render_pass = depth_prepass_;
-  bool enable_depth_write = true;
-  vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
-  if (spec.use_depth_prepass) {
+  const bool enable_depth_write = spec.has_material;
+  const bool omit_fragment_shader =
+      spec.use_depth_prepass || !spec.has_material;
+  const vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
+  if (omit_fragment_shader) {
     // Omit fragment shader.
+    if (!spec.use_depth_prepass) {
+      render_pass = lighting_pass_;
+    }
   } else {
     render_pass = lighting_pass_;
     fragment_spirv_future =
@@ -438,7 +443,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
         ESCHER_CHECKED_VK_RESULT(device.createShaderModule(module_info));
   }
   vk::ShaderModule fragment_module;
-  if (!spec.use_depth_prepass) {
+  if (!omit_fragment_shader) {
     SpirvData spirv = fragment_spirv_future.get();
 
     vk::ShaderModuleCreateInfo module_info;

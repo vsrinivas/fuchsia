@@ -36,11 +36,27 @@ class ModelDisplayListBuilder {
                           // (see callers).
                           bool use_depth_prepass);
 
+  ~ModelDisplayListBuilder();
+
   void AddObject(const Object& object);
 
   ModelDisplayListPtr Build(CommandBuffer* command_buffer);
 
  private:
+  // Called by AddObject() when the object has clippees.  First draws the object
+  // and any additional clippers, updating the stencil buffer.  Then, calls
+  // AddObject() each of the clippees (note: this may be recursive, since each
+  // clippee may be a clipper of its own list of clippees).  Finally, the
+  // clippers are redrawn to return the stencil buffer to its original state.
+  void AddClipperAndClippeeObjects(const Object& object);
+  // Leaf helper called by AddClipperAndClippeeObjects(); actually writes data
+  // to uniform buffers, updates descriptor sets, and adds an item to the
+  // display list.
+  void AddClipperObject(const Object& object);
+  // Leaf helper called by AddObject(); actually writes data to uniform buffers,
+  // updates descriptor sets, and adds an item to the display list.
+  void AddNonClipperObject(const Object& object);
+
   void PrepareUniformBufferForWriteOfSize(size_t size, size_t alignment);
   vk::DescriptorSet ObtainPerObjectDescriptorSet();
   void UpdateDescriptorSetForObject(const Object& object,

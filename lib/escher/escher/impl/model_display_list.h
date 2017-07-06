@@ -18,7 +18,7 @@ class ModelDisplayList : public Resource {
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
   struct Item {
-    vk::DescriptorSet descriptor_sets[ModelData::PerObject::kDescriptorCount];
+    vk::DescriptorSet descriptor_set;
     ModelPipeline* pipeline;
     MeshPtr mesh;
     uint32_t stencil_reference;

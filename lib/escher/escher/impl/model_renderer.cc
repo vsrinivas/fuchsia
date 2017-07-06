@@ -90,12 +90,19 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
                        Hash<ModelPipelineSpec>>
         pipeline_bins;
     for (size_t i = 0; i < objects.size(); ++i) {
-      ModelPipelineSpec spec;
       auto& obj = objects[i];
-      spec.mesh_spec = GetMeshForShape(obj.shape())->spec();
-      spec.shape_modifiers = obj.shape().modifiers();
-      pipeline_bins[spec].push_back(i);
+      if (obj.shape().type() == Shape::Type::kNone) {
+        // The Object is a clip-group; immediately add this to list of opaque
+        // objects without binning.
+        opaque_objects.push_back(i);
+      } else {
+        ModelPipelineSpec spec;
+        spec.mesh_spec = GetMeshForShape(obj.shape())->spec();
+        spec.shape_modifiers = obj.shape().modifiers();
+        pipeline_bins[spec].push_back(i);
+      }
     }
+
     for (auto& pair : pipeline_bins) {
       for (uint32_t object_index : pair.second) {
         opaque_objects.push_back(object_index);
@@ -162,6 +169,22 @@ void ModelRenderer::Draw(const Stage& stage,
       vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                      current_pipeline);
 
+      // According to my reading of the Vulkan spec, the "valid usage"
+      // requirements for vkCmdSetStencilReference() imply that it must be
+      // called after binding a new pipeline:
+      //   "The currently bound graphics pipeline MUST have been created with
+      //    the VK_DYNAMIC_STATE_STENCIL_REFERENCE dynamic state enabled".
+      // ... this implies that it will not simply be ignored if the pipeline
+      // doesn't have dynamic state (i.e. it can have bad effects, which we
+      // verified by experiment), which implies that the reference state is
+      // stored into memory associated with the pipeline, which implies that
+      // we must set it when binding a new pipeline.
+      if (item.pipeline->HasDynamicStencilState()) {
+        current_stencil_reference = item.stencil_reference;
+        vk_command_buffer.setStencilReference(vk::StencilFaceFlagBits::eFront,
+                                              current_stencil_reference);
+      }
+
       // Whenever the pipeline changes, it is possible that the pipeline layout
       // must also change.
       if (current_pipeline_layout != item.pipeline->pipeline_layout()) {
@@ -173,13 +196,14 @@ void ModelRenderer::Draw(const Stage& stage,
       }
     }
 
-    if (current_stencil_reference != item.stencil_reference) {
+    if (item.pipeline->HasDynamicStencilState() &&
+        current_stencil_reference != item.stencil_reference) {
       current_stencil_reference = item.stencil_reference;
       vk_command_buffer.setStencilReference(vk::StencilFaceFlagBits::eFront,
                                             current_stencil_reference);
     }
 
-    vk::DescriptorSet ds = item.descriptor_sets[0];
+    vk::DescriptorSet ds = item.descriptor_set;
     vk_command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, current_pipeline_layout,
         ModelData::PerObject::kDescriptorSetIndex, 1, &ds, 0, nullptr);
@@ -196,9 +220,12 @@ const MeshPtr& ModelRenderer::GetMeshForShape(const Shape& shape) const {
       return circle_;
     case Shape::Type::kMesh:
       return shape.mesh();
+    case Shape::Type::kNone: {
+      FTL_DCHECK(false);
+      static const MeshPtr kNone;
+      return kNone;
+    }
   }
-  FTL_CHECK(false);
-  return shape.mesh();  // this would DCHECK
 }
 
 MeshPtr ModelRenderer::CreateRectangle() {
