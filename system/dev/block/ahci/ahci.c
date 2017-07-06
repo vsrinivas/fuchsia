@@ -725,11 +725,11 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     const pci_config_t* config;
     size_t config_size;
     mx_handle_t config_handle;
-    status = device->pci.ops->map_resource(&device->pci,
-                                           PCI_RESOURCE_CONFIG,
-                                           MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                           (void**)&config,
-                                           &config_size, &config_handle);
+    status = pci_map_resource(&device->pci,
+                              PCI_RESOURCE_CONFIG,
+                              MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              (void**)&config,
+                              &config_size, &config_handle);
     if (status != MX_OK) {
         xprintf("ahci: error %d getting pci config\n", status);
         goto fail;
