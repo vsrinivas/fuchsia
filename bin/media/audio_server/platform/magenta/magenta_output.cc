@@ -122,8 +122,10 @@ MediaResult MagentaOutput::Init() {
     req.channels = kDefaultChannelCount;
     req.sample_format = kDefaultAudio2Fmt;
 
-    res =
-        SyncDriverCall(stream_channel_, req, &resp, rb_channel_.get_address());
+    res = SyncDriverCall(stream_channel_,
+                         req,
+                         &resp,
+                         rb_channel_.reset_and_get_address());
     if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to set format " << req.frames_per_second
                      << "Hz " << req.channels << "-Ch 0x" << std::hex
@@ -207,7 +209,10 @@ MediaResult MagentaOutput::Init() {
     req.min_ring_buffer_frames = kDefaultRingBufferFrames;
     req.notifications_per_ring = 0;
 
-    res = SyncDriverCall(rb_channel_, req, &resp, rb_vmo_.get_address());
+    res = SyncDriverCall(rb_channel_,
+                         req,
+                         &resp,
+                         rb_vmo_.reset_and_get_address());
 
     // TODO(johngro): Do a better job of translating errors.
     if (res != MX_OK) {

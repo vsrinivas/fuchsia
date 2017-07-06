@@ -116,7 +116,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd,
       mx::channel channel;
       ssize_t res;
 
-      res = ioctl_audio2_get_channel(dev_node.get(), channel.get_address());
+      res = ioctl_audio2_get_channel(dev_node.get(),
+                                     channel.reset_and_get_address());
       if (res < 0) {
         FTL_LOG(INFO) << "Failed to open channel to Audio2 output (res " << res
                       << ")";
