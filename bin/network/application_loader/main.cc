@@ -57,6 +57,7 @@ class RetryingLoader {
     if (response->status_code == 200) {
       auto package = app::ApplicationPackage::New();
       package->data = std::move(response->body->get_buffer());
+      package->resolved_url = std::move(response->url);
       SendResponse(std::move(package));
     } else if (response->error) {
       Retry(response);
