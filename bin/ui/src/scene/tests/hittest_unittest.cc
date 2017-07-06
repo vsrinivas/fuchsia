@@ -179,22 +179,22 @@ TEST_F(HitTestTest, RayAboveScenePointingUp) {
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode1) {
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
-             {{.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f},
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
-              {.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f}});
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode2) {
   ExpectHits(2, vec3(0.f, 0.f, 10.f), kDownVector,
-             {{.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f},
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
-              {.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f}});
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode3) {
   ExpectHits(3, vec3(-4.f, -4.f, 10.f), kDownVector,
-             {{.tag = 25, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f},
-              {.tag = 10, .tx = 0.f, .ty = 0.f, .tz = -2.f, .d = 8.f}});
+             {{.tag = 10, .tx = 0.f, .ty = 0.f, .tz = -2.f, .d = 8.f},
+              {.tag = 25, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode4) {
@@ -204,22 +204,22 @@ TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode4) {
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode1) {
   ExpectHits(1, vec3(9.f, 9.f, 10.f), kDownVector,
-             {{.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f},
+             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
-              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f}});
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode2) {
   ExpectHits(2, vec3(9.f, 9.f, 10.f), kDownVector,
-             {{.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f},
+             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
-              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f}});
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode3) {
   ExpectHits(3, vec3(5.f, 5.f, 10.f), kDownVector,
-             {{.tag = 25, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f},
-              {.tag = 20, .tx = -5.f, .ty = -5.f, .tz = -1.f, .d = 9.f}});
+             {{.tag = 20, .tx = -5.f, .ty = -5.f, .tz = -1.f, .d = 9.f},
+              {.tag = 25, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode5) {
@@ -234,9 +234,9 @@ TEST_F(HitTestTest, Hit20InMiddleFromNode6) {
 TEST_F(HitTestTest, HitBoth10And20FromNode1) {
   // 10 is nearer so it comes before 20
   ExpectHits(1, vec3(6.f, 6.f, 10.f), kDownVector,
-             {{.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f},
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
-              {.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f},
               {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f}});
 }
 
@@ -248,11 +248,11 @@ TEST_F(HitTestTest, DISABLED_HitBoth20And30FromNode1) {
   // 20 and 30 are same distance but 30 is closer in draw order so it
   // comes before 20
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
-             {{.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f},
-              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
-              {.tag = 30, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
+             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
-              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f}});
+              {.tag = 30, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
+              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 }  // namespace test

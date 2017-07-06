@@ -29,13 +29,6 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   ray_info_ = nullptr;
   session_ = nullptr;
 
-  // Arrange the hits from outermost to innermost node.
-  // They were originally inserted during a post-order traversal
-  // walking children from first to last.  This reversal results in a
-  // list which follows a pre-order traversal with children enumerated
-  // from last to first.
-  std::reverse(hits_.begin(), hits_.end());
-
   // Sort by distance, preserving traversal order in case of ties.
   std::stable_sort(hits_.begin(), hits_.end(), [](const Hit& a, const Hit& b) {
     return a.distance < b.distance;

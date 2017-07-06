@@ -143,10 +143,11 @@ interface Session {
   // Performs a hit test along the specified ray.
   //
   // Returns a list of intersections of tagged nodes between the ray
-  // and the geometry of the subtree of nodes at |node_id|.  Results
-  // are sorted by increasing distance then by increasing node tree
-  // depth.  This ensures that containers will appear before their
-  // children in the result set.
+  // and the geometry of the subtree of nodes at |node_id|.  Results are
+  // sorted by increasing distance from the ray's origin.  Nodes which are
+  // hit at the same distance are sorted by the sequence they would appear
+  // in a post-order tree traversal of the scene.  Equivalently, the
+  // results are ordered by decreasing hit specificity.
   //
   // The session must associate a tag with any nodes it would like to
   // observe in the result set.  Untagged nodes are still considered in
