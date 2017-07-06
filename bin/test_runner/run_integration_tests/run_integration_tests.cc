@@ -13,7 +13,7 @@
 #include <iostream>
 
 #include "apps/test_runner/lib/test_runner.h"
-#include "apps/test_runner/src/run_tests/test_runner_config.h"
+#include "apps/test_runner/src/run_integration_tests/test_runner_config.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -22,13 +22,10 @@
 namespace test_runner {
 namespace {
 
-// TODO(abarth): Remove this reference to a hard-coded config file.
-constexpr char kModularTestsJson[] =
-    "/system/apps/modular_tests/modular_tests.json";
-
-class ModularTestRunObserver : public test_runner::TestRunObserver {
+class TestRunObserverImpl : public test_runner::TestRunObserver {
  public:
-  ModularTestRunObserver(const std::string& test_id) : test_id_(test_id) {}
+  TestRunObserverImpl(const std::string& test_id) : test_id_(test_id) {}
+
   void SendMessage(const std::string& test_id,
                    const std::string& operation,
                    const std::string& msg) override {
@@ -55,7 +52,7 @@ bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
   size_t random_size;
   mx_cprng_draw(&random_number, sizeof random_number, &random_size);
   std::string test_id = ftl::StringPrintf("test_%lX", random_number);
-  ModularTestRunObserver observer(test_id);
+  TestRunObserverImpl observer(test_id);
   test_runner::TestRunContext context(app_context, &observer, test_id, url,
                                       args);
 
@@ -71,25 +68,28 @@ void PrintKnownTests(const TestRunnerConfig& config) {
   }
 }
 
-int RunTestsMain(int argc, char** argv) {
+int RunIntegrationTestsMain(int argc, char** argv) {
   mtl::MessageLoop loop;
   ftl::CommandLine settings = ftl::CommandLineFromArgcArgv(argc, argv);
-  TestRunnerConfig config(
-      settings.GetOptionValueWithDefault("test_file", kModularTestsJson));
-
-  if (settings.HasOption("help")) {
-    std::cerr << R"USAGE(test runner [TEST NAME]
-  --test_file <file path>    The json file defining all the tests. [DEFAULT:
-                             /system/apps/modular_tests/modular_tests.json]
+  std::string test_file;
+  if (!settings.GetOptionValue("test_file", &test_file) ||
+      settings.HasOption("help")) {
+    std::cerr << R"USAGE(run_integration_tests [TEST NAME]
+  --test_file <file path>    The JSON file defining all the tests (required).
   --help                     This message.
 
   If a [TEST NAME] which is listed in --test_file is provided, it is run.
   Otherwise, all tests from --test_file are run.
 )USAGE";
 
-    PrintKnownTests(config);
+    if (!test_file.empty()) {
+      TestRunnerConfig config(test_file);
+      PrintKnownTests(config);
+    }
     return 0;
   }
+
+  TestRunnerConfig config(test_file);
 
   std::shared_ptr<app::ApplicationContext> app_context =
       app::ApplicationContext::CreateFromStartupInfo();
@@ -158,5 +158,5 @@ int RunTestsMain(int argc, char** argv) {
 }  // namespace test_runner
 
 int main(int argc, char** argv) {
-  return test_runner::RunTestsMain(argc, argv);
+  return test_runner::RunIntegrationTestsMain(argc, argv);
 }

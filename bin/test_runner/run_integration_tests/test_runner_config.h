@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_TESTS_RUN_MODULAR_TESTS_TEST_RUNNER_CONFIG_H_
-#define APPS_MODULAR_TESTS_RUN_MODULAR_TESTS_TEST_RUNNER_CONFIG_H_
+#ifndef APPS_TEST_RUNNER_SRC_RUN_INTEGRATION_TESTS_TEST_RUNNER_CONFIG_H_
+#define APPS_TEST_RUNNER_SRC_RUN_INTEGRATION_TESTS_TEST_RUNNER_CONFIG_H_
 
 #include <map>
 #include <string>
@@ -40,4 +40,4 @@ class TestRunnerConfig {
 
 }  // namespace test_runner
 
-#endif  // APPS_MODULAR_TESTS_RUN_MODULAR_TESTS_TEST_RUNNER_CONFIG_H_
+#endif  // APPS_TEST_RUNNER_SRC_RUN_INTEGRATION_TESTS_TEST_RUNNER_CONFIG_H_
