@@ -26,9 +26,9 @@ name and the application URL which provides it.
 
     {
       "services": {
-        "service-name-1": "file:///system/apps/app_without_args",
+        "service-name-1": "app_without_args",
         "service-name-2": [
-           "file:///system/apps/app_with_args", "arg1", "arg2", "arg3"
+           "app_with_args", "arg1", "arg2", "arg3"
         ]
       }
     }
@@ -42,9 +42,9 @@ handling "file" URIs, is mapped by default.
 
     {
       "loaders": {
-        "scheme-1": "file:///system/apps/loader_without_args",
+        "scheme-1": "loader_without_args",
         "scheme-2": [
-           "file:///system/apps/loader_with_args", "arg1", "arg2", "arg3"
+           "loader_with_args", "arg1", "arg2", "arg3"
         ]
       }
     }
@@ -57,7 +57,7 @@ of an app URL and its arguments.
 
     {
       "apps": [
-        "file:///system/apps/app_without_args",
-        [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
+        "app_without_args",
+        [ "app_with_args", "arg1", "arg2", "arg3" ]
       ]
     }

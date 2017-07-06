@@ -16,8 +16,8 @@ namespace app {
 // The configuration file should be specified as:
 // {
 //   "initial-apps": [
-//     "file:///system/apps/app_without_args",
-//     [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
+//     "app_without_args",
+//     [ "app_with_args", "arg1", "arg2", "arg3" ]
 //   ],
 //   "path": [
 //     "/system/apps"
