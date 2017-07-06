@@ -11,7 +11,7 @@ MODULE_CFLAGS += -Wno-discarded-qualifiers -Wno-format-signedness
 else
 MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
 endif
-MODULE_CFLAGS += -Wno-strict-aliasing
+MODULE_CFLAGS += -fno-strict-aliasing
 
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/source/include/acpica
 

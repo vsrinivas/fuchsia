@@ -185,7 +185,12 @@ MODULE_CFLAGS += -Wno-discarded-qualifiers
 else
 MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
 endif
-MODULE_CFLAGS += -Wno-strict-aliasing -I$(SRC_DIR)/include/acpica
+# We need to specify -fno-strict-aliasing, since ACPICA has a habit of violating strict aliasing
+# rules in some of its macros.  Rewriting this code would increase the maintenance cost of
+# bringing in the latest upstream ACPICA, so instead we mitigate the problem with a compile-time
+# flag.  We take the more conservative approach of disabling strict-aliasing-based optimizations,
+# rather than disabling warnings.
+MODULE_CFLAGS += -fno-strict-aliasing -I$(SRC_DIR)/include/acpica
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

@@ -10,7 +10,7 @@ MODULE_NAME := acpisvc
 
 MODULE_TYPE := userapp
 
-MODULE_CFLAGS += -Wno-strict-aliasing -Ithird_party/lib/acpica/source/include
+MODULE_CFLAGS += -fno-strict-aliasing -Ithird_party/lib/acpica/source/include
 
 ifeq ($(ARCH),x86)
 MODULE_SRCS += \
