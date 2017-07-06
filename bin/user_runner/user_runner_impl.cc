@@ -103,6 +103,12 @@ UserRunnerImpl::UserRunnerImpl(
       user_shell_(user_scope_.GetLauncher(), std::move(user_shell)) {
   binding_->set_connection_error_handler([this] { Terminate([] {}); });
 
+  // If ledger state is erased from underneath us (happens when the cloud store
+  // is cleared), ledger will close the connection to |ledger_repository_|.
+  ledger_repository_.set_connection_error_handler([this] {
+    Logout();
+  });
+
   // Show user shell.
 
   mozart::ViewProviderPtr view_provider;
