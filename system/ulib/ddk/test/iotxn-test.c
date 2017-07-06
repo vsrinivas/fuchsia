@@ -351,21 +351,8 @@ static bool test_phys_iter_unaligned_noncontig(void) {
 
     iotxn_phys_iter_init(&iter, &iotxn, 0);
     mx_paddr_t paddr;
+
     size_t size = iotxn_phys_iter_next(&iter, &paddr);
-
-
-    // TODO(teisenbe): This is a bug.  The correct behavior is in the commented
-    // out block below.
-    ASSERT_EQ(size, 2u * PAGE_SIZE - 128, "");
-    ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
-
-    size = iotxn_phys_iter_next(&iter, &paddr);
-    ASSERT_EQ(size, 128u, "");
-    ASSERT_EQ(paddr, iotxn.phys[2], "");
-
-    size = iotxn_phys_iter_next(&iter, &paddr);
-    ASSERT_EQ(size, 0u, "");
-    /*
     ASSERT_EQ(size, PAGE_SIZE - 128u, "");
     ASSERT_EQ(paddr, iotxn.phys[0] + 128, "");
 
@@ -379,7 +366,6 @@ static bool test_phys_iter_unaligned_noncontig(void) {
 
     size = iotxn_phys_iter_next(&iter, &paddr);
     ASSERT_EQ(size, 0u, "");
-    */
 
     free(iotxn.phys);
 
