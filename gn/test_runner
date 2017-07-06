@@ -11,8 +11,8 @@
             "bootfs_path": "bin/report_result"
         },
         {
-            "binary": "run_tests",
-            "bootfs_path": "test/run_tests"
+            "binary": "run_integration_tests",
+            "bootfs_path": "test/run_integration_tests"
         },
         {
             "binary": "test_runner",
