@@ -226,7 +226,7 @@ template("package") {
         dest = "lib/" + library.name
         if (defined(library.used_by_drivers) && library.used_by_drivers) {
             boot_manifest_contents += [ "$dest=$source" ]
-        k else {
+        } else {
             package_manifest_contents += [ "$dest=$source" ]
         }
       }
