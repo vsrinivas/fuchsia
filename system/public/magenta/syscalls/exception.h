@@ -137,7 +137,8 @@ typedef struct mx_exception_report {
 // (default resume does not do so)
 
 #define MX_RESUME_TRY_NEXT (2)
-#define MX_RESUME_NOT_HANDLED (2) // deprecated
+typedef int MX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
+#define MX_RESUME_NOT_HANDLED ((MX_RESUME_NOT_HANDLED_DEPRECATION)(2))
 // Only meaningful when combined with MX_RESUME_EXCEPTION
 // Indicates that instead of resuming from the faulting instruction we instead
 // let the next exception handler in the search order, if any, process the
