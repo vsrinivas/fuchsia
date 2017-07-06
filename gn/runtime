@@ -9,6 +9,9 @@
     "labels": [
         "//application"
     ],
+    "packages": {
+        "run": "//application/src/run"
+    },
     "binaries": [
         {
             "binary": "appmgr",
