@@ -254,30 +254,35 @@ bool InputInterpreter::Read(bool discard) {
     // TODO(jpoichet) check whether the device was actually closed or not
     return false;
   }
-  if (discard) {
-    return true;
-  }
 
   TRACE_DURATION("input", "Read");
   if (has_keyboard_) {
     ParseKeyboardReport(report_.data(), rc);
-    input_device_->DispatchReport(keyboard_report_.Clone());
+    if (!discard) {
+      input_device_->DispatchReport(keyboard_report_.Clone());
+    }
   }
 
   if (has_mouse_) {
     ParseMouseReport(report_.data(), rc);
-    input_device_->DispatchReport(mouse_report_.Clone());
+    if (!discard) {
+      input_device_->DispatchReport(mouse_report_.Clone());
+    }
   }
 
   switch (touch_device_type_) {
     case TouchDeviceType::ACER12:
       if (report_[0] == ACER12_RPT_ID_STYLUS) {
         if (ParseAcer12StylusReport(report_.data(), rc)) {
-          input_device_->DispatchReport(stylus_report_.Clone());
+          if (!discard) {
+            input_device_->DispatchReport(stylus_report_.Clone());
+          }
         }
       } else if (report_[0] == ACER12_RPT_ID_TOUCH) {
         if (ParseAcer12TouchscreenReport(report_.data(), rc)) {
-          input_device_->DispatchReport(touchscreen_report_.Clone());
+          if (!discard) {
+            input_device_->DispatchReport(touchscreen_report_.Clone());
+          }
         }
       }
       break;
@@ -285,7 +290,9 @@ bool InputInterpreter::Read(bool discard) {
     case TouchDeviceType::SAMSUNG:
       if (report_[0] == SAMSUNG_RPT_ID_TOUCH) {
         if (ParseSamsungTouchscreenReport(report_.data(), rc)) {
-          input_device_->DispatchReport(touchscreen_report_.Clone());
+          if (!discard) {
+            input_device_->DispatchReport(touchscreen_report_.Clone());
+          }
         }
       }
       break;
