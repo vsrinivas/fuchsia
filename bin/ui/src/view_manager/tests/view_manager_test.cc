@@ -63,7 +63,7 @@ TEST_F(ViewManagerTest, CreateAView) {
   EXPECT_EQ(0, view_token_callback_invokecount);
   view->GetToken(view_token_callback);
 
-  RUN_MESSAGE_LOOP_WHILE(view_token_callback_invokecount != 1);
+  RUN_MESSAGE_LOOP_UNTIL(view_token_callback_invokecount == 1);
 
   EXPECT_EQ(1, view_token_callback_invokecount);
 }
@@ -118,7 +118,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   EXPECT_EQ(0, view_token_callback_invokecount);
   child_view->GetToken(view_token_callback);
 
-  RUN_MESSAGE_LOOP_WHILE(view_token_callback_invokecount != 1);
+  RUN_MESSAGE_LOOP_UNTIL(view_token_callback_invokecount == 1);
 
   EXPECT_EQ(1, view_token_callback_invokecount);
 }

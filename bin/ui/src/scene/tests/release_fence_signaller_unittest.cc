@@ -24,18 +24,18 @@ TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
   // Create two fences.
   uint64_t seq_num1 = GenerateNextCommandBufferSequenceNumber(&sequencer);
   mx::event fence1;
-  ASSERT_EQ(mx::event::create(0, &fence1), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence1));
 
   uint64_t seq_num2 = GenerateNextCommandBufferSequenceNumber(&sequencer);
   mx::event fence2;
-  ASSERT_EQ(mx::event::create(0, &fence2), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &fence2));
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence2));
 
   // Create a third fence that will not be signaled initially.
   uint64_t seq_num3 = GenerateNextCommandBufferSequenceNumber(&sequencer);
   mx::event fence3;
-  ASSERT_EQ(mx::event::create(0, &fence3), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &fence3));
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence3));
 
   // Assert that none of the fences are signalled.

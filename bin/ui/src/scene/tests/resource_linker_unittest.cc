@@ -24,28 +24,28 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto resource =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   ASSERT_TRUE(linker.ExportResource(resource, std::move(source)));
 
-  ASSERT_EQ(linker.UnresolvedExports(), 1u);
+  ASSERT_EQ(1u, linker.UnresolvedExports());
 }
 
 TEST_F(ResourceLinkerTest, AllowsImport) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
   ASSERT_TRUE(linker.ExportResource(exported, std::move(source)));
 
-  ASSERT_EQ(linker.UnresolvedExports(), 1u);
+  ASSERT_EQ(1u, linker.UnresolvedExports());
 
   bool did_resolve = false;
   ResourceLinker::OnImportResolvedCallback resolution_handler =
@@ -54,19 +54,19 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
     did_resolve = true;
     ASSERT_TRUE(resource);
     ASSERT_EQ(exported, resource);
-    ASSERT_NE(resource->type_flags() & kEntityNode, 0u);
-    ASSERT_EQ(cause, ResourceLinker::ResolutionResult::kSuccess);
+    ASSERT_NE(0u, resource->type_flags() & kEntityNode);
+    ASSERT_EQ(ResourceLinker::ResolutionResult::kSuccess, cause);
   };
 
   linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
-                        );
+  );
 
   // Make sure the closure and its assertions are not skipped.
   ASSERT_TRUE(did_resolve);
-  ASSERT_EQ(linker.UnresolvedExports(), 1u);
-  ASSERT_EQ(linker.UnresolvedImports(), 0u);
+  ASSERT_EQ(1u, linker.UnresolvedExports());
+  ASSERT_EQ(0u, linker.UnresolvedImports());
 }
 
 TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
@@ -76,7 +76,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
   mx::eventpair source_out;
   {
     mx::eventpair source;
-    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
     source_out = mx::eventpair{source.get()};
     // source dies now.
   }
@@ -84,7 +84,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
   auto resource =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
   ASSERT_FALSE(linker.ExportResource(resource, std::move(source_out)));
-  ASSERT_EQ(linker.UnresolvedExports(), 0u);
+  ASSERT_EQ(0u, linker.UnresolvedExports());
 }
 
 // TODO(chinmaygarde): Figure out how the related koid if valid when we have
@@ -95,20 +95,20 @@ TEST_F(ResourceLinkerTest, DISABLED_CannotExportWithDeadDestinationHandle) {
   mx::eventpair source;
   {
     mx::eventpair destination;
-    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
     // destination dies now.
   }
 
   auto resource =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
   ASSERT_FALSE(linker.ExportResource(resource, std::move(source)));
-  ASSERT_EQ(linker.UnresolvedExports(), 0u);
+  ASSERT_EQ(0u, linker.UnresolvedExports());
 }
 
 TEST_F(ResourceLinkerTest,
        DestinationHandleDeathAutomaticallyCleansUpResource) {
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   mtl::Thread thread;
   thread.Run();
@@ -123,15 +123,15 @@ TEST_F(ResourceLinkerTest,
     auto resource =
         ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
     ASSERT_TRUE(linker.ExportResource(resource, std::move(source)));
-    ASSERT_EQ(linker.UnresolvedExports(), 1u);
+    ASSERT_EQ(1u, linker.UnresolvedExports());
 
     // Set an expiry callback that checks the resource expired for the right
     // reason and signal the latch.
     linker.SetOnExpiredCallback([&linker, &latch](
                                     ResourcePtr resource,
                                     ResourceLinker::ExpirationCause cause) {
-      ASSERT_EQ(cause, ResourceLinker::ExpirationCause::kImportHandleClosed);
-      ASSERT_EQ(linker.UnresolvedExports(), 0u);
+      ASSERT_EQ(ResourceLinker::ExpirationCause::kImportHandleClosed, cause);
+      ASSERT_EQ(0u, linker.UnresolvedExports());
       latch.Signal();
     });
 
@@ -151,7 +151,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -164,22 +164,22 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
     did_resolve = true;
     ASSERT_TRUE(resource);
     ASSERT_EQ(exported, resource);
-    ASSERT_NE(resource->type_flags() & kEntityNode, 0u);
-    ASSERT_EQ(cause, ResourceLinker::ResolutionResult::kSuccess);
+    ASSERT_NE(0u, resource->type_flags() & kEntityNode);
+    ASSERT_EQ(ResourceLinker::ResolutionResult::kSuccess, cause);
   };
   linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
-                        );
+  );
   ASSERT_FALSE(did_resolve);
-  ASSERT_EQ(linker.UnresolvedExports(), 0u);
-  ASSERT_EQ(linker.UnresolvedImports(), 1u);
+  ASSERT_EQ(0u, linker.UnresolvedExports());
+  ASSERT_EQ(1u, linker.UnresolvedImports());
 
   // Export.
   ASSERT_TRUE(linker.ExportResource(exported, std::move(source)));
-  ASSERT_EQ(linker.UnresolvedExports(),
-            1u);  // Since we already have the destination handle in scope.
-  ASSERT_EQ(linker.UnresolvedImports(), 0u);
+  ASSERT_EQ(1u, linker.UnresolvedExports());  // Since we already have the
+                                              // destination handle in scope.
+  ASSERT_EQ(0u, linker.UnresolvedImports());
   ASSERT_TRUE(did_resolve);
 }
 
@@ -187,7 +187,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   ResourceLinker linker;
 
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   auto exported =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
@@ -198,11 +198,11 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
       [exported, &resolution_count](
           ResourcePtr resource,
           ResourceLinker::ResolutionResult cause) -> void {
-    ASSERT_EQ(cause, ResourceLinker::ResolutionResult::kSuccess);
+    ASSERT_EQ(ResourceLinker::ResolutionResult::kSuccess, cause);
     resolution_count++;
     ASSERT_TRUE(resource);
     ASSERT_EQ(exported, resource);
-    ASSERT_NE(resource->type_flags() & kEntityNode, 0u);
+    ASSERT_NE(0u, resource->type_flags() & kEntityNode);
   };
 
   static const size_t kImportCount = 100;
@@ -215,18 +215,18 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     linker.ImportResource(mozart2::ImportSpec::NODE,         // import spec
                           std::move(duplicate_destination),  // import handle
                           resolution_handler  // import resolution handler
-                          );
-    ASSERT_EQ(resolution_count, 0u);
-    ASSERT_EQ(linker.UnresolvedExports(), 0u);
-    ASSERT_EQ(linker.UnresolvedImports(), i);
+    );
+    ASSERT_EQ(0u, resolution_count);
+    ASSERT_EQ(0u, linker.UnresolvedExports());
+    ASSERT_EQ(i, linker.UnresolvedImports());
   }
 
   // Export.
   ASSERT_TRUE(linker.ExportResource(exported, std::move(source)));
-  ASSERT_EQ(linker.UnresolvedExports(),
-            1u);  // Since we already have the destination handle in scope.
-  ASSERT_EQ(linker.UnresolvedImports(), 0u);
-  ASSERT_EQ(resolution_count, kImportCount);
+  ASSERT_EQ(1u, linker.UnresolvedExports());  // Since we already have the
+                                              // destination handle in scope.
+  ASSERT_EQ(0u, linker.UnresolvedImports());
+  ASSERT_EQ(kImportCount, resolution_count);
 }
 
 }  // namespace test

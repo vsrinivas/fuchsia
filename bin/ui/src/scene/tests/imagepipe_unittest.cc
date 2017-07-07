@@ -40,19 +40,43 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
 TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
   // Create an AcquireFence.
   mx::event fence1;
-  ASSERT_EQ(mx::event::create(0, &fence1), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
   AcquireFence buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
+  EXPECT_FALSE(buffer_fence1.ready());
   EXPECT_FALSE(buffer_fence1.WaitReady(ftl::TimeDelta::Zero()));
+
+  // Still should not be ready.
+  EXPECT_FALSE(buffer_fence1.ready());
 
   // Signal the fence.
   fence1.signal(0u, kFenceSignalled);
 
   // Expect that it is signalled now.
   EXPECT_TRUE(buffer_fence1.WaitReady(ftl::TimeDelta::Zero()));
+  EXPECT_TRUE(buffer_fence1.ready());
+}
 
-  // TODO: Test WaitAsync and callbacks.
+TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
+  // Create an AcquireFence.
+  mx::event fence1;
+  ASSERT_EQ(MX_OK, mx::event::create(0, &fence1));
+  AcquireFence buffer_fence1(CopyEvent(fence1));
+
+  // Expect that it is not signalled initially.
+  EXPECT_FALSE(buffer_fence1.WaitReady(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(buffer_fence1.ready());
+
+  bool signalled = false;
+  // Expect that it is signalled now.
+  buffer_fence1.WaitReadyAsync([&signalled]() { signalled = true; });
+
+  // Signal the fence.
+  fence1.signal(0u, kFenceSignalled);
+
+  RUN_MESSAGE_LOOP_UNTIL(buffer_fence1.ready());
+  EXPECT_TRUE(signalled);
 }
 
 ftl::RefPtr<mtl::SharedVmo> CreateVmoWithBuffer(
@@ -95,11 +119,6 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
   }
   escher::ResourceManager* dummy_resource_manager_;
 };
-
-// How long to run the message loop when we want to allow a task in the
-// task queue to run.
-constexpr ftl::TimeDelta kPumpMessageLoopDuration =
-    ftl::TimeDelta::FromMilliseconds(100);
 
 // Present two frames on the ImagePipe, making sure that acquire fence is being
 // listened to and release fences are signalled.
@@ -160,9 +179,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Make checkerboard the currently displayed image.
   mx::event acquire_fence1;
-  ASSERT_EQ(mx::event::create(0, &acquire_fence1), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &acquire_fence1));
   mx::event release_fence1;
-  ASSERT_EQ(mx::event::create(0, &release_fence1), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence1));
 
   image_pipe->PresentImage(imageId1, 0, CopyEvent(acquire_fence1),
                            CopyEvent(release_fence1), nullptr);
@@ -211,9 +230,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Make gradient the currently displayed image.
   mx::event acquire_fence2;
-  ASSERT_EQ(mx::event::create(0, &acquire_fence2), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &acquire_fence2));
   mx::event release_fence2;
-  ASSERT_EQ(mx::event::create(0, &release_fence2), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence2));
 
   image_pipe->PresentImage(imageId2, 0, CopyEvent(acquire_fence2),
                            CopyEvent(release_fence2), nullptr);

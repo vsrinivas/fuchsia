@@ -22,7 +22,7 @@ using ImportThreadedTest = SessionThreadedTest;
 TEST_F(ImportTest, ExportsResourceViaOp) {
   // Create the event pair.
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Setup the resource to export.
   ResourceId resource_id = 1;
@@ -31,7 +31,7 @@ TEST_F(ImportTest, ExportsResourceViaOp) {
   ASSERT_TRUE(Apply(NewCreateEntityNodeOp(resource_id)));
 
   // Assert that the entity node was correctly mapped in.
-  ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+  ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
   // Apply the export op.
   ASSERT_TRUE(Apply(NewExportResourceOp(resource_id, std::move(source))));
@@ -40,17 +40,17 @@ TEST_F(ImportTest, ExportsResourceViaOp) {
 TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   // Create the event pair.
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Apply the import op.
   ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                         mozart2::ImportSpec::NODE, /* spec */
                                         std::move(destination)) /* endpoint */
-                    ));
+  ));
 
   // Assert that the import node was correctly mapped in. It has not been linked
   // yet.
-  ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+  ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
   // Assert that the import node was setup with the correct properties.
   auto import_node = FindResource<Import>(1);
@@ -58,16 +58,16 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   ASSERT_TRUE(import_node);
 
   // No one has exported a resource so there should be no binding.
-  ASSERT_EQ(import_node->imported_resource(), nullptr);
+  ASSERT_EQ(nullptr, import_node->imported_resource());
 
   // Import specs should match.
-  ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+  ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
 }
 
 TEST_F(ImportTest, PerformsFullLinking) {
   // Create the event pair.
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Perform the import
   {
@@ -75,11 +75,11 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+    ASSERT_EQ(1u, session_->GetMappedResourceCount());
   }
 
   // Bindings not yet resolved.
@@ -90,10 +90,10 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(import_node->imported_resource(), nullptr);
+    ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Perform the export
@@ -102,7 +102,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(Apply(NewCreateEntityNodeOp(2)));
 
     // Assert that the entity node was correctly mapped in.
-    ASSERT_EQ(session_->GetMappedResourceCount(), 2u);
+    ASSERT_EQ(2u, session_->GetMappedResourceCount());
 
     // Apply the export op.
     ASSERT_TRUE(Apply(NewExportResourceOp(2, std::move(source))));
@@ -116,21 +116,21 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(import_node);
 
     // Bindings should be resolved by now.
-    ASSERT_NE(import_node->imported_resource(), nullptr);
+    ASSERT_NE(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
 
     // Check that it was bound to the right object.
-    ASSERT_NE(import_node->imported_resource(), nullptr);
+    ASSERT_NE(nullptr, import_node->imported_resource());
     auto entity = FindResource<EntityNode>(2);
     ASSERT_TRUE(entity);
     ASSERT_EQ(import_node->imported_resource(), entity.get());
     ASSERT_TRUE(import_node->delegate());
     ASSERT_EQ(import_node->delegate()->type_info().flags,
               entity->type_info().flags);
-    ASSERT_EQ(entity->imports().size(), 1u);
-    ASSERT_EQ(*(entity->imports().begin()), import_node.get());
+    ASSERT_EQ(1u, entity->imports().size());
+    ASSERT_EQ(import_node.get(), *(entity->imports().begin()));
   }
 }
 
@@ -147,7 +147,7 @@ TEST_F(ImportThreadedTest,
   session_context_->GetResourceLinker().SetOnExpiredCallback(
       [this, &import_expired_latch](ResourcePtr,
                                     ResourceLinker::ExpirationCause cause) {
-        ASSERT_EQ(cause, ResourceLinker::ExpirationCause::kImportHandleClosed);
+        ASSERT_EQ(ResourceLinker::ExpirationCause::kImportHandleClosed, cause);
         import_expired_latch.Signal();
       });
 
@@ -156,21 +156,21 @@ TEST_F(ImportThreadedTest,
   PostTaskSync([this, &source]() {
     // Create the event pair.
     mx::eventpair destination;
-    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
     // Apply the import op.
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+    ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
     // Assert that the resource linker is ready to potentially link the
     // resource.
-    ASSERT_EQ(session_context_->GetResourceLinker().UnresolvedImports(), 1u);
+    ASSERT_EQ(1u, session_context_->GetResourceLinker().UnresolvedImports());
 
     // Assert that the import node was setup with the correct properties.
     auto import_node = FindResource<Import>(1);
@@ -178,10 +178,10 @@ TEST_F(ImportThreadedTest,
     ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(import_node->imported_resource(), nullptr);
+    ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
 
     // Release the import resource.
     ASSERT_TRUE(Apply(NewReleaseResourceOp(1 /* import resource ID */)));
@@ -201,17 +201,17 @@ TEST_F(ImportTest,
   // Create an unlinked import resource.
   mx::eventpair source, destination;
 
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Apply the import op.
   ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                         mozart2::ImportSpec::NODE, /* spec */
                                         std::move(destination)) /* endpoint */
-                    ));
+  ));
 
   // Assert that the import node was correctly mapped in. It has not been
   // linked yet.
-  ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+  ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
   // Resolve by the import container.
 
@@ -222,10 +222,10 @@ TEST_F(ImportTest,
     ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(import_node->imported_resource(), nullptr);
+    ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Resolve by the resource owned by the import container.
@@ -236,7 +236,7 @@ TEST_F(ImportTest,
     ASSERT_TRUE(import_node_backing);
 
     // Since the entity node is not owned by the resource map, its ID is 0.
-    ASSERT_EQ(import_node_backing->resource_id(), 0u);
+    ASSERT_EQ(0u, import_node_backing->resource_id());
   }
 }
 
@@ -244,17 +244,17 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
   // Create an unlinked import resource.
   mx::eventpair source, destination;
   {
-    ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
     // Apply the import op.
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+    ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
     // Assert that the import node was setup with the correct properties.
     auto import_node = FindResource<Import>(1);
@@ -265,7 +265,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
     ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Attempt to add an entity node as a child to an unlinked resource.
@@ -282,7 +282,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
 TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
   // Create the event pair.
   mx::eventpair source, destination;
-  ASSERT_EQ(mx::eventpair::create(0, &source, &destination), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Perform the import
   {
@@ -290,11 +290,11 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-                      ));
+    ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(session_->GetMappedResourceCount(), 1u);
+    ASSERT_EQ(1u, session_->GetMappedResourceCount());
   }
 
   // Bindings not yet resolved.
@@ -305,10 +305,10 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(import_node);
 
     // No one has exported a resource so there should be no binding.
-    ASSERT_EQ(import_node->imported_resource(), nullptr);
+    ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Perform the export
@@ -317,7 +317,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(Apply(NewCreateEntityNodeOp(2)));
 
     // Assert that the entity node was correctly mapped in.
-    ASSERT_EQ(session_->GetMappedResourceCount(), 2u);
+    ASSERT_EQ(2u, session_->GetMappedResourceCount());
 
     // Apply the export op.
     ASSERT_TRUE(Apply(NewExportResourceOp(2, std::move(source))));
@@ -351,7 +351,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
 TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
   // Create the token pain.
   mx::eventpair import_token, export_token;
-  ASSERT_EQ(mx::eventpair::create(0, &import_token, &export_token), MX_OK);
+  ASSERT_EQ(MX_OK, mx::eventpair::create(0, &import_token, &export_token));
 
   // Effective node hierarchy must be:
   //
@@ -389,7 +389,7 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
 
     // Export.
     ASSERT_TRUE(Apply(NewExportResourceOp(1, std::move(export_token))));
-    ASSERT_EQ(session_context_->GetResourceLinker().UnresolvedExports(), 1u);
+    ASSERT_EQ(1u, session_context_->GetResourceLinker().UnresolvedExports());
   }
 
   // Embeddee.
@@ -411,7 +411,7 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
   {
     auto scene = FindResource<Scene>(1);
     ASSERT_TRUE(scene);
-    ASSERT_EQ(scene->imports().size(), 1u);
+    ASSERT_EQ(1u, scene->imports().size());
   }
 }
 

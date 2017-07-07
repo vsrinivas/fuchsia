@@ -137,7 +137,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
 
   while (!frames_.empty() &&
          frames_.front().presentation_time <= presentation_time &&
-         frames_.front().acquire_fence->is_ready()) {
+         frames_.front().acquire_fence->ready()) {
     next_image_id = frames_.front().image_id;
     if (next_release_fence) {
       // We're skipping a frame, so we can immediately signal its release fence.

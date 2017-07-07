@@ -7,11 +7,17 @@
 #include <mx/event.h>
 
 #include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 
 namespace mozart {
 namespace scene {
 namespace test {
+
+// How long to run the message loop when we want to allow a task in the
+// task queue to run.
+constexpr ftl::TimeDelta kPumpMessageLoopDuration =
+    ftl::TimeDelta::FromMilliseconds(100);
 
 // Synchronously checks whether the event has signalled any of the bits in
 // |signal|.

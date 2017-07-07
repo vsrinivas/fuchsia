@@ -40,7 +40,7 @@ class AcquireFence : private mtl::MessageLoopHandler {
   void WaitReadyAsync(ftl::Closure ready_callback);
 
   // Returns whether this fence has been signalled.
-  bool is_ready() const { return ready_; }
+  bool ready() const { return ready_; }
 
  private:
   // |mtl::MessageLoopHandler|

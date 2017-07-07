@@ -20,10 +20,10 @@ TEST_F(SceneManagerTest, CreateAndDestroySession) {
   mozart2::SessionPtr session;
   EXPECT_EQ(0U, manager_impl_->session_context()->GetSessionCount());
   manager_->CreateSession(session.NewRequest(), nullptr);
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          1);
   session = nullptr;
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          0);
 }
 
@@ -40,7 +40,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
   manager_->CreateSession(sess1a.NewRequest(), nullptr);
   manager_->CreateSession(sess2a.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          2);
   auto handler1 = static_cast<SessionHandlerForTest*>(
       manager_impl_->session_context()->FindSession(1));
@@ -51,8 +51,8 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
   sess1a->Connect(sess1b.NewRequest(), nullptr);
   mozart2::SessionPtr sess2b;
   sess2a->Connect(sess2b.NewRequest(), nullptr);
-  RUN_MESSAGE_LOOP_WHILE(handler1->connect_count() != 1);
-  RUN_MESSAGE_LOOP_WHILE(handler2->connect_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler1->connect_count() == 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler2->connect_count() == 1);
   EXPECT_EQ(0U, handler1->enqueue_count());
   EXPECT_EQ(0U, handler2->enqueue_count());
 
@@ -68,8 +68,8 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
     ops.push_back(NewCreateCircleOp(2, 25.f));
     sess2a->Enqueue(std::move(ops));
   }
-  RUN_MESSAGE_LOOP_WHILE(handler1->enqueue_count() != 1);
-  RUN_MESSAGE_LOOP_WHILE(handler2->enqueue_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler1->enqueue_count() == 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler2->enqueue_count() == 1);
 
   // Disconnect one connection, and send Present() on the other.
   sess1a = nullptr;
@@ -80,12 +80,12 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
   sess2a->Present(0u, ::fidl::Array<mx::event>::New(0),
                   ::fidl::Array<mx::event>::New(0),
                   [](mozart2::PresentationInfoPtr info) {});
-  RUN_MESSAGE_LOOP_WHILE(handler1->present_count() != 1);
-  RUN_MESSAGE_LOOP_WHILE(handler2->present_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler1->present_count() == 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler2->present_count() == 1);
 
   sess1b = nullptr;
   sess2a = nullptr;
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          0);
 }
 
@@ -103,7 +103,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   mozart2::SessionPtr sess1d;
   sess1c->Connect(sess1d.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          1);
   auto handler = static_cast<SessionHandlerForTest*>(
       manager_impl_->session_context()->FindSession(1));
@@ -131,7 +131,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
 
   // Once these are known to be enqueued, it is safe to refer to the session
   // ids that were created via the different connections.
-  RUN_MESSAGE_LOOP_WHILE(handler->enqueue_count() != 3);
+  RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 3);
   {
     ::fidl::Array<mozart2::OpPtr> ops;
     ops.push_back(NewAddChildOp(3, 4));
@@ -143,7 +143,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
                     ::fidl::Array<mx::event>::New(0),
                     [](mozart2::PresentationInfoPtr info) {});
   }
-  RUN_MESSAGE_LOOP_WHILE(handler->present_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   {
     auto resources = handler->session()->resources();
     auto entity = resources->FindResource<EntityNode>(3);
@@ -162,7 +162,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
                     [](mozart2::PresentationInfoPtr info) {});
   }
 
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          0);
 
   // TODO: Test SessionListener.  One good way to do this would be to attach a
@@ -179,14 +179,14 @@ bool IsFenceSignalled(const mx::event& fence) {
 }
 
 TEST_F(SceneManagerTest, ReleaseFences) {
-  // Tests creating a session, making a second connection to the same session,
-  // and verifying that fences are release after calling Present.
+  // Tests creating a session, and calling Present with two release fences.
+  // The release fences should be signalled after a subsequent Present.
   EXPECT_EQ(0u, manager_impl_->session_context()->GetSessionCount());
 
   mozart2::SessionPtr session_host;
   manager_->CreateSession(session_host.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
                          1);
   EXPECT_EQ(1u, manager_impl_->session_context()->GetSessionCount());
   auto handler = static_cast<SessionHandlerForTest*>(
@@ -194,7 +194,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
 
   mozart2::SessionPtr session;
   session_host->Connect(session.NewRequest(), nullptr);
-  RUN_MESSAGE_LOOP_WHILE(handler->connect_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler->connect_count() == 1);
   EXPECT_EQ(0u, handler->enqueue_count());
 
   {
@@ -203,27 +203,27 @@ TEST_F(SceneManagerTest, ReleaseFences) {
     ops.push_back(NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
   }
-  RUN_MESSAGE_LOOP_WHILE(handler->enqueue_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
   EXPECT_EQ(1u, handler->enqueue_count());
 
   // Create release fences
   mx::event release_fence1;
-  ASSERT_EQ(mx::event::create(0, &release_fence1), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence1));
   mx::event release_fence2;
-  ASSERT_EQ(mx::event::create(0, &release_fence2), MX_OK);
+  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence2));
 
   ::fidl::Array<mx::event> release_fences;
   release_fences.push_back(CopyEvent(release_fence1));
   release_fences.push_back(CopyEvent(release_fence2));
 
-  EXPECT_FALSE(IsFenceSignalled(release_fences[0]));
-  EXPECT_FALSE(IsFenceSignalled(release_fences[1]));
+  EXPECT_FALSE(IsFenceSignalled(release_fence1));
+  EXPECT_FALSE(IsFenceSignalled(release_fence2));
 
   // Call Present with release fences.
   session->Present(0u, ::fidl::Array<mx::event>::New(0),
                    std::move(release_fences),
                    [](mozart2::PresentationInfoPtr info) {});
-  RUN_MESSAGE_LOOP_WHILE(handler->present_count() != 1);
+  RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
@@ -232,7 +232,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   session->Present(0u, ::fidl::Array<mx::event>::New(0),
                    ::fidl::Array<mx::event>::New(0),
                    [](mozart2::PresentationInfoPtr info) {});
-  RUN_MESSAGE_LOOP_WHILE(handler->present_count() != 2);
+  RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
   EXPECT_EQ(2u, handler->present_count());
 
   EXPECT_TRUE(IsFenceSignalled(release_fence1));

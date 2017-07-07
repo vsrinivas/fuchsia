@@ -37,7 +37,7 @@ void SceneManagerTest::SetUp() {
 
 void SceneManagerTest::TearDown() {
   manager_ = nullptr;
-  RUN_MESSAGE_LOOP_WHILE(manager_impl_ != nullptr);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_ == nullptr);
   thread_->TaskRunner()->PostTask(
       []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   thread_->Join();
