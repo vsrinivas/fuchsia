@@ -30,7 +30,7 @@ Image::Image(Session* session,
           session->context()->escher_resource_recycler(),
           image_info,
           vk_image,
-          memory->escher_gpu_mem())) {}
+          static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem())) {}
 
 ImagePtr Image::New(Session* session,
                     MemoryPtr memory,
