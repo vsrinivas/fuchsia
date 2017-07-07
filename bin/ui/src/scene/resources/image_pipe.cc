@@ -109,7 +109,7 @@ void ImagePipe::PresentImage(uint32_t image_id,
 
   // TODO: capture only a weak ptr?
   frames_.back().acquire_fence->WaitReadyAsync(
-      [this] { session()->context()->ScheduleUpdate(0); });
+      [session = session()] { session->context()->ScheduleUpdate(0); });
 };
 
 const escher::ImagePtr& ImagePipe::GetEscherImage() {

@@ -21,6 +21,7 @@ source_set("testing_deps") {
     "mocks.h",
   ]
   public_deps = [
+    ":util",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/lib/tests",
     "//apps/mozart/src/scene:common",
@@ -76,7 +77,6 @@ executable("unittests") {
 
   deps = [
     ":testing_deps",
-    ":util",
     "//apps/mozart/src/tests:main",
   ]
 }

@@ -199,6 +199,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   };
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;
+  ::fidl::Array<mx::event> fences_to_release_on_next_update_;
 
   const SessionId id_;
   SessionContext* const context_;

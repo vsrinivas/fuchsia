@@ -10,6 +10,7 @@
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene/tests/mocks.h"
 #include "apps/mozart/src/scene/tests/scene_manager_test.h"
+#include "apps/mozart/src/scene/tests/util.h"
 
 namespace mozart {
 namespace scene {
@@ -168,6 +169,74 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   // listener when creating connection 1c, and verifying that the error message
   // triggered above is received (and therefore was sent properly as part of
   // Session tear-down).
+}
+
+bool IsFenceSignalled(const mx::event& fence) {
+  mx_signals_t signals = 0u;
+  mx_status_t status = fence.wait_one(kFenceSignalledOrClosed, 0, &signals);
+  FTL_DCHECK(status == MX_OK || status == MX_ERR_TIMED_OUT);
+  return signals & kFenceSignalledOrClosed;
+}
+
+TEST_F(SceneManagerTest, ReleaseFences) {
+  // Tests creating a session, making a second connection to the same session,
+  // and verifying that fences are release after calling Present.
+  EXPECT_EQ(0u, manager_impl_->session_context()->GetSessionCount());
+
+  mozart2::SessionPtr session_host;
+  manager_->CreateSession(session_host.NewRequest(), nullptr);
+
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->session_context()->GetSessionCount() !=
+                         1);
+  EXPECT_EQ(1u, manager_impl_->session_context()->GetSessionCount());
+  auto handler = static_cast<SessionHandlerForTest*>(
+      manager_impl_->session_context()->FindSession(1));
+
+  mozart2::SessionPtr session;
+  session_host->Connect(session.NewRequest(), nullptr);
+  RUN_MESSAGE_LOOP_WHILE(handler->connect_count() != 1);
+  EXPECT_EQ(0u, handler->enqueue_count());
+
+  {
+    ::fidl::Array<mozart2::OpPtr> ops;
+    ops.push_back(NewCreateCircleOp(1, 50.f));
+    ops.push_back(NewCreateCircleOp(2, 25.f));
+    session->Enqueue(std::move(ops));
+  }
+  RUN_MESSAGE_LOOP_WHILE(handler->enqueue_count() != 1);
+  EXPECT_EQ(1u, handler->enqueue_count());
+
+  // Create release fences
+  mx::event release_fence1;
+  ASSERT_EQ(mx::event::create(0, &release_fence1), MX_OK);
+  mx::event release_fence2;
+  ASSERT_EQ(mx::event::create(0, &release_fence2), MX_OK);
+
+  ::fidl::Array<mx::event> release_fences;
+  release_fences.push_back(CopyEvent(release_fence1));
+  release_fences.push_back(CopyEvent(release_fence2));
+
+  EXPECT_FALSE(IsFenceSignalled(release_fences[0]));
+  EXPECT_FALSE(IsFenceSignalled(release_fences[1]));
+
+  // Call Present with release fences.
+  session->Present(0u, ::fidl::Array<mx::event>::New(0),
+                   std::move(release_fences),
+                   [](mozart2::PresentationInfoPtr info) {});
+  RUN_MESSAGE_LOOP_WHILE(handler->present_count() != 1);
+  EXPECT_EQ(1u, handler->present_count());
+
+  EXPECT_FALSE(IsFenceSignalled(release_fence1));
+  EXPECT_FALSE(IsFenceSignalled(release_fence2));
+  // Call Present again with no release fences.
+  session->Present(0u, ::fidl::Array<mx::event>::New(0),
+                   ::fidl::Array<mx::event>::New(0),
+                   [](mozart2::PresentationInfoPtr info) {});
+  RUN_MESSAGE_LOOP_WHILE(handler->present_count() != 2);
+  EXPECT_EQ(2u, handler->present_count());
+
+  EXPECT_TRUE(IsFenceSignalled(release_fence1));
+  EXPECT_TRUE(IsFenceSignalled(release_fence2));
 }
 
 }  // namespace test

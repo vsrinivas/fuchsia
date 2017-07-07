@@ -745,6 +745,14 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       info->presentation_time = presentation_time;
       info->presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));
+
+      for (auto& fence : fences_to_release_on_next_update_) {
+        context()->release_fence_signaller()->AddCPUReleaseFence(
+            std::move(fence));
+      }
+      fences_to_release_on_next_update_ =
+          std::move(scheduled_updates_.front().release_fences);
+
       scheduled_updates_.pop();
 
       // TODO: gather statistics about how close the actual
