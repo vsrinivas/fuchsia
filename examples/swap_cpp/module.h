@@ -8,8 +8,6 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
-#include "third_party/skia/include/core/SkColor.h"
 
 namespace modular_example {
 
@@ -18,14 +16,13 @@ class ModuleView : public mozart::BaseView {
   explicit ModuleView(
       mozart::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      SkColor color);
+      uint32_t color);
 
  private:
   // |BaseView|:
-  void OnDraw() override;
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
 
-  SkColor color_;
-  mozart::BufferProducer buffer_producer_;
+  mozart::client::ShapeNode background_node_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };

@@ -3,63 +3,31 @@
 // found in the LICENSE file.
 
 #include "apps/modular/examples/swap_cpp/module.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
-#include "third_party/skia/include/core/SkCanvas.h"
 
 namespace modular_example {
-
-constexpr uint32_t kContentImageResourceId = 1;
 
 ModuleView::ModuleView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    SkColor color)
+    uint32_t color)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "ModuleView"),
-      color_(color) {}
+      background_node_(session()) {
+  mozart::client::Material background_material(session());
+  background_material.SetColor((color >> 16) & 0xff, (color >> 8) & 0xff,
+                               color & 0xff, (color >> 24) & 0xff);
+  background_node_.SetMaterial(background_material);
+  parent_node().AddChild(background_node_);
+}
 
-void ModuleView::OnDraw() {
-  auto update = mozart::SceneUpdate::New();
-  auto root_node = mozart::Node::New();
-
-  FTL_DCHECK(properties());
-  const mozart::Size& size = *properties()->view_layout->size;
-  if (size.width > 0 && size.height > 0) {
-    mozart::ImagePtr image;
-    sk_sp<SkSurface> surface =
-        mozart::MakeSkSurface(size, &buffer_producer_, &image);
-
-    FTL_CHECK(surface);
-    SkCanvas* canvas = surface->getCanvas();
-    canvas->clear(SK_ColorBLUE);
-    canvas->translate(size.width / 2, size.height / 2);
-    SkPaint paint;
-    paint.setColor(color_);
-    paint.setAntiAlias(true);
-    float d = std::min(size.width, size.height) / 4;
-    canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
-    canvas->flush();
-
-    auto content_resource = mozart::Resource::New();
-    content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = std::move(image);
-    update->resources.insert(kContentImageResourceId,
-                             std::move(content_resource));
-
-    mozart::RectF bounds;
-    bounds.width = size.width;
-    bounds.height = size.height;
-    root_node->op = mozart::NodeOp::New();
-    root_node->op->set_image(mozart::ImageNodeOp::New());
-    root_node->op->get_image()->content_rect = bounds.Clone();
-    root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-  }
-
-  update->nodes.insert(mozart::kSceneRootNodeId, std::move(root_node));
-  scene()->Update(std::move(update));
-  scene()->Publish(CreateSceneMetadata());
-  buffer_producer_.Tick();
+void ModuleView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
+  mozart::client::Rectangle background_shape(session(), size().width,
+                                             size().height);
+  background_node_.SetShape(background_shape);
+  background_node_.SetTranslation(
+      (float[]){size().width * .5f, size().height * .5f, 0.f});
+  InvalidateScene();
 }
 
 ModuleApp::ModuleApp(CreateViewCallback create) : create_(create) {}

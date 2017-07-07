@@ -25,12 +25,10 @@ executable("example_module1") {
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//third_party/skia",
   ]
 }
 
@@ -46,12 +44,10 @@ executable("example_module2") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//third_party/skia",
   ]
 }
 
@@ -70,7 +66,6 @@ executable("example_recipe") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//lib/ftl",

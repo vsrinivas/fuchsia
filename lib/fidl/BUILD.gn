@@ -146,7 +146,6 @@ source_set("view_host") {
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//third_party/skia",
   ]
 }
 

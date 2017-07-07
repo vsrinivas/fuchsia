@@ -8,9 +8,7 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -18,14 +16,11 @@
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "third_party/skia/include/core/SkCanvas.h"
-#include "third_party/skia/include/core/SkColor.h"
-#include "third_party/skia/include/core/SkRect.h"
 
 namespace {
 
-constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr float kBackgroundElevation = 0.f;
+constexpr float kSquareElevation = 8.f;
 constexpr int kTickRotationDegrees = 45;
 constexpr int kAnimationDelayInMs = 200;
 
@@ -40,68 +35,58 @@ class Module1View : public mozart::BaseView {
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  kModuleName),
-        store_(store) {}
+        store_(store),
+        background_node_(session()),
+        square_node_(session()) {
+    mozart::client::Material background_material(session());
+    background_material.SetColor(0x67, 0x3a, 0xb7, 0xff);  // Deep Purple 500
+    background_node_.SetMaterial(background_material);
+    parent_node().AddChild(background_node_);
+
+    mozart::client::Material square_material(session());
+    square_material.SetColor(0x00, 0xe6, 0x76, 0xff);  // Green A400
+    square_node_.SetMaterial(square_material);
+    parent_node().AddChild(square_node_);
+  }
 
   ~Module1View() override = default;
-
-  void set_enable_animation(bool value) { enable_animation_ = value; }
 
  private:
   // Copied from
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
-  void OnDraw() override {
-    FTL_DCHECK(properties());
-    auto update = mozart::SceneUpdate::New();
-    const mozart::Size& size = *properties()->view_layout->size;
-    if (size.width > 0 && size.height > 0) {
-      mozart::RectF bounds;
-      bounds.width = size.width;
-      bounds.height = size.height;
-      mozart::ImagePtr image;
-      sk_sp<SkSurface> surface =
-          mozart::MakeSkSurface(size, &buffer_producer_, &image);
-      FTL_CHECK(surface);
-      DrawContent(surface->getCanvas(), size);
-      auto content_resource = mozart::Resource::New();
-      content_resource->set_image(mozart::ImageResource::New());
-      content_resource->get_image()->image = std::move(image);
-      update->resources.insert(kContentImageResourceId,
-                               std::move(content_resource));
-      auto root_node = mozart::Node::New();
-      root_node->op = mozart::NodeOp::New();
-      root_node->op->set_image(mozart::ImageNodeOp::New());
-      root_node->op->get_image()->content_rect = bounds.Clone();
-      root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-      update->nodes.insert(kRootNodeId, std::move(root_node));
-    } else {
-      auto root_node = mozart::Node::New();
-      update->nodes.insert(kRootNodeId, std::move(root_node));
-    }
-    scene()->Update(std::move(update));
-    scene()->Publish(CreateSceneMetadata());
-    buffer_producer_.Tick();
-
-    if (enable_animation_)
-      Invalidate();
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override {
+    InvalidateScene();
   }
 
-  void DrawContent(SkCanvas* const canvas, const mozart::Size& size) {
-    canvas->clear(SK_ColorBLUE);
-    canvas->translate(size.width / 2, size.height / 2);
-    canvas->rotate(
-        SkIntToScalar(kTickRotationDegrees * store_->counter.counter));
-    SkPaint paint;
-    paint.setColor(SK_ColorGREEN);
-    paint.setAntiAlias(true);
-    float d = std::min(size.width, size.height) / 4;
-    canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
-    canvas->flush();
+  void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info) override {
+    if (!has_size())
+      return;
+
+    const float center_x = size().width * .5f;
+    const float center_y = size().height * .5f;
+    const float square_size = std::min(size().width, size().height) * .6f;
+    const float angle =
+        kTickRotationDegrees * store_->counter.counter * M_PI * 2;
+
+    mozart::client::Rectangle background_shape(session(), size().width,
+                                               size().height);
+    background_node_.SetShape(background_shape);
+    background_node_.SetTranslation(
+        (float[]){center_x, center_y, kBackgroundElevation});
+
+    mozart::client::Rectangle square_shape(session(), square_size, square_size);
+    square_node_.SetShape(square_shape);
+    square_node_.SetTranslation(
+        (float[]){center_x, center_y, kSquareElevation});
+    square_node_.SetRotation(
+        (float[]){0.f, 0.f, sinf(angle * .5f), cosf(angle * .5f)});
   }
 
   modular_example::Store* const store_;
-  mozart::BufferProducer buffer_producer_;
-  bool enable_animation_ = false;
+  mozart::client::ShapeNode background_node_;
+  mozart::client::ShapeNode square_node_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Module1View);
 };
@@ -123,6 +108,15 @@ class MultiplierImpl : public modular::examples::Multiplier {
 class Module1App : modular::SingleServiceViewApp<modular::Module> {
  public:
   explicit Module1App() : store_(kModuleName), weak_ptr_factory_(this) {
+    // TODO(mesch): The callbacks seem to have a sequential relationship.
+    // It seems to me there should be a single callback that does all three
+    // things in a sequence. Since the result InvalidateScene() happens only
+    // (asynchonously) later, the order here really doesn't matter, but it's
+    // only accidentally so.
+    store_.AddCallback([this] {
+      if (view_)
+        view_->InvalidateScene();
+    });
     store_.AddCallback([this] { IncrementCounterAction(); });
     store_.AddCallback([this] { CheckForDone(); });
   }
@@ -196,21 +190,11 @@ class Module1App : modular::SingleServiceViewApp<modular::Module> {
       return;
     }
 
-    // TODO(jimbe) Enabling animation should be done in its own function, but
-    // it needs a trigger to know when to start.
-    if (view_) {
-      view_->set_enable_animation(true);
-      view_->Invalidate();
-    }
     ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {
           if (!module_ptr.get()) {
             return;
-          }
-
-          if (view_) {
-            view_->set_enable_animation(false);
           }
 
           store_.counter.sender = kModuleName;

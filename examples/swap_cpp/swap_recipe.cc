@@ -7,14 +7,11 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
 constexpr uint32_t kChildKey = 1;
-constexpr uint32_t kChildSceneResourceId = 1;
-constexpr uint32_t kChildSceneNodeId = 1;
 constexpr int kSwapSeconds = 5;
 constexpr std::array<const char*, 2> kModuleQueries{
     {"file:///system/apps/swap_module1", "file:///system/apps/swap_module2"}};
@@ -31,75 +28,33 @@ class RecipeView : public mozart::BaseView {
   ~RecipeView() override = default;
 
   void SetChild(mozart::ViewOwnerPtr view_owner) {
-    if (view_info_) {
+    if (host_node_) {
       GetViewContainer()->RemoveChild(kChildKey, nullptr);
+      host_node_->Detach();
+      host_node_.reset();
     }
-    GetViewContainer()->AddChild(kChildKey, std::move(view_owner));
+
+    if (view_owner) {
+      host_node_.reset(new mozart::client::EntityNode(session()));
+
+      mx::eventpair host_import_token;
+      host_node_->ExportAsRequest(&host_import_token);
+      parent_node().AddChild(*host_node_);
+
+      GetViewContainer()->AddChild(kChildKey, std::move(view_owner),
+                                   std::move(host_import_token));
+    }
   }
 
  private:
   // |BaseView|:
-  void OnChildAttached(uint32_t child_key,
-                       mozart::ViewInfoPtr child_view_info) override {
-    view_info_ = std::move(child_view_info);
-    Invalidate();
-  }
-
-  // |BaseView|:
-  void OnLayout() override {
-    FTL_DCHECK(properties());
-    const mozart::Size& size = *properties()->view_layout->size;
-    if (view_info_ && size.width > 0 && size.height > 0) {
-      auto view_properties = mozart::ViewProperties::New();
-      view_properties->view_layout = mozart::ViewLayout::New();
-      view_properties->view_layout->size = mozart::Size::New();
-      view_properties->view_layout->size->width = size.width;
-      view_properties->view_layout->size->height = size.height;
-      view_properties->view_layout->inset = mozart::Inset::New();
-      GetViewContainer()->SetChildProperties(kChildKey, 0,
-                                             std::move(view_properties));
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override {
+    if (host_node_) {
+      GetViewContainer()->SetChildProperties(kChildKey, properties()->Clone());
     }
   }
 
-  // |BaseView|:
-  void OnDraw() override {
-    auto update = mozart::SceneUpdate::New();
-    update->clear_resources = true;
-    update->clear_nodes = true;
-    auto root_node = mozart::Node::New();
-
-    FTL_DCHECK(properties());
-    const mozart::Size& size = *properties()->view_layout->size;
-    if (view_info_ && size.width > 0 && size.height > 0) {
-      mozart::RectF bounds;
-      bounds.width = size.width;
-      bounds.height = size.height;
-      root_node->content_transform = mozart::Transform::New();
-      root_node->content_clip = bounds.Clone();
-      mozart::SetTranslationTransform(root_node->content_transform.get(), 0, 0,
-                                      0);
-
-      auto scene_resource = mozart::Resource::New();
-      scene_resource->set_scene(mozart::SceneResource::New());
-      scene_resource->get_scene()->scene_token =
-          view_info_->scene_token.Clone();
-      update->resources.insert(kChildSceneResourceId,
-                               std::move(scene_resource));
-
-      auto scene_node = mozart::Node::New();
-      scene_node->op = mozart::NodeOp::New();
-      scene_node->op->set_scene(mozart::SceneNodeOp::New());
-      scene_node->op->get_scene()->scene_resource_id = kChildSceneResourceId;
-      update->nodes.insert(kChildSceneNodeId, std::move(scene_node));
-      root_node->child_node_ids.push_back(kChildSceneNodeId);
-    }
-
-    update->nodes.insert(mozart::kSceneRootNodeId, std::move(root_node));
-    scene()->Update(std::move(update));
-    scene()->Publish(CreateSceneMetadata());
-  }
-
-  mozart::ViewInfoPtr view_info_;
+  std::unique_ptr<mozart::client::EntityNode> host_node_;
 };
 
 class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {

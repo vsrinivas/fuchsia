@@ -14,8 +14,6 @@
 
 namespace modular {
 
-struct ViewData;
-
 // A class that allows modules to display the UI of their child
 // modules, without displaying any UI on their own. Used for modules
 // that play the role of a view controller (aka quarterback, recipe).
@@ -35,20 +33,18 @@ class ViewHost : public mozart::BaseView {
   void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner);
 
  private:
+  struct ViewData;
+
   // |BaseView|:
-  void OnChildAttached(uint32_t child_key,
-                       mozart::ViewInfoPtr child_view_info) override;
-  // |BaseView|:
+  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnChildUnavailable(uint32_t child_key) override;
 
-  // |BaseView|:
-  void OnLayout() override;
+  void UpdateScene();
 
-  // |BaseView|:
-  void OnDraw() override;
+  mozart::client::EntityNode container_node_;
 
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
-  uint32_t next_child_key_{};
+  uint32_t next_child_key_{1u};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewHost);
 };

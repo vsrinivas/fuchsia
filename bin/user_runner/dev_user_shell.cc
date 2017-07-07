@@ -14,7 +14,6 @@
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
