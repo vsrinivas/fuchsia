@@ -90,10 +90,19 @@ HostImagePool::HostImagePool(Session* session, uint32_t num_images)
 
 HostImagePool::~HostImagePool() = default;
 
-bool HostImagePool::Configure(mozart2::ImageInfoPtr image_info) {
-  if (image_info_.Equals(image_info))
-    return false;
-  image_info_ = std::move(image_info);
+bool HostImagePool::Configure(const mozart2::ImageInfo* image_info) {
+  if (image_info) {
+    if (image_info_ && image_info->Equals(*image_info_.get()))
+      return false;  // no change
+    if (!image_info_)
+      image_info_ = image_info->Clone();
+    else
+      *image_info_ = *image_info;
+  } else {
+    if (!image_info_)
+      return false;  // no change
+    image_info_.reset();
+  }
 
   for (uint32_t i = 0; i < num_images(); i++)
     image_ptrs_[i].reset();

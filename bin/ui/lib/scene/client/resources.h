@@ -161,9 +161,21 @@ class Material : public Resource {
 class Node : public Resource {
  public:
   // Sets the node's transform properties.
+  void SetTranslation(float tx, float ty, float tz) {
+    SetTranslation((float[3]){tx, ty, tz});
+  }
   void SetTranslation(const float translation[3]);
+  void SetScale(float sx, float sy, float sz) {
+    SetScale((float[3]){sx, sy, sz});
+  }
   void SetScale(const float scale[3]);
+  void SetRotation(float qi, float qj, float qk, float qw) {
+    SetRotation((float[4]){qi, qj, qk, qw});
+  }
   void SetRotation(const float quaternion[4]);
+  void SetAnchor(float ax, float ay, float az) {
+    SetAnchor((float[3]){ax, ay, az});
+  }
   void SetAnchor(const float anchor[3]);
 
   // Sets the node's tag value.

@@ -42,7 +42,7 @@ HostSkSurfacePool::HostSkSurfacePool(mozart::client::Session* session,
 
 HostSkSurfacePool::~HostSkSurfacePool() = default;
 
-bool HostSkSurfacePool::Configure(mozart2::ImageInfoPtr image_info) {
+bool HostSkSurfacePool::Configure(const mozart2::ImageInfo* image_info) {
   if (!image_pool_.Configure(std::move(image_info)))
     return false;
 

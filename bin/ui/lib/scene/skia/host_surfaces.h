@@ -30,7 +30,7 @@ class HostSkSurfacePool {
  public:
   // Creates a pool which can supply up to |num_images| images on demand.
   explicit HostSkSurfacePool(mozart::client::Session* session,
-                             uint32_t num_images = 2u);
+                             uint32_t num_images);
   ~HostSkSurfacePool();
 
   // The number of images which this pool can manage.
@@ -47,7 +47,7 @@ class HostSkSurfacePool {
   // If |image_info| is nullptr, the pool reverts to an non-configured state;
   // all images are released but the memory is retained for recycling.
   // Returns true if the configuration changed.
-  bool Configure(mozart2::ImageInfoPtr image_info);
+  bool Configure(const mozart2::ImageInfo* image_info);
 
   // Gets the surface backed by the image with the specified index.
   // The |index| must be between 0 and |num_images() - 1|.
