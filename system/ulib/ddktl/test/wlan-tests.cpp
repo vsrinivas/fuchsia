@@ -230,7 +230,7 @@ static bool test_wlanmac_protocol_ifc_proxy() {
     // casting is correct.
     TestWlanmacProtocol protocol_dev;
 
-    wlanmac_protocol_t proto;;
+    wlanmac_protocol_t proto;
     auto status = protocol_dev.DdkGetProtocol(MX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(MX_OK, status, "");
 

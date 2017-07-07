@@ -122,7 +122,7 @@ bool array_tests(void) {
     // test boolean array
     EXPECT_EQ(mdi_find_node(&root, MDI_TEST_BOOL_ARRAY, &node), 0,
               "MDI_TEST_BOOL_ARRAY not found");
-    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");;
+    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");
     bool b[4];
     EXPECT_EQ(mdi_array_boolean(&node, 0, &b[0]), 0, "mdi_array_boolean failed");
     EXPECT_EQ(mdi_array_boolean(&node, 1, &b[1]), 0, "mdi_array_boolean failed");
@@ -136,7 +136,7 @@ bool array_tests(void) {
     // test uint8 array
     EXPECT_EQ(mdi_find_node(&root, MDI_TEST_UINT8_ARRAY, &node), 0,
               "MDI_TEST_UINT8_ARRAY not found");
-    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");;
+    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");
     uint8_t u8[4];
     EXPECT_EQ(mdi_array_uint8(&node, 0, &u8[0]), 0, "mdi_array_uint8 failed");
     EXPECT_EQ(mdi_array_uint8(&node, 1, &u8[1]), 0, "mdi_array_uint8 failed");
@@ -150,7 +150,7 @@ bool array_tests(void) {
     // test int32 array
     EXPECT_EQ(mdi_find_node(&root, MDI_TEST_INT32_ARRAY, &node), 0,
               "MDI_TEST_INT32_ARRAY not found");
-    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");;
+    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");
     int32_t i32[4];
     EXPECT_EQ(mdi_array_int32(&node, 0, &i32[0]), 0, "mdi_array_int32 failed");
     EXPECT_EQ(mdi_array_int32(&node, 1, &i32[1]), 0, "mdi_array_int32 failed");
@@ -164,7 +164,7 @@ bool array_tests(void) {
     // test uint32 array
     EXPECT_EQ(mdi_find_node(&root, MDI_TEST_UINT32_ARRAY, &node), 0,
               "MDI_TEST_UINT32_ARRAY not found");
-    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");;
+    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");
     uint32_t u32[4];
     EXPECT_EQ(mdi_array_uint32(&node, 0, &u32[0]), 0, "mdi_array_uint32 failed");
     EXPECT_EQ(mdi_array_uint32(&node, 1, &u32[1]), 0, "mdi_array_uint32 failed");
@@ -178,7 +178,7 @@ bool array_tests(void) {
     // test uint64 array
     EXPECT_EQ(mdi_find_node(&root, MDI_TEST_UINT64_ARRAY, &node), 0,
               "MDI_TEST_UINT64_ARRAY not found");
-    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");;
+    EXPECT_EQ(mdi_array_length(&node), 3u, "mdi_array_length failed");
     uint64_t u64[4];
     EXPECT_EQ(mdi_array_uint64(&node, 0, &u64[0]), 0, "mdi_array_uint64 failed");
     EXPECT_EQ(mdi_array_uint64(&node, 1, &u64[1]), 0, "mdi_array_uint64 failed");

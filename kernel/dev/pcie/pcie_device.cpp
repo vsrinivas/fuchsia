@@ -457,7 +457,7 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
      * in time, otherwise they might see some minor glitching while access is
      * disabled.
      */
-    uint16_t backup = cfg_->Read(PciConfig::kCommand);;
+    uint16_t backup = cfg_->Read(PciConfig::kCommand);
     if (bar_info.is_mmio)
         cfg_->Write(PciConfig::kCommand, static_cast<uint16_t>(backup & ~PCI_COMMAND_MEM_EN));
     else

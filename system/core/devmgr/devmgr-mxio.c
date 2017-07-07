@@ -86,7 +86,7 @@ mx_status_t devmgr_launch(mx_handle_t job, const char* name,
     }
     envp[envn++] = NULL;
 
-    mx_handle_t job_copy = MX_HANDLE_INVALID;;
+    mx_handle_t job_copy = MX_HANDLE_INVALID;
     mx_handle_duplicate(job, CHILD_JOB_RIGHTS, &job_copy);
 
     launchpad_t* lp;

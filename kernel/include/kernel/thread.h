@@ -96,7 +96,7 @@ typedef struct thread {
     uint64_t user_pid;
 
     /* callback for user thread state changes */
-    thread_user_callback_t user_callback;;
+    thread_user_callback_t user_callback;
 
     /* Total time in THREAD_RUNNING state.  If the thread is currently in
      * THREAD_RUNNING state, this excludes the time it has accrued since it

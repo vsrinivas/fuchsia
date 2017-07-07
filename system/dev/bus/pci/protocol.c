@@ -70,7 +70,7 @@ static mx_status_t pci_get_resource(void* ctx, uint32_t res_id, mx_pci_resource_
             status = mx_pci_get_bar(device->handle, res_id, out_res);
             break;
         case PCI_RESOURCE_CONFIG:
-            status = mx_pci_get_config(device->handle, out_res);;
+            status = mx_pci_get_config(device->handle, out_res);
             break;
     }
 

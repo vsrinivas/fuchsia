@@ -153,7 +153,7 @@ status_t PcieBridge::ParseBusWindowsLocked() {
     limit = cfg_->Read(PciConfig::kPrefetchableMemoryLimit);
 
     bool supports_64bit_pf_mem = ((base & 0xF) == 0x1) && ((base & 0xF) == (limit& 0xF));
-    pf_mem_base_  = (base & ~0xF) << 16;;
+    pf_mem_base_  = (base & ~0xF) << 16;
     pf_mem_limit_ = (limit << 16) | 0xFFFFF;
     if (supports_64bit_pf_mem) {
         pf_mem_base_  |=
