@@ -219,11 +219,11 @@ def main():
     full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> )"
     btre = re.compile(full_prefix + "bt#(\d+):")
     bt_with_offset_re = re.compile(full_prefix +
-        "bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$")
+        "bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \(([^,]+),(0x[0-9a-f]+)\)$")
     bt_end_re = re.compile(full_prefix + "bt#(\d+): end")
     arch_re = re.compile(full_prefix + "arch: ([\\S]+)$")
     build_id_re = re.compile(full_prefix +
-        "dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=([\\S]+)$")
+        "dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=(.+)$")
     disasm_re = re.compile("^ *(0x[0-9a-f]+)( .+)$")
 
     # Magenta backtraces
