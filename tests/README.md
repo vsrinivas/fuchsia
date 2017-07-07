@@ -42,13 +42,13 @@ sourcing [scripts/env.sh][env_sh].
 
 ## Starting the test suite directly under Fuchsia
 
-`run_integration_tests` is a command that runs all of the Modular tests. It is based
+`run_modular_tests.sh` is a command that runs all of the Modular tests. It is based
 on the [Test Runner][test_runner] framework.
 
 It can be run directly from either the shell:
 
 ```
-$ /system/test/run_integration_tests --test_file=/system/apps/modular_tests/modular_tests.json
+$ /system/test/run_modular_tests.sh
 ```
 
 
