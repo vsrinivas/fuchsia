@@ -40,11 +40,11 @@ void SceneManagerTest::TearDown() {
 }
 
 SessionHandlerForTest::SessionHandlerForTest(
-    SceneManagerImpl* scene_manager,
+    SessionContext* session_context,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : SessionHandler(scene_manager,
+    : SessionHandler(session_context,
                      session_id,
                      std::move(request),
                      std::move(listener)),
@@ -73,12 +73,12 @@ void SessionHandlerForTest::Connect(
   ++connect_count_;
 }
 
-DummySessionContext::DummySessionContext() : SessionContext(nullptr) {}
+SessionContextForTest::SessionContextForTest() : SessionContext(nullptr) {}
 
 SceneManagerImplForTest::SceneManagerImplForTest()
-    : SceneManagerImpl(std::make_unique<DummySessionContext>(), nullptr) {}
+    : SceneManagerImpl(std::make_unique<SessionContextForTest>(), nullptr) {}
 
-std::unique_ptr<SessionHandler> SceneManagerImplForTest::CreateSessionHandler(
+std::unique_ptr<SessionHandler> SessionContextForTest::CreateSessionHandler(
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {

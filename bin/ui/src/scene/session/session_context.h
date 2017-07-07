@@ -20,8 +20,11 @@
 namespace mozart {
 namespace scene {
 
+using SessionId = uint64_t;
+
 class FrameScheduler;
 class Session;
+class SessionHandler;
 
 // Interface that describes the ways that a |Session| communicates with its
 // environment.
@@ -83,6 +86,15 @@ class SessionContext : public FrameSchedulerListener {
   // a new Image to present.
   void ScheduleUpdate(uint64_t presentation_time);
 
+  void CreateSession(
+      ::fidl::InterfaceRequest<mozart2::Session> request,
+      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+
+  // Finds the session handler corresponding to the given id.
+  SessionHandler* FindSession(SessionId id);
+
+  size_t GetSessionCount() { return session_count_; }
+
   FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
 
  protected:
@@ -90,6 +102,18 @@ class SessionContext : public FrameSchedulerListener {
   SessionContext(std::unique_ptr<ReleaseFenceSignaller> r);
 
  private:
+  friend class SessionHandler;
+  friend class Session;
+
+  // Allow overriding to support tests.
+  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
+      SessionId id,
+      ::fidl::InterfaceRequest<mozart2::Session> request,
+      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+
+  // Destroys the session with the given id.
+  void TearDownSession(SessionId id);
+
   // Implement |FrameSchedulerListener|.  For each session, apply all updates
   // that should be applied before rendering and presenting a frame at
   // |presentation_time|.
@@ -103,6 +127,11 @@ class SessionContext : public FrameSchedulerListener {
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
   FrameScheduler* const frame_scheduler_ = nullptr;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
+
+  // Map of all the sessions.
+  std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
+  std::atomic<size_t> session_count_;
+  SessionId next_session_id_ = 1;
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.

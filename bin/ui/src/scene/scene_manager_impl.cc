@@ -6,8 +6,6 @@
 
 #include "apps/mozart/src/scene/display.h"
 
-#include "lib/ftl/functional/make_copyable.h"
-
 namespace mozart {
 namespace scene {
 
@@ -18,8 +16,7 @@ SceneManagerImpl::SceneManagerImpl(
     : frame_scheduler_(std::move(frame_scheduler)),
       session_context_(std::make_unique<SessionContext>(escher,
                                                         frame_scheduler_.get(),
-                                                        std::move(swapchain))),
-      session_count_(0) {
+                                                        std::move(swapchain))) {
   // Either both Escher and a FrameScheduler must be available, or neither.
   FTL_DCHECK(!escher == !frame_scheduler_);
 
@@ -39,18 +36,12 @@ SceneManagerImpl::SceneManagerImpl(
     std::unique_ptr<SessionContext> session_context,
     std::unique_ptr<FrameScheduler> frame_scheduler)
     : frame_scheduler_(std::move(frame_scheduler)),
-      session_context_(std::move(session_context)),
-      session_count_(0) {}
+      session_context_(std::move(session_context)) {}
 
 void SceneManagerImpl::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  SessionId session_id = next_session_id_++;
-
-  auto handler =
-      CreateSessionHandler(session_id, std::move(request), std::move(listener));
-  sessions_.insert({session_id, std::move(handler)});
-  ++session_count_;
+  session_context_->CreateSession(std::move(request), std::move(listener));
 }
 
 void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
@@ -61,38 +52,6 @@ void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   info->height = Display::kHardcodedDisplayHeight;
   info->device_pixel_ratio = Display::kHardcodedDevicePixelRatio;
   callback(std::move(info));
-}
-
-std::unique_ptr<SessionHandler> SceneManagerImpl::CreateSessionHandler(
-    SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  return std::make_unique<SessionHandler>(this, session_id, std::move(request),
-                                          std::move(listener));
-}
-
-SessionHandler* SceneManagerImpl::FindSession(SessionId id) {
-  auto it = sessions_.find(id);
-  if (it != sessions_.end()) {
-    return it->second.get();
-  }
-  return nullptr;
-}
-
-void SceneManagerImpl::TearDownSession(SessionId id) {
-  auto it = sessions_.find(id);
-  FTL_DCHECK(it != sessions_.end());
-  if (it != sessions_.end()) {
-    std::unique_ptr<SessionHandler> handler = std::move(it->second);
-    sessions_.erase(it);
-    --session_count_;
-    handler->TearDown();
-
-    // Don't destroy handler immediately, since it may be the one calling
-    // TearDownSession().
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        ftl::MakeCopyable([handler = std::move(handler)]{}));
-  }
 }
 
 }  // namespace scene

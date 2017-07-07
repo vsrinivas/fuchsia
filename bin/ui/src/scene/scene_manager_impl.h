@@ -37,33 +37,15 @@ class SceneManagerImpl : public mozart2::SceneManager {
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
   void GetDisplayInfo(const GetDisplayInfoCallback& callback) override;
 
-  size_t GetSessionCount() { return session_count_; }
-
-  SessionHandler* FindSession(SessionId id);
-
  protected:
   // Only used by subclasses used in testing.
   explicit SceneManagerImpl(std::unique_ptr<SessionContext> session_context,
                             std::unique_ptr<FrameScheduler> frame_scheduler);
 
  private:
-  friend class SessionHandler;
-
-  void TearDownSession(SessionId id);
-
-  // Allow overriding to support tests.
-  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      SessionId id,
-      ::fidl::InterfaceRequest<mozart2::Session> request,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
-
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<SessionContext> session_context_;
-  std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
-  std::atomic<size_t> session_count_;
   std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
-
-  SessionId next_session_id_ = 1;
 };
 
 }  // namespace scene

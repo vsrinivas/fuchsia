@@ -17,7 +17,7 @@ namespace test {
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      SceneManagerImpl* manager,
+      SessionContext* session_context,
       SessionId session_id,
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
@@ -46,23 +46,22 @@ class SessionHandlerForTest : public SessionHandler {
 
 // Subclass of SessionContext that exposes a default constructor. Leaves
 // lots of instance variables uninitialized.
-class DummySessionContext : public SessionContext {
+class SessionContextForTest : public SessionContext {
  public:
-  DummySessionContext();
-};
-
-// Subclass SceneManagerImpl to make testing easier.
-class SceneManagerImplForTest : public SceneManagerImpl {
- public:
-  SceneManagerImplForTest();
-
-  using SceneManagerImpl::FindSession;
+  SessionContextForTest();
+  using SessionContext::FindSession;
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
       SessionId id,
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
+};
+
+// Subclass SceneManagerImpl to make testing easier.
+class SceneManagerImplForTest : public SceneManagerImpl {
+ public:
+  SceneManagerImplForTest();
 };
 
 class SceneManagerTest : public ::testing::Test {

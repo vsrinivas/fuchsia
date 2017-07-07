@@ -11,21 +11,18 @@ namespace mozart {
 namespace scene {
 
 SessionHandler::SessionHandler(
-    SceneManagerImpl* scene_manager,
+    SessionContext* session_context,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : scene_manager_(scene_manager),
+    : session_context_(session_context),
       session_(::ftl::MakeRefCounted<scene::Session>(
           session_id,
-          scene_manager->session_context(),
+          session_context_,
           static_cast<ErrorReporter*>(this))) {
-  FTL_DCHECK(scene_manager_);
+  FTL_DCHECK(session_context);
 
-  bindings_.set_on_empty_set_handler([this]() {
-    scene_manager_->TearDownSession(session_->id());
-    FTL_DCHECK(!session_->is_valid());
-  });
+  bindings_.set_on_empty_set_handler([this]() { BeginTearDown(); });
 
   Connect(std::move(request), std::move(listener));
 }
@@ -89,6 +86,11 @@ void SessionHandler::ReportError(ftl::LogSeverity severity,
       // Invalid severity.
       FTL_DCHECK(false);
   }
+}
+
+void SessionHandler::BeginTearDown() {
+  session_context_->TearDownSession(session_->id());
+  FTL_DCHECK(!session_->is_valid());
 }
 
 void SessionHandler::TearDown() {

@@ -4,9 +4,12 @@
 
 #include "apps/mozart/src/scene/session/session_context.h"
 
+#include "lib/ftl/functional/make_copyable.h"
+
 #include "apps/mozart/src/scene/frame_scheduler.h"
 #include "apps/mozart/src/scene/renderer/renderer.h"
 #include "apps/mozart/src/scene/session/session.h"
+#include "apps/mozart/src/scene/session/session_handler.h"
 
 namespace mozart {
 namespace scene {
@@ -16,17 +19,16 @@ SessionContext::SessionContext(
     FrameScheduler* frame_scheduler,
     std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : escher_(escher),
-      image_factory_(escher ? std::make_unique<escher::SimpleImageFactory>(
-                                  escher->resource_recycler(),
-                                  escher->gpu_allocator())
-                            : nullptr),
+      image_factory_(std::make_unique<escher::SimpleImageFactory>(
+          escher->resource_recycler(),
+          escher->gpu_allocator())),
       rounded_rect_factory_(
-          escher ? std::make_unique<escher::RoundedRectFactory>(escher)
-                 : nullptr),
+          std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
       frame_scheduler_(frame_scheduler),
-      swapchain_(std::move(swapchain)) {}
+      swapchain_(std::move(swapchain)),
+      session_count_(0) {}
 
 SessionContext::SessionContext(std::unique_ptr<ReleaseFenceSignaller> r)
     : release_fence_signaller_(std::move(r)) {}
@@ -85,6 +87,49 @@ void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
 
 void SessionContext::ScheduleUpdate(uint64_t presentation_time) {
   ScheduleSessionUpdate(presentation_time, nullptr);
+}
+
+void SessionContext::CreateSession(
+    ::fidl::InterfaceRequest<mozart2::Session> request,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+  SessionId session_id = next_session_id_++;
+
+  auto handler =
+      CreateSessionHandler(session_id, std::move(request), std::move(listener));
+  sessions_.insert({session_id, std::move(handler)});
+  ++session_count_;
+}
+
+std::unique_ptr<SessionHandler> SessionContext::CreateSessionHandler(
+    SessionId session_id,
+    ::fidl::InterfaceRequest<mozart2::Session> request,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+  return std::make_unique<SessionHandler>(this, session_id, std::move(request),
+                                          std::move(listener));
+}
+
+SessionHandler* SessionContext::FindSession(SessionId id) {
+  auto it = sessions_.find(id);
+  if (it != sessions_.end()) {
+    return it->second.get();
+  }
+  return nullptr;
+}
+
+void SessionContext::TearDownSession(SessionId id) {
+  auto it = sessions_.find(id);
+  FTL_DCHECK(it != sessions_.end());
+  if (it != sessions_.end()) {
+    std::unique_ptr<SessionHandler> handler = std::move(it->second);
+    sessions_.erase(it);
+    --session_count_;
+    handler->TearDown();
+
+    // Don't destroy handler immediately, since it may be the one calling
+    // TearDownSession().
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+        ftl::MakeCopyable([handler = std::move(handler)]{}));
+  }
 }
 
 bool SessionContext::OnPrepareFrame(uint64_t presentation_time,

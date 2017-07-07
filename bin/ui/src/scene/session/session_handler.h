@@ -22,7 +22,7 @@ class SceneManagerImpl;
 // suggests to.
 class SessionHandler : public mozart2::Session, private ErrorReporter {
  public:
-  SessionHandler(SceneManagerImpl* scene_manager,
+  SessionHandler(SessionContext* session_context,
                  SessionId session_id,
                  ::fidl::InterfaceRequest<mozart2::Session> request,
                  ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
@@ -46,20 +46,21 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
                const HitTestCallback& callback) override;
 
  private:
-  friend class SceneManagerImpl;
-
-  // Called by |binding_| when the connection closes, or by the SessionHandler
-  // itself when there is a validation error while applying operations.  Must be
-  // invoked within the SessionHandler MessageLoop.
-  void BeginTeardown();
+  friend class SessionContext;
 
   // Customize behavior of ErrorReporter::ReportError().
   void ReportError(ftl::LogSeverity severity,
                    std::string error_string) override;
 
+  // Called by |binding_| when the connection closes. Must be invoked within
+  // the SessionHandler MessageLoop.
+  void BeginTearDown();
+
+  // Called only by SessionContext. Use BeginTearDown() instead when you need to
+  // teardown from within SessionHandler.
   void TearDown();
 
-  SceneManagerImpl* const scene_manager_;
+  SessionContext* const session_context_;
   scene::SessionPtr session_;
 
   ::fidl::BindingSet<mozart2::Session> bindings_;

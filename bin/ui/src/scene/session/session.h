@@ -27,6 +27,8 @@ using ImageBasePtr = ::ftl::RefPtr<ImageBase>;
 class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
+class SessionContext;
+
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
 class Session : public ftl::RefCountedThreadSafe<Session> {
@@ -53,6 +55,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // the resource may continue to exist if it is referenced by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
+  // Called only by SessionContext. Use BeginTearDown() instead when you need to
+  // teardown from within Session.
   void TearDown();
 
   // Session becomes invalid once TearDown is called.
@@ -84,6 +88,9 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                const mozart2::Session::HitTestCallback& callback);
 
  private:
+  // Called internally to initiate teardown.
+  void BeginTearDown();
+
   // Operation application functions, called by ApplyOp().
   bool ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op);
   bool ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op);

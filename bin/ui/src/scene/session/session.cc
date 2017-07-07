@@ -753,7 +753,9 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       FTL_LOG(WARNING) << "mozart::Session::ApplyScheduledUpdates(): "
                           "An error was encountered while applying the update. "
                           "Initiating teardown.";
-      TearDown();
+
+      BeginTearDown();
+
       // Tearing down a session will very probably result in changes to
       // the global scene-graph.
       return true;
@@ -804,6 +806,11 @@ void Session::HitTest(uint32_t node_id,
         << " does not exist in the currently presented content.";
   }
   callback(std::move(wrapped_hits));
+}
+
+void Session::BeginTearDown() {
+  context()->TearDownSession(id());
+  FTL_DCHECK(!is_valid());
 }
 
 }  // namespace scene
