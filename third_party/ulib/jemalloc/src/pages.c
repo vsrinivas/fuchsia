@@ -24,89 +24,37 @@ static bool	os_overcommits;
 
 static const char mmap_vmo_name[] = "jemalloc-heap";
 
-void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
-	uint32_t mx_flags = 0u;
-	if (commit)
-		mx_flags |= (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-	if (fixed)
-		mx_flags |= MX_VM_FLAG_SPECIFIC;
-
-	if (len == 0) {
+static void* fuchsia_pages_alloc(size_t size) {
+	if (size == 0) {
 		errno = EINVAL;
 		return NULL;
 	}
-	if (len >= PTRDIFF_MAX) {
+	if (size >= PTRDIFF_MAX) {
 		errno = ENOMEM;
 		return NULL;
 	}
 
 	// round up to page size
-	len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-
-	size_t offset = 0;
-	mx_status_t status = MX_OK;
-	if (fixed) {
-		mx_info_vmar_t info;
-		status = _mx_object_get_info(_mx_vmar_root_self(), MX_INFO_VMAR, &info,
-		    sizeof(info), NULL, NULL);
-		if (status < 0 || (uintptr_t)start < info.base) {
-			goto fail;
-		}
-		offset = (uintptr_t)start - info.base;
-	}
+	size = (size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
 	mx_handle_t vmo;
-	uintptr_t ptr = 0;
-	if (_mx_vmo_create(len, 0, &vmo) < 0) {
+	if (_mx_vmo_create(size, 0, &vmo) < 0) {
 		errno = ENOMEM;
 		return NULL;
 	}
 	_mx_object_set_property(vmo, MX_PROP_NAME, mmap_vmo_name, strlen(mmap_vmo_name));
 
-	status = _mx_vmar_map(_mx_vmar_root_self(), offset, vmo, 0u, len, mx_flags, &ptr);
+	const size_t offset = 0;
+	const uint32_t mx_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
+	uintptr_t ptr = 0;
+	mx_status_t status = _mx_vmar_map(_mx_vmar_root_self(), offset, vmo, 0u, size, mx_flags, &ptr);
 	_mx_handle_close(vmo);
 	if (status < 0) {
-		goto fail;
+		errno = ENOMEM;
+		return NULL;
 	}
 
 	return (void*)ptr;
-
-fail:
-	switch (status) {
-	case MX_ERR_BAD_HANDLE:
-		errno = EBADF;
-		break;
-	case MX_ERR_NOT_SUPPORTED:
-		errno = ENODEV;
-		break;
-	case MX_ERR_ACCESS_DENIED:
-		errno = EACCES;
-		break;
-	case MX_ERR_NO_MEMORY:
-		errno = ENOMEM;
-		break;
-	case MX_ERR_INVALID_ARGS:
-	case MX_ERR_BAD_STATE:
-	default:
-		errno = EINVAL;
-	}
-	return NULL;
-}
-
-static void* fuchsia_pages_alloc(void* addr, size_t size, bool commit) {
-	/*
-	 * We don't use fixed=false here, because it can cause the *replacement*
-	 * of existing mappings, and we only want to create new mappings.
-	 */
-	void* ret = fuchsia_pages_map(addr, size, commit, /* fixed */ false);
-	if (addr != NULL && ret != addr && ret != NULL) {
-		/*
-		 * We succeeded in mapping memory, but not in the right place.
-		 */
-		pages_unmap(ret, size);
-		ret = NULL;
-	}
-	return ret;
 }
 
 static int fuchsia_pages_free(void* addr, size_t size) {
@@ -129,21 +77,6 @@ static void* fuchsia_pages_trim(void* ret, void* addr, size_t size, size_t alloc
 	return (ret);
 }
 
-static bool fuchsia_pages_commit(void* addr, size_t size, bool commit) {
-	void *result = fuchsia_pages_map(addr, size, commit, /* fixed */ true);
-	if (result == NULL)
-		return (true);
-	if (result != addr) {
-		/*
-		 * We succeeded in mapping memory, but not in the right
-		 * place.
-		 */
-		pages_unmap(result, size);
-		return (true);
-	}
-	return (false);
-}
-
 #endif
 
 void *
@@ -164,7 +97,9 @@ pages_map(void *addr, size_t size, bool *commit)
 	ret = VirtualAlloc(addr, size, MEM_RESERVE | (*commit ? MEM_COMMIT : 0),
 	    PAGE_READWRITE);
 #elif __Fuchsia__
-	ret = fuchsia_pages_alloc(addr, size, *commit);
+	assert(*commit);
+	assert(addr == NULL);
+	ret = fuchsia_pages_alloc(size);
 #else
 	/*
 	 * We don't use MAP_FIXED here, because it can cause the *replacement*
@@ -264,7 +199,7 @@ pages_commit_impl(void *addr, size_t size, bool commit)
 	return (commit ? (addr != VirtualAlloc(addr, size, MEM_COMMIT,
 	    PAGE_READWRITE)) : (!VirtualFree(addr, size, MEM_DECOMMIT)));
 #elif __Fuchsia__
-	return fuchsia_pages_commit(addr, size, commit);
+	not_reached();
 #else
 	{
 		int prot = commit ? PAGES_PROT_COMMIT : PAGES_PROT_DECOMMIT;
@@ -427,6 +362,8 @@ pages_boot(void)
 	if (os_overcommits)
 		mmap_flags |= MAP_NORESERVE;
 #  endif
+#elif defined(__Fuchsia__)
+	os_overcommits = true;
 #else
 	os_overcommits = false;
 #endif
