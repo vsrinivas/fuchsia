@@ -45,6 +45,10 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
   }
 
  private:
+  std::string GetName() const override {
+    return "RemoteInvokerImpl::StartOnDeviceCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &page_id_};
 

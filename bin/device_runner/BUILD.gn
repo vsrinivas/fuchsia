@@ -43,6 +43,7 @@ executable("device_runner") {
     "//apps/modular/services/user:private",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
+    "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
     "//lib/mtl",
   ]

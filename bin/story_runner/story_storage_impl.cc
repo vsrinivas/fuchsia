@@ -75,6 +75,10 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryStorageImpl::ReadLinkDataCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &result_};
 
@@ -139,6 +143,10 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryStorageImpl::WriteLinkDataCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 

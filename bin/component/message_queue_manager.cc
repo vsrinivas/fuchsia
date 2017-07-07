@@ -203,6 +203,10 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   }
 
  private:
+  std::string GetName() const override {
+    return "MessageQueueManager::GetQueueTokenCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &result_};
     page_->GetSnapshot(
@@ -274,6 +278,10 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "MessageQueueManager::GetMessageSenderCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -356,6 +364,10 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "MessageQueueManager::ObtainMessageQueueCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -461,6 +473,10 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "MessageQueueManager::DeleteMessageQueueCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -552,6 +568,10 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "MessageQueueManager::DeleteNamespaceCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
     page_->GetSnapshot(

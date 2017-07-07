@@ -107,7 +107,11 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override {
+    return "StoryControllerImpl::AddModuleCall";
+  }
+
+  void Run() override {
     FlowToken flow{this};
 
     auto module_path = parent_module_path_.Clone();
@@ -153,7 +157,11 @@ class StoryControllerImpl::GetModulesCall
   }
 
  private:
-  void Run() {
+  std::string GetName() const override {
+    return "StoryControllerImpl::GetModulesCall";
+  }
+
+  void Run() override {
     FlowToken flow(this, &result_);
 
     story_controller_impl_->story_storage_impl_->ReadAllModuleData(
@@ -186,7 +194,11 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override {
+    return "StoryControllerImpl::AddForCreateCall";
+  }
+
+  void Run() override {
     FlowToken flow{this};
 
     // This flow branches and then joins on all the branches completing, which
@@ -238,7 +250,9 @@ class StoryControllerImpl::StartCall : Operation<> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override { return "StoryControllerImpl::StartCall"; }
+
+  void Run() override {
     FlowToken flow{this};
 
     // If the story is running, we do nothing and close the view owner request.
@@ -293,8 +307,10 @@ class StoryControllerImpl::StopCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override { return "StoryControllerImpl::StopCall"; }
+
   // StopCall may be run even on a story impl that is not running.
-  void Run() {
+  void Run() override {
     // At this point, we don't need to monitor the external modules for state
     // changes anymore, because the next state change of the story is triggered
     // by the Cleanup() call below.
@@ -416,7 +432,11 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override {
+    return "StoryControllerImpl::StopModuleCall";
+  }
+
+  void Run() override {
     FlowToken flow{this};
 
     // Read the module data.
@@ -508,7 +528,9 @@ class StoryControllerImpl::DeleteCall : Operation<> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override { return "StoryControllerImpl::DeleteCall"; }
+
+  void Run() override {
     // No call to Done(), in order to block all further operations on the queue
     // until the instance is deleted.
     new StopCall(&operation_queue_, story_controller_impl_, false /* notify */,
@@ -560,7 +582,11 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override {
+    return "StoryControllerImpl::StartModuleCall";
+  }
+
+  void Run() override {
     FlowToken flow{this};
 
     // We currently require a 1:1 relationship between module
@@ -727,7 +753,11 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
   }
 
  private:
-  void Run() {
+  std::string GetName() const override {
+    return "StoryControllerImpl::GetImportanceCall";
+  }
+
+  void Run() override {
     FlowToken flow{this, &result_};
 
     story_controller_impl_->story_storage_impl_->ReadLog(

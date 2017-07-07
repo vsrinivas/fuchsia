@@ -4,6 +4,7 @@
 
 #include "apps/modular/lib/fidl/operation.h"
 
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace modular {
@@ -37,6 +38,7 @@ ftl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
 
 void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
+  TRACE_DURATION_BEGIN("modular", o->GetName().c_str());
   o->Run();
 }
 
@@ -77,6 +79,7 @@ void OperationQueue::Hold(OperationBase* const o) {
   if (idle_) {
     FTL_DCHECK(operations_.size() == 1);
     idle_ = false;
+    TRACE_DURATION_BEGIN("modular", o->GetName().c_str());
     o->Run();
   }
 }
@@ -89,6 +92,7 @@ void OperationQueue::Drop(OperationBase* const o) {
 
 void OperationQueue::Cont() {
   if (!operations_.empty()) {
+    TRACE_DURATION_BEGIN("modular", operations_.front()->GetName().c_str());
     operations_.front()->Run();
   } else {
     idle_ = true;

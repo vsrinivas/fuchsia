@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include "apps/tracing/lib/trace/event.h"
+#include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -149,6 +151,9 @@ class OperationBase {
   // is invoked, |Done()| must be called to signal completion of this operation.
   virtual void Run() = 0;
 
+  // Derived classes need to specify a human-readable name for this Operation.
+  virtual std::string GetName() const = 0;
+
  protected:
   // Derived classes need to pass the OperationContainer here. The constructor
   // adds the instance to the container.
@@ -214,6 +219,7 @@ class Operation : public OperationBase {
   // container. Must be the last thing this instance does, as it results in
   // destructor invocation.
   void Done(Args... result_args) {
+    TRACE_DURATION_END("modular", GetName().c_str());
     DispatchCallback(std::move(result_call_), std::move(result_args)...);
   }
 
@@ -354,6 +360,8 @@ class SyncCall : public Operation<> {
       : Operation(container, std::move(result_call)) {
     Ready();
   }
+
+  std::string GetName() const override { return "SyncCall"; }
 
   void Run() override { Done(); }
 

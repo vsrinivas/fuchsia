@@ -53,6 +53,7 @@ executable("user_runner") {
     "//apps/modular/src/component",
     "//apps/modular/src/story_runner",
     "//apps/mozart/services/views",
+    "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",

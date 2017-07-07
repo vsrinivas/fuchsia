@@ -28,6 +28,7 @@ executable("oauth_token_manager") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/auth",
     "//apps/network/services",
+    "//apps/tracing/lib/trace:provider",
     "//apps/web_runner/services",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

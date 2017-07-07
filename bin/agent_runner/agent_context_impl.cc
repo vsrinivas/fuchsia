@@ -26,6 +26,10 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "AgentContextImpl::StartAndInitializeCall";
+  }
+
   void Run() override {
     FTL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
     FTL_DLOG(INFO) << "Starting new agent, url: " << agent_context_impl_->url_;
@@ -86,6 +90,8 @@ class AgentContextImpl::StopCall : Operation<bool> {
   }
 
  private:
+  std::string GetName() const override { return "AgentContextImpl::StopCall"; }
+
   void Run() override {
     FlowToken flow{this, &stopped_};
 

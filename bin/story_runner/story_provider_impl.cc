@@ -79,6 +79,10 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryProviderImpl::MutateStoryDataCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -135,6 +139,10 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryProviderImpl::CreateStoryCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &story_id_};
 
@@ -236,6 +244,10 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryProviderImpl::DeleteStoryCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -321,6 +333,10 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryProviderImpl::GetControllerCall";
+  }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -384,6 +400,8 @@ class StoryProviderImpl::TeardownCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override { return "StoryProviderImpl::TeardownCall"; }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -420,6 +438,10 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
   }
 
  private:
+  std::string GetName() const override {
+    return "StoryProviderImpl::GetImportanceCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &importance_};
 

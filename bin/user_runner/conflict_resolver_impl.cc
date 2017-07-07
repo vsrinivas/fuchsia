@@ -37,6 +37,10 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override {
+    return "ConflictResolverImpl::LogConflictDiffCall";
+  }
+
   void Run() override {
     GetDiff(
         nullptr, "left",

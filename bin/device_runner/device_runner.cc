@@ -22,6 +22,7 @@
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -184,6 +185,9 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
  private:
   void Start() {
+    // 0. Initialize tracing
+    tracing::InitializeTracer(app_context_.get(), {"device_runner"});
+
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.

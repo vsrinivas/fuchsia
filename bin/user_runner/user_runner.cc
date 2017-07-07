@@ -7,6 +7,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/src/user_runner/user_runner_impl.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -24,6 +25,7 @@ class UserRunnerApp : UserRunnerFactory {
         [this](fidl::InterfaceRequest<UserRunnerFactory> request) {
           bindings_.AddBinding(this, std::move(request));
         });
+    tracing::InitializeTracer(application_context_.get(), {"user_runner"});
   }
 
  private:

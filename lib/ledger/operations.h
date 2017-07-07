@@ -42,6 +42,8 @@ class ReadDataCall : Operation<DataPtr> {
   }
 
  private:
+  std::string GetName() const override { return "ReadDataCall"; }
+
   void Run() override {
     FlowToken flow{this, &result_};
 
@@ -122,6 +124,8 @@ class ReadAllDataCall : Operation<DataArray> {
   }
 
  private:
+  std::string GetName() const override { return "ReadAllDataCall"; }
+
   void Run() override {
     FlowToken flow{this, &data_};
 
@@ -200,6 +204,8 @@ class WriteDataCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override { return "WriteDataCall"; }
+
   void Run() override {
     FlowToken flow{this};
 

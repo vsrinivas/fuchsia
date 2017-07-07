@@ -21,6 +21,7 @@
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "apps/web_runner/services/web_view.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -499,6 +500,10 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   }
 
  private:
+  std::string GetName() const override {
+    return "OAuthTokenManagerApp::GoogleFirebaseTokensCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &firebase_token_};
 
@@ -674,6 +679,10 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   }
 
  private:
+  std::string GetName() const override {
+    return "OAuthTokenManagerApp::GoogleOAuthTokensCall";
+  }
+
   void Run() override {
     FlowToken flow{this, &result_};
 
@@ -869,6 +878,11 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   }
 
  private:
+  // |Operation|
+  std::string GetName() const override {
+    return "OAuthTokenManagerApp::GoogleUserCredsCall";
+  }
+
   // |Operation|
   void Run() override {
     // No FlowToken used here; calling Done() directly is more suitable,
@@ -1083,6 +1097,11 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
 
  private:
   // |Operation|
+  std::string GetName() const override {
+    return "OAuthTokenManagerApp::GoogleProfileAttributesCall";
+  }
+
+  // |Operation|
   void Run() override {
     if (!account_) {
       Failure("Account is null.");
@@ -1170,6 +1189,8 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });
+  tracing::InitializeTracer(application_context_.get(),
+                            {"oauth_token_manager"});
 
   // Reserialize existing users.
   creds_ = ParseCredsFile();

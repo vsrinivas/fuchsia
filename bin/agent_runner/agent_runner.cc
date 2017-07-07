@@ -68,6 +68,8 @@ class AgentRunner::InitializeCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override { return "AgentRunner::InitializeCall"; }
+
   void Run() override {
     FlowToken flow{this};
 
@@ -121,6 +123,8 @@ class AgentRunner::UpdateCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override { return "AgentRunner::UpdateCall"; }
+
   void Run() override {
     agent_runner_->AddedTrigger(key_, value_);
     Done();
@@ -142,6 +146,8 @@ class AgentRunner::DeleteCall : Operation<> {
   }
 
  private:
+  std::string GetName() const override { return "AgentRunner::DeleteCall"; }
+
   void Run() override {
     agent_runner_->DeletedTrigger(key_);
     Done();
