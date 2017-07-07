@@ -274,25 +274,45 @@ void MediaPlayerImpl::Update() {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
+
+          // Capture the target position and clear it. If we get another seek
+          // request while setting the timeline transform and and seeking the
+          // source, we'll notice that and do those things again.
+          int64_t target_position = target_position_;
+          target_position_ = kUnspecifiedTime;
+
           // |program_range_min_pts_| will be delivered in the |SetProgramRange|
           // call, ensuring that the renderers discard packets with PTS values
           // less than the target position. |transform_subject_time_| is used
           // when setting the timeline.
-          program_range_min_pts_ = target_position_;
-          transform_subject_time_ = target_position_;
-          SetTimelineTransform(0.0f, Timeline::local_now(),
-                               [this](bool completed) {
-                                 // Seek to the new position.
-                                 FLOG(log_channel_, Seeking(target_position_));
-                                 source_->Seek(target_position_, [this]() {
-                                   target_position_ = kUnspecifiedTime;
-                                   state_ = State::kFlushed;
-                                   FLOG(log_channel_, Flushed());
-                                   // Back in |kFlushed|. Call |Update| to see
-                                   // if there's further action to be taken.
-                                   Update();
-                                 });
-                               });
+          transform_subject_time_ = target_position;
+          program_range_min_pts_ = target_position;
+
+          SetTimelineTransform(
+              0.0f, Timeline::local_now(),
+              [this, target_position](bool completed) {
+                if (target_position_ == target_position) {
+                  // We've had a rendundant seek request. Ignore it.
+                  target_position_ = kUnspecifiedTime;
+                } else if (target_position_ != kUnspecifiedTime) {
+                  // We've had a seek request to a new position. Refrain from
+                  // seeking the source and re-enter this sequence.
+                  state_ = State::kFlushed;
+                  FLOG(log_channel_, Flushed());
+                  Update();
+                  return;
+                }
+
+                // Seek to the new position.
+                FLOG(log_channel_, Seeking(target_position));
+                source_->Seek(target_position, [this]() {
+                  state_ = State::kFlushed;
+                  FLOG(log_channel_, Flushed());
+                  // Back in |kFlushed|. Call |Update| to see
+                  // if there's further action to be taken.
+                  Update();
+                });
+              });
 
           // Done for now. We're in kWaiting, and the callback will call Update
           // when the Seek call is complete.
