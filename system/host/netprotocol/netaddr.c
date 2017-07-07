@@ -69,6 +69,8 @@ int main(int argc, char** argv) {
 
     if (optind + 1 == argc) {
         hostname = argv[optind];
+        if (!*hostname || (*hostname == ':' && hostname[1] == '\0'))
+            hostname = NULL;
     } else if (optind != argc) {
         usage(argv[0]);
     }
