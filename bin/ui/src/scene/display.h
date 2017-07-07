@@ -20,7 +20,7 @@ class Display {
 
   static constexpr uint32_t kHardcodedDisplayWidth = 2160;
   static constexpr uint32_t kHardcodedDisplayHeight = 1440;
-  static constexpr float kHardcodedDevicePixelRatio = 1.f;
+  static constexpr float kHardcodedDevicePixelRatio = 2.f;
 
   Display();
 
