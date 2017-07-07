@@ -28,8 +28,7 @@ interface MediaService {
   // Creates a source. If allowed_media_types is supplied, conversions will be
   // added to each stream as needed to make the media type of the stream match
   // one of the allowed types. If a stream cannot be converted to one of the
-  // allowed types, its media type will have the scheme NONE, and the stream
-  // will not be usable.
+  // allowed types, the source will not expose that stream.
   CreateSource(SeekingReader reader,
                array<MediaTypeSet>? allowed_media_types,
                MediaSource& source);
