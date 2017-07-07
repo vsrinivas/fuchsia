@@ -8,15 +8,28 @@
 #include "application/services/application_loader.fidl.h"
 
 namespace maxwell {
+namespace {
+
+// TODO(abarth): Get this constant from a generated header once netstack uses
+// FIDL.
+constexpr char kNetstack[] = "net.Netstack";
+
+}  // namespace
 
 ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
     app::ApplicationEnvironment* parent_env) {
   AddService<app::ApplicationLoader>(
       [parent_env](fidl::InterfaceRequest<app::ApplicationLoader> request) {
-        app::ServiceProviderPtr root_services;
-        parent_env->GetServices(root_services.NewRequest());
-        app::ConnectToService(root_services.get(), std::move(request));
+        app::ServiceProviderPtr services;
+        parent_env->GetServices(services.NewRequest());
+        app::ConnectToService(services.get(), std::move(request));
       });
+  AddServiceForName(
+      [parent_env](mx::channel request) {
+        app::ServiceProviderPtr services;
+        parent_env->GetServices(services.NewRequest());
+        services->ConnectToService(kNetstack, std::move(request));
+      }, kNetstack);
 }
 
 void ApplicationEnvironmentHostImpl::GetApplicationEnvironmentServices(
