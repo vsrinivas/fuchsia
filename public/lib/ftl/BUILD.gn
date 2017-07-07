@@ -183,6 +183,7 @@ executable("ftl_unittests") {
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
     "files/directory_unittest.cc",
+    "files/file_descriptor_unittest.cc",
     "files/file_unittest.cc",
     "files/path_unittest.cc",
     "files/scoped_temp_dir_unittest.cc",
@@ -194,6 +195,7 @@ executable("ftl_unittests") {
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
     "random/rand_unittest.cc",
+    "random/uuid_unittest.cc",
     "strings/ascii_unittest.cc",
     "strings/concatenate_unittest.cc",
     "strings/join_strings_unittest.cc",
@@ -210,6 +212,10 @@ executable("ftl_unittests") {
     "tasks/one_shot_timer_unittest.cc",
     "test/run_all_unittests.cc",
     "test/timeout_tolerance.h",
+    "threading/thread_unittest.cc",
+    "time/stopwatch_unittest.cc",
+    "time/time_delta_unittest.cc",
+    "time/time_point_unittest.cc",
     "time/time_unittest.cc",
   ]
 
