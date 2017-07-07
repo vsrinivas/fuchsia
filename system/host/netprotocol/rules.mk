@@ -20,6 +20,8 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS += $(LOCAL_DIR)/netcp.c $(LOCAL_DIR)/netprotocol.c
 
+MODULE_HOST_LIBS := system/ulib/tftp
+
 MODULE_NAME := netcp
 
 include make/module.mk

@@ -256,7 +256,8 @@ static bool netboot_open_callback(device_info_t* device, void* data) {
     return false;
 }
 
-int netboot_open(const char* hostname, const char* ifname) {
+int netboot_open(const char* hostname, const char* ifname,
+                 struct sockaddr_in6* addr, bool make_connection) {
     if ((hostname == NULL) || (hostname[0] == 0)) {
         char* envname = getenv("MAGENTA_NODENAME");
         hostname = envname && envname[0] != 0 ? envname : "*";
@@ -297,7 +298,11 @@ int netboot_open(const char* hostname, const char* ifname) {
     tv.tv_usec = 250 * 1000;
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    if (connect(s, (void*)&cookie.addr, rlen) < 0) {
+    if (addr) {
+        memcpy(addr, &cookie.addr, sizeof(cookie.addr));
+    }
+
+    if (make_connection && connect(s, (void*)&cookie.addr, rlen) < 0) {
         fprintf(stderr, "error: cannot connect UDP port\n");
         close(s);
         return -1;

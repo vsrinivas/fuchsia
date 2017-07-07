@@ -40,6 +40,7 @@ void netboot_usage(void);
 typedef bool (*on_device_cb)(device_info_t* device, void* cookie);
 int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* cookie);
 
-int netboot_open(const char* hostname, const char* ifname);
+int netboot_open(const char* hostname, const char* ifname,
+                 struct sockaddr_in6* addr, bool make_connection);
 
 int netboot_txn(int s, msg* in, msg* out, int outlen);

@@ -26,6 +26,21 @@
 #include <stdint.h>
 
 #include <magenta/boot/netboot.h>
+#include <tftp/tftp.h>
+
+#define TFTP_BUF_SZ 2048
+
+typedef struct {
+    int fd;
+    size_t size;
+} file_info_t;
+
+typedef struct {
+    int socket;
+    bool connected;
+    uint32_t previous_timeout_ms;
+    struct sockaddr_in6 target_addr;
+} transport_info_t;
 
 static const char* appname;
 
@@ -108,99 +123,183 @@ static int pull_file(int s, const char* dst, const char* src) {
     return 0;
 }
 
-static int push_file(int s, const char* dst, const char* src) {
-    // TODO: push to a temporary file and then relink it after close.
-
-    int r;
-    msg in, out;
-    size_t dst_len = strlen(dst);
-    const char* ptr;
-
-    out.hdr.cmd = NB_OPEN;
-    out.hdr.arg = O_WRONLY;
-    memcpy(out.data, dst, dst_len);
-    out.data[dst_len] = 0;
-
-again:
-    r = netboot_txn(s, &in, &out, sizeof(out.hdr) + dst_len + 1);
-    if (r < 0) {
-        if (errno == EISDIR) {
-            ptr = strrchr(src, '/');
-            if (!ptr) {
-                ptr = src;
-            } else {
-                ptr += 1;
-            }
-            int print_len = snprintf((char*)out.data, sizeof(out.data), "%s/%s", dst, ptr);
-            if (print_len >= MAXSIZE) {
-                errno = ENAMETOOLONG;
-                return -1;
-            } else if (print_len < 0) {
-                return print_len;
-            }
-            dst_len = print_len;
-            goto again;
-        }
-        fprintf(stderr, "%s: error opening remote file %s (%d)\n",
-                appname, out.data, errno);
-        return r;
+static ssize_t file_open_read(const char* filename, void* file_cookie) {
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        return TFTP_ERR_IO;
     }
-
-    int fd = open(src, O_RDONLY, 0664);
-    if (!fd) {
-        fprintf(stderr, "%s: cannot open %s for reading: %s\n",
-                appname, src, strerror(errno));
-        return -1;
-    }
-
-    int n = 0;
-    int len = 0;
-    int blocknum = 0;
-    for (;;) {
-        memset(&out, 0, sizeof(out));
-        out.hdr.cmd = NB_WRITE;
-        out.hdr.arg = blocknum;
-
-        len = read(fd, out.data, sizeof(out.data));
-        if (len < 0) {
-            fprintf(stderr, "%s: error reading block %d (%d)\n",
-                    appname, blocknum, errno);
-            close(fd);
-            return r;
-        }
-        if (len == 0) {
-            break; // EOF
-        }
-
-        r = netboot_txn(s, &in, &out, sizeof(out.hdr) + len + 1);
-        if (r < 0) {
-            fprintf(stderr, "%s: error writing block %d (%d)\n",
-                    appname, blocknum, errno);
-            close(fd);
-            return r;
-        }
-
-        blocknum++;
-        n += len;
-    }
-
-    memset(&out, 0, sizeof(out));
-    out.hdr.cmd = NB_CLOSE;
-    r = netboot_txn(s, &in, &out, sizeof(out.hdr) + 1);
-    if (r < 0) {
-        fprintf(stderr, "%s: remote close failed: %s\n",
-                appname, strerror(errno));
+    file_info_t *file_info = file_cookie;
+    file_info->fd = fd;
+    struct stat st;
+    if (fstat(file_info->fd, &st) < 0) {
         close(fd);
-        return r;
+        return TFTP_ERR_IO;
+    }
+    file_info->size = st.st_size;
+    return st.st_size;
+}
+
+static tftp_status file_open_write(const char* filename, size_t size, void* file_cookie) {
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (fd < 0) {
+        return TFTP_ERR_IO;
+    }
+    file_info_t* file_info = file_cookie;
+    file_info->fd = fd;
+    file_info->size = size;
+    return TFTP_NO_ERROR;
+}
+
+static tftp_status file_read(void* data, size_t* length, off_t offset, void* file_cookie) {
+    int fd = ((file_info_t*)file_cookie)->fd;
+    ssize_t n = pread(fd, data, *length, offset);
+    if (n < 0) {
+        return TFTP_ERR_IO;
+    }
+    *length = n;
+    return TFTP_NO_ERROR;
+}
+
+static tftp_status file_write(const void* data, size_t* length, off_t offset, void* file_cookie) {
+    int fd = ((file_info_t*)file_cookie)->fd;
+    ssize_t n = pwrite(fd, data, *length, offset);
+    if (n < 0) {
+        return TFTP_ERR_IO;
+    }
+    *length = n;
+    return TFTP_NO_ERROR;
+}
+
+static void file_close(void* file_cookie) {
+    close(((file_info_t*)file_cookie)->fd);
+}
+
+static int transport_send(void* data, size_t len, void* transport_cookie) {
+    transport_info_t* transport_info = transport_cookie;
+    ssize_t send_result;
+    if (!transport_info->connected) {
+        transport_info->target_addr.sin6_port = htons(NB_TFTP_INCOMING_PORT);
+        send_result = sendto(transport_info->socket, data, len, 0,
+                             (struct sockaddr*)&transport_info->target_addr,
+                             sizeof(transport_info->target_addr));
+    } else {
+        send_result = send(transport_info->socket, data, len, 0);
+    }
+    if (send_result < 0) {
+        return TFTP_ERR_IO;
+    }
+    return (int)send_result;
+}
+
+static int transport_recv(void* data, size_t len, bool block, void* transport_cookie) {
+    transport_info_t* transport_info = transport_cookie;
+    int flags = fcntl(transport_info->socket, F_GETFL, 0);
+    if (flags < 0) {
+        return TFTP_ERR_IO;
+    }
+    if (block) {
+        flags &= ~O_NONBLOCK;
+    } else {
+        flags |= O_NONBLOCK;
+    }
+    if (fcntl(transport_info->socket, F_SETFL, flags)) {
+        return TFTP_ERR_IO;
+    }
+    ssize_t recv_result;
+    struct sockaddr_in6 connection_addr;
+    socklen_t addr_len = sizeof(connection_addr);
+    if (!transport_info->connected) {
+        recv_result = recvfrom(transport_info->socket, data, len, 0,
+                               (struct sockaddr*)&connection_addr,
+                               &addr_len);
+    } else {
+        recv_result = recv(transport_info->socket, data, len, 0);
+    }
+    if (recv_result < 0) {
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+            return TFTP_ERR_TIMED_OUT;
+        }
+        return TFTP_ERR_INTERNAL;
+    }
+    if (!transport_info->connected) {
+        if (connect(transport_info->socket, (struct sockaddr*)&connection_addr,
+                    sizeof(connection_addr)) < 0) {
+            return TFTP_ERR_IO;
+        }
+        memcpy(&transport_info->target_addr, &connection_addr,
+               sizeof(transport_info->target_addr));
+        transport_info->connected = true;
+    }
+    return recv_result;
+}
+
+static int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
+    transport_info_t* transport_info = transport_cookie;
+    if (transport_info->previous_timeout_ms != timeout_ms && timeout_ms > 0) {
+        transport_info->previous_timeout_ms = timeout_ms;
+        struct timeval tv;
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = 1000 * (timeout_ms - 1000 * tv.tv_sec);
+        return setsockopt(transport_info->socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    }
+    return 0;
+}
+
+static int push_file(int s, struct sockaddr_in6* addr, const char* dst,
+                     const char* src) {
+    // Initialize session
+    tftp_session* session = NULL;
+    size_t session_data_sz = tftp_sizeof_session();
+    void* session_data = calloc(session_data_sz, 1);
+    if (session_data == NULL) {
+        fprintf(stderr, "%s: unable to allocate tftp session memory\n", appname);
+        return 1;
+    }
+    if (tftp_init(&session, session_data, session_data_sz) != TFTP_NO_ERROR) {
+        fprintf(stderr, "%s: unable to initiate tftp session\n", appname);
+        free(session_data);
+        return 1;
     }
 
-    if (close(fd)) {
-        fprintf(stderr, "%s: local close failed: %s\n",
-                appname, strerror(errno));
-        return -1;
+    // Initialize file interface
+    file_info_t file_info;
+    tftp_file_interface file_ifc = {file_open_read, file_open_write,
+                                    file_read, file_write, file_close};
+    tftp_session_set_file_interface(session, &file_ifc);
+
+    // Initialize transport interface
+    transport_info_t transport_info;
+    transport_info.previous_timeout_ms = 0;
+    transport_info.socket = s;
+    transport_info.connected = false;
+    memcpy(&transport_info.target_addr, addr, sizeof(transport_info.target_addr));
+    tftp_transport_interface transport_ifc = {transport_send, transport_recv,
+                                              transport_timeout_set};
+    tftp_session_set_transport_interface(session, &transport_ifc);
+
+    // Prepare buffers
+    char err_msg[128];
+    tftp_request_opts opts = { 0 };
+    opts.inbuf = malloc(TFTP_BUF_SZ);
+    opts.inbuf_sz = TFTP_BUF_SZ;
+    opts.outbuf = malloc(TFTP_BUF_SZ);
+    opts.outbuf_sz = TFTP_BUF_SZ;
+    opts.err_msg = err_msg;
+    opts.err_msg_sz = sizeof(err_msg);
+
+    tftp_status status = tftp_push_file(session, &transport_info, &file_info,
+                                        src, dst, &opts);
+
+    free(session_data);
+    free(opts.inbuf);
+    free(opts.outbuf);
+
+    if (status < 0) {
+        fprintf(stderr, "%s: %s (status = %d)\n", appname, opts.err_msg, (int)status);
+        return 1;
     }
 
-    fprintf(stderr, "wrote %d bytes\n", n);
+    fprintf(stderr, "wrote %zu bytes\n", file_info.size);
 
     return 0;
 }
@@ -254,7 +353,8 @@ int main(int argc, char** argv) {
     }
 
     int s;
-    if ((s = netboot_open(hostname, NULL)) < 0) {
+    struct sockaddr_in6 server_addr;
+    if ((s = netboot_open(hostname, NULL, &server_addr, !push)) < 0) {
         if (errno == ETIMEDOUT) {
             fprintf(stderr, "%s: lookup of %s timed out\n", appname, hostname);
         } else {
@@ -263,9 +363,10 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+
     int ret;
     if (push) {
-        ret = push_file(s, dst, src);
+        ret = push_file(s, &server_addr, dst, src);
     } else {
         ret = pull_file(s, dst, src);
     }
