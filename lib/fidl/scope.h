@@ -23,16 +23,9 @@ namespace modular {
 class Scope : public app::ApplicationEnvironmentHost {
  public:
   Scope(const app::ApplicationEnvironmentPtr& parent_env,
-        const std::string& label)
-      : binding_(this) {
-    InitScope(parent_env, label);
-  }
+        const std::string& label);
 
-  Scope(const Scope* const parent_scope, const std::string& label)
-      : binding_(this) {
-    FTL_DCHECK(parent_scope != nullptr);
-    InitScope(parent_scope->environment(), label);
-  }
+  Scope(const Scope* const parent_scope, const std::string& label);
 
   template <typename Interface>
   void AddService(
@@ -41,12 +34,7 @@ class Scope : public app::ApplicationEnvironmentHost {
     service_provider_impl_.AddService(handler, service_name);
   }
 
-  app::ApplicationLauncher* GetLauncher() {
-    if (!env_launcher_) {
-      env_->GetApplicationLauncher(env_launcher_.NewRequest());
-    }
-    return env_launcher_.get();
-  }
+  app::ApplicationLauncher* GetLauncher();
 
   const app::ApplicationEnvironmentPtr& environment() const { return env_; }
 
@@ -54,20 +42,10 @@ class Scope : public app::ApplicationEnvironmentHost {
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
       fidl::InterfaceRequest<app::ServiceProvider> environment_services)
-      override {
-    service_provider_impl_.AddBinding(std::move(environment_services));
-  }
+      override;
 
   void InitScope(const app::ApplicationEnvironmentPtr& parent_env,
-                 const std::string& label) {
-    app::ServiceProviderPtr parent_env_service_provider;
-    parent_env->GetServices(parent_env_service_provider.NewRequest());
-    service_provider_impl_.SetDefaultServiceProvider(
-        std::move(parent_env_service_provider));
-    parent_env->CreateNestedEnvironment(binding_.NewBinding(),
-                                        env_.NewRequest(),
-                                        env_controller_.NewRequest(), label);
-  }
+                 const std::string& label);
 
   fidl::Binding<app::ApplicationEnvironmentHost> binding_;
   app::ApplicationEnvironmentPtr env_;
