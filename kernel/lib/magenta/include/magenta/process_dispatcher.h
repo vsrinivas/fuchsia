@@ -216,7 +216,7 @@ public:
     mxtl::RefPtr<ExceptionPort> exception_port();
     mxtl::RefPtr<ExceptionPort> debugger_exception_port();
 
-    // The following two methods can be slow and innacurrate and should only be
+    // The following two methods can be slow and inaccurate and should only be
     // called from diagnostics code.
     uint32_t ThreadCount() const;
     size_t PageCount() const;
