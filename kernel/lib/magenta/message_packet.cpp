@@ -7,6 +7,7 @@
 #include <magenta/message_packet.h>
 
 #include <err.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <magenta/handle_reaper.h>
@@ -16,6 +17,9 @@
 // static
 mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
                                      mxtl::unique_ptr<MessagePacket>* msg) {
+    // Although the API uses uint32_t, we pack the handle count into a smaller
+    // field internally. Make sure it fits.
+    static_assert(kMaxMessageHandles <= UINT16_MAX, "");
     if (data_size > kMaxMessageSize || num_handles > kMaxMessageHandles) {
         return MX_ERR_OUT_OF_RANGE;
     }
@@ -80,6 +84,9 @@ MessagePacket::~MessagePacket() {
     }
 }
 
-MessagePacket::MessagePacket(uint32_t data_size, uint32_t num_handles, Handle** handles)
-    : owns_handles_(false), data_size_(data_size), num_handles_(num_handles), handles_(handles) {
+MessagePacket::MessagePacket(uint32_t data_size,
+                             uint32_t num_handles, Handle** handles)
+    : handles_(handles), data_size_(data_size),
+      // NewPacket ensures that num_handles fits in 16 bits.
+      num_handles_(static_cast<uint16_t>(num_handles)), owns_handles_(false) {
 }

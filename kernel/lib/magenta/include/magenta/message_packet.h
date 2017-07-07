@@ -77,10 +77,8 @@ private:
     // entries first, then the data buffer.
     void* data() const { return static_cast<void*>(handles_ + num_handles_); }
 
-    // TODO(dbort): Could save space by packing owns_handles_ and num_handles_
-    // in the same 32-bit word.
-    bool owns_handles_;
-    const uint32_t data_size_;
-    const uint32_t num_handles_;
     Handle** const handles_;
+    const uint32_t data_size_;
+    const uint16_t num_handles_;
+    bool owns_handles_;
 };
