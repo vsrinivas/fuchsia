@@ -28,7 +28,7 @@ Here's an example of `netconnector_example` being registered in the
     {
       "host": "my_acer",
       "services": {
-        "netconnector::Example": "file:///system/apps/netconnector_example"
+        "netconnector::Example": "netconnector_example"
       },
       "devices": {
         "acer": "192.168.4.118",
