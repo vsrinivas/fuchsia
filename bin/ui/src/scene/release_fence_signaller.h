@@ -40,7 +40,7 @@ class ReleaseFenceSignaller
   // Implement impl::CommandBufferSequenceListener::CommandBufferFinished().
   // Signals any fences that correspond to a CommandBuffer with a sequence
   // numbers equal to or less than |sequence_number|.
-  void CommandBufferFinished(uint64_t sequence_number) override;
+  void OnCommandBufferFinished(uint64_t sequence_number) override;
 
   // A fence along with the sequence number it is waiting for before it will be
   // signalled.

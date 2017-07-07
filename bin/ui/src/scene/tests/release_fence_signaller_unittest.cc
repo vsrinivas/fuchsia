@@ -13,25 +13,27 @@ namespace mozart {
 namespace scene {
 namespace test {
 
-using ReleaseFenceSignallerTest = ::testing::Test;
+class ReleaseFenceSignallerTest
+    : public ::testing::Test,
+      protected escher::impl::CommandBufferSequencerController {};
 
 TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
   escher::impl::CommandBufferSequencer sequencer;
   ReleaseFenceSignaller release_fence_signaler(&sequencer);
 
   // Create two fences.
-  uint64_t seq_num1 = sequencer.GetNextCommandBufferSequenceNumber();
+  uint64_t seq_num1 = GenerateNextCommandBufferSequenceNumber(&sequencer);
   mx::event fence1;
   ASSERT_EQ(mx::event::create(0, &fence1), MX_OK);
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence1));
 
-  uint64_t seq_num2 = sequencer.GetNextCommandBufferSequenceNumber();
+  uint64_t seq_num2 = GenerateNextCommandBufferSequenceNumber(&sequencer);
   mx::event fence2;
   ASSERT_EQ(mx::event::create(0, &fence2), MX_OK);
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence2));
 
   // Create a third fence that will not be signaled initially.
-  uint64_t seq_num3 = sequencer.GetNextCommandBufferSequenceNumber();
+  uint64_t seq_num3 = GenerateNextCommandBufferSequenceNumber(&sequencer);
   mx::event fence3;
   ASSERT_EQ(mx::event::create(0, &fence3), MX_OK);
   release_fence_signaler.AddCPUReleaseFence(CopyEvent(fence3));
@@ -41,14 +43,14 @@ TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
   ASSERT_FALSE(IsEventSignalled(fence2, kFenceSignalled));
 
   // Mark the sequence numbers so far as finished. (Do it out of order for fun).
-  sequencer.CommandBufferFinished(seq_num2);
-  sequencer.CommandBufferFinished(seq_num1);
+  CommandBufferFinished(&sequencer, seq_num2);
+  CommandBufferFinished(&sequencer, seq_num1);
 
   ASSERT_TRUE(IsEventSignalled(fence1, kFenceSignalled));
   ASSERT_TRUE(IsEventSignalled(fence2, kFenceSignalled));
   ASSERT_FALSE(IsEventSignalled(fence3, kFenceSignalled));
 
-  sequencer.CommandBufferFinished(seq_num3);
+  CommandBufferFinished(&sequencer, seq_num3);
 
   ASSERT_TRUE(IsEventSignalled(fence1, kFenceSignalled));
   ASSERT_TRUE(IsEventSignalled(fence2, kFenceSignalled));

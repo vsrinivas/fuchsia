@@ -28,12 +28,12 @@ void ReleaseFenceSignaller::AddVulkanReleaseFence(mx::event fence) {
 }
 
 void ReleaseFenceSignaller::AddCPUReleaseFence(mx::event fence) {
-  uint64_t fence_sequence_number =
-      command_buffer_sequencer_->GetLastCommandBufferSequenceNumber();
+  uint64_t latest_sequence_number =
+      command_buffer_sequencer_->latest_sequence_number();
 
-  if (last_finished_sequence_number_ < fence_sequence_number) {
-    pending_fences_.push({fence_sequence_number, std::move(fence)});
-  } else if (last_finished_sequence_number_ == fence_sequence_number) {
+  if (latest_sequence_number > last_finished_sequence_number_) {
+    pending_fences_.push({latest_sequence_number, std::move(fence)});
+  } else if (latest_sequence_number == last_finished_sequence_number_) {
     // Signal the fence immediately if its sequence number has already been
     // marked finished.
     fence.signal(0u, kFenceSignalled);
@@ -43,7 +43,7 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(mx::event fence) {
   }
 }
 
-void ReleaseFenceSignaller::CommandBufferFinished(uint64_t sequence_number) {
+void ReleaseFenceSignaller::OnCommandBufferFinished(uint64_t sequence_number) {
   // Iterate through the pending fences until you hit something that is
   // greater than |sequence_number|.
   last_finished_sequence_number_ = sequence_number;

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mx/eventpair.h>
-
 #if defined(countof)
 // Workaround for compiler error due to Magenta defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more
