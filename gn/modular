@@ -201,5 +201,11 @@
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
         }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "test/run_modular_tests.sh",
+            "file": "apps/modular/tests/run_modular_tests.sh"
+        }
     ]
 }
