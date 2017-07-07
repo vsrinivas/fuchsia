@@ -803,22 +803,25 @@ EOF
 
 function ftest-usage() {
   cat >&2 <<END
-Usage: ftest target
+Usage: ftest target <args>
 Builds the specified target (e.g., ftl_unittests), copies it to the target, and
 executes it. Useful for tight iterations on unittests.
 END
 }
 
 function ftest() {
-  if [[ $# -ne 1 ]]; then
+  if [[ $# -eq 0 ]]; then
     ftest-usage
     return 1
   fi
   local target="$1"
 
   "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "${target}"
+  if [[ $? -ne 0 ]]; then
+    return 1
+  fi
   fcp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
-  fcmd "/tmp/${target}"
+  fcmd "/tmp/${target}" "${@:1}"
 }
 
 function fclock() {
