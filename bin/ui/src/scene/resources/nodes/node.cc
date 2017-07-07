@@ -35,7 +35,13 @@ Node::Node(Session* session,
   FTL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
 
-Node::~Node() = default;
+Node::~Node() {
+  ForEachDirectDescendant(*this, [](Node* node) {
+    FTL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
+    node->parent_relation_ = ParentRelation::kNone;
+    node->parent_ = nullptr;
+  });
+}
 
 bool Node::AddChild(NodePtr child_node) {
   // TODO(MZ-130): Some node types (e.g. Scenes) cannot be reparented. We must
@@ -47,18 +53,14 @@ bool Node::AddChild(NodePtr child_node) {
     return false;
   }
 
-  // Remove child from current parent, if necessary.
-  if (auto parent = child_node->parent_) {
-    if (this == parent && !child_node->is_part_) {
-      // Node is already our child.
-      return true;
-    }
-    // Remove child from parent.
-    Detach(child_node);
+  if (child_node->parent_relation_ == ParentRelation::kChild &&
+      child_node->parent_ == this) {
+    return true;  // no change
   }
+  Detach(child_node);
 
   // Add child to its new parent (i.e. us).
-  child_node->is_part_ = false;
+  child_node->parent_relation_ = ParentRelation::kChild;
   child_node->parent_ = this;
   child_node->InvalidateGlobalTransform();
 
@@ -75,17 +77,14 @@ bool Node::AddPart(NodePtr part_node) {
     return false;
   }
 
-  // Remove part from current parent, if necessary.
-  if (auto parent = part_node->parent_) {
-    if (this == parent && part_node->is_part_) {
-      // Node is already our child.
-      return true;
-    }
-    Detach(part_node);
+  if (part_node->parent_relation_ == ParentRelation::kPart &&
+      part_node->parent_ == this) {
+    return true;  // no change
   }
+  Detach(part_node);
 
   // Add part to its new parent (i.e. us).
-  part_node->is_part_ = true;
+  part_node->parent_relation_ = ParentRelation::kPart;
   part_node->parent_ = this;
   part_node->InvalidateGlobalTransform();
 
@@ -97,16 +96,36 @@ bool Node::AddPart(NodePtr part_node) {
 
 bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
   FTL_DCHECK(node_to_detach_from_parent);
+
   if (node_to_detach_from_parent->type_flags() & ResourceType::kScene) {
     node_to_detach_from_parent->error_reporter()->ERROR()
         << "A Scene cannot be detached.";
     return false;
   }
+
   if (auto parent = node_to_detach_from_parent->parent_) {
-    auto& container = node_to_detach_from_parent->is_part_ ? parent->parts_
-                                                           : parent->children_;
-    size_t removed_count = container.erase(node_to_detach_from_parent);
-    FTL_DCHECK(removed_count == 1);  // verify parent-child invariant
+    switch (node_to_detach_from_parent->parent_relation_) {
+      case ParentRelation::kChild: {
+        size_t removed_count =
+            parent->children_.erase(node_to_detach_from_parent);
+        FTL_DCHECK(removed_count == 1);  // verify parent-child invariant
+        break;
+      }
+      case ParentRelation::kPart: {
+        size_t removed_count = parent->parts_.erase(node_to_detach_from_parent);
+        FTL_DCHECK(removed_count == 1);  // verify parent-child invariant
+        break;
+      }
+      case ParentRelation::kImportDelegate:
+        node_to_detach_from_parent->error_reporter()->ERROR()
+            << "An imported node cannot be detached.";
+        return false;
+      case ParentRelation::kNone:
+        FTL_NOTREACHED();
+        break;
+    }
+
+    node_to_detach_from_parent->parent_relation_ = ParentRelation::kNone;
     node_to_detach_from_parent->parent_ = nullptr;
     node_to_detach_from_parent->InvalidateGlobalTransform();
   }
@@ -176,7 +195,7 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;
-    ForEachDirectDescentant(
+    ForEachDirectDescendant(
         *this, [](Node* node) { node->InvalidateGlobalTransform(); });
   }
 }
@@ -194,8 +213,10 @@ void Node::AddImport(Import* import) {
   Resource::AddImport(import);
 
   auto delegate = static_cast<Node*>(import->delegate());
-  FTL_DCHECK(!delegate->parent_);
+  FTL_DCHECK(delegate->parent_relation_ == ParentRelation::kNone);
   delegate->parent_ = this;
+  delegate->parent_relation_ = ParentRelation::kImportDelegate;
+
   delegate->InvalidateGlobalTransform();
 }
 
@@ -203,8 +224,10 @@ void Node::RemoveImport(Import* import) {
   Resource::RemoveImport(import);
 
   auto delegate = static_cast<Node*>(import->delegate());
-  FTL_DCHECK(delegate->parent_);
+  FTL_DCHECK(delegate->parent_relation_ == ParentRelation::kImportDelegate);
+  delegate->parent_relation_ = ParentRelation::kNone;
   delegate->parent_ = nullptr;
+
   delegate->InvalidateGlobalTransform();
 }
 

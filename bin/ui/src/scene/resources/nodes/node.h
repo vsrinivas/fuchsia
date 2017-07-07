@@ -77,10 +77,13 @@ class Node : public Resource {
   void InvalidateGlobalTransform();
   void ComputeGlobalTransform() const;
 
+  // Describes the manner in which a node is related to its parent.
+  enum class ParentRelation { kNone, kChild, kPart, kImportDelegate };
+
   const ResourceId resource_id_;
   uint32_t tag_value_ = 0u;
-  bool is_part_ = false;
   Node* parent_ = nullptr;
+  ParentRelation parent_relation_ = ParentRelation::kNone;
   std::set<NodePtr> children_;
   std::set<NodePtr> parts_;
 

@@ -84,7 +84,7 @@ void HitTester::AccumulateHitsInner(Node* node) {
     tag_info_->ReportIntersection(distance);
   }
 
-  ForEachDirectDescentant(*node,
+  ForEachDirectDescendant(*node,
                           [this](Node* node) { AccumulateHitsOuter(node); });
 }
 

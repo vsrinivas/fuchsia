@@ -13,7 +13,7 @@ namespace scene {
 // Applies a functor to all descendents of the given node.
 // The functor's signature must be |void(const Node* node)|.
 template <typename Callable>
-void ForEachDirectDescentant(const Node& node, Callable func) {
+void ForEachDirectDescendant(const Node& node, Callable func) {
   for (auto& part : node.parts()) {
     func(part.get());
   }
