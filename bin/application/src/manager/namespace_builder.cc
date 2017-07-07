@@ -44,12 +44,27 @@ NamespaceBuilder::NamespaceBuilder() = default;
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
+void NamespaceBuilder::AddFlatNamespace(FlatNamespacePtr ns) {
+  if (!ns.is_null() && ns->paths.size() == ns->directories.size()) {
+    for (size_t i = 0; i < ns->paths.size(); ++i) {
+      AddDirectoryIfNotPresent(ns->paths[i], std::move(ns->directories[i]));
+    }
+  }
+}
+
 void NamespaceBuilder::AddRoot() {
   PushDirectoryFromPath("/", O_RDWR);
 }
 
 void NamespaceBuilder::AddPackage(mx::channel package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
+}
+
+void NamespaceBuilder::AddDirectoryIfNotPresent(
+    const std::string& path, mx::channel directory) {
+  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
+    return;
+  PushDirectoryFromChannel(path, std::move(directory));
 }
 
 void NamespaceBuilder::AddServices(mx::channel services) {
@@ -96,6 +111,7 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path, int oflags) {
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path,
                                                 mx::channel channel) {
+  FTL_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
   types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
   handles_.push_back(channel.get());
   paths_.push_back(std::move(path));

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "application/src/manager/sandbox_metadata.h"
+#include "application/services/flat_namespace.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace app {
@@ -20,8 +21,10 @@ class NamespaceBuilder {
   NamespaceBuilder();
   ~NamespaceBuilder();
 
+  void AddFlatNamespace(FlatNamespacePtr flat_namespace);
   void AddRoot();
   void AddPackage(mx::channel package);
+  void AddDirectoryIfNotPresent(const std::string& path, mx::channel directory);
   void AddServices(mx::channel services);
   void AddSandbox(const SandboxMetadata& sandbox);
 

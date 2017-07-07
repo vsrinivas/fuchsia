@@ -383,6 +383,12 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
   builder.AddRoot();
   builder.AddServices(std::move(svc));
 
+  // Add the custom namespace.
+  // Note that this must be the last |builder| step adding entries to the
+  // namespace so that we can filter out entries already added in previous
+  // steps.
+  builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
+
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateProcess(job_for_child_, std::move(package),
                                       std::move(launch_info), builder.Build());
@@ -422,6 +428,12 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
     }
     builder.AddSandbox(sandbox);
   }
+
+  // Add the custom namespace.
+  // Note that this must be the last |builder| step adding entries to the
+  // namespace so that we can filter out entries already added in previous
+  // steps.
+  builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateSandboxedProcess(
