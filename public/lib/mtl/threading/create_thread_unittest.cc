@@ -4,9 +4,9 @@
 
 #include "lib/mtl/threading/create_thread.h"
 
+#include "gtest/gtest.h"
 #include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "gtest/gtest.h"
 
 namespace mtl {
 namespace {

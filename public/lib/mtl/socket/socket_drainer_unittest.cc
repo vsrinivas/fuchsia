@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mx/socket.h>
+
 #include "gtest/gtest.h"
 #include "lib/mtl/socket/socket_drainer.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mx/socket.h"
 
 namespace mtl {
 namespace {
