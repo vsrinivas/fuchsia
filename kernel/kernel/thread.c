@@ -42,17 +42,6 @@
 #include <magenta/exception.h>
 #endif
 
-#define STACK_DEBUG_BYTE (0x99)
-#define STACK_DEBUG_WORD (0x99999999)
-
-#define DEBUG_THREAD_CONTEXT_SWITCH 0
-
-#define TRACE_CONTEXT_SWITCH(str, x...) \
-    do { if (DEBUG_THREAD_CONTEXT_SWITCH) printf("CS " str, ## x); } while (0)
-
-#define THREAD_INITIAL_TIME_SLICE LK_MSEC(50)
-#define THREAD_TICK_RATE          LK_MSEC(10)
-
 /* global thread list */
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
 
@@ -63,7 +52,6 @@ spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
 static int idle_thread_routine(void *) __NO_RETURN;
 static void thread_exit_locked(thread_t *current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
-static enum handler_return thread_timer_tick(struct timer *t, lk_time_t now, void *arg);
 
 static void init_thread_struct(thread_t *t, const char *name)
 {
@@ -498,7 +486,7 @@ __NO_RETURN static void thread_exit_locked(thread_t *current_thread, int retcode
     }
 
     /* reschedule */
-    _thread_resched_internal();
+    sched_resched_internal();
 
     panic("somehow fell through thread_exit()\n");
 }
@@ -682,7 +670,7 @@ static void thread_do_suspend(void)
         current_thread->signals &= ~THREAD_SIGNAL_SUSPEND;
 
         // directly invoke the context switch, since we've already manipulated this thread's state
-        _thread_resched_internal();
+        sched_resched_internal();
 
         // If the thread was killed, we should not allow it to resume.  We
         // shouldn't call user_callback() with THREAD_USER_STATE_RESUME in
@@ -738,144 +726,6 @@ __NO_RETURN static int idle_thread_routine(void *arg)
 {
     for (;;)
         arch_idle();
-}
-
-// On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
-// after set_current_thread (we'd now see newthread's unsafe-sp instead!).
-// Hence this function and everything it calls between this point and the
-// the low-level context switch must be marked with __NO_SAFESTACK.
-__NO_SAFESTACK static void final_context_switch(thread_t *oldthread,
-                                                thread_t *newthread) {
-    set_current_thread(newthread);
-    arch_context_switch(oldthread, newthread);
-}
-
-/**
- * @brief  Cause another thread to be executed.
- *
- * Internal reschedule routine. The current thread needs to already be in whatever
- * state and queues it needs to be in. This routine simply picks the next thread and
- * switches to it.
- *
- * This is probably not the function you're looking for. See
- * thread_reschedule() instead.
- */
-void _thread_resched_internal(void)
-{
-    thread_t *current_thread = get_current_thread();
-    uint cpu = arch_curr_cpu_num();
-
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
-    DEBUG_ASSERT(!arch_in_int_handler());
-
-    CPU_STATS_INC(reschedules);
-
-    /* pick a new thread to run */
-    thread_t *newthread = sched_get_top_thread(cpu);
-
-    DEBUG_ASSERT(newthread);
-
-    newthread->state = THREAD_RUNNING;
-
-    thread_t *oldthread = current_thread;
-
-    /* if it's the same thread as we're already running, exit */
-    if (newthread == oldthread)
-        return;
-
-    lk_time_t now = current_time();
-    oldthread->runtime_ns += now - oldthread->last_started_running;
-    newthread->last_started_running = now;
-
-    /* set up quantum for the new thread if it was consumed */
-    if (newthread->remaining_time_slice == 0) {
-        newthread->remaining_time_slice = THREAD_INITIAL_TIME_SLICE;
-    }
-
-    /* mark the cpu ownership of the threads */
-    thread_set_last_cpu(newthread, cpu);
-
-    /* set the cpu state based on the new thread we've picked */
-    if (thread_is_idle(newthread)) {
-        mp_set_cpu_idle(cpu);
-    } else {
-        mp_set_cpu_busy(cpu);
-    }
-
-    if (thread_is_realtime(newthread)) {
-        mp_set_cpu_realtime(cpu);
-    } else {
-        mp_set_cpu_non_realtime(cpu);
-    }
-
-    CPU_STATS_INC(context_switches);
-
-    if (thread_is_idle(oldthread)) {
-        percpu[cpu].stats.idle_time += now - oldthread->last_started_running;
-    }
-
-    ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
-           (uint32_t)(uintptr_t)oldthread, (uint32_t)(uintptr_t)newthread);
-
-    if (thread_is_real_time_or_idle(newthread)) {
-        if (!thread_is_real_time_or_idle(oldthread)) {
-            /* if we're switching from a non real time to a real time, cancel
-             * the preemption timer. */
-            TRACE_CONTEXT_SWITCH("stop preempt, cpu %u, old %p (%s), new %p (%s)\n",
-                    cpu, oldthread, oldthread->name, newthread, newthread->name);
-            timer_cancel(&percpu[cpu].preempt_timer);
-        }
-    } else if (thread_is_real_time_or_idle(oldthread)) {
-        /* if we're switching from a real time (or idle thread) to a regular one,
-         * set up a periodic timer to run our preemption tick. */
-        TRACE_CONTEXT_SWITCH("start preempt, cpu %u, old %p (%s), new %p (%s)\n",
-                cpu, oldthread, oldthread->name, newthread, newthread->name);
-        timer_set_oneshot(&percpu[cpu].preempt_timer, now + THREAD_TICK_RATE, thread_timer_tick, NULL);
-    }
-
-    /* set some optional target debug leds */
-    target_set_debug_led(0, !thread_is_idle(newthread));
-
-    TRACE_CONTEXT_SWITCH("cpu %u, old %p (%s, pri %d:%d, flags 0x%x), new %p (%s, pri %d:%d, flags 0x%x)\n",
-            cpu, oldthread, oldthread->name, oldthread->base_priority, oldthread->priority_boost,
-            oldthread->flags, newthread, newthread->name,
-            newthread->base_priority, newthread->priority_boost, newthread->flags);
-
-#if THREAD_STACK_BOUNDS_CHECK
-    /* check that the old thread has not blown its stack just before pushing its context */
-    if (oldthread->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) {
-        static_assert((THREAD_STACK_PADDING_SIZE % sizeof(uint32_t)) == 0, "");
-        uint32_t *s = (uint32_t *)oldthread->stack;
-        for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
-            if (unlikely(s[i] != STACK_DEBUG_WORD)) {
-                /* NOTE: will probably blow the stack harder here, but hopefully enough
-                 * state exists to at least get some sort of debugging done.
-                 */
-                panic("stack overrun at %p: thread %p (%s), stack %p\n", &s[i],
-                      oldthread, oldthread->name, oldthread->stack);
-            }
-        }
-# if __has_feature(safe_stack)
-        s = (uint32_t *)oldthread->unsafe_stack;
-        for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
-            if (unlikely(s[i] != STACK_DEBUG_WORD)) {
-                panic("unsafe_stack overrun at %p: thread %p (%s), unsafe_stack %p\n", &s[i],
-                      oldthread, oldthread->name, oldthread->unsafe_stack);
-            }
-        }
-# endif
-    }
-#endif
-
-    /* see if we need to swap mmu context */
-    if (newthread->aspace != oldthread->aspace) {
-        vmm_context_switch(oldthread->aspace, newthread->aspace);
-    }
-
-    /* do the low level context switch */
-    final_context_switch(oldthread, newthread);
 }
 
 /**
@@ -950,26 +800,6 @@ void thread_reschedule(void)
     sched_reschedule();
 
     THREAD_UNLOCK(state);
-}
-
-static enum handler_return thread_timer_tick(struct timer *t, lk_time_t now, void *arg)
-{
-    timer_set_oneshot(t, now + THREAD_TICK_RATE, thread_timer_tick, NULL);
-
-    thread_t *current_thread = get_current_thread();
-
-    if (thread_is_real_time_or_idle(current_thread))
-        return INT_NO_RESCHEDULE;
-
-    current_thread->remaining_time_slice -= MIN(THREAD_TICK_RATE, current_thread->remaining_time_slice);
-
-    ktrace_probe2("timer_tick", (uint32_t)current_thread->user_tid, current_thread->remaining_time_slice);
-
-    if (current_thread->remaining_time_slice == 0) {
-        return INT_RESCHEDULE;
-    } else {
-        return INT_NO_RESCHEDULE;
-    }
 }
 
 /* timer callback to wake up a sleeping thread */

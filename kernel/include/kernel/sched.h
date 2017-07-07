@@ -20,8 +20,4 @@ void sched_unblock_list(struct list_node *list);
 void sched_yield(void);
 void sched_preempt(void);
 void sched_reschedule(void);
-
-/* the low level reschedule routine, called from the scheduler */
-void _thread_resched_internal(void);
-
-thread_t *sched_get_top_thread(uint cpu);
+void sched_resched_internal(void);

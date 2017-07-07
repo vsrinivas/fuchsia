@@ -67,9 +67,6 @@ typedef struct timer {
  */
 void timer_init(timer_t *);
 
-/* sets a timer, this method is deprecated, see timer_set */
-void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg);
-
 /**
  * Set up a timer that executes once
  *
@@ -107,6 +104,23 @@ void timer_set(timer_t *timer, lk_time_t deadline,
  *
  */
 bool timer_cancel(timer_t *);
+
+/* Equivalent to timer_set with a slack of 0 */
+static inline void timer_set_oneshot(
+    timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg) {
+    return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
+}
+
+/* Similar to timer_set_oneshot, with additional constraints:
+ * - Will reset a currently active timer
+ * - Must be called with interrupts disabled
+ * - Must be running on the cpu that the timer is set to fire on (if currently set)
+ * - Cannot be called from the timer itself
+ */
+/* NOTE: internal api that is needed probably only by the scheduler */
+void timer_reset_oneshot_local(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg);
+
+/* Internal routines used when bringing cpus online/offline */
 
 /* Moves timers from |old_cpu| to the current cpu
  */

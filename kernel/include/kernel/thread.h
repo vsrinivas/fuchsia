@@ -26,6 +26,8 @@ __BEGIN_CDECLS
 #define THREAD_STACK_PADDING_SIZE 256
 #endif
 #endif
+#define STACK_DEBUG_BYTE (0x99)
+#define STACK_DEBUG_WORD (0x99999999)
 
 enum thread_state {
     THREAD_INITIAL = 0,

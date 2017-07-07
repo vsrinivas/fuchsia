@@ -162,7 +162,8 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer,
 void timer_set(timer_t *timer, lk_time_t deadline,
                enum slack_mode mode, uint64_t slack,
                timer_callback callback, void *arg) {
-    LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
+    LTRACEF("timer %p deadline %" PRIu64 " slack %" PRIu64 " callback %p arg %p\n",
+            timer, deadline, slack, callback, arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
     DEBUG_ASSERT(mode <= TIMER_SLACK_EARLY);
@@ -231,9 +232,51 @@ out:
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
-void timer_set_oneshot(
-    timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg) {
-    return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
+/* similar to timer_set_oneshot, with additional features/constraints:
+ * - will reset a currently active timer
+ * - must be called with interrupts disabled
+ * - must be running on the cpu that the timer is set to fire on (if currently set)
+ * - cannot be called from the timer itself
+ */
+void timer_reset_oneshot_local(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
+{
+    LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
+
+    DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    uint cpu = arch_curr_cpu_num();
+
+    /* no need to disable interrupts when acquiring this lock */
+    spin_lock(&timer_lock);
+
+    if (unlikely(timer->active_cpu >= 0)) {
+        panic("timer %p currently active\n", timer);
+    }
+
+    /* remove it from the queue if it was present */
+    if (list_in_list(&timer->node))
+        list_delete(&timer->node);
+
+    /* set up the structure */
+    timer->scheduled_time = deadline;
+    timer->slack = 0;
+    timer->callback = callback;
+    timer->arg = arg;
+    timer->cancel = false;
+    timer->active_cpu = -1;
+
+    LTRACEF("scheduled time %" PRIu64 "\n", timer->scheduled_time);
+
+    insert_timer_in_queue(cpu, timer, 0u, 0u);
+
+    if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
+        /* we just modified the head of the timer queue */
+        LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
+        platform_set_oneshot_timer(deadline);
+    }
+
+    spin_unlock(&timer_lock);
 }
 
 bool timer_cancel(timer_t *timer)
