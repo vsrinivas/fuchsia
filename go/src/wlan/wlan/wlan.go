@@ -448,10 +448,12 @@ func (c *Client) doRun() error {
 }
 
 var twoPointFourGhzChannels = []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+var broadcastBssid = [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 func (c *Client) requestScan() error {
 	req := &mlme.ScanRequest{
 		BssType:        mlme.BssTypes_Infrastructure,
+		Bssid:        	broadcastBssid,
 		ScanType:       mlme.ScanTypes_Passive,
 		ChannelList:    &twoPointFourGhzChannels,
 		MinChannelTime: 100,
