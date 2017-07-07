@@ -286,6 +286,28 @@ pub fn ticks_per_second() -> u64 {
     unsafe { sys::mx_ticks_per_second() }
 }
 
+/// Draw random bytes from the kernel's CPRNG to fill the given buffer. Returns the actual number of
+/// bytes drawn, which may sometimes be less than the size of the buffer provided.
+///
+/// Wraps the
+/// [mx_cprng_draw](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/cprng_draw.md)
+/// syscall.
+pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
+    let mut actual = 0;
+    let status = unsafe { sys::mx_cprng_draw(buffer.as_mut_ptr(), buffer.len(), &mut actual) };
+    into_result(status, || actual)
+}
+
+/// Mix the given entropy into the kernel CPRNG.
+///
+/// Wraps the
+/// [mx_cprng_add_entropy](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/cprng_add_entropy.md)
+/// syscall.
+pub fn cprng_add_entropy(buffer: &[u8]) -> Result<(), Status> {
+    let status = unsafe { sys::mx_cprng_add_entropy(buffer.as_ptr(), buffer.len()) };
+    into_result(status, || ())
+}
+
 fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
     where F: FnOnce() -> T {
     // All non-negative values are assumed successful. Note: calls that don't try
@@ -699,5 +721,19 @@ mod tests {
 
         // but not with a different scope.
         assert_eq!(event.set_cookie(&event.get_ref(), 123), Err(Status::ErrAccessDenied));
+    }
+
+    #[test]
+    fn cprng() {
+        let mut buffer = [0; 20];
+        assert_eq!(cprng_draw(&mut buffer), Ok(20));
+        assert_ne!(buffer[0], 0);
+        assert_ne!(buffer[19], 0);
+    }
+
+    #[test]
+    fn cprng_add() {
+        let buffer = [0, 1, 2];
+        assert_eq!(cprng_add_entropy(&buffer), Ok(()));
     }
 }
