@@ -19,7 +19,7 @@ class CommandBufferSequencerListener {
 
   // Notify the listener that all command buffers with seq # <= sequence_number
   // have finished executing on the GPU.
-  virtual void CommandBufferFinished(uint64_t sequence_number) = 0;
+  virtual void OnCommandBufferFinished(uint64_t sequence_number) = 0;
 
  protected:
   // Allow subclasses to register/unregister themselves.
@@ -35,14 +35,21 @@ class CommandBufferSequencer {
  public:
   ~CommandBufferSequencer();
 
-  // Obtain a monotonically-increasing sequence number for a CommandBuffer that
-  // is about to be obtained from a CommandBufferPool.
-  uint64_t GetNextCommandBufferSequenceNumber();
-
   // Get the most recent sequence number generated for a CommandBuffer. All
   // future sequence numbers will be greater since sequence numbers are
   // monotonically-increasing.
-  uint64_t GetLastCommandBufferSequenceNumber();
+  uint64_t latest_sequence_number() { return latest_sequence_number_; }
+
+ private:
+  // Allow listeners to register/unregister themselves.
+  friend class CommandBufferSequencerListener;
+
+  // Special class to only allow privileged classes to call private methods.
+  friend class CommandBufferSequencerController;
+
+  // Obtain a monotonically-increasing sequence number for a CommandBuffer that
+  // is about to be obtained from a CommandBufferPool.
+  uint64_t GenerateNextCommandBufferSequenceNumber();
 
   // Receive a notification that the CommandBuffer with the specified sequence
   // number has completed execution.
@@ -60,18 +67,31 @@ class CommandBufferSequencer {
   // notify all registered listeners.
   void CommandBufferFinished(uint64_t sequence_number);
 
- private:
-  // Allow listeners to register/unregister themselves.
-  friend class CommandBufferSequencerListener;
   void AddListener(CommandBufferSequencerListener* listener);
   void RemoveListener(CommandBufferSequencerListener* listener);
 
-  uint64_t last_generated_sequence_number_ = 0;
+  // The last sequence number returned by GenerateNextSequenceNumber().
+  uint64_t latest_sequence_number_ = 0;
+  // The highest sequence number where its command-buffer, and all command-
+  // buffers for all previous sequence numbers, have finished.
   uint64_t last_finished_sequence_number_ = 0;
+
   // Sequence numbers of command-buffers that finished out-of-sequence.
   std::vector<uint64_t> out_of_sequence_numbers_;
 
   std::vector<CommandBufferSequencerListener*> listeners_;
+};
+
+// Subclassed to be able to call private methods on CommandBufferSequencer.
+class CommandBufferSequencerController {
+ protected:
+  uint64_t GenerateNextCommandBufferSequenceNumber(CommandBufferSequencer* s) {
+    return s->GenerateNextCommandBufferSequenceNumber();
+  }
+  void CommandBufferFinished(CommandBufferSequencer* s,
+                             uint64_t sequence_number) {
+    s->CommandBufferFinished(sequence_number);
+  }
 };
 
 }  // namespace impl

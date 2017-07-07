@@ -7,6 +7,7 @@
 #include <queue>
 
 #include "escher/impl/command_buffer.h"
+#include "escher/impl/command_buffer_sequencer.h"
 #include "escher/vk/vulkan_context.h"
 #include "ftl/macros.h"
 
@@ -14,12 +15,11 @@ namespace escher {
 namespace impl {
 
 class CommandBuffer;
-class CommandBufferSequencer;
 
 // Manages the lifecycle of CommandBuffers.
 //
 // Not thread-safe.
-class CommandBufferPool {
+class CommandBufferPool : CommandBufferSequencerController {
  public:
   // The CommandBufferPool does not take ownership of the device and queue.
   CommandBufferPool(vk::Device device,

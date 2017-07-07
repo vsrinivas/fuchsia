@@ -101,7 +101,7 @@ CommandBuffer* CommandBufferPool::GetCommandBuffer() {
     pending_buffers_.push(std::move(free_buffers_.front()));
     free_buffers_.pop();
   }
-  buffer->Begin(sequencer_->GetNextCommandBufferSequenceNumber());
+  buffer->Begin(GenerateNextCommandBufferSequenceNumber(sequencer_));
   return buffer;
 }
 
@@ -112,7 +112,7 @@ void CommandBufferPool::Cleanup() {
   while (!pending_buffers_.empty()) {
     auto& buffer = pending_buffers_.front();
     if (buffer->Retire()) {
-      sequencer_->CommandBufferFinished(buffer->sequence_number());
+      CommandBufferFinished(sequencer_, buffer->sequence_number());
       free_buffers_.push(std::move(pending_buffers_.front()));
       pending_buffers_.pop();
     } else {

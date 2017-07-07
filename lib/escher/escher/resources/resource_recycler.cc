@@ -32,7 +32,7 @@ void ResourceRecycler::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
   }
 }
 
-void ResourceRecycler::CommandBufferFinished(uint64_t sequence_number) {
+void ResourceRecycler::OnCommandBufferFinished(uint64_t sequence_number) {
   FTL_DCHECK(sequence_number > last_finished_sequence_number_);
   last_finished_sequence_number_ = sequence_number;
 

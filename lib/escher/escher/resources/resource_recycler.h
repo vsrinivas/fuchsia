@@ -35,7 +35,7 @@ class ResourceRecycler : public ResourceManager,
 
   // Implement impl::CommandBufferSequenceListener::CommandBufferFinished().
   // Checks whether it is safe to recycle any of |unused_resources_|.
-  void CommandBufferFinished(uint64_t sequence_number) override;
+  void OnCommandBufferFinished(uint64_t sequence_number) override;
 
   // Implement Owner::OnReceiveOwnable().  Call RecycleOwnable() immediately if
   // it is safe to do so.  Otherwise, adds the resource to a set of resources
