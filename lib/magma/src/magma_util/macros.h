@@ -115,6 +115,8 @@ __attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, con
         DASSERT(false);                                                                            \
     } while (0)
 
+#define ATTRIBUTE_UNUSED __attribute__((unused))
+
 #ifndef DISALLOW_COPY_AND_ASSIGN
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)                                                         \
     TypeName(const TypeName&) = delete;                                                            \

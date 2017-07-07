@@ -151,13 +151,7 @@ source_set("trace") {
     "platform_trace.h",
   ]
 
-  deps = [
+  public_deps = [
     "magenta:trace",
   ]
-
-  if (magma_enable_tracing) {
-    public_deps = [
-      "//apps/tracing/lib/trace",
-    ]
-  }
 }

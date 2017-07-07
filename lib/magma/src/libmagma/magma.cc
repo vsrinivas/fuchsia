@@ -4,9 +4,11 @@
 
 #include "magma.h"
 #include "magenta/magenta_platform_ioctl.h"
+#include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_semaphore.h"
+#include "platform_trace.h"
 #include <vector>
 
 magma_connection_t* magma_open(int fd, uint32_t capabilities)
@@ -20,6 +22,14 @@ magma_connection_t* magma_open(int fd, uint32_t capabilities)
                                sizeof(device_handle));
     if (ioctl_ret < 0)
         return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
+
+#if MAGMA_ENABLE_TRACING
+    static std::atomic_bool tracing_enabled{false};
+    bool value = false;
+    if (tracing_enabled.compare_exchange_strong(value, true))
+        tracing::InitializeTracer(app::ApplicationContext::CreateFromStartupInfo().get(),
+                                  {"libmagma"});
+#endif
 
     // Here we release ownership of the connection to the client
     return magma::PlatformIpcConnection::Create(device_handle).release();
@@ -165,13 +175,39 @@ void magma_release_command_buffer(struct magma_connection_t* connection,
 void magma_submit_command_buffer(magma_connection_t* connection, magma_buffer_t command_buffer,
                                  uint32_t context_id)
 {
+    TRACE_DURATION("magma", "submit_command_buffer");
+
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(command_buffer);
+
+    class CommandBufferInterpreter : public magma::CommandBuffer {
+    public:
+        CommandBufferInterpreter(magma::PlatformBuffer* platform_buffer)
+            : platform_buffer_(platform_buffer)
+        {
+        }
+
+        magma::PlatformBuffer* platform_buffer() override { return platform_buffer_; }
+
+    private:
+        magma::PlatformBuffer* platform_buffer_;
+    };
+
+    CommandBufferInterpreter interpreter(platform_buffer);
+    if (!interpreter.Initialize()) {
+        DLOG("failed to initialize interpreter");
+        return;
+    }
 
     uint32_t buffer_handle;
     if (!platform_buffer->duplicate_handle(&buffer_handle)) {
         DLOG("failed to duplicate handle");
         return;
     }
+
+    uint64_t batch_buffer_id =
+        interpreter.resource(interpreter.batch_buffer_resource_index()).buffer_id();
+    TRACE_FLOW_BEGIN("magma", "command_buffer", batch_buffer_id);
+    (void)batch_buffer_id;
 
     magma::PlatformIpcConnection::cast(connection)->ExecuteCommandBuffer(buffer_handle, context_id);
 

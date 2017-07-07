@@ -22,7 +22,9 @@ shared_library("libmagma") {
   ]
 
   deps = [
+    "$magma_build_root/src/magma_util:command_buffer",
     "$magma_build_root/src/magma_util/platform:connection",
+    "$magma_build_root/src/magma_util/platform:trace",
   ]
 
   libs = [ "mxio" ]

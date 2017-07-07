@@ -6,6 +6,7 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include "platform_object.h"
+#include "platform_trace.h"
 #include <ddk/driver.h>
 #include <limits.h> // PAGE_SIZE
 #include <map>
@@ -235,8 +236,12 @@ bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_co
     if ((start_page_index + page_count) * PAGE_SIZE > size())
         return DRETF(false, "offset + length greater than buffer size");
 
-    mx_status_t status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
-                                       page_count * PAGE_SIZE, nullptr, 0);
+    mx_status_t status;
+    {
+        TRACE_DURATION("magma", "vmo commit");
+        status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
+                               page_count * PAGE_SIZE, nullptr, 0);
+    }
     if (status == MX_ERR_NO_MEMORY)
         return DRETF(false, "Kernel returned MX_ERR_NO_MEMORY when attempting to commit vmo "
                             "pages.\nThis means the system has run out of physical memory and "
@@ -380,9 +385,12 @@ bool MagentaPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t 
             return DRETF(false, "zero pin_count for page %u", i);
     }
 
-    mx_status_t status =
-        vmo_.op_range(MX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
-                      addr_out, page_count * sizeof(addr_out[0]));
+    mx_status_t status;
+    {
+        TRACE_DURATION("magma", "vmo lookup");
+        status = vmo_.op_range(MX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE,
+                               page_count * PAGE_SIZE, addr_out, page_count * sizeof(addr_out[0]));
+    }
     if (status != MX_OK)
         return DRETF(false, "failed to lookup vmo");
 

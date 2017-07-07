@@ -15,6 +15,7 @@ source_set("buffer") {
     ":object",
     "$magenta_build_root/system/ulib/mx",
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
   ]
 
   libs = [
@@ -159,7 +160,7 @@ source_set("trace") {
   ]
 
   if (magma_enable_tracing) {
-    deps += [
+    public_deps = [
       "//apps/tracing/lib/trace:provider",
       "//apps/tracing/services",
       "//lib/mtl",
