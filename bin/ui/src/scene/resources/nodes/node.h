@@ -26,6 +26,7 @@ class Node : public Resource {
   ResourceId resource_id() const { return resource_id_; }
 
   bool AddChild(NodePtr child_node);
+  bool DetachChildren();
   bool AddPart(NodePtr part_node);
 
   bool SetTagValue(uint32_t tag_value);

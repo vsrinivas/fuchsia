@@ -132,6 +132,21 @@ bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
   return true;
 }
 
+bool Node::DetachChildren() {
+  if (!(type_flags() & kHasChildren)) {
+    error_reporter()->ERROR() << "scene::Node::DetachChildren(): node of type '"
+                              << type_name() << "' cannot have children.";
+    return false;
+  }
+  for (auto& child : children_) {
+    child->parent_relation_ = ParentRelation::kNone;
+    child->parent_ = nullptr;
+    child->InvalidateGlobalTransform();
+  }
+  children_.clear();
+  return true;
+}
+
 bool Node::SetTagValue(uint32_t tag_value) {
   tag_value_ = tag_value;
   return true;

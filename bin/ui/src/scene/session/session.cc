@@ -211,8 +211,9 @@ bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
 }
 
 bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
-  error_reporter_->ERROR()
-      << "scene::Session::ApplyDetachChildrenOp(): unimplemented";
+  if (auto node = resources_.FindResource<Node>(op->node_id)) {
+    return node->DetachChildren();
+  }
   return false;
 }
 
