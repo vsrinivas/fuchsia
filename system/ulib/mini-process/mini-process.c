@@ -24,6 +24,7 @@ static void* get_syscall_addr(const void* syscall_fn, uintptr_t vdso_base) {
 
 // This struct defines the first message that the child process gets.
 typedef struct {
+    __typeof(mx_handle_close)*      handle_close;
     __typeof(mx_object_wait_one)*   object_wait_one;
     __typeof(mx_object_signal)*     object_signal;
     __typeof(mx_event_create)*      event_create;
@@ -43,6 +44,7 @@ typedef struct {
 static mx_status_t write_ctx_message(
     mx_handle_t channel, uintptr_t vdso_base, mx_handle_t transferred_handle) {
     minip_ctx_t ctx = {
+        .handle_close = get_syscall_addr(&mx_handle_close, vdso_base),
         .object_wait_one = get_syscall_addr(&mx_object_wait_one, vdso_base),
         .object_signal = get_syscall_addr(&mx_object_signal, vdso_base),
         .event_create = get_syscall_addr(&mx_event_create, vdso_base),
@@ -132,6 +134,42 @@ __NO_SAFESTACK static void minipr_thread_loop(mx_handle_t channel, uintptr_t fnp
                     cmd.status = ctx.channel_create(0u, &handle[0], &handle[1]);
                     goto reply;
                 }
+                if (what & MINIP_CMD_USE_BAD_HANDLE_CLOSED) {
+                    what &= ~MINIP_CMD_USE_BAD_HANDLE_CLOSED;
+
+                    // Test one case of using an invalid handle.  This
+                    // tests a double-close of an event handle.
+                    mx_handle_t handle;
+                    if (ctx.event_create(0u, &handle) != MX_OK ||
+                        ctx.handle_close(handle) != MX_OK)
+                        __builtin_trap();
+                    cmd.status = ctx.handle_close(handle);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED) {
+                    what &= ~MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED;
+
+                    // Test another case of using an invalid handle.  This
+                    // tests closing a handle after it has been transferred
+                    // out of the process (by writing it to a channel).  In
+                    // this case, the Handle object still exists inside the
+                    // kernel.
+                    mx_handle_t handle;
+                    mx_handle_t channel1;
+                    mx_handle_t channel2;
+                    if (ctx.event_create(0u, &handle) != MX_OK ||
+                        ctx.channel_create(0u, &channel1, &channel2) != MX_OK ||
+                        ctx.channel_write(channel1, 0, NULL, 0,
+                                          &handle, 1) != MX_OK)
+                        __builtin_trap();
+                    // This should produce an error and/or exception.
+                    cmd.status = ctx.handle_close(handle);
+                    // Clean up.
+                    if (ctx.handle_close(channel1) != MX_OK ||
+                        ctx.handle_close(channel2) != MX_OK)
+                        __builtin_trap();
+                    goto reply;
+                }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get either MX_CHANNEL_PEER_CLOSED if
@@ -177,11 +215,11 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     static const char vmo_name[] = "mini-process:stack";
     mx_object_set_property(stack_vmo, MX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
-    // We assume that the code to execute is less than 600 bytes. As of gcc 6
-    // the code is 488 bytes with frame pointers in x86 and a bit larger for ARM
-    // and the stack usage is 152 bytes.
+    // We assume that the code to execute is less than kSizeLimit bytes.
+    const uint32_t kSizeLimit = 1000;
     size_t actual;
-    status = mx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, 600u, &actual);
+    status = mx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit,
+                          &actual);
     if (status != MX_OK)
         goto exit;
 

@@ -43,7 +43,10 @@ typedef struct mx_policy_basic {
 
 Where *condition* is one of
 + **MX_POL_BAD_HANDLE** a process under this job is attempting to
-  issue a syscall with an invalid handle.
+  issue a syscall with an invalid handle.  In this case,
+  **MX_POL_ACTION_ALLOW** and **MX_POL_ACTION_DENY** are equivalent:
+  if the syscall returns, it will always return the error
+  **MX_ERR_BAD_HANDLE**.
 + **MX_POL_WRONG_OBJECT** a process under this job is attempting to
   issue a syscall with a handle that does not support such operation.
 + **MX_POL_VMAR_WX** a process under this job is attempting to map an

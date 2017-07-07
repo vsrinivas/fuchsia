@@ -15,19 +15,23 @@ __BEGIN_CDECLS
 //
 // The process echoes a canned message.
 // The return value upon success is MX_OK.
-#define MINIP_CMD_ECHO_MSG         1
+#define MINIP_CMD_ECHO_MSG                   (1 << 0)
 // The process creates an event and sends it back on |handle|.
 // The return value upon success is MX_OK.
-#define MINIP_CMD_CREATE_EVENT     2
+#define MINIP_CMD_CREATE_EVENT               (1 << 1)
 // The process creates a channel and sends one end back on |handle|.
 // The return value upon success is MX_OK.
-#define MINIP_CMD_CREATE_CHANNEL   4
+#define MINIP_CMD_CREATE_CHANNEL             (1 << 2)
+// The following two commands cause the process to call a syscall with an
+// invalid handle value.  The return value is the result of that syscall.
+#define MINIP_CMD_USE_BAD_HANDLE_CLOSED      (1 << 3)
+#define MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED (1 << 4)
 // The process will execute __builtin_trap() which causes a fatal exception.
 // The return value upon success is MX_ERR_PEER_CLOSED.
-#define MINIP_CMD_BUILTIN_TRAP     8
+#define MINIP_CMD_BUILTIN_TRAP               (1 << 5)
 // The process just calls mx_process_exit() immediately without replying.
 // The return value upon success is MX_ERR_PEER_CLOSED.
-#define MINIP_CMD_EXIT_NORMAL      16
+#define MINIP_CMD_EXIT_NORMAL                (1 << 6)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.
