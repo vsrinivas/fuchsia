@@ -22,7 +22,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
   FTL_DCHECK(params.is_valid());
 
   std::unique_ptr<app::ApplicationContext> application_context =
-      modular::ApplicationContext::CreateFromStartupInfo();
+      app::ApplicationContext::CreateFromStartupInfo();
 
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();

@@ -41,7 +41,7 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
   std::unique_ptr<app::ApplicationContext> application_context =
-      modular::ApplicationContext::CreateFromStartupInfo();
+      app::ApplicationContext::CreateFromStartupInfo();
 
   media::AudioServerPtr audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();
