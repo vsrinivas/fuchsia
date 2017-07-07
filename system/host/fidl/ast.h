@@ -32,6 +32,7 @@ struct CompoundIdentifier {
 };
 
 struct Literal {
+    virtual ~Literal() {}
 };
 
 struct StringLiteral : public Literal {
@@ -75,6 +76,7 @@ struct LiteralConstant : Constant {
 };
 
 struct Type {
+    virtual ~Type() {}
 };
 
 struct ArrayType : public Type {
@@ -207,6 +209,7 @@ struct ConstDeclaration {
 };
 
 struct EnumMemberValue {
+    virtual ~EnumMemberValue() {}
 };
 
 struct EnumMemberValueIdentifier : public EnumMemberValue {
