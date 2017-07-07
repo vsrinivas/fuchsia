@@ -58,7 +58,6 @@ source_set("ftl_lib") {
     "functional/cancelable_callback.h",
     "functional/closure.h",
     "functional/make_copyable.h",
-    "functional/make_runnable.h",
     "inttypes.h",
     "log_settings.cc",
     "logging.cc",
