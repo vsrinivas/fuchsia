@@ -15,9 +15,10 @@ class DoneCancellable : public Cancellable {
 }  // namespace
 
 CancellableImpl::CancellableImpl(ftl::Closure on_cancel)
-    : on_cancel_(std::move(on_cancel)), is_done_(false) {}
+    : is_cancelled_(false), on_cancel_(std::move(on_cancel)), is_done_(false) {}
 
 void CancellableImpl::Cancel() {
+  is_cancelled_ = true;
   if (is_done_)
     return;
   is_done_ = true;

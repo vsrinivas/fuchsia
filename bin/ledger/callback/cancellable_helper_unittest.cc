@@ -79,15 +79,24 @@ TEST(CancellableImpl, DeleteWrappingCallbackInWrappedCallback) {
   EXPECT_EQ(nullptr, callback);
 }
 
+// Verifies that if the cancellable is cancelled within the wrapped callback,
+// neither on_cancel_ nor on_done_ are called:
+//  - we don't call on_done_ because Cancel() is called before the wrapped
+//    callback completes
+//  - we don't call on_cancel_ because the wrapped callback is executed (and not
+//    cancelled)
 TEST(CancellableImpl, CancelInWrappedCallback) {
   bool on_cancel_called = false;
+  bool on_done_called = false;
   ftl::RefPtr<CancellableImpl> cancellable =
       CancellableImpl::Create([&on_cancel_called] { on_cancel_called = true; });
+  cancellable->SetOnDone([&on_done_called] { on_done_called = true; });
   auto callback =
       cancellable->WrapCallback([cancellable] { cancellable->Cancel(); });
   cancellable = nullptr;
   callback();
   EXPECT_FALSE(on_cancel_called);
+  EXPECT_FALSE(on_done_called);
 }
 
 }  //  namespace

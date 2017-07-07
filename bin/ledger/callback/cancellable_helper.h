@@ -69,6 +69,11 @@ class CancellableImpl final : public Cancellable {
     return internal::WrappedCancellableCallback<T>(
         callback, &is_done_, [ref_ptr = ftl::RefPtr<CancellableImpl>(this)] {
           FTL_DCHECK(ref_ptr->is_done_);
+          // Never call the done callback after Cancel(). Note that Cancel() can
+          // be called from within the wrapped callback.
+          if (ref_ptr->is_cancelled_) {
+            return;
+          }
           if (ref_ptr->on_done_) {
             ref_ptr->on_done_();
           }
@@ -83,6 +88,7 @@ class CancellableImpl final : public Cancellable {
  private:
   CancellableImpl(ftl::Closure on_cancel);
 
+  bool is_cancelled_;
   ftl::Closure on_cancel_;
   bool is_done_;
   ftl::Closure on_done_;
