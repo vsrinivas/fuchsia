@@ -130,6 +130,10 @@ struct iotxn {
     // invoked by the 'iotxn_release' method when it is called
     // by the requestor.
     void (*release_cb)(iotxn_t* txn);
+
+    // May be used by iotxn_physmap() to store the physical pages list
+    // instead of allocating additional memory.
+    mx_paddr_t phys_inline[3];
 };
 
 static_assert(offsetof(iotxn_t, phys) == 64, "phys should be at 64");

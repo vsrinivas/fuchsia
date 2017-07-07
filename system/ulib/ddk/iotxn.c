@@ -31,7 +31,7 @@
 
 #define IOTXN_PFLAG_CONTIGUOUS (1 << 0)   // the vmo is contiguous
 #define IOTXN_PFLAG_ALLOC      (1 << 1)   // the vmo is allocated by us
-#define IOTXN_PFLAG_PHYSMAP    (1 << 2)   // we performed physmap() on this vmo
+#define IOTXN_PFLAG_PHYSMAP    (1 << 2)   // we performed physmap() on this vmo and allocated memory
 #define IOTXN_PFLAG_MMAP       (1 << 3)   // we performed mmap() on this vmo
 #define IOTXN_PFLAG_FREE       (1 << 4)   // this txn has been released
 #define IOTXN_PFLAG_QUEUED     (1 << 5)   // transaction has been queued and not yet released
@@ -56,7 +56,7 @@ static uint32_t alloc_flags_to_pflags(uint32_t alloc_flags) {
 }
 
 static bool do_free_phys(uint32_t pflags) {
-    // only free phys if we called physmap
+    // only free phys if we called physmap and allocated memory
     return (pflags & IOTXN_PFLAG_PHYSMAP);
 }
 
@@ -96,6 +96,8 @@ static void iotxn_release_free_list(iotxn_t* txn) {
     mx_paddr_t* phys = txn->phys;
     uint64_t phys_count = txn->phys_count;
     uint32_t pflags = txn->pflags;
+    mx_paddr_t phys_inline[3];
+    memcpy(phys_inline, txn->phys_inline, sizeof(txn->phys_inline));
 
     memset(txn, 0, sizeof(iotxn_t));
 
@@ -108,6 +110,7 @@ static void iotxn_release_free_list(iotxn_t* txn) {
         txn->phys = phys;
         txn->phys_count = phys_count;
         txn->pflags = pflags;
+        memcpy(txn->phys_inline, phys_inline, sizeof(txn->phys_inline));
     } else {
         if (do_free_phys(pflags)) {
             if (phys != NULL) {
@@ -209,10 +212,7 @@ ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offse
 }
 
 static mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
-    txn->phys = malloc(sizeof(mx_paddr_t));
-    if (txn->phys == NULL) {
-        return MX_ERR_NO_MEMORY;
-    }
+    txn->phys = txn->phys_inline;
 
     // for contiguous buffers, commit the whole range but just map the first
     // page
@@ -227,11 +227,9 @@ static mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
         goto fail;
     }
 
-    txn->pflags |= IOTXN_PFLAG_PHYSMAP;
     txn->phys_count = 1;
     return MX_OK;
 fail:
-    free(txn->phys);
     txn->phys = NULL;
     return status;
 }
@@ -243,7 +241,8 @@ static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
     uint64_t page_length = txn->vmo_length + (txn->vmo_offset - page_offset);
     uint64_t pages = ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
 
-    mx_paddr_t* paddrs = malloc(sizeof(mx_paddr_t) * pages);
+    bool use_inline = pages <= 3;
+    mx_paddr_t* paddrs = use_inline ? txn->phys_inline : malloc(sizeof(mx_paddr_t) * pages);
     if (paddrs == NULL) {
         xprintf("iotxn_physmap_paged: out of memory\n");
         return MX_ERR_NO_MEMORY;
@@ -254,18 +253,24 @@ static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
     mx_status_t status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_COMMIT, txn->vmo_offset, txn->vmo_length, NULL, 0);
     if (status != MX_OK) {
         xprintf("iotxn_physmap_paged: error %d in commit\n", status);
-        free(paddrs);
+        if (!use_inline) {
+            free(paddrs);
+        }
         return status;
     }
 
     status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_LOOKUP, page_offset, page_length, paddrs, sizeof(mx_paddr_t) * pages);
     if (status != MX_OK) {
         xprintf("iotxn_physmap_paged: error %d in lookup\n", status);
-        free(paddrs);
+        if (!use_inline) {
+            free(paddrs);
+        }
         return status;
     }
 
-    txn->pflags |= IOTXN_PFLAG_PHYSMAP;
+    if (!use_inline) {
+        txn->pflags |= IOTXN_PFLAG_PHYSMAP;
+    }
     txn->phys = paddrs;
     txn->phys_count = pages;
     return MX_OK;
@@ -357,13 +362,7 @@ mx_status_t iotxn_clone_partial(iotxn_t* txn, uint64_t vmo_offset, mx_off_t leng
         uint64_t new_page_offset = ROUNDDOWN(clone->vmo_offset, PAGE_SIZE);
         if (page_offset != new_page_offset) {
             if (txn->pflags & IOTXN_PFLAG_CONTIGUOUS) {
-                clone->phys = malloc(sizeof(mx_paddr_t));
-                if (!clone->phys) {
-                    iotxn_release(clone);
-                    return MX_ERR_NO_MEMORY;
-                }
-                // need to free allocated phys on release
-                clone->pflags |= IOTXN_PFLAG_PHYSMAP;
+                clone->phys = clone->phys_inline;
                 clone->phys[0] = txn->phys[0] + new_page_offset - page_offset;
             } else {
                 uint64_t pages = (new_page_offset - page_offset) / PAGE_SIZE;
