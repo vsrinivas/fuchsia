@@ -353,12 +353,13 @@ mx_status_t Scanner::HandleTimeout() {
     if (req_->scan_type == ScanTypes::ACTIVE &&
         now >= channel_start_ + WLAN_TU(req_->probe_delay)) {
         debugf("Reached probe delay\n");
+        // TODO(hahnr): Add support for CCA as described in IEEE Std 802.11-2016 11.1.4.3.2 f)
         mx_time_t timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
         status = timer_->StartTimer(timeout);
         if (status != MX_OK) {
             goto timer_fail;
         }
-        // TODO(tkilbourn): send probe requests
+        SendProbeRequest();
         return MX_OK;
     }
 
@@ -386,6 +387,74 @@ mx_time_t Scanner::InitialTimeout() const {
     } else {
         return channel_start_ + WLAN_TU(req_->probe_delay);
     }
+}
+
+// TODO(hahnr): support SSID list (IEEE Std 802.11-2016 11.1.4.3.2)
+mx_status_t Scanner::SendProbeRequest() {
+    debugfn();
+
+    // TODO(hahnr): better size management; for now reserve 128 bytes for Probe elements
+    size_t probe_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + 128;
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    const DeviceAddress& mymac = device_->GetState()->address();
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), probe_len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
+    hdr->fc.set_type(kManagement);
+    hdr->fc.set_subtype(kProbeRequest);
+
+    std::memset(hdr->addr1, 0xFF, sizeof(hdr->addr1));
+    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
+    std::memcpy(hdr->addr3, req_->bssid.data(), sizeof(hdr->addr3));
+    // TODO(hahnr): keep reference to last sequence #?
+    uint16_t seq = device_->GetState()->next_seq();
+    hdr->sc.set_seq(seq);
+
+    auto probe = packet->mut_field<ProbeRequest>(sizeof(MgmtFrameHeader));
+    auto ele_len = packet->len() - sizeof(MgmtFrameHeader) - sizeof(ProbeRequest);
+    ElementWriter w(probe->elements, ele_len);
+    if (!w.write<SsidElement>(req_->ssid.data())) {
+        errorf("could not write ssid \"%s\" to probe request\n", req_->ssid.data());
+        return MX_ERR_IO;
+    }
+
+    // TODO(hahnr): determine these rates based on hardware
+    // Rates (in Mbps): 1, 2, 5.5, 6, 9, 11, 12, 18
+    std::vector<uint8_t> rates = { 0x02, 0x04, 0x0b, 0x0c, 0x12, 0x16, 0x18, 0x24 };
+    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+        errorf("could not write supported rates\n");
+        return MX_ERR_IO;
+    }
+
+    // Rates (in Mbps): 24, 36, 48, 54
+    std::vector<uint8_t> ext_rates = { 0x30, 0x48, 0x60, 0x6c };
+    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
+        errorf("could not write extended supported rates\n");
+        return MX_ERR_IO;
+    }
+
+    // Validate the request in debug mode
+    MX_DEBUG_ASSERT(probe->Validate(w.size()));
+
+    size_t actual_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + w.size();
+    mx_status_t status = packet->set_len(actual_len);
+    if (status != MX_OK) {
+        errorf("could not set packet length to %zu: %d\n", actual_len, status);
+        return status;
+    }
+
+    status = device_->SendWlan(std::move(packet));
+    if (status != MX_OK) {
+        errorf("could not send probe request packet: %d\n", status);
+        return status;
+    }
+    return status;
 }
 
 mx_status_t Scanner::SendScanResponse() {

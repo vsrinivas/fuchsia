@@ -46,6 +46,7 @@ class Scanner {
   private:
     mx_time_t InitialTimeout() const;
     mx_status_t SendScanResponse();
+    mx_status_t SendProbeRequest();
 
     DeviceInterface* device_;
     mxtl::unique_ptr<Timer> timer_;
