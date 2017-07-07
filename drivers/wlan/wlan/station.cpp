@@ -381,7 +381,7 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
     SendAssocResponse(AssociateResultCodes::SUCCESS);
-    // TODO(tkilbourn): this is where we should indicate link status to the ethernet layer
+    device_->SetStatus(ETH_STATUS_ONLINE);
 
     return MX_OK;
 }
@@ -406,6 +406,8 @@ mx_status_t Station::HandleDisassociation(const Packet* packet) {
     infof("disassociating from %s, reason=%u\n", bss_->ssid.data(), disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
+    device_->SetStatus(0);
+
     return SendDisassociateIndication(disassoc->reason_code);
 }
 

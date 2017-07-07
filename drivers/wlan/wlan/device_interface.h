@@ -75,6 +75,13 @@ class DeviceState : public mxtl::RefCounted<DeviceState> {
         chan_ = chan;
     }
 
+    bool online() {
+        return online_;
+    }
+    void set_online(bool online) {
+        online_ = online;
+    }
+
     uint16_t next_seq() {
         return seq_no_++ & kMaxSequenceNumber;
     }
@@ -83,6 +90,7 @@ class DeviceState : public mxtl::RefCounted<DeviceState> {
     DeviceAddress addr_;
     wlan_channel_t chan_ = { 0 };
     uint16_t seq_no_ = 0;
+    bool online_ = false;
 };
 
 // DeviceInterface represents the actions that may interact with external systems.
@@ -97,6 +105,7 @@ class DeviceInterface {
     virtual mx_status_t SendService(mxtl::unique_ptr<Packet> packet) = 0;
 
     virtual mx_status_t SetChannel(wlan_channel_t chan) = 0;
+    virtual mx_status_t SetStatus(uint32_t status) = 0;
 
     virtual mxtl::RefPtr<DeviceState> GetState() = 0;
 };

@@ -209,6 +209,9 @@ void Device::EthmacSend(uint32_t options, void* data, size_t length) {
 
 void Device::WlanmacStatus(uint32_t status) {
     debugf("WlanmacStatus %u\n", status);
+
+    std::lock_guard<std::mutex> lock(lock_);
+    SetStatusLocked(status);
 }
 
 void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
@@ -281,6 +284,20 @@ mx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
         return status;
     }
     return post_status;
+}
+
+mx_status_t Device::SetStatus(uint32_t status) {
+    // Lock is already held when MLME is asked to handle assoc/deassoc packets, which caused this
+    // link status change.
+    SetStatusLocked(status);
+    return MX_OK;
+}
+
+void Device::SetStatusLocked(uint32_t status) {
+    state_->set_online(status == ETH_STATUS_ONLINE);
+    if (ethmac_proxy_ != nullptr) {
+        ethmac_proxy_->Status(status);
+    }
 }
 
 mxtl::RefPtr<DeviceState> Device::GetState() {

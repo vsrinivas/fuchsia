@@ -57,6 +57,11 @@ struct MockDevice : public DeviceInterface {
         return MX_OK;
     }
 
+    mx_status_t SetStatus(uint32_t status) override final {
+        state->set_online(status == 1);
+        return MX_OK;
+    }
+
     mxtl::RefPtr<DeviceState> GetState() override final {
         return state;
     }
@@ -284,6 +289,8 @@ TEST_F(ScannerTest, ScanResponse) {
     EXPECT_EQ(0xff, bss->rcpi_measurement);
     EXPECT_EQ(60u, bss->rsni_measurement);
 }
+
+// TODO(hahnr): add test for active scanning
 
 }  // namespace
 }  // namespace wlan

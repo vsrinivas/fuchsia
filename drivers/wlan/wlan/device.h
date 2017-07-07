@@ -64,6 +64,7 @@ class Device : public WlanBaseDevice,
     mx_status_t SendWlan(mxtl::unique_ptr<Packet> packet) override final;
     mx_status_t SendService(mxtl::unique_ptr<Packet> packet) override final;
     mx_status_t SetChannel(wlan_channel_t chan) override final;
+    mx_status_t SetStatus(uint32_t status) override final;
     mxtl::RefPtr<DeviceState> GetState() override final;
 
   private:
@@ -91,6 +92,7 @@ class Device : public WlanBaseDevice,
     mx_status_t QueueDevicePortPacket(DevicePacket id);
 
     mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
+    void SetStatusLocked(uint32_t status);
 
     ddk::WlanmacProtocolProxy wlanmac_proxy_;
     mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
