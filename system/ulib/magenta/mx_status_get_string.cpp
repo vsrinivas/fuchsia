@@ -14,7 +14,7 @@ const char* _mx_status_get_string(mx_status_t status) {
     case MX_ERR_NO_RESOURCES: return "MX_ERR_NO_RESOURCES";
     case MX_ERR_NO_MEMORY: return "MX_ERR_NO_MEMORY";
     case MX_ERR_CALL_FAILED: return "MX_ERR_CALL_FAILED";
-    case MX_ERR_INTERNAL_INTR_RETRY: return "MX_MX_ERR_INTERNAL_INTR_KILLED_RETRY";
+    case MX_ERR_INTERNAL_INTR_RETRY: return "MX_ERR_INTERNAL_INTR_KILLED_RETRY";
     case MX_ERR_INVALID_ARGS: return "MX_ERR_INVALID_ARGS";
     case MX_ERR_BAD_HANDLE: return "MX_ERR_BAD_HANDLE";
     case MX_ERR_WRONG_TYPE: return "MX_ERR_WRONG_TYPE";
