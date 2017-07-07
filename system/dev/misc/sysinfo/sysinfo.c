@@ -58,7 +58,7 @@ static mx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         if (h == MX_HANDLE_INVALID) {
             return MX_ERR_NOT_SUPPORTED;
         }
-        mx_status_t status = mx_handle_duplicate(h, MX_RIGHT_ENUMERATE | MX_RIGHT_TRANSFER, &h);
+        mx_status_t status = mx_handle_duplicate(h, MX_RIGHT_TRANSFER, &h);
         if (status < 0) {
             return status;
         }
