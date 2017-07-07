@@ -180,7 +180,7 @@ void JobDispatcher::Kill() {
             return;
 
         // Short circuit if there is nothing to do. Notice |state_|
-        // does not change. See note at the end of this function.
+        // does not change.
         if ((job_count_ == 0u) && (process_count_ == 0u))
             return;
 
