@@ -25,13 +25,20 @@ class Session {
   using PresentCallback =
       std::function<void(mozart2::PresentationInfoPtr info)>;
 
+  // Provide information about hits.
+  using HitTestCallback =
+      std::function<void(fidl::Array<mozart2::HitPtr> hits)>;
+
   explicit Session(mozart2::SessionPtr session);
   ~Session();
 
-  // Sets a callback which is invoked if the session died.
+  // Sets a callback which is invoked if the session dies.
   void set_connection_error_handler(ftl::Closure closure) {
     session_.set_connection_error_handler(std::move(closure));
   }
+
+  // Gets a pointer to the underlying session interface.
+  mozart2::Session* session() { return session_.get(); }
 
   // Allocates a new unique resource id.
   uint32_t AllocResourceId();
@@ -59,6 +66,12 @@ class Session {
   // Implicitly flushes all queued operations to the session.
   // Invokes the callback when the scene manager applies the presentation.
   void Present(uint64_t presentation_time, PresentCallback callback);
+
+  // Performs a hit test along the specified ray.
+  void HitTest(uint32_t node_id,
+               const float ray_origin[3],
+               const float ray_direction[3],
+               HitTestCallback callback);
 
  private:
   mozart2::SessionPtr session_;

@@ -62,5 +62,23 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
                     std::move(release_fences_), std::move(callback));
 }
 
+void Session::HitTest(uint32_t node_id,
+                      const float ray_origin[3],
+                      const float ray_direction[3],
+                      HitTestCallback callback) {
+  auto ray_origin_vec = mozart2::vec3::New();
+  ray_origin_vec->x = ray_origin[0];
+  ray_origin_vec->y = ray_origin[1];
+  ray_origin_vec->z = ray_origin[2];
+
+  auto ray_direction_vec = mozart2::vec3::New();
+  ray_direction_vec->x = ray_direction[0];
+  ray_direction_vec->y = ray_direction[1];
+  ray_direction_vec->z = ray_direction[2];
+
+  session_->HitTest(node_id, std::move(ray_origin_vec),
+                    std::move(ray_direction_vec), std::move(callback));
+}
+
 }  // namespace client
 }  // namespace mozart
