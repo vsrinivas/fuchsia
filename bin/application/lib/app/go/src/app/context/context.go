@@ -5,9 +5,9 @@
 package context
 
 import (
-	"fmt"
 	spi "application/lib/app/service_provider_impl"
 	"fidl/bindings"
+	"fmt"
 
 	"syscall/mx"
 	"syscall/mx/mxio/rio"
@@ -19,16 +19,16 @@ import (
 )
 
 type Context struct {
-	Environment          *ae.ApplicationEnvironment_Proxy
-	OutgoingService      *spi.ServiceProviderImpl
-	OutgoingServiceStub  *bindings.Stub
-	serviceRoot          mx.Handle
-	Launcher             *al.ApplicationLauncher_Proxy
+	Environment         *ae.ApplicationEnvironment_Proxy
+	OutgoingService     *spi.ServiceProviderImpl
+	OutgoingServiceStub *bindings.Stub
+	serviceRoot         mx.Handle
+	Launcher            *al.ApplicationLauncher_Proxy
 }
 
 // TODO: define these in syscall/mx/mxruntime
 const (
-	HandleAppServices     mxruntime.HandleType = 0x43
+	HandleAppServices mxruntime.HandleType = 0x43
 )
 
 func getServiceRoot() mx.Handle {

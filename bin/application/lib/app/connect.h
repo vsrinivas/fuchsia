@@ -43,6 +43,6 @@ namespace modular {
 // modular::ConnectToService to app::ConnectToService. New code should use the
 // app:: name. TODO(jamesr): Remove once users are transitioned over.
 using app::ConnectToService;
-}
+}  // namespace modular
 
 #endif  // APPLICATION_LIB_APP_CONNECT_H_

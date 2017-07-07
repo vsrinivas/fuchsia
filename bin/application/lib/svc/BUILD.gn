@@ -14,9 +14,9 @@ source_set("svc") {
 
   public_deps = [
     "//application/services",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
     "//magenta/system/ulib/svcfs",

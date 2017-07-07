@@ -19,13 +19,15 @@ int main(int argc, const char** argv) {
     launch_info->arguments.push_back(argv[2 + i]);
   }
 
-  // Manually connect to the service root instead of using ApplicationContext to avoid having to
-  // spin up a message loop just to send 2 messages.
+  // Manually connect to the service root instead of using ApplicationContext to
+  // avoid having to spin up a message loop just to send 2 messages.
   mx::channel h1, service_root;
-  if (mx::channel::create(0, &h1, &service_root) != MX_OK) return 1;
+  if (mx::channel::create(0, &h1, &service_root) != MX_OK)
+    return 1;
 
   // TODO(abarth): Use "/svc/" once that actually works.
-  if (mxio_service_connect("/svc/.", h1.release()) != MX_OK) return 1;
+  if (mxio_service_connect("/svc/.", h1.release()) != MX_OK)
+    return 1;
 
   fidl::SynchronousInterfacePtr<app::ApplicationLauncher> launcher;
   auto launcher_request = GetSynchronousProxy(&launcher);

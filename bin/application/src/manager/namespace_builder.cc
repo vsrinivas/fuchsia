@@ -60,8 +60,8 @@ void NamespaceBuilder::AddPackage(mx::channel package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
 }
 
-void NamespaceBuilder::AddDirectoryIfNotPresent(
-    const std::string& path, mx::channel directory) {
+void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path,
+                                                mx::channel directory) {
   if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
     return;
   PushDirectoryFromChannel(path, std::move(directory));

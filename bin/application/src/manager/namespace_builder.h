@@ -10,8 +10,8 @@
 
 #include <vector>
 
-#include "application/src/manager/sandbox_metadata.h"
 #include "application/services/flat_namespace.fidl.h"
+#include "application/src/manager/sandbox_metadata.h"
 #include "lib/ftl/macros.h"
 
 namespace app {

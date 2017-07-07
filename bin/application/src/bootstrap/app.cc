@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sys/types.h>
 #include <dirent.h>
+#include <sys/types.h>
 
 #include "application/src/bootstrap/app.h"
 
@@ -42,9 +42,10 @@ App::App()
     FTL_LOG(ERROR) << "Config directory path too long";
   } else {
     const size_t dir_len = strlen(buf);
-    DIR *cfg_dir = opendir(kConfigDir);
+    DIR* cfg_dir = opendir(kConfigDir);
     if (cfg_dir != NULL) {
-      for (dirent *cfg = readdir(cfg_dir); cfg != NULL; cfg = readdir(cfg_dir)) {
+      for (dirent* cfg = readdir(cfg_dir); cfg != NULL;
+           cfg = readdir(cfg_dir)) {
         if (strcmp(".", cfg->d_name) == 0 || strcmp("..", cfg->d_name) == 0) {
           continue;
         }

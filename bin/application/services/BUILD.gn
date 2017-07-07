@@ -16,9 +16,13 @@ fidl("services") {
     "flat_namespace.fidl",
   ]
 
-  public_deps = [":service_provider"]
+  public_deps = [
+    ":service_provider",
+  ]
 }
 
 fidl("service_provider") {
-  sources = ["service_provider.fidl"]
+  sources = [
+    "service_provider.fidl",
+  ]
 }

@@ -14,7 +14,8 @@ import 'package:application.services/service_provider.fidl.dart';
 class ApplicationContext {
   ApplicationContext();
 
-  final ApplicationEnvironmentProxy environment = new ApplicationEnvironmentProxy();
+  final ApplicationEnvironmentProxy environment =
+      new ApplicationEnvironmentProxy();
   final ApplicationLauncherProxy launcher = new ApplicationLauncherProxy();
   final ServiceProviderProxy environmentServices = new ServiceProviderProxy();
   final ServiceProviderImpl outgoingServices = new ServiceProviderImpl();
@@ -26,7 +27,8 @@ class ApplicationContext {
     if (environmentHandle != null) {
       final core.Handle handle = new core.Handle(environmentHandle);
       context.environment
-        ..ctrl.bind(new InterfaceHandle<ApplicationEnvironment>(new core.Channel(handle), 0))
+        ..ctrl.bind(new InterfaceHandle<ApplicationEnvironment>(
+            new core.Channel(handle), 0))
         ..getApplicationLauncher(context.launcher.ctrl.request())
         ..getServices(context.environmentServices.ctrl.request());
     }
@@ -34,7 +36,8 @@ class ApplicationContext {
     final int outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
     if (outgoingServicesHandle != null) {
       final core.Handle handle = new core.Handle(outgoingServicesHandle);
-      context.outgoingServices.bind(new InterfaceRequest<ServiceProvider>(new core.Channel(handle)));
+      context.outgoingServices.bind(
+          new InterfaceRequest<ServiceProvider>(new core.Channel(handle)));
     }
 
     return context;
@@ -48,23 +51,24 @@ class ApplicationContext {
   }
 }
 
-void connectToService(ServiceProvider serviceProvider,
-                      ProxyController controller) {
+void connectToService(
+    ServiceProvider serviceProvider, ProxyController controller) {
   final String serviceName = controller.serviceName;
-  if (serviceName == null)
-    return;
-  serviceProvider.connectToService(serviceName, controller.request().passChannel());
+  if (serviceName == null) return;
+  serviceProvider.connectToService(
+      serviceName, controller.request().passChannel());
 }
 
-InterfaceHandle connectToServiceByName(ServiceProvider serviceProvider, String serviceName) {
+InterfaceHandle connectToServiceByName(
+    ServiceProvider serviceProvider, String serviceName) {
   final core.ChannelPair pair = new core.ChannelPair();
   serviceProvider.connectToService(serviceName, pair.channel0);
   return new InterfaceHandle(pair.channel1, 0);
 }
 
 typedef void ServiceConnector<T>(InterfaceRequest<T> request);
-typedef void DefaultServiceConnector(String serviceName,
-                                     InterfaceRequest request);
+typedef void DefaultServiceConnector(
+    String serviceName, InterfaceRequest request);
 
 class ServiceProviderImpl extends ServiceProvider {
   final ServiceProviderBinding _binding = new ServiceProviderBinding();
@@ -79,7 +83,8 @@ class ServiceProviderImpl extends ServiceProvider {
 
   DefaultServiceConnector defaultConnector;
 
-  final Map<String, ServiceConnector> _connectors = new Map<String, ServiceConnector>();
+  final Map<String, ServiceConnector> _connectors =
+      new Map<String, ServiceConnector>();
 
   void addServiceForName<T>(ServiceConnector<T> connector, String serviceName) {
     _connectors[serviceName] = connector;
