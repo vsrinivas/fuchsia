@@ -33,8 +33,11 @@ class TestTokenProvider : public modular::auth::TokenProvider {
       const GetFirebaseAuthTokenCallback& callback) override {
     task_runner_->PostTask(ftl::MakeCopyable([
       token_to_return = std::move(token_to_return),
+      error_to_return = std::move(error_to_return),
       callback = std::move(callback)
-    ]() mutable { callback(std::move(token_to_return)); }));
+    ]() mutable {
+      callback(std::move(token_to_return), std::move(error_to_return));
+    }));
   }
 
   void GetClientId(const GetClientIdCallback& callback) override {
@@ -51,6 +54,7 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   void SetNull() { token_to_return = nullptr; }
 
   modular::auth::FirebaseTokenPtr token_to_return;
+  modular::auth::AuthErrPtr error_to_return;
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

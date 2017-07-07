@@ -30,12 +30,14 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
   }
 
   token_provider_->GetFirebaseAuthToken(
-      api_key_, [callback = cancellable->WrapCallback(callback)](auto token) {
+      api_key_, [callback = cancellable->WrapCallback(callback)](auto token,
+                                                                 auto error) {
         if (!token || token->id_token.size() == 0) {
           // This should not happen - the token provider returns nullptr when
           // running in the guest mode, but in this case we don't initialize
           // sync and should never call auth provider.
-          FTL_LOG(ERROR) << "Empty Firebase token returned by token provider.";
+          FTL_LOG(ERROR) << "Empty Firebase token returned by token provider "
+                         << "with error: " << error->message;
           callback(cloud_sync::AuthStatus::ERROR, "");
           return;
         }
@@ -54,12 +56,13 @@ void AuthProviderImpl::GetFirebaseUserId(
   }
 
   token_provider_->GetFirebaseAuthToken(
-      api_key_, [callback = std::move(callback)](auto token) {
+      api_key_, [callback = std::move(callback)](auto token, auto error) {
         if (!token || token->local_id.size() == 0) {
           // This should not happen - the token provider returns nullptr when
           // running in the guest mode, but in this case we don't initialize
           // sync and should never call auth provider.
-          FTL_LOG(ERROR) << "Empty Firebase token returned by token provider.";
+          FTL_LOG(ERROR) << "Empty Firebase token returned by token provider "
+                         << "with error: " << error->message;
           callback(cloud_sync::AuthStatus::ERROR, "");
           return;
         }
