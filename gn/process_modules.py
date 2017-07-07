@@ -48,6 +48,8 @@ class Amalgamation:
         self.config_paths.append(config_path)
         packages = config.get("packages", {})
         for package in packages:
+            if package in self.packages:
+                raise Exception("Duplicate package name: %s" % package)
             self.packages.append(package)
             self.deps.append(packages[package])
 
@@ -95,6 +97,16 @@ class Amalgamation:
         if config.get("gopaths"):
             self.gopaths.extend(config.get("gopaths"))
 
+def detect_duplicate_keys(pairs):
+    keys = set()
+    result = {}
+    for k, v in pairs:
+        if k in keys:
+            raise Exception("Duplicate key %s" % k)
+        keys.add(k)
+        result[k] = v
+    return result
+
 
 def resolve_imports(import_queue, omit_files, build_root):
     # Hack: Add cpp manifest until we derive runtime information from the
@@ -109,7 +121,7 @@ def resolve_imports(import_queue, omit_files, build_root):
         config_path = os.path.join(paths.SCRIPT_DIR, config_name)
         with open(config_path) as f:
             try:
-                config = json.load(f)
+                config = json.load(f, object_pairs_hook=detect_duplicate_keys)
                 amalgamation.add_config(config, config_path)
                 for i in config.get("imports", []):
                     if i not in imported:
