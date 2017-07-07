@@ -31,7 +31,10 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
+// The handle used to transmit messages to appmgr.
 static mx_handle_t svc_root_handle;
+// The handle used by appmgr to serve incoming requests.
+// If appmgr cannot be launched within a timeout, this handle is closed.
 static mx_handle_t svc_request_handle;
 
 mx_handle_t get_service_root(void) {
@@ -226,17 +229,18 @@ void do_autorun(const char* name, const char* env) {
     }
 }
 
+static mtx_t appmgr_lock = MTX_INIT;
+
 int devmgr_start_appmgr(void* arg) {
     static bool appmgr_started = false;
     static bool autorun_started = false;
-    static mtx_t lock = MTX_INIT;
 
     // we're starting the appmgr because /system is present
     // so we also signal the device coordinator that those
     // drivers are now loadable
     load_system_drivers();
 
-    mtx_lock(&lock);
+    mtx_lock(&appmgr_lock);
     struct stat s;
     if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
         unsigned int appmgr_hnd_count = 0;
@@ -247,7 +251,7 @@ int devmgr_start_appmgr(void* arg) {
             appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
             appmgr_ids[appmgr_hnd_count] = PA_SERVICE_REQUEST;
             appmgr_hnd_count++;
-            svc_request_handle = 0;
+            svc_request_handle = MX_HANDLE_INVALID;
         }
         devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
                       argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
@@ -258,7 +262,18 @@ int devmgr_start_appmgr(void* arg) {
         do_autorun("autorun:system", "magenta.autorun.system");
         autorun_started = true;
     }
-    mtx_unlock(&lock);
+    mtx_unlock(&appmgr_lock);
+    return 0;
+}
+
+int service_timeout(void* arg) {
+    mx_nanosleep(mx_deadline_after(MX_SEC(10)));
+    mtx_lock(&appmgr_lock);
+    if (svc_request_handle != MX_HANDLE_INVALID) {
+        printf("devmgr: appmgr not found, closing service handle\n");
+        mx_handle_close(svc_request_handle);
+    }
+    mtx_unlock(&appmgr_lock);
     return 0;
 }
 
@@ -474,6 +489,10 @@ int main(int argc, char** argv) {
 
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
+        thrd_detach(t);
+    }
+
+    if ((thrd_create_with_name(&t, service_timeout, NULL, "service-timout")) == thrd_success) {
         thrd_detach(t);
     }
 
