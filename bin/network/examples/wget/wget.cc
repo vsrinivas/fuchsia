@@ -70,19 +70,8 @@ class ResponsePrinter {
 class WGetApp {
  public:
   WGetApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
-#if USE_ENVIRONMENT_SERVICE
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
-#else
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/network";
-    launch_info->services = fidl::GetProxy(&network_service_provider_);
-    context_->launcher()->CreateApplication(std::move(launch_info),
-                                            fidl::GetProxy(&app_controller_));
-
-    app::ConnectToService(network_service_provider_.get(),
-                          fidl::GetProxy(&network_service_));
-#endif
     FTL_DCHECK(network_service_);
   }
 
@@ -111,10 +100,6 @@ class WGetApp {
 
  private:
   std::unique_ptr<app::ApplicationContext> context_;
-#if !USE_ENVIRONMENT_SERVICE
-  app::ApplicationControllerPtr app_controller_;
-  app::ServiceProviderPtr network_service_provider_;
-#endif
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
