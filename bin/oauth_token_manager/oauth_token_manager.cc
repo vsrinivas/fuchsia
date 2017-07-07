@@ -44,7 +44,8 @@ namespace modular {
 namespace auth {
 
 using FirebaseTokenCallback =
-    std::function<void(modular::auth::FirebaseTokenPtr)>;
+    std::function<void(modular::auth::FirebaseTokenPtr,
+                       modular::auth::AuthErrPtr)>;
 
 namespace {
 
@@ -239,9 +240,9 @@ void Post(const std::string& request_body,
     }
 
     if (response->status_code != 200) {
-      failure_callback(
-          "Status code: " + std::to_string(response->status_code) +
-          " while fetching tokens with error description:" + response_body);
+      failure_callback("Error response from server: " +
+                       std::to_string(response->status_code) +
+                       ", with description:" + response_body);
       return;
     }
 
@@ -253,8 +254,13 @@ void Post(const std::string& request_body,
       return;
     };
     auto result = set_token_callback(std::move(doc));
-    FTL_DCHECK(result);
-    success_callback();
+    if (result) {
+      success_callback();
+    } else {
+      failure_callback("Invalid response: " +
+                       modular::JsonValueToPrettyString(std::move(doc)));
+    }
+    return;
   });
 }
 
@@ -483,7 +489,7 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 };
 
 class OAuthTokenManagerApp::GoogleFirebaseTokensCall
-    : Operation<modular::auth::FirebaseTokenPtr> {
+    : Operation<modular::auth::FirebaseTokenPtr, modular::auth::AuthErrPtr> {
  public:
   GoogleFirebaseTokensCall(OperationContainer* const container,
                            const std::string& account_id,
@@ -505,15 +511,15 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   }
 
   void Run() override {
-    FlowToken flow{this, &firebase_token_};
+    FlowToken flow{this, &firebase_token_, &auth_err_};
 
     if (account_id_.empty()) {
-      Failure(flow, "Account id is empty, running in guest mode.");
+      Failure(flow, Status::BAD_REQUEST, "Account id is empty");
       return;
     }
 
     if (firebase_api_key_.empty()) {
-      Failure(flow, "Firebase Api key is empty");
+      Failure(flow, Status::BAD_REQUEST, "Firebase Api key is empty");
       return;
     }
 
@@ -568,7 +574,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
          [this, branch](const std::string error_message) {
            std::unique_ptr<FlowToken> flow = branch.Continue();
            FTL_CHECK(flow);
-           Failure(*flow, error_message);
+           OAuthFailure(*flow, error_message);
          },
          [this](rapidjson::Document doc) {
            return GetFirebaseToken(std::move(doc));
@@ -633,6 +639,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   }
 
   void Success(FlowToken flow) {
+    // Set firebase token
     firebase_token_ = auth::FirebaseToken::New();
     if (id_token_.empty()) {
       firebase_token_->id_token = "";
@@ -645,10 +652,24 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
       firebase_token_->local_id = fb_token.local_id;
       firebase_token_->email = fb_token.email;
     }
+
+    // Set status to success
+    auth_err_ = auth::AuthErr::New();
+    auth_err_->status = Status::OK;
+    auth_err_->message = "";
   }
 
-  void Failure(FlowToken flow, const std::string& error_message) {
+  void OAuthFailure(FlowToken flow, const std::string& error_message) {
+    Failure(flow, Status::OAUTH_ERROR, error_message);
+  }
+
+  void Failure(FlowToken flow,
+               Status status,
+               const std::string& error_message) {
     FTL_LOG(ERROR) << error_message;
+    auth_err_ = auth::AuthErr::New();
+    auth_err_->status = status;
+    auth_err_->message = error_message;
   }
 
   const std::string account_id_;
@@ -657,6 +678,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   OAuthTokenManagerApp* const app_;
 
   modular::auth::FirebaseTokenPtr firebase_token_;
+  modular::auth::AuthErrPtr auth_err_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;

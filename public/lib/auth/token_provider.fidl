@@ -4,6 +4,20 @@
 
 module modular.auth;
 
+// Specifies the success/failure status.
+enum Status {
+  OK,
+  BAD_REQUEST,
+  OAUTH_ERROR,
+};
+
+// Authentication errors returned by Token Manager. It contains error status
+// code along with a detailed error message.
+struct AuthErr {
+  Status status;
+  string message;
+};
+
 // Stores attributes related to a firebase auth token for a given firebase api
 // key. These tokens are obtained by agents using
 // TokenProvider.GetFirebaseAuthToken().
@@ -45,7 +59,7 @@ interface TokenProvider {
   //
   // Empty response is returned if running in incognito mode.
   GetFirebaseAuthToken(string firebase_api_key) =>
-    (FirebaseToken? firebase_token);
+    (FirebaseToken? firebase_token, AuthErr auth_err);
 
   // Returns the client id used to fetch the above tokens.
   GetClientId() => (string? client_id);
