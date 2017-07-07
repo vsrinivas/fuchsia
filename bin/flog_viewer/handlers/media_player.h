@@ -44,6 +44,10 @@ class MediaPlayer : public ChannelHandler,
 
   void Flushed() override;
 
+  void ProgramRangeSet(uint64_t program,
+                       int64_t min_pts,
+                       int64_t max_pts) override;
+
   void Primed() override;
 
   void Playing() override;

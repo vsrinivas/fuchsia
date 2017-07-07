@@ -284,8 +284,13 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os, AsNsTime value) {
   int64_t time = value.time_;
 
-  if (time == media::kUnspecifiedTime) {
-    return os << "unspecified";
+  switch (time) {
+    case media::kUnspecifiedTime:
+      return os << "unspecified";
+    case media::kMinTime:
+      return os << "min";
+    case media::kMaxTime:
+      return os << "max";
   }
 
   if (time < 0) {
@@ -300,8 +305,13 @@ std::ostream& operator<<(std::ostream& os, AsNsTime value) {
 std::ostream& operator<<(std::ostream& os, AsUsTime value) {
   int64_t time = value.time_;
 
-  if (time == media::kUnspecifiedTime) {
-    return os << "unspecified";
+  switch (time) {
+    case media::kUnspecifiedTime:
+      return os << "unspecified";
+    case media::kMinTime:
+      return os << "min";
+    case media::kMaxTime:
+      return os << "max";
   }
 
   if (time < 0) {
@@ -316,8 +326,13 @@ std::ostream& operator<<(std::ostream& os, AsUsTime value) {
 std::ostream& operator<<(std::ostream& os, AsMsTime value) {
   int64_t time = value.time_;
 
-  if (time == media::kUnspecifiedTime) {
-    return os << "unspecified";
+  switch (time) {
+    case media::kUnspecifiedTime:
+      return os << "unspecified";
+    case media::kMinTime:
+      return os << "min";
+    case media::kMaxTime:
+      return os << "max";
   }
 
   if (time < 0) {

@@ -29,6 +29,7 @@ class MediaTimelineControlPointAccumulator : public Accumulator {
   Counted timeline_updates_;
   media::TimelineTransformPtr pending_timeline_transform_;
   media::TimelineTransformPtr current_timeline_transform_;
+  int64_t current_program_range_min_pts_ = media::kUnspecifiedTime;
   Counted prime_requests_;
   Counted end_of_streams_reached_;
 
@@ -57,6 +58,10 @@ class MediaTimelineControlPoint
  private:
   // MediaTimelineControlPointChannel implementation.
   void BoundAs(uint64_t koid) override;
+
+  void SetProgramRangeRequested(uint64_t program,
+                                int64_t min_pts,
+                                int64_t max_pts) override;
 
   void PrimeRequested() override;
 

@@ -15,6 +15,7 @@ interface MediaPlayerChannel {
   CreatedSink(uint64 stream_index, uint64 related_koid);
   StreamsPrepared();
   Flushed();
+  ProgramRangeSet(uint64 program, int64 min_pts, int64 max_pts);
   Primed();
   Playing();
   EndOfStream();

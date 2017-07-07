@@ -141,6 +141,24 @@ void MediaPlayer::Flushed() {
   accumulator_->state_ = MediaPlayerAccumulator::State::kFlushed;
 }
 
+void MediaPlayer::ProgramRangeSet(uint64_t program,
+                                  int64_t min_pts,
+                                  int64_t max_pts) {
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaPlayer.ProgramRangeSet\n";
+  terse_out() << indent;
+  terse_out() << begl << "program: " << program << "\n";
+  terse_out() << begl << "min_pts: " << AsNsTime(min_pts) << "\n";
+  terse_out() << begl << "max_pts: " << AsNsTime(max_pts) << "\n";
+  terse_out() << outdent;
+
+  if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed &&
+      accumulator_->state_ != MediaPlayerAccumulator::State::kStreamsPrepared &&
+      accumulator_->state_ != MediaPlayerAccumulator::State::kFlushing) {
+    ReportProblem() << "Program range set out of sequence";
+  }
+}
+
 void MediaPlayer::Primed() {
   terse_out() << AsEntryIndex(entry_index()) << " " << entry()
               << "MediaPlayer.Primed\n";

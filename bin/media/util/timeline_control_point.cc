@@ -148,6 +148,7 @@ void TimelineControlPoint::GetTimelineConsumer(
 void TimelineControlPoint::SetProgramRange(uint64_t program,
                                            int64_t min_pts,
                                            int64_t max_pts) {
+  FLOG(log_channel_, SetProgramRangeRequested(program, min_pts, max_pts));
   if (program_range_set_callback_) {
     program_range_set_callback_(program, min_pts, max_pts);
   }

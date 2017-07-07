@@ -9,6 +9,7 @@ import "apps/media/services/timelines.fidl";
 [ServiceName="media::logs::MediaTimelineControlPointChannel"]
 interface MediaTimelineControlPointChannel {
   BoundAs(uint64 koid);
+  SetProgramRangeRequested(uint64 program, int64 min_pts, int64 max_pts);
   PrimeRequested();
   CompletingPrime();
   ScheduleTimelineTransform(TimelineTransform timeline_transform);

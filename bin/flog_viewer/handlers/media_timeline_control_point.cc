@@ -41,6 +41,20 @@ void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
   BindAs(koid);
 }
 
+void MediaTimelineControlPoint::SetProgramRangeRequested(uint64_t program,
+                                                         int64_t min_pts,
+                                                         int64_t max_pts) {
+  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+              << "MediaTimelineControlPoint.SetProgramRangeRequested\n";
+  terse_out() << indent;
+  terse_out() << begl << "program: " << program << "\n";
+  terse_out() << begl << "min_pts: " << AsNsTime(min_pts) << "\n";
+  terse_out() << begl << "max_pts: " << AsNsTime(max_pts) << "\n";
+  terse_out() << outdent;
+
+  accumulator_->current_program_range_min_pts_ = min_pts;
+}
+
 void MediaTimelineControlPoint::PrimeRequested() {
   terse_out() << AsEntryIndex(entry_index()) << " " << entry()
               << "MediaTimelineControlPoint.PrimeRequested"
@@ -109,6 +123,10 @@ void MediaTimelineControlPointAccumulator::Print(std::ostream& os) {
        << "SUSPENSE: pending timeline update: " << pending_timeline_transform_
        << "\n";
   }
+
+  os << begl
+     << "program range min pts: " << AsNsTime(current_program_range_min_pts_)
+     << "\n";
 
   os << begl << "prime requests: " << prime_requests_.count() << "\n";
   if (prime_requests_.outstanding_count() == 1) {
