@@ -131,11 +131,4 @@ class ServiceProviderImpl : public ServiceProvider {
 
 }  // namespace app
 
-namespace modular {
-// This is a temporary alias to ease the transition from
-// modular::ServiceProviderImpl to app::ServiceProviderImpl. New code should use
-// the app:: name. TODO(jamesr): Remove once users are transitioned over.
-using app::ServiceProviderImpl;
-}  // namespace modular
-
 #endif  // APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_

@@ -38,11 +38,4 @@ inline void ConnectToService(
 
 }  // namespace app
 
-namespace modular {
-// This is a temporary alias to ease the transition from
-// modular::ConnectToService to app::ConnectToService. New code should use the
-// app:: name. TODO(jamesr): Remove once users are transitioned over.
-using app::ConnectToService;
-}  // namespace modular
-
 #endif  // APPLICATION_LIB_APP_CONNECT_H_

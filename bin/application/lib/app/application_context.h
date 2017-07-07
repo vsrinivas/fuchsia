@@ -103,11 +103,4 @@ class ApplicationContext {
 
 }  // namespace app
 
-namespace modular {
-// This is a temporary alias to ease the transition from
-// modular::ApplicationContext to app::ApplicationContext. New code should use
-// the app:: name. TODO(jamesr): Remove once users are transitioned over.
-using app::ApplicationContext;
-}  // namespace modular
-
 #endif  // APPLICATION_LIB_APP_APPLICATION_CONTEXT_H_
