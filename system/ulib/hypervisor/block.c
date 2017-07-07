@@ -19,7 +19,7 @@
 #define PCI_INTERRUPT_VIRTIO_BLOCK  33u
 #define PCI_ALIGN(n)                ((((uintptr_t)n) + 4095) & ~4095)
 
-typedef mx_status_t (* virtio_req_fn)(void* ctx, void* req, void* addr, uint32_t len);
+typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
 
 mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port, uint8_t* input_size,
                                      mx_guest_port_in_ret_t* port_in_ret) {
@@ -131,7 +131,7 @@ static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
 }
 
 static mx_status_t handle_virtio_queue(virtio_queue_t* queue, void* mem_addr, size_t mem_size,
-                                       uint32_t hdr_size, void* ctx, virtio_req_fn req_fn) {
+                                       uint32_t hdr_size, void* ctx, virtio_req_fn_t req_fn) {
     for (; queue->index < queue->avail->idx; queue->index++, queue->used->idx++) {
         uint16_t desc_index = queue->avail->ring[ring_index(queue, queue->index)];
         if (desc_index >= queue->size)
