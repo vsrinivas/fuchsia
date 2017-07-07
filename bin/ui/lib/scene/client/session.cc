@@ -14,6 +14,13 @@ Session::Session(mozart2::SessionPtr session) : session_(std::move(session)) {
   FTL_DCHECK(session_);
 }
 
+Session::Session(mozart2::SceneManager* scene_manager,
+                 mozart2::SessionListenerPtr session_listener) {
+  FTL_DCHECK(scene_manager);
+  scene_manager->CreateSession(session_.NewRequest(),
+                               std::move(session_listener));
+}
+
 Session::~Session() {
   FTL_DCHECK(resource_count_ == 0)
       << "Some resources outlived the session: " << resource_count_;

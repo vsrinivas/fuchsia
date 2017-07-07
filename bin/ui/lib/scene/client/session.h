@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
 
 #include <functional>
@@ -29,7 +30,16 @@ class Session {
   using HitTestCallback =
       std::function<void(fidl::Array<mozart2::HitPtr> hits)>;
 
+  // Wraps the provided session.
   explicit Session(mozart2::SessionPtr session);
+
+  // Creates a new session using the provided scene manager.
+  // The scene manager itself is not retained after construction.
+  explicit Session(mozart2::SceneManager* scene_manager,
+                   mozart2::SessionListenerPtr session_listener = nullptr);
+
+  // Destroys the session.
+  // All resources must be released prior to destruction.
   ~Session();
 
   // Sets a callback which is invoked if the session dies.

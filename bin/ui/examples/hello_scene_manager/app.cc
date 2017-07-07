@@ -191,9 +191,7 @@ class HelloSceneManagerApp {
     FTL_LOG(INFO) << "Creating new Session";
 
     // TODO: set up SessionListener.
-    mozart2::SessionPtr session;
-    scene_manager_->CreateSession(session.NewRequest(), nullptr);
-    session_ = std::make_unique<mozart::client::Session>(std::move(session));
+    session_ = std::make_unique<mozart::client::Session>(scene_manager_.get());
     session_->set_connection_error_handler([this] {
       FTL_LOG(INFO) << "Session terminated.";
       loop_->QuitNow();
