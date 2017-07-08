@@ -816,7 +816,7 @@ function ftest() {
   fi
   local target="$1"
 
-  "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "${target}"
+  fbuild-internal "${target}"
   if [[ $? -ne 0 ]]; then
     return 1
   fi
