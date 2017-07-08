@@ -10,14 +10,13 @@
 std::unique_ptr<DemoHarness> DemoHarness::New(
     DemoHarness::WindowParams window_params,
     DemoHarness::InstanceParams instance_params) {
-  auto harness = new DemoHarnessFuchsia(window_params, instance_params);
-  harness->Init();
+  auto harness = new DemoHarnessFuchsia(window_params);
+  harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }
 
-DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params,
-                                       InstanceParams instance_params)
-    : DemoHarness(window_params, instance_params),
+DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params)
+    : DemoHarness(window_params),
       loop_(mtl::MessageLoop::GetCurrent()),
       owned_loop_(loop_ ? nullptr : new mtl::MessageLoop()),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -36,7 +35,8 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params,
 
 void DemoHarnessFuchsia::InitWindowSystem() {}
 
-void DemoHarnessFuchsia::CreateWindowAndSurface(const WindowParams& params) {
+vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
+    const WindowParams& params) {
   VkMagmaSurfaceCreateInfoKHR create_info = {
       .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
       .pNext = nullptr,
@@ -45,15 +45,13 @@ void DemoHarnessFuchsia::CreateWindowAndSurface(const WindowParams& params) {
   VkResult err =
       vkCreateMagmaSurfaceKHR(instance(), &create_info, nullptr, &surface);
   FTL_CHECK(!err);
-  set_surface(surface);
+  return surface;
 }
 
 void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
     InstanceParams* params) {
-  params->extension_names.emplace_back(
-      std::string(VK_KHR_SURFACE_EXTENSION_NAME));
-  params->extension_names.emplace_back(
-      std::string(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME));
+  params->AddExtensionName(VK_KHR_SURFACE_EXTENSION_NAME);
+  params->AddExtensionName(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME);
 }
 
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}

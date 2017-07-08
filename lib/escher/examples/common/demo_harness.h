@@ -9,9 +9,9 @@
 
 #include "escher/resources/resource_manager.h"
 #include "escher/vk/vulkan_context.h"
+#include "escher/vk/vulkan_device_queues.h"
+#include "escher/vk/vulkan_instance.h"
 #include "escher/vk/vulkan_swapchain.h"
-
-#include "vulkan_proc_addrs.h"
 
 class Demo;
 
@@ -28,22 +28,12 @@ class DemoHarness {
     bool use_fullscreen = false;
   };
 
-  struct InstanceParams {
-    std::vector<std::string> layer_names{"VK_LAYER_LUNARG_standard_validation"};
-    std::vector<std::string> extension_names;
-  };
+  using InstanceParams = escher::VulkanInstance::Params;
 
   static std::unique_ptr<DemoHarness> New(
       DemoHarness::WindowParams window_params,
-      DemoHarness::InstanceParams instance_params);
+      InstanceParams instance_params);
   virtual ~DemoHarness();
-
-  const std::vector<vk::LayerProperties>& GetInstanceLayers() const {
-    return instance_layers_;
-  }
-  const std::vector<vk::ExtensionProperties>& GetInstanceExtensions() const {
-    return instance_extensions_;
-  }
 
   escher::VulkanContext GetVulkanContext();
   escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
@@ -60,16 +50,32 @@ class DemoHarness {
 
  protected:
   // Create via DemoHarness::New().
-  DemoHarness(WindowParams window_params, InstanceParams instance_params);
+  DemoHarness(WindowParams window_params);
 
   // Subclasses are responsible for setting this when they start running a Demo,
   // and setting it back to nullptr when they finish running the Demo.
   Demo* demo_ = nullptr;
 
-  vk::Device device() { return device_; }
-  vk::Instance instance() { return instance_; }
-  vk::SurfaceKHR surface() { return surface_; }
-  void set_surface(vk::SurfaceKHR surf) { surface_ = surf; }
+  vk::Device device() const { return device_queues_->vk_device(); }
+  vk::PhysicalDevice physical_device() const {
+    return device_queues_->vk_physical_device();
+  }
+  vk::Instance instance() const { return instance_->vk_instance(); }
+  vk::SurfaceKHR surface() const { return device_queues_->vk_surface(); }
+  vk::Queue main_queue() const { return device_queues_->vk_main_queue(); }
+  uint32_t main_queue_family() const {
+    return device_queues_->vk_main_queue_family();
+  }
+  vk::Queue transfer_queue() const {
+    return device_queues_->vk_transfer_queue();
+  }
+  uint32_t transfer_queue_family() const {
+    return device_queues_->vk_transfer_queue_family();
+  }
+
+  const escher::VulkanInstance::ProcAddrs& instance_proc_addrs() const {
+    return instance_->proc_addrs();
+  }
 
  private:
   // For wrapping swapchain images in VkImage.
@@ -84,13 +90,14 @@ class DemoHarness {
 
   // Called by New() after instantiation is complete, so that virtual functions
   // can be called upon the harness.
-  void Init();
+  void Init(DemoHarness::InstanceParams instance_params);
 
   // Called by Init().
   virtual void InitWindowSystem() = 0;
   void CreateInstance(InstanceParams params);
-  virtual void CreateWindowAndSurface(const WindowParams& window_params) = 0;
-  void CreateDeviceAndQueue();
+  virtual vk::SurfaceKHR CreateWindowAndSurface(
+      const WindowParams& window_params) = 0;
+  void CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params);
   void CreateSwapchain(const WindowParams& window_params);
 
   // Called by Init() via CreateInstance().
@@ -126,30 +133,15 @@ class DemoHarness {
                              const char* pMessage);
 
   WindowParams window_params_;
-  InstanceParams instance_params_;
 
-  vk::Instance instance_;
-  vk::SurfaceKHR surface_;
-  vk::PhysicalDevice physical_device_;
-  vk::Device device_;
-  vk::Queue queue_;
-  uint32_t queue_family_index_ = UINT32_MAX;  // initialize to invalid index.
-  vk::Queue transfer_queue_;
-  uint32_t transfer_queue_family_index_ = UINT32_MAX;  // invalid index.
+  escher::VulkanInstancePtr instance_;
+  escher::VulkanDeviceQueuesPtr device_queues_;
   escher::VulkanSwapchain swapchain_;
 
   VkDebugReportCallbackEXT debug_report_callback_;
 
-  InstanceProcAddrs instance_procs_;
-  DeviceProcAddrs device_procs_;
-
   std::unique_ptr<SwapchainImageOwner> swapchain_image_owner_;
   uint32_t swapchain_image_count_ = 0;
-
-  std::vector<vk::LayerProperties> instance_layers_;
-  std::vector<vk::ExtensionProperties> instance_extensions_;
-
-  vk::InstanceCreateInfo instance_create_info;
 
   bool should_quit_ = false;
   bool shutdown_complete_ = false;

@@ -132,14 +132,13 @@ static void DemoGlfwMouseButtonCallback(GLFWwindow* window,
 std::unique_ptr<DemoHarness> DemoHarness::New(
     DemoHarness::WindowParams window_params,
     DemoHarness::InstanceParams instance_params) {
-  auto harness = new DemoHarnessLinux(window_params, instance_params);
-  harness->Init();
+  auto harness = new DemoHarnessLinux(window_params);
+  harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }
 
-DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params,
-                                   InstanceParams instance_params)
-    : DemoHarness(window_params, instance_params) {}
+DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params)
+    : DemoHarness(window_params) {}
 
 void DemoHarnessLinux::InitWindowSystem() {
   FTL_CHECK(!g_harness);
@@ -149,7 +148,8 @@ void DemoHarnessLinux::InitWindowSystem() {
   FTL_CHECK(glfwInit());
 }
 
-void DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& params) {
+vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(
+    const WindowParams& params) {
   FTL_CHECK(!g_window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -163,11 +163,12 @@ void DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& params) {
   VkSurfaceKHR surface;
   VkResult err = glfwCreateWindowSurface(instance(), g_window, NULL, &surface);
   FTL_CHECK(!err);
-  set_surface(surface);
 
   glfwSetKeyCallback(g_window, DemoGlfwKeyCallback);
   glfwSetCursorPosCallback(g_window, DemoGlfwCursorPosCallback);
   glfwSetMouseButtonCallback(g_window, DemoGlfwMouseButtonCallback);
+
+  return surface;
 }
 
 void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(
@@ -177,7 +178,7 @@ void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(
   const char** extensions =
       glfwGetRequiredInstanceExtensions(&extensions_count);
   for (uint32_t i = 0; i < extensions_count; ++i) {
-    params->extension_names.emplace_back(std::string(extensions[i]));
+    params->extension_names.insert(extensions[i]);
   }
 }
 

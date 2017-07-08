@@ -8,8 +8,6 @@ static_library("common") {
     "demo.h",
     "demo_harness.cc",
     "demo_harness.h",
-    "vulkan_proc_addrs.cc",
-    "vulkan_proc_addrs.h",
   ]
   deps = [
     "//lib/ftl",

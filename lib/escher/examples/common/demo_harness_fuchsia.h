@@ -18,8 +18,7 @@ class DemoHarnessFuchsia : public DemoHarness,
                            public escher_demo::EscherDemo,
                            public modular::Module {
  public:
-  DemoHarnessFuchsia(WindowParams window_params,
-                     InstanceParams instance_params);
+  DemoHarnessFuchsia(WindowParams window_params);
 
   // |DemoHarness|
   void Run(Demo* demo) override;
@@ -48,7 +47,8 @@ class DemoHarnessFuchsia : public DemoHarness,
  private:
   // Called by Init().
   void InitWindowSystem() override;
-  void CreateWindowAndSurface(const WindowParams& window_params) override;
+  vk::SurfaceKHR CreateWindowAndSurface(
+      const WindowParams& window_params) override;
 
   // Called by Init() via CreateInstance().
   void AppendPlatformSpecificInstanceExtensionNames(

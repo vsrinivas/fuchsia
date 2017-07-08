@@ -8,14 +8,15 @@
 
 class DemoHarnessLinux : public DemoHarness {
  public:
-  DemoHarnessLinux(WindowParams window_params, InstanceParams instance_params);
+  DemoHarnessLinux(WindowParams window_params);
 
   void Run(Demo* demo) override;
 
  private:
   // Called by Init().
   void InitWindowSystem() override;
-  void CreateWindowAndSurface(const WindowParams& window_params) override;
+  vk::SurfaceKHR CreateWindowAndSurface(
+      const WindowParams& window_params) override;
 
   // Called by Init() via CreateInstance().
   void AppendPlatformSpecificInstanceExtensionNames(

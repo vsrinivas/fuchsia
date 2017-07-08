@@ -8,6 +8,7 @@
 #include "escher/examples/common/demo.h"
 #include "escher/renderer/image.h"
 #include "escher/vk/gpu_mem.h"
+#include "escher/vk/vulkan_instance.h"
 #include "ftl/logging.h"
 #include "ftl/memory/ref_ptr.h"
 
@@ -16,9 +17,8 @@
 
 #define VK_CHECK_RESULT(XXX) FTL_CHECK(XXX.result == vk::Result::eSuccess)
 
-DemoHarness::DemoHarness(WindowParams window_params,
-                         InstanceParams instance_params)
-    : window_params_(window_params), instance_params_(instance_params) {
+DemoHarness::DemoHarness(WindowParams window_params)
+    : window_params_(window_params) {
   // Init() is called by DemoHarness::New().
 }
 
@@ -26,15 +26,15 @@ DemoHarness::~DemoHarness() {
   FTL_DCHECK(shutdown_complete_);
 }
 
-void DemoHarness::Init() {
+void DemoHarness::Init(InstanceParams instance_params) {
   FTL_LOG(INFO) << "Initializing " << window_params_.window_name
                 << (window_params_.use_fullscreen ? " (fullscreen "
                                                   : " (windowed ")
                 << window_params_.width << "x" << window_params_.height << ")";
   InitWindowSystem();
-  CreateInstance(instance_params_);
-  CreateWindowAndSurface(window_params_);
-  CreateDeviceAndQueue();
+  CreateInstance(std::move(instance_params));
+  vk::SurfaceKHR surface = CreateWindowAndSurface(window_params_);
+  CreateDeviceAndQueue({{}, surface});
   CreateSwapchain(window_params_);
   escher::GlslangInitializeProcess();
 }
@@ -50,99 +50,19 @@ void DemoHarness::Shutdown() {
   ShutdownWindowSystem();
 }
 
-// Helper for DemoHarness::CreateInstance().
-static std::vector<vk::LayerProperties> GetRequiredInstanceLayers(
-    std::set<std::string> required_layer_names) {
-  // Get list of all available layers.
-  auto result = vk::enumerateInstanceLayerProperties();
-  VK_CHECK_RESULT(result);
-  std::vector<vk::LayerProperties>& props = result.value;
-
-  // Keep only the required layers.  Panic if any are not available.
-  std::vector<vk::LayerProperties> required_layers;
-  for (auto& name : required_layer_names) {
-    auto found = std::find_if(props.begin(), props.end(),
-                              [&name](vk::LayerProperties& layer) {
-                                return !strncmp(layer.layerName, name.c_str(),
-                                                VK_MAX_EXTENSION_NAME_SIZE);
-                              });
-    FTL_CHECK(found != props.end());
-    required_layers.push_back(*found);
-  }
-  return required_layers;
-}
-
-// Helper for DemoHarness::CreateInstance().
-static std::vector<vk::ExtensionProperties> GetRequiredInstanceExtensions(
-    std::set<std::string> required_extension_names) {
-  // Get list of all available extensions.
-  auto result = vk::enumerateInstanceExtensionProperties();
-  VK_CHECK_RESULT(result);
-  std::vector<vk::ExtensionProperties>& props = result.value;
-
-  // Keep only the required extensions.  Panic if any are not available.
-  std::vector<vk::ExtensionProperties> required_extensions;
-  for (auto& name : required_extension_names) {
-    auto found =
-        std::find_if(props.begin(), props.end(),
-                     [&name](vk::ExtensionProperties& extension) {
-                       return !strncmp(extension.extensionName, name.c_str(),
-                                       VK_MAX_EXTENSION_NAME_SIZE);
-                     });
-    FTL_CHECK(found != props.end());
-    required_extensions.push_back(*found);
-  }
-  return required_extensions;
-}
-
 void DemoHarness::CreateInstance(InstanceParams params) {
   // Add our own required layers and extensions in addition to those provided
   // by the caller.  Verify that they are all available, and obtain info about
   // them that is used:
   // - to create the instance.
   // - for future reference.
-  {
-    instance_layers_ = GetRequiredInstanceLayers(
-        // Duplicates are not allowed.
-        std::set<std::string>(params.layer_names.begin(),
-                              params.layer_names.end()));
+  AppendPlatformSpecificInstanceExtensionNames(&params);
 
-    AppendPlatformSpecificInstanceExtensionNames(&params);
+  // We need this extension for getting debug callbacks.
+  params.extension_names.insert("VK_EXT_debug_report");
 
-    // We need this extension for getting debug callbacks.
-    params.extension_names.emplace_back("VK_EXT_debug_report");
-
-    instance_extensions_ = GetRequiredInstanceExtensions(
-        // Duplicates are not allowed.
-        std::set<std::string>(params.extension_names.begin(),
-                              params.extension_names.end()));
-  }
-
-  // Create Vulkan instance.
-  {
-    // Gather names of layers/extensions to populate InstanceCreateInfo.
-    std::vector<const char*> layer_names;
-    for (auto& layer : instance_layers_) {
-      layer_names.push_back(layer.layerName);
-    }
-    std::vector<const char*> extension_names;
-    for (auto& extension : instance_extensions_) {
-      extension_names.push_back(extension.extensionName);
-    }
-
-    vk::InstanceCreateInfo info;
-    info.enabledLayerCount = layer_names.size();
-    info.ppEnabledLayerNames = layer_names.data();
-    info.enabledExtensionCount = extension_names.size();
-    info.ppEnabledExtensionNames = extension_names.data();
-
-    auto result = vk::createInstance(info);
-    VK_CHECK_RESULT(result);
-    instance_ = result.value;
-  }
-
-  // Obtain instance-specific function pointers.
-  instance_procs_ = InstanceProcAddrs(instance_);
+  instance_ = escher::VulkanInstance::New(std::move(params));
+  FTL_CHECK(instance_);
 
   // Set up debug callback.
   {
@@ -156,117 +76,16 @@ void DemoHarness::CreateInstance(InstanceParams params) {
                           VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 
     // We use the C API here due to dynamically loading the extension function.
-    VkResult result = instance_procs_.CreateDebugReportCallbackEXT(
-        instance_, &dbgCreateInfo, nullptr, &debug_report_callback_);
+    VkResult result = instance_proc_addrs().CreateDebugReportCallbackEXT(
+        instance(), &dbgCreateInfo, nullptr, &debug_report_callback_);
     FTL_CHECK(result == VK_SUCCESS);
   }
 }
 
-void DemoHarness::CreateDeviceAndQueue() {
-  // Obtain list of physical devices.
-  auto result = instance_.enumeratePhysicalDevices();
-  VK_CHECK_RESULT(result);
-  std::vector<vk::PhysicalDevice>& devices = result.value;
-
-  // Iterate over physical devices until we find one that meets our needs.
-  for (auto& physical_device : devices) {
-    auto result = physical_device.enumerateDeviceExtensionProperties();
-    VK_CHECK_RESULT(result);
-    std::vector<vk::ExtensionProperties>& device_props = result.value;
-    auto found_device =
-        std::find_if(device_props.begin(), device_props.end(),
-                     [](vk::ExtensionProperties& extension) {
-                       return !strncmp(extension.extensionName,
-                                       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                                       VK_MAX_EXTENSION_NAME_SIZE);
-                     });
-    if (found_device != device_props.end()) {
-      // We found a device with the necessary extension.  Now let's ensure that
-      // it has a queue that supports graphics.
-      auto queues = physical_device.getQueueFamilyProperties();
-      auto desired_flags =
-          vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute;
-      for (size_t i = 0; i < queues.size(); ++i) {
-        if (desired_flags == (queues[i].queueFlags & desired_flags)) {
-          // TODO: it is possible that there is no queue family that supports
-          // both graphics/compute and present.  In this case, we would need a
-          // separate present queue.  For now, just assert that there is a
-          // single queue that meets our needs.
-          {
-            VkBool32 supports_present;
-            auto result = instance_procs_.GetPhysicalDeviceSurfaceSupportKHR(
-                physical_device, i, surface_, &supports_present);
-            FTL_CHECK(result == VK_SUCCESS);
-            FTL_CHECK(supports_present == VK_TRUE);
-          }
-
-          // We found an appropriate device!  Remember it, then create a
-          // logical device.
-          physical_device_ = physical_device;
-
-          // We may only create one queue, or we may create an additional
-          // transfer-only queue... see below.
-          vk::DeviceQueueCreateInfo queue_info[2];
-          queue_info[0] = vk::DeviceQueueCreateInfo();
-          queue_info[0] = vk::DeviceQueueCreateInfo();
-          queue_info[0].queueFamilyIndex = i;
-          queue_info[0].queueCount = 1;
-          float queue_priorities[1] = {0.0};
-          queue_info[0].pQueuePriorities = queue_priorities;
-
-          vk::DeviceCreateInfo device_info;
-          device_info.queueCreateInfoCount = 1;
-          device_info.pQueueCreateInfos = queue_info;
-          // TODO: need other device extensions?
-          const char* swapchain_extension_name = "VK_KHR_swapchain";
-          device_info.enabledExtensionCount = 1;
-          device_info.ppEnabledExtensionNames = &swapchain_extension_name;
-
-          // Try to find a transfer-only queue... if it exists, it will be the
-          // fastest way to upload data to the GPU.
-          for (size_t j = 0; j < queues.size(); ++j) {
-            auto flags = queues[j].queueFlags;
-            if (!(flags & vk::QueueFlagBits::eGraphics) &&
-                !(flags & vk::QueueFlagBits::eCompute) &&
-                (flags & vk::QueueFlagBits::eTransfer)) {
-              // Found a transfer-only queue.  Update the parameters that will
-              // be used to create the logical device.
-              device_info.queueCreateInfoCount = 2;
-              queue_info[1].queueFamilyIndex = j;
-              queue_info[1].queueCount = 1;
-              // TODO: make transfer queue higher priority?  Maybe unnecessary,
-              // since we'll use semaphores to block the graphics/compute queue
-              // until necessary transfers are complete.
-              queue_info[1].pQueuePriorities = queue_priorities;
-              break;
-            }
-          }
-
-          // Create the logical device.
-          auto result = physical_device_.createDevice(device_info);
-          VK_CHECK_RESULT(result);
-          device_ = result.value;
-
-          // Obtain device-specific function pointers.
-          device_procs_ = DeviceProcAddrs(device_);
-
-          // Obtain the queues that we requested to be created with the device.
-          queue_family_index_ = queue_info[0].queueFamilyIndex;
-          queue_ = device_.getQueue(queue_family_index_, 0);
-          if (device_info.queueCreateInfoCount == 2) {
-            transfer_queue_family_index_ = queue_info[1].queueFamilyIndex;
-            transfer_queue_ = device_.getQueue(transfer_queue_family_index_, 0);
-          } else {
-            transfer_queue_family_index_ = UINT32_MAX;
-            transfer_queue_ = nullptr;
-          }
-
-          return;
-        }
-      }
-    }
-  }
-  FTL_CHECK(false);
+void DemoHarness::CreateDeviceAndQueue(
+    escher::VulkanDeviceQueues::Params params) {
+  device_queues_ =
+      escher::VulkanDeviceQueues::New(instance_, std::move(params));
 }
 
 void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
@@ -278,14 +97,14 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
-    auto result = physical_device_.getSurfaceCapabilitiesKHR(surface_);
+    auto result = physical_device().getSurfaceCapabilitiesKHR(surface());
     VK_CHECK_RESULT(result);
     surface_caps = std::move(result.value);
   }
 
   std::vector<vk::PresentModeKHR> present_modes;
   {
-    auto result = physical_device_.getSurfacePresentModesKHR(surface_);
+    auto result = physical_device().getSurfacePresentModesKHR(surface());
     VK_CHECK_RESULT(result);
     present_modes = std::move(result.value);
   }
@@ -337,7 +156,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
   vk::Format format = vk::Format::eUndefined;
   vk::ColorSpaceKHR color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
   {
-    auto result = physical_device_.getSurfaceFormatsKHR(surface_);
+    auto result = physical_device().getSurfaceFormatsKHR(surface());
     VK_CHECK_RESULT(result);
     for (auto& sf : result.value) {
       if (sf.colorSpace != color_space)
@@ -369,7 +188,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
   vk::SwapchainKHR swapchain;
   {
     vk::SwapchainCreateInfoKHR info;
-    info.surface = surface_;
+    info.surface = surface();
     info.minImageCount = swapchain_image_count_;
     info.imageFormat = format;
     info.imageColorSpace = color_space;
@@ -382,13 +201,14 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
                       vk::ImageUsageFlagBits::eTransferDst |
                       vk::ImageUsageFlagBits::eSampled;
     info.queueFamilyIndexCount = 1;
-    info.pQueueFamilyIndices = &queue_family_index_;
+    uint32_t queue_family_index = device_queues_->vk_main_queue_family();
+    info.pQueueFamilyIndices = &queue_family_index;
     info.preTransform = pre_transform;
     info.presentMode = swapchain_present_mode;
     info.oldSwapchain = old_swapchain;
     info.clipped = true;
 
-    auto result = device_.createSwapchainKHR(info);
+    auto result = device().createSwapchainKHR(info);
     VK_CHECK_RESULT(result);
     swapchain = result.value;
   }
@@ -396,12 +216,12 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
   if (old_swapchain) {
     // Note: destroying the swapchain also cleans up all its associated
     // presentable images once the platform is done with them.
-    device_.destroySwapchainKHR(old_swapchain);
+    device().destroySwapchainKHR(old_swapchain);
   }
 
   // Obtain swapchain images and buffers.
   {
-    auto result = device_.getSwapchainImagesKHR(swapchain);
+    auto result = device().getSwapchainImagesKHR(swapchain);
     VK_CHECK_RESULT(result);
 
     std::vector<vk::Image> images(std::move(result.value));
@@ -426,22 +246,24 @@ void DemoHarness::DestroySwapchain() {
   swapchain_.images.clear();
 
   FTL_CHECK(swapchain_.swapchain);
-  device_.destroySwapchainKHR(swapchain_.swapchain);
+  device().destroySwapchainKHR(swapchain_.swapchain);
   swapchain_.swapchain = nullptr;
 }
 
 void DemoHarness::DestroyDevice() {
-  device_.destroy();
+  if (auto surf = surface()) {
+    instance().destroySurfaceKHR(surf);
+  }
+  device_queues_ = nullptr;
 }
 
 void DemoHarness::DestroyInstance() {
   // Destroy the debug callback.  We use the C API here because we need to
   // dynamically load the destruction function.
-  instance_procs_.DestroyDebugReportCallbackEXT(
-      instance_, debug_report_callback_, nullptr);
+  instance_proc_addrs().DestroyDebugReportCallbackEXT(
+      instance(), debug_report_callback_, nullptr);
 
-  instance_.destroySurfaceKHR(surface_);
-  instance_.destroy();
+  instance_ = nullptr;
 }
 
 VkBool32 DemoHarness::HandleDebugReport(
@@ -517,9 +339,7 @@ VkBool32 DemoHarness::HandleDebugReport(
 }
 
 escher::VulkanContext DemoHarness::GetVulkanContext() {
-  return escher::VulkanContext(instance_, physical_device_, device_, queue_,
-                               queue_family_index_, transfer_queue_,
-                               transfer_queue_family_index_);
+  return device_queues_->GetVulkanContext();
 }
 
 DemoHarness::SwapchainImageOwner::SwapchainImageOwner(
