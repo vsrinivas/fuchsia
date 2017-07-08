@@ -126,7 +126,7 @@ struct mx_proc_args {
 
 // A handle which will handle OPEN requests relative
 // to a particular path which is specified by the
-// nametable entry refereed to by the "arg" field
+// nametable entry referred to by the "arg" field
 #define PA_NS_DIR                0x20
 
 
