@@ -296,7 +296,10 @@ def main():
         call_args.append("--lib")
     if args.type == "bin":
         call_args.extend(["--bin", args.name])
-    subprocess.check_call(call_args, env=env, cwd=args.gen_dir)
+    retcode = subprocess.call(call_args, env=env, cwd=args.gen_dir)
+    if retcode != 0:
+        return retcode
+
 
     # Fix the depfile manually until a flag gets added to cargo to tweak the
     # base path for targets.
