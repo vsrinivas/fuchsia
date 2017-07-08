@@ -39,7 +39,7 @@ public:
 
     // Called when this object is added to a StateTracker, to give it the initial state.
     // Note that |cinfo| might be null.
-    // May return flags: KWokeThreads, kNeedRemoval
+    // May return flags: kWokeThreads, kNeedRemoval
     // WARNING: This is called under StateTracker's mutex.
     virtual Flags OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) = 0;
 
