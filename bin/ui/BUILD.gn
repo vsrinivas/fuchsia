@@ -232,6 +232,25 @@ package("hello_material") {
       } ]
 }
 
+package("shadertoy") {
+  archive = true
+
+  deps = [
+    "examples/shadertoy",
+    "examples/shadertoy:shadertoy_client",
+  ]
+
+  binaries = [
+    {
+      name = "shadertoy_service"
+      dest = "app"
+    },
+    {
+      name = "shadertoy_client"
+      dest = "app"
+    } ]
+}
+
 package("mozart") {
   app = true
 
@@ -263,6 +282,12 @@ package("mozart") {
     },
     {
       name = "screencap"
+    },
+    {
+      name = "shadertoy_service"
+    },
+    {
+      name = "shadertoy_client"
     },
   ]
 }

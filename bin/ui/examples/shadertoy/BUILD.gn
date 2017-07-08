@@ -3,8 +3,31 @@
 # found in the LICENSE file.
 
 executable("shadertoy") {
+  output_name = "shadertoy_service"
+
   sources = [
+    "compiler.cc",
+    "compiler.h",
+    "glm_hack.h",
+    "main.cc",
+    "pipeline.cc",
+    "pipeline.h",
+    "renderer.cc",
+    "renderer.h",
     "shadertoy_app.cc",
+    "shadertoy_app.h",
+    "shadertoy_factory_impl.cc",
+    "shadertoy_factory_impl.h",
+    "shadertoy_impl.cc",
+    "shadertoy_impl.h",
+    "shadertoy_state_for_imagepipe.cc",
+    "shadertoy_state_for_imagepipe.h",
+    "shadertoy_state_for_material.cc",
+    "shadertoy_state_for_material.h",
+    "shadertoy_state_for_view.cc",
+    "shadertoy_state_for_view.h",
+    "shadertoy_state.cc",
+    "shadertoy_state.h",
   ]
 
   deps = [
@@ -14,6 +37,7 @@ executable("shadertoy") {
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",
+    "//apps/tracing/lib/trace:provider",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
     "//lib/fidl/cpp/bindings",
@@ -26,5 +50,30 @@ executable("shadertoy") {
     "//lib",
     "//lib/escher",
     "//third_party/glm",
+  ]
+}
+
+executable("shadertoy_client") {
+  output_name = "shadertoy_client"
+
+  sources = [
+    "client.cc",
+  ]
+
+  deps = [
+    "services",
+    ":shadertoy",
+    "//application/lib/app",
+    "//apps/mozart/lib/scene:client",
+    "//apps/mozart/lib/scene:session_helpers",
+    "//apps/mozart/services/buffers/cpp",
+    "//apps/mozart/services/scene",
+    "//lib/fidl/cpp/bindings",
+  ]
+
+  include_dirs = [
+    "//lib/escher",
+    "//third_party/glm",
+    "//lib",
   ]
 }

@@ -29,7 +29,7 @@ interface Shadertoy {
   SetShaderCode(string glsl) => (bool successful);
 
   // Corresponds to Shadertoy's 'iResolution' shader parameter.
-  SetResolution(mozart2.vec3 resolution);
+  SetResolution(uint32 width, uint32 height);
 
   // Corresponds to Shadertoy's 'iMouse' shader parameter.  The value is
   // interpreted as follows:

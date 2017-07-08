@@ -289,8 +289,8 @@ class HelloSceneManagerApp {
   }
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  mozart2::SceneManagerPtr scene_manager_;
   mtl::MessageLoop* loop_;
+  mozart2::SceneManagerPtr scene_manager_;
 
   std::unique_ptr<mozart::client::Session> session_;
   std::unique_ptr<mozart::client::ShapeNode> rrect_node_;

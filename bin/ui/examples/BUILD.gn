@@ -11,6 +11,7 @@ group("examples") {
     "noodles",
     "paint",
     "shadertoy",
+    "shadertoy:shadertoy_client",
     "shapes",
     "spinning_square",
     "tile",

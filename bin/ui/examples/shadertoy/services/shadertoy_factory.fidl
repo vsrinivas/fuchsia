@@ -8,6 +8,7 @@ import "apps/mozart/services/views/view_token.fidl";
 
 // ShadertoyFactory provides a number of methods for creating |Shadertoy|
 // instances.
+[ServiceName="ShadertoyFactory"]
 interface ShadertoyFactory {
   // Create a new Shadertoy that will present its rendered content to
   // |image_pipe|.
