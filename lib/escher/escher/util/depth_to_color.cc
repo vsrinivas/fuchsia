@@ -9,6 +9,7 @@
 #include "escher/renderer/texture.h"
 #include "escher/renderer/timestamper.h"
 #include "escher/resources/resource_recycler.h"
+#include "escher/vk/buffer.h"
 
 namespace {
 constexpr char g_kernel_src[] = R"GLSL(
@@ -71,11 +72,12 @@ TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
         image_cache_->vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
+        std::vector<vk::DescriptorType>{},
         0, g_kernel_src, compiler_);
   }
 
-  kernel_->Dispatch({depth_texture, tmp_texture}, command_buffer, work_groups_x,
-                    work_groups_y, 1, nullptr);
+  kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
+                    work_groups_x, work_groups_y, 1, nullptr);
 
   timestamper->AddTimestamp("converted depth image to color image");
   return tmp_texture;

@@ -9,8 +9,10 @@
 #include "escher/renderer/image.h"
 #include "escher/renderer/texture.h"
 #include "escher/resources/resource_recycler.h"
+#include "escher/vk/buffer.h"
 
 namespace escher {
+
 namespace impl {
 
 namespace {
@@ -410,11 +412,12 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
         vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
+        std::vector<vk::DescriptorType>{},
         0, g_kernel_src, compiler_);
   }
 
-  kernel_->Dispatch({depth_texture, tmp_texture}, command_buffer, work_groups_x,
-                    work_groups_y, 1, nullptr);
+  kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
+                    work_groups_x, work_groups_y, 1, nullptr);
 
   timestamper->AddTimestamp("generated SSDO acceleration lookup table");
   return tmp_texture;
@@ -454,10 +457,11 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
         vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
+        std::vector<vk::DescriptorType>{},
         0, g_null_kernel_src, compiler_);
   }
 
-  null_kernel_->Dispatch({depth_texture, tmp_texture}, command_buffer,
+  null_kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
                          work_groups_x, work_groups_y, 1, nullptr);
 
   timestamper->AddTimestamp("generated null SSDO acceleration lookup table");
@@ -495,9 +499,10 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
         vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
                                      vk::ImageLayout::eGeneral},
+        std::vector<vk::DescriptorType>{},
         0, g_unpack_kernel_src, compiler_);
   }
-  unpack_kernel_->Dispatch({packed_lookup_table, result_texture},
+  unpack_kernel_->Dispatch({packed_lookup_table, result_texture}, {},
                            command_buffer, work_groups_x, work_groups_y, 1,
                            nullptr);
 

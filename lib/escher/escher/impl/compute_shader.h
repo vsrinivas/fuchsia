@@ -13,11 +13,13 @@ namespace impl {
 class GlslToSpirvCompiler;
 
 // Simplifies the creation and use of Vulkan compute pipelines.  The current
-// implementation is limited to using images and push-constants for in/output.
+// implementation is limited to using images, storage/uniform buffers, and
+// push-constants for in/output.
 class ComputeShader {
  public:
   ComputeShader(const VulkanContext& context,
                 std::vector<vk::ImageLayout> layouts,
+                std::vector<vk::DescriptorType> buffer_types,
                 size_t push_constants_size,
                 const char* source_code,
                 GlslToSpirvCompiler* compiler);
@@ -27,8 +29,9 @@ class ComputeShader {
   // |push_constants| must point to data of the size passed to the ComputeShader
   // constructor, or nullptr if that size was 0.
   //
-  // TODO: avoid reffing/unreffing textures
+  // TODO: avoid reffing/unreffing textures and buffers.
   void Dispatch(std::vector<TexturePtr> textures,
+                std::vector<BufferPtr> buffers,
                 CommandBuffer* command_buffer,
                 uint32_t x,
                 uint32_t y,
@@ -45,6 +48,7 @@ class ComputeShader {
   const PipelinePtr pipeline_;
   std::vector<vk::WriteDescriptorSet> descriptor_set_writes_;
   std::vector<vk::DescriptorImageInfo> descriptor_image_info_;
+  std::vector<vk::DescriptorBufferInfo> descriptor_buffer_info_;
 };
 
 }  // namespace impl

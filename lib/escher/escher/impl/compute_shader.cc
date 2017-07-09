@@ -10,6 +10,7 @@
 #include "escher/impl/vk/pipeline_spec.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/texture.h"
+#include "escher/vk/buffer.h"
 #include "escher/vk/vulkan_context.h"
 
 namespace escher {
@@ -19,7 +20,8 @@ namespace {
 
 // Used by ComputeShader constructor.
 inline std::vector<vk::DescriptorSetLayoutBinding> CreateLayoutBindings(
-    const std::vector<vk::ImageLayout>& layouts) {
+    const std::vector<vk::ImageLayout>& layouts,
+    const std::vector<vk::DescriptorType>& buffer_types) {
   std::vector<vk::DescriptorSetLayoutBinding> result;
   for (uint32_t index = 0; index < layouts.size(); ++index) {
     vk::DescriptorType descriptor_type;
@@ -37,6 +39,11 @@ inline std::vector<vk::DescriptorSetLayoutBinding> CreateLayoutBindings(
         descriptor_type = vk::DescriptorType::eStorageImage;
     }
     result.push_back({index, descriptor_type, 1,
+                      vk::ShaderStageFlagBits::eCompute, nullptr});
+  }
+  for (uint32_t i = 0; i < buffer_types.size(); ++i) {
+    uint32_t binding = i + static_cast<uint32_t>(layouts.size());
+    result.push_back({binding, buffer_types[i], 1,
                       vk::ShaderStageFlagBits::eCompute, nullptr});
   }
   return result;
@@ -105,15 +112,28 @@ PipelinePtr CreatePipeline(vk::Device device,
   return pipeline;
 }
 
+// Used by ComputeShader constructor.
+inline void InitWriteDescriptorSet(
+    vk::WriteDescriptorSet& write,
+    const std::vector<vk::DescriptorSetLayoutBinding>& layout_bindings,
+    uint32_t binding_id) {
+  write.dstArrayElement = 0;
+  write.descriptorType = layout_bindings[binding_id].descriptorType;
+  write.descriptorCount = 1;
+  write.dstBinding = binding_id;
+}
+
 }  // namespace
 
 ComputeShader::ComputeShader(const VulkanContext& context,
                              std::vector<vk::ImageLayout> layouts,
+                             std::vector<vk::DescriptorType> buffer_types,
                              size_t push_constants_size,
                              const char* source_code,
                              GlslToSpirvCompiler* compiler)
     : device_(context.device),
-      descriptor_set_layout_bindings_(CreateLayoutBindings(layouts)),
+      descriptor_set_layout_bindings_(
+          CreateLayoutBindings(layouts, buffer_types)),
       descriptor_set_layout_create_info_(
           CreateDescriptorSetLayoutCreateInfo(descriptor_set_layout_bindings_)),
       push_constants_size_(static_cast<uint32_t>(push_constants_size)),
@@ -125,7 +145,9 @@ ComputeShader::ComputeShader(const VulkanContext& context,
                                compiler)) {
   FTL_DCHECK(push_constants_size == push_constants_size_);  // detect overflow
   descriptor_image_info_.reserve(layouts.size());
-  descriptor_set_writes_.reserve(layouts.size());
+  descriptor_buffer_info_.reserve(buffer_types.size());
+  descriptor_set_writes_.reserve(
+      layouts.size() + buffer_types.size());
   for (uint32_t index = 0; index < layouts.size(); ++index) {
     // The other fields will be filled out during each call to Dispatch().
     vk::DescriptorImageInfo image_info;
@@ -133,12 +155,20 @@ ComputeShader::ComputeShader(const VulkanContext& context,
     descriptor_image_info_.push_back(image_info);
 
     vk::WriteDescriptorSet write;
-    write.dstArrayElement = 0;
-    write.descriptorType =
-        descriptor_set_layout_bindings_[index].descriptorType;
-    write.descriptorCount = 1;
-    write.dstBinding = index;
+    InitWriteDescriptorSet(write, descriptor_set_layout_bindings_, index);
     write.pImageInfo = &descriptor_image_info_[index];
+    descriptor_set_writes_.push_back(write);
+  }
+  for (uint32_t i = 0; i < buffer_types.size(); ++i) {
+    // The other fields will be filled out during each call to Dispatch().
+    vk::DescriptorBufferInfo buffer_info;
+    buffer_info.offset = 0;
+    descriptor_buffer_info_.push_back(buffer_info);
+
+    uint32_t binding = i + static_cast<uint32_t>(layouts.size());
+    vk::WriteDescriptorSet write;
+    InitWriteDescriptorSet(write, descriptor_set_layout_bindings_, binding);
+    write.pBufferInfo = &descriptor_buffer_info_[i];
     descriptor_set_writes_.push_back(write);
   }
 }
@@ -146,6 +176,7 @@ ComputeShader::ComputeShader(const VulkanContext& context,
 ComputeShader::~ComputeShader() {}
 
 void ComputeShader::Dispatch(std::vector<TexturePtr> textures,
+                             std::vector<BufferPtr> buffers,
                              CommandBuffer* command_buffer,
                              uint32_t x,
                              uint32_t y,
@@ -161,6 +192,12 @@ void ComputeShader::Dispatch(std::vector<TexturePtr> textures,
     descriptor_image_info_[i].imageView = textures[i]->image_view();
     descriptor_image_info_[i].sampler = textures[i]->sampler();
     command_buffer->KeepAlive(textures[i]);
+  }
+  for (uint32_t i = 0; i < buffers.size(); ++i) {
+    uint32_t binding = i + static_cast<uint32_t>(textures.size());
+    descriptor_set_writes_[binding].dstSet = descriptor_set;
+    descriptor_buffer_info_[i].buffer = buffers[i]->get();
+    descriptor_buffer_info_[i].range = buffers[i]->size();
   }
   device_.updateDescriptorSets(
       static_cast<uint32_t>(descriptor_set_writes_.size()),

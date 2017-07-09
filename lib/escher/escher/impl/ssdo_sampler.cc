@@ -630,6 +630,7 @@ SsdoSampler::SsdoSampler(ResourceRecycler* resource_recycler,
       sampler_kernel_(resource_recycler->vulkan_context(),
                       {vk::ImageLayout::eShaderReadOnlyOptimal,
                        vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral},
+                      {},
                       sizeof(SamplerConfig),
                       g_sampler_kernel_src,
                       compiler) {
@@ -775,7 +776,7 @@ void SsdoSampler::SampleUsingKernel(CommandBuffer* command_buffer,
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->width();
 
-  sampler_kernel_.Dispatch({depth_texture, output_texture, noise_texture_},
+  sampler_kernel_.Dispatch({depth_texture, output_texture, noise_texture_}, {},
                            command_buffer, width, height, 1, push_constants);
 }
 
