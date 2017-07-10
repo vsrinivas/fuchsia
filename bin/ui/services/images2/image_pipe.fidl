@@ -2,6 +2,7 @@ module mozart2;
 
 import "apps/mozart/services/images2/image_info.fidl";
 import "apps/mozart/services/images2/memory_type.fidl";
+import "apps/mozart/services/presentation/presentation_info.fidl";
 
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.
@@ -108,6 +109,7 @@ interface ImagePipe {
   // TODO(MZ-80): Specify the presentation time.
   // TODO(MZ-88): Provide a callback when the presented image has been
   // accepted, as is done for scene content in |Session.Present()|.
-  PresentImage(uint32 image_id, handle<event>? acquire_fence,
-               handle<event>? release_fence);
+  PresentImage(uint32 image_id, uint64 presentation_time,
+      handle<event>? acquire_fence, handle<event>? release_fence) =>
+          (PresentationInfo presentation_info);
 };

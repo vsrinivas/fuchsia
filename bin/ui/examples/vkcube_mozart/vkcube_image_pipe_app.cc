@@ -44,17 +44,16 @@ class VulkanCubeApp {
   ResourceId NewResourceId() { return ++resource_id_counter_; }
 
   void Initialize() {
-    startup_time_ = std::chrono::high_resolution_clock::now();
+    last_time_ = start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
     InitializeSwapchain();
     InitializeSession();
   }
 
-  void Update() {
+  void Update(uint64_t next_presentation_time) {
     // Quit if over time.
-    auto now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = now - startup_time_;
+    uint64_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - start_time_;
     if (kDurationBeforeQuitInSeconds != 0 &&
-        elapsed.count() >= 1000 * kDurationBeforeQuitInSeconds) {
+        elapsed >= kDurationBeforeQuitInSeconds * kBillion) {
       loop_->task_runner()->PostTask([this] {
         session_ = nullptr;
         FTL_LOG(INFO) << "Quitting.";
@@ -66,7 +65,8 @@ class VulkanCubeApp {
     int i = demo_->current_buffer;
 
     // Render the cube to the current buffer
-    RenderCube();
+    RenderCube((next_presentation_time - last_time_) / kMillion);
+    last_time_ = next_presentation_time;
 
     mx::event acquire_fence;
     mx::event::create(0, &acquire_fence);
@@ -76,13 +76,11 @@ class VulkanCubeApp {
     constexpr mx_status_t kSignalled = MX_USER_SIGNAL_0;
     acquire_fence.signal(0u, kSignalled);
 
-    image_pipe_->PresentImage(i, std::move(acquire_fence),
-                              std::move(release_fence));
-
-    auto next_frame_time =
-        ftl::TimePoint::FromEpochDelta(ftl::TimeDelta::FromMilliseconds(16));
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTaskForTime(
-        [this] { Update(); }, next_frame_time);
+    image_pipe_->PresentImage(
+        i, next_presentation_time, std::move(acquire_fence),
+        std::move(release_fence), [this](mozart2::PresentationInfoPtr info) {
+          Update(info->presentation_time + info->presentation_interval);
+        });
   }
 
   void InitializeSwapchain() {
@@ -199,8 +197,6 @@ class VulkanCubeApp {
     for (int i = 0; i < FRAME_LAG; i++) {
       vkResetFences(demo_->device, 1, &demo_->fences[i]);
     }
-
-    t0_ = std::chrono::high_resolution_clock::now();
   }
 
   void InitializeSession() {
@@ -290,15 +286,12 @@ class VulkanCubeApp {
     return ops;
   }
 
-  void RenderCube() {
+  void RenderCube(uint64_t elapsed_ms) {
     VkResult err;
 
     demo_update_data_buffer(demo_);
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = t1 - t0_;
-    total_ms_ += elapsed.count();
-    t0_ = t1;
+    total_ms_ += elapsed_ms;
 
     if (elapsed_frames_ && (elapsed_frames_ % num_frames_) == 0) {
       float fps = num_frames_ / (total_ms_ / kMsPerSec);
@@ -328,7 +321,12 @@ class VulkanCubeApp {
     demo_->curFrame++;
   }
 
+  uint64_t start_time() const { return start_time_; }
+
  private:
+  static constexpr uint64_t kBillion = 1000000000;
+  static constexpr uint64_t kMillion = 1000000;
+
   std::unique_ptr<app::ApplicationContext> application_context_;
   app::ApplicationControllerPtr controller_;
   app::ServiceProviderPtr services_;
@@ -357,8 +355,9 @@ class VulkanCubeApp {
       std::chrono::milliseconds(std::chrono::seconds(1)).count();
 
   float total_ms_ = 0;
-  std::chrono::high_resolution_clock::time_point t0_;
-  std::chrono::high_resolution_clock::time_point startup_time_;
+
+  uint64_t start_time_ = 0;
+  uint64_t last_time_ = 0;
 };
 
 int main(int argc, char** argv) {
@@ -375,7 +374,7 @@ int main(int argc, char** argv) {
 
   // Kick off the cube example. Update takes care of posting new frames (or
   // quitting).
-  loop.task_runner()->PostTask([&app] { app.Update(); });
+  loop.task_runner()->PostTask([&app] { app.Update(app.start_time()); });
   loop.Run();
   return 0;
 }

@@ -185,7 +185,10 @@ void FrameScheduler::UpdateScene() {
                                                         presentation_interval);
   }
   // We shouldn't be rendering a frame if no listener needed to be updated.
-  FTL_DCHECK(presentation_is_desired);
+  if (!presentation_is_desired) {
+    FTL_LOG(WARNING) << "FrameScheduler::UpdateScene(): Rendering a frame, but "
+                        "no presentation was desired.";
+  }
 }
 
 void FrameScheduler::DrawFrame() {

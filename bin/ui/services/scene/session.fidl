@@ -4,6 +4,7 @@
 
 module mozart2;
 
+import "apps/mozart/services/presentation/presentation_info.fidl";
 import "apps/mozart/services/scene/ops.fidl";
 import "apps/mozart/services/scene/types.fidl";
 
@@ -170,27 +171,6 @@ interface Session {
   // Returns a null hit array if |node_id| is unknown or not a node.
   HitTest(uint32 node_id, vec3 ray_origin, vec3 ray_direction) =>
       (array<Hit>? hits);
-};
-
-// Information returned by |Session.Present()| when the scene manager
-// begins preparing the first frame which includes the presented content.
-struct PresentationInfo {
-  // The actual time at which the enqueued operations are anticipated to take
-  // visible effect, expressed in nanoseconds in the |CLOCK_MONOTONIC|
-  // timebase.
-  //
-  // This value increases monotonically with each new frame, typically in
-  // increments of the |presentation_interval|.
-  uint64 presentation_time;
-
-  // The nominal amount of time which is anticipated to elapse between
-  // successively presented frames, expressed in nanoseconds.  When rendering
-  // to a display, the interval will typically be derived from the display
-  // refresh rate.
-  //
-  // This value is non-zero.  It may vary from time to time, such as when
-  // changing display modes.
-  uint64 presentation_interval;
 };
 
 // Describes where a hit occurred within the content of a node tagged

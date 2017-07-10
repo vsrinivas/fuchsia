@@ -134,8 +134,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   mx::event release_fence1;
   ASSERT_EQ(mx::event::create(0, &release_fence1), MX_OK);
 
-  image_pipe->PresentImage(imageId1, CopyEvent(acquire_fence1),
-                           CopyEvent(release_fence1));
+  image_pipe->PresentImage(imageId1, 0, CopyEvent(acquire_fence1),
+                           CopyEvent(release_fence1), nullptr);
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
@@ -180,8 +180,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   mx::event release_fence2;
   ASSERT_EQ(mx::event::create(0, &release_fence2), MX_OK);
 
-  image_pipe->PresentImage(imageId2, CopyEvent(acquire_fence2),
-                           CopyEvent(release_fence2));
+  image_pipe->PresentImage(imageId2, 0, CopyEvent(acquire_fence2),
+                           CopyEvent(release_fence2), nullptr);
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.

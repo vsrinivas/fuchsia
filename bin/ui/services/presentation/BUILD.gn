@@ -13,3 +13,9 @@ fidl("presentation") {
     "//apps/mozart/services/views",
   ]
 }
+
+fidl("presentation_info") {
+  sources = [
+    "presentation_info.fidl",
+  ]
+}

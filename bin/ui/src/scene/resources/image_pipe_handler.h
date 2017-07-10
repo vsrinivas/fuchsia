@@ -26,8 +26,10 @@ class ImagePipeHandler : public mozart2::ImagePipe {
   void RemoveImage(uint32_t image_id) override;
   // TODO(MZ-152): Add Presentation time to image_pipe.fidl.
   void PresentImage(uint32_t image_id,
+                    uint64_t presentation_time,
                     mx::event acquire_fence,
-                    mx::event release_fence) override;
+                    mx::event release_fence,
+                    const PresentImageCallback& callback) override;
 
   ::fidl::Binding<mozart2::ImagePipe> binding_;
   mozart::scene::ImagePipe* image_pipe_;

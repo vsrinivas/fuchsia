@@ -29,10 +29,13 @@ void ImagePipeHandler::RemoveImage(uint32_t image_id) {
 }
 
 void ImagePipeHandler::PresentImage(uint32_t image_id,
+                                    uint64_t presentation_time,
                                     mx::event acquire_fence,
-                                    mx::event release_fence) {
-  image_pipe_->PresentImage(image_id, std::move(acquire_fence),
-                            std::move(release_fence));
+                                    mx::event release_fence,
+                                    const PresentImageCallback& callback) {
+  image_pipe_->PresentImage(image_id, presentation_time,
+                            std::move(acquire_fence), std::move(release_fence),
+                            callback);
 }
 
 }  // namespace scene

@@ -212,8 +212,8 @@ class HelloSceneManagerApp {
   void Update(uint64_t next_presentation_time) {
     // Translate / rotate the rounded rect.
     {
-      double secs = static_cast<double>(next_presentation_time - start_time_) /
-                    1'000'000'000;
+      double secs =
+          static_cast<double>(next_presentation_time - start_time_) / kBillion;
 
       rrect_node_->SetTranslation(sin(secs * 0.8) * 500.f,
                                   sin(secs * 0.6) * 570.f, 10.f);
@@ -226,8 +226,8 @@ class HelloSceneManagerApp {
 
     // Translate the clip-circles.
     {
-      double secs = static_cast<double>(next_presentation_time - start_time_) /
-                    1'000'000'000;
+      double secs =
+          static_cast<double>(next_presentation_time - start_time_) / kBillion;
 
       float offset1 = sin(secs * 0.8) * 300.f;
       float offset2 = cos(secs * 0.8) * 300.f;
@@ -240,7 +240,7 @@ class HelloSceneManagerApp {
     {
       double secs = static_cast<double>(next_presentation_time -
                                         camera_anim_start_time_) /
-                    1'000'000'000;
+                    kBillion;
       const double kCameraModeDuration = 5.0;
       float param = secs / kCameraModeDuration;
       if (param > 1.0) {
@@ -267,12 +267,15 @@ class HelloSceneManagerApp {
     }
 
     // Present
-    session_->Present(0, [this](mozart2::PresentationInfoPtr info) {
-      Update(info->presentation_time + info->presentation_interval);
-    });
+    session_->Present(
+        next_presentation_time, [this](mozart2::PresentationInfoPtr info) {
+          Update(info->presentation_time + info->presentation_interval);
+        });
   }
 
  private:
+  static constexpr uint64_t kBillion = 1000000000;
+
   void ReleaseSessionResources() {
     FTL_LOG(INFO) << "Closing session.";
 

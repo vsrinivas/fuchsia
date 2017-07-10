@@ -745,6 +745,16 @@ void Session::ScheduleUpdate(
   }
 }
 
+void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
+                                      ImagePipePtr image_pipe) {
+  if (is_valid()) {
+    scheduled_image_pipe_updates_.push(
+        {presentation_time, std::move(image_pipe)});
+
+    context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+  }
+}
+
 bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
   bool needs_render = false;
@@ -781,6 +791,19 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       return true;
     }
   }
+
+  // TODO: Unify with other session updates.
+  while (!scheduled_image_pipe_updates_.empty() &&
+         scheduled_image_pipe_updates_.front().presentation_time <=
+             presentation_time) {
+    needs_render = scheduled_image_pipe_updates_.front().image_pipe->Update(
+        presentation_time, presentation_interval);
+    // TODO(MZ-171): if you comment this next line out, this becomes an infinite
+    // loop.  For some reason, this is not caught by unit tests.  We should
+    // improve the tests so that the catch this bug (and hopefully others).
+    scheduled_image_pipe_updates_.pop();
+  }
+
   return needs_render;
 }
 

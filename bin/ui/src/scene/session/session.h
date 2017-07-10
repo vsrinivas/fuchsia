@@ -24,6 +24,9 @@ using ImagePtr = ::ftl::RefPtr<Image>;
 class ImageBase;
 using ImageBasePtr = ::ftl::RefPtr<ImageBase>;
 
+class ImagePipe;
+using ImagePipePtr = ::ftl::RefPtr<ImagePipe>;
+
 class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
@@ -74,6 +77,11 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                       ::fidl::Array<mx::event> acquire_fences,
                       ::fidl::Array<mx::event> release_fences,
                       const mozart2::Session::PresentCallback& callback);
+
+  // Called by ImagePipe::PresentImage().  Stashes the arguments without
+  // applying them; they will later be applied by ApplyScheduledUpdates().
+  void ScheduleImagePipeUpdate(uint64_t presentation_time,
+                               ImagePipePtr image_pipe);
 
   // Called by SessionContext() when it is notified by the FrameScheduler that
   // a frame should be rendered for the specified |presentation_time|.  Return
@@ -201,6 +209,12 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;
   ::fidl::Array<mx::event> fences_to_release_on_next_update_;
+
+  struct ImagePipeUpdate {
+    uint64_t presentation_time;
+    ImagePipePtr image_pipe;
+  };
+  std::queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
 
   const SessionId id_;
   SessionContext* const context_;
