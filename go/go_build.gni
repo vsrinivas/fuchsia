@@ -31,6 +31,8 @@
 # At miniumum there should be a go_dependencies declaration for the package to
 # be built.
 
+import("//build/toolchain/clang_toolchain.gni")
+
 template("go_build") {
   assert(defined(invoker.gopackage),
          "gopackage must be defined for $target_name")
@@ -72,7 +74,9 @@ template("go_build") {
       "--go-tool",
       rebase_path("//buildtools/go"),
       "--binname",
-      output_name
+      output_name,
+      "--toolchain-prefix",
+      rebase_path(clang_prefix)
     ]
 
     if (defined(invoker.test) && invoker.test) {

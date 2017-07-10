@@ -32,6 +32,8 @@ def main():
     parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
                         action='append')
     parser.add_argument('--binname', help='Output file', required=True)
+    parser.add_argument('--toolchain-prefix', help='Path to toolchain binaries',
+                        required=False)
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
 
@@ -83,6 +85,10 @@ def main():
     env['GOARCH'] = goarch
     env['GOOS'] = goos
     env['GOPATH'] = gopath + ":" + os.path.abspath(os.path.join(args.root_out_dir, "gen/go"))
+    # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
+    # preference the toolchain path. Note that on Mac, ld is also found from
+    # /usr/bin.
+    env['PATH'] = args.toolchain_prefix + ":/usr/bin:/bin"
 
     cmd = [args.go_tool]
     if args.is_test:
