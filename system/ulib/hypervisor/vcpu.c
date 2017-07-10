@@ -188,6 +188,7 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         input_size = 1;
         packet.port_in_ret.u8 = io_port_state->uart_line_control;
         break;
+    case UART_INTERRUPT_ENABLE_PORT:
     case UART_MODEM_CONTROL_IO_PORT:
         input_size = 1;
         packet.port_in_ret.u8 = 0;
@@ -252,7 +253,7 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     case I8253_CHANNEL_0:
     case I8253_CONTROL_PORT:
     case I8042_DATA_PORT:
-    case UART_RECEIVE_IO_PORT + 1 ... UART_LINE_CONTROL_IO_PORT - 1:
+    case UART_INTERRUPT_ENABLE_PORT ... UART_LINE_CONTROL_IO_PORT - 1:
     case UART_LINE_CONTROL_IO_PORT + 1 ... UART_SCR_SCRATCH_IO_PORT:
         return MX_OK;
     case UART_RECEIVE_IO_PORT:

@@ -6,6 +6,7 @@
 
 /* UART ports. */
 #define UART_RECEIVE_IO_PORT        0x3f8
+#define UART_INTERRUPT_ENABLE_PORT  0x3f9
 #define UART_LINE_CONTROL_IO_PORT   0x3fb
 #define UART_MODEM_CONTROL_IO_PORT  0x3fc
 #define UART_LINE_STATUS_IO_PORT    0x3fd
