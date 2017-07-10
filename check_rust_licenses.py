@@ -45,7 +45,8 @@ def fetch_license(subdir):
         die('can\'t find repo path for ' + subdir)
     baseurl = find_github_blob_path(repo_path)
     text = []
-    for license_filename in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT'):
+    # 'LICENCE' is a British English spelling variant used in https://github.com/ebarnard/rust-plist
+    for license_filename in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT', 'COPYING', 'LICENCE'):
         url = '/'.join((baseurl, license_filename))
         try:
             resp = urllib2.urlopen(url)

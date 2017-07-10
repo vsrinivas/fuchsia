@@ -25,6 +25,7 @@ CONFIGS = [
     "rust/magenta-rs",
     "rust/magenta-rs/magenta-sys",
     "rust/rust_sample_module",
+    "third_party/xi-editor/rust/core-lib",
 ]
 
 NATIVE_LIBS = {
