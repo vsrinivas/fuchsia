@@ -9,6 +9,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <magenta/syscalls/policy.h>
 #include <mxio/loader-service.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -29,6 +30,8 @@ static _Noreturn void usage(const char* progname, bool error) {
     option_usage(out, "-f FILE", "execute FILE but pass PROGRAM as argv[0]");
     option_usage(out, "-F FD", "execute FD");
     option_usage(out, "-h", "display this usage message and exit");
+    option_usage(out, "-H",
+                 "enable exception-on-bad-handle job policy (implies -j)");
     option_usage(out, "-j", "start process in a new job");
     option_usage(out, "-l",
                  "pass mxio_loader_service handle in main bootstrap message");
@@ -62,11 +65,12 @@ int main(int argc, char** argv) {
     bool send_loader_message = false;
     bool pass_loader_handle = false;
     bool new_job = false;
+    bool enable_bad_handle_policy = false;
     const char* exec_vmo_file = NULL;
     int exec_vmo_fd = -1;
     size_t stack_size = -1;
 
-    for (int opt; (opt = getopt(argc, argv, "d:e:f:F:hjlLrsS:v:")) != -1;) {
+    for (int opt; (opt = getopt(argc, argv, "d:e:f:F:hHjlLrsS:v:")) != -1;) {
         switch (opt) {
         case 'd':;
             int from, to;
@@ -106,6 +110,10 @@ int main(int argc, char** argv) {
             break;
         case 'h':
             usage(argv[0], false);
+            break;
+        case 'H':
+            enable_bad_handle_policy = true;
+            new_job = true;
             break;
         case 'j':
             new_job = true;
@@ -178,6 +186,15 @@ int main(int argc, char** argv) {
         check("launchpad child job", status);
         mx_handle_close(job);
         job = child_job;
+    }
+    if (enable_bad_handle_policy) {
+        mx_policy_basic_t policy[] = {
+            { MX_POL_BAD_HANDLE, MX_POL_ACTION_EXCEPTION },
+        };
+        mx_status_t status = mx_job_set_policy(
+            job, MX_JOB_POL_RELATIVE, MX_JOB_POL_BASIC,
+            &policy, countof(policy));
+        check("mx_job_set_policy", status);
     }
 
     launchpad_t* lp;
