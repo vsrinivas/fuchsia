@@ -216,7 +216,7 @@ class Process final {
   Process() = default;
 
   // The exception handler invoked by ExceptionPort.
-  void OnException(const mx_excp_type_t type,
+  void OnException(const mx_port_packet_t& packet,
                    const mx_exception_context_t& context);
 
   // Debug handle mgmt.

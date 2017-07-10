@@ -674,11 +674,12 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   }
 }
 
-void Process::OnException(const mx_excp_type_t type,
+void Process::OnException(const mx_port_packet_t& packet,
                           const mx_exception_context_t& context) {
+  mx_excp_type_t type = static_cast<mx_excp_type_t>(packet.type);
   Thread* thread = nullptr;
-  if (context.tid != MX_KOID_INVALID)
-    thread = FindThreadById(context.tid);
+  if (packet.exception.tid != MX_KOID_INVALID)
+    thread = FindThreadById(packet.exception.tid);
 
   // Finding the load address of the main executable requires a few steps.
   // It's not loaded until the first time we hit the _dl_debug_state

@@ -222,9 +222,7 @@ void ExceptionPort::Worker() {
         return;
       }
 
-      iter->second.callback(
-          static_cast<const mx_excp_type_t>(packet.type),
-          report.context);
+      iter->second.callback(packet, report.context);
     });
   }
 
@@ -242,7 +240,8 @@ void PrintException(FILE* out, Process* process, Thread* thread,
     fprintf(out, "Thread %s received exception %s\n",
             thread->GetDebugName().c_str(),
             util::ExceptionToString(type, context).c_str());
-    fprintf(out, "PC 0x%" PRIxPTR "\n", context.arch.pc);
+    mx_vaddr_t pc = thread->registers()->GetPC();
+    fprintf(out, "PC 0x%" PRIxPTR "\n", pc);
   } else {
     switch (type) {
     case MX_EXCP_THREAD_STARTING:

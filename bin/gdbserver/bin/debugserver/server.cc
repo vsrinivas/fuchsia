@@ -365,7 +365,7 @@ void RspServer::OnThreadStarting(Process* process,
   // conditionally only when necessary.
   StopReplyPacket stop_reply(StopReplyPacket::Type::kReceivedSignal);
   stop_reply.SetSignalNumber(5);
-  stop_reply.SetThreadId(process->id(), context.tid);
+  stop_reply.SetThreadId(process->id(), thread->id());
   stop_reply.SetStopReason("create");
 
   auto packet = stop_reply.Build();
@@ -442,7 +442,7 @@ void RspServer::OnArchitecturalException(
 
   StopReplyPacket stop_reply(StopReplyPacket::Type::kReceivedSignal);
   stop_reply.SetSignalNumber(isigval);
-  stop_reply.SetThreadId(process->id(), context.tid);
+  stop_reply.SetThreadId(process->id(), thread->id());
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {

@@ -35,7 +35,7 @@ class ExceptionPort final {
   // Handler callback invoked when the kernel reports an exception. For more
   // information about the possible values and fields of the |type| and
   // |context| parameters, see <magenta/syscalls/exception.h>.
-  using Callback = std::function<void(const mx_excp_type_t type,
+  using Callback = std::function<void(const mx_port_packet_t& packet,
                                       const mx_exception_context_t& context)>;
 
   ExceptionPort();
