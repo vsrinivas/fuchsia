@@ -231,8 +231,12 @@ class ContainerTraits : public Base {
   ~ContainerTraits() = default;
 };
 
+// Abstract base class for nodes which can have child nodes.
+// This type cannot be instantiated, please see subclasses.
+using ContainerNode = mozart::client::ContainerTraits<mozart::client::Node>;
+
 // Represents an entity node resource in a session.
-class EntityNode : public ContainerTraits<Node> {
+class EntityNode : public ContainerNode {
  public:
   explicit EntityNode(Session* session);
   ~EntityNode();
@@ -246,7 +250,7 @@ class EntityNode : public ContainerTraits<Node> {
 // Represents an imported node resource in a session.
 // The imported node is initially created in an unbound state and must
 // be bound immediately after creation, prior to use.
-class ImportNode : public ContainerTraits<Node> {
+class ImportNode : public ContainerNode {
  public:
   explicit ImportNode(Session* session);
   ~ImportNode();
@@ -269,7 +273,7 @@ class ImportNode : public ContainerTraits<Node> {
 
 // Creates a node that clips the contents of its hierarchy to the specified clip
 // shape.
-class ClipNode : public ContainerTraits<Node> {
+class ClipNode : public ContainerNode {
  public:
   explicit ClipNode(Session* session);
   ~ClipNode();
@@ -279,7 +283,7 @@ class ClipNode : public ContainerTraits<Node> {
 };
 
 // Creates a node that renders its hierarchy with the specified opacity.
-class OpacityNode : public ContainerTraits<Node> {
+class OpacityNode : public ContainerNode {
  public:
   explicit OpacityNode(Session* session);
   ~OpacityNode();
