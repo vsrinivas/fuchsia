@@ -18,10 +18,10 @@ void PageStorageEmptyImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
   FTL_NOTIMPLEMENTED();
 }
 
-Status PageStorageEmptyImpl::GetHeadCommitIds(
-    std::vector<CommitId>* commit_ids) {
+void PageStorageEmptyImpl::GetHeadCommitIds(
+    std::function<void(Status, std::vector<CommitId>)> callback) {
   FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED, std::vector<CommitId>());
 }
 
 void PageStorageEmptyImpl::GetCommit(

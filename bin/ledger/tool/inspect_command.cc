@@ -104,24 +104,26 @@ void InspectCommand::ListPages(ftl::Closure on_done) {
         page_id, ftl::MakeCopyable([
           completer = ftl::MakeAutoCall(waiter->NewCallback()), page_id
         ](storage::Status status,
-                 std::unique_ptr<storage::PageStorage> storage) {
+                 std::unique_ptr<storage::PageStorage> storage) mutable {
           if (status != storage::Status::OK) {
             FTL_LOG(FATAL) << "Unable to retrieve page "
                            << convert::ToHex(page_id) << " due to error "
                            << status;
           }
-          std::cout << "Page " << convert::ToHex(page_id) << std::endl;
-          std::vector<storage::CommitId> heads;
-          storage::Status get_status = storage->GetHeadCommitIds(&heads);
-          if (get_status != storage::Status::OK) {
-            FTL_LOG(FATAL) << "Unable to retrieve commits for page "
-                           << convert::ToHex(page_id) << " due to error "
-                           << status;
-          }
-          for (const storage::CommitId& commit_id : heads) {
-            std::cout << " head commit " << convert::ToHex(commit_id)
-                      << std::endl;
-          }
+          storage->GetHeadCommitIds(ftl::MakeCopyable([
+            completer = std::move(completer), page_id = std::move(page_id)
+          ](storage::Status get_status, std::vector<storage::CommitId> heads) {
+            std::cout << "Page " << convert::ToHex(page_id) << std::endl;
+            if (get_status != storage::Status::OK) {
+              FTL_LOG(FATAL)
+                  << "Unable to retrieve commits for page "
+                  << convert::ToHex(page_id) << " due to error " << get_status;
+            }
+            for (const storage::CommitId& commit_id : heads) {
+              std::cout << " head commit " << convert::ToHex(commit_id)
+                        << std::endl;
+            }
+          }));
         }));
   }
   waiter->Finalize(std::move(on_done));
@@ -267,13 +269,23 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                   unsynced_commit_ids.insert(commit->GetId());
                 });
 
+  std::vector<storage::CommitId> heads;
+  if (coroutine::SyncCall(
+          handler,
+          [this](
+              const std::function<void(
+                  storage::Status, std::vector<storage::CommitId>)>& callback) {
+            storage_->GetHeadCommitIds(std::move(callback));
+          },
+          &status, &heads)) {
+    FTL_NOTREACHED();
+  }
   std::unordered_set<storage::CommitId> commit_ids;
   std::deque<storage::CommitId> to_explore;
-  std::vector<storage::CommitId> heads;
-  status = storage_->GetHeadCommitIds(&heads);
   if (status != storage::Status::OK) {
     FTL_LOG(FATAL) << "Unable to get head commits due to error " << status;
   }
+
   commit_ids.insert(heads.begin(), heads.end());
   to_explore.insert(to_explore.begin(), heads.begin(), heads.end());
   std::string file_path =

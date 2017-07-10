@@ -26,7 +26,8 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
 
-  Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
+  void GetHeadCommitIds(
+      std::function<void(Status, std::vector<CommitId>)> callback) override;
 
   void GetCommit(CommitIdView commit_id,
                  std::function<void(Status, std::unique_ptr<const Commit>)>

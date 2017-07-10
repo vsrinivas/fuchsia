@@ -50,10 +50,10 @@ class PageStorage {
   // unset a previously set value.
   virtual void SetSyncDelegate(PageSyncDelegate* page_sync) = 0;
 
-  // Finds the ids of all head commits and adds them in the |commit_ids| vector.
-  // It is guaranteed that valid pages have at least one head commit, even if
-  // they are empty.
-  virtual Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) = 0;
+  // Finds the ids of all head commits. It is guaranteed that valid pages have
+  // at least one head commit, even if they are empty.
+  virtual void GetHeadCommitIds(
+      std::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Finds the commit with the given |commit_id| and calls the given |callback|
   // with the result.
   virtual void GetCommit(

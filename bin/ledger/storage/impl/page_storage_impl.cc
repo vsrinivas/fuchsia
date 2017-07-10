@@ -154,8 +154,15 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
   page_sync_ = page_sync;
 }
 
-Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
-  return db_.GetHeads(commit_ids);
+void PageStorageImpl::GetHeadCommitIds(
+    std::function<void(Status, std::vector<CommitId>)> callback) {
+  std::vector<CommitId> commit_ids;
+  Status status = db_.GetHeads(&commit_ids);
+  if (status != Status::OK) {
+    callback(status, std::vector<CommitId>());
+    return;
+  }
+  callback(Status::OK, std::move(commit_ids));
 }
 
 void PageStorageImpl::GetCommit(

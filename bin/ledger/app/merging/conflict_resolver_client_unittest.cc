@@ -152,9 +152,14 @@ TEST_F(ConflictResolverClientTest, Error) {
   });
 
   merge_resolver_->SetMergeStrategy(std::move(custom_merge_strategy));
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
+
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_FALSE(merge_resolver_->IsEmpty());
@@ -170,11 +175,12 @@ TEST_F(ConflictResolverClientTest, Error) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  Status status;
+  Status merge_status;
   conflict_resolver_impl.requests[0].result_provider_ptr->Merge(
-      std::move(merged_values), callback::Capture(MakeQuitTask(), &status));
+      std::move(merged_values),
+      callback::Capture(MakeQuitTask(), &merge_status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::KEY_NOT_FOUND, status);
+  EXPECT_EQ(Status::KEY_NOT_FOUND, merge_status);
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(conflict_resolver_impl.requests[0].result_provider_disconnected);

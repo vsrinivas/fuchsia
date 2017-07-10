@@ -87,16 +87,17 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
     // No strategy, or a merge already in progress. Let's bail out early.
     return;
   }
-
-  std::vector<storage::CommitId> heads;
-  storage::Status s = storage_->GetHeadCommitIds(&heads);
-  FTL_DCHECK(s == storage::Status::OK);
-  if (heads.size() == 1) {
-    // No conflict.
-    return;
-  }
-  heads.resize(2);
-  ResolveConflicts(delayed_status, std::move(heads));
+  storage_->GetHeadCommitIds(
+      [this, delayed_status](storage::Status s,
+                             std::vector<storage::CommitId> heads) {
+        FTL_DCHECK(s == storage::Status::OK);
+        if (heads.size() == 1) {
+          // No conflict.
+          return;
+        }
+        heads.resize(2);
+        ResolveConflicts(delayed_status, std::move(heads));
+      });
 }
 
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,

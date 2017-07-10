@@ -254,7 +254,9 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
     : coroutine_service_(coroutine_service),
       manager_(manager),
       storage_(storage),
-      transaction_in_progress_(false) {
+      transaction_in_progress_(false),
+      current_commit_(nullptr),
+      weak_factory_(this) {
   watchers_.set_on_empty([this] { CheckEmpty(); });
 }
 
@@ -263,20 +265,22 @@ BranchTracker::~BranchTracker() {
 }
 
 void BranchTracker::Init(std::function<void(Status)> on_done) {
-  std::vector<storage::CommitId> commit_ids;
-  storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
-  if (status != storage::Status::OK) {
-    on_done(PageUtils::ConvertStatus(status));
-    return;
-  }
+  storage_->GetHeadCommitIds([
+    weak_this = weak_factory_.GetWeakPtr(), on_done = std::move(on_done)
+  ](storage::Status status, std::vector<storage::CommitId> commit_ids) {
+    if (!weak_this) {
+      return;
+    }
+    if (status != storage::Status::OK) {
+      on_done(PageUtils::ConvertStatus(status));
+      return;
+    }
 
-  FTL_DCHECK(commit_ids.size() > 0);
-  // current_commit_ will be updated to have a correct value after the first
-  // Commit received in OnNewCommits or StopTransaction.
-  current_commit_ = nullptr;
-  current_commit_id_ = commit_ids[0];
-  storage_->AddCommitWatcher(this);
-  on_done(Status::OK);
+    FTL_DCHECK(commit_ids.size() > 0);
+    weak_this->InitCommitAndSetWatcher(std::move(commit_ids[0]));
+
+    on_done(Status::OK);
+  });
 }
 
 void BranchTracker::set_on_empty(ftl::Closure on_empty_callback) {
@@ -367,6 +371,14 @@ void BranchTracker::RegisterPageWatcher(
 
 bool BranchTracker::IsEmpty() {
   return watchers_.empty();
+}
+
+void BranchTracker::InitCommitAndSetWatcher(storage::CommitId commit_id) {
+  // current_commit_ will be updated to have a correct value after the first
+  // Commit received in OnNewCommits or StopTransaction.
+  FTL_DCHECK(!current_commit_);
+  current_commit_id_ = std::move(commit_id);
+  storage_->AddCommitWatcher(this);
 }
 
 void BranchTracker::CheckEmpty() {

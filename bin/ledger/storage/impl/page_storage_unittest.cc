@@ -113,29 +113,29 @@ class FakePageDbImpl : public PageDbEmptyImpl {
  public:
   FakePageDbImpl(coroutine::CoroutineService* coroutine_service,
                  PageStorageImpl* page_storage)
-      : coroutine_service_(coroutine_service), page_storage_(page_storage) {}
+      : coroutine_service_(coroutine_service), storage_(page_storage) {}
 
   Status Init() override { return Status::OK; }
   Status CreateJournal(JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override {
     JournalId id = RandomString(10);
-    *journal = JournalDBImpl::Simple(journal_type, coroutine_service_,
-                                     page_storage_, this, id, base);
+    *journal = JournalDBImpl::Simple(journal_type, coroutine_service_, storage_,
+                                     this, id, base);
     return Status::OK;
   }
 
   Status CreateMergeJournal(const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override {
-    *journal = JournalDBImpl::Merge(coroutine_service_, page_storage_, this,
+    *journal = JournalDBImpl::Merge(coroutine_service_, storage_, this,
                                     RandomString(10), base, other);
     return Status::OK;
   }
 
  private:
   coroutine::CoroutineService* coroutine_service_;
-  PageStorageImpl* page_storage_;
+  PageStorageImpl* storage_;
 };
 
 class PageStorageTest : public StorageTest {
@@ -162,9 +162,18 @@ class PageStorageTest : public StorageTest {
  protected:
   PageStorage* GetStorage() override { return storage_.get(); }
 
+  std::vector<storage::CommitId> GetHeads() {
+    Status status;
+    std::vector<storage::CommitId> ids;
+    storage_->GetHeadCommitIds(
+        callback::Capture(MakeQuitTask(), &status, &ids));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
+    return ids;
+  }
+
   std::unique_ptr<const Commit> GetFirstHead() {
-    std::vector<CommitId> ids;
-    EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&ids));
+    std::vector<storage::CommitId> ids = GetHeads();
     EXPECT_FALSE(ids.empty());
     return GetCommit(ids[0]);
   }
@@ -565,8 +574,7 @@ TEST_F(PageStorageTest, SyncCommits) {
 
 TEST_F(PageStorageTest, HeadCommits) {
   // Every page should have one initial head commit.
-  std::vector<CommitId> heads;
-  EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
+  std::vector<storage::CommitId> heads = GetHeads();
   EXPECT_EQ(1u, heads.size());
 
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -580,8 +588,8 @@ TEST_F(PageStorageTest, HeadCommits) {
   storage_->AddCommitFromLocal(std::move(commit), {}, [](Status status) {
     EXPECT_EQ(Status::OK, status);
   });
-  EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
-  EXPECT_EQ(1u, heads.size());
+  heads = GetHeads();
+  ASSERT_EQ(1u, heads.size());
   EXPECT_EQ(id, heads[0]);
 }
 
@@ -1250,8 +1258,8 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
 }
 
 TEST_F(PageStorageTest, NoOpCommit) {
-  std::vector<CommitId> heads;
-  EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
+  std::vector<storage::CommitId> heads = GetHeads();
+  ASSERT_FALSE(heads.empty());
 
   std::unique_ptr<Journal> journal;
   storage_->StartCommit(heads[0], JournalType::EXPLICIT, &journal);

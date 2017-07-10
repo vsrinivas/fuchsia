@@ -77,11 +77,16 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
 
-  storage::Status GetHeadCommitIds(
-      std::vector<storage::CommitId>* commit_ids) override {
-    // Current tests only rely on the number of heads, not on the actual ids.
-    commit_ids->resize(head_count);
-    return storage::Status::OK;
+  void GetHeadCommitIds(
+      std::function<void(storage::Status, std::vector<storage::CommitId>)>
+          callback) override {
+    message_loop_->task_runner()->PostTask(
+        [ this, callback = std::move(callback) ] {
+          // Current tests only rely on the number of heads, not on the actual
+          // ids.
+          callback(storage::Status::OK,
+                   std::vector<storage::CommitId>(head_count));
+        });
   }
 
   void GetCommit(storage::CommitIdView commit_id,
@@ -415,16 +420,18 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id1"));
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 
-  ASSERT_EQ(4u, state_watcher_->states.size());
+  ASSERT_EQ(5u, state_watcher_->states.size());
   EXPECT_EQ(CATCH_UP_DOWNLOAD, state_watcher_->states[0].download);
   EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[1].download);
   EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[2].download);
   EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[3].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[4].download);
 
   EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, state_watcher_->states[0].upload);
   EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, state_watcher_->states[1].upload);
-  EXPECT_EQ(UPLOAD_IN_PROGRESS, state_watcher_->states[2].upload);
-  EXPECT_EQ(UPLOAD_IDLE, state_watcher_->states[3].upload);
+  EXPECT_EQ(UPLOAD_PENDING, state_watcher_->states[2].upload);
+  EXPECT_EQ(UPLOAD_IN_PROGRESS, state_watcher_->states[3].upload);
+  EXPECT_EQ(UPLOAD_IDLE, state_watcher_->states[4].upload);
 }
 
 // Verifies that the backlog of commits to upload returned from
@@ -439,18 +446,20 @@ TEST_F(PageSyncImplTest, PageWatcher) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(5u, watcher.states.size());
+  ASSERT_EQ(6u, watcher.states.size());
   EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[0].download);
   EXPECT_EQ(CATCH_UP_DOWNLOAD, watcher.states[1].download);
   EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[2].download);
   EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[3].download);
   EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[4].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[5].download);
 
   EXPECT_EQ(UPLOAD_IDLE, watcher.states[0].upload);
   EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, watcher.states[1].upload);
   EXPECT_EQ(WAIT_CATCH_UP_DOWNLOAD, watcher.states[2].upload);
-  EXPECT_EQ(UPLOAD_IN_PROGRESS, watcher.states[3].upload);
-  EXPECT_EQ(UPLOAD_IDLE, watcher.states[4].upload);
+  EXPECT_EQ(UPLOAD_PENDING, watcher.states[3].upload);
+  EXPECT_EQ(UPLOAD_IN_PROGRESS, watcher.states[4].upload);
+  EXPECT_EQ(UPLOAD_IDLE, watcher.states[5].upload);
 }
 
 // Verifies that the backlog of commits to upload is not uploaded until there's
@@ -571,7 +580,7 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
   });
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(2u, cloud_provider_.received_commits.size());
+  ASSERT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
   EXPECT_EQ("content1", cloud_provider_.received_commits[0].content);
   EXPECT_EQ("id3", cloud_provider_.received_commits[1].id);
@@ -608,7 +617,7 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
   storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
   page_sync_->OnNewCommits(storage_.NewCommit("id1", "content1")->AsList(),
                            storage::ChangeSource::LOCAL);
-  EXPECT_TRUE(page_sync_->IsIdle());
+  EXPECT_TRUE(RunLoopUntil([&] { return page_sync_->IsIdle(); }));
   ASSERT_EQ(0u, cloud_provider_.received_commits.size());
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.count("id1"));
 
@@ -645,7 +654,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(2u, cloud_provider_.received_commits.size());
+  ASSERT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
   EXPECT_EQ("content1", cloud_provider_.received_commits[0].content);
   EXPECT_EQ("id2", cloud_provider_.received_commits[1].id);

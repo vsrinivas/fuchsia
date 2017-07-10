@@ -137,12 +137,23 @@ TEST_F(MergeResolverTest, Empty) {
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(MakeQuitTask());
+
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
-  EXPECT_EQ(2u, ids.size());
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(2u, ids.size());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
   EXPECT_TRUE(resolver.IsEmpty());
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(1u, ids.size());
 }
 
@@ -206,8 +217,12 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   storage::CommitId commit_5 =
       CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
 
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
@@ -241,8 +256,12 @@ TEST_F(MergeResolverTest, LastOneWins) {
   storage::CommitId commit_5 =
       CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
 
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
@@ -257,9 +276,13 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(resolver.IsEmpty());
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(1u, ids.size());
-  storage::Status status;
+
   std::unique_ptr<const storage::Commit> commit;
   page_storage_->GetCommit(
       ids[0], ::callback::Capture(MakeQuitTask(), &status, &commit));
@@ -295,8 +318,12 @@ TEST_F(MergeResolverTest, None) {
   storage::CommitId commit_5 =
       CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
 
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
@@ -308,7 +335,11 @@ TEST_F(MergeResolverTest, None) {
   EXPECT_TRUE(RunLoopWithTimeout());
 
   EXPECT_TRUE(resolver.IsEmpty());
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
 }
 
@@ -323,8 +354,12 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   storage::CommitId commit_3 =
       CreateCommit(commit_1, AddKeyValueToJournal("key3", "val3.0"));
 
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_2));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
@@ -341,7 +376,11 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(resolver.IsEmpty());
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(1u, ids.size());
 }
 
@@ -362,8 +401,12 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   storage::CommitId merge_2 = CreateMergeCommit(
       commit_2, commit_3, AddKeyValueToJournal("key3", "val3.0"));
 
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), merge_1));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), merge_2));
@@ -377,7 +420,11 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(resolver.IsEmpty());
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(1u, ids.size());
   EXPECT_GT(get_next_count, 0);
 }
@@ -390,8 +437,12 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
   storage::CommitId commit_2 = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
 
+  storage::Status status;
   std::vector<storage::CommitId> ids;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(2u, ids.size());
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_1));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_2));
@@ -406,7 +457,11 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(resolver.IsEmpty());
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(1u, ids.size());
   EXPECT_EQ(0u, merge_strategy_ptr->merge_calls);
 }

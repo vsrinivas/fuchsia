@@ -51,19 +51,19 @@ PageId FakePageStorage::GetId() {
   return page_id_;
 }
 
-Status FakePageStorage::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
-  commit_ids->clear();
-
+void FakePageStorage::GetHeadCommitIds(
+    std::function<void(Status, std::vector<CommitId>)> callback) {
+  std::vector<CommitId> commit_ids;
   for (auto it = journals_.rbegin(); it != journals_.rend(); ++it) {
     if (it->second->IsCommitted()) {
-      commit_ids->push_back(it->second->GetId());
+      commit_ids.push_back(it->second->GetId());
       break;
     }
   }
-  if (commit_ids->size() == 0) {
-    commit_ids->push_back(CommitId());
+  if (commit_ids.size() == 0) {
+    commit_ids.push_back(CommitId());
   }
-  return Status::OK;
+  callback(Status::OK, std::move(commit_ids));
 }
 
 void FakePageStorage::GetCommit(

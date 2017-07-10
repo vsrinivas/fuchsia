@@ -75,8 +75,10 @@ void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
 }
 
 bool PageSyncImpl::IsIdle() {
+  // TODO(nellyv): We should try to simplify the logic behind upload/download
+  // states and IsIdle(). See LE-262.
   return !batch_upload_ && download_list_retrieved_ && !batch_download_ &&
-         commits_to_download_.empty();
+         upload_state_ != UPLOAD_PENDING && commits_to_download_.empty();
 }
 
 void PageSyncImpl::SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) {
@@ -354,27 +356,31 @@ void PageSyncImpl::HandleLocalCommits(
     return;
   }
 
-  if (batch_upload_) {
-    // If we are already uploading a commit batch, return early too.
-    return;
-  }
+  SetUploadState(UPLOAD_PENDING);
+  storage_->GetHeadCommitIds(
+      [this](storage::Status status, std::vector<storage::CommitId> heads) {
+        if (status != storage::Status::OK) {
+          SetUploadState(UPLOAD_ERROR);
+          HandleError("Failed to retrieve the current heads");
+          return;
+        }
+        if (batch_upload_ || commits_staged_for_upload_.empty()) {
+          // If we are already uploading a commit batch, or if a previous call
+          // already handled the commit return early.
+          return;
+        }
+        FTL_DCHECK(!heads.empty());
 
-  std::vector<storage::CommitId> heads;
-  if (storage_->GetHeadCommitIds(&heads) != storage::Status::OK) {
-    SetUploadState(UPLOAD_ERROR);
-    HandleError("Failed to retrieve the current heads");
-    return;
-  }
-  FTL_DCHECK(!heads.empty());
+        if (heads.size() > 1u) {
+          // Too many local heads.
+          SetUploadState(WAIT_TOO_MANY_LOCAL_HEADS);
+          CheckIdle();
+          return;
+        }
 
-  if (heads.size() > 1u) {
-    SetUploadState(WAIT_TOO_MANY_LOCAL_HEADS);
-    // Too many local heads.
-    return;
-  }
-
-  SetUploadState(UPLOAD_IN_PROGRESS);
-  UploadStagedCommits();
+        SetUploadState(UPLOAD_IN_PROGRESS);
+        UploadStagedCommits();
+      });
 }
 
 void PageSyncImpl::UploadStagedCommits() {

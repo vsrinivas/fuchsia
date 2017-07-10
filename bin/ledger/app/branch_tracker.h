@@ -14,6 +14,7 @@
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;
@@ -66,6 +67,8 @@ class BranchTracker : public storage::CommitWatcher {
       const std::vector<std::unique_ptr<const storage::Commit>>& commits,
       storage::ChangeSource source) override;
 
+  void InitCommitAndSetWatcher(storage::CommitId commit_id);
+
   void CheckEmpty();
 
   coroutine::CoroutineService* coroutine_service_;
@@ -86,6 +89,9 @@ class BranchTracker : public storage::CommitWatcher {
   // initialization (which is set to nullptr) is not necessary.
   std::unique_ptr<const storage::Commit> current_commit_;
   storage::CommitId current_commit_id_;
+
+  // This must be the last member of the class.
+  ftl::WeakPtrFactory<BranchTracker> weak_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BranchTracker);
 };
