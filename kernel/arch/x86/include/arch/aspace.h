@@ -25,6 +25,8 @@ struct arch_aspace {
     /* pointer to the translation table */
     paddr_t pt_phys;
     pt_entry_t *pt_virt;
+    /** counter of pages allocated to back the translation table */
+    size_t pt_pages;
 
     uint flags;
 

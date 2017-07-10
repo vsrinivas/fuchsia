@@ -26,6 +26,8 @@ struct arch_aspace {
     /* pointer to the translation table */
     paddr_t tt_phys;
     volatile pte_t *tt_virt;
+    /** upper bound of the number of pages allocated to back the translation table */
+    size_t pt_pages;
 
     uint flags;
 

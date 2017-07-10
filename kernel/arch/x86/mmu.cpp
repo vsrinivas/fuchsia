@@ -584,6 +584,7 @@ static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, volatile pt_
 
     flags = PageTable::intermediate_arch_flags();
     update_entry<PageTable>(aspace, vaddr, pte, X86_VIRT_TO_PHYS(m), flags);
+    aspace->pt_pages++;
     return MX_OK;
 }
 
@@ -773,6 +774,7 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, volatile pt_entry_t* t
         if (unmap_page_table) {
             unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
             pmm_free_page(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table)));
+            aspace->pt_pages--;
             unmapped = true;
         }
         *new_cursor = cursor;
@@ -896,6 +898,7 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, volatile pt_entry_t* 
                 update_entry<PageTable>(aspace, new_cursor->vaddr, e, X86_VIRT_TO_PHYS(m),
                                         interm_arch_flags);
                 pt_val = *e;
+                aspace->pt_pages++;
             }
 
             MappingCursor cursor;
@@ -1322,6 +1325,7 @@ static status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t
 
         LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
     }
+    aspace->pt_pages = 1;
     aspace->io_bitmap = nullptr;
     aspace->active_cpus = 0;
     spin_lock_init(&aspace->io_bitmap_lock);
