@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/common/usb.h>
+#include <driver/usb.h>
 #include <magenta/device/midi.h>
 #include <sync/completion.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <threads.h>
 
 #include "midi.h"
@@ -18,6 +19,7 @@
 typedef struct {
     mx_device_t* mxdev;
     mx_device_t* usb_mxdev;
+    usb_protocol_t usb;
 
     // pool of free USB requests
     list_node_t free_write_reqs;
@@ -192,7 +194,7 @@ static mx_protocol_device_t usb_midi_sink_device_proto = {
     .ioctl = usb_midi_sink_ioctl,
 };
 
-mx_status_t usb_midi_sink_create(mx_device_t* device, int index,
+mx_status_t usb_midi_sink_create(mx_device_t* device, usb_protocol_t* usb, int index,
                                   usb_interface_descriptor_t* intf, usb_endpoint_descriptor_t* ep) {
     usb_midi_sink_t* sink = calloc(1, sizeof(usb_midi_sink_t));
     if (!sink) {
@@ -202,10 +204,11 @@ mx_status_t usb_midi_sink_create(mx_device_t* device, int index,
 
     list_initialize(&sink->free_write_reqs);
     sink->usb_mxdev = device;
+    memcpy(&sink->usb, usb, sizeof(sink->usb));
 
     int packet_size = usb_ep_max_packet(ep);
     if (intf->bAlternateSetting != 0) {
-        usb_set_interface(device, intf->bInterfaceNumber, intf->bAlternateSetting);
+        usb_set_interface(usb, intf->bInterfaceNumber, intf->bAlternateSetting);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep));

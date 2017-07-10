@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/common/usb.h>
+#include <driver/usb.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -32,16 +32,15 @@ uint32_t* usb_audio_parse_sample_rates(usb_audio_ac_format_type_i_desc* format_d
     return result;
 }
 
-mx_status_t usb_audio_set_sample_rate(mx_device_t* usb_device, uint8_t ep_addr,
-                                      uint32_t sample_rate) {
+mx_status_t usb_audio_set_sample_rate(usb_protocol_t* usb, uint8_t ep_addr, uint32_t sample_rate) {
     uint8_t buffer[3];
     buffer[0] = sample_rate;
     buffer[1] = sample_rate >> 8;
     buffer[2] = sample_rate >> 16;
-    mx_status_t result = usb_control(usb_device, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
+    mx_status_t result = usb_control(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
                                      USB_AUDIO_SET_CUR,
                                      USB_AUDIO_SAMPLING_FREQ_CONTROL << 8,
-                                     ep_addr, &buffer, sizeof(buffer));
+                                     ep_addr, &buffer, sizeof(buffer), MX_TIME_INFINITE);
     if (result < 0) {
         return result;
     } else {
@@ -50,37 +49,32 @@ mx_status_t usb_audio_set_sample_rate(mx_device_t* usb_device, uint8_t ep_addr,
 }
 
 // volume is in 0 - 100 range
-mx_status_t usb_audio_set_volume(mx_device_t* device, uint8_t interface_number, int fu_id,
+mx_status_t usb_audio_set_volume(usb_protocol_t* usb, uint8_t interface_number, int fu_id,
                                  int volume) {
     uint16_t volume_min;
     uint16_t volume_max;
     mx_status_t status;
 
-    status = usb_control(device, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    status = usb_control(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_GET_MIN, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                         fu_id << 8, &volume_min, sizeof(volume_min));
+                         fu_id << 8, &volume_min, sizeof(volume_min), MX_TIME_INFINITE);
     if (status != sizeof(volume_min)) goto out;
-    status = usb_control(device, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    status = usb_control(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_GET_MAX, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                         fu_id << 8, &volume_max, sizeof(volume_max));
+                         fu_id << 8, &volume_max, sizeof(volume_max), MX_TIME_INFINITE);
     if (status != sizeof(volume_min)) goto out;
     if (volume_min >= volume_max) return MX_ERR_INTERNAL;
 
     // TODO (voydanoff) - maybe this should be logarithmic?
     uint16_t volume16 = volume_min + ((volume_max - volume_min) * volume) / 100;
-    status = usb_control(device, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    status = usb_control(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_SET_CUR, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                         fu_id << 8, &volume16, sizeof(volume16));
+                         fu_id << 8, &volume16, sizeof(volume16), MX_TIME_INFINITE);
 
 out:
     if (status == MX_ERR_IO_REFUSED) {
-        usb_protocol_t usb;
-        status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
-        if (status != MX_OK) {
-            return status;
-        }
         // clear the stall
-        usb_reset_endpoint(&usb, 0);
+        usb_reset_endpoint(usb, 0);
     }
     return status;
 }

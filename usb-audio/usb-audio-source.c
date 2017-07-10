@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/common/usb.h>
+#include <driver/usb.h>
 #include <magenta/device/audio.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,6 +17,7 @@
 typedef struct {
     mx_device_t* mxdev;
     mx_device_t* usb_mxdev;
+    usb_protocol_t usb;
     uint8_t ep_addr;
     uint8_t interface_number;
     uint8_t alternate_setting;
@@ -128,7 +129,7 @@ static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
 
     // switch to alternate interface if necessary
     if (source->alternate_setting != 0) {
-        usb_set_interface(source->usb_mxdev, source->interface_number, source->alternate_setting);
+        usb_set_interface(&source->usb, source->interface_number, source->alternate_setting);
     }
 
     // queue up reads, including stale completed reads
@@ -160,7 +161,7 @@ static mx_status_t usb_audio_source_stop(usb_audio_source_t* source) {
 
     // switch back to primary interface
     if (source->alternate_setting != 0) {
-        usb_set_interface(source->usb_mxdev, source->interface_number, 0);
+        usb_set_interface(&source->usb, source->interface_number, 0);
     }
 
 out:
@@ -298,8 +299,7 @@ static mx_status_t usb_audio_source_ioctl(void* ctx, uint32_t op, const void* in
         if (i == source->sample_rate_count) {
             return MX_ERR_INVALID_ARGS;
         }
-        mx_status_t status = usb_audio_set_sample_rate(source->usb_mxdev, source->ep_addr,
-                                                       sample_rate);
+        mx_status_t status = usb_audio_set_sample_rate(&source->usb, source->ep_addr, sample_rate);
         if (status == MX_OK) {
             source->sample_rate = sample_rate;
         }
@@ -324,7 +324,7 @@ static mx_protocol_device_t usb_audio_source_device_proto = {
     .ioctl = usb_audio_source_ioctl,
 };
 
-mx_status_t usb_audio_source_create(mx_device_t* device, int index,
+mx_status_t usb_audio_source_create(mx_device_t* device, usb_protocol_t* usb, int index,
                                     usb_interface_descriptor_t* intf,
                                     usb_endpoint_descriptor_t* ep,
                                     usb_audio_ac_format_type_i_desc* format_desc) {
@@ -357,6 +357,7 @@ mx_status_t usb_audio_source_create(mx_device_t* device, int index,
     source->ep_addr = ep->bEndpointAddress;
     source->interface_number = intf->bInterfaceNumber;
     source->alternate_setting = intf->bAlternateSetting;
+    memcpy(&source->usb, usb, sizeof(source->usb));
 
     int packet_size = usb_ep_max_packet(ep);
 
@@ -374,8 +375,7 @@ mx_status_t usb_audio_source_create(mx_device_t* device, int index,
 
     source->sample_rate = source->sample_rates[0];
     // this may stall if only one sample rate is supported, so ignore error
-    usb_audio_set_sample_rate(source->usb_mxdev, source->ep_addr, source->sample_rate);
-
+    usb_audio_set_sample_rate(&source->usb, source->ep_addr, source->sample_rate);
 
     char name[MX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "usb-audio-source-%d", index);
