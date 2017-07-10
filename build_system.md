@@ -82,3 +82,16 @@ See the [standard build instructions](https://fuchsia.googlesource.com/docs/+/ma
 can pass to QEMU.
 
 [magenta]: https://fuchsia.googlesource.com/magenta/+/HEAD/docs/getting_started.md "Magenta"
+
+
+### Running on ARM Hardware
+
+To build a fuchsia image for a particular ARM hardware target, you must also
+provide the magenta project name for that particular target to gen.py via the
+magenta_project argument. For example, to build a fuchsia image for the
+Raspberry Pi 3, you might invoke gen.py as follows:
+
+```
+./packages/gn/gen.py --magenta_project=magenta-rpi3-arm64 --target_cpu=aarch64
+./buildtools/ninja -C out/debug-aarch64
+```
