@@ -63,9 +63,8 @@ CommandBuffer::~CommandBuffer()
     if (!prepared_to_execute_)
         return;
 
-    uint64_t buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+    uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
     TRACE_FLOW_END("magma", "command_buffer", buffer_id);
-    (void)buffer_id;
 
     UnmapResourcesGpu();
 
@@ -169,9 +168,8 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
     exec_resource_mappings_.clear();
     exec_resource_mappings_.reserve(exec_resources_.size());
 
-    uint64_t buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+    uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
     TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
-    (void)buffer_id;
 
     if (!MapResourcesGpu(address_space, exec_resource_mappings_))
         return DRETF(false, "failed to map execution resources");
