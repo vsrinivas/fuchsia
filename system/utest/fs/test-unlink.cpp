@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdint.h>
@@ -103,17 +104,31 @@ bool test_unlink_open_elsewhere(void) {
 bool test_remove(void) {
     BEGIN_TEST;
 
+    // Test the trivial cases of removing files and directories
     const char* filename = "::file";
     int fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0644);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(remove(filename), 0, "");
     ASSERT_EQ(remove(filename), -1, "");
+    ASSERT_EQ(errno, ENOENT, "");
     ASSERT_EQ(close(fd), 0, "");
 
     const char* dirname = "::dir";
     ASSERT_EQ(mkdir(dirname, 0666), 0, "");
     ASSERT_EQ(remove(dirname), 0, "");
     ASSERT_EQ(remove(dirname), -1, "");
+    ASSERT_EQ(errno, ENOENT, "");
+
+    // Test that we cannot remove non-empty directories, and that
+    // we see the expected error code too.
+    ASSERT_EQ(mkdir("::dir", 0666), 0, "");
+    ASSERT_EQ(mkdir("::dir/subdir", 0666), 0, "");
+    ASSERT_EQ(remove("::dir"), -1, "");
+    ASSERT_EQ(errno, ENOTEMPTY, "");
+    ASSERT_EQ(remove("::dir/subdir"), 0, "");
+    ASSERT_EQ(remove("::dir"), 0, "");
+    ASSERT_EQ(remove("::dir"), -1, "");
+    ASSERT_EQ(errno, ENOENT, "");
 
     END_TEST;
 }

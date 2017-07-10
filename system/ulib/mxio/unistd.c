@@ -742,6 +742,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case MX_ERR_SHOULD_WAIT: return EAGAIN;
     case MX_ERR_FILE_BIG: return EFBIG;
     case MX_ERR_NO_SPACE: return ENOSPC;
+    case MX_ERR_NOT_EMPTY: return ENOTEMPTY;
 
     // No specific translation, so return a generic errno value.
     default: return EIO;

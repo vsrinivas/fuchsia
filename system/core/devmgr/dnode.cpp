@@ -127,7 +127,7 @@ mxtl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
 mx_status_t Dnode::CanUnlink() const {
     if (!children_.is_empty()) {
         // Cannot unlink non-empty directory
-        return MX_ERR_BAD_STATE;
+        return MX_ERR_NOT_EMPTY;
     } else if (vnode_->IsRemote()) {
         // Cannot unlink mount points
         return MX_ERR_BAD_STATE;

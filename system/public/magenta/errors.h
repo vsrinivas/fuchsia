@@ -163,6 +163,8 @@
 // MX_ERR_NO_SPACE: Filesystem or device space is exhausted.
 #define MX_ERR_NO_SPACE (-54)
 
+// MX_ERR_NOT_EMPTY: Directory is not empty.
+#define MX_ERR_NOT_EMPTY (-55)
 
 // ======== Flow Control ========
 // These are not errors, as such, and will never be returned

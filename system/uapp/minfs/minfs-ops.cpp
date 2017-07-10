@@ -545,7 +545,7 @@ static mx_status_t cb_dir_unlink(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
         return MX_ERR_NOT_DIR;
     }
     if (!vn->CanUnlink()) {
-        return MX_ERR_BAD_STATE;
+        return MX_ERR_NOT_EMPTY;
     }
     return vndir->UnlinkChild(args->txn, mxtl::move(vn), de, offs);
 }
