@@ -186,7 +186,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         if (r == MX_ERR_SHOULD_WAIT) {
             if (io->flags & MXIO_FLAG_NONBLOCK) {
                 mxio_release(io);
-                return EWOULDBLOCK;
+                return ERRNO(EWOULDBLOCK);
             }
             // wait for an incoming connection
             uint32_t events = POLLIN;
