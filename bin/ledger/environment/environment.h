@@ -33,6 +33,13 @@ class Environment {
   // should be used to access the file system.
   const ftl::RefPtr<ftl::TaskRunner> GetIORunner();
 
+  // Flags only for testing.
+  void SetTriggerCloudErasedForTesting();
+
+  bool TriggerCloudErasedForTesting() {
+    return trigger_cloud_erased_for_testing_;
+  }
+
  private:
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
   NetworkService* const network_service_;
@@ -40,6 +47,9 @@ class Environment {
 
   std::thread io_thread_;
   ftl::RefPtr<ftl::TaskRunner> io_runner_;
+
+  // Flags only for testing.
+  bool trigger_cloud_erased_for_testing_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Environment);
 };

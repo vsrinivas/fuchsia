@@ -34,4 +34,11 @@ const ftl::RefPtr<ftl::TaskRunner> Environment::GetIORunner() {
   return io_runner_;
 }
 
+void Environment::SetTriggerCloudErasedForTesting() {
+  FTL_LOG(WARNING)
+      << "Setting up the environment to trigger cloud erased recovery: "
+      << "THIS SHOULD ONLY HAPPEN IN TESTS";
+  trigger_cloud_erased_for_testing_ = true;
+}
+
 }  // namespace ledger

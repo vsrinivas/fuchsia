@@ -8,9 +8,13 @@
 #include "application/lib/app/connect.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl-sync.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -41,23 +45,20 @@ class LedgerAppTest : public ::testing::Test {
   ~LedgerAppTest() override {}
 
  protected:
-  // ::testing::Test:
-  void SetUp() override {
-    ::testing::Test::SetUp();
+  void Init(std::vector<std::string> additional_args) {
     app::ServiceProviderPtr child_services;
-    fidl::SynchronousInterfacePtr<ledger::LedgerRepositoryFactory>
-        ledger_repository_factory;
-
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "ledger";
     launch_info->services = child_services.NewRequest();
     launch_info->arguments.push_back("--no_minfs_wait");
     launch_info->arguments.push_back("--no_persisted_config");
-    context_->launcher()->CreateApplication(
-        std::move(launch_info),
-        ledger_repository_factory_controller_.NewRequest());
+    for (auto& additional_arg : additional_args) {
+      launch_info->arguments.push_back(std::move(additional_arg));
+    }
+    context_->launcher()->CreateApplication(std::move(launch_info),
+                                            ledger_controller_.NewRequest());
 
-    ledger_repository_factory_controller_.set_connection_error_handler([this] {
+    ledger_controller_.set_connection_error_handler([this] {
       for (const auto& callback : ledger_shutdown_callbacks_) {
         callback();
       }
@@ -65,38 +66,40 @@ class LedgerAppTest : public ::testing::Test {
 
     app::ConnectToService(
         child_services.get(),
-        fidl::GetSynchronousProxy(&ledger_repository_factory));
+        fidl::GetSynchronousProxy(&ledger_repository_factory_));
     app::ConnectToService(child_services.get(),
                           fidl::GetSynchronousProxy(&controller_));
-
-    Status status;
-    fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
-    ledger_repository_factory->GetRepository(
-        tmp_dir_.path(), nullptr, nullptr,
-        fidl::GetSynchronousProxy(&ledger_repository), &status);
-    ASSERT_EQ(Status::OK, status);
-
-    ledger_repository->GetLedger(TestArray(),
-                                 fidl::GetSynchronousProxy(&ledger_), &status);
-    ASSERT_EQ(Status::OK, status);
-  };
+  }
 
   void RegisterShutdownCallback(std::function<void()> callback) {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
  private:
-  files::ScopedTempDir tmp_dir_;
-  app::ApplicationControllerPtr ledger_repository_factory_controller_;
+  app::ApplicationControllerPtr ledger_controller_;
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
 
  protected:
+  fidl::SynchronousInterfacePtr<ledger::LedgerRepositoryFactory>
+      ledger_repository_factory_;
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
   fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
 };
 
 TEST_F(LedgerAppTest, PutAndGet) {
-  ledger::Status status;
+  Init({});
+  Status status;
+  fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
+  files::ScopedTempDir tmp_dir;
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), nullptr, nullptr,
+      fidl::GetSynchronousProxy(&ledger_repository), &status);
+  ASSERT_EQ(Status::OK, status);
+
+  ledger_repository->GetLedger(TestArray(), fidl::GetSynchronousProxy(&ledger_),
+                               &status);
+  ASSERT_EQ(Status::OK, status);
+
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetRootPage(fidl::GetSynchronousProxy(&page), &status);
   ASSERT_EQ(Status::OK, status);
@@ -114,6 +117,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
 }
 
 TEST_F(LedgerAppTest, Terminate) {
+  Init({});
   bool called = false;
   RegisterShutdownCallback([&called] {
     called = true;
@@ -124,6 +128,46 @@ TEST_F(LedgerAppTest, Terminate) {
                                         ftl::TimeDelta::FromSeconds(1));
   loop_->Run();
   EXPECT_TRUE(called);
+}
+
+// Triggers the cloud erased recovery codepath and verifies that:
+//  - Ledger disconnects the clients
+//  - the repository directory is cleared
+TEST_F(LedgerAppTest, CloudErasedRecovery) {
+  Init({"--no_network_for_testing", "--trigger_cloud_erased_for_testing"});
+  bool ledger_shut_down = false;
+  RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
+
+  Status status;
+  ledger::LedgerRepositoryPtr ledger_repository;
+  files::ScopedTempDir tmp_dir;
+  std::string deletion_sentinel_path;
+  EXPECT_TRUE(tmp_dir.NewTempFile(&deletion_sentinel_path));
+  EXPECT_TRUE(files::IsFile(deletion_sentinel_path));
+
+  ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
+  firebase_config->server_id = "network_is_disabled_anyway";
+  // Has to be empty so that we don't try to obtain auth tokens.
+  firebase_config->api_key = "";
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), std::move(firebase_config), nullptr,
+      ledger_repository.NewRequest(), &status);
+  ASSERT_EQ(Status::OK, status);
+
+  bool repo_disconnected = false;
+  ledger_repository.set_connection_error_handler(
+      [&repo_disconnected] { repo_disconnected = true; });
+
+  // Run the message loop until Ledger clears the repo directory and disconnects
+  // the client.
+  bool cleared = test::RunGivenLoopUntil(
+      loop_, [deletion_sentinel_path, &repo_disconnected] {
+        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+      });
+  EXPECT_TRUE(cleared);
+
+  // Verify that the Ledger app didn't crash.
+  EXPECT_FALSE(ledger_shut_down);
 }
 
 }  // namespace

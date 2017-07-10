@@ -16,6 +16,7 @@
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service_impl.h"
+#include "apps/ledger/src/network/no_network_service.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -35,6 +36,16 @@ constexpr ftl::StringView kMinFsName = "minfs";
 constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 constexpr ftl::StringView kNoMinFsFlag = "no_minfs_wait";
 constexpr ftl::StringView kNoPersistedConfig = "no_persisted_config";
+constexpr ftl::StringView kNoNetworkForTesting = "no_network_for_testing";
+constexpr ftl::StringView kTriggerCloudErasedForTesting =
+    "trigger_cloud_erased_for_testing";
+
+struct AppParams {
+  LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence =
+      LedgerRepositoryFactoryImpl::ConfigPersistence::PERSIST;
+  bool no_network_for_testing = false;
+  bool trigger_cloud_erased_for_testing = false;
+};
 
 // App is the main entry point of the Ledger application.
 //
@@ -45,22 +56,31 @@ constexpr ftl::StringView kNoPersistedConfig = "no_persisted_config";
 class App : public LedgerController,
             public LedgerRepositoryFactoryImpl::Delegate {
  public:
-  App(LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence)
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        config_persistence_(config_persistence) {
+  App(AppParams app_params)
+      : app_params_(std::move(app_params)),
+        application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        config_persistence_(app_params_.config_persistence) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
   }
   ~App() {}
 
   bool Start() {
-    network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
-        loop_.task_runner(), [this] {
-          return application_context_
-              ->ConnectToEnvironmentService<network::NetworkService>();
-        });
+    if (app_params_.no_network_for_testing) {
+      network_service_ =
+          std::make_unique<ledger::NoNetworkService>(loop_.task_runner());
+    } else {
+      network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
+          loop_.task_runner(), [this] {
+            return application_context_
+                ->ConnectToEnvironmentService<network::NetworkService>();
+          });
+    }
     environment_ = std::make_unique<Environment>(loop_.task_runner(),
                                                  network_service_.get());
+    if (app_params_.trigger_cloud_erased_for_testing) {
+      environment_->SetTriggerCloudErasedForTesting();
+    }
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         this, environment_.get(), config_persistence_);
@@ -123,6 +143,7 @@ class App : public LedgerController,
 
   bool shutdown_in_progress_ = false;
   mtl::MessageLoop loop_;
+  const AppParams app_params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;
   std::unique_ptr<NetworkService> network_service_;
@@ -164,17 +185,23 @@ int main(int argc, const char** argv) {
   const auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   ftl::SetLogSettingsFromCommandLine(command_line);
 
+  ledger::AppParams app_params;
+  if (command_line.HasOption(ledger::kNoPersistedConfig)) {
+    app_params.config_persistence =
+        ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET;
+  }
+  app_params.no_network_for_testing =
+      command_line.HasOption(ledger::kNoNetworkForTesting);
+  app_params.trigger_cloud_erased_for_testing =
+      command_line.HasOption(ledger::kTriggerCloudErasedForTesting);
+
   if (!command_line.HasOption(ledger::kNoMinFsFlag.ToString())) {
     // Poll until /data is persistent. This is need to retrieve the Ledger
     // configuration.
     ledger::WaitForData();
   }
 
-  ledger::LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence =
-      command_line.HasOption(ledger::kNoPersistedConfig.ToString())
-          ? ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET
-          : ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::PERSIST;
-  ledger::App app(config_persistence);
+  ledger::App app(std::move(app_params));
   if (!app.Start()) {
     return 1;
   }

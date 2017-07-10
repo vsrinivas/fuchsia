@@ -91,6 +91,13 @@ void UserSyncImpl::DoCheckCloudVersion(std::string auth_token) {
   user_config_.local_version_checker->CheckCloudVersion(
       std::move(auth_token), user_firebase_.get(), GetLocalVersionPath(),
       [this](LocalVersionChecker::Status status) {
+        // HACK: in order to test this codepath in an apptest, we expose a hook
+        // that forces the cloud erased recovery closure to run.
+        if (environment_->TriggerCloudErasedForTesting()) {
+          on_version_mismatch_();
+          return;
+        }
+
         if (status == LocalVersionChecker::Status::OK) {
           EnableUpload();
           return;

@@ -162,8 +162,10 @@ executable("application_tests") {
 
   deps = [
     "//application/lib/app",
+    "//apps/ledger/services/internal",
     "//apps/ledger/services/internal:internal_sync",
     "//apps/ledger/services/public:public_sync",
+    "//apps/ledger/src/test:lib",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",
     "//third_party/gtest",
