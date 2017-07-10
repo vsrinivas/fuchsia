@@ -118,17 +118,10 @@ static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
     vc_t* vc = containerof(fh, vc_t, fh);
 
     if (pollevt & POLLIN) {
-        size_t count = 0;
-        for (;;) {
-            char data[8192];
-            ssize_t r = read(vc->fd, data, sizeof(data));
-            if (r <= 0) {
-                break;
-            }
-            count += r;
+        char data[1024];
+        ssize_t r = read(vc->fd, data, sizeof(data));
+        if (r > 0) {
             vc_write(vc, data, r, 0);
-        }
-        if (count) {
             return MX_OK;
         }
     }
