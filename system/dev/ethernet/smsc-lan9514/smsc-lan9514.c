@@ -503,6 +503,7 @@ static mx_status_t lan9514_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
+        eth->ifc->status(eth->cookie, eth->online ? ETH_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 
@@ -677,6 +678,9 @@ static int lan9514_start_thread(void* arg) {
                                 and configure for wake on phy (energy detect)
                     */
                     printf("lan9514: Link is down - %04x\n", temp);
+                    if (eth->ifc) {
+                        eth->ifc->status(eth->cookie, 0);
+                    }
                     status = lan9514_mdio_write(eth, MII_PHY_LAN9514_INT_MASK_REG, MII_PHY_LAN9514_INT_MASK_ANEG_COMP);
                     if (status < 0)
                         goto teardown;
@@ -700,6 +704,9 @@ static int lan9514_start_thread(void* arg) {
                 mtx_lock(&eth->mutex);
                 eth->online = true;
                 printf("lan9514: Link is up - %04x\n", temp);
+                if (eth->ifc) {
+                    eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+                }
                 iotxn_t* req;
                 iotxn_t* prev;
                 list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {

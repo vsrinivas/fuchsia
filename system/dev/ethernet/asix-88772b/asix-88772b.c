@@ -220,12 +220,20 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
             bool was_online = eth->online;
             eth->online = online;
             if (online && !was_online) {
+                if (eth->ifc) {
+                    eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
+                }
+
                 // Now that we are online, queue all our read requests
                 iotxn_t* req;
                 iotxn_t* prev;
                 list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
                     list_delete(&req->node);
                     iotxn_queue(eth->usb_device, req);
+                }
+            } else if (!online && was_online) {
+                if (eth->ifc) {
+                    eth->ifc->status(eth->cookie, 0);
                 }
             }
         }
@@ -347,6 +355,7 @@ static mx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
+        eth->ifc->status(eth->cookie, eth->online ? ETH_STATUS_ONLINE : 0);
     }
     mtx_unlock(&eth->mutex);
 
