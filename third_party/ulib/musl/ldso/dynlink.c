@@ -1311,8 +1311,10 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         // Hold the VMAR handle only long enough to apply RELRO.
         // Now it's no longer needed and the mappings cannot be
         // changed any more (only unmapped).
-        _mx_handle_close(p->vmar);
-        p->vmar = MX_HANDLE_INVALID;
+        if (p->vmar != MX_HANDLE_INVALID) {
+            _mx_handle_close(p->vmar);
+            p->vmar = MX_HANDLE_INVALID;
+        }
 
         p->relocated = 1;
     }
