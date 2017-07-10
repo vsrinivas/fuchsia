@@ -116,8 +116,7 @@ static status_t try_system_exception_handler(UserThread* thread,
 // different exception?
 
 status_t magenta_exception_handler(uint exception_type,
-                                   arch_exception_context_t* context,
-                                   mx_vaddr_t ip) {
+                                   arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
     UserThread* thread = UserThread::GetCurrent();
@@ -182,10 +181,8 @@ status_t magenta_exception_handler(uint exception_type,
         // in handling the exception
         char pname[MX_MAX_NAME_LEN];
         process->get_name(pname);
-        printf("KERN: %s in magenta thread '%s' in process '%s' at IP %#"
-               PRIxPTR "\n",
-               excp_type_to_string(exception_type), thread->name(),
-               pname, ip);
+        printf("KERN: %s in magenta thread '%s' in process '%s'\n",
+               excp_type_to_string(exception_type), thread->name(), pname);
 
         arch_dump_exception_context(context);
     }

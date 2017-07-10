@@ -16,8 +16,7 @@ __BEGIN_CDECLS
 typedef struct arch_exception_context arch_exception_context_t;
 
 status_t magenta_exception_handler(uint exception_type,
-                                   struct arch_exception_context* context,
-                                   mx_vaddr_t ip);
+                                   struct arch_exception_context* context);
 
 // This reports an exception that was raised by a syscall using
 // thread_signal_exception().

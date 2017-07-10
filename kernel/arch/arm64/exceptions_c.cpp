@@ -64,7 +64,7 @@ static status_t call_magenta_data_fault_exception_handler(mx_excp_type_t type, s
     arch_enable_ints();
     DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
     thread->arch.suspended_general_regs = iframe;
-    status_t status = magenta_exception_handler(type, &context, iframe->elr);
+    status_t status = magenta_exception_handler(type, &context);
     thread->arch.suspended_general_regs = nullptr;
     arch_disable_ints();
     return status;
@@ -462,10 +462,7 @@ status_t magenta_report_syscall_exception(void)
     struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
-    // TODO(mseaborn): Implement reporting the pc register value.
-    mx_vaddr_t pc_register_value = 0;
-    return magenta_exception_handler(MX_EXCP_GENERAL, &context,
-                                     pc_register_value);
+    return magenta_exception_handler(MX_EXCP_GENERAL, &context);
 }
 
 #endif

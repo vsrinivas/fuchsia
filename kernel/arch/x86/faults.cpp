@@ -80,7 +80,7 @@ static status_t call_magenta_exception_handler(uint kind,
 {
     thread_t *thread = get_current_thread();
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
-    status_t status = magenta_exception_handler(kind, context, frame->ip);
+    status_t status = magenta_exception_handler(kind, context);
     x86_reset_suspended_general_regs(&thread->arch);
     return status;
 }
@@ -504,10 +504,7 @@ status_t magenta_report_syscall_exception(void)
     x86_iframe_t frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
-    // TODO(mseaborn): Implement reporting the pc register value.
-    mx_vaddr_t pc_register_value = 0;
-    return magenta_exception_handler(MX_EXCP_GENERAL, &context,
-                                     pc_register_value);
+    return magenta_exception_handler(MX_EXCP_GENERAL, &context);
 }
 
 #endif
