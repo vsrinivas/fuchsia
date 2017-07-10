@@ -4,15 +4,19 @@
 
 #include "apps/mozart/src/scene/tests/scene_manager_test.h"
 
-#include "gtest/gtest.h"
-#include "lib/ftl/synchronization/waitable_event.h"
+#include "apps/mozart/lib/tests/test_with_message_loop.h"
 
 namespace mozart {
 namespace scene {
 namespace test {
 
 void SceneManagerTest::SetUp() {
-  manager_impl_ = std::make_unique<SceneManagerImplForTest>();
+  auto r = std::make_unique<ReleaseFenceSignallerForTest>(
+      &command_buffer_sequencer_);
+  auto session_context = std::make_unique<SessionContextForTest>(std::move(r));
+
+  manager_impl_ =
+      std::make_unique<SceneManagerImplForTest>(std::move(session_context));
   manager_binding_ = std::make_unique<fidl::Binding<mozart2::SceneManager>>(
       manager_impl_.get());
 
@@ -37,53 +41,6 @@ void SceneManagerTest::TearDown() {
   thread_->TaskRunner()->PostTask(
       []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   thread_->Join();
-}
-
-SessionHandlerForTest::SessionHandlerForTest(
-    SessionContext* session_context,
-    SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : SessionHandler(session_context,
-                     session_id,
-                     std::move(request),
-                     std::move(listener)),
-      enqueue_count_(0),
-      present_count_(0),
-      connect_count_(0) {}
-
-void SessionHandlerForTest::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
-  SessionHandler::Enqueue(std::move(ops));
-  ++enqueue_count_;
-}
-
-void SessionHandlerForTest::Present(uint64_t presentation_time,
-                                    ::fidl::Array<mx::event> acquire_fences,
-                                    ::fidl::Array<mx::event> release_fences,
-                                    const PresentCallback& callback) {
-  SessionHandler::Present(presentation_time, std::move(acquire_fences),
-                          std::move(release_fences), callback);
-  ++present_count_;
-}
-
-void SessionHandlerForTest::Connect(
-    ::fidl::InterfaceRequest<mozart2::Session> session,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  SessionHandler::Connect(std::move(session), std::move(listener));
-  ++connect_count_;
-}
-
-SessionContextForTest::SessionContextForTest() : SessionContext(nullptr) {}
-
-SceneManagerImplForTest::SceneManagerImplForTest()
-    : SceneManagerImpl(std::make_unique<SessionContextForTest>(), nullptr) {}
-
-std::unique_ptr<SessionHandler> SessionContextForTest::CreateSessionHandler(
-    SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  return std::make_unique<SessionHandlerForTest>(
-      this, session_id, std::move(request), std::move(listener));
 }
 
 }  // namespace test

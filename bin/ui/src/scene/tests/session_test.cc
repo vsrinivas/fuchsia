@@ -7,15 +7,11 @@
 #include "lib/ftl/synchronization/waitable_event.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "escher/vk/vulkan_swapchain.h"
+#include "apps/mozart/src/scene/tests/mocks.h"
 
 namespace mozart {
 namespace scene {
 namespace test {
-
-SessionContextForTest::SessionContextForTest(
-    std::unique_ptr<ReleaseFenceSignaller> r)
-    : SessionContext(std::move(r)) {}
 
 void SessionTest::SetUp() {
   session_context_ = std::unique_ptr<SessionContext>(CreateSessionContext());

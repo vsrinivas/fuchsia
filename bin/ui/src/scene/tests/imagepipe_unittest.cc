@@ -10,32 +10,13 @@
 #include "apps/mozart/src/scene/acquire_fence.h"
 #include "apps/mozart/src/scene/fence.h"
 #include "apps/mozart/src/scene/resources/image_pipe.h"
+#include "apps/mozart/src/scene/tests/mocks.h"
 #include "apps/mozart/src/scene/tests/session_test.h"
 #include "apps/mozart/src/scene/tests/util.h"
 
 namespace mozart {
 namespace scene {
 namespace test {
-
-class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
- public:
-  ReleaseFenceSignallerForTest(
-      escher::impl::CommandBufferSequencer* command_buffer_sequencer)
-      : ReleaseFenceSignaller(command_buffer_sequencer){};
-
-  void AddCPUReleaseFence(mx::event fence) override {
-    num_calls_to_add_cpu_release_fence_++;
-    // Signal immediately for testing purposes.
-    fence.signal(0u, kFenceSignalled);
-  };
-
-  uint32_t num_calls_to_add_cpu_release_fence() {
-    return num_calls_to_add_cpu_release_fence_;
-  }
-
- private:
-  uint32_t num_calls_to_add_cpu_release_fence_ = 0;
-};
 
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
  public:

@@ -13,11 +13,6 @@ namespace mozart {
 namespace scene {
 namespace test {
 
-class SessionContextForTest : public SessionContext {
- public:
-  SessionContextForTest(std::unique_ptr<ReleaseFenceSignaller> r);
-};
-
 class SessionTest : public ::testing::Test, public scene::ErrorReporter {
  public:
   // ::testing::Test virtual method.

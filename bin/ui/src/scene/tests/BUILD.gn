@@ -16,6 +16,10 @@ group("tests") {
 
 source_set("testing_deps") {
   testonly = true
+  sources = [
+    "mocks.cc",
+    "mocks.h",
+  ]
   public_deps = [
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/lib/tests",
