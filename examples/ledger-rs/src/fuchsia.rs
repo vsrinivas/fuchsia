@@ -71,6 +71,7 @@ impl Launcher {
             url,
             arguments,
             service_request: None,
+            flat_namespace: None,
             services: Some(services_request)
         };
         self.proxy.create_application(launch_info, Some(controller_request));
