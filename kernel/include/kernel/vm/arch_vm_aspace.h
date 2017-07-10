@@ -6,11 +6,9 @@
 
 #pragma once
 
-#include <mxtl/canary.h>
+#include <arch/mmu.h>
 #include <mxtl/macros.h>
 #include <sys/types.h>
-#include <arch/mmu.h>
-#include <arch/aspace.h>
 
 // flags
 const uint ARCH_MMU_FLAG_CACHED =          (0u << 0);
@@ -29,38 +27,21 @@ const uint ARCH_ASPACE_FLAG_KERNEL =       (1u << 0);
 const uint ARCH_ASPACE_FLAG_GUEST_PASPACE =   (1u << 1);
 
 // per arch base class api to encapsulate the mmu routines on an aspace
-class ArchVmAspace {
+class ArchVmAspaceInterface {
 public:
-    ArchVmAspace();
-    ~ArchVmAspace();
+    virtual ~ArchVmAspaceInterface() { }
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(ArchVmAspace);
-
-    status_t Init(vaddr_t base, size_t size, uint mmu_flags);
-    status_t Destroy();
+    virtual status_t Init(vaddr_t base, size_t size, uint mmu_flags) = 0;
+    virtual status_t Destroy() = 0;
 
     // main methods
-    status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count, uint mmu_flags, size_t* mapped);
-    status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped);
-    status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags);
-    status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
+    virtual status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count,
+                         uint mmu_flags, size_t* mapped) = 0;
+    virtual status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) = 0;
+    virtual status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) = 0;
+    virtual status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) = 0;
 
-    vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags,
-                     vaddr_t end, uint next_region_mmu_flags,
-                     vaddr_t align, size_t size, uint mmu_flags);
-
-    // TODO remove once we have per arch aspace objects
-    arch_aspace_t& GetInnerAspace() { return aspace_; }
-
-    static void ContextSwitch(ArchVmAspace *from, ArchVmAspace *to) {
-        arch_internal::arch_mmu_context_switch(from ? &from->GetInnerAspace() : nullptr,
-                                to ? &to->GetInnerAspace() : nullptr);
-    }
-
-private:
-    mxtl::Canary<mxtl::magic("VAAS")> canary_;
-
-    arch_aspace_t aspace_ = {};
+    virtual vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags,
+                             vaddr_t end, uint next_region_mmu_flags,
+                             vaddr_t align, size_t size, uint mmu_flags) = 0;
 };
-
-

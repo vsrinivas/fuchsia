@@ -9,6 +9,7 @@
 #include <string.h>
 #include <trace.h>
 
+#include <arch/aspace.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>

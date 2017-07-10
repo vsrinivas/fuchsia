@@ -6,8 +6,9 @@
 
 #include <unittest.h>
 #include <err.h>
-#include <arch/x86/mmu.h>
+#include <arch/aspace.h>
 #include <arch/mmu.h>
+#include <arch/x86/mmu.h>
 #include <kernel/vm/arch_vm_aspace.h>
 
 static bool mmu_tests(void* context) {

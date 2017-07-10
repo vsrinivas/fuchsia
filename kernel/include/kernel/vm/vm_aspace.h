@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <arch/aspace.h>
 #include <arch/mmu.h>
 #include <assert.h>
 #include <kernel/mutex.h>

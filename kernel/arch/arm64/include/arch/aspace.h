@@ -7,9 +7,11 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <list.h>
 #include <arch/arm64/mmu.h>
+#include <kernel/vm/arch_vm_aspace.h>
+#include <magenta/compiler.h>
+#include <mxtl/canary.h>
+#include <mxtl/ref_counted.h>
 
 __BEGIN_CDECLS
 
@@ -34,3 +36,31 @@ struct arch_aspace {
 
 __END_CDECLS
 
+class ArmArchVmAspace final : public ArchVmAspaceInterface, mxtl::RefCounted<ArmArchVmAspace>  {
+public:
+    ArmArchVmAspace() { }
+    virtual ~ArmArchVmAspace();
+
+    status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
+    status_t Destroy() override;
+
+    // main methods
+    status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count,
+                 uint mmu_flags, size_t* mapped) override;
+    status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
+    status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
+    status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;
+
+    vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags,
+                     vaddr_t end, uint next_region_mmu_flags,
+                     vaddr_t align, size_t size, uint mmu_flags) override;
+
+    arch_aspace& GetInnerAspace() { return aspace_; }
+
+    static void ContextSwitch(ArmArchVmAspace *from, ArmArchVmAspace *to);
+private:
+    mxtl::Canary<mxtl::magic("VAAS")> canary_;
+    arch_aspace aspace_ = {};
+};
+
+using ArchVmAspace = ArmArchVmAspace;
