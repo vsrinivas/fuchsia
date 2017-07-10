@@ -23,7 +23,6 @@ static void option_usage(FILE* out,
 static _Noreturn void usage(const char* progname, bool error) {
     FILE* out = error ? stderr : stdout;
     fprintf(out, "Usage: %s [OPTIONS] [--] PROGRAM [ARGS...]\n", progname);
-    option_usage(out, "-b", "use basic ELF loading, no PT_INTERP support");
     option_usage(out, "-d FD", "pass FD with the same descriptor number");
     option_usage(out, "-d FD:NEWFD", "pass FD as descriptor number NEWFD");
     option_usage(out, "-e VAR=VALUE", "pass environment variable");
@@ -57,7 +56,6 @@ int main(int argc, char** argv) {
     size_t envsize = 0;
     const char* program = NULL;
     int program_fd = -1;
-    bool basic = false;
     bool send_root = false;
     struct fd { int from, to; } *fds = NULL;
     size_t nfds = 0;
@@ -68,11 +66,8 @@ int main(int argc, char** argv) {
     int exec_vmo_fd = -1;
     size_t stack_size = -1;
 
-    for (int opt; (opt = getopt(argc, argv, "bd:e:f:F:hjlLrsS:v:")) != -1;) {
+    for (int opt; (opt = getopt(argc, argv, "d:e:f:F:hjlLrsS:v:")) != -1;) {
         switch (opt) {
-        case 'b':
-            basic = true;
-            break;
         case 'd':;
             int from, to;
             switch (sscanf(optarg, "%u:%u", &from, &to)) {
@@ -206,13 +201,8 @@ int main(int argc, char** argv) {
         check("launchpad_clone_fd", status);
     }
 
-    if (basic) {
-        status = launchpad_elf_load_basic(lp, vmo);
-        check("launchpad_elf_load_basic", status);
-    } else {
-        status = launchpad_elf_load(lp, vmo);
-        check("launchpad_elf_load", status);
-    }
+    status = launchpad_load_from_vmo(lp, vmo);
+    check("launchpad_load_from_vmo", status);
 
     if (send_loader_message) {
         bool already_sending = launchpad_send_loader_message(lp, true);
