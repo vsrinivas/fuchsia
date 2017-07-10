@@ -84,7 +84,6 @@ static nstab_t NS[] = {
     { "/fake", "/boot" },
     { "/fake/dev", "/dev" },
     { "/fake/tmp", "/tmp" },
-    { "/fake/dev/class/pci/xyz", "/boot/src" },
 };
 
 static void listdir(const char* path) {
@@ -142,7 +141,5 @@ int main(int argc, char** argv) {
     // should show numeric pci devices, with "xyz" local
     listdir("fake/dev/class/pci");
 
-    // should show contents of /boot/src
-    listdir("fake/dev/class/pci/xyz");
     return 0;
 }
