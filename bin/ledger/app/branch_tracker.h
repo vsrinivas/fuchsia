@@ -29,6 +29,8 @@ class BranchTracker : public storage::CommitWatcher {
                 storage::PageStorage* storage);
   ~BranchTracker();
 
+  void Init(std::function<void(Status)> on_done);
+
   void set_on_empty(ftl::Closure on_empty_callback);
 
   // Returns the head commit of the currently tracked branch.

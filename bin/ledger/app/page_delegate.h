@@ -42,6 +42,8 @@ class PageDelegate {
                SyncWatcherSet* watchers);
   ~PageDelegate();
 
+  void Init(std::function<void(Status)> on_done);
+
   void set_on_empty(ftl::Closure on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
@@ -110,6 +112,7 @@ class PageDelegate {
   PageManager* manager_;
   storage::PageStorage* storage_;
 
+  fidl::InterfaceRequest<Page> request_;
   BoundInterface<Page, PageImpl> interface_;
   BranchTracker branch_tracker_;
 

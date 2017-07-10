@@ -27,7 +27,8 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
                            SyncWatcherSet* watchers)
     : manager_(manager),
       storage_(storage),
-      interface_(std::move(request), this),
+      request_(std::move(request)),
+      interface_(this),
       branch_tracker_(coroutine_service, manager, storage),
       watcher_set_(watchers) {
   interface_.set_on_empty([this] {
@@ -43,6 +44,17 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
 }
 
 PageDelegate::~PageDelegate() {}
+
+void PageDelegate::Init(std::function<void(Status)> on_done) {
+  branch_tracker_.Init([ this, on_done = std::move(on_done) ](Status status) {
+    if (status != Status::OK) {
+      on_done(status);
+      return;
+    }
+    interface_.Bind(std::move(request_));
+    on_done(Status::OK);
+  });
+}
 
 // GetId() => (array<uint8> id);
 void PageDelegate::GetId(const Page::GetIdCallback& callback) {

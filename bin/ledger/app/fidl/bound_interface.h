@@ -17,6 +17,14 @@ class BoundInterface {
       : impl_(std::forward<Args>(args)...),
         binding_(&impl_, std::move(request)) {}
 
+  template <class... Args>
+  BoundInterface(Args&&... args)
+      : impl_(std::forward<Args>(args)...), binding_(&impl_) {}
+
+  void Bind(fidl::InterfaceRequest<Interface> request) {
+    binding_.Bind(std::move(request));
+  }
+
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     binding_.set_connection_error_handler([this, on_empty_callback]() {
       binding_.Close();

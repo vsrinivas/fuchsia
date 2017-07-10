@@ -51,13 +51,17 @@ PageManager::PageManager(
 
 PageManager::~PageManager() {}
 
-void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
+void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
+                           std::function<void(Status)> on_done) {
   if (sync_backlog_downloaded_) {
-    pages_.emplace(environment_->coroutine_service(), this, page_storage_.get(),
-                   std::move(page_request), &watchers_);
-  } else {
-    page_requests_.push_back(std::move(page_request));
+    pages_
+        .emplace(environment_->coroutine_service(), this, page_storage_.get(),
+                 std::move(page_request), &watchers_)
+        .Init(std::move(on_done));
+    return;
   }
+  page_requests_.push_back(
+      std::make_pair(std::move(page_request), std::move(on_done)));
 }
 
 void PageManager::BindPageSnapshot(
@@ -82,8 +86,8 @@ void PageManager::OnSyncBacklogDownloaded() {
                   << "Clients will receive a change notification.";
   }
   sync_backlog_downloaded_ = true;
-  for (auto& request : page_requests_) {
-    BindPage(std::move(request));
+  for (auto it = page_requests_.begin(); it != page_requests_.end(); ++it) {
+    BindPage(std::move(it->first), std::move(it->second));
   }
   page_requests_.clear();
 }

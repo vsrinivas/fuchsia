@@ -60,7 +60,11 @@ class PageImplTest : public test::TestWithMessageLoop {
 
     manager_ = std::make_unique<PageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver));
-    manager_->BindPage(page_ptr_.NewRequest());
+    Status status;
+    manager_->BindPage(page_ptr_.NewRequest(),
+                       callback::Capture(MakeQuitTask(), &status));
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_FALSE(RunLoopWithTimeout());
   }
 
   void CommitFirstPendingJournal(
@@ -1161,8 +1165,12 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
 }
 
 TEST_F(PageImplTest, ParallelPut) {
+  Status status;
   PagePtr page_ptr2;
-  manager_->BindPage(page_ptr2.NewRequest());
+  manager_->BindPage(page_ptr2.NewRequest(),
+                     callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
 
   std::string key("some_key");
   std::string value1("a small value");

@@ -46,7 +46,8 @@ class PageManager {
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
   // request.
-  void BindPage(fidl::InterfaceRequest<Page> page_request);
+  void BindPage(fidl::InterfaceRequest<Page> page_request,
+                std::function<void(Status)> on_done);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
@@ -73,7 +74,9 @@ class PageManager {
   ftl::Closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
-  std::vector<fidl::InterfaceRequest<Page>> page_requests_;
+  std::vector<
+      std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
+      page_requests_;
 
   SyncWatcherSet watchers_;
 

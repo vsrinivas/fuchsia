@@ -9,6 +9,7 @@
 #include "apps/ledger/src/app/diff_utils.h"
 #include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -255,19 +256,27 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
       storage_(storage),
       transaction_in_progress_(false) {
   watchers_.set_on_empty([this] { CheckEmpty(); });
+}
+
+BranchTracker::~BranchTracker() {
+  storage_->RemoveCommitWatcher(this);
+}
+
+void BranchTracker::Init(std::function<void(Status)> on_done) {
   std::vector<storage::CommitId> commit_ids;
-  // TODO(etiennej): Fail more nicely.
-  FTL_CHECK(storage_->GetHeadCommitIds(&commit_ids) == storage::Status::OK);
+  storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
+  if (status != storage::Status::OK) {
+    on_done(PageUtils::ConvertStatus(status));
+    return;
+  }
+
   FTL_DCHECK(commit_ids.size() > 0);
   // current_commit_ will be updated to have a correct value after the first
   // Commit received in OnNewCommits or StopTransaction.
   current_commit_ = nullptr;
   current_commit_id_ = commit_ids[0];
   storage_->AddCommitWatcher(this);
-}
-
-BranchTracker::~BranchTracker() {
-  storage_->RemoveCommitWatcher(this);
+  on_done(Status::OK);
 }
 
 void BranchTracker::set_on_empty(ftl::Closure on_empty_callback) {

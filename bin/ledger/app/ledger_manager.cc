@@ -45,8 +45,7 @@ class LedgerManager::PageManagerContainer {
       return;
     }
     if (page_manager_) {
-      page_manager_->BindPage(std::move(page_request));
-      callback(status_);
+      page_manager_->BindPage(std::move(page_request), std::move(callback));
       return;
     }
     requests_.push_back(
@@ -58,13 +57,15 @@ class LedgerManager::PageManagerContainer {
   void SetPageManager(Status status,
                       std::unique_ptr<PageManager> page_manager) {
     FTL_DCHECK(!page_manager_);
-    FTL_DCHECK(status != Status::OK || page_manager);
+    FTL_DCHECK((status != Status::OK) == !page_manager);
     status_ = status;
     page_manager_ = std::move(page_manager);
     for (auto it = requests_.begin(); it != requests_.end(); ++it) {
-      if (page_manager_)
-        page_manager_->BindPage(std::move(it->first));
-      it->second(status_);
+      if (page_manager_) {
+        page_manager_->BindPage(std::move(it->first), std::move(it->second));
+      } else {
+        it->second(status_);
+      }
     }
     requests_.clear();
     if (on_empty_callback_) {
