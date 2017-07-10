@@ -93,7 +93,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 
     // Memory fence to ensure all writes to the bootstrap region are
     // visible on the APs when they come up
-    smp_wmb();
+    smp_mb();
 
     for (unsigned int i = 0; i < count; ++i) {
         uint32_t apic_id = apic_ids[i];

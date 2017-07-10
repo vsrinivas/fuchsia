@@ -31,12 +31,7 @@ static inline void arch_spinloop_signal(void)
 }
 
 #define mb()        __asm__ volatile("dsb sy" : : : "memory")
-#define rmb()       __asm__ volatile("dsb ld" : : : "memory")
-#define wmb()       __asm__ volatile("dsb st" : : : "memory")
-
 #define smp_mb()    __asm__ volatile("dmb ish" : : : "memory")
-#define smp_rmb()   __asm__ volatile("dmb ishld" : : : "memory")
-#define smp_wmb()   __asm__ volatile("dmb ishst" : : : "memory")
 
 static inline uint64_t arch_cycle_count(void)
 {

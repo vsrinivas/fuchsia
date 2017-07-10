@@ -113,7 +113,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
     /* disable interrupts so our current CPU doesn't change */
     spin_lock_saved_state_t irqstate;
     arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
-    smp_rmb();
+    smp_mb();
 
     uint local_cpu = arch_curr_cpu_num();
 

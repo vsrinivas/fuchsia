@@ -163,7 +163,7 @@ static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
         return MX_ERR_INVALID_ARGS;
     }
 
-    smp_wmb();
+    smp_mb();
 
     uint cpu = 0;
     uint cluster = 0;

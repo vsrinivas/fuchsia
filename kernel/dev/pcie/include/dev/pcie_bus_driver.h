@@ -200,7 +200,7 @@ private:
 
     bool     AdvanceState(State expected, State next);
     bool     IsNotStarted(bool allow_quirks_phase = false) const;
-    bool     IsOperational() const { smp_rmb(); return state_ == State::OPERATIONAL; }
+    bool     IsOperational() const { smp_mb(); return state_ == State::OPERATIONAL; }
 
     status_t AllocBookkeeping();
     void     ForeachRoot(ForeachRootCallback cbk, void* ctx);
