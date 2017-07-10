@@ -52,6 +52,12 @@ class AppClientBase {
   // Terminate interface, which would only be exposed to AppClient.
   void AppTerminate(const std::function<void()>& done);
 
+  // Registers a handler to receive a notification when this application
+  // connection encounters an error. This typically happens when this
+  // application stops or crashes. |error_handler| will be deregistered when
+  // attempting graceful termination via |AppTerminate|.
+  void SetAppErrorHandler(const ftl::Closure& error_handler);
+
  private:
   // Service specific parts of the termination sequence.
   virtual void ServiceTerminate(const std::function<void()>& done);

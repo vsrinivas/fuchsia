@@ -27,6 +27,7 @@ void AppClientBase::AppTerminate(const std::function<void()>& done) {
 
     *called = true;
 
+    app_.set_connection_error_handler([] {});
     app_.reset();
     services_.reset();
 
@@ -39,6 +40,10 @@ void AppClientBase::AppTerminate(const std::function<void()>& done) {
       cont, ftl::TimeDelta::FromSeconds(kAppClientTimeoutSeconds));
 
   ServiceTerminate(cont);
+}
+
+void AppClientBase::SetAppErrorHandler(const ftl::Closure& error_handler) {
+  app_.set_connection_error_handler(error_handler);
 }
 
 void AppClientBase::ServiceTerminate(const std::function<void()>& done) {}

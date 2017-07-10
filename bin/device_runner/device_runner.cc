@@ -226,6 +226,11 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
     ledger_.reset(new AppClient<ledger::LedgerRepositoryFactory>(
         app_context_->launcher().get(), std::move(ledger_config)));
+    ledger_->SetAppErrorHandler([] {
+      FTL_CHECK(false) << "Ledger seems to have crashed unexpectedly. This is "
+                       << "an un-recoverable state and machine needs to be "
+                       << "restarted. Please file a bug!";
+    });
 
     // 5. Setup user provider.
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
