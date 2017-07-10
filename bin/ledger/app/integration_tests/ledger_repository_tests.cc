@@ -62,36 +62,18 @@ class EmptyTokenProvider : public modular::auth::TokenProvider {
 // manager connection error.
 TEST_F(LedgerRepositoryIntegrationTest, ShutDownOnTokenProviderError) {
   const auto timeout = ftl::TimeDelta::FromSeconds(1);
-  files::ScopedTempDir tmp_dir;
-  Status status;
-  modular::auth::TokenProviderPtr token_provider_ptr;
-  std::unique_ptr<EmptyTokenProvider> token_provider =
-      std::make_unique<EmptyTokenProvider>(token_provider_ptr.NewRequest());
 
-  FirebaseConfigPtr firebase_config = FirebaseConfig::New();
-  firebase_config->server_id = "server-id";
-  firebase_config->api_key = "";
-
-  LedgerRepositoryPtr repository;
-  ledger_repository_factory()->GetRepository(
-      tmp_dir.path(), std::move(firebase_config), std::move(token_provider_ptr),
-      repository.NewRequest(), callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout(timeout));
-  EXPECT_EQ(Status::OK, status);
+  LedgerRepositoryPtr repository = GetTestLedgerRepository();
   bool repository_disconnected = false;
   repository.set_connection_error_handler(
       [&repository_disconnected] { repository_disconnected = true; });
 
-  LedgerPtr ledger;
-  repository->GetLedger(convert::ToArray("bla"), ledger.NewRequest(),
-                        [&status](Status s) { status = s; });
-  ASSERT_TRUE(repository.WaitForIncomingResponseWithTimeout(timeout));
-  EXPECT_EQ(Status::OK, status);
+  LedgerPtr ledger = GetTestLedger();
   bool ledger_disconnected = false;
   ledger.set_connection_error_handler(
       [&ledger_disconnected] { ledger_disconnected = true; });
 
-  token_provider.reset();
+  UnbindTokenProvider();
 
   ASSERT_FALSE(ledger.WaitForIncomingResponseWithTimeout(timeout));
   EXPECT_TRUE(ledger_disconnected);

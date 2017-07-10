@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/integration_tests/integration_test.h"
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/storage/public/types.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"

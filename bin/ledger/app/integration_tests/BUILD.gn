@@ -31,6 +31,7 @@ executable("integration_tests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",
+    "//apps/ledger/src/test/cloud_server",
     "//apps/modular/services/auth",
     "//apps/test_runner/src:gtest_main",
     "//lib/fidl/cpp/bindings",

@@ -31,14 +31,9 @@ class PageIntegrationTest : public IntegrationTest {
 
 TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
   files::ScopedTempDir tmp_dir;
-  Status status;
-  LedgerRepositoryPtr repository;
-  ledger_repository_factory()->GetRepository(
-      tmp_dir.path(), nullptr, nullptr, repository.NewRequest(),
-      callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  LedgerRepositoryPtr repository = GetTestLedgerRepository();
 
+  Status status;
   LedgerRepositoryPtr duplicated_repository;
   repository->Duplicate(duplicated_repository.NewRequest(),
                         [&status](Status s) { status = s; });

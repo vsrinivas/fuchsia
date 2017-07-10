@@ -6,15 +6,13 @@
 #define APPS_LEDGER_SRC_APP_INTEGRATION_TESTS_INTEGRATION_TEST_H_
 
 #include <functional>
+#include <thread>
 
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/erase_remote_repository_operation.h"
-#include "apps/ledger/src/app/ledger_repository_factory_impl.h"
-#include "apps/ledger/src/network/fake_network_service.h"
+#include "apps/ledger/src/test/cloud_server/fake_cloud_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {
@@ -37,6 +35,9 @@ class IntegrationTest : public test::TestWithMessageLoop {
     virtual LedgerRepositoryFactory* ledger_repository_factory() = 0;
     // Returns a default Ledger object.
     virtual Ledger* ledger() = 0;
+    // Builds and returns a new connection to the default LedgerRepository
+    // object.
+    virtual LedgerRepositoryPtr GetTestLedgerRepository() = 0;
     // Builds and returns a new connection to the default Ledger object.
     virtual LedgerPtr GetTestLedger() = 0;
     // Builds and returns a new connection to a new random page on the default
@@ -48,6 +49,8 @@ class IntegrationTest : public test::TestWithMessageLoop {
     // Deletes the given page on the default Ledger object.
     virtual void DeletePage(const fidl::Array<uint8_t>& page_id,
                             Status expected_status) = 0;
+    // Unbinds current connections to the token provider.
+    virtual void UnbindTokenProvider() = 0;
 
    private:
     FTL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
@@ -69,6 +72,10 @@ class IntegrationTest : public test::TestWithMessageLoop {
 
   Ledger* ledger() { return default_instance_->ledger(); }
 
+  LedgerRepositoryPtr GetTestLedgerRepository() {
+    return default_instance_->GetTestLedgerRepository();
+  }
+
   LedgerPtr GetTestLedger() { return default_instance_->GetTestLedger(); }
 
   PagePtr GetTestPage() { return default_instance_->GetTestPage(); }
@@ -81,11 +88,18 @@ class IntegrationTest : public test::TestWithMessageLoop {
     default_instance_->DeletePage(page_id, expected_status);
   }
 
+  void UnbindTokenProvider() { default_instance_->UnbindTokenProvider(); }
+
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance();
 
  private:
+  // Thread used to do socket IOs.
   std::thread socket_thread_;
+  // Thread used to run the network service and the token provider.
+  std::thread services_thread_;
   ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> services_task_runner_;
+  FakeCloudNetworkService network_service_;
   std::unique_ptr<LedgerAppInstance> default_instance_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);

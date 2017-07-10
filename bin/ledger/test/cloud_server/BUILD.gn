@@ -1,0 +1,35 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cloud_server") {
+  testonly = true
+
+  sources = [
+    "fake_cloud_network_service.cc",
+    "fake_cloud_network_service.h",
+    "fake_cloud_url_loader.cc",
+    "fake_cloud_url_loader.h",
+    "firebase_server.cc",
+    "firebase_server.h",
+    "gcs_server.cc",
+    "gcs_server.h",
+    "server.cc",
+    "server.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/glue/socket",
+    "//apps/network/services",
+    "//lib/fidl",
+    "//lib/ftl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/convert",
+    "//lib/url",
+    "//third_party/rapidjson",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
