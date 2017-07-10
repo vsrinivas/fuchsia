@@ -1449,7 +1449,8 @@ int utimensat(int dirfd, const char *fn,
 
     // TODO(orr): AT_SYMLINK_NOFOLLOW
     if ((flags & AT_SYMLINK_NOFOLLOW) != 0) {
-        return ERRNO(EINVAL);
+        // Allow this flag - don't return an error.  Fuchsia does not support
+        // symlinks, so don't break utilities (like tar) that use this flag.
     }
 
     if ((r = __mxio_open_at(&io, dirfd, fn, 0, 0)) < 0) {
