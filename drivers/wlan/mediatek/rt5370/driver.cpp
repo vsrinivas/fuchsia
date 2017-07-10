@@ -4,7 +4,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/common/usb.h>
+#include <driver/usb.h>
 
 #include <cstdio>
 #include <cstdint>
@@ -17,8 +17,14 @@
 extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
+    usb_protocol_t usb;
+    mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (result != MX_OK) {
+        return result;
+    }
+
     usb_desc_iter_t iter;
-    mx_status_t result = usb_desc_iter_init(device, &iter);
+    result = usb_desc_iter_init(&usb, &iter);
     if (result < 0) return result;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
@@ -46,7 +52,7 @@ extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    auto rtdev = new rt5370::Device(device, blkin_endpt, std::move(blkout_endpts));
+    auto rtdev = new rt5370::Device(device, &usb, blkin_endpt, std::move(blkout_endpts));
     auto f = std::async(std::launch::async, [rtdev]() {
                 auto status = rtdev->Bind();
                 if (status != MX_OK) {

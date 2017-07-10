@@ -8,6 +8,7 @@
 #include <ddk/iotxn.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlan.h>
+#include <driver/usb.h>
 #include <magenta/compiler.h>
 #include <mx/time.h>
 #include <mxtl/unique_ptr.h>
@@ -29,7 +30,8 @@ template <uint16_t A> class EepromField;
 
 class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
   public:
-    Device(mx_device_t* device, uint8_t bulk_in, std::vector<uint8_t>&& bulk_out);
+    Device(mx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
+           std::vector<uint8_t>&& bulk_out);
     ~Device();
 
     mx_status_t Bind();
@@ -121,6 +123,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     static void ReadIotxnComplete(iotxn_t* request, void* cookie);
     static void WriteIotxnComplete(iotxn_t* request, void* cookie);
 
+    usb_protocol_t usb_;
     mxtl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     uint8_t rx_endpt_ = 0;
