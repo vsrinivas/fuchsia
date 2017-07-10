@@ -100,8 +100,27 @@ bool test_unlink_open_elsewhere(void) {
     END_TEST;
 }
 
+bool test_remove(void) {
+    BEGIN_TEST;
+
+    const char* filename = "::file";
+    int fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(remove(filename), 0, "");
+    ASSERT_EQ(remove(filename), -1, "");
+    ASSERT_EQ(close(fd), 0, "");
+
+    const char* dirname = "::dir";
+    ASSERT_EQ(mkdir(dirname, 0666), 0, "");
+    ASSERT_EQ(remove(dirname), 0, "");
+    ASSERT_EQ(remove(dirname), -1, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(unlink_tests,
     RUN_TEST_MEDIUM(test_unlink_simple)
     RUN_TEST_MEDIUM(test_unlink_use_afterwards)
     RUN_TEST_MEDIUM(test_unlink_open_elsewhere)
+    RUN_TEST_MEDIUM(test_remove);
 )
