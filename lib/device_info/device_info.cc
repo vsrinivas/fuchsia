@@ -14,6 +14,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/random/uuid.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/strings/trim.h"
 
 namespace modular {
 
@@ -69,12 +70,21 @@ std::string LoadDeviceName(const std::string& user) {
 
   std::string path = ftl::StringPrintf(kDeviceNameFile, user.c_str());
 
-  if (!files::ReadFileToString(path, &device_name)) {
+  if (files::ReadFileToString(path, &device_name)) {
+    // Remove whitespace because vim and echo like adding a newline.
+    constexpr char ws[] = " \t\n\r";
+    device_name = ftl::TrimString(device_name, ws).ToString();
+  }
+
+  if (device_name.empty()) {
     // gethostname() will return "fuchsia" if the network stack hasn't started.
     // Generally by this point we should have used OAuth to auth. This code is
-    // just optimistically trying to get a more unique and recognizable device
-    // name when the user doesn't specify one with their device shell.
+    // designed to allow a friendly device name, or a fallback to the result
+    // of gethostname() if the user didn't change it. The friendly name is
+    // defined by users, so there appears to be no requirement for uniqueness.
     char host_name_buffer[HOST_NAME_MAX + 1];
+    // Defense in depth.
+    host_name_buffer[HOST_NAME_MAX] = '\0';
     int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
     if (result < 0) {
@@ -83,6 +93,12 @@ std::string LoadDeviceName(const std::string& user) {
     } else {
       device_name = host_name_buffer;
     }
+
+    // Saving this value causes any changes in the return value of gethostname()
+    // to be ignored, but the cached copy helps with the aforementioned problem
+    // that the network stack may not have started.
+    // TODO(jimbe) Don't write the result of gethostname() to this file once
+    // NET-79 is fixed. (Maybe write an empty file so users can find it.)
     bool success =
         files::WriteFile(path, device_name.data(), device_name.length());
     FTL_DCHECK(success);
