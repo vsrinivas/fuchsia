@@ -6,4 +6,7 @@
 
 #include <magenta/types.h>
 
+// Check if *buf* is a valid PNP or ACPI id.  *len* does not include a null byte
+bool is_pnp_acpi_id(char* buf, unsigned int len);
+
 mx_status_t begin_processing(mx_handle_t acpi_root);

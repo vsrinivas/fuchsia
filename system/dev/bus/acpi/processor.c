@@ -226,8 +226,7 @@ fail:
     return status;
 }
 
-// Check if *buf* is a valid PNP or ACPI id.  *len* does not include a null byte
-static bool is_pnp_acpi_id(char* buf, unsigned int len) {
+bool is_pnp_acpi_id(char* buf, unsigned int len) {
     if (len < 7) {
         return false;
     }

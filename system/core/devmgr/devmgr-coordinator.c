@@ -19,6 +19,7 @@
 #include <mxio/io.h>
 
 #include "acpi.h"
+
 #include "devcoordinator.h"
 #include "devmgr.h"
 #include "log.h"
@@ -198,6 +199,21 @@ static device_t misc_device = {
     .refcount = 1,
 };
 
+#if ACPI_BUS_DRV
+static mx_handle_t acpi_rpc[2] = { MX_HANDLE_INVALID, MX_HANDLE_INVALID };
+
+static device_t acpi_device = {
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV,
+    .protocol_id = MX_PROTOCOL_ACPI_BUS,
+    .name = "acpi",
+    .libname = "",
+    .args = "acpi,,",
+    .children = LIST_INITIAL_VALUE(acpi_device.children),
+    .pending = LIST_INITIAL_VALUE(acpi_device.pending),
+    .refcount = 1,
+};
+#endif
+
 static device_t platform_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV,
     .name = "platform",
@@ -256,6 +272,9 @@ static void dc_dump_device(device_t* dev, size_t indent) {
 static void dc_dump_state(void) {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
+#if ACPI_BUS_DRV
+    dc_dump_device(&acpi_device, 1);
+#endif
     if (platform_device.hrsrc != MX_HANDLE_INVALID) {
         dc_dump_device(&platform_device, 1);
     }
@@ -317,6 +336,9 @@ static void dc_dump_device_props(device_t* dev) {
 static void dc_dump_devprops(void) {
     dc_dump_device_props(&root_device);
     dc_dump_device_props(&misc_device);
+#if ACPI_BUS_DRV
+    dc_dump_device_props(&acpi_device);
+#endif
     if (platform_device.hrsrc != MX_HANDLE_INVALID) {
         dc_dump_device_props(&platform_device);
     }
@@ -519,6 +541,15 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     //TODO: limit root job access to root devhost only
     launchpad_add_handle(lp, get_sysinfo_job_root(),
                          PA_HND(PA_USER0, ID_HJOBROOT));
+
+#if ACPI_BUS_DRV
+    //TODO: pass a channel to the acpi devhost to rpc with
+    //      devcoordinator, so it can call reboot/poweroff/ps0.
+    //      come up with a better way to wire this up.
+    if (!strcmp(name, "devhost:acpi")) {
+        launchpad_add_handle(lp, acpi_rpc[1], PA_HND(PA_USER0, 10));
+    }
+#endif
 
     const char* errmsg;
     mx_status_t status = launchpad_go(lp, &host->proc, &errmsg);
@@ -1268,6 +1299,14 @@ static bool is_root_driver(driver_t* drv) {
         (memcmp(&root_device_binding, drv->binding, sizeof(root_device_binding)) == 0);
 }
 
+#if ACPI_BUS_DRV
+static bool is_acpi_bus_driver(driver_t* drv) {
+    // only our built-in acpi driver should bind as acpi bus
+    // so compare library path instead of binding program
+    return !strcmp(drv->libname, "/boot/driver/bus-acpi.so");
+}
+#endif
+
 static bool is_platform_bus_driver(driver_t* drv) {
     // only our built-in platform-bus driver should bind as platform bus
     // so compare library path instead of binding program
@@ -1310,6 +1349,13 @@ device_t* coordinator_init(mx_handle_t root_job) {
 //TODO: The acpisvc needs to become the acpi bus device
 //      For now, we launch it manually here so PCI can work
 static void acpi_init(void) {
+#if ACPI_BUS_DRV
+    mx_status_t status = mx_channel_create(0, &acpi_rpc[0], &acpi_rpc[1]);
+    if (status != MX_OK) {
+        return;
+    }
+    devhost_acpi_set_rpc(acpi_rpc[0]);
+#else
     mx_status_t status = devhost_launch_acpisvc(devhost_job);
     if (status != MX_OK) {
         return;
@@ -1319,6 +1365,7 @@ static void acpi_init(void) {
     // platform doesn't support initing PCIe via ACPI.  If the platform needed
     // it, it will fail later.
     devhost_init_pcie();
+#endif
 }
 
 void dc_bind_driver(driver_t* drv) {
@@ -1329,6 +1376,10 @@ void dc_bind_driver(driver_t* drv) {
         dc_attempt_bind(drv, &root_device);
     } else if (is_misc_driver(drv)) {
         dc_attempt_bind(drv, &misc_device);
+#if ACPI_BUS_DRV
+    } else if (is_acpi_bus_driver(drv)) {
+        dc_attempt_bind(drv, &acpi_device);
+#endif
     } else if (is_platform_bus_driver(drv) &&
                (platform_device.hrsrc != MX_HANDLE_INVALID)) {
         dc_attempt_bind(drv, &platform_device);
@@ -1396,6 +1447,9 @@ void coordinator(void) {
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &socket_device);
+#if ACPI_BUS_DRV
+    devfs_publish(&root_device, &acpi_device);
+#endif
     if (platform_device.hrsrc != MX_HANDLE_INVALID) {
         devfs_publish(&root_device, &platform_device);
     }

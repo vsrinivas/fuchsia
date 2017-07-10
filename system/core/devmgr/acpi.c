@@ -22,6 +22,8 @@
 
 static acpi_handle_t acpi_root;
 
+#if !ACPI_BUS_DRV
+
 mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle) {
     const char* binname = "/boot/bin/acpisvc";
 
@@ -101,6 +103,12 @@ mx_status_t devhost_init_pcie(void) {
     return status;
 }
 
+#endif
+
+void devhost_acpi_set_rpc(mx_handle_t handle) {
+    acpi_handle_init(&acpi_root, handle);
+}
+
 void devhost_acpi_poweroff(void) {
     acpi_s_state_transition(&acpi_root, ACPI_S_STATE_S5);
     mx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
@@ -115,6 +123,3 @@ void devhost_acpi_ps0(char* arg) {
     acpi_ps0(&acpi_root, arg, strlen(arg));
 }
 
-mx_handle_t devhost_acpi_clone(void) {
-    return acpi_clone_handle(&acpi_root);
-}

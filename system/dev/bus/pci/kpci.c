@@ -160,5 +160,9 @@ static mx_driver_ops_t kpci_driver_ops = {
 };
 
 MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 1)
+#if ACPI_BUS_DRV
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
+#else
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
+#endif
 MAGENTA_DRIVER_END(pci)

@@ -6,10 +6,15 @@
 
 #include <magenta/types.h>
 
+#if !ACPI_BUS_DRV
+
 mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle);
 mx_status_t devhost_init_pcie(void);
+
+#endif
+
+void devhost_acpi_set_rpc(mx_handle_t handle);
 
 void devhost_acpi_reboot(void);
 void devhost_acpi_poweroff(void);
 void devhost_acpi_ps0(char* arg);
-mx_handle_t devhost_acpi_clone(void);
