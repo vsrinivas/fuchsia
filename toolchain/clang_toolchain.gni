@@ -5,14 +5,50 @@
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 
+declare_args() {
+  # Run the strip tool on libraries and binaries
+  use_strip = true
+}
+
+if (host_cpu == "arm64") {
+  _clang_cpu = "aarch64"
+} else if (host_cpu == "x64") {
+  _clang_cpu = "x86_64"
+} else {
+  assert(false, "Host CPU not supported")
+}
+
+if (host_os == "linux") {
+  _clang_os = "linux"
+} else if (host_os == "mac") {
+  _clang_os = "darwin"
+} else {
+  assert(false, "Host OS not supported")
+}
+
+_clang_name = "clang+llvm-$_clang_cpu-$_clang_os"
+_clang_path = "//buildtools/toolchain/$_clang_name"
+
+declare_args() {
+  # The default clang toolchain provided by the buildtools. This variable is
+  # additionally consumed by the go toolchain.
+  clang_prefix = rebase_path("$_clang_path/bin", root_build_dir)
+}
+
 # Defines a clang-based toolchain
 #
 # Parameters
+#
+#   prefix
+#     If given the path from which "cc", "cxx", "ar", "ld" and "strip" will be
+#     found (unless overridden).
+#     If not given, prefix defaults to $clang_prefix.
 #
 #   cc
 #   cxx
 #   ar
 #   ld
+#   strip
 #
 #   toolchain_cpu
 #     What "current_cpu" should be set to when invoking a build
@@ -22,23 +58,14 @@ import("//build/toolchain/goma.gni")
 #     What "current_os" should be set to when invoking a
 #     build using this toolchain.
 #
-#   strip
-#     The strip executable which will be run on all shared libraries and
-#     executables as they're built.
-#
 #   use_goma
 #     Override the global use_goma setting, useful to opt-out of goma in a
-#     particular toolchain by setting use_gome = false in it.
+#     particular toolchain by setting use_goma = false in it.
 #
 #   deps
 #     Dependencies of this toolchain.
 template("clang_toolchain") {
   toolchain(target_name) {
-    assert(defined(invoker.cc), "clang_toolchain() must specify a \"cc\" value")
-    assert(defined(invoker.cxx),
-           "clang_toolchain() must specify a \"cxx\" value")
-    assert(defined(invoker.ar), "clang_toolchain() must specify a \"ar\" value")
-    assert(defined(invoker.ld), "clang_toolchain() must specify a \"ld\" value")
     assert(defined(invoker.toolchain_cpu),
            "clang_toolchain() must specify a \"toolchain_cpu\"")
     assert(defined(invoker.toolchain_os),
@@ -55,13 +82,34 @@ template("clang_toolchain") {
       compiler_prefix = ""
     }
 
-    cc = compiler_prefix + invoker.cc
-    cxx = compiler_prefix + invoker.cxx
+    prefix = clang_prefix
+    if (defined(invoker.prefix)) {
+      prefix = invoker.prefix
+    }
+
+    # Set all tools to defaults
+    cc = compiler_prefix + "${prefix}/clang"
+    cxx = compiler_prefix + "${prefix}/clang++"
+    ar = "${prefix}/llvm-ar"
+    ld = cxx
+    if (use_strip) {
+      clang_strip = "${prefix}/strip"
+      strip = clang_strip
+    }
+
+    # Override any tools as requested by the invoker
+    if (defined(invoker.cc)) {
+      cc = compiler_prefix + invoker.cc
+    }
+    if (defined(invoker.cxx)) {
+      cxx = compiler_prefix + invoker.cxx
+    }
     forward_variables_from(invoker,
                            [
                              "ar",
                              "deps",
                              "ld",
+                             "strip",
                            ])
 
     # These library switches can apply to all tools below.
@@ -136,7 +184,7 @@ template("clang_toolchain") {
       outfile = "{{output_dir}}/$outname"
       rspfile = "$outfile.rsp"
       unstripped_outfile = outfile
-      if (defined(invoker.strip)) {
+      if (use_strip) {
         unstripped_outfile = "{{root_out_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
@@ -148,9 +196,9 @@ template("clang_toolchain") {
         rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
         default_output_extension = ".so"
       }
-      if (defined(invoker.strip)) {
+      if (use_strip) {
         command +=
-            " && ${invoker.strip} -s -o \"$outfile\" \"$unstripped_outfile\""
+            " && $strip -s -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -167,7 +215,7 @@ template("clang_toolchain") {
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       rspfile = "$outfile.rsp"
-      if (defined(invoker.strip)) {
+      if (use_strip) {
         unstripped_outfile = "{{root_out_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
       } else {
         unstripped_outfile = outfile
@@ -181,9 +229,9 @@ template("clang_toolchain") {
         rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
         default_output_extension = ".so"
       }
-      if (defined(invoker.strip)) {
+      if (use_strip) {
         command +=
-            " && ${invoker.strip} -s -o \"$outfile\" \"$unstripped_outfile\""
+            " && $strip -s -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -199,7 +247,7 @@ template("clang_toolchain") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       rspfile = "$outfile.rsp"
       unstripped_outfile = outfile
-      if (defined(invoker.strip)) {
+      if (use_strip) {
         unstripped_outfile = "{{root_out_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
@@ -209,9 +257,9 @@ template("clang_toolchain") {
         command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
         rspfile_content = "{{inputs}}"
       }
-      if (defined(invoker.strip)) {
+      if (use_strip) {
         command +=
-            " && ${invoker.strip} -s -o \"$outfile\" \"$unstripped_outfile\""
+            " && $strip -s -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "LINK $outfile"
       default_output_dir = "{{root_out_dir}}"
