@@ -50,8 +50,8 @@ vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
 
 void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
     InstanceParams* params) {
-  params->AddExtensionName(VK_KHR_SURFACE_EXTENSION_NAME);
-  params->AddExtensionName(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME);
+  params->extension_names.insert(VK_KHR_SURFACE_EXTENSION_NAME);
+  params->extension_names.insert(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME);
 }
 
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}
