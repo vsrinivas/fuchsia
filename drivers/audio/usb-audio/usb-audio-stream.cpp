@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <magenta/device/audio2.h>
 #include <magenta/device/usb.h>
@@ -39,11 +38,12 @@ UsbAudioStream::~UsbAudioStream() {
 // static
 mx_status_t UsbAudioStream::Create(bool is_input,
                                    mx_device_t* parent,
+                                   usb_protocol_t* usb,
                                    int index,
                                    usb_interface_descriptor_t* usb_interface,
                                    usb_endpoint_descriptor_t* usb_endpoint,
                                    usb_audio_ac_format_type_i_desc* format_desc) {
-    auto stream = mxtl::AdoptRef(new UsbAudioStream(parent, is_input));
+    auto stream = mxtl::AdoptRef(new UsbAudioStream(parent, usb, is_input));
     char name[64];
     snprintf(name, sizeof(name), "usb-audio-%s-%03d", is_input ? "input" : "output", index);
 
@@ -485,7 +485,7 @@ mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
     // channel count.  Right now, we only support the one format/count provided
     // to us by the outer layer, but eventually we need to support them all.
     MX_DEBUG_ASSERT(parent_ != nullptr);
-    resp.result = usb_audio_set_sample_rate(parent_, usb_ep_addr_, req.frames_per_second);
+    resp.result = usb_audio_set_sample_rate(&usb_, usb_ep_addr_, req.frames_per_second);
     if (resp.result != MX_OK) goto finished;
 
     // Create a new ring buffer channel which can be used to move bulk data and
@@ -677,7 +677,7 @@ mx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
 
     // switch to alternate interface if necessary
     if (alt_setting_ != 0) {
-        usb_set_interface(parent_, iface_num_, alt_setting_);
+        usb_set_interface(&usb_, iface_num_, alt_setting_);
     }
 
     // Initialize the counters used to...
@@ -709,7 +709,7 @@ mx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
     if ((resp.result != MX_OK) || (read_amt != sizeof(usb_frame_num_))) {
         LOG("Failed to fetch USB frame number!  (res %d, amt %zu)\n", resp.result, read_amt);
         if (alt_setting_ != 0) {
-            usb_set_interface(parent_, iface_num_, 0);
+            usb_set_interface(&usb_, iface_num_, 0);
         }
         return channel->Write(&resp, sizeof(resp));
     }
@@ -967,9 +967,9 @@ void UsbAudioStream::NotifyChannelDeactivated(const DispatcherChannel& channel) 
 }  // namespace audio
 
 extern "C"
-mx_status_t usb_audio_sink_create(mx_device_t* device, int index,
+mx_status_t usb_audio_sink_create(mx_device_t* device, usb_protocol_t* usb, int index,
                                   usb_interface_descriptor_t* intf,
                                   usb_endpoint_descriptor_t* ep,
                                   usb_audio_ac_format_type_i_desc* format_desc) {
-    return audio::usb::UsbAudioStream::Create(false, device, index, intf, ep, format_desc);
+    return audio::usb::UsbAudioStream::Create(false, device, usb, index, intf, ep, format_desc);
 }

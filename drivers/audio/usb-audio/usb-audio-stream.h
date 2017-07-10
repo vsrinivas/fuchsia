@@ -6,6 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
+#include <driver/usb.h>
 #include <magenta/listnode.h>
 #include <mx/vmo.h>
 #include <mxtl/mutex.h>
@@ -35,6 +36,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
 public:
     static mx_status_t Create(bool is_input,
                               mx_device_t* parent,
+                              usb_protocol_t* usb,
                               int index,
                               usb_interface_descriptor_t* usb_interface,
                               usb_endpoint_descriptor_t* usb_endpoint,
@@ -66,9 +68,10 @@ private:
         STARTED,
     };
 
-    UsbAudioStream(mx_device_t* parent, bool is_input)
+    UsbAudioStream(mx_device_t* parent, usb_protocol_t* usb, bool is_input)
         : UsbAudioStreamBase(parent),
           AudioStreamProtocol(is_input),
+          usb_(*usb),
           create_time_(mx_time_get(MX_CLOCK_MONOTONIC)) { }
 
     virtual ~UsbAudioStream();
@@ -108,6 +111,7 @@ private:
     void IotxnComplete(iotxn_t* txn);
     void QueueIotxnLocked() __TA_REQUIRES(txn_lock_);
 
+    usb_protocol_t                  usb_;
     mxtl::Mutex lock_;
     mxtl::Mutex txn_lock_ __TA_ACQUIRED_AFTER(lock_);
 

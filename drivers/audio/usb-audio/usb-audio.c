@@ -5,7 +5,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/common/usb.h>
 #include <magenta/hw/usb-audio.h>
 #include <magenta/listnode.h>
 
@@ -27,7 +26,7 @@
     } while (0)
 #endif
 
-extern mx_status_t usb_audio_sink_create(mx_device_t* device, int index,
+extern mx_status_t usb_audio_sink_create(mx_device_t* device, usb_protocol_t* usb, int index,
                                          usb_interface_descriptor_t* intf,
                                          usb_endpoint_descriptor_t* ep,
                                          usb_audio_ac_format_type_i_desc* format_desc);
@@ -40,9 +39,15 @@ typedef struct {
 } feature_unit_node_t;
 
 static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie) {
+    usb_protocol_t usb;
+    mx_status_t status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (status != MX_OK) {
+        return status;
+    }
+
     // find our endpoints
     usb_desc_iter_t iter;
-    mx_status_t status = usb_desc_iter_init(device, &iter);
+    status = usb_desc_iter_init(&usb, &iter);
     if (status < 0) return status;
     int audio_sink_index = 0;
     int audio_source_index = 0;
@@ -94,10 +99,10 @@ static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie)
                     if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_ISOCHRONOUS) {
                         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-                            usb_audio_sink_create(device, audio_sink_index++, intf, endp,
+                            usb_audio_sink_create(device, &usb, audio_sink_index++, intf, endp,
                                                   format_desc);
                         } else {
-                             usb_audio_source_create(device, audio_source_index++, intf, endp,
+                             usb_audio_source_create(device, &usb, audio_source_index++, intf, endp,
                                                      format_desc);
                         }
                         // this is a quick and dirty hack to set volume to 75%
@@ -106,14 +111,14 @@ static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie)
                         feature_unit_node_t* fu_node;
                         list_for_every_entry(&fu_descs, fu_node, feature_unit_node_t, node) {
                             // this may fail, but we are taking shotgun approach here
-                            usb_audio_set_volume(device, intf->bInterfaceNumber, fu_node->desc->bUnitID, 75);
+                            usb_audio_set_volume(&usb, intf->bInterfaceNumber, fu_node->desc->bUnitID, 75);
                         }
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-                           usb_midi_sink_create(device, midi_sink_index++, intf, endp);
+                           usb_midi_sink_create(device, &usb, midi_sink_index++, intf, endp);
                         } else {
-                           usb_midi_source_create(device, midi_source_index++, intf, endp);
+                           usb_midi_source_create(device, &usb, midi_source_index++, intf, endp);
                         }
                     }
                 }
