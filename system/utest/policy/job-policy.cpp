@@ -248,8 +248,6 @@ static bool get_koid(mx_handle_t handle, mx_koid_t* koid) {
 
 #if defined(__x86_64__)
 
-#define ARCH_ID ARCH_ID_X86_64
-
 typedef struct mx_x86_64_general_regs mx_general_regs_t;
 
 static uint64_t get_syscall_result(mx_general_regs_t* regs) {
@@ -257,8 +255,6 @@ static uint64_t get_syscall_result(mx_general_regs_t* regs) {
 }
 
 #elif defined(__aarch64__)
-
-#define ARCH_ID ARCH_ID_ARM_64
 
 typedef struct mx_arm64_general_regs mx_general_regs_t;
 
