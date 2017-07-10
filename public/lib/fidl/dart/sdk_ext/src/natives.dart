@@ -22,7 +22,7 @@ class MxHandle {
 }
 
 /// A wrapper for an mx_Handle_t.
-/// 
+///
 /// A Handle object registers a finalizer for its underlying mx_handle_t that
 /// closes the mx_handle_t when the Handle is garbage collected.
 class Handle extends NativeFieldWrapperClass2 {
@@ -53,7 +53,7 @@ class Handle extends NativeFieldWrapperClass2 {
   }
 
   /// Returns the underlying mx_handle_t and sets [h] to MX_HANDLE_INVALID.
-  /// 
+  ///
   /// This function removes the finalizer for the underlying handle. It is the
   /// callee's responsibility to close the returned handle.
   int release() {
@@ -86,6 +86,10 @@ class MxChannel {
 
   static void queryAndRead(int handleToken, int flags, List result)
       native "MxChannel_QueryAndRead";
+}
+
+class MxEventpair {
+  static List create(int flags) native "MxEventpair_Create";
 }
 
 class MxSocket {

@@ -48,6 +48,7 @@ struct HandlePeer {
   V(MxChannel_Write, 5)            \
   V(MxChannel_Read, 5)             \
   V(MxChannel_QueryAndRead, 3)     \
+  V(MxEventpair_Create, 1)         \
   V(MxSocket_Create, 1)            \
   V(MxSocket_Write, 5)             \
   V(MxSocket_Read, 5)              \
@@ -109,7 +110,8 @@ static void SetNullReturn(Dart_NativeArguments arguments) {
 }
 
 static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(MX_ERR_INVALID_ARGS));
+  Dart_SetIntegerReturnValue(arguments,
+                             static_cast<int64_t>(MX_ERR_INVALID_ARGS));
 }
 
 #define CHECK_INTEGER_ARGUMENT(args, num, result, failure)       \
@@ -450,9 +452,9 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
     FTL_DCHECK(!Dart_IsError(err));
   }
 
-  rv = mx_channel_read(
-      static_cast<mx_handle_t>(dart_handle), options, bytes,
-      reinterpret_cast<mx_handle_t*>(handle_bytes), blen, hlen, &blen, &hlen);
+  rv = mx_channel_read(static_cast<mx_handle_t>(dart_handle), options, bytes,
+                       reinterpret_cast<mx_handle_t*>(handle_bytes), blen, hlen,
+                       &blen, &hlen);
 
   if (blen > 0) {
     err = Dart_TypedDataReleaseData(data);
@@ -469,6 +471,21 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   Dart_ListSetAt(result, 2, dart_handles);
   Dart_ListSetAt(result, 3, Dart_NewInteger(blen));
   Dart_ListSetAt(result, 4, Dart_NewInteger(hlen));
+}
+
+void MxEventpair_Create(Dart_NativeArguments arguments) {
+  int64_t options = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &options, Null);
+
+  mx_handle_t end1 = MX_HANDLE_INVALID;
+  mx_handle_t end2 = MX_HANDLE_INVALID;
+  mx_status_t rv = mx_eventpair_create(options, &end1, &end2);
+
+  Dart_Handle list = Dart_NewList(3);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(end1));
+  Dart_ListSetAt(list, 2, Dart_NewInteger(end2));
+  Dart_SetReturnValue(arguments, list);
 }
 
 void MxSocket_Create(Dart_NativeArguments arguments) {
@@ -524,9 +541,8 @@ void MxSocket_Write(Dart_NativeArguments arguments) {
   }
   bytes = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + offset);
 
-  mx_status_t rv = mx_socket_write(
-      static_cast<mx_handle_t>(handle), options, const_cast<const void*>(bytes),
-      blen, &blen);
+  mx_status_t rv = mx_socket_write(static_cast<mx_handle_t>(handle), options,
+                                   const_cast<const void*>(bytes), blen, &blen);
 
   // Release the data.
   if (!Dart_IsNull(typed_data)) {
@@ -577,8 +593,8 @@ void MxSocket_Read(Dart_NativeArguments arguments) {
   }
   bytes = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + offset);
 
-  mx_status_t rv = mx_socket_read(
-      static_cast<mx_handle_t>(handle), options, bytes, blen, &blen);
+  mx_status_t rv = mx_socket_read(static_cast<mx_handle_t>(handle), options,
+                                  bytes, blen, &blen);
 
   // Release the data.
   if (!Dart_IsNull(typed_data)) {
@@ -730,7 +746,6 @@ void MxVmo_Read(Dart_NativeArguments arguments) {
   }
   size_t blen = static_cast<size_t>(num_bytes);
 
-
   // Grab the data if there is any.
   Dart_TypedData_Type typ;
   void* bytes = nullptr;
@@ -741,8 +756,8 @@ void MxVmo_Read(Dart_NativeArguments arguments) {
   bytes =
       reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + data_offset);
 
-  mx_status_t rv = mx_vmo_read(
-      static_cast<mx_handle_t>(handle), bytes, vmo_offset, blen, &blen);
+  mx_status_t rv = mx_vmo_read(static_cast<mx_handle_t>(handle), bytes,
+                               vmo_offset, blen, &blen);
 
   // Release the data.
   if (!Dart_IsNull(typed_data)) {

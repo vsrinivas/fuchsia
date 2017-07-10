@@ -12,6 +12,7 @@ export 'dart:fidl.internal' show Handle;
 
 part 'src/core/channel.dart';
 part 'src/core/channel_reader.dart';
+part 'src/core/eventpair.dart';
 part 'src/core/socket.dart';
 part 'src/core/socket_reader.dart';
 part 'src/core/vmo.dart';
