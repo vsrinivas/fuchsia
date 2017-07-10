@@ -12,6 +12,9 @@
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
+#include "apps/test_runner/lib/reporting/gtest_listener.h"
+#include "apps/test_runner/lib/reporting/reporter.h"
+#include "apps/test_runner/lib/reporting/results_queue.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/ftl/files/file.h"
@@ -164,6 +167,8 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
       loop_, [deletion_sentinel_path, &repo_disconnected] {
         return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
       });
+  EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
+  EXPECT_TRUE(repo_disconnected);
   EXPECT_TRUE(cleared);
 
   // Verify that the Ledger app didn't crash.
@@ -174,11 +179,20 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
 }  // namespace ledger
 
 int main(int argc, char** argv) {
+  test_runner::ResultsQueue queue;
+  test_runner::Reporter reporter(argv[0], &queue);
+  test_runner::GTestListener listener(argv[0], &queue);
+
   mtl::MessageLoop loop;
   ledger::loop_ = &loop;
   std::unique_ptr<app::ApplicationContext> context =
       app::ApplicationContext::CreateFromStartupInfo();
   ledger::context_ = context.get();
+  reporter.Start(context.get());
+
   testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  testing::UnitTest::GetInstance()->listeners().Append(&listener);
+  int status = RUN_ALL_TESTS();
+  testing::UnitTest::GetInstance()->listeners().Release(&listener);
+  return status;
 }
