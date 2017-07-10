@@ -30,4 +30,5 @@
 #define PIC2_DATA_PORT              0xa1
 
 /* PIT ports. */
+#define I8253_CHANNEL_0             0x40
 #define I8253_CONTROL_PORT          0x43

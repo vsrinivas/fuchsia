@@ -249,6 +249,7 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     switch (port_out->port) {
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
+    case I8253_CHANNEL_0:
     case I8253_CONTROL_PORT:
     case I8042_DATA_PORT:
     case UART_RECEIVE_IO_PORT + 1 ... UART_LINE_CONTROL_IO_PORT - 1:
