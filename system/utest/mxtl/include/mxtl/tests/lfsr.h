@@ -9,7 +9,6 @@
 
 namespace mxtl {
 namespace tests {
-namespace intrusive_containers {
 
 namespace internal {
 
@@ -96,6 +95,5 @@ MAKE_LFSR(64, 0xD800000000000000);
 
 #undef MAKE_LFSR
 
-}  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace mxtl
