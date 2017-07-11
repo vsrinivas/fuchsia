@@ -24,12 +24,7 @@ func (echo *EchoImpl) EchoString(inValue *string) (outValue *string, err error) 
 }
 
 type EchoDelegate struct {
-	ctx *context.Context
 	stubs []*bindings.Stub
-}
-
-func NewEchoDelegate() *EchoDelegate {
-	return &EchoDelegate{ctx: context.CreateFromStartupInfo()}
 }
 
 func (delegate *EchoDelegate) Create(request echo.Echo_Request) {
@@ -54,16 +49,10 @@ func (delegate *EchoDelegate) Quit() {
 }
 
 func main() {
-	delegate := NewEchoDelegate()
-	delegate.ctx.OutgoingService.AddService(&echo.Echo_ServiceFactory{delegate})
+	ctx := context.CreateFromStartupInfo()
+	ctx.OutgoingService.AddService(
+		&echo.Echo_ServiceFactory{&EchoDelegate{}})
+	ctx.Serve()
 
-	stub := delegate.ctx.OutgoingServiceStub
-	for {
-		if err := stub.ServeRequest(); err != nil {
-			if mxerror.Status(err) != mx.ErrPeerClosed {
-				log.Println(err)
-			}
-			break
-		}
-	}
+	select {}
 }
