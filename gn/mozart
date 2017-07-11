@@ -12,6 +12,8 @@
     ],
     "packages": {
         "mozart": "//apps/mozart",
+        "basic_wm": "//apps/mozart:basic_wm",
+        "hello_material": "//apps/mozart:hello_material",
         "shapes_view": "//apps/mozart:shapes_view",
         "noodles_view": "//apps/mozart:noodles_view",
         "compositor_service": "//apps/mozart:compositor_service",
