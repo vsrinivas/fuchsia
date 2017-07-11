@@ -76,6 +76,7 @@ typedef void (*dma_cb_t)(void* arg);
 typedef struct bcm_dma {
     uint32_t ch_num;
     io_buffer_t ctl_blks;
+    io_buffer_t regs_buffer;
     bcm_dma_state_t state;
     mtx_t dma_lock;
     bcm_dma_vmo_index_t* mem_idx;

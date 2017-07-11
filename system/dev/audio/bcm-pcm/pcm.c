@@ -13,6 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/platform-device.h>
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
@@ -51,6 +52,10 @@
 
 #define DMA_CHAN 11
 #define PCM_TRACE 0
+
+#define CLOCK_MMIO  0
+#define GPIO_MMIO   1
+
 // clang-format on
 
 typedef union {
@@ -63,7 +68,7 @@ typedef union {
 } buffer_packet_t;
 
 typedef struct {
-
+   platform_device_protocol_t pdev;
     mx_device_t* mxdev;
     mx_device_t* parent;
     bcm_pcm_regs_t* control_regs;
@@ -662,22 +667,23 @@ static int pcm_bootstrap_thread(void* arg) {
     bcm_pcm_t* pcm_ctx = (bcm_pcm_t*)arg;
 
     // Carve out some address space for the clock control registers
-    mx_status_t status = mx_mmap_device_memory(
-        get_root_resource(),
-        BCM_CM_BASE, 0x1000,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&pcm_ctx->clock_regs);
-
-    if (status != MX_OK)
+    void* mmio_base;
+    size_t mmio_size;
+    mx_handle_t mmio_handle;
+    mx_status_t status = pdev_map_mmio(&pcm_ctx->pdev, CLOCK_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &mmio_base, &mmio_size, &mmio_handle);
+    if (status != MX_OK) {
         goto pcm_err;
+    }
+    pcm_ctx->clock_regs = mmio_base;
 
     // Carve out some address space for the device -- it's memory mapped.
-    status = mx_mmap_device_memory(
-        get_root_resource(),
-        GPIO_BASE, 0x1000,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&pcm_ctx->gpio_regs);
-
-    if (status != MX_OK)
+    status = pdev_map_mmio(&pcm_ctx->pdev, GPIO_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                           &mmio_base, &mmio_size, &mmio_handle);
+    if (status != MX_OK) {
         goto pcm_err;
+    }
+    pcm_ctx->gpio_regs = mmio_base;
 
     /* ALT Function 0 is PCM for these pins */
     set_gpio_function(pcm_ctx->gpio_regs, BCM_PCM_CLK_ALT0_PIN, FSEL_ALT0);
@@ -685,13 +691,12 @@ static int pcm_bootstrap_thread(void* arg) {
     set_gpio_function(pcm_ctx->gpio_regs, BCM_PCM_DIN_ALT0_PIN, FSEL_ALT0);
     set_gpio_function(pcm_ctx->gpio_regs, BCM_PCM_DOUT_ALT0_PIN, FSEL_ALT0);
 
-    status = mx_mmap_device_memory(
-        get_root_resource(),
-        I2S_BASE, 0x1000,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&pcm_ctx->control_regs);
-
-    if (status != MX_OK)
+     status = pdev_map_mmio(&pcm_ctx->pdev, 2, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                           &mmio_base, &mmio_size, &mmio_handle);
+    if (status != MX_OK) {
         goto pcm_err;
+    }
+    pcm_ctx->control_regs = mmio_base;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -716,12 +721,16 @@ pcm_err:
 }
 
 static mx_status_t bcm_pcm_bind(void* ctx, mx_device_t* parent, void** cookie) {
-
     bcm_pcm_t* pcm_ctx = calloc(1, sizeof(*pcm_ctx));
     if (!pcm_ctx)
         return MX_ERR_NO_MEMORY;
 
     pcm_ctx->parent = parent;
+    mx_status_t status = device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pcm_ctx->pdev);
+    if (status !=  MX_OK) {
+        free(pcm_ctx);
+        return status;
+    }
 
     thrd_t bootstrap_thrd;
     int thrd_rc = thrd_create_with_name(&bootstrap_thrd,

@@ -13,6 +13,7 @@
 // DDK includes
 #include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
@@ -27,11 +28,16 @@
 #include <bcm/ioctl.h>
 #include "bcm28xx/usb_dwc_regs.h"
 
+#include <magenta/process.h>
+
 #define NUM_HOST_CHANNELS 8
 #define PAGE_MASK_4K (0xFFF)
 #define USB_PAGE_START (USB_BASE & (~PAGE_MASK_4K))
 #define USB_PAGE_SIZE (0x1000)
 #define PAGE_REG_DELTA (USB_BASE - USB_PAGE_START)
+
+#define MMIO_INDEX  0
+#define IRQ_INDEX   0
 
 // This is how many free requests we'll hang onto in our free request cache.
 #define FREE_REQ_CACHE_THRESHOLD 1024
@@ -39,7 +45,7 @@
 #define MAX_DEVICE_COUNT 65
 #define ROOT_HUB_DEVICE_ID (MAX_DEVICE_COUNT - 1)
 
-static volatile struct dwc_regs* regs;
+static volatile struct dwc_regs* regs = NULL;
 
 #define TRACE 0
 #include "bcm-usb-dwc-debug.h"
@@ -1697,8 +1703,12 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     xprintf("usb_dwc_bind dev = %p\n", dev);
 
     dwc_usb_t* usb_dwc = NULL;
-    mx_handle_t irq_handle = MX_HANDLE_INVALID;
-    mx_status_t st = MX_ERR_INTERNAL;
+
+    platform_device_protocol_t proto;
+    mx_status_t st = device_get_protocol(dev, MX_PROTOCOL_PLATFORM_DEV, &proto);
+    if (st != MX_OK) {
+        return st;
+    }
 
     // Allocate a new device object for the bus.
     usb_dwc = calloc(1, sizeof(*usb_dwc));
@@ -1713,24 +1723,22 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     usb_dwc->DBG_reqid = 0x1;
 
     // Carve out some address space for this device.
-    st = mx_mmap_device_memory(
-        get_root_resource(), USB_PAGE_START, (uint32_t)USB_PAGE_SIZE,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)(&regs));
+    size_t mmio_size;
+    mx_handle_t mmio_handle = MX_HANDLE_INVALID;
+    st = pdev_map_mmio(&proto, MMIO_INDEX, MX_CACHE_POLICY_UNCACHED_DEVICE, (void **)&regs,
+                       &mmio_size, &mmio_handle);
     if (st != MX_OK) {
-        xprintf("usb_dwc_bind failed to mx_mmap_device_memory.\n");
+        xprintf("usb_dwc_bind failed to pdev_map_mmio.\n");
         goto error_return;
     }
 
     // Create an IRQ Handle for this device.
-    irq_handle = mx_interrupt_create(get_root_resource(), INTERRUPT_VC_USB,
-                                     MX_FLAG_REMAP_IRQ);
-    if (irq_handle < 0) {
+    st = pdev_map_interrupt(&proto, IRQ_INDEX, &usb_dwc->irq_handle);
+    if (st != MX_OK) {
         xprintf("usb_dwc_bind failed to map usb irq.\n");
-        st = MX_ERR_NO_RESOURCES;
         goto error_return;
     }
 
-    usb_dwc->irq_handle = irq_handle;
     usb_dwc->parent = dev;
     list_initialize(&usb_dwc->rh_txn_head);
 
@@ -1797,8 +1805,14 @@ static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
     return MX_OK;
 
 error_return:
-    if (usb_dwc)
+    if (regs) {
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)regs, mmio_size);
+    }
+    mx_handle_close(mmio_handle);
+    if (usb_dwc) {
+        mx_handle_close(usb_dwc->irq_handle);
         free(usb_dwc);
+    }
 
     return st;
 }

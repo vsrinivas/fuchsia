@@ -35,6 +35,8 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdhci.h>
 
+#include <magenta/process.h>
+
 // BCM28xx Specific Includes
 #include <bcm/bcm28xx.h>
 #include <bcm/ioctl.h>
@@ -53,21 +55,43 @@
 #define SDMMC_PAGE_START (EMMC_BASE & (~PAGE_MASK_4K))
 #define SDMMC_PAGE_SIZE (0x1000)
 
+#define MMIO_INDEX  0
+#define IRQ_INDEX   0
+
+
 typedef struct emmc {
     mx_device_t* mxdev;
     mx_device_t* parent;
    platform_device_protocol_t pdev;
+   void* mmio_base;
+   size_t mmio_size;
+   mx_handle_t mmio_handle;
 } emmc_t;
 
 static mx_handle_t emmc_sdhci_get_interrupt(void* ctx) {
-    return mx_interrupt_create(get_root_resource(), INTERRUPT_VC_ARASANSDIO, MX_FLAG_REMAP_IRQ);
+    emmc_t* emmc = ctx;
+
+    mx_handle_t handle;
+    if (pdev_map_interrupt(&emmc->pdev, IRQ_INDEX, &handle) == MX_OK) {
+        return handle;
+    } else {
+        return MX_HANDLE_INVALID;
+    }
 }
 
 static mx_status_t emmc_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
-    return mx_mmap_device_memory(get_root_resource(), SDMMC_PAGE_START,
-                                (uint32_t)SDMMC_PAGE_SIZE,
-                                MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                (uintptr_t*)(out));
+    emmc_t* emmc = ctx;
+
+    if (!emmc->mmio_base) {
+        mx_status_t status = pdev_map_mmio(&emmc->pdev, MMIO_INDEX, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                           &emmc->mmio_base, &emmc->mmio_size, &emmc->mmio_handle);
+        if (status != MX_OK) {
+            return status;
+        }
+    }
+
+    *out = emmc->mmio_base;
+    return MX_OK;
 }
 
 static uint32_t emmc_sdhci_get_base_clock(void* ctx) {
@@ -111,6 +135,11 @@ static void emmc_unbind(void* ctx) {
 
 static void emmc_release(void* ctx) {
     emmc_t* emmc = ctx;
+
+    if (emmc->mmio_base) {
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)emmc->mmio_base, emmc->mmio_size);
+        mx_handle_close(emmc->mmio_handle);
+    }
     free(emmc);
 }
 

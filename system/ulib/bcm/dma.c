@@ -85,15 +85,14 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
     }
 
     if (dma_regs == NULL) {
-        status = mx_mmap_device_memory(
-            get_root_resource(),
-            DMA_BASE, BCM_DMA_PAGE_SIZE,
-            MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&dma_regs);
-
+        status = io_buffer_init_physical(&dma->regs_buffer, DMA_BASE, BCM_DMA_PAGE_SIZE,
+            get_root_resource(), MX_CACHE_POLICY_UNCACHED_DEVICE);
         if (status != MX_OK) {
             goto dma_init_err;
         }
+        dma_regs = io_buffer_virt(&dma->regs_buffer);
     }
+
     xprintf("Initializing control block buffers\n");
     // pre-init the control block buffer
     status = io_buffer_init(&dma->ctl_blks,

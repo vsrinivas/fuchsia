@@ -11,6 +11,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/platform-device.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/threads.h>
@@ -25,11 +26,13 @@
 #define BCM_MAX_SEGMENTS 20
 #define BCM_FIFO_DEADLINE_MS 100
 
-typedef struct {
-    mx_device_t*        parent;
-    bcm_i2c_regs_t*     control_regs;
-    uint32_t            dev_id;
+#define GPIO_MMIO   0
 
+typedef struct {
+    mx_device_t*                parent;
+    platform_device_protocol_t  pdev_proto;
+    bcm_i2c_regs_t*             control_regs;
+    uint32_t                    dev_id;
 } bcm_i2c_t;
 
 /* TODO - improve fifo read/write to be interrupt driven and capable of handling
@@ -223,13 +226,13 @@ static int i2c_bootstrap_thread(void *arg) {
     assert(arg);
 
     bcm_i2c_t* i2c_ctx = (bcm_i2c_t*)arg;
-    uintptr_t base_addr = (i2c_ctx->dev_id == 1) ? BSC1_BASE : BSC0_BASE;
 
-    mx_status_t status = mx_mmap_device_memory(
-        get_root_resource(),
-        base_addr, 0x1000,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&i2c_ctx->control_regs);
-
+    size_t mmio_size;
+    mx_handle_t mmio_handle = MX_HANDLE_INVALID;
+    mx_status_t status = pdev_map_mmio(&i2c_ctx->pdev_proto, i2c_ctx->dev_id,
+                                              MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                              (void **)&i2c_ctx->control_regs, &mmio_size,
+                                              &mmio_handle);
     if (status != MX_OK)
         goto i2c_err;
 
@@ -252,13 +255,13 @@ static int i2c_bootstrap_thread(void *arg) {
     if (status == MX_OK) return 0;
 
 i2c_err:
-    if (i2c_ctx)
-        free(i2c_ctx);
+    free(i2c_ctx);
 
     return -1;
 }
 
-static mx_status_t bootstrap_i2c(mx_device_t* parent, uint32_t dev_id) {
+static mx_status_t bootstrap_i2c(mx_device_t* parent, platform_device_protocol_t* pdev_proto,
+                                 uint32_t dev_id) {
 
     bcm_i2c_t* i2c_ctx = calloc(1, sizeof(*i2c_ctx));
     if (!i2c_ctx)
@@ -266,6 +269,7 @@ static mx_status_t bootstrap_i2c(mx_device_t* parent, uint32_t dev_id) {
 
     i2c_ctx->parent     = parent;
     i2c_ctx->dev_id     = dev_id;
+    memcpy(&i2c_ctx->pdev_proto, pdev_proto, sizeof(i2c_ctx->pdev_proto));
 
     char tid[30];
     snprintf(tid,sizeof(tid),"i2c%d_bootstrap_thread",dev_id);
@@ -283,17 +287,24 @@ static mx_status_t bootstrap_i2c(mx_device_t* parent, uint32_t dev_id) {
 
 
 static mx_status_t i2c_bind(void* ctx, mx_device_t* parent, void** cookie) {
+    platform_device_protocol_t pdev;
 
-    mx_status_t ret = MX_OK;
+    mx_status_t ret = device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (ret != MX_OK) {
+        printf("i2c_bind can't find MX_PROTOCOL_PLATFORM_DEV\n");
+        return ret;
+    }
 
     bcm_gpio_ctrl_t* gpio_regs;
     // Carve out some address space for the device -- it's memory mapped.
-    mx_status_t status = mx_mmap_device_memory(
-        get_root_resource(),
-        GPIO_BASE, 0x1000,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&gpio_regs);
-
-    if (status != MX_OK) return MX_ERR_NO_MEMORY;
+    size_t mmio_size;
+    mx_handle_t mmio_handle = MX_HANDLE_INVALID;
+    mx_status_t status = pdev_map_mmio(&pdev, GPIO_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                            (void **)&gpio_regs, &mmio_size, &mmio_handle);
+    if (status != MX_OK) {
+        printf("i2c_bind: pdev_map_mmio failed: %d\n", status);
+        return status;
+    }
 
     /* ALT Function 0 is I2C for these pins */
     set_gpio_function(gpio_regs, BCM_SDA1_PIN, FSEL_ALT0);
@@ -303,13 +314,13 @@ static mx_status_t i2c_bind(void* ctx, mx_device_t* parent, void** cookie) {
     set_gpio_function(gpio_regs, BCM_SCL0_PIN, FSEL_ALT0);
 
 
-    status = bootstrap_i2c(parent, 0);
+    status = bootstrap_i2c(parent, &pdev, 0);
     if (status != MX_OK) {
         ret = status;
         printf("Failed to initialize i2c0\n");
     }
 
-    status = bootstrap_i2c(parent, 1);
+    status = bootstrap_i2c(parent, &pdev, 1);
     if (status != MX_OK) {
         ret = status;
         printf("Failed to initialize i2c1\n");

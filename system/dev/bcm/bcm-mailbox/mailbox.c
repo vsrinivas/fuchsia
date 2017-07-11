@@ -15,6 +15,7 @@
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/platform-device.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/assert.h>
 
@@ -24,6 +25,8 @@
 #define BCM_PROPERTY_TAG_GET_MACADDR        (0x00010003)
 
 #define BCM_MAILBOX_REQUEST                 (0x00000000)
+
+#define MAILBOX_MMIO    0
 
 // Preserve columns
 // clang-format off
@@ -299,19 +302,20 @@ static bcm_bus_protocol_ops_t bcm_bus_protocol = {
 static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
 
-    platform_device_protocol_t pdp;
-    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdp) != MX_OK) {
+    platform_device_protocol_t pdev;
+    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev) != MX_OK) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
     // Carve out some address space for the device -- it's memory mapped.
-    mx_status_t status = mx_mmap_device_memory(
-        get_root_resource(),
-        MAILBOX_PAGE_ADDRESS, MAILBOX_REGS_LENGTH,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, &page_base);
-
-    if (status != MX_OK)
+    size_t mmio_size;
+    mx_handle_t mmio_handle;
+    mx_status_t status = pdev_map_mmio(&pdev, MAILBOX_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       (void **)&page_base, &mmio_size, &mmio_handle);
+    if (status != MX_OK) {
+        printf("mailbox_bind pdev_map_mmio failed %d\n", status);
         return status;
+    }
 
     // The device is actually mapped at some offset into the page.
     mailbox_regs = (uint32_t*)(page_base + PAGE_REG_DELTA);
@@ -326,6 +330,8 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     status = device_add(parent, &vc_rpc_args, NULL);
     if (status != MX_OK) {
+        mx_vmar_unmap(mx_vmar_root_self(), page_base, mmio_size);
+        mx_handle_close(mmio_handle);
         return status;
     }
 
@@ -333,7 +339,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     bcm_vc_poweron(bcm_dev_usb);
     bcm_vc_poweron(bcm_dev_i2c1);
 
-    pdp.ops->register_protocol(pdp.ctx, MX_PROTOCOL_BCM_BUS, &bcm_bus_protocol, NULL);
+    pdev_register_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &bcm_bus_protocol, NULL);
 
     return MX_OK;
 }

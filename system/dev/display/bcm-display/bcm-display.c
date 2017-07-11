@@ -11,6 +11,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/platform-device.h>
@@ -38,6 +39,7 @@ typedef struct {
     bcm_bus_protocol_t bus_proto;
     mx_display_info_t disp_info;
     bcm_fb_desc_t fb_desc;
+    io_buffer_t buffer;
     uint8_t* framebuffer;
 } bcm_display_t;
 
@@ -103,17 +105,18 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
         iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
         iotxn_copyfrom(txn, &display->fb_desc, sizeof(bcm_fb_desc_t), offset);
 
-        uintptr_t page_base;
-
         // map framebuffer into userspace
-        mx_mmap_device_memory(
-            get_root_resource(),
-            display->fb_desc.fb_p & 0x3fffffff, display->fb_desc.fb_size,
-            MX_CACHE_POLICY_CACHED, &page_base);
-        display->framebuffer = (uint8_t*)page_base;
-        memset(display->framebuffer, 0x00, display->fb_desc.fb_size);
-
+        ret = io_buffer_init_physical(&display->buffer, display->fb_desc.fb_p & 0x3fffffff,
+                                      display->fb_desc.fb_size, get_root_resource(),
+                                      MX_CACHE_POLICY_CACHED);
         iotxn_release(txn);
+
+        if (ret != MX_OK) {
+            printf("bcm_vc_get_framebuffer: io_buffer_init_physical failed %d\n", ret);
+            return ret;
+        }
+        display->framebuffer = (uint8_t*)io_buffer_virt(&display->buffer);
+        memset(display->framebuffer, 0x00, display->fb_desc.fb_size);
     }
     memcpy(fb_desc, &display->fb_desc, sizeof(bcm_fb_desc_t));
     return sizeof(bcm_fb_desc_t);
@@ -164,7 +167,8 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     mx_set_framebuffer(get_root_resource(), display->framebuffer,
                        display->fb_desc.fb_size, display->disp_info.format,
-                       display->disp_info.width, display->disp_info.height, display->disp_info.stride);
+                       display->disp_info.width, display->disp_info.height,
+                       display->disp_info.stride);
 
     device_add_args_t vc_fbuff_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
