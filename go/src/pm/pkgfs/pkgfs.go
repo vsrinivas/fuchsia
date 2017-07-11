@@ -103,6 +103,14 @@ func (f *Filesystem) RootDirectory() fs.Directory {
 	return f.root
 }
 
+func (f *Filesystem) Type() string {
+	return "pkgfs"
+}
+
+func (f *Filesystem) FreeSize() int64 {
+	return 0
+}
+
 var _ fs.FileSystem = (*Filesystem)(nil)
 
 type rootDirectory struct {
