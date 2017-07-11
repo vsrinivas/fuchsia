@@ -17,6 +17,8 @@ typedef enum {
     // These are architectural exceptions.
     // Further information can be found in report.context.arch.
 
+    MX_EXCP_MIN_ARCH = MX_PKT_TYPE_EXCEPTION(0),
+
     // General exception not covered by another value.
     MX_EXCP_GENERAL = MX_PKT_TYPE_EXCEPTION(0),
     MX_EXCP_FATAL_PAGE_FAULT = MX_PKT_TYPE_EXCEPTION(1),
@@ -71,7 +73,8 @@ typedef enum {
     MX_EXCP_GONE = MX_PKT_TYPE_EXCEPTION(0x84),
 } mx_excp_type_t;
 
-#define MX_EXCP_IS_ARCH(excp) ((excp) <= MX_EXCP_MAX_ARCH)
+#define MX_EXCP_IS_ARCH(excp) \
+  ((excp) >= MX_EXCP_MIN_ARCH && (excp) <= MX_EXCP_MAX_ARCH)
 
 typedef struct x86_64_exc_data {
     uint64_t vector;
