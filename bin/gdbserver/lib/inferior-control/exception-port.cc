@@ -199,27 +199,36 @@ void ExceptionPort::Worker() {
         return;
       }
 
-      // TODO(dje): We already maintain a table of threads plus their handles.
-      // Rewrite this to work with that table. Now would be a fine time to
-      // notice new threads, but for existing threads there's no point in
-      // doing a lookup to get a new handle.
-      mx_handle_t thread;
-      mx_status_t status = mx_object_get_child(iter->second.process_handle,
-                                               packet.exception.tid,
-                                               MX_RIGHT_SAME_RIGHTS, &thread);
-      if (status < 0) {
-        FTL_VLOG(1) << "Failed to get a handle to [" << packet.exception.pid
-                    << "." << packet.exception.tid << "]";
-        return;
-      }
       mx_exception_report_t report;
-      status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT,
-                                  &report, sizeof(report), NULL, NULL);
-      mx_handle_close(thread);
-      if (status < 0) {
-        FTL_VLOG(1) << "Failed to get exception report for [" << packet.exception.pid
-                    << "." << packet.exception.tid << "]";
-        return;
+
+      if (MX_EXCP_IS_ARCH(packet.type)) {
+        // TODO(dje): We already maintain a table of threads plus their
+        // handles. Rewrite this to work with that table. Now would be a fine
+        // time to notice new threads, but for existing threads there's no
+        // point in doing a lookup to get a new handle.
+        mx_handle_t thread;
+        mx_status_t status = mx_object_get_child(iter->second.process_handle,
+                                                 packet.exception.tid,
+                                                 MX_RIGHT_SAME_RIGHTS,
+                                                 &thread);
+        if (status < 0) {
+          FTL_VLOG(1) << "Failed to get a handle to [" << packet.exception.pid
+                      << "." << packet.exception.tid << "]";
+          return;
+        }
+        status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT,
+                                    &report, sizeof(report), NULL, NULL);
+        mx_handle_close(thread);
+        if (status < 0) {
+          FTL_VLOG(1) << "Failed to get exception report for [" << packet.exception.pid
+                      << "." << packet.exception.tid << "]";
+          return;
+        }
+      } else {
+        // Fill in |report| for a synthetic exception.
+        memset(&report, 0, sizeof(report));
+        report.header.size = sizeof(report);
+        report.header.type = packet.type;
       }
 
       iter->second.callback(packet, report.context);
