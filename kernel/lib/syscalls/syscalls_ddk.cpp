@@ -237,6 +237,50 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
     return MX_OK;
 }
 
+mx_status_t sys_vmo_create_physical(mx_handle_t hrsrc, uintptr_t paddr, size_t size,
+                                    user_ptr<mx_handle_t> _out) {
+    LTRACEF("size 0x%zu\n", size);
+
+    if (!IS_PAGE_ALIGNED(paddr) || size == 0) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    // TODO: attempting to create a physical VMO that points to memory should be an error
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
+
+    size = ROUNDUP_PAGE_SIZE(size);
+    // create a vm object
+    mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, size));
+    if (!vmo) {
+        return MX_ERR_NO_MEMORY;
+    }
+
+    // create a Vm Object dispatcher
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    mx_rights_t rights;
+    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
+    if (result != MX_OK)
+        return result;
+
+    // create a handle and attach the dispatcher to it
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    if (!handle)
+        return MX_ERR_NO_MEMORY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+
+    up->AddHandle(mxtl::move(handle));
+    return MX_OK;
+}
+
 mx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint32_t> width, user_ptr<uint32_t> height, user_ptr<uint32_t> stride) {
 #if ARCH_X86
     if (!bootloader.fb_base ||

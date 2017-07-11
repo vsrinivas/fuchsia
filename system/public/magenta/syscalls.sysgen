@@ -486,7 +486,8 @@ syscall mmap_device_io
     (handle: mx_handle_t, io_addr: uint32_t, len: uint32_t)
     returns (mx_status_t);
 
-syscall mmap_device_memory
+# use vmo_create_physical instead
+syscall mmap_device_memory deprecated
     (handle: mx_handle_t, paddr: mx_paddr_t, len: uint32_t,
         cache_policy: mx_cache_policy_t)
     returns (mx_status_t, out_vaddr: uintptr_t);
@@ -497,6 +498,10 @@ syscall io_mapping_get_info
 
 syscall vmo_create_contiguous
     (rsrc_handle: mx_handle_t, size: size_t, alignment_log2: uint32_t)
+    returns (mx_status_t, out: mx_handle_t);
+
+syscall vmo_create_physical
+    (rsrc_handle: mx_handle_t, paddr: mx_paddr_t, size: size_t)
     returns (mx_status_t, out: mx_handle_t);
 
 # DDK Syscalls: Misc Info
