@@ -303,7 +303,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
 
   if (!firebase_config || !token_provider) {
     // No sync configuration passed, only delete the local state.
-    callback(DeleteRepositoryDirectory(repository_information));
+    callback(Status::OK);
     return;
   }
 
@@ -432,7 +432,8 @@ Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
   if (rename(repository_information.content_path.c_str(),
              destination.c_str()) != 0) {
     FTL_LOG(ERROR) << "Unable to move repository local storage at "
-                   << repository_information.content_path;
+                   << repository_information.content_path << " to "
+                   << destination << ". Error: " << strerror(errno);
     return Status::IO_ERROR;
   }
   if (!files::DeletePath(destination, true)) {
