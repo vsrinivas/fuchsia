@@ -4,25 +4,71 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
-import("//lib/fidl/fidl.gni")
+import("//packages/package.gni")
 
-group("wlan") {
-  deps = [
-    ":wlanstack",
-  ]
-}
+# These go dependencies are common to wlanstack and wlanstack_test
+wlan_go_dependencies = [
+  {
+    package = "wlanstack"
+    source = "wlanstack"
+  },
+  {
+    package = "apps/wlan/wlan"
+    source = "wlan"
+  },
+  {
+    package = "fidl"
+    source = "//lib/fidl/go/src/fidl"
+  },
+  {
+    package = "apps/netstack/eth"
+    source = "//apps/netstack/eth"
+  },
+  {
+    package = "apps/netstack/watcher"
+    source = "//apps/netstack/watcher"
+  },
+]
 
-go_binary("wlanstack") {
-  gopackage = "apps/wlan/wlanstack"
+go_binary("wlanstack_bin") {
+  output_name = "wlanstack"
+  gopackage = "wlanstack"
   deps = [
-    "//apps/netstack",
     "//apps/wlan/services:mlme",
   ]
+  go_dependencies = wlan_go_dependencies
 }
 
-go_test("wlanstack_test") {
+go_test("wlanstack_test_bin") {
+  output_name = "wlanstack_test"
   gopackage = "apps/wlan/wlan"
   deps = [
     "//apps/wlan/services:mlme",
   ]
+  go_dependencies = wlan_go_dependencies
+}
+
+package("wlanstack") {
+  deps = [
+    ":wlanstack_bin",
+  ]
+
+  binaries = [ {
+        name = "wlanstack"
+      } ]
+
+  resources = [ {
+        path = rebase_path("default.json")
+        dest = "data/wlanstack/config.json"
+      } ]
+}
+
+package("wlanstack_test") {
+  deps = [
+    ":wlanstack_test_bin",
+  ]
+
+  tests = [ {
+        name = "wlanstack_test"
+      } ]
 }
