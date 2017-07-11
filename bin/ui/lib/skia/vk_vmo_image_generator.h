@@ -24,7 +24,8 @@ class VkVmoImageGenerator : public SkImageGenerator {
 
   sk_sp<GrTextureProxy> onGenerateTexture(GrContext*,
                                           const SkImageInfo& info,
-                                          const SkIPoint& origin) override;
+                                          const SkIPoint& origin,
+                                          SkTransferFunctionBehavior behavior) override;
 
  private:
   ftl::RefPtr<mtl::SharedVmo> shared_vmo_ = nullptr;

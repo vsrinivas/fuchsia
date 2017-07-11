@@ -139,7 +139,8 @@ VkVmoImageGenerator::~VkVmoImageGenerator() {}
 sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
     GrContext* context,
     const SkImageInfo& info,
-    const SkIPoint& origin) {
+    const SkIPoint& origin,
+    SkTransferFunctionBehavior behavior) {
   // TODO: Assert subset (described by |info| and |origin|) is equal to full
   // size.
   VkResult err;
