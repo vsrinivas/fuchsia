@@ -363,7 +363,7 @@ mozart2::OpPtr NewExportResourceOpAsRequest(uint32_t resource_id,
   mx::eventpair export_token;
   mx_status_t status =
       mx::eventpair::create(0u, &export_token, out_import_token);
-  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(status == MX_OK) << "event pair create failed: status=" << status;
   return NewExportResourceOp(resource_id, std::move(export_token));
 }
 
@@ -376,7 +376,7 @@ mozart2::OpPtr NewImportResourceOpAsRequest(uint32_t resource_id,
   mx::eventpair import_token;
   mx_status_t status =
       mx::eventpair::create(0u, &import_token, out_export_token);
-  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(status == MX_OK) << "event pair create failed: status=" << status;
   return NewImportResourceOp(resource_id, import_spec, std::move(import_token));
 }
 

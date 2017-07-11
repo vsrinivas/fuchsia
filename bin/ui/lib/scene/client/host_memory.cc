@@ -24,7 +24,7 @@ std::pair<mx::vmo, ftl::RefPtr<HostData>> AllocateMemory(size_t size) {
   // Create the vmo and map it into this process.
   mx::vmo local_vmo;
   mx_status_t status = mx::vmo::create(size, 0u, &local_vmo);
-  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(status == MX_OK) << "vmo create failed: status=" << status;
   auto data = ftl::MakeRefCounted<HostData>(local_vmo, 0u, size);
 
   // Drop rights before we transfer the VMO to the session manager.
@@ -32,7 +32,7 @@ std::pair<mx::vmo, ftl::RefPtr<HostData>> AllocateMemory(size_t size) {
   status = local_vmo.replace(
       MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_MAP,
       &remote_vmo);
-  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(status == MX_OK) << "replace rights failed: status=" << status;
   return std::make_pair(std::move(remote_vmo), std::move(data));
 }
 
@@ -46,14 +46,14 @@ HostData::HostData(const mx::vmo& vmo,
   uintptr_t ptr;
   mx_status_t status =
       mx::vmar::root_self().map(0, vmo, offset, size, flags, &ptr);
-  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(status == MX_OK) << "map failed: status=" << status;
   ptr_ = reinterpret_cast<void*>(ptr);
 }
 
 HostData::~HostData() {
   mx_status_t status =
       mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
-  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(status == MX_OK) << "unmap failed: status=" << status;
 }
 
 HostMemory::HostMemory(Session* session, size_t size)
@@ -108,6 +108,10 @@ bool HostImagePool::Configure(const mozart2::ImageInfo* image_info) {
     image_ptrs_[i].reset();
 
   if (image_info_) {
+    FTL_DCHECK(image_info_->width > 0);
+    FTL_DCHECK(image_info_->height > 0);
+    FTL_DCHECK(image_info_->stride > 0);
+
     size_t desired_size = Image::ComputeSize(*image_info_);
     for (uint32_t i = 0; i < num_images(); i++) {
       if (memory_ptrs_[i] && !CanReuseMemory(*memory_ptrs_[i], desired_size))
