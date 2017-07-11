@@ -1,8 +1,8 @@
 #! /bin/bash
 # Copy the ipt "ptout" files from the target.
 # Requires the netcp program to be in $PATH.
-#
-# Notes: At the moment this assumes a cpu-mode trace with up to four cpus.
+# A local copy of foo.ptlist, named foo.xptlist, is created containing
+# local paths of trace buffer files.
 
 set -e
 
@@ -39,10 +39,18 @@ done
 
 # This file contains a list of the files with trace buffers.
 declare -r PTLIST_FILE="${OUTPUT_SPEC}.ptlist"
+# Same as foo.ptlist, but contains local paths.
+declare -r XPTLIST_FILE="${OUTPUT_SPEC}.xptlist"
 
-for f in $(cat "$PTLIST_FILE" | awk '{print $2}')
+rm -f "$XPTLIST_FILE"
+
+while read line
 do
-    cpu_suffix="${f#${SOURCE_SPEC}}"
+    set $line
+    seqno=$1
+    file=$2
+    cpu_suffix="${file#${SOURCE_SPEC}}"
     output_file="${OUTPUT_SPEC}${cpu_suffix}"
-    netcp "${MAGENTA_HOSTNAME}:$f" "$output_file"
-done
+    netcp "${MAGENTA_HOSTNAME}:$file" "$output_file"
+    echo "$seqno $output_file" >> "$XPTLIST_FILE"
+done < "$PTLIST_FILE"
