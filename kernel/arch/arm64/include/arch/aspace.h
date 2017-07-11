@@ -11,36 +11,10 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
-#include <mxtl/ref_counted.h>
 
-__BEGIN_CDECLS
-
-#define ARCH_ASPACE_MAGIC 0x41524153 // ARAS
-
-struct arch_aspace {
-    /* magic value for use-after-free detection */
-    uint32_t magic;
-
-    uint16_t asid;
-
-    /* pointer to the translation table */
-    paddr_t tt_phys;
-    volatile pte_t *tt_virt;
-    /** upper bound of the number of pages allocated to back the translation table */
-    size_t pt_pages;
-
-    uint flags;
-
-    /* range of address space */
-    vaddr_t base;
-    size_t size;
-};
-
-__END_CDECLS
-
-class ArmArchVmAspace final : public ArchVmAspaceInterface, mxtl::RefCounted<ArmArchVmAspace>  {
+class ArmArchVmAspace final : public ArchVmAspaceInterface {
 public:
-    ArmArchVmAspace() { }
+    ArmArchVmAspace() {}
     virtual ~ArmArchVmAspace();
 
     status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
@@ -61,12 +35,68 @@ public:
                      vaddr_t end, uint next_region_mmu_flags,
                      vaddr_t align, size_t size, uint mmu_flags) override;
 
-    paddr_t arch_table_phys() const override { return aspace_.tt_phys; }
+    paddr_t arch_table_phys() const override { return tt_phys_; }
 
-    static void ContextSwitch(ArmArchVmAspace *from, ArmArchVmAspace *to);
+    static void ContextSwitch(ArmArchVmAspace* from, ArmArchVmAspace* to);
+
 private:
+    inline bool IsValidVaddr(vaddr_t vaddr) {
+        return (vaddr >= base_ && vaddr <= base_ + size_ - 1);
+    }
+
+    // Page table management.
+    volatile pte_t* GetPageTable(vaddr_t index, uint page_size_shift,
+                                 volatile pte_t* page_table);
+
+    status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift);
+
+    void FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift);
+
+    ssize_t MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
+                         paddr_t paddr_in, size_t size_in, pte_t attrs,
+                         uint index_shift, uint page_size_shift,
+                         volatile pte_t* page_table, uint asid);
+
+    ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
+                           uint index_shift, uint page_size_shift,
+                           volatile pte_t* page_table, uint asid);
+
+    int ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
+                         pte_t attrs, uint index_shift, uint page_size_shift,
+                         volatile pte_t* page_table, uint asid);
+
+    ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
+                     vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
+                     uint page_size_shift, volatile pte_t* top_page_table,
+                     uint asid);
+
+    ssize_t UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
+                       uint top_size_shift, uint top_index_shift,
+                       uint page_size_shift, volatile pte_t* top_page_table,
+                       uint asid);
+
+    status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
+                          vaddr_t vaddr_base, uint top_size_shift,
+                          uint top_index_shift, uint page_size_shift,
+                          volatile pte_t* top_page_table, uint asid);
+
     mxtl::Canary<mxtl::magic("VAAS")> canary_;
-    arch_aspace aspace_ = {};
+
+    uint16_t asid_ = 0;
+
+    // Pointer to the translation table.
+    paddr_t tt_phys_ = 0;
+    volatile pte_t* tt_virt_ = nullptr;
+
+    // Upper bound of the number of pages allocated to back the translation
+    // table.
+    size_t pt_pages_ = 0;
+
+    uint flags_ = 0;
+
+    // Range of address space.
+    vaddr_t base_ = 0;
+    size_t size_ = 0;
 };
 
 using ArchVmAspace = ArmArchVmAspace;
