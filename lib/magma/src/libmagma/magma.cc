@@ -9,6 +9,7 @@
 #include "platform_connection.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
+#include <mutex>
 #include <vector>
 
 magma_connection_t* magma_open(int fd, uint32_t capabilities)
@@ -24,11 +25,11 @@ magma_connection_t* magma_open(int fd, uint32_t capabilities)
         return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
 
 #if MAGMA_ENABLE_TRACING
-    static std::atomic_bool tracing_enabled{false};
-    bool value = false;
-    if (tracing_enabled.compare_exchange_strong(value, true))
+    static std::once_flag trace_init_flag;
+    std::call_once(trace_init_flag, [] {
         tracing::InitializeTracer(app::ApplicationContext::CreateFromStartupInfo().get(),
                                   {"libmagma"});
+    });
 #endif
 
     // Here we release ownership of the connection to the client
@@ -204,10 +205,9 @@ void magma_submit_command_buffer(magma_connection_t* connection, magma_buffer_t 
         return;
     }
 
-    uint64_t batch_buffer_id =
+    uint64_t ATTRIBUTE_UNUSED batch_buffer_id =
         interpreter.resource(interpreter.batch_buffer_resource_index()).buffer_id();
     TRACE_FLOW_BEGIN("magma", "command_buffer", batch_buffer_id);
-    (void)batch_buffer_id;
 
     magma::PlatformIpcConnection::cast(connection)->ExecuteCommandBuffer(buffer_handle, context_id);
 
