@@ -24,7 +24,7 @@
 // VMO representing a physical range of memory
 class VmObjectPhysical final : public VmObject {
 public:
-    static mxtl::RefPtr<VmObject> Create(paddr_t base, uint64_t size);
+    static status_t Create(paddr_t base, uint64_t size, mxtl::RefPtr<VmObject>* vmo);
 
     uint64_t size() const override
         // TODO: Figure out whether it's safe to lock here without causing

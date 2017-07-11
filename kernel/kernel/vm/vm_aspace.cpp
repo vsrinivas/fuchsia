@@ -364,9 +364,10 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     // allocate a zero length vm object to back it
     // TODO: decide if a null vmo object is worth it
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, &vmo);
+    if (status != MX_OK)
+        return status;
 
     // lookup how it's already mapped
     uint arch_mmu_flags = 0;
@@ -398,9 +399,10 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     size = ROUNDUP_PAGE_SIZE(size);
 
     // create a vm object to back it
-    auto vmo = VmObjectPhysical::Create(paddr, size);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPhysical::Create(paddr, size, &vmo);
+    if (status != MX_OK)
+        return status;
 
     // force it to be mapped up front
     // TODO: add new flag to precisely mean pre-map
@@ -430,13 +432,14 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return MX_ERR_INVALID_ARGS;
 
     // create a vm object to back it
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != MX_OK)
+        return status;
 
     // always immediately commit memory to the object
     uint64_t committed;
-    auto status = vmo->CommitRangeContiguous(0, size, &committed, align_pow2);
+    status = vmo->CommitRangeContiguous(0, size, &committed, align_pow2);
     if (status < 0)
         return status;
     if (static_cast<size_t>(committed) < size) {
@@ -460,15 +463,16 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
         return MX_ERR_INVALID_ARGS;
 
     // allocate a vm object to back it
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != MX_OK)
+        return status;
 
     // commit memory up front if requested
     if (vmm_flags & VMM_FLAG_COMMIT) {
         // commit memory to the object
         uint64_t committed;
-        auto status = vmo->CommitRange(0, size, &committed);
+        status = vmo->CommitRange(0, size, &committed);
         if (status < 0)
             return status;
         if (static_cast<size_t>(committed) < size) {

@@ -21,11 +21,13 @@ static status_t get_paddr(void* context, size_t offset, size_t index, paddr_t pa
 }
 
 status_t setup_vmo(size_t vmo_size, mxtl::RefPtr<VmObject>* vmo_out) {
-    mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(0, vmo_size);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(0, vmo_size, &vmo);
+    if (status != MX_OK)
+        return status;
+
     uint64_t committed = 0;
-    status_t status = vmo->CommitRange(0, vmo->size(), &committed);
+    status = vmo->CommitRange(0, vmo->size(), &committed);
     if (status != MX_OK)
         return status;
     if (committed != vmo->size())
@@ -190,12 +192,14 @@ static bool guest_physical_address_space_map_apic_page(void* context) {
     BEGIN_TEST;
 
     // Allocate VMO.
-    mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(0, PAGE_SIZE);
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(0, PAGE_SIZE, &vmo);
+    EXPECT_EQ(status, MX_OK, "vmobject creation\n");
     EXPECT_NONNULL(vmo, "Failed to allocate VMO.\n");
 
     // Setup GuestPhysicalAddressSpace.
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas;
-    status_t status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
+    status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
     EXPECT_EQ(MX_OK, status, "Failed to create GuestPhysicalAddressSpace.\n");
 
     // Allocate a page to use as the APIC page.

@@ -102,18 +102,19 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
     LTRACEF("allocating %s stack\n", unsafe ? "unsafe" : "safe");
 
     // Create a VMO for our stack
-    auto stack_vmo = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE);
-    if (!stack_vmo) {
+    mxtl::RefPtr<VmObject> stack_vmo;
+    mx_status_t status = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE, &stack_vmo);
+    if (status != MX_OK) {
         TRACEF("error allocating %s stack for thread\n",
                unsafe ? "unsafe" : "safe");
-        return MX_ERR_NO_MEMORY;
+        return status;
     }
 
     // create a vmar with enough padding for a page before and after the stack
     const size_t padding_size = PAGE_SIZE;
 
     mxtl::RefPtr<VmAddressRegion> kstack_vmar;
-    auto status = vmar->CreateSubVmar(
+    status = vmar->CreateSubVmar(
         0, 2 * padding_size + DEFAULT_STACK_SIZE, 0,
         VMAR_FLAG_CAN_MAP_SPECIFIC |
         VMAR_FLAG_CAN_MAP_READ |

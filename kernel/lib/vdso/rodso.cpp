@@ -22,10 +22,16 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     DEBUG_ASSERT(code_start > 0);
     DEBUG_ASSERT(code_start < size);
     mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_status_t status = VmObjectDispatcher::Create(
-        VmObjectPaged::CreateFromROData(image, size),
+
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::CreateFromROData(image, size, &vmo);
+    ASSERT(status == MX_OK);
+
+    status = VmObjectDispatcher::Create(
+        mxtl::move(vmo),
         &dispatcher, &vmo_rights_);
     ASSERT(status == MX_OK);
+
     status = dispatcher->set_name(name, strlen(name));
     ASSERT(status == MX_OK);
     vmo_ = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);

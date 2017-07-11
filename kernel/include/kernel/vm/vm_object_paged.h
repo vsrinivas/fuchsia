@@ -26,9 +26,9 @@
 // the main VM object type, holding a list of pages
 class VmObjectPaged final : public VmObject {
 public:
-    static mxtl::RefPtr<VmObject> Create(uint32_t pmm_alloc_flags, uint64_t size);
+    static status_t Create(uint32_t pmm_alloc_flags, uint64_t size, mxtl::RefPtr<VmObject>* vmo);
 
-    static mxtl::RefPtr<VmObject> CreateFromROData(const void* data, size_t size);
+    static status_t CreateFromROData(const void* data, size_t size, mxtl::RefPtr<VmObject>* vmo);
 
     status_t Resize(uint64_t size) override;
     status_t ResizeLocked(uint64_t size) override TA_REQ(lock_);

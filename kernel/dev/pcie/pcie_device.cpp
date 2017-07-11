@@ -154,10 +154,10 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
 
     // Map a VMO to the config if it's mappable via MMIO.
     if (cfg_->addr_space() == PciAddrSpace::MMIO) {
-        cfg_vmo_ = VmObjectPhysical::Create(cfg_phys_, PAGE_SIZE);
-        if (cfg_vmo_ == nullptr) {
+        res = VmObjectPhysical::Create(cfg_phys_, PAGE_SIZE, &cfg_vmo_);
+        if (res != MX_OK) {
             TRACEF("Failed to allocate VMO for config of device %02x:%02x:%01x!\n", bus_id_, dev_id_, func_id_);
-            return MX_ERR_NO_MEMORY;
+            return res;
         }
 
         // Config is always uncached and set by the bus driver.
@@ -504,12 +504,13 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     // the event of PIO bars, the mx_pci_get_bar syscall will sort out
     // the PIO details from the info structure.
     if (bar_info.size > 0 && bar_info.is_mmio) {
-        auto vmo = VmObjectPhysical::Create(bar_info.bus_addr,
-                mxtl::max<uint64_t>(bar_info.size, PAGE_SIZE));
-        if (vmo == nullptr) {
+        mxtl::RefPtr<VmObject> vmo;
+        status_t status = VmObjectPhysical::Create(bar_info.bus_addr,
+                mxtl::max<uint64_t>(bar_info.size, PAGE_SIZE), &vmo);
+        if (status != MX_OK) {
             TRACEF("Failed to allocate VMO for bar %u of device %02x:%02x:%01x!\n",
                     bar_id, bus_id_, dev_id_, func_id_);
-            return MX_ERR_NO_MEMORY;
+            return status;
         }
 
         // No cache policy is configured here so drivers may set it themselves

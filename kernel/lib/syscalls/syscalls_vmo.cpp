@@ -38,9 +38,10 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
         return res;
 
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(0, size);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    res = VmObjectPaged::Create(0, size, &vmo);
+    if (res != MX_OK)
+        return res;
 
     // create a Vm Object dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;

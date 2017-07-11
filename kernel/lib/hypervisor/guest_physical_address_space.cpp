@@ -85,8 +85,12 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
 }
 
 status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
-    mxtl::RefPtr<VmObject> vmo = VmObjectPhysical::Create(host_paddr, PAGE_SIZE);
-    status_t result = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_CACHED);
+    mxtl::RefPtr<VmObject> vmo;
+    status_t result = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
+    if (result != MX_OK)
+        return result;
+
+    result = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_CACHED);
     if (result != MX_OK)
         return result;
 

@@ -317,7 +317,9 @@ static bool dump_all_aspaces(void* context) {
 // Creates a vm object.
 static bool vmo_create_test(void* context) {
     BEGIN_TEST;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE);
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE, &vmo);
+    EXPECT_EQ(status, MX_OK, "");
     EXPECT_TRUE(vmo, "");
     END_TEST;
 }
@@ -326,8 +328,10 @@ static bool vmo_create_test(void* context) {
 static bool vmo_commit_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     uint64_t committed;
     auto ret = vmo->CommitRange(0, alloc_size, &committed);
@@ -342,10 +346,12 @@ static bool vmo_pin_test(void* context) {
     BEGIN_TEST;
 
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
-    status_t status = vmo->Pin(PAGE_SIZE, alloc_size);
+    status = vmo->Pin(PAGE_SIZE, alloc_size);
     EXPECT_EQ(MX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
     status = vmo->Pin(PAGE_SIZE, 0);
     EXPECT_EQ(MX_OK, status, "pinning range of len 0\n");
@@ -405,10 +411,13 @@ static bool vmo_multiple_pin_test(void* context) {
     BEGIN_TEST;
 
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
+
     uint64_t n;
-    status_t status = vmo->CommitRange(0, alloc_size, &n);
+    status = vmo->CommitRange(0, alloc_size, &n);
     EXPECT_EQ(MX_OK, status, "committing range\n");
 
     status = vmo->Pin(0, alloc_size);
@@ -450,8 +459,10 @@ static bool vmo_multiple_pin_test(void* context) {
 static bool vmo_odd_size_commit_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = 15;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     uint64_t committed;
     auto ret = vmo->CommitRange(0, alloc_size, &committed);
@@ -465,8 +476,10 @@ static bool vmo_odd_size_commit_test(void* context) {
 static bool vmo_contiguous_commit_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     uint64_t committed;
     auto ret = vmo->CommitRangeContiguous(0, alloc_size, &committed, 0);
@@ -480,8 +493,10 @@ static bool vmo_contiguous_commit_test(void* context) {
 static bool vmo_precommitted_map_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -502,8 +517,10 @@ static bool vmo_precommitted_map_test(void* context) {
 static bool vmo_demand_paged_map_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -524,8 +541,10 @@ static bool vmo_demand_paged_map_test(void* context) {
 static bool vmo_dropped_ref_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -549,8 +568,10 @@ static bool vmo_dropped_ref_test(void* context) {
 static bool vmo_remap_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -584,8 +605,10 @@ static bool vmo_remap_test(void* context) {
 static bool vmo_double_remap_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -638,8 +661,10 @@ static bool vmo_read_write_smoke_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
 
     // create object
-    auto vmo = VmObjectPaged::Create(0, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(0, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     // create test buffer
     AllocChecker ac;
@@ -743,8 +768,10 @@ static bool vmo_cache_test(void* context) {
     EXPECT_TRUE(vm_page, "");
     // Test that the flags set/get properly
     {
-        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
-        EXPECT_TRUE(vmo, "");
+        mxtl::RefPtr<VmObject> vmo;
+        status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        EXPECT_EQ(status, MX_OK, "vmobject creation\n");
+        EXPECT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(MX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
         EXPECT_NEQ(cache_policy, cache_policy_get, "check initial cache policy");
         EXPECT_EQ(MX_OK, vmo->SetMappingCachePolicy(cache_policy), "try set");
@@ -754,21 +781,28 @@ static bool vmo_cache_test(void* context) {
 
     // Test valid flags
     for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
-        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
-        EXPECT_TRUE(vmo, "");
+        mxtl::RefPtr<VmObject> vmo;
+        status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        EXPECT_EQ(status, MX_OK, "vmobject creation\n");
+        EXPECT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(MX_OK, vmo->SetMappingCachePolicy(cache_policy), "try setting valid flags");
     }
 
     // Test invalid flags
     for (uint32_t i = ARCH_MMU_FLAG_CACHE_MASK + 1; i < 32; i++) {
-        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
-        EXPECT_TRUE(vmo, "");
+        mxtl::RefPtr<VmObject> vmo;
+        status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        EXPECT_EQ(status, MX_OK, "vmobject creation\n");
+        EXPECT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(i), "try set with invalid flags");
     }
 
     // Test valid flags with invalid flags
     {
-        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        mxtl::RefPtr<VmObject> vmo;
+        status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        EXPECT_EQ(status, MX_OK, "vmobject creation\n");
+        EXPECT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x5), "bad 0x5");
         EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xA), "bad 0xA");
         EXPECT_EQ(MX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x55), "bad 0x55");
@@ -777,8 +811,10 @@ static bool vmo_cache_test(void* context) {
 
     // Test that changing policy while mapped is blocked
     {
-        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
-        EXPECT_TRUE(vmo, "");
+        mxtl::RefPtr<VmObject> vmo;
+        status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        EXPECT_EQ(status, MX_OK, "vmobject creation\n");
+        EXPECT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(MX_OK, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
                   kArchRwFlags), "map vmo");
         EXPECT_EQ(MX_ERR_BAD_STATE, vmo->SetMappingCachePolicy(cache_policy),
@@ -798,8 +834,10 @@ static bool vmo_lookup_test(void* context) {
     BEGIN_TEST;
 
     static const size_t alloc_size = PAGE_SIZE * 16;
-    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    mxtl::RefPtr<VmObject> vmo;
+    status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
+    REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
+    REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     size_t pages_seen = 0;
     auto lookup_fn = [](void* context, size_t offset, size_t index, paddr_t pa) {
@@ -807,7 +845,7 @@ static bool vmo_lookup_test(void* context) {
         (*pages_seen)++;
         return MX_OK;
     };
-    status_t status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
+    status = vmo->Lookup(0, alloc_size, 0, lookup_fn, &pages_seen);
     EXPECT_EQ(MX_ERR_NO_MEMORY, status, "lookup on uncommitted pages\n");
     EXPECT_EQ(0u, pages_seen, "lookup on uncommitted pages\n");
     pages_seen = 0;

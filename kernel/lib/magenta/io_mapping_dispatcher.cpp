@@ -79,9 +79,10 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     if (!aspace_)
         return MX_ERR_INTERNAL;
 
-    mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, size));
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    status_t res = VmObjectPhysical::Create(paddr, size, &vmo);
+    if (res != MX_OK)
+        return res;
 
     paddr_ = paddr;
     size_ = size;
@@ -92,7 +93,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
         return MX_ERR_INVALID_ARGS;
 
     auto root_vmar = aspace_->RootVmar();
-    status_t res = root_vmar->CreateVmMapping(0, size, PAGE_SIZE_SHIFT, 0,
+    res = root_vmar->CreateVmMapping(0, size, PAGE_SIZE_SHIFT, 0,
                                               mxtl::move(vmo), 0, arch_mmu_flags,
                                               dbg_name, &mapping_);
     if (res != MX_OK)

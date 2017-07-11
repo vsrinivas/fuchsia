@@ -33,24 +33,27 @@ VmObjectPhysical::~VmObjectPhysical() {
     LTRACEF("%p\n", this);
 }
 
-mxtl::RefPtr<VmObject> VmObjectPhysical::Create(paddr_t base, uint64_t size) {
+status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, mxtl::RefPtr<VmObject>* obj) {
     if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0)
-        return nullptr;
+        return MX_ERR_INVALID_ARGS;
 
     // check that base + size is a valid range
     safeint::CheckedNumeric<paddr_t> safe_base = base;
     safe_base += size - 1;
     if (!safe_base.IsValid())
-        return nullptr;
+        return MX_ERR_INVALID_ARGS;
 
     AllocChecker ac;
     auto vmo = mxtl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
     if (!ac.check())
-        return nullptr;
+        return MX_ERR_NO_MEMORY;
 
     // Physical VMOs should default to uncached access.
     vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
-    return vmo;
+
+    *obj = mxtl::move(vmo);
+
+    return MX_OK;
 }
 
 void VmObjectPhysical::Dump(uint depth, bool verbose) {

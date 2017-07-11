@@ -68,25 +68,23 @@ VmObjectPaged::~VmObjectPaged() {
     page_list_.FreeAllPages();
 }
 
-mxtl::RefPtr<VmObject> VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size) {
+mx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, mxtl::RefPtr<VmObject>* obj) {
     // there's a max size to keep indexes within range
     if (size > MAX_SIZE)
-        return nullptr;
+        return MX_ERR_INVALID_ARGS;
 
     AllocChecker ac;
     auto vmo = mxtl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, nullptr));
     if (!ac.check())
-        return nullptr;
+        return MX_ERR_NO_MEMORY;
 
     auto err = vmo->Resize(size);
-    if (err == MX_ERR_NO_MEMORY)
-        return nullptr;
-    // Other kinds of failures are not handled yet.
-    DEBUG_ASSERT(err == MX_OK);
     if (err != MX_OK)
-        return nullptr;
+        return err;
 
-    return vmo;
+    *obj = mxtl::move(vmo);
+
+    return MX_OK;
 }
 
 status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, mxtl::RefPtr<VmObject>* clone_vmo) {
@@ -202,9 +200,13 @@ status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
     return MX_OK;
 }
 
-mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data, size_t size) {
-    auto vmo = Create(PMM_ALLOC_FLAG_ANY, size);
-    if (vmo && size > 0) {
+mx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, mxtl::RefPtr<VmObject>* obj) {
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != MX_OK)
+        return status;
+
+    if (size > 0) {
         ASSERT(IS_PAGE_ALIGNED(size));
         ASSERT(IS_PAGE_ALIGNED(reinterpret_cast<uintptr_t>(data)));
 
@@ -248,7 +250,9 @@ mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data, size_t 
         vmo.reset(vmo.leak_ref());
     }
 
-    return vmo;
+    *obj = mxtl::move(vmo);
+
+    return MX_OK;
 }
 
 status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** const page_out, paddr_t* const pa_out) {

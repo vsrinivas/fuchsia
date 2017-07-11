@@ -261,9 +261,12 @@ static int attempt_userboot() {
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
-    auto stack_vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size);
+    mxtl::RefPtr<VmObject> stack_vmo;
+    VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
     stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
-    auto rootfs_vmo = VmObjectPaged::CreateFromROData(rbase, rsize);
+
+    mxtl::RefPtr<VmObject> rootfs_vmo;
+    VmObjectPaged::CreateFromROData(rbase, rsize, &rootfs_vmo);
     rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
 
     // Prepare the bootstrap message packet.  This puts its data (the

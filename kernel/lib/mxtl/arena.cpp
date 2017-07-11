@@ -54,11 +54,11 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     const size_t vmar_sz = vmo_sz + guard_sz;
 
     // Create the VMO.
-    mxtl::RefPtr<VmObject> vmo =
-        VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_sz);
-    if (vmo == nullptr) {
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_sz, &vmo);
+    if (status != MX_OK) {
         LTRACEF("Arena '%s': can't create %zu-byte VMO\n", name, vmo_sz);
-        return MX_ERR_NO_MEMORY;
+        return status;
     }
 
     auto kspace = VmAspace::kernel_aspace();

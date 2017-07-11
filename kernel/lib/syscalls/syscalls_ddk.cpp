@@ -126,9 +126,10 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
 
     size = ROUNDUP_PAGE_SIZE(size);
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
-    if (!vmo)
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != MX_OK)
+        return status;
 
     // always immediately commit memory to the object
     uint64_t committed;
@@ -166,10 +167,6 @@ mx_status_t sys_vmo_create_physical(mx_handle_t hrsrc, uintptr_t paddr, size_t s
                                     user_ptr<mx_handle_t> _out) {
     LTRACEF("size 0x%zu\n", size);
 
-    if (!IS_PAGE_ALIGNED(paddr) || size == 0) {
-        return MX_ERR_INVALID_ARGS;
-    }
-
     // TODO: attempting to create a physical VMO that points to memory should be an error
 
     mx_status_t status;
@@ -178,16 +175,18 @@ mx_status_t sys_vmo_create_physical(mx_handle_t hrsrc, uintptr_t paddr, size_t s
     }
 
     size = ROUNDUP_PAGE_SIZE(size);
+
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, size));
-    if (!vmo) {
-        return MX_ERR_NO_MEMORY;
+    mxtl::RefPtr<VmObject> vmo;
+    mx_status_t result = VmObjectPhysical::Create(paddr, size, &vmo);
+    if (result != MX_OK) {
+        return result;
     }
 
     // create a Vm Object dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
+    result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
