@@ -51,7 +51,7 @@ package("magma-dev") {
       },
 
       {
-        name = "vk_ext_tiling"
+        name = "vkext"
       },
 
       {

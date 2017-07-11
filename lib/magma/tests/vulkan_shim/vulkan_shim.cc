@@ -414,6 +414,15 @@ VkResult VulkanShimInit()
             vulkan_shim_get_proc_addr(instance, "vkGetPhysicalDeviceMagmaPresentationSupportKHR"));
 #endif
 
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX =
+        reinterpret_cast<PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX>(
+            vulkan_shim_get_proc_addr(instance,
+                                      "vkGetPhysicalDeviceExternalSemaphorePropertiesKHX"));
+    vkImportSemaphoreFdKHX = reinterpret_cast<PFN_vkImportSemaphoreFdKHX>(
+        vulkan_shim_get_proc_addr(instance, "vkImportSemaphoreFdKHX"));
+    vkGetSemaphoreFdKHX = reinterpret_cast<PFN_vkGetSemaphoreFdKHX>(
+        vulkan_shim_get_proc_addr(instance, "vkGetSemaphoreFdKHX"));
+
     vkDestroyInstance(instance, nullptr);
 
     return VK_SUCCESS;
@@ -617,3 +626,8 @@ PFN_vkGetPhysicalDeviceMagmaPresentationSupportKHR vkGetPhysicalDeviceMagmaPrese
 PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT;
 PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
 PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT;
+
+PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX;
+PFN_vkImportSemaphoreFdKHX vkImportSemaphoreFdKHX;
+PFN_vkGetSemaphoreFdKHX vkGetSemaphoreFdKHX;

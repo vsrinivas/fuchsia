@@ -13,10 +13,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 #include <vector>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "platform_semaphore.h"
 
 namespace {
 
@@ -25,7 +27,7 @@ public:
     static bool CheckExtensions();
 
     bool Initialize();
-    bool Exec();
+    static bool Exec(VulkanTest* t1, VulkanTest* t2);
 
 private:
     bool InitVulkan();
@@ -39,6 +41,9 @@ private:
     VkDeviceMemory vk_device_memory_;
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
+
+    static constexpr uint32_t kSemaphoreCount = 2;
+    std::vector<VkSemaphore> vk_semaphore_;
 };
 
 bool VulkanTest::CheckExtensions()
@@ -57,11 +62,13 @@ bool VulkanTest::CheckExtensions()
 
     for (auto& prop : extension_properties) {
         DLOG("extension name %s version %u", prop.extensionName, prop.specVersion);
-        if (strcmp(prop.extensionName, VK_GOOGLE_IMAGE_TILING_SCANOUT_EXTENSION_NAME) == 0)
+        if ((strcmp(prop.extensionName, VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME) ==
+             0) ||
+            (strcmp(prop.extensionName, VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME) == 0))
             found_count++;
     }
 
-    return found_count == 1;
+    return found_count == 2;
 }
 
 bool VulkanTest::Initialize()
@@ -175,73 +182,120 @@ bool VulkanTest::InitVulkan()
 
     vkGetDeviceQueue(vkdevice, queue_family_index, 0, &vk_queue_);
 
+    VkExternalSemaphorePropertiesKHX external_semaphore_properties;
+    VkPhysicalDeviceExternalSemaphoreInfoKHX external_semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHX,
+        .pNext = nullptr,
+        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
+    };
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX(vk_physical_device_, &external_semaphore_info,
+                                                      &external_semaphore_properties);
+
+    EXPECT_EQ(external_semaphore_properties.exportFromImportedHandleTypes,
+              VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX);
+    EXPECT_EQ(external_semaphore_properties.compatibleHandleTypes, 0u);
+    EXPECT_EQ(external_semaphore_properties.externalSemaphoreFeatures,
+              0u | VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHX |
+                  VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHX);
+
+    // Create semaphores for export
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        VkExportSemaphoreCreateInfoKHX export_create_info = {
+            .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHX,
+            .pNext = nullptr,
+            .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
+        };
+
+        VkSemaphoreCreateInfo create_info = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            .pNext = &export_create_info,
+            .flags = 0,
+        };
+
+        // Try not setting the export part; not sure if this is required
+        if (i == kSemaphoreCount - 1)
+            create_info.pNext = nullptr;
+
+        VkSemaphore semaphore;
+        result = vkCreateSemaphore(vk_device_, &create_info, nullptr, &semaphore);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkCreateSemaphore returned %d", result);
+
+        vk_semaphore_.push_back(semaphore);
+    }
+
     return true;
 }
 
-bool VulkanTest::Exec()
+bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
 {
     VkResult result;
 
-    VkImageFormatProperties optimal_image_format_properties, scanout_image_format_properties;
+    std::vector<int> fd(kSemaphoreCount);
 
-    result = vkGetPhysicalDeviceImageFormatProperties(
-        vk_physical_device_, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT, &optimal_image_format_properties);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkGetPhysicalDeviceImageFormatProperties returned %u\n", result);
+    // Export semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        result = vkGetSemaphoreFdKHX(t1->vk_device_, t1->vk_semaphore_[i],
+                                     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX, &fd[i]);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkGetSemaphoreFdKHX returned %d", result);
+    }
 
-    result = vkGetPhysicalDeviceImageFormatProperties(
-        vk_physical_device_, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D,
-        VK_IMAGE_TILING_SCANOUT_GOOGLE,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT, &scanout_image_format_properties);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkGetPhysicalDeviceImageFormatProperties returned %u\n", result);
+    // Import semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        VkImportSemaphoreFdInfoKHX import_info = {
+            .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHX,
+            .pNext = nullptr,
+            .semaphore = t2->vk_semaphore_[i],
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
+            .fd = fd[i]};
 
-    if (memcmp(&optimal_image_format_properties, &scanout_image_format_properties,
-               sizeof(VkImageFormatProperties)) != 0)
-        return DRETF(false, "optimal doesn't match scanout");
+        result = vkImportSemaphoreFdKHX(t2->vk_device_, &import_info);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkImportSemaphoreFdKHX failed: %d", result);
+    }
 
-    DLOG("image format properties match");
+    // Test semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        auto platform_semaphore_export = magma::PlatformSemaphore::Import(fd[i]);
 
-    VkImageCreateInfo image_create_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UNORM,
-        .extent = VkExtent3D{64, 64, 1},
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_SCANOUT_GOOGLE,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,     // not used since not sharing
-        .pQueueFamilyIndices = nullptr, // not used since not sharing
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
+        // Export the imported semaphores
+        result = vkGetSemaphoreFdKHX(t2->vk_device_, t2->vk_semaphore_[i],
+                                     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX, &fd[i]);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkGetSemaphoreFdKHX returned %d", result);
 
-    result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkCreateImage failed: %d", result);
+        std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_import =
+            magma::PlatformSemaphore::Import(fd[i]);
 
-    DLOG("scanout tiling image created");
+        EXPECT_EQ(platform_semaphore_export->id(), platform_semaphore_import->id());
+        DLOG("Testing semaphore %u: 0x%lx", i, platform_semaphore_export->id());
 
-    vkDestroyImage(vk_device_, vk_image_, nullptr);
+        platform_semaphore_export->Reset();
 
-    DLOG("scanout tiling image destroyed");
+        std::thread thread(
+            [platform_semaphore_import] { EXPECT_TRUE(platform_semaphore_import->Wait(2000)); });
+
+        platform_semaphore_export->Signal();
+        thread.join();
+    }
+
+    // Destroy semaphores
+    for (uint32_t i = 0; i < kSemaphoreCount; i++) {
+        vkDestroySemaphore(t1->vk_device_, t1->vk_semaphore_[i], nullptr);
+        vkDestroySemaphore(t2->vk_device_, t2->vk_semaphore_[i], nullptr);
+    }
 
     return true;
 }
 
-TEST(VulkanExtension, Tiling)
+TEST(VulkanExtension, SemaphoreImportExport)
 {
     ASSERT_TRUE(VulkanTest::CheckExtensions());
-    VulkanTest test;
-    ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec());
+    VulkanTest t1, t2;
+    ASSERT_TRUE(t1.Initialize());
+    ASSERT_TRUE(t2.Initialize());
+    ASSERT_TRUE(VulkanTest::Exec(&t1, &t2));
 }
 
 } // namespace

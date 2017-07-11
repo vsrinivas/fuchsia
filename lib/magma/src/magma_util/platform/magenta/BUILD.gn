@@ -126,6 +126,7 @@ source_set("semaphore") {
   ]
 
   deps = [
+    ":object",
     "$magenta_build_root/system/ulib/mx",
     "$magma_build_root/src/magma_util",
   ]

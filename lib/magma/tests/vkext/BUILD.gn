@@ -6,23 +6,25 @@ import("//magma/gnbuild/magma.gni")
 
 use_vulkan_loader = false
 
-group("vkext") {
-  public_deps = [ ":vk_ext_tiling" ]
-}
+executable("vkext") {
+  testonly = true
 
-executable("vk_ext_tiling") {
   sources = [
+    "main.cc",
+    "vk_ext_semaphore.cc",
     "vk_ext_tiling.cc",
   ]
 
-  public_deps = [
+  deps = [
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "//third_party/gtest",
   ]
 
   if (use_vulkan_loader) {
-    public_deps += [ "$magma_build_root:vulkan" ]
+    deps += [ "$magma_build_root:vulkan" ]
   } else {
-    public_deps += [
+    deps += [
       "$magma_build_root/tests/vulkan_shim",
       "$mesa_build_root:magma_vulkan",
     ]
