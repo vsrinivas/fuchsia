@@ -1192,7 +1192,7 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
                           size_t out_len) {
     switch (op) {
         case IOCTL_VFS_QUERY_FS: {
-            if (out_len < sizeof(vfs_query_info_t)) {
+            if (out_len < (sizeof(vfs_query_info_t) + strlen(kFsName))) {
                 return MX_ERR_INVALID_ARGS;
             }
 
@@ -1201,8 +1201,8 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
             info->used_bytes = fs_->info_.alloc_block_count * fs_->info_.block_size;
             info->total_nodes = fs_->info_.inode_count;
             info->used_nodes = fs_->info_.alloc_inode_count;
-            strcpy(info->name, kFsName);
-            return sizeof(*info);
+            memcpy(info->name, kFsName, strlen(kFsName));
+            return sizeof(vfs_query_info_t) + strlen(kFsName);
         }
         case IOCTL_VFS_UNMOUNT_FS: {
             mx_status_t status = Sync();

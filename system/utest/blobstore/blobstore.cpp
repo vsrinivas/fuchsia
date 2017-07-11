@@ -51,11 +51,15 @@ const fsck_options_t test_fsck_options = {
 static bool CheckBlobstoreInfo(const char* mount_path) {
     int fd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
-    vfs_query_info_t out;
-    ASSERT_EQ(ioctl_vfs_query_fs(fd, &out, sizeof(out)), (ssize_t)sizeof(out), "Failed to query filesystem");
-    ASSERT_EQ(strncmp("blobstore", out.name, strlen("blobstore")), 0, "Unexpected filesystem mounted");
-    ASSERT_LE(out.used_nodes, out.total_nodes, "Used nodes greater than free nodes");
-    ASSERT_LE(out.used_bytes, out.total_bytes, "Used bytes greater than free bytes");
+    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
+    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
+    ssize_t r = ioctl_vfs_query_fs(fd, info, sizeof(buf) - 1);
+    ASSERT_EQ(r, (ssize_t)(sizeof(vfs_query_info_t) + strlen("blobstore")), "Failed to query filesystem");
+    buf[r] = '\0';
+    const char* name = reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
+    ASSERT_EQ(strncmp("blobstore", name, strlen("blobstore")), 0, "Unexpected filesystem mounted");
+    ASSERT_LE(info->used_nodes, info->total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(info->used_bytes, info->total_bytes, "Used bytes greater than free bytes");
     ASSERT_EQ(close(fd), 0, "");
     return true;
 }

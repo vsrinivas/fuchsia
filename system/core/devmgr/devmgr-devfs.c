@@ -668,14 +668,15 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
     case MXRIO_IOCTL:
         switch (msg->arg2.op) {
         case IOCTL_VFS_QUERY_FS: {
-            if (arg < (int32_t) sizeof(vfs_query_info_t)) {
+            const char* devfs_name = "devfs";
+            if (arg < (int32_t) (sizeof(vfs_query_info_t) + strlen(devfs_name))) {
                 return MX_ERR_INVALID_ARGS;
             }
             vfs_query_info_t* info = (vfs_query_info_t*) msg->data;
             memset(info, 0, sizeof(*info));
-            strcpy(info->name, "devfs");
-            msg->datalen = sizeof(*info);
-            return sizeof(*info);
+            memcpy(info->name, devfs_name, strlen(devfs_name));
+            msg->datalen = sizeof(vfs_query_info_t) + strlen(devfs_name);
+            return sizeof(vfs_query_info_t) + strlen(devfs_name);
         }
         }
         break;

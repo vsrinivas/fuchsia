@@ -144,7 +144,7 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
                          size_t out_len) {
     switch (op) {
     case IOCTL_VFS_QUERY_FS: {
-        if (out_len < sizeof(vfs_query_info_t)) {
+        if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
             return MX_ERR_INVALID_ARGS;
         }
         vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
@@ -152,8 +152,8 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
         info->used_bytes = blobstore_->info_.alloc_block_count * blobstore_->info_.block_size;
         info->total_nodes = blobstore_->info_.inode_count;
         info->used_nodes = blobstore_->info_.alloc_inode_count;
-        strcpy(info->name, kFsName);
-        return sizeof(*info);
+        memcpy(info->name, kFsName, strlen(kFsName));
+        return sizeof(vfs_query_info_t) + strlen(kFsName);
     }
     case IOCTL_VFS_UNMOUNT_FS: {
         mx_status_t status = Sync();

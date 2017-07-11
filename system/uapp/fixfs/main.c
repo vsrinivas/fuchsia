@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <stdalign.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -13,14 +14,28 @@
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
 
+typedef union {
+    vfs_query_info_t info;
+    struct {
+        alignas(vfs_query_info_t) char h[sizeof(vfs_query_info_t)];
+        char name[MAX_FS_NAME_LEN + 1];
+    };
+} vfs_query_info_wrapper_t;
+
 void check_and_remount(const char* device_path, const char* mount_path, disk_format_t disk_format, mount_options_t* mount_options) {
     int mountfd = open(mount_path, O_RDONLY);
 
     if (mountfd > 0) {
-        vfs_query_info_t info;
-        ssize_t r = ioctl_vfs_query_fs(mountfd, &info, sizeof(info));
+        vfs_query_info_wrapper_t wrapper;
+        ssize_t r = ioctl_vfs_query_fs(mountfd, &wrapper.info, sizeof(wrapper) - 1);
         close(mountfd);
-        if (r != sizeof(info) || strcmp(info.name, "memfs")) {
+
+        if (r <= (ssize_t)sizeof(vfs_query_info_t)) {
+            return;
+        }
+
+        wrapper.name[r - sizeof(vfs_query_info_t)] = '\0';
+        if (strcmp(wrapper.name, "memfs")) {
             return;
         }
     } else if (mountfd != MX_ERR_INTERNAL) {

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdalign.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -54,10 +55,10 @@ int parse_args(int argc, char** argv, lsfs_options_t* options, const char** dirp
     return 0;
 }
 
-void print_fs_type(const char* name, const lsfs_options_t* options,
-                   const vfs_query_info_t* info, const char* device_path) {
+void print_fs_type(const char* name, const lsfs_options_t* options, const vfs_query_info_t* info,
+                   const int name_len, const char* device_path) {
     printf("%-15s  ", name);
-    printf("%-10s  ", info != NULL ? info->name : "?");
+    printf("%-10.*s  ", name_len, info != NULL ? info->name : "?");
     if (options->size_usage) {
         printf("Bytes: [%lu / %lu] ", info != NULL ? info->used_bytes : 0,
                                       info != NULL ? info->total_bytes : 0);
@@ -71,6 +72,14 @@ void print_fs_type(const char* name, const lsfs_options_t* options,
     }
     printf("\n");
 }
+
+typedef union {
+    vfs_query_info_t info;
+    struct {
+        alignas(vfs_query_info_t) char h[sizeof(vfs_query_info_t)];
+        char name[MAX_FS_NAME_LEN + 1];
+    };
+} vfs_query_info_wrapper_t;
 
 int main(int argc, char** argv) {
     const char* dirpath;
@@ -110,11 +119,18 @@ int main(int argc, char** argv) {
             printf("lsfs: couldn't open: %s\n", de->d_name);
             continue;
         }
-        vfs_query_info_t info;
+
+        vfs_query_info_wrapper_t wrapper;
         char device_path[1024];
-        ssize_t r = ioctl_vfs_query_fs(fd, &info, sizeof(info));
+        ssize_t r = ioctl_vfs_query_fs(fd, &wrapper.info, sizeof(wrapper) - 1);
+        int name_len = r - sizeof(vfs_query_info_t);
+
+        if (name_len > 0) {
+            wrapper.name[name_len] = '\0';
+        }
+
         ssize_t s = ioctl_vfs_get_device_path(fd, device_path, sizeof(device_path));
-        print_fs_type(de->d_name, &options, (r == sizeof(info)) ? &info : NULL, (s > 0 ? device_path : NULL));
+        print_fs_type(de->d_name, &options, name_len > 0 ? &wrapper.info : NULL, name_len, (s > 0 ? device_path : NULL));
         close(fd);
     }
     closedir(dir);

@@ -128,7 +128,7 @@ typedef struct vfs_query_info {
     uint64_t used_bytes;
     uint64_t total_nodes;
     uint64_t used_nodes;
-    char name[MAX_FS_NAME_LEN];
+    char name[]; // Does not include null-terminator
 } vfs_query_info_t;
 
 // ssize_t ioctl_vfs_query_fs(int fd, vfs_query_info_t* out, size_t out_len);

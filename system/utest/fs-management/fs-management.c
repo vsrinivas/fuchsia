@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdalign.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,14 +23,24 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 
+typedef union {
+    vfs_query_info_t info;
+    struct {
+        alignas(vfs_query_info_t) char h[sizeof(vfs_query_info_t)];
+        char name[MAX_FS_NAME_LEN];
+    };
+} vfs_query_info_wrapper_t;
+
 static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) {
     int fd = open(path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
-    vfs_query_info_t out;
-    ASSERT_EQ(ioctl_vfs_query_fs(fd, &out, sizeof(out)), (ssize_t)sizeof(out), "Failed to query filesystem");
-    ASSERT_EQ(strncmp(fs_name, out.name, len), 0, "Unexpected filesystem mounted");
-    ASSERT_LE(out.used_nodes, out.total_nodes, "Used nodes greater than free nodes");
-    ASSERT_LE(out.used_bytes, out.total_bytes, "Used bytes greater than free bytes");
+    vfs_query_info_wrapper_t wrapper;
+    ssize_t r = ioctl_vfs_query_fs(fd, &wrapper.info, sizeof(wrapper) - 1);
+    ASSERT_EQ(r, (ssize_t)(sizeof(vfs_query_info_t) + len), "Failed to query filesystem");
+    wrapper.name[r - sizeof(vfs_query_info_t)] = '\0';
+    ASSERT_EQ(strncmp(fs_name, wrapper.name, len), 0, "Unexpected filesystem mounted");
+    ASSERT_LE(wrapper.info.used_nodes, wrapper.info.total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(wrapper.info.used_bytes, wrapper.info.total_bytes, "Used bytes greater than free bytes");
     //TODO(planders): eventually check that total/used counts are > 0
     ASSERT_EQ(close(fd), 0, "");
     return true;

@@ -534,7 +534,7 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         return devmgr_add_systemfs_vmo(*vmo);
     }
     case IOCTL_VFS_QUERY_FS: {
-        if (out_len < sizeof(vfs_query_info_t)) {
+        if (out_len < sizeof(vfs_query_info_t) + strlen(kFsName)) {
             return MX_ERR_INVALID_ARGS;
         }
 
@@ -544,8 +544,8 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
         info->used_bytes = 0;
         info->total_nodes = 0;
         info->used_nodes = 0;
-        strcpy(info->name, kFsName);
-        return sizeof(*info);
+        memcpy(info->name, kFsName, strlen(kFsName));
+        return sizeof(vfs_query_info_t) + strlen(kFsName);
     }
     default:
         return MX_ERR_NOT_SUPPORTED;
