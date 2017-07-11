@@ -4,8 +4,26 @@
 
 module maxwell;
 
+import "lib/media/fidl/media_transport.fidl";
 import "lib/suggestion/fidl/proposal.fidl";
 import "lib/suggestion/fidl/user_input.fidl";
+
+// For now, it is expected that the format must be known synchronously at
+// response time, before connecting to the packet producer. If in the future
+// this proves to be a performance bottleneck, we can add a second interface
+// layer.
+struct MediaResponse {
+  media.MediaType media_type;
+  media.MediaPacketProducer media_packet_producer;
+};
+
+struct AskResponse {
+  array<Proposal> proposals;
+  string? natural_language_response;
+  // An optional voice/audio/media response to the query as answered by this
+  // agent.
+  MediaResponse? media_response;
+};
 
 // An interface enabling Agents to contribute Proposals reactively to the
 // Suggestion engine.
@@ -27,5 +45,5 @@ interface AskHandler {
   // ProposalPublisher to make persistent Proposals. However, these
   // proposals may be subject to more stringent filtering by the Suggestion
   // Engine. TODO(rosswang): spec/revisit.
-  Ask(UserInput query) => (array<Proposal> proposals);
+  Ask(UserInput query) => (AskResponse response);
 };

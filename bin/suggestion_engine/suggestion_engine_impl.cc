@@ -6,6 +6,10 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/time/time_delta.h"
+#include "lib/fxl/time/time_point.h"
+#include "lib/media/timeline/timeline.h"
+#include "lib/media/timeline/timeline_rate.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/ask_subscriber.h"
@@ -13,11 +17,18 @@
 #include "peridot/bin/suggestion_engine/next_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-
 #include <string>
 
 namespace maxwell {
+
+namespace {
+
+// Minimum delay from the time an ask initiation is received to wait before
+// selecting the best voice/audio/media response available among those received
+// from the ask handlers triggered for that ask. The actual delay may be longer
+// if a longer time elapses before any response contains a media response.
+constexpr fxl::TimeDelta kAskMediaResponseDelay =
+    fxl::TimeDelta::FromMilliseconds(100);
 
 bool IsInterruption(const SuggestionPrototype* suggestion) {
   return ((suggestion->proposal->display) &&
@@ -27,10 +38,13 @@ bool IsInterruption(const SuggestionPrototype* suggestion) {
             maxwell::AnnoyanceType::PEEK)));
 }
 
+}  // namespace
+
 SuggestionEngineImpl::SuggestionEngineImpl()
     : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
       ask_suggestions_(new RankedSuggestions(&ask_channel_)),
-      next_suggestions_(new RankedSuggestions(&next_channel_)) {
+      next_suggestions_(new RankedSuggestions(&next_channel_)),
+      ask_has_media_response_ptr_factory_(&ask_has_media_response_) {
   app_context_->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -43,6 +57,13 @@ SuggestionEngineImpl::SuggestionEngineImpl()
       [this](fidl::InterfaceRequest<SuggestionDebug> request) {
         debug_bindings_.AddBinding(&debug_, std::move(request));
       });
+
+  media_service_ =
+      app_context_->ConnectToEnvironmentService<media::MediaService>();
+  media_service_.set_connection_error_handler([this] {
+    media_service_ = nullptr;
+    media_packet_producer_ = nullptr;
+  });
 
   // The Next suggestions are always ranked with a static ranking function.
   next_suggestions_->UpdateRankingFunction(
@@ -131,6 +152,12 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
     return debug_.OnAskStart(query, ask_suggestions_);
   }
 
+  // Mark any outstanding media responses as stale (see below)
+  ask_has_media_response_ptr_factory_.InvalidateWeakPtrs();
+  ask_has_media_response_ = false;
+  auto has_media_response = ask_has_media_response_ptr_factory_.GetWeakPtr();
+  fxl::TimePoint ask_time_point = fxl::TimePoint::Now();
+
   auto remainingHandlers = std::make_shared<size_t>(ask_handlers_.size());
   for (auto ask = ask_handlers_.begin(); ask != ask_handlers_.end(); ask++) {
     (*ask)->handler->Ask(
@@ -139,9 +166,36 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
         // ask_handlers_ can be modified during this iteration.
         // Replace ask_handlers_ with a map + validation when BoundPtrSet is
         // removed.
-        [this, remainingHandlers, query,
-         ask](fidl::Array<ProposalPtr> proposals) {
-          for (auto& proposal : proposals) {
+        // TODO(rosswang): Large number of captures, substantial lambda;
+        // consider replacing with an object.
+        [this, remainingHandlers, query, ask, has_media_response,
+         ask_time_point](AskResponsePtr response) {
+          // TODO(rosswang): defer selection of "I don't know" responses
+          if (has_media_response && !*has_media_response &&
+              response->media_response) {
+            *has_media_response = true;
+            // TODO(rosswang): Never delay for voice queries.
+            fxl::TimeDelta media_delay =
+                fxl::TimePoint::Now() - ask_time_point - kAskMediaResponseDelay;
+
+            if (media_delay < fxl::TimeDelta::Zero()) {
+              media_delay = fxl::TimeDelta::Zero();
+            }
+
+            fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+                fxl::MakeCopyable([
+                  this, has_media_response,
+                  media_response = std::move(response->media_response)
+                ]() mutable {
+                  // make sure we're still the active query
+                  if (has_media_response) {
+                    PlayMediaResponse(std::move(media_response));
+                  }
+                }),
+                media_delay);
+          }
+
+          for (auto& proposal : response->proposals) {
             AddAskProposal((*ask)->publisher.get(), std::move(proposal));
           }
           (*remainingHandlers)--;
@@ -374,6 +428,63 @@ void SuggestionEngineImpl::PerformActions(
       default:
         FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action->which();
     }
+  }
+}
+
+void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
+  if (!media_service_)
+    return;
+
+  media::AudioRendererPtr audio_renderer;
+  media::MediaRendererPtr media_renderer;
+  media_service_->CreateAudioRenderer(audio_renderer.NewRequest(),
+                                      media_renderer.NewRequest());
+
+  media_sink_.reset();
+  media_service_->CreateSink(media_renderer.PassInterfaceHandle(),
+                             media_sink_.NewRequest());
+
+  media_packet_producer_ = media::MediaPacketProducerPtr::Create(
+      std::move(media_response->media_packet_producer));
+  media_sink_->ConsumeMediaType(
+      std::move(media_response->media_type),
+      [this](fidl::InterfaceHandle<media::MediaPacketConsumer> consumer) {
+        media_packet_producer_->Connect(
+            media::MediaPacketConsumerPtr::Create(std::move(consumer)), [this] {
+              time_lord_.reset();
+              media_timeline_consumer_.reset();
+              media_sink_->GetTimelineControlPoint(time_lord_.NewRequest());
+              time_lord_->GetTimelineConsumer(
+                  media_timeline_consumer_.NewRequest());
+              time_lord_->Prime([this] {
+                auto tt = media::TimelineTransform::New();
+                tt->reference_time = media::Timeline::local_now() +
+                                     media::Timeline::ns_from_ms(30);
+                tt->subject_time = media::kUnspecifiedTime;
+                tt->reference_delta = tt->subject_delta = 1;
+
+                HandleMediaUpdates(
+                    media::MediaTimelineControlPoint::kInitialStatus, nullptr);
+
+                media_timeline_consumer_->SetTimelineTransform(
+                    std::move(tt), [](bool completed) {});
+              });
+            });
+      });
+}
+
+void SuggestionEngineImpl::HandleMediaUpdates(
+    uint64_t version,
+    media::MediaTimelineControlPointStatusPtr status) {
+  if (status && status->end_of_stream) {
+    media_packet_producer_ = nullptr;
+    media_sink_ = nullptr;
+  } else {
+    time_lord_->GetStatus(
+        version, [this](uint64_t next_version,
+                        media::MediaTimelineControlPointStatusPtr next_status) {
+          HandleMediaUpdates(next_version, std::move(next_status));
+        });
   }
 }
 

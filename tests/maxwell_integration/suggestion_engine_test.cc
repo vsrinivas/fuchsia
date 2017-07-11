@@ -110,7 +110,11 @@ class AskProposinator : public Proposinator, public AskHandler {
     ask_proposals_.resize(0);
   }
 
-  void Commit() { ask_callback_(std::move(ask_proposals_)); }
+  void Commit() {
+    auto response = AskResponse::New();
+    response->proposals = std::move(ask_proposals_);
+    ask_callback_(std::move(response));
+  }
 
   fidl::String query() const { return query_ ? query_->get_text() : NULL; }
 

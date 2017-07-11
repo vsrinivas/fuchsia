@@ -36,7 +36,7 @@ class _AskHandlerImpl extends AskHandler {
   static final _musicPatternPortugal = new RegExp(r"portugal|the man");
 
   @override
-  void ask(UserInput query, void callback(List<Proposal> proposals)) {
+  void ask(UserInput query, void callback(AskResponse response)) {
     List<Proposal> proposals = new List();
     if (query.text?.contains(_urlSubPattern) ?? false) {
       final String url = query.text.startsWith("http")
@@ -153,7 +153,7 @@ class _AskHandlerImpl extends AskHandler {
       proposals.addAll(_kDummyInterruptions);
     }
 
-    callback(proposals);
+    callback(new AskResponse()..proposals = proposals);
   }
 }
 

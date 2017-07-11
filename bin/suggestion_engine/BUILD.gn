@@ -23,6 +23,8 @@ executable("suggestion_engine") {
     ":timeline_stories_watcher",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/public/lib/context/fidl",

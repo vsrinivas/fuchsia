@@ -31,7 +31,7 @@ fidl::InterfaceHandle<T> Duplicate(const fidl::InterfacePtr<T>& ptr) {
   return handle;
 }
 
-modular::AgentControllerPtr startStoryInfoAgent(
+modular::AgentControllerPtr StartStoryInfoAgent(
     modular::ComponentContext* component_context,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
@@ -121,7 +121,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // Start privileged local Framework-style Agents.
   {
-    auto controller = startStoryInfoAgent(
+    auto controller = StartStoryInfoAgent(
         component_context_.get(), Duplicate(story_provider),
         Duplicate(focus_provider), Duplicate(visible_stories_provider_));
     agent_controllers_.push_back(std::move(controller));
