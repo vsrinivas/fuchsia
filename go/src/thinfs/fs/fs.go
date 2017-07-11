@@ -202,6 +202,13 @@ type FileSystem interface {
 	// RootDirectory returns the root directory for the file system.  Callers must close the returned
 	// directory to ensure that all changes persist to disk.
 	RootDirectory() Directory
+
+	// Type returns the type of the file system as a string
+	Type() string
+
+	// FreeSize returns the free capacity of the filesystem (in bytes). If the free capacity is
+	// unknown, it will instead return the value of Size().
+	FreeSize() int64
 }
 
 // Directory represents the generic methods that can be taken on directory.

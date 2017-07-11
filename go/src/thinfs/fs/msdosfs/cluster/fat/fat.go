@@ -532,3 +532,14 @@ func (f *FAT) isHardError() bool {
 	}
 	return (v & f.errorBit()) == 0
 }
+
+// FreeCount returns the number of free clusters stored in fsinfo.
+func (f *FAT) FreeCount() (int64, error) {
+	err := error(nil)
+
+	if f.freeCount == fsinfo.UnknownFlag {
+		err = fs.ErrNotFound
+	}
+
+	return int64(f.freeCount), err
+}

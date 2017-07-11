@@ -38,6 +38,13 @@ type ThinVFS struct {
 	nextCookie int64
 }
 
+type VfsQueryInfo struct {
+	TotalBytes uint64
+	UsedBytes  uint64
+	TotalNodes uint64
+	UsedNodes  uint64
+}
+
 // NewServer creates a new ThinVFS server. Serve must be called to begin servicing the filesystem.
 func NewServer(filesys fs.FileSystem, h mx.Handle) (*ThinVFS, error) {
 	vfs := &ThinVFS{
@@ -533,6 +540,31 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			// Close reply handle, indicating that the unmounting process is complete
 			rh.Close()
 			os.Exit(0)
+		case mxio.IoctlVFSQueryFS:
+			maxlen := uint32(msg.Arg)
+			totalBytes := uint64(vfs.fs.Size())
+			usedBytes := totalBytes - uint64(vfs.fs.FreeSize())
+
+			queryInfo := VfsQueryInfo{
+				TotalBytes: totalBytes,
+				UsedBytes:  usedBytes,
+				TotalNodes: 0,
+				UsedNodes:  0,
+			}
+
+			name := append([]byte(vfs.fs.Type()), 0)
+
+			const infoSize = uint32(unsafe.Sizeof(queryInfo))
+			totalSize := infoSize + uint32(len(name))
+
+			if totalSize > maxlen {
+				return mx.ErrBufferTooSmall
+			}
+
+			copy(msg.Data[0:], (*[infoSize]byte)(unsafe.Pointer(&queryInfo))[:])
+			copy(msg.Data[infoSize:], name)
+			msg.Datalen = totalSize
+			return mx.Status(msg.Datalen)
 		default:
 			return mx.ErrNotSupported
 		}

@@ -219,3 +219,8 @@ func (m *Manager) removeAllAfter(cluster uint32, removeStart bool) error {
 	}
 	return nil
 }
+
+// FreeCount returns the number of free clusters stored in fsinfo.
+func (m *Manager) FreeCount() (int64, error) {
+	return m.fat.FreeCount()
+}
