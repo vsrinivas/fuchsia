@@ -23,8 +23,15 @@ class FTL_EXPORT MessageLoopHandler {
   // that the handler was waiting for but may also include other signals
   // that happen to also be asserted at the same time.
   //
+  // The number of pending operations is passed in |count|. This is the count
+  // returned by |mx_port_wait|, see:
+  // https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/port_wait.md
+  // For channels this is the number of messages that are ready to be read.
+  //
   // The default implementation does nothing.
-  virtual void OnHandleReady(mx_handle_t handle, mx_signals_t pending);
+  virtual void OnHandleReady(mx_handle_t handle,
+                             mx_signals_t pending,
+                             uint64_t count);
 
   // Called when an error occurs while waiting on the handle.
   //

@@ -59,7 +59,9 @@ void FDWaiter::Cancel() {
   callback_ = Callback();
 }
 
-void FDWaiter::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void FDWaiter::OnHandleReady(mx_handle_t handle,
+                             mx_signals_t pending,
+                             uint64_t count) {
   FTL_DCHECK(io_);
   FTL_DCHECK(key_);
 

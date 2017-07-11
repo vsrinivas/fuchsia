@@ -220,7 +220,9 @@ class TestMessageLoopHandler : public MessageLoopHandler {
   mx_status_t last_error_result() const { return last_error_result_; }
 
   // MessageLoopHandler:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override {
     ready_count_++;
   }
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
@@ -245,9 +247,11 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override {
     message_loop_->QuitNow();
-    TestMessageLoopHandler::OnHandleReady(handle, pending);
+    TestMessageLoopHandler::OnHandleReady(handle, pending, count);
   }
 
  private:
@@ -286,10 +290,12 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 
   void set_handler_key(MessageLoop::HandlerKey key) { key_ = key; }
 
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override {
     EXPECT_TRUE(message_loop_->HasHandler(key_));
     message_loop_->RemoveHandler(key_);
-    TestMessageLoopHandler::OnHandleReady(handle, pending);
+    TestMessageLoopHandler::OnHandleReady(handle, pending, count);
     MessageLoop::GetCurrent()->PostQuitTask();
   }
 

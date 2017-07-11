@@ -224,7 +224,8 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   const HandlerData& handler_data = it->second;
   FTL_DCHECK(packet.signal.trigger == handler_data.trigger);
   handler_data.handler->OnHandleReady(handler_data.handle,
-                                      packet.signal.observed);
+                                      packet.signal.observed,
+                                      packet.signal.count);
 
   // TODO(abarth): Slip the "repeating" and "once" cases in the MessageLoop
   // API.

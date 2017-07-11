@@ -36,6 +36,7 @@ class FTL_EXPORT SocketDrainer {
   void WaitForData();
   static void WaitComplete(mx_status_t result,
                            mx_signals_t pending,
+                           uint64_t count,
                            void* context);
 
   Client* client_;

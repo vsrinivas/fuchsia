@@ -35,6 +35,7 @@ class CopyToFileHandler {
   void OnHandleReady(mx_status_t result);
   static void WaitComplete(mx_status_t result,
                            mx_signals_t pending,
+                           uint64_t count,
                            void* context);
 
   mx::socket source_;
@@ -102,6 +103,7 @@ void CopyToFileHandler::OnHandleReady(mx_status_t result) {
 
 void CopyToFileHandler::WaitComplete(mx_status_t result,
                                      mx_signals_t pending,
+                                     uint64_t count,
                                      void* context) {
   CopyToFileHandler* handler = static_cast<CopyToFileHandler*>(context);
   handler->wait_id_ = 0;
@@ -125,6 +127,7 @@ class CopyFromFileHandler {
   void OnHandleReady(mx_status_t result);
   static void WaitComplete(mx_status_t result,
                            mx_signals_t pending,
+                           uint64_t count,
                            void* context);
 
   ftl::UniqueFD source_;
@@ -203,6 +206,7 @@ void CopyFromFileHandler::OnHandleReady(mx_status_t result) {
 
 void CopyFromFileHandler::WaitComplete(mx_status_t result,
                                        mx_signals_t pending,
+                                       uint64_t count,
                                        void* context) {
   CopyFromFileHandler* handler = static_cast<CopyFromFileHandler*>(context);
   handler->wait_id_ = 0;

@@ -67,6 +67,7 @@ void SocketDrainer::WaitForData() {
 
 void SocketDrainer::WaitComplete(mx_status_t result,
                                  mx_signals_t pending,
+                                 uint64_t count,
                                  void* context) {
   SocketDrainer* drainer = static_cast<SocketDrainer*>(context);
   drainer->wait_id_ = 0;

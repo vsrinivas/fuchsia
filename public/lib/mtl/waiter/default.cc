@@ -34,22 +34,22 @@ class HandleWatcher : public MessageLoopHandler {
   }
 
  protected:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override {
     FTL_DCHECK(handle_ == handle);
-    CallCallback(MX_OK, pending);
+    CallCallback(MX_OK, pending, count);
   }
 
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
     FTL_DCHECK(handle_ == handle);
-    CallCallback(status, MX_SIGNAL_NONE);
+    CallCallback(status, MX_SIGNAL_NONE, 0);
   }
 
  private:
-  void CallCallback(mx_status_t status, mx_signals_t pending) {
+  void CallCallback(mx_status_t status, mx_signals_t pending, uint64_t count) {
     FidlAsyncWaitCallback callback = callback_;
     void* context = context_;
     delete this;
-    callback(status, pending, context);
+    callback(status, pending, count, context);
   }
 
   MessageLoop::HandlerKey key_;

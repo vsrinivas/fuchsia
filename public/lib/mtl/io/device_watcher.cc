@@ -65,7 +65,9 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
       std::move(dir_fd), std::move(dir_watch), std::move(callback)));
 }
 
-void DeviceWatcher::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void DeviceWatcher::OnHandleReady(mx_handle_t handle,
+                                  mx_signals_t pending,
+                                  uint64_t count) {
   if (pending & MX_CHANNEL_READABLE) {
     uint32_t size;
     uint8_t buf[VFS_WATCH_MSG_MAX];

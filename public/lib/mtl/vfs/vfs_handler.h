@@ -20,11 +20,15 @@ class FTL_EXPORT VFSHandler : public MessageLoopHandler {
   explicit VFSHandler(VFSDispatcher* dispatcher);
   ~VFSHandler() override;
 
-  void Start(mx::channel channel, fs::vfs_dispatcher_cb_t callback, void* iostate);
+  void Start(mx::channel channel,
+             fs::vfs_dispatcher_cb_t callback,
+             void* iostate);
 
  private:
   // |MessageLoopHandler| implementation:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   void Stop(bool needs_close);

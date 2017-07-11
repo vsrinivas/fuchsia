@@ -47,7 +47,9 @@ class FTL_EXPORT DeviceWatcher : private mtl::MessageLoopHandler {
   static void ListDevices(ftl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
   // |MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override;
 
   ftl::UniqueFD dir_fd_;
   mx::channel dir_watch_;

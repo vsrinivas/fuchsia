@@ -9,7 +9,8 @@ namespace mtl {
 MessageLoopHandler::~MessageLoopHandler() {}
 
 void MessageLoopHandler::OnHandleReady(mx_handle_t handle,
-                                       mx_signals_t pending) {}
+                                       mx_signals_t pending,
+                                       uint64_t count) {}
 
 void MessageLoopHandler::OnHandleError(mx_handle_t handle, mx_status_t error) {}
 
