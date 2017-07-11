@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <hw/inout.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 
 __WEAK mx_handle_t root_resource_handle;
@@ -35,11 +36,12 @@ static cnd_t os_execute_cond;
 static int os_execute_tasks = 0;
 
 static struct {
-    void* ecam;
+    mx_handle_t vmo;
+    mx_vaddr_t ecam;
     size_t ecam_size;
     bool has_legacy;
     bool pci_probed;
-} acpi_pci_tbl = { NULL, 0, false, false };
+} acpi_pci_tbl = { MX_HANDLE_INVALID, 0, 0, false, false };
 
 const size_t PCIE_MAX_DEVICES_PER_BUS = 32;
 const size_t PCIE_MAX_FUNCTIONS_PER_DEVICE = 8;
@@ -161,6 +163,32 @@ static ACPI_STATUS acpi_pci_x86_pio_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
 }
 #endif
 
+static mx_status_t mmap_physical(mx_paddr_t phys, size_t size, uint32_t cache_policy,
+                                 mx_handle_t* out_vmo, mx_vaddr_t* out_vaddr) {
+    mx_handle_t vmo;
+    mx_vaddr_t vaddr;
+    mx_status_t st = mx_vmo_create_physical(root_resource_handle, phys, size, &vmo);
+    if (st != MX_OK) {
+        return st;
+    }
+    st = mx_vmo_set_cache_policy(vmo, cache_policy);
+    if (st != MX_OK) {
+        mx_handle_close(vmo);
+        return st;
+    }
+    st = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
+                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_MAP_RANGE,
+                     &vaddr);
+    if (st != MX_OK) {
+        mx_handle_close(vmo);
+        return st;
+    } else {
+        *out_vmo = vmo;
+        *out_vaddr = vaddr;
+        return MX_OK;
+    }
+}
+
 static mx_status_t acpi_probe_ecam(void) {
     // Look for MCFG and set up the ECAM pointer if we find it for PCIe
     // subsequent calls to this will use the existing ecam read
@@ -216,11 +244,12 @@ static mx_status_t acpi_probe_ecam(void) {
     // The size of this mapping is defined in the PCI Firmware v3 spec to be
     // big enough for all of the buses in this config.
     acpi_pci_tbl.ecam_size = size_per_bus * num_buses;
-    mx_status_t ret = mx_mmap_device_memory(root_resource_handle, base, acpi_pci_tbl.ecam_size,
-                                            MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                            (uintptr_t *)&acpi_pci_tbl.ecam);
+    mx_status_t ret = mmap_physical(base, acpi_pci_tbl.ecam_size,
+                                    MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                    &acpi_pci_tbl.vmo,
+                                    &acpi_pci_tbl.ecam);
     if (ret == MX_OK && LOCAL_TRACE) {
-        printf("ACPI: Found PCIe and mapped at %p.\n", acpi_pci_tbl.ecam);
+        printf("ACPI: Found PCIe and mapped at %p.\n", (void*)acpi_pci_tbl.ecam);
     }
 
     return MX_OK;
@@ -460,10 +489,9 @@ void *AcpiOsMapMemory(
     ACPI_PHYSICAL_ADDRESS end = (PhysicalAddress + Length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
     uintptr_t vaddr;
-    // TODO(teisenbe): Replace this with a VMO-based system
-    mx_status_t status = mx_mmap_device_memory(root_resource_handle,
-                                               aligned_address, end - aligned_address,
-                                               MX_CACHE_POLICY_CACHED, &vaddr);
+    mx_handle_t vmo;
+    mx_status_t status = mmap_physical(aligned_address, end - aligned_address,
+                                       MX_CACHE_POLICY_CACHED, &vmo, &vaddr);
     if (status != MX_OK) {
         return NULL;
     }
@@ -1063,7 +1091,7 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
     }
 
     ACPI_STATUS status = AE_ERROR;
-    if (acpi_pci_tbl.ecam != NULL) {
+    if (acpi_pci_tbl.ecam != 0) {
         status = acpi_pci_ecam_cfg_rw(PciId, Register, Value, Width, Write);
     } else if (acpi_pci_tbl.has_legacy) {
         // TODO: ARM PIO?
