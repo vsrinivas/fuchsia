@@ -12,6 +12,8 @@
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
 
+static const uint64_t kAddr32kb     = 0x0000000000008000;
+static const uint64_t kAddr64kb     = 0x0000000000010000;
 static const uint64_t kAddr1mb      = 0x0000000000100000;
 static const uint64_t kAddr3500mb   = 0x00000000e0000000;
 static const uint64_t kAddr4000mb   = 0x0000000100000000;
@@ -106,7 +108,7 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
 }
 
 size_t guest_e820_size(size_t size) {
-    return (size > kAddr4000mb ? 4 : 3) * sizeof(e820entry_t);
+    return (size > kAddr4000mb ? 6 : 5) * sizeof(e820entry_t);
 }
 
 mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
@@ -114,23 +116,31 @@ mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
         return MX_ERR_BUFFER_TOO_SMALL;
 
     e820entry_t* entry = (e820entry_t*)(addr + e820_off);
-    // 0 to 1mb is reserved.
+    // 0 to 32kb is reserved.
     entry[0].addr = 0;
-    entry[0].size = kAddr1mb;
+    entry[0].size = kAddr32kb;
     entry[0].type = kE820Reserved;
-    // 1mb to min(size, 3500mb) is available.
-    entry[1].addr = kAddr1mb;
-    entry[1].size = (size < kAddr3500mb ? size : kAddr3500mb) - kAddr1mb;
+    // 32kb to to 64kb is available (for linux's real mode trampoline).
+    entry[1].addr = kAddr32kb;
+    entry[1].size = kAddr32kb;
     entry[1].type = kE820Ram;
-    // 3500mb to 4000mb is reserved.
-    entry[2].addr = kAddr3500mb;
-    entry[2].size = kAddr4000mb - kAddr3500mb;
+    // 64kb to 1mb is reserved.
+    entry[2].addr = kAddr64kb;
+    entry[2].size = kAddr1mb - kAddr64kb;
     entry[2].type = kE820Reserved;
+    // 1mb to min(size, 3500mb) is available.
+    entry[3].addr = kAddr1mb;
+    entry[3].size = (size < kAddr3500mb ? size : kAddr3500mb) - kAddr1mb;
+    entry[3].type = kE820Ram;
+    // 3500mb to 4000mb is reserved.
+    entry[4].addr = kAddr3500mb;
+    entry[4].size = kAddr4000mb - kAddr3500mb;
+    entry[4].type = kE820Reserved;
     if (size > kAddr4000mb) {
         // If size > 4000mb, then make that region available.
-        entry[3].addr = kAddr4000mb;
-        entry[3].size = size - kAddr4000mb;
-        entry[3].type = kE820Ram;
+        entry[5].addr = kAddr4000mb;
+        entry[5].size = size - kAddr4000mb;
+        entry[5].type = kE820Ram;
     }
 
     return MX_OK;
