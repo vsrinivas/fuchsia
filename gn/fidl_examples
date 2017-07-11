@@ -11,6 +11,9 @@
             "application/lib/app/go/src/app": "application/lib/app"
         },
         {
+            "application/lib/svc/go/src/svc": "application/lib/svc"
+        },
+        {
             "lib/fidl/go/src/fidl": "fidl"
         }
     ],
