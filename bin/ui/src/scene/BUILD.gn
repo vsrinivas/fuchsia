@@ -4,16 +4,7 @@
 
 import("//apps/mozart/config.gni")
 
-group("scene") {
-  testonly = true
-
-  public_deps = [
-    ":scene_manager_service",
-    "tests",
-  ]
-}
-
-executable("scene_manager_service") {
+executable("scene") {
   output_name = "scene_manager_service"
 
   sources = [

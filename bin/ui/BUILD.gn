@@ -21,8 +21,6 @@ group("all") {
     "services",
     "src",
   ]
-
-  testonly = true
 }
 
 package("mozart_tests") {
@@ -210,7 +208,6 @@ package("tile_view") {
 
 package("mozart") {
   app = true
-  testonly = true
 
   deps = [
     ":all",

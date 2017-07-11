@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 group("src") {
-  testonly = true
-
   public_deps = [
     "compositor",
     "ime",
