@@ -251,6 +251,16 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             // Disable the performance energy bias bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
         }
+        if (leaf == X86_CPUID_PERFORMANCE_MONITORING) {
+            // Disable all performance monitoring.
+
+            // 31-07 = Reserved 0, 06-00 = 1 if event is not available.
+            const uint32_t performance_monitoring_no_events = 0b1111111;
+            guest_state->rax = 0;
+            guest_state->rbx = performance_monitoring_no_events;
+            guest_state->rcx = 0;
+            guest_state->rdx = 0;
+        }
         return MX_OK;
     default:
         return MX_ERR_NOT_SUPPORTED;
