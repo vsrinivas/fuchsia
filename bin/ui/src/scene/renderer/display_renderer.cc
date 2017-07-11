@@ -18,10 +18,10 @@ namespace scene {
 DisplayRenderer::DisplayRenderer(Session* session,
                                  ResourceId id,
                                  FrameScheduler* frame_scheduler,
-                                 escher::Escher* escher,
+                                 escher::PaperRendererPtr paper_renderer,
                                  escher::VulkanSwapchain swapchain)
     : Renderer(session, id, frame_scheduler),
-      paper_renderer_(escher->NewPaperRenderer()),
+      paper_renderer_(std::move(paper_renderer)),
       swapchain_helper_(std::move(swapchain), paper_renderer_) {}
 
 DisplayRenderer::~DisplayRenderer() {}

@@ -16,7 +16,7 @@ class DisplayRenderer final : public Renderer {
   DisplayRenderer(Session* session,
                   ResourceId id,
                   FrameScheduler* frame_scheduler,
-                  escher::Escher* escher,
+                  escher::PaperRendererPtr paper_renderer,
                   escher::VulkanSwapchain swapchain);
 
   ~DisplayRenderer();

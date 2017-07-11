@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/scene/session/session_context.h"
 
+#include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 #include "apps/mozart/src/scene/frame_scheduler.h"
@@ -154,6 +155,13 @@ bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
 escher::VulkanSwapchain SessionContext::GetVulkanSwapchain() const {
   FTL_DCHECK(swapchain_);
   return *(swapchain_.get());
+}
+
+const escher::PaperRendererPtr& SessionContext::GetPaperRenderer() {
+  if (!paper_renderer_ && escher_) {
+    paper_renderer_ = escher_->NewPaperRenderer();
+  }
+  return paper_renderer_;
 }
 
 }  // namespace scene

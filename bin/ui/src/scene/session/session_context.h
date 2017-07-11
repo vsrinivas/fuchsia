@@ -97,6 +97,9 @@ class SessionContext : public FrameSchedulerListener {
 
   FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
 
+  // Return a lazily-constructed PaperRenderer.
+  const escher::PaperRendererPtr& GetPaperRenderer();
+
  protected:
   // Only used by subclasses used in testing.
   SessionContext(std::unique_ptr<ReleaseFenceSignaller> r);
@@ -127,6 +130,7 @@ class SessionContext : public FrameSchedulerListener {
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
   FrameScheduler* const frame_scheduler_ = nullptr;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
+  escher::PaperRendererPtr paper_renderer_;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;

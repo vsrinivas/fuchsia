@@ -278,6 +278,8 @@ class HelloSceneManagerApp {
 
     renderer_.reset();
     camera_.reset();
+    clipper_2_.reset();
+    clipper_1_.reset();
     rrect_node_.reset();
 
     session_.reset();

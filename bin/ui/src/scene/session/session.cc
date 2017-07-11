@@ -24,6 +24,7 @@
 #include "apps/mozart/src/scene/util/unwrap.h"
 #include "apps/mozart/src/scene/util/wrap.h"
 
+#include "escher/renderer/paper_renderer.h"
 #include "escher/shape/mesh.h"
 #include "escher/shape/rounded_rect_factory.h"
 
@@ -600,7 +601,7 @@ ResourcePtr Session::CreateDisplayRenderer(
     ResourceId id,
     const mozart2::DisplayRendererPtr& args) {
   return ftl::MakeRefCounted<DisplayRenderer>(
-      this, id, context()->frame_scheduler(), context()->escher(),
+      this, id, context()->frame_scheduler(), context()->GetPaperRenderer(),
       context()->GetVulkanSwapchain());
 }
 
