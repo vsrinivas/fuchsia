@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//packages/package.gni")
 
-group("rt5370-with-firmware") {
-  deps = [
-    ":rt5370",
-    ":rt5370-firmware",
-  ]
-}
+driver_module("rt5370_driver") {
+  output_name = "rt5370"
 
-driver_module("rt5370") {
   sources = [
     "binding.c",
     "device.cpp",
@@ -38,6 +34,29 @@ driver_module("rt5370") {
 }
 
 copy("rt5370-firmware") {
-  sources = [ "firmware/rt2870.bin" ]
-  outputs = [ "$root_out_dir/rt2870.bin" ]
+  sources = [
+    "firmware/rt2870.bin",
+  ]
+  outputs = [
+    "$root_out_dir/firmware/rt2870.bin",
+  ]
+}
+
+package("rt5370") {
+  deps = [
+    ":rt5370_driver",
+
+    # The 'firmware' step has to build in the shared toolchain since we treat
+    # firmware blobs as if they were libraries which always use the shared
+    # toolchain to build.
+    ":rt5370-firmware(//build/toolchain/fuchsia:x64-shared)",
+  ]
+
+  drivers = [ {
+        name = "rt5370.so"
+      } ]
+
+  libraries = [ {
+        name = "firmware/rt2870.bin"
+      } ]
 }

@@ -5,7 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 
 group("testing") {
-  deps = [
+  public_deps = [
     ":wlan-testdev",
     ":wlan-testutil",
   ]

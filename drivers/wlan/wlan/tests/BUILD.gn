@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 group("tests") {
   testonly = true
-  deps = [
+  public_deps = [
     ":mac_tests",
     ":scanner_tests",
   ]
@@ -13,9 +15,13 @@ group("tests") {
 source_set("test_main") {
   testonly = true
 
-  sources = [ "test_main.cpp" ]
+  sources = [
+    "test_main.cpp",
+  ]
 
-  deps = [ "//third_party/gtest" ]
+  deps = [
+    "//third_party/gtest",
+  ]
 
   configs += [ "//drivers/wifi/wlan:wlan_config" ]
 }
@@ -44,7 +50,9 @@ executable("scanner_tests") {
 
   testonly = true
 
-  sources = [ "scanner_unittest.cpp" ]
+  sources = [
+    "scanner_unittest.cpp",
+  ]
 
   deps = [
     ":test_main",
@@ -53,4 +61,34 @@ executable("scanner_tests") {
   ]
 
   configs += [ "//drivers/wifi/wlan:wlan_config" ]
+}
+
+package("wlan_tests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+    "//drivers/wifi/testing",
+  ]
+
+  binaries = [
+    {
+      name = "wlan-testutil"
+    },
+  ]
+
+  tests = [
+    {
+      name = "wlan_mac_unittest"
+    },
+
+    {
+      name = "wlan_scanner_unittest"
+    },
+
+  ]
+
+  drivers = [ {
+        name = "wlan-testdev.so"
+      } ]
 }
