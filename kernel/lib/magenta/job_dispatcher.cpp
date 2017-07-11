@@ -16,12 +16,17 @@
 #include <mxalloc/new.h>
 
 // The starting max_height value of the root job.
-static const uint32_t kRootJobMaxHeight = 32;
+static constexpr uint32_t kRootJobMaxHeight = 32;
+
+static constexpr char kRootJobName[] = "<superroot>";
 
 mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     AllocChecker ac;
     auto job = mxtl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, kPolicyEmpty));
-    return ac.check() ? job : nullptr;
+    if (!ac.check())
+        return nullptr;
+    job->set_name(kRootJobName, sizeof(kRootJobName));
+    return job;
 }
 
 status_t JobDispatcher::Create(uint32_t flags,
@@ -61,11 +66,44 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                       : MX_JOB_IMPORTANCE_MAX),
       state_tracker_(MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS),
       policy_(policy) {
+
+    // Set the initial relative importance.
+    // Tries to make older jobs closer to the root more important.
+    AutoLock lock(&importance_lock_);
+    if (parent_ == nullptr) {
+        // Root job is the most important.
+        importance_list_.push_back(this);
+    } else {
+        mxtl::RefPtr<JobDispatcher> neighbor;
+        {
+            AutoLock plock(&parent_->lock_);
+            if (!parent_->jobs_.is_empty()) {
+                // Our youngest sibling.
+                neighbor = mxtl::WrapRefPtr(&parent_->jobs_.back());
+                // We aren't added to our parent's child list until after
+                // construction.
+                DEBUG_ASSERT(!dll_job_raw_.InContainer());
+                DEBUG_ASSERT(neighbor.get() != this);
+            } else {
+                // Our parent.
+                neighbor = parent_;
+            }
+        }
+        // Make ourselves slightly less important than our neighbor.
+        importance_list_.insert( // before
+            importance_list_.make_iterator(*neighbor.get()), this);
+    }
 }
 
 JobDispatcher::~JobDispatcher() {
     if (parent_)
         parent_->RemoveChildJob(this);
+
+    {
+        AutoLock lock(&importance_lock_);
+        DEBUG_ASSERT(dll_importance_.InContainer());
+        importance_list_.erase(*this);
+    }
 }
 
 void JobDispatcher::on_zero_handles() {
@@ -337,5 +375,38 @@ status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
         return MX_ERR_ACCESS_DENIED;
     }
     importance_ = importance;
+    return MX_OK;
+}
+
+// Global importance ranking. Note that this is independent of
+// mx_task_importance_t-style importance as far as JobDispatcher is concerned;
+// some other entity will choose how to order importance_list_.
+Mutex JobDispatcher::importance_lock_;
+JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
+
+status_t JobDispatcher::MakeMoreImportantThan(
+    mxtl::RefPtr<JobDispatcher> other) {
+
+    canary_.Assert();
+    if (other != nullptr)
+        other->canary_.Assert();
+
+    // Update this job's position in the global job importance list.
+    AutoLock lock(&importance_lock_);
+    DEBUG_ASSERT(dll_importance_.InContainer());
+    DEBUG_ASSERT(other == nullptr || other->dll_importance_.InContainer());
+
+    importance_list_.erase(*this);
+    DEBUG_ASSERT(!dll_importance_.InContainer());
+    if (other == nullptr) {
+        // Make this the least important.
+        importance_list_.push_front(this);
+    } else {
+        // Insert just after the less-important other job.
+        importance_list_.insert_after(
+            importance_list_.make_iterator(*other), this);
+    }
+    DEBUG_ASSERT(dll_importance_.InContainer());
+
     return MX_OK;
 }
