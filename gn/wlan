@@ -2,27 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "gopaths": [
-        {
-            "apps/wlan": "apps/wlan"
-        }
-    ],
-    "drivers": [
-        {
-            "binary": "rt5370.so",
-            "bootfs_path": "driver/rt5370.so"
-        },
-        {
-            "binary": "rt2870.bin",
-            "bootfs_path": "lib/firmware/rt2870.bin"
-        },
-        {
-            "binary": "wlan.so",
-            "bootfs_path": "driver/wlan.so"
-        }
-    ],
-    "labels": [
-        "//drivers/wifi/mediatek/rt5370:rt5370-with-firmware",
-        "//drivers/wifi/wlan"
-    ]
+    "packages": {
+        "wlan": "//drivers/wifi/wlan",
+        "rt5370": "//drivers/wifi/mediatek/rt5370"
+    }
 }

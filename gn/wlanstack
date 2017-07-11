@@ -2,25 +2,7 @@
     "languages": [
         "go"
     ],
-    "gopaths": [
-        {
-            "lib/fidl/go/src/fidl": "fidl"
-        }
-    ],
-    "labels": [
-        "//apps/wlan"
-    ],
-    "binaries": [
-        {
-            "binary": "wlanstack",
-            "bootfs_path": "bin/wlanstack"
-        }
-    ],
-    "resources": [
-        {
-            "file": "apps/wlan/default.json",
-            "bootfs_path": "data/wlanstack/config.json",
-            "default": "true"
-        }
-    ]
+    "packages": {
+        "wlanstack": "//apps/wlan:wlanstack"
+    }
 }
