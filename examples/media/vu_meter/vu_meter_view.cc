@@ -45,10 +45,8 @@ VuMeterView::VuMeterView(
       slow_right_(kSlowDecay) {
   FTL_DCHECK(params.is_valid());
 
-  media::MediaServicePtr media_service =
+  auto media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
-
-  // Get an audio capturer.
   media_service->CreateAudioCapturer(media_capturer_.NewRequest());
 
   media_capturer_.set_connection_error_handler([this]() {
@@ -83,13 +81,13 @@ void VuMeterView::OnEvent(mozart::InputEventPtr event,
   FTL_DCHECK(event);
   bool handled = false;
   if (event->is_pointer()) {
-    mozart::PointerEventPtr& pointer = event->get_pointer();
+    auto& pointer = event->get_pointer();
     if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
       ToggleStartStop();
       handled = true;
     }
   } else if (event->is_keyboard()) {
-    mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
+    auto& keyboard = event->get_keyboard();
     if (keyboard->phase == mozart::KeyboardEvent::Phase::PRESSED) {
       switch (keyboard->hid_usage) {
         case HID_USAGE_KEY_SPACE:
@@ -112,8 +110,7 @@ void VuMeterView::OnDraw() {
   FTL_DCHECK(properties());
 
   auto update = mozart::SceneUpdate::New();
-
-  const mozart::Size& view_size = *properties()->view_layout->size;
+  const auto& view_size = *properties()->view_layout->size;
 
   if (view_size.width == 0 || view_size.height == 0) {
     // Nothing to show yet.
@@ -124,7 +121,7 @@ void VuMeterView::OnDraw() {
     bounds.height = view_size.height;
 
     mozart::ImagePtr image;
-    sk_sp<SkSurface> surface =
+    auto surface =
         mozart::MakeSkSurface(view_size, &buffer_producer_, &image);
     FTL_CHECK(surface);
     DrawContent(view_size, surface->getCanvas());

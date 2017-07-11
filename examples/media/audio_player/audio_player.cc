@@ -21,13 +21,12 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
     : quit_when_done_(!params.stay()) {
   FTL_DCHECK(params.is_valid());
 
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context = app::ApplicationContext::CreateFromStartupInfo();
 
-  media::MediaServicePtr media_service =
+  auto media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
-  media::NetMediaServicePtr net_media_service =
+  auto net_media_service =
       application_context
           ->ConnectToEnvironmentService<media::NetMediaService>();
 

@@ -18,8 +18,7 @@ void usage(const char* prog_name) {
 }
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.positional_args().size() > 1) {
     usage(argv[0]);
     return 0;
@@ -40,23 +39,20 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
 
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context = app::ApplicationContext::CreateFromStartupInfo();
 
-  media::AudioServerPtr audio_server =
+  auto audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();
 
   if (set_gain) {
     audio_server->SetMasterGain(gain_target);
   }
 
-  audio_server->GetMasterGain(
-      [](float db_gain) {
-        std::cout << "Master gain is currently "
-                  << std::fixed << std::setprecision(2) << db_gain
-                  << " dB.\n";
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
-      });
+  audio_server->GetMasterGain([](float db_gain) {
+    std::cout << "Master gain is currently " << std::fixed
+              << std::setprecision(2) << db_gain << " dB.\n";
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
 
   loop.Run();
   return 0;

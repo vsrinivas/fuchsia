@@ -8,7 +8,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   examples::MediaPlayerParams params(command_line);
   if (!params.is_valid()) {
     return 1;

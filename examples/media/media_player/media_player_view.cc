@@ -63,10 +63,10 @@ MediaPlayerView::MediaPlayerView(
       input_handler_(GetViewServiceProvider(), this) {
   FTL_DCHECK(params.is_valid());
 
-  media::MediaServicePtr media_service =
+  auto media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
-  media::NetMediaServicePtr net_media_service =
+  auto net_media_service =
       application_context
           ->ConnectToEnvironmentService<media::NetMediaService>();
 
@@ -132,7 +132,7 @@ void MediaPlayerView::OnEvent(mozart::InputEventPtr event,
   FTL_DCHECK(event);
   bool handled = false;
   if (event->is_pointer()) {
-    const mozart::PointerEventPtr& pointer = event->get_pointer();
+    const auto& pointer = event->get_pointer();
     if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
       if (metadata_ && Contains(progress_bar_rect_, pointer->x, pointer->y)) {
         // User poked the progress bar...seek.
@@ -148,7 +148,7 @@ void MediaPlayerView::OnEvent(mozart::InputEventPtr event,
       handled = true;
     }
   } else if (event->is_keyboard()) {
-    mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
+    auto& keyboard = event->get_keyboard();
     if (keyboard->phase == mozart::KeyboardEvent::Phase::PRESSED) {
       switch (keyboard->hid_usage) {
         case HID_USAGE_KEY_SPACE:
@@ -211,7 +211,7 @@ void MediaPlayerView::OnDraw() {
   update->clear_nodes = true;
   update->clear_resources = true;
 
-  const mozart::Size& view_size = *properties()->view_layout->size;
+  const auto& view_size = *properties()->view_layout->size;
 
   if (view_size.width == 0 || view_size.height == 0) {
     // Nothing to show yet.
@@ -294,9 +294,9 @@ void MediaPlayerView::OnDraw() {
 
     // Draw the progress bar.
     mozart::ImagePtr controls_image;
-    SkISize controls_size =
+    auto controls_size =
         SkISize::Make(controls_rect.width, controls_rect.height);
-    sk_sp<SkSurface> controls_surface = mozart::MakeSkSurface(
+    auto controls_surface = mozart::MakeSkSurface(
         controls_size, &buffer_producer_, &controls_image);
     FTL_CHECK(controls_surface);
     DrawControls(controls_surface->getCanvas(), controls_size);
