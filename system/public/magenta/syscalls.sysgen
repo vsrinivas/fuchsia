@@ -212,6 +212,13 @@ syscall thread_write_state
     (handle: mx_handle_t, kind: uint32_t, buffer: any[buffer_len] IN, buffer_len: uint32_t)
     returns (mx_status_t);
 
+# NOTE: thread_set_priority is an experimental syscall.
+# Do not use it.  It is going away very soon.  Just don't do it.  This is not
+# the syscall you are looking for.  See MG-940
+syscall thread_set_priority deprecated
+    (prio: int32_t)
+    returns (mx_status_t);
+
 # Processes
 
 syscall process_exit noreturn

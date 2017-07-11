@@ -37,6 +37,13 @@
 #include "syscalls_priv.h"
 
 #define LOCAL_TRACE 0
+#define THREAD_SET_PRIORITY_EXPERIMENT 1
+
+#if THREAD_SET_PRIORITY_EXPERIMENT
+#include <kernel/cmdline.h>
+#include <kernel/thread.h>
+#include <lk/init.h>
+#endif
 
 // For reading general purpose integer registers, we can allocate in
 // an inline array and save the malloc. Assume 64 registers as a
@@ -51,6 +58,18 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 // Assume the typical set-policy call has 8 items or less.
 constexpr size_t kPolicyBasicInlineCount = 8;
 
+#if THREAD_SET_PRIORITY_EXPERIMENT
+// See MG-940
+static bool thread_set_priority_allowed = false;
+static void thread_set_priority_experiment_init_hook(uint) {
+    thread_set_priority_allowed = cmdline_get_bool("thread.set.priority.allowed", false);
+    printf("thread set priority experiment is : %s\n",
+           thread_set_priority_allowed ? "ENABLED" : "DISABLED");
+}
+LK_INIT_HOOK(thread_set_priority_experiment,
+             thread_set_priority_experiment_init_hook,
+             LK_INIT_LEVEL_THREADING - 1);
+#endif
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               user_ptr<const char> _name, uint32_t name_len,
@@ -195,6 +214,25 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
     // TODO(dje): Setting privileged values in registers.
     status = thread->thread()->WriteState(state_kind, bytes.get(), buffer_len, false);
     return status;
+}
+
+// See MG-940
+mx_status_t sys_thread_set_priority(int32_t prio) {
+#if THREAD_SET_PRIORITY_EXPERIMENT
+    // If the experimental mx_thread_set_priority has not been enabled using the
+    // kernel command line option, simply deny this request.
+    if (!thread_set_priority_allowed)
+        return MX_ERR_NOT_SUPPORTED;
+
+    if ((prio < LOWEST_PRIORITY) || (prio > HIGHEST_PRIORITY))
+        return MX_ERR_INVALID_ARGS;
+
+    thread_set_priority(prio);
+
+    return MX_OK;
+#else
+    return MX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 mx_status_t sys_task_suspend(mx_handle_t task_handle) {
