@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits>
 #include "apps/mozart/src/scene/resources/import.h"
+
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 
 namespace mozart {
 namespace scene {
 namespace {
 // Resources that are created to be |Import| delegates are not
-// directly owned by the |ResourceMap|. Instead, they are  owned by the import
-// resources themselves. So we give them a special identifier that is not part
-// of any session.
-constexpr ResourceId kDelegateResourceId =
-    std::numeric_limits<ResourceId>::max();
+// directly owned by the |ResourceMap|. Instead, they are owned by the import
+// resources themselves. So we give them an id of 0, which is reserved.
+constexpr ResourceId kDelegateResourceId = 0u;
 
 ResourcePtr CreateDelegate(Session* session, mozart2::ImportSpec spec) {
   switch (spec) {

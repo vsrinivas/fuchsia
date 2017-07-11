@@ -235,10 +235,8 @@ TEST_F(ImportTest,
 
     ASSERT_TRUE(import_node_backing);
 
-    // Since the entity node is not owned by the resource map, its ID is
-    // ResourceId::MAX.
-    ASSERT_EQ(import_node_backing->resource_id(),
-              std::numeric_limits<ResourceId>::max());
+    // Since the entity node is not owned by the resource map, its ID is 0.
+    ASSERT_EQ(import_node_backing->resource_id(), 0u);
   }
 }
 
