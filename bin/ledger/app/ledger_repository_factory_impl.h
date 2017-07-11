@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/src/app/erase_repository_operation.h"
+#include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/callback/pending_operation.h"
@@ -28,7 +28,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
     ~Delegate() {}
 
     virtual void EraseRepository(
-        EraseRepositoryOperation erase_repository_operation,
+        EraseRemoteRepositoryOperation erase_remote_repository_operation,
         std::function<void(bool)> callback) = 0;
 
    private:
@@ -43,6 +43,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
  private:
   class LedgerRepositoryContainer;
+  struct RepositoryInformation;
 
   // LedgerRepositoryFactory:
   void GetRepository(
@@ -51,20 +52,28 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
-
   void EraseRepository(
       const fidl::String& repository_path,
       FirebaseConfigPtr firebase_config,
       fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
       const EraseRepositoryCallback& callback) override;
 
+  // Verifies that the current server id is not different from the server id
+  // used in a previous run and wipes the local state in case of a mismatch.
+  //
+  // Ledger does not support cloud migrations - once the repository is synced
+  // with a cloud, we can't change the server.
+  bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
+                       const RepositoryInformation& repository_information);
+
   void CreateRepository(LedgerRepositoryContainer* container,
-                        std::string sanitized_path,
-                        std::string repository_name,
+                        const RepositoryInformation& repository_information,
                         cloud_sync::UserConfig user_config);
 
-  void OnVersionMismatch(std::string repository_name,
-                         std::string repository_path);
+  void OnVersionMismatch(RepositoryInformation repository_information);
+
+  Status DeleteRepositoryDirectory(
+      const RepositoryInformation& repository_information);
 
   Delegate* const delegate_;
   ledger::Environment* const environment_;

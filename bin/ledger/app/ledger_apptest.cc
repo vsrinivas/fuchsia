@@ -17,6 +17,7 @@
 #include "apps/test_runner/lib/reporting/results_queue.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -144,9 +145,11 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
   Status status;
   ledger::LedgerRepositoryPtr ledger_repository;
   files::ScopedTempDir tmp_dir;
-  std::string deletion_sentinel_path;
-  EXPECT_TRUE(tmp_dir.NewTempFile(&deletion_sentinel_path));
-  EXPECT_TRUE(files::IsFile(deletion_sentinel_path));
+  std::string content_path = tmp_dir.path() + "/content";
+  std::string deletion_sentinel_path = content_path + "/sentinel";
+  ASSERT_TRUE(files::CreateDirectory(content_path));
+  ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
 
   ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
   firebase_config->server_id = "network_is_disabled_anyway";

@@ -9,7 +9,7 @@
 
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/erase_repository_operation.h"
+#include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -63,8 +63,9 @@ class IntegrationTest : public test::TestWithMessageLoop {
 
    private:
     // LedgerRepositoryFactoryImpl::Delegate:
-    void EraseRepository(EraseRepositoryOperation erase_repository_operation,
-                         std::function<void(bool)> callback) override {
+    void EraseRepository(
+        EraseRemoteRepositoryOperation erase_remote_repository_operation,
+        std::function<void(bool)> callback) override {
       FTL_NOTIMPLEMENTED();
       callback(false);
     }

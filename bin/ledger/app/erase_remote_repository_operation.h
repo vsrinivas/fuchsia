@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_ERASE_REPOSITORY_OPERATION_H_
-#define APPS_LEDGER_SRC_APP_ERASE_REPOSITORY_OPERATION_H_
+#ifndef APPS_LEDGER_SRC_APP_ERASE_REMOTE_REPOSITORY_OPERATION_H_
+#define APPS_LEDGER_SRC_APP_ERASE_REMOTE_REPOSITORY_OPERATION_H_
 
 #include <memory>
 #include <string>
@@ -17,19 +17,20 @@
 
 namespace ledger {
 
-// Asynchronous operation that erases data in the given repository, locally and
-// in the cloud.
-class EraseRepositoryOperation {
+// Asynchronous operation that erases data in the cloud for the given
+// repository.
+class EraseRemoteRepositoryOperation {
  public:
-  EraseRepositoryOperation(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                           ledger::NetworkService* network_service,
-                           std::string repository_path,
-                           std::string server_id,
-                           std::string api_key,
-                           modular::auth::TokenProviderPtr token_provider);
+  EraseRemoteRepositoryOperation(
+      ftl::RefPtr<ftl::TaskRunner> task_runner,
+      ledger::NetworkService* network_service,
+      std::string server_id,
+      std::string api_key,
+      modular::auth::TokenProviderPtr token_provider);
 
-  EraseRepositoryOperation(EraseRepositoryOperation&& other);
-  EraseRepositoryOperation& operator=(EraseRepositoryOperation&& other);
+  EraseRemoteRepositoryOperation(EraseRemoteRepositoryOperation&& other);
+  EraseRemoteRepositoryOperation& operator=(
+      EraseRemoteRepositoryOperation&& other);
 
   void Start(std::function<void(bool)> on_done);
 
@@ -47,9 +48,9 @@ class EraseRepositoryOperation {
   std::string auth_token_;
   std::unique_ptr<firebase::FirebaseImpl> firebase_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(EraseRepositoryOperation);
+  FTL_DISALLOW_COPY_AND_ASSIGN(EraseRemoteRepositoryOperation);
 };
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_ERASE_REPOSITORY_OPERATION_H_
+#endif  // APPS_LEDGER_SRC_APP_ERASE_REMOTE_REPOSITORY_OPERATION_H_

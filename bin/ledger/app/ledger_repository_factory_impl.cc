@@ -20,13 +20,16 @@
 
 namespace ledger {
 
-namespace {
-ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
-  size_t separator = repository_path.rfind('/');
-  FTL_DCHECK(separator != std::string::npos);
-  FTL_DCHECK(separator != repository_path.size() - 1);
+constexpr ftl::StringView kContentPath = "/content";
+constexpr ftl::StringView kStagingPath = "/staging";
 
-  return repository_path.substr(separator + 1);
+namespace {
+ftl::StringView GetDefaultUserId(ftl::StringView base_path) {
+  size_t separator = base_path.rfind('/');
+  FTL_DCHECK(separator != std::string::npos);
+  FTL_DCHECK(separator != base_path.size() - 1);
+
+  return base_path.substr(separator + 1);
 }
 
 cloud_sync::UserConfig GetUserConfig(const FirebaseConfigPtr& firebase_config,
@@ -56,56 +59,6 @@ bool SaveConfigForDebugging(ftl::StringView user_id,
                                    repository_path, temp_dir)) {
     return false;
   }
-  return true;
-}
-
-// Verifies that the current server id is not different from the server id used
-// in a previous run and wipes the local state in case of a mismatch.
-//
-// Ledger does not support cloud migrations - once the repository is synced with
-// a cloud, we can't change the server.
-bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
-                     ftl::StringView repository_path,
-                     const std::string& temp_dir) {
-  FTL_DCHECK(user_config.use_sync);
-
-  std::string server_id_path =
-      ftl::Concatenate({repository_path, "/", kServerIdFilename});
-  if (files::IsFile(server_id_path)) {
-    std::string previous_server_id;
-    if (!files::ReadFileToString(server_id_path, &previous_server_id)) {
-      FTL_LOG(ERROR) << "Failed to read the previous server id for "
-                     << "compatibility check";
-      return false;
-    }
-
-    if (previous_server_id == user_config.server_id) {
-      return true;
-    }
-
-    FTL_LOG(WARNING) << "Mismatch between the previous server id: "
-                     << previous_server_id
-                     << " and the current one: " << user_config.server_id
-                     << ".";
-    FTL_LOG(WARNING) << "Ledger does not support cloud migrations: "
-                     << "Deleting local state at " << repository_path << ".";
-
-    if (!files::DeletePath(repository_path.ToString(), true)) {
-      FTL_LOG(ERROR) << "Unable to delete ledger directory. "
-                     << "Reset Ledger using "
-                     << "`rm -rf " << repository_path << "`";
-      return false;
-    }
-  }
-
-  std::string temp_dir_root = ftl::Concatenate({repository_path, "/tmp"});
-  if (!files::WriteFileInTwoPhases(server_id_path, user_config.server_id,
-                                   temp_dir)) {
-    FTL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
-                   << "check.";
-    return false;
-  }
-
   return true;
 }
 
@@ -209,6 +162,26 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
 
+struct LedgerRepositoryFactoryImpl::RepositoryInformation {
+ public:
+  RepositoryInformation(const fidl::String& repository_path)
+      : base_path(files::SimplifyPath(repository_path.get())),
+        content_path(ftl::Concatenate({base_path, kContentPath})),
+        staging_path(ftl::Concatenate({base_path, kStagingPath})) {}
+
+  RepositoryInformation(const RepositoryInformation& other) = default;
+  RepositoryInformation(RepositoryInformation&& other) = default;
+  RepositoryInformation& operator=(const RepositoryInformation& other) =
+      default;
+
+  bool Init() { return GetRepositoryName(content_path, &name); }
+
+  const std::string base_path;
+  const std::string content_path;
+  const std::string staging_path;
+  std::string name;
+};
+
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     Delegate* delegate,
     ledger::Environment* environment,
@@ -226,14 +199,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
-  std::string sanitized_path =
-      files::SimplifyPath(std::move(repository_path.get()));
-  std::string name;
-  if (!GetRepositoryName(sanitized_path, &name)) {
+  RepositoryInformation repository_information(repository_path);
+  if (!repository_information.Init()) {
     callback(Status::IO_ERROR);
     return;
   }
-  auto it = repositories_.find(name);
+  auto it = repositories_.find(repository_information.name);
   if (it != repositories_.end()) {
     it->second.BindRepository(std::move(repository_request),
                               std::move(callback));
@@ -244,9 +215,10 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     FTL_LOG(WARNING) << "No sync configuration - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
 
-    auto ret = repositories_.emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(name),
-                                     std::forward_as_tuple(nullptr));
+    auto ret = repositories_.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(repository_information.name),
+        std::forward_as_tuple(nullptr));
     LedgerRepositoryContainer* container = &ret.first->second;
     container->BindRepository(std::move(repository_request),
                               std::move(callback));
@@ -261,28 +233,30 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
   if (token_provider_ptr) {
-    token_provider_ptr.set_connection_error_handler([this, name] {
-      FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
-                     << "shutting down the repository.";
-      auto find_repository = repositories_.find(name);
-      FTL_DCHECK(find_repository != repositories_.end());
-      repositories_.erase(find_repository);
-    });
+    token_provider_ptr.set_connection_error_handler(
+        [ this, name = repository_information.name ] {
+          FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
+                         << "shutting down the repository.";
+          auto find_repository = repositories_.find(name);
+          FTL_DCHECK(find_repository != repositories_.end());
+          repositories_.erase(find_repository);
+        });
   }
   auto auth_provider = std::make_unique<AuthProviderImpl>(
       environment_->main_runner(), firebase_config->api_key,
       std::move(token_provider_ptr));
   cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
 
-  auto ret = repositories_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(name),
-      std::forward_as_tuple(std::move(auth_provider)));
+  auto ret =
+      repositories_.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(repository_information.name),
+                            std::forward_as_tuple(std::move(auth_provider)));
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 
   auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
-    this, sanitized_path = std::move(sanitized_path), name = std::move(name),
-    firebase_config = std::move(firebase_config), auth_provider_ptr, container
+    this, repository_information, firebase_config = std::move(firebase_config),
+    auth_provider_ptr, container
   ](cloud_sync::AuthStatus auth_status, std::string user_id) {
     if (auth_status != cloud_sync::AuthStatus::OK) {
       FTL_LOG(ERROR) << "Failed to retrieve Firebase user ID from the token "
@@ -294,12 +268,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     if (user_id.empty()) {
       FTL_LOG(WARNING) << "Empty Firebase ID returned by the token manager, "
                        << "falling back to using directory name as the id.";
-      user_id = GetStorageDirectoryName(sanitized_path).ToString();
+      user_id = GetDefaultUserId(repository_information.base_path).ToString();
     }
-    cloud_sync::UserConfig user_config = GetUserConfig(
-        firebase_config, user_id, sanitized_path, auth_provider_ptr);
-    CreateRepository(container, std::move(sanitized_path), std::move(name),
-                     std::move(user_config));
+    cloud_sync::UserConfig user_config =
+        GetUserConfig(firebase_config, user_id,
+                      repository_information.content_path, auth_provider_ptr);
+    CreateRepository(container, repository_information, std::move(user_config));
 
   }));
 }
@@ -309,29 +283,27 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     FirebaseConfigPtr firebase_config,
     fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
     const EraseRepositoryCallback& callback) {
-  std::string sanitized_path =
-      files::SimplifyPath(std::move(repository_path.get()));
-  std::string name;
-  if (!GetRepositoryName(sanitized_path, &name)) {
+  RepositoryInformation repository_information(repository_path);
+  if (!repository_information.Init()) {
     callback(Status::IO_ERROR);
     return;
   }
-  auto find_repository = repositories_.find(name);
+  auto find_repository = repositories_.find(repository_information.name);
   if (find_repository != repositories_.end()) {
     FTL_LOG(WARNING) << "The repository to be erased is running, "
                      << "shutting it down before erasing.";
     repositories_.erase(find_repository);
   }
 
-  if (!firebase_config || !token_provider) {
+  Status status = DeleteRepositoryDirectory(repository_information);
+  if (status != Status::OK) {
+    callback(status);
+    return;
+  }
+
+  if (firebase_config || !token_provider) {
     // No sync configuration passed, only delete the local state.
-    if (!files::DeletePath(sanitized_path, true)) {
-      FTL_LOG(ERROR) << "Unable to delete repository local storage at "
-                     << sanitized_path;
-      callback(Status::IO_ERROR);
-      return;
-    }
-    callback(Status::OK);
+    callback(DeleteRepositoryDirectory(repository_information));
     return;
   }
 
@@ -339,10 +311,10 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
 
   delegate_->EraseRepository(
-      EraseRepositoryOperation(
+      EraseRemoteRepositoryOperation(
           environment_->main_runner(), environment_->network_service(),
-          std::move(sanitized_path), firebase_config->server_id,
-          firebase_config->api_key, std::move(token_provider_ptr)),
+          firebase_config->server_id, firebase_config->api_key,
+          std::move(token_provider_ptr)),
       [callback](bool succeeded) {
         if (succeeded) {
           callback(Status::OK);
@@ -352,27 +324,76 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
       });
 }
 
+// Verifies that the current server id is not different from the server id used
+// in a previous run and wipes the local state in case of a mismatch.
+//
+// Ledger does not support cloud migrations - once the repository is synced with
+// a cloud, we can't change the server.
+bool LedgerRepositoryFactoryImpl::CheckSyncConfig(
+    const cloud_sync::UserConfig& user_config,
+    const RepositoryInformation& repository_information) {
+  FTL_DCHECK(user_config.use_sync);
+
+  std::string server_id_path = ftl::Concatenate(
+      {repository_information.content_path, "/", kServerIdFilename});
+  if (files::IsFile(server_id_path)) {
+    std::string previous_server_id;
+    if (!files::ReadFileToString(server_id_path, &previous_server_id)) {
+      FTL_LOG(ERROR) << "Failed to read the previous server id for "
+                     << "compatibility check";
+      return false;
+    }
+
+    if (previous_server_id == user_config.server_id) {
+      return true;
+    }
+
+    FTL_LOG(WARNING) << "Mismatch between the previous server id: "
+                     << previous_server_id
+                     << " and the current one: " << user_config.server_id
+                     << ".";
+    FTL_LOG(WARNING) << "Ledger does not support cloud migrations: "
+                     << "Deleting local state at "
+                     << repository_information.content_path << ".";
+    if (DeleteRepositoryDirectory(repository_information) != Status::OK) {
+      FTL_LOG(ERROR) << "Unable to delete ledger directory. "
+                     << "Reset Ledger using "
+                     << "`rm -rf " << repository_information.content_path
+                     << "`";
+      return false;
+    }
+  }
+
+  if (!files::WriteFileInTwoPhases(server_id_path, user_config.server_id,
+                                   repository_information.staging_path)) {
+    FTL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
+                   << "check.";
+    return false;
+  }
+
+  return true;
+}
+
 void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
-    std::string repository_path,
-    std::string repository_name,
+    const RepositoryInformation& repository_information,
     cloud_sync::UserConfig user_config) {
-  const std::string temp_dir = ftl::Concatenate({repository_path, "/tmp"});
+  const std::string temp_dir =
+      ftl::Concatenate({repository_information.content_path, "/tmp"});
   if (config_persistence_ == ConfigPersistence::PERSIST &&
-      !CheckSyncConfig(user_config, repository_path, temp_dir)) {
+      !CheckSyncConfig(user_config, repository_information)) {
     container->SetRepository(Status::CONFIGURATION_ERROR, nullptr);
     return;
   }
   // Save debugging data for `ledger_tool`.
   if (config_persistence_ == ConfigPersistence::PERSIST &&
-      !SaveConfigForDebugging(user_config.user_id, repository_path, temp_dir)) {
+      !SaveConfigForDebugging(user_config.user_id,
+                              repository_information.content_path, temp_dir)) {
     FTL_LOG(WARNING) << "Failed to save the current configuration.";
   }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
-  ftl::Closure on_version_mismatch = [
-    this, repository_path, repository_name = std::move(repository_name)
-  ]() mutable {
-    OnVersionMismatch(std::move(repository_name), std::move(repository_path));
+  ftl::Closure on_version_mismatch = [this, repository_information]() mutable {
+    OnVersionMismatch(std::move(repository_information));
   };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
@@ -380,14 +401,13 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
       std::move(on_version_mismatch));
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      std::move(repository_path), environment_, std::move(watchers),
+      repository_information.content_path, environment_, std::move(watchers),
       std::move(user_sync));
   container->SetRepository(Status::OK, std::move(repository));
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(
-    std::string repository_name,
-    std::string repository_path) {
+    RepositoryInformation repository_information) {
   FTL_LOG(ERROR)
       << "Data in the cloud is incompatible with the local state, "
       << "erasing the local state. Log out and back in to sync the state from "
@@ -398,17 +418,29 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(
 
   // First, shut down the repository so that we can delete the files while it's
   // not running.
-  auto find_repository = repositories_.find(repository_name);
+  auto find_repository = repositories_.find(repository_information.name);
   FTL_DCHECK(find_repository != repositories_.end());
   repositories_.erase(find_repository);
 
-  // Delete the local files.
-  if (!files::DeletePath(repository_path, true)) {
-    FTL_LOG(ERROR) << "Unable to delete repository local storage at "
-                   << repository_path;
-    return;
+  DeleteRepositoryDirectory(repository_information);
+}
+
+Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
+    const RepositoryInformation& repository_information) {
+  files::ScopedTempDir tmp_directory(repository_information.staging_path);
+  std::string destination = tmp_directory.path() + "/content";
+  if (rename(repository_information.content_path.c_str(),
+             destination.c_str()) != 0) {
+    FTL_LOG(ERROR) << "Unable to move repository local storage at "
+                   << repository_information.content_path;
+    return Status::IO_ERROR;
   }
-  FTL_LOG(INFO) << "Erased local data at " << repository_path;
+  if (!files::DeletePath(destination, true)) {
+    FTL_LOG(ERROR) << "Unable to delete repository staging storage at "
+                   << destination;
+    return Status::IO_ERROR;
+  }
+  return Status::OK;
 }
 
 }  // namespace ledger

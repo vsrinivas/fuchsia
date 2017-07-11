@@ -2,24 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/erase_repository_operation.h"
+#include "apps/ledger/src/app/erase_remote_repository_operation.h"
 
 #include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/path.h"
 
 namespace ledger {
 
-EraseRepositoryOperation::EraseRepositoryOperation(
+EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     ledger::NetworkService* network_service,
-    std::string repository_path,
     std::string server_id,
     std::string api_key,
     modular::auth::TokenProviderPtr token_provider)
     : network_service_(network_service),
-      repository_path_(std::move(repository_path)),
       server_id_(server_id),
       api_key_(std::move(api_key)) {
   token_provider.set_connection_error_handler([this] {
@@ -32,24 +28,16 @@ EraseRepositoryOperation::EraseRepositoryOperation(
       task_runner, api_key_, std::move(token_provider));
 }
 
-EraseRepositoryOperation::EraseRepositoryOperation(
-    EraseRepositoryOperation&& other) = default;
+EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
+    EraseRemoteRepositoryOperation&& other) = default;
 
-EraseRepositoryOperation& EraseRepositoryOperation::operator=(
-    EraseRepositoryOperation&& other) = default;
+EraseRemoteRepositoryOperation& EraseRemoteRepositoryOperation::operator=(
+    EraseRemoteRepositoryOperation&& other) = default;
 
-void EraseRepositoryOperation::Start(std::function<void(bool)> on_done) {
+void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
   FTL_DCHECK(!on_done_);
   on_done_ = std::move(on_done);
   FTL_DCHECK(on_done_);
-
-  if (!files::DeletePath(repository_path_, true)) {
-    FTL_LOG(ERROR) << "Unable to delete repository local storage at "
-                   << repository_path_;
-    on_done_(false);
-    return;
-  }
-  FTL_LOG(INFO) << "Erased local data at " << repository_path_;
 
   auth_provider_->GetFirebaseUserId([this](cloud_sync::AuthStatus auth_status,
                                            std::string user_id) {
@@ -75,7 +63,7 @@ void EraseRepositoryOperation::Start(std::function<void(bool)> on_done) {
   });
 }
 
-void EraseRepositoryOperation::EraseRemote() {
+void EraseRemoteRepositoryOperation::EraseRemote() {
   if (user_id_.empty() || auth_token_.empty()) {
     FTL_LOG(ERROR) << "Missing credentials from the token provider, "
                    << "will not erase the remote state. (running as guest?)";

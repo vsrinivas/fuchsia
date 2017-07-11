@@ -11,7 +11,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/src/app/erase_repository_operation.h"
+#include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -120,10 +120,11 @@ class App : public LedgerController,
   }
 
   // LedgerRepositoryFactoryImpl::Delegate:
-  void EraseRepository(EraseRepositoryOperation erase_repository_operation,
-                       std::function<void(bool)> callback) override {
+  void EraseRepository(
+      EraseRemoteRepositoryOperation erase_remote_repository_operation,
+      std::function<void(bool)> callback) override {
     auto handler = pending_operation_manager_.Manage(
-        std::move(erase_repository_operation));
+        std::move(erase_remote_repository_operation));
     handler.first->Start([
       this, cleanup = std::move(handler.second), callback = std::move(callback)
     ](bool succeeded) {
