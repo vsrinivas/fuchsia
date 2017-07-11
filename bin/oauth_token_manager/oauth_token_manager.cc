@@ -43,6 +43,9 @@
 namespace modular {
 namespace auth {
 
+using ShortLivedTokenCallback =
+    std::function<void(std::string, modular::auth::AuthErrPtr)>;
+
 using FirebaseTokenCallback =
     std::function<void(modular::auth::FirebaseTokenPtr,
                        modular::auth::AuthErrPtr)>;
@@ -173,7 +176,7 @@ void Post(const std::string& request_body,
           network::URLLoader* const url_loader,
           const std::string& url,
           const std::function<void()>& success_callback,
-          const std::function<void(std::string)>& failure_callback,
+          const std::function<void(Status, std::string)>& failure_callback,
           const std::function<bool(rapidjson::Document)>& set_token_callback) {
   std::string encoded_request_body(request_body);
   if (url.find(kFirebaseAuthEndpoint) == std::string::npos) {
@@ -222,8 +225,9 @@ void Post(const std::string& request_body,
                                             network::URLResponsePtr response) {
     if (!response->error.is_null()) {
       failure_callback(
-          "Network error! code: " + std::to_string(response->error->code) +
-          " description: " + response->error->description.data());
+          Status::NETWORK_ERROR,
+          "POST error: " + std::to_string(response->error->code) +
+              " , with description: " + response->error->description.data());
       return;
     }
 
@@ -233,16 +237,18 @@ void Post(const std::string& request_body,
       // TODO(alhaad/ukode): Use non-blocking variant.
       if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
-        failure_callback("Failed to read response from socket with status:" +
-                         std::to_string(response->status_code));
+        failure_callback(Status::NETWORK_ERROR,
+                         "Failed to read response from socket with status:" +
+                             std::to_string(response->status_code));
         return;
       }
     }
 
     if (response->status_code != 200) {
-      failure_callback("Error response from server: " +
-                       std::to_string(response->status_code) +
-                       ", with description:" + response_body);
+      failure_callback(
+          Status::OAUTH_SERVER_ERROR,
+          "Received status code:" + std::to_string(response->status_code) +
+              ", and response body:" + response_body);
       return;
     }
 
@@ -250,27 +256,29 @@ void Post(const std::string& request_body,
     rapidjson::ParseResult ok = doc.Parse(response_body);
     if (!ok) {
       std::string error_msg = GetParseError_En(ok.Code());
-      failure_callback("JSON parse error: " + error_msg);
+      failure_callback(Status::BAD_RESPONSE, "JSON parse error: " + error_msg);
       return;
     };
     auto result = set_token_callback(std::move(doc));
     if (result) {
       success_callback();
     } else {
-      failure_callback("Invalid response: " +
-                       modular::JsonValueToPrettyString(std::move(doc)));
+      failure_callback(Status::BAD_RESPONSE,
+                       "Invalid response: " +
+                           modular::JsonValueToPrettyString(std::move(doc)));
     }
     return;
   });
 }
 
 // Exactly one of success_callback and failure_callback is ever invoked.
-void Get(network::URLLoader* const url_loader,
-         const std::string& url,
-         const std::string& access_token,
-         const std::function<void()>& success_callback,
-         const std::function<void(std::string)>& failure_callback,
-         const std::function<bool(rapidjson::Document)>& set_token_callback) {
+void Get(
+    network::URLLoader* const url_loader,
+    const std::string& url,
+    const std::string& access_token,
+    const std::function<void()>& success_callback,
+    const std::function<void(Status status, std::string)>& failure_callback,
+    const std::function<bool(rapidjson::Document)>& set_token_callback) {
   network::URLRequestPtr request(network::URLRequest::New());
   request->url = url;
   request->method = "GET";
@@ -298,8 +306,9 @@ void Get(network::URLLoader* const url_loader,
                                             network::URLResponsePtr response) {
     if (!response->error.is_null()) {
       failure_callback(
-          "Network error! code: " + std::to_string(response->error->code) +
-          " description: " + response->error->description.data());
+          Status::NETWORK_ERROR,
+          "GET error: " + std::to_string(response->error->code) +
+              " ,with description: " + response->error->description.data());
       return;
     }
 
@@ -309,16 +318,18 @@ void Get(network::URLLoader* const url_loader,
       // TODO(alhaad/ukode): Use non-blocking variant.
       if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
-        failure_callback("Failed to read response from socket with status:" +
-                         std::to_string(response->status_code));
+        failure_callback(Status::NETWORK_ERROR,
+                         "Failed to read response from socket with status:" +
+                             std::to_string(response->status_code));
         return;
       }
     }
 
     if (response->status_code != 200) {
       failure_callback(
+          Status::OAUTH_SERVER_ERROR,
           "Status code: " + std::to_string(response->status_code) +
-          " while fetching tokens with error description:" + response_body);
+              " while fetching tokens with error description:" + response_body);
       return;
     }
 
@@ -326,12 +337,17 @@ void Get(network::URLLoader* const url_loader,
     rapidjson::ParseResult ok = doc.Parse(response_body);
     if (!ok) {
       std::string error_msg = GetParseError_En(ok.Code());
-      failure_callback("JSON parse error: " + error_msg);
+      failure_callback(Status::BAD_RESPONSE, "JSON parse error: " + error_msg);
       return;
     };
     auto result = set_token_callback(std::move(doc));
-    FTL_DCHECK(result);
-    success_callback();
+    if (result) {
+      success_callback();
+    } else {
+      failure_callback(Status::BAD_RESPONSE,
+                       "Invalid response: " +
+                           modular::JsonValueToPrettyString(std::move(doc)));
+    }
   });
 }
 
@@ -362,7 +378,7 @@ class OAuthTokenManagerApp : AccountProvider {
   // Refresh access and id tokens.
   void RefreshToken(const std::string& account_id,
                     const TokenType& token_type,
-                    const std::function<void(std::string)>& callback);
+                    const ShortLivedTokenCallback& callback);
 
   // Refresh firebase tokens.
   void RefreshFirebaseToken(const std::string& account_id,
@@ -382,9 +398,7 @@ class OAuthTokenManagerApp : AccountProvider {
       token_provider_factory_impls_;
 
   // In-memory cache for long lived user credentials. This cache is populated
-  // from |kCredentialsFile| on Initialize.
-  // TODO(ukode): Replace rapidjson with a dedicated data structure for storing
-  // user credentials.
+  // from |kCredentialsFile| on initialization.
   const ::auth::CredentialStore* creds_ = nullptr;
 
   // In-memory cache for short lived firebase auth id tokens. These tokens get
@@ -467,8 +481,16 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
     FTL_DCHECK(app_);
 
     // Oauth id token is used as input to fetch firebase auth token.
-    GetIdToken([ this, firebase_api_key = firebase_api_key,
-                 callback ](const std::string id_token) {
+    GetIdToken([ this, firebase_api_key = firebase_api_key, callback ](
+        const std::string id_token, const modular::auth::AuthErrPtr auth_err) {
+      if (auth_err->status != Status::OK) {
+        modular::auth::AuthErrPtr ae = auth::AuthErr::New();
+        ae->status = auth_err->status;
+        ae->message = auth_err->message;
+        callback(nullptr, std::move(ae));
+        return;
+      }
+
       app_->RefreshFirebaseToken(account_id_, firebase_api_key, id_token,
                                  callback);
     });
@@ -571,10 +593,10 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
            FTL_CHECK(flow);
            Success(*flow);
          },
-         [this, branch](const std::string error_message) {
+         [this, branch](const Status status, const std::string error_message) {
            std::unique_ptr<FlowToken> flow = branch.Continue();
            FTL_CHECK(flow);
-           OAuthFailure(*flow, error_message);
+           Failure(*flow, status, error_message);
          },
          [this](rapidjson::Document doc) {
            return GetFirebaseToken(std::move(doc));
@@ -659,14 +681,11 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     auth_err_->message = "";
   }
 
-  void OAuthFailure(FlowToken flow, const std::string& error_message) {
-    Failure(flow, Status::OAUTH_ERROR, error_message);
-  }
-
   void Failure(FlowToken flow,
-               Status status,
+               const Status& status,
                const std::string& error_message) {
-    FTL_LOG(ERROR) << error_message;
+    FTL_LOG(ERROR) << "Failed with error status:" << status
+                   << " ,and message:" << error_message;
     auth_err_ = auth::AuthErr::New();
     auth_err_->status = status;
     auth_err_->message = error_message;
@@ -686,13 +705,14 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   FTL_DISALLOW_COPY_AND_ASSIGN(GoogleFirebaseTokensCall);
 };
 
-class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
+class OAuthTokenManagerApp::GoogleOAuthTokensCall
+    : Operation<fidl::String, modular::auth::AuthErrPtr> {
  public:
   GoogleOAuthTokensCall(OperationContainer* const container,
                         const std::string& account_id,
                         const TokenType& token_type,
                         OAuthTokenManagerApp* const app,
-                        const std::function<void(fidl::String)>& callback)
+                        const ShortLivedTokenCallback& callback)
       : Operation(container, callback),
         account_id_(account_id),
         token_type_(token_type),
@@ -706,10 +726,10 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   }
 
   void Run() override {
-    FlowToken flow{this, &result_};
+    FlowToken flow{this, &result_, &auth_err_};
 
     if (account_id_.empty()) {
-      Failure(flow, "Account id is empty.");
+      Failure(flow, Status::BAD_REQUEST, "Account id is empty.");
       return;
     }
 
@@ -757,10 +777,10 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
            FTL_CHECK(flow);
            Success(*flow);
          },
-         [this, branch](const std::string error_message) {
+         [this, branch](const Status status, const std::string error_message) {
            std::unique_ptr<FlowToken> flow = branch.Continue();
            FTL_CHECK(flow);
-           Failure(*flow, error_message);
+           Failure(*flow, status, error_message);
          },
          [this](rapidjson::Document doc) {
            return GetShortLivedTokens(std::move(doc));
@@ -860,14 +880,19 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
           result_ = app_->oauth_tokens_[account_id_].id_token;
           break;
         case FIREBASE_JWT_TOKEN:
-        default:
-          Failure(flow, "invalid token type");
+          Failure(flow, Status::INTERNAL_ERROR, "invalid token type");
       }
     }
   }
 
-  void Failure(FlowToken flow, const std::string& error_message) {
-    FTL_LOG(ERROR) << error_message;
+  void Failure(FlowToken flow,
+               const Status& status,
+               const std::string& error_message) {
+    FTL_LOG(ERROR) << "Failed with error status:" << status
+                   << " ,and message:" << error_message;
+    auth_err_ = auth::AuthErr::New();
+    auth_err_->status = status;
+    auth_err_->message = error_message;
   }
 
   const std::string account_id_;
@@ -879,6 +904,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   network::URLLoaderPtr url_loader_;
 
   fidl::String result_;
+  modular::auth::AuthErrPtr auth_err_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GoogleOAuthTokensCall);
 };
@@ -961,7 +987,9 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
 
     Post(request_body, url_loader_.get(), kGoogleOAuthTokenEndpoint,
          [this] { Success(); },
-         [this](const std::string error_message) { Failure(error_message); },
+         [this](const Status status, const std::string error_message) {
+           Failure(status, error_message);
+         },
          [this](rapidjson::Document doc) {
            return ProcessCredentials(std::move(doc));
          });
@@ -1051,8 +1079,9 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     Done();
   }
 
-  void Failure(const std::string& error_message) {
-    FTL_LOG(ERROR) << error_message;
+  void Failure(const Status& status, const std::string& error_message) {
+    FTL_LOG(ERROR) << "Failed with error status:" << status
+                   << " ,and message:" << error_message;
     callback_(nullptr, error_message);
     auth_context_->StopOverlay();
     Done();
@@ -1126,7 +1155,7 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   // |Operation|
   void Run() override {
     if (!account_) {
-      Failure("Account is null.");
+      Failure(Status::BAD_REQUEST, "Account is null.");
       return;
     }
 
@@ -1146,7 +1175,9 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
     // https://developers.google.com/+/web/api/rest/latest/people/get api.
     Get(url_loader_.get(), kGooglePeopleGetEndpoint, access_token,
         [this] { Success(); },
-        [this](const std::string error_message) { Failure(error_message); },
+        [this](const Status status, const std::string error_message) {
+          Failure(status, error_message);
+        },
         [this](rapidjson::Document doc) {
           return SetAccountAttributes(std::move(doc));
         });
@@ -1187,8 +1218,10 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
     Done();
   }
 
-  void Failure(const std::string& error_message) {
+  void Failure(const Status& status, const std::string& error_message) {
+    FTL_VLOG(1) << "Error status code:" << status;
     FTL_LOG(ERROR) << error_message;
+
     // Account is missing profile attributes, but still valid.
     callback_(std::move(account_), error_message);
     Done();
@@ -1278,7 +1311,7 @@ void OAuthTokenManagerApp::GetTokenProviderFactory(
 void OAuthTokenManagerApp::RefreshToken(
     const std::string& account_id,
     const TokenType& token_type,
-    const std::function<void(std::string)>& callback) {
+    const ShortLivedTokenCallback& callback) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::RefreshToken()";
   new GoogleOAuthTokensCall(&operation_queue_, account_id, token_type, this,
                             callback);

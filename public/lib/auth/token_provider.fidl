@@ -8,7 +8,10 @@ module modular.auth;
 enum Status {
   OK,
   BAD_REQUEST,
-  OAUTH_ERROR,
+  BAD_RESPONSE,
+  OAUTH_SERVER_ERROR,
+  NETWORK_ERROR,
+  INTERNAL_ERROR,
 };
 
 // Authentication errors returned by Token Manager. It contains error status
@@ -43,14 +46,14 @@ interface TokenProvider {
   // is returned from cache if not expired, otherwise refreshed from the server.
   //
   // Empty response is returned if running in incognito mode.
-  GetAccessToken() => (string? access_token);
+  GetAccessToken() => (string? access_token, AuthErr auth_err);
 
   // Gets the Identity token (with pre-defined scopes) for this user. Identity
   // token is returned from cache if not expired, otherwise refreshed from the
   // server.
   //
   // Empty response is returned if running in incognito mode.
-  GetIdToken() => (string? id_token);
+  GetIdToken() => (string? id_token, AuthErr auth_err);
 
   // Gets the |FirebaseToken| for this user for the specified firebase api key.
   // This api invokes firebase auth's VerifyAssertion endpoint that takes an
