@@ -34,6 +34,10 @@ mx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
 mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle,
                                mx_off_t offset, uint32_t flags);
 
+// Initializes an io_buffer that maps a given physical address
+mx_status_t io_buffer_init_physical(io_buffer_t* buffer, mx_paddr_t addr, size_t size,
+                                    mx_handle_t resource, uint32_t cache_policy);
+
 mx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const mx_off_t offset, const size_t size);
 // Releases an io_buffer

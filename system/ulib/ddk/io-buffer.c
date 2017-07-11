@@ -49,7 +49,7 @@ mx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
     mx_handle_t vmo_handle;
     mx_status_t status = mx_vmo_create_contiguous(get_root_resource(), size, alignment_log2, &vmo_handle);
     if (status != MX_OK) {
-        printf("io_buffer: mx_vmo_create failed %d\n", vmo_handle);
+        printf("io_buffer: mx_vmo_create_contiguous failed %d\n", status);
         return status;
     }
 
@@ -76,6 +76,39 @@ mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_o
     if (status != MX_OK) return status;
 
     return io_buffer_init_common(buffer, vmo_handle, size, offset, flags);
+}
+
+mx_status_t io_buffer_init_physical(io_buffer_t* buffer, mx_paddr_t addr, size_t size,
+                                    mx_handle_t resource, uint32_t cache_policy) {
+    mx_handle_t vmo_handle;
+    mx_status_t status = mx_vmo_create_physical(resource, addr, size, &vmo_handle);
+    if (status != MX_OK) {
+        printf("io_buffer: mx_vmo_create_physical failed %d\n", status);
+        return status;
+    }
+
+    status = mx_vmo_set_cache_policy(vmo_handle, cache_policy);
+    if (status != MX_OK) {
+        printf("io_buffer: mx_vmo_set_cache_policy failed %d\n", status);
+        mx_handle_close(vmo_handle);
+        return status;
+    }
+
+    uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_MAP_RANGE;
+    mx_vaddr_t virt;
+    status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
+    if (status != MX_OK) {
+        printf("io_buffer: mx_vmar_map failed %d size: %zu\n", status, size);
+        mx_handle_close(vmo_handle);
+        return status;
+    }
+
+    buffer->vmo_handle = vmo_handle;
+    buffer->size = size;
+    buffer->offset = 0;
+    buffer->virt = (void *)virt;
+    buffer->phys = addr;
+    return MX_OK;
 }
 
 void io_buffer_release(io_buffer_t* buffer) {
