@@ -17,6 +17,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/io-buffer.h>
 #include <magenta/device/tpm.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -35,9 +36,10 @@
 // that we need to allocate.
 #define MAX_RAND_BYTES 256
 
-mtx_t tpm_lock = MTX_INIT;
+static mtx_t tpm_lock = MTX_INIT;
 void *tpm_base;
 mx_handle_t irq_handle;
+static io_buffer_t io_buffer;
 
 // implement tpm protocol:
 
@@ -134,15 +136,12 @@ static mx_protocol_device_t tpm_device_proto __UNUSED = {
 //TODO: bind against hw, not misc
 mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
 #if defined(__x86_64__) || defined(__i386__)
-    uintptr_t tmp;
-    mx_status_t status = mx_mmap_device_memory(
-            get_root_resource(),
-            TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
-            MX_CACHE_POLICY_UNCACHED, &tmp);
+    mx_status_t status = io_buffer_init_physical(&io_buffer, TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
+                                                 get_root_resource(), MX_CACHE_POLICY_UNCACHED);
     if (status != MX_OK) {
         return status;
     }
-    tpm_base = (void*)(tmp);
+    tpm_base = io_buffer_virt(&io_buffer);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
