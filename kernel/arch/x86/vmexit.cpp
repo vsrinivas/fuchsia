@@ -229,8 +229,12 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
             // Disable the VMX bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_VMX.bit);
+            // Disable the PDCM bit.
+            guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
             // Disable the x2APIC bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
+            // Disable the Thermal Monitor bit.
+            guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
         }
         if (leaf == X86_CPUID_XSAVE) {
             if (subleaf == 0) {
@@ -242,6 +246,10 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             } else if (subleaf == 1) {
                 guest_state->rax &= ~(1u << 3);
             }
+        }
+        if (leaf == X86_CPUID_THERMAL_AND_POWER) {
+            // Disable the performance energy bias bit.
+            guest_state->rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
         }
         return MX_OK;
     default:
@@ -378,8 +386,7 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
         guest_state->rax = kLocalApicPhysBase;
         guest_state->rdx = 0;
         return MX_OK;
-    // From Volume 3, Section 35.1, Table 35-2 (p. 35-11): For now, only
-    // enable fast strings.
+    // From Volume 4, Section 2.1, Table 2-2: For now, only enable fast strings.
     case X86_MSR_IA32_MISC_ENABLE:
         next_rip(exit_info);
         guest_state->rax = read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings;
@@ -393,11 +400,14 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
     case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
-    // From Volume 3, Section 35.1, Table 35-2 (p. 35-13): For now, 0.
+    // From Volume 3, Section 9.11.4: For now, 0.
     case X86_MSR_IA32_PLATFORM_ID:
-    // From Volume 3, Section 35.1, Table 35-2 (p. 35-5): 0 indicates no
-    // microcode update is loaded.
+    // From Volume 3, Section 9.11.7: 0 indicates no microcode update is loaded.
     case X86_MSR_IA32_BIOS_SIGN_ID:
+    // From Volume 3, Section 15.3.1: 0 indicates that our machine has no
+    // checking capabilities.
+    case X86_MSR_IA32_MCG_CAP:
+    case X86_MSR_IA32_MCG_STATUS:
         next_rip(exit_info);
         guest_state->rax = 0;
         guest_state->rdx = 0;

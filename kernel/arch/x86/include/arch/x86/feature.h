@@ -28,6 +28,7 @@ enum x86_cpuid_leaf_num {
     X86_CPUID_MODEL_FEATURES = 0x1,
     X86_CPUID_CACHE_V1 = 0x2,
     X86_CPUID_CACHE_V2 = 0x4,
+    X86_CPUID_THERMAL_AND_POWER = 0x6,
     X86_CPUID_TOPOLOGY = 0xb,
     X86_CPUID_XSAVE = 0xd,
     X86_CPUID_PT = 0x14,
@@ -99,6 +100,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_SSE3         X86_CPUID_BIT(0x1, 2, 0)
 #define X86_FEATURE_VMX          X86_CPUID_BIT(0x1, 2, 5)
 #define X86_FEATURE_SSSE3        X86_CPUID_BIT(0x1, 2, 9)
+#define X86_FEATURE_PDCM         X86_CPUID_BIT(0x1, 2, 15)
 #define X86_FEATURE_SSE4_1       X86_CPUID_BIT(0x1, 2, 19)
 #define X86_FEATURE_SSE4_2       X86_CPUID_BIT(0x1, 2, 20)
 #define X86_FEATURE_X2APIC       X86_CPUID_BIT(0x1, 2, 21)
@@ -113,8 +115,10 @@ void x86_feature_debug(void);
 #define X86_FEATURE_FXSR         X86_CPUID_BIT(0x1, 3, 24)
 #define X86_FEATURE_SSE          X86_CPUID_BIT(0x1, 3, 25)
 #define X86_FEATURE_SSE2         X86_CPUID_BIT(0x1, 3, 26)
+#define X86_FEATURE_TM           X86_CPUID_BIT(0x1, 3, 29)
 #define X86_FEATURE_HWP          X86_CPUID_BIT(0x6, 0, 7)
 #define X86_FEATURE_HWP_PREF     X86_CPUID_BIT(0x6, 0, 10)
+#define X86_FEATURE_PERF_BIAS    X86_CPUID_BIT(0x6, 2, 3)
 #define X86_FEATURE_FSGSBASE     X86_CPUID_BIT(0x7, 1, 0)
 #define X86_FEATURE_TSC_ADJUST   X86_CPUID_BIT(0x7, 1, 1)
 #define X86_FEATURE_AVX2         X86_CPUID_BIT(0x7, 1, 5)

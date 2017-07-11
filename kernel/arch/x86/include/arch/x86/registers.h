@@ -37,6 +37,8 @@
 #define X86_MSR_IA32_SYSENTER_CS        0x00000174 /* SYSENTER CS */
 #define X86_MSR_IA32_SYSENTER_ESP       0x00000175 /* SYSENTER ESP */
 #define X86_MSR_IA32_SYSENTER_EIP       0x00000176 /* SYSENTER EIP */
+#define X86_MSR_IA32_MCG_CAP            0x00000179 /* global machine check capability */
+#define X86_MSR_IA32_MCG_STATUS         0x0000017a /* global machine check status */
 #define X86_MSR_IA32_MISC_ENABLE        0x000001a0 /* enable/disable misc processor features */
 #define X86_MSR_IA32_MTRR_PHYSBASE0     0x00000200 /* MTRR PhysBase0 */
 #define X86_MSR_IA32_MTRR_PHYSMASK0     0x00000201 /* MTRR PhysMask0 */
