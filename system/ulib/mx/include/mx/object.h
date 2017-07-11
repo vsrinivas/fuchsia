@@ -133,19 +133,6 @@ public:
 
     mx_handle_t get() const { return value_; }
 
-    // Get the address of the underlying internal handle storage.
-    //
-    // Note: The intended purpose is to facilitate interactions with C APIs
-    // which expect to be provided a pointer to a handle used as an out
-    // parameter.  Because of this, the expectation is that the C-API is going
-    // to overwrite the contents of value_, and if value_ was a valid handle,
-    // the handle would have been leaked.
-    //
-    // BE CAREFUL!  Misuse of this method on mx::object<> instances whose
-    // current handle is valid can result in leaking handles.
-    __attribute__((deprecated("Please use reset_and_get_address instead")))
-    mx_handle_t* get_address() { return &value_; }
-
     // Reset the underlying handle, and then get the address of the
     // underlying internal handle storage.
     //
