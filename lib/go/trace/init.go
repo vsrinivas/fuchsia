@@ -29,7 +29,7 @@ func InitializeTracerUsingFlag(ctx *context.Context, ts Setting) error {
 
 func InitializeTracer(ctx *context.Context, ts Setting) {
 	traceRegistryRequest, traceRegistryPointer := trace_registry.CreateChannelForTraceRegistry()
-	ctx.ConnectToEnvironmentService(bindings.InterfaceRequest(traceRegistryRequest), traceRegistryRequest.Name())
+	ctx.ConnectToEnvironmentService(traceRegistryRequest.Name(), bindings.InterfaceRequest(traceRegistryRequest))
 	traceRegistryProxy := trace_registry.NewTraceRegistryProxy(traceRegistryPointer, bindings.GetAsyncWaiter())
 	InitializeTracerUsingRegistry(traceRegistryProxy, ts)
 }

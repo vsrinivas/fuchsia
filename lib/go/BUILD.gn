@@ -16,6 +16,10 @@ go_test("trace_tests_go") {
       source = "//application/lib/app/go/src/app"
     },
     {
+      package = "application/lib/svc"
+      source = "//application/lib/svc/go/src/svc"
+    },
+    {
       package = "fidl"
       source = "//lib/fidl/go/src/fidl"
     },
