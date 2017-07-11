@@ -71,6 +71,16 @@ static bool namespace_create_test(void) {
     ASSERT_EQ(strcmp(de->d_name, "."), 0, "");
     ASSERT_EQ(closedir(dir), 0, "");
 
+    // Try doing some basic file ops within the namespace
+    int fd = open("fake/newfile", O_CREAT | O_RDWR | O_EXCL);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(write(fd, "hello", strlen("hello")), 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("fake/newfile"), 0, "");
+    ASSERT_EQ(mkdir("fake/newdir", 0666), 0, "");
+    ASSERT_EQ(rename("fake/newdir", "fake/olddir"), 0, "");
+    ASSERT_EQ(rmdir("fake/olddir"), 0, "");
+
     END_TEST;
 }
 

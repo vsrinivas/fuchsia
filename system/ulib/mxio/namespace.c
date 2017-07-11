@@ -461,7 +461,7 @@ static mx_status_t mxdir_misc(mxio_t* io, uint32_t op, int64_t off,
         attr->nlink = 1;
         return sizeof(vnattr_t);
     default:
-        return MX_ERR_NOT_SUPPORTED;
+        return mxrio_misc(io, op, off, maxreply, ptr, len);
     }
 }
 
