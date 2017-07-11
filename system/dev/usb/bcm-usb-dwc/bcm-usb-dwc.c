@@ -113,8 +113,7 @@ typedef struct dwc_usb_device {
 
 typedef struct dwc_usb {
     mx_device_t* mxdev;
-    mx_device_t* bus_device;
-    usb_bus_protocol_t bus;
+    usb_bus_interface_t bus;
     mx_handle_t irq_handle;
     thrd_t irq_thread;
     mx_device_t* parent;
@@ -537,14 +536,14 @@ static mx_protocol_device_t dwc_device_proto = {
     .release = dwc_release,
 };
 
-static void dwc_set_bus_device(void* ctx, mx_device_t* busdev) {
+static void dwc_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
     dwc_usb_t* dwc = ctx;
-    dwc->bus_device = busdev;
-    if (busdev) {
-        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, &dwc->bus);
+
+    if (bus) {
+        memcpy(&dwc->bus, bus, sizeof(dwc->bus));
         usb_bus_add_device(&dwc->bus, ROOT_HUB_DEVICE_ID, 0, USB_SPEED_HIGH);
     } else {
-        dwc->bus.ops = NULL;
+        memset(&dwc->bus, 0, sizeof(dwc->bus));
     }
 }
 
@@ -755,7 +754,7 @@ mx_status_t dwc_reset_endpoint(void* ctx, uint32_t device_id, uint8_t ep_address
 }
 
 static usb_hci_protocol_ops_t dwc_hci_protocol = {
-    .set_bus_device = dwc_set_bus_device,
+    .set_bus_interface = dwc_set_bus_interface,
     .get_max_device_count = dwc_get_max_device_count,
     .enable_endpoint = dwc_enable_ep,
     .get_current_frame = dwc_get_frame,

@@ -28,7 +28,7 @@
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
     xprintf("xhci_add_new_device\n");
 
-    if (!xhci->bus_mxdev || !xhci->bus.ops) {
+    if (!xhci->bus.ops) {
         printf("no bus device in xhci_add_device\n");
         return MX_ERR_INTERNAL;
     }
@@ -39,7 +39,7 @@ mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
     xprintf("xhci_remove_device %d\n", slot_id);
 
-    if (!xhci->bus_mxdev || !xhci->bus.ops) {
+    if (!xhci->bus.ops) {
         printf("no bus device in xhci_remove_device\n");
         return;
     }
@@ -47,15 +47,15 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_bus_remove_device(&xhci->bus, slot_id);
 }
 
-static void xhci_set_bus_device(void* ctx, mx_device_t* busdev) {
+static void xhci_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
     xhci_t* xhci = ctx;
-    xhci->bus_mxdev = busdev;
-    if (busdev) {
-        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, &xhci->bus);
+
+    if (bus) {
+        memcpy(&xhci->bus, bus, sizeof(xhci->bus));
         // wait until bus driver has started before doing this
         xhci_queue_start_root_hubs(xhci);
     } else {
-        xhci->bus.ops = NULL;
+        memset(&xhci->bus, 0, sizeof(xhci->bus));
     }
 }
 
@@ -115,7 +115,7 @@ size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_addr
 }
 
 usb_hci_protocol_ops_t xhci_hci_protocol = {
-    .set_bus_device = xhci_set_bus_device,
+    .set_bus_interface = xhci_set_bus_interface,
     .get_max_device_count = xhci_get_max_device_count,
     .enable_endpoint = xhci_enable_ep,
     .get_current_frame = xhci_get_frame,
@@ -146,9 +146,7 @@ static void xhci_unbind(void* ctx) {
     xhci_t* xhci = ctx;
     xprintf("xhci_unbind\n");
 
-    if (xhci->bus_mxdev) {
-        device_remove(xhci->bus_mxdev);
-    }
+    device_remove(xhci->mxdev);
 }
 
 static void xhci_release(void* ctx) {

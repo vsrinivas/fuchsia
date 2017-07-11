@@ -12,8 +12,10 @@
 
 __BEGIN_CDECLS;
 
+typedef struct usb_bus_interface usb_bus_interface_t;
+
 typedef struct usb_hci_protocol_ops {
-    void (*set_bus_device)(void* ctx, mx_device_t* busdev);
+    void (*set_bus_interface)(void* ctx, usb_bus_interface_t* bus_intf);
     size_t (*get_max_device_count)(void* ctx);
     // enables or disables an endpoint using parameters derived from ep_desc
     mx_status_t (*enable_endpoint)(void* ctx, uint32_t device_id,
@@ -37,8 +39,8 @@ typedef struct usb_hci_protocol {
     void* ctx;
 } usb_hci_protocol_t;
 
-static inline void usb_hci_set_bus_device(usb_hci_protocol_t* hci, mx_device_t* busdev) {
-    hci->ops->set_bus_device(hci->ctx, busdev);
+static inline void usb_hci_set_bus_interface(usb_hci_protocol_t* hci, usb_bus_interface_t* intf) {
+    hci->ops->set_bus_interface(hci->ctx, intf);
 }
 
 static inline size_t usb_hci_get_max_device_count(usb_hci_protocol_t* hci) {
@@ -57,8 +59,6 @@ static inline mx_status_t usb_hci_enable_endpoint(usb_hci_protocol_t* hci, uint3
 static inline uint64_t usb_hci_get_current_frame(usb_hci_protocol_t* hci) {
     return hci->ops->get_current_frame(hci->ctx);
 }
-
-
 
 static inline mx_status_t usb_hci_configure_hub(usb_hci_protocol_t* hci, uint32_t device_id,
                                                 usb_speed_t speed,

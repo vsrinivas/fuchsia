@@ -52,6 +52,11 @@ static void bus_remove_device(void* ctx, uint32_t device_id) {
     }
 }
 
+static usb_bus_interface_ops_t _bus_interface = {
+    .add_device = bus_add_device,
+    .remove_device = bus_remove_device,
+};
+
 static mx_status_t bus_configure_hub(void* ctx, mx_device_t* hub_device, usb_speed_t speed,
                                          usb_hub_descriptor_t* descriptor) {
     usb_bus_t* bus = ctx;
@@ -81,8 +86,6 @@ static mx_status_t bus_device_removed(void* ctx, mx_device_t* hub_device, int po
 }
 
 static usb_bus_protocol_ops_t _bus_protocol = {
-    .add_device = bus_add_device,
-    .remove_device = bus_remove_device,
     .configure_hub = bus_configure_hub,
     .hub_device_added = bus_device_added,
     .hub_device_removed = bus_device_removed,
@@ -90,7 +93,7 @@ static usb_bus_protocol_ops_t _bus_protocol = {
 
 static void usb_bus_unbind(void* ctx) {
     usb_bus_t* bus = ctx;
-    usb_hci_set_bus_device(&bus->hci, NULL);
+    usb_hci_set_bus_interface(&bus->hci, NULL);
 
     for (size_t i = 0; i < bus->max_device_count; i++) {
         usb_device_t* device = bus->devices[i];
@@ -147,7 +150,10 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     mx_status_t status = device_add(device, &args, &bus->mxdev);
     if (status == MX_OK) {
-        usb_hci_set_bus_device(&bus->hci, bus->mxdev);
+        static usb_bus_interface_t bus_intf;
+        bus_intf.ops = &_bus_interface;
+        bus_intf.ctx = bus;
+        usb_hci_set_bus_interface(&bus->hci, &bus_intf);
     } else {
         free(bus->devices);
         free(bus);
