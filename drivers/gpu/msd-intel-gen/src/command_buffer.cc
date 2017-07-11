@@ -63,8 +63,11 @@ CommandBuffer::~CommandBuffer()
     if (!prepared_to_execute_)
         return;
 
-    uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
-    TRACE_FLOW_END("magma", "command_buffer", buffer_id);
+    {
+        TRACE_DURATION("magma", "Command Buffer End");
+        uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+        TRACE_FLOW_END("magma", "command_buffer", buffer_id);
+    }
 
     UnmapResourcesGpu();
 
