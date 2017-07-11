@@ -32,11 +32,12 @@ class TestTokenProvider : public modular::auth::TokenProvider {
       const fidl::String& firebase_api_key,
       const GetFirebaseAuthTokenCallback& callback) override {
     task_runner_->PostTask(ftl::MakeCopyable([
-      token_to_return = std::move(token_to_return),
-      error_to_return = std::move(error_to_return),
-      callback = std::move(callback)
+      token_to_return = token_to_return.Clone(),
+      error_to_return = error_to_return.Clone(), callback = std::move(callback)
     ]() mutable {
-      callback(std::move(token_to_return), std::move(error_to_return));
+      auto error = error_to_return ? std::move(error_to_return)
+                                   : GetAuthError(token_to_return.is_null());
+      callback(std::move(token_to_return), std::move(error));
     }));
   }
 
@@ -57,6 +58,14 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   modular::auth::AuthErrPtr error_to_return;
 
  private:
+  static modular::auth::AuthErrPtr GetAuthError(bool has_error) {
+    auto result = modular::auth::AuthErr::New();
+    result->message = has_error ? "No Token" : "";
+    result->status = has_error ? modular::auth::Status::OAUTH_ERROR
+                               : modular::auth::Status::OK;
+    return result;
+  }
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   FTL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
 };
