@@ -50,9 +50,8 @@ static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
 mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t options) {
     LTRACEF("vector %u options 0x%x\n", vector, options);
 
-    // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(hrsrc)) < 0) {
+    if ((status = validate_resource_irq(hrsrc, vector)) < 0) {
         return status;
     }
 
@@ -112,9 +111,8 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
 
     LTRACEF("addr %#" PRIxPTR " len %#x\n", paddr, len);
 
-    // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(hrsrc)) < 0) {
+    if ((status = validate_resource_mmio(hrsrc, paddr, len)) < 0) {
         return status;
     }
 
@@ -247,9 +245,8 @@ mx_status_t sys_vmo_create_physical(mx_handle_t hrsrc, uintptr_t paddr, size_t s
 
     // TODO: attempting to create a physical VMO that points to memory should be an error
 
-    // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(hrsrc)) < 0) {
+    if ((status = validate_resource_mmio(hrsrc, paddr, size)) < 0) {
         return status;
     }
 

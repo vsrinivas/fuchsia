@@ -346,7 +346,37 @@ mx_status_t magenta_sleep(mx_time_t deadline) {
 mx_status_t validate_resource_handle(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<ResourceDispatcher> resource;
-    return up->GetDispatcher(handle, &resource);
+    auto status = up->GetDispatcher(handle, &resource);
+    if (status != MX_OK) {
+        return status;
+    }
+    if (resource->get_kind() == MX_RSRC_KIND_ROOT) {
+        return MX_OK;
+    }
+    return MX_ERR_ACCESS_DENIED;
+}
+
+mx_status_t validate_ranged_resource(mx_handle_t handle, uint32_t kind, uint64_t low,
+                                     uint64_t high) {
+    auto up = ProcessDispatcher::GetCurrent();
+    mxtl::RefPtr<ResourceDispatcher> resource;
+    auto status = up->GetDispatcher(handle, &resource);
+    if (status != MX_OK) {
+        return status;
+    }
+    uint32_t rsrc_kind = resource->get_kind();
+    if (rsrc_kind == MX_RSRC_KIND_ROOT) {
+        // root resource is valid for everything
+        return MX_OK;
+    } else if (rsrc_kind == kind) {
+        uint64_t rsrc_low, rsrc_high;
+        resource->get_range(&rsrc_low, &rsrc_high);
+        if (low >= rsrc_low && high <= rsrc_high) {
+            return MX_OK;
+        }
+    }
+
+    return MX_ERR_ACCESS_DENIED;
 }
 
 mx_status_t get_process(ProcessDispatcher* up,
