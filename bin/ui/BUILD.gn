@@ -206,6 +206,32 @@ package("tile_view") {
       } ]
 }
 
+package("basic_wm") {
+  app = true
+
+  deps = [
+    "examples/basic_wm",
+  ]
+
+  binaries = [ {
+        name = "basic_wm"
+        source = "gen/apps/mozart/examples/basic_wm/basic_wm.flx"
+      } ]
+}
+
+package("hello_material") {
+  app = true
+
+  deps = [
+    "examples/hello_material",
+  ]
+
+  binaries = [ {
+        name = "hello_material"
+        source = "gen/apps/mozart/examples/hello_material/hello_material.flx"
+      } ]
+}
+
 package("mozart") {
   app = true
 
@@ -227,13 +253,7 @@ package("mozart") {
       name = "vkcube_image_pipe"
     },
     {
-      name = "gen/apps/mozart/examples/hello_material/hello_material.flx"
-    },
-    {
       name = "input"
-    },
-    {
-      name = "gen/apps/mozart/examples/basic_wm/basic_wm.flx"
     },
     {
       name = "launch"
