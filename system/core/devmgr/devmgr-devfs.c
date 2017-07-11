@@ -226,6 +226,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
         }
         if (mx_channel_write(w->handle, 0, msg, len + 2, NULL, 0) < 0) {
             *wp = next;
+            mx_handle_close(w->handle);
             free(w);
         } else {
             wp = &w->next;
