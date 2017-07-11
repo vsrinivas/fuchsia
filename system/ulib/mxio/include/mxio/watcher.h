@@ -28,7 +28,7 @@ typedef mx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, voi
 // stops and the callback's status is returned to the caller
 // of mxio_watch_directory.
 //
-// If the deadline expires, MX_ERR_TIMEOUT is returned to the
+// If the deadline expires, MX_ERR_TIMED_OUT is returned to the
 // caller.  A deadline of MX_TIME_INFINITE will never expire.
 //
 // The callback may use MX_ERR_STOP as a way to signal to the
