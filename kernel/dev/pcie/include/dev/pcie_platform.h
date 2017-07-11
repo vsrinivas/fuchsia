@@ -146,6 +146,7 @@ public:
         DEBUG_ASSERT(false);
     }
 
+    DISALLOW_COPY_ASSIGN_AND_MOVE(PciePlatformInterface);
 protected:
     enum class MsiSupportLevel { NONE, MSI, MSI_WITH_MASKING };
     explicit PciePlatformInterface(MsiSupportLevel msi_support)
