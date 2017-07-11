@@ -5,7 +5,7 @@
 #pragma once
 
 #include <type_traits>
-#include <unordered_set>
+#include <vector>
 
 #include "apps/mozart/lib/scene/types.h"
 #include "apps/mozart/src/scene/resources/resource_type_info.h"
@@ -63,7 +63,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
   /// The list of import resource that currently have a binding to this
   /// resource.
-  const std::unordered_set<Import*>& imports() const { return imports_; }
+  const std::vector<Import*>& imports() const { return imports_; }
 
   /// Adds the import resource to the list of importers of this resource.
   virtual void AddImport(Import* import);
@@ -85,7 +85,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
  private:
   Session* const session_;
   const ResourceTypeInfo& type_info_;
-  std::unordered_set<Import*> imports_;
+  std::vector<Import*> imports_;
 };
 
 using ResourcePtr = ftl::RefPtr<Resource>;

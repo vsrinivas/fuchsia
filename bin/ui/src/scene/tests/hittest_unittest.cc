@@ -240,17 +240,13 @@ TEST_F(HitTestTest, HitBoth10And20FromNode1) {
               {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f}});
 }
 
-// TODO(MZ-160): This test is flaky because the traversal order of children
-// is unstable.  We should change Node to store its children, parts, and
-// imports in a predictable order such as sequentially by order of insertion
-// instead of using an std::set keyed by a pointer.
-TEST_F(HitTestTest, DISABLED_HitBoth20And30FromNode1) {
+TEST_F(HitTestTest, HitBoth20And30FromNode1) {
   // 20 and 30 are same distance but 30 is closer in draw order so it
   // comes before 20
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
              {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
-              {.tag = 30, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
+              {.tag = 30, .tx = -14.f, .ty = -4.f, .tz = -1.f, .d = 9.f},
               {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }

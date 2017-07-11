@@ -25,8 +25,8 @@ class Import final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   Import(Session* session,
-                mozart2::ImportSpec spec,
-                mx::eventpair import_token);
+         mozart2::ImportSpec spec,
+         mx::eventpair import_token);
 
   ~Import() override;
 
@@ -62,7 +62,7 @@ class Import final : public Resource {
   mx::eventpair import_token_;
   const mozart2::ImportSpec import_spec_;
   const ResourcePtr delegate_;
-  Resource* imported_resource_;
+  Resource* imported_resource_ = nullptr;
 
   // |Resource|.
   Resource* GetDelegate(const ResourceTypeInfo& type_info) override;

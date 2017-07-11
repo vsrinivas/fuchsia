@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene/resources/resource.h"
 
+#include <algorithm>
+
 #include "apps/mozart/src/scene/resources/import.h"
 #include "apps/mozart/src/scene/session/session.h"
 
@@ -38,16 +40,15 @@ void Resource::AddImport(Import* import) {
   }
 
   // Perform the binding.
-  auto insertion_result = imports_.insert(import);
-  FTL_DCHECK(insertion_result.second)
-      << "Import must not already be bound to this resource.";
+  imports_.push_back(import);
   import->BindImportedResource(this);
 }
 
 void Resource::RemoveImport(Import* import) {
-  auto erased = imports_.erase(import);
-  FTL_DCHECK(erased == 1)
+  auto it = std::find(imports_.begin(), imports_.end(), import);
+  FTL_DCHECK(it != imports_.end())
       << "Import must not already be unbound from this resource.";
+  imports_.erase(it);
 }
 
 Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {

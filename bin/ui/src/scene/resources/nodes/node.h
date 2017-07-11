@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <set>
+#include <vector>
 
 #include "apps/mozart/src/scene/resources/resource.h"
 #include "lib/escher/escher/geometry/transform.h"
@@ -55,9 +55,9 @@ class Node : public Resource {
 
   Node* parent() const { return parent_; }
 
-  const std::set<NodePtr>& children() const { return children_; }
+  const std::vector<NodePtr>& children() const { return children_; }
 
-  const std::set<NodePtr>& parts() const { return parts_; }
+  const std::vector<NodePtr>& parts() const { return parts_; }
 
   void AddImport(Import* import) override;
   void RemoveImport(Import* import) override;
@@ -87,8 +87,8 @@ class Node : public Resource {
   uint32_t tag_value_ = 0u;
   Node* parent_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
-  std::set<NodePtr> children_;
-  std::set<NodePtr> parts_;
+  std::vector<NodePtr> children_;
+  std::vector<NodePtr> parts_;
 
   escher::Transform transform_;
   mutable escher::mat4 global_transform_;

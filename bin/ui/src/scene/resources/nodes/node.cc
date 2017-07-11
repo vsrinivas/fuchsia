@@ -64,10 +64,7 @@ bool Node::AddChild(NodePtr child_node) {
   child_node->parent_relation_ = ParentRelation::kChild;
   child_node->parent_ = this;
   child_node->InvalidateGlobalTransform();
-
-  auto insert_result = children_.insert(std::move(child_node));
-  FTL_DCHECK(insert_result.second);
-
+  children_.push_back(std::move(child_node));
   return true;
 }
 
@@ -88,10 +85,7 @@ bool Node::AddPart(NodePtr part_node) {
   part_node->parent_relation_ = ParentRelation::kPart;
   part_node->parent_ = this;
   part_node->InvalidateGlobalTransform();
-
-  auto insert_result = parts_.insert(std::move(part_node));
-  FTL_DCHECK(insert_result.second);
-
+  parts_.push_back(std::move(part_node));
   return true;
 }
 
@@ -107,14 +101,17 @@ bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
   if (auto parent = node_to_detach_from_parent->parent_) {
     switch (node_to_detach_from_parent->parent_relation_) {
       case ParentRelation::kChild: {
-        size_t removed_count =
-            parent->children_.erase(node_to_detach_from_parent);
-        FTL_DCHECK(removed_count == 1);  // verify parent-child invariant
+        auto it = std::find(parent->children_.begin(), parent->children_.end(),
+                            node_to_detach_from_parent);
+        FTL_DCHECK(it != parent->children_.end());
+        parent->children_.erase(it);
         break;
       }
       case ParentRelation::kPart: {
-        size_t removed_count = parent->parts_.erase(node_to_detach_from_parent);
-        FTL_DCHECK(removed_count == 1);  // verify parent-child invariant
+        auto it = std::find(parent->parts_.begin(), parent->parts_.end(),
+                            node_to_detach_from_parent);
+        FTL_DCHECK(it != parent->parts_.end());
+        parent->parts_.erase(it);
         break;
       }
       case ParentRelation::kImportDelegate:
