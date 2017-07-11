@@ -39,6 +39,10 @@ mx_status_t tpm_set_irq(enum locality loc, uint8_t vector);
 mx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type);
 mx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type);
 
+// Returns MX_OK if this TPM is supported and returns MX_NOT_SUPPORTED if it is not.
+// Any other error indicates an issue occurred during detection.
+mx_status_t tpm_is_supported(enum locality loc);
+
 // Request use of the given locality
 mx_status_t tpm_request_use(enum locality loc);
 // Wait for actual access to the locality

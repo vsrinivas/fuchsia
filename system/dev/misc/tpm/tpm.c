@@ -143,6 +143,11 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
     }
     tpm_base = io_buffer_virt(&io_buffer);
 
+    status = tpm_is_supported(LOCALITY0);
+    if (status != MX_OK) {
+        return status;
+    }
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "tpm",

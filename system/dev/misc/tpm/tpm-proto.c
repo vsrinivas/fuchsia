@@ -22,7 +22,7 @@
 #define TPM_DID_VID(locality) (volatile uint32_t *)(TPM_LOCALITY_BASE(locality) + 0xf00)
 #define TPM_RID(locality) (volatile uint32_t *)(TPM_LOCALITY_BASE(locality) + 0xf04)
 
-// TPM_ACCESS bit masks
+// TPM_ACCESS bitmasks
 #define TPM_ACCESS_REG_VALID       0x80
 #define TPM_ACCESS_ACTIVE_LOCALITY 0x20
 #define TPM_ACCESS_BEEN_SEIZED     0x10
@@ -31,7 +31,13 @@
 #define TPM_ACCESS_REQUEST_USE     0x02
 #define TPM_ACCESS_ESTABLISHMENT   0x01
 
-// TPM_STS bit masks
+
+// TPM_INTF_CAP bitmasks
+#define TPM_INTF_CAP_IFACE_VER_MASK 0x70000000
+#define TPM_INTF_CAP_IFACE_VER_1_3  0x20000000
+#define TPM_INTF_CAP_IFACE_VER_1_2  0x00000000
+
+// TPM_STS bitmasks
 #define TPM_STS_FAMILY              0x0c000000
 #define TPM_STS_RESET_ESTABLISHMENT 0x02000000
 #define TPM_STS_CMD_CANCEL          0x01000000
@@ -52,6 +58,12 @@
 #define TPM_INT_ENABLE_RISING_EDGE   (2 << 3)
 #define TPM_INT_ENABLE_FALLING_EDGE  (3 << 3)
 
+// TPM_INTERFACE_ID bitmasks
+#define TPM_INTERFACE_ID_TYPE_MASK     0xf
+#define TPM_INTERFACE_ID_TYPE_FIFO_2_0 0x0
+#define TPM_INTERFACE_ID_TYPE_CRB      0x1
+#define TPM_INTERFACE_ID_TYPE_FIFO_1_3 0xf
+
 // Timeouts (in ns)
 #define TIMEOUT_A 750000  //  750 ms
 #define TIMEOUT_B 2000000 // 2000 ms
@@ -70,6 +82,23 @@ mx_status_t tpm_set_irq(enum locality loc, uint8_t vector) {
     // configuring signaling modes yet.
     *TPM_INT_ENABLE(loc) |= TPM_INT_ENABLE_RISING_EDGE;
     return MX_OK;
+}
+
+mx_status_t tpm_is_supported(enum locality loc) {
+    const uint32_t iface_id = *TPM_INTERFACE_ID(loc);
+    switch (iface_id & TPM_INTERFACE_ID_TYPE_MASK) {
+        case TPM_INTERFACE_ID_TYPE_FIFO_1_3: {
+            const uint32_t iface_ver = *TPM_INTF_CAP(loc) & TPM_INTF_CAP_IFACE_VER_MASK;
+            if (iface_ver == TPM_INTF_CAP_IFACE_VER_1_2) {
+                return MX_OK;
+            }
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        case TPM_INTERFACE_ID_TYPE_FIFO_2_0:
+        case TPM_INTERFACE_ID_TYPE_CRB:
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+    }
 }
 
 mx_status_t tpm_request_use(enum locality loc) {
