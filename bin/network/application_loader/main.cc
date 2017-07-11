@@ -98,6 +98,7 @@ class RetryingLoader {
   }
 
   void SendResponse(app::ApplicationPackagePtr package) {
+    FTL_DCHECK(!package || package->resolved_url);
     callback_(std::move(package));
     deleter_();
   }

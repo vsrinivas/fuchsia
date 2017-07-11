@@ -454,6 +454,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
       response->status_code = status_code_;
       response->status_line =
           http_version_ + " " + std::to_string(status_code_) + status_message_;
+      response->url = loader_->current_url_.spec();
 
       while (std::getline(response_stream, header) && header != "\r") {
         HttpHeaderPtr hdr = HttpHeader::New();
