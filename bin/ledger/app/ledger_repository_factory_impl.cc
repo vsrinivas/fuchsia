@@ -301,7 +301,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     return;
   }
 
-  if (firebase_config || !token_provider) {
+  if (!firebase_config || !token_provider) {
     // No sync configuration passed, only delete the local state.
     callback(DeleteRepositoryDirectory(repository_information));
     return;
