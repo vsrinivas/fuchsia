@@ -45,6 +45,8 @@ public:
 
     bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override;
 
+    uint64_t GetBatchBufferId();
+
     uint32_t GetPipeControlFlags() override;
 
     // Takes ownership of the wait semaphores array

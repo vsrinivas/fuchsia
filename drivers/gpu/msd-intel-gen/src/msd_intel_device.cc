@@ -625,7 +625,8 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     if (connection && connection->context_killed())
         return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Connection context killed");
 
-    TRACE_DURATION_BEGIN("magma", "PrepareForExecution");
+    TRACE_DURATION_BEGIN("magma", "PrepareForExecution",
+                         "id", command_buffer->GetBatchBufferId());
     if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                         "Failed to prepare command buffer for execution");

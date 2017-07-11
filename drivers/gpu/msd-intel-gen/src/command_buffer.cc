@@ -79,7 +79,9 @@ CommandBuffer::~CommandBuffer()
 
 void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
 {
-    TRACE_ASYNC_BEGIN("magma", "CommandBuffer Exec", nonce_);
+    uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+
+    TRACE_ASYNC_BEGIN("magma", "CommandBuffer Exec", nonce_, "id", buffer_id);
     sequence_number_ = sequence_number;
 }
 
@@ -142,6 +144,11 @@ bool CommandBuffer::GetGpuAddress(gpu_addr_t* gpu_addr_out)
 
     *gpu_addr_out = exec_resource_mappings_[batch_buffer_index_]->gpu_addr() + batch_start_offset_;
     return true;
+}
+
+uint64_t CommandBuffer::GetBatchBufferId()
+{
+    return resource(batch_buffer_resource_index()).buffer_id();
 }
 
 void CommandBuffer::UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
