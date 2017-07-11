@@ -112,17 +112,17 @@ void DumpVisitor::VisitNode(Node* r) {
   if (!r->transform().IsIdentity()) {
     WriteProperty("transform") << r->transform();
   }
-  if (!r->children().empty()) {
-    BeginSection("children");
-    for (auto& child : r->children()) {
-      child->Accept(this);
-    }
-    EndSection();
-  }
   if (!r->parts().empty()) {
     BeginSection("parts");
     for (auto& part : r->parts()) {
       part->Accept(this);
+    }
+    EndSection();
+  }
+  if (!r->children().empty()) {
+    BeginSection("children");
+    for (auto& child : r->children()) {
+      child->Accept(this);
     }
     EndSection();
   }

@@ -37,7 +37,7 @@ Node::Node(Session* session,
 }
 
 Node::~Node() {
-  ForEachDirectDescendant(*this, [](Node* node) {
+  ForEachDirectDescendantFrontToBack(*this, [](Node* node) {
     FTL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
     node->parent_relation_ = ParentRelation::kNone;
     node->parent_ = nullptr;
@@ -223,7 +223,7 @@ bool Node::SetHitTestBehavior(mozart2::HitTestBehavior hit_test_behavior) {
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;
-    ForEachDirectDescendant(
+    ForEachDirectDescendantFrontToBack(
         *this, [](Node* node) { node->InvalidateGlobalTransform(); });
   }
 }

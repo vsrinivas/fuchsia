@@ -88,8 +88,8 @@ void HitTester::AccumulateHitsInner(Node* node) {
     tag_info_->ReportIntersection(distance);
   }
 
-  ForEachDirectDescendant(*node,
-                          [this](Node* node) { AccumulateHitsOuter(node); });
+  ForEachDirectDescendantFrontToBack(
+      *node, [this](Node* node) { AccumulateHitsOuter(node); });
 }
 
 }  // namespace scene
