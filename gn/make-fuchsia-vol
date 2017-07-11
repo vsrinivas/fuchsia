@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "go"
+    ],
+    "labels": [
+        "//scripts/make-fuchsia-vol:make-fuchsia-vol(//build/toolchain:host_x64)"
+    ]
+}
