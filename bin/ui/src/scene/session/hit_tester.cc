@@ -56,6 +56,10 @@ void HitTester::AccumulateHitsOuter(Node* node) {
 }
 
 void HitTester::AccumulateHitsLocal(Node* node) {
+  // Bail if hit testing is suppressed.
+  if (node->hit_test_behavior() == mozart2::HitTestBehavior::kSuppress)
+    return;
+
   // Take a fast path if the node does not contribute a tag to the hit test.
   if (!node->tag_value() || node->session() != session_) {
     AccumulateHitsInner(node);

@@ -108,6 +108,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetShapeOp(const mozart2::SetShapeOpPtr& op);
   bool ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op);
   bool ApplySetClipOp(const mozart2::SetClipOpPtr& op);
+  bool ApplySetHitTestBehaviorOp(const mozart2::SetHitTestBehaviorOpPtr& op);
   bool ApplySetCameraOp(const mozart2::SetCameraOpPtr& op);
   bool ApplySetCameraProjectionOp(const mozart2::SetCameraProjectionOpPtr& op);
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);

@@ -46,6 +46,8 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
       return stream << "SET_MATERIAL";
     case Op::Tag::SET_CLIP:
       return stream << "SET_CLIP";
+    case Op::Tag::SET_HIT_TEST_BEHAVIOR:
+      return stream << "SET_HIT_TEST_BEHAVIOR";
     case Op::Tag::SET_CAMERA:
       return stream << "SET_CAMERA";
     case Op::Tag::SET_CAMERA_PROJECTION:

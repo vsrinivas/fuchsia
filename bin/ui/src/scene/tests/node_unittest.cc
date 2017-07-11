@@ -83,6 +83,21 @@ TEST_F(NodeTest, NodesWithChildren) {
   EXPECT_EQ(nullptr, child_node->parent());
 }
 
+TEST_F(NodeTest, SettingHitTestBehavior) {
+  const ResourceId kNodeId = 1;
+
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
+
+  auto shape_node = FindResource<ShapeNode>(kNodeId);
+  EXPECT_EQ(mozart2::HitTestBehavior::kDefault,
+            shape_node->hit_test_behavior());
+
+  EXPECT_TRUE(Apply(
+      NewSetHitTestBehaviorOp(kNodeId, mozart2::HitTestBehavior::kSuppress)));
+  EXPECT_EQ(mozart2::HitTestBehavior::kSuppress,
+            shape_node->hit_test_behavior());
+}
+
 }  // namespace test
 }  // namespace scene
 }  // namespace mozart

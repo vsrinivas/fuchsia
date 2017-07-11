@@ -251,6 +251,16 @@ TEST_F(HitTestTest, HitBoth20And30FromNode1) {
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
+TEST_F(HitTestTest, SuppressNode25FromNode1) {
+  Apply(NewSetHitTestBehaviorOp(3, mozart2::HitTestBehavior::kSuppress));
+
+  // While we would have hit 20 and 25, we suppressed node 3 so neither appears.
+  ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
+             {{.tag = 30, .tx = -14.f, .ty = -4.f, .tz = -1.f, .d = 9.f},
+              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
+}
+
 }  // namespace test
 }  // namespace scene
 }  // namespace mozart

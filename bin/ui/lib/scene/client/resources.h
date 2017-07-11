@@ -182,6 +182,9 @@ class Node : public Resource {
   // Sets the node's tag value.
   void SetTag(uint32_t tag_value);
 
+  // Sets the node's hit test behavior.
+  void SetHitTestBehavior(mozart2::HitTestBehavior hit_test_behavior);
+
   // Detaches the node from its parent.
   void Detach();
 

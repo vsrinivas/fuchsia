@@ -146,6 +146,10 @@ void Node::SetTag(uint32_t tag_value) {
   session()->Enqueue(mozart::NewSetTagOp(id(), tag_value));
 }
 
+void Node::SetHitTestBehavior(mozart2::HitTestBehavior hit_test_behavior) {
+  session()->Enqueue(mozart::NewSetHitTestBehaviorOp(id(), hit_test_behavior));
+}
+
 void Node::Detach() {
   session()->Enqueue(mozart::NewDetachOp(id()));
 }

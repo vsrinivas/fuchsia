@@ -30,6 +30,7 @@ union Op {
   SetShapeOp set_shape;
   SetMaterialOp set_material;
   SetClipOp set_clip;
+  SetHitTestBehaviorOp set_hit_test_behavior;
 
   // Camera and lighting operations.
   SetCameraOp set_camera;
@@ -265,6 +266,16 @@ struct SetClipOp {
   uint32 node_id;
   uint32 clip_id;
   bool clip_to_self;
+};
+
+// Sets a node's hit test behavior.
+//
+// Discussion:
+// By default, hit testing is performed on the node's content, its parts,
+// and its children.
+struct SetHitTestBehaviorOp {
+  uint32 node_id;
+  HitTestBehavior hit_test_behavior;
 };
 
 // Sets a renderer's camera.

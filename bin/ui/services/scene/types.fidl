@@ -139,3 +139,12 @@ enum ValueType {
   kQuaternion,
   kTransform,
 };
+
+// Describes how nodes interact with hit testings.
+enum HitTestBehavior {
+  // Apply hit testing to the node's content, its parts, and its children.
+  kDefault = 0,
+
+  // Suppress hit testing of the node and everything it contains.
+  kSuppress,
+};

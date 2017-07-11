@@ -93,6 +93,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetMaterialOp(op->get_set_material());
     case mozart2::Op::Tag::SET_CLIP:
       return ApplySetClipOp(op->get_set_clip());
+    case mozart2::Op::Tag::SET_HIT_TEST_BEHAVIOR:
+      return ApplySetHitTestBehaviorOp(op->get_set_hit_test_behavior());
     case mozart2::Op::Tag::SET_CAMERA:
       return ApplySetCameraOp(op->get_set_camera());
     case mozart2::Op::Tag::SET_CAMERA_PROJECTION:
@@ -303,6 +305,15 @@ bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
 
   if (auto node = resources_.FindResource<Node>(op->node_id)) {
     return node->SetClipToSelf(op->clip_to_self);
+  }
+
+  return false;
+}
+
+bool Session::ApplySetHitTestBehaviorOp(
+    const mozart2::SetHitTestBehaviorOpPtr& op) {
+  if (auto node = resources_.FindResource<Node>(op->node_id)) {
+    return node->SetHitTestBehavior(op->hit_test_behavior);
   }
 
   return false;

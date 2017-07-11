@@ -539,6 +539,19 @@ mozart2::OpPtr NewSetTagOp(uint32_t node_id, uint32_t tag_value) {
   return op;
 }
 
+mozart2::OpPtr NewSetHitTestBehaviorOp(
+    uint32_t node_id,
+    mozart2::HitTestBehavior hit_test_behavior) {
+  auto set_hit_test_behavior = mozart2::SetHitTestBehaviorOp::New();
+  set_hit_test_behavior->node_id = node_id;
+  set_hit_test_behavior->hit_test_behavior = hit_test_behavior;
+
+  auto op = mozart2::Op::New();
+  op->set_set_hit_test_behavior(std::move(set_hit_test_behavior));
+
+  return op;
+}
+
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id) {
   auto set_camera = mozart2::SetCameraOp::New();
   set_camera->renderer_id = renderer_id;

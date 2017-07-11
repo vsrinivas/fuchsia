@@ -215,6 +215,11 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   return true;
 }
 
+bool Node::SetHitTestBehavior(mozart2::HitTestBehavior hit_test_behavior) {
+  hit_test_behavior_ = hit_test_behavior;
+  return true;
+}
+
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;

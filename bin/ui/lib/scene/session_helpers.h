@@ -113,6 +113,9 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id,
                             uint32_t clip_id,
                             bool clip_to_self);
 mozart2::OpPtr NewSetTagOp(uint32_t node_id, uint32_t tag_value);
+mozart2::OpPtr NewSetHitTestBehaviorOp(
+    uint32_t node_id,
+    mozart2::HitTestBehavior hit_test_behavior);
 
 // Camera and lighting operations.
 mozart2::OpPtr NewSetCameraOp(uint32_t renderer_id, uint32_t camera_id);
