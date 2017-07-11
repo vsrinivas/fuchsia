@@ -5,7 +5,7 @@
 package context
 
 import (
-	spi "application/lib/app/service_provider_impl"
+	"application/lib/svc/svcns"
 	"fidl/bindings"
 	"fmt"
 
@@ -19,16 +19,17 @@ import (
 )
 
 type Context struct {
-	Environment         *ae.ApplicationEnvironment_Proxy
-	OutgoingService     *spi.ServiceProviderImpl
-	OutgoingServiceStub *bindings.Stub
-	serviceRoot         mx.Handle
-	Launcher            *al.ApplicationLauncher_Proxy
+	Environment          *ae.ApplicationEnvironment_Proxy
+	OutgoingService      *svcns.Namespace
+	serviceRoot          mx.Handle
+	Launcher             *al.ApplicationLauncher_Proxy
+	appServices          mx.Handle
 }
 
 // TODO: define these in syscall/mx/mxruntime
 const (
-	HandleAppServices mxruntime.HandleType = 0x43
+	HandleServiceRequest  mxruntime.HandleType = 0x3B
+	HandleAppServices     mxruntime.HandleType = 0x43
 )
 
 func getServiceRoot() mx.Handle {
@@ -45,44 +46,68 @@ func getServiceRoot() mx.Handle {
 	return c1.Handle
 }
 
-func New(serviceRoot mx.Handle, servicesRequest *bindings.InterfaceRequest) *Context {
-	context := &Context{serviceRoot: serviceRoot}
+func New(serviceRoot, serviceRequest, appServices mx.Handle) *Context {
+	context := &Context{
+		serviceRoot: serviceRoot,
+		appServices: appServices,
+	}
 
-	request := sp.ServiceProvider_Request{
-		bindings.NewChannelHandleOwner(servicesRequest.ChannelHandleOwner.PassChannel())}
-	context.OutgoingService = spi.New()
-	context.OutgoingServiceStub = sp.NewServiceProviderStub(request, context.OutgoingService, bindings.GetAsyncWaiter())
+	context.OutgoingService = svcns.New()
 
 	envRequest, envPointer := ae.CreateChannelForApplicationEnvironment()
 	context.ConnectToEnvironmentService(
-		bindings.InterfaceRequest(envRequest), envRequest.Name())
+		envRequest.Name(), bindings.InterfaceRequest(envRequest))
 	context.Environment =
 		ae.NewApplicationEnvironmentProxy(envPointer, bindings.GetAsyncWaiter())
 
 	lnchRequest, lnchPointer := al.CreateChannelForApplicationLauncher()
 	context.ConnectToEnvironmentService(
-		bindings.InterfaceRequest(lnchRequest), lnchRequest.Name())
+		lnchRequest.Name(), bindings.InterfaceRequest(lnchRequest))
 	context.Launcher =
 		al.NewApplicationLauncherProxy(lnchPointer, bindings.GetAsyncWaiter())
 
+	if serviceRequest.IsValid() {
+		context.OutgoingService.ServeDirectory(serviceRequest)
+	}
+
 	return context
+}
+
+func (context *Context) Serve() {
+	if context.appServices.IsValid() {
+		request := sp.ServiceProvider_Request{
+			bindings.NewChannelHandleOwner(context.appServices)}
+		stub := sp.NewServiceProviderStub(
+			request, context.OutgoingService, bindings.GetAsyncWaiter())
+		go func() {
+			for {
+				if err := stub.ServeRequest(); err != nil {
+					break
+				}
+			}
+		}()
+	}
+
+	if context.OutgoingService.Dispatcher != nil {
+		go context.OutgoingService.Dispatcher.Serve()
+	}
 }
 
 func (context *Context) Close() {
 	// TODO: should do something here?
 }
 
-func (context *Context) ConnectToEnvironmentService(r bindings.InterfaceRequest, name string) {
-	err := rio.ServiceConnectAt(context.serviceRoot, name, r.ChannelHandleOwner.PassChannel())
+func (context *Context) ConnectToEnvironmentService(name string, r bindings.InterfaceRequest) {
+	err := rio.ServiceConnectAt(context.serviceRoot, name, r.PassChannel())
 	if err != nil {
 		panic(fmt.Sprintf("ConnectToEnvironmentService: %v", err))
 	}
 }
 
 func CreateFromStartupInfo() *Context {
-	services := mxruntime.GetStartupHandle(
+	serviceRequest := mxruntime.GetStartupHandle(
+		mxruntime.HandleInfo{Type: HandleServiceRequest, Arg: 0})
+	appServices := mxruntime.GetStartupHandle(
 		mxruntime.HandleInfo{Type: HandleAppServices, Arg: 0})
-	return New(getServiceRoot(),
-		&bindings.InterfaceRequest{
-			bindings.NewChannelHandleOwner(services)})
+	return New(getServiceRoot(), serviceRequest, appServices)
 }
