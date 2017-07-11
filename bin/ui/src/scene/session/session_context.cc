@@ -160,6 +160,7 @@ escher::VulkanSwapchain SessionContext::GetVulkanSwapchain() const {
 const escher::PaperRendererPtr& SessionContext::GetPaperRenderer() {
   if (!paper_renderer_ && escher_) {
     paper_renderer_ = escher_->NewPaperRenderer();
+    paper_renderer_->set_sort_by_pipeline(false);
   }
   return paper_renderer_;
 }
