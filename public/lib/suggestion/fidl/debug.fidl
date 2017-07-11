@@ -38,5 +38,6 @@ interface NextProposalListener {
 // can contain an InterfaceHandle.
 struct ProposalSummary {
   string id;
+  string publisher_url;
   SuggestionDisplay display;
 };
