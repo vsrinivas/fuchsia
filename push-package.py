@@ -7,7 +7,6 @@ import argparse
 import errno
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -42,62 +41,50 @@ def parse_package_file(package_file_path):
   return data
 
 
-def scp_everything(package_data, out_dir, dst_root, name_filter, verbose):
-  tar_dir = os.path.join(out_dir, 'push_package_tmp')
-  dst_dir = os.path.join(tar_dir, dst_root.lstrip('/'))
+def update_device(device, batch_file, verbose, out_dir):
   ssh_config_path = os.path.join(out_dir, 'ssh-keys', 'ssh_config')
-  if verbose:
-    tar_extract_flags = '-xvf'
-  else:
-    tar_extract_flags = '-xf'
 
-  # Clean up if a previous run exited improperly
-  shutil.rmtree(dst_dir, ignore_errors=True)
+  try:
+    netaddr = netaddr_cmd(out_dir, device)
+    ipv6 = '[' + subprocess.check_output(netaddr).strip() + ']'
+  except subprocess.CalledProcessError:
+    # netaddr prints its own errors, no need to add another one here.
+    return 1
 
-  # Temporary file for tar.
-  with tempfile.TemporaryFile() as f:
-    try:
-      # Create a directory tree that mirrors what we want on the device.
-      for binary in package_data['binaries']:
-        binary_name = binary['binary']
-        if name_filter is not None and name_filter not in binary_name:
-          continue
-
-        src_path = os.path.join(out_dir, binary_name)
-        dst_path = os.path.join(dst_dir, binary['bootfs_path'].lstrip('/'))
-        device_path = os.path.join(dst_root,
-                                   binary['bootfs_path'].lstrip('/'))
-        if (verbose):
-          print 'Copying "%s"\n     => "%s"' % (src_path, device_path)
-        mkdir_p(os.path.dirname(dst_path))
-        os.link(src_path, dst_path)
-
-      # tar the new directory tree to our temp file.
-      status = subprocess.call(
-          ['tar', '-cf', '-', dst_root.lstrip('/')], cwd=tar_dir,
-          stdout=f)
-      if status != 0:
-        sys.stderr.write('error: tar failed\n')
-        return status
-    finally:
-      shutil.rmtree(tar_dir, ignore_errors=True)
-
-    try:
-      netaddr = netaddr_cmd(out_dir, ':')
-      host = subprocess.check_output(netaddr).strip()
-    except subprocess.CalledProcessError:
-      sys.stderr.write('error: device "%s" not found.\n', ':')
-      return 1
-
-    f.seek(0, 0)
+  with open(os.devnull, 'w') as devnull:
     status = subprocess.call(
-        ['ssh', '-F', ssh_config_path, host, 'tar', tar_extract_flags, '-'],
-        stdin=f)
+        ['sftp', '-F', ssh_config_path, '-b', batch_file, ipv6],
+        stdout=sys.stdout if verbose else devnull)
     if status != 0:
-      sys.stderr.write('error: ssh failed\n')
-      return status
+      print >> sys.stderr, 'error: sftp failed'
 
-  print 'Updated %d files on device' % (len(package_data['binaries']))
+    return status
+
+
+def scp_everything(devices, package_data, out_dir, dst_root, name_filter,
+                   verbose):
+  # Temporary file for sftp
+  with tempfile.NamedTemporaryFile(delete=False) as f:
+    # Create a directory tree that mirrors what we want on the device.
+    for binary in package_data['binaries']:
+      binary_name = binary['binary']
+      if name_filter is not None and name_filter not in binary_name:
+        continue
+
+      src_path = os.path.join(out_dir, binary_name)
+      device_path = os.path.join(dst_root, binary['bootfs_path'].lstrip('/'))
+
+      # must "rm" the file first because memfs requires it
+      print >> f, '-rm %s' % device_path
+      print >> f, 'put -P %s %s' % (src_path, device_path)
+
+    f.flush()
+
+    for device in devices:
+      if update_device(device, f.name, verbose, out_dir) == 0:
+        print 'Updated %d files on "%s".' % (len(package_data['binaries']), device)
+      else:
+        print 'Update FAILED on "%s"' % device
 
   return 0
 
@@ -105,6 +92,8 @@ def scp_everything(package_data, out_dir, dst_root, name_filter, verbose):
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('package_file', help='JSON file containing package data')
+  parser.add_argument(
+      'device', default=[':'], nargs='*', help='Device to update')
   parser.add_argument(
       '-o',
       '--out-dir',
@@ -116,7 +105,7 @@ def main():
       '--dst-root',
       metavar='PATH',
       default=DEFAULT_DST_ROOT,
-      help='Path to the directory to copy package products')
+      help='Path on device to the directory to copy package products')
   parser.add_argument(
       '-f',
       '--filter',
@@ -124,6 +113,7 @@ def main():
       help='Push products with a name that contains FILTER')
   parser.add_argument(
       '-v', '--verbose', action='store_true', help='Display copy filenames')
+
   args = parser.parse_args()
 
   package_data = parse_package_file(args.package_file)
@@ -132,7 +122,8 @@ def main():
   name_filter = args.filter
   verbose = args.verbose
 
-  return scp_everything(package_data, out_dir, dst_root, name_filter, verbose)
+  return scp_everything(args.device, package_data, out_dir, dst_root,
+                        name_filter, verbose)
 
 
 if __name__ == '__main__':
