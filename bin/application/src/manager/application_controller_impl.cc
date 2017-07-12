@@ -51,7 +51,8 @@ void ApplicationControllerImpl::Detach() {
 
 // Called when process terminates, regardless of if Kill() was invoked.
 void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
-                                              mx_signals_t pending) {
+                                              mx_signals_t pending,
+                                              uint64_t count) {
   FTL_DCHECK(handle == process_.get());
   FTL_DCHECK(pending & MX_TASK_TERMINATED);
 

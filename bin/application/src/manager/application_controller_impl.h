@@ -36,7 +36,7 @@ class ApplicationControllerImpl : public ApplicationController,
 
  private:
   // |mtl::MessageLoopHandler| implementation:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
 
   fidl::Binding<ApplicationController> binding_;
   ApplicationEnvironmentImpl* environment_;
