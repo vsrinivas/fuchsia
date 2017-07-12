@@ -45,12 +45,12 @@ MediaDecoderImpl::MediaDecoderImpl(
               MediaType::From(decoder_->output_stream_type()),
               FLOG_ADDRESS(consumer_.get()), FLOG_ADDRESS(producer_.get())));
 
-  PartRef consumer_ref = graph_.Add(consumer_);
-  PartRef decoder_ref = graph_.Add(decoder_);
-  PartRef producer_ref = graph_.Add(producer_);
+  NodeRef consumer_ref = graph_.Add(consumer_);
+  NodeRef decoder_ref = graph_.Add(decoder_);
+  NodeRef producer_ref = graph_.Add(producer_);
 
-  graph_.ConnectParts(consumer_ref, decoder_ref);
-  graph_.ConnectParts(decoder_ref, producer_ref);
+  graph_.ConnectNodes(consumer_ref, decoder_ref);
+  graph_.ConnectNodes(decoder_ref, producer_ref);
 
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](bool hold_frame,

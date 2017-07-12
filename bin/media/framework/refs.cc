@@ -11,35 +11,35 @@
 
 namespace media {
 
-size_t PartRef::input_count() const {
+size_t NodeRef::input_count() const {
   FTL_DCHECK(valid());
   return stage_->input_count();
 }
 
-InputRef PartRef::input(size_t index) const {
+InputRef NodeRef::input(size_t index) const {
   FTL_DCHECK(valid());
   FTL_DCHECK(index < stage_->input_count());
   return InputRef(stage_, index);
 }
 
-InputRef PartRef::input() const {
+InputRef NodeRef::input() const {
   FTL_DCHECK(valid());
   FTL_DCHECK(stage_->input_count() == 1);
   return InputRef(stage_, 0);
 }
 
-size_t PartRef::output_count() const {
+size_t NodeRef::output_count() const {
   FTL_DCHECK(valid());
   return stage_->output_count();
 }
 
-OutputRef PartRef::output(size_t index) const {
+OutputRef NodeRef::output(size_t index) const {
   FTL_DCHECK(valid());
   FTL_DCHECK(index < stage_->output_count());
   return OutputRef(stage_, index);
 }
 
-OutputRef PartRef::output() const {
+OutputRef NodeRef::output() const {
   FTL_DCHECK(valid());
   FTL_DCHECK(stage_->output_count() == 1);
   return OutputRef(stage_, 0);

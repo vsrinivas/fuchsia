@@ -99,12 +99,12 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
 MediaDemuxImpl::~MediaDemuxImpl() {}
 
 void MediaDemuxImpl::OnDemuxInitialized(Result result) {
-  demux_part_ = graph_.Add(demux_);
+  demux_node_ = graph_.Add(demux_);
 
   const std::vector<Demux::DemuxStream*>& demux_streams = demux_->streams();
   for (Demux::DemuxStream* demux_stream : demux_streams) {
     streams_.push_back(std::unique_ptr<Stream>(
-        new Stream(demux_part_.output(demux_stream->index()),
+        new Stream(demux_node_.output(demux_stream->index()),
                    demux_stream->stream_type(), &graph_)));
 
     streams_.back()->producer()->SetConnectionStateChangedCallback(
@@ -163,7 +163,7 @@ void MediaDemuxImpl::GetStatus(uint64_t version_last_seen,
 void MediaDemuxImpl::Flush(bool hold_frame, const FlushCallback& callback) {
   RCHECK(init_complete_.occurred());
 
-  graph_.FlushAllOutputs(demux_part_);
+  graph_.FlushAllOutputs(demux_node_);
 
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
@@ -190,7 +190,7 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
   FTL_DCHECK(graph);
 
   producer_ = FidlPacketProducer::Create();
-  graph_->ConnectOutputToPart(output_, graph_->Add(producer_));
+  graph_->ConnectOutputToNode(output_, graph_->Add(producer_));
 }
 
 MediaDemuxImpl::Stream::~Stream() {}

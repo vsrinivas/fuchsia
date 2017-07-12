@@ -36,7 +36,7 @@ namespace media {
 //
 // The process starts when a stage invokes an update callback supplied by the
 // engine. Stages that implement synchronous models never do this. Other stages
-// do this as directed by the parts they host in accordance with their
+// do this as directed by the nodes they host in accordance with their
 // respective models. When a stage is ready to supply media or update demand
 // due to external events, it calls the update callback. The engine responds by
 // adding the stage to the backlog and then burning down the backlog. The stage
@@ -56,18 +56,18 @@ namespace media {
 //    call, because the lock is taken for the duration of Update, and the
 //    callback will take the lock.
 // 2) A stage cannot update supply/demand on its inputs/outputs except during
-//    Update. When an external event occurs, the stage and/or its hosted part
+//    Update. When an external event occurs, the stage and/or its hosted node
 //    should update its internal state as required and invoke the callback.
-//    During the subsequent Update, the stage and/or part can then update
+//    During the subsequent Update, the stage and/or node can then update
 //    supply and/or demand.
 // 3) Threads used to call update callbacks must be suitable for operating the
 //    engine. There is currently no affordance for processing other tasks on
 //    the thread while the callback is running. A callback may run for a long
 //    time, depending on how much work needs to be done.
-// 4) Parts cannot rely on being called back on the same thread on which they
+// 4) Nodes cannot rely on being called back on the same thread on which they
 //    invoke update callbacks. This may require additional synchronization and
-//    thread transitions inside the part.
-// 5) If a part takes a lock of its own during Update, it should not also hold
+//    thread transitions inside the node.
+// 5) If a node takes a lock of its own during Update, it should not also hold
 //    that lock when calling the update callback. Doing so will result in
 //    deadlock.
 //

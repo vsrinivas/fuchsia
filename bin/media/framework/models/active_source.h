@@ -5,14 +5,14 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/part.h"
+#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
 // Source that produces packets asynchronously.
-class ActiveSource : public Part {
+class ActiveSource : public Node {
  public:
   using SupplyCallback = std::function<void(PacketPtr packet)>;
 

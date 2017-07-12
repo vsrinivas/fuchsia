@@ -48,12 +48,12 @@ LpcmReformatterImpl::LpcmReformatterImpl(
               MediaType::From(reformatter_->output_stream_type()),
               FLOG_ADDRESS(consumer_.get()), FLOG_ADDRESS(producer_.get())));
 
-  PartRef consumer_ref = graph_.Add(consumer_);
-  PartRef reformatter_ref = graph_.Add(reformatter_);
-  PartRef producer_ref = graph_.Add(producer_);
+  NodeRef consumer_ref = graph_.Add(consumer_);
+  NodeRef reformatter_ref = graph_.Add(reformatter_);
+  NodeRef producer_ref = graph_.Add(producer_);
 
-  graph_.ConnectParts(consumer_ref, reformatter_ref);
-  graph_.ConnectParts(reformatter_ref, producer_ref);
+  graph_.ConnectNodes(consumer_ref, reformatter_ref);
+  graph_.ConnectNodes(reformatter_ref, producer_ref);
 
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](bool hold_frame,

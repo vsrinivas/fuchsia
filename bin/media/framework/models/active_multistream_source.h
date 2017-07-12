@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/part.h"
+#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
 
 // Asynchronous source of packets for multiple streams.
-class ActiveMultistreamSource : public Part {
+class ActiveMultistreamSource : public Node {
  public:
   using SupplyCallback =
       std::function<void(size_t output_index, PacketPtr packet)>;

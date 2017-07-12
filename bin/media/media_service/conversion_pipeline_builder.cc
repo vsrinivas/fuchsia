@@ -138,7 +138,7 @@ AddResult AddTransformsForCompressedAudio(
     return AddResult::kFailed;
   }
 
-  *output = graph->ConnectOutputToPart(*output, graph->Add(decoder)).output();
+  *output = graph->ConnectOutputToNode(*output, graph->Add(decoder)).output();
   *out_type = decoder->output_stream_type();
 
   return AddResult::kProgressed;
@@ -168,7 +168,7 @@ AddResult AddTransformsForCompressedVideo(
     return AddResult::kFailed;
   }
 
-  *output = graph->ConnectOutputToPart(*output, graph->Add(decoder)).output();
+  *output = graph->ConnectOutputToNode(*output, graph->Add(decoder)).output();
   *out_type = decoder->output_stream_type();
 
   return AddResult::kProgressed;
@@ -191,7 +191,7 @@ AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
   if (in_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
     *output = graph
-                  ->ConnectOutputToPart(
+                  ->ConnectOutputToNode(
                       *output, graph->Add(LpcmReformatter::Create(
                                    in_type, out_type_set.sample_format())))
                   .output();
@@ -309,7 +309,7 @@ bool BuildConversionPipeline(
       case AddResult::kFailed:
         // Failed to find a suitable conversion. Return the pipeline to its
         // original state.
-        graph->RemovePartsConnectedToOutput(*output);
+        graph->RemoveNodesConnectedToOutput(*output);
         *out_type = nullptr;
         return false;
       case AddResult::kProgressed:

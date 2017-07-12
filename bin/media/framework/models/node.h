@@ -6,10 +6,10 @@
 
 namespace media {
 
-// Host for a source, sink or transform.
-class Part {
+// A source, sink or transform in a graph.
+class Node {
  public:
-  virtual ~Part() {}
+  virtual ~Node() {}
 
   // Flushes media state.
   virtual void Flush() {}

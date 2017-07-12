@@ -93,7 +93,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   Graph graph_;
-  PartRef demux_part_;
+  NodeRef demux_node_;
   std::shared_ptr<Demux> demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;

@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/part.h"
+#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
 // Synchronous packet transform.
-class Transform : public Part {
+class Transform : public Node {
  public:
   ~Transform() override {}
 

@@ -17,16 +17,16 @@ class InputRef;
 class OutputRef;
 
 // Opaque Stage pointer used for graph building.
-class PartRef {
+class NodeRef {
  public:
-  PartRef() : stage_(nullptr) {}
+  NodeRef() : stage_(nullptr) {}
 
-  PartRef& operator=(std::nullptr_t) {
+  NodeRef& operator=(std::nullptr_t) {
     stage_ = nullptr;
     return *this;
   }
 
-  // Returns the number of inputs the part has.
+  // Returns the number of inputs the node has.
   size_t input_count() const;
 
   // Returns a reference to the specified input.
@@ -36,7 +36,7 @@ class PartRef {
   // call to be valid.
   InputRef input() const;
 
-  // Returns the number of outputs the part has.
+  // Returns the number of outputs the node has.
   size_t output_count() const;
 
   // Returns a reference to the specified output.
@@ -46,11 +46,11 @@ class PartRef {
   // call to be valid.
   OutputRef output() const;
 
-  // Returns true if the reference refers to a part, false if it's null.
+  // Returns true if the reference refers to a node, false if it's null.
   explicit operator bool() const { return stage_ != nullptr; }
 
  private:
-  explicit PartRef(Stage* stage) : stage_(stage) {}
+  explicit NodeRef(Stage* stage) : stage_(stage) {}
 
   // Determines if the reference is non-null and otherwise valid. Useful for
   // DCHECKs.
@@ -78,9 +78,9 @@ class InputRef {
   // Returns true if the reference refers to an input, false if it's null.
   explicit operator bool() const { return stage_ != nullptr; }
 
-  // Returns a reference to the part that owns this input. Returns a null
+  // Returns a reference to the node that owns this input. Returns a null
   // reference if this reference is null.
-  PartRef part() const { return PartRef(stage_); }
+  NodeRef node() const { return NodeRef(stage_); }
 
   // Indicates whether this input is connected to an output.
   bool connected() const;
@@ -103,7 +103,7 @@ class InputRef {
   size_t index_;
 
   friend Graph;
-  friend PartRef;
+  friend NodeRef;
   friend OutputRef;
   friend Output;
   friend Engine;
@@ -123,9 +123,9 @@ class OutputRef {
   // Returns true if the reference refers to an output, false if it's null.
   explicit operator bool() const { return stage_ != nullptr; }
 
-  // Returns a reference to the part that owns this output. Returns a null
+  // Returns a reference to the node that owns this output. Returns a null
   // reference if this reference is null.
-  PartRef part() const { return PartRef(stage_); }
+  NodeRef node() const { return NodeRef(stage_); }
 
   // Indicates whether this output is connected to an input.
   bool connected() const;
@@ -148,7 +148,7 @@ class OutputRef {
   size_t index_;
 
   friend Graph;
-  friend PartRef;
+  friend NodeRef;
   friend InputRef;
   friend Input;
   friend Engine;

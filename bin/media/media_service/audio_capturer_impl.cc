@@ -35,7 +35,7 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   source_ = UsbAudioSource::Create(audio_enum.input_device_paths().front());
 
-  graph_.ConnectParts(graph_.Add(source_), graph_.Add(producer_));
+  graph_.ConnectNodes(graph_.Add(source_), graph_.Add(producer_));
   graph_.Prepare();
 }
 

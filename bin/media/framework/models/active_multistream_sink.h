@@ -5,7 +5,7 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/part.h"
+#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
@@ -30,7 +30,7 @@ class ActiveMultistreamSinkHost {
 };
 
 // Synchronous sink of packets for multiple streams.
-class ActiveMultistreamSink : public Part {
+class ActiveMultistreamSink : public Node {
  public:
   ~ActiveMultistreamSink() override {}
 

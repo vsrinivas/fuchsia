@@ -5,14 +5,14 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/part.h"
+#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
 // Sink that consumes packets asynchronously.
-class ActiveSink : public Part {
+class ActiveSink : public Node {
  public:
   using DemandCallback = std::function<void(Demand demand)>;
 

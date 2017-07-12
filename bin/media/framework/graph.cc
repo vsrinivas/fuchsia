@@ -14,10 +14,10 @@ Graph::~Graph() {
   Reset();
 }
 
-void Graph::RemovePart(PartRef part) {
-  FTL_DCHECK(part.valid());
+void Graph::RemoveNode(NodeRef node) {
+  FTL_DCHECK(node.valid());
 
-  Stage* stage = part.stage_;
+  Stage* stage = node.stage_;
 
   size_t input_count = stage->input_count();
   for (size_t input_index = 0; input_index < input_count; input_index++) {
@@ -42,7 +42,7 @@ void Graph::RemovePart(PartRef part) {
   delete stage;
 }
 
-PartRef Graph::Connect(const OutputRef& output, const InputRef& input) {
+NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {
   FTL_DCHECK(output.valid());
   FTL_DCHECK(input.valid());
 
@@ -56,30 +56,30 @@ PartRef Graph::Connect(const OutputRef& output, const InputRef& input) {
   output.actual().Connect(input);
   input.actual().Connect(output);
 
-  return input.part();
+  return input.node();
 }
 
-PartRef Graph::ConnectParts(PartRef upstream_part, PartRef downstream_part) {
-  FTL_DCHECK(upstream_part.valid());
-  FTL_DCHECK(downstream_part.valid());
-  Connect(upstream_part.output(), downstream_part.input());
-  return downstream_part;
+NodeRef Graph::ConnectNodes(NodeRef upstream_node, NodeRef downstream_node) {
+  FTL_DCHECK(upstream_node.valid());
+  FTL_DCHECK(downstream_node.valid());
+  Connect(upstream_node.output(), downstream_node.input());
+  return downstream_node;
 }
 
-PartRef Graph::ConnectOutputToPart(const OutputRef& output,
-                                   PartRef downstream_part) {
+NodeRef Graph::ConnectOutputToNode(const OutputRef& output,
+                                   NodeRef downstream_node) {
   FTL_DCHECK(output.valid());
-  FTL_DCHECK(downstream_part.valid());
-  Connect(output, downstream_part.input());
-  return downstream_part;
+  FTL_DCHECK(downstream_node.valid());
+  Connect(output, downstream_node.input());
+  return downstream_node;
 }
 
-PartRef Graph::ConnectPartToInput(PartRef upstream_part,
+NodeRef Graph::ConnectNodeToInput(NodeRef upstream_node,
                                   const InputRef& input) {
-  FTL_DCHECK(upstream_part.valid());
+  FTL_DCHECK(upstream_node.valid());
   FTL_DCHECK(input.valid());
-  Connect(upstream_part.output(), input);
-  return input.part();
+  Connect(upstream_node.output(), input);
+  return input.node();
 }
 
 void Graph::DisconnectOutput(const OutputRef& output) {
@@ -118,49 +118,49 @@ void Graph::DisconnectInput(const InputRef& input) {
   input.actual().Disconnect();
 }
 
-void Graph::RemovePartsConnectedToPart(PartRef part) {
-  FTL_DCHECK(part.valid());
+void Graph::RemoveNodesConnectedToNode(NodeRef node) {
+  FTL_DCHECK(node.valid());
 
-  std::deque<PartRef> to_remove{part};
+  std::deque<NodeRef> to_remove{node};
 
   while (!to_remove.empty()) {
-    PartRef part = to_remove.front();
+    NodeRef node = to_remove.front();
     to_remove.pop_front();
 
-    for (size_t i = 0; i < part.input_count(); ++i) {
-      to_remove.push_back(part.input(i).part());
+    for (size_t i = 0; i < node.input_count(); ++i) {
+      to_remove.push_back(node.input(i).node());
     }
 
-    for (size_t i = 0; i < part.output_count(); ++i) {
-      to_remove.push_back(part.output(i).part());
+    for (size_t i = 0; i < node.output_count(); ++i) {
+      to_remove.push_back(node.output(i).node());
     }
 
-    RemovePart(part);
+    RemoveNode(node);
   }
 }
 
-void Graph::RemovePartsConnectedToOutput(const OutputRef& output) {
+void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
   FTL_DCHECK(output.valid());
 
   if (!output.connected()) {
     return;
   }
 
-  PartRef downstream_part = output.mate().part();
+  NodeRef downstream_node = output.mate().node();
   DisconnectOutput(output);
-  RemovePartsConnectedToPart(downstream_part);
+  RemoveNodesConnectedToNode(downstream_node);
 }
 
-void Graph::RemovePartsConnectedToInput(const InputRef& input) {
+void Graph::RemoveNodesConnectedToInput(const InputRef& input) {
   FTL_DCHECK(input.valid());
 
   if (!input.connected()) {
     return;
   }
 
-  PartRef upstream_part = input.mate().part();
+  NodeRef upstream_node = input.mate().node();
   DisconnectInput(input);
-  RemovePartsConnectedToPart(upstream_part);
+  RemoveNodesConnectedToNode(upstream_node);
 }
 
 void Graph::Reset() {
@@ -191,15 +191,15 @@ void Graph::FlushOutput(const OutputRef& output) {
   engine_.FlushOutput(output);
 }
 
-void Graph::FlushAllOutputs(PartRef part) {
-  FTL_DCHECK(part.valid());
-  size_t output_count = part.output_count();
+void Graph::FlushAllOutputs(NodeRef node) {
+  FTL_DCHECK(node.valid());
+  size_t output_count = node.output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
-    FlushOutput(part.output(output_index));
+    FlushOutput(node.output(output_index));
   }
 }
 
-PartRef Graph::Add(Stage* stage) {
+NodeRef Graph::Add(Stage* stage) {
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {
@@ -212,7 +212,7 @@ PartRef Graph::Add(Stage* stage) {
 
   stage->SetUpdateCallback(update_function_);
 
-  return PartRef(stage);
+  return NodeRef(stage);
 }
 
 }  // namespace media
