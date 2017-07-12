@@ -19,6 +19,8 @@ ContextEngineImpl::ContextEngineImpl() {
   repository_.AddCoprocessor(new AggregateCoprocessor("explicit/raw/text"));
   repository_.AddCoprocessor(
       new AggregateCoprocessor("explicit/raw/text_selection"));
+  repository_.AddCoprocessor(new AggregateCoprocessor("explicit/music_artist"));
+  // Put this last after all other aggregators
   repository_.AddCoprocessor(new FocusedStoryCoprocessor());
 }
 
