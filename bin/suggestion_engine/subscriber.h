@@ -41,6 +41,24 @@ class Subscriber {
     suggestion->uuid = suggestion_data.prototype->suggestion_id;
     suggestion->rank = suggestion_data.rank;
     suggestion->display = suggestion_data.prototype->proposal->display->Clone();
+    if (!suggestion_data.prototype->proposal->on_selected.empty()) {
+      // TODO(thatguy): Proposal.on_select should be single Action, not an array
+      // https://fuchsia.atlassian.net/browse/MW-118
+      const auto &selected_action =
+          suggestion_data.prototype->proposal->on_selected[0];
+      switch (selected_action->which()) {
+        case Action::Tag::FOCUS_STORY: {
+          suggestion->story_id = selected_action->get_focus_story()->story_id;
+          break;
+        }
+        case Action::Tag::ADD_MODULE_TO_STORY: {
+          suggestion->story_id =
+              selected_action->get_add_module_to_story()->story_id;
+          break;
+        }
+        default: {}
+      }
+    }
     return suggestion;
   }
 

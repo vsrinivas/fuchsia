@@ -101,4 +101,8 @@ struct Suggestion {
 
   // Display properties of the Suggestion
   SuggestionDisplay display;
+
+  // When the suggestion affects a specific story, the ID of that story will be
+  // included here.
+  string? story_id;
 };
