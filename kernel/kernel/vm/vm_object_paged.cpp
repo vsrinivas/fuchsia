@@ -625,25 +625,28 @@ status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-    status_t status = MX_OK;
-    uint64_t off;
-    for (off = start_page_offset; off != end_page_offset && status == MX_OK; off += PAGE_SIZE) {
-        vm_page_t* p = page_list_.GetPage(off);
-        if (!p) {
-            status = MX_ERR_NOT_FOUND;
-            break;
-        }
+    uint64_t expected_next_off = start_page_offset;
+    status_t status = page_list_.ForEveryPageInRange(
+            [&expected_next_off](const auto p, uint64_t off) {
+                if (off != expected_next_off) {
+                    return MX_ERR_NOT_FOUND;
+                }
 
-        DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
-        if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
-            status = MX_ERR_UNAVAILABLE;
-            break;
-        }
-        p->object.pin_count++;
+                DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
+                if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
+                    return MX_ERR_UNAVAILABLE;
+                }
+
+                p->object.pin_count++;
+                expected_next_off = off + PAGE_SIZE;
+                return MX_ERR_NEXT;
+            }, start_page_offset, end_page_offset);
+
+    if (status == MX_OK && expected_next_off != end_page_offset) {
+        status = MX_ERR_NOT_FOUND;
     }
-
     if (status != MX_OK) {
-        UnpinLocked(start_page_offset, off - start_page_offset);
+        UnpinLocked(start_page_offset, expected_next_off - start_page_offset);
         return status;
     }
 
@@ -668,16 +671,21 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-    uint64_t off;
-    for (off = start_page_offset; off != end_page_offset; off += PAGE_SIZE) {
-        vm_page_t* p = page_list_.GetPage(off);
-        ASSERT_MSG(p != nullptr, "Tried to unpin an uncommitted page");
+    uint64_t expected_next_off = start_page_offset;
+    status_t status = page_list_.ForEveryPageInRange(
+            [&expected_next_off](const auto p, uint64_t off) {
+                if (off != expected_next_off) {
+                    return MX_ERR_NOT_FOUND;
+                }
 
-        DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
-        ASSERT(p->object.pin_count > 0);
-        p->object.pin_count--;
-    }
-
+                DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
+                ASSERT(p->object.pin_count > 0);
+                p->object.pin_count--;
+                expected_next_off = off + PAGE_SIZE;
+                return MX_ERR_NEXT;
+            }, start_page_offset, end_page_offset);
+    ASSERT_MSG(status == MX_OK && expected_next_off == end_page_offset,
+               "Tried to unpin an uncommitted page");
     return;
 }
 
