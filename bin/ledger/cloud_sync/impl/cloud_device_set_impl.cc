@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 
+#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/concatenate.h"
 
@@ -11,7 +12,7 @@ namespace cloud_sync {
 
 namespace {
 std::string GetDeviceMapKey(ftl::StringView fingerprint) {
-  return ftl::Concatenate({"__metadata/devices/", fingerprint});
+  return ftl::Concatenate({kDeviceMapRelpath, "/", fingerprint});
 }
 }  // namespace
 

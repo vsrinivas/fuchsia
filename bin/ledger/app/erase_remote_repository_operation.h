@@ -37,8 +37,11 @@ class EraseRemoteRepositoryOperation {
   void Start(std::function<void(bool)> on_done);
 
  private:
+  void ClearDeviceMap();
+
   void EraseRemote();
 
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ledger::NetworkService* network_service_;
   std::string repository_path_;
   std::string server_id_;

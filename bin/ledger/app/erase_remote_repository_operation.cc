@@ -16,7 +16,8 @@ EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
     std::string server_id,
     std::string api_key,
     modular::auth::TokenProviderPtr token_provider)
-    : network_service_(network_service),
+    : task_runner_(task_runner),
+      network_service_(network_service),
       server_id_(server_id),
       api_key_(std::move(api_key)) {
   token_provider.set_connection_error_handler([this] {
@@ -64,14 +65,14 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
                   }
 
                   auth_token_ = std::move(auth_token);
-                  EraseRemote();
+                  ClearDeviceMap();
                 });
             auth_provider_requests_.emplace(std::move(token_request));
           });
   auth_provider_requests_.emplace(std::move(user_id_request));
 }
 
-void EraseRemoteRepositoryOperation::EraseRemote() {
+void EraseRemoteRepositoryOperation::ClearDeviceMap() {
   if (user_id_.empty()) {
     FTL_LOG(ERROR) << "Missing credentials from the token provider, "
                    << "will not erase the remote state. (running as guest?)";
@@ -82,6 +83,26 @@ void EraseRemoteRepositoryOperation::EraseRemote() {
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_, server_id_,
       cloud_sync::GetFirebasePathForUser(user_id_));
+  std::vector<std::string> query_params;
+  if (!auth_token_.empty()) {
+    query_params = {"auth=" + auth_token_};
+  }
+
+  firebase_->Delete(
+      cloud_sync::kDeviceMapRelpath, std::move(query_params),
+      [this](firebase::Status status) {
+        if (status != firebase::Status::OK) {
+          FTL_LOG(ERROR) << "Failed to erase the device map: " << status;
+          on_done_(false);
+          return;
+        }
+        FTL_LOG(INFO) << "Erased the device map, will clear the state next.";
+        task_runner_->PostDelayedTask([this] { EraseRemote(); },
+                                      ftl::TimeDelta::FromSeconds(3));
+      });
+}
+
+void EraseRemoteRepositoryOperation::EraseRemote() {
   std::vector<std::string> query_params;
   if (!auth_token_.empty()) {
     query_params = {"auth=" + auth_token_};
