@@ -5,7 +5,7 @@
     "binaries": [
         {
             "binary": "pkgfs_test",
-            "bootfs_path": "tests/pkgfs_test"
+            "bootfs_path": "test/pkgfs_test"
         }
     ]
 }
