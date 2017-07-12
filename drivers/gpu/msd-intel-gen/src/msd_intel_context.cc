@@ -6,6 +6,7 @@
 #include "address_space.h"
 #include "command_buffer.h"
 #include "msd_intel_connection.h"
+#include "platform_trace.h"
 
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
                                      std::unique_ptr<MsdIntelBuffer> context_buffer,
@@ -118,6 +119,10 @@ void ClientContext::Shutdown()
 
 magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
+    TRACE_DURATION("magma", "ReceiveCommandBuffer");
+    uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
+    TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
+
     auto connection = connection_.lock();
     if (!connection)
         return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "couldn't lock reference to connection");
@@ -173,6 +178,11 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock)
             if (connection->context_killed())
                 return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
+            {
+                TRACE_DURATION("magma", "SubmitCommandBuffer");
+                uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
+                TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
+            }
             connection->SubmitCommandBuffer(std::move(command_buffer));
             pending_command_buffer_queue_.pop();
         } else {
