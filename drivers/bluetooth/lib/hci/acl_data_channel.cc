@@ -320,7 +320,7 @@ bool ACLDataChannel::MaxLENumPacketsReachedLocked() const {
   return le_num_sent_packets_ == le_buffer_info_.max_num_packets();
 }
 
-void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
   if (!is_initialized_) return;
 
   FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());

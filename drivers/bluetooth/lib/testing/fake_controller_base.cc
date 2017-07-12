@@ -92,7 +92,7 @@ void FakeControllerBase::CloseACLDataChannel() {
   acl_channel_.reset();
 }
 
-void FakeControllerBase::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void FakeControllerBase::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
   if (handle == cmd_channel_.get()) {
     HandleCommandPacket();
   } else if (handle == acl_channel_.get()) {

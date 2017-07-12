@@ -134,7 +134,7 @@ bool Transport::IsInitialized() const {
   return is_initialized_;
 }
 
-void Transport::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void Transport::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
   FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
   NotifyClosedCallback();
 }

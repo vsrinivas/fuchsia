@@ -68,7 +68,7 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
 
  private:
   // ::mtl::MessageLoopHandler overrides
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
 
   // Read and handle packets received over the channels.
   void HandleCommandPacket();

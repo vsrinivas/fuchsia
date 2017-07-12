@@ -56,7 +56,7 @@ bool Sniffer::Start() {
   return true;
 }
 
-void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
   FTL_DCHECK(handle == snoop_channel_.get());
   FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
 

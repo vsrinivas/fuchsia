@@ -427,7 +427,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
   }
 }
 
-void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
   FTL_DCHECK(handle == channel_.get());
   FTL_DCHECK(pending & MX_CHANNEL_READABLE);
 
