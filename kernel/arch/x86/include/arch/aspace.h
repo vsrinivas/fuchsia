@@ -10,40 +10,18 @@
 #include <arch/x86/ioport.h>
 #include <arch/x86/mmu.h>
 #include <kernel/vm/arch_vm_aspace.h>
+#include <magenta/atomic.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
-#include <mxtl/ref_counted.h>
 
-__BEGIN_CDECLS
+struct MappingCursor;
 
-#define ARCH_ASPACE_MAGIC 0x41524153 // ARAS
-
-struct arch_aspace {
-    /* magic value for use-after-free detection */
-    uint32_t magic;
-
-    /* pointer to the translation table */
-    paddr_t pt_phys;
-    pt_entry_t *pt_virt;
-    /** counter of pages allocated to back the translation table */
-    size_t pt_pages;
-
-    uint flags;
-
-    /* range of address space */
-    vaddr_t base;
-    size_t size;
-
-    /* cpus that are currently executing in this aspace
-     * actually an mp_cpu_mask_t, but header dependencies. */
-    volatile int active_cpus;
-};
-
-__END_CDECLS
-
-class X86ArchVmAspace final : public ArchVmAspaceInterface, mxtl::RefCounted<X86ArchVmAspace>  {
+class X86ArchVmAspace final : public ArchVmAspaceInterface {
 public:
-    X86ArchVmAspace() { }
+    template <typename PageTable>
+    static void UnmapEntry(X86ArchVmAspace* aspace, vaddr_t vaddr, volatile pt_entry_t* pte);
+
+    X86ArchVmAspace() {}
     virtual ~X86ArchVmAspace();
 
     status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
@@ -64,19 +42,107 @@ public:
                      vaddr_t end, uint next_region_mmu_flags,
                      vaddr_t align, size_t size, uint mmu_flags) override;
 
-    paddr_t arch_table_phys() const override { return aspace_.pt_phys; }
+    paddr_t arch_table_phys() const override { return pt_phys_; }
 
-    paddr_t pt_phys() const { return aspace_.pt_phys; }
+    paddr_t pt_phys() const { return pt_phys_; }
 
-    size_t pt_pages() const { return aspace_.pt_pages; }
+    size_t pt_pages() const { return pt_pages_; }
+
+    int active_cpus() { return atomic_load(&active_cpus_); }
 
     IoBitmap& io_bitmap() { return io_bitmap_; }
 
-    static void ContextSwitch(X86ArchVmAspace *from, X86ArchVmAspace *to);
+    static void ContextSwitch(X86ArchVmAspace* from, X86ArchVmAspace* to);
+
 private:
+    // Test the vaddr against the address space's range.
+    bool IsValidVaddr(vaddr_t vaddr) {
+        return (vaddr >= base_ && vaddr <= base_ + size_ - 1);
+    }
+
+    template <template <int> class PageTable>
+    status_t DestroyAspace();
+
+    template <template <int> class PageTable>
+    status_t MapPages(vaddr_t vaddr, paddr_t paddr, const size_t count,
+                      uint mmu_flags, size_t* mapped);
+
+    template <template <int> class PageTable>
+    status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
+
+    template <template <int> class PageTable>
+    status_t ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags);
+
+    template <template <int> class PageTable, typename F>
+    status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags,
+                        F arch_to_mmu);
+
+    template <typename PageTable>
+    status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags,
+                        const MappingCursor& start_cursor,
+                        MappingCursor* new_cursor);
+
+    template <typename PageTable>
+    status_t AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
+                          const MappingCursor& start_cursor,
+                          MappingCursor* new_cursor);
+
+    template <typename PageTable>
+    bool RemoveMapping(volatile pt_entry_t* table,
+                       const MappingCursor& start_cursor,
+                       MappingCursor* new_cursor);
+
+    template <typename PageTable>
+    bool RemoveMappingL0(volatile pt_entry_t* table,
+                         const MappingCursor& start_cursor,
+                         MappingCursor* new_cursor);
+
+    template <typename PageTable>
+    status_t UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
+                           const MappingCursor& start_cursor,
+                           MappingCursor* new_cursor);
+
+    template <typename PageTable>
+    status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
+                             const MappingCursor& start_cursor,
+                             MappingCursor* new_cursor);
+
+    template <typename PageTable>
+    status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
+                        page_table_levels* ret_level,
+                        volatile pt_entry_t** mapping);
+
+    template <typename PageTable>
+    status_t GetMappingL0(volatile pt_entry_t* table, vaddr_t vaddr,
+                          enum page_table_levels* ret_level,
+                          volatile pt_entry_t** mapping);
+
+    template <typename PageTable>
+    void UpdateEntry(vaddr_t vaddr, volatile pt_entry_t* pte, paddr_t paddr,
+                     arch_flags_t flags);
+
+    template <typename PageTable>
+    status_t SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte);
+
     mxtl::Canary<mxtl::magic("VAAS")> canary_;
     IoBitmap io_bitmap_;
-    arch_aspace aspace_ = {};
+
+    // Pointer to the translation table.
+    paddr_t pt_phys_ = 0;
+    pt_entry_t* pt_virt_ = nullptr;
+
+    // Counter of pages allocated to back the translation table.
+    size_t pt_pages_ = 0;
+
+    uint flags_ = 0;
+
+    // Range of address space.
+    vaddr_t base_ = 0;
+    size_t size_ = 0;
+
+    // CPUs that are currently executing in this aspace.
+    // Actually an mp_cpu_mask_t, but header dependencies.
+    volatile int active_cpus_ = 0;
 };
 
 using ArchVmAspace = X86ArchVmAspace;
