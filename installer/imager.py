@@ -295,8 +295,13 @@ file_count = manifest.build_minfs_image(system_manifests, disk_path, minfs_bin)
 print "\nCopied %i files" % file_count
 
 compressed_disk = "%s.lz4" % disk_path
+sparse_disk = "%s.sparse" % disk_path
+
+sparse_cmd = [os.path.join(args.build_dir, "host_x64", "sparser"), "-s", disk_path, sparse_disk]
+subprocess.check_call(sparse_cmd, cwd=working_dir)
+
 print "Compressing system disk image to %s" % compressed_disk
-if not compress_file(lz4_path, disk_path, compressed_disk, working_dir):
+if not compress_file(lz4_path, sparse_disk, compressed_disk, working_dir):
   sys.exit(-1)
 
 # create /EFI/BOOT
@@ -334,8 +339,13 @@ if not cp_fat(mcopy_path, mdir_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_
 print "Copied command line \"%s\"" % kernel_cmdline
 
 compressed_disk_efi = "%s.lz4" % disk_path_efi
+sparse_disk = "%s.sparse" % disk_path_efi
+
+sparse_cmd = [os.path.join(args.build_dir, "host_x64", "sparser"), "-s", disk_path_efi, sparse_disk]
+subprocess.check_call(sparse_cmd, cwd=working_dir)
+
 print "Compressing ESP disk image to %s" % compressed_disk_efi
-if not compress_file(lz4_path, disk_path_efi, compressed_disk_efi, working_dir):
+if not compress_file(lz4_path, sparse_disk, compressed_disk_efi, working_dir):
   sys.exit(-1)
 
 runtime_sys_manifests, runtime_boot_manifests = build_manifest_lists(runtime_dir)
