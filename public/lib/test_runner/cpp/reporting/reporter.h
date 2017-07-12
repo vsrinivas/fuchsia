@@ -37,7 +37,7 @@ class Reporter : public mtl::MessageLoopHandler {
   // MessageLoopHandler override.
   // Gets called when the queue is ready to read. Pops TestResultPtr instances
   // from the queue until empty, and reports them to the TestRunner service.
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
 
   // Attempts to connect to TestRunner FIDL service. If successful, registers an
   // event handler for when the queue is ready to read, so that incoming test

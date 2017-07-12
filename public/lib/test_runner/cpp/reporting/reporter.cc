@@ -37,8 +37,8 @@ Reporter::Reporter(std::string identity, ResultsQueue* queue)
 
 Reporter::~Reporter() {}
 
-void Reporter::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  while(!queue_->Empty()) {
+void Reporter::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
+  while (!queue_->Empty()) {
     TestResultPtr result = queue_->Pop();
     if (result) {
       test_runner()->ReportResult(std::move(result));
