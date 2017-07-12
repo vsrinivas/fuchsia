@@ -152,7 +152,12 @@ wlan_channel_t Scanner::ScanChannel() const {
     return wlan_channel_t{req_->channel_list[channel_index_]};
 }
 
-mx_status_t Scanner::HandleBeacon(const Packet* packet) {
+// A ProbeResponse carries all currently used attributes of a Beacon frame. Hence, treat a
+// ProbeResponse as a Beacon for now to support active scanning. There are additional information
+// for either frame type which we have to process on a per frame type basis in the future. For now,
+// stick with this kind of unification.
+// TODO(hahnr): find a way to properly split up the Beacon and ProbeResponse processing
+mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
 
@@ -161,7 +166,7 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
     auto hdr = packet->field<MgmtFrameHeader>(0);
     auto bcn = packet->field<Beacon>(sizeof(MgmtFrameHeader));
     debugbcn("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
-              bcn->timestamp, bcn->beacon_interval, bcn->cap.val());
+             bcn->timestamp, bcn->beacon_interval, bcn->cap.val());
 
     BSSDescription* bss;
     uint64_t sender = DeviceAddress(hdr->addr2).to_u64();
@@ -225,62 +230,6 @@ mx_status_t Scanner::HandleBeacon(const Packet* packet) {
                 size_t used = bptr - buf;
                 MX_DEBUG_ASSERT(sizeof(buf) > used);
                 bptr += snprintf(bptr, sizeof(buf) - used, " %u", supprates->rates[i]);
-            }
-            debugbcn("supported rates:%s\n", buf);
-            break;
-        }
-        case element_id::kDsssParamSet: {
-            auto dsss_params = reader.read<DsssParamSetElement>();
-            if (dsss_params == nullptr) goto done_iter;
-            debugbcn("current channel: %u\n", dsss_params->current_chan);
-            break;
-        }
-        case element_id::kCountry: {
-            auto country = reader.read<CountryElement>();
-            if (country == nullptr) goto done_iter;
-            debugbcn("country: %.*s\n", 3, country->country);
-            break;
-        }
-        default:
-            debugbcn("unknown element id: %u len: %u\n", hdr->id, hdr->len);
-            reader.skip(sizeof(ElementHeader) + hdr->len);
-            break;
-        }
-    }
-done_iter:
-
-    return MX_OK;
-}
-
-mx_status_t Scanner::HandleProbeResponse(const Packet* packet) {
-    // TODO(tkilbourn): consolidate with HandleBeacon
-    debugfn();
-    MX_DEBUG_ASSERT(IsRunning());
-
-    auto resp = packet->field<ProbeResponse>(sizeof(MgmtFrameHeader));
-    debugbcn("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
-              resp->timestamp, resp->beacon_interval, resp->cap.val());
-
-    size_t elt_len = packet->len() - sizeof(MgmtFrameHeader) - sizeof(ProbeResponse);
-    ElementReader reader(resp->elements, elt_len);
-
-    while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) break;
-
-        switch (hdr->id) {
-        case element_id::kSsid: {
-            auto ssid = reader.read<SsidElement>();
-            debugbcn("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
-            break;
-        }
-        case element_id::kSuppRates: {
-            auto supprates = reader.read<SupportedRatesElement>();
-            if (supprates == nullptr) goto done_iter;
-            char buf[256];
-            char* bptr = buf;
-            for (int i = 0; i < supprates->hdr.len; i++) {
-                bptr += snprintf(bptr, sizeof(buf) - (bptr - buf), " %u", supprates->rates[i]);
             }
             debugbcn("supported rates:%s\n", buf);
             break;

@@ -312,7 +312,7 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) {
-        scanner_->HandleBeacon(packet);
+        scanner_->HandleBeaconOrProbeResponse(packet);
     }
 
     if (IsStaValid()) {
@@ -329,7 +329,7 @@ mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) {
-        scanner_->HandleProbeResponse(packet);
+        scanner_->HandleBeaconOrProbeResponse(packet);
     }
 
     return MX_OK;

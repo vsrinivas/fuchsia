@@ -36,8 +36,7 @@ class Scanner {
     wlan_channel_t ScanChannel() const;
 
     mx_status_t Start(ScanRequestPtr req);
-    mx_status_t HandleBeacon(const Packet* packet);
-    mx_status_t HandleProbeResponse(const Packet* packet);
+    mx_status_t HandleBeaconOrProbeResponse(const Packet* packet);
     mx_status_t HandleTimeout();
     mx_status_t HandleError(mx_status_t error_code);
 

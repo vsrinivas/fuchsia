@@ -270,7 +270,7 @@ TEST_F(ScannerTest, ScanResponse) {
     info.snr = 60;
     p.CopyCtrlFrom(info);
 
-    EXPECT_EQ(MX_OK, scanner_.HandleBeacon(&p));
+    EXPECT_EQ(MX_OK, scanner_.HandleBeaconOrProbeResponse(&p));
     clock_.Set(1);
     EXPECT_EQ(MX_OK, scanner_.HandleTimeout());
 

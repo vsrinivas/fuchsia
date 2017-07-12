@@ -380,8 +380,8 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     assoc_timeout_ = 0;
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
-    SendAssocResponse(AssociateResultCodes::SUCCESS);
     device_->SetStatus(ETH_STATUS_ONLINE);
+    SendAssocResponse(AssociateResultCodes::SUCCESS);
 
     return MX_OK;
 }
