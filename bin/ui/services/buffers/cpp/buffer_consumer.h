@@ -44,7 +44,9 @@ class BufferConsumer : private mtl::MessageLoopHandler {
 
  private:
   // |mtl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   void TracePooledBufferCount() const;

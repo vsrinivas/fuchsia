@@ -55,7 +55,7 @@ class InputReader : mtl::MessageLoopHandler {
   void OnInternalReport(mx_handle_t handle, InputInterpreter::ReportType type);
 
   // |mtl::MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending);
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count);
 
   mozart::InputDeviceRegistry* registry_;
 

@@ -166,7 +166,9 @@ ftl::RefPtr<mtl::SharedVmo> BufferProducer::CreateSharedVmo(size_t size) {
       std::move(vmo), map_flags_, std::move(retainer), std::move(retention)));
 }
 
-void BufferProducer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void BufferProducer::OnHandleReady(mx_handle_t handle,
+                                   mx_signals_t pending,
+                                   uint64_t count) {
   FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   auto it = pending_buffers_.find(handle);

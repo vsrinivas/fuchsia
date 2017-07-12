@@ -104,7 +104,8 @@ void ResourceLinker::ImportResource(
 }
 
 void ResourceLinker::OnHandleReady(mx_handle_t export_handle,
-                                   mx_signals_t pending) {
+                                   mx_signals_t pending,
+                                   uint64_t count) {
   // This is invoked when all the peers for the registered export handle are
   // closed.
   if (pending & kEventPairDeathSignals) {

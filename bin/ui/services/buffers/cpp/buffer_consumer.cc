@@ -125,7 +125,9 @@ std::unique_ptr<ConsumedBufferHolder> BufferConsumer::ConsumeBuffer(
       new ConsumedBufferHolder(std::move(shared_vmo), std::move(fence)));
 }
 
-void BufferConsumer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void BufferConsumer::OnHandleReady(mx_handle_t handle,
+                                   mx_signals_t pending,
+                                   uint64_t count) {
   FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   auto it = retained_buffers_.find(handle);

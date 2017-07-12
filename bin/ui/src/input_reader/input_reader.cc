@@ -124,7 +124,9 @@ void InputReader::OnDisplayHandleReady(mx_handle_t handle,
 #pragma mark mtl::MessageLoopHandler
 // |mtl::MessageLoopHandler|:
 
-void InputReader::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void InputReader::OnHandleReady(mx_handle_t handle,
+                                mx_signals_t pending,
+                                uint64_t count) {
   if (handle == display_ownership_event_) {
     OnDisplayHandleReady(handle, pending);
   } else if (devices_.count(handle)) {
