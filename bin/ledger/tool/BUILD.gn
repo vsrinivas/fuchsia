@@ -9,8 +9,6 @@ executable("tool") {
     "command.h",
     "convert.cc",
     "convert.h",
-    "doctor_command.cc",
-    "doctor_command.h",
     "inspect_command.cc",
     "inspect_command.h",
     "tool.cc",

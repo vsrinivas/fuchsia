@@ -12,7 +12,6 @@
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/tool/convert.h"
-#include "apps/ledger/src/tool/doctor_command.h"
 #include "apps/ledger/src/tool/inspect_command.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
@@ -48,37 +47,12 @@ void ToolApp::PrintUsage() {
   std::cout << " --user-id=<string> overrides the user ID to use" << std::endl;
   std::cout << " --force skips confirmation dialogs" << std::endl;
   std::cout << "Commands:" << std::endl;
-  std::cout << " - `doctor` - checks up the Ledger configuration (default)"
-            << std::endl;
-  std::cout
-      << " - `clean` - wipes remote and local data of the most recent user"
-      << std::endl;
   std::cout << " - `inspect` - inspects the state of a ledger" << std::endl;
 }
 
 std::unique_ptr<Command> ToolApp::CommandFromArgs(
     const std::vector<std::string>& args) {
-  // `doctor` is the default command.
-  if (args.empty() || args[0] == "doctor") {
-    if (args.size() > 1) {
-      std::cerr << "Too many arguments for the " << args[0] << " command"
-                << std::endl;
-      return nullptr;
-    }
-    if (!user_config_.use_sync) {
-      std::cout << "the `doctor` command requires sync" << std::endl;
-    }
-    return std::make_unique<DoctorCommand>(&user_config_,
-                                           network_service_.get());
-  }
-
-  if (args[0] == "clean") {
-    std::cerr << "The `clean` command is gone, please refer to the "
-              << "User Guide at " << kUserGuideUrl << std::endl;
-    return nullptr;
-  }
-
-  if (args[0] == "inspect") {
+  if (!args.empty() && args[0] == "inspect") {
     return std::make_unique<InspectCommand>(args, user_config_,
                                             user_repository_path_);
   }
@@ -103,8 +77,7 @@ bool ToolApp::Initialize() {
     }
   }
 
-  std::unordered_set<std::string> valid_commands = {"doctor", "clean",
-                                                    "inspect"};
+  std::unordered_set<std::string> valid_commands = {"inspect"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (args.size() && valid_commands.count(args[0]) == 0) {
     std::cerr << "Unknown command: " << args[0] << std::endl;
