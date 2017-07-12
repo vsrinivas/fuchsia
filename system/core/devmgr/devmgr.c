@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -241,6 +242,72 @@ static void fetch_vdsos(void) {
     }
 }
 
+static void load_cmdline_from_bootfs(void) {
+    int fd = open("/boot/config/devmgr", O_RDONLY);
+    if (fd < 0) {
+        return;
+    }
+    off_t sz = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    char* cfg;
+    if ((sz < 0) || ((cfg = malloc(sz + 1)) == NULL)) {
+        close(fd);
+        return;
+    }
+    char* x = cfg;
+    while (sz > 0) {
+        int r = read(fd, x, sz);
+        if (r <= 0) {
+            close(fd);
+            free(cfg);
+            return;
+        }
+        x += r;
+        sz -= r;
+    }
+    *x = 0;
+    close(fd);
+
+    x = cfg;
+    while (*x) {
+        // skip any leading whitespace
+        while (isspace(*x)) {
+            x++;
+        }
+
+        // find the next line (seek for CR or NL)
+        char* next = x;
+        for (;;) {
+            // eof? we're all done then
+            if (*next == 0) {
+                return;
+            }
+            if ((*next == '\r') || (*next == '\n')) {
+                *next++ = 0;
+                break;
+            }
+            next++;
+        }
+
+        // process line if not a comment and not a zero-length name
+        if ((*x != '#') && (*x != '=')) {
+            for (char *y = x; *y != 0; y++) {
+                // space in name is invalid, give up
+                if (isspace(*y)) {
+                    break;
+                }
+                // valid looking env entry? store it
+                if (*y == '=') {
+                    putenv(x);
+                    break;
+                }
+            }
+        }
+
+        x = next;
+    }
+}
+
 int main(int argc, char** argv) {
     // Close the loader-service channel so the service can go away.
     // We won't use it any more (no dlopen calls in this process).
@@ -258,13 +325,15 @@ int main(int argc, char** argv) {
 
     printf("devmgr: main()\n");
 
+    devmgr_init(root_job_handle);
+    devmgr_vfs_init();
+
+    load_cmdline_from_bootfs();
+
     char** e = environ;
     while (*e) {
         printf("cmdline: %s\n", *e++);
     }
-
-    devmgr_init(root_job_handle);
-    devmgr_vfs_init();
 
     mx_object_set_property(root_job_handle, MX_PROP_NAME, "root", 4);
 

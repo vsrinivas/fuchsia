@@ -13,6 +13,11 @@ The kernel commandline is passed from the kernel to the userboot process
 and the device manager, so some of the options described below apply to
 those userspace processes, not the kernel itself.
 
+The devmgr reads the file /boot/config/devmgr (if it exists) at startup
+and imports name=value lines into its environment, augmenting or overriding
+the values from the kernel commandline.  Leading whitespace is ignored and
+lines starting with # are ignored.  Whitespace is not allowed in names.
+
 ## aslr.disable
 
 If this option is set, the system will not use Address Space Layout
