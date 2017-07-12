@@ -61,7 +61,7 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   static modular::auth::AuthErrPtr GetAuthError(bool has_error) {
     auto result = modular::auth::AuthErr::New();
     result->message = has_error ? "No Token" : "";
-    result->status = has_error ? modular::auth::Status::OAUTH_ERROR
+    result->status = has_error ? modular::auth::Status::OAUTH_SERVER_ERROR
                                : modular::auth::Status::OK;
     return result;
   }
