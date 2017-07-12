@@ -47,20 +47,28 @@ public:
     virtual ~X86ArchVmAspace();
 
     status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
+
     status_t Destroy() override;
 
     // main methods
     status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count,
                  uint mmu_flags, size_t* mapped) override;
+
     status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
+
     status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
+
     status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;
 
     vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags,
                      vaddr_t end, uint next_region_mmu_flags,
                      vaddr_t align, size_t size, uint mmu_flags) override;
 
-    arch_aspace& GetInnerAspace() { return aspace_; }
+    paddr_t arch_table_phys() const override { return aspace_.pt_phys; }
+
+    paddr_t pt_phys() const { return aspace_.pt_phys; }
+
+    size_t pt_pages() const { return aspace_.pt_pages; }
 
     IoBitmap& io_bitmap() { return io_bitmap_; }
 

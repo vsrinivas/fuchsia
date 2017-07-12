@@ -20,7 +20,7 @@ static bool mmu_tests(void* context) {
         size_t size = (1UL << 47) - base - (1UL << 20);
         status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, MX_OK, "init aspace");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 1u, "single page for PML4 table");
+        EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
 
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
@@ -37,14 +37,14 @@ static bool mmu_tests(void* context) {
         err = aspace.Map(va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map single page");
         EXPECT_EQ(mapped, 1u, "map single page");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 4u,
+        EXPECT_EQ(aspace.pt_pages(), 4u,
                   "map single page, PDP, PD and PT tables allocated");
 
         // Map the last page of the region
         err = aspace.Map(va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map last page");
         EXPECT_EQ(mapped, 1u, "map single page");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 6u,
+        EXPECT_EQ(aspace.pt_pages(), 6u,
                   "map single page, PD and PT tables allocated");
 
         paddr_t pa;
@@ -58,7 +58,7 @@ static bool mmu_tests(void* context) {
         err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap unallocated region");
         EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 4u, "unmap allocated region");
+        EXPECT_EQ(aspace.pt_pages(), 4u, "unmap allocated region");
 
         err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
         EXPECT_EQ(err, MX_ERR_NOT_FOUND, "last entry is not mapped anymore");
@@ -67,7 +67,7 @@ static bool mmu_tests(void* context) {
         err = aspace.Unmap(va - 3 * PAGE_SIZE, 1, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap single page");
         EXPECT_EQ(unmapped, 1u, "unmap unallocated region");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 1u, "unmap single page");
+        EXPECT_EQ(aspace.pt_pages(), 1u, "unmap single page");
 
         err = aspace.Destroy();
         EXPECT_EQ(err, MX_OK, "destroy aspace");
@@ -80,7 +80,7 @@ static bool mmu_tests(void* context) {
         size_t size = (1UL << 47) - base - (1UL << 20);
         status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, MX_OK, "init aspace");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 1u, "single page for PML4 table");
+        EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
 
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
@@ -97,7 +97,7 @@ static bool mmu_tests(void* context) {
         err = aspace.Map(va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map single page");
         EXPECT_EQ(mapped, 1u, "map single page");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 4u,
+        EXPECT_EQ(aspace.pt_pages(), 4u,
                   "map single page, PDP, PD and PT tables allocated");
 
         // Attempt to unmap the target region (analogous to unmapping a demand
@@ -106,13 +106,13 @@ static bool mmu_tests(void* context) {
         err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap unallocated region");
         EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 4u, "unmap unallocated region");
+        EXPECT_EQ(aspace.pt_pages(), 4u, "unmap unallocated region");
 
         // Unmap the single page from earlier
         err = aspace.Unmap(va - 2 * PAGE_SIZE, 1, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap single page");
         EXPECT_EQ(unmapped, 1u, "unmap single page");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 1u, "unmap single page");
+        EXPECT_EQ(aspace.pt_pages(), 1u, "unmap single page");
 
         err = aspace.Destroy();
         EXPECT_EQ(err, MX_OK, "destroy aspace");
@@ -125,7 +125,7 @@ static bool mmu_tests(void* context) {
         size_t size = (1UL << 47) - base - (1UL << 20);
         status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, MX_OK, "init aspace");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 1u, "single page for PML4 table");
+        EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
 
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
@@ -137,11 +137,11 @@ static bool mmu_tests(void* context) {
         err = aspace.Map(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map large page");
         EXPECT_EQ(mapped, 512u, "map large page");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 3u, "map large page");
+        EXPECT_EQ(aspace.pt_pages(), 3u, "map large page");
 
         err = aspace.Protect(va + PAGE_SIZE, 1, ARCH_MMU_FLAG_PERM_READ);
         EXPECT_EQ(err, MX_OK, "protect single page");
-        EXPECT_EQ(aspace.GetInnerAspace().pt_pages, 4u,
+        EXPECT_EQ(aspace.pt_pages(), 4u,
                   "protect single page, split large page");
 
         err = aspace.Destroy();

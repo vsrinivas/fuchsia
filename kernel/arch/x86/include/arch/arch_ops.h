@@ -68,11 +68,9 @@ static inline uint32_t arch_dcache_line_size(void) {
 
 // Log architecture-specific data for process creation.
 // This can only be called after the process has been created and before
-// it is running: |aspace| is assumed to live across the call.
-// Alas we can't use mx_koid_t here as the arch layer is at a lower level
-// than magenta.
-struct arch_aspace;
-void arch_trace_process_create(uint64_t pid, const struct arch_aspace* aspace);
+// it is running. Alas we can't use mx_koid_t here as the arch layer is at a
+// lower level than magenta.
+void arch_trace_process_create(uint64_t pid, paddr_t pt_phys);
 
 __END_CDECLS
 

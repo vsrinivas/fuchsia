@@ -120,9 +120,9 @@ void x86_processor_trace_init(void)
 
 // Intel Processor Trace support needs to be able to map cr3 values that
 // appear in the trace to pids that ld.so uses to dump memory maps.
-void arch_trace_process_create(uint64_t pid, const arch_aspace_t* aspace) {
+void arch_trace_process_create(uint64_t pid, paddr_t pt_phys) {
     // The cr3 value that appears in Intel PT h/w tracing.
-    uint64_t cr3 = aspace->pt_phys;
+    uint64_t cr3 = pt_phys;
     ktrace(TAG_IPT_PROCESS_CREATE, (uint32_t)pid, (uint32_t)(pid >> 32),
            (uint32_t)cr3, (uint32_t)(cr3 >> 32));
 }

@@ -121,7 +121,7 @@ status_t x86_bootstrap16_prep(
             (entry64 - (uintptr_t)x86_bootstrap16_start);
     ASSERT(long_mode_entry <= UINT32_MAX);
 
-    uint64_t phys_bootstrap_pml4 = bootstrap_aspace->arch_aspace().GetInnerAspace().pt_phys;
+    uint64_t phys_bootstrap_pml4 = bootstrap_aspace->arch_aspace().pt_phys();
     uint64_t phys_kernel_pml4 = x86_get_cr3();
     if (phys_bootstrap_pml4 > UINT32_MAX) {
         // TODO(teisenbe): Once the pmm supports it, we should request that this
