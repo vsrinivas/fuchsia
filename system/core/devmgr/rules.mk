@@ -14,6 +14,7 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
+    $(LOCAL_DIR)/block-watcher.c \
     $(LOCAL_DIR)/dnode.cpp \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/devmgr.c \

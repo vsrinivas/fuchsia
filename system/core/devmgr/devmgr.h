@@ -37,4 +37,6 @@ void load_system_drivers(void);
 
 mx_handle_t get_service_root(void);
 
+void block_device_watcher(mx_handle_t job);
+
 __END_CDECLS
