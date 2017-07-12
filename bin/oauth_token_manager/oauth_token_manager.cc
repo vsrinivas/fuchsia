@@ -883,6 +883,11 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
           Failure(flow, Status::INTERNAL_ERROR, "invalid token type");
       }
     }
+
+    // Set status to success
+    auth_err_ = auth::AuthErr::New();
+    auth_err_->status = Status::OK;
+    auth_err_->message = "";
   }
 
   void Failure(FlowToken flow,
