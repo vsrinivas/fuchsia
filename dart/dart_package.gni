@@ -144,16 +144,13 @@ template("dart_package") {
       options_file = invoker.analysis_options
     }
 
-    dart_sdk_label = "//dart:create_sdk($host_toolchain)"
-    dart_sdk_out_dir = get_label_info(dart_sdk_label, "root_out_dir")
-    dart_sdk_dir = "$dart_sdk_out_dir/dart-sdk"
+    dart_sdk_dir = "//dart/tools/sdks/$host_os/dart-sdk"
     dart_analyzer_binary = "$dart_sdk_dir/bin/dartanalyzer"
 
     action(invocation_target_name) {
       script = "//build/dart/gen_analyzer_invocation.py"
 
       deps = dart_deps + [
-        dart_sdk_label,
         ":$dot_packages_target_name",
       ]
 
