@@ -4,23 +4,23 @@
 
 #pragma once
 
+#include "apps/maxwell/src/suggestion_engine/ask_dispatcher.h"
 #include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
 
 namespace maxwell {
 
-class AskChannel;
-
 // Manages a single Ask suggestion subscriber.
-class AskSubscriber : public BoundWindowedSubscriber<AskController> {
+class AskSubscriber : public BoundWindowedSuggestionSubscriber<AskController> {
  public:
-  AskSubscriber(AskChannel* channel,
+  AskSubscriber(RankedSuggestions* ranked_suggestions,
+                AskDispatcher* engine,
                 fidl::InterfaceHandle<SuggestionListener> listener,
                 fidl::InterfaceRequest<AskController> controller);
 
   void SetUserInput(UserInputPtr input) override;
 
  private:
-  AskChannel* channel_;
+  AskDispatcher* ask_dispatcher_;
 };
 
 }  // namespace maxwell

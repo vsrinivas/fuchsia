@@ -11,7 +11,9 @@
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/user_input.fidl.h"
 
-#include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
+#include "apps/maxwell/src/suggestion_engine/ranked_suggestions.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {

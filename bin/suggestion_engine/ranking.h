@@ -1,0 +1,31 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "lib/ftl/time/time_point.h"
+
+#include <functional>
+#include <limits>
+#include <string>
+
+namespace maxwell {
+
+using RankingFunction =
+    std::function<int64_t(const maxwell::SuggestionPrototype*)>;
+
+constexpr int64_t kNoMatchRank = std::numeric_limits<int64_t>::max();
+
+int64_t RankBySubstring(std::string text, const std::string& query);
+int64_t RankByTimestamp(ftl::TimePoint timestamp);
+
+namespace ranking {
+
+RankingFunction GetAskRankingFunction(const std::string& query);
+RankingFunction GetNextRankingFunction();
+
+};  // namespace ranking
+
+};  // namespace maxwell

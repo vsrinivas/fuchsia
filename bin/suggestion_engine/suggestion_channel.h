@@ -4,32 +4,36 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_subscriber.h"
+
+#include <vector>
 
 namespace maxwell {
 
 class SuggestionChannel {
  public:
-  // Current justification: ranking is not implemented; proposals ranked in
-  // insertion order.
-  //
-  // Eventual justification:
-  //
-  // Use a vector rather than set to allow dynamic reordering. Not all usages
-  // take advantage of dynamic reordering, but this is sufficiently general to
-  // not require a specialized impl using std::set.
-  typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
+  void DispatchInvalidate();
+  void DispatchOnAddSuggestion(RankedSuggestion* suggestion);
+  void DispatchOnRemoveSuggestion(RankedSuggestion* suggestion);
+  void AddSubscriber(SuggestionSubscriber* subscriber);
 
-  virtual ~SuggestionChannel() = default;
+  bool is_bound() {
+    for (auto& subscriber : subscribers_) {
+      if (subscriber->is_bound())
+        return true;
+    }
+    return false;
+  }
 
-  virtual void OnAddSuggestion(SuggestionPrototype* prototype) = 0;
-  virtual void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) = 0;
-  virtual void OnRemoveSuggestion(
-      const RankedSuggestion* ranked_suggestion) = 0;
+  void set_connection_error_handler(const ftl::Closure& error_handler) {
+    for (auto& subscriber : subscribers_) {
+      subscriber->set_connection_error_handler(error_handler);
+    }
+  }
 
-  // Returns a read-only mutable vector of suggestions in ranked order, from
-  // highest to lowest relevance.
-  virtual const RankedSuggestions* ranked_suggestions() const = 0;
+ private:
+  std::vector<SuggestionSubscriber*> subscribers_;
 };
 
 }  // namespace maxwell

@@ -4,44 +4,102 @@
 
 executable("suggestion_engine") {
   sources = [
-    "ask_channel.cc",
-    "ask_channel.h",
-    "ask_subscriber.cc",
-    "ask_subscriber.h",
-    "debug.cc",
-    "debug.h",
-    "interruptions_subscriber.h",
-    "next_channel.cc",
-    "next_channel.h",
-    "next_subscriber.h",
+    "ask_publisher.h",
     "proposal_publisher_impl.cc",
     "proposal_publisher_impl.h",
-    "ranked_suggestion.h",
-    "repo.cc",
-    "repo.h",
-    "subscriber.h",
-    "suggestion_channel.h",
-    "suggestion_engine.cc",
-    "suggestion_prototype.cc",
-    "suggestion_prototype.h",
-    "windowed_subscriber.cc",
-    "windowed_subscriber.h",
+    "suggestion_engine_impl.cc",
+    "suggestion_engine_impl.h",
   ]
 
   deps = [
+    ":debug",
     ":filter",
+    ":interfaces",
+    ":models",
+    ":ranking",
+    ":state",
+    ":subscribers",
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
     "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/suggestion:debug",
     "//apps/maxwell/src:bound_set",
+    "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//apps/modular/lib/fidl:json_xdr",
     "//lib/mtl",
+  ]
+}
+
+source_set("subscribers") {
+  sources = [
+    "ask_subscriber.cc",
+    "ask_subscriber.h",
+    "interruptions_subscriber.h",
+    "next_subscriber.h",
+    "windowed_subscriber.cc",
+    "windowed_subscriber.h",
+  ]
+
+  deps = [
+    ":interfaces",
+    ":models",
+    ":state",
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("interfaces") {
+  sources = [
+    "ask_dispatcher.h",
+    "suggestion_subscriber.h",
+  ]
+
+  deps = [
+    ":models",
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("ranking") {
+  sources = [
+    "ranking.cc",
+    "ranking.h",
+  ]
+
+  deps = [
+    ":models",
+    "//lib/mtl",
+  ]
+}
+
+source_set("state") {
+  sources = [
+    "ranked_suggestions.cc",
+    "ranked_suggestions.h",
+    "suggestion_channel.cc",
+    "suggestion_channel.h",
+  ]
+
+  deps = [
+    ":interfaces",
+    ":models",
+    ":ranking",
+    "//apps/maxwell/services/suggestion",
+    "//lib/ftl",
+  ]
+}
+
+source_set("models") {
+  sources = [
+    "suggestion_prototype.cc",
+    "suggestion_prototype.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/suggestion",
   ]
 }
 
@@ -78,5 +136,19 @@ source_set("filter") {
 
   deps = [
     "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("debug") {
+  sources = [
+    "debug.cc",
+    "debug.h",
+  ]
+
+  deps = [
+    ":models",
+    ":state",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
   ]
 }

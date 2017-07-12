@@ -4,11 +4,16 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
+#include <string>
+
+#include "apps/maxwell/services/suggestion/user_input.fidl.h"
 
 namespace maxwell {
 
-// Manages a single Next suggestion subscriber.
-typedef BoundWindowedSuggestionSubscriber<NextController> NextSubscriber;
+class AskDispatcher {
+ public:
+  AskDispatcher() {}
+  virtual void DispatchAsk(UserInputPtr input) = 0;
+};
 
 }  // namespace maxwell

@@ -4,20 +4,19 @@
 
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 
-#include "apps/maxwell/src/suggestion_engine/ask_channel.h"
-
 namespace maxwell {
 
-AskSubscriber::AskSubscriber(AskChannel* channel,
+AskSubscriber::AskSubscriber(RankedSuggestions* ranked_suggestions,
+                             AskDispatcher* ask_dispatcher,
                              fidl::InterfaceHandle<SuggestionListener> listener,
                              fidl::InterfaceRequest<AskController> controller)
-    : BoundWindowedSubscriber(channel->ranked_suggestions(),
-                              std::move(listener),
-                              std::move(controller)),
-      channel_(channel) {}
+    : BoundWindowedSuggestionSubscriber(ranked_suggestions,
+                                        std::move(listener),
+                                        std::move(controller)),
+      ask_dispatcher_(ask_dispatcher) {}
 
 void AskSubscriber::SetUserInput(UserInputPtr input) {
-  channel_->SetQuery(input->get_text());
+  ask_dispatcher_->DispatchAsk(std::move(input));
 }
 
 }  // namespace maxwell

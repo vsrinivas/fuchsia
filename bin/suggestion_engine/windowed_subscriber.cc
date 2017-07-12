@@ -6,27 +6,27 @@
 
 namespace maxwell {
 
-void WindowedSubscriber::SetResultCount(int32_t count) {
-  FTL_LOG(INFO) << "WindowedSubscriber::SetResultCount(" << count << ")";
+void WindowedSuggestionSubscriber::SetResultCount(int32_t count) {
+  FTL_LOG(INFO) << "WindowedSuggestionSubscriber::SetResultCount(" << count
+                << ")";
   if (count < 0)
     count = 0;
 
-  size_t target = std::min((size_t)count, ranked_suggestions_->size());
-  size_t prev = std::min((size_t)max_results_, ranked_suggestions_->size());
+  size_t target = std::min((size_t)count, ranked_suggestions_.size());
+  size_t prev = std::min((size_t)max_results_, ranked_suggestions_.size());
 
   if (target != prev) {
     if (target > prev) {
       fidl::Array<SuggestionPtr> delta;
       for (size_t i = prev; i < target; i++) {
-        delta.push_back(CreateSuggestion(*(*ranked_suggestions_)[i]));
+        delta.push_back(CreateSuggestion(*ranked_suggestions_[i]));
       }
       listener()->OnAdd(std::move(delta));
     } else if (target == 0) {
       listener()->OnRemoveAll();
     } else if (target < prev) {
       for (size_t i = prev - 1; i >= target; i--) {
-        listener()->OnRemove(
-            (*ranked_suggestions_)[i]->prototype->suggestion_id);
+        listener()->OnRemove(ranked_suggestions_[i]->prototype->suggestion_id);
       }
     }
   }
@@ -34,13 +34,13 @@ void WindowedSubscriber::SetResultCount(int32_t count) {
   max_results_ = count;
 }
 
-void WindowedSubscriber::Invalidate() {
+void WindowedSuggestionSubscriber::Invalidate() {
   listener()->OnRemoveAll();
 
   fidl::Array<SuggestionPtr> window;
   for (int32_t i = 0;
-       i < max_results_ && (unsigned)i < ranked_suggestions_->size(); i++) {
-    window.push_back(CreateSuggestion(*(*ranked_suggestions_)[i]));
+       i < max_results_ && (unsigned)i < ranked_suggestions_.size(); i++) {
+    window.push_back(CreateSuggestion(*ranked_suggestions_[i]));
   }
 
   if (window)  // after OnRemoveAll, no point in adding if no window
@@ -54,7 +54,7 @@ void WindowedSubscriber::Invalidate() {
 //
 // The mutable content of the RankedSuggestion given here is not used; only the
 // rank and pointer address or ID are considered.
-bool WindowedSubscriber::IncludeSuggestion(
+bool WindowedSuggestionSubscriber::IncludeSuggestion(
     const RankedSuggestion& ranked_suggestion) const {
   if (max_results_ == 0)
     return false;
@@ -64,7 +64,7 @@ bool WindowedSubscriber::IncludeSuggestion(
   float newRank = ranked_suggestion.rank;
 
   const int32_t i = max_results_ - 1;
-  auto it = ranked_suggestions_->begin() + i;
+  auto it = ranked_suggestions_.begin() + i;
 
   if (newRank < (*it)->rank)
     return true;
@@ -79,7 +79,7 @@ bool WindowedSubscriber::IncludeSuggestion(
     }
 
     // backwards iteration is inelegant.
-    if (it == ranked_suggestions_->begin())
+    if (it == ranked_suggestions_.begin())
       return false;
 
     --it;

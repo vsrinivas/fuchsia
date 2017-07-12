@@ -5,28 +5,29 @@
 #pragma once
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
-class Subscriber {
+
+struct RankedSuggestion;
+
+class SuggestionSubscriber {
  public:
-  Subscriber(fidl::InterfaceHandle<SuggestionListener> listener)
+  SuggestionSubscriber(fidl::InterfaceHandle<SuggestionListener> listener)
       : listener_(SuggestionListenerPtr::Create(std::move(listener))) {}
 
-  virtual ~Subscriber() = default;
+  virtual ~SuggestionSubscriber() = default;
 
-  virtual void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
-    DispatchAdd(ranked_suggestion);
-  }
+  virtual void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) = 0;
 
-  virtual void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
-    DispatchRemove(ranked_suggestion);
-  }
+  virtual void OnRemoveSuggestion(
+      const RankedSuggestion& ranked_suggestion) = 0;
+
+  virtual void Invalidate() = 0;
 
   // FIDL methods, for use with BoundSet without having to expose listener_.
 
-  bool is_bound() const { return listener_.is_bound(); }
+  bool is_bound() { return listener_.is_bound(); }
 
   void set_connection_error_handler(const ftl::Closure& error_handler) {
     listener_.set_connection_error_handler(error_handler);
@@ -44,7 +45,7 @@ class Subscriber {
     if (!suggestion_data.prototype->proposal->on_selected.empty()) {
       // TODO(thatguy): Proposal.on_select should be single Action, not an array
       // https://fuchsia.atlassian.net/browse/MW-118
-      const auto &selected_action =
+      const auto& selected_action =
           suggestion_data.prototype->proposal->on_selected[0];
       switch (selected_action->which()) {
         case Action::Tag::FOCUS_STORY: {

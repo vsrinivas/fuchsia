@@ -22,17 +22,15 @@ struct ProposalContent {
 };
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
-    {{"Terminal",
-      {"moterm", 0xff212121 /*Grey 900*/, "", ""}},
+    {{"Terminal", {"moterm", 0xff212121 /*Grey 900*/, "", ""}},
      {"YouTube",
-      {"youtube_story",
-       0xffe52d27 /*YouTube red from color spec*/, "",
+      {"youtube_story", 0xffe52d27 /*YouTube red from color spec*/, "",
        "http://s-media-cache-ak0.pinimg.com/originals/bf/66/4b/"
        "bf664b1b730ac0423225c0c3526a44ef.jpg"}},
      {"Noodles", {"noodles_view", 0xff212121 /*Grey 900*/, "", ""}},
      {"Color", {"color", 0xff5affd6 /*Custom turquoise*/, "", ""}},
-     {"Spinning Square", {"spinning_square_view",
-       0xff512da8 /*Deep Purple 700*/, "", ""}},
+     {"Spinning Square",
+      {"spinning_square_view", 0xff512da8 /*Deep Purple 700*/, "", ""}},
      {"Paint", {"paint_view", 0xffad1457 /*Blue Grey 50*/, "", ""}},
      {"Hello Material", {"hello_material", 0xff4caf50 /*Green 500*/, "", ""}},
      {"Teal A400", {"color", 0xff1de9b6, "0xFF1DE9B6", ""}},
@@ -86,18 +84,17 @@ class ModuleSuggesterAgentApp : public AskHandler {
 
   void Ask(UserInputPtr query, const AskCallback& callback) override {
     if (query->is_text() && query->get_text().size() >= 4) {
-      // Propose everything; let the Next filter do the filtering
-      // HACK(rosswang)
+      auto proposals = fidl::Array<ProposalPtr>::New(0);
       for (const auto& entry : kAskOnlyStories) {
-        out_->Propose(MkProposal(entry.first, entry.second));
+        proposals.push_back(MkProposal(entry.first, entry.second));
       }
+      callback(std::move(proposals));
     } else {
       for (const auto& entry : kAskOnlyStories) {
         out_->Remove(entry.first);
       }
+      callback(fidl::Array<ProposalPtr>::New(0));
     }
-
-    callback(fidl::Array<ProposalPtr>::New(0));  // TODO(rosswang)
   }
 
  private:

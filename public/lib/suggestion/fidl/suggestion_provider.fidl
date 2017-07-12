@@ -78,6 +78,10 @@ interface SuggestionListener {
   OnRemoveAll();
 };
 
+interface AskSuggestionListener {
+  OnAskResults(UserInput query, array<Suggestion> suggestions);
+};
+
 enum InteractionType {
   SELECTED,
   DISMISSED

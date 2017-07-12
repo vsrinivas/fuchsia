@@ -5,15 +5,15 @@
 #pragma once
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
-#include "apps/maxwell/src/suggestion_engine/subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/ranked_suggestions.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_subscriber.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
-class InterruptionsSubscriber : public Subscriber {
+class InterruptionsSubscriber : public SuggestionSubscriber {
  public:
   InterruptionsSubscriber(fidl::InterfaceHandle<SuggestionListener> listener)
-      : Subscriber(std::move(listener)) {}
+      : SuggestionSubscriber(std::move(listener)) {}
 
   virtual void OnAddSuggestion(
       const RankedSuggestion& ranked_suggestion) override {

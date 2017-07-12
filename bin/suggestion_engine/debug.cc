@@ -5,7 +5,6 @@
 #include <functional>
 
 #include "apps/maxwell/src/suggestion_engine/debug.h"
-#include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 
 namespace maxwell {
 
@@ -14,13 +13,16 @@ SuggestionDebugImpl::SuggestionDebugImpl() {}
 void makeProposalSummary(const SuggestionPrototype* suggestion,
                          ProposalSummaryPtr* summary) {
   (*summary)->id = suggestion->proposal->id;
-  (*summary)->publisher_url = suggestion->source->component_url();
+  (*summary)->publisher_url = suggestion->source_url;
   (*summary)->display = suggestion->proposal->display.Clone();
 }
 
 void makeProposalSummaries(const RankedSuggestions* suggestions,
                            fidl::Array<ProposalSummaryPtr>* summaries) {
-  for (auto it = suggestions->begin(); it < suggestions->end(); it++) {
+  const std::vector<RankedSuggestion*>* suggestionsVector =
+      suggestions->GetSuggestions();
+  for (auto it = suggestionsVector->begin(); it < suggestionsVector->end();
+       it++) {
     ProposalSummaryPtr summary = ProposalSummary::New();
     makeProposalSummary((*it)->prototype, &summary);
     summaries->push_back(std::move(summary));
