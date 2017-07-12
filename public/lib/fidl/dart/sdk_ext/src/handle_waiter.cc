@@ -93,8 +93,10 @@ void HandleWaiter::OnWaitComplete(mx_status_t status, mx_signals_t pending) {
 
 void HandleWaiter::CallOnWaitComplete(mx_status_t status,
                                       mx_signals_t pending,
+                                      uint64_t count,
                                       void* closure) {
   HandleWaiter* handle_waiter = static_cast<HandleWaiter*>(closure);
+  // TODO: plumb count through to Dart.
   handle_waiter->OnWaitComplete(status, pending);
 }
 

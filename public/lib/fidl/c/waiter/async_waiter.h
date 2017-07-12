@@ -14,6 +14,7 @@ static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
 
 typedef void (*FidlAsyncWaitCallback)(mx_status_t result,
                                       mx_signals_t pending,
+                                      uint64_t count,
                                       void* closure);
 
 // Functions for asynchronously waiting (and cancelling asynchronous waits) on a

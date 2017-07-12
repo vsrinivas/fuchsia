@@ -40,6 +40,7 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
   void OnWaitComplete(mx_status_t status, mx_signals_t pending);
   static void CallOnWaitComplete(mx_status_t status,
                                  mx_signals_t pending,
+                                 uint64_t count,
                                  void* closure);
 
   const FidlAsyncWaiter* waiter_;

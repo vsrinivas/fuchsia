@@ -113,12 +113,15 @@ bool Connector::Accept(Message* message) {
 // static
 void Connector::CallOnHandleReady(mx_status_t result,
                                   mx_signals_t pending,
+                                  uint64_t count,
                                   void* closure) {
   Connector* self = static_cast<Connector*>(closure);
-  self->OnHandleReady(result, pending);
+  self->OnHandleReady(result, pending, count);
 }
 
-void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
+void Connector::OnHandleReady(mx_status_t result,
+                              mx_signals_t pending,
+                              uint64_t count) {
   FTL_CHECK(async_wait_id_ != 0);
   async_wait_id_ = 0;
   if (result != MX_OK) {
@@ -128,17 +131,19 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
   FTL_DCHECK(!error_);
 
   if (pending & MX_CHANNEL_READABLE) {
-    // If the channel is readable, we drain one message out of the channel and
-    // then return to the event loop to avoid starvation.
-
     // Return immediately if |this| was destroyed. Do not touch any members!
     mx_status_t rv;
-    if (!ReadSingleMessage(&rv))
-      return;
+    for (uint64_t i = 0; i < count; i++) {
+      if (!ReadSingleMessage(&rv))
+        return;
 
-    // If we get MX_ERR_PEER_CLOSED (or another error), we'll already have
-    // notified the error and likely been destroyed.
-    FTL_DCHECK(rv == MX_OK || rv == MX_ERR_SHOULD_WAIT);
+      // If we get MX_ERR_PEER_CLOSED (or another error), we'll already have
+      // notified the error and likely been destroyed.
+      FTL_DCHECK(rv == MX_OK || rv == MX_ERR_SHOULD_WAIT);
+      if (rv != MX_OK) {
+        break;
+      }
+    }
     WaitToReadMore();
 
   } else if (pending & MX_CHANNEL_PEER_CLOSED) {

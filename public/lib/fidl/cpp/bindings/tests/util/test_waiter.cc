@@ -84,7 +84,7 @@ void WaitForAsyncWaiter() {
       auto context = holder->context;
       g_holders.erase(wait_id);
       delete holder;
-      cb(packet.status, packet.signal.observed, context);
+      cb(packet.status, packet.signal.observed, 1, context);
     } else {
       FTL_CHECK(result == MX_ERR_TIMED_OUT) << result;
       return;

@@ -85,8 +85,9 @@ class Connector : public MessageReceiver {
  private:
   static void CallOnHandleReady(mx_status_t result,
                                 mx_signals_t pending,
+                                uint64_t count,
                                 void* closure);
-  void OnHandleReady(mx_status_t result, mx_signals_t pending);
+  void OnHandleReady(mx_status_t result, mx_signals_t pending, uint64_t count);
 
   void WaitToReadMore();
 
