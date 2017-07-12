@@ -94,7 +94,7 @@ function makeProposalHtml(proposal) {
       .text(proposal.display.headline);
   $(subheadline)
       .addClass("mdc-list-item__text__secondary")
-      .text(proposal.display.subheadline);
+      .text(proposal.publisherUrl);
   $(headline).append(subheadline);
   $(item).append(headline);
   return item;
@@ -120,6 +120,13 @@ function updateLastQuery(query) {
   queryElem.text(query);
 }
 
+function updateAgentProposals(proposals) {
+  proposals.forEach(function(proposal) {
+    var agentElems = getOrCreateAgentElements(proposal.publisherUrl);
+    addProposalToAgent(proposal,agentElems);
+  });
+}
+
 function handleSuggestionsUpdate(suggestions) {
   updateProposals('#askProposals', suggestions.ask_proposals);
   updateProposals('#nextProposals', suggestions.next_proposals);
@@ -130,6 +137,20 @@ function handleSuggestionsUpdate(suggestions) {
     updateLastSelection(suggestions.selection);
   }
   updateLastQuery(suggestions.ask_query);
+
+  // Update agents with next proposals
+  clearAgentProposals();
+  updateAgentProposals(suggestions.next_proposals);
+}
+
+function makeContextTopicRow(topic,topicValue) {
+  var topicId = "#topic-" + topic;
+  var row = $("<tr/>")
+    .append($("<td/>").addClass('wrappable').text(topic))
+    .append($("<td/>").attr("id", topicId)
+      .append($("<pre/>").text(topicValue)));
+
+  return row;
 }
 
 function handleContextUpdate(context) {
@@ -148,19 +169,17 @@ function handleContextUpdate(context) {
       danger = true;
     }
     var topicId = "#topic-" + topic;
-    var existingTopic = $("#" + $.escapeSelector(topicId));
-    if (existingTopic.length > 0) {
-      // element exists, update the value
-      existingTopic.find("pre").text(topicValue)
-        .toggleClass("text-danger", danger);
-    } else {
-      // element does not exist, add it to the table
-      $("<tr/>").appendTo("#context")
-        .append($("<td/>").addClass('wrappable').text(topic))
-        .append($("<td/>").attr("id", topicId)
-          .append(($("<pre/>").text(topicValue)
-            .toggleClass("text-danger", danger))));
+    var escapedTopic = $.escapeSelector(topicId);
+    var contextTopic = $("#context #" + escapedTopic);
+    if (contextTopic.length == 0) {
+      // element does not exist in the context section, add it to the table
+      makeContextTopicRow(topic,topicValue).appendTo("#context");
     }
+    // modify all elements showing this topic
+    // (may be others on agent tab, for example)
+    $("#" + escapedTopic).find("pre")
+        .text(topicValue)
+        .toggleClass("text-danger", danger);
   });
 }
 
@@ -206,6 +225,17 @@ function handleContextSubscribers(subscribers) {
     $("#contextSubscriptions")
       .append($('<li/>').addClass('mdc-list-item').append(listText))
       .append($('<li/>').addClass('mdc-list-divider').attr('role','divider'));
+
+    // update agents page information
+    if (update.subscriber.type == "agent") {
+      var agentElems = getOrCreateAgentElements(update.subscriber.url);
+      update.queries.forEach(function(query) {
+        // TODO(jwnichols): Special behavior for subscribers to all topics?
+        for(var i = 0; i < query.length; i++) {
+          addAgentContextTopic(query[i],agentElems);
+        }
+      });
+    }
   });
 }
 
@@ -515,4 +545,54 @@ function setStoryVisible(storyVisible, storyElems) {
 
 function setStoryState(storyState, storyElems) {
   // TODO(jwnichols): Add story state to the overview
+}
+
+function getOrCreateAgentElements(agentUrl) {
+  var agentCardId = 'agent-' + agentUrl;
+  var agentElems = $('#' + $.escapeSelector(agentCardId));
+  if (agentElems.length == 0) {
+    agentElems = $(`<div class="cell mdc-layout-grid__cell agent-card">
+        <div class="mdc-card">
+          <section class="mdc-card__primary">
+            <h1 class="mdc-card__title mdc-card__title--large wrappable"></h1>
+          </section>
+          <section class="mdc-card__supporting-text agent-context">
+            <h2 class="mdc-card__subtitle agent-subhead">Subscribed Context Topics</h2>
+            <table class="agent-context-table">
+              <thead><tr><th>Topic</th><th>Value</th></tr></thead>
+              <tbody>
+              </tbody>
+            </table>
+            <h2 class="mdc-card__subtitle agent-subhead">Proposals Made</h2>
+          </section>
+          <ul class="mdc-list mdc-list--two-line mdc-list--dense">
+          </ul>
+        </div> <!-- mdc_card -->
+      </div>`);
+
+    agentElems.attr('id',agentCardId);
+    agentElems.find('h1').text(agentUrl);
+
+    $('#agent-card-addpoint').append(agentElems);
+  }
+  return agentElems;
+}
+
+function addAgentContextTopic(topic,agentElems) {
+  agentElems.find('tbody').append(makeContextTopicRow(topic,""));
+}
+
+function addProposalToAgent(proposal,agentElems) {
+  var proposalItem = makeProposalHtml(proposal);
+  // The secondary headline by default is the URL, which is redundant
+  // on the agent page.  Change it to the subheadline.
+  $(proposalItem).find('span.mdc-list-item__text__secondary')
+    .text(proposal.display.subheadline);
+  agentElems.find('ul').prepend(proposalItem);
+  // move this agent to the top
+  $('#agent-card-addpoint').prepend(agentElems);
+}
+
+function clearAgentProposals() {
+  $('#agents-panel ul').empty();
 }
