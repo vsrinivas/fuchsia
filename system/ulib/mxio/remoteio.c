@@ -896,6 +896,7 @@ static mxio_ops_t mx_remote_ops = {
     .wait_begin = mxrio_wait_begin,
     .wait_end = mxrio_wait_end,
     .unwrap = mxrio_unwrap,
+    .shutdown = mxio_default_shutdown,
     .posix_ioctl = mxio_default_posix_ioctl,
     .get_vmo = mxio_default_get_vmo,
 };

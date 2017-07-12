@@ -436,21 +436,3 @@ static ssize_t mxio_recvmsg(mxio_t* io, struct msghdr* msg, int flags) {
         return ERRNO(EISCONN);
     return STATUS(r);
 }
-
-int shutdown(int fd, int how) {
-    mxio_t* io;
-    if ((io = fd_to_io(fd)) == NULL) {
-        return ERRNO(EBADF);
-    }
-    if (!(io->flags & MXIO_FLAG_SOCKET)) {
-        mxio_release(io);
-        return ERRNO(ENOTSOCK);
-    }
-    if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
-        mxio_release(io);
-        return ERRNO(ENOTCONN);
-    }
-    mx_status_t r = mxio_socket_shutdown(io, how);
-    mxio_release(io);
-    return STATUS(r);
-}

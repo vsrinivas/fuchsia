@@ -43,6 +43,7 @@ typedef struct mxio_ops {
     mx_status_t (*open)(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out);
     mx_status_t (*clone)(mxio_t* io, mx_handle_t* out_handles, uint32_t* out_types);
     mx_status_t (*unwrap)(mxio_t* io, mx_handle_t* out_handles, uint32_t* out_types);
+    mx_status_t (*shutdown)(mxio_t* io, int how);
     void (*wait_begin)(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* signals);
     void (*wait_end)(mxio_t* io, mx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
@@ -168,6 +169,7 @@ void mxio_socket_set_dgram_ops(mxio_t* io);
 
 mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, va_list va);
 mx_status_t mxio_socket_shutdown(mxio_t* io, int how);
+mx_status_t mxio_socketpair_shutdown(mxio_t* io, int how);
 
 // unsupported / do-nothing hooks shared by implementations
 ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
@@ -187,6 +189,7 @@ ssize_t mxio_default_ioctl(mxio_t* io, uint32_t op, const void* in_buf, size_t i
 void mxio_default_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals);
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events);
 mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types);
+mx_status_t mxio_default_shutdown(mxio_t* io, int how);
 ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, va_list va);
 mx_status_t mxio_default_get_vmo(mxio_t* io, mx_handle_t* out, size_t* off, size_t* len);
 

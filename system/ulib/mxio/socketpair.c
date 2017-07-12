@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <mxio/io.h>
+#include <mxio/socket.h>
 #include <mxio/util.h>
 
 #include "pipe.h"
@@ -73,6 +74,7 @@ static mxio_ops_t mx_socketpair_ops = {
     .wait_begin = mx_pipe_wait_begin,
     .wait_end = mx_pipe_wait_end,
     .unwrap = mx_pipe_unwrap,
+    .shutdown = mxio_socketpair_shutdown,
     .posix_ioctl = mx_pipe_posix_ioctl,
     .get_vmo = mxio_default_get_vmo,
 };
@@ -128,4 +130,16 @@ int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int fla
 int sockatmark(int fd) {
     // ENOTTY is sic.
     return checksocket(fd, ENOTTY, ENOSYS);
+}
+
+mx_status_t mxio_socketpair_shutdown(mxio_t* io, int how) {
+    mx_pipe_t* p = (mx_pipe_t*)io;
+    if (how == SHUT_RD || how == SHUT_RDWR) {
+        // TODO: flag to disable all reads from this end (and writes from other)
+    }
+    if (how == SHUT_WR || how == SHUT_RDWR) {
+        // TODO: turn on a flag to prevent all write attempts
+        mx_socket_write(p->h, MX_SOCKET_HALF_CLOSE, NULL, 0, NULL);
+    }
+    return MX_OK;
 }

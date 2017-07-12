@@ -732,6 +732,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case MX_ERR_UNAVAILABLE: return EBUSY;
     case MX_ERR_ALREADY_EXISTS: return EEXIST;
     case MX_ERR_PEER_CLOSED: return EPIPE;
+    case MX_ERR_BAD_STATE: return EPIPE;
     case MX_ERR_BAD_PATH: return ENAMETOOLONG;
     case MX_ERR_IO: return EIO;
     case MX_ERR_NOT_DIR: return ENOTDIR;
@@ -2006,4 +2007,20 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     ssize_t r = io->ops->recvmsg(io, msg, flags);
     mxio_release(io);
     return r < 0 ? STATUS(r) : r;
+}
+
+int shutdown(int fd, int how) {
+    mxio_t* io;
+    if ((io = fd_to_io(fd)) == NULL) {
+        return ERRNO(EBADF);
+    }
+    mx_status_t r = io->ops->shutdown(io, how);
+    mxio_release(io);
+    if (r == MX_ERR_BAD_STATE) {
+        return ERRNO(ENOTCONN);
+    }
+    if (r == MX_ERR_WRONG_TYPE) {
+        return ERRNO(ENOTSOCK);
+    }
+    return STATUS(r);
 }

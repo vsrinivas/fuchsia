@@ -213,6 +213,7 @@ static mxio_ops_t vmofile_ops = {
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
     .unwrap = mxio_default_unwrap,
+    .shutdown = mxio_default_shutdown,
     .posix_ioctl = mxio_default_posix_ioctl,
     .get_vmo = vmofile_get_vmo,
 };

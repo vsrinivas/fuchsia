@@ -549,6 +549,7 @@ static mxio_ops_t mxio_socket_stream_ops = {
     .wait_begin = mxsio_wait_begin_stream,
     .wait_end = mxsio_wait_end_stream,
     .unwrap = mxsio_unwrap_stream,
+    .shutdown = mxio_socket_shutdown,
     .posix_ioctl = mxsio_posix_ioctl_stream,
     .get_vmo = mxio_default_get_vmo,
 };
@@ -571,6 +572,7 @@ static mxio_ops_t mxio_socket_dgram_ops = {
     .wait_begin = mxsio_wait_begin_dgram,
     .wait_end = mxsio_wait_end_dgram,
     .unwrap = mxio_default_unwrap,
+    .shutdown = mxio_socket_shutdown,
     .posix_ioctl = mxio_default_posix_ioctl, // not supported
     .get_vmo = mxio_default_get_vmo,
 };
@@ -602,6 +604,9 @@ void mxio_socket_set_dgram_ops(mxio_t* io) {
 }
 
 mx_status_t mxio_socket_shutdown(mxio_t* io, int how) {
+    if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
+        return MX_ERR_BAD_STATE;
+    }
     mxrio_t* rio = (mxrio_t*)io;
     if (how == SHUT_RD || how == SHUT_RDWR) {
         // TODO: turn on a flag to prevent all read attempts

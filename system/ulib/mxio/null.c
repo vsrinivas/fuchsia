@@ -71,6 +71,10 @@ mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* type
     return MX_ERR_NOT_SUPPORTED;
 }
 
+mx_status_t mxio_default_shutdown(mxio_t* io, int how) {
+    return MX_ERR_WRONG_TYPE;
+}
+
 mx_status_t mxio_default_close(mxio_t* io) {
     return MX_OK;
 }
@@ -114,6 +118,7 @@ static mxio_ops_t mx_null_ops = {
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
     .unwrap = mxio_default_unwrap,
+    .shutdown = mxio_default_shutdown,
     .posix_ioctl = mxio_default_posix_ioctl,
     .get_vmo = mxio_default_get_vmo,
 };
