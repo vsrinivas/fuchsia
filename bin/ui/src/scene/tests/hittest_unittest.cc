@@ -244,10 +244,10 @@ TEST_F(HitTestTest, HitBoth20And30FromNode1) {
   // 20 and 30 are same distance but 30 is closer in draw order so it
   // comes before 20
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
-             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
-              {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
-              {.tag = 30, .tx = -14.f, .ty = -4.f, .tz = -1.f, .d = 9.f},
+             {{.tag = 30, .tx = -14.f, .ty = -4.f, .tz = -1.f, .d = 9.f},
               {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
+              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
+              {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
