@@ -98,7 +98,7 @@ static uint32_t emmc_sdhci_get_base_clock(void* ctx) {
     uint32_t base_clock = 0;
     emmc_t* emmc = ctx;
     bcm_bus_protocol_t bus_proto;
-    mx_status_t st = pdev_find_protocol(&emmc->pdev, MX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
+    mx_status_t st = pdev_get_protocol(&emmc->pdev, MX_PROTOCOL_BCM_BUS, (void*)&bus_proto);
     if (st != MX_OK) {
         xprintf("emmc: could not find MX_PROTOCOL_BCM_BUS\n");
         goto out;

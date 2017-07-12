@@ -17,22 +17,22 @@ kernel = {
 }
 
 platform = {
-    device = {
-        name = "mailbox"
-        vid = 0xBC
-        pid = 1
-        did = 1
+    vid = 0xBC
+    pid = 1
+
+    // Resources for the bcm-mailbox driver, which acts as our platform bus implementation
+    bus = {
         mmio = {
             name = "arm-base"
             base-phys = 0x3f00B000
             length = 0x1000
         }
     }
+
+    // Platform devices
     device = {
         name = "bcm-emmc"
-        vid = 0xBC
-        pid = 1
-        did = 2
+        did = 1
         mmio = {
             name = "emmc"
             base-phys = 0x3f300000
@@ -45,9 +45,7 @@ platform = {
     }
     device = {
         name = "bcm-i2c"
-        vid = 0xBC
-        pid = 1
-        did = 3
+        did = 2
         mmio = {
             name = "i2c-0"
             base-phys = 0x3f205000
@@ -66,9 +64,7 @@ platform = {
     }
     device = {
         name = "bcm-pcm"
-        vid = 0xBC
-        pid = 1
-        did = 4
+        did = 3
         mmio = {
             name = "clock-ctl"
             base-phys = 0x3f101000
@@ -87,9 +83,7 @@ platform = {
     }
     device = {
         name = "bcm-usb"
-        vid = 0xBC
-        pid = 1
-        did = 5
+        did = 4
         mmio = {
             name = "usb-regs"
             base-phys = 0x3f980000
@@ -102,8 +96,6 @@ platform = {
     }
     device = {
         name = "bcm-display"
-        vid = 0xBC
-        pid = 1
-        did = 6
+        did = 5
     }
 }

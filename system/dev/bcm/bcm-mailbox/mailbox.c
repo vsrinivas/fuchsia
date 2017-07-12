@@ -13,7 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/display.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-bus.h>
 
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
@@ -278,7 +278,6 @@ static mx_status_t mailbox_device_ioctl(void* ctx, uint32_t op,
     }
 }
 
-
 static mx_protocol_device_t mailbox_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = mailbox_device_ioctl,
@@ -293,44 +292,59 @@ static mx_status_t bcm_set_framebuffer(void* ctx, mx_paddr_t addr) {
     return mailbox_read(ch_framebuffer, &ack);
 }
 
-static bcm_bus_protocol_ops_t bcm_bus_protocol = {
+static bcm_bus_protocol_ops_t bus_protocol_ops = {
     .get_macid = bcm_get_macid,
     .get_clock_rate = bcm_get_clock_rate,
     .set_framebuffer = bcm_set_framebuffer,
 };
 
-static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
-    uintptr_t page_base;
+static mx_status_t mailbox_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    if (proto_id == MX_PROTOCOL_BCM_BUS) {
+        bcm_bus_protocol_t* proto = out;
+        proto->ops = &bus_protocol_ops;
+        proto->ctx = ctx;
+        return MX_OK;
+    } else {
+        return MX_ERR_NOT_SUPPORTED;
+    }
+}
 
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev) != MX_OK) {
+static pbus_interface_ops_t mailbox_bus_ops = {
+    .get_protocol = mailbox_get_protocol,
+};
+
+static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
+    platform_bus_protocol_t pbus;
+    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_BUS, &pbus) != MX_OK) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
     // Carve out some address space for the device -- it's memory mapped.
+    uintptr_t mmio_base;
     size_t mmio_size;
     mx_handle_t mmio_handle;
-    mx_status_t status = pdev_map_mmio(&pdev, MAILBOX_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       (void **)&page_base, &mmio_size, &mmio_handle);
+    mx_status_t status = pbus_map_mmio(&pbus, MAILBOX_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       (void **)&mmio_base, &mmio_size, &mmio_handle);
     if (status != MX_OK) {
         printf("mailbox_bind pdev_map_mmio failed %d\n", status);
         return status;
     }
 
     // The device is actually mapped at some offset into the page.
-    mailbox_regs = (uint32_t*)(page_base + PAGE_REG_DELTA);
+    mailbox_regs = (uint32_t*)(mmio_base + PAGE_REG_DELTA);
 
     device_add_args_t vc_rpc_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bcm-vc-rpc",
         .ops = &mailbox_device_protocol,
-        .proto_id = MX_PROTOCOL_BCM_BUS,
-        .proto_ops = &bcm_bus_protocol,
+        // nothing should bind to this device
+        // all interaction will be done via the pbus_interface_t
+        .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     status = device_add(parent, &vc_rpc_args, NULL);
     if (status != MX_OK) {
-        mx_vmar_unmap(mx_vmar_root_self(), page_base, mmio_size);
+        mx_vmar_unmap(mx_vmar_root_self(), mmio_base, mmio_size);
         mx_handle_close(mmio_handle);
         return status;
     }
@@ -339,7 +353,10 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     bcm_vc_poweron(bcm_dev_usb);
     bcm_vc_poweron(bcm_dev_i2c1);
 
-    pdev_register_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &bcm_bus_protocol, NULL);
+    pbus_interface_t intf;
+    intf.ops = &mailbox_bus_ops;
+    intf.ctx = NULL;    // TODO(voydanoff) - add mailbox ctx struct
+    pbus_set_interface(&pbus, &intf);
 
     return MX_OK;
 }
@@ -349,9 +366,7 @@ static mx_driver_ops_t bcm_mailbox_driver_ops = {
     .bind = mailbox_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_BROADCOMM_RPI3),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_MAILBOX),
+MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_BUS),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
 MAGENTA_DRIVER_END(bcm_mailbox)

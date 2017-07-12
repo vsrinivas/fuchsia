@@ -17,12 +17,11 @@ __BEGIN_CDECLS;
 // Broadcomm specific PIDs and DIDs
 #define PDEV_PID_BROADCOMM_RPI3         0x0001  // Raspberry PI 3
 
-#define PDEV_DID_BROADCOMM_MAILBOX      0x0001  // Videocore mailbox, used for comms between cpu/gpu
-#define PDEV_DID_BROADCOMM_EMMC         0x0002  // Bcm28xx eMMC device.
-#define PDEV_DID_BROADCOMM_I2C          0x0003  // Bcm28xx I2C device.
-#define PDEV_DID_BROADCOMM_PCM          0x0004  // Bcm28xx PCM/I2S device.
-#define PDEV_DID_BROADCOMM_USB          0x0005  // Bcm28xx USB
-#define PDEV_DID_BROADCOMM_DISPLAY      0x0006  // Bcm28xx Display
+#define PDEV_DID_BROADCOMM_EMMC         0x0001  // Bcm28xx eMMC device.
+#define PDEV_DID_BROADCOMM_I2C          0x0002  // Bcm28xx I2C device.
+#define PDEV_DID_BROADCOMM_PCM          0x0003  // Bcm28xx PCM/I2S device.
+#define PDEV_DID_BROADCOMM_USB          0x0004  // Bcm28xx USB
+#define PDEV_DID_BROADCOMM_DISPLAY      0x0005  // Bcm28xx Display
 
 #define IOCTL_BCM_POWER_ON_USB \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BCM, 0)

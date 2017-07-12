@@ -135,7 +135,7 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
         return status;
     }
 
-    status = pdev_find_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &display->bus_proto);
+    status = pdev_get_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &display->bus_proto);
     if (status != MX_OK) {
         printf("bcm_display_bind can't find MX_PROTOCOL_BCM_BUS\n");
         free(display);

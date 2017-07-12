@@ -545,7 +545,7 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
         platform_device_protocol_t pdev;
 
         if (device_get_protocol(dev, MX_PROTOCOL_PLATFORM_DEV, &pdev) == MX_OK &&
-                pdev_find_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &bus_proto) == MX_OK) {
+                pdev_get_protocol(&pdev, MX_PROTOCOL_BCM_BUS, &bus_proto) == MX_OK) {
             break;
         }
         dev = device_get_parent(dev);
