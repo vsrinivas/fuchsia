@@ -170,7 +170,7 @@ static int xhci_irq_thread(void* arg) {
     // xhci_start will block, so do this part here instead of in usb_xhci_bind
     xhci_start(xhci);
 
-   device_add_args_t args = {
+    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "xhci",
         .ctx = xhci,
@@ -184,6 +184,14 @@ static int xhci_irq_thread(void* arg) {
         free(xhci);
         return status;
     }
+
+    // TODO(johngro) : See MG-940.  Get rid of this.  No matter how we approach
+    // the problem of realtime latency in magenta, clearly not all XHCI
+    // transactions are high priority.  At the very least, we need to split this
+    // system so that there are at least two completers bound to two IRQs, and
+    // that only realtime transactions use the completer which ends up getting
+    // realtime latency guarantees.
+    mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
 
     while (1) {
         mx_status_t wait_res;
