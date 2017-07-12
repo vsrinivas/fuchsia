@@ -30,7 +30,8 @@ behave the same way the parent does, except that any write operation on the clon
 will bring in a copy of the page at the offset the write occurred. The new page in
 the cloned vmo is now a copy and may diverge from the parent. Any reads from
 ranges outside of the parent vmo's size will contain zeros, and writes will
-allocate new zero filled pages.
+allocate new zero filled pages.  If a page in a clone is decommitted, the
+parent's page will become visible once again, still with copy-on-write semantics.
 
 *offset* must be page aligned.
 
