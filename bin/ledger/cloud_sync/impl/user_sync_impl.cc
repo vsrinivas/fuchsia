@@ -6,11 +6,19 @@
 
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
+#include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
+#include "apps/ledger/src/glue/crypto/rand.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/concatenate.h"
 
 namespace cloud_sync {
+
+namespace {
+constexpr size_t kFingerprintSize = 16;
+
+}  // namespace
 
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
                            UserConfig user_config,
@@ -50,83 +58,161 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
   return result;
 }
 
-std::string UserSyncImpl::GetLocalVersionPath() {
-  return ftl::Concatenate({user_config_.user_directory, "/local_version"});
+std::string UserSyncImpl::GetFingerprintPath() {
+  return ftl::Concatenate({user_config_.user_directory, "/fingerprint"});
 }
 
 void UserSyncImpl::Start() {
   FTL_DCHECK(!started_);
 
   if (user_config_.use_sync) {
-    user_firebase_ = std::make_unique<firebase::FirebaseImpl>(
-        environment_->network_service(), user_config_.server_id,
-        GetFirebasePathForUser(user_config_.user_id));
-    CheckCloudVersion();
+    CheckCloudNotErased();
   }
 
   started_ = true;
 }
 
-void UserSyncImpl::CheckCloudVersion() {
-  FTL_DCHECK(user_firebase_);
+void UserSyncImpl::CheckCloudNotErased() {
   FTL_DCHECK(user_config_.auth_provider);
+
+  std::string fingerprint_path = GetFingerprintPath();
+  if (!files::IsFile(fingerprint_path)) {
+    CreateFingerprint();
+    return;
+  }
+
+  if (!files::ReadFileToString(fingerprint_path, &fingerprint_)) {
+    FTL_LOG(ERROR) << "Unable to read the fingerprint file at: "
+                   << fingerprint_path << ", sync upload will not work.";
+    return;
+  }
 
   auto request =
       user_config_.auth_provider->GetFirebaseToken(
           [this](AuthStatus auth_status, std::string auth_token) {
-            if (auth_status == AuthStatus::ERROR) {
+            if (auth_status != AuthStatus::OK) {
               FTL_LOG(ERROR)
                   << "Failed to retrieve the auth token for version check, "
                   << "sync upload will not work.";
               return;
             }
 
-            FTL_DCHECK(auth_status == AuthStatus::OK);
-            DoCheckCloudVersion(std::move(auth_token));
+            user_config_.local_version_checker->CheckFingerprint(
+                std::move(auth_token), fingerprint_,
+                [this](LocalVersionChecker::Status status) {
+                  HandleCheckCloudResult(status);
+                });
           });
   auth_token_requests_.emplace(request);
 }
 
-void UserSyncImpl::DoCheckCloudVersion(std::string auth_token) {
-  user_config_.local_version_checker->CheckCloudVersion(
-      std::move(auth_token), user_firebase_.get(), GetLocalVersionPath(),
-      [this](LocalVersionChecker::Status status) {
-        // HACK: in order to test this codepath in an apptest, we expose a hook
-        // that forces the cloud erased recovery closure to run.
-        if (environment_->TriggerCloudErasedForTesting()) {
-          on_version_mismatch_();
+void UserSyncImpl::CreateFingerprint() {
+  // Generate the fingerprint.
+  char fingerprint_array[kFingerprintSize];
+  glue::RandBytes(fingerprint_array, kFingerprintSize);
+  fingerprint_ =
+      convert::ToHex(ftl::StringView(fingerprint_array, kFingerprintSize));
+
+  auto request =
+      user_config_.auth_provider->GetFirebaseToken(
+          [this](AuthStatus auth_status, std::string auth_token) {
+            if (auth_status != AuthStatus::OK) {
+              FTL_LOG(ERROR)
+                  << "Failed to retrieve the auth token for fingerprint check, "
+                  << "sync upload will not work.";
+              return;
+            }
+
+            user_config_.local_version_checker->SetFingerprint(
+                std::move(auth_token), fingerprint_,
+                [this](LocalVersionChecker::Status status) {
+                  if (status == LocalVersionChecker::Status::OK) {
+                    // Persist the new fingerprint.
+                    FTL_DCHECK(!fingerprint_.empty());
+                    if (!files::WriteFile(GetFingerprintPath(),
+                                          fingerprint_.data(),
+                                          fingerprint_.size())) {
+                      FTL_LOG(ERROR) << "Failed to persist the fingerprint, "
+                                     << "sync upload will not work.";
+                      return;
+                    }
+                  }
+                  HandleCheckCloudResult(status);
+                });
+          });
+  auth_token_requests_.emplace(request);
+}
+
+void UserSyncImpl::HandleCheckCloudResult(LocalVersionChecker::Status status) {
+  // HACK: in order to test this codepath in an apptest, we expose a hook
+  // that forces the cloud erased recovery closure to run.
+  if (environment_->TriggerCloudErasedForTesting()) {
+    on_version_mismatch_();
+    return;
+  }
+
+  switch (status) {
+    case LocalVersionChecker::Status::OK:
+      backoff_->Reset();
+      SetCloudErasedWatcher();
+      EnableUpload();
+      return;
+    case LocalVersionChecker::Status::NETWORK_ERROR:
+      // Retry after some backoff time.
+      environment_->main_runner()->PostDelayedTask(
+          [weak_this = weak_ptr_factory_.GetWeakPtr()] {
+            if (weak_this) {
+              weak_this->CheckCloudNotErased();
+            }
+          },
+          backoff_->GetNext());
+      return;
+    case LocalVersionChecker::Status::ERASED:
+      // |this| can be deleted within on_version_mismatch_() - don't
+      // access member variables afterwards.
+      on_version_mismatch_();
+      return;
+  }
+}
+
+void UserSyncImpl::SetCloudErasedWatcher() {
+  auto request = user_config_.auth_provider->GetFirebaseToken(
+      [this](AuthStatus auth_status, std::string auth_token) {
+        if (auth_status != AuthStatus::OK) {
+          FTL_LOG(ERROR) << "Failed to retrieve the auth token for fingerprint "
+                         << "watcher.";
           return;
         }
 
-        if (status == LocalVersionChecker::Status::OK) {
-          EnableUpload();
-          return;
-        }
-
-        if (status == LocalVersionChecker::Status::NETWORK_ERROR) {
-          // Retry after some backoff time.
-          environment_->main_runner()->PostDelayedTask(
-              [weak_this = weak_ptr_factory_.GetWeakPtr()] {
-                if (weak_this) {
-                  weak_this->CheckCloudVersion();
-                }
-              },
-              backoff_->GetNext());
-          return;
-        }
-
-        if (status == LocalVersionChecker::Status::DISK_ERROR) {
-          FTL_LOG(ERROR) << "Unable to access local version file: "
-                         << GetLocalVersionPath()
-                         << ". Sync upload will be disabled.";
-          return;
-        }
-
-        FTL_DCHECK(status == LocalVersionChecker::Status::INCOMPATIBLE);
-        // |this| can be deleted within on_version_mismatch_() - don't
-        // access member variables afterwards.
-        on_version_mismatch_();
+        user_config_.local_version_checker->WatchFingerprint(
+            std::move(auth_token), fingerprint_,
+            [this](LocalVersionChecker::Status status) {
+              HandleWatcherResult(status);
+            });
       });
+  auth_token_requests_.emplace(request);
+}
+
+void UserSyncImpl::HandleWatcherResult(LocalVersionChecker::Status status) {
+  switch (status) {
+    case LocalVersionChecker::Status::OK:
+      backoff_->Reset();
+      return;
+    case LocalVersionChecker::Status::NETWORK_ERROR:
+      environment_->main_runner()->PostDelayedTask(
+          [weak_this = weak_ptr_factory_.GetWeakPtr()] {
+            if (weak_this) {
+              weak_this->SetCloudErasedWatcher();
+            }
+          },
+          backoff_->GetNext());
+      return;
+    case LocalVersionChecker::Status::ERASED:
+      // |this| can be deleted within on_version_mismatch_() - don't
+      // access member variables afterwards.
+      on_version_mismatch_();
+      return;
+  }
 }
 
 void UserSyncImpl::EnableUpload() {

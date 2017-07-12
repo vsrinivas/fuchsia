@@ -8,6 +8,7 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
@@ -32,7 +33,8 @@ ftl::StringView GetDefaultUserId(ftl::StringView base_path) {
   return base_path.substr(separator + 1);
 }
 
-cloud_sync::UserConfig GetUserConfig(const FirebaseConfigPtr& firebase_config,
+cloud_sync::UserConfig GetUserConfig(Environment* environment,
+                                     const FirebaseConfigPtr& firebase_config,
                                      ftl::StringView user_id,
                                      ftl::StringView user_directory,
                                      cloud_sync::AuthProvider* auth_provider) {
@@ -43,8 +45,12 @@ cloud_sync::UserConfig GetUserConfig(const FirebaseConfigPtr& firebase_config,
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
   user_config.auth_provider = auth_provider;
+  auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
+      environment->network_service(), user_config.server_id,
+      cloud_sync::GetFirebasePathForUser(user_config.user_id));
   user_config.local_version_checker =
-      std::make_unique<cloud_sync::LocalVersionCheckerImpl>();
+      std::make_unique<cloud_sync::LocalVersionCheckerImpl>(
+          std::move(user_firebase));
   return user_config;
 }
 
@@ -271,7 +277,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       user_id = GetDefaultUserId(repository_information.base_path).ToString();
     }
     cloud_sync::UserConfig user_config =
-        GetUserConfig(firebase_config, user_id,
+        GetUserConfig(environment_, firebase_config, user_id,
                       repository_information.content_path, auth_provider_ptr);
     CreateRepository(container, repository_information, std::move(user_config));
 

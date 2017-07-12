@@ -39,13 +39,19 @@ class UserSyncImpl : public UserSync {
   // Starts UserSyncImpl. This method must be called before any other method.
   void Start();
 
+  // Returns the path where the device fingerprint is stored.
+  std::string GetFingerprintPath();
+
  private:
-  // Returns the path where the local version is stored.
-  std::string GetLocalVersionPath();
-  // Checks that the version on the cloud is compatible with the local version
-  // on the device.
-  void CheckCloudVersion();
-  void DoCheckCloudVersion(std::string auth_token);
+  // Checks that the cloud was not erased since the last sync using the device
+  // fingerprint.
+  void CheckCloudNotErased();
+  void CreateFingerprint();
+  void HandleCheckCloudResult(LocalVersionChecker::Status status);
+
+  // Sets a watcher to detect that the cloud is cleared while sync is running.
+  void SetCloudErasedWatcher();
+  void HandleWatcherResult(LocalVersionChecker::Status status);
 
   // Enables sync upload.
   void EnableUpload();
@@ -60,7 +66,8 @@ class UserSyncImpl : public UserSync {
   // Whether uploads should be enabled. It is false until the cloud version has
   // been checked.
   bool upload_enabled_ = false;
-  std::unique_ptr<firebase::Firebase> user_firebase_;
+  // Fingerprint of the device in the cloud device list.
+  std::string fingerprint_;
   std::unordered_set<LedgerSyncImpl*> active_ledger_syncs_;
 
   // Pending auth token requests to be cancelled when this class goes away.

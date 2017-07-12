@@ -6,9 +6,9 @@
 
 #include <unordered_map>
 
+#include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/ftl/files/file.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/logging.h"
 
 namespace cloud_sync {
@@ -18,31 +18,24 @@ class FakeFirebase : public firebase::Firebase {
   FakeFirebase() {}
   ~FakeFirebase() override {}
 
-  virtual void Get(const std::string& key,
-                   const std::vector<std::string>& query_params,
-                   const std::function<void(firebase::Status status,
-                                            const rapidjson::Value& value)>&
-                       callback) override {
+  void Get(const std::string& key,
+           const std::vector<std::string>& query_params,
+           const std::function<void(firebase::Status status,
+                                    const rapidjson::Value& value)>& callback)
+      override {
     get_query_params.push_back(query_params);
     rapidjson::Document document;
-    if (values.count(key)) {
-      document.Parse(values[key]);
-    } else {
-      document.Parse("null");
-    }
+    document.Parse(returned_value);
     callback(returned_status, document);
   }
 
-  virtual void Put(
+  void Put(
       const std::string& key,
       const std::vector<std::string>& query_params,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
     put_query_params.push_back(query_params);
-    rapidjson::Document document;
-    document.Parse(data.c_str(), data.size());
-    FTL_DCHECK(!document.HasParseError());
-    values[key] = data;
+    put_data.push_back(data);
     callback(returned_status);
   }
 
@@ -64,115 +57,135 @@ class FakeFirebase : public firebase::Firebase {
   void Watch(const std::string& key,
              const std::vector<std::string>& query_params,
              firebase::WatchClient* watch_client) override {
-    FTL_NOTREACHED();
+    watch_query_params.push_back(query_params);
+    watch_keys.push_back(key);
+    this->watch_client = watch_client;
   }
 
   void UnWatch(firebase::WatchClient* watch_client) override {
-    FTL_NOTREACHED();
+    EXPECT_EQ(this->watch_client, watch_client);
+    unwatch_calls++;
   }
 
   firebase::Status returned_status = firebase::Status::OK;
+  std::string returned_value;
   std::unordered_map<std::string, std::string> values;
   std::vector<std::vector<std::string>> get_query_params;
   std::vector<std::vector<std::string>> put_query_params;
+  std::vector<std::string> put_data;
+  std::vector<std::string> watch_keys;
+  std::vector<std::vector<std::string>> watch_query_params;
+  firebase::WatchClient* watch_client;
+  int unwatch_calls = 0;
 };
 
-class LocalVersionCheckerImplTest : public ::testing::Test {
+class LocalVersionCheckerImplTest : public ::test::TestWithMessageLoop {
  public:
-  LocalVersionCheckerImplTest() {}
+  LocalVersionCheckerImplTest() : local_version_checker_(InitFirebase()) {}
 
  protected:
-  void SetUp() override {
-    ResetFile();
-    ResetFirebase();
+  FakeFirebase* firebase_;
+  LocalVersionCheckerImpl local_version_checker_;
+
+  std::unique_ptr<firebase::Firebase> InitFirebase() {
+    auto firebase = std::make_unique<FakeFirebase>();
+    firebase_ = firebase.get();
+    return firebase;
   }
-
-  void ResetFile() {
-    tmp_dir = std::make_unique<files::ScopedTempDir>();
-    local_version_file = tmp_dir->path() + "/version";
-  }
-
-  void ResetFirebase() { firebase = std::make_unique<FakeFirebase>(); }
-
-  LocalVersionChecker::Status CheckCloudVersion() {
-    LocalVersionCheckerImpl checker;
-
-    auto result = LocalVersionChecker::Status::NETWORK_ERROR;
-    checker.CheckCloudVersion(
-        auth_token, firebase.get(), local_version_file,
-        [&result](auto found_result) { result = found_result; });
-    return result;
-  }
-
-  std::string GetFileContent() {
-    std::string result;
-    EXPECT_TRUE(files::ReadFileToString(local_version_file, &result));
-    return result;
-  }
-
-  std::unique_ptr<files::ScopedTempDir> tmp_dir;
-  std::string local_version_file;
-  std::unique_ptr<FakeFirebase> firebase;
-  std::string auth_token;
 };
 
-TEST_F(LocalVersionCheckerImplTest, NoLocalVersionNoRemoteVersion) {
-  EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-
-  EXPECT_TRUE(files::IsFile(local_version_file));
-  ASSERT_EQ(1u, firebase->values.size());
-  EXPECT_NE(std::string::npos,
-            firebase->values.begin()->first.find(GetFileContent()));
-}
-
-TEST_F(LocalVersionCheckerImplTest, CompatibleLocalAndRemoteVersion) {
-  ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-
-  EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-
-  EXPECT_TRUE(files::IsFile(local_version_file));
-  ASSERT_EQ(1u, firebase->values.size());
-  EXPECT_NE(std::string::npos,
-            firebase->values.begin()->first.find(GetFileContent()));
-}
-
-TEST_F(LocalVersionCheckerImplTest, NoLocalVersionOtherRemoteVersion) {
-  ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-
-  ResetFile();
-  EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-  EXPECT_TRUE(files::IsFile(local_version_file));
-  EXPECT_EQ(2u, firebase->values.size());
-}
-
-TEST_F(LocalVersionCheckerImplTest, IncompatibleVersions) {
-  ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-
-  ResetFirebase();
-  EXPECT_EQ(LocalVersionChecker::Status::INCOMPATIBLE, CheckCloudVersion());
-}
-
-TEST_F(LocalVersionCheckerImplTest, IoErrorOnPut) {
-  firebase->returned_status = firebase::Status::NETWORK_ERROR;
-
-  EXPECT_EQ(LocalVersionChecker::Status::NETWORK_ERROR, CheckCloudVersion());
-}
-
-TEST_F(LocalVersionCheckerImplTest, IoErrorOnGet) {
-  ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-
-  firebase->returned_status = firebase::Status::NETWORK_ERROR;
-  EXPECT_EQ(LocalVersionChecker::Status::NETWORK_ERROR, CheckCloudVersion());
-}
-
-TEST_F(LocalVersionCheckerImplTest, Auth) {
-  auth_token = "some-token";
-  ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
-  EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
+TEST_F(LocalVersionCheckerImplTest, CheckFingerprintOk) {
+  firebase_->returned_value = "true";
+  LocalVersionChecker::Status status;
+  local_version_checker_.CheckFingerprint(
+      "some-token", "some-fingerprint",
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(LocalVersionChecker::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
-            firebase->get_query_params);
+            firebase_->get_query_params);
+}
+
+TEST_F(LocalVersionCheckerImplTest, CheckFingerprintErased) {
+  firebase_->returned_value = "null";
+  LocalVersionChecker::Status status;
+  local_version_checker_.CheckFingerprint(
+      "some-token", "some-fingerprint",
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(LocalVersionChecker::Status::ERASED, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
-            firebase->put_query_params);
+            firebase_->get_query_params);
+}
+
+TEST_F(LocalVersionCheckerImplTest, CheckFingerprintDeleteInCallback) {
+  firebase_->returned_value = "null";
+  LocalVersionChecker::Status status;
+  auto checker = std::make_unique<LocalVersionCheckerImpl>(InitFirebase());
+  checker->CheckFingerprint("some-token", "some-fingerprint",
+                            [this, &checker, &status](auto s) {
+                              checker.reset();
+                              status = s;
+                              message_loop_.PostQuitTask();
+                            });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(checker);
+  EXPECT_EQ(LocalVersionChecker::Status::ERASED, status);
+}
+
+TEST_F(LocalVersionCheckerImplTest, SetFingerprintOk) {
+  LocalVersionChecker::Status status;
+  local_version_checker_.SetFingerprint(
+      "some-token", "some-fingerprint",
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(LocalVersionChecker::Status::OK, status);
+  EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
+            firebase_->put_query_params);
+  EXPECT_EQ((std::vector<std::string>{"true"}), firebase_->put_data);
+}
+
+TEST_F(LocalVersionCheckerImplTest, WatchFingerprint) {
+  bool called = false;
+  LocalVersionChecker::Status status;
+  local_version_checker_.WatchFingerprint("some-token", "some-fingerprint",
+                                          [&status, &called](auto s) {
+                                            status = s;
+                                            called = true;
+                                          });
+  EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
+            firebase_->watch_query_params);
+  EXPECT_EQ((std::vector<std::string>{"__metadata/devices/some-fingerprint"}),
+            firebase_->watch_keys);
+  ASSERT_TRUE(firebase_->watch_client);
+
+  {
+    rapidjson::Document document;
+    document.Parse("true");
+    firebase_->watch_client->OnPut("/", document);
+  }
+  EXPECT_TRUE(called);
+  EXPECT_EQ(LocalVersionChecker::Status::OK, status);
+
+  called = false;
+  {
+    rapidjson::Document document;
+    document.Parse("null");
+    firebase_->watch_client->OnPut("/", document);
+  }
+  EXPECT_TRUE(called);
+  EXPECT_EQ(LocalVersionChecker::Status::ERASED, status);
+}
+
+TEST_F(LocalVersionCheckerImplTest, WatchUnwatchOnDelete) {
+  {
+    LocalVersionCheckerImpl short_lived_checker(InitFirebase());
+
+    short_lived_checker.WatchFingerprint("some-token", "some-fingerprint",
+                                         [](auto status) {});
+    EXPECT_EQ(0, firebase_->unwatch_calls);
+  }
+  EXPECT_EQ(1, firebase_->unwatch_calls);
 }
 
 }  // namespace
