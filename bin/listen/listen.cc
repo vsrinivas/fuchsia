@@ -143,7 +143,7 @@ class Service : private mtl::MessageLoopHandler {
   }
 
   // mtl::MessageLoopHandler
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
     FTL_CHECK(pending & MX_PROCESS_TERMINATED);
     auto iter = process_handler_key_.find(handle);
     FTL_CHECK(iter != process_handler_key_.end());
