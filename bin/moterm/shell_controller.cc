@@ -163,6 +163,7 @@ void ShellController::WaitForShell() {
 // static.
 void ShellController::WaitComplete(mx_status_t result,
                                    mx_signals_t pending,
+                                   uint64_t count,
                                    void* context) {
   ShellController* controller = static_cast<ShellController*>(context);
   controller->wait_id_ = 0;

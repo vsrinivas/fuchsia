@@ -106,7 +106,9 @@ bool Command::Start(std::vector<std::string> command,
   return true;
 }
 
-void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void Command::OnHandleReady(mx_handle_t handle,
+                            mx_signals_t pending,
+                            uint64_t count) {
   if (handle == process_.get() && (pending & MX_PROCESS_TERMINATED)) {
     mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
     termination_key_ = 0;

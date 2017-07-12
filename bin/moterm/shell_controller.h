@@ -55,6 +55,7 @@ class ShellController : public History::Client {
   void WaitForShell();
   static void WaitComplete(mx_status_t result,
                            mx_signals_t pending,
+                           uint64_t count,
                            void* context);
 
   // Ledger-backed store for terminal history.
