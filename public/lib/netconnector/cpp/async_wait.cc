@@ -45,6 +45,7 @@ void AsyncWait::Cancel() {
 // static
 void AsyncWait::CallbackHandler(mx_status_t status,
                                 mx_signals_t pending,
+                                uint64_t count,
                                 void* closure) {
   AsyncWait* self = reinterpret_cast<AsyncWait*>(closure);
   self->wait_id_ = 0;

@@ -38,6 +38,7 @@ class AsyncWait {
  private:
   static void CallbackHandler(mx_status_t status,
                               mx_signals_t pending,
+                              uint64_t count,
                               void* closure);
 
   const FidlAsyncWaiter* waiter_;
