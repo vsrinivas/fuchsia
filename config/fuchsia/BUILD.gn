@@ -80,24 +80,20 @@ config("toolchain_version_stamp") {
   # artifacts from an older version of the toolchain may or may not be compatible with newer ones.
   # To achieve this, we insert a synthetic define into the compile line.
   if (host_os == "linux") {
-    toolchain_stamp_file = "//buildtools/linux64/toolchain.stamp"
+    clang_stamp_file = "//buildtools/linux64/clang.stamp"
   } else if (host_os == "mac") {
-    toolchain_stamp_file = "//buildtools/mac/toolchain.stamp"
+    clang_stamp_file = "//buildtools/mac/clang.stamp"
   } else {
     assert(false, "Unsupported host OS")
   }
-  toolchain_version = read_file(toolchain_stamp_file, "trim string")
+  toolchain_version = read_file(clang_stamp_file, "trim string")
   defines = [ "TOOLCHAIN_VERSION=$toolchain_version" ]
 }
 
 config("compiler_sysroot") {
-  # The sysroot for fuchsia lives in a directory called 'sysroot' at the root of
-  # the build directory, which is also the current working directory for the
-  # build. This specifies the sysroot flag as a relative path, which is important
-  # so it matches the output names for the sysroot assembly build edges in ninja,
-  # which doesn't canonicalize paths.
-  cflags = [ "--sysroot=sysroot" ]
-  ldflags = [ "--sysroot=sysroot" ]
+  # The sysroot for Fuchsia is part of Magenta build which is pointed to by the sysroot variable.
+  cflags = [ "--sysroot=${sysroot}" ]
+  ldflags = cflags
   asmflags = cflags
 }
 

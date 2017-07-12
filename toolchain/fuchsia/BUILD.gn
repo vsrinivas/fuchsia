@@ -4,6 +4,7 @@
 
 import("//build/toolchain/clang_toolchain.gni")
 import("//build/config/fuchsia/config.gni")
+import("//packages/package.gni")
 
 template("fuchsia_toolchain") {
   clang_toolchain(target_name) {
@@ -15,25 +16,39 @@ template("fuchsia_toolchain") {
   }
 }
 
-# The fuchsia toolchains require an assembled sysroot in order to do anything,
-# so we need to create a dependency edge between all targets using the fuchsia
-# toolchain and the sysroot assembly step. The cleanest way to do this in GN is
-# by creating a toolchain dependency from the fuchsia toolchains to the
-# assembly step. Since all targets in GN exist within a toolchain, and all
-# targets inside the fuchsia toolchain need to depend on the sysroot assembly
-# step, we need to create another toolchain to contain the sysroot assembly
-# target.
-fuchsia_toolchain("${target_cpu}-sysroot") {
+fuchsia_toolchain(target_cpu) {
 }
 
-fuchsia_toolchain(target_cpu) {
-  deps = [
-    "//build/sysroot(//build/toolchain/fuchsia:${target_cpu}-sysroot)",
-  ]
-}
 fuchsia_toolchain("${target_cpu}-shared") {
   is_pic_default = true
-  deps = [
-    "//build/sysroot(//build/toolchain/fuchsia:${target_cpu}-sysroot)",
-  ]
+}
+
+if (current_cpu == "arm64") {
+  clang_target = "aarch64-fuchsia"
+} else if (current_cpu == "x64") {
+  clang_target = "x86_64-fuchsia"
+} else {
+  assert(false, "Unsupported architecture")
+}
+
+package("runtimes") {
+  files = exec_script("//build/clang_print_file_name.py",
+                      [
+                        "--target=${clang_target}",
+                        "--prefix=${clang_prefix}",
+                        "libc++.so.2",
+                        "libc++abi.so.1",
+                        "libunwind.so.1",
+                      ],
+                      "trim list lines")
+  libraries = []
+  foreach(file, files) {
+    libraries += [
+      {
+        name = get_path_info(file, "file")
+        source = file
+        used_by_early_boot_drivers = true
+      }
+    ]
+  }
 }
