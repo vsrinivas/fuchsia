@@ -48,6 +48,15 @@ To suppress Kronk startup, use:
 
     fgen --args kronk=false
 
+## MI Dashboard
+
+The MI dashboard provides an off-device view into the data used by the
+Maxwell sub-system through a web page.  Its web server starts on port 4000.
+To disable the dashboard, for example while running tests, you can set the
+following parameter via `fgen`:
+
+    fgen --args mi_dashboard=false
+
 ## Other Docs
 
 * [Module Manifest](docs/module_manifest.md)

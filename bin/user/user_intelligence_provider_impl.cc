@@ -112,6 +112,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 #endif
 #endif
 
+// Toggle using the "mi_dashboard" gn arg
+#ifdef MI_DASHBOARD
   StartAgent(
       "file:///system/apps/agents/mi_dashboard.dartx",
       [=](const std::string& url, app::ServiceNamespace* agent_host) {
@@ -131,6 +133,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
               user_action_log_->Duplicate(std::move(request));
             });
       });
+#endif
 
   // Start privileged local Framework-style Agents.
   {

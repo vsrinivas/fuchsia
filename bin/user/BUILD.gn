@@ -9,6 +9,9 @@ declare_args() {
   # if true, uses the "kronk-dev" agent, which is the unstable,
   # under-development version
   kronk_dev = false
+
+  # if false, bypasses starting the MI Dashboard
+  mi_dashboard = true
 }
 
 source_set("user") {
@@ -57,11 +60,16 @@ source_set("user_intelligence_provider") {
     "//apps/network/services",
   ]
 
+  defines = []
   if (kronk) {
-    defines = [ "KRONK" ]
+    defines += [ "KRONK" ]
     if (kronk_dev) {
       defines += [ "KRONK_DEV" ]
     }
+  }
+
+  if (mi_dashboard) {
+    defines += [ "MI_DASHBOARD" ]
   }
 }
 
