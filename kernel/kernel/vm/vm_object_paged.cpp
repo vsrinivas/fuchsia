@@ -255,7 +255,15 @@ mx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, mxtl:
     return MX_OK;
 }
 
-status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** const page_out, paddr_t* const pa_out) {
+// Looks up the page at the requested offset, faulting it in if requested and necessary.  If
+// this VMO has a parent and the requested page isn't found, the parent will be searched.
+//
+// |free_list|, if not NULL, is a list of allocated but unused vm_page_t that
+// this function may allocate from.  This function will need at most one entry,
+// and will not fail if |free_list| is a non-empty list, faulting in was requested,
+// and offset is in range.
+status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                                      vm_page_t** const page_out, paddr_t* const pa_out) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
 
@@ -288,7 +296,8 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t*
         // make sure we don't cause the parent to fault in new pages, just ask for any that already exist
         uint parent_pf_flags = pf_flags & ~(VMM_PF_FLAG_FAULT_MASK);
 
-        status_t status = parent_->GetPageLocked(parent_offset.ValueOrDie(), parent_pf_flags, &p, &pa);
+        status_t status = parent_->GetPageLocked(parent_offset.ValueOrDie(), parent_pf_flags,
+                                                 nullptr, &p, &pa);
         if (status == MX_OK) {
             // we have a page from them. if we're read-only faulting, return that page so they can map
             // or read from it directly
@@ -305,9 +314,19 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t*
 
             // if we're write faulting, we need to clone it and return the new page
             paddr_t pa_clone;
-            vm_page_t* p_clone = pmm_alloc_page(pmm_alloc_flags_, &pa_clone);
-            if (!p_clone)
+            vm_page_t* p_clone = nullptr;
+            if (free_list) {
+                p_clone = list_remove_head_type(free_list, vm_page_t, free.node);
+                if (p_clone) {
+                    pa_clone = vm_page_to_paddr(p_clone);
+                }
+            }
+            if (!p_clone) {
+                p_clone = pmm_alloc_page(pmm_alloc_flags_, &pa_clone);
+            }
+            if (!p_clone) {
                 return MX_ERR_NO_MEMORY;
+            }
 
             InitializeVmPage(p_clone);
 
@@ -351,9 +370,18 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t*
     }
 
     // allocate a page
-    p = pmm_alloc_page(pmm_alloc_flags_, &pa);
-    if (!p)
+    if (free_list) {
+        p = list_remove_head_type(free_list, vm_page_t, free.node);
+        if (p) {
+            pa = vm_page_to_paddr(p);
+        }
+    }
+    if (!p) {
+        p = pmm_alloc_page(pmm_alloc_flags_, &pa);
+    }
+    if (!p) {
         return MX_ERR_NO_MEMORY;
+    }
 
     InitializeVmPage(p);
 
@@ -433,20 +461,19 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
 
     // add them to the appropriate range of the object
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
+        // Don't commit if we already have this page
         vm_page_t* p = page_list_.GetPage(o);
-        if (p)
+        if (p) {
             continue;
+        }
 
-        p = list_remove_head_type(&page_list, vm_page_t, free.node);
-        ASSERT(p);
-
-        InitializeVmPage(p);
-
-        // TODO: remove once pmm returns zeroed pages
-        ZeroPage(p);
-
-        status_t status = page_list_.AddPage(p, o);
-        DEBUG_ASSERT(status == MX_OK);
+        // Check if our parent has the page
+        paddr_t pa;
+        const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
+        // Should not be able to fail, since we're providing it memory and the
+        // range should be valid.
+        status_t status = GetPageLocked(o, flags, &page_list, &p, &pa);
+        ASSERT(status == MX_OK);
 
         if (committed)
             *committed += PAGE_SIZE;
@@ -469,6 +496,11 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
         *committed = 0;
 
     AutoLock a(&lock_);
+
+    // This function does not support cloned VMOs.
+    if (unlikely(parent_)) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
 
     // trim the size
     uint64_t new_len;
@@ -779,7 +811,9 @@ status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* b
 
         // fault in the page
         paddr_t pa;
-        auto status = GetPageLocked(src_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0), nullptr, &pa);
+        auto status = GetPageLocked(src_offset,
+                                    VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0),
+                                    nullptr, nullptr, &pa);
         if (status < 0)
             return status;
 
@@ -863,7 +897,8 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                      missing_off += PAGE_SIZE) {
 
                     paddr_t pa;
-                    status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr, &pa);
+                    status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
+                                                          nullptr, &pa);
                     if (status != MX_OK) {
                         return MX_ERR_NO_MEMORY;
                     }
@@ -897,7 +932,7 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     // If expected_next_off isn't at the end, there's a gap to process
     for (uint64_t off = expected_next_off; off < end_page_offset; off += PAGE_SIZE) {
         paddr_t pa;
-        status_t status = GetPageLocked(off, pf_flags, nullptr, &pa);
+        status_t status = GetPageLocked(off, pf_flags, nullptr, nullptr, &pa);
         if (status != MX_OK) {
             return MX_ERR_NO_MEMORY;
         }
@@ -1008,7 +1043,7 @@ status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
 
         // lookup the physical address of the page, careful not to fault in a new one
         paddr_t pa;
-        auto status = GetPageLocked(op_start_offset, 0, nullptr, &pa);
+        auto status = GetPageLocked(op_start_offset, 0, nullptr, nullptr, &pa);
 
         if (likely(status == MX_OK)) {
             // Convert the page address to a Kernel virtual address.

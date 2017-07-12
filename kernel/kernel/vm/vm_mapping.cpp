@@ -411,7 +411,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
         status_t status;
         paddr_t pa;
-        status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, &pa);
+        status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, nullptr, &pa);
         if (status < 0) {
             // no page to map
             if (commit) {
@@ -551,7 +551,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     // fault in or grab an existing page
     paddr_t new_pa;
     vm_page_t* page;
-    status_t status = object_->GetPageLocked(vmo_offset, pf_flags, &page, &new_pa);
+    status_t status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, &page, &new_pa);
     if (status < 0) {
         TRACEF("ERROR: failed to fault in or grab existing page\n");
         TRACEF("%p vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, vmo_offset, pf_flags);

@@ -68,7 +68,8 @@ public:
     status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
     status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t**, paddr_t*) override
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+                           vm_page_t**, paddr_t*) override
         // Calls a Locked method of the parent, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 

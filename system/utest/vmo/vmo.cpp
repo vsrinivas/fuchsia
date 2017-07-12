@@ -873,6 +873,74 @@ bool vmo_clone_decommit_test() {
     END_TEST;
 }
 
+// verify the affect of commit on a clone
+bool vmo_clone_commit_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_handle_t clone_vmo;
+    uintptr_t ptr;
+    uintptr_t clone_ptr;
+    volatile uint32_t *p;
+    volatile uint32_t *cp;
+
+    // create a vmo
+    const size_t size = PAGE_SIZE * 4;
+    EXPECT_EQ(MX_OK, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+
+    // map it
+    EXPECT_EQ(MX_OK,
+            mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr),
+            "map");
+    EXPECT_NONNULL(ptr, "map address");
+    p = (volatile uint32_t *)ptr;
+
+    // clone it and map that
+    clone_vmo = MX_HANDLE_INVALID;
+    EXPECT_EQ(MX_OK, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
+    EXPECT_EQ(MX_OK,
+            mx_vmar_map(mx_vmar_root_self(), 0, clone_vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &clone_ptr),
+            "map");
+    EXPECT_NONNULL(clone_ptr, "map address");
+    cp = (volatile uint32_t *)clone_ptr;
+
+    // write to parent and make sure clone sees it
+    memset((void*)p, 0x99, PAGE_SIZE);
+    EXPECT_EQ(0x99999999, p[0], "wrote to original");
+    EXPECT_EQ(0x99999999, cp[0], "read back from clone");
+
+    EXPECT_EQ(MX_OK, mx_vmo_op_range(clone_vmo, MX_VMO_OP_COMMIT, 0, PAGE_SIZE, NULL, 0));
+
+    // make sure that clone has the same contents as the parent
+    for (size_t i = 0; i < PAGE_SIZE / sizeof(*p); ++i) {
+        EXPECT_EQ(0x99999999, cp[i], "read new page");
+    }
+    EXPECT_EQ(0x99999999, p[0], "read back from original");
+
+    // write to clone and make sure parent doesn't see it
+    cp[0] = 0;
+    EXPECT_EQ(0, cp[0], "wrote to clone");
+    EXPECT_EQ(0x99999999, p[0], "read back from original");
+
+    EXPECT_EQ(MX_OK, mx_vmo_op_range(clone_vmo, MX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+
+    EXPECT_EQ(0x99999999, cp[0], "clone should match orig again");
+    EXPECT_EQ(0x99999999, p[0], "read back from original");
+
+    // close the original handle
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
+
+    // close the clone handle
+    EXPECT_EQ(MX_OK, mx_handle_close(clone_vmo), "handle_close");
+
+    // unmap
+    EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_EQ(MX_OK, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
+
+    END_TEST;
+}
+
 bool vmo_cache_test() {
     BEGIN_TEST;
 
@@ -1080,6 +1148,7 @@ RUN_TEST(vmo_clone_test_2);
 RUN_TEST(vmo_clone_test_3);
 RUN_TEST(vmo_clone_test_4);
 RUN_TEST(vmo_clone_decommit_test);
+RUN_TEST(vmo_clone_commit_test);
 RUN_TEST(vmo_clone_rights_test);
 END_TEST_CASE(vmo_tests)
 
