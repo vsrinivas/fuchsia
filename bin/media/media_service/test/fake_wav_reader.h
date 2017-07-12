@@ -52,6 +52,7 @@ class FakeWavReader : public SeekingReader {
   // Callback function for WriteToSocket's async wait.
   static void WriteToSocketStatic(mx_status_t status,
                                   mx_signals_t pending,
+                                  uint64_t count,
                                   void* closure);
 
   // Writes data to socket_ starting at postion_;

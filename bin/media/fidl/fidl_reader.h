@@ -40,6 +40,7 @@ class FidlReader : public Reader,
   // Calls ReadFromSocket.
   static void ReadFromSocketStatic(mx_status_t status,
                                    mx_signals_t pending,
+                                   uint64_t count,
                                    void* closure);
 
   FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader);

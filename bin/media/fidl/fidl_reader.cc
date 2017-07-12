@@ -167,6 +167,7 @@ void FidlReader::FailReadAt(mx_status_t status) {
 // static
 void FidlReader::ReadFromSocketStatic(mx_status_t status,
                                       mx_signals_t pending,
+                                      uint64_t count,
                                       void* closure) {
   FidlReader* reader = reinterpret_cast<FidlReader*>(closure);
 

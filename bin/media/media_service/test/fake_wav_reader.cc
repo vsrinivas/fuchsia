@@ -134,6 +134,7 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 // static
 void FakeWavReader::WriteToSocketStatic(mx_status_t status,
                                         mx_signals_t pending,
+                                        uint64_t count,
                                         void* closure) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
   reader->wait_id_ = 0;

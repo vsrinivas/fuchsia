@@ -107,6 +107,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 // static
 void FileReaderImpl::WriteToSocketStatic(mx_status_t status,
                                          mx_signals_t pending,
+                                         uint64_t count,
                                          void* closure) {
   FileReaderImpl* reader = reinterpret_cast<FileReaderImpl*>(closure);
   reader->wait_id_ = 0;
