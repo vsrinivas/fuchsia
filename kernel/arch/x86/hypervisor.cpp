@@ -555,6 +555,7 @@ status_t VmcsPerCpu::Setup(uint16_t vpid, paddr_t pml4_address, paddr_t apic_acc
     if (status != MX_OK)
         return status;
 
+    vpid_ = vpid;
     AutoVmcsLoad vmcs_load(&page_);
 
     // Setup secondary processor-based VMCS controls.
@@ -1032,12 +1033,11 @@ VmcsContext::VmcsContext(VmxonContext* hypervisor, mxtl::RefPtr<FifoDispatcher> 
 
 static int vmcs_clear(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
-    uint16_t vpid = vmcs_read(VmcsField16::VPID);
-    status_t status = context->hypervisor()->ReleaseVpid(vpid);
+    VmcsPerCpu* per_cpu = context->PerCpu();
+    status_t status = context->hypervisor()->ReleaseVpid(per_cpu->vpid());
     if (status != MX_OK)
         return status;
 
-    VmcsPerCpu* per_cpu = context->PerCpu();
     return per_cpu->Clear();
 }
 

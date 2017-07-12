@@ -292,8 +292,10 @@ public:
 
     bool ShouldResume() const { return vmx_state_.resume; }
     bool HasApicMem() const { return local_apic_state_.apic_addr != nullptr; }
+    uint16_t vpid() const { return vpid_; }
 
 private:
+    uint16_t vpid_ = 0;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
     VmxState vmx_state_;
