@@ -417,7 +417,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
 
         if (!show_mem) {
             printf("pmm free: issue the same command to stop.\n");
-            timer_initialize(&timer);
+            timer_init(&timer);
             timer_set_oneshot(&timer, current_time() + LK_SEC(1), &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {

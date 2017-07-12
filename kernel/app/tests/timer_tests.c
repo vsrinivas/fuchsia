@@ -28,7 +28,7 @@ static int timer_do_one_thread(void* arg)
     timer_t timer;
 
     event_init(&event, false, 0);
-    timer_initialize(&timer);
+    timer_init(&timer);
 
     timer_set_oneshot(&timer, current_time() + LK_MSEC(10), timer_cb, &event);
     event_wait(&event);

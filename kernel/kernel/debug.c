@@ -173,7 +173,7 @@ static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
 
     if (showthreadload == false) {
         // start the display
-        timer_initialize(&tltimer);
+        timer_init(&tltimer);
         timer_set_oneshot(&tltimer, current_time() + LK_SEC(1), &threadload, NULL);
         showthreadload = true;
     } else {

@@ -47,7 +47,7 @@ status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
     dog->name    = name ? name : "unnamed watchdog";
     dog->enabled = false;
     dog->timeout = timeout;
-    timer_initialize(&dog->expire_timer);
+    timer_init(&dog->expire_timer);
 
     return MX_OK;
 }
@@ -105,7 +105,7 @@ static enum handler_return hw_watchdog_timer_callback(struct timer *timer, lk_ti
 status_t watchdog_hw_init(lk_time_t timeout)
 {
     DEBUG_ASSERT(INFINITE_TIME != timeout);
-    timer_initialize(&hw_watchdog_timer);
+    timer_init(&hw_watchdog_timer);
     return platform_watchdog_init(timeout, &hw_watchdog_pet_timeout);
 }
 

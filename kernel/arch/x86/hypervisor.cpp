@@ -454,7 +454,7 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
         return status;
 
     memset(&vmx_state_, 0, sizeof(vmx_state_));
-    timer_initialize(&local_apic_state_.timer);
+    timer_init(&local_apic_state_.timer);
     event_init(&local_apic_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
     local_apic_state_.apic_addr = nullptr;
 

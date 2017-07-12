@@ -15,7 +15,7 @@
 
 __BEGIN_CDECLS
 
-void timer_init(void);
+void timer_queue_init(void);
 
 struct timer;
 typedef enum handler_return (*timer_callback)(struct timer *, lk_time_t now, void *arg);
@@ -53,7 +53,7 @@ typedef struct timer {
  * - Setting and canceling timers is not thread safe and cannot be done concurrently
  * - timer_cancel() may spin waiting for a pending timer to complete on another cpu
 */
-void timer_initialize(timer_t *);
+void timer_init(timer_t *);
 void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg);
 bool timer_cancel(timer_t *);
 

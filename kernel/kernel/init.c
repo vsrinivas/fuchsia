@@ -25,6 +25,6 @@ void kernel_init(void)
 
     // initialize kernel timers
     dprintf(SPEW, "initializing timers\n");
-    timer_init();
+    timer_queue_init();
 }
 

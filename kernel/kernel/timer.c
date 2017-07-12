@@ -42,7 +42,7 @@ static spin_lock_t timer_lock;
 /**
  * @brief  Initialize a timer object
  */
-void timer_initialize(timer_t *timer)
+void timer_init(timer_t *timer)
 {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
 }
@@ -347,7 +347,7 @@ void timer_thaw_percpu(void)
     spin_unlock(&timer_lock);
 }
 
-void timer_init(void)
+void timer_queue_init(void)
 {
     timer_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {

@@ -1008,7 +1008,7 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable)
     DEBUG_ASSERT(!arch_in_int_handler());
 
     timer_t timer;
-    timer_initialize(&timer);
+    timer_init(&timer);
 
     THREAD_LOCK(state);
 
@@ -1128,7 +1128,7 @@ void thread_init_early(void)
 void thread_init(void)
 {
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        timer_initialize(&percpu[i].preempt_timer);
+        timer_init(&percpu[i].preempt_timer);
     }
 }
 
@@ -1461,7 +1461,7 @@ status_t wait_queue_block(wait_queue_t *wait, lk_time_t deadline)
 
     /* if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue */
     if (deadline != INFINITE_TIME) {
-        timer_initialize(&timer);
+        timer_init(&timer);
         timer_set_oneshot(&timer, deadline, wait_queue_timeout_handler, (void *)current_thread);
     }
 
