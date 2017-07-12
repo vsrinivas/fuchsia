@@ -46,19 +46,22 @@ class VisibleStoriesHandler;
 
 class UserRunnerImpl : UserRunner, UserShellContext {
  public:
-  UserRunnerImpl(
-      const app::ApplicationEnvironmentPtr& application_environment,
+  UserRunnerImpl(std::shared_ptr<app::ApplicationContext> application_context);
+
+  ~UserRunnerImpl() override;
+
+  void Connect(fidl::InterfaceRequest<UserRunner> request);
+
+ private:
+  // |UserRunner|
+  void Initialize(
       auth::AccountPtr account,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserRunner> user_runner_request);
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
 
-  ~UserRunnerImpl() override;
-
- private:
   // |UserRunner|
   void Terminate(const TerminateCallback& done) override;
 
@@ -88,6 +91,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void SetupLedger();
 
   std::unique_ptr<fidl::Binding<UserRunner>> binding_;
+  std::shared_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
@@ -99,12 +103,12 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   ledger::PagePtr root_page_;
   ConflictResolverImpl conflict_resolver_;
 
-  Scope user_scope_;
+  std::unique_ptr<Scope> user_scope_;
 
   auth::AccountPtr account_;
 
   std::unique_ptr<AppClientBase> maxwell_;
-  AppClient<UserShell> user_shell_;
+  std::unique_ptr<AppClient<UserShell>> user_shell_;
 
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;

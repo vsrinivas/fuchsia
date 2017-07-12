@@ -16,37 +16,21 @@
 namespace modular {
 
 // Implementation of the user runner app.
-class UserRunnerApp : UserRunnerFactory {
+class UserRunnerApp {
  public:
   UserRunnerApp()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    application_context_->outgoing_services()->AddService<UserRunnerFactory>(
-        [this](fidl::InterfaceRequest<UserRunnerFactory> request) {
-          bindings_.AddBinding(this, std::move(request));
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        user_runner_impl_(application_context_) {
+    application_context_->outgoing_services()->AddService<UserRunner>(
+        [this](fidl::InterfaceRequest<UserRunner> request) {
+          user_runner_impl_.Connect(std::move(request));
         });
     tracing::InitializeTracer(application_context_.get(), {"user_runner"});
   }
 
  private:
-  // |UserRunnerFactory|
-  void Create(
-      auth::AccountPtr account,
-      AppConfigPtr user_shell,
-      AppConfigPtr story_shell,
-      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      fidl::InterfaceHandle<UserContext> user_context,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserRunner> user_runner_request) override {
-    // Deleted in UserRunnerImpl::Terminate().
-    new UserRunnerImpl(application_context_->environment(), std::move(account),
-                       std::move(user_shell), std::move(story_shell),
-                       std::move(token_provider_factory),
-                       std::move(user_context), std::move(view_owner_request),
-                       std::move(user_runner_request));
-  }
-
   std::shared_ptr<app::ApplicationContext> application_context_;
-  fidl::BindingSet<UserRunnerFactory> bindings_;
+  UserRunnerImpl user_runner_impl_;
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
 };
 

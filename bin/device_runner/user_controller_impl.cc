@@ -39,13 +39,11 @@ UserControllerImpl::UserControllerImpl(
       std::move(launch_info), user_runner_controller_.NewRequest());
 
   // 2. Initialize the UserRunner service.
-  UserRunnerFactoryPtr user_runner_factory;
-  app::ConnectToService(services.get(), user_runner_factory.NewRequest());
-  user_runner_factory->Create(
+  app::ConnectToService(services.get(), user_runner_.NewRequest());
+  user_runner_->Initialize(
       std::move(account), std::move(user_shell), story_shell.Clone(),
       std::move(token_provider_factory),
-      user_context_binding_.NewBinding(), std::move(view_owner_request),
-      user_runner_.NewRequest());
+      user_context_binding_.NewBinding(), std::move(view_owner_request));
 }
 
 // |UserController|

@@ -121,31 +121,39 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    const app::ApplicationEnvironmentPtr& application_environment,
+    std::shared_ptr<app::ApplicationContext> const application_context)
+    : binding_(new fidl::Binding<UserRunner>(this)),
+      application_context_(application_context),
+      user_shell_context_binding_(this) {
+  binding_->set_connection_error_handler([this] { Terminate([] {}); });
+}
+
+UserRunnerImpl::~UserRunnerImpl() = default;
+
+void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunner> request) {
+  binding_->Bind(std::move(request));
+}
+
+void UserRunnerImpl::Initialize(
     auth::AccountPtr account,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<UserRunner> user_runner_request)
-    : binding_(
-          new fidl::Binding<UserRunner>(this, std::move(user_runner_request))),
-      user_shell_context_binding_(this),
-      token_provider_factory_(auth::TokenProviderFactoryPtr::Create(
-          std::move(token_provider_factory))),
-      user_context_(UserContextPtr::Create(std::move(user_context))),
-      user_scope_(application_environment,
-                  std::string(kUserScopeLabelPrefix) + GetAccountId(account)),
-      account_(std::move(account)),
-      user_shell_(user_scope_.GetLauncher(), std::move(user_shell)) {
-  binding_->set_connection_error_handler([this] { Terminate([] {}); });
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  token_provider_factory_ = auth::TokenProviderFactoryPtr::Create(
+       std::move(token_provider_factory));
+  user_context_ = UserContextPtr::Create(std::move(user_context));
+  account_ = std::move(account);
+  user_scope_ = std::make_unique<Scope>(application_context_->environment(),
+                                        std::string(kUserScopeLabelPrefix) + GetAccountId(account));
+  user_shell_ = std::make_unique<AppClient<UserShell>>(user_scope_->GetLauncher(), std::move(user_shell));
 
   SetupLedger();
 
   // Show user shell.
   mozart::ViewProviderPtr view_provider;
-  ConnectToService(user_shell_.services(), view_provider.NewRequest());
+  ConnectToService(user_shell_->services(), view_provider.NewRequest());
   view_provider->CreateView(std::move(view_owner_request), nullptr);
 
   // DeviceMap service
@@ -155,7 +163,7 @@ UserRunnerImpl::UserRunnerImpl(
 
   device_map_impl_.reset(new DeviceMapImpl(device_name_, device_id,
                                            device_profile, root_page_.get()));
-  user_scope_.AddService<DeviceMap>(
+  user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         device_map_impl_->Connect(std::move(request));
       });
@@ -165,7 +173,7 @@ UserRunnerImpl::UserRunnerImpl(
   // TODO(planders) Do not create RemoteInvoker until service is actually
   // requested.
   remote_invoker_impl_.reset(new RemoteInvokerImpl(ledger_.get()));
-  user_scope_.AddService<RemoteInvoker>(
+  user_scope_->AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
         remote_invoker_impl_->Connect(std::move(request));
       });
@@ -234,7 +242,7 @@ UserRunnerImpl::UserRunnerImpl(
                    });
 
   agent_runner_.reset(new AgentRunner(
-      user_scope_.GetLauncher(), message_queue_manager_.get(),
+      user_scope_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), std::move(agent_runner_page),
       token_provider_factory_.get(), user_intelligence_provider_.get()));
 
@@ -266,7 +274,7 @@ UserRunnerImpl::UserRunnerImpl(
   maxwell_config->url = kMaxwellUrl;
 
   maxwell_.reset(
-      new AppClientBase(user_scope_.GetLauncher(), std::move(maxwell_config)));
+      new AppClientBase(user_scope_->GetLauncher(), std::move(maxwell_config)));
 
   maxwell::UserIntelligenceProviderFactoryPtr maxwell_factory;
   app::ConnectToService(maxwell_->services(), maxwell_factory.NewRequest());
@@ -282,7 +290,7 @@ UserRunnerImpl::UserRunnerImpl(
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(component_scope), intelligence_services_.NewRequest());
 
-  user_scope_.AddService<resolver::Resolver>(
+  user_scope_->AddService<resolver::Resolver>(
       std::bind(&maxwell::UserIntelligenceProvider::GetResolver,
                 user_intelligence_provider_.get(), std::placeholders::_1));
   // End init maxwell.
@@ -292,7 +300,7 @@ UserRunnerImpl::UserRunnerImpl(
       focus_provider_story_provider.NewRequest();
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      &user_scope_, device_id, ledger_.get(), root_page_.get(),
+      user_scope_.get(), device_id, ledger_.get(), root_page_.get(),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
       user_intelligence_provider_.get()));
@@ -307,16 +315,15 @@ UserRunnerImpl::UserRunnerImpl(
   visible_stories_handler_->AddProviderBinding(
       std::move(visible_stories_provider_request));
 
-  user_shell_.primary_service()->Initialize(
+  user_shell_->primary_service()->Initialize(
       user_shell_context_binding_.NewBinding());
-}
 
-UserRunnerImpl::~UserRunnerImpl() = default;
+}
 
 void UserRunnerImpl::Terminate(const TerminateCallback& done) {
   FTL_LOG(INFO) << "UserRunner::Terminate()";
 
-  user_shell_.AppTerminate([this, done] {
+  user_shell_->AppTerminate([this, done] {
     // We teardown |story_provider_impl_| before |agent_runner_| because the
     // modules running in a story might freak out if agents they are connected
     // to go away while they are still running. On the other hand agents are
@@ -324,10 +331,9 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
     story_provider_impl_->Teardown([this, done] {
       agent_runner_->Teardown([this, done] {
         ledger_app_client_->AppTerminate([this, done] {
-          // First delete this, then invoke done, finally post stop.
+          // First invoke done, finally post stop.
           std::unique_ptr<fidl::Binding<UserRunner>> binding =
               std::move(binding_);
-          delete this;
           done();
           mtl::MessageLoop::GetCurrent()->PostQuitTask();
 
@@ -427,7 +433,7 @@ void UserRunnerImpl::SetupLedger() {
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
   ledger_app_client_.reset(new AppClient<ledger::LedgerRepositoryFactory>(
-      user_scope_.GetLauncher(), std::move(ledger_config)));
+      user_scope_->GetLauncher(), std::move(ledger_config)));
   ledger_app_client_->SetAppErrorHandler([] {
     FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly."
                    << "Logging out.";

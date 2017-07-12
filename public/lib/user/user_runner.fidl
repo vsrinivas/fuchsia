@@ -14,24 +14,20 @@ import "apps/mozart/services/views/view_token.fidl";
 // an instance of this service in order to launch and display a |UserRunner| per
 // user.
 [ServiceName="modular.UserRunnerFactory"]  // Created by user_runner application.
-interface UserRunnerFactory {
+interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
-  Create(auth.Account? account,
-         AppConfig user_shell,
-         AppConfig story_shell,
-         auth.TokenProviderFactory token_provider_factory,
-         UserContext user_context,
-         mozart.ViewOwner& view_owner,
-         UserRunner& user_runner);
-};
+  Initialize(auth.Account? account,
+             AppConfig user_shell,
+             AppConfig story_shell,
+             auth.TokenProviderFactory token_provider_factory,
+             UserContext user_context,
+             mozart.ViewOwner& view_owner);
 
-// This interface allows a |UserRunnerFactory|'s client to monitor and control
-// the life cycle of this |UserRunner|.
-interface UserRunner {
   // This signals |UserRunner| to teardown itself. Upon response, the caller may
   // terminate the |UserRunner| process if it hasn't done so already.
   Terminate() => ();
+
 };
 
 // This interface is provided by device runner to |UserRunner|.
