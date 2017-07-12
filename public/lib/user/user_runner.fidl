@@ -21,7 +21,6 @@ interface UserRunnerFactory {
          AppConfig user_shell,
          AppConfig story_shell,
          auth.TokenProviderFactory token_provider_factory,
-         ledger.LedgerRepository ledger_repository,
          UserContext user_context,
          mozart.ViewOwner& view_owner,
          UserRunner& user_runner);
@@ -39,7 +38,4 @@ interface UserRunner {
 interface UserContext {
   // See detailed comments in UserShellContext.Logout().
   Logout();
-
-  // See detailed comments in UserShellContext.LogoutAndResetLedgerState().
-  LogoutAndResetLedgerState();
 };

@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "application/lib/app/application_context.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/src/user_runner/user_runner_impl.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -35,14 +34,12 @@ class UserRunnerApp : UserRunnerFactory {
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     // Deleted in UserRunnerImpl::Terminate().
     new UserRunnerImpl(application_context_->environment(), std::move(account),
                        std::move(user_shell), std::move(story_shell),
-                       std::move(ledger_repository),
                        std::move(token_provider_factory),
                        std::move(user_context), std::move(view_owner_request),
                        std::move(user_runner_request));

@@ -24,17 +24,12 @@ UserControllerImpl::UserControllerImpl(
     const AppConfig& story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
-    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserController> user_controller_request,
-    std::function<void()> reset_ledger_callback,
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
-      reset_ledger_callback_(std::move(reset_ledger_callback)),
       done_(done) {
-  FTL_DCHECK(reset_ledger_callback_);
-
   // 1. Launch UserRunner in the current environment.
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kUserRunnerUri;
@@ -48,7 +43,7 @@ UserControllerImpl::UserControllerImpl(
   app::ConnectToService(services.get(), user_runner_factory.NewRequest());
   user_runner_factory->Create(
       std::move(account), std::move(user_shell), story_shell.Clone(),
-      std::move(token_provider_factory), std::move(ledger_repository),
+      std::move(token_provider_factory),
       user_context_binding_.NewBinding(), std::move(view_owner_request),
       user_runner_.NewRequest());
 }
@@ -88,13 +83,6 @@ void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
 void UserControllerImpl::Logout() {
   FTL_LOG(INFO) << "UserContext::Logout()";
   Logout([] {});
-}
-
-// |UserContext|
-void UserControllerImpl::LogoutAndResetLedgerState() {
-  Logout([this] {
-    reset_ledger_callback_();
-  });
 }
 
 }  // namespace modular

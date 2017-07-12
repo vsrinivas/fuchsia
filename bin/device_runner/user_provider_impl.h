@@ -6,7 +6,6 @@
 #define APPS_MODULAR_SRC_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
 #include "application/lib/app/application_context.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
@@ -24,7 +23,6 @@ class UserProviderImpl : UserProvider {
   UserProviderImpl(std::shared_ptr<app::ApplicationContext> app_context,
                    const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
-                   ledger::LedgerRepositoryFactory* ledger_repository_factory,
                    auth::AccountProvider* account_provider);
 
   void Connect(fidl::InterfaceRequest<UserProvider> request);
@@ -52,7 +50,6 @@ class UserProviderImpl : UserProvider {
   bool Parse(const std::string& serialized_users);
 
   void LoginInternal(auth::AccountPtr account,
-                     const std::string& local_ledger_path,
                      UserLoginParamsPtr user_login_params);
 
   fidl::BindingSet<UserProvider> bindings_;
@@ -60,7 +57,6 @@ class UserProviderImpl : UserProvider {
   std::shared_ptr<app::ApplicationContext> app_context_;
   const AppConfig& default_user_shell_;  // Neither owned nor copied.
   const AppConfig& story_shell_;         // Neither owned nor copied.
-  ledger::LedgerRepositoryFactory* const ledger_repository_factory_;
   auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;

@@ -7,7 +7,6 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/auth/account/account.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
@@ -42,10 +41,8 @@ class UserControllerImpl : UserController, UserContext {
       const AppConfig& story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
-      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserController> user_controller,
-      std::function<void()> reset_ledger_callback,
       DoneCallback done);
 
   // This will effectively tear down the entire instance by calling |done|.
@@ -59,9 +56,6 @@ class UserControllerImpl : UserController, UserContext {
   // |UserContext|
   void Logout() override;
 
-  // |UserContext|
-  void LogoutAndResetLedgerState() override;
-
   std::unique_ptr<Scope> user_runner_scope_;
   app::ApplicationControllerPtr user_runner_controller_;
   UserRunnerPtr user_runner_;
@@ -72,7 +66,6 @@ class UserControllerImpl : UserController, UserContext {
   fidl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
 
   std::vector<LogoutCallback> logout_response_callbacks_;
-  const std::function<void()> reset_ledger_callback_;
   DoneCallback done_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserControllerImpl);

@@ -44,16 +44,7 @@ void AppClient<auth::AccountProvider>::ServiceTerminate(
   service_.set_connection_error_handler(done);
 }
 
-template <>
-void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
-    const std::function<void()>& done) {
-  service_.set_connection_error_handler(done);
-}
-
 namespace {
-
-constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
-constexpr char kLedgerNoMinfsWaitFlag[] = "--no_minfs_wait";
 
 class Settings {
  public:
@@ -219,23 +210,9 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     token_manager_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
 
-    // 4. Start the ledger.
-    AppConfigPtr ledger_config = AppConfig::New();
-    ledger_config->url = kLedgerAppUrl;
-    ledger_config->args = fidl::Array<fidl::String>::New(1);
-    ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-    ledger_.reset(new AppClient<ledger::LedgerRepositoryFactory>(
-        app_context_->launcher().get(), std::move(ledger_config)));
-    ledger_->SetAppErrorHandler([] {
-      FTL_CHECK(false) << "Ledger seems to have crashed unexpectedly. This is "
-                       << "an un-recoverable state and machine needs to be "
-                       << "restarted. Please file a bug!";
-    });
-
-    // 5. Setup user provider.
+    // 4. Setup user provider.
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
         app_context_, settings_.user_shell, settings_.story_shell,
-        ledger_->primary_service().get(),
         token_manager_->primary_service().get());
   }
 
@@ -256,15 +233,12 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
       FTL_LOG(INFO) << "- UserProvider down";
       token_manager_->AppTerminate([this] {
         FTL_LOG(INFO) << "- AuthProvider down";
-        ledger_->AppTerminate([this] {
-          FTL_LOG(INFO) << "- Ledger down";
           device_shell_->AppTerminate([this] {
             FTL_LOG(INFO) << "- DeviceShell down";
             mtl::MessageLoop::GetCurrent()->PostQuitTask();
           });
         });
       });
-    });
   }
 
   // |AccountProviderContext|
@@ -286,7 +260,6 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
   std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
   std::unique_ptr<AppClient<DeviceShell>> device_shell_;
-  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>> ledger_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };

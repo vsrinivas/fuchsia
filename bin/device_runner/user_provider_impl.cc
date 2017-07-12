@@ -15,18 +15,7 @@ namespace modular {
 
 namespace {
 
-// Hard-coded communal Ledger instance.
-const char kFirebaseServerId[] = "fuchsia-ledger";
-const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
-
-// TODO(alhaad): This is also defined in device_runner.cc. Reconcile!
-constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
-constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v5.db";
-
-std::string LedgerRepositoryPath(const std::string& account_id) {
-  return kLedgerDataBaseDir + account_id;
-}
 
 auth::AccountPtr Convert(const UserStorage* user) {
   FTL_DCHECK(user);
@@ -60,25 +49,16 @@ std::string GetRandomId() {
   return std::to_string(random_number);
 }
 
-ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
-  auto firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = kFirebaseServerId;
-  firebase_config->api_key = kFirebaseApiKey;
-  return firebase_config;
-}
-
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
     const AppConfig& default_user_shell,
     const AppConfig& story_shell,
-    ledger::LedgerRepositoryFactory* const ledger_repository_factory,
     auth::AccountProvider* const account_provider)
     : app_context_(app_context),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
-      ledger_repository_factory_(ledger_repository_factory),
       account_provider_(account_provider) {
   // There might not be a file of users persisted. If config file doesn't
   // exist, move forward with no previous users.
@@ -128,13 +108,10 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
 
 void UserProviderImpl::Login(UserLoginParamsPtr params) {
   // If requested, run in incognito mode.
-  // TODO(alhaad): Revisit clean-up of local ledger state for incognito mode.
+  // TODO(alhaad): Revisit clean-up of local state for incognito mode.
   if (params->account_id.is_null() || params->account_id == "") {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
-    // When running in incogito mode, we generate a random number. This number
-    // serves as account_id and the filename for ledger repository.
-    LoginInternal(nullptr /* account */, LedgerRepositoryPath(GetRandomId()),
-                  std::move(params));
+    LoginInternal(nullptr /* account */, std::move(params));
     return;
   }
 
@@ -157,9 +134,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     return;
   }
 
-  std::string ledger_repository_path = LedgerRepositoryPath(params->account_id);
   FTL_LOG(INFO) << "UserProvider::Login() account: " << params->account_id;
-  LoginInternal(Convert(found_user), ledger_repository_path, std::move(params));
+  LoginInternal(Convert(found_user), std::move(params));
 }
 
 void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
@@ -247,9 +223,8 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
   std::vector<flatbuffers::Offset<modular::UserStorage>> users;
   for (const auto* user : *(users_storage_->users())) {
     if (user->id()->str() == account_id) {
-      // Delete the local ledger repository for this user too.
-      std::string user_id = user->display_name()->str();
-      files::DeletePath(LedgerRepositoryPath(account_id), true);
+      // TODO(alhaad): We need to delete the local ledger data for a user who
+      // has been removed. Re-visit this when sandboxing the user runner.
       continue;
     }
 
@@ -272,28 +247,8 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
   }
 }
 
-void UserProviderImpl::ResetUserLedgerState(
-    const fidl::String& account_id) {
-  // Get token provider factory for this user.
-  auth::TokenProviderFactoryPtr token_provider_factory;
-  account_provider_->GetTokenProviderFactory(
-      account_id, token_provider_factory.NewRequest());
-
-  // Get a token provider instance to pass to ledger.
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
-  token_provider_factory->GetTokenProvider(
-      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
-
-  auto firebase_config = GetLedgerFirebaseConfig();
-  ledger_repository_factory_->EraseRepository(
-      LedgerRepositoryPath(account_id),
-      std::move(firebase_config),
-      std::move(ledger_token_provider_for_erase),
-      [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "EraseRepository failed: " << status;
-        }
-      });
+void UserProviderImpl::ResetUserLedgerState(const fidl::String& account_id) {
+  // TODO(alhaad): See FW-227.
 }
 
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
@@ -331,7 +286,6 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 }
 
 void UserProviderImpl::LoginInternal(auth::AccountPtr account,
-                                     const std::string& local_ledger_path,
                                      UserLoginParamsPtr params) {
   // Get token provider factory for this user.
   auth::TokenProviderFactoryPtr token_provider_factory;
@@ -339,49 +293,14 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
       account.is_null() ? GetRandomId() : account->id.get(),
       token_provider_factory.NewRequest());
 
-  // Get a token provider instance to pass to ledger.
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
-  token_provider_factory->GetTokenProvider(kLedgerAppUrl,
-                                           ledger_token_provider.NewRequest());
-
-  ledger::FirebaseConfigPtr firebase_config;
-  if (account) {
-    firebase_config = GetLedgerFirebaseConfig();
-  }
-  fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
-  ledger_repository_factory_->GetRepository(
-      local_ledger_path, std::move(firebase_config),
-      std::move(ledger_token_provider), ledger_repository.NewRequest(),
-      [](ledger::Status status) {
-        FTL_DCHECK(status == ledger::Status::OK)
-            << "GetRepository failed: " << status;
-      });
-
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
-  token_provider_factory->GetTokenProvider(
-      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
   auto user_shell = params->user_shell_config.is_null()
                         ? default_user_shell_.Clone()
                         : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), std::move(account),
-      std::move(ledger_repository), std::move(params->view_owner),
-      std::move(params->user_controller), ftl::MakeCopyable([
-        this, local_ledger_path,
-        ledger_token_provider_for_erase =
-            std::move(ledger_token_provider_for_erase)
-      ]() mutable {
-        auto firebase_config = GetLedgerFirebaseConfig();
-        ledger_repository_factory_->EraseRepository(
-            local_ledger_path, std::move(firebase_config),
-            std::move(ledger_token_provider_for_erase),
-            [](ledger::Status status) {
-              if (status != ledger::Status::OK) {
-                FTL_LOG(ERROR) << "EraseRepository failed: " << status;
-              }
-            });
-      }),
+      std::move(params->view_owner),
+      std::move(params->user_controller),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });
   user_controllers_[controller.get()] = std::move(controller);
 }

@@ -44,7 +44,7 @@ class AgentRunner : AgentProvider, PageClient {
       MessageQueueManager* message_queue_manager,
       ledger::LedgerRepository* ledger_repository,
       ledger::PagePtr page,
-      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      auth::TokenProviderFactory* const token_provider_factory,
       maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
 
@@ -168,7 +168,7 @@ class AgentRunner : AgentProvider, PageClient {
   MessageQueueManager* const message_queue_manager_;
   ledger::LedgerRepository* const ledger_repository_;
   ledger::PagePtr page_;
-  auth::TokenProviderFactoryPtr token_provider_factory_;
+  auth::TokenProviderFactory* const token_provider_factory_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
 
   fidl::BindingSet<AgentProvider> agent_provider_bindings_;

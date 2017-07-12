@@ -51,7 +51,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
       auth::AccountPtr account,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
-      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -86,10 +85,15 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
+  void SetupLedger();
+
   std::unique_ptr<fidl::Binding<UserRunner>> binding_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
+  auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;
+  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>>
+      ledger_app_client_;
   ledger::LedgerRepositoryPtr ledger_repository_;
   ledger::LedgerPtr ledger_;
   ledger::PagePtr root_page_;

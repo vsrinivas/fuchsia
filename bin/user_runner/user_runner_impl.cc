@@ -39,6 +39,15 @@
 
 namespace modular {
 
+
+// Template specializations for fidl services that don't have a Terminate()
+// method.
+template <>
+void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
+    const std::function<void()>& done) {
+  service_.set_connection_error_handler(done);
+}
+
 namespace {
 
 constexpr char kAppId[] = "modular_user_runner";
@@ -47,6 +56,14 @@ constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/framework/message-queues/v1/";
 constexpr char kUserShellLinkName[] = "user-shell-link";
+
+constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
+constexpr char kLedgerNoMinfsWaitFlag[] = "--no_minfs_wait";
+constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
+
+// Hard-coded communal Ledger instance.
+const char kFirebaseServerId[] = "fuchsia-ledger";
+const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -75,6 +92,28 @@ std::string LedgerStatusToString(ledger::Status status) {
   }
 };
 
+ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
+  auto firebase_config = ledger::FirebaseConfig::New();
+  firebase_config->server_id = kFirebaseServerId;
+  firebase_config->api_key = kFirebaseApiKey;
+  return firebase_config;
+}
+
+std::string GetLedgerPath(const auth::AccountPtr& account) {
+  if (!account.is_null()) {
+    return kLedgerDataBaseDir + std::string(account->id);
+  }
+
+  // Generate a random number to be used in this case.
+  uint32_t random_number;
+  size_t random_size;
+  mx_status_t status = mx_cprng_draw(&random_number, sizeof random_number, &random_size);
+  FTL_CHECK(status == MX_OK);
+  FTL_CHECK(sizeof random_number == random_size);
+
+  return kLedgerDataBaseDir + std::string("GUEST/") + std::to_string(random_number);
+}
+
 std::string GetAccountId(const auth::AccountPtr& account) {
   return account.is_null() ? "GUEST" : account->id;
 }
@@ -86,7 +125,6 @@ UserRunnerImpl::UserRunnerImpl(
     auth::AccountPtr account,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
-    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -94,52 +132,21 @@ UserRunnerImpl::UserRunnerImpl(
     : binding_(
           new fidl::Binding<UserRunner>(this, std::move(user_runner_request))),
       user_shell_context_binding_(this),
+      token_provider_factory_(auth::TokenProviderFactoryPtr::Create(
+          std::move(token_provider_factory))),
       user_context_(UserContextPtr::Create(std::move(user_context))),
-      ledger_repository_(
-          ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
       user_scope_(application_environment,
                   std::string(kUserScopeLabelPrefix) + GetAccountId(account)),
       account_(std::move(account)),
       user_shell_(user_scope_.GetLauncher(), std::move(user_shell)) {
   binding_->set_connection_error_handler([this] { Terminate([] {}); });
 
-  // If ledger state is erased from underneath us (happens when the cloud store
-  // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_connection_error_handler([this] {
-    Logout();
-  });
+  SetupLedger();
 
   // Show user shell.
-
   mozart::ViewProviderPtr view_provider;
   ConnectToService(user_shell_.services(), view_provider.NewRequest());
   view_provider->CreateView(std::move(view_owner_request), nullptr);
-
-  // Open Ledger.
-
-  ledger_repository_->GetLedger(to_array(kAppId), ledger_.NewRequest(),
-                                [](ledger::Status status) {
-                                  FTL_CHECK(status == ledger::Status::OK)
-                                      << "LedgerRepository.GetLedger() failed: "
-                                      << LedgerStatusToString(status);
-                                });
-
-  // This must be the first call after GetLedger, otherwise the Ledger
-  // starts with one reconciliation strategy, then switches to another.
-  ledger_->SetConflictResolverFactory(
-      conflict_resolver_.AddBinding(), [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
-                         << LedgerStatusToString(status);
-        }
-      });
-
-  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
-                     << LedgerStatusToString(status);
-    }
-  });
 
   // DeviceMap service
   std::string device_id = LoadDeviceID(GetAccountId(account_));
@@ -229,7 +236,7 @@ UserRunnerImpl::UserRunnerImpl(
   agent_runner_.reset(new AgentRunner(
       user_scope_.GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), std::move(agent_runner_page),
-      std::move(token_provider_factory), user_intelligence_provider_.get()));
+      token_provider_factory_.get(), user_intelligence_provider_.get()));
 
   // HACK(anwilson): Start some agents directly by user runner that are needed
   // to keep some dimensions of context updated. They will move
@@ -316,14 +323,16 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
     // meant to outlive story lifetimes.
     story_provider_impl_->Teardown([this, done] {
       agent_runner_->Teardown([this, done] {
-        // First delete this, then invoke done, finally post stop.
-        std::unique_ptr<fidl::Binding<UserRunner>> binding =
-            std::move(binding_);
-        delete this;
-        done();
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        ledger_app_client_->AppTerminate([this, done] {
+          // First delete this, then invoke done, finally post stop.
+          std::unique_ptr<fidl::Binding<UserRunner>> binding =
+              std::move(binding_);
+          delete this;
+          done();
+          mtl::MessageLoop::GetCurrent()->PostQuitTask();
 
-        FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
+          FTL_LOG(INFO) << "UserRunner::Terminate(): done";
+        });
       });
     });
   });
@@ -396,7 +405,83 @@ void UserRunnerImpl::Logout() {
 }
 
 void UserRunnerImpl::LogoutAndResetLedgerState() {
-  user_context_->LogoutAndResetLedgerState();
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
+  token_provider_factory_->GetTokenProvider(
+      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
+  auto firebase_config = GetLedgerFirebaseConfig();
+  ledger_app_client_->primary_service()->EraseRepository(
+      GetLedgerPath(account_), std::move(firebase_config),
+      std::move(ledger_token_provider_for_erase),
+      [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "EraseRepository failed: " << status;
+        }
+        user_context_->Logout();
+      });
+}
+
+void UserRunnerImpl::SetupLedger() {
+  // Start the ledger.
+  AppConfigPtr ledger_config = AppConfig::New();
+  ledger_config->url = kLedgerAppUrl;
+  ledger_config->args = fidl::Array<fidl::String>::New(1);
+  ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
+  ledger_app_client_.reset(new AppClient<ledger::LedgerRepositoryFactory>(
+      user_scope_.GetLauncher(), std::move(ledger_config)));
+  ledger_app_client_->SetAppErrorHandler([] {
+    FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly."
+                   << "Logging out.";
+  });
+
+  // Get a token provider instance to pass to ledger.
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
+  token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
+                                           ledger_token_provider.NewRequest());
+
+  ledger::FirebaseConfigPtr firebase_config;
+  if (account_) {
+    firebase_config = GetLedgerFirebaseConfig();
+  }
+
+  ledger_app_client_->primary_service()->GetRepository(
+      GetLedgerPath(account_), std::move(firebase_config),
+      std::move(ledger_token_provider), ledger_repository_.NewRequest(),
+      [](ledger::Status status) {
+        FTL_DCHECK(status == ledger::Status::OK)
+            << "GetRepository failed: " << status;
+      });
+
+  // If ledger state is erased from underneath us (happens when the cloud store
+  // is cleared), ledger will close the connection to |ledger_repository_|.
+  ledger_repository_.set_connection_error_handler([this] {
+    Logout();
+  });
+
+  // Open Ledger.
+  ledger_repository_->GetLedger(to_array(kAppId), ledger_.NewRequest(),
+                                [](ledger::Status status) {
+                                  FTL_CHECK(status == ledger::Status::OK)
+                                      << "LedgerRepository.GetLedger() failed: "
+                                      << LedgerStatusToString(status);
+                                });
+
+  // This must be the first call after GetLedger, otherwise the Ledger
+  // starts with one reconciliation strategy, then switches to another.
+  ledger_->SetConflictResolverFactory(
+      conflict_resolver_.AddBinding(), [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
+                         << LedgerStatusToString(status);
+        }
+      });
+
+  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
+                     << LedgerStatusToString(status);
+    }
+  });
+
 }
 
 }  // namespace modular
