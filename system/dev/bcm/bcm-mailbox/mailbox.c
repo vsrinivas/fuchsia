@@ -13,7 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/display.h>
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform-device.h>
 
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
@@ -314,8 +314,8 @@ static pbus_interface_ops_t mailbox_bus_ops = {
 };
 
 static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
-    platform_bus_protocol_t pbus;
-    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_BUS, &pbus) != MX_OK) {
+    platform_device_protocol_t pdev;
+    if (device_get_protocol(parent, MX_PROTOCOL_PLATFORM_DEV, &pdev) != MX_OK) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -323,7 +323,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     uintptr_t mmio_base;
     size_t mmio_size;
     mx_handle_t mmio_handle;
-    mx_status_t status = pbus_map_mmio(&pbus, MAILBOX_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    mx_status_t status = pdev_map_mmio(&pdev, MAILBOX_MMIO, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                        (void **)&mmio_base, &mmio_size, &mmio_handle);
     if (status != MX_OK) {
         printf("mailbox_bind pdev_map_mmio failed %d\n", status);
@@ -356,7 +356,7 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     pbus_interface_t intf;
     intf.ops = &mailbox_bus_ops;
     intf.ctx = NULL;    // TODO(voydanoff) - add mailbox ctx struct
-    pbus_set_interface(&pbus, &intf);
+    pdev_set_interface(&pdev, &intf);
 
     return MX_OK;
 }
@@ -366,7 +366,9 @@ static mx_driver_ops_t bcm_mailbox_driver_ops = {
     .bind = mailbox_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_BUS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
+MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_BROADCOMM_RPI3),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),
 MAGENTA_DRIVER_END(bcm_mailbox)

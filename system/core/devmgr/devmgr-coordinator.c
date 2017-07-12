@@ -200,7 +200,6 @@ static device_t misc_device = {
 
 static device_t platform_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV,
-    .protocol_id = MX_PROTOCOL_PLATFORM_BUS,
     .name = "platform",
     .libname = "",
     .args = "platform,,",

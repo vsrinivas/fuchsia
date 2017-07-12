@@ -65,6 +65,10 @@ mx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
     return platform_bus_publish_devices(bus);
 }
 
+static mx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+
 static mx_status_t platform_bus_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
                                          void** vaddr, size_t* size, mx_handle_t* out_handle) {
     platform_bus_t* bus = ctx;
@@ -76,8 +80,9 @@ static mx_status_t platform_bus_map_interrupt(void* ctx, uint32_t index, mx_hand
     return platform_map_interrupt(&bus->resources, index, out_handle);
 }
 
-static platform_bus_protocol_ops_t platform_bus_proto_ops = {
+static platform_device_protocol_ops_t platform_bus_proto_ops = {
     .set_interface = platform_bus_set_interface,
+    .get_protocol = platform_bus_get_protocol,
     .map_mmio = platform_bus_map_mmio,
     .map_interrupt = platform_bus_map_interrupt,
 };
@@ -187,6 +192,7 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     mx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, bus->vid},
         {BIND_PLATFORM_DEV_PID, 0, bus->pid},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_BUS_IMPLEMENTOR_DID},
     };
 
     device_add_args_t add_args = {
@@ -194,7 +200,7 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
         .name = "platform-bus",
         .ctx = bus,
         .ops = &platform_bus_proto,
-        .proto_id = MX_PROTOCOL_PLATFORM_BUS,
+        .proto_id = MX_PROTOCOL_PLATFORM_DEV,
         .proto_ops = &platform_bus_proto_ops,
         .props = props,
         .prop_count = countof(props),

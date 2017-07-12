@@ -99,8 +99,10 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
         ret = bcm_bus_set_framebuffer(&display->bus_proto, phys + offset);
-        if (ret != MX_OK)
+        if (ret != MX_OK) {
+            printf("bcm_bus_set_framebuffer failed %d\n", ret);
             return ret;
+        }
 
         iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
         iotxn_copyfrom(txn, &display->fb_desc, sizeof(bcm_fb_desc_t), offset);
@@ -119,7 +121,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
         memset(display->framebuffer, 0x00, display->fb_desc.fb_size);
     }
     memcpy(fb_desc, &display->fb_desc, sizeof(bcm_fb_desc_t));
-    return sizeof(bcm_fb_desc_t);
+    return MX_OK;
 }
 
 mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
@@ -158,7 +160,10 @@ mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
     framebuff_descriptor.fb_p = 0;
     framebuff_descriptor.fb_size = 0;
 
-    bcm_vc_get_framebuffer(display, &framebuff_descriptor);
+    if (bcm_vc_get_framebuffer(display, &framebuff_descriptor) != MX_OK) {
+        free(display);
+        return status;
+    }
 
     display->disp_info.format = MX_PIXEL_FORMAT_ARGB_8888;
     display->disp_info.width = 800;

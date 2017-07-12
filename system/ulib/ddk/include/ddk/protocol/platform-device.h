@@ -9,7 +9,22 @@
 
 __BEGIN_CDECLS;
 
+// DID reserved for the platform bus implementation driver
+#define PDEV_BUS_IMPLEMENTOR_DID    0
+
+// interface registered by the platform bus implementation driver
 typedef struct {
+    mx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* out);
+    // TODO(voydanoff) Add APIs for GPIOs, clocks I2C, etc
+} pbus_interface_ops_t;
+
+typedef struct {
+    pbus_interface_ops_t* ops;
+    void* ctx;
+} pbus_interface_t;
+
+typedef struct {
+    mx_status_t (*set_interface)(void* ctx, pbus_interface_t* interface);
     mx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* out);
     mx_status_t (*map_mmio)(void* ctx, uint32_t index, uint32_t cache_policy, void** vaddr,
                             size_t* size, mx_handle_t* out_handle);
@@ -21,6 +36,11 @@ typedef struct {
     platform_device_protocol_ops_t* ops;
     void* ctx;
 } platform_device_protocol_t;
+
+static inline mx_status_t pdev_set_interface(platform_device_protocol_t* pdev,
+                                             pbus_interface_t* interface) {
+    return pdev->ops->set_interface(pdev->ctx, interface);
+}
 
 // Requests a given protocol from the platform bus implementation
 static inline mx_status_t pdev_get_protocol(platform_device_protocol_t* pdev, uint32_t proto_id,

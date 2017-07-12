@@ -12,6 +12,10 @@
 
 #include "platform-bus.h"
 
+mx_status_t platform_dev_set_interface(void* ctx, pbus_interface_t* interface) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+
 static mx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     platform_dev_t* pdev = ctx;
     platform_bus_t* bus = pdev->bus;
@@ -34,6 +38,7 @@ static mx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, mx_hand
 }
 
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
+    .set_interface = platform_dev_set_interface,
     .get_protocol = platform_dev_get_protocol,
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
@@ -78,6 +83,10 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
 
     if (!name || !did) {
         printf("platform_bus_publish_device: missing name or did\n");
+        return MX_ERR_INVALID_ARGS;
+    }
+    if (did == PDEV_BUS_IMPLEMENTOR_DID) {
+        printf("platform_bus_publish_device: PDEV_BUS_IMPLEMENTOR_DID not allowed\n");
         return MX_ERR_INVALID_ARGS;
     }
 
