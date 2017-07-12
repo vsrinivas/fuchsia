@@ -31,16 +31,13 @@ UserControllerImpl::UserControllerImpl(
       user_controller_binding_(this, std::move(user_controller_request)),
       done_(done) {
   // 1. Launch UserRunner in the current environment.
-  auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = kUserRunnerUri;
-  app::ServiceProviderPtr services;
-  launch_info->services = services.NewRequest();
-  app_context->launcher()->CreateApplication(
-      std::move(launch_info), user_runner_controller_.NewRequest());
+  AppConfigPtr user_runner_config = AppConfig::New();
+  user_runner_config->url = kUserRunnerUri;
+  user_runner_.reset(new AppClient<UserRunner>(app_context->launcher().get(),
+                                               std::move(user_runner_config)));
 
   // 2. Initialize the UserRunner service.
-  app::ConnectToService(services.get(), user_runner_.NewRequest());
-  user_runner_->Initialize(
+  user_runner_->primary_service()->Initialize(
       std::move(account), std::move(user_shell), story_shell.Clone(),
       std::move(token_provider_factory),
       user_context_binding_.NewBinding(), std::move(view_owner_request));
@@ -58,7 +55,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
   user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
-  user_runner_->Terminate([this] {
+  user_runner_->AppTerminate([this] {
     for (const auto& done : logout_response_callbacks_) {
       done();
     }

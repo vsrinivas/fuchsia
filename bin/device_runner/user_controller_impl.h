@@ -7,6 +7,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
+#include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/auth/account/account.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
@@ -57,8 +58,7 @@ class UserControllerImpl : UserController, UserContext {
   void Logout() override;
 
   std::unique_ptr<Scope> user_runner_scope_;
-  app::ApplicationControllerPtr user_runner_controller_;
-  UserRunnerPtr user_runner_;
+  std::unique_ptr<AppClient<UserRunner>> user_runner_;
 
   fidl::Binding<UserContext> user_context_binding_;
   fidl::Binding<UserController> user_controller_binding_;
