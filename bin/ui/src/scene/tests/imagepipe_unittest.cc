@@ -103,12 +103,42 @@ constexpr ftl::TimeDelta kPumpMessageLoopDuration =
 
 // Present two frames on the ImagePipe, making sure that acquire fence is being
 // listened to and release fences are signalled.
-TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
+TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
   ImagePipePtr image_pipe =
       ftl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
                                                            this);
 
   uint32_t imageId1 = 0;
+  // Create a checkerboard image and copy it into a vmo.
+  {
+    size_t image_dim = 100;
+    auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
+
+    auto image_info = mozart2::ImageInfo::New();
+    image_info->pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
+    image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
+    image_info->width = image_dim;
+    image_info->height = image_dim;
+    image_info->stride = image_dim;
+
+    // Add the image to the image pipe with ImagePipe.AddImage().
+    image_pipe->AddImage(imageId1, std::move(image_info),
+                         CopyVmo(checkerboard->vmo()),
+                         mozart2::MemoryType::HOST_MEMORY, 0);
+
+    EXPECT_EQ("ImagePipe::AddImage: Image can not be assigned an ID of 0.",
+              reported_errors_.back());
+  }
+}
+
+// Present two frames on the ImagePipe, making sure that acquire fence is
+// being listened to and release fences are signalled.
+TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
+  ImagePipePtr image_pipe =
+      ftl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+                                                           this);
+
+  uint32_t imageId1 = 1;
 
   // Create a checkerboard image and copy it into a vmo.
   {
@@ -146,13 +176,18 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   acquire_fence1.signal(0u, kFenceSignalled);
 
   // Run until image1 is presented.
-  RUN_MESSAGE_LOOP_UNTIL(image_pipe->GetEscherImage());
+  for (int i = 0; !image_pipe->GetEscherImage() && i < 400; i++) {
+    image_pipe->Update(0u, 0u);
+    ::mozart::test::RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10));
+  }
+
+  ASSERT_TRUE(image_pipe->GetEscherImage());
   escher::ImagePtr image1 = image_pipe->GetEscherImage();
 
   // Image should now be presented.
   ASSERT_TRUE(image1);
 
-  uint32_t imageId2 = 1;
+  uint32_t imageId2 = 2;
   // Create a new Image with a gradient.
   {
     size_t image_dim = 100;

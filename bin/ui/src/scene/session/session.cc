@@ -798,9 +798,6 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
              presentation_time) {
     needs_render = scheduled_image_pipe_updates_.front().image_pipe->Update(
         presentation_time, presentation_interval);
-    // TODO(MZ-171): if you comment this next line out, this becomes an infinite
-    // loop.  For some reason, this is not caught by unit tests.  We should
-    // improve the tests so that the catch this bug (and hopefully others).
     scheduled_image_pipe_updates_.pop();
   }
 

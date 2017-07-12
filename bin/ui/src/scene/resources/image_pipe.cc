@@ -32,6 +32,12 @@ void ImagePipe::AddImage(uint32_t image_id,
                          mx::vmo vmo,
                          mozart2::MemoryType memory_type,
                          uint64_t memory_offset) {
+  if (image_id == 0) {
+    session()->error_reporter()->ERROR()
+        << "ImagePipe::AddImage: Image can not be assigned an ID of 0.";
+    CloseConnectionAndCleanUp();
+    return;
+  }
   vk::Device device = session()->context()->vk_device();
   MemoryPtr memory;
   switch (memory_type) {
@@ -46,7 +52,7 @@ void ImagePipe::AddImage(uint32_t image_id,
   }
   if (!memory) {
     session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage: Unable to create a memory object";
+        << "ImagePipe::AddImage: Unable to create a memory object.";
     CloseConnectionAndCleanUp();
     return;
   }
@@ -142,7 +148,9 @@ bool ImagePipe::Update(uint64_t presentation_time,
     auto info = mozart2::PresentationInfo::New();
     info->presentation_time = presentation_time;
     info->presentation_interval = presentation_interval;
-    frames_.front().present_image_callback(std::move(info));
+    if (frames_.front().present_image_callback) {
+      frames_.front().present_image_callback(std::move(info));
+    }
     frames_.pop_front();
   }
 
