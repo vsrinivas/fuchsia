@@ -31,6 +31,8 @@ source_set("common") {
   sources = [
     "acquire_fence.cc",
     "acquire_fence.h",
+    "acquire_fence_set.cc",
+    "acquire_fence_set.h",
     "display.cc",
     "display.h",
     "fence.h",

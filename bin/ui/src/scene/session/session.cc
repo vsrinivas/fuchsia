@@ -738,10 +738,18 @@ void Session::ScheduleUpdate(
     ::fidl::Array<mx::event> release_events,
     const mozart2::Session::PresentCallback& callback) {
   if (is_valid()) {
-    scheduled_updates_.push({presentation_time, std::move(ops),
-                             std::move(acquire_fences),
-                             std::move(release_events), callback});
-    context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+    auto acquire_fence_set =
+        std::make_unique<AcquireFenceSet>(std::move(acquire_fences));
+    // TODO: Consider calling ScheduleSessionUpdate immediately if
+    // acquire_fence_set is already ready (which is the case if there are zero
+    // acquire fences).
+    acquire_fence_set->WaitReadyAsync([this, presentation_time] {
+      context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+    });
+
+    scheduled_updates_.push(Update{presentation_time, std::move(ops),
+                                   std::move(acquire_fence_set),
+                                   std::move(release_events), callback});
   }
 }
 
@@ -759,7 +767,8 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
   bool needs_render = false;
   while (!scheduled_updates_.empty() &&
-         scheduled_updates_.front().presentation_time <= presentation_time) {
+         scheduled_updates_.front().presentation_time <= presentation_time &&
+         scheduled_updates_.front().acquire_fences->ready()) {
     if (ApplyUpdate(&scheduled_updates_.front())) {
       needs_render = true;
       auto info = mozart2::PresentationInfo::New();

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/src/scene/acquire_fence_set.h"
 #include "apps/mozart/src/scene/resources/memory.h"
 #include "apps/mozart/src/scene/resources/resource_map.h"
 #include "apps/mozart/src/scene/session/session_context.h"
@@ -199,7 +200,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
     uint64_t presentation_time;
 
     ::fidl::Array<mozart2::OpPtr> ops;
-    ::fidl::Array<mx::event> acquire_fences;
+    std::unique_ptr<AcquireFenceSet> acquire_fences;
     ::fidl::Array<mx::event> release_fences;
 
     // Callback to report when the update has been applied in response to

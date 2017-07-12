@@ -239,6 +239,71 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   EXPECT_TRUE(IsFenceSignalled(release_fence2));
 }
 
+TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
+  // Tests creating a session, and calling Present with an acquire and a release
+  // fence. The release fences should be signalled only after a subsequent
+  // Present, and not until the acquire fence has been signalled.
+  EXPECT_EQ(0u, manager_impl_->session_context()->GetSessionCount());
+
+  mozart2::SessionPtr session_host;
+  manager_->CreateSession(session_host.NewRequest(), nullptr);
+
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
+                         1);
+  EXPECT_EQ(1u, manager_impl_->session_context()->GetSessionCount());
+  auto handler = static_cast<SessionHandlerForTest*>(
+      manager_impl_->session_context()->FindSession(1));
+
+  mozart2::SessionPtr session;
+  session_host->Connect(session.NewRequest(), nullptr);
+  RUN_MESSAGE_LOOP_UNTIL(handler->connect_count() == 1);
+  EXPECT_EQ(0u, handler->enqueue_count());
+
+  {
+    ::fidl::Array<mozart2::OpPtr> ops;
+    ops.push_back(NewCreateCircleOp(1, 50.f));
+    ops.push_back(NewCreateCircleOp(2, 25.f));
+    session->Enqueue(std::move(ops));
+  }
+  RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
+  EXPECT_EQ(1u, handler->enqueue_count());
+
+  // Create acquire and release fences
+  mx::event acquire_fence;
+  ASSERT_EQ(MX_OK, mx::event::create(0, &acquire_fence));
+  mx::event release_fence;
+  ASSERT_EQ(MX_OK, mx::event::create(0, &release_fence));
+
+  ::fidl::Array<mx::event> acquire_fences;
+  acquire_fences.push_back(CopyEvent(acquire_fence));
+
+  ::fidl::Array<mx::event> release_fences;
+  release_fences.push_back(CopyEvent(release_fence));
+
+  // Call Present with both the acquire and release fences.
+  session->Present(0u, std::move(acquire_fences), std::move(release_fences),
+                   [](mozart2::PresentationInfoPtr info) {});
+  RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
+  EXPECT_EQ(1u, handler->present_count());
+
+  EXPECT_FALSE(IsFenceSignalled(release_fence));
+
+  // Call Present again with no fences.
+  session->Present(0u, ::fidl::Array<mx::event>::New(0),
+                   ::fidl::Array<mx::event>::New(0),
+                   [](mozart2::PresentationInfoPtr info) {});
+  RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
+
+  EXPECT_FALSE(IsFenceSignalled(release_fence));
+
+  // Now signal the acquire fence.
+  acquire_fence.signal(0u, kFenceSignalled);
+
+  // Now expect that the first frame was presented, and its release fence was
+  // signalled.
+  RUN_MESSAGE_LOOP_UNTIL(IsFenceSignalled(release_fence));
+}
+
 }  // namespace test
 }  // namespace scene
 }  // namespace mozart

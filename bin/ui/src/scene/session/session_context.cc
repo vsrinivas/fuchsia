@@ -75,7 +75,13 @@ void SessionContext::OnImportResolvedForResource(
 
 void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
                                            ftl::RefPtr<Session> session) {
-  updatable_sessions_.push({presentation_time, std::move(session)});
+  if (session->is_valid()) {
+    updatable_sessions_.push({presentation_time, std::move(session)});
+    ScheduleUpdate(presentation_time);
+  }
+}
+
+void SessionContext::ScheduleUpdate(uint64_t presentation_time) {
   if (frame_scheduler_) {
     frame_scheduler_->RequestFrame(presentation_time);
   } else {
@@ -84,10 +90,6 @@ void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
         << "No FrameScheduler available; applying update immediately";
     OnPrepareFrame(presentation_time, 0);
   }
-}
-
-void SessionContext::ScheduleUpdate(uint64_t presentation_time) {
-  ScheduleSessionUpdate(presentation_time, nullptr);
 }
 
 void SessionContext::CreateSession(

@@ -71,6 +71,9 @@ void AcquireFence::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(pending & kFenceSignalledOrClosed);
   FTL_DCHECK(ready_callback_);
 
+  // TODO: Handle the case where there is an error condition, probably want to
+  // close the session.
+
   ready_ = true;
   ftl::Closure callback = std::move(ready_callback_);
   ClearHandler();
