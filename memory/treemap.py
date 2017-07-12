@@ -288,11 +288,18 @@ def dump_html_table(node, depth=0, parent_area=None, total_area=None):
         # We're the root node. Dump the headers.
         lines.extend([
                 '<style>',
+                'table#tree {',
+                '    border-collapse: collapse;',
+                '    border-spacing: 0;',
+                '}',
                 'table#tree tr:nth-child(even) {',
                 '    background-color: #eee;',
                 '}',
                 'table#tree tr:nth-child(odd) {',
                 '    background-color: #fff;',
+                '}',
+                'table#tree tr:hover {',
+                '    background-color: #ff8;',
                 '}',
                 'table#tree td {',
                 '    text-align: right;',
