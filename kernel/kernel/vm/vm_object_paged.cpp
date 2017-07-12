@@ -44,6 +44,7 @@ void InitializeVmPage(vm_page_t* p) {
     DEBUG_ASSERT(p->state == VM_PAGE_STATE_ALLOC);
     p->state = VM_PAGE_STATE_OBJECT;
     p->object.pin_count = 0;
+    p->object.contiguous_pin = 0;
 }
 
 } // namespace
@@ -60,6 +61,9 @@ VmObjectPaged::~VmObjectPaged() {
 
     page_list_.ForEveryPage(
             [](const auto p, uint64_t off) {
+                if (p->object.contiguous_pin) {
+                    p->object.pin_count--;
+                }
                 ASSERT(p->object.pin_count == 0);
                 return MX_ERR_NEXT;
             });
@@ -523,6 +527,9 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
     }
 
     DEBUG_ASSERT(count == new_len / PAGE_SIZE);
+    if (count != new_len / PAGE_SIZE) {
+        return MX_ERR_BAD_STATE;
+    }
 
     // allocate count number of pages
     list_node page_list;
@@ -552,6 +559,11 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
 
         auto status = page_list_.AddPage(p, o);
         DEBUG_ASSERT(status == MX_OK);
+
+        // Mark the pages as pinned, so they can't be physically rearranged
+        // underneath us.
+        p->object.pin_count++;
+        p->object.contiguous_pin = true;
 
         if (committed)
             *committed += PAGE_SIZE;
@@ -591,6 +603,9 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* d
     LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 ", page_aliged_len %#" PRIx64 "\n", start, end,
             page_aligned_len);
 
+    // TODO(teisenbe): Allow decommitting of pages pinned by
+    // CommitRangeContiguous
+
     if (AnyPagesPinnedLocked(start, page_aligned_len)) {
         return MX_ERR_BAD_STATE;
     }
@@ -614,6 +629,11 @@ status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
     canary_.Assert();
 
     AutoLock a(&lock_);
+    return PinLocked(offset, len);
+}
+
+status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
+    canary_.Assert();
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))

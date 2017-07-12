@@ -106,6 +106,7 @@ private:
     // internal page list routine
     void AddPageToArray(size_t index, vm_page_t* p);
 
+    status_t PinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
     void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
     // internal check if any pages in a range are pinned
