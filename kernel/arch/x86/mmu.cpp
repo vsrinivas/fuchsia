@@ -21,8 +21,6 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/pmm.h>
 
-#include <bitmap/rle-bitmap.h>
-
 #define LOCAL_TRACE 0
 
 /* Default address width including virtual/physical address.
@@ -1326,9 +1324,7 @@ static status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t
         LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
     }
     aspace->pt_pages = 1;
-    aspace->io_bitmap = nullptr;
     aspace->active_cpus = 0;
-    spin_lock_init(&aspace->io_bitmap_lock);
 
     return MX_OK;
 }
@@ -1357,10 +1353,6 @@ status_t mmu_destroy_aspace(arch_aspace_t* aspace) {
     }
 #endif
 
-    if (aspace->io_bitmap) {
-        delete static_cast<bitmap::RleBitmap*>(aspace->io_bitmap);
-    }
-
     pmm_free_page(paddr_to_vm_page(aspace->pt_phys));
 
     aspace->magic = 0;
@@ -1375,7 +1367,10 @@ static status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
         return mmu_destroy_aspace<PageTable>(aspace);
 }
 
-static void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
+void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace *from, X86ArchVmAspace *to) {
+    arch_aspace_t* old_aspace = from ? &from->aspace_ : nullptr;
+    arch_aspace_t* aspace = to ? &to->aspace_ : nullptr;
+
     mp_cpu_mask_t cpu_bit = 1U << arch_curr_cpu_num();
     if (aspace != nullptr) {
         DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
@@ -1395,18 +1390,12 @@ static void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* as
     }
 
     /* Cleanup io bitmap entries from previous thread */
-    if (old_aspace && old_aspace->io_bitmap) {
-        spin_lock(&old_aspace->io_bitmap_lock);
-        x86_clear_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(old_aspace->io_bitmap));
-        spin_unlock(&old_aspace->io_bitmap_lock);
-    }
+    if (from)
+        x86_clear_tss_io_bitmap(from->io_bitmap());
 
     /* Set the io bitmap for this thread */
-    if (aspace && aspace->io_bitmap) {
-        spin_lock(&aspace->io_bitmap_lock);
-        x86_set_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(aspace->io_bitmap));
-        spin_unlock(&aspace->io_bitmap_lock);
-    }
+    if (to)
+        x86_set_tss_io_bitmap(to->io_bitmap());
 }
 
 template <template <int> class PageTable, typename F>
@@ -1533,9 +1522,4 @@ vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags,
                                   vaddr_t align, size_t size, uint mmu_flags) {
     canary_.Assert();
     return PAGE_ALIGN(base);
-}
-
-void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace *from, X86ArchVmAspace *to) {
-    arch_mmu_context_switch(from ? &from->aspace_ : nullptr,
-                            to ? &to->aspace_ : nullptr);
 }

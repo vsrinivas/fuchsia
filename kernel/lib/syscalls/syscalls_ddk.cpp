@@ -321,7 +321,7 @@ mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len
 
     LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
 
-    return x86_set_io_bitmap(io_addr, len, 1);
+    return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, 1);
 }
 #else
 mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {

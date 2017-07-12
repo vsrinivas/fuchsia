@@ -19,48 +19,93 @@
 #include <malloc.h>
 #include <string.h>
 
-#include <bitmap/rle-bitmap.h>
 #include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
-/* Task used for updating IO permissions on each CPU */
+void x86_reset_tss_io_bitmap(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    tss_t* tss = &x86_get_percpu()->default_tss;
+    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
+
+    bitmap_set(tss_bitmap, 0, IO_BITMAP_BITS);
+}
+
+static void x86_clear_tss_io_bitmap(const bitmap::RleBitmap& bitmap) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    tss_t* tss = &x86_get_percpu()->default_tss;
+
+    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
+    for (const auto& extent : bitmap) {
+        DEBUG_ASSERT(extent.bitoff + extent.bitlen <= IO_BITMAP_BITS);
+        bitmap_set(tss_bitmap, static_cast<int>(extent.bitoff), static_cast<int>(extent.bitlen));
+    }
+}
+
+void x86_clear_tss_io_bitmap(IoBitmap& io_bitmap) {
+    AutoSpinLock guard(io_bitmap.lock_);
+    if (!io_bitmap.bitmap_)
+        return;
+
+    x86_clear_tss_io_bitmap(*io_bitmap.bitmap_);
+}
+
+static void x86_set_tss_io_bitmap(const bitmap::RleBitmap& bitmap) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    tss_t* tss = &x86_get_percpu()->default_tss;
+
+    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
+    for (const auto& extent : bitmap) {
+        DEBUG_ASSERT(extent.bitoff + extent.bitlen <= IO_BITMAP_BITS);
+        bitmap_clear(tss_bitmap, static_cast<int>(extent.bitoff), static_cast<int>(extent.bitlen));
+    }
+}
+
+void x86_set_tss_io_bitmap(IoBitmap& io_bitmap) {
+    AutoSpinLock guard(io_bitmap.lock_);
+    if (!io_bitmap.bitmap_)
+        return;
+
+    x86_set_tss_io_bitmap(*io_bitmap.bitmap_);
+}
+
+IoBitmap& IoBitmap::GetCurrent() {
+    VmAspace* aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
+    return aspace->arch_aspace().io_bitmap();
+}
+
+IoBitmap::~IoBitmap() { }
+
 struct ioport_update_context {
-    // aspace that we're trying to update
-    ArchVmAspace* aspace;
+    // IoBitmap that we're trying to update
+    IoBitmap* io_bitmap;
 };
-static void ioport_update_task(void* raw_context) {
+
+void IoBitmap::UpdateTask(void* raw_context) {
     DEBUG_ASSERT(arch_ints_disabled());
     struct ioport_update_context* context =
         (struct ioport_update_context*)raw_context;
 
-    VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
-    ArchVmAspace *as = &aspace->arch_aspace();
-    arch_aspace& inner_aspace = as->GetInnerAspace();
-    if (as != context->aspace) {
+    IoBitmap& io_bitmap = GetCurrent();
+    if (&io_bitmap != context->io_bitmap) {
         return;
     }
 
-    spin_lock(&inner_aspace.io_bitmap_lock);
-
-    // This is overkill, but it's much simpler to reason about
-    x86_reset_tss_io_bitmap();
-    x86_set_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(inner_aspace.io_bitmap));
-
-    spin_unlock(&inner_aspace.io_bitmap_lock);
+    {
+        AutoSpinLock guard(io_bitmap.lock_);
+        // This is overkill, but it's much simpler to reason about
+        x86_reset_tss_io_bitmap();
+        x86_set_tss_io_bitmap(*io_bitmap.bitmap_);
+    }
 }
 
-int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
+int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
     if ((port + len < port) || (port + len > IO_BITMAP_BITS))
         return MX_ERR_INVALID_ARGS;
 
-    VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
-    ArchVmAspace *as = &aspace->arch_aspace();
-    arch_aspace& inner_aspace = as->GetInnerAspace();
-
     mxtl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
-    if (!inner_aspace.io_bitmap) {
+    if (!bitmap_) {
         // Optimistically allocate a bitmap structure if we don't have one, and
         // we'll see if we actually need this allocation later.  In the common
         // case, when we make the allocation we will use it.
@@ -89,68 +134,38 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
 
     status_t status = MX_OK;
     do {
-        AutoSpinLock guard(inner_aspace.io_bitmap_lock);
+        AutoSpinLock guard(lock_);
 
-        if (!inner_aspace.io_bitmap) {
-            inner_aspace.io_bitmap = optimistic_bitmap.release();
+        if (!bitmap_) {
+            bitmap_ = mxtl::move(optimistic_bitmap);
         }
-        auto bitmap = static_cast<bitmap::RleBitmap*>(inner_aspace.io_bitmap);
-        DEBUG_ASSERT(bitmap);
+        DEBUG_ASSERT(bitmap_);
 
         status = enable ?
-                bitmap->SetNoAlloc(port, port + len, &bitmap_freelist) :
-                bitmap->ClearNoAlloc(port, port + len, &bitmap_freelist);
+                bitmap_->SetNoAlloc(port, port + len, &bitmap_freelist) :
+                bitmap_->ClearNoAlloc(port, port + len, &bitmap_freelist);
         if (status != MX_OK) {
             break;
         }
 
-        // Set the io bitmap in the tss (the tss IO bitmap has reversed polarity)
-        tss_t* tss = &x86_get_percpu()->default_tss;
-        if (enable) {
-            bitmap_clear(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
-        } else {
-            bitmap_set(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+        IoBitmap& current = GetCurrent();
+        if (this == &current) {
+            // Set the io bitmap in the tss (the tss IO bitmap has reversed polarity)
+            tss_t* tss = &x86_get_percpu()->default_tss;
+            if (enable) {
+                bitmap_clear(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+            } else {
+                bitmap_set(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+            }
         }
     } while (0);
 
     // Let all other CPUs know about the update
     if (status == MX_OK) {
-        struct ioport_update_context task_context = {.aspace = as};
-        mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, ioport_update_task, &task_context);
+        struct ioport_update_context task_context = {.io_bitmap = this};
+        mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, IoBitmap::UpdateTask, &task_context);
     }
 
     arch_interrupt_restore(state, 0);
     return status;
-}
-
-void x86_set_tss_io_bitmap(const bitmap::RleBitmap& bitmap)
-{
-    DEBUG_ASSERT(arch_ints_disabled());
-    tss_t *tss = &x86_get_percpu()->default_tss;
-
-    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
-    for (const auto& extent : bitmap) {
-        DEBUG_ASSERT(extent.bitoff + extent.bitlen <= IO_BITMAP_BITS);
-        bitmap_clear(tss_bitmap, static_cast<int>(extent.bitoff), static_cast<int>(extent.bitlen));
-    }
-}
-
-void x86_reset_tss_io_bitmap(void) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    tss_t *tss = &x86_get_percpu()->default_tss;
-    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
-
-    bitmap_set(tss_bitmap, 0, IO_BITMAP_BITS);
-}
-
-void x86_clear_tss_io_bitmap(const bitmap::RleBitmap& bitmap)
-{
-    DEBUG_ASSERT(arch_ints_disabled());
-    tss_t *tss = &x86_get_percpu()->default_tss;
-
-    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
-    for (const auto& extent : bitmap) {
-        DEBUG_ASSERT(extent.bitoff + extent.bitlen <= IO_BITMAP_BITS);
-        bitmap_set(tss_bitmap, static_cast<int>(extent.bitoff), static_cast<int>(extent.bitlen));
-    }
 }

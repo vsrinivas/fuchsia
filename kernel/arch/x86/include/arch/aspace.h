@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <arch/x86/ioport.h>
 #include <arch/x86/mmu.h>
-#include <kernel/spinlock.h>
 #include <kernel/vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
@@ -37,11 +37,6 @@ struct arch_aspace {
     /* cpus that are currently executing in this aspace
      * actually an mp_cpu_mask_t, but header dependencies. */
     volatile int active_cpus;
-
-    /* Pointer to a bitmap::RleBitmap representing the range of ports
-     * enabled in this aspace. */
-    void *io_bitmap;
-    spin_lock_t io_bitmap_lock;
 };
 
 __END_CDECLS
@@ -67,9 +62,12 @@ public:
 
     arch_aspace& GetInnerAspace() { return aspace_; }
 
+    IoBitmap& io_bitmap() { return io_bitmap_; }
+
     static void ContextSwitch(X86ArchVmAspace *from, X86ArchVmAspace *to);
 private:
     mxtl::Canary<mxtl::magic("VAAS")> canary_;
+    IoBitmap io_bitmap_;
     arch_aspace aspace_ = {};
 };
 
