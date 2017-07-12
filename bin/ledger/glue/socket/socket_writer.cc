@@ -91,6 +91,7 @@ void SocketWriter::WaitForSocket() {
 // static
 void SocketWriter::WaitComplete(mx_status_t result,
                                 mx_signals_t pending,
+                                uint64_t count,
                                 void* context) {
   SocketWriter* writer = static_cast<SocketWriter*>(context);
   writer->wait_id_ = 0;
