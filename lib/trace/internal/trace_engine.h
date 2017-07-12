@@ -114,7 +114,9 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                        std::vector<std::string> enabled_categories);
 
   // |mtl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   ThreadRef RegisterThreadInternal(mx_koid_t process_koid,

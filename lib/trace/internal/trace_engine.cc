@@ -442,7 +442,9 @@ TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
   return Payload(nullptr);
 }
 
-void TraceEngine::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void TraceEngine::OnHandleReady(mx_handle_t handle,
+                                mx_signals_t pending,
+                                uint64_t count) {
   FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);

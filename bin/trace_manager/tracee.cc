@@ -143,7 +143,9 @@ void Tracee::OnProviderStarted(bool success) {
   start_callback(success);
 }
 
-void Tracee::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void Tracee::OnHandleReady(mx_handle_t handle,
+                           mx_signals_t pending,
+                           uint64_t count) {
   FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
   FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
              state_ == State::kStopping);

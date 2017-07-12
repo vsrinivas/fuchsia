@@ -66,7 +66,9 @@ void Tracer::Stop() {
   }
 }
 
-void Tracer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void Tracer::OnHandleReady(mx_handle_t handle,
+                           mx_signals_t pending,
+                           uint64_t count) {
   FTL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
   if (pending & MX_SOCKET_READABLE) {

@@ -69,7 +69,9 @@ class Tracee : private mtl::MessageLoopHandler {
   void TransitionToState(State new_state);
   void OnProviderStarted(bool success);
   // |mtl::MessageLoopHandler|
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   TransferStatus WriteProviderInfoRecord(const mx::socket& socket) const;
