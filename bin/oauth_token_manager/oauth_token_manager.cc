@@ -519,7 +519,9 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
                            const std::string& id_token,
                            OAuthTokenManagerApp* const app,
                            const FirebaseTokenCallback& callback)
-      : Operation(container, callback),
+      : Operation("OAuthTokenManagerApp::GoogleFirebaseTokensCall",
+                  container,
+                  callback),
         account_id_(account_id),
         firebase_api_key_(firebase_api_key),
         id_token_(id_token),
@@ -528,10 +530,6 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   }
 
  private:
-  std::string GetName() const override {
-    return "OAuthTokenManagerApp::GoogleFirebaseTokensCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &firebase_token_, &auth_err_};
 
@@ -713,7 +711,9 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
                         const TokenType& token_type,
                         OAuthTokenManagerApp* const app,
                         const ShortLivedTokenCallback& callback)
-      : Operation(container, callback),
+      : Operation("OAuthTokenManagerApp::GoogleOAuthTokensCall",
+                  container,
+                  callback),
         account_id_(account_id),
         token_type_(token_type),
         app_(app) {
@@ -721,10 +721,6 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
   }
 
  private:
-  std::string GetName() const override {
-    return "OAuthTokenManagerApp::GoogleOAuthTokensCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &result_, &auth_err_};
 
@@ -923,7 +919,9 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
                       AccountPtr account,
                       OAuthTokenManagerApp* const app,
                       const AddAccountCallback& callback)
-      : Operation(container, [] {}),
+      : Operation("OAuthTokenManagerApp::GoogleUserCredsCall",
+                  container,
+                  [] {}),
         account_(std::move(account)),
         app_(app),
         callback_(callback) {
@@ -931,11 +929,6 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   }
 
  private:
-  // |Operation|
-  std::string GetName() const override {
-    return "OAuthTokenManagerApp::GoogleUserCredsCall";
-  }
-
   // |Operation|
   void Run() override {
     // No FlowToken used here; calling Done() directly is more suitable,
@@ -1144,7 +1137,9 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
                               AccountPtr account,
                               OAuthTokenManagerApp* const app,
                               const AddAccountCallback& callback)
-      : Operation(container, [] {}),
+      : Operation("OAuthTokenManagerApp::GoogleProfileAttributesCall",
+                  container,
+                  [] {}),
         account_(std::move(account)),
         app_(app),
         callback_(callback) {
@@ -1152,11 +1147,6 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   }
 
  private:
-  // |Operation|
-  std::string GetName() const override {
-    return "OAuthTokenManagerApp::GoogleProfileAttributesCall";
-  }
-
   // |Operation|
   void Run() override {
     if (!account_) {

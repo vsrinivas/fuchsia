@@ -194,7 +194,10 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
                     const std::string& component_instance_id,
                     const std::string& queue_name,
                     ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("MessageQueueManager::GetQueueTokenCall",
+                  container,
+                  std::move(result_call),
+                  queue_name),
         page_(page),
         component_namespace_(component_namespace),
         component_instance_id_(component_instance_id),
@@ -203,10 +206,6 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   }
 
  private:
-  std::string GetName() const override {
-    return "MessageQueueManager::GetQueueTokenCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &result_};
     page_->GetSnapshot(
@@ -269,7 +268,9 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
                        ledger::Page* const page,
                        const std::string& token,
                        fidl::InterfaceRequest<MessageSender> request)
-      : Operation(container, [] {}),
+      : Operation("MessageQueueManager::GetMessageSenderCall",
+                  container,
+                  [] {}),
         message_queue_manager_(message_queue_manager),
         page_(page),
         token_(token),
@@ -278,10 +279,6 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "MessageQueueManager::GetMessageSenderCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -353,7 +350,10 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
                          const std::string& component_instance_id,
                          const std::string& queue_name,
                          fidl::InterfaceRequest<MessageQueue> request)
-      : Operation(container, [] {}),
+      : Operation("MessageQueueManager::ObtainMessageQueueCall",
+                  container,
+                  [] {},
+                  queue_name),
         message_queue_manager_(message_queue_manager),
         page_(page),
         request_(std::move(request)) {
@@ -364,10 +364,6 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "MessageQueueManager::ObtainMessageQueueCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -463,7 +459,10 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name)
-      : Operation(container, [] {}),
+      : Operation("MessageQueueManager::DeleteMessageQueueCall",
+                  container,
+                  [] {},
+                  queue_name),
         message_queue_manager_(message_queue_manager),
         page_(page) {
     message_queue_info_.component_namespace = component_namespace;
@@ -473,10 +472,6 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "MessageQueueManager::DeleteMessageQueueCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -560,7 +555,10 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
                       ledger::Page* const page,
                       const std::string& component_namespace,
                       ftl::Closure done_callback)
-      : Operation(container, done_callback),
+      : Operation("MessageQueueManager::DeleteNamespaceCall",
+                  container,
+                  done_callback,
+                  component_namespace),
         page_(page),
         message_queues_key_prefix_(
             MakeMessageQueuesPrefix(component_namespace)) {
@@ -568,10 +566,6 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "MessageQueueManager::DeleteNamespaceCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
     page_->GetSnapshot(

@@ -21,15 +21,15 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
  public:
   StartAndInitializeCall(OperationContainer* const container,
                          AgentContextImpl* const agent_context_impl)
-      : Operation(container, [] {}), agent_context_impl_(agent_context_impl) {
+      : Operation("AgentContextImpl::StartAndInitializeCall",
+                  container,
+                  [] {},
+                  agent_context_impl->url_),
+        agent_context_impl_(agent_context_impl) {
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "AgentContextImpl::StartAndInitializeCall";
-  }
-
   void Run() override {
     FTL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
     FTL_DLOG(INFO) << "Starting new agent, url: " << agent_context_impl_->url_;
@@ -83,15 +83,16 @@ class AgentContextImpl::StopCall : Operation<bool> {
            const bool terminating,
            AgentContextImpl* const agent_context_impl,
            ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("AgentContextImpl::StopCall",
+                  container,
+                  std::move(result_call),
+                  agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         terminating_(terminating) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "AgentContextImpl::StopCall"; }
-
   void Run() override {
     FlowToken flow{this, &stopped_};
 

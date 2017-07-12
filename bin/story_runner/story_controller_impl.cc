@@ -96,7 +96,10 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
                 const fidl::String& link_name,
                 SurfaceRelationPtr surface_relation,
                 const ResultCall& done)
-      : Operation(container, done),
+      : Operation("StoryControllerImpl::AddModuleCall",
+                  container,
+                  done,
+                  module_url),
         story_controller_impl_(story_controller_impl),
         parent_module_path_(std::move(parent_module_path)),
         module_name_(module_name),
@@ -107,10 +110,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryControllerImpl::AddModuleCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -151,16 +150,12 @@ class StoryControllerImpl::GetModulesCall
   GetModulesCall(OperationContainer* const container,
                  StoryControllerImpl* const story_controller_impl,
                  const ResultCall& callback)
-      : Operation(container, callback),
+      : Operation("StoryControllerImpl::GetModulesCall", container, callback),
         story_controller_impl_(story_controller_impl) {
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryControllerImpl::GetModulesCall";
-  }
-
   void Run() override {
     FlowToken flow(this, &result_);
 
@@ -184,7 +179,10 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
                    const fidl::String& link_name,
                    const fidl::String& link_json,
                    const ResultCall& done)
-      : Operation(container, done),
+      : Operation("StoryControllerImpl::AddForCreateCall",
+                  container,
+                  done,
+                  module_url),
         story_controller_impl_(story_controller_impl),
         module_name_(module_name),
         module_url_(module_url),
@@ -194,10 +192,6 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryControllerImpl::AddForCreateCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -243,15 +237,13 @@ class StoryControllerImpl::StartCall : Operation<> {
   StartCall(OperationContainer* const container,
             StoryControllerImpl* const story_controller_impl,
             fidl::InterfaceRequest<mozart::ViewOwner> request)
-      : Operation(container, [] {}),
+      : Operation("StoryControllerImpl::StartCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         request_(std::move(request)) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "StoryControllerImpl::StartCall"; }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -300,15 +292,13 @@ class StoryControllerImpl::StopCall : Operation<> {
            StoryControllerImpl* const story_controller_impl,
            const bool notify,
            std::function<void()> done)
-      : Operation(container, done),
+      : Operation("StoryControllerImpl::StopCall", container, done),
         story_controller_impl_(story_controller_impl),
         notify_(notify) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "StoryControllerImpl::StopCall"; }
-
   // StopCall may be run even on a story impl that is not running.
   void Run() override {
     // At this point, we don't need to monitor the external modules for state
@@ -425,17 +415,13 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
                  StoryControllerImpl* const story_controller_impl,
                  const fidl::Array<fidl::String>& module_path,
                  const std::function<void()>& done)
-      : Operation(container, done),
+      : Operation("StoryControllerImpl::StopModuleCall", container, done),
         story_controller_impl_(story_controller_impl),
         module_path_(module_path.Clone()) {
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryControllerImpl::StopModuleCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -521,15 +507,13 @@ class StoryControllerImpl::DeleteCall : Operation<> {
   DeleteCall(OperationContainer* const container,
              StoryControllerImpl* const story_controller_impl,
              std::function<void()> done)
-      : Operation(container, [] {}),
+      : Operation("StoryControllerImpl::DeleteCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         done_(std::move(done)) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "StoryControllerImpl::DeleteCall"; }
-
   void Run() override {
     // No call to Done(), in order to block all further operations on the queue
     // until the instance is deleted.
@@ -564,7 +548,10 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : Operation(container, [] {}),
+      : Operation("StoryControllerImpl::StartModuleCall",
+                  container,
+                  [] {},
+                  module_url),
         story_controller_impl_(story_controller_impl),
         parent_module_path_(parent_module_path.Clone()),
         module_path_(module_path.Clone()),
@@ -582,10 +569,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryControllerImpl::StartModuleCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -746,17 +729,15 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
                     StoryControllerImpl* const story_controller_impl,
                     const ContextState& context_state,
                     ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryControllerImpl::GetImportanceCall",
+                  container,
+                  std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         context_state_(context_state.Clone()) {
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryControllerImpl::GetImportanceCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &result_};
 

@@ -31,16 +31,14 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
  public:
   LogConflictDiffCall(OperationContainer* const container,
                       ledger::MergeResultProviderPtr result_provider)
-      : Operation(container, [] {}),
+      : Operation("ConflictResolverImpl::LogConflictDiffCall",
+                  container,
+                  [] {}),
         result_provider_(std::move(result_provider)) {
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "ConflictResolverImpl::LogConflictDiffCall";
-  }
-
   void Run() override {
     GetDiff(
         nullptr, "left",

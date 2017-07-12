@@ -61,15 +61,13 @@ class AgentRunner::InitializeCall : Operation<> {
   InitializeCall(OperationContainer* const container,
                  AgentRunner* const agent_runner,
                  std::shared_ptr<ledger::PageSnapshotPtr> const snapshot)
-      : Operation(container, [] {}),
+      : Operation("AgentRunner::InitializeCall", container, [] {}),
         agent_runner_(agent_runner),
         snapshot_(snapshot) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "AgentRunner::InitializeCall"; }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -115,7 +113,7 @@ class AgentRunner::UpdateCall : Operation<> {
              AgentRunner* const agent_runner,
              const std::string& key,
              const std::string& value)
-      : Operation(container, [] {}),
+      : Operation("AgentRunner::UpdateCall", container, [] {}, key),
         agent_runner_(agent_runner),
         key_(key),
         value_(value) {
@@ -123,8 +121,6 @@ class AgentRunner::UpdateCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override { return "AgentRunner::UpdateCall"; }
-
   void Run() override {
     agent_runner_->AddedTrigger(key_, value_);
     Done();
@@ -141,13 +137,13 @@ class AgentRunner::DeleteCall : Operation<> {
   DeleteCall(OperationContainer* const container,
              AgentRunner* const agent_runner,
              const std::string& key)
-      : Operation(container, [] {}), agent_runner_(agent_runner), key_(key) {
+      : Operation("AgentRunner::DeleteCall", container, [] {}, key),
+        agent_runner_(agent_runner),
+        key_(key) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "AgentRunner::DeleteCall"; }
-
   void Run() override {
     agent_runner_->DeletedTrigger(key_);
     Done();

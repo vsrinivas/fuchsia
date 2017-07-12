@@ -33,7 +33,10 @@ class ReadDataCall : Operation<DataPtr> {
                const bool not_found_is_ok,
                DataFilter filter,
                ResultCall result_call)
-      : Operation<DataPtr>(container, std::move(result_call)),
+      : Operation<DataPtr>("ReadDataCall",
+                           container,
+                           std::move(result_call),
+                           key),
         page_(page),
         key_(key),
         not_found_is_ok_(not_found_is_ok),
@@ -42,8 +45,6 @@ class ReadDataCall : Operation<DataPtr> {
   }
 
  private:
-  std::string GetName() const override { return "ReadDataCall"; }
-
   void Run() override {
     FlowToken flow{this, &result_};
 
@@ -115,7 +116,10 @@ class ReadAllDataCall : Operation<DataArray> {
                   const char* const prefix,
                   DataFilter const filter,
                   ResultCall result_call)
-      : Operation<DataArray>(container, std::move(result_call)),
+      : Operation<DataArray>("ReadAllDataCall",
+                             container,
+                             std::move(result_call),
+                             prefix),
         page_(page),
         prefix_(prefix),
         filter_(filter) {
@@ -124,8 +128,6 @@ class ReadAllDataCall : Operation<DataArray> {
   }
 
  private:
-  std::string GetName() const override { return "ReadAllDataCall"; }
-
   void Run() override {
     FlowToken flow{this, &data_};
 
@@ -195,7 +197,7 @@ class WriteDataCall : Operation<> {
                 DataFilter filter,
                 DataPtr data,
                 ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("WriteDataCall", container, std::move(result_call), key),
         page_(page),
         key_(key),
         filter_(filter),
@@ -204,8 +206,6 @@ class WriteDataCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override { return "WriteDataCall"; }
-
   void Run() override {
     FlowToken flow{this};
 

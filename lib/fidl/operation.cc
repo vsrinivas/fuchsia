@@ -17,6 +17,18 @@ void OperationContainer::InvalidateWeakPtrs(OperationBase* const o) {
   o->InvalidateWeakPtrs();
 }
 
+const char* OperationContainer::GetTraceName(OperationBase* const o) {
+  return o->trace_name_;
+}
+
+uint64_t OperationContainer::GetTraceId(OperationBase* const o) {
+  return o->trace_id_;
+}
+
+const std::string& OperationContainer::GetTraceInfo(OperationBase* const o) {
+  return o->trace_info_;
+}
+
 OperationCollection::OperationCollection() : weak_ptr_factory_(this) {}
 
 OperationCollection::~OperationCollection() {
@@ -38,7 +50,9 @@ ftl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
 
 void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
-  TRACE_DURATION_BEGIN("modular", o->GetName().c_str());
+  TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
+                    kTraceIdKey, GetTraceId(o), kTraceInfoKey,
+                    GetTraceInfo(o));
   o->Run();
 }
 
@@ -79,7 +93,9 @@ void OperationQueue::Hold(OperationBase* const o) {
   if (idle_) {
     FTL_DCHECK(operations_.size() == 1);
     idle_ = false;
-    TRACE_DURATION_BEGIN("modular", o->GetName().c_str());
+    TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
+                      kTraceIdKey, GetTraceId(o), kTraceInfoKey,
+                      GetTraceInfo(o));
     o->Run();
   }
 }
@@ -92,15 +108,24 @@ void OperationQueue::Drop(OperationBase* const o) {
 
 void OperationQueue::Cont() {
   if (!operations_.empty()) {
-    TRACE_DURATION_BEGIN("modular", operations_.front()->GetName().c_str());
-    operations_.front()->Run();
+    auto o = operations_.front().get();
+    TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
+                      kTraceIdKey, GetTraceId(o), kTraceInfoKey,
+                      GetTraceInfo(o));
+    o->Run();
   } else {
     idle_ = true;
   }
 }
 
-OperationBase::OperationBase(OperationContainer* const c)
-    : container_(c->GetWeakPtr()), weak_ptr_factory_(this) {}
+OperationBase::OperationBase(const char* trace_name,
+                             OperationContainer* const c,
+                             const std::string& trace_info)
+    : container_(c->GetWeakPtr()),
+      weak_ptr_factory_(this),
+      trace_name_(trace_name),
+      trace_id_(TRACE_NONCE()),
+      trace_info_(trace_info) {}
 
 OperationBase::~OperationBase() = default;
 

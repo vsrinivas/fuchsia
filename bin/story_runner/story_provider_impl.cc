@@ -71,7 +71,9 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
                       const fidl::String& story_id,
                       std::function<bool(StoryData* story_data)> mutate,
                       ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryProviderImpl::MutateStoryDataCall",
+                  container,
+                  std::move(result_call)),
         page_(page),
         story_id_(story_id),
         mutate_(mutate) {
@@ -79,10 +81,6 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryProviderImpl::MutateStoryDataCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -128,7 +126,9 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
                   FidlStringMap extra_info,
                   fidl::String root_json,
                   ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryProviderImpl::CreateStoryCall",
+                  container,
+                  std::move(result_call)),
         ledger_(ledger),
         root_page_(root_page),
         story_provider_impl_(story_provider_impl),
@@ -139,10 +139,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryProviderImpl::CreateStoryCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &story_id_};
 
@@ -234,7 +230,9 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
                   MessageQueueManager* const message_queue_manager,
                   const bool already_deleted,
                   ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryProviderImpl::DeleteStoryCall",
+                  container,
+                  std::move(result_call)),
         page_(page),
         story_id_(story_id),
         story_controller_impls_(story_controller_impls),
@@ -244,10 +242,6 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryProviderImpl::DeleteStoryCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -322,7 +316,7 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
                     StoryControllerImplMap* const story_controller_impls,
                     const fidl::String& story_id,
                     fidl::InterfaceRequest<StoryController> request)
-      : Operation(container, [] {}),
+      : Operation("StoryProviderImpl::GetControllerCall", container, [] {}),
         ledger_(ledger),
         page_(page),
         story_provider_impl_(story_provider_impl),
@@ -333,10 +327,6 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryProviderImpl::GetControllerCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -394,14 +384,14 @@ class StoryProviderImpl::TeardownCall : Operation<> {
   TeardownCall(OperationContainer* const container,
                StoryProviderImpl* const story_provider_impl,
                ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryProviderImpl::TeardownCall",
+                  container,
+                  std::move(result_call)),
         story_provider_impl_(story_provider_impl) {
     Ready();
   }
 
  private:
-  std::string GetName() const override { return "StoryProviderImpl::TeardownCall"; }
-
   void Run() override {
     FlowToken flow{this};
 
@@ -431,17 +421,15 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
   GetImportanceCall(OperationContainer* const container,
                     StoryProviderImpl* const story_provider_impl,
                     ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryProviderImpl::GetImportanceCall",
+                  container,
+                  std::move(result_call)),
         story_provider_impl_(story_provider_impl) {
     importance_.mark_non_null();
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryProviderImpl::GetImportanceCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &importance_};
 

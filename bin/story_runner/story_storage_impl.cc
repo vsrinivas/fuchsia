@@ -68,17 +68,15 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
                    ledger::Page* const page,
                    const LinkPathPtr& link_path,
                    ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryStorageImpl::ReadLinkDataCall",
+                  container,
+                  std::move(result_call)),
         page_(page),
         link_key_(MakeLinkKey(link_path)) {
     Ready();
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryStorageImpl::ReadLinkDataCall";
-  }
-
   void Run() override {
     FlowToken flow{this, &result_};
 
@@ -135,7 +133,9 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
                     const LinkPathPtr& link_path,
                     fidl::String data,
                     ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+      : Operation("StoryStorageImpl::WriteLinkDataCall",
+                  container,
+                  std::move(result_call)),
         page_(page),
         link_key_(MakeLinkKey(link_path)),
         data_(std::move(data)) {
@@ -143,10 +143,6 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
   }
 
  private:
-  std::string GetName() const override {
-    return "StoryStorageImpl::WriteLinkDataCall";
-  }
-
   void Run() override {
     FlowToken flow{this};
 
