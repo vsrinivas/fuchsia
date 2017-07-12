@@ -148,7 +148,9 @@ bool CommandBuffer::GetGpuAddress(gpu_addr_t* gpu_addr_out)
 
 uint64_t CommandBuffer::GetBatchBufferId()
 {
-    return resource(batch_buffer_resource_index()).buffer_id();
+    if (batch_buffer_resource_index() < num_resources())
+        return resource(batch_buffer_resource_index()).buffer_id();
+    return 0;
 }
 
 void CommandBuffer::UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
