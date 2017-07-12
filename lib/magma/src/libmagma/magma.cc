@@ -10,6 +10,7 @@
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 #include <mutex>
+#include <thread>
 #include <vector>
 
 magma_connection_t* magma_open(int fd, uint32_t capabilities)
@@ -27,8 +28,12 @@ magma_connection_t* magma_open(int fd, uint32_t capabilities)
 #if MAGMA_ENABLE_TRACING
     static std::once_flag trace_init_flag;
     std::call_once(trace_init_flag, [] {
-        tracing::InitializeTracer(app::ApplicationContext::CreateFromStartupInfo().get(),
-                                  {"libmagma"});
+        std::thread([] {
+            mtl::MessageLoop loop;
+            tracing::InitializeTracer(app::ApplicationContext::CreateFromStartupInfo().get(),
+                                      {"libmagma"});
+            loop.Run();
+        }).detach();
     });
 #endif
 
