@@ -251,12 +251,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 
     // Translate the circle.
     float translation[3] = {kScreenWidth / 2, kScreenHeight / 2, 10.f};
-    ops.push_back(mozart::NewSetTransformOp(
-        node_id, translation,
-        mozart::kOnesFloat3,        // scale
-        mozart::kZeroesFloat3,      // anchor point
-        mozart::kQuaternionDefault  // rotation
-        ));
+    ops.push_back(mozart::NewSetTranslationOp(node_id, translation));
     // Attach the circle to the Scene.
     ops.push_back(mozart::NewAddChildOp(scene_id, node_id));
 
