@@ -21,7 +21,6 @@
 #include "pci.h"
 #include "powerbtn.h"
 #include "processor.h"
-#include "resource_tree.h"
 #include "power.h"
 
 #define TRACE 0
@@ -33,6 +32,12 @@
     do {                \
     } while (0)
 #endif
+
+#define MAX_NAMESPACE_DEPTH 100
+
+typedef struct acpi_ns_walk_ctx {
+    mx_device_t* parents[MAX_NAMESPACE_DEPTH + 1];
+} acpi_ns_walk_ctx_t;
 
 mx_handle_t root_resource_handle;
 mx_handle_t rpc_handle;
@@ -48,21 +53,103 @@ static mx_protocol_device_t acpi_device_proto = {
     .version = DEVICE_OPS_VERSION,
 };
 
-static mx_status_t acpi_add_pci_root_device(mx_device_t* parent, const char* name) {
-    mx_device_t* dev;
+static mx_device_t* publish_device(mx_device_t* parent, ACPI_DEVICE_INFO* info) {
+#if TRACE
+    if (!parent) {
+        xprintf("acpi-bus: parent is NULL\n");
+        return NULL;
+    }
+#endif
+
+    // ACPI names are always 4 characters in a uint32
+    char name[5] = { 0 };
+    memcpy(name, &info->Name, sizeof(name) - 1);
+
+    // Publish HID in device props
+    const char* hid = (const char*)info->HardwareId.String;
+    mx_device_prop_t props[2];
+    if ((info->Valid & ACPI_VALID_HID) &&
+            (info->HardwareId.Length > 0) &&
+            (info->HardwareId.Length <= sizeof(uint64_t))) {
+        props[0].id = BIND_ACPI_HID_0_3;
+        props[0].value = htobe32(*((uint32_t*)(hid)));
+        props[1].id = BIND_ACPI_HID_4_7;
+        props[1].value = htobe32(*((uint32_t*)(hid + 4)));
+    } else {
+        xprintf("acpi-bus: device %s has no HID\n", name);
+        hid = NULL;
+    }
+
+    // TODO: publish pciroot and other acpi devices in separate devhosts?
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = NULL,
         .ops = &acpi_device_proto,
+        .props = (hid != NULL) ? props : NULL,
+        .prop_count = (hid != NULL) ? countof(props) : 0,
         .proto_id = MX_PROTOCOL_ACPI,
     };
 
-    mx_status_t status = device_add(parent, &args, &dev);
-    if (status != MX_OK) {
-        xprintf("acpi-bus: error %d in device_add\n", status);
+    mx_status_t status;
+    mx_device_t* dev = NULL;
+    if ((status = device_add(parent, &args, &dev)) != MX_OK) {
+        xprintf("acpi-bus: error %d in device_add, parent=%s(%p) name=%4s hid=%s\n", status, device_get_name(parent), parent, name, hid);
+    } else {
+        if (hid) {
+            xprintf("acpi-bus: published device %s, parent=%s(%p), hid=%s props=0x%x,0x%x\n", name, device_get_name(parent), parent, hid, props[0].value, props[1].value);
+        } else {
+            xprintf("acpi-bus: published device %s, parent=%s(%p)\n", name, device_get_name(parent), parent);
+        }
     }
-    return status;
+
+    return dev;
+}
+
+static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_level,
+                                         void* context, void** status) {
+    acpi_ns_walk_ctx_t* ctx = (acpi_ns_walk_ctx_t*)context;
+
+    ACPI_DEVICE_INFO* info = NULL;
+    ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
+    if (acpi_status != AE_OK) {
+        return acpi_status;
+    }
+
+    xprintf("acpi-bus: nesting level %d\n", nesting_level);
+    mx_device_t* dev = publish_device(ctx->parents[nesting_level - 1], info);
+
+    // Store the newly created device for DFS traversal
+    if (dev) {
+        ctx->parents[nesting_level] = dev;
+    }
+
+    ACPI_FREE(info);
+
+    return AE_OK;
+}
+
+static mx_status_t publish_all_devices(mx_device_t* parent) {
+    acpi_ns_walk_ctx_t* ctx = malloc(sizeof(acpi_ns_walk_ctx_t));
+    if (!ctx) {
+        return MX_ERR_NO_MEMORY;
+    }
+
+    ctx->parents[0] = parent;
+
+    // Walk the ACPI namespace for devices and publish them
+    ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE,
+                                                ACPI_ROOT_OBJECT,
+                                                MAX_NAMESPACE_DEPTH,
+                                                acpi_ns_walk_callback,
+                                                NULL, ctx, NULL);
+    free(ctx);
+    if (acpi_status != AE_OK) {
+        return MX_ERR_BAD_STATE;
+    } else {
+        return MX_OK;
+    }
 }
 
 static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) {
@@ -116,6 +203,7 @@ static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) 
     free(arg);
 
     // start rpc thread
+    // TODO: probably will be replaced with devmgr rpc mechanism
     thrd_t rpc_thrd;
     int rc = thrd_create_with_name(&rpc_thrd, acpi_rpc_thread, NULL, "acpi-rpc");
     if (rc != thrd_success) {
@@ -123,9 +211,10 @@ static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) 
         return MX_ERR_INTERNAL;
     }
 
-    // Publish PCI root device
-    // TODO: publish other ACPI devices
-    return acpi_add_pci_root_device(parent, "pci-root");
+    // publish devices
+    publish_all_devices(parent);
+
+    return MX_OK;
 }
 
 #if 0

@@ -15,7 +15,6 @@
 #include "pci.h"
 #include "powerbtn.h"
 #include "processor.h"
-#include "resource_tree.h"
 
 mx_handle_t root_resource_handle;
 

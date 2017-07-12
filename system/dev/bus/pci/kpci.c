@@ -159,10 +159,17 @@ static mx_driver_ops_t kpci_driver_ops = {
     .create = kpci_drv_create,
 };
 
-MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 1)
+#define ACPI_PCIROOT_HID_0_3 0x504e5030 // "PNP0"
+#define ACPI_PCIROOT_HID_4_7 0x41303800 // "A08"
+
 #if ACPI_BUS_DRV
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
-#else
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
-#endif
+MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
+    BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, ACPI_PCIROOT_HID_0_3),
+    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, ACPI_PCIROOT_HID_4_7),
 MAGENTA_DRIVER_END(pci)
+#else
+MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
+MAGENTA_DRIVER_END(pci)
+#endif
