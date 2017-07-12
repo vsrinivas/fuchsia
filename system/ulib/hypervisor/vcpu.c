@@ -33,10 +33,19 @@
 /* Local APIC register addresses. */
 #define LOCAL_APIC_REGISTER_ID                  0x0020
 #define LOCAL_APIC_REGISTER_VERSION             0x0030
+#define LOCAL_APIC_REGISTER_LDR                 0x00d0
+#define LOCAL_APIC_REGISTER_DFR                 0x00e0
 #define LOCAL_APIC_REGISTER_SVR                 0x00f0
+#define LOCAL_APIC_REGISTER_ISR_31_0            0x0100
+#define LOCAL_APIC_REGISTER_ISR_255_224         0x0170
+#define LOCAL_APIC_REGISTER_IRR_31_0            0x0200
+#define LOCAL_APIC_REGISTER_IRR_255_224         0x0270
 #define LOCAL_APIC_REGISTER_ESR                 0x0280
 #define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
 #define LOCAL_APIC_REGISTER_LVT_THERMAL         0x0330
+#define LOCAL_APIC_REGISTER_LVT_PERFMON         0x0340
+#define LOCAL_APIC_REGISTER_LVT_LINT0           0x0350
+#define LOCAL_APIC_REGISTER_LVT_LINT1           0x0360
 #define LOCAL_APIC_REGISTER_LVT_ERROR           0x0370
 #define LOCAL_APIC_REGISTER_INITIAL_COUNT       0x0380
 
@@ -304,8 +313,6 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
     MX_ASSERT(mem_trap->guest_paddr >= LOCAL_APIC_PHYS_BASE);
     mx_vaddr_t offset = mem_trap->guest_paddr - LOCAL_APIC_PHYS_BASE;
     switch (offset) {
-    case LOCAL_APIC_REGISTER_ID:
-        return inst_read32(inst, 0);
     case LOCAL_APIC_REGISTER_VERSION: {
         // From Intel Volume 3, Section 10.4.8.
         //
@@ -323,9 +330,18 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
         // Therefore, we ignore writes to the ESR.
         if (inst->type == INST_MOV_WRITE)
             return MX_OK;
+    case LOCAL_APIC_REGISTER_ISR_31_0 ... LOCAL_APIC_REGISTER_ISR_255_224:
+    case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
+        return inst_read32(inst, 0);
+    case LOCAL_APIC_REGISTER_ID:
+    case LOCAL_APIC_REGISTER_LDR:
+    case LOCAL_APIC_REGISTER_DFR:
     case LOCAL_APIC_REGISTER_SVR:
     case LOCAL_APIC_REGISTER_LVT_TIMER:
     case LOCAL_APIC_REGISTER_LVT_THERMAL:
+    case LOCAL_APIC_REGISTER_LVT_PERFMON:
+    case LOCAL_APIC_REGISTER_LVT_LINT0:
+    case LOCAL_APIC_REGISTER_LVT_LINT1:
     case LOCAL_APIC_REGISTER_LVT_ERROR:
         return inst_rw32(inst, local_apic_state->apic_addr + offset);
     case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
