@@ -60,8 +60,9 @@ void ActiveMultistreamSinkStage::Update(Engine* engine) {
     FTL_DCHECK(*iter < inputs_.size());
     StageInput* input = inputs_[*iter].get();
     if (input->input_.packet_from_upstream()) {
-      input->demand_ = sink_->SupplyPacket(
-          input->index_, std::move(input->input_.packet_from_upstream()));
+      input->demand_ =
+          sink_->SupplyPacket(input->input_.index(),
+                              std::move(input->input_.packet_from_upstream()));
 
       if (input->demand_ == Demand::kNegative) {
         auto remove_iter = iter;
@@ -99,7 +100,7 @@ size_t ActiveMultistreamSinkStage::AllocateInput() {
 
   StageInput* input;
   if (unallocated_inputs_.empty()) {
-    input = new StageInput(inputs_.size());
+    input = new StageInput(this, inputs_.size());
     inputs_.emplace_back(std::unique_ptr<StageInput>(input));
   } else {
     // Allocate lowest indices first.
@@ -111,7 +112,7 @@ size_t ActiveMultistreamSinkStage::AllocateInput() {
 
   input->allocated_ = true;
 
-  return input->index_;
+  return input->input_.index();
 }
 
 size_t ActiveMultistreamSinkStage::ReleaseInput(size_t index) {
@@ -134,7 +135,7 @@ size_t ActiveMultistreamSinkStage::ReleaseInput(size_t index) {
       inputs_.pop_back();
     }
   } else {
-    unallocated_inputs_.insert(input->index_);
+    unallocated_inputs_.insert(input->input_.index());
   }
 
   return inputs_.size();

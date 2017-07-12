@@ -9,19 +9,14 @@
 
 namespace media {
 
-Output::Output() : demand_(Demand::kNegative), copy_allocator_(nullptr) {}
+Output::Output(Stage* stage, size_t index) : stage_(stage), index_(index) {}
 
 Output::~Output() {}
 
-void Output::Connect(const InputRef& input) {
-  FTL_DCHECK(input.valid());
+void Output::Connect(Input* input) {
+  FTL_DCHECK(input);
   FTL_DCHECK(!mate_);
   mate_ = input;
-}
-
-Input& Output::actual_mate() const {
-  FTL_DCHECK(mate_.valid());
-  return mate_.actual();
 }
 
 void Output::SetCopyAllocator(PayloadAllocator* copy_allocator) {
@@ -30,11 +25,11 @@ void Output::SetCopyAllocator(PayloadAllocator* copy_allocator) {
 }
 
 Demand Output::demand() const {
-  FTL_DCHECK(connected());
+  FTL_DCHECK(mate_);
 
   // Return negative demand if mate() already has a packet.
   // We check demand_ here to possibly avoid the second check.
-  if (demand_ == Demand::kNegative || actual_mate().packet_from_upstream()) {
+  if (demand_ == Demand::kNegative || mate_->packet_from_upstream()) {
     return Demand::kNegative;
   }
 
@@ -44,7 +39,7 @@ Demand Output::demand() const {
 void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
   FTL_DCHECK(packet);
   FTL_DCHECK(engine);
-  FTL_DCHECK(connected());
+  FTL_DCHECK(mate_);
 
   if (copy_allocator_ != nullptr) {
     // Need to copy the packet due to an allocation conflict.
@@ -67,8 +62,8 @@ void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
                        packet->end_of_stream(), size, buffer, copy_allocator_);
   }
 
-  if (actual_mate().SupplyPacketFromOutput(std::move(packet))) {
-    engine->PushToSupplyBacklog(mate_.stage_);
+  if (mate_->SupplyPacketFromOutput(std::move(packet))) {
+    engine->PushToSupplyBacklog(mate_->stage());
   }
 }
 

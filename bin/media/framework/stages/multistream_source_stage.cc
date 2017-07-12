@@ -12,7 +12,10 @@ MultistreamSourceStage::MultistreamSourceStage(
     std::shared_ptr<MultistreamSource> source)
     : source_(source), ended_streams_(0) {
   FTL_DCHECK(source);
-  outputs_.resize(source->stream_count());
+
+  for (size_t index = 0; index < source->stream_count(); ++index) {
+    outputs_.emplace_back(this, index);
+  }
 }
 
 MultistreamSourceStage::~MultistreamSourceStage() {}

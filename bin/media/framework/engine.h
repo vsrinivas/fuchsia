@@ -88,13 +88,13 @@ class Engine {
   ~Engine();
 
   // Prepares the input and the subgraph upstream of it.
-  void PrepareInput(const InputRef& input_ref);
+  void PrepareInput(Input* input);
 
   // Unprepares the input and the subgraph upstream of it.
-  void UnprepareInput(const InputRef& input_ref);
+  void UnprepareInput(Input* input);
 
   // Flushes the output and the subgraph downstream of it.
-  void FlushOutput(const OutputRef& output_ref);
+  void FlushOutput(Output* output);
 
   // Queues the stage for update and winds down the backlog.
   void RequestUpdate(Stage* stage);
@@ -107,18 +107,17 @@ class Engine {
 
  private:
   using UpstreamVisitor =
-      std::function<void(const InputRef& input,
-                         const OutputRef& output,
+      std::function<void(Input* input,
+                         Output* output,
                          const Stage::UpstreamCallback& callback)>;
   using DownstreamVisitor =
-      std::function<void(const OutputRef& output,
-                         const InputRef& input,
+      std::function<void(Output* output,
+                         Input* input,
                          const Stage::DownstreamCallback& callback)>;
 
-  void VisitUpstream(const InputRef& input, const UpstreamVisitor& vistor);
+  void VisitUpstream(Input* input, const UpstreamVisitor& visitor);
 
-  void VisitDownstream(const OutputRef& output,
-                       const DownstreamVisitor& vistor);
+  void VisitDownstream(Output* output, const DownstreamVisitor& visitor);
 
   // Processes the entire backlog.
   void Update();

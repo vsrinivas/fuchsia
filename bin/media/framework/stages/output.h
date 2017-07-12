@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/models/demand.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
-#include "apps/media/src/framework/refs.h"
 
 namespace media {
 
@@ -18,24 +17,27 @@ class Input;
 // Represents a stage's connector to an adjacent downstream stage.
 class Output {
  public:
-  Output();
+  Output(Stage* stage, size_t index);
 
   ~Output();
 
+  // The stage of which this output is a part.
+  Stage* stage() const { return stage_; }
+
+  // The index of this output with respect to the stage.
+  size_t index() const { return index_; }
+
   // The input to which this output is connected.
-  const InputRef& mate() const { return mate_; }
+  Input* mate() const { return mate_; }
 
   // Establishes a connection.
-  void Connect(const InputRef& input);
+  void Connect(Input* input);
 
   // Breaks a connection. Called only by the engine.
   void Disconnect() { mate_ = nullptr; }
 
   // Determines whether the output is connected to an input.
-  bool connected() const { return static_cast<bool>(mate_); }
-
-  // The connected input.
-  Input& actual_mate() const;
+  bool connected() const { return mate_; }
 
   // Sets the allocator the output must use to copy the payload of output
   // packets. This is used when the connected input insists that a specific
@@ -56,9 +58,11 @@ class Output {
   void Flush();
 
  private:
-  InputRef mate_;
-  Demand demand_;
-  PayloadAllocator* copy_allocator_;
+  Stage* stage_;
+  size_t index_;
+  Input* mate_ = nullptr;
+  Demand demand_ = Demand::kNegative;
+  PayloadAllocator* copy_allocator_ = nullptr;
 };
 
 }  // namespace media

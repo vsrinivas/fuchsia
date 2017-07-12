@@ -12,84 +12,65 @@
 namespace media {
 
 size_t NodeRef::input_count() const {
-  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_);
   return stage_->input_count();
 }
 
 InputRef NodeRef::input(size_t index) const {
-  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_);
   FTL_DCHECK(index < stage_->input_count());
-  return InputRef(stage_, index);
+  return InputRef(&stage_->input(index));
 }
 
 InputRef NodeRef::input() const {
-  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_);
   FTL_DCHECK(stage_->input_count() == 1);
-  return InputRef(stage_, 0);
+  return InputRef(&stage_->input(0));
 }
 
 size_t NodeRef::output_count() const {
-  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_);
   return stage_->output_count();
 }
 
 OutputRef NodeRef::output(size_t index) const {
-  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_);
   FTL_DCHECK(index < stage_->output_count());
-  return OutputRef(stage_, index);
+  return OutputRef(&stage_->output(index));
 }
 
 OutputRef NodeRef::output() const {
-  FTL_DCHECK(valid());
+  FTL_DCHECK(stage_);
   FTL_DCHECK(stage_->output_count() == 1);
-  return OutputRef(stage_, 0);
+  return OutputRef(&stage_->output(0));
+}
+
+NodeRef InputRef::node() const {
+  return input_ ? NodeRef(input_->stage()) : NodeRef();
 }
 
 bool InputRef::connected() const {
-  FTL_DCHECK(valid());
-  return actual().connected();
+  FTL_DCHECK(input_);
+  return input_->connected();
 }
 
-const OutputRef& InputRef::mate() const {
-  FTL_DCHECK(valid());
-  return actual().mate();
+OutputRef InputRef::mate() const {
+  FTL_DCHECK(input_);
+  return OutputRef(input_->mate());
 }
 
-InputRef::InputRef(Stage* stage, size_t index) : stage_(stage), index_(index) {
-  FTL_DCHECK(valid());
-}
-
-Input& InputRef::actual() const {
-  FTL_DCHECK(valid());
-  return stage_->input(index_);
-}
-
-bool InputRef::valid() const {
-  return stage_ != nullptr && index_ < stage_->input_count();
+NodeRef OutputRef::node() const {
+  return output_ ? NodeRef(output_->stage()) : NodeRef();
 }
 
 bool OutputRef::connected() const {
-  FTL_DCHECK(valid());
-  return actual().connected();
+  FTL_DCHECK(output_);
+  return output_->connected();
 }
 
-const InputRef& OutputRef::mate() const {
-  FTL_DCHECK(valid());
-  return actual().mate();
-}
-
-OutputRef::OutputRef(Stage* stage, size_t index)
-    : stage_(stage), index_(index) {
-  FTL_DCHECK(valid());
-}
-
-Output& OutputRef::actual() const {
-  FTL_DCHECK(valid());
-  return stage_->output(index_);
-}
-
-bool OutputRef::valid() const {
-  return stage_ != nullptr && index_ < stage_->output_count();
+InputRef OutputRef::mate() const {
+  FTL_DCHECK(output_);
+  return InputRef(output_->mate());
 }
 
 }  // namespace media

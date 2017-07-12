@@ -9,27 +9,24 @@
 
 namespace media {
 
-Input::Input() : prepared_(false) {}
+Input::Input(Stage* stage, size_t index) : stage_(stage), index_(index) {
+  FTL_DCHECK(stage_);
+}
 
 Input::~Input() {}
 
-void Input::Connect(const OutputRef& output) {
-  FTL_DCHECK(output.valid());
+void Input::Connect(Output* output) {
+  FTL_DCHECK(output);
   FTL_DCHECK(!mate_);
   mate_ = output;
 }
 
-Output& Input::actual_mate() const {
-  FTL_DCHECK(mate_.valid());
-  return mate_.actual();
-}
-
 void Input::SetDemand(Demand demand, Engine* engine) const {
   FTL_DCHECK(engine);
-  FTL_DCHECK(connected());
+  FTL_DCHECK(mate_);
 
-  if (actual_mate().UpdateDemandFromInput(demand)) {
-    engine->PushToDemandBacklog(mate().stage_);
+  if (mate_->UpdateDemandFromInput(demand)) {
+    engine->PushToDemandBacklog(mate_->stage());
   }
 }
 

@@ -15,21 +15,23 @@ Graph::~Graph() {
 }
 
 void Graph::RemoveNode(NodeRef node) {
-  FTL_DCHECK(node.valid());
+  FTL_DCHECK(node);
 
   Stage* stage = node.stage_;
 
   size_t input_count = stage->input_count();
   for (size_t input_index = 0; input_index < input_count; input_index++) {
-    if (stage->input(input_index).connected()) {
-      DisconnectInput(InputRef(stage, input_index));
+    Input& input = stage->input(input_index);
+    if (input.connected()) {
+      DisconnectInput(InputRef(&input));
     }
   }
 
   size_t output_count = stage->output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
-    if (stage->output(output_index).connected()) {
-      DisconnectOutput(OutputRef(stage, output_index));
+    Output& output = stage->output(output_index);
+    if (output.connected()) {
+      DisconnectOutput(OutputRef(&output));
     }
   }
 
@@ -43,8 +45,8 @@ void Graph::RemoveNode(NodeRef node) {
 }
 
 NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {
-  FTL_DCHECK(output.valid());
-  FTL_DCHECK(input.valid());
+  FTL_DCHECK(output);
+  FTL_DCHECK(input);
 
   if (output.connected()) {
     DisconnectOutput(output);
@@ -53,73 +55,79 @@ NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {
     DisconnectInput(input);
   }
 
-  output.actual().Connect(input);
-  input.actual().Connect(output);
+  output.actual()->Connect(input.actual());
+  input.actual()->Connect(output.actual());
 
   return input.node();
 }
 
 NodeRef Graph::ConnectNodes(NodeRef upstream_node, NodeRef downstream_node) {
-  FTL_DCHECK(upstream_node.valid());
-  FTL_DCHECK(downstream_node.valid());
+  FTL_DCHECK(upstream_node);
+  FTL_DCHECK(downstream_node);
   Connect(upstream_node.output(), downstream_node.input());
   return downstream_node;
 }
 
 NodeRef Graph::ConnectOutputToNode(const OutputRef& output,
                                    NodeRef downstream_node) {
-  FTL_DCHECK(output.valid());
-  FTL_DCHECK(downstream_node.valid());
+  FTL_DCHECK(output);
+  FTL_DCHECK(downstream_node);
   Connect(output, downstream_node.input());
   return downstream_node;
 }
 
 NodeRef Graph::ConnectNodeToInput(NodeRef upstream_node,
                                   const InputRef& input) {
-  FTL_DCHECK(upstream_node.valid());
-  FTL_DCHECK(input.valid());
+  FTL_DCHECK(upstream_node);
+  FTL_DCHECK(input);
   Connect(upstream_node.output(), input);
   return input.node();
 }
 
 void Graph::DisconnectOutput(const OutputRef& output) {
-  FTL_DCHECK(output.valid());
+  FTL_DCHECK(output);
 
   if (!output.connected()) {
     return;
   }
 
-  Input& mate = output.mate().actual();
+  Output* actual_output = output.actual();
+  FTL_DCHECK(actual_output);
+  Input* mate = actual_output->mate();
+  FTL_DCHECK(mate);
 
-  if (mate.prepared()) {
+  if (mate->prepared()) {
     FTL_CHECK(false) << "attempt to disconnect prepared output";
     return;
   }
 
-  mate.Disconnect();
-  output.actual().Disconnect();
+  mate->Disconnect();
+  actual_output->Disconnect();
 }
 
 void Graph::DisconnectInput(const InputRef& input) {
-  FTL_DCHECK(input.valid());
+  FTL_DCHECK(input);
 
   if (!input.connected()) {
     return;
   }
 
-  Output& mate = input.mate().actual();
+  Input* actual_input = input.actual();
+  FTL_DCHECK(actual_input);
+  Output* mate = actual_input->mate();
+  FTL_DCHECK(mate);
 
-  if (input.actual().prepared()) {
+  if (actual_input->prepared()) {
     FTL_CHECK(false) << "attempt to disconnect prepared input";
     return;
   }
 
-  mate.Disconnect();
-  input.actual().Disconnect();
+  mate->Disconnect();
+  actual_input->Disconnect();
 }
 
 void Graph::RemoveNodesConnectedToNode(NodeRef node) {
-  FTL_DCHECK(node.valid());
+  FTL_DCHECK(node);
 
   std::deque<NodeRef> to_remove{node};
 
@@ -140,7 +148,7 @@ void Graph::RemoveNodesConnectedToNode(NodeRef node) {
 }
 
 void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
-  FTL_DCHECK(output.valid());
+  FTL_DCHECK(output);
 
   if (!output.connected()) {
     return;
@@ -152,7 +160,7 @@ void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
 }
 
 void Graph::RemoveNodesConnectedToInput(const InputRef& input) {
-  FTL_DCHECK(input.valid());
+  FTL_DCHECK(input);
 
   if (!input.connected()) {
     return;
@@ -176,23 +184,23 @@ void Graph::Reset() {
 void Graph::Prepare() {
   for (Stage* sink : sinks_) {
     for (size_t i = 0; i < sink->input_count(); ++i) {
-      engine_.PrepareInput(InputRef(sink, i));
+      engine_.PrepareInput(&sink->input(i));
     }
   }
 }
 
 void Graph::PrepareInput(const InputRef& input) {
-  FTL_DCHECK(input.valid());
-  engine_.PrepareInput(input);
+  FTL_DCHECK(input);
+  engine_.PrepareInput(input.actual());
 }
 
 void Graph::FlushOutput(const OutputRef& output) {
   FTL_DCHECK(output);
-  engine_.FlushOutput(output);
+  engine_.FlushOutput(output.actual());
 }
 
 void Graph::FlushAllOutputs(NodeRef node) {
-  FTL_DCHECK(node.valid());
+  FTL_DCHECK(node);
   size_t output_count = node.output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
     FlushOutput(node.output(output_index));

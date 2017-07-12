@@ -7,7 +7,11 @@
 namespace media {
 
 TransformStage::TransformStage(std::shared_ptr<Transform> transform)
-    : transform_(transform), allocator_(nullptr), input_packet_is_new_(true) {
+    : input_(this, 0),
+      output_(this, 0),
+      transform_(transform),
+      allocator_(nullptr),
+      input_packet_is_new_(true) {
   FTL_DCHECK(transform_);
 }
 

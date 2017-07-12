@@ -19,7 +19,7 @@ class OutputRef;
 // Opaque Stage pointer used for graph building.
 class NodeRef {
  public:
-  NodeRef() : stage_(nullptr) {}
+  NodeRef() {}
 
   NodeRef& operator=(std::nullptr_t) {
     stage_ = nullptr;
@@ -52,11 +52,7 @@ class NodeRef {
  private:
   explicit NodeRef(Stage* stage) : stage_(stage) {}
 
-  // Determines if the reference is non-null and otherwise valid. Useful for
-  // DCHECKs.
-  bool valid() const { return stage_ != nullptr; }
-
-  Stage* stage_;
+  Stage* stage_ = nullptr;
 
   friend Graph;
   friend InputRef;
@@ -67,40 +63,35 @@ class NodeRef {
 // Opaque Input pointer used for graph building.
 class InputRef {
  public:
-  InputRef() : stage_(nullptr), index_(0) {}
+  InputRef() {}
 
   InputRef& operator=(std::nullptr_t) {
-    stage_ = nullptr;
-    index_ = 0;
+    input_ = nullptr;
     return *this;
   }
 
   // Returns true if the reference refers to an input, false if it's null.
-  explicit operator bool() const { return stage_ != nullptr; }
+  explicit operator bool() const { return input_; }
 
   // Returns a reference to the node that owns this input. Returns a null
   // reference if this reference is null.
-  NodeRef node() const { return NodeRef(stage_); }
+  NodeRef node() const;
 
-  // Indicates whether this input is connected to an output.
+  // Indicates whether this input is connected to an output. Calling this method
+  // on a null |InputRef| results in undefined behavior.
   bool connected() const;
 
   // Returns a reference to the output to which this input is connected. Returns
   // an invalid reference if this input isn't connected to an output.
-  const OutputRef& mate() const;
+  OutputRef mate() const;
 
  private:
-  InputRef(Stage* stage, size_t index);
+  InputRef(Input* input) : input_(input) {}
 
   // Returns the actual input referenced by this object.
-  Input& actual() const;
+  Input* actual() const { return input_; }
 
-  // Determines if the reference is non-null and otherwise valid. Useful for
-  // DCHECKs.
-  bool valid() const;
-
-  Stage* stage_;
-  size_t index_;
+  Input* input_ = nullptr;
 
   friend Graph;
   friend NodeRef;
@@ -112,40 +103,35 @@ class InputRef {
 // Opaque Output pointer used for graph building.
 class OutputRef {
  public:
-  OutputRef() : stage_(nullptr), index_(0) {}
+  OutputRef() {}
 
   OutputRef& operator=(std::nullptr_t) {
-    stage_ = nullptr;
-    index_ = 0;
+    output_ = nullptr;
     return *this;
   }
 
   // Returns true if the reference refers to an output, false if it's null.
-  explicit operator bool() const { return stage_ != nullptr; }
+  explicit operator bool() const { return output_; }
 
   // Returns a reference to the node that owns this output. Returns a null
   // reference if this reference is null.
-  NodeRef node() const { return NodeRef(stage_); }
+  NodeRef node() const;
 
-  // Indicates whether this output is connected to an input.
+  // Indicates whether this output is connected to an input. Calling this method
+  // on a null |OutputRef| results in undefined behavior.
   bool connected() const;
 
   // Returns a reference to the input to which this output is connected. Returns
   // an invalid reference if this output isn't connected to an input.
-  const InputRef& mate() const;
+  InputRef mate() const;
 
  private:
-  OutputRef(Stage* stage, size_t index);
+  OutputRef(Output* output) : output_(output) {}
 
   // Returns the actual input referenced by this object.
-  Output& actual() const;
+  Output* actual() const { return output_; };
 
-  // Determines if the reference is non-null and otherwise valid. Useful for
-  // DCHECKs.
-  bool valid() const;
-
-  Stage* stage_;
-  size_t index_;
+  Output* output_ = nullptr;
 
   friend Graph;
   friend NodeRef;

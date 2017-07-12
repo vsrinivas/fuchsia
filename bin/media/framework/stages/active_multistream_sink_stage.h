@@ -53,10 +53,9 @@ class ActiveMultistreamSinkStage : public Stage,
   void UpdateDemand(size_t input_index, Demand demand) override;
 
   struct StageInput {
-    StageInput(size_t index)
-        : index_(index), allocated_(false), demand_(Demand::kNegative) {}
+    StageInput(Stage* stage, size_t index)
+        : input_(stage, index), allocated_(false), demand_(Demand::kNegative) {}
     Input input_;
-    size_t index_;
     bool allocated_;
     Demand demand_;
   };

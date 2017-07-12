@@ -10,34 +10,44 @@ Engine::Engine() {}
 
 Engine::~Engine() {}
 
-void Engine::PrepareInput(const InputRef& input) {
-  VisitUpstream(input, [](const InputRef& input, const OutputRef& output,
+void Engine::PrepareInput(Input* input) {
+  FTL_DCHECK(input);
+  VisitUpstream(input, [](Input* input, Output* output,
                           const Stage::UpstreamCallback& callback) {
-    FTL_DCHECK(!input.actual().prepared());
-    PayloadAllocator* allocator = input.stage_->PrepareInput(input.index_);
-    input.actual().set_prepared(true);
-    output.stage_->PrepareOutput(output.index_, allocator, callback);
+    FTL_DCHECK(input);
+    FTL_DCHECK(output);
+    FTL_DCHECK(!input->prepared());
+    PayloadAllocator* allocator = input->stage()->PrepareInput(input->index());
+    input->set_prepared(true);
+    output->stage()->PrepareOutput(output->index(), allocator, callback);
   });
 }
 
-void Engine::UnprepareInput(const InputRef& input) {
-  VisitUpstream(input, [](const InputRef& input, const OutputRef& output,
+void Engine::UnprepareInput(Input* input) {
+  FTL_DCHECK(input);
+  VisitUpstream(input, [](Input* input, Output* output,
                           const Stage::UpstreamCallback& callback) {
-    FTL_DCHECK(input.actual().prepared());
-    input.stage_->UnprepareInput(input.index_);
-    output.stage_->UnprepareOutput(output.index_, callback);
+    FTL_DCHECK(input);
+    FTL_DCHECK(output);
+    FTL_DCHECK(input->prepared());
+    input->stage()->UnprepareInput(input->index());
+    output->stage()->UnprepareOutput(output->index(), callback);
   });
 }
 
-void Engine::FlushOutput(const OutputRef& output) {
-  if (!output.connected()) {
+void Engine::FlushOutput(Output* output) {
+  FTL_DCHECK(output);
+  if (!output->connected()) {
     return;
   }
-  VisitDownstream(output, [](const OutputRef& output, const InputRef& input,
+
+  VisitDownstream(output, [](Output* output, Input* input,
                              const Stage::DownstreamCallback& callback) {
-    FTL_DCHECK(input.actual().prepared());
-    output.stage_->FlushOutput(output.index_);
-    input.stage_->FlushInput(input.index_, callback);
+    FTL_DCHECK(output);
+    FTL_DCHECK(input);
+    FTL_DCHECK(input->prepared());
+    output->stage()->FlushOutput(output->index());
+    input->stage()->FlushInput(input->index(), callback);
   });
 }
 
@@ -69,46 +79,46 @@ void Engine::PushToDemandBacklog(Stage* stage) {
   }
 }
 
-void Engine::VisitUpstream(const InputRef& input,
-                           const UpstreamVisitor& vistor) {
+void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
+  FTL_DCHECK(input);
   ftl::MutexLocker locker(&mutex_);
 
-  std::queue<InputRef> backlog;
+  std::queue<Input*> backlog;
   backlog.push(input);
 
   while (!backlog.empty()) {
-    InputRef input = backlog.front();
+    Input* input = backlog.front();
     backlog.pop();
-    FTL_DCHECK(input.valid());
-    FTL_DCHECK(input.connected());
+    FTL_DCHECK(input);
+    FTL_DCHECK(input->connected());
 
-    const OutputRef& output = input.mate();
-    Stage* output_stage = output.stage_;
+    Output* output = input->mate();
+    Stage* output_stage = output->stage();
 
-    vistor(input, output, [output_stage, &backlog](size_t input_index) {
-      backlog.push(InputRef(output_stage, input_index));
+    visitor(input, output, [output_stage, &backlog](size_t input_index) {
+      backlog.push(&output_stage->input(input_index));
     });
   }
 }
 
-void Engine::VisitDownstream(const OutputRef& output,
-                             const DownstreamVisitor& vistor) {
+void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
+  FTL_DCHECK(output);
   ftl::MutexLocker locker(&mutex_);
 
-  std::queue<OutputRef> backlog;
+  std::queue<Output*> backlog;
   backlog.push(output);
 
   while (!backlog.empty()) {
-    OutputRef output = backlog.front();
+    Output* output = backlog.front();
     backlog.pop();
-    FTL_DCHECK(output.valid());
-    FTL_DCHECK(output.connected());
+    FTL_DCHECK(output);
+    FTL_DCHECK(output->connected());
 
-    const InputRef& input = output.mate();
-    Stage* input_stage = input.stage_;
+    Input* input = output->mate();
+    Stage* input_stage = input->stage();
 
-    vistor(output, input, [input_stage, &backlog](size_t output_index) {
-      backlog.push(OutputRef(input_stage, output_index));
+    visitor(output, input, [input_stage, &backlog](size_t output_index) {
+      backlog.push(&input_stage->output(output_index));
     });
   }
 }

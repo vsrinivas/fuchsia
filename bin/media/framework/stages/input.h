@@ -6,7 +6,6 @@
 
 #include "apps/media/src/framework/models/demand.h"
 #include "apps/media/src/framework/packet.h"
-#include "apps/media/src/framework/refs.h"
 
 namespace media {
 
@@ -17,15 +16,21 @@ class Output;
 // Represents a stage's connector to an adjacent upstream stage.
 class Input {
  public:
-  Input();
+  Input(Stage* stage, size_t index);
 
   ~Input();
 
+  // The stage of which this input is a part.
+  Stage* stage() const { return stage_; }
+
+  // The index of this input with respect to the stage.
+  size_t index() const { return index_; }
+
   // The output to which this input is connected.
-  const OutputRef& mate() const { return mate_; }
+  Output* mate() const { return mate_; }
 
   // Establishes a connection.
-  void Connect(const OutputRef& output);
+  void Connect(Output* output);
 
   // Breaks a connection. Called only by the engine.
   void Disconnect() {
@@ -34,10 +39,7 @@ class Input {
   }
 
   // Determines whether the input is connected to an output.
-  bool connected() const { return static_cast<bool>(mate_); }
-
-  // The connected output.
-  Output& actual_mate() const;
+  bool connected() const { return mate_; }
 
   // Determines if the input is prepared.
   bool prepared() { return prepared_; }
@@ -60,8 +62,10 @@ class Input {
   void Flush();
 
  private:
-  OutputRef mate_;
-  bool prepared_;
+  Stage* stage_;
+  size_t index_;
+  Output* mate_ = nullptr;
+  bool prepared_ = false;
   PacketPtr packet_from_upstream_;
 };
 

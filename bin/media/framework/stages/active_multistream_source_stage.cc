@@ -10,10 +10,12 @@ namespace media {
 
 ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
     std::shared_ptr<ActiveMultistreamSource> source)
-    : outputs_(source->stream_count()),
-      packets_per_output_(source->stream_count()),
-      source_(source) {
+    : packets_per_output_(source->stream_count()), source_(source) {
   FTL_DCHECK(source);
+
+  for (size_t index = 0; index < source->stream_count(); ++index) {
+    outputs_.emplace_back(this, index);
+  }
 
   supply_function_ = [this](size_t output_index, PacketPtr packet) {
     mutex_.Lock();

@@ -7,7 +7,7 @@
 namespace media {
 
 ActiveSourceStage::ActiveSourceStage(std::shared_ptr<ActiveSource> source)
-    : source_(source), prepared_(false) {
+    : output_(this, 0), source_(source), prepared_(false) {
   FTL_DCHECK(source_);
 
   supply_function_ = [this](PacketPtr packet) {
