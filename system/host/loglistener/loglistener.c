@@ -4,6 +4,11 @@
 
 #define _POSIX_C_SOURCE 200809L
 
+// for SO_REUSEPORT
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE
+#endif
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -18,6 +23,12 @@
 #include <stdint.h>
 
 #include <magenta/boot/netboot.h>
+
+#ifdef _DARWIN_C_SOURCE
+#define REUSEPORT SO_REUSEPORT
+#else
+#define REUSEPORT SO_REUSEADDR
+#endif
 
 static const char* appname;
 static const char* nodename = "*";
@@ -51,7 +62,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "%s: cannot create socket %d\n", appname, s);
         return -1;
     }
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &n, sizeof(n));
+    setsockopt(s, SOL_SOCKET, REUSEPORT, &n, sizeof(n));
     if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
         fprintf(stderr, "%s: cannot bind to [%s]%d %d\n", appname,
                 inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
