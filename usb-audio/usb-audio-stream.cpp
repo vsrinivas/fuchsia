@@ -770,6 +770,19 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     uint64_t complete_time = mx_ticks_get();
     Action when_finished = Action::NONE;
 
+    // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
+    // official way of meeting real-time latency requirements.  Also, the fact
+    // that this boosting gets done after the first transaction completes
+    // degrades the quality of the startup time estimate (if the system is under
+    // high load when the system starts up).  As a general issue, there are
+    // better ways of refining this estimate than bumping the thread prio before
+    // the first transaction gets queued.  Therefor, we just have a poor
+    // estimate for now and will need to live with the consequences.
+    if (!iotxn_complete_prio_bumped_) {
+        mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+        iotxn_complete_prio_bumped_ = true;
+    }
+
     {
         mxtl::AutoLock txn_lock(&txn_lock_);
 

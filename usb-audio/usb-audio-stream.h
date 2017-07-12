@@ -161,6 +161,9 @@ private:
     uint8_t                         usb_ep_addr_ = 0;
     const mx_time_t                 create_time_;
     const uint64_t                  ticks_per_msec_ = mx_ticks_per_second() / 1000u;
+
+    // TODO(johngro) : See MG-940.  eliminate this ASAP
+    bool iotxn_complete_prio_bumped_ = false;
 };
 
 }  // namespace usb
