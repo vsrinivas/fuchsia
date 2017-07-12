@@ -39,7 +39,8 @@ using namespace cobalt;
 
 // TODO(azani): Change to DNS-looked-up address.
 // const char kLocalShufflerUri[] = "100.101.108.140:5001";
-const char kCloudShufflerUri[] = "130.211.233.218:5001";
+// const char kCloudShufflerUri[] = "130.211.233.218:5001";
+const char kCloudShufflerUri[] = "130.211.218.95:5001";
 const int32_t kFuchsiaCustomerId = 1;
 
 // Returns whether or not an operation should be retried based on its returned

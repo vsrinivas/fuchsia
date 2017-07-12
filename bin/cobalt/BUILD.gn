@@ -14,38 +14,24 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":cobalt_testapp"
+    ":cobalt_testapp",
   ]
 }
 
 executable("cobalt_testapp") {
-  testonly = true
-
-  deps = [
-    ":testapp",
-  ]
-}
-
-source_set("testapp") {
-  testonly = true
-
   sources = [
-    "test_app.cc",
+    "cobalt_testapp.cc",
   ]
 
   deps = [
-    "//cobalt/encoder",
+    "//application/lib/app",
+    "//apps/cobalt_client/services:cobalt",
     "//lib/ftl",
     "//lib/mtl",
-    "//third_party/grpc:grpc++",
-    # TODO(rudominer) Change to protobuf_lite after we have a different way
-    # of deserializing a message from a human-readable string.
-    "//third_party/protobuf:protobuf_full",
   ]
-
 }
 
-executable("cobalt_app") {
+executable("cobalt") {
   sources = [
     "cobalt_main.cc",
     "config.h",
