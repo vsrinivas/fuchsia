@@ -40,30 +40,29 @@ static int timer_do_one_thread(void* arg)
     return 0;
 }
 
-static thread_t _timer_threads[SMP_MAX_CPUS];
-#define timer_threads(cpu) (&_timer_threads[cpu])
-
 static void timer_test_all_cpus(void)
 {
+    thread_t *timer_threads[SMP_MAX_CPUS];
     uint max = arch_max_num_cpus();
+
     uint i;
     for (i = 0; i < max; i++) {
         char name[16];
         snprintf(name, sizeof(name), "timer %u\n", i);
 
-        thread_t* t = thread_create_etc(
-                timer_threads(i), name, timer_do_one_thread, NULL,
+        timer_threads[i] = thread_create_etc(
+                NULL, name, timer_do_one_thread, NULL,
                 DEFAULT_PRIORITY, NULL, NULL, DEFAULT_STACK_SIZE, NULL);
-        if (t == NULL) {
+        if (timer_threads[i] == NULL) {
             printf("failed to create thread for cpu %d\n", i);
             return;
         }
-        thread_set_pinned_cpu(t, i);
-        thread_resume(t);
+        thread_set_pinned_cpu(timer_threads[i], i);
+        thread_resume(timer_threads[i]);
     }
     uint joined = 0;
     for (i = 0; i < max; i++) {
-        if (thread_join(timer_threads(i), NULL, LK_SEC(1)) == 0) {
+        if (thread_join(timer_threads[i], NULL, LK_SEC(1)) == 0) {
             joined += 1;
         }
     }
