@@ -40,6 +40,12 @@ static bool stdio_pipe_test(void)
 
     ASSERT_EQ(strncmp(buffer, "hello", 5), 0, "Incorrect buffer read from pipe");
 
+    ASSERT_EQ(lseek(fds[0], 0, SEEK_SET), -1, "lseek should have failed");
+    ASSERT_EQ(errno, ESPIPE, "lseek error should have been pipe-related");
+
+    ASSERT_EQ(close(fds[0]), 0, "");
+    ASSERT_EQ(close(fds[1]), 0, "");
+
     END_TEST;
 }
 

@@ -36,7 +36,7 @@ ssize_t mxio_default_sendmsg(mxio_t* io, const struct msghdr* msg, int flags) {
 }
 
 off_t mxio_default_seek(mxio_t* io, off_t offset, int whence) {
-    return MX_ERR_NOT_SUPPORTED;
+    return MX_ERR_WRONG_TYPE;
 }
 
 mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len) {

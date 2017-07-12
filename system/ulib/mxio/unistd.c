@@ -1145,7 +1145,13 @@ off_t lseek(int fd, off_t offset, int whence) {
         return ERRNO(EBADF);
     }
     off_t r = io->ops->seek(io, offset, whence);
-    if (r < 0) {
+    if (r == MX_ERR_WRONG_TYPE) {
+        // Although 'ESPIPE' is a bit of a misnomer, it is the valid errno
+        // for any fd which does not implement seeking (i.e., for pipes,
+        // sockets, etc).
+        errno = ESPIPE;
+        r = -1;
+    } else if (r < 0) {
         r = ERROR(r);
     }
     mxio_release(io);
