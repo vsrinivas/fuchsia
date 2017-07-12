@@ -224,7 +224,8 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
         cpuid_c((uint32_t)guest_state->rax, (uint32_t)guest_state->rcx,
                 (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
                 (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
-        if (leaf == X86_CPUID_MODEL_FEATURES) {
+        switch (leaf) {
+        case X86_CPUID_MODEL_FEATURES:
             // Enable the hypervisor bit.
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
             // Disable the VMX bit.
@@ -235,8 +236,8 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
             // Disable the Thermal Monitor bit.
             guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
-        }
-        if (leaf == X86_CPUID_XSAVE) {
+            break;
+        case X86_CPUID_XSAVE:
             if (subleaf == 0) {
                 uint32_t xsave_size = 0;
                 status_t status = compute_xsave_size(guest_state->xcr0, &xsave_size);
@@ -246,20 +247,25 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             } else if (subleaf == 1) {
                 guest_state->rax &= ~(1u << 3);
             }
-        }
-        if (leaf == X86_CPUID_THERMAL_AND_POWER) {
+            break;
+        case X86_CPUID_THERMAL_AND_POWER:
             // Disable the performance energy bias bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
-        }
-        if (leaf == X86_CPUID_PERFORMANCE_MONITORING) {
+            break;
+        case X86_CPUID_PERFORMANCE_MONITORING: {
             // Disable all performance monitoring.
-
             // 31-07 = Reserved 0, 06-00 = 1 if event is not available.
             const uint32_t performance_monitoring_no_events = 0b1111111;
             guest_state->rax = 0;
             guest_state->rbx = performance_monitoring_no_events;
             guest_state->rcx = 0;
             guest_state->rdx = 0;
+            break;
+        }
+        case X86_CPUID_EXTENDED_FEATURE_FLAGS:
+            // Disable the Processor Trace bit.
+            guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
+            break;
         }
         return MX_OK;
     default:
