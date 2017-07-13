@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,14 +7,13 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/acpi.h>
 
-#include <acpisvc/simple.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <threads.h>
 
-#define TRACE 1
+#define TRACE 0
 
 #if TRACE
 #define xprintf(fmt...) printf(fmt)
@@ -29,11 +28,17 @@
 #define ACPI_BATTERY_STATE_CRITICAL    (1 << 2)
 
 typedef struct acpi_battery_device {
-    acpi_handle_t acpi_handle;
+    mx_device_t* mxdev;
+
+    // acpi protocol
+    acpi_protocol_t acpi;
+
+    // thread to poll for battery status
     thrd_t poll_thread;
 
     mtx_t lock;
 
+    // current battery status
     uint32_t state;
     uint32_t capacity_full;
     uint32_t capacity_design;
@@ -66,80 +71,79 @@ static mx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, mx_off_
     return MX_OK;
 }
 
+static void acpi_battery_release(void* ctx) {
+    free(ctx);
+}
+
 static mx_protocol_device_t acpi_battery_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = acpi_battery_read,
-    // TODO(yky): release
+    .release = acpi_battery_release,
 };
 
 static int acpi_battery_poll_thread(void* arg) {
     acpi_battery_device_t* dev = arg;
     for (;;) {
-        acpi_rsp_bst_t* bst;
-        mx_status_t status = acpi_bst(&dev->acpi_handle, &bst);
-        if (status != MX_OK) {
-            continue;
+        acpi_rsp_bst_t bst;
+        if (acpi_BST(&dev->acpi, &bst) != MX_OK) {
+            break;
         }
 
-        acpi_rsp_bif_t* bif;
-        status = acpi_bif(&dev->acpi_handle, &bif);
-        if (status != MX_OK) {
-            free(bst);
-            continue;
+        acpi_rsp_bif_t bif;
+        if (acpi_BIF(&dev->acpi, &bif) != MX_OK) {
+            break;
         }
 
         mtx_lock(&dev->lock);
-        dev->state = bst->state;
-        dev->capacity_remaining = bst->capacity_remaining;
-        dev->capacity_full = bif->capacity_full;
-        dev->capacity_design = bif->capacity_design;
+        dev->state = bst.battery_state;
+        dev->capacity_remaining = bst.battery_remaining_capacity;
+
+        dev->capacity_design = bif.design_capacity;
+        dev->capacity_full = bif.last_full_charge_capacity;
         mtx_unlock(&dev->lock);
-        free(bif);
-        free(bst);
 
         mx_nanosleep(mx_deadline_after(MX_MSEC(1000)));
     }
+    printf("acpi-battery: poll thread exiting\n");
     return 0;
 }
 
-static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    acpi_protocol_t acpi;
-    if (device_get_protocol(dev, MX_PROTOCOL_ACPI, &acpi)) {
+static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* parent, void** cookie) {
+    xprintf("acpi-battery: bind\n");
+
+    acpi_battery_device_t* dev = calloc(1, sizeof(acpi_battery_device_t));
+    if (!dev) {
+        return MX_ERR_NO_MEMORY;
+    }
+
+    if (device_get_protocol(parent, MX_PROTOCOL_ACPI, &dev->acpi)) {
+        free(dev);
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mx_handle_t handle = acpi.ops->clone_handle(acpi.ctx);
-    if (handle <= 0) {
-        printf("acpi-battery: error cloning handle (%d)\n", handle);
-        return handle;
-    }
-
-    acpi_battery_device_t* device = calloc(1, sizeof(acpi_battery_device_t));
-    if (!device) {
-        mx_handle_close(handle);
-        return MX_ERR_NO_MEMORY;
-    }
-    acpi_handle_init(&device->acpi_handle, handle);
-
-    int rc = thrd_create_with_name(&device->poll_thread, acpi_battery_poll_thread, device, "acpi-battery-poll");
+    int rc = thrd_create_with_name(&dev->poll_thread, acpi_battery_poll_thread, dev, "acpi-battery-poll");
     if (rc != thrd_success) {
-        printf("acpi-battery: polling thread did not start (%d)\n", rc);
+        xprintf("acpi-battery: polling thread did not start (%d)\n", rc);
+        free(dev);
+        return rc;
     }
 
    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "acpi-battery",
-        .ctx = device,
+        .ctx = dev,
         .ops = &acpi_battery_device_proto,
         .proto_id = MX_PROTOCOL_BATTERY,
     };
 
-    mx_status_t status = device_add(dev, &args, NULL);
+    mx_status_t status = device_add(parent, &args, NULL);
     if (status != MX_OK) {
-        printf("acpi-battery: could not add device! err=%d\n", status);
-        free(device);
+        xprintf("acpi-battery: could not add device! err=%d\n", status);
+        free(dev);
         return status;
     }
+
+    printf("acpi-battery: initialized\n");
 
     return MX_OK;
 }

@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -10,7 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/acpi-battery.c
 
-MODULE_STATIC_LIBS := system/ulib/acpisvc-client system/ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
