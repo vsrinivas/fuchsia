@@ -155,7 +155,7 @@ static bool vmar_test() {
     END_TEST;
 }
 
-static bool port_v2_test() {
+static bool port_test() {
     BEGIN_TEST;
     mx::port port;
     ASSERT_EQ(mx::port::create(0, &port), MX_OK, "");
@@ -264,7 +264,7 @@ RUN_TEST(channel_test)
 RUN_TEST(socket_test)
 RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
-RUN_TEST(port_v2_test)
+RUN_TEST(port_test)
 RUN_TEST(time_test)
 RUN_TEST(thread_self_test)
 RUN_TEST(process_self_test)

@@ -16,7 +16,7 @@ mx_status_t mx_port_queue(mx_handle_t handle, const void* packet, size_t size);
 
 ## DESCRIPTION
 
-Ports V2: **port_queue**() queues a *packet* to the port specified
+**port_queue**() queues a *packet* to the port specified
 by *handle*. The *packet* must be of type **mx_port_packet** and
 *size* should be set to zero.
 
@@ -46,49 +46,19 @@ typedef union mx_packet_user {
 
 ```
 
-Ports V1: **port_queue**() queues a *packet* of *size* bytes
-to the port specified by *handle*. The *packet* must begin
-with **mx_packet_header_t** and *size* must be the no bigger than
-**MX_PORT_MAX_PKT_SIZE**.
-
-```
-typedef struct mx_packet_header {
-    uint64_t key;
-    uint32_t type;
-    uint32_t extra;
-} mx_packet_header_t;
-
-```
-
-*key* and *exta* values will be preserved and *type* value will be
-internally recorded as **MX_PORT_PKT_TYPE_USER** to signal the
-consumer of the packet that the packet comes from the **port_queue**()
-operation as opposed to packets generated from bound handles which
-have the type set to MX_PORT_PKT_TYPE_IOSN.
-
 ## RETURN VALUE
 
 **port_queue**() returns **MX_OK** on successful queue of a packet.
 
-## ERRORS Ports V2
+## ERRORS
 
 **MX_ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
 *packet* is an invalid pointer.
 
-**MX_ERR_WRONG_TYPE** *size* is not zero or *handle* is not a port V2
+**MX_ERR_WRONG_TYPE** *size* is not zero or *handle* is not a port
 handle.
 
 **MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
-
-## ERRORS Ports V1
-
-**MX_ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
-*packet* is an invalid pointer, or *size* is less than the size
-of **mx_packet_header_t**.
-
-**MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
-
-**MX_ERR_BUFFER_TOO_SMALL**  If the packet is too big.
 
 ## NOTES
 

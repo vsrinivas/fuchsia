@@ -27,7 +27,7 @@
 mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     LTRACEF("options %u\n", options);
 
-    // Currently, the only allowed option is to switch on PortsV2.
+    // No options are supported.
     if (options != 0u)
         return MX_ERR_INVALID_ARGS;
 

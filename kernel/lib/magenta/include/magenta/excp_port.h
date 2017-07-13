@@ -15,7 +15,7 @@
 
 class UserThread;
 class ProcessDispatcher;
-class PortDispatcherV2;
+class PortDispatcher;
 
 // Represents the binding of an exception port to a specific target
 // (system/process/thread). Multiple ExceptionPorts may exist for a

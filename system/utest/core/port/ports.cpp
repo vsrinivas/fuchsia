@@ -17,7 +17,7 @@ static bool basic_test(void) {
 
     mx_handle_t port;
     status = mx_port_create(0, &port);
-    EXPECT_EQ(status, 0, "could not create port v2");
+    EXPECT_EQ(status, 0, "could not create port");
 
     const mx_port_packet_t in = {
         12ull,
@@ -55,7 +55,7 @@ static bool queue_and_close_test(void) {
 
     mx_handle_t port;
     status = mx_port_create(0, &port);
-    EXPECT_EQ(status, MX_OK, "could not create port v2");
+    EXPECT_EQ(status, MX_OK, "could not create port");
 
     mx_port_packet_t out0 = {};
     status = mx_port_wait(port, mx_deadline_after(MX_USEC(1)), &out0, 0u);

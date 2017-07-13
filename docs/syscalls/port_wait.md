@@ -1,4 +1,4 @@
-# mx_port_wait  (v2)
+# mx_port_wait
 
 ## NAME
 

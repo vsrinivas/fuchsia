@@ -373,7 +373,7 @@ static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals, ui
         return MX_ERR_STOP;
     }
     if (ios->dead) {
-        // ports v2 does not let us cancel packets that are
+        // ports does not let us cancel packets that are
         // alread in the queue, so the dead flag enables us
         // to ignore them
         return MX_ERR_STOP;
@@ -544,7 +544,7 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     ios->dead = true;
 
     // ensure we get no further events
-    //TODO: this does not work yet, ports v2 limitation
+    //TODO: this does not work yet, ports limitation
     port_cancel(&dh_port, &ios->ph);
     ios->ph.handle = MX_HANDLE_INVALID;
     dev->ios = NULL;
