@@ -35,6 +35,7 @@ static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
 }
 
 static bool data_mounted = false;
+static bool blobstore_mounted = false;
 
 /*
  * Attempt to mount the device pointed to be the file descriptor at a known
@@ -46,8 +47,6 @@ static bool data_mounted = false;
  */
 static mx_status_t mount_minfs(int fd, mount_options_t* options) {
     uint8_t type_guid[GPT_GUID_LEN];
-    static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-    static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
 
     // initialize our data for this run
     ssize_t read_sz = ioctl_block_get_type_guid(fd, type_guid,
@@ -55,7 +54,7 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
 
     // check if this partition matches any special type GUID
     if (read_sz == GPT_GUID_LEN) {
-        if (!memcmp(type_guid, sys_guid, GPT_GUID_LEN)) {
+        if (is_sys_guid(type_guid, read_sz)) {
             if (secondary_bootfs_ready()) {
                 return MX_ERR_ALREADY_BOUND;
             }
@@ -64,27 +63,27 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
             options->wait_until_ready = true;
             options->create_mountpoint = true;
 
-            mx_status_t st = mount(fd, "/system", DISK_FORMAT_MINFS, options, launch_minfs);
+            mx_status_t st = mount(fd, PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != MX_OK) {
-                printf("devmgr: failed to mount /system, retcode = %d\n", st);
+                printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_SYSTEM, st);
             } else {
                 devmgr_start_appmgr(NULL);
             }
 
-            return MX_OK;
-        } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
+            return st;
+        } else if (is_data_guid(type_guid, read_sz)) {
             if (data_mounted) {
                 return MX_ERR_ALREADY_BOUND;
             }
             data_mounted = true;
             options->wait_until_ready = true;
 
-            mx_status_t st = mount(fd, "/data", DISK_FORMAT_MINFS, options, launch_minfs);
+            mx_status_t st = mount(fd, PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != MX_OK) {
-                printf("devmgr: failed to mount /data, retcode = %d\n", st);
+                printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_DATA, st);
             }
 
-            return MX_OK;
+            return st;
         }
     }
 
@@ -101,7 +100,10 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         return MX_OK;
     }
 
-    printf("devmgr: new block device: /dev/class/block/%s\n", name);
+    char device_path[PATH_MAX];
+    sprintf(device_path, "%s/%s", PATH_DEV_BLOCK, name);
+
+    printf("devmgr: new block device: %s\n", device_path);
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
         return MX_OK;
@@ -111,43 +113,45 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
 
     switch (df) {
     case DISK_FORMAT_GPT: {
-        printf("devmgr: /dev/class/block/%s: GPT?\n", name);
+        printf("devmgr: %s: GPT?\n", device_path);
         // probe for partition table
         ioctl_device_bind(fd, GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
         close(fd);
         return MX_OK;
     }
     case DISK_FORMAT_MBR: {
-        printf("devmgr: /dev/class/block/%s: MBR?\n", name);
+        printf("devmgr: %s: MBR?\n", device_path);
         // probe for partition table
         ioctl_device_bind(fd, MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
         close(fd);
         return MX_OK;
     }
     case DISK_FORMAT_BLOBFS: {
-        mount_options_t options = default_mount_options;
-        options.create_mountpoint = true;
-        mount(fd, "/blobstore", DISK_FORMAT_BLOBFS, &options, launch_blobstore);
+        if (!blobstore_mounted) {
+            mount_options_t options = default_mount_options;
+            options.create_mountpoint = true;
+            mx_status_t status = mount(fd, PATH_BLOBSTORE, DISK_FORMAT_BLOBFS, &options, launch_blobstore);
+            if (status != MX_OK) {
+                printf("devmgr: Failed to mount blobstore partition %s at %s: %d. Please run fixfs to reformat.\n", device_path, PATH_BLOBSTORE, status);
+            } else {
+                blobstore_mounted = true;
+            }
+        }
+
         return MX_OK;
     }
     case DISK_FORMAT_MINFS: {
+        printf("devmgr: minfs\n");
         mount_options_t options = default_mount_options;
         options.wait_until_ready = false;
-        printf("devmgr: minfs\n");
-        if (mount_minfs(fd, &options) != MX_OK) {
-            close(fd);
-        }
+        mount_minfs(fd, &options);
         return MX_OK;
     }
     case DISK_FORMAT_FAT: {
         // Use the GUID to avoid auto-mounting the EFI partition as writable
         uint8_t guid[GPT_GUID_LEN];
         ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
-        bool efi = false;
-        static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
-        if (r == GPT_GUID_LEN && !memcmp(guid, guid_efi_part, GPT_GUID_LEN)) {
-            efi = true;
-        }
+        bool efi = is_efi_guid(guid, r);
         mount_options_t options = default_mount_options;
         options.create_mountpoint = true;
         options.readonly = efi;
@@ -155,9 +159,9 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         static int efi_counter = 0;
         char mountpath[MXIO_MAX_FILENAME + 64];
         if (efi) {
-            snprintf(mountpath, sizeof(mountpath), "/volume/efi-%d", efi_counter++);
+            snprintf(mountpath, sizeof(mountpath), "%s/efi-%d", PATH_VOLUME, efi_counter++);
         } else {
-            snprintf(mountpath, sizeof(mountpath), "/volume/fat-%d", fat_counter++);
+            snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", PATH_VOLUME, fat_counter++);
         }
         options.wait_until_ready = false;
         printf("devmgr: fatfs\n");

@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #define PARTITIONS_COUNT 128
 #define GPT_GUID_LEN 16
@@ -60,6 +61,15 @@ typedef struct gpt_device {
     gpt_partition_t* partitions[PARTITIONS_COUNT];
     // pointer to a list of partitions
 } gpt_device_t;
+
+bool is_sys_guid(uint8_t* guid, ssize_t len);
+// determines whether guid is system guid
+
+bool is_data_guid(uint8_t* guid, ssize_t len);
+// determines whether guid is data guid
+
+bool is_efi_guid(uint8_t* guid, ssize_t len);
+// determines whether guid is efi guid
 
 int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** out_dev);
 // read the partition table from the device.

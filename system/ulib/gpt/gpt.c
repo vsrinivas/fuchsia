@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "gpt/gpt.h"
 
@@ -85,6 +84,21 @@ static void partition_init(gpt_partition_t* part, const char* name, uint8_t* typ
     part->last = last;
     part->flags = flags;
     cstring_to_utf16((uint16_t*)part->name, name, sizeof(part->name) / sizeof(uint16_t));
+}
+
+bool is_sys_guid(uint8_t* guid, ssize_t len) {
+    static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
+    return len == GPT_GUID_LEN && !memcmp(guid, sys_guid, GPT_GUID_LEN);
+}
+
+bool is_data_guid(uint8_t* guid, ssize_t len) {
+    static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+    return len == GPT_GUID_LEN && !memcmp(guid, data_guid, GPT_GUID_LEN);
+}
+
+bool is_efi_guid(uint8_t* guid, ssize_t len) {
+    static const uint8_t efi_guid[GPT_GUID_LEN] = GUID_EFI_VALUE;
+    return len == GPT_GUID_LEN && !memcmp(guid, efi_guid, GPT_GUID_LEN);
 }
 
 int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** out_dev) {
