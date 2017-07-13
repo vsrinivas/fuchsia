@@ -37,6 +37,7 @@ executable("user_runner") {
     "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/ledger:constants",
     "//apps/modular/lib/ledger:operations",
     "//apps/modular/lib/ledger:page_client",
     "//apps/modular/lib/ledger:storage",

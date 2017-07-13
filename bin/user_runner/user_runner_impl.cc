@@ -14,6 +14,7 @@
 #include "apps/modular/lib/device_info/device_info.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/lib/ledger/constants.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -56,14 +57,6 @@ constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/framework/message-queues/v1/";
 constexpr char kUserShellLinkName[] = "user-shell-link";
-
-constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
-constexpr char kLedgerNoMinfsWaitFlag[] = "--no_minfs_wait";
-constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-
-// Hard-coded communal Ledger instance.
-const char kFirebaseServerId[] = "fuchsia-ledger";
-const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
