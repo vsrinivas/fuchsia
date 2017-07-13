@@ -129,7 +129,7 @@ def main(argv):
     file_pairs = []
     for test in tests:
       for filename, remote_dir in test['copy']:
-        file_pairs.append((filename, remote_dir +'/' + filename))
+        file_pairs.append((filename, remote_dir + '/' + filename))
     command_tuple = fuchsia_tools.sftp( '[' + host + ']', file_pairs)
     with open(os.devnull, 'w') as devnull:
       status = subprocess.call(command_tuple[0], stdout=devnull)
