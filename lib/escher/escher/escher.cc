@@ -85,4 +85,8 @@ impl::CommandBufferSequencer* Escher::command_buffer_sequencer() {
   return impl_->command_buffer_sequencer();
 }
 
+impl::CommandBufferPool* Escher::command_buffer_pool() {
+  return impl_->command_buffer_pool();
+}
+
 }  // namespace escher
