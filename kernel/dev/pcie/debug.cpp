@@ -354,10 +354,6 @@ static void dump_pcie_bars(const PcieDevice& dev,
                 info->is_mmio ? (info->is_64bit ? " 64-bit" : " 32-bit") : "",
                 info->is_mmio ? "MMIO" : "PIO",
                 info->allocation == nullptr ? "" : " (allocated)");
-        if (info->vmo) {
-            LSPCI_PRINTF("                               :: ");
-            info->vmo->Dump(0, false);
-        }
     }
 }
 
@@ -544,11 +540,6 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
      * filter */
     if (params->verbose) {
         params->indent_level += 2;
-
-        if (dev->config_vmo()) {
-            LSPCI_PRINTF("Config VMO        : ");
-            dev->config_vmo()->Dump(0, false);
-        }
 
         dump_pcie_common(*dev, params);
         dump_pcie_bars(*dev, params);

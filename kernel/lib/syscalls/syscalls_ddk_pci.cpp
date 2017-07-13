@@ -15,6 +15,7 @@
 #include <dev/interrupt.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
+#include <kernel/vm/vm_object_physical.h>
 
 #include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
@@ -380,7 +381,7 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
 
     // Get bar info from the device via the dispatcher and make sure it makes sense
     const pcie_bar_info_t* info = pci_device->GetBar(bar_num);
-    if (info == nullptr || info->size == 0 || info->vmo == nullptr) {
+    if (info == nullptr || info->size == 0) {
         return MX_ERR_INVALID_ARGS;
     }
 
@@ -392,11 +393,25 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
     if (info->size == 0) {
         bar.type = PCI_RESOURCE_TYPE_UNUSED;
     } else if (info->is_mmio) {
-        DEBUG_ASSERT(info->vmo != nullptr);
+        // Create a VMO mapping to the address / size of the mmio region this bar
+        // was allocated at
+        mxtl::RefPtr<VmObject> vmo;
+        status = VmObjectPhysical::Create(info->bus_addr,
+                                            mxtl::max<uint64_t>(info->size, PAGE_SIZE), &vmo);
+        if (status != MX_OK) {
+            return status;
+        }
+
+        // Set the name of the vmo for tracking
+        char name[32];
+        auto dev = pci_device->device();
+        snprintf(name, sizeof(name), "pci-%02x:%02x.%1x-bar%u",
+                dev->bus_id(), dev->dev_id(), dev->func_id(), bar_num);
+        vmo->set_name(name, sizeof(name));
 
         // We have a VMO, time to prep a handle to it for the caller
         mx_rights_t rights;
-        status = VmObjectDispatcher::Create(info->vmo, &dispatcher, &rights);
+        status = VmObjectDispatcher::Create(vmo, &dispatcher, &rights);
         if (status != MX_OK) {
             return status;
         }
@@ -461,15 +476,30 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
 
     // VMO vs PIO
     if (pci_config.is_mmio) {
-        DEBUG_ASSERT(pci_config.vmo);
+        auto dev = pci_device->device();
+        mxtl::RefPtr<VmObject> vmo;
+        status = VmObjectPhysical::Create(dev->config_phys(), PAGE_SIZE, &vmo);
+        if (status != MX_OK) {
+            return status;
+        }
 
+        // Config is always uncached
+        vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED_DEVICE);
+
+        // Set the name of the vmo for tracking
+        char name[32];
+        snprintf(name, sizeof(name), "pci-%02x:%02x.%1x-cfg",
+                 dev->bus_id(), dev->dev_id(), dev->func_id());
+        vmo->set_name(name, sizeof(name));
+
+        vmo->Dump(0, true);
         // Create a handle to the VMO to give back to the caller, but strip off the write
         // permission. PCI config space is only writable by the bus driver.
         // TODO(cja): Rethink this for dealing with gap registers in capability space
         // later. It might make sense to keep a mapping of gaps in the space to allow
         // writes and provide a syscall to do so.
         mx_rights_t rights;
-        status = VmObjectDispatcher::Create(pci_config.vmo, &dispatcher, &rights);
+        status = VmObjectDispatcher::Create(vmo, &dispatcher, &rights);
         if (status != MX_OK) {
             return status;
         }
