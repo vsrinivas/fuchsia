@@ -209,6 +209,9 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     token_manager_config->url = "file:///system/apps/oauth_token_manager";
     token_manager_.reset(new AppClient<auth::AccountProvider>(
         app_context_->launcher().get(), std::move(token_manager_config)));
+    token_manager_->SetAppErrorHandler([] {
+      FTL_CHECK(false) << "Token manager crashed. Stopping device runner.";
+    });
     token_manager_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
 
