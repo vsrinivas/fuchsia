@@ -55,6 +55,9 @@ void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
 	size_t offset = 0;
 	mx_status_t status = MX_OK;
 	if (fixed) {
+		if ((uintptr_t)start < pages_base) {
+			abort();
+		}
 		offset = (uintptr_t)start - pages_base;
 	}
 
