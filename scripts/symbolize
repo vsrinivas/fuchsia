@@ -197,6 +197,9 @@ def main():
 
     magenta_build_dir = os.path.join(
         os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
+    if not os.path.exists(magenta_build_dir):
+        magenta_build_dir = os.path.join(
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-magenta", "build-magenta-pc-x86-64")
     build_dirs = [magenta_build_dir]
     if args.build_dir:
         build_dirs = args.build_dir + build_dirs
