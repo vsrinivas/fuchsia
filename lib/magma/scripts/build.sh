@@ -26,11 +26,6 @@ fi
 
 build_dir=$fuchsia_root/out/$build-x86-64
 
-if [ ! -d "$build_dir" ]; then
-	echo "Can't find build_dir: $build_dir"
-	exit 1
-fi
-
 args="msd_intel_wait_for_flip=false"
 args="$args magma_enable_tracing=false"
 
