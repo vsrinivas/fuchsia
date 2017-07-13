@@ -154,6 +154,10 @@
             "bootfs_path": "test/modular_util_unittests"
         },
         {
+            "binary": "null_module",
+            "bootfs_path": "apps/modular_tests/null_module"
+        },
+        {
             "binary": "swap_module1",
             "bootfs_path": "apps/swap_module1"
         },
