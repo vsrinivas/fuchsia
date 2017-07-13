@@ -142,6 +142,7 @@ private:
     magma::Status ProcessDumpStatusToLog();
 
     void ProcessPendingFlip();
+    void ProcessPendingFlipSync();
     void ProcessFlipComplete();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
@@ -214,6 +215,7 @@ private:
 
     std::mutex pageflip_request_mutex_;
     std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_queue_;
+    std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_sync_queue_;
 
     magma::FpsPrinter fps_printer_;
 

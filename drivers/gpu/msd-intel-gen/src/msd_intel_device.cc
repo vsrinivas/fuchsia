@@ -88,6 +88,11 @@ public:
     {
         return std::move(wait_semaphores_);
     }
+    void set_wait_semaphore(std::shared_ptr<magma::PlatformSemaphore> semaphore)
+    {
+        wait_semaphores_.clear();
+        wait_semaphores_.push_back(std::move(semaphore));
+    }
 
 protected:
     magma::Status Process(MsdIntelDevice* device) override
@@ -403,13 +408,12 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
                           std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
 {
-    DLOG("Flip buffer 0x%" PRIx64, buffer->platform_buffer()->id());
+    DLOG("Flip buffer %lu", buffer->platform_buffer()->id());
 
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
     DASSERT(buffer);
 
-    if (kWaitForFlip)
-        wait_semaphores.push_back(flip_ready_semaphore_);
+    TRACE_DURATION("magma", "Flip", "buffer", buffer->platform_buffer()->id());
 
     auto request = std::make_unique<FlipRequest>(buffer, image_desc, std::move(wait_semaphores),
                                                  std::move(signal_semaphores));
@@ -438,13 +442,54 @@ void MsdIntelDevice::ProcessPendingFlip()
         auto semaphores = request->get_wait_semaphores();
 
         if (semaphores.size() == 0) {
-            EnqueueDeviceRequest(std::move(request));
+            if (kWaitForFlip)
+                request->set_wait_semaphore(flip_ready_semaphore_);
+
+            pageflip_pending_sync_queue_.push(std::move(request));
             pageflip_pending_queue_.pop();
+
+            if (pageflip_pending_sync_queue_.size() == 1) {
+                lock.unlock();
+                ProcessPendingFlipSync();
+                lock.lock();
+            }
+
         } else {
-            DLOG("adding waitset with %zu semaphores", semaphores.size());
+            DLOG("adding waitset with %zu semaphores, first %lu", semaphores.size(),
+                 semaphores[0]->id());
 
             // Invoke the callback when semaphores are satisfied;
             // the next ProcessPendingFlip will see an empty semaphore array for the front request.
+            bool result = semaphore_port_->AddWaitSet(
+                std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
+            DASSERT(result);
+            break;
+        }
+    }
+}
+
+void MsdIntelDevice::ProcessPendingFlipSync()
+{
+    auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
+        this->ProcessPendingFlipSync();
+    };
+
+    std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
+
+    while (pageflip_pending_sync_queue_.size()) {
+        DLOG("pageflip_pending_sync_queue_ size %zu", pageflip_pending_sync_queue_.size());
+
+        std::unique_ptr<FlipRequest>& request = pageflip_pending_sync_queue_.front();
+
+        // Takes ownership
+        auto semaphores = request->get_wait_semaphores();
+
+        if (semaphores.size() == 0) {
+            EnqueueDeviceRequest(std::move(request));
+            pageflip_pending_sync_queue_.pop();
+        } else {
+            DASSERT(semaphores.size() == 1); // flip ready semaphore only
+            DLOG("adding waitset with flip ready semaphore");
             bool result = semaphore_port_->AddWaitSet(
                 std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
             DASSERT(result);
@@ -458,6 +503,7 @@ void MsdIntelDevice::ProcessPendingFlip()
 void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request,
                                           bool enqueue_front)
 {
+    TRACE_DURATION("magma", "EnqueueDeviceRequest");
     std::unique_lock<std::mutex> lock(device_request_mutex_);
     if (enqueue_front) {
         device_request_list_.emplace_front(std::move(request));
@@ -676,6 +722,7 @@ magma::Status MsdIntelDevice::ProcessFlip(
 #endif
 
     TRACE_DURATION("magma", "ProcessFlip");
+    DLOG("ProcessFlip buffer %lu", buffer->platform_buffer()->id());
 
     // Error indicators are passed to the callback
     magma::Status status(MAGMA_STATUS_OK);
