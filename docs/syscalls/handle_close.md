@@ -23,6 +23,9 @@ If the *handle* was used in a pending [object_wait_one](syscalls/object_wait_one
 If the *handle* was the next to last handle to the object. The last handle to the
 object will assert the **MX_SIGNAL_LAST_HANDLE** signal.
 
+It is not an error to close the special "never a valid handle" **MX_HANDLE_INVALID**,
+similar to free(NULL) being a valid call.
+
 ## RETURN VALUE
 
 **handle_close**() returns **MX_OK** on success.
