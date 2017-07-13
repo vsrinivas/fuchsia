@@ -305,10 +305,12 @@ template("package") {
         args += [ rebase_path(root_build_dir + "/" + test.name) ]
       }
       foreach(driver, drivers) {
-        args += [ rebase_path(root_build_dir + "/" + driver.name) ]
+        driver_path = rebase_path("$shared_toolchain_out_dir/${driver.name}")
+        args += [ rebase_path(driver_path) ]
       }
       foreach(library, libraries) {
-        args += [ rebase_path(root_build_dir + "/" + library.name) ]
+        library_path = "$shared_toolchain_out_dir/${library.name}"
+        args += [ rebase_path(library_path) ]
       }
     }
 
