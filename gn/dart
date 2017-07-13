@@ -7,14 +7,11 @@
         "zlib"
     ],
     "labels": [
-        "//dart/pkg/analyzer_cli(//build/toolchain:host_x64)",
         "//dart/runtime/bin:dart",
         "//dart/runtime/bin:dart_precompiled_runtime",
-        "//dart/runtime/bin:dart(//build/toolchain:host_x64)",
         "//dart/runtime/bin:hello_fuchsia",
         "//dart/runtime/bin:hello_fuchsia_dylib",
-        "//dart:create_sdk",
-        "//dart:create_sdk(//build/toolchain:host_x64)"
+        "//dart:create_sdk"
     ],
     "binaries": [
         {
