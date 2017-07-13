@@ -394,6 +394,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
                 if (status != MX_OK) {
                     txn->status = status;
                     txn->actual = 0;
+                    list_delete(&txn->node);
                     list_add_tail(completed_txns, &txn->node);
                 }
                 ep->current_txn = NULL;
