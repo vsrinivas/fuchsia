@@ -6,6 +6,7 @@ group("user_shell") {
   testonly = true
 
   deps = [
+    ":null_module",
     ":test_user_shell",
   ]
 }
@@ -30,6 +31,22 @@ executable("test_user_shell") {
     "//apps/test_runner/services:test_runner",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("null_module") {
+  testonly = true
+
+  sources = [
+    "null_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//apps/mozart/services/views",
     "//lib/mtl",
   ]
 }
