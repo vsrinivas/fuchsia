@@ -4,7 +4,7 @@
 
 group("all") {
   deps = [
-    ":dummy_story_shell",
+    ":dev_story_shell",
     ":story_runner",
   ]
 }
@@ -61,9 +61,9 @@ source_set("story_runner") {
   ]
 }
 
-executable("dummy_story_shell") {
+executable("dev_story_shell") {
   sources = [
-    "dummy_story_shell.cc",
+    "dev_story_shell.cc",
   ]
 
   deps = [

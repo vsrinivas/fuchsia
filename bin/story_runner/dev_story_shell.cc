@@ -17,12 +17,12 @@
 
 namespace {
 
-class DummyStoryShellApp
+class DevStoryShellApp
     : modular::SingleServiceViewApp<modular::StoryShellFactory>,
       modular::StoryShell {
  public:
-  DummyStoryShellApp() : story_shell_binding_(this) {}
-  ~DummyStoryShellApp() override = default;
+  DevStoryShellApp() : story_shell_binding_(this) {}
+  ~DevStoryShellApp() override = default;
 
  private:
   // |SingleServiceViewApp|
@@ -94,14 +94,14 @@ class DummyStoryShellApp
   fidl::Binding<modular::StoryShell> story_shell_binding_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   modular::StoryContextPtr story_context_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyStoryShellApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  DummyStoryShellApp app;
+  DevStoryShellApp app;
   loop.Run();
   return 0;
 }
