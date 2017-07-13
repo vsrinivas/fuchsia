@@ -20,6 +20,7 @@
 #include <magenta/types.h>
 #include <thread>
 
+#include "magma_util/cache_flush.h"
 #include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
 #include "magma_util/platform/magenta/magenta_platform_trace.h"
@@ -54,6 +55,8 @@ struct intel_i915_device_t {
     std::mutex magma_mutex;
     std::atomic_bool console_visible{true};
 };
+
+static magma::CacheFlush g_cache_flush;
 
 static int magma_start(intel_i915_device_t* dev);
 static int magma_stop(intel_i915_device_t* dev);
@@ -91,29 +94,12 @@ static mx_status_t intel_i915_get_framebuffer(void* ctx, void** framebuffer)
     return MX_OK;
 }
 
-#define CACHELINE_SIZE 64
-#define CACHELINE_MASK 63
-
-static inline void clflush_range(void* start, size_t size)
-{
-    DLOG("clflush_range");
-
-    uint8_t* p = reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(start) & ~CACHELINE_MASK);
-    uint8_t* end = reinterpret_cast<uint8_t*>(start) + size;
-
-    __builtin_ia32_mfence();
-    while (p < end) {
-        __builtin_ia32_clflush(p);
-        p += CACHELINE_SIZE;
-    }
-}
-
 static void intel_i915_flush(void* ctx)
 {
     intel_i915_device_t* device = get_i915_device(ctx);
     // Don't incur overhead of flushing when console's not visible
     if (device->console_visible)
-        clflush_range(device->framebuffer_addr, device->framebuffer_size);
+        g_cache_flush.clflush_range(device->framebuffer_addr, device->framebuffer_size);
 }
 
 static void intel_i915_acquire_or_release_display(void* ctx, bool acquire)
@@ -129,14 +115,14 @@ static void intel_i915_acquire_or_release_display(void* ctx, bool acquire)
         device->console_visible = true;
         if (device->ownership_change_callback)
             device->ownership_change_callback(true, device->ownership_change_cookie);
-        clflush_range(device->framebuffer_addr, device->framebuffer_size);
+        g_cache_flush.clflush_range(device->framebuffer_addr, device->framebuffer_size);
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
         auto last_framebuffer = device->magma_system_device->PageFlipAndEnable(
             device->console_framebuffer, &image_desc, false);
         if (last_framebuffer) {
             void* data;
             if (last_framebuffer->platform_buffer()->MapCpu(&data)) {
-                clflush_range(data, last_framebuffer->size());
+                g_cache_flush.clflush_range(data, last_framebuffer->size());
                 last_framebuffer->platform_buffer()->UnmapCpu();
             }
             device->placeholder_framebuffer = last_framebuffer;
@@ -185,7 +171,7 @@ static int reset_placeholder(intel_i915_device_t* device)
     void* addr;
     if (device->placeholder_buffer->MapCpu(&addr)) {
         memset(addr, 0, device->placeholder_buffer->size());
-        clflush_range(addr, device->placeholder_buffer->size());
+        g_cache_flush.clflush_range(addr, device->placeholder_buffer->size());
         device->placeholder_buffer->UnmapCpu();
     }
 
