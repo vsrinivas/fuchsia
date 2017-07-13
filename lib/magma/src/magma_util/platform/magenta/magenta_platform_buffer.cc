@@ -243,10 +243,10 @@ bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_co
                                page_count * PAGE_SIZE, nullptr, 0);
     }
     if (status == MX_ERR_NO_MEMORY)
-        return DRETF(false, "Kernel returned MX_ERR_NO_MEMORY when attempting to commit vmo "
-                            "pages.\nThis means the system has run out of physical memory and "
+        return DRETF(false, "Kernel returned MX_ERR_NO_MEMORY when attempting to commit %u vmo "
+                            "pages (%u bytes).\nThis means the system has run out of physical memory and "
                             "things will now start going very badly.\nPlease stop using so much "
-                            "physical memory :)");
+                            "physical memory :)", page_count, PAGE_SIZE*page_count);
     else if (status != MX_OK)
         return DRETF(false, "failed to commit vmo pages: %d", status);
 
