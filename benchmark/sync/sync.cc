@@ -55,7 +55,11 @@ SyncBenchmark::SyncBenchmark(size_t entry_count,
       server_id_(std::move(server_id)),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
-      beta_tmp_dir_(kStoragePath) {
+      beta_tmp_dir_(kStoragePath),
+      token_provider_impl_("",
+                           "sync_user",
+                           "sync_user@google.com",
+                           "client_id") {
   FTL_DCHECK(entry_count > 0);
   FTL_DCHECK(value_size > 0);
   tracing::InitializeTracer(application_context_.get(),
@@ -73,12 +77,12 @@ void SyncBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FTL_DCHECK(ret);
 
-  ledger::LedgerPtr alpha =
-      benchmark::GetLedger(application_context_.get(), &alpha_controller_,
-                           "sync", alpha_path, true, server_id_);
-  ledger::LedgerPtr beta =
-      benchmark::GetLedger(application_context_.get(), &beta_controller_,
-                           "sync", beta_path, true, server_id_);
+  ledger::LedgerPtr alpha = benchmark::GetLedger(
+      application_context_.get(), &alpha_controller_, &token_provider_impl_,
+      "sync", alpha_path, true, server_id_);
+  ledger::LedgerPtr beta = benchmark::GetLedger(
+      application_context_.get(), &beta_controller_, &token_provider_impl_,
+      "sync", beta_path, true, server_id_);
 
   benchmark::GetPageEnsureInitialized(
       alpha.get(), nullptr,
@@ -152,7 +156,8 @@ void SyncBenchmark::Backlog() {
   FTL_DCHECK(ret);
 
   gamma_ = benchmark::GetLedger(application_context_.get(), &gamma_controller_,
-                                "sync", gamma_path, true, server_id_);
+                                &token_provider_impl_, "sync", gamma_path, true,
+                                server_id_);
   TRACE_ASYNC_BEGIN("benchmark", "get and verify backlog", 0);
   gamma_->GetPage(page_id_.Clone(), gamma_page_.NewRequest(),
                   [this](ledger::Status status) {

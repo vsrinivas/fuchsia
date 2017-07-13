@@ -18,6 +18,7 @@ namespace benchmark {
 
 ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
                             app::ApplicationControllerPtr* controller,
+                            FakeTokenProvider* token_provider,
                             std::string ledger_name,
                             std::string ledger_repository_path,
                             bool sync,
@@ -46,9 +47,12 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
     firebase_config->api_key = "";
   }
 
+  modular::auth::TokenProviderPtr token_provider_ptr;
+  token_provider->AddBinding(token_provider_ptr.NewRequest());
   repository_factory->GetRepository(
-      ledger_repository_path, std::move(firebase_config), nullptr,
-      repository.NewRequest(), QuitOnErrorCallback("GetRepository"));
+      ledger_repository_path, std::move(firebase_config),
+      std::move(token_provider_ptr), repository.NewRequest(),
+      QuitOnErrorCallback("GetRepository"));
 
   ledger::LedgerPtr ledger;
   repository->GetLedger(convert::ToArray(ledger_name), ledger.NewRequest(),

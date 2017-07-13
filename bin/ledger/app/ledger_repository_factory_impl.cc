@@ -25,14 +25,6 @@ constexpr ftl::StringView kContentPath = "/content";
 constexpr ftl::StringView kStagingPath = "/staging";
 
 namespace {
-ftl::StringView GetDefaultUserId(ftl::StringView base_path) {
-  size_t separator = base_path.rfind('/');
-  FTL_DCHECK(separator != std::string::npos);
-  FTL_DCHECK(separator != base_path.size() - 1);
-
-  return base_path.substr(separator + 1);
-}
-
 cloud_sync::UserConfig GetUserConfig(Environment* environment,
                                      const FirebaseConfigPtr& firebase_config,
                                      ftl::StringView user_id,
@@ -217,7 +209,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     return;
   }
 
-  if (!firebase_config) {
+  if (!firebase_config || !token_provider) {
     FTL_LOG(WARNING) << "No sync configuration - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
 
@@ -238,16 +230,15 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
-  if (token_provider_ptr) {
-    token_provider_ptr.set_connection_error_handler(
-        [ this, name = repository_information.name ] {
-          FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
-                         << "shutting down the repository.";
-          auto find_repository = repositories_.find(name);
-          FTL_DCHECK(find_repository != repositories_.end());
-          repositories_.erase(find_repository);
-        });
-  }
+  token_provider_ptr.set_connection_error_handler(
+      [ this, name = repository_information.name ] {
+        FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
+                       << "shutting down the repository.";
+        auto find_repository = repositories_.find(name);
+        FTL_DCHECK(find_repository != repositories_.end());
+        repositories_.erase(find_repository);
+      });
+
   auto auth_provider = std::make_unique<AuthProviderImpl>(
       environment_->main_runner(), firebase_config->api_key,
       std::move(token_provider_ptr));
@@ -271,11 +262,6 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       return;
     }
 
-    if (user_id.empty()) {
-      FTL_LOG(WARNING) << "Empty Firebase ID returned by the token manager, "
-                       << "falling back to using directory name as the id.";
-      user_id = GetDefaultUserId(repository_information.base_path).ToString();
-    }
     cloud_sync::UserConfig user_config =
         GetUserConfig(environment_, firebase_config, user_id,
                       repository_information.content_path, auth_provider_ptr);

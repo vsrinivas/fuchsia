@@ -41,6 +41,10 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
                                            int value_size,
                                            std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      token_provider_impl_("",
+                           "sync_user",
+                           "sync_user@google.com",
+                           "client_id"),
       entry_count_(entry_count),
       value_size_(value_size),
       server_id_(std::move(server_id)),
@@ -65,12 +69,12 @@ void ConvergenceBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FTL_DCHECK(ret);
 
-  alpha_ledger_ =
-      benchmark::GetLedger(application_context_.get(), &alpha_controller_,
-                           "sync", alpha_path, true, server_id_);
-  beta_ledger_ =
-      benchmark::GetLedger(application_context_.get(), &beta_controller_,
-                           "sync", beta_path, true, server_id_);
+  alpha_ledger_ = benchmark::GetLedger(
+      application_context_.get(), &alpha_controller_, &token_provider_impl_,
+      "sync", alpha_path, true, server_id_);
+  beta_ledger_ = benchmark::GetLedger(application_context_.get(),
+                                      &beta_controller_, &token_provider_impl_,
+                                      "sync", beta_path, true, server_id_);
 
   benchmark::GetPageEnsureInitialized(
       alpha_ledger_.get(), nullptr,

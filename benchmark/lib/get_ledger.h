@@ -9,6 +9,7 @@
 #include <string>
 
 #include "application/lib/app/application_context.h"
+#include "apps/ledger/benchmark/lib/fake_token_provider.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "lib/ftl/strings/string_view.h"
@@ -20,6 +21,7 @@ namespace benchmark {
 ledger::LedgerPtr GetLedger(
     app::ApplicationContext* context,
     app::ApplicationControllerPtr* controller,
+    FakeTokenProvider* token_provider,
     std::string ledger_name,
     std::string ledger_repository_path,
     bool sync,

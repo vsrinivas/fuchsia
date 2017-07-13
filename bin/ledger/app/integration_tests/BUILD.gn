@@ -23,6 +23,7 @@ executable("integration_tests") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/ledger/src/app:lib",
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/network:fake",

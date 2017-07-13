@@ -106,14 +106,8 @@ TEST_F(AuthProviderImplTest, GetFirebaseTokenErrorIfEmpty) {
                                  modular::auth::TokenProviderPtr::Create(
                                      token_provider_binding_.NewBinding()));
 
-  token_provider_.Set("", "", "");
   cloud_sync::AuthStatus auth_status;
   std::string firebase_token;
-  auth_provider.GetFirebaseToken(
-      callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
-
   token_provider_.SetNull();
   auth_provider.GetFirebaseToken(
       callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
@@ -142,43 +136,13 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserIdErrorIfEmpty) {
                                  modular::auth::TokenProviderPtr::Create(
                                      token_provider_binding_.NewBinding()));
 
-  token_provider_.Set("", "", "");
-  cloud_sync::AuthStatus auth_status;
-  std::string firebase_user_id;
-  auth_provider.GetFirebaseUserId(
-      callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
-  EXPECT_EQ("", firebase_user_id);
-
   token_provider_.SetNull();
+  cloud_sync::AuthStatus auth_status;
+  std::string firebase_user_id;
   auth_provider.GetFirebaseUserId(
       callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_sync::AuthStatus::ERROR, auth_status);
-  EXPECT_EQ("", firebase_user_id);
-}
-
-// Verifies that if configured with empty API key, the auth provider returns
-// empty tokens. This allows to run benchmarks against unaunthenticated cloud.
-TEST_F(AuthProviderImplTest, NoApiKey) {
-  AuthProviderImpl auth_provider(message_loop_.task_runner(), "",
-                                 modular::auth::TokenProviderPtr::Create(
-                                     token_provider_binding_.NewBinding()));
-
-  cloud_sync::AuthStatus auth_status;
-  std::string firebase_token;
-  auth_provider.GetFirebaseToken(
-      callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
-  EXPECT_EQ("", firebase_token);
-
-  std::string firebase_user_id;
-  auth_provider.GetFirebaseToken(
-      callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
   EXPECT_EQ("", firebase_user_id);
 }
 

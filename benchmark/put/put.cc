@@ -34,6 +34,10 @@ PutBenchmark::PutBenchmark(int entry_count,
     : generator_(seed),
       tmp_dir_(kStoragePath),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      token_provider_impl_("",
+                           "sync_user",
+                           "sync_user@google.com",
+                           "client_id"),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -65,9 +69,9 @@ void PutBenchmark::Run() {
                 << " --transaction-size=" << transaction_size_
                 << " --key-size=" << key_size_
                 << " --value-size=" << value_size_ << (update_ ? "update" : "");
-  ledger::LedgerPtr ledger =
-      benchmark::GetLedger(application_context_.get(), &application_controller_,
-                           "put", tmp_dir_.path(), false, "");
+  ledger::LedgerPtr ledger = benchmark::GetLedger(
+      application_context_.get(), &application_controller_,
+      &token_provider_impl_, "put", tmp_dir_.path(), false, "");
 
   InitializeKeys(ftl::MakeCopyable([ this, ledger = std::move(ledger) ](
       std::vector<fidl::Array<uint8_t>> keys) {

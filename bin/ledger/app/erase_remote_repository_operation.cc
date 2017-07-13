@@ -74,8 +74,12 @@ void EraseRemoteRepositoryOperation::EraseRemote() {
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_, server_id_,
       cloud_sync::GetFirebasePathForUser(user_id_));
+  std::vector<std::string> query_params;
+  if (!auth_token_.empty()) {
+    query_params = {"auth=" + auth_token_};
+  }
   firebase_->Delete(
-      "", {"auth=" + auth_token_}, [this](firebase::Status status) {
+      "", std::move(query_params), [this](firebase::Status status) {
         if (status != firebase::Status::OK) {
           FTL_LOG(ERROR) << "Failed to erase the remote state: " << status;
           on_done_(false);

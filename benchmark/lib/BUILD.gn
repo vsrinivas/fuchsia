@@ -10,11 +10,14 @@ source_set("lib") {
     "get_ledger.h",
     "logging.cc",
     "logging.h",
+    "fake_token_provider.cc",
+    "fake_token_provider.h",
   ]
 
   public_deps = [
     "//application/lib/app",
     "//apps/ledger/services/public",
+    "//apps/modular/services/auth",
   ]
 
   deps = [
