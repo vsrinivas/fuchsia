@@ -10,16 +10,18 @@
 namespace mozart {
 namespace scene {
 
-SceneManagerApp::SceneManagerApp(Params* params,
-                                 DemoHarnessFuchsia* demo_harness)
-    : Demo(demo_harness),
-      application_context_(demo_harness->application_context()),
-
+SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
+                                 Params* params,
+                                 std::unique_ptr<DemoHarness> demo_harness)
+    : application_context_(app_context),
+      demo_harness_(std::move(demo_harness)),
+      vulkan_context_(demo_harness_->GetVulkanContext()),
+      escher_(vulkan_context_),
       scene_manager_(std::make_unique<SceneManagerImpl>(
-          escher(),
+          &escher_,
           std::make_unique<FrameScheduler>(&display_),
           std::make_unique<escher::VulkanSwapchain>(
-              harness()->GetVulkanSwapchain()))) {
+              demo_harness_->GetVulkanSwapchain()))) {
   FTL_DCHECK(application_context_);
 
   tracing::InitializeTracer(application_context_, {"scene_manager"});
@@ -32,12 +34,6 @@ SceneManagerApp::SceneManagerApp(Params* params,
 }
 
 SceneManagerApp::~SceneManagerApp() {}
-
-void SceneManagerApp::DrawFrame() {
-  // We only subclass from Demo to get access to Vulkan/Escher, not for the
-  // rendering framework.
-  FTL_DCHECK(false);
-}
 
 }  // namespace scene
 }  // namespace mozart

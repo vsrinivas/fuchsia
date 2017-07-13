@@ -18,23 +18,24 @@ namespace mozart {
 namespace scene {
 
 // TODO(MZ-142): SceneManagerApp shouldn't inherit from Demo.
-class SceneManagerApp : public Demo {
+class SceneManagerApp {
  public:
   class Params {
    public:
     bool Setup(const ftl::CommandLine& command_line) { return true; }
   };
 
-  SceneManagerApp(Params* params, DemoHarnessFuchsia* harness);
+  SceneManagerApp(app::ApplicationContext* app_context,
+                  Params* params,
+                  std::unique_ptr<DemoHarness> harness);
   ~SceneManagerApp();
 
  private:
-  // |Demo|.
-  void DrawFrame() override;
-
   app::ApplicationContext* const application_context_;
 
   std::unique_ptr<DemoHarness> demo_harness_;
+  escher::VulkanContext vulkan_context_;
+  escher::Escher escher_;
   std::unique_ptr<SceneManagerImpl> scene_manager_;
 
   fidl::BindingSet<mozart2::SceneManager> bindings_;
