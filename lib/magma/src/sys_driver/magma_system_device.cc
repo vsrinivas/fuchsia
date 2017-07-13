@@ -31,6 +31,7 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
                                      magma_system_image_descriptor* image_desc, bool enable)
 {
     std::unique_lock<std::mutex> lock(page_flip_mutex_);
+    std::shared_ptr<MagmaSystemBuffer> last_buffer_copy;
 
     msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, 0, 0, nullptr);
 
@@ -38,20 +39,38 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
     page_flip_enable_ = enable;
 
     if (enable) {
-        DLOG("flip_deferred_wait_semaphores_ size %zu", flip_deferred_wait_semaphores_.size());
-        for (auto iter : flip_deferred_wait_semaphores_) {
-            iter.second->platform_semaphore()->Reset();
+        for (auto& deferred_semaphores : deferred_flip_semaphores_) {
+            for (auto iter : deferred_semaphores.wait) {
+                DLOG("waiting for semaphore %lu", iter->platform_semaphore()->id());
+                if (!iter->platform_semaphore()->Wait(100))
+                    DLOG("timeout waiting for semaphore");
+            }
+            for (auto iter : deferred_semaphores.signal) {
+                DLOG("signalling semaphore %lu", iter->platform_semaphore()->id());
+                iter->platform_semaphore()->Signal();
+            }
         }
-        DLOG("flip_deferred_signal_semaphores_ size %zu", flip_deferred_signal_semaphores_.size());
-        for (auto iter : flip_deferred_signal_semaphores_) {
-            iter.second->platform_semaphore()->Signal();
-        }
-        flip_deferred_wait_semaphores_.clear();
-        flip_deferred_signal_semaphores_.clear();
+        deferred_flip_buffers_.clear();
+        deferred_flip_semaphores_.clear();
         last_flipped_buffer_ = nullptr;
+
+    } else if (last_flipped_buffer_) {
+        void* src;
+        if (last_flipped_buffer_->platform_buffer()->MapCpu(&src)) {
+            std::unique_ptr<magma::PlatformBuffer> copy =
+                magma::PlatformBuffer::Create(last_flipped_buffer_->size(), "last_buffer_copy");
+
+            void* dst;
+            if (copy->MapCpu(&dst)) {
+                memcpy(dst, src, copy->size());
+                copy->UnmapCpu();
+                last_buffer_copy = MagmaSystemBuffer::Create(std::move(copy));
+            }
+            last_flipped_buffer_->platform_buffer()->UnmapCpu();
+        }
     }
 
-    return last_flipped_buffer_;
+    return last_buffer_copy;
 }
 
 // Called by display connection threads
@@ -63,18 +82,34 @@ void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
     std::unique_lock<std::mutex> lock(page_flip_mutex_);
 
     if (!page_flip_enable_) {
+        DeferredFlip deferred_flip;
+
         for (uint32_t i = 0; i < wait_semaphore_count; i++) {
-            DLOG("page flip disabled buffer 0x%" PRIx64 " wait semaphore 0x%" PRIx64,
-                 buf->platform_buffer()->id(), semaphores[i]->platform_semaphore()->id());
-            flip_deferred_wait_semaphores_[semaphores[i]->platform_semaphore()->id()] =
-                semaphores[i];
+            DLOG("page flip disabled buffer %lu wait semaphore %lu", buf->platform_buffer()->id(),
+                 semaphores[i]->platform_semaphore()->id());
+            deferred_flip.wait.push_back(semaphores[i]);
         }
         for (uint32_t i = wait_semaphore_count; i < semaphores.size(); i++) {
-            DLOG("page flip disabled buffer 0x%" PRIx64 " signal semaphore 0x%" PRIx64,
-                 buf->platform_buffer()->id(), semaphores[i]->platform_semaphore()->id());
-            flip_deferred_signal_semaphores_[semaphores[i]->platform_semaphore()->id()] =
-                semaphores[i];
+            DLOG("page flip disabled buffer %lu signal semaphore %lu", buf->platform_buffer()->id(),
+                 semaphores[i]->platform_semaphore()->id());
+            deferred_flip.signal.push_back(semaphores[i]);
         }
+
+        auto iter = std::find(std::begin(deferred_flip_buffers_), std::end(deferred_flip_buffers_),
+                              buf->platform_buffer()->id());
+        if (iter == deferred_flip_buffers_.end()) {
+            // This buffer hasn't been flipped so its rendering should complete.
+            // Consume the wait semaphores now.
+            for (auto iter : deferred_flip.wait) {
+                DLOG("waiting for semaphore %lu", iter->platform_semaphore()->id());
+                if (!iter->platform_semaphore()->Wait(100))
+                    DLOG("timeout waiting for semaphore");
+            }
+            deferred_flip.wait.clear();
+        }
+
+        deferred_flip_buffers_.push_back(buf->platform_buffer()->id());
+        deferred_flip_semaphores_.push_back(std::move(deferred_flip));
         return;
     }
 

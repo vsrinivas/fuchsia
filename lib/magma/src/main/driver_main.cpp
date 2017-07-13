@@ -133,8 +133,14 @@ static void intel_i915_acquire_or_release_display(void* ctx, bool acquire)
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
         auto last_framebuffer = device->magma_system_device->PageFlipAndEnable(
             device->console_framebuffer, &image_desc, false);
-        if (last_framebuffer)
+        if (last_framebuffer) {
+            void* data;
+            if (last_framebuffer->platform_buffer()->MapCpu(&data)) {
+                clflush_range(data, last_framebuffer->size());
+                last_framebuffer->platform_buffer()->UnmapCpu();
+            }
             device->placeholder_framebuffer = last_framebuffer;
+        }
     } else if (!acquire && !device->magma_system_device->page_flip_enabled()) {
         DLOG("flipping to placeholder_framebuffer");
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};

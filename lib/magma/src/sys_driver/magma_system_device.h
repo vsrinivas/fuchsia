@@ -82,10 +82,13 @@ private:
 
     bool page_flip_enable_ = true;
     std::mutex page_flip_mutex_;
-    std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemSemaphore>>
-        flip_deferred_wait_semaphores_;
-    std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemSemaphore>>
-        flip_deferred_signal_semaphores_;
+
+    struct DeferredFlip {
+        std::vector<std::shared_ptr<MagmaSystemSemaphore>> wait;
+        std::vector<std::shared_ptr<MagmaSystemSemaphore>> signal;
+    };
+    std::vector<DeferredFlip> deferred_flip_semaphores_;
+    std::vector<uint64_t> deferred_flip_buffers_;
     std::shared_ptr<MagmaSystemBuffer> last_flipped_buffer_;
 
     struct Connection {
