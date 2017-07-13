@@ -38,6 +38,9 @@ bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
                 os << a << " ";
         }
 
+        if (sc.ret_spec.size() > 0)
+            write_argument_annotation(os, sc.ret_spec[0]);
+
         os.seekp(-1, std::ios_base::end);
 
         os << ";\n\n";

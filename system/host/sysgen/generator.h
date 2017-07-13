@@ -133,3 +133,5 @@ std::string write_syscall_return_var(std::ofstream& os, const Syscall& sc);
 // Performs no casting or pointer wrapping.
 void write_syscall_invocation(std::ofstream& os, const Syscall& sc,
                               const std::string& return_var, const std::string& name_prefix);
+
+void write_argument_annotation(std::ofstream& os, const TypeSpec& arg);

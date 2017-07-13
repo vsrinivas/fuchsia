@@ -10,4 +10,5 @@
 #include <magenta/syscalls/types.h>
 #include <lib/user_copy/user_ptr.h>
 
+#define MX_SYSCALL_PARAM_ATTR(x)
 #include <magenta/syscall-definitions.h>

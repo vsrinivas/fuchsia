@@ -12,6 +12,12 @@
 
 __BEGIN_CDECLS
 
+#if defined(__clang__)
+#define MX_SYSCALL_PARAM_ATTR(x)   __attribute__((annotate("mx_" #x)))
+#else
+#define MX_SYSCALL_PARAM_ATTR(x)   // no-op
+#endif
+
 #include <magenta/syscalls/definitions.h>
 
 // Compatibility wrappers for deprecated syscalls also go here, when

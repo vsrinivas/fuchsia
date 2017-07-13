@@ -11,6 +11,9 @@ using std::ofstream;
 using std::string;
 
 static constexpr char kAuthors[] = "The Fuchsia Authors";
+static constexpr char kWrapMacro[] = "MX_SYSCALL_PARAM_ATTR";
+static constexpr char kDefaultHandleAnnotation[] = "handle_use";
+bool is_identifier_keyword(const string& iden);
 
 bool Generator::header(ofstream& os) {
     auto t = std::time(nullptr);
@@ -128,6 +131,7 @@ void write_syscall_signature_line(ofstream& os, const Syscall& sc, string name_p
             os << inter_arg;
         }
         first = false;
+        write_argument_annotation(os, arg);
         os << arg.as_cpp_declaration(wrap_pointers_with_user_ptr) << ",";
     });
 
@@ -168,4 +172,18 @@ void write_syscall_invocation(ofstream& os, const Syscall& sc,
     }
 
     os << ");\n";
+}
+
+void write_argument_annotation(std::ofstream& os, const TypeSpec& arg) {
+    bool has_annotation = false;
+    for (const auto& a : arg.attributes) {
+        if (!a.empty() && !is_identifier_keyword(a)) {
+            has_annotation = true;
+            os << kWrapMacro << "(" << a << ") ";
+        }
+    }
+    // If arg type is a handle (not an array) and no annotation is present, use default annotation
+    if (!has_annotation && arg.type == "mx_handle_t" && arg.arr_spec == nullptr) {
+        os << kWrapMacro << "(" << kDefaultHandleAnnotation << ") ";
+    }
 }

@@ -13,15 +13,22 @@
 using std::string;
 using std::vector;
 
+bool is_identifier_keyword(const string& iden) {
+    if (iden == "syscall" ||
+        iden == "returns" ||
+        iden == "IN" || iden == "OUT" || iden == "INOUT") {
+        return true;
+    }
+    return false;
+}
+
 bool vet_identifier(const string& iden, const FileCtx& fc) {
     if (iden.empty()) {
         fc.print_error("expecting idenfier", "");
         return false;
     }
 
-    if (iden == "syscall" ||
-        iden == "returns" ||
-        iden == "IN" || iden == "OUT" || iden == "INOUT") {
+    if (is_identifier_keyword(iden)) {
         fc.print_error("identifier cannot be keyword or attribute", iden);
         return false;
     }

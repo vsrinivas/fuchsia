@@ -4,7 +4,8 @@
 
 #
 # The syntax of each line is
-#     syscall <name> [attributes] ([args]) [returns (<type> [args])];
+#     syscall <name> [attributes] ([args])
+#         [returns (<type> [attributes] [args])];
 #
 # with '[]' being optional and '<>' being required input.
 #
@@ -13,7 +14,8 @@
 # [attributes] can be empty or is a space separated list of words with
 # meaning for a particular generator.
 #
-# [args] can be empty or is a comma separated list of '<aname>: <type> [ctr]'
+# [args] can be empty or is a comma separated list of
+# '<aname>: <type> [attributes] [ctr]'
 #
 # <aname> is the argument name. It must be a valid C indentifier.
 #
@@ -26,6 +28,21 @@
 # with valid values being one of: 'IN', 'OUT', 'INOUT'
 #
 # The 'returns (<type>)' is expected unless one of the attributes is 'noreturn'.
+#
+#
+# To help the clang static analyzer identify handle related syscalls, 3
+# attributes are available to describe handle behaviors. Which are
+# handle_acquire, handle_release and handle_release_always.
+#
+#  handle_acquire        The handle will be allocated when this call is
+#                        successful.
+#
+#  handle_release        The handle will be released/destroyed when this
+#                        call is successful.
+#
+#  handle_release_always The handle will be released/destroyed; the only failure
+#                        possible is for an invalid handle.
+#
 #
 
 # Time
@@ -77,16 +94,16 @@ syscall cache_flush vdsocall
 # Generic handle operations
 
 syscall handle_close
-    (handle: mx_handle_t)
+    (handle: mx_handle_t handle_release_always)
     returns (mx_status_t);
 
 syscall handle_duplicate
     (handle: mx_handle_t, rights: mx_rights_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall handle_replace
-    (handle: mx_handle_t, rights: mx_rights_t)
-    returns (mx_status_t, out: mx_handle_t);
+    (handle: mx_handle_t handle_release, rights: mx_rights_t)
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 # Generic object operations
 
@@ -140,7 +157,8 @@ syscall object_get_child
 
 syscall channel_create
     (options: uint32_t)
-    returns (mx_status_t, out0: mx_handle_t, out1: mx_handle_t);
+    returns (mx_status_t, out0: mx_handle_t handle_acquire,
+        out1: mx_handle_t handle_acquire);
 
 syscall channel_read
     (handle: mx_handle_t, options: uint32_t,
@@ -177,7 +195,8 @@ syscall channel_call vdsocall
 
 syscall socket_create
     (options: uint32_t)
-    returns (mx_status_t, out0: mx_handle_t, out1: mx_handle_t);
+    returns (mx_status_t, out0: mx_handle_t handle_acquire,
+        out1: mx_handle_t handle_acquire);
 
 syscall socket_write
     (handle: mx_handle_t, options: uint32_t,
@@ -196,7 +215,7 @@ syscall thread_exit noreturn ();
 syscall thread_create
     (process: mx_handle_t, name: char[name_len] IN, name_len: uint32_t,
         options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall thread_start
     (handle: mx_handle_t, thread_entry: uintptr_t,
@@ -226,11 +245,13 @@ syscall process_exit noreturn
 
 syscall process_create
     (job: mx_handle_t, name: char[name_len] IN, name_len: uint32_t, options: uint32_t)
-    returns (mx_status_t, proc_handle: mx_handle_t, vmar_handle: mx_handle_t);
+    returns (mx_status_t, proc_handle: mx_handle_t handle_acquire,
+        vmar_handle: mx_handle_t handle_acquire);
 
 syscall process_start
-    (process_handle: mx_handle_t, thread_handle: mx_handle_t, entry: uintptr_t,
-        stack: uintptr_t, arg_handle: mx_handle_t, arg2: uintptr_t)
+    (process_handle: mx_handle_t,
+        thread_handle: mx_handle_t, entry: uintptr_t,
+        stack: uintptr_t, arg_handle: mx_handle_t handle_release, arg2: uintptr_t)
     returns (mx_status_t);
 
 syscall process_read_memory
@@ -247,7 +268,7 @@ syscall process_write_memory
 
 syscall job_create
     (parent_job: mx_handle_t, options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall job_set_policy
     (job: mx_handle_t, options: uint32_t, topic: uint32_t, policy: any[count] IN, count: uint32_t)
@@ -267,18 +288,19 @@ syscall task_resume
     returns (mx_status_t);
 
 syscall task_kill
-    (task_handle: mx_handle_t)
+    (task_handle: mx_handle_t handle_release)
     returns (mx_status_t);
 
 # Synchronization
 
 syscall event_create
     (options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall eventpair_create
     (options: uint32_t)
-    returns (mx_status_t, out0: mx_handle_t, out1: mx_handle_t);
+    returns (mx_status_t,
+        out0: mx_handle_t handle_acquire, out1: mx_handle_t handle_acquire);
 
 syscall futex_wait blocking
     (value_ptr: mx_futex_t[1] INOUT, current_value: int, deadline: mx_time_t)
@@ -297,7 +319,7 @@ syscall futex_requeue
 
 syscall port_create
     (options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall port_queue
     (handle: mx_handle_t, packet: any[size] IN, size: size_t)
@@ -315,7 +337,7 @@ syscall port_cancel
 
 syscall timer_create
     (options: uint32_t, clock_id: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall timer_start
     (handle: mx_handle_t, deadline: mx_time_t, period: mx_duration_t, slack: mx_duration_t)
@@ -329,7 +351,7 @@ syscall timer_cancel
 
 syscall vmo_create
     (size: uint64_t, options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall vmo_read
     (handle: mx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t)
@@ -354,7 +376,7 @@ syscall vmo_op_range
 
 syscall vmo_clone
     (handle: mx_handle_t, options: uint32_t, offset: uint64_t, size: uint64_t)
-    returns (mx_status_t, out: mx_handle_t);
+    returns (mx_status_t, out: mx_handle_t handle_acquire);
 
 syscall vmo_set_cache_policy
     (handle: mx_handle_t, cache_policy: uint32_t)
@@ -364,7 +386,8 @@ syscall vmo_set_cache_policy
 
 syscall vmar_allocate
     (parent_vmar_handle: mx_handle_t, offset: size_t, size: size_t, map_flags: uint32_t)
-     returns (mx_status_t, child_vmar: mx_handle_t, child_addr: uintptr_t);
+    returns (mx_status_t,
+        child_vmar: mx_handle_t handle_acquire, child_addr: uintptr_t);
 
 syscall vmar_destroy
     (vmar_handle: mx_handle_t)
@@ -399,7 +422,8 @@ syscall cprng_add_entropy
 
 syscall fifo_create
     (elem_count: uint32_t, elem_size: uint32_t, options: uint32_t)
-    returns (mx_status_t, out0: mx_handle_t, out1: mx_handle_t);
+    returns (mx_status_t,
+        out0: mx_handle_t handle_acquire, out1: mx_handle_t handle_acquire);
 
 syscall fifo_read
     (handle: mx_handle_t, data: any[len] OUT, len: size_t)
@@ -412,11 +436,13 @@ syscall fifo_write
 # Multi-function
 
 syscall vmar_unmap_handle_close_thread_exit vdsocall
-    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t, handle: mx_handle_t)
+    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t,
+        handle: mx_handle_t handle_release)
     returns (mx_status_t);
 
 syscall futex_wake_handle_close_thread_exit vdsocall noreturn
-    (value_ptr: mx_futex_t[1] IN, count: uint32_t, new_value: int, handle: mx_handle_t);
+    (value_ptr: mx_futex_t[1] IN, count: uint32_t, new_value: int,
+        handle: mx_handle_t handle_release);
 
 # ---------------------------------------------------------------------------------------
 # Syscalls past this point are non-public
