@@ -15,7 +15,7 @@ class ImageBase : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Returns the image that should currenty be presented. Can be null.
+  // Returns the image that should currently be presented. Can be null.
   virtual const escher::ImagePtr& GetEscherImage() = 0;
 
  protected:

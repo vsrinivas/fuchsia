@@ -30,17 +30,20 @@ void DisplayRenderer::DrawFrame() {
   float width = static_cast<float>(swapchain_helper_.swapchain().width);
   float height = static_cast<float>(swapchain_helper_.swapchain().height);
 
+  // Record the display list.
+  // This may have side-effects on the scene such as updating textures
+  // bound to image pipes.
+  FTL_DCHECK(camera());
+  FTL_DCHECK(camera()->scene());
+  escher::Model model(
+      CreateDisplayList(camera()->scene(), escher::vec2(width, height)));
+
   if (FTL_VLOG_IS_ON(3)) {
     std::ostringstream output;
     DumpVisitor visitor(output);
     Accept(&visitor);
     FTL_VLOG(3) << "Renderer dump\n" << output.str();
   }
-
-  FTL_DCHECK(camera());
-  FTL_DCHECK(camera()->scene());
-  escher::Model model(
-      CreateDisplayList(camera()->scene(), escher::vec2(width, height)));
 
   escher::Stage stage;
   stage.Resize(escher::SizeI(width, height), 1.0, escher::SizeI(0, 0));

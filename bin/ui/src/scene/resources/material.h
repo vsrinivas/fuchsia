@@ -32,6 +32,7 @@ class Material : public Resource {
     FTL_CHECK(false);
     return 0.f;
   }
+  const ImageBasePtr& texture_image() const { return texture_; }
   const escher::MaterialPtr& escher_material() const {
     return escher_material_;
   }

@@ -109,6 +109,9 @@ void DumpVisitor::VisitNode(Node* r) {
     WriteProperty("hit_test_behavior")
         << static_cast<int>(r->hit_test_behavior());
   }
+  if (r->clip_to_self()) {
+    WriteProperty("clip_to_self") << r->clip_to_self();
+  }
   if (!r->transform().IsIdentity()) {
     WriteProperty("transform") << r->transform();
   }
@@ -165,6 +168,8 @@ void DumpVisitor::Visit(Material* r) {
     WriteProperty("texture.width") << r->escher_material()->texture()->width();
     WriteProperty("texture.height")
         << r->escher_material()->texture()->height();
+  } else if (r->texture_image()) {
+    WriteProperty("texture.pending") << "true";
   }
   VisitResource(r);
   EndItem();
