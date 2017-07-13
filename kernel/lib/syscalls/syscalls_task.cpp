@@ -317,21 +317,32 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     if (thread->thread()->process() != process.get())
         return MX_ERR_ACCESS_DENIED;
 
-    // XXX test that handle has TRANSFER rights before we remove it from the source process
-
-    HandleOwner arg_handle = up->RemoveHandle(arg_handle_value);
-    if (!arg_handle)
-        return MX_ERR_INVALID_ARGS;
+    HandleOwner arg_handle;
+    {
+        AutoLock lock(up->handle_table_lock());
+        auto handle = up->GetHandleLocked(arg_handle_value);
+        if (!handle)
+            return MX_ERR_BAD_HANDLE;
+        if (!magenta_rights_check(handle, MX_RIGHT_TRANSFER))
+            return MX_ERR_ACCESS_DENIED;
+        arg_handle = up->RemoveHandleLocked(arg_handle_value);
+    }
 
     auto arg_nhv = process->MapHandleToValue(arg_handle);
     process->AddHandle(mxtl::move(arg_handle));
 
-    // TODO(cpu) if Start() fails we want to undo RemoveHandle().
+    status = thread->Start(pc, sp, arg_nhv, arg2, /* initial_thread */ true);
+    if (status != MX_OK) {
+        // Put back the |arg_handle| into the calling process.
+        auto handle = process->RemoveHandle(arg_nhv);
+        up->AddHandle(mxtl::move(handle));
+        return status;
+    }
 
     ktrace(TAG_PROC_START, (uint32_t)thread->get_koid(),
            (uint32_t)process->get_koid(), 0, 0);
 
-    return thread->Start(pc, sp, arg_nhv, arg2, /* initial_thread= */ true);
+    return MX_OK;
 }
 
 void sys_process_exit(int retcode) {

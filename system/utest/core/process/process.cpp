@@ -46,6 +46,33 @@ bool mini_process_sanity() {
     END_TEST;
 }
 
+bool process_start_fail() {
+    BEGIN_TEST;
+
+    mx_handle_t event1, event2;
+    mx_handle_t process;
+    mx_handle_t thread;
+
+    ASSERT_EQ(mx_event_create(0u, &event1), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event2), MX_OK, "");
+
+    ASSERT_EQ(start_mini_process(mx_job_default(), event1, &process, &thread), MX_OK, "");
+
+    mx_handle_t other_thread;
+    ASSERT_EQ(mx_thread_create(process, "test", 4u, 0, &other_thread), MX_OK, "");
+
+    // Test that calling process_start() again for an existing process fails in a
+    // reasonable way. Also test that the transfered object is back into this process.
+    EXPECT_EQ(mx_process_start(process, other_thread, 0, 0, event2, 0), MX_ERR_BAD_STATE, "");
+    EXPECT_EQ(mx_object_signal(event2, 0u, MX_EVENT_SIGNALED), MX_OK, "");
+
+    mx_handle_close(event2);
+    mx_handle_close(process);
+    mx_handle_close(thread);
+    mx_handle_close(other_thread);
+    END_TEST;
+}
+
 bool kill_process_via_thread_close() {
     BEGIN_TEST;
 
@@ -343,6 +370,7 @@ bool info_reflects_process_state() {
 
 BEGIN_TEST_CASE(process_tests)
 RUN_TEST(mini_process_sanity);
+RUN_TEST(process_start_fail);
 RUN_TEST(kill_process_via_thread_close);
 RUN_TEST(kill_process_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
