@@ -9,7 +9,6 @@
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/acl_data_channel.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
-#include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/files/unique_fd.h"
@@ -42,10 +41,10 @@ class LEConnectionTest final {
   // Called after the connection has been successfully established. Sends 3 times the maximum number
   // of LE packets that can be stored in the controller's buffers. Sends ATT protocol Handle-Value
   // notification PDUs.
-  void SendNotifications();
+  void SendNotifications(bluetooth::hci::ConnectionHandle connection_handle);
 
   // Called when ACL data packets are received.
-  void ACLDataRxCallback(std::unique_ptr<bluetooth::hci::ACLDataPacket> data_packet);
+  void ACLDataRxCallback(std::unique_ptr<bluetooth::hci::ACLDataPacket> packet);
 
   // Logs the given message and status code and exits the run loop.
   void LogErrorStatusAndQuit(const std::string& msg, bluetooth::hci::Status status);
@@ -64,8 +63,6 @@ class LEConnectionTest final {
   bluetooth::common::DeviceAddressBytes dst_addr_;
   bluetooth::hci::CommandChannel::EventHandlerId le_conn_complete_handler_id_;
   bluetooth::hci::CommandChannel::EventHandlerId disconn_handler_id_;
-  std::unordered_map<bluetooth::hci::ConnectionHandle, ftl::RefPtr<bluetooth::hci::Connection>>
-      conn_map_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LEConnectionTest);
 };

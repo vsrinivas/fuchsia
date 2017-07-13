@@ -35,32 +35,7 @@ class ACLDataChannelTest : public TestingBase {
     test_device()->Start();
   }
 
-  void AddLEConnection(ConnectionHandle handle) {
-    FTL_DCHECK(conn_map_.find(handle) == conn_map_.end());
-    // Set some defaults so that all values are non-zero.
-    LEConnectionParams params(LEPeerAddressType::kPublic, common::DeviceAddressBytes(),
-                              defaults::kLEConnectionIntervalMin,
-                              defaults::kLEConnectionIntervalMax,
-                              defaults::kLEConnectionIntervalMin,  // conn_interval
-                              kLEConnectionLatencyMax,             // conn_latency
-                              defaults::kLESupervisionTimeout);
-    conn_map_[handle] = Connection::NewLEConnection(handle, Connection::Role::kMaster, params);
-  }
-
-  void SetUpConnectionLookUpCallback() {
-    set_connection_lookup_callback(
-        std::bind(&ACLDataChannelTest::LookUpConnection, this, std::placeholders::_1));
-  }
-
  private:
-  ftl::RefPtr<Connection> LookUpConnection(ConnectionHandle handle) {
-    auto iter = conn_map_.find(handle);
-    if (iter == conn_map_.end()) return nullptr;
-    return iter->second;
-  }
-
-  std::unordered_map<ConnectionHandle, ftl::RefPtr<Connection>> conn_map_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannelTest);
 };
 
@@ -90,10 +65,7 @@ TEST_F(ACLDataChannelTest, VerifyMTUs) {
   EXPECT_EQ(kLEBufferInfo, acl_data_channel()->GetLEBufferInfo());
 }
 
-// TODO(armansito): Uncomment and fix the tests below during the ACLDataChannel refactor (I'm
-// avoiding a rebase nightmare; the fix is coming in an immediate follow-up change).
-/*
-// Test that SendPacket works using the BR/EDR buffer.
+// Test that SendPacket works using only the BR/EDR buffer.
 TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
   constexpr size_t kMaxMTU = 5;
   constexpr size_t kMaxNumPackets = 5;
@@ -101,63 +73,43 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
   constexpr ConnectionHandle kHandle1 = 0x0002;
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets), DataBufferInfo());
-  SetUpConnectionLookUpCallback();
-
-  // This should fail because the connection doesn't exist.
-  common::DynamicByteBuffer buffer(ACLDataTxPacket::GetMinBufferSize(1));
-  ACLDataTxPacket packet(kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                         ACLBroadcastFlag::kPointToPoint, 1u, &buffer);
-  packet.EncodeHeader();
-  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(buffer)));
-
-  // This should fail because the payload exceeds the MTU.
-  AddLEConnection(kHandle0);
-  buffer = common::DynamicByteBuffer(ACLDataTxPacket::GetMinBufferSize(kMaxMTU + 1));
-  packet = ACLDataTxPacket(kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                           ACLBroadcastFlag::kPointToPoint, kMaxMTU + 1, &buffer);
-  packet.EncodeHeader();
-  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(buffer)));
 
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
+
+  // Callback invoked by TestDevice when it receive a data packet from us.
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    ACLDataRxPacket packet(&bytes);
-    if (packet.GetConnectionHandle() == kHandle0) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+
+    common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
+    ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+
+    if (connection_handle == kHandle0) {
       handle0_packet_count++;
     } else {
-      ASSERT_EQ(kHandle1, packet.GetConnectionHandle());
+      ASSERT_EQ(kHandle1, connection_handle);
       handle1_packet_count++;
     }
 
     if ((handle0_packet_count + handle1_packet_count) % kMaxNumPackets == 0) {
-      // We add a 1 second timeout to allow any erroneously sent packets to get through. It's
-      // important to do this so that our test isn't guaranteed to succeed if the code has bugs in
-      // it.
-      PostDelayedQuitTask(1);
+      message_loop()->QuitNow();
     }
   };
   test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
-  // Correct MTU on kHandle0 should succeed.
-  buffer = common::DynamicByteBuffer(ACLDataTxPacket::GetMinBufferSize(kMaxMTU));
-  packet = ACLDataTxPacket(kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                           ACLBroadcastFlag::kPointToPoint, kMaxMTU, &buffer);
-  packet.EncodeHeader();
-  EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
+  // Queue up 10 packets in total, distributed among the two connection handles.
+  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+    for (int i = 0; i < 10; ++i) {
+      ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
+      Connection::LinkType ll_type =
+          (i % 2) ? Connection::LinkType::kACL : Connection::LinkType::kLE;
+      auto packet = ACLDataPacket::New(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, kMaxMTU);
+      EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(packet), ll_type));
+    }
+  });
 
-  // Queue up 10 packets in total, distributed among the two connection handles. (1 has been queued
-  // on kHandle0 above).
-  AddLEConnection(kHandle1);
-  for (int i = 0; i < 9; ++i) {
-    buffer = common::DynamicByteBuffer(ACLDataTxPacket::GetMinBufferSize(kMaxMTU));
-    packet =
-        ACLDataTxPacket((i % 2) ? kHandle0 : kHandle1, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                        ACLBroadcastFlag::kPointToPoint, kMaxMTU, &buffer);
-    packet.EncodeHeader();
-    EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
-  }
-
-  RunMessageLoop(10);
+  RunMessageLoop(5);
 
   // kMaxNumPackets is 5. The controller should have received 3 packets on kHandle0 and 2 on
   // kHandle1
@@ -173,7 +125,7 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
                                      );
   test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunMessageLoop(10);
+  RunMessageLoop(5);
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -181,57 +133,131 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
 
 // Test that SendPacket works using the LE buffer when no BR/EDR buffer is available.
 TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
-  constexpr size_t kLEMaxMTU = 5;
-  constexpr size_t kLEMaxNumPackets = 5;
-  constexpr size_t kLargeMTU = 6;
+  constexpr size_t kMaxMTU = 5;
+  constexpr size_t kTotalAttempts = 12;
+  constexpr size_t kTotalExpected = 6;
+  constexpr size_t kBufferNumPackets = 3;
   constexpr ConnectionHandle kHandle0 = 0x0001;
   constexpr ConnectionHandle kHandle1 = 0x0002;
 
-  InitializeACLDataChannel(DataBufferInfo(), DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
-  SetUpConnectionLookUpCallback();
-  AddLEConnection(kHandle0);
-  AddLEConnection(kHandle1);
+  InitializeACLDataChannel(DataBufferInfo(), DataBufferInfo(kMaxMTU, kBufferNumPackets));
+
+  // This should fail because the payload exceeds the MTU.
+  auto packet = ACLDataPacket::New(kHandle1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                   ACLBroadcastFlag::kPointToPoint, kMaxMTU + 1);
+  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(packet), Connection::LinkType::kACL));
+
+  size_t handle0_packet_count = 0;
+  size_t handle1_packet_count = 0;
+  auto data_callback = [&](const common::ByteBuffer& bytes) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+
+    common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
+    ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+
+    if (connection_handle == kHandle0) {
+      handle0_packet_count++;
+    } else {
+      ASSERT_EQ(kHandle1, connection_handle);
+      handle1_packet_count++;
+    }
+
+    if ((handle0_packet_count + handle1_packet_count) % kBufferNumPackets == 0) {
+      message_loop()->QuitNow();
+    }
+  };
+  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
+
+  // Queue up 12 packets in total, distributed among the two connection handles and link types.
+  // Since the BR/EDR MTU is zero, we expect to only see LE packets transmitted.
+  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+    for (size_t i = 0; i < kTotalAttempts; ++i) {
+      ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
+      auto packet = ACLDataPacket::New(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, kMaxMTU);
+      if (i % 2) {
+        // ACL-U packets should fail due to 0 MTU size.
+        EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(packet), Connection::LinkType::kACL));
+      } else {
+        EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(packet), Connection::LinkType::kLE));
+      }
+    }
+  });
+
+  RunMessageLoop(10);
+
+  // The controller can buffer 3 packets. Since BR/EDR packets should have failed to go out, the
+  // controller should have received 3 packets on handle0 and none on handle1.
+  // kHandle1
+  EXPECT_EQ(kTotalExpected / 2u, handle0_packet_count);
+  EXPECT_EQ(0u, handle1_packet_count);
+
+  // Notify the processed packets with a Number Of Completed Packet HCI event.
+  auto event_buffer =
+      common::CreateStaticByteBuffer(0x13, 0x05,             // Event header
+                                     0x01,                   // Number of handles
+                                     0x01, 0x00, 0x03, 0x00  // 3 packets on handle 0x0001
+                                     );
+  test_device()->SendCommandChannelPacket(event_buffer);
+
+  RunMessageLoop(1);
+
+  EXPECT_EQ(kTotalExpected, handle0_packet_count);
+  EXPECT_EQ(0u, handle1_packet_count);
+}
+
+// Test that SendPacket works for LE packets when both buffer types are available.
+TEST_F(ACLDataChannelTest, SendLEPacketBothBuffers) {
+  constexpr size_t kMaxMTU = 200;
+  constexpr size_t kMaxNumPackets = 50;
+  constexpr size_t kLEMaxMTU = 5;
+  constexpr size_t kLEMaxNumPackets = 5;
+  constexpr ConnectionHandle kHandle0 = 0x0001;
+  constexpr ConnectionHandle kHandle1 = 0x0002;
+
+  InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
+                           DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
 
   // This should fail because the payload exceeds the LE MTU.
-  common::DynamicByteBuffer buffer(ACLDataTxPacket::GetMinBufferSize(kLargeMTU));
-  ACLDataTxPacket packet(kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                         ACLBroadcastFlag::kPointToPoint, kLargeMTU, &buffer);
-  packet.EncodeHeader();
-  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(buffer)));
+  auto packet = ACLDataPacket::New(kHandle1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                   ACLBroadcastFlag::kPointToPoint, kMaxMTU);
+  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(packet), Connection::LinkType::kLE));
 
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    ACLDataRxPacket packet(&bytes);
-    if (packet.GetConnectionHandle() == kHandle0) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+
+    common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
+    ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+
+    if (connection_handle == kHandle0) {
       handle0_packet_count++;
     } else {
-      ASSERT_EQ(kHandle1, packet.GetConnectionHandle());
+      ASSERT_EQ(kHandle1, connection_handle);
       handle1_packet_count++;
     }
 
     if ((handle0_packet_count + handle1_packet_count) % kLEMaxNumPackets == 0) {
-      // We add a 1 second timeout to allow any erroneously sent packets to get through. It's
-      // important to do this so that our test isn't guaranteed to succeed if the code has bugs in
-      // it.
-      PostDelayedQuitTask(1);
+      message_loop()->QuitNow();
     }
   };
   test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  for (int i = 0; i < 10; ++i) {
-    buffer = common::DynamicByteBuffer(ACLDataTxPacket::GetMinBufferSize(kLEMaxMTU));
-    packet =
-        ACLDataTxPacket((i % 2) ? kHandle1 : kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                        ACLBroadcastFlag::kPointToPoint, kLEMaxMTU, &buffer);
-    packet.EncodeHeader();
-    EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
-  }
+  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+    for (int i = 0; i < 10; ++i) {
+      ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
+      Connection::LinkType ll_type = Connection::LinkType::kLE;  // Send LE packets only.
+      auto packet = ACLDataPacket::New(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, kLEMaxMTU);
+      EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(packet), ll_type));
+    }
+  });
 
   RunMessageLoop(10);
 
-  // CommandChannel should be looking at kLEMaxNumPackets, which is 5. The controller should have
+  // ACLDataChannel should be looking at kLEMaxNumPackets, which is 5. The controller should have
   // received 3 packets on kHandle0 and 2 on kHandle1
   EXPECT_EQ(3, handle0_packet_count);
   EXPECT_EQ(2, handle1_packet_count);
@@ -251,61 +277,58 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
   EXPECT_EQ(5, handle1_packet_count);
 }
 
-// Test that SendPacket works for LE packets when both buffer types are available.
-TEST_F(ACLDataChannelTest, SendPacketBothBuffers) {
-  constexpr size_t kMaxMTU = 200;
-  constexpr size_t kMaxNumPackets = 50;
-  constexpr size_t kLEMaxMTU = 5;
-  constexpr size_t kLEMaxNumPackets = 5;
+// Test that SendPacket works for BR/EDR packets when both buffer types are available.
+TEST_F(ACLDataChannelTest, SendBREDRPacketBothBuffers) {
+  constexpr size_t kLEMaxMTU = 200;
+  constexpr size_t kLEMaxNumPackets = 50;
+  constexpr size_t kMaxMTU = 5;
+  constexpr size_t kMaxNumPackets = 5;
   constexpr ConnectionHandle kHandle0 = 0x0001;
   constexpr ConnectionHandle kHandle1 = 0x0002;
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
                            DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
-  SetUpConnectionLookUpCallback();
-  AddLEConnection(kHandle0);
-  AddLEConnection(kHandle1);
 
-  // This should fail because the payload exceeds the LE MTU.
-  common::DynamicByteBuffer buffer(ACLDataTxPacket::GetMinBufferSize(kMaxMTU));
-  ACLDataTxPacket packet(kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                         ACLBroadcastFlag::kPointToPoint, kMaxMTU, &buffer);
-  packet.EncodeHeader();
-  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(buffer)));
+  // This should fail because the payload exceeds the ACL MTU.
+  auto packet = ACLDataPacket::New(kHandle1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                   ACLBroadcastFlag::kPointToPoint, kLEMaxMTU);
+  EXPECT_FALSE(acl_data_channel()->SendPacket(std::move(packet), Connection::LinkType::kACL));
 
   int handle0_packet_count = 0;
   int handle1_packet_count = 0;
   auto data_callback = [&](const common::ByteBuffer& bytes) {
-    ACLDataRxPacket packet(&bytes);
-    if (packet.GetConnectionHandle() == kHandle0) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+
+    common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
+    ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+
+    if (connection_handle == kHandle0) {
       handle0_packet_count++;
     } else {
-      ASSERT_EQ(kHandle1, packet.GetConnectionHandle());
+      ASSERT_EQ(kHandle1, connection_handle);
       handle1_packet_count++;
     }
 
-    if ((handle0_packet_count + handle1_packet_count) % kLEMaxNumPackets == 0) {
-      // We add a 1 second timeout to allow any erroneously sent packets to get through. It's
-      // important to do this so that our test isn't guaranteed to succeed if the code has bugs in
-      // it.
-      PostDelayedQuitTask(1);
+    if ((handle0_packet_count + handle1_packet_count) % kMaxNumPackets == 0) {
+      message_loop()->QuitNow();
     }
   };
   test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  for (int i = 0; i < 10; ++i) {
-    buffer = common::DynamicByteBuffer(ACLDataTxPacket::GetMinBufferSize(kLEMaxMTU));
-    packet =
-        ACLDataTxPacket((i % 2) ? kHandle1 : kHandle0, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                        ACLBroadcastFlag::kPointToPoint, kLEMaxMTU, &buffer);
-    packet.EncodeHeader();
-    EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
-  }
+  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+    for (int i = 0; i < 10; ++i) {
+      ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
+      Connection::LinkType ll_type = Connection::LinkType::kACL;  // Send BR/EDR packets only.
+      auto packet = ACLDataPacket::New(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, kMaxMTU);
+      EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(packet), ll_type));
+    }
+  });
 
   RunMessageLoop(10);
 
-  // CommandChannel should be looking at kLEMaxNumPackets, which is 5. The controller should have
+  // ACLDataChannel should be looking at kLEMaxNumPackets, which is 5. The controller should have
   // received 3 packets on kHandle0 and 2 on kHandle1
   EXPECT_EQ(3, handle0_packet_count);
   EXPECT_EQ(2, handle1_packet_count);
@@ -345,15 +368,19 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
   int handle2_processed_count = 0;
   int total_packet_count = 0;
   auto data_cb = [&](const common::ByteBuffer& bytes) {
-    ACLDataRxPacket packet(&bytes);
-    if (packet.GetConnectionHandle() == kHandle0) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+
+    common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
+    ConnectionHandle connection_handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+
+    if (connection_handle == kHandle0) {
       handle0_total_packet_count++;
       handle0_processed_count++;
-    } else if (packet.GetConnectionHandle() == kHandle1) {
+    } else if (connection_handle == kHandle1) {
       handle1_total_packet_count++;
       handle1_processed_count++;
     } else {
-      ASSERT_EQ(kHandle2, packet.GetConnectionHandle());
+      ASSERT_EQ(kHandle2, connection_handle);
       handle2_total_packet_count++;
       handle2_processed_count++;
     }
@@ -361,6 +388,8 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
 
     // For every kLEMaxNumPackets packets processed, we notify the host.
     if ((total_packet_count % kLEMaxNumPackets) == 0) {
+      // NOTE(armansito): Here we include handles even when the processed-count is 0. This is OK;
+      // ACLDataChannel should ignore those.
       auto event_buffer = common::CreateStaticByteBuffer(
           0x13, 0x0D,                                                       // Event header
           0x03,                                                             // Number of handles
@@ -380,24 +409,16 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
                            DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
-  SetUpConnectionLookUpCallback();
-  AddLEConnection(kHandle0);
-  AddLEConnection(kHandle1);
-  AddLEConnection(kHandle2);
 
   // On 3 threads (for each connection handle) we each send 6 packets up to a total of 18.
   auto thread_func = [kLEMaxMTU, this](ConnectionHandle handle) {
     for (int i = 0; i < kExpectedTotalPacketCount / 3; ++i) {
-      common::DynamicByteBuffer buffer(ACLDataTxPacket::GetMinBufferSize(kLEMaxMTU));
-      ACLDataTxPacket packet(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                             ACLBroadcastFlag::kPointToPoint, kLEMaxMTU, &buffer);
-      packet.EncodeHeader();
-      EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
+      auto packet = ACLDataPacket::New(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, kLEMaxMTU);
+      EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(packet), Connection::LinkType::kLE));
     }
   };
 
-  // Two have things get processed in real-time we launch the thread as a delayed task on our
-  // message loop.
   std::thread t1, t2, t3;
   message_loop()->task_runner()->PostTask([&] {
     t1 = std::thread(thread_func, kHandle0);
@@ -425,21 +446,19 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
 
   // It doesn't matter what we set the buffer values to since we're testing incoming packets.
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets), DataBufferInfo());
-  SetUpConnectionLookUpCallback();
 
   constexpr size_t kExpectedPacketCount = 2u;
   size_t num_rx_packets = 0u;
   ConnectionHandle packet0_handle;
   ConnectionHandle packet1_handle;
-  auto data_rx_cb = [&](common::DynamicByteBuffer bytes) {
+  auto data_rx_cb = [&](std::unique_ptr<ACLDataPacket> packet) {
     num_rx_packets++;
     if (num_rx_packets == kExpectedPacketCount) message_loop()->PostQuitTask();
 
-    ACLDataRxPacket packet(&bytes);
     if (num_rx_packets == 1)
-      packet0_handle = packet.GetConnectionHandle();
+      packet0_handle = packet->connection_handle();
     else if (num_rx_packets == 2)
-      packet1_handle = packet.GetConnectionHandle();
+      packet1_handle = packet->connection_handle();
     else
       FTL_NOTREACHED();
   };
@@ -473,7 +492,6 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
 
 TEST_F(ACLDataChannelTest, TransportClosedCallback) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
-  SetUpConnectionLookUpCallback();
 
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called, this] {
@@ -489,7 +507,6 @@ TEST_F(ACLDataChannelTest, TransportClosedCallback) {
 
 TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
-  SetUpConnectionLookUpCallback();
 
   int closed_cb_count = 0;
   auto closed_cb = [&closed_cb_count, this] { closed_cb_count++; };
@@ -504,7 +521,6 @@ TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
   RunMessageLoop(2);
   EXPECT_EQ(1, closed_cb_count);
 }
-*/
 
 }  // namespace
 }  // namespace hci

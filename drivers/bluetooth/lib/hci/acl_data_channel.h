@@ -5,8 +5,10 @@
 #pragma once
 
 #include <functional>
+#include <list>
 #include <mutex>
 #include <queue>
+#include <unordered_map>
 
 #include <magenta/compiler.h>
 #include <mx/channel.h>
@@ -14,6 +16,7 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
+#include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -23,7 +26,6 @@
 namespace bluetooth {
 namespace hci {
 
-class Connection;
 class Transport;
 
 // Represents the controller data buffer settings for the BR/EDR or LE transports.
@@ -63,14 +65,7 @@ class DataBufferInfo {
 // 2, Part E, Section 4.1.1.
 class ACLDataChannel final : public ::mtl::MessageLoopHandler {
  public:
-  // The ACLDataChannel may need to look up connections using their handles for proper flow control.
-  // NOTE: Implementations should be thread-safe as this will be invoked from the I/O thread.
-  // NOTE: Implementations should avoid calling the public interface methods of the ACLDataChannel
-  //       to avoid causing a potential deadlock.
-  using ConnectionLookupCallback = std::function<ftl::RefPtr<Connection>(ConnectionHandle)>;
-
-  ACLDataChannel(Transport* transport, mx::channel hci_acl_channel,
-                 const ConnectionLookupCallback& conn_lookup_cb);
+  ACLDataChannel(Transport* transport, mx::channel hci_acl_channel);
   ~ACLDataChannel() override;
 
   // Starts listening on the HCI ACL data channel and starts handling data flow control.
@@ -96,17 +91,16 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // |data_packet| is passed to the callback implementation as a rvalue reference..
   using DataReceivedCallback = std::function<void(std::unique_ptr<ACLDataPacket> data_packet)>;
 
-  // Assigns a handler callback for received ACL data packets.
-  void SetDataRxHandler(const DataReceivedCallback& rx_callback,
-                        ftl::RefPtr<ftl::TaskRunner> rx_task_runner);
+  // Assigns a handler callback for received ACL data packets. |rx_callback| will be invoked on the
+  // Transport I/O thread.
+  void SetDataRxHandler(const DataReceivedCallback& rx_callback);
 
   // Queues the given ACL data packet to be sent to the controller. Returns false if the packet
-  // cannot be queued up, e.g. if |data_packet| does not correspond to a known link layer
-  // connection.
+  // cannot be queued up, e.g. if the size of |data_packet| exceeds the MTU for |ll_type|.
   //
   // |data_packet| is passed by value, meaning that ACLDataChannel will take ownership of it.
   // |data_packet| must represent a valid ACL data packet.
-  bool SendPacket(std::unique_ptr<ACLDataPacket> data_packet);
+  bool SendPacket(std::unique_ptr<ACLDataPacket> data_packet, Connection::LinkType ll_type);
 
   // Returns the underlying channel handle.
   const mx::channel& channel() const { return channel_; }
@@ -121,21 +115,25 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
  private:
   // Represents a queued ACL data packet.
   struct QueuedDataPacket {
+    QueuedDataPacket(Connection::LinkType ll_type, std::unique_ptr<ACLDataPacket> packet)
+        : ll_type(ll_type), packet(std::move(packet)) {}
+
     QueuedDataPacket() = default;
     QueuedDataPacket(QueuedDataPacket&& other) = default;
     QueuedDataPacket& operator=(QueuedDataPacket&& other) = default;
 
+    Connection::LinkType ll_type;
     std::unique_ptr<ACLDataPacket> packet;
   };
 
   // Returns the data buffer MTU for the given connection.
-  size_t GetBufferMTU(const Connection& connection);
+  size_t GetBufferMTU(Connection::LinkType ll_type) const;
 
   // Handler for the HCI Number of Completed Packets Event, used for packet-based data flow control.
   void NumberOfCompletedPacketsCallback(const EventPacket& event);
 
   // Tries to send the next batch of queued data packets if the controller has any space available.
-  void TrySendNextQueuedPackets();
+  void TrySendNextQueuedPacketsLocked() __TA_REQUIRES(send_mutex_);
 
   // Returns the number of BR/EDR packets for which the controller has available space to buffer.
   size_t GetNumFreeBREDRPacketsLocked() const __TA_REQUIRES(send_mutex_);
@@ -160,14 +158,6 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // locked context.
   void IncrementLETotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
-  // Returns true if the maximum number of sent packets has been reached. Must be called from a
-  // locked context.
-  bool MaxNumPacketsReachedLocked() const __TA_REQUIRES(send_mutex_);
-
-  // Returns true if the maximum number of sent LE packets has been reached. Must be called from a
-  // locked context.
-  bool MaxLENumPacketsReachedLocked() const __TA_REQUIRES(send_mutex_);
-
   // ::mtl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
@@ -180,10 +170,6 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
 
   // The channel that we use to send/receive HCI ACL data packets.
   mx::channel channel_;
-
-  // The callback used to obtain references to Connection objects based on a link-layer connection
-  // handle.
-  ConnectionLookupCallback conn_lookup_cb_;
 
   // True if this instance has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;
@@ -200,7 +186,6 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // The current handler for incoming data and the task runner on which to run it.
   std::mutex rx_mutex_;
   DataReceivedCallback rx_callback_ __TA_GUARDED(rx_mutex_);
-  ftl::RefPtr<ftl::TaskRunner> rx_task_runner_ __TA_GUARDED(rx_mutex_);
 
   // BR/EDR data buffer information. This buffer will not be available on LE-only controllers.
   DataBufferInfo bredr_buffer_info_;
@@ -220,11 +205,23 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
 
   // The ACL data packet queue contains the data packets that are waiting to be sent to the
   // controller.
-  // TODO(armansito): We'll probably need a smarter priority queue here since a simple FIFO queue
-  // can cause a single connection to starve others when there are multiple connections present. We
-  // should instead manage data packet priority based on its connection handle and on the result of
-  // the HCI Number of Completed Packets events.
-  std::queue<QueuedDataPacket> send_queue_ __TA_GUARDED(send_mutex_);
+  // TODO(armansito): Use priority_queue based on L2CAP channel priority.
+  // TODO(armansito): Store std::unique_ptr<QueuedDataPacket>?
+  using DataPacketQueue = std::list<QueuedDataPacket>;
+  DataPacketQueue send_queue_ __TA_GUARDED(send_mutex_);
+
+  // Stores the link type of connections on which we have a pending packet that has been sent to the
+  // controller. Entries are removed on the HCI Number Of Completed Packets event.
+  struct PendingPacketData {
+    PendingPacketData() = default;
+
+    // We initialize the packet count at 1 since a new entry will only be created once.
+    PendingPacketData(Connection::LinkType ll_type) : ll_type(ll_type), count(1u) {}
+
+    Connection::LinkType ll_type;
+    size_t count;
+  };
+  std::unordered_map<ConnectionHandle, PendingPacketData> pending_links_ __TA_GUARDED(send_mutex_);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannel);
 };

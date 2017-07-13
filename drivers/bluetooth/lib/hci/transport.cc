@@ -62,9 +62,8 @@ bool Transport::Initialize() {
   return true;
 }
 
-bool Transport::InitializeACLDataChannel(
-    const DataBufferInfo& bredr_buffer_info, const DataBufferInfo& le_buffer_info,
-    const ACLDataChannel::ConnectionLookupCallback& conn_lookup_cb) {
+bool Transport::InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info,
+                                         const DataBufferInfo& le_buffer_info) {
   FTL_DCHECK(hci_device_);
   FTL_DCHECK(IsInitialized());
 
@@ -81,7 +80,7 @@ bool Transport::InitializeACLDataChannel(
         mtl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
   });
 
-  acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel), conn_lookup_cb);
+  acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel));
   acl_data_channel_->Initialize(bredr_buffer_info, le_buffer_info);
 
   return true;

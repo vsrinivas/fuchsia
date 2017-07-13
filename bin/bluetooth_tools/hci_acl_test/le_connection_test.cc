@@ -80,18 +80,13 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress
 void LEConnectionTest::InitializeDataChannelAndCreateConnection(
     const bluetooth::hci::DataBufferInfo& bredr_buffer_info,
     const bluetooth::hci::DataBufferInfo& le_buffer_info) {
-  auto conn_lookup_cb = [this](hci::ConnectionHandle handle) -> ftl::RefPtr<hci::Connection> {
-    auto iter = conn_map_.find(handle);
-    if (iter == conn_map_.end()) return nullptr;
-    return iter->second;
-  };
-  if (!hci_->InitializeACLDataChannel(bredr_buffer_info, le_buffer_info, conn_lookup_cb)) {
+  if (!hci_->InitializeACLDataChannel(bredr_buffer_info, le_buffer_info)) {
     FTL_LOG(ERROR) << "Failed to initialize ACL data channel";
     message_loop_.QuitNow();
     return;
   }
   hci_->acl_data_channel()->SetDataRxHandler(
-      std::bind(&LEConnectionTest::ACLDataRxCallback, this, _1), message_loop_.task_runner());
+      std::bind(&LEConnectionTest::ACLDataRxCallback, this, _1));
 
   // Connection parameters with reasonable defaults.
   hci::LEConnectionParams conn_params(hci::LEPeerAddressType::kPublic, dst_addr_);
@@ -144,17 +139,9 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
         orig_params.connection_interval_max(), le16toh(params->conn_interval),
         le16toh(params->conn_latency), le16toh(params->supervision_timeout));
 
-    auto conn = hci::Connection::NewLEConnection(le16toh(params->connection_handle),
-                                                 (params->role == hci::LEConnectionRole::kMaster)
-                                                     ? hci::Connection::Role::kMaster
-                                                     : hci::Connection::Role::kSlave,
-                                                 conn_params);
-
     FTL_LOG(INFO) << "LE Connection Complete - handle: "
-                  << ftl::StringPrintf("0x%04x", conn->handle())
+                  << ftl::StringPrintf("0x%04x", le16toh(params->connection_handle))
                   << ", BD_ADDR: " << conn_params.peer_address().ToString();
-
-    conn_map_[conn->handle()] = conn;
 
     // We're done with this event. Unregister the handler.
     hci_->command_channel()->RemoveEventHandler(le_conn_complete_handler_id_);
@@ -165,14 +152,9 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
       FTL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
 
       const auto& params = event.view().payload<hci::DisconnectionCompleteEventParams>();
-      auto iter = conn_map_.find(le16toh(params.connection_handle));
-      if (iter == conn_map_.end()) {
-        FTL_LOG(ERROR) << "Received Disconnection Complete event for unknown handle";
-        return;
-      }
 
-      conn_map_.erase(iter);
-      FTL_LOG(INFO) << ftl::StringPrintf("Disconnected - reason: 0x%02x", params.reason);
+      FTL_LOG(INFO) << ftl::StringPrintf("Disconnected - handle: 0x%02x, reason: 0x%02x",
+                                         le16toh(params.connection_handle), params.reason);
       hci_->command_channel()->RemoveEventHandler(disconn_handler_id_);
       message_loop_.QuitNow();
     };
@@ -180,7 +162,7 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
     disconn_handler_id_ = hci_->command_channel()->AddEventHandler(
         hci::kDisconnectionCompleteEventCode, disconn_cb, message_loop_.task_runner());
 
-    SendNotifications();
+    SendNotifications(le16toh(params->connection_handle));
   };
 
   le_conn_complete_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
@@ -194,16 +176,16 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
                                        hci::kCommandStatusEventCode);
 }
 
-void LEConnectionTest::SendNotifications() {
+void LEConnectionTest::SendNotifications(hci::ConnectionHandle connection_handle) {
   // Just send back an error response:
   //    - 4-octet L2CAP header.
   //    - 4-octet ATT protocol Handle-Value Notification.
   constexpr size_t kDataLength = 8;
   for (unsigned int i = 0; i < hci_->acl_data_channel()->GetLEBufferInfo().max_num_packets() * 3;
        ++i) {
-    auto packet = hci::ACLDataPacket::New(conn_map_.begin()->first,
-                                          hci::ACLPacketBoundaryFlag::kFirstNonFlushable,
-                                          hci::ACLBroadcastFlag::kPointToPoint, kDataLength);
+    auto packet =
+        hci::ACLDataPacket::New(connection_handle, hci::ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                hci::ACLBroadcastFlag::kPointToPoint, kDataLength);
     auto payload = packet->mutable_view()->mutable_payload_data();
 
     // L2CAP: payload length
@@ -224,7 +206,7 @@ void LEConnectionTest::SendNotifications() {
     // ATT: Attribute Value
     payload[7] = 0x00;
 
-    hci_->acl_data_channel()->SendPacket(std::move(packet));
+    hci_->acl_data_channel()->SendPacket(std::move(packet), hci::Connection::LinkType::kLE);
   }
 }
 
@@ -276,7 +258,7 @@ void LEConnectionTest::ACLDataRxCallback(std::unique_ptr<hci::ACLDataPacket> pac
   // ATT: Error Code: Request Not Supported
   rsp_payload[8] = 0x06;
 
-  hci_->acl_data_channel()->SendPacket(std::move(response));
+  hci_->acl_data_channel()->SendPacket(std::move(response), hci::Connection::LinkType::kLE);
 }
 
 void LEConnectionTest::LogErrorStatusAndQuit(const std::string& msg, hci::Status status) {

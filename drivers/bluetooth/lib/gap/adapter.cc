@@ -248,10 +248,8 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
 
   // Now that we have all the ACL data buffer information it's time to initialize the
   // ACLDataChannel.
-  // TODO(armansito): Implement a proper connection look-up callback.
-  if (!hci_->InitializeACLDataChannel(
-          state_.bredr_data_buffer_info(), state_.low_energy_state().data_buffer_info(),
-          [](hci::ConnectionHandle) -> ftl::RefPtr<hci::Connection> { return nullptr; })) {
+  if (!hci_->InitializeACLDataChannel(state_.bredr_data_buffer_info(),
+                                      state_.low_energy_state().data_buffer_info())) {
     FTL_LOG(ERROR) << "gap: Adapter: Failed to initialize ACLDataChannel (step 3)";
     CleanUp();
     callback(false);

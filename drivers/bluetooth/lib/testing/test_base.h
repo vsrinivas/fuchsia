@@ -107,27 +107,21 @@ class TransportTest : public TestBase<FakeControllerType> {
 
   bool InitializeACLDataChannel(const hci::DataBufferInfo& bredr_buffer_info,
                                 const hci::DataBufferInfo& le_buffer_info) {
-    if (!transport_->InitializeACLDataChannel(
-            bredr_buffer_info, le_buffer_info,
-            std::bind(&TransportTest<FakeControllerType>::LookUpConnection, this,
-                      std::placeholders::_1))) {
+    if (!transport_->InitializeACLDataChannel(bredr_buffer_info, le_buffer_info)) {
       return false;
     }
 
     transport_->acl_data_channel()->SetDataRxHandler(
-        std::bind(&TransportTest<FakeControllerType>::OnDataReceived, this, std::placeholders::_1),
-        TestBase<FakeControllerType>::message_loop()->task_runner());
+        std::bind(&TransportTest<FakeControllerType>::OnDataReceived, this, std::placeholders::_1));
 
     return true;
   }
 
+  // Sets a callback which will be invoked when we receive packets from the test controller.
+  // |callback| will be posted on the test main loop (i.e. TestBase::message_loop_), thus no locking
+  // is necessary within the callback.
   void set_data_received_callback(const hci::ACLDataChannel::DataReceivedCallback& callback) {
     data_received_callback_ = callback;
-  }
-
-  void set_connection_lookup_callback(
-      const hci::ACLDataChannel::ConnectionLookupCallback& callback) {
-    connection_lookup_callback_ = callback;
   }
 
   ftl::RefPtr<hci::Transport> transport() const { return transport_; }
@@ -136,16 +130,17 @@ class TransportTest : public TestBase<FakeControllerType> {
 
  private:
   void OnDataReceived(std::unique_ptr<hci::ACLDataPacket> data_packet) {
-    if (data_received_callback_) data_received_callback_(std::move(data_packet));
-  }
+    // Accessing |data_received_callback_| is racy but unlikely to cause issues in unit tests.
+    // NOTE(armansito): Famous last words?
+    if (!data_received_callback_) return;
 
-  ftl::RefPtr<hci::Connection> LookUpConnection(hci::ConnectionHandle handle) {
-    if (!connection_lookup_callback_) return nullptr;
-    return connection_lookup_callback_(handle);
+    TestBase<FakeControllerType>::message_loop()->task_runner()->PostTask(
+        ftl::MakeCopyable([ this, packet = std::move(data_packet) ]() mutable {
+          data_received_callback_(std::move(packet));
+        }));
   }
 
   hci::ACLDataChannel::DataReceivedCallback data_received_callback_;
-  hci::ACLDataChannel::ConnectionLookupCallback connection_lookup_callback_;
   ftl::RefPtr<hci::Transport> transport_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TransportTest);

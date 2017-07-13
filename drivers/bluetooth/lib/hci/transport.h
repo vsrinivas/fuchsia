@@ -54,8 +54,7 @@ class Transport final : public ::mtl::MessageLoopHandler,
   // during initialization. Initialize() must have been called successfully prior to calling this
   // method.
   bool InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info,
-                                const DataBufferInfo& le_buffer_info,
-                                const ACLDataChannel::ConnectionLookupCallback& conn_lookup_cb);
+                                const DataBufferInfo& le_buffer_info);
 
   // Cleans up all transport channels, stops the I/O event loop, and joins the I/O thread. Once a
   // Transport has been shut down, it cannot be re-initialized.
