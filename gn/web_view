@@ -12,23 +12,7 @@
         "sqlite",
         "zlib"
     ],
-    "labels": [
-        "//apps/web_view"
-    ],
-    "resources": [
-        {
-            "bootfs_path": "data/webkit/Roboto-Regular.ttf",
-            "file": "apps/fonts/third_party/roboto/Roboto-Regular.ttf"
-        }
-    ],
-    "binaries": [
-        {
-            "binary": "web_view",
-            "bootfs_path": "apps/web_view"
-        },
-        {
-            "binary": "x64-shared/libwebkit.so",
-            "bootfs_path": "lib/libwebkit.so"
-        }
-    ]
+    "packages": {
+        "web_view": "//apps/web_view"
+    }
 }
