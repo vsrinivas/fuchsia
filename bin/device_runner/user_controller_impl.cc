@@ -39,8 +39,8 @@ UserControllerImpl::UserControllerImpl(
   // 2. Initialize the UserRunner service.
   user_runner_->primary_service()->Initialize(
       std::move(account), std::move(user_shell), story_shell.Clone(),
-      std::move(token_provider_factory),
-      user_context_binding_.NewBinding(), std::move(view_owner_request));
+      std::move(token_provider_factory), user_context_binding_.NewBinding(),
+      std::move(view_owner_request));
 }
 
 // |UserController|

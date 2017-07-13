@@ -233,12 +233,12 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
       FTL_LOG(INFO) << "- UserProvider down";
       token_manager_->AppTerminate([this] {
         FTL_LOG(INFO) << "- AuthProvider down";
-          device_shell_->AppTerminate([this] {
-            FTL_LOG(INFO) << "- DeviceShell down";
-            mtl::MessageLoop::GetCurrent()->PostQuitTask();
-          });
+        device_shell_->AppTerminate([this] {
+          FTL_LOG(INFO) << "- DeviceShell down";
+          mtl::MessageLoop::GetCurrent()->PostQuitTask();
         });
       });
+    });
   }
 
   // |AccountProviderContext|

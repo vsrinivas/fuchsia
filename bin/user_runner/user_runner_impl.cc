@@ -40,7 +40,6 @@
 
 namespace modular {
 
-
 // Template specializations for fidl services that don't have a Terminate()
 // method.
 template <>
@@ -100,11 +99,13 @@ std::string GetLedgerPath(const auth::AccountPtr& account) {
   // Generate a random number to be used in this case.
   uint32_t random_number;
   size_t random_size;
-  mx_status_t status = mx_cprng_draw(&random_number, sizeof random_number, &random_size);
+  mx_status_t status =
+      mx_cprng_draw(&random_number, sizeof random_number, &random_size);
   FTL_CHECK(status == MX_OK);
   FTL_CHECK(sizeof random_number == random_size);
 
-  return kLedgerDataBaseDir + std::string("GUEST/") + std::to_string(random_number);
+  return kLedgerDataBaseDir + std::string("GUEST/") +
+         std::to_string(random_number);
 }
 
 std::string GetAccountId(const auth::AccountPtr& account) {
@@ -134,13 +135,15 @@ void UserRunnerImpl::Initialize(
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  token_provider_factory_ = auth::TokenProviderFactoryPtr::Create(
-       std::move(token_provider_factory));
+  token_provider_factory_ =
+      auth::TokenProviderFactoryPtr::Create(std::move(token_provider_factory));
   user_context_ = UserContextPtr::Create(std::move(user_context));
   account_ = std::move(account);
-  user_scope_ = std::make_unique<Scope>(application_context_->environment(),
-                                        std::string(kUserScopeLabelPrefix) + GetAccountId(account));
-  user_shell_ = std::make_unique<AppClient<UserShell>>(user_scope_->GetLauncher(), std::move(user_shell));
+  user_scope_ = std::make_unique<Scope>(
+      application_context_->environment(),
+      std::string(kUserScopeLabelPrefix) + GetAccountId(account));
+  user_shell_ = std::make_unique<AppClient<UserShell>>(
+      user_scope_->GetLauncher(), std::move(user_shell));
 
   SetupLedger();
 
@@ -310,7 +313,6 @@ void UserRunnerImpl::Initialize(
 
   user_shell_->primary_service()->Initialize(
       user_shell_context_binding_.NewBinding());
-
 }
 
 void UserRunnerImpl::Terminate(const TerminateCallback& done) {
@@ -435,7 +437,7 @@ void UserRunnerImpl::SetupLedger() {
   // Get a token provider instance to pass to ledger.
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
-                                           ledger_token_provider.NewRequest());
+                                            ledger_token_provider.NewRequest());
 
   ledger::FirebaseConfigPtr firebase_config;
   if (account_) {
@@ -452,9 +454,7 @@ void UserRunnerImpl::SetupLedger() {
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_connection_error_handler([this] {
-    Logout();
-  });
+  ledger_repository_.set_connection_error_handler([this] { Logout(); });
 
   // Open Ledger.
   ledger_repository_->GetLedger(to_array(kAppId), ledger_.NewRequest(),
@@ -480,7 +480,6 @@ void UserRunnerImpl::SetupLedger() {
                      << LedgerStatusToString(status);
     }
   });
-
 }
 
 }  // namespace modular

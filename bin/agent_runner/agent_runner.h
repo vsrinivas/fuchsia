@@ -39,13 +39,12 @@ class XdrContext;
 // manages the life time of a running agent.
 class AgentRunner : AgentProvider, PageClient {
  public:
-  AgentRunner(
-      app::ApplicationLauncher* application_launcher,
-      MessageQueueManager* message_queue_manager,
-      ledger::LedgerRepository* ledger_repository,
-      ledger::PagePtr page,
-      auth::TokenProviderFactory* const token_provider_factory,
-      maxwell::UserIntelligenceProvider* user_intelligence_provider);
+  AgentRunner(app::ApplicationLauncher* application_launcher,
+              MessageQueueManager* message_queue_manager,
+              ledger::LedgerRepository* ledger_repository,
+              ledger::PagePtr page,
+              auth::TokenProviderFactory* const token_provider_factory,
+              maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
 
   void Connect(fidl::InterfaceRequest<AgentProvider> request);

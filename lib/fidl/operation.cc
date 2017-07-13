@@ -51,8 +51,7 @@ ftl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
 void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
   TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
-                    kTraceIdKey, GetTraceId(o), kTraceInfoKey,
-                    GetTraceInfo(o));
+                    kTraceIdKey, GetTraceId(o), kTraceInfoKey, GetTraceInfo(o));
   o->Run();
 }
 

@@ -270,8 +270,7 @@ void UserProviderImpl::ResetUserLedgerState(const fidl::String& account_id) {
   // Get token provider factory for this user.
   auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
-      account_id,
-      token_provider_factory.NewRequest());
+      account_id, token_provider_factory.NewRequest());
 
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
   token_provider_factory->GetTokenProvider(
@@ -289,9 +288,8 @@ void UserProviderImpl::ResetUserLedgerState(const fidl::String& account_id) {
           FTL_LOG(ERROR) << "EraseRepository failed: " << status;
         }
 
-        ledger_app_client->AppTerminate([ledger_app_client] {
-          delete ledger_app_client;
-        });
+        ledger_app_client->AppTerminate(
+            [ledger_app_client] { delete ledger_app_client; });
       });
 }
 
@@ -343,8 +341,7 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), std::move(account),
-      std::move(params->view_owner),
-      std::move(params->user_controller),
+      std::move(params->view_owner), std::move(params->user_controller),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });
   user_controllers_[controller.get()] = std::move(controller);
 }
