@@ -22,7 +22,16 @@ static bool	os_overcommits;
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 
+// Reserve a terabyte of address space for heap allocations.
+#define VMAR_SIZE (1ull << 40)
+
 static const char mmap_vmo_name[] = "jemalloc-heap";
+
+// malloc wants to manage both address space and memory mapped within
+// chunks of address space. To maintain claims to address space we
+// must use our own vmar.
+static mx_handle_t pages_vmar;
+static uintptr_t pages_base;
 
 void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
 	uint32_t mx_flags = 0u;
@@ -46,13 +55,7 @@ void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
 	size_t offset = 0;
 	mx_status_t status = MX_OK;
 	if (fixed) {
-		mx_info_vmar_t info;
-		status = _mx_object_get_info(_mx_vmar_root_self(), MX_INFO_VMAR, &info,
-		    sizeof(info), NULL, NULL);
-		if (status < 0 || (uintptr_t)start < info.base) {
-			goto fail;
-		}
-		offset = (uintptr_t)start - info.base;
+		offset = (uintptr_t)start - pages_base;
 	}
 
 	mx_handle_t vmo;
@@ -63,7 +66,7 @@ void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
 	}
 	_mx_object_set_property(vmo, MX_PROP_NAME, mmap_vmo_name, strlen(mmap_vmo_name));
 
-	status = _mx_vmar_map(_mx_vmar_root_self(), offset, vmo, 0u, len, mx_flags, &ptr);
+	status = _mx_vmar_map(pages_vmar, offset, vmo, 0u, len, mx_flags, &ptr);
 	_mx_handle_close(vmo);
 	if (status < 0) {
 		goto fail;
@@ -417,6 +420,15 @@ pages_boot(void)
 {
 #if !defined(_WIN32) && !defined(__Fuchsia__)
 	mmap_flags = MAP_PRIVATE | MAP_ANON;
+#endif
+
+#if defined(__Fuchsia__)
+	uint32_t vmar_flags = MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_CAN_MAP_READ |
+	    MX_VM_FLAG_CAN_MAP_WRITE;
+	mx_status_t status = _mx_vmar_allocate(_mx_vmar_root_self(), 0, VMAR_SIZE,
+					       vmar_flags, &pages_vmar, &pages_base);
+	if (status != MX_OK)
+		abort();
 #endif
 
 #ifdef JEMALLOC_SYSCTL_VM_OVERCOMMIT
