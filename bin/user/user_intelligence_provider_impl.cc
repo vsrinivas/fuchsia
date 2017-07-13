@@ -52,6 +52,7 @@ modular::AgentControllerPtr startStoryInfoAgent(
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     app::ApplicationContext* app_context,
+    const Config& config,
     fidl::InterfaceHandle<modular::ComponentContext> component_context_handle,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
@@ -91,26 +92,9 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   resolver_services_ = StartServiceProviderApp("resolver");
 
-  // TODO(rosswang): Search the ComponentIndex and iterate through results.
-  StartAgent("file:///system/apps/agents/module_suggester");
-  StartAgent("file:///system/apps/agents/module_suggester.dartx");
-  StartAgent("file:///system/apps/concert_agent");
-  StartAgent("file:///system/apps/music_artist_agent");
-  StartAgent("file:///system/apps/last_fm_agent");
-  StartAgent("file:///system/apps/location_agent");
-  StartAgent("file:///system/apps/agents/maxwell_btl");
-  StartAgent("file:///system/apps/agents/maxwell_entity_selector");
-  StartAgent("file:///system/apps/agents/maxwell_proposal_maker");
-  StartAgent("file:///system/apps/weather_agent");
-// Toggle using the "kronk" gn arg
-#ifdef KRONK
-// Toggle using the "kronk_dev" gn arg (see README).
-#ifdef KRONK_DEV
-  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
-#else
-  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk");
-#endif
-#endif
+  for (const auto& agent : config.startup_agents) {
+    StartAgent(agent);
+  }
 
 // Toggle using the "mi_dashboard" gn arg
 #ifdef MI_DASHBOARD
@@ -246,8 +230,9 @@ void UserIntelligenceProviderImpl::StartAgent(
 //////////////////////////////////////////////////////////////////////////////
 
 UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
-    app::ApplicationContext* app_context)
-    : app_context_(app_context) {}
+    app::ApplicationContext* app_context,
+    const Config& config)
+    : app_context_(app_context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
     fidl::InterfaceHandle<modular::ComponentContext> component_context,
@@ -261,8 +246,9 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   // UserIntelligenceProvider.
   FTL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
-      app_context_, std::move(component_context), std::move(story_provider),
-      std::move(focus_provider), std::move(visible_stories_provider)));
+      app_context_, config_, std::move(component_context),
+      std::move(story_provider), std::move(focus_provider),
+      std::move(visible_stories_provider)));
   binding_.reset(new fidl::Binding<UserIntelligenceProvider>(impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));
 }

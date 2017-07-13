@@ -12,6 +12,7 @@
 #include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/maxwell/src/user/agent_launcher.h"
+#include "apps/maxwell/src/user/config.h"
 
 namespace maxwell {
 
@@ -20,6 +21,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   // |app_context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
       app::ApplicationContext* app_context,
+      const Config& config,
       fidl::InterfaceHandle<modular::ComponentContext> component_context,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
@@ -74,7 +76,8 @@ class UserIntelligenceProviderFactoryImpl
     : public UserIntelligenceProviderFactory {
  public:
   // |app_context| is not owned and must outlive this instance.
-  UserIntelligenceProviderFactoryImpl(app::ApplicationContext* app_context);
+  UserIntelligenceProviderFactoryImpl(app::ApplicationContext* app_context,
+                                      const Config& config);
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
   void GetUserIntelligenceProvider(
@@ -88,6 +91,7 @@ class UserIntelligenceProviderFactoryImpl
 
  private:
   app::ApplicationContext* app_context_;  // Not owned.
+  const Config config_;
 
   // We expect a 1:1 relationship between instances of this Factory and
   // instances of UserIntelligenceProvider.

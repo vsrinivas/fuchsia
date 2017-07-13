@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # if false, bypasses Kronk launch
-  kronk = true
-
-  # if true, uses the "kronk-dev" agent, which is the unstable,
-  # under-development version
-  kronk_dev = false
+  # DEPRECATED: The below variables are deprecated.
+  # Instead use a config json as described in README.md.
 
   # if false, bypasses starting the MI Dashboard
   mi_dashboard = true
@@ -28,10 +24,18 @@ executable("maxwell_main") {
   ]
 
   deps = [
+    ":config",
     ":user_intelligence_provider",
     "//application/lib/app",
     "//apps/maxwell/services/user",
     "//lib/mtl",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("config") {
+  sources = [
+    "config.h",
   ]
 }
 
@@ -47,6 +51,7 @@ source_set("user_intelligence_provider") {
 
   deps = [
     ":agent_launcher",
+    ":config",
     ":intelligence_services",
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
@@ -61,15 +66,9 @@ source_set("user_intelligence_provider") {
   ]
 
   defines = []
-  if (kronk) {
-    defines += [ "KRONK" ]
-    if (kronk_dev) {
-      defines += [ "KRONK_DEV" ]
-    }
-  }
 
   if (mi_dashboard) {
-    defines += [ "MI_DASHBOARD" ]
+    defines += [ "DEPRECATED_MI_DASHBOARD" ]
   }
 }
 

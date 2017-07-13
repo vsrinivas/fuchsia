@@ -20,6 +20,13 @@ into Fuchsia.
 
 At present, the dashboard includes a context dump. More features to follow.
 
+To disable the dashboard, for example while running tests, you can create your
+own Maxwell startup config file and set the parameter `mi_dashboard` to
+`false`.  The `maxwell` process accepts a `--config` argument with the path to
+the JSON file.
+
+See `src/user/default_config.json` for a starting point.
+
 ## Testing
 
 To run the Maxwell integration tests in a running Fuchsia environment:
@@ -32,30 +39,6 @@ A spurious error like
 
 may appear due to the tests not running with networking wired in; it is
 immaterial to the test.
-
-## Kronk
-
-Kronk is the Assistant agent. It is built out-of-tree and deployed to a Google
-Cloud bucket. Normally, Maxwell launches the stable release version of this
-agent. For development, set the following in your `fgen` to use the HEAD
-unstable version:
-
-    fgen --args kronk_dev=true
-
-(and then rebuild)
-
-To suppress Kronk startup, use:
-
-    fgen --args kronk=false
-
-## MI Dashboard
-
-The MI dashboard provides an off-device view into the data used by the
-Maxwell sub-system through a web page.  Its web server starts on port 4000.
-To disable the dashboard, for example while running tests, you can set the
-following parameter via `fgen`:
-
-    fgen --args mi_dashboard=false
 
 ## Other Docs
 
