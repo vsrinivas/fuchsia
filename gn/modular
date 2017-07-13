@@ -70,8 +70,8 @@
             "bootfs_path": "apps/dev_device_shell"
         },
         {
-            "binary": "dummy_story_shell",
-            "bootfs_path": "apps/dummy_story_shell"
+            "binary": "dev_story_shell",
+            "bootfs_path": "apps/dev_story_shell"
         },
         {
             "binary": "gen/apps/modular/examples/counter_flutter/child/example_flutter_counter_child.flx",
