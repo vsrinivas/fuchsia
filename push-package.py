@@ -64,7 +64,7 @@ def update_device(device, batch_file, verbose, out_dir):
 def scp_everything(devices, package_data, out_dir, dst_root, name_filter,
                    verbose):
   # Temporary file for sftp
-  with tempfile.NamedTemporaryFile(delete=False) as f:
+  with tempfile.NamedTemporaryFile() as f:
     # Create a directory tree that mirrors what we want on the device.
     for binary in package_data['binaries']:
       binary_name = binary['binary']
