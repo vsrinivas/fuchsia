@@ -41,6 +41,20 @@ def get_target(label):
     return path, name
 
 
+# Updates paths in a toml block
+def fix_paths(block, args):
+    if block is None:
+        return
+    name = args.name
+    if "name" in block:
+        name = block["name"]
+    if "path" not in block:
+        raise Exception("Need to specify entry point for %s" % name)
+    relative_path = block["path"]
+    new_path = os.path.join(args.crate_root, relative_path)
+    block["path"] = os.path.relpath(new_path, args.gen_dir)
+
+
 # Gathers build metadata from the given dependencies.
 def gather_dependency_infos(root_gen_dir, deps):
     result = []
@@ -208,12 +222,15 @@ def main():
                     "name": package_name,
                     "path": "src/main.rs"
                 }]
+        if "bin" in config:
             for bin in config["bin"]:
-                if "name" in bin and bin["name"] == args.name:
-                    base = bin
-                    break
-            if base is None:
-                raise Exception("Could not find binary named %s" % args.name)
+                if "name" in bin:
+                    fix_paths(bin, args)
+                    if bin["name"] == args.name:
+                        base = bin
+        if args.type == "bin" and base is None:
+            raise Exception("Could not find binary named %s" % args.name)
+
         if args.type == "lib":
             if "lib" not in config:
                 # Use the defaults.
@@ -221,17 +238,12 @@ def main():
                     "name": default_name,
                     "path": "src/lib.rs"
                 }
+        if "lib" in config:
             lib = config["lib"]
-            if "name" not in lib or lib["name"] != args.name:
-                raise Exception("Could not find library named %s" % args.name)
-            base = lib
-        # Rewrite the artifact's entry point so that it can be located by
-        # reading the generated manifest file.
-        if "path" not in base:
-            raise Exception("Need to specify entry point for %s" % args.name)
-        relative_path = base["path"]
-        new_path = os.path.join(args.crate_root, relative_path)
-        base["path"] = os.path.relpath(new_path, args.gen_dir)
+            if args.type == "lib":
+                if "name" not in lib or lib["name"] != args.name:
+                    raise Exception("Could not find library named %s" % args.name)
+            fix_paths(lib, args)
 
         # Add or edit dependency sections for local deps.
         if "dependencies" not in config:
