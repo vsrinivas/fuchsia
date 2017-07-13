@@ -14,8 +14,10 @@ namespace scene {
 
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
-Resource::Resource(Session* session, const ResourceTypeInfo& type_info)
-    : session_(session), type_info_(type_info) {
+Resource::Resource(Session* session,
+                   ResourceId id,
+                   const ResourceTypeInfo& type_info)
+    : session_(session), id_(id), type_info_(type_info) {
   FTL_DCHECK(session);
   FTL_DCHECK(type_info.IsKindOf(Resource::kTypeInfo));
   session_->IncrementResourceCount();
@@ -30,6 +32,11 @@ Resource::~Resource() {
 
 ErrorReporter* Resource::error_reporter() const {
   return session_->error_reporter();
+}
+
+bool Resource::SetLabel(const std::string& label) {
+  label_ = label.substr(0, mozart2::kLabelMaxLength);
+  return true;
 }
 
 void Resource::AddImport(Import* import) {

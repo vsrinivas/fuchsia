@@ -15,8 +15,8 @@ namespace scene {
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
 
-Material::Material(Session* session)
-    : Resource(session, Material::kTypeInfo),
+Material::Material(Session* session, ResourceId id)
+    : Resource(session, id, Material::kTypeInfo),
       escher_material_(ftl::MakeRefCounted<escher::Material>()) {}
 
 void Material::SetColor(float red, float green, float blue, float alpha) {

@@ -14,7 +14,7 @@ DirectionalLight::DirectionalLight(Session* session,
                                    ResourceId id,
                                    const escher::vec3& direction,
                                    float intensity)
-    : Resource(session, DirectionalLight::kTypeInfo),
+    : Resource(session, id, DirectionalLight::kTypeInfo),
       direction_(direction),
       intensity_(intensity) {}
 

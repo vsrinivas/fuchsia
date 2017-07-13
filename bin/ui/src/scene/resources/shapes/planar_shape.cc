@@ -7,8 +7,10 @@
 namespace mozart {
 namespace scene {
 
-PlanarShape::PlanarShape(Session* session, const ResourceTypeInfo& type_info)
-    : Shape(session, type_info) {}
+PlanarShape::PlanarShape(Session* session,
+                         ResourceId id,
+                         const ResourceTypeInfo& type_info)
+    : Shape(session, id, type_info) {}
 
 bool PlanarShape::GetIntersection(const escher::ray4& ray,
                                   float* out_distance) const {

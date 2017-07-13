@@ -25,7 +25,7 @@ const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
 Renderer::Renderer(Session* session,
                    ResourceId id,
                    FrameScheduler* frame_scheduler)
-    : Resource(session, Renderer::kTypeInfo),
+    : Resource(session, id, Renderer::kTypeInfo),
       frame_scheduler_(frame_scheduler) {
   FTL_DCHECK(frame_scheduler);
   escher::MaterialPtr default_material_ =

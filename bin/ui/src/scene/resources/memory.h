@@ -21,7 +21,7 @@ class Memory : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
  protected:
-  Memory(Session* session, const ResourceTypeInfo& type_info);
+  Memory(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 };
 
 using MemoryPtr = ftl::RefPtr<Memory>;

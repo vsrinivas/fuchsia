@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -32,12 +33,17 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   ResourceTypeFlags type_flags() const { return type_info_.flags; }
   const char* type_name() const { return type_info_.name; }
 
-  // The session this Resource lives in.
+  // The session this Resource lives in and the id it was created with there.
   Session* session() const { return session_; }
+  ResourceId id() const { return id_; }
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.
   ErrorReporter* error_reporter() const;
+
+  // The diagnostic label.
+  const std::string label() const { return label_; }
+  bool SetLabel(const std::string& label);
 
   // Used by ResourceVisitor to visit a tree of Resources.
   virtual void Accept(class ResourceVisitor* visitor) = 0;
@@ -72,7 +78,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   virtual void RemoveImport(Import* import);
 
  protected:
-  Resource(Session* session, const ResourceTypeInfo& type_info);
+  Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 
   friend class ResourceMap;
   friend class Import;
@@ -84,7 +90,9 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
  private:
   Session* const session_;
+  const ResourceId id_;
   const ResourceTypeInfo& type_info_;
+  std::string label_;
   std::vector<Import*> imports_;
 };
 

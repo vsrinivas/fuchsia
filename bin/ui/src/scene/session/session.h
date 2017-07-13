@@ -123,6 +123,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
   bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
   bool ApplySetColorOp(const mozart2::SetColorOpPtr& op);
+  bool ApplySetLabelOp(const mozart2::SetLabelOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
   bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
@@ -150,8 +151,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateVariable(ResourceId id, const mozart2::VariablePtr& args);
 
   // Actually create resources.
-  ResourcePtr CreateMemory(ResourceId, const mozart2::MemoryPtr& args);
-  ResourcePtr CreateImage(ResourceId,
+  ResourcePtr CreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
+  ResourcePtr CreateImage(ResourceId id,
                           MemoryPtr memory,
                           const mozart2::ImagePtr& args);
   ResourcePtr CreateScene(ResourceId id, const mozart2::ScenePtr& args);

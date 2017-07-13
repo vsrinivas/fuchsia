@@ -20,7 +20,7 @@ class Material : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Material(Session* session);
+  Material(Session* session, ResourceId id);
 
   void SetColor(float red, float green, float blue, float alpha);
   void SetTexture(ImageBasePtr texture_image);

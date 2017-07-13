@@ -32,7 +32,7 @@ DumpVisitor::~DumpVisitor() = default;
 
 void DumpVisitor::Visit(GpuMemory* r) {
   // To prevent address space layout leakage, we don't print the pointers.
-  BeginItem("GpuMemory");
+  BeginItem("GpuMemory", r);
   WriteProperty("size") << r->escher_gpu_mem()->size();
   WriteProperty("offset") << r->escher_gpu_mem()->offset();
   VisitResource(r);
@@ -41,7 +41,7 @@ void DumpVisitor::Visit(GpuMemory* r) {
 
 void DumpVisitor::Visit(HostMemory* r) {
   // To prevent address space layout leakage, we don't print the pointers.
-  BeginItem("HostMemory");
+  BeginItem("HostMemory", r);
   WriteProperty("size") << r->size();
   VisitResource(r);
   EndItem();
@@ -56,14 +56,14 @@ void DumpVisitor::VisitEscherImage(escher::Image* i) {
 }
 
 void DumpVisitor::Visit(Image* r) {
-  BeginItem("Image");
+  BeginItem("Image", r);
   VisitEscherImage(r->GetEscherImage().get());
   VisitResource(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(ImagePipe* r) {
-  BeginItem("ImagePipe");
+  BeginItem("ImagePipe", r);
   if (r->GetEscherImage()) {
     BeginSection("currently presented image");
     VisitEscherImage(r->GetEscherImage().get());
@@ -74,13 +74,13 @@ void DumpVisitor::Visit(ImagePipe* r) {
 }
 
 void DumpVisitor::Visit(EntityNode* r) {
-  BeginItem("EntityNode", r->resource_id());
+  BeginItem("EntityNode", r);
   VisitNode(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(ShapeNode* r) {
-  BeginItem("ShapeNode", r->resource_id());
+  BeginItem("ShapeNode", r);
   VisitNode(r);
   if (r->shape()) {
     BeginSection("shape");
@@ -96,7 +96,7 @@ void DumpVisitor::Visit(ShapeNode* r) {
 }
 
 void DumpVisitor::Visit(Scene* r) {
-  BeginItem("Scene", r->resource_id());
+  BeginItem("Scene", r);
   VisitNode(r);
   EndItem();
 }
@@ -133,14 +133,14 @@ void DumpVisitor::VisitNode(Node* r) {
 }
 
 void DumpVisitor::Visit(CircleShape* r) {
-  BeginItem("CircleShape");
+  BeginItem("CircleShape", r);
   WriteProperty("radius") << r->radius();
   VisitResource(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(RectangleShape* r) {
-  BeginItem("RectangleShape");
+  BeginItem("RectangleShape", r);
   WriteProperty("width") << r->width();
   WriteProperty("height") << r->height();
   VisitResource(r);
@@ -148,7 +148,7 @@ void DumpVisitor::Visit(RectangleShape* r) {
 }
 
 void DumpVisitor::Visit(RoundedRectangleShape* r) {
-  BeginItem("RoundedRectangleShape");
+  BeginItem("RoundedRectangleShape", r);
   WriteProperty("width") << r->width();
   WriteProperty("height") << r->height();
   WriteProperty("top_left_radius") << r->top_left_radius();
@@ -160,7 +160,7 @@ void DumpVisitor::Visit(RoundedRectangleShape* r) {
 }
 
 void DumpVisitor::Visit(Material* r) {
-  BeginItem("Material");
+  BeginItem("Material", r);
   WriteProperty("red") << r->red();
   WriteProperty("green") << r->green();
   WriteProperty("blue") << r->blue();
@@ -176,7 +176,7 @@ void DumpVisitor::Visit(Material* r) {
 }
 
 void DumpVisitor::Visit(Camera* r) {
-  BeginItem("Camera");
+  BeginItem("Camera", r);
   BeginSection("scene");
   r->scene()->Accept(this);
   EndSection();
@@ -185,7 +185,7 @@ void DumpVisitor::Visit(Camera* r) {
 }
 
 void DumpVisitor::Visit(Renderer* r) {
-  BeginItem("Renderer");
+  BeginItem("Renderer", r);
   if (r->camera()) {
     BeginSection("camera");
     r->camera()->Accept(this);
@@ -196,7 +196,7 @@ void DumpVisitor::Visit(Renderer* r) {
 }
 
 void DumpVisitor::Visit(DirectionalLight* r) {
-  BeginItem("DirectionalLight");
+  BeginItem("DirectionalLight", r);
   escher::operator<<(WriteProperty("direction"), r->direction());
   WriteProperty("intensity") << r->intensity();
   VisitResource(r);
@@ -204,7 +204,7 @@ void DumpVisitor::Visit(DirectionalLight* r) {
 }
 
 void DumpVisitor::Visit(Import* r) {
-  BeginItem("Import");
+  BeginItem("Import", r);
   WriteProperty("import_spec") << r->import_spec();
   WriteProperty("is_bound") << r->is_bound();
   BeginSection("delegate");
@@ -224,10 +224,14 @@ void DumpVisitor::VisitResource(Resource* r) {
   }
 }
 
-void DumpVisitor::BeginItem(const char* type, uint32_t resource_id) {
+void DumpVisitor::BeginItem(const char* type, Resource* r) {
   BeginLine();
-  if (resource_id)
-    output_ << resource_id << "> ";
+  if (r) {
+    output_ << r->id();
+    if (!r->label().empty())
+      output_ << ":\"" << r->label() << "\"";
+    output_ << "> ";
+  }
   output_ << type;
   indentation_ += 2;
 }

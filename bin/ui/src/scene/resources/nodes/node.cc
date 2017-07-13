@@ -32,7 +32,7 @@ const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 Node::Node(Session* session,
            ResourceId node_id,
            const ResourceTypeInfo& type_info)
-    : Resource(session, type_info), resource_id_(node_id) {
+    : Resource(session, node_id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
 

@@ -10,8 +10,10 @@ namespace scene {
 const ResourceTypeInfo ImageBase::kTypeInfo = {ResourceType::kImageBase,
                                                "ImageBase"};
 
-ImageBase::ImageBase(Session* session, const ResourceTypeInfo& type_info)
-    : Resource(session, type_info) {
+ImageBase::ImageBase(Session* session,
+                     ResourceId id,
+                     const ResourceTypeInfo& type_info)
+    : Resource(session, id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(ImageBase::kTypeInfo));
 }
 

@@ -44,7 +44,7 @@ class DumpVisitor : public ResourceVisitor {
   void VisitResource(Resource* r);
   void VisitEscherImage(escher::Image* i);
 
-  void BeginItem(const char* type, uint32_t resource_id = 0u);
+  void BeginItem(const char* type, Resource* r);
   std::ostream& WriteProperty(const char* label);
   void EndItem();
 

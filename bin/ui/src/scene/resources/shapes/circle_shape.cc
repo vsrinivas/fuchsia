@@ -10,8 +10,9 @@ namespace scene {
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
 
-CircleShape::CircleShape(Session* session, float initial_radius)
-    : PlanarShape(session, CircleShape::kTypeInfo), radius_(initial_radius) {}
+CircleShape::CircleShape(Session* session, ResourceId id, float initial_radius)
+    : PlanarShape(session, id, CircleShape::kTypeInfo),
+      radius_(initial_radius) {}
 
 bool CircleShape::ContainsPoint(const escher::vec2& point) const {
   return point.x * point.x + point.y * point.y <= radius_ * radius_;

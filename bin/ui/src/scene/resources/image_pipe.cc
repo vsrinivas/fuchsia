@@ -15,14 +15,15 @@ namespace scene {
 const ResourceTypeInfo ImagePipe::kTypeInfo = {
     ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
 
-ImagePipe::ImagePipe(Session* session)
-    : ImageBase(session, ImagePipe::kTypeInfo),
+ImagePipe::ImagePipe(Session* session, ResourceId id)
+    : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       images_(session->error_reporter()) {}
 
 ImagePipe::ImagePipe(Session* session,
+                     ResourceId id,
                      ::fidl::InterfaceRequest<mozart2::ImagePipe> request)
-    : ImageBase(session, ImagePipe::kTypeInfo),
+    : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       images_(session->error_reporter()) {}
@@ -42,11 +43,11 @@ void ImagePipe::AddImage(uint32_t image_id,
   MemoryPtr memory;
   switch (memory_type) {
     case mozart2::MemoryType::VK_DEVICE_MEMORY:
-      memory = GpuMemory::New(session(), device, std::move(vmo),
+      memory = GpuMemory::New(session(), 0u, device, std::move(vmo),
                               session()->error_reporter());
       break;
     case mozart2::MemoryType::HOST_MEMORY:
-      memory = HostMemory::New(session(), device, std::move(vmo),
+      memory = HostMemory::New(session(), 0u, device, std::move(vmo),
                                session()->error_reporter());
       break;
   }
@@ -86,7 +87,8 @@ ImagePtr ImagePipe::CreateImage(Session* session,
                                 const mozart2::ImageInfoPtr& image_info,
                                 uint64_t memory_offset,
                                 ErrorReporter* error_reporter) {
-  return Image::New(session, memory, image_info, memory_offset, error_reporter);
+  return Image::New(session, 0u, memory, image_info, memory_offset,
+                    error_reporter);
 }
 
 void ImagePipe::RemoveImage(uint32_t image_id) {

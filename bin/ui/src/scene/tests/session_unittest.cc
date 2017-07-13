@@ -48,6 +48,32 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_EQ(0U, session_->GetMappedResourceCount());
 }
 
+TEST_F(SessionTest, Labeling) {
+  const ResourceId kNodeId = 1;
+  const std::string kShortLabel = "test!";
+  const std::string kLongLabel = std::string('x', mozart2::kLabelMaxLength);
+  const std::string kTooLongLabel =
+      std::string('?', mozart2::kLabelMaxLength + 1);
+
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
+  auto shape_node = FindResource<ShapeNode>(kNodeId);
+  EXPECT_TRUE(shape_node->label().empty());
+  EXPECT_TRUE(Apply(NewSetLabelOp(kNodeId, kShortLabel)));
+  EXPECT_EQ(kShortLabel, shape_node->label());
+  EXPECT_TRUE(Apply(NewSetLabelOp(kNodeId, kLongLabel)));
+  EXPECT_EQ(kLongLabel, shape_node->label());
+  EXPECT_TRUE(Apply(NewSetLabelOp(kNodeId, kTooLongLabel)));
+  EXPECT_EQ(kTooLongLabel.substr(0, mozart2::kLabelMaxLength),
+            shape_node->label());
+  EXPECT_TRUE(Apply(NewSetLabelOp(kNodeId, "")));
+  EXPECT_TRUE(shape_node->label().empty());
+
+  // Bypass the truncation performed by session helpers.
+  shape_node->SetLabel(kTooLongLabel);
+  EXPECT_EQ(kTooLongLabel.substr(0, mozart2::kLabelMaxLength),
+            shape_node->label());
+}
+
 // TODO:
 // - test that FindResource() cannot return resources that have the wrong type.
 

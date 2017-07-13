@@ -46,7 +46,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                         mozart2::ImportSpec::NODE, /* spec */
                                         std::move(destination)) /* endpoint */
-  ));
+                    ));
 
   // Assert that the import node was correctly mapped in. It has not been linked
   // yet.
@@ -75,7 +75,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-    ));
+                      ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
@@ -162,7 +162,7 @@ TEST_F(ImportThreadedTest,
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-    ));
+                      ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
@@ -207,7 +207,7 @@ TEST_F(ImportTest,
   ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                         mozart2::ImportSpec::NODE, /* spec */
                                         std::move(destination)) /* endpoint */
-  ));
+                    ));
 
   // Assert that the import node was correctly mapped in. It has not been
   // linked yet.
@@ -236,7 +236,7 @@ TEST_F(ImportTest,
     ASSERT_TRUE(import_node_backing);
 
     // Since the entity node is not owned by the resource map, its ID is 0.
-    ASSERT_EQ(0u, import_node_backing->resource_id());
+    ASSERT_EQ(0u, import_node_backing->id());
   }
 }
 
@@ -250,7 +250,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-    ));
+                      ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
@@ -290,7 +290,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_TRUE(Apply(NewImportResourceOp(1 /* import resource ID */,
                                           mozart2::ImportSpec::NODE, /* spec */
                                           std::move(destination)) /* endpoint */
-    ));
+                      ));
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.

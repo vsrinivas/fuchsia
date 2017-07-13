@@ -106,7 +106,8 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
   ImagePipeThatCreatesDummyImages(
       Session* session,
       escher::ResourceManager* dummy_resource_manager)
-      : ImagePipe(session), dummy_resource_manager_(dummy_resource_manager) {}
+      : ImagePipe(session, 0u),
+        dummy_resource_manager_(dummy_resource_manager) {}
 
  private:
   // Override to create an Image without a backing escher::Image.
@@ -115,7 +116,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
                        const mozart2::ImageInfoPtr& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
-    return Image::NewForTesting(session, dummy_resource_manager_, memory);
+    return Image::NewForTesting(session, 0u, dummy_resource_manager_, memory);
   }
   escher::ResourceManager* dummy_resource_manager_;
 };

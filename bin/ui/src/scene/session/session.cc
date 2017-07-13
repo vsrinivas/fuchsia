@@ -105,6 +105,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetTextureOp(op->get_set_texture());
     case mozart2::Op::Tag::SET_COLOR:
       return ApplySetColorOp(op->get_set_color());
+    case mozart2::Op::Tag::SET_LABEL:
+      return ApplySetLabelOp(op->get_set_label());
     case mozart2::Op::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FTL_CHECK(false);
@@ -181,7 +183,7 @@ bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
 
 bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
   ImportPtr import =
-      ftl::MakeRefCounted<Import>(this, op->spec, std::move(op->token));
+      ftl::MakeRefCounted<Import>(this, op->id, op->spec, std::move(op->token));
   context_->ImportResource(import, op->spec, import->import_token());
   return resources_.AddResource(op->id, std::move(import));
 }
@@ -401,6 +403,13 @@ bool Session::ApplySetLightIntensityOp(
   return false;
 }
 
+bool Session::ApplySetLabelOp(const mozart2::SetLabelOpPtr& op) {
+  if (auto r = resources_.FindResource<Resource>(op->id)) {
+    return r->SetLabel(op->label.get());
+  }
+  return false;
+}
+
 bool Session::ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args) {
   auto memory = CreateMemory(id, args);
   return memory ? resources_.AddResource(id, std::move(memory)) : false;
@@ -418,8 +427,8 @@ bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
 
 bool Session::ApplyCreateImagePipe(ResourceId id,
                                    const mozart2::ImagePipeArgsPtr& args) {
-  auto image_pipe =
-      ftl::MakeRefCounted<ImagePipe>(this, std::move(args->image_pipe_request));
+  auto image_pipe = ftl::MakeRefCounted<ImagePipe>(
+      this, id, std::move(args->image_pipe_request));
   return resources_.AddResource(id, image_pipe);
 }
 
@@ -579,20 +588,21 @@ bool Session::ApplyCreateVariable(ResourceId id,
   return false;
 }
 
-ResourcePtr Session::CreateMemory(ResourceId, const mozart2::MemoryPtr& args) {
+ResourcePtr Session::CreateMemory(ResourceId id,
+                                  const mozart2::MemoryPtr& args) {
   vk::Device device = context()->vk_device();
   switch (args->memory_type) {
     case mozart2::MemoryType::VK_DEVICE_MEMORY:
-      return GpuMemory::New(this, device, args, error_reporter_);
+      return GpuMemory::New(this, id, device, args, error_reporter_);
     case mozart2::MemoryType::HOST_MEMORY:
-      return HostMemory::New(this, device, args, error_reporter_);
+      return HostMemory::New(this, id, device, args, error_reporter_);
   }
 }
 
-ResourcePtr Session::CreateImage(ResourceId,
+ResourcePtr Session::CreateImage(ResourceId id,
                                  MemoryPtr memory,
                                  const mozart2::ImagePtr& args) {
-  return Image::New(this, memory, args->info, args->memory_offset,
+  return Image::New(this, id, memory, args->info, args->memory_offset,
                     error_reporter_);
 }
 
@@ -648,11 +658,11 @@ ResourcePtr Session::CreateShapeNode(ResourceId id,
 }
 
 ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {
-  return ftl::MakeRefCounted<CircleShape>(this, initial_radius);
+  return ftl::MakeRefCounted<CircleShape>(this, id, initial_radius);
 }
 
 ResourcePtr Session::CreateRectangle(ResourceId id, float width, float height) {
-  return ftl::MakeRefCounted<RectangleShape>(this, width, height);
+  return ftl::MakeRefCounted<RectangleShape>(this, id, width, height);
 }
 
 ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
@@ -676,11 +686,11 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
                              escher::MeshAttribute::kUV};
 
   return ftl::MakeRefCounted<RoundedRectangleShape>(
-      this, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
+      this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
 }
 
 ResourcePtr Session::CreateMaterial(ResourceId id) {
-  return ftl::MakeRefCounted<Material>(this);
+  return ftl::MakeRefCounted<Material>(this, id);
 }
 
 void Session::TearDown() {

@@ -13,7 +13,10 @@ class RectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RectangleShape(Session* session, float initial_width, float initial_height);
+  RectangleShape(Session* session,
+                 ResourceId id,
+                 float initial_width,
+                 float initial_height);
 
   float width() const { return width_; }
   float height() const { return height_; }

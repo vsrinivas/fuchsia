@@ -9,8 +9,8 @@ namespace scene {
 
 const ResourceTypeInfo Shape::kTypeInfo = {ResourceType::kShape, "Shape"};
 
-Shape::Shape(Session* session, const ResourceTypeInfo& type_info)
-    : Resource(session, type_info) {
+Shape::Shape(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
+    : Resource(session, id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
 }
 

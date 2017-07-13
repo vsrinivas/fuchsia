@@ -612,6 +612,17 @@ mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
   return op;
 }
 
+mozart2::OpPtr NewSetLabelOp(uint32_t resource_id, const std::string& label) {
+  auto set_label_op = mozart2::SetLabelOp::New();
+  set_label_op->id = resource_id;
+  set_label_op->label = label.substr(0, mozart2::kLabelMaxLength);
+
+  auto op = mozart2::Op::New();
+  op->set_set_label(std::move(set_label_op));
+
+  return op;
+}
+
 mozart2::FloatValuePtr NewFloatValue(float value) {
   auto val = mozart2::FloatValue::New();
   val->variable_id = 0;

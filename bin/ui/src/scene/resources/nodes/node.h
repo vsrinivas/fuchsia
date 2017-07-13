@@ -23,8 +23,6 @@ class Node : public Resource {
 
   virtual ~Node() override;
 
-  ResourceId resource_id() const { return resource_id_; }
-
   bool AddChild(NodePtr child_node);
   bool DetachChildren();
   bool AddPart(NodePtr part_node);
@@ -87,7 +85,6 @@ class Node : public Resource {
   // Describes the manner in which a node is related to its parent.
   enum class ParentRelation { kNone, kChild, kPart, kImportDelegate };
 
-  const ResourceId resource_id_;
   uint32_t tag_value_ = 0u;
   Node* parent_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;

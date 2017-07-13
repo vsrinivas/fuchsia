@@ -9,8 +9,10 @@ namespace scene {
 
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
-Memory::Memory(Session* session, const ResourceTypeInfo& type_info)
-    : Resource(session, type_info) {}
+Memory::Memory(Session* session,
+               ResourceId id,
+               const ResourceTypeInfo& type_info)
+    : Resource(session, id, type_info) {}
 
 }  // namespace scene
 }  // namespace mozart

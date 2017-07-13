@@ -58,6 +58,8 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
       return stream << "SET_TEXTURE";
     case Op::Tag::SET_COLOR:
       return stream << "SET_COLOR";
+    case Op::Tag::SET_LABEL:
+      return stream << "SET_LABEL";
     case Op::Tag::__UNKNOWN__:
       return stream << "__UNKNOWN__";
   }

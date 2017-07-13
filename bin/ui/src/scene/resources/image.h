@@ -31,12 +31,14 @@ class Image : public ImageBase {
   //
   // Returns the created Image, or nullptr if there was an error.
   static ImagePtr New(Session* session,
+                      ResourceId id,
                       MemoryPtr memory,
                       const mozart2::ImageInfoPtr& image_info,
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
   static ImagePtr NewForTesting(Session* session,
+                                ResourceId id,
                                 escher::ResourceManager* image_owner,
                                 MemoryPtr host_memory);
 
@@ -51,6 +53,7 @@ class Image : public ImageBase {
   // |vk_image| is the VkImage, whose lifetime is now controlled by this
   // object. |memory| is the GPU memory that is associated with this image.
   Image(Session* session,
+        ResourceId id,
         GpuMemoryPtr memory,
         escher::ImageInfo image_info,
         vk::Image vk_image_);
@@ -62,7 +65,10 @@ class Image : public ImageBase {
   //
   // TODO: We might not want to hold on to the memory since we're uploading
   // its contents to the GPU and using the uploaded copy.
-  Image(Session* session, MemoryPtr memory, escher::ImagePtr image);
+  Image(Session* session,
+        ResourceId id,
+        MemoryPtr memory,
+        escher::ImagePtr image);
 
   MemoryPtr memory_;
   escher::ImagePtr image_;

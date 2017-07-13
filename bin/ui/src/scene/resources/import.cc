@@ -27,9 +27,10 @@ constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
 Import::Import(Session* session,
+               ResourceId id,
                mozart2::ImportSpec spec,
                mx::eventpair import_token)
-    : Resource(session, Import::kTypeInfo),
+    : Resource(session, id, Import::kTypeInfo),
       import_token_(std::move(import_token)),
       import_spec_(spec),
       delegate_(CreateDelegate(session, spec)) {

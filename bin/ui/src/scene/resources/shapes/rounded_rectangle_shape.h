@@ -17,6 +17,7 @@ class RoundedRectangleShape final : public PlanarShape {
   static const ResourceTypeInfo kTypeInfo;
 
   RoundedRectangleShape(Session* session,
+                        ResourceId id,
                         const escher::RoundedRectSpec& spec,
                         escher::MeshPtr mesh);
 

@@ -13,7 +13,7 @@ class CircleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  CircleShape(Session* session, float initial_radius);
+  CircleShape(Session* session, ResourceId id, float initial_radius);
 
   float radius() const { return radius_; }
 

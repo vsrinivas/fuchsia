@@ -13,15 +13,17 @@ const ResourceTypeInfo GpuMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kGpuMemory, "GpuMemory"};
 
 GpuMemory::GpuMemory(Session* session,
+                     ResourceId id,
                      vk::Device device,
                      vk::DeviceMemory mem,
                      vk::DeviceSize size,
                      uint32_t memory_type_index)
-    : Memory(session, GpuMemory::kTypeInfo),
+    : Memory(session, id, GpuMemory::kTypeInfo),
       escher_gpu_mem_(
           escher::GpuMem::New(device, mem, size, memory_type_index)) {}
 
 GpuMemoryPtr GpuMemory::New(Session* session,
+                            ResourceId id,
                             vk::Device device,
                             const mozart2::MemoryPtr& args,
                             ErrorReporter* error_reporter) {
@@ -30,10 +32,11 @@ GpuMemoryPtr GpuMemory::New(Session* session,
                                "Memory must be of type VK_DEVICE_MEMORY.";
     return nullptr;
   }
-  return New(session, device, std::move(args->vmo), error_reporter);
+  return New(session, id, device, std::move(args->vmo), error_reporter);
 }
 
 GpuMemoryPtr GpuMemory::New(Session* session,
+                            ResourceId id,
                             vk::Device device,
                             mx::vmo vmo,
                             ErrorReporter* error_reporter) {
@@ -63,7 +66,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   uint32_t memory_type_index = 0;
 
   return ftl::MakeRefCounted<GpuMemory>(
-      session, vk::Device(device), vk::DeviceMemory(memory),
+      session, id, vk::Device(device), vk::DeviceMemory(memory),
       vk::DeviceSize(vmo_size), memory_type_index);
 }
 

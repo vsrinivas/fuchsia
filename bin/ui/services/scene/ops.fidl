@@ -39,6 +39,9 @@ union Op {
 
   SetTextureOp set_texture;
   SetColorOp set_color;
+
+  // Diagnostic operations.
+  SetLabelOp set_label;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -97,6 +100,24 @@ struct ImportResourceOp {
   uint32 id;
   handle<eventpair> token;
   ImportSpec spec;
+};
+
+// Maximum length for a resource label.
+const uint32 kLabelMaxLength = 32;
+
+// Sets/clears a label to help developers identify the purpose of the resource
+// when using diagnostic tools.
+//
+// The label serves no functional purpose in the scene graph.  It exists only
+// to help developers understand its structure.  The scene manager may truncate
+// or discard labels at will.
+//
+// Constraints:
+// - The label's maximum length is |kLabelMaxLength| characters.
+// - Setting the label to an empty string clears it.
+struct SetLabelOp {
+  uint32 id;
+  string label;
 };
 
 // Add a node as a child to another node.

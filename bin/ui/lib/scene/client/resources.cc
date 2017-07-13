@@ -26,6 +26,10 @@ void Resource::ExportAsRequest(mx::eventpair* out_import_token) {
       mozart::NewExportResourceOpAsRequest(id(), out_import_token));
 }
 
+void Resource::SetLabel(const std::string& label) {
+  session_->Enqueue(mozart::NewSetLabelOp(id(), label));
+}
+
 void Resource::AddChild(uint32_t child_node_id) {
   session()->Enqueue(mozart::NewAddChildOp(id(), child_node_id));
 }

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "apps/mozart/services/scene/session.fidl.h"
 
 namespace mozart {
@@ -132,6 +134,9 @@ mozart2::OpPtr NewSetColorOp(uint32_t node_id,
                              uint8_t green,
                              uint8_t blue,
                              uint8_t alpha);
+
+// Diagnostic operations.
+mozart2::OpPtr NewSetLabelOp(uint32_t resource_id, const std::string& label);
 
 // Basic types.
 

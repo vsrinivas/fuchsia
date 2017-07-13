@@ -32,7 +32,7 @@ class Shape : public Resource {
       const escher::MaterialPtr& material) = 0;
 
  protected:
-  Shape(Session* session, const ResourceTypeInfo& type_info);
+  Shape(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 };
 
 using ShapePtr = ftl::RefPtr<Shape>;

@@ -25,6 +25,7 @@ class Import final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   Import(Session* session,
+         ResourceId id,
          mozart2::ImportSpec spec,
          mx::eventpair import_token);
 

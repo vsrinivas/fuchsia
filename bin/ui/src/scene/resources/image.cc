@@ -15,16 +15,20 @@ namespace scene {
 const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
-Image::Image(Session* session, MemoryPtr memory, escher::ImagePtr image)
-    : ImageBase(session, Image::kTypeInfo),
+Image::Image(Session* session,
+             ResourceId id,
+             MemoryPtr memory,
+             escher::ImagePtr image)
+    : ImageBase(session, id, Image::kTypeInfo),
       memory_(std::move(memory)),
       image_(std::move(image)) {}
 
 Image::Image(Session* session,
+             ResourceId id,
              GpuMemoryPtr memory,
              escher::ImageInfo image_info,
              vk::Image vk_image)
-    : ImageBase(session, Image::kTypeInfo),
+    : ImageBase(session, id, Image::kTypeInfo),
       memory_(std::move(memory)),
       image_(ftl::MakeRefCounted<escher::Image>(
           session->context()->escher_resource_recycler(),
@@ -33,6 +37,7 @@ Image::Image(Session* session,
           static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem())) {}
 
 ImagePtr Image::New(Session* session,
+                    ResourceId id,
                     MemoryPtr memory,
                     const mozart2::ImageInfoPtr& image_info,
                     uint64_t memory_offset,
@@ -107,8 +112,8 @@ ImagePtr Image::New(Session* session,
         session->context()->escher_gpu_uploader(), pixel_format,
         image_info->width, image_info->height,
         static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset);
-    return ftl::AdoptRef(
-        new Image(session, std::move(host_memory), std::move(escher_image)));
+    return ftl::AdoptRef(new Image(session, id, std::move(host_memory),
+                                   std::move(escher_image)));
 
     // Create from GPU memory.
   } else if (memory->IsKindOf<GpuMemory>()) {
@@ -148,8 +153,8 @@ ImagePtr Image::New(Session* session,
     vk::DeviceMemory vk_mem = gpu_memory->escher_gpu_mem()->base();
     VkDeviceSize offset = memory_offset;
     vk_device.bindImageMemory(vk_image, vk_mem, offset);
-    return ftl::AdoptRef(
-        new Image(session, std::move(gpu_memory), escher_image_info, vk_image));
+    return ftl::AdoptRef(new Image(session, id, std::move(gpu_memory),
+                                   escher_image_info, vk_image));
   } else {
     FTL_CHECK(false);
     return nullptr;
@@ -157,12 +162,13 @@ ImagePtr Image::New(Session* session,
 }
 
 ImagePtr Image::NewForTesting(Session* session,
+                              ResourceId id,
                               escher::ResourceManager* image_owner,
                               MemoryPtr host_memory) {
   escher::ImagePtr escher_image = ftl::MakeRefCounted<escher::Image>(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
 
-  return ftl::AdoptRef(new Image(session, host_memory, escher_image));
+  return ftl::AdoptRef(new Image(session, id, host_memory, escher_image));
 }
 
 }  // namespace scene

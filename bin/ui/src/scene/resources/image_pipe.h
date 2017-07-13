@@ -31,8 +31,9 @@ class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session);
+  ImagePipe(Session* session, ResourceId id);
   ImagePipe(Session* session,
+            ResourceId id,
             ::fidl::InterfaceRequest<mozart2::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.

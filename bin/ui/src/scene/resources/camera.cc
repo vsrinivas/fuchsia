@@ -10,7 +10,7 @@ namespace scene {
 const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 
 Camera::Camera(Session* session, ResourceId id, ScenePtr scene)
-    : Resource(session, Camera::kTypeInfo), scene_(std::move(scene)) {}
+    : Resource(session, id, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
 void Camera::SetProjection(const glm::vec3& eye_position,
                            const glm::vec3& eye_look_at,

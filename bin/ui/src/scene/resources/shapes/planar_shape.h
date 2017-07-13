@@ -22,7 +22,9 @@ class PlanarShape : public Shape {
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
  protected:
-  PlanarShape(Session* session, const ResourceTypeInfo& type_info);
+  PlanarShape(Session* session,
+              ResourceId id,
+              const ResourceTypeInfo& type_info);
 };
 
 }  // namespace scene
