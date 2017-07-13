@@ -131,9 +131,9 @@ Extra flags will be passed to the supporting Dart tool if applicable.
             print script
             print output
 
+    print ''
     if len(failed_scripts):
         failed_scripts.sort()
-        print ''
         print 'Failures in:'
         for script in failed_scripts:
             print '  %s' % script
