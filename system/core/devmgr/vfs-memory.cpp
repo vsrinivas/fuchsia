@@ -325,7 +325,7 @@ mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
         return r;
     } else if (dn == nullptr) {
         // Cannot unlink directory 'foo' using the argument 'foo/.'
-        return MX_ERR_INVALID_ARGS;
+        return MX_ERR_UNAVAILABLE;
     } else if (!dn->IsDirectory() && must_be_dir) {
         // Path ending in "/" was requested, implying that the dnode must be a directory
         return MX_ERR_NOT_DIR;

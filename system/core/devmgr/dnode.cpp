@@ -130,7 +130,7 @@ mx_status_t Dnode::CanUnlink() const {
         return MX_ERR_NOT_EMPTY;
     } else if (vnode_->IsRemote()) {
         // Cannot unlink mount points
-        return MX_ERR_BAD_STATE;
+        return MX_ERR_UNAVAILABLE;
     }
     return MX_OK;
 }

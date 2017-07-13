@@ -425,15 +425,18 @@ static mx_status_t cb_dir_find(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* d
     }
 }
 
-bool VnodeMinfs::CanUnlink() const {
+mx_status_t VnodeMinfs::CanUnlink() const {
     // directories must be empty (dirent_count == 2)
     if (IsDirectory()) {
         if (inode_.dirent_count != 2) {
             // if we have more than "." and "..", not empty, cannot unlink
-            return false;
+            return MX_ERR_NOT_EMPTY;
+        } else if (IsRemote()) {
+            // we cannot unlink mount points
+            return MX_ERR_UNAVAILABLE;
         }
     }
-    return true;
+    return MX_OK;
 }
 
 mx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
@@ -544,8 +547,8 @@ static mx_status_t cb_dir_unlink(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
     if ((args->type == kMinfsTypeDir) && !vn->IsDirectory()) {
         return MX_ERR_NOT_DIR;
     }
-    if (!vn->CanUnlink()) {
-        return MX_ERR_NOT_EMPTY;
+    if ((status = vn->CanUnlink()) != MX_OK) {
+        return status;
     }
     return vndir->UnlinkChild(args->txn, mxtl::move(vn), de, offs);
 }
@@ -592,9 +595,9 @@ static mx_status_t cb_dir_attempt_rename(mxtl::RefPtr<VnodeMinfs> vndir, minfs_d
     } else if (args->type != de->type) {
         // cannot rename directory to file (or vice versa)
         return MX_ERR_BAD_STATE;
-    } else if (!vn->CanUnlink()) {
+    } else if ((status = vn->CanUnlink()) != MX_OK) {
         // if we cannot unlink the target, we cannot rename the target
-        return MX_ERR_BAD_STATE;
+        return status;
     }
 
     // If we are renaming ON TOP of a directory, then we can skip

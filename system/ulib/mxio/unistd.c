@@ -729,6 +729,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case MX_ERR_INVALID_ARGS: return EINVAL;
     case MX_ERR_BUFFER_TOO_SMALL: return EINVAL;
     case MX_ERR_TIMED_OUT: return ETIMEDOUT;
+    case MX_ERR_UNAVAILABLE: return EBUSY;
     case MX_ERR_ALREADY_EXISTS: return EEXIST;
     case MX_ERR_PEER_CLOSED: return ENOTCONN;
     case MX_ERR_BAD_PATH: return ENAMETOOLONG;

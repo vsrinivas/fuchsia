@@ -164,7 +164,7 @@ public:
 
     bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
     bool IsDeletedDirectory() const { return flags_ & kMinfsFlagDeletedDirectory; }
-    bool CanUnlink() const;
+    mx_status_t CanUnlink() const;
 
     uint32_t GetKey() const { return ino_; }
     static size_t GetHash(uint32_t key) { return INO_HASH(key); }

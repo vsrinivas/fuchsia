@@ -170,6 +170,10 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
                MX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
 
+    // Let's try removing the mount point (we shouldn't be allowed to do so)
+    ASSERT_EQ(rmdir(mount_path), -1, "");
+    ASSERT_EQ(errno, EBUSY, "");
+
     // Let's try telling the target filesystem to shut down
     // WITHOUT O_ADMIN
     int badfd = open(mount_path, O_RDONLY | O_DIRECTORY);

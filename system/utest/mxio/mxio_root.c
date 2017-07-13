@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -34,6 +35,19 @@ bool stat_test(void) {
     END_TEST;
 }
 
+bool remove_test(void) {
+    BEGIN_TEST;
+
+    ASSERT_EQ(remove("/"), -1, "");
+    ASSERT_EQ(errno, EBUSY, "");
+
+    ASSERT_EQ(rmdir("/"), -1, "");
+    ASSERT_EQ(errno, EBUSY, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(mxio_root_test)
 RUN_TEST(stat_test)
+RUN_TEST(remove_test)
 END_TEST_CASE(mxio_root_test)
