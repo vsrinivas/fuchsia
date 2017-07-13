@@ -144,10 +144,10 @@ function handleSuggestionsUpdate(suggestions) {
 }
 
 function makeContextTopicRow(topic,topicValue) {
-  var topicId = "#topic-" + topic;
+  var topicId = "topic-" + topic;
   var row = $("<tr/>")
     .append($("<td/>").addClass('wrappable').text(topic))
-    .append($("<td/>").attr("id", topicId)
+    .append($("<td/>").attr("topic",topic)
       .append($("<pre/>").text(topicValue)));
 
   return row;
@@ -168,16 +168,16 @@ function handleContextUpdate(context) {
       topicValue = rawValue;
       danger = true;
     }
-    var topicId = "#topic-" + topic;
+    var topicId = "topic-" + topic;
     var escapedTopic = $.escapeSelector(topicId);
-    var contextTopic = $("#context #" + escapedTopic);
+    var contextTopic = $("#context td[topic^='" + topic + "']");
     if (contextTopic.length == 0) {
       // element does not exist in the context section, add it to the table
       makeContextTopicRow(topic,topicValue).appendTo("#context");
     }
     // modify all elements showing this topic
     // (may be others on agent tab, for example)
-    $("#" + escapedTopic).find("pre")
+    $("td[topic^='" + topic + "']").find("pre")
         .text(topicValue)
         .toggleClass("text-danger", danger);
   });
@@ -579,7 +579,11 @@ function getOrCreateAgentElements(agentUrl) {
 }
 
 function addAgentContextTopic(topic,agentElems) {
-  agentElems.find('tbody').append(makeContextTopicRow(topic,""));
+  var tbody = agentElems.find('tbody');
+  var contextRow = agentElems.find("td[topic^='" + topic + "']");
+  if (contextRow.length == 0) {
+    tbody.append(makeContextTopicRow(topic,""));
+  }
 }
 
 function addProposalToAgent(proposal,agentElems) {
