@@ -85,11 +85,13 @@ class Settings {
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to 'file:///system/apps/userpicker_device_shell'.
+                For integration testing use "dev_device_shell".
     USER_SHELL: URL of the user shell to run.
                 Defaults to 'file:///system/apps/armadillo_user_shell'.
-                For integration testing use "dummy_user_shell".
+                For integration testing use "dev_user_shell".
     STORY_SHELL: URL of the story shell to run.
-                Defaults to 'file:///system/apps/dummy_story_shell'.
+                Defaults to 'file:///system/apps/mondrian'.
+                For integration testing use "dev_story_shell".
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
   }
 
