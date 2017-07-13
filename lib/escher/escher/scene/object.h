@@ -53,6 +53,7 @@ class Object {
 
   // The material with which to fill the shape.
   const MaterialPtr& material() const { return material_; }
+  void set_material(MaterialPtr material) { material_ = std::move(material); }
 
   Object& set_shape_modifiers(ShapeModifiers modifiers) {
     shape_.set_modifiers(modifiers);
