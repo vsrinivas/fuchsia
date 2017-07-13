@@ -102,7 +102,7 @@ mx_status_t PortDispatcher::Create(uint32_t options,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = MX_DEFAULT_IO_PORT_V2_RIGHTS;
+    *rights = MX_DEFAULT_PORT_RIGHTS;;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
