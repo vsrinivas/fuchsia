@@ -50,7 +50,9 @@ void AcquireFenceSet::ClearHandlers() {
   handler_keys_.clear();
 }
 
-void AcquireFenceSet::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+void AcquireFenceSet::OnHandleReady(mx_handle_t handle,
+                                    mx_signals_t pending,
+                                    uint64_t count) {
   FTL_DCHECK(pending & kFenceSignalledOrClosed);
   FTL_DCHECK(ready_callback_);
 
