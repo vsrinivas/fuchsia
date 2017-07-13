@@ -124,12 +124,21 @@ def main(argv):
 
   driver = Driver()
 
-  for test in tests:
-    if args.sync:
+  # Sync all files at once because sftp has a 1.3 second startup overhead
+  if args.sync:
+    file_pairs = []
+    for test in tests:
       for filename, remote_dir in test['copy']:
-        scp = fuchsia_tools.scp('[' + host + ']', filename, remote_dir)
-        subprocess.check_call(scp)
+        file_pairs.append((filename, remote_dir +'/' + filename))
+    command_tuple = fuchsia_tools.sftp( '[' + host + ']', file_pairs)
+    with open(os.devnull, 'w') as devnull:
+      status = subprocess.call(command_tuple[0], stdout=devnull)
+      command_tuple[1].close()
+      if status != 0:
+        print >> sys.stderr, 'error: sftp failed'
+        return status
 
+  for test in tests:
     id_ = str(uuid.uuid4())
     try:
       sock.send(driver.start_test(id_, test) + '\n')

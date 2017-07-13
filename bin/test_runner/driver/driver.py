@@ -4,6 +4,7 @@
 
 import json
 import os
+import tempfile
 
 
 class Color(object):
@@ -122,17 +123,27 @@ class FuchsiaTools(object):
   def fuchsia_build_dir(self):
     return self._get_env('FUCHSIA_BUILD_DIR')
 
-  def scp(self, server, filename, remote_dir):
+  # Returns tuple of (command, batch_file_handle)
+  # You should close batch_file_handle after you call sftp
+  def sftp(self, server, file_pairs):
     ssh_config = os.path.join(self.fuchsia_build_dir, 'ssh-keys/ssh_config')
-    local_path = os.path.join(self.fuchsia_build_dir, filename)
+
+    f = tempfile.NamedTemporaryFile()
+    for pair in file_pairs:
+      local_path = os.path.join(self.fuchsia_build_dir, pair[0])
+      print >> f, '-rm %s' % pair[1]
+      print >> f, 'put -P %s %s' % (local_path, pair[1])
+    f.flush()
+
     command = [
-      'scp',
-      '-F', ssh_config,
-      local_path,
-      server + ':' + remote_dir,
+        'sftp',
+        '-F',
+        ssh_config,
+        '-b',
+        f.name, server
     ]
     Log.command(command)
-    return command
+    return (command, f)
 
   def netaddr(self, device):
     path = os.path.join(self.fuchsia_out_dir, 'build-magenta/tools/netaddr')

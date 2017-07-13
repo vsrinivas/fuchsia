@@ -78,11 +78,15 @@ class FuchsiaToolsTest(unittest.TestCase):
     tools = FuchsiaTools(self.ENV)
     self.assertEqual(tools.netls()[0], 'out/build-magenta/tools/netls')
 
-  def test_scp(self):
+  # TODO(jimbe) This test should test the contents of the batch file
+  def test_sftp(self):
     tools = FuchsiaTools(self.ENV)
+    tuple = tools.sftp('server', [('file', '/x')])
+    tuple[1].close()
+    tuple[0][4] = 'batch';
     self.assertEqual(
-        tools.scp('server', 'file', '/x'),
-        ['scp', '-F', 'build/ssh-keys/ssh_config', 'build/file', 'server:/x'])
+        tuple[0],
+        ['sftp', '-F', 'build/ssh-keys/ssh_config', '-b', 'batch', 'server'])
 
   def test_missing_out_dir(self):
     tools = FuchsiaTools({})
@@ -92,7 +96,7 @@ class FuchsiaToolsTest(unittest.TestCase):
   def test_missing_build_dir(self):
     tools = FuchsiaTools({})
     with self.assertRaisesRegexp(MissingEnvironmentVariable, 'FUCHSIA_BUILD_DIR'):
-      tools.scp('server', 'file', '/x')
+      tools.sftp('server', [('file', '/x')])
 
 
 class DriverTest(unittest.TestCase):
