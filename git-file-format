@@ -11,7 +11,7 @@ by any commits introduced on the local branch are formatted.
 """
 
 import argparse
-import os.path
+import os
 import paths
 import platform
 import subprocess
@@ -67,6 +67,11 @@ def _get_diff_base():
     except subprocess.CalledProcessError:
         return "HEAD"
 
+def _cd_to_root():
+    path = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"]).strip()
+    os.chdir(path)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Format modified files.")
@@ -89,6 +94,10 @@ def main():
         default=False,
         help="format all files in the repo, not just the modified ones")
     args = parser.parse_args()
+
+    # `cd` to the root of the git repository. git diff-index returns
+    # paths relative to this dir.
+    _cd_to_root()
 
     # Find the files to be formatted.
     diff_base = _get_diff_base()
