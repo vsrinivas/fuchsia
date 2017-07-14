@@ -144,10 +144,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
 
   // |PageClient|
-  void OnChange(const std::string& key, const std::string& value) override;
+  void OnPageChange(const std::string& key, const std::string& value) override;
 
   // |PageClient|
-  void OnDelete(const std::string& key) override;
+  void OnPageDelete(const std::string& key) override;
 
   // |FocusWatcher|
   void OnFocusChange(FocusInfoPtr info) override;

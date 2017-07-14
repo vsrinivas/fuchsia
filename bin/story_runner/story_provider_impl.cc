@@ -673,8 +673,8 @@ void StoryProviderImpl::WatchImportance(
 }
 
 // |PageClient|
-void StoryProviderImpl::OnChange(const std::string& key,
-                                 const std::string& value) {
+void StoryProviderImpl::OnPageChange(const std::string& key,
+                                     const std::string& value) {
   auto story_data = StoryData::New();
   if (!XdrRead(value, &story_data, XdrStoryData)) {
     return;
@@ -697,7 +697,7 @@ void StoryProviderImpl::OnChange(const std::string& key,
 }
 
 // |PageClient|
-void StoryProviderImpl::OnDelete(const std::string& key) {
+void StoryProviderImpl::OnPageDelete(const std::string& key) {
   // Extract the story ID from the ledger key. cf. kStoryKeyPrefix.
   const fidl::String story_id = key.substr(sizeof(kStoryKeyPrefix) - 1);
 

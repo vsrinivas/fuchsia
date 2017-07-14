@@ -542,11 +542,12 @@ void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
       AgentProviderWatcherPtr::Create(std::move(watcher)));
 }
 
-void AgentRunner::OnChange(const std::string& key, const std::string& value) {
+void AgentRunner::OnPageChange(const std::string& key,
+                               const std::string& value) {
   new UpdateCall(&operation_queue_, this, key, value);
 }
 
-void AgentRunner::OnDelete(const std::string& key) {
+void AgentRunner::OnPageDelete(const std::string& key) {
   new DeleteCall(&operation_queue_, this, key);
 }
 

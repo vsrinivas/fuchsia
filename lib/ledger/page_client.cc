@@ -53,23 +53,24 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
 void PageClient::OnChange(ledger::PageChangePtr page,
                           ledger::ResultState result_state,
                           const OnChangeCallback& callback) {
-  if (!page.is_null() && !page->changes.is_null()) {
-    for (auto& entry : page->changes) {
-      // Remove prefix maybe?
-      const std::string& key = to_string(entry->key);
-      std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
-                       << "Unable to extract data.";
-        continue;
-      }
-
-      OnChange(key, value);
+  // According to their fidl spec, neither page nor page->changes
+  // should be null.
+  FTL_DCHECK(page && page->changes);
+  for (auto& entry : page->changes) {
+    // Remove prefix maybe?
+    const std::string key = to_string(entry->key);
+    std::string value;
+    if (!mtl::StringFromVmo(entry->value, &value)) {
+      FTL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
+                     << "Unable to extract data.";
+      continue;
     }
 
-    for (auto& key : page->deleted_keys) {
-      OnDelete(to_string(key));
-    }
+    OnPageChange(key, value);
+  }
+
+  for (auto& key : page->deleted_keys) {
+    OnPageDelete(to_string(key));
   }
 
   // Every time we receive a group of OnChange notifications, we update the root
@@ -82,9 +83,10 @@ void PageClient::OnChange(ledger::PageChangePtr page,
   callback(Update(result_state));
 }
 
-void PageClient::OnChange(const std::string& key, const std::string& value) {}
+void PageClient::OnPageChange(const std::string& key,
+                              const std::string& value) {}
 
-void PageClient::OnDelete(const std::string& key) {}
+void PageClient::OnPageDelete(const std::string& key) {}
 
 namespace {
 

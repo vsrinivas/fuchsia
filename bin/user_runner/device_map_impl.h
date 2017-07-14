@@ -36,10 +36,10 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void GetCurrentDevice(const GetCurrentDeviceCallback& callback) override;
 
   // |PageClient|
-  void OnChange(const std::string& key, const std::string& value) override;
+  void OnPageChange(const std::string& key, const std::string& value) override;
 
   // |PageClient|
-  void OnDelete(const std::string& key) override;
+  void OnPageDelete(const std::string& key) override;
 
   fidl::BindingSet<DeviceMap> bindings_;
   ledger::Page* const page_;

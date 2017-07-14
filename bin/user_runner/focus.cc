@@ -88,7 +88,8 @@ void FocusHandler::WatchRequest(
 }
 
 // |PageClient|
-void FocusHandler::OnChange(const std::string& key, const std::string& value) {
+void FocusHandler::OnPageChange(const std::string& key,
+                                const std::string& value) {
   auto focus_info = FocusInfo::New();
   if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
     return;

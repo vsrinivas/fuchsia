@@ -118,10 +118,10 @@ class AgentRunner : AgentProvider, PageClient {
   void Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) override;
 
   // |PageClient|
-  void OnChange(const std::string& key, const std::string& value) override;
+  void OnPageChange(const std::string& key, const std::string& value) override;
 
   // |PageClient|
-  void OnDelete(const std::string& key) override;
+  void OnPageDelete(const std::string& key) override;
 
   // agent URL -> { task id -> queue name }
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>>

@@ -42,7 +42,7 @@ class FocusHandler : FocusProvider, FocusController, PageClient {
       fidl::InterfaceHandle<FocusRequestWatcher> watcher) override;
 
   // |PageClient|
-  void OnChange(const std::string& key, const std::string& value) override;
+  void OnPageChange(const std::string& key, const std::string& value) override;
 
   ledger::Page* const page_;
   const fidl::String device_id_;

@@ -45,7 +45,7 @@ class PageClient : ledger::PageWatcher {
   explicit PageClient(const std::string& context,
                       ledger::Page* page,
                       const char* prefix);
-  ~PageClient();
+  ~PageClient() override;
 
   // Returns the current page snapshot. It is returned as a shared_ptr, so that
   // it can be used in an asynchronous operation. In that case, the page
@@ -72,8 +72,8 @@ class PageClient : ledger::PageWatcher {
  private:
   // Derived classes implement these methods as needed. The default
   // implementation does nothing.
-  virtual void OnChange(const std::string& key, const std::string& value);
-  virtual void OnDelete(const std::string& key);
+  virtual void OnPageChange(const std::string& key, const std::string& value);
+  virtual void OnPageDelete(const std::string& key);
 
   // Replaces the previous page snapshot with a newly requested one.
   fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();

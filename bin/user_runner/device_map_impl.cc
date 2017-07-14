@@ -71,11 +71,12 @@ void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {
   callback(current_device_.Clone());
 }
 
-void DeviceMapImpl::OnChange(const std::string& key, const std::string& value) {
+void DeviceMapImpl::OnPageChange(const std::string& key,
+                                 const std::string& value) {
   FTL_LOG(INFO) << "New Device: " << key;
 }
 
-void DeviceMapImpl::OnDelete(const std::string& key) {
+void DeviceMapImpl::OnPageDelete(const std::string& key) {
   FTL_LOG(INFO) << "Deleted Device: " << key;
 }
 

@@ -266,8 +266,8 @@ void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
   watchers_.erase(f);
 }
 
-void StoryStorageImpl::OnChange(const std::string& key,
-                                const std::string& value) {
+void StoryStorageImpl::OnPageChange(const std::string& key,
+                                    const std::string& value) {
   for (auto& watcher_entry : watchers_) {
     if (key == watcher_entry.key) {
       watcher_entry.watcher(value);

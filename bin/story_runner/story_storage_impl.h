@@ -22,7 +22,7 @@ class LinkImpl;
 // A wrapper around a ledger page to store links in a story that runs
 // asynchronous operations pertaining to one Story instance in a
 // dedicated OperationQueue instance.
-class StoryStorageImpl : public PageClient {
+class StoryStorageImpl : PageClient {
  public:
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
@@ -70,7 +70,7 @@ class StoryStorageImpl : public PageClient {
 
  private:
   // |PageClient|
-  void OnChange(const std::string& key, const std::string& value) override;
+  void OnPageChange(const std::string& key, const std::string& value) override;
 
   // Clients to notify when the value of a given link changes in the
   // ledger page. The first element in the pair is the key for the link path.
