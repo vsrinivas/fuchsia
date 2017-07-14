@@ -140,7 +140,10 @@ status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
     // lock, because any of these threads might wake up from a timeout
     // and call FutexWait(), which would clobber the "next" pointer in
     // the thread's FutexNode.
-    FutexNode::WakeThreads(wake_head);
+    if (FutexNode::WakeThreads(wake_head)) {
+        lock.release();
+        thread_reschedule();
+    }
 
     return MX_OK;
 }
@@ -202,7 +205,11 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
         futex_table_.insert(node);
     }
 
-    FutexNode::WakeThreads(wake_head);
+    if (FutexNode::WakeThreads(wake_head)) {
+        lock.release();
+        thread_reschedule();
+    }
+
     return MX_OK;
 }
 

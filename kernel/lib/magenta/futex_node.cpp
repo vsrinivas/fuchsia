@@ -127,18 +127,36 @@ status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_S
     return result;
 }
 
-void FutexNode::WakeThreads(FutexNode* head) {
+bool FutexNode::WakeThreads(FutexNode* head) {
+    bool any_woken = false;
+
     if (!head)
-        return;
+        return any_woken;
+
     FutexNode* node = head;
     do {
         FutexNode* next = node->queue_next_;
+
+        // Place waiting threads in the runnable state, but do not reschedule
+        // yet.  Our caller is currently holding the main futex_lock, and
+        // threads which get woken by this action are going to immediately
+        // attempt to obtain the main futex_lock.  If we indicate that threads
+        // were woken during this process, our caller will release the lock and
+        // then arrange for a reschedule operation (which leads to a smoother
+        // transition)
         THREAD_LOCK(state);
-        wait_queue_wake_one(&node->wait_queue_, true, MX_OK);
+        if (wait_queue_wake_one(&node->wait_queue_,
+                                /* reschedule */ false,
+                                MX_OK)) {
+            any_woken = true;
+        }
         THREAD_UNLOCK(state);
+
         node->MarkAsNotInQueue();
         node = next;
     } while (node != head);
+
+    return any_woken;
 }
 
 // Set |node1| and |node2|'s list pointers so that |node1| is immediately
