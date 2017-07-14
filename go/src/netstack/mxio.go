@@ -1196,7 +1196,8 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		log.Printf("socketServer.mxio: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 
-	if rh <= 0 {
+	// if the remote side is closed, rio.Handler synthesizes an opClose message with rh == 0.
+	if rh <= 0 && op != rio.OpClose {
 		if debug2 {
 			log.Printf("socketServer.mxio invalid rh (op=%v)", op) // DEBUG
 		}
