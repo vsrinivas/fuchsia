@@ -5,6 +5,7 @@
 #include "apps/maxwell/src/acquirers/story_info/link_watcher_impl.h"
 
 #include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
+#include "apps/maxwell/src/context_engine/scope_utils.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -111,7 +112,8 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   doc.AddMember(kSourceProperty, source_doc, doc.GetAllocator());
 
   std::string json = modular::JsonValueToString(doc);
-  publisher_->Publish(context.topic, json);
+  auto scoped_topic = MakeStoryScopeTopic(story_id_, ConcatTopic("link", context.topic));
+  publisher_->Publish(scoped_topic, json);
 
   FTL_LOG(INFO) << "Context published: " << json << std::endl << "Original link value: " << value;
 }
