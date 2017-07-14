@@ -17,7 +17,7 @@ source_set("user") {
 }
 
 executable("maxwell_main") {
-  output_name = "maxwell"
+  output_name = "maxwell_main"
 
   sources = [
     "maxwell_main.cc",
