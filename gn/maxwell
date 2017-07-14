@@ -4,10 +4,13 @@
         "dart"
     ],
     "labels": [
-        "//apps/maxwell",
+        "//apps/maxwell:all",
         "//apps/maxwell/src:integration_tests",
         "//apps/maxwell/src:unittests"
     ],
+    "packages": {
+        "maxwell": "//apps/maxwell"
+    },
     "binaries": [
         {
             "binary": "acquirers/story_info_main",
@@ -54,10 +57,6 @@
             "bootfs_path": "apps/context_engine"
         },
         {
-            "binary": "maxwell",
-            "bootfs_path": "apps/maxwell"
-        },
-        {
             "binary": "resolver",
             "bootfs_path": "apps/resolver"
         },
@@ -76,16 +75,6 @@
         {
             "binary": "context_coprocessors_unittest",
             "bootfs_path": "test/maxwell/context_coprocessors_unittest"
-        }
-    ],
-    "resources": [
-        {
-            "bootfs_path": "data/maxwell/default_config.json",
-            "file": "apps/maxwell/src/user/default_config.json"
-        },
-        {
-            "bootfs_path": "data/maxwell/test_config.json",
-            "file": "apps/maxwell/src/user/test_config.json"
         }
     ]
 }
