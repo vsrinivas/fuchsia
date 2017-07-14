@@ -111,7 +111,7 @@ declare_args() {
 #
 #     Entries in a scope in the resources list:
 #
-#       source (path, required)
+#       path (path, required)
 #         Location of resource in source or build directory. If the resource is
 #         checked in, this will typically be specified as a path relative to the
 #         BUILD.gn file containing the package() rule. If the resource is
