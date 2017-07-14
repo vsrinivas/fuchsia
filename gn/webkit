@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "curl",
+        "libxml2",
+        "sqlite",
+        "zlib"
+    ],
+    "labels": [
+        "//third_party/webkit"
+    ]
+}
