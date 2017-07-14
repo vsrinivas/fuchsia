@@ -8,11 +8,12 @@
 
 namespace mtl {
 
-FDWaiter::FDWaiter() : io_(nullptr), key_(0) {}
+FDWaiter::FDWaiter() : io_(nullptr), key_(0) { }
 
 FDWaiter::~FDWaiter() {
-  if (io_)
+  if (io_) {
     Cancel();
+  }
 
   FTL_DCHECK(!io_);
   FTL_DCHECK(!key_);
@@ -26,8 +27,6 @@ bool FDWaiter::Wait(Callback callback,
   FTL_DCHECK(!key_);
 
   io_ = __mxio_fd_to_io(fd);
-  if (!io_)
-    return false;
 
   mx_handle_t handle = MX_HANDLE_INVALID;
   mx_signals_t signals = MX_SIGNAL_NONE;
@@ -47,9 +46,9 @@ bool FDWaiter::Wait(Callback callback,
 
 void FDWaiter::Cancel() {
   FTL_DCHECK(io_);
+  FTL_DCHECK(key_);
 
-  if (key_)
-    MessageLoop::GetCurrent()->RemoveHandler(key_);
+  MessageLoop::GetCurrent()->RemoveHandler(key_);
 
   __mxio_release(io_);
   io_ = nullptr;
