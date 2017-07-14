@@ -20,6 +20,7 @@ static bool	os_overcommits;
 #ifdef __Fuchsia__
 
 #include <magenta/process.h>
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 
 // Reserve a terabyte of address space for heap allocations.
@@ -115,14 +116,9 @@ static void* fuchsia_pages_alloc(void* addr, size_t size, bool commit) {
 	return ret;
 }
 
-static int fuchsia_pages_free(void* addr, size_t size) {
+static mx_status_t fuchsia_pages_free(void* addr, size_t size) {
 	uintptr_t ptr = (uintptr_t)addr;
-	mx_status_t status = _mx_vmar_unmap(_mx_vmar_root_self(), ptr, size);
-	if (status < 0) {
-		errno = EINVAL;
-		return -1;
-	}
-	return 0;
+	return _mx_vmar_unmap(pages_vmar, ptr, size);
 }
 
 static void* fuchsia_pages_trim(void* ret, void* addr, size_t size, size_t alloc_size, size_t leadsize) {
@@ -204,14 +200,19 @@ pages_unmap(void *addr, size_t size)
 #ifdef _WIN32
 	if (VirtualFree(addr, 0, MEM_RELEASE) == 0)
 #elif __Fuchsia__
-	if (fuchsia_pages_free(addr, size) == -1)
+	mx_status_t status = fuchsia_pages_free(addr, size);
+	if (status != MX_OK)
 #else
 	if (munmap(addr, size) == -1)
 #endif
 	{
+#if __Fuchsia__
+		const char* buf = _mx_status_get_string(status);
+#else
 		char buf[BUFERROR_BUF];
-
 		buferror(get_errno(), buf, sizeof(buf));
+#endif
+
 		malloc_printf("<jemalloc>: Error in "
 #ifdef _WIN32
 		              "VirtualFree"
