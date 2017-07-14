@@ -65,12 +65,6 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // Block current thread.  This releases lock_ and does not reacquire it.
     result = node->BlockThread(&lock_, deadline);
     if (result == MX_OK) {
-        // Fix/workaround for MG-624:
-        // We must re-acquire the lock here to force this thread to wait until
-        // the WakeThreads() marks this thread as not in the queue anymore.
-        // Otherwise, this thread can exit before it does that, causing
-        // WakeThreads() to scribble on memory.
-        AutoLock lock(&lock_);
         DEBUG_ASSERT(!node->IsInQueue());
         // All the work necessary for removing us from the hash table was done by FutexWake()
         return MX_OK;

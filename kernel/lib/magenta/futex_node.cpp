@@ -137,6 +137,21 @@ bool FutexNode::WakeThreads(FutexNode* head) {
     do {
         FutexNode* next = node->queue_next_;
 
+        // We must be careful to correctly handle the case where the thread
+        // for |node| wakes and exits, deleting |node|.  There are two
+        // cases to consider:
+        //  1) The thread's wait times out, or the thread is killed or
+        //     suspended.  In those cases, FutexWait() will reacquire the
+        //     FutexContext lock.  We are currently holding that lock, so
+        //     FutexWait() will not race with us.
+        //  2) The thread is woken by our wait_queue_wake_one() call.  In
+        //     this case, FutexWait() will *not* reacquire the FutexContext
+        //     lock.  To handle this correctly, we must not access |node|
+        //     after wait_queue_wake_one().
+
+        // We must do this before we wake the thread, to handle case 2.
+        node->MarkAsNotInQueue();
+
         // Place waiting threads in the runnable state, but do not reschedule
         // yet.  Our caller is currently holding the main futex_lock, and
         // threads which get woken by this action are going to immediately
@@ -152,8 +167,12 @@ bool FutexNode::WakeThreads(FutexNode* head) {
         }
         THREAD_UNLOCK(state);
 
-        node->MarkAsNotInQueue();
         node = next;
+
+        // In the following comparison, |head| could be a dangling pointer
+        // by this point.  That is odd, but safe.  |head| is only used for
+        // comparison, and nothing could have been added to the list after
+        // |head| was freed.
     } while (node != head);
 
     return any_woken;
