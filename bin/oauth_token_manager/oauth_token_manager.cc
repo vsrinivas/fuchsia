@@ -69,7 +69,7 @@ constexpr char kFirebaseAuthEndpoint[] =
     "verifyAssertion";
 constexpr char kRedirectUri[] = "com.google.fuchsia.auth:/oauth2redirect";
 constexpr char kCredentialsFile[] = "/data/modular/device/v2/creds.db";
-constexpr char kWebViewUrl[] = "file:///system/apps/web_view";
+constexpr char kWebViewUrl[] = "web_view";
 
 constexpr auto kScopes = {"openid",
                           "email",
@@ -1093,13 +1093,8 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     app_->application_context_->launcher()->CreateApplication(
         std::move(web_view_launch_info), web_view_controller_.NewRequest());
     web_view_controller_.set_connection_error_handler([this] {
-      // web_view is not build by default because of the time it adds to the
-      // build.
-      // TODO(alhaad/ukode): Fallback to a pre-build version.
       FTL_CHECK(false)
-          << "web_view not found at " << kWebViewUrl << ". "
-          << "Please build web_view locally. Instructions at "
-          << "https://fuchsia.googlesource.com/web_view/+/master/README.md";
+          << "web_view not found at " << kWebViewUrl << ".";
     });
 
     mozart::ViewOwnerPtr view_owner;
