@@ -233,7 +233,7 @@ class Operation : public OperationBase {
   Operation(const char* trace_name,
             OperationContainer* const container,
             ResultCall result_call,
-            std::string trace_info = "")
+            const std::string& trace_info = "")
       : OperationBase(trace_name, container, trace_info),
         result_call_(std::move(result_call)) {}
 
