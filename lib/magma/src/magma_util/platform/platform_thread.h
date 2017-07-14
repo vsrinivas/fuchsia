@@ -6,6 +6,7 @@
 #define PLATFORM_THREAD_H
 
 #include <stdint.h>
+#include <string>
 
 namespace magma {
 
@@ -24,6 +25,11 @@ private:
     static uint32_t GetCurrentThreadId();
 
     uint32_t id_ = 0;
+};
+
+class PlatformThreadHelper {
+public:
+    static void SetCurrentThreadName(const std::string& name);
 };
 
 } // namespace magma

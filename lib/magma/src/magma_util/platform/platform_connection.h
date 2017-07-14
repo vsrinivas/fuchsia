@@ -12,6 +12,7 @@
 #include "platform_event.h"
 #include "platform_object.h"
 #include "platform_semaphore.h"
+#include "platform_thread.h"
 
 #include <memory>
 
@@ -107,6 +108,7 @@ public:
 
     static void RunLoop(std::shared_ptr<magma::PlatformConnection> connection)
     {
+        magma::PlatformThreadHelper::SetCurrentThreadName("ConnectionThread");
         while (connection->HandleRequest())
             ;
         // the runloop terminates when the remote closes, or an error is experienced

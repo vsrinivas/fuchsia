@@ -90,6 +90,10 @@ source_set("thread") {
   sources = [
     "magenta_platform_thread.cc",
   ]
+
+  libs = [
+    "magenta"
+  ]
 }
 
 source_set("event") {
