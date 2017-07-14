@@ -632,7 +632,7 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 			log.Printf("pkgfs: package file open failure: %q for %q/%q/%q", root, d.name, d.version, name)
 			return nil, nil, goErrToFSErr(err)
 		}
-		return &packageFile{f}, nil, nil
+		return &packageFile{f, unsupportedFile("packagefile:" + root)}, nil, nil
 	}
 	log.Printf("pkgfs:packagedir:open %q not found in %v", name, d.contents)
 	return nil, nil, fs.ErrNotFound
@@ -666,6 +666,7 @@ func (d *packageDir) Stat() (int64, time.Time, time.Time, error) {
 // TODO(raggi): turn this into a proper remoteio to the blobstore file instead.
 type packageFile struct {
 	*os.File
+	unsupportedFile
 }
 
 func (pf *packageFile) Close() error {
