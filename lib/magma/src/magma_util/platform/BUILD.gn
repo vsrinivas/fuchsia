@@ -79,6 +79,7 @@ source_set("connection") {
   ]
 
   deps = [
+    ":thread",
     "magenta:connection",
   ]
 }
