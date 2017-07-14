@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+"""
+
+This tool will color the lines from loglistener
+
+Example usage #1:
+  # Colorize log lines, with all messages from the same thread in the same color
+  loglistener | scripts/colorize_logs -t
+
+Example usage #2:
+  # Colorize log lines, with all messages from the same process in the same color
+  loglistener | scripts/colorize_logs
+
+Example usage #3:
+  # Print the colorization of log.txt to stdout
+  # Identical to `scripts/colorize_logs < log.txt`
+  scripts/colorize_logs log.txt
+
+"""
+
+import argparse
+import re
+import sys
+
+BASE_COLORS = [
+    #'\033[40m', # black
+    '\033[41m', # red
+    '\033[42m', # green
+    '\033[43m', # yellow
+    '\033[44m', # blue
+    '\033[45m', # magenta
+    '\033[46m', # cyan
+    #'\033[47m', # white
+]
+RESET_BG = '\033[49m'
+
+class ColorAssigner(object):
+  def __init__(self, colors):
+    self.lru = list(colors)
+    self.task_colors = { }
+
+  def get_bg_color(self, task_id):
+    if task_id not in self.task_colors:
+      c = self.lru.pop(0)
+      self.task_colors[task_id] = c
+    else:
+      c = self.task_colors[task_id]
+      self.lru.remove(c)
+
+    self.lru.append(c)
+    return c
+
+def main():
+  parser = argparse.ArgumentParser(
+      description=__doc__,
+      formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument("--process", "-p", dest="per_process", action="store_true",
+                      help="Color code by process (on by default)")
+  parser.add_argument("--thread", "-t", dest="per_process", action="store_false",
+                      help="Color code by thread")
+  parser.add_argument("input", nargs='?', action="store", default=None,
+                      help="The file to colorize.  Defaults to stdin")
+  parser.set_defaults(per_process=True)
+  args = parser.parse_args()
+
+  if args.input:
+    f = open(args.input, 'r')
+  else:
+    f = sys.stdin
+
+  # Define the identifier extractor.  It should be in group 1.
+  if args.per_process:
+    line_re = re.compile(r'^\[\d+\.\d+] (\d+)\.\d+> .*$')
+  else:
+    line_re = re.compile(r'^\[\d+\.\d+] (\d+\.\d+)> .*$')
+
+  assigner = ColorAssigner(BASE_COLORS);
+
+  for line in f:
+    line = line.strip()
+    m = line_re.match(line)
+    if not m:
+      print line
+      continue
+
+    task_id = m.group(1)
+    color = assigner.get_bg_color(task_id)
+
+    # Use join to avoid python putting a space between each value being
+    # printed.
+    print ''.join([color, line, RESET_BG])
+
+if __name__ == '__main__':
+  main()
