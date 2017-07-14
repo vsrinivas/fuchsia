@@ -6,8 +6,8 @@
 
 #include <queue>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 #include "lib/ftl/functional/cancelable_callback.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -16,7 +16,6 @@
 namespace bluetooth {
 namespace hci {
 
-class EventPacket;
 class Transport;
 
 // A SequentialCommandRunner can be used to chain HCI commands one after another such that each
@@ -38,7 +37,7 @@ class SequentialCommandRunner final {
   // Adds a HCI command packet and an optional callback to invoke with the completion event to the
   // command sequence. Cannot be called once RunCommands() has been called.
   using CommandCompleteCallback = std::function<void(const EventPacket& command_complete)>;
-  void QueueCommand(common::DynamicByteBuffer command_packet,
+  void QueueCommand(std::unique_ptr<CommandPacket> command_packet,
                     const CommandCompleteCallback& callback = CommandCompleteCallback());
 
   // Runs all the queued commands. Once this is called no new commands can be queued. This method
@@ -78,7 +77,8 @@ class SequentialCommandRunner final {
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ftl::RefPtr<Transport> transport_;
 
-  using CommandQueue = std::queue<std::pair<common::DynamicByteBuffer, CommandCompleteCallback>>;
+  using CommandQueue =
+      std::queue<std::pair<std::unique_ptr<CommandPacket>, CommandCompleteCallback>>;
   CommandQueue command_queue_;
 
   // Callback assigned in RunCommands(). If this is non-null then this object is currently executing

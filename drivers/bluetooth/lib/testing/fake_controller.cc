@@ -6,8 +6,7 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/hci/command_packet.h"
-#include "apps/bluetooth/lib/hci/event_packet.h"
+#include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -112,10 +111,14 @@ void FakeController::RespondWithCommandComplete(hci::OpCode opcode, void* return
   // Either both are zero or neither is.
   FTL_DCHECK(!!return_params == !!return_params_size);
 
-  common::DynamicByteBuffer buffer(hci::EventPacket::GetMinBufferSize(
-      sizeof(hci::CommandCompleteEventParams) + return_params_size));
-  hci::MutableEventPacket event_packet(hci::kCommandCompleteEventCode, &buffer);
-  auto payload = event_packet.mutable_payload<hci::CommandCompleteEventParams>();
+  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) +
+                                   sizeof(hci::CommandCompleteEventParams) + return_params_size);
+  common::MutablePacketView<hci::EventHeader> event(&buffer,
+                                                    buffer.size() - sizeof(hci::EventHeader));
+  event.mutable_header()->event_code = hci::kCommandCompleteEventCode;
+  event.mutable_header()->parameter_total_size = buffer.size() - sizeof(hci::EventHeader);
+
+  auto payload = event.mutable_payload<hci::CommandCompleteEventParams>();
   payload->num_hci_command_packets = settings_.num_hci_command_packets;
   payload->command_opcode = htole16(opcode);
   std::memcpy(payload->return_parameters, return_params, return_params_size);
@@ -160,10 +163,12 @@ void FakeController::SendAdvertisingReports() {
   }
 }
 
-void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_packet) {
-  if (MaybeRespondWithDefaultStatus(command_packet.opcode())) return;
+void FakeController::OnCommandPacketReceived(
+    const common::PacketView<hci::CommandHeader>& command_packet) {
+  hci::OpCode opcode = le16toh(command_packet.header().opcode);
+  if (MaybeRespondWithDefaultStatus(opcode)) return;
 
-  switch (command_packet.opcode()) {
+  switch (opcode) {
     case hci::kReadLocalVersionInfo: {
       hci::ReadLocalVersionInfoReturnParams params;
       std::memset(&params, 0, sizeof(params));
@@ -283,7 +288,7 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
         le_scan_state_.filter_policy = in_params.filter_policy;
       }
 
-      RespondWithCommandComplete(command_packet.opcode(), &out_params, sizeof(out_params));
+      RespondWithCommandComplete(opcode, &out_params, sizeof(out_params));
       break;
     }
     case hci::kLESetScanEnable: {
@@ -304,7 +309,7 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
 
       hci::SimpleReturnParams out_params;
       out_params.status = hci::Status::kSuccess;
-      RespondWithCommandComplete(command_packet.opcode(), &out_params, sizeof(out_params));
+      RespondWithCommandComplete(opcode, &out_params, sizeof(out_params));
 
       if (le_scan_state_.enabled) SendAdvertisingReports();
       break;
@@ -313,13 +318,13 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
     case hci::kWriteLEHostSupport: {
       hci::SimpleReturnParams params;
       params.status = hci::Status::kSuccess;
-      RespondWithCommandComplete(command_packet.opcode(), &params, sizeof(params));
+      RespondWithCommandComplete(opcode, &params, sizeof(params));
       break;
     }
     default: {
       hci::SimpleReturnParams params;
       params.status = hci::Status::kUnknownCommand;
-      RespondWithCommandComplete(command_packet.opcode(), &params, sizeof(params));
+      RespondWithCommandComplete(opcode, &params, sizeof(params));
       break;
     }
   }

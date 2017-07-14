@@ -16,7 +16,7 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/optional.h"
-#include "apps/bluetooth/lib/hci/event_packet.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/ftl/functional/cancelable_callback.h"
@@ -90,7 +90,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
-  TransactionId SendCommand(common::DynamicByteBuffer command_packet,
+  TransactionId SendCommand(std::unique_ptr<CommandPacket> command_packet,
                             const CommandStatusCallback& status_callback,
                             const CommandCompleteCallback& complete_callback,
                             ftl::RefPtr<ftl::TaskRunner> task_runner,
@@ -162,7 +162,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
   // Represents a queued command packet.
   struct QueuedCommand {
-    QueuedCommand(TransactionId id, common::DynamicByteBuffer command_packet,
+    QueuedCommand(TransactionId id, std::unique_ptr<CommandPacket> command_packet,
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
                   ftl::RefPtr<ftl::TaskRunner> task_runner, EventCode complete_event_code);
@@ -171,7 +171,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     QueuedCommand(QueuedCommand&& other) = default;
     QueuedCommand& operator=(QueuedCommand&& other) = default;
 
-    common::DynamicByteBuffer packet_data;
+    std::unique_ptr<CommandPacket> packet;
     PendingTransactionData transaction_data;
   };
 
@@ -191,7 +191,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // If the given event packet corresponds to the currently pending command,
   // this method completes the transaction and sends the next queued command, if
   // any.
-  void HandlePendingCommandComplete(const EventPacket& event);
+  void HandlePendingCommandComplete(std::unique_ptr<EventPacket> event);
 
   // If the given CommandStatus event packet corresponds to the currently
   // pending command and notifes the transaction's |status_callback|.
@@ -207,7 +207,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   void SetPendingCommand(PendingTransactionData* command);
 
   // Notifies a matching event handler for the given event.
-  void NotifyEventHandler(const EventPacket& event);
+  void NotifyEventHandler(std::unique_ptr<EventPacket> event);
 
   // ::mtl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
@@ -243,6 +243,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
   // The HCI command queue. These are the commands that have been queued to be
   // sent to the controller.
+  // TODO(armansito): Store std::unique_ptr<QueuedCommand>?
   std::queue<QueuedCommand> send_queue_ __TA_GUARDED(send_queue_mutex_);
 
   // Contains the currently pending HCI command packet. While controllers may
@@ -254,9 +255,6 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
   // The command timeout callback assigned to the current pending command.
   ftl::CancelableClosure pending_cmd_timeout_;
-
-  // Buffer where we queue incoming HCI event packets.
-  common::StaticByteBuffer<EventPacket::GetMinBufferSize(kMaxEventPacketPayloadSize)> event_buffer_;
 
   // Guards |event_handler_id_map_| and |event_code_handlers_| which can be
   // accessed by both the public EventHandler methods and |io_thread_|.

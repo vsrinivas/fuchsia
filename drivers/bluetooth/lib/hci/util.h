@@ -13,10 +13,6 @@
 namespace bluetooth {
 namespace hci {
 
-// Returns a DynamicByteBuffer encoding an HCI command with the given |opcode| and payload.
-common::DynamicByteBuffer BuildHCICommand(hci::OpCode opcode, void* params = nullptr,
-                                          size_t params_size = 0u);
-
 // Returns a user-friendly string representation of |version|.
 std::string HCIVersionToString(hci::HCIVersion version);
 

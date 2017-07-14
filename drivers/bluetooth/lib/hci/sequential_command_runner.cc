@@ -23,11 +23,11 @@ SequentialCommandRunner::~SequentialCommandRunner() {
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 }
 
-void SequentialCommandRunner::QueueCommand(common::DynamicByteBuffer command_packet,
+void SequentialCommandRunner::QueueCommand(std::unique_ptr<CommandPacket> command_packet,
                                            const CommandCompleteCallback& callback) {
   FTL_DCHECK(!result_callback_);
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
-  FTL_DCHECK(sizeof(CommandHeader) <= command_packet.size());
+  FTL_DCHECK(sizeof(CommandHeader) <= command_packet->view().size());
 
   command_queue_.push(std::make_pair(std::move(command_packet), callback));
 }
@@ -79,7 +79,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
 
   complete_callback_.Reset([ this, cmd_cb = next.second ](CommandChannel::TransactionId,
                                                           const EventPacket& event_packet) {
-    auto status = event_packet.GetReturnParams<SimpleReturnParams>()->status;
+    auto status = event_packet.return_params<SimpleReturnParams>()->status;
     if (status != Status::kSuccess) {
       NotifyResultAndReset(false);
       return;

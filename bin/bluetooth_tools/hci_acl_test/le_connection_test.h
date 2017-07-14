@@ -45,7 +45,7 @@ class LEConnectionTest final {
   void SendNotifications();
 
   // Called when ACL data packets are received.
-  void ACLDataRxCallback(bluetooth::common::DynamicByteBuffer rx_bytes);
+  void ACLDataRxCallback(std::unique_ptr<bluetooth::hci::ACLDataPacket> data_packet);
 
   // Logs the given message and status code and exits the run loop.
   void LogErrorStatusAndQuit(const std::string& msg, bluetooth::hci::Status status);

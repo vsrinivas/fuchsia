@@ -6,7 +6,6 @@
 
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/tools/lib/command_dispatcher.h"
-#include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 

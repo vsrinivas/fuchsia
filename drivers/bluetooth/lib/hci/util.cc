@@ -4,22 +4,10 @@
 
 #include "util.h"
 
-#include "apps/bluetooth/lib/hci/command_packet.h"
 #include "lib/ftl/logging.h"
 
 namespace bluetooth {
 namespace hci {
-
-common::DynamicByteBuffer BuildHCICommand(hci::OpCode opcode, void* params, size_t params_size) {
-  common::DynamicByteBuffer buffer(hci::CommandPacket::GetMinBufferSize(params_size));
-  hci::CommandPacket cmd_packet(opcode, &buffer, params_size);
-  if (params_size) {
-    FTL_DCHECK(params);
-    std::memcpy(cmd_packet.mutable_payload_bytes(), params, params_size);
-  }
-  cmd_packet.EncodeHeader();
-  return buffer;
-}
 
 std::string HCIVersionToString(hci::HCIVersion version) {
   switch (version) {

@@ -94,9 +94,6 @@ class PacketView {
   // A PacketView that contains no backing buffer is considered invalid.
   bool is_valid() const { return buffer_ && size_ >= sizeof(HeaderType); }
 
-  // TODO(armansito): Move this to MutableByteBuffer while overhauling HCI packets.
-  void Resize(size_t payload_size) { this->set_size(sizeof(HeaderType) + payload_size); }
-
  protected:
   void set_size(size_t size) {
     FTL_DCHECK(buffer_);
@@ -139,6 +136,8 @@ class MutablePacketView : public PacketView<HeaderType> {
     FTL_DCHECK(sizeof(PayloadType) <= this->payload_size());
     return reinterpret_cast<PayloadType*>(mutable_payload_bytes());
   }
+
+  void Resize(size_t payload_size) { this->set_size(sizeof(HeaderType) + payload_size); }
 
  private:
   MutableByteBuffer* mutable_buffer() const {

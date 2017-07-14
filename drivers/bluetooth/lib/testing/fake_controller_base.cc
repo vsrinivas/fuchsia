@@ -7,7 +7,6 @@
 #include <magenta/status.h>
 
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/threading/create_thread.h"
@@ -117,18 +116,18 @@ void FakeControllerBase::HandleCommandPacket() {
     return;
   }
 
-  if (read_size < hci::CommandPacket::GetMinBufferSize(0u)) {
+  if (read_size < sizeof(hci::CommandHeader)) {
     FTL_LOG(ERROR) << "Malformed command packet received";
     return;
   }
 
   common::MutableBufferView view(buffer.mutable_data(), read_size);
-  hci::CommandPacket packet(&view);
+  common::PacketView<hci::CommandHeader> packet(&view, read_size - sizeof(hci::CommandHeader));
   OnCommandPacketReceived(packet);
 }
 
 void FakeControllerBase::HandleACLPacket() {
-  common::StaticByteBuffer<hci::ACLDataTxPacket::GetMinBufferSize(hci::kMaxACLPayloadSize)> buffer;
+  common::StaticByteBuffer<hci::kMaxACLPayloadSize + sizeof(hci::ACLDataHeader)> buffer;
   uint32_t read_size;
   mx_status_t status =
       acl_channel_.read(0u, buffer.mutable_data(), buffer.size(), &read_size, nullptr, 0, nullptr);

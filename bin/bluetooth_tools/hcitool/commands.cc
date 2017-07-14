@@ -12,8 +12,7 @@
 #include "apps/bluetooth/lib/common/manufacturer_names.h"
 #include "apps/bluetooth/lib/gap/advertising_data.h"
 #include "apps/bluetooth/lib/hci/advertising_report_parser.h"
-#include "apps/bluetooth/lib/hci/command_packet.h"
-#include "apps/bluetooth/lib/hci/event_packet.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/util.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -36,9 +35,9 @@ void StatusCallback(ftl::Closure complete_cb, bluetooth::hci::CommandChannel::Tr
 }
 
 hci::CommandChannel::TransactionId SendCommand(
-    const CommandData* cmd_data, const hci::CommandPacket& packet,
+    const CommandData* cmd_data, std::unique_ptr<hci::CommandPacket> packet,
     const hci::CommandChannel::CommandCompleteCallback& cb, const ftl::Closure& complete_cb) {
-  return cmd_data->cmd_channel()->SendCommand(common::DynamicByteBuffer(packet.data()),
+  return cmd_data->cmd_channel()->SendCommand(std::move(packet),
                                               std::bind(&StatusCallback, complete_cb, _1, _2), cb,
                                               cmd_data->task_runner());
 }
@@ -46,10 +45,6 @@ hci::CommandChannel::TransactionId SendCommand(
 void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {
   std::cout << "  Command Complete - status: " << ftl::StringPrintf("0x%02x", status)
             << " (id=" << id << ")" << std::endl;
-}
-
-constexpr size_t BufferSize(size_t payload_size) {
-  return hci::CommandPacket::GetMinBufferSize(payload_size);
 }
 
 // TODO(armansito): Move this to a library header as it will be useful
@@ -181,7 +176,7 @@ bool HandleVersionInfo(const CommandData* cmd_data, const ftl::CommandLine& cmd_
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto params = event.GetReturnParams<hci::ReadLocalVersionInfoReturnParams>();
+    auto params = event.return_params<hci::ReadLocalVersionInfoReturnParams>();
     LogCommandComplete(params->status, id);
     if (params->status != hci::Status::kSuccess) {
       complete_cb();
@@ -197,11 +192,8 @@ bool HandleVersionInfo(const CommandData* cmd_data, const ftl::CommandLine& cmd_
     complete_cb();
   };
 
-  common::StaticByteBuffer<BufferSize(0u)> buffer;
-  hci::CommandPacket packet(hci::kReadLocalVersionInfo, &buffer);
-  packet.EncodeHeader();
-
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto packet = hci::CommandPacket::New(hci::kReadLocalVersionInfo);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
   std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")" << std::endl;
   return true;
@@ -215,16 +207,14 @@ bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto status = event.GetReturnParams<hci::SimpleReturnParams>()->status;
+    auto status = event.return_params<hci::SimpleReturnParams>()->status;
     LogCommandComplete(status, id);
     complete_cb();
   };
 
-  common::StaticByteBuffer<BufferSize(0u)> buffer;
-  hci::CommandPacket packet(hci::kReset, &buffer);
-  packet.EncodeHeader();
+  auto packet = hci::CommandPacket::New(hci::kReset);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
   std::cout << "  Sent HCI_Reset (id=" << id << ")" << std::endl;
 
   return true;
@@ -238,7 +228,7 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::ReadBDADDRReturnParams>();
+    auto return_params = event.return_params<hci::ReadBDADDRReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
       complete_cb();
@@ -249,11 +239,9 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
     complete_cb();
   };
 
-  common::StaticByteBuffer<BufferSize(0u)> buffer;
-  hci::CommandPacket packet(hci::kReadBDADDR, &buffer);
-  packet.EncodeHeader();
+  auto packet = hci::CommandPacket::New(hci::kReadBDADDR);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
   std::cout << "  Sent HCI_Read_BDADDR (id=" << id << ")" << std::endl;
 
   return true;
@@ -267,7 +255,7 @@ bool HandleReadLocalName(const CommandData* cmd_data, const ftl::CommandLine& cm
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::ReadLocalNameReturnParams>();
+    auto return_params = event.return_params<hci::ReadLocalNameReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
       complete_cb();
@@ -279,11 +267,8 @@ bool HandleReadLocalName(const CommandData* cmd_data, const ftl::CommandLine& cm
     complete_cb();
   };
 
-  common::StaticByteBuffer<BufferSize(0u)> buffer;
-  hci::CommandPacket packet(hci::kReadLocalName, &buffer);
-  packet.EncodeHeader();
-
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto packet = hci::CommandPacket::New(hci::kReadLocalName);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
   std::cout << "  Sent HCI_Read_Local_Name (id=" << id << ")" << std::endl;
 
   return true;
@@ -297,20 +282,19 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& c
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
 
   const std::string& name = cmd_line.positional_args()[0];
-  common::StaticByteBuffer<BufferSize(hci::kMaxLocalNameLength)> buffer;
-  hci::CommandPacket packet(hci::kWriteLocalName, &buffer, name.length() + 1);
-  buffer[name.length()] = '\0';
-  std::strcpy((char*)packet.mutable_payload<hci::WriteLocalNameCommandParams>()->local_name,
+  auto packet = hci::CommandPacket::New(hci::kWriteLocalName, name.length() + 1);
+  std::strcpy((char*)packet->mutable_view()
+                  ->mutable_payload<hci::WriteLocalNameCommandParams>()
+                  ->local_name,
               name.c_str());
-  packet.EncodeHeader();
 
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
   std::cout << "  Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
 
   return true;
@@ -336,20 +320,19 @@ bool HandleSetAdvEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
 
   constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingEnableCommandParams);
-  constexpr size_t kBufferSize = BufferSize(kPayloadSize);
 
-  common::StaticByteBuffer<kBufferSize> buffer;
-  hci::CommandPacket packet(hci::kLESetAdvertisingEnable, &buffer, kPayloadSize);
-  packet.mutable_payload<hci::LESetAdvertisingEnableCommandParams>()->advertising_enable = value;
-  packet.EncodeHeader();
+  auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingEnable, kPayloadSize);
+  packet->mutable_view()
+      ->mutable_payload<hci::LESetAdvertisingEnableCommandParams>()
+      ->advertising_enable = value;
 
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")" << std::endl;
   return true;
@@ -395,9 +378,9 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const ftl::CommandLine& cmd
   }
 
   constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingParametersCommandParams);
-  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
-  hci::CommandPacket packet(hci::kLESetAdvertisingParameters, &buffer, kPayloadSize);
-  auto params = packet.mutable_payload<hci::LESetAdvertisingParametersCommandParams>();
+  auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingParameters, kPayloadSize);
+  auto params =
+      packet->mutable_view()->mutable_payload<hci::LESetAdvertisingParametersCommandParams>();
   params->adv_interval_min = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_interval_max = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_type = adv_type;
@@ -408,13 +391,12 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const ftl::CommandLine& cmd
   params->adv_filter_policy = hci::LEAdvFilterPolicy::kAllowAll;
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
 
-  packet.EncodeHeader();
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")" << std::endl;
 
@@ -437,9 +419,8 @@ bool HandleSetAdvData(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
   }
 
   constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingDataCommandParams);
-  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
-  buffer.SetToZeros();
-  hci::CommandPacket packet(hci::kLESetAdvertisingData, &buffer, kPayloadSize);
+  auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingData, kPayloadSize);
+  packet->mutable_view()->mutable_payload_data().SetToZeros();
 
   std::string name;
   if (cmd_line.GetOptionValue("name", &name)) {
@@ -451,23 +432,24 @@ bool HandleSetAdvData(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
       return false;
     }
 
-    auto params = packet.mutable_payload<hci::LESetAdvertisingDataCommandParams>();
+    auto params = packet->mutable_view()->mutable_payload<hci::LESetAdvertisingDataCommandParams>();
     params->adv_data_length = adv_data_len;
     params->adv_data[0] = adv_data_len - 1;
     params->adv_data[1] = 0x09;  // Complete Local Name
     std::strncpy((char*)params->adv_data + 2, name.c_str(), name.length());
   } else {
-    packet.mutable_payload<hci::LESetAdvertisingDataCommandParams>()->adv_data_length = 0;
+    packet->mutable_view()
+        ->mutable_payload<hci::LESetAdvertisingDataCommandParams>()
+        ->adv_data_length = 0;
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
 
-  packet.EncodeHeader();
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")" << std::endl;
 
@@ -505,10 +487,9 @@ bool HandleSetScanParams(const CommandData* cmd_data, const ftl::CommandLine& cm
   }
 
   constexpr size_t kPayloadSize = sizeof(hci::LESetScanParametersCommandParams);
-  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
-  hci::CommandPacket packet(hci::kLESetScanParameters, &buffer, kPayloadSize);
+  auto packet = hci::CommandPacket::New(hci::kLESetScanParameters, kPayloadSize);
 
-  auto params = packet.mutable_payload<hci::LESetScanParametersCommandParams>();
+  auto params = packet->mutable_view()->mutable_payload<hci::LESetScanParametersCommandParams>();
   params->scan_type = scan_type;
   params->scan_interval = htole16(hci::kLEScanIntervalDefault);
   params->scan_window = htole16(hci::kLEScanIntervalDefault);
@@ -516,13 +497,12 @@ bool HandleSetScanParams(const CommandData* cmd_data, const ftl::CommandLine& cm
   params->filter_policy = hci::LEScanFilterPolicy::kNoWhiteList;
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
 
-  packet.EncodeHeader();
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")" << std::endl;
 
@@ -580,17 +560,16 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
   }
 
   constexpr size_t kPayloadSize = sizeof(hci::LESetScanEnableCommandParams);
-  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
-  hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
+  auto packet = hci::CommandPacket::New(hci::kLESetScanEnable, kPayloadSize);
 
-  auto params = packet.mutable_payload<hci::LESetScanEnableCommandParams>();
+  auto params = packet->mutable_view()->mutable_payload<hci::LESetScanEnableCommandParams>();
   params->scanning_enabled = hci::GenericEnableParam::kEnable;
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
   auto le_adv_report_cb = [name_filter, addr_type_filter](const hci::EventPacket& event) {
     FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
-    FTL_DCHECK(event.payload<hci::LEMetaEventParams>().subevent_code ==
+    FTL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
                hci::kLEAdvertisingReportSubeventCode);
 
     hci::AdvertisingReportParser parser(event);
@@ -611,29 +590,26 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
   // The callback invoked after scanning is stopped.
   auto final_cb = [cleanup_cb](hci::CommandChannel::TransactionId id,
                                const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     cleanup_cb();
   };
 
   // Delayed task that stops scanning.
-  auto scan_disable_cb = [kPayloadSize, cleanup_cb, final_cb, &cmd_data] {
-    common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
-    hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
-
-    auto params = packet.mutable_payload<hci::LESetScanEnableCommandParams>();
+  auto scan_disable_cb = [kPayloadSize, cleanup_cb, final_cb, cmd_data] {
+    auto packet = hci::CommandPacket::New(hci::kLESetScanEnable, kPayloadSize);
+    auto params = packet->mutable_view()->mutable_payload<hci::LESetScanEnableCommandParams>();
     params->scanning_enabled = hci::GenericEnableParam::kDisable;
     params->filter_duplicates = hci::GenericEnableParam::kDisable;
 
-    packet.EncodeHeader();
-    auto id = SendCommand(cmd_data, packet, final_cb, cleanup_cb);
+    auto id = SendCommand(cmd_data, std::move(packet), final_cb, cleanup_cb);
 
     std::cout << "  Sent HCI_LE_Set_Scan_Enable (disabled) (id=" << id << ")" << std::endl;
   };
 
   auto cb = [ scan_disable_cb, cleanup_cb, timeout, task_runner = cmd_data->task_runner() ](
       hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
       cleanup_cb();
@@ -642,8 +618,7 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
     task_runner->PostDelayedTask(scan_disable_cb, timeout);
   };
 
-  packet.EncodeHeader();
-  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")" << std::endl;
 

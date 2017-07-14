@@ -8,6 +8,7 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/test_helpers.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 
 namespace bluetooth {
 namespace hci {
@@ -17,9 +18,11 @@ namespace {
 TEST(AdvertisingReportParserTest, EmptyReport) {
   auto bytes = common::CreateStaticByteBuffer(0x3E, 0x02, 0x02, 0x00);
 
-  EventPacket event(&bytes);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
 
-  AdvertisingReportParser parser(event);
+  AdvertisingReportParser parser(*event);
   EXPECT_FALSE(parser.HasMoreReports());
 
   const LEAdvertisingReportData* data;
@@ -28,6 +31,8 @@ TEST(AdvertisingReportParserTest, EmptyReport) {
 }
 
 TEST(AdvertisingReportParserTest, SingleReportMalformed) {
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0x3E, 0x0B, 0x02, 0x01,  // HCI event header and LE Meta Event params
       0x03, 0x02,              // event_type, address_type
@@ -35,9 +40,13 @@ TEST(AdvertisingReportParserTest, SingleReportMalformed) {
       0x00                                 // |length_data|. RSSI is missing
       );
 
-  EventPacket event(&bytes);
+  // clang-format on
 
-  AdvertisingReportParser parser(event);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
+
+  AdvertisingReportParser parser(*event);
   EXPECT_TRUE(parser.HasMoreReports());
   EXPECT_FALSE(parser.encountered_error());
 
@@ -48,6 +57,8 @@ TEST(AdvertisingReportParserTest, SingleReportMalformed) {
 }
 
 TEST(AdvertisingReportParserTest, SingleReportNoData) {
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0x3E, 0x0C, 0x02, 0x01,  // HCI event header and LE Meta Event params
       0x03, 0x02,              // event_type, address_type
@@ -55,9 +66,13 @@ TEST(AdvertisingReportParserTest, SingleReportNoData) {
       0x00, 0x7F                           // |length_data|, RSSI
       );
 
-  EventPacket event(&bytes);
+  // clang-format on
 
-  AdvertisingReportParser parser(event);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
+
+  AdvertisingReportParser parser(*event);
   EXPECT_TRUE(parser.HasMoreReports());
 
   const LEAdvertisingReportData* data;
@@ -77,6 +92,8 @@ TEST(AdvertisingReportParserTest, SingleReportNoData) {
 }
 
 TEST(AdvertisingReportParserTest, ReportsValidInvalid) {
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0x3E, 0x16, 0x02, 0x02,  // HCI event header and LE Meta Event params
       0x03, 0x02,              // event_type, address_type
@@ -87,9 +104,13 @@ TEST(AdvertisingReportParserTest, ReportsValidInvalid) {
       0x0A, 0x7F                           // malformed |length_data|, RSSI
       );
 
-  EventPacket event(&bytes);
+  // clang-format on
 
-  AdvertisingReportParser parser(event);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
+
+  AdvertisingReportParser parser(*event);
   EXPECT_TRUE(parser.HasMoreReports());
   EXPECT_FALSE(parser.encountered_error());
 
@@ -112,6 +133,8 @@ TEST(AdvertisingReportParserTest, ReportsValidInvalid) {
 }
 
 TEST(AdvertisingReportParserTest, ReportsAllValid) {
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0x3E, 0x28, 0x02, 0x03,              // HCI event header and LE Meta Event params
       0x03, 0x02,                          // event_type, address_type
@@ -128,9 +151,13 @@ TEST(AdvertisingReportParserTest, ReportsAllValid) {
       0x01                                 // RSSI
       );
 
-  EventPacket event(&bytes);
+  // clang-format on
 
-  AdvertisingReportParser parser(event);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
+
+  AdvertisingReportParser parser(*event);
   EXPECT_TRUE(parser.HasMoreReports());
 
   const LEAdvertisingReportData* data;
@@ -172,6 +199,8 @@ TEST(AdvertisingReportParserTest, ReportsAllValid) {
 }
 
 TEST(AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0x3E, 0x28, 0x02,  // HCI event header and LE Meta Event param
       0x01,              // Event count is 1, even though packet contains 3
@@ -189,9 +218,13 @@ TEST(AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
       0x01                                 // RSSI
       );
 
-  EventPacket event(&bytes);
+  // clang-format on
 
-  AdvertisingReportParser parser(event);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
+
+  AdvertisingReportParser parser(*event);
   EXPECT_TRUE(parser.HasMoreReports());
   EXPECT_FALSE(parser.encountered_error());
 
@@ -215,6 +248,8 @@ TEST(AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
 }
 
 TEST(AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0x3E, 0x0C, 0x02,  // HCI event header and LE Meta Event param
       0x02,              // Event count is 2, even though packet contains 1
@@ -223,9 +258,13 @@ TEST(AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
       0x00, 0x7F                           // |length_data|, RSSI
       );
 
-  EventPacket event(&bytes);
+  // clang-format on
 
-  AdvertisingReportParser parser(event);
+  auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
+  event->mutable_view()->mutable_data().Write(bytes);
+  event->InitializeFromBuffer();
+
+  AdvertisingReportParser parser(*event);
   EXPECT_TRUE(parser.HasMoreReports());
 
   const LEAdvertisingReportData* data;

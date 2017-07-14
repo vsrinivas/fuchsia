@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/hci/event_packet.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "lib/ftl/macros.h"
 

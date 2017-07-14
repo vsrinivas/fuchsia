@@ -14,6 +14,7 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/synchronization/thread_checker.h"
@@ -23,7 +24,6 @@ namespace bluetooth {
 namespace hci {
 
 class Connection;
-class EventPacket;
 class Transport;
 
 // Represents the controller data buffer settings for the BR/EDR or LE transports.
@@ -93,8 +93,8 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   void ShutDown();
 
   // Callback invoked when there is a new ACL data packet from the controller. The ownership of the
-  // |acl_data_packet| is passed to the callback implementation.
-  using DataReceivedCallback = std::function<void(common::DynamicByteBuffer acl_data_packet)>;
+  // |data_packet| is passed to the callback implementation as a rvalue reference..
+  using DataReceivedCallback = std::function<void(std::unique_ptr<ACLDataPacket> data_packet)>;
 
   // Assigns a handler callback for received ACL data packets.
   void SetDataRxHandler(const DataReceivedCallback& rx_callback,
@@ -106,7 +106,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   //
   // |data_packet| is passed by value, meaning that ACLDataChannel will take ownership of it.
   // |data_packet| must represent a valid ACL data packet.
-  bool SendPacket(common::DynamicByteBuffer data_packet);
+  bool SendPacket(std::unique_ptr<ACLDataPacket> data_packet);
 
   // Returns the underlying channel handle.
   const mx::channel& channel() const { return channel_; }
@@ -125,10 +125,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
     QueuedDataPacket(QueuedDataPacket&& other) = default;
     QueuedDataPacket& operator=(QueuedDataPacket&& other) = default;
 
-    // TODO(armansito): We will need a better memory management scheme since copying packet data for
-    // each data packet is going to cause huge performance issues. For now this is OK since we are
-    // initially only supporting fixed-channel LE L2CAP.
-    common::DynamicByteBuffer bytes;
+    std::unique_ptr<ACLDataPacket> packet;
   };
 
   // Returns the data buffer MTU for the given connection.
@@ -204,11 +201,6 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   std::mutex rx_mutex_;
   DataReceivedCallback rx_callback_ __TA_GUARDED(rx_mutex_);
   ftl::RefPtr<ftl::TaskRunner> rx_task_runner_ __TA_GUARDED(rx_mutex_);
-
-  // The buffer we use to temporarily write incoming data packets.
-  // TODO(armansito): It might be better to initialize this dynamically based on the MTU reported by
-  // the controller.
-  common::StaticByteBuffer<ACLDataTxPacket::GetMinBufferSize(kMaxACLPayloadSize)> rx_buffer_;
 
   // BR/EDR data buffer information. This buffer will not be available on LE-only controllers.
   DataBufferInfo bredr_buffer_info_;

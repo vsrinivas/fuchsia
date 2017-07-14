@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/hci/command_packet.h"
+#include "apps/bluetooth/lib/hci/control_packets.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
 #include "apps/bluetooth/lib/testing/test_controller.h"
@@ -78,12 +78,9 @@ TEST_F(CommandChannelTest, CommandTimeout) {
     message_loop()->QuitNow();
   };
 
-  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
-  CommandPacket reset(kReset, &buffer);
-  reset.EncodeHeader();
+  auto reset = CommandPacket::New(kReset);
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
-      common::DynamicByteBuffer(buffer), status_cb, NOP_COMPLETE_CB(),
-      message_loop()->task_runner());
+      std::move(reset), status_cb, NOP_COMPLETE_CB(), message_loop()->task_runner());
 
   RunMessageLoop();
 
@@ -113,19 +110,19 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
   bool test_obj_deleted = false;
   auto test_obj =
       ftl::MakeRefCounted<TestCallbackObject>([&test_obj_deleted] { test_obj_deleted = true; });
-  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
-  CommandPacket reset(kReset, &buffer);
-  reset.EncodeHeader();
+
+  auto reset = CommandPacket::New(kReset);
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
-      common::DynamicByteBuffer(buffer), [test_obj](CommandChannel::TransactionId, Status) {},
+      std::move(reset), [test_obj](CommandChannel::TransactionId, Status) {},
       [&id, this, test_obj](CommandChannel::TransactionId callback_id, const EventPacket& event) {
         EXPECT_EQ(id, callback_id);
         EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
-        EXPECT_EQ(4, event.header().parameter_total_size);
+        EXPECT_EQ(4, event.view().header().parameter_total_size);
         EXPECT_EQ(kNumHCICommandPackets,
-                  event.payload<CommandCompleteEventParams>().num_hci_command_packets);
-        EXPECT_EQ(kReset, le16toh(event.payload<CommandCompleteEventParams>().command_opcode));
-        EXPECT_EQ(Status::kHardwareFailure, event.GetReturnParams<SimpleReturnParams>()->status);
+                  event.view().payload<CommandCompleteEventParams>().num_hci_command_packets);
+        EXPECT_EQ(kReset,
+                  le16toh(event.view().payload<CommandCompleteEventParams>().command_opcode));
+        EXPECT_EQ(Status::kHardwareFailure, event.return_params<SimpleReturnParams>()->status);
 
         // Quit the message loop to continue the test.
         message_loop()->QuitNow();
@@ -175,16 +172,14 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
                                  const EventPacket& event) {
     EXPECT_EQ(callback_id, id);
     EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
-    EXPECT_EQ(Status::kSuccess, event.GetReturnParams<SimpleReturnParams>()->status);
+    EXPECT_EQ(Status::kSuccess, event.return_params<SimpleReturnParams>()->status);
 
     // Quit the message loop to continue the test.
     message_loop()->QuitNow();
   };
 
-  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
-  CommandPacket reset(kReset, &buffer);
-  reset.EncodeHeader();
-  id = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+  auto reset = CommandPacket::New(kReset);
+  id = cmd_channel()->SendCommand(std::move(reset), status_cb, complete_cb,
                                   message_loop()->task_runner());
   RunMessageLoop();
   EXPECT_EQ(1, status_cb_count);
@@ -216,18 +211,16 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
                                  const EventPacket& event) {
     EXPECT_EQ(callback_id, id);
     EXPECT_EQ(kCommandStatusEventCode, event.event_code());
-    EXPECT_EQ(Status::kSuccess, event.payload<CommandStatusEventParams>().status);
-    EXPECT_EQ(1, event.payload<CommandStatusEventParams>().num_hci_command_packets);
-    EXPECT_EQ(kReset, le16toh(event.payload<CommandStatusEventParams>().command_opcode));
+    EXPECT_EQ(Status::kSuccess, event.view().payload<CommandStatusEventParams>().status);
+    EXPECT_EQ(1, event.view().payload<CommandStatusEventParams>().num_hci_command_packets);
+    EXPECT_EQ(kReset, le16toh(event.view().payload<CommandStatusEventParams>().command_opcode));
 
     // Quit the message loop to continue the test.
     message_loop()->QuitNow();
   };
 
-  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
-  CommandPacket reset(kReset, &buffer);
-  reset.EncodeHeader();
-  id = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+  auto reset = CommandPacket::New(kReset);
+  id = cmd_channel()->SendCommand(std::move(reset), status_cb, complete_cb,
                                   message_loop()->task_runner(), kCommandStatusEventCode);
   RunMessageLoop();
 
@@ -294,7 +287,7 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
     complete_cb_count++;
     EXPECT_EQ(id1, callback_id);
 
-    auto return_params = event.GetReturnParams<ReadBDADDRReturnParams>();
+    auto return_params = event.return_params<ReadBDADDRReturnParams>();
     EXPECT_EQ(Status::kSuccess, return_params->status);
     EXPECT_EQ("06:05:04:03:02:01", return_params->bd_addr.ToString());
 
@@ -304,14 +297,11 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
     if (complete_cb_count == 1) message_loop()->PostQuitTask();
   };
 
-  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
-  CommandPacket reset(kReset, &buffer);
-  reset.EncodeHeader();
-  id0 = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+  auto reset = CommandPacket::New(kReset);
+  id0 = cmd_channel()->SendCommand(std::move(reset), status_cb, complete_cb,
                                    message_loop()->task_runner());
-  CommandPacket read_bdaddr(kReadBDADDR, &buffer);
-  read_bdaddr.EncodeHeader();
-  id1 = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+  auto read_bdaddr = CommandPacket::New(kReadBDADDR);
+  id1 = cmd_channel()->SendCommand(std::move(read_bdaddr), status_cb, complete_cb,
                                    message_loop()->task_runner());
   RunMessageLoop();
   EXPECT_EQ(2, status_cb_count);
@@ -422,7 +412,8 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   auto event_cb = [&event_count, kTestEventCode, this](const EventPacket& event) {
     event_count++;
     EXPECT_EQ(kTestEventCode, event.event_code());
-    EXPECT_EQ(1, event.header().parameter_total_size);
+    EXPECT_EQ(1u, event.view().header().parameter_total_size);
+    EXPECT_EQ(1u, event.view().payload_size());
 
     // We post this task to the end of the message queue so that the quit call
     // doesn't inherently guarantee that this callback gets invoked only once.
@@ -431,10 +422,8 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
 
   cmd_channel()->AddEventHandler(kTestEventCode, event_cb, message_loop()->task_runner());
 
-  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
-  CommandPacket reset(kReset, &buffer);
-  reset.EncodeHeader();
-  cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), NOP_STATUS_CB(), NOP_COMPLETE_CB(),
+  auto reset = CommandPacket::New(kReset);
+  cmd_channel()->SendCommand(std::move(reset), NOP_STATUS_CB(), NOP_COMPLETE_CB(),
                              message_loop()->task_runner(), kTestEventCode);
 
   RunMessageLoop();
@@ -454,7 +443,7 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   auto event_cb0 = [&event_count0, kTestSubeventCode0, this](const EventPacket& event) {
     event_count0++;
     EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
-    EXPECT_EQ(kTestSubeventCode0, event.payload<LEMetaEventParams>().subevent_code);
+    EXPECT_EQ(kTestSubeventCode0, event.view().payload<LEMetaEventParams>().subevent_code);
     message_loop()->PostQuitTask();
   };
 
@@ -462,7 +451,7 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   auto event_cb1 = [&event_count1, kTestSubeventCode1, this](const EventPacket& event) {
     event_count1++;
     EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
-    EXPECT_EQ(kTestSubeventCode1, event.payload<LEMetaEventParams>().subevent_code);
+    EXPECT_EQ(kTestSubeventCode1, event.view().payload<LEMetaEventParams>().subevent_code);
     message_loop()->PostQuitTask();
   };
 

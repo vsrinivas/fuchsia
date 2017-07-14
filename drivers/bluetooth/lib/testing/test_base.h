@@ -7,9 +7,11 @@
 #include <memory>
 
 #include "apps/bluetooth/lib/hci/acl_data_channel.h"
+#include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -133,8 +135,8 @@ class TransportTest : public TestBase<FakeControllerType> {
   hci::ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
 
  private:
-  void OnDataReceived(common::DynamicByteBuffer acl_data_bytes) {
-    if (data_received_callback_) data_received_callback_(std::move(acl_data_bytes));
+  void OnDataReceived(std::unique_ptr<hci::ACLDataPacket> data_packet) {
+    if (data_received_callback_) data_received_callback_(std::move(data_packet));
   }
 
   ftl::RefPtr<hci::Connection> LookUpConnection(hci::ConnectionHandle handle) {

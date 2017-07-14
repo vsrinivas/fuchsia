@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/ftl/macros.h"
 
@@ -58,7 +59,8 @@ class TestController : public FakeControllerBase {
 
  private:
   // FakeControllerBase overrides:
-  void OnCommandPacketReceived(const hci::CommandPacket& command_packet) override;
+  void OnCommandPacketReceived(
+      const common::PacketView<hci::CommandHeader>& command_packet) override;
   void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) override;
 
   std::queue<CommandTransaction> cmd_transactions_;

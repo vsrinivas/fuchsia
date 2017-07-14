@@ -10,6 +10,7 @@ source_set("common") {
     "byte_buffer.h",
     "device_address.cc",
     "device_address.h",
+    "intrusive_pointer_traits.h",
     "manufacturer_names.cc",
     "manufacturer_names.h",
     "observer_list.h",

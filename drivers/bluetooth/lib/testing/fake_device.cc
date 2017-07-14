@@ -4,8 +4,7 @@
 
 #include "fake_device.h"
 
-#include "apps/bluetooth/lib/hci/event_packet.h"
-
+#include "apps/bluetooth/lib/common/packet_view.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/random/rand.h"
 
@@ -45,17 +44,20 @@ void FakeDevice::SetScanResponse(bool should_batch_reports, const common::ByteBu
 }
 
 common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_scan_rsp) const {
-  size_t event_size = hci::EventPacket::GetMinBufferSize(
-      sizeof(hci::LEMetaEventParams) + sizeof(hci::LEAdvertisingReportSubeventParams) +
-      sizeof(hci::LEAdvertisingReportData) + adv_data_.size() + sizeof(int8_t));
+  size_t event_size = sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
+                      sizeof(hci::LEAdvertisingReportSubeventParams) +
+                      sizeof(hci::LEAdvertisingReportData) + adv_data_.size() + sizeof(int8_t);
   if (include_scan_rsp) {
     FTL_DCHECK(scannable_);
     event_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t);
   }
 
   common::DynamicByteBuffer buffer(event_size);
-  hci::MutableEventPacket event_packet(hci::kLEMetaEventCode, &buffer);
-  auto payload = event_packet.mutable_payload<hci::LEMetaEventParams>();
+  common::MutablePacketView<hci::EventHeader> event(&buffer, event_size - sizeof(hci::EventHeader));
+  event.mutable_header()->event_code = hci::kLEMetaEventCode;
+  event.mutable_header()->parameter_total_size = event_size - sizeof(hci::EventHeader);
+
+  auto payload = event.mutable_payload<hci::LEMetaEventParams>();
   payload->subevent_code = hci::kLEAdvertisingReportSubeventCode;
 
   auto subevent_payload =
@@ -90,12 +92,16 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(bool include_
 
 common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
   FTL_DCHECK(scannable_);
-  size_t event_size = hci::EventPacket::GetMinBufferSize(
-      sizeof(hci::LEMetaEventParams) + sizeof(hci::LEAdvertisingReportSubeventParams) +
-      sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t));
+  size_t event_size = sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
+                      sizeof(hci::LEAdvertisingReportSubeventParams) +
+                      sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t);
+
   common::DynamicByteBuffer buffer(event_size);
-  hci::MutableEventPacket event_packet(hci::kLEMetaEventCode, &buffer);
-  auto payload = event_packet.mutable_payload<hci::LEMetaEventParams>();
+  common::MutablePacketView<hci::EventHeader> event(&buffer, event_size - sizeof(hci::EventHeader));
+  event.mutable_header()->event_code = hci::kLEMetaEventCode;
+  event.mutable_header()->parameter_total_size = event_size - sizeof(hci::EventHeader);
+
+  auto payload = event.mutable_payload<hci::LEMetaEventParams>();
   payload->subevent_code = hci::kLEAdvertisingReportSubeventCode;
 
   auto subevent_payload =

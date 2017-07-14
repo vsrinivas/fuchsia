@@ -4,51 +4,49 @@
 
 #pragma once
 
+#include <memory>
+
+#include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/packet_view.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/packet.h"
+#include "lib/ftl/macros.h"
 
 namespace bluetooth {
-
-namespace common {
-class ByteBuffer;
-class MutableByteBuffer;
-}  // namespace common
-
 namespace hci {
 
-// TODO(armansito): Rename these to ACLDataPacketReader and ACLDataPacketWriter.
-
-// Represents a HCI ACL data packet to be sent from the host to the controller.
-class ACLDataTxPacket : public ::bluetooth::common::MutablePacketView<ACLDataHeader> {
+// Packet template specialization for ACL data packets. This cannot be directly instantiated.
+// Represents a HCI ACL data packet.
+using ACLDataPacket = Packet<ACLDataHeader>;
+template <>
+class Packet<ACLDataHeader> : public PacketBase<ACLDataHeader, ACLDataPacket> {
  public:
-  ACLDataTxPacket(ConnectionHandle connection_handle, ACLPacketBoundaryFlag packet_boundary_flag,
-                  ACLBroadcastFlag broadcast_flag, size_t data_length,
-                  common::MutableByteBuffer* buffer);
+  // Slab-allocates a new ACLDataPacket with the given payload size without initializing its
+  // contents.
+  static std::unique_ptr<ACLDataPacket> New(uint16_t payload_size);
 
-  // Encodes the contents of the packet header contents into the underlying buffer.. This method
-  // must be called before this packet can be sent to the controller.
-  void EncodeHeader();
+  // Slab-allocates a new ACLDataPacket with the given payload size and initializes the
+  // packet's header field with the given data.
+  static std::unique_ptr<ACLDataPacket> New(ConnectionHandle connection_handle,
+                                            ACLPacketBoundaryFlag packet_boundary_flag,
+                                            ACLBroadcastFlag broadcast_flag,
+                                            uint16_t payload_size = 0u);
 
-  // Returns the minimum number of bytes needed for a ACLDataPacket with the given |payload_size|.
-  constexpr static size_t GetMinBufferSize(size_t payload_size) {
-    return sizeof(ACLDataHeader) + payload_size;
-  }
+  // Getters for the header fields.
+  ConnectionHandle connection_handle() const;
+  ACLPacketBoundaryFlag packet_boundary_flag() const;
+  ACLBroadcastFlag broadcast_flag() const;
+
+  // Initializes the internal PacketView by reading the header portion of the underlying buffer.
+  void InitializeFromBuffer();
+
+ protected:
+  Packet<EventHeader>() = default;
 
  private:
-  ConnectionHandle connection_handle_;
-  ACLPacketBoundaryFlag packet_boundary_flag_;
-  ACLBroadcastFlag broadcast_flag_;
-};
-
-// Represents a HCI ACL data packet received from the controller.
-class ACLDataRxPacket : public ::bluetooth::common::PacketView<ACLDataHeader> {
- public:
-  explicit ACLDataRxPacket(const common::ByteBuffer* buffer);
-
-  // Getters for header fields.
-  ConnectionHandle GetConnectionHandle() const;
-  ACLPacketBoundaryFlag GetPacketBoundaryFlag() const;
-  ACLBroadcastFlag GetBroadcastFlag() const;
+  // Writes the given header fields into the underlying buffer.
+  void WriteHeader(ConnectionHandle connection_handle, ACLPacketBoundaryFlag packet_boundary_flag,
+                   ACLBroadcastFlag broadcast_flag);
 };
 
 }  // namespace hci

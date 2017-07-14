@@ -113,7 +113,8 @@ class FakeController : public FakeControllerBase {
   void SendAdvertisingReports();
 
   // FakeControllerBase overrides:
-  void OnCommandPacketReceived(const hci::CommandPacket& command_packet) override;
+  void OnCommandPacketReceived(
+      const common::PacketView<hci::CommandHeader>& command_packet) override;
   void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) override;
 
   Settings settings_;

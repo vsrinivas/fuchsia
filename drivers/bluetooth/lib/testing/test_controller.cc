@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "apps/bluetooth/lib/common/test_helpers.h"
-#include "apps/bluetooth/lib/hci/command_packet.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace bluetooth {
@@ -56,7 +55,8 @@ void TestController::SetDataCallback(const DataCallback& callback,
   data_task_runner_ = task_runner;
 }
 
-void TestController::OnCommandPacketReceived(const hci::CommandPacket& command_packet) {
+void TestController::OnCommandPacketReceived(
+    const common::PacketView<hci::CommandHeader>& command_packet) {
   ASSERT_FALSE(cmd_transactions_.empty()) << "Received unexpected command packet";
 
   auto& current = cmd_transactions_.front();

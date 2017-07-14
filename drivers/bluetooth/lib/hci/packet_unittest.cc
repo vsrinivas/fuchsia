@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/hci/command_packet.h"
-#include "apps/bluetooth/lib/hci/event_packet.h"
-
-#include <endian.h>
+#include "apps/bluetooth/lib/hci/control_packets.h"
 
 #include <array>
 #include <cstdint>
 
+#include <endian.h>
+#include <magenta/compiler.h>
+
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/test_helpers.h"
 
 using bluetooth::common::ContainersEqual;
@@ -29,62 +28,54 @@ constexpr EventCode kTestEventCode = 0xFF;
 
 struct TestPayload {
   uint8_t foo;
-};
+} __PACKED;
 
 TEST(HCIPacketTest, CommandPacket) {
   constexpr size_t kPayloadSize = sizeof(TestPayload);
-  constexpr size_t kBufferSize = CommandPacket::GetMinBufferSize(kPayloadSize);
-  StaticByteBuffer<kBufferSize> buffer;
+  auto packet = CommandPacket::New(kTestOpCode, kPayloadSize);
 
-  CommandPacket packet(kTestOpCode, &buffer, kPayloadSize);
+  EXPECT_EQ(kTestOpCode, packet->opcode());
+  EXPECT_EQ(kPayloadSize, packet->view().payload_size());
 
-  EXPECT_EQ(kTestOpCode, packet.opcode());
-  EXPECT_EQ(kPayloadSize, packet.payload_size());
+  packet->mutable_view()->mutable_payload<TestPayload>()->foo = 127;
 
-  packet.mutable_payload<TestPayload>()->foo = 127;
-  packet.EncodeHeader();
+  // clang-format off
 
-  constexpr std::array<uint8_t, kBufferSize> kExpected{{
+  auto kExpected = common::CreateStaticByteBuffer(
       0xFF, 0x07,  // opcode
       0x01,        // parameter_total_size
-      0x7F,        // foo
-  }};
-  EXPECT_TRUE(ContainersEqual(kExpected, buffer));
-}
+      0x7F         // foo
+  );
 
-TEST(HCIPacketTest, CommandPacketFromBuffer) {
-  constexpr size_t kPayloadSize = sizeof(TestPayload);
-  constexpr size_t kBufferSize = CommandPacket::GetMinBufferSize(kPayloadSize);
-  StaticByteBuffer<kBufferSize> buffer;
+  // clang-format on
 
-  CommandPacket packet(kTestOpCode, &buffer, kPayloadSize);
-
-  EXPECT_EQ(kTestOpCode, packet.opcode());
-  EXPECT_EQ(kPayloadSize, packet.payload_size());
-
-  packet.EncodeHeader();
-
-  CommandPacket packet0(&buffer);
-
-  EXPECT_EQ(kTestOpCode, packet.opcode());
-  EXPECT_EQ(kPayloadSize, packet.payload_size());
+  EXPECT_TRUE(ContainersEqual(kExpected, packet->view().data()));
 }
 
 TEST(HCIPacketTest, EventPacket) {
   constexpr size_t kPayloadSize = sizeof(TestPayload);
+  auto packet = EventPacket::New(kPayloadSize);
+
+  // clang-format off
+
   auto bytes = common::CreateStaticByteBuffer(
       0xFF,  // event code
       0x01,  // parameter_total_size
       0x7F  // foo
   );
-  EventPacket packet(&bytes);
+  packet->mutable_view()->mutable_data().Write(bytes);
+  packet->InitializeFromBuffer();
 
-  EXPECT_EQ(kTestEventCode, packet.event_code());
-  EXPECT_EQ(kPayloadSize, packet.payload_size());
-  EXPECT_EQ(127, packet.payload<TestPayload>().foo);
+  // clang-format on
+
+  EXPECT_EQ(kTestEventCode, packet->event_code());
+  EXPECT_EQ(kPayloadSize, packet->view().payload_size());
+  EXPECT_EQ(127, packet->view().payload<TestPayload>().foo);
 }
 
-TEST(HCIPacketTest, EventPacketGetReturnParams) {
+TEST(HCIPacketTest, EventPacketReturnParams) {
+  // clang-format off
+
   auto correct_size_bad_event_code = common::CreateStaticByteBuffer(
       // Event header
       0xFF, 0x04,  // (event_code is not CommandComplete)
@@ -93,16 +84,14 @@ TEST(HCIPacketTest, EventPacketGetReturnParams) {
       0x01, 0xFF, 0x07,
 
       // Return parameters
-      0x7F
-  );
+      0x7F);
   auto cmd_complete_small_payload = common::CreateStaticByteBuffer(
       // Event header
       0x0E, 0x03,
 
       // CommandCompleteEventParams
-      0x01, 0xFF, 0x07
-  );
-  auto cmd_complete_valid_bytes = common::CreateStaticByteBuffer(
+      0x01, 0xFF, 0x07);
+  auto valid = common::CreateStaticByteBuffer(
       // Event header
       0x0E, 0x04,
 
@@ -110,125 +99,149 @@ TEST(HCIPacketTest, EventPacketGetReturnParams) {
       0x01, 0xFF, 0x07,
 
       // Return parameters
-      0x7F
-  );
+      0x7F);
 
-  // If the event code or the payload size don't match, then GetReturnParams should return nullptr.
-  EventPacket invalid0(&correct_size_bad_event_code);
-  EXPECT_EQ(nullptr, invalid0.GetReturnParams<TestPayload>());
-  EventPacket invalid1(&cmd_complete_small_payload);
-  EXPECT_EQ(nullptr, invalid1.GetReturnParams<TestPayload>());
+  // clang-format on
 
-  // Good packets
-  EventPacket valid0(&cmd_complete_valid_bytes);
-  EXPECT_NE(nullptr, valid0.GetReturnParams<TestPayload>());
-  EXPECT_EQ(127, valid0.GetReturnParams<TestPayload>()->foo);
+  // Allocate a large enough packet which we'll reuse for the 3 payloads.
+  auto packet = EventPacket::New(valid.size());
+
+  // If the event code or the payload size don't match, then return_params() should return nullptr.
+  packet->mutable_view()->mutable_data().Write(correct_size_bad_event_code);
+  packet->InitializeFromBuffer();
+  EXPECT_EQ(nullptr, packet->return_params<TestPayload>());
+
+  packet->mutable_view()->mutable_data().Write(cmd_complete_small_payload);
+  packet->InitializeFromBuffer();
+  EXPECT_EQ(nullptr, packet->return_params<TestPayload>());
+
+  // Reset packet size to the original so that |valid| can fit.
+  packet->mutable_view()->Resize(valid.size());
+
+  // Valid case
+  packet->mutable_view()->mutable_data().Write(valid);
+  packet->InitializeFromBuffer();
+  ASSERT_NE(nullptr, packet->return_params<TestPayload>());
+  EXPECT_EQ(127, packet->return_params<TestPayload>()->foo);
 }
 
-TEST(HCIPacketTest, GetLEEventParams) {
+TEST(HCIPacketTest, LEEventParams) {
+  // clang-format off
+
   auto correct_size_bad_event_code = common::CreateStaticByteBuffer(
-    // Event header
-    0xFF, 0x02,  // (event_code is not LEMetaEventCode)
+      // Event header
+      0xFF, 0x02,  // (event_code is not LEMetaEventCode)
 
-    // Subevent code
-    0xFF,
+      // Subevent code
+      0xFF,
 
-    // Subevent payload
-    0x7F
-  );
+      // Subevent payload
+      0x7F);
   auto payload_too_small = common::CreateStaticByteBuffer(
-    0x3E, 0x01,
+      0x3E, 0x01,
 
-    // Subevent code
-    0xFF
-  );
+      // Subevent code
+      0xFF);
   auto valid = common::CreateStaticByteBuffer(
-    // Event header
-    0x3E, 0x02,
+      // Event header
+      0x3E, 0x02,
 
-    // Subevent code
-    0xFF,
+      // Subevent code
+      0xFF,
 
-    // Subevent payload
-    0x7F
-  );
+      // Subevent payload
+      0x7F);
 
-  // If the event code or the payload size don't match, then GetReturnParams should return nullptr.
-  EventPacket invalid0(&correct_size_bad_event_code);
-  EXPECT_EQ(nullptr, invalid0.GetLEEventParams<TestPayload>());
-  EventPacket invalid1(&payload_too_small);
-  EXPECT_EQ(nullptr, invalid1.GetLEEventParams<TestPayload>());
+  // clang-format on
 
-  // Good packets
-  EventPacket valid0(&valid);
-  EXPECT_NE(nullptr, valid0.GetLEEventParams<TestPayload>());
-  EXPECT_EQ(127, valid0.GetLEEventParams<TestPayload>()->foo);
+  auto packet = EventPacket::New(valid.size());
+
+  // If the event code or the payload size don't match, then return_params() should return nullptr.
+  packet->mutable_view()->mutable_data().Write(correct_size_bad_event_code);
+  packet->InitializeFromBuffer();
+  EXPECT_EQ(nullptr, packet->le_event_params<TestPayload>());
+
+  packet->mutable_view()->mutable_data().Write(payload_too_small);
+  packet->InitializeFromBuffer();
+  EXPECT_EQ(nullptr, packet->le_event_params<TestPayload>());
+
+  // Valid case
+  packet->mutable_view()->Resize(valid.size());
+  packet->mutable_view()->mutable_data().Write(valid);
+  packet->InitializeFromBuffer();
+
+  EXPECT_NE(nullptr, packet->le_event_params<TestPayload>());
+  EXPECT_EQ(127, packet->le_event_params<TestPayload>()->foo);
 }
 
-TEST(HCIPacketTest, ACLDataTxPacket) {
-  constexpr size_t kMaxDataLength = 10;
-  constexpr size_t kDataLength = 1;
-  constexpr size_t kBufferSize = ACLDataTxPacket::GetMinBufferSize(kMaxDataLength);
-  common::StaticByteBuffer<kBufferSize> buffer;
-  buffer.SetToZeros();
+TEST(HCIPacketTest, ACLDataPacketFromFields) {
+  constexpr size_t kLargeDataLength = 10;
+  constexpr size_t kSmallDataLength = 1;
 
-  ACLDataTxPacket packet(0x007F, ACLPacketBoundaryFlag::kContinuingFragment,
-                         ACLBroadcastFlag::kActiveSlaveBroadcast, kDataLength, &buffer);
-  packet.EncodeHeader();
+  auto packet = ACLDataPacket::New(0x007F, ACLPacketBoundaryFlag::kContinuingFragment,
+                                   ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
 
   // First 12-bits: 0x07F
   // Upper 4-bits: 0b0101
-  EXPECT_TRUE(
-      ContainersEqual(packet.data(), std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
+  EXPECT_TRUE(ContainersEqual(packet->view().data(),
+                              std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
 
-  packet = ACLDataTxPacket(0x0FFF, ACLPacketBoundaryFlag::kCompletePDU,
-                           ACLBroadcastFlag::kActiveSlaveBroadcast, kDataLength, &buffer);
-  packet.EncodeHeader();
+  packet = ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kCompletePDU,
+                              ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
 
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0111
-  EXPECT_TRUE(
-      ContainersEqual(packet.data(), std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
+  EXPECT_TRUE(ContainersEqual(packet->view().data(),
+                              std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
 
-  packet = ACLDataTxPacket(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                           ACLBroadcastFlag::kPointToPoint, kMaxDataLength, &buffer);
-  packet.EncodeHeader();
+  packet = ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                              ACLBroadcastFlag::kPointToPoint, kLargeDataLength);
 
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0000
-  EXPECT_TRUE(ContainersEqual(
-      packet.data(), std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                              0x00, 0x00, 0x00, 0x00}}));
+  EXPECT_TRUE(ContainersEqual(packet->view().data(),
+                              std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00,
+                                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}));
 }
 
-TEST(HCIPacketTest, ACLDataRxPacket) {
-  // The same test cases as ACLDataTxPacket test above but in the opposite direction.
+TEST(HCIPacketTest, ACLDataPacketFromBuffer) {
+  constexpr size_t kLargeDataLength = 256;
+  constexpr size_t kSmallDataLength = 1;
+
+  // The same test cases as ACLDataPacketFromFields test above but in the opposite direction.
+
+  // First 12-bits: 0x07F
+  // Upper 4-bits: 0b0101
   auto bytes = common::CreateStaticByteBuffer(0x7F, 0x50, 0x01, 0x00, 0x00);
-  ACLDataRxPacket packet(&bytes);
-  EXPECT_EQ(0x007F, packet.GetConnectionHandle());
-  EXPECT_EQ(ACLPacketBoundaryFlag::kContinuingFragment, packet.GetPacketBoundaryFlag());
-  EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet.GetBroadcastFlag());
-  EXPECT_EQ(1u, packet.payload_size());
+  auto packet = ACLDataPacket::New(kSmallDataLength);
+  packet->mutable_view()->mutable_data().Write(bytes);
+  packet->InitializeFromBuffer();
 
+  EXPECT_EQ(0x007F, packet->connection_handle());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kContinuingFragment, packet->packet_boundary_flag());
+  EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet->broadcast_flag());
+  EXPECT_EQ(kSmallDataLength, packet->view().payload_size());
+
+  // First 12-bits: 0xFFF
+  // Upper 4-bits: 0b0111
   bytes = common::CreateStaticByteBuffer(0xFF, 0x7F, 0x01, 0x00, 0x00);
-  packet = ACLDataRxPacket(&bytes);
-  EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
-  EXPECT_EQ(ACLPacketBoundaryFlag::kCompletePDU, packet.GetPacketBoundaryFlag());
-  EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet.GetBroadcastFlag());
-  EXPECT_EQ(1u, packet.payload_size());
+  packet->mutable_view()->mutable_data().Write(bytes);
+  packet->InitializeFromBuffer();
 
-  // 256 + 4
-  auto large_bytes = common::StaticByteBuffer<260>();
-  large_bytes.SetToZeros();
-  large_bytes[0] = 0xFF;
-  large_bytes[1] = 0x0F;
-  large_bytes[2] = 0x00;
-  large_bytes[3] = 0x01;
-  packet = ACLDataRxPacket(&large_bytes);
-  EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
-  EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable, packet.GetPacketBoundaryFlag());
-  EXPECT_EQ(ACLBroadcastFlag::kPointToPoint, packet.GetBroadcastFlag());
-  EXPECT_EQ(256u, packet.payload_size());
+  EXPECT_EQ(0x0FFF, packet->connection_handle());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kCompletePDU, packet->packet_boundary_flag());
+  EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet->broadcast_flag());
+  EXPECT_EQ(kSmallDataLength, packet->view().payload_size());
+
+  packet = ACLDataPacket::New(kLargeDataLength);
+  packet->mutable_view()->mutable_data().Write(
+      common::CreateStaticByteBuffer(0xFF, 0x0F, 0x00, 0x01));
+  packet->InitializeFromBuffer();
+
+  EXPECT_EQ(0x0FFF, packet->connection_handle());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable, packet->packet_boundary_flag());
+  EXPECT_EQ(ACLBroadcastFlag::kPointToPoint, packet->broadcast_flag());
+  EXPECT_EQ(kLargeDataLength, packet->view().payload_size());
 }
 
 }  // namespace

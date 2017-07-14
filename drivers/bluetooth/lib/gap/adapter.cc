@@ -9,7 +9,6 @@
 #include "apps/bluetooth/lib/gap/remote_device.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "apps/bluetooth/lib/hci/event_packet.h"
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/hci/util.h"
@@ -79,37 +78,37 @@ bool Adapter::Initialize(const InitializeCallback& callback,
   // internally invalidate the callbacks if it ever gets deleted.
 
   // HCI_Reset
-  init_seq_runner_->QueueCommand(hci::BuildHCICommand(hci::kReset));
+  init_seq_runner_->QueueCommand(hci::CommandPacket::New(hci::kReset));
 
   // HCI_Read_Local_Version_Information
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kReadLocalVersionInfo),
+      hci::CommandPacket::New(hci::kReadLocalVersionInfo),
       [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::ReadLocalVersionInfoReturnParams>();
+        auto params = cmd_complete.return_params<hci::ReadLocalVersionInfoReturnParams>();
         state_.hci_version_ = params->hci_version;
       });
 
   // HCI_Read_Local_Supported_Commands
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kReadLocalSupportedCommands),
+      hci::CommandPacket::New(hci::kReadLocalSupportedCommands),
       [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::ReadLocalSupportedCommandsReturnParams>();
+        auto params = cmd_complete.return_params<hci::ReadLocalSupportedCommandsReturnParams>();
         std::memcpy(state_.supported_commands_, params->supported_commands,
                     sizeof(params->supported_commands));
       });
 
   // HCI_Read_Local_Supported_Features
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kReadLocalSupportedFeatures),
+      hci::CommandPacket::New(hci::kReadLocalSupportedFeatures),
       [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::ReadLocalSupportedFeaturesReturnParams>();
+        auto params = cmd_complete.return_params<hci::ReadLocalSupportedFeaturesReturnParams>();
         state_.lmp_features_[0] = le64toh(params->lmp_features);
       });
 
   // HCI_Read_BD_ADDR
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kReadBDADDR), [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::ReadBDADDRReturnParams>();
+      hci::CommandPacket::New(hci::kReadBDADDR), [this](const hci::EventPacket& cmd_complete) {
+        auto params = cmd_complete.return_params<hci::ReadBDADDRReturnParams>();
         state_.controller_address_ = params->bd_addr;
       });
 
@@ -162,8 +161,9 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
   if (state_.IsCommandSupported(14, hci::SupportedCommand::kReadBufferSize)) {
     // HCI_Read_Buffer_Size
     init_seq_runner_->QueueCommand(
-        hci::BuildHCICommand(hci::kReadBufferSize), [this](const hci::EventPacket& cmd_complete) {
-          auto params = cmd_complete.GetReturnParams<hci::ReadBufferSizeReturnParams>();
+        hci::CommandPacket::New(hci::kReadBufferSize),
+        [this](const hci::EventPacket& cmd_complete) {
+          auto params = cmd_complete.return_params<hci::ReadBufferSizeReturnParams>();
           uint16_t mtu = le16toh(params->hc_acl_data_packet_length);
           uint16_t max_count = le16toh(params->hc_total_num_acl_data_packets);
           if (mtu && max_count) {
@@ -174,24 +174,25 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
 
   // HCI_LE_Read_Local_Supported_Features
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kLEReadLocalSupportedFeatures),
+      hci::CommandPacket::New(hci::kLEReadLocalSupportedFeatures),
       [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::LEReadLocalSupportedFeaturesReturnParams>();
+        auto params = cmd_complete.return_params<hci::LEReadLocalSupportedFeaturesReturnParams>();
         state_.le_state_.supported_features_ = le64toh(params->le_features);
       });
 
   // HCI_LE_Read_Supported_States
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kLEReadSupportedStates),
+      hci::CommandPacket::New(hci::kLEReadSupportedStates),
       [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::LEReadSupportedStatesReturnParams>();
+        auto params = cmd_complete.return_params<hci::LEReadSupportedStatesReturnParams>();
         state_.le_state_.supported_states_ = le64toh(params->le_states);
       });
 
   // HCI_LE_Read_Buffer_Size
   init_seq_runner_->QueueCommand(
-      hci::BuildHCICommand(hci::kLEReadBufferSize), [this](const hci::EventPacket& cmd_complete) {
-        auto params = cmd_complete.GetReturnParams<hci::LEReadBufferSizeReturnParams>();
+      hci::CommandPacket::New(hci::kLEReadBufferSize),
+      [this](const hci::EventPacket& cmd_complete) {
+        auto params = cmd_complete.return_params<hci::LEReadBufferSizeReturnParams>();
         uint16_t mtu = le16toh(params->hc_le_acl_data_packet_length);
         uint8_t max_count = params->hc_total_num_le_acl_data_packets;
         if (mtu && max_count) {
@@ -205,12 +206,17 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
     state_.max_lmp_feature_page_index_ = 1;
 
     // HCI_Read_Local_Extended_Features
-    hci::ReadLocalExtendedFeaturesCommandParams params;
-    params.page_number = 1;  // Try to read page 1.
+    auto cmd_packet = hci::CommandPacket::New(hci::kReadLocalExtendedFeatures,
+                                              sizeof(hci::ReadLocalExtendedFeaturesCommandParams));
+
+    // Try to read page 1.
+    cmd_packet->mutable_view()
+        ->mutable_payload<hci::ReadLocalExtendedFeaturesCommandParams>()
+        ->page_number = 1;
+
     init_seq_runner_->QueueCommand(
-        hci::BuildHCICommand(hci::kReadLocalExtendedFeatures, &params, sizeof(params)),
-        [this](const hci::EventPacket& cmd_complete) {
-          auto params = cmd_complete.GetReturnParams<hci::ReadLocalExtendedFeaturesReturnParams>();
+        std::move(cmd_packet), [this](const hci::EventPacket& cmd_complete) {
+          auto params = cmd_complete.return_params<hci::ReadLocalExtendedFeaturesReturnParams>();
           state_.lmp_features_[1] = le64toh(params->extended_lmp_features);
           state_.max_lmp_feature_page_index_ = params->maximum_page_number;
         });
@@ -258,42 +264,50 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
   // HCI_Set_Event_Mask
   {
     uint64_t event_mask = BuildEventMask();
-    hci::SetEventMaskCommandParams params;
-    params.event_mask = htole64(event_mask);
-    init_seq_runner_->QueueCommand(
-        hci::BuildHCICommand(hci::kSetEventMask, &params, sizeof(params)));
+    auto cmd_packet =
+        hci::CommandPacket::New(hci::kSetEventMask, sizeof(hci::SetEventMaskCommandParams));
+    cmd_packet->mutable_view()->mutable_payload<hci::SetEventMaskCommandParams>()->event_mask =
+        htole64(event_mask);
+    init_seq_runner_->QueueCommand(std::move(cmd_packet));
   }
 
   // HCI_LE_Set_Event_Mask
   {
     uint64_t event_mask = BuildLEEventMask();
-    hci::LESetEventMaskCommandParams params;
-    params.le_event_mask = htole64(event_mask);
-    init_seq_runner_->QueueCommand(
-        hci::BuildHCICommand(hci::kLESetEventMask, &params, sizeof(params)));
+    auto cmd_packet =
+        hci::CommandPacket::New(hci::kLESetEventMask, sizeof(hci::LESetEventMaskCommandParams));
+    cmd_packet->mutable_view()->mutable_payload<hci::LESetEventMaskCommandParams>()->le_event_mask =
+        htole64(event_mask);
+    init_seq_runner_->QueueCommand(std::move(cmd_packet));
   }
 
   // HCI_Write_LE_Host_Support if the appropriate feature bit is not set AND if the controller
   // supports this command.
   if (!state_.HasLMPFeatureBit(1, hci::LMPFeature::kLESupportedHost) &&
       state_.IsCommandSupported(24, hci::SupportedCommand::kWriteLEHostSupport)) {
-    hci::WriteLEHostSupportCommandParams params;
-    params.le_supported_host = hci::GenericEnableParam::kEnable;
-    params.simultaneous_le_host = 0x00;
-    init_seq_runner_->QueueCommand(
-        hci::BuildHCICommand(hci::kWriteLEHostSupport, &params, sizeof(params)));
+    auto cmd_packet = hci::CommandPacket::New(hci::kWriteLEHostSupport,
+                                              sizeof(hci::WriteLEHostSupportCommandParams));
+    auto params =
+        cmd_packet->mutable_view()->mutable_payload<hci::WriteLEHostSupportCommandParams>();
+    params->le_supported_host = hci::GenericEnableParam::kEnable;
+    params->simultaneous_le_host = 0x00;
+    init_seq_runner_->QueueCommand(std::move(cmd_packet));
   }
 
   // If we know that Page 2 of the extended features bitfield is available, then request it.
   if (state_.max_lmp_feature_page_index_ > 1) {
-    hci::ReadLocalExtendedFeaturesCommandParams params;
-    params.page_number = 2;  // Try to read page 2.
+    auto cmd_packet = hci::CommandPacket::New(hci::kReadLocalExtendedFeatures,
+                                              sizeof(hci::ReadLocalExtendedFeaturesCommandParams));
+
+    // Try to read page 2.
+    cmd_packet->mutable_view()
+        ->mutable_payload<hci::ReadLocalExtendedFeaturesCommandParams>()
+        ->page_number = 2;
 
     // HCI_Read_Local_Extended_Features
     init_seq_runner_->QueueCommand(
-        hci::BuildHCICommand(hci::kReadLocalExtendedFeatures, &params, sizeof(params)),
-        [this](const hci::EventPacket& cmd_complete) {
-          auto params = cmd_complete.GetReturnParams<hci::ReadLocalExtendedFeaturesReturnParams>();
+        std::move(cmd_packet), [this](const hci::EventPacket& cmd_complete) {
+          auto params = cmd_complete.return_params<hci::ReadLocalExtendedFeaturesReturnParams>();
           state_.lmp_features_[2] = le64toh(params->extended_lmp_features);
           state_.max_lmp_feature_page_index_ = params->maximum_page_number;
         });

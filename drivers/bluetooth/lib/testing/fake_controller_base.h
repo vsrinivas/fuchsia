@@ -9,18 +9,14 @@
 #include <mx/channel.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "apps/bluetooth/lib/common/packet_view.h"
+#include "apps/bluetooth/lib/hci/hci.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/thread_checker.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
-namespace hci {
-
-class CommandPacket;
-
-}  // namespace hci
-
 namespace testing {
 
 // Abstract base for implementing a fake HCI controller endpoint. This can directly send
@@ -61,7 +57,8 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   const mx::channel& acl_data_channel() const { return acl_channel_; }
 
   // Called when there is an incoming command packet.
-  virtual void OnCommandPacketReceived(const hci::CommandPacket& command_packet) = 0;
+  virtual void OnCommandPacketReceived(
+      const common::PacketView<hci::CommandHeader>& command_packet) = 0;
 
   // Called when there is an outgoing ACL data packet.
   virtual void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) = 0;

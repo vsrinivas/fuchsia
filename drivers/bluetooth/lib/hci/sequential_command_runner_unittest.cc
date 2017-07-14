@@ -13,6 +13,8 @@ namespace bluetooth {
 namespace hci {
 namespace {
 
+constexpr OpCode kTestOpCode = 0xFFFF;
+
 using ::bluetooth::testing::CommandTransaction;
 
 using TestingBase = ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
@@ -97,8 +99,8 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
   SequentialCommandRunner cmd_runner(message_loop()->task_runner(), transport());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Will not run
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -113,8 +115,8 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_FALSE(result);
 
   // Sequence 2 (test)
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Will not run
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -129,9 +131,9 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_FALSE(result);
 
   // Sequence 3 (test)
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Will not run
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -147,8 +149,8 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
   cb_called = 0;
 
   // Sequence 4 (test)
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -165,8 +167,8 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
   result_cb_called = 0;
 
   // Sequence 5 (test) (no callback passed to QueueCommand)
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes));
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes));
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode));
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode));
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -227,8 +229,8 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
 
   // Sequence 1: Sequence will be cancelled after the first command.
   SequentialCommandRunner cmd_runner(message_loop()->task_runner(), transport());
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Should not run
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
@@ -250,12 +252,12 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
 
   // Sequence 2: Sequence will be cancelled after first command. This tests canceling a sequence
   // from a CommandCompleteCallback.
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), [&](const EventPacket& event) {
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), [&](const EventPacket& event) {
     cmd_runner.Cancel();
     EXPECT_TRUE(cmd_runner.IsReady());
     EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   });
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Should not run
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
@@ -274,18 +276,18 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   // Sequence 3: Sequence will be cancelled after first command and immediately followed by a
   // second command which will fail. This tests canceling a sequence and initiating a new one from a
   // CommandCompleteCallback.
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), [&](const EventPacket& event) {
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), [&](const EventPacket& event) {
     cmd_runner.Cancel();
     EXPECT_TRUE(cmd_runner.IsReady());
     EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
     // Queue multiple commands (only one will execute since TestController will send back an
     // error status.
-    cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);
-    cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Shouldn't run
+    cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
+    cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
     cmd_runner.RunCommands(result_cb);
   });
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(command_bytes), cb);  // <-- Should not run
+  cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);  // <-- Should not run
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 

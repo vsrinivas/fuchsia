@@ -81,28 +81,26 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval, uint
   scan_cb_ = callback;
 
   // HCI_LE_Set_Scan_Parameters
-  hci::LESetScanParametersCommandParams params;
-  params.scan_type = active ? hci::LEScanType::kActive : hci::LEScanType::kPassive;
-  params.scan_interval = htole16(scan_interval);
-  params.scan_window = htole16(scan_window);
-  params.filter_policy = filter_policy;
+  auto command = CommandPacket::New(kLESetScanParameters, sizeof(LESetScanParametersCommandParams));
+  auto scan_params = command->mutable_view()->mutable_payload<LESetScanParametersCommandParams>();
+  scan_params->scan_type = active ? LEScanType::kActive : LEScanType::kPassive;
+  scan_params->scan_interval = htole16(scan_interval);
+  scan_params->scan_window = htole16(scan_window);
+  scan_params->filter_policy = filter_policy;
 
   // TODO(armansito): Stop using a public address here when we support LE Privacy. We should
   // *always* use LE Privacy.
-  params.own_address_type = hci::LEOwnAddressType::kPublic;
-
-  hci_cmd_runner()->QueueCommand(
-      hci::BuildHCICommand(hci::kLESetScanParameters, &params, sizeof(params)));
+  scan_params->own_address_type = LEOwnAddressType::kPublic;
+  hci_cmd_runner()->QueueCommand(std::move(command));
 
   // HCI_LE_Set_Scan_Enable
-  hci::LESetScanEnableCommandParams enable_params;
-  enable_params.scanning_enabled = hci::GenericEnableParam::kEnable;
-  enable_params.filter_duplicates =
+  command = CommandPacket::New(kLESetScanEnable, sizeof(LESetScanEnableCommandParams));
+  auto enable_params = command->mutable_view()->mutable_payload<LESetScanEnableCommandParams>();
+  enable_params->scanning_enabled = GenericEnableParam::kEnable;
+  enable_params->filter_duplicates =
       filter_duplicates ? hci::GenericEnableParam::kEnable : hci::GenericEnableParam::kDisable;
 
-  hci_cmd_runner()->QueueCommand(
-      hci::BuildHCICommand(hci::kLESetScanEnable, &enable_params, sizeof(enable_params)));
-
+  hci_cmd_runner()->QueueCommand(std::move(command));
   hci_cmd_runner()->RunCommands([this, period_ms](bool success) {
     FTL_DCHECK(scan_cb_);
     FTL_DCHECK(state() == State::kInitiating);
@@ -175,13 +173,12 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
   FTL_DCHECK(hci_cmd_runner()->IsReady());
 
   // Tell the controller to stop scanning.
-  hci::LESetScanEnableCommandParams enable_params;
-  enable_params.scanning_enabled = hci::GenericEnableParam::kDisable;
-  enable_params.filter_duplicates = hci::GenericEnableParam::kDisable;
+  auto command = CommandPacket::New(kLESetScanEnable, sizeof(LESetScanEnableCommandParams));
+  auto enable_params = command->mutable_view()->mutable_payload<LESetScanEnableCommandParams>();
+  enable_params->scanning_enabled = GenericEnableParam::kDisable;
+  enable_params->filter_duplicates = GenericEnableParam::kDisable;
 
-  hci_cmd_runner()->QueueCommand(
-      hci::BuildHCICommand(hci::kLESetScanEnable, &enable_params, sizeof(enable_params)));
-
+  hci_cmd_runner()->QueueCommand(std::move(command));
   hci_cmd_runner()->RunCommands([this, stopped](bool success) {
     FTL_DCHECK(scan_cb_);
     FTL_DCHECK(state() == State::kStopping);

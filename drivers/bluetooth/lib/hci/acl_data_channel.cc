@@ -12,6 +12,7 @@
 #include "lib/ftl/strings/string_printf.h"
 
 #include "connection.h"
+#include "slab_allocators.h"
 #include "transport.h"
 
 namespace bluetooth {
@@ -126,29 +127,29 @@ void ACLDataChannel::SetDataRxHandler(const DataReceivedCallback& rx_callback,
   rx_task_runner_ = rx_task_runner;
 }
 
-bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
+bool ACLDataChannel::SendPacket(std::unique_ptr<ACLDataPacket> data_packet) {
   if (!is_initialized_) {
     FTL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
     return false;
   }
 
-  // Use ACLDataRxPacket to since we want a data packet "reader" not a "writer".
-  ACLDataRxPacket acl_packet(&data_packet);
-  auto conn = conn_lookup_cb_(acl_packet.GetConnectionHandle());
+  FTL_DCHECK(data_packet);
+
+  auto conn = conn_lookup_cb_(data_packet->connection_handle());
   if (!conn) {
     FTL_VLOG(1) << ftl::StringPrintf(
         "hci: ACLDataChannel: cannot send packet for unknown connection: 0x%04x",
-        acl_packet.GetConnectionHandle());
+        data_packet->connection_handle());
     return false;
   }
 
-  if (acl_packet.payload_size() > GetBufferMTU(*conn)) {
+  if (data_packet->view().payload_size() > GetBufferMTU(*conn)) {
     FTL_LOG(ERROR) << "ACL data packet too large!";
     return false;
   }
 
   QueuedDataPacket queued_packet;
-  queued_packet.bytes = std::move(data_packet);
+  queued_packet.packet = std::move(data_packet);
 
   // We currently only support LE. We don't do anything fancy wrt buffer management.
   FTL_DCHECK(conn->type() == Connection::LinkType::kLE);
@@ -178,7 +179,7 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
   FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
-  const auto& payload = event.payload<NumberOfCompletedPacketsEventParams>();
+  const auto& payload = event.view().payload<NumberOfCompletedPacketsEventParams>();
   size_t total_comp_packets = 0;
   size_t le_total_comp_packets = 0;
 
@@ -247,10 +248,10 @@ void ACLDataChannel::TrySendNextQueuedPackets() {
 
   size_t num_packets_sent = 0;
   while (!to_send.empty()) {
-    auto packet = std::move(to_send.front());
-    to_send.pop();
+    const QueuedDataPacket& packet = to_send.front();
 
-    mx_status_t status = channel_.write(0, packet.bytes.data(), packet.bytes.size(), nullptr, 0);
+    auto packet_bytes = packet.packet->view().data();
+    mx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
     if (status < 0) {
       // TODO(armansito): We'll almost certainly hit this case if the channel's buffer gets filled,
       // so we need to watch for MX_CHANNEL_WRITABLE.
@@ -329,11 +330,18 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   std::lock_guard<std::mutex> lock(rx_mutex_);
   if (!rx_callback_) return;
 
-  FTL_DCHECK(rx_task_runner_);
+  // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
+  // largest possible buffer.
+  auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
+  if (!packet) {
+    FTL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
+    return;
+  }
 
   uint32_t read_size;
-  mx_status_t status = channel_.read(0u, rx_buffer_.mutable_data(), rx_buffer_.size(), &read_size,
-                                     nullptr, 0, nullptr);
+  auto packet_bytes = packet->mutable_view()->mutable_data();
+  mx_status_t status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+                                     &read_size, nullptr, 0, nullptr);
   if (status < 0) {
     FTL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
     // Clear the handler so that we stop receiving events from it.
@@ -349,21 +357,19 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uin
   }
 
   const size_t rx_payload_size = read_size - sizeof(ACLDataHeader);
-  ACLDataRxPacket packet(&rx_buffer_);
-  if (packet.payload_size() != rx_payload_size) {
+  const size_t size_from_header = packet->view().header().data_total_length;
+  if (size_from_header != rx_payload_size) {
     FTL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
-                   << "payload size from header (" << packet.payload_size() << ")"
+                   << "payload size from header (" << size_from_header << ")"
                    << " does not match received payload size: " << rx_payload_size;
     return;
   }
 
-  // TODO(armansito): Use slab-allocated buffer and stop copying.
-  common::DynamicByteBuffer buffer(packet.size());
-  packet.data().Copy(&buffer, 0, packet.size());
+  packet->InitializeFromBuffer();
 
   rx_task_runner_->PostTask(
-      ftl::MakeCopyable([ buffer = std::move(buffer), callback = rx_callback_ ]() mutable {
-        callback(std::move(buffer));
+      ftl::MakeCopyable([ packet = std::move(packet), callback = rx_callback_ ]() mutable {
+        callback(std::move(packet));
       }));
 }
 
