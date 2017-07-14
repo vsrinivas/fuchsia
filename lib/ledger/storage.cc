@@ -81,14 +81,13 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
 }
 
 std::string EncodeModulePath(const fidl::Array<fidl::String>& module_path) {
-  std::string output;
-  for (size_t i = 0; i < module_path.size(); i++) {
-    output.append(StringEscape(module_path[i].get(), kCharsToEscape, kEscaper));
-    if (i < module_path.size() - 1) {
-      output.append(kSubSeparator);
-    }
+  std::vector<std::string> segments;
+  segments.reserve(module_path.size());
+  for (const auto& module_path_part : module_path) {
+    segments.emplace_back(
+        StringEscape(module_path_part.get(), kCharsToEscape, kEscaper));
   }
-  return output;
+  return ftl::JoinStrings(segments, kSubSeparator);
 }
 
 std::string EncodeLinkPath(const LinkPathPtr& link_path) {

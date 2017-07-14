@@ -52,3 +52,18 @@ source_set("storage") {
     "//lib/ftl",
   ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "storage_unittest.cc",
+  ]
+
+  deps = [
+    ":storage",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}
