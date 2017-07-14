@@ -7,9 +7,14 @@
     ],
     "labels": [
         "//apps/cobalt_client",
+        "//apps/cobalt_client/src:cobalt",
         "//apps/cobalt_client/src:tests"
     ],
     "binaries": [
+        {
+            "binary": "cobalt",
+            "bootfs_path": "apps/cobalt"
+        },
         {
             "binary": "cobalt_testapp",
             "bootfs_path": "test/cobalt_testapp"
