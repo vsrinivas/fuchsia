@@ -19,6 +19,11 @@
 
 namespace {
 
+const uint32_t kTestAppProjectId = 2;
+const uint32_t kRareEventMetricId = 1;
+const uint32_t kRareEventEncodingId = 1;
+const std::string kRareEventObservation1 = "Rare-event-1";
+
 std::string StatusToString(cobalt::Status status) {
   switch (status) {
     case cobalt::Status::OK:
@@ -55,16 +60,15 @@ class CobaltTestApp {
         app::ConnectToService<cobalt::CobaltEncoderFactory>(services.get());
     cobalt::CobaltEncoderPtr encoder;
     // TODO(azani): Switch to a test project.
-    encoder_factory->GetEncoder(cobalt::Projects::kLedger, GetProxy(&encoder));
+    encoder_factory->GetEncoder(kTestAppProjectId, GetProxy(&encoder));
 
     // Add 7 observations of rare event 1 to the envelope.
     for (int i = 0; i < 7; i++) {
-      encoder->AddStringObservation(cobalt::LedgerMetrics::kRareEventCounts,
-                                    cobalt::LedgerEncodings::kRareEventEncoding,
-                                    "Rare event 1", [i](cobalt::Status status) {
-                                      FTL_LOG(INFO) << "Add(Rare event 1) => "
-                                                    << StatusToString(status);
-                                    });
+      encoder->AddStringObservation(
+          kRareEventMetricId, kRareEventEncodingId, kRareEventObservation1,
+          [i](cobalt::Status status) {
+            FTL_LOG(INFO) << "Add(Rare-event-1) => " << StatusToString(status);
+          });
     }
 
     // Send the observations.

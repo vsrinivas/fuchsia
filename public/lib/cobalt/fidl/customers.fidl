@@ -19,7 +19,7 @@ module cobalt;
 
 // Ids for projects that use Cobalt within Fuchsia.
 struct Projects {
-  const uint32 kLedger = 1;
+  const uint32 kLedger = 100;
 };
 
 // Ids for metrics for the Ledger project.
