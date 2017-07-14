@@ -141,6 +141,8 @@ func errorToRIO(err error) mx.Status {
 		return mx.ErrAccessDenied
 	case fs.ErrNoSpace:
 		return mx.ErrNoSpace
+	case fs.ErrNotEmpty:
+		return mx.ErrNotEmpty
 	case fs.ErrFailedPrecondition, fs.ErrNotEmpty, fs.ErrNotOpen, fs.ErrIsActive, fs.ErrUnmounted:
 		return mx.ErrBadState
 	case fs.ErrNotAFile:
@@ -193,6 +195,9 @@ func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
 	}
 	if arg&syscall.O_DIRECTORY != 0 {
 		res |= fs.OpenFlagDirectory
+	}
+	if arg&syscall.O_PIPELINE != 0 {
+		res |= fs.OpenFlagPipeline
 	}
 
 	// Ad-hoc mechanism for additional file access mode flags
@@ -287,6 +292,30 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 	case rio.OpSetAttr:
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(f.Touch(atime, mtime))
+	case rio.OpFcntl:
+		flags := openFlagsFromRIO(int32(msg.FcntlFlags()), 0)
+		statusFlags := fs.OpenFlagAppend
+		switch uint32(msg.Arg) {
+		case rio.OpFcntlCmdGetFL:
+			var cflags uint32
+			oflags := f.GetOpenFlags()
+			if oflags.Append() {
+				cflags |= syscall.O_APPEND
+			}
+			if oflags.Read() && oflags.Write() {
+				cflags |= syscall.O_RDWR
+			} else if oflags.Write() {
+				cflags |= syscall.O_WRONLY
+			}
+			msg.SetFcntlFlags(cflags)
+			return mx.ErrOk
+		case rio.OpFcntlCmdSetFL:
+			err := f.SetOpenFlags((f.GetOpenFlags() & ^statusFlags) | (flags & statusFlags))
+			return errorToRIO(err)
+		default:
+			msg.DiscardHandles()
+			return mx.ErrNotSupported
+		}
 	default:
 		println("ThinFS FILE UNKNOWN OP: ", msg.Op())
 		msg.DiscardHandles()
@@ -349,15 +378,17 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			obj = &directoryWrapper{d: d}
 		}
 
-		ro := &rio.RioObject{
-			RioObjectHeader: rio.RioObjectHeader{
-				Status: mx.ErrOk,
-				Type:   uint32(mxio.ProtocolRemote),
-			},
-			Esize:  0,
-			Hcount: 0,
+		if !flags.Pipeline() {
+			ro := &rio.RioObject{
+				RioObjectHeader: rio.RioObjectHeader{
+					Status: mx.ErrOk,
+					Type:   uint32(mxio.ProtocolRemote),
+				},
+				Esize:  0,
+				Hcount: 0,
+			}
+			ro.Write(msg.Handle[0], 0)
 		}
-		ro.Write(msg.Handle[0], 0)
 		if err := vfs.AddHandler(msg.Handle[0], obj); err != nil {
 			println("Failed to create a handle")
 			if f != nil {

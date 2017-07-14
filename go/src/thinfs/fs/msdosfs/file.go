@@ -99,6 +99,19 @@ func (f *file) Dup() (fs.File, error) {
 	}, nil
 }
 
+func (f *file) GetOpenFlags() fs.OpenFlags {
+	f.RLock()
+	defer f.RUnlock()
+	return f.flags
+}
+
+func (f *file) SetOpenFlags(flags fs.OpenFlags) error {
+	f.Lock()
+	defer f.Unlock()
+	f.flags = flags
+	return nil
+}
+
 // TODO(smklein): Test reopen before plugging it into Remote IO
 func (f *file) Reopen(flags fs.OpenFlags) (fs.File, error) {
 	f.fs.RLock()

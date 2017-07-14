@@ -101,6 +101,8 @@ const (
 	OpenFlagFile
 	// OpenFlagDirectory indicates the operation must act on a directory
 	OpenFlagDirectory
+	// OpenFlagPipeline indicates the open request should open immediately with no response
+	OpenFlagPipeline
 )
 
 // Read returns if the Read permission is active
@@ -141,6 +143,10 @@ func (f OpenFlags) File() bool {
 // Directory returns if the Directory flag is active
 func (f OpenFlags) Directory() bool {
 	return f&OpenFlagDirectory != 0
+}
+
+func (f OpenFlags) Pipeline() bool {
+	return f&OpenFlagPipeline != 0
 }
 
 // Whence is used to explain the meaning of an offset in a file
@@ -270,6 +276,13 @@ type File interface {
 	// 1) The flags may be downgraded with the "flags" provided.
 	// 2) The file position is set to either zero or EOF depending on "flags".
 	Reopen(flags OpenFlags) (File, error)
+
+	// GetOpenFlags returns the open flags used to open the file
+	GetOpenFlags() OpenFlags
+
+	// SetOpenFlags attempts to update the open flags. May return an
+	// error if the operation is not supported.
+	SetOpenFlags(flags OpenFlags) error
 
 	// Read reads a maximum of len(p) bytes into "p" from the file at a location decided by "off"
 	// and "whence".
