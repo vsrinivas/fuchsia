@@ -9,7 +9,8 @@ static_library("unittest") {
   ]
   public = [ "include/unittest/unittest.h" ]
   deps = [
-    "//magenta/system/ulib/pretty"
+    "//magenta/system/ulib/pretty",
+    "//magenta/system/public"
   ]
   public_configs = [ ":unittest_config" ]
 }
