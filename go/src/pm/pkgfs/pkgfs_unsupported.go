@@ -76,6 +76,16 @@ func (f unsupportedFile) Write(p []byte, off int64, whence int) (int, error) {
 	return 0, fs.ErrNotSupported
 }
 
+func (f unsupportedFile) GetOpenFlags() fs.OpenFlags {
+	debugLog("pkgfs:unsupported(%s): get open flags", string(f))
+	return 0
+}
+
+func (f unsupportedFile) SetOpenFlags(flags fs.OpenFlags) error {
+	debugLog("pkgfs:unsupported(%s): set open flags", string(f))
+	return fs.ErrNotSupported
+}
+
 var _ = fs.File(unsupportedFile("impl-check"))
 
 type unsupportedDirectory string
