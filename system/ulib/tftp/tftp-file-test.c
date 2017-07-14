@@ -14,41 +14,53 @@
 // This test simulates a tftp file transfer by running two threads. Both the
 // file and transport interfaces are implemented in memory buffers.
 
-#define FILE_SIZE 1000000
-#define XFER_BLOCK_SIZE 1000
-#define XFER_WINDOW_SIZE 20
+struct test_params {
+    uint32_t filesz;
+    uint16_t winsz;
+    uint16_t blksz;
+};
 
-uint8_t src_file[FILE_SIZE];
-uint8_t dst_file[FILE_SIZE];
+uint8_t *src_file;
+uint8_t *dst_file;
 
 /* FAUX FILES INTERFACE */
 
 typedef struct {
     uint8_t* buf;
     char filename[PATH_MAX + 1];
+    size_t filesz;
 } file_info_t;
 
 // Allocate our src and dst buffers, filling both with random values.
-void initialize_files(void) {
+int initialize_files(struct test_params* tp) {
+    src_file = malloc(tp->filesz);
+    dst_file = malloc(tp->filesz);
+
+    if (!src_file || !dst_file) {
+        return 1;
+    }
+
     int* src_as_ints = (int*)src_file;
     int* dst_as_ints = (int*)dst_file;
 
     size_t ndx;
     srand(0);
-    for (ndx = 0; ndx < FILE_SIZE / sizeof(int); ndx++) {
+    for (ndx = 0; ndx < tp->filesz / sizeof(int); ndx++) {
         src_as_ints[ndx] = rand();
         dst_as_ints[ndx] = rand();
     }
-    for (ndx = (FILE_SIZE / sizeof(int)) * sizeof(int);
-         ndx < FILE_SIZE;
+    for (ndx = (tp->filesz / sizeof(int)) * sizeof(int);
+         ndx < tp->filesz;
          ndx++) {
         src_file[ndx] = rand();
         dst_file[ndx] = rand();
     }
+
+    return 0;
 }
 
-int compare_files(void) {
-    return memcmp(src_file, dst_file, FILE_SIZE);
+int compare_files(size_t filesz) {
+    return memcmp(src_file, dst_file, filesz);
 }
 
 const char* file_get_filename(file_info_t* file_info) {
@@ -60,7 +72,7 @@ ssize_t file_open_read(const char* filename, void* file_cookie) {
     file_info->buf = src_file;
     strncpy(file_info->filename, filename, PATH_MAX);
     file_info->filename[PATH_MAX] = '\0';
-    return FILE_SIZE;
+    return file_info->filesz;
 }
 
 tftp_status file_open_write(const char* filename,
@@ -76,12 +88,12 @@ tftp_status file_open_write(const char* filename,
 tftp_status file_read(void* data, size_t* length, off_t offset,
                       void* file_cookie) {
     file_info_t* file_info = file_cookie;
-    if (offset > FILE_SIZE) {
+    if ((size_t)offset > file_info->filesz) {
         // Something has gone wrong in libtftp
         return TFTP_ERR_INTERNAL;
     }
-    if ((offset + *length) > FILE_SIZE) {
-        *length = FILE_SIZE - offset;
+    if ((offset + *length) > file_info->filesz) {
+        *length = file_info->filesz - offset;
     }
     memcpy(data, &file_info->buf[offset], *length);
     return TFTP_NO_ERROR;
@@ -90,7 +102,7 @@ tftp_status file_read(void* data, size_t* length, off_t offset,
 tftp_status file_write(const void* data, size_t* length, off_t offset,
                        void* file_cookie) {
     file_info_t* file_info = file_cookie;
-    if ((offset >= FILE_SIZE) || ((offset + *length) > FILE_SIZE)) {
+    if (((size_t)offset >= file_info->filesz) || ((offset + *length) > file_info->filesz)) {
         // Something has gone wrong in libtftp
         return TFTP_ERR_INTERNAL;
     }
@@ -212,7 +224,7 @@ int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
 
 /// SEND THREAD
 
-bool run_send_test(void) {
+bool run_send_test(struct test_params* tp) {
     BEGIN_HELPER;
 
     // Configure TFTP session
@@ -226,6 +238,7 @@ bool run_send_test(void) {
 
     // Configure file interface
     file_info_t file_info;
+    file_info.filesz = tp->filesz;
     tftp_file_interface file_callbacks = { file_open_read,
                                            file_open_write,
                                            file_read,
@@ -246,16 +259,16 @@ bool run_send_test(void) {
     ASSERT_EQ(status, TFTP_NO_ERROR, "could not set transport interface");
 
     // Allocate intermediate buffers
-    size_t buf_sz = XFER_BLOCK_SIZE > PATH_MAX ?
-                    XFER_BLOCK_SIZE + 2 : PATH_MAX + 2;
+    size_t buf_sz = tp->blksz > PATH_MAX ?
+                    tp->blksz + 2 : PATH_MAX + 2;
     char* msg_in_buf = malloc(buf_sz);
     ASSERT_NEQ(msg_in_buf, NULL, "memory allocation failure");
     char* msg_out_buf = malloc(buf_sz);
     ASSERT_NEQ(msg_out_buf, NULL, "memory allocation failure");
 
     char err_msg_buf[128];
-    size_t block_sz = XFER_BLOCK_SIZE;
-    uint8_t window_sz = XFER_WINDOW_SIZE;
+    size_t block_sz = tp->blksz;
+    uint16_t window_sz = tp->winsz;
 
     tftp_request_opts opts = { .inbuf = msg_in_buf,
                                .inbuf_sz = buf_sz,
@@ -274,13 +287,14 @@ done:
 }
 
 void* tftp_send_main(void* arg) {
-    run_send_test();
+    struct test_params* tp = arg;
+    run_send_test(tp);
     pthread_exit(NULL);
 }
 
 /// RECV THREAD
 
-bool run_recv_test(void) {
+bool run_recv_test(struct test_params* tp) {
     BEGIN_HELPER;
 
     // Configure TFTP session
@@ -294,6 +308,7 @@ bool run_recv_test(void) {
 
     // Configure file interface
     file_info_t file_info;
+    file_info.filesz = tp->filesz;
     tftp_file_interface file_callbacks = { file_open_read,
                                            file_open_write,
                                            file_read,
@@ -313,8 +328,8 @@ bool run_recv_test(void) {
     ASSERT_EQ(status, TFTP_NO_ERROR, "could not set transport interface");
 
     // Allocate intermediate buffers
-    size_t buf_sz = XFER_BLOCK_SIZE > PATH_MAX ?
-                    XFER_BLOCK_SIZE + 2 : PATH_MAX + 2;
+    size_t buf_sz = tp->blksz > PATH_MAX ?
+                    tp->blksz + 2 : PATH_MAX + 2;
     char* msg_in_buf = malloc(buf_sz);
     ASSERT_NEQ(msg_in_buf, NULL, "memory allocation failure");
     char* msg_out_buf = malloc(buf_sz);
@@ -338,28 +353,48 @@ done:
 }
 
 void* tftp_recv_main(void* arg) {
-    run_recv_test();
+    struct test_params* tp = arg;
+    run_recv_test(tp);
     pthread_exit(NULL);
 }
 
-bool test_tftp_send_file(void) {
+bool run_one_send_test(struct test_params *tp) {
     BEGIN_TEST;
-    initialize_files();
+    int init_result = initialize_files(tp);
+    ASSERT_EQ(init_result, 0, "failure to initialize state");
 
     pthread_t send_thread, recv_thread;
-    pthread_create(&send_thread, NULL, tftp_send_main, NULL);
-    pthread_create(&recv_thread, NULL, tftp_recv_main, NULL);
+    pthread_create(&send_thread, NULL, tftp_send_main, tp);
+    pthread_create(&recv_thread, NULL, tftp_recv_main, tp);
 
     pthread_join(send_thread, NULL);
     pthread_join(recv_thread, NULL);
 
-    int compare_result = compare_files();
+    int compare_result = compare_files(tp->filesz);
     EXPECT_EQ(compare_result, 0, "output file mismatch");
-
     END_TEST;
+}
+
+bool test_tftp_send_file(void) {
+    struct test_params tp = {.filesz = 1000000, .winsz = 20, .blksz = 1000};
+    return run_one_send_test(&tp);
+}
+
+bool test_tftp_send_file_wrapping_block_count(void) {
+    // Wraps block count 4 times
+    struct test_params tp = {.filesz = 2100000, .winsz = 64, .blksz = 8};
+    return run_one_send_test(&tp);
+}
+
+bool test_tftp_send_file_lg_window(void) {
+    // Make sure that a window size > 255 works properly
+    struct test_params tp = {.filesz = 1000000, .winsz = 1024, .blksz = 1024};
+    return run_one_send_test(&tp);
 }
 
 BEGIN_TEST_CASE(tftp_send_file)
 RUN_TEST(test_tftp_send_file)
+RUN_TEST(test_tftp_send_file_wrapping_block_count)
+RUN_TEST(test_tftp_send_file_lg_window)
 END_TEST_CASE(tftp_send_file)
 

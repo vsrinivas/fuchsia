@@ -943,6 +943,73 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     END_TEST;
 }
 
+static bool test_tftp_receive_data_block_wrapping(void) {
+    BEGIN_TEST;
+
+    constexpr unsigned long kWrapAt = 0x3ffff;
+    constexpr int kBlockSize = 8;
+    constexpr unsigned long kFileSize = (kWrapAt + 2) * kBlockSize;
+
+    test_state ts;
+    static bool write_called;
+    write_called = false;
+    ts.reset(1024, 2048, 2048);
+
+    tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
+    ifc.open_write = [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                         EXPECT_STR_EQ(filename, kFilename, strlen(kFilename), "bad filename");
+                         EXPECT_EQ(size, kFileSize, "bad file size");
+                         return 0;
+                     };
+    ifc.write = [](const void* data, size_t* length, off_t offset, void* file_cookie)
+                    -> tftp_status {
+                    // Remember that the block count starts at zero, which makes the offset
+                    // calculation a bit counter-intuitive (one might expect that we would
+                    // be writing to (kWrapAt + 1) * kBlockSize).
+                    EXPECT_EQ(kWrapAt * kBlockSize, offset, "block count failed to wrap");
+                    write_called = true;
+                    return TFTP_NO_ERROR;
+                };
+    tftp_session_set_file_interface(ts.session, &ifc);
+
+    char req_buf[1024];
+    req_buf[0] = 0x00;
+    req_buf[1] = 0x02;  // Opcode (WRQ)
+    int req_buf_sz = 2 + snprintf(&req_buf[2], sizeof(req_buf) - 2,
+                                  "%s%cOCTET%cTSIZE%c%lu%cBLKSIZE%c%d", kFilename,
+                                  '\0', '\0', '\0', kFileSize, '\0', '\0', kBlockSize) + 1;
+    ASSERT_LT(req_buf_sz, (int) sizeof(req_buf), "insufficient space for WRQ message");
+    auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
+                                   &ts.timeout, nullptr);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
+    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+
+    // Artificially advance to force block wrapping
+    ts.session->block_number = kWrapAt;
+
+    uint8_t data_buf[] = {
+        0x00, 0x03,  // Opcode (DATA)
+        0x00, 0x00,  // Block
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08  // Data
+    };
+
+    status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen,
+                              &ts.timeout, NULL);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "failed to process data");
+    EXPECT_TRUE(write_called, "no attempt to write data");
+    EXPECT_EQ(kWrapAt + 1, ts.session->block_number, "failed to advance block number");
+
+    uint8_t expected_ack[] = {
+        0x00, 0x04,  // Opcode (ACK)
+        0x00, 0x00   // Block
+    };
+    EXPECT_EQ(sizeof(expected_ack), ts.outlen, "response size mismatch");
+    EXPECT_EQ(0, memcmp(expected_ack, ts.out, sizeof(expected_ack)), "bad response");
+
+    END_TEST;
+}
+
 static bool test_tftp_send_data_receive_ack(void) {
     BEGIN_TEST;
 
@@ -1140,6 +1207,160 @@ static bool test_tftp_send_data_receive_ack_window_size(void) {
     END_TEST;
 }
 
+static bool test_tftp_send_data_receive_ack_block_wrapping(void) {
+    BEGIN_TEST;
+
+    constexpr unsigned long kWrapAt = 0x3ffff;
+    constexpr int kBlockSize = 8;
+    constexpr unsigned long kFileSize = (kWrapAt + 2) * kBlockSize;
+
+    static int reads_performed;
+    reads_performed = 0;
+
+    test_state ts;
+    ts.reset(1024, 2048, 2048);
+
+    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET, kFileSize,
+                                              kBlockSize, 0, 0, ts.out, &ts.outlen, &ts.timeout);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
+    EXPECT_TRUE(verify_write_request(ts), "bad write request");
+
+    char oack_buf[256];
+    oack_buf[0] = 0x00;
+    oack_buf[1] = 0x06;
+    size_t oack_buf_sz = 2 + snprintf(&oack_buf[2], sizeof(oack_buf) - 2,
+                                      "TSIZE%c%lu%cBLKSIZE%c%d",
+                                      '\0', kFileSize, '\0', '\0', kBlockSize) + 1;
+
+    tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
+    ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
+                   EXPECT_EQ(0, offset, "incorrect initial read");
+                   reads_performed++;
+                   return TFTP_NO_ERROR;
+               };
+    tftp_session_set_file_interface(ts.session, &ifc);
+
+    status = tftp_process_msg(ts.session, oack_buf, oack_buf_sz, ts.out, &ts.outlen,
+                              &ts.timeout, NULL);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failure to process OACK");
+    EXPECT_EQ(1, reads_performed, "failed to call read function");
+
+    // Artificially advance the session to a point where wrapping will occur
+    ts.session->block_number = kWrapAt;
+
+    uint8_t data_buf[4 + kBlockSize];
+    size_t data_buf_len = sizeof(data_buf);
+    ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
+                   // Keep in mind that the block index starts at 1, so the offset calculation
+                   // is not necessarily intuitive
+                   EXPECT_EQ(kWrapAt * kBlockSize, offset, "incorrect wrapping read");
+                   reads_performed++;
+                   return TFTP_NO_ERROR;
+               };
+    tftp_session_set_file_interface(ts.session, &ifc);
+    status = tftp_prepare_data(ts.session, data_buf, &data_buf_len, &ts.timeout, NULL);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failed to generate DATA packet");
+    EXPECT_EQ(2, reads_performed, "failed to call read function");
+    EXPECT_EQ(sizeof(data_buf), data_buf_len, "improperly formatted DATA packet");
+    unsigned int opcode = data_buf[0] << 8 | data_buf[1];
+    EXPECT_EQ(0x0003, opcode, "incorrect DATA packet opcode");
+    unsigned int block = data_buf[2] << 8 | data_buf[3];
+    EXPECT_EQ(0x0000, block, "incorrect DATA packet block");
+
+    END_TEST;
+}
+
+static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
+    BEGIN_TEST;
+
+    constexpr unsigned long kLastBlockSent = 0x40003;
+    constexpr unsigned long kAckBlock = 0x3fffb;
+    constexpr int kBlockSize = 8;
+    constexpr unsigned long kFileSize = 0x50000 * kBlockSize;
+
+    static int reads_performed;
+    reads_performed = 0;
+
+    test_state ts;
+    ts.reset(1024, 2048, 2048);
+
+    // Create a write request
+    auto status = tftp_generate_write_request(ts.session, kFilename, MODE_OCTET, kFileSize,
+                                              kBlockSize, 0, 0, ts.out, &ts.outlen, &ts.timeout);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
+    EXPECT_TRUE(verify_write_request(ts), "bad write request");
+
+    // Simulate a response (OACK)
+    char oack_buf[256];
+    oack_buf[0] = 0x00;
+    oack_buf[1] = 0x06;
+    size_t oack_buf_sz = 2 + snprintf(&oack_buf[2], sizeof(oack_buf) - 2,
+                                      "TSIZE%c%lu%cBLKSIZE%c%d",
+                                      '\0', kFileSize, '\0', '\0', kBlockSize) + 1;
+
+    tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
+    ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
+                   EXPECT_EQ(0, offset, "incorrect initial read");
+                   reads_performed++;
+                   return TFTP_NO_ERROR;
+               };
+    tftp_session_set_file_interface(ts.session, &ifc);
+
+    // Process OACK and generate write of first block
+    status = tftp_process_msg(ts.session, oack_buf, oack_buf_sz, ts.out, &ts.outlen,
+                              &ts.timeout, NULL);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failure to process OACK");
+    EXPECT_EQ(1, reads_performed, "failed to call read function");
+
+    // Artificially advance the session so we can test wrapping
+    ts.session->block_number = kLastBlockSent;
+
+    // Create a DATA packet for block kLastBlockSent + 1
+    uint8_t data_buf[4 + kBlockSize] = {0};
+    size_t data_buf_len = sizeof(data_buf);
+    tftp_data_msg* msg = reinterpret_cast<tftp_data_msg*>(&data_buf[0]);
+    ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
+                   // Keep in mind that the block index starts at 1, so the offset calculation
+                   // is not necessarily intuitive
+                   EXPECT_EQ(kLastBlockSent * kBlockSize, offset, "incorrect read offset");
+                   reads_performed++;
+                   return TFTP_NO_ERROR;
+               };
+    tftp_session_set_file_interface(ts.session, &ifc);
+    status = tftp_prepare_data(ts.session, data_buf, &data_buf_len, &ts.timeout, NULL);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failed to generate DATA packet");
+    EXPECT_EQ(2, reads_performed, "failed to call read function");
+    EXPECT_EQ(sizeof(data_buf), data_buf_len, "improperly formatted DATA packet");
+    unsigned int opcode = htons(msg->opcode);
+    EXPECT_EQ(OPCODE_DATA, opcode, "incorrect DATA packet opcode");
+    uint16_t offset = msg->block;
+    EXPECT_EQ((kLastBlockSent + 1) & 0xffff, offset, "incorrect DATA packet block");
+
+    // Simulate an ACK response that is before our last block wrap
+    tftp_data_msg ack_msg;
+    ack_msg.opcode = htons(OPCODE_ACK);
+    ack_msg.block = kAckBlock & 0xffff;
+    ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
+                   EXPECT_EQ(kAckBlock * kBlockSize, offset, "incorrect read offset");
+                   reads_performed++;
+                   return TFTP_NO_ERROR;
+               };
+    tftp_session_set_file_interface(ts.session, &ifc);
+
+    // Next DATA packet should backup to proper address (before wrap)
+    status = tftp_process_msg(ts.session, reinterpret_cast<void*>(&ack_msg), sizeof(ack_msg),
+                              ts.out, &ts.outlen, &ts.timeout, NULL);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "no ACK generated");
+    EXPECT_EQ(3, reads_performed, "failed to call read function");
+    ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + kBlockSize, "improper DATA packet size");
+    msg = reinterpret_cast<tftp_data_msg*>(ts.out);
+    EXPECT_EQ(OPCODE_DATA, htons(msg->opcode), "incorrect DATA packet opcode");
+    EXPECT_EQ((kAckBlock + 1) & 0xffff, msg->block, "incorrect DATA packet block");
+    EXPECT_EQ(ts.session->block_number, kAckBlock + 1, "session offset not rewound correctly");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(tftp_setup)
 RUN_TEST(test_tftp_init)
 RUN_TEST(test_tftp_session_options)
@@ -1176,6 +1397,7 @@ RUN_TEST(test_tftp_receive_data_blocksize)
 RUN_TEST(test_tftp_receive_data_windowsize)
 RUN_TEST(test_tftp_receive_data_skipped_block)
 RUN_TEST(test_tftp_receive_data_windowsize_skipped_block)
+RUN_TEST(test_tftp_receive_data_block_wrapping)
 END_TEST_CASE(tftp_receive_data)
 
 BEGIN_TEST_CASE(tftp_send_data)
@@ -1183,6 +1405,8 @@ RUN_TEST(test_tftp_send_data_receive_ack)
 RUN_TEST(test_tftp_send_data_receive_final_ack)
 RUN_TEST(test_tftp_send_data_receive_ack_skipped_block)
 RUN_TEST(test_tftp_send_data_receive_ack_window_size)
+RUN_TEST(test_tftp_send_data_receive_ack_block_wrapping)
+RUN_TEST(test_tftp_send_data_receive_ack_skip_block_wrap)
 END_TEST_CASE(tftp_send_data)
 
 int main(int argc, char* argv[]) {

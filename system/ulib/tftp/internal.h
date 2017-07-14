@@ -54,7 +54,7 @@ typedef struct tftp_options_t {
     uint8_t timeout;
     uint32_t file_size;
 
-    uint32_t window_size;
+    uint16_t window_size;
 } tftp_options;
 
 /**
@@ -103,7 +103,7 @@ struct tftp_session_t {
     // "Negotiated" values
     size_t file_size;
     tftp_mode mode;
-    uint32_t window_size;
+    uint16_t window_size;
     uint16_t block_size;
     uint8_t timeout;
 
@@ -132,7 +132,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
                                         size_t datalen,
                                         size_t block_size,
                                         uint8_t timeout,
-                                        uint8_t window_size,
+                                        uint16_t window_size,
                                         void* outgoing,
                                         size_t* outlen,
                                         uint32_t* timeout_ms);

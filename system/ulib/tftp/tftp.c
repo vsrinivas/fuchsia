@@ -220,7 +220,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
                                         size_t datalen,
                                         size_t block_size,
                                         uint8_t timeout,
-                                        uint8_t window_size,
+                                        uint16_t window_size,
                                         void* outgoing,
                                         size_t* outlen,
                                         uint32_t* timeout_ms) {
@@ -500,7 +500,11 @@ tftp_status tftp_handle_data(tftp_session* session,
     xprintf(" <- Block %u (Last = %u, Offset = %d, Size = %ld, Left = %ld)\n", data->block,
             session->block_number, session->block_number * session->block_size,
             session->file_size, session->file_size - session->block_number * session->block_size);
-    if (data->block == session->block_number + 1) {
+    // The block field of the message is only 16 bits wide. To support large files
+    // (> 65535 * blocksize bytes), we allow the block number to wrap. We use signed modulo
+    // math to determine the relative location of the block to our current position.
+    int16_t block_delta = data->block - (uint16_t)session->block_number;
+    if (block_delta == 1) {
         xprintf("Advancing normally + 1\n");
         size_t wr = msg_len - sizeof(tftp_data_msg);
         // TODO(tkilbourn): assert that these function pointers are set
@@ -512,16 +516,11 @@ tftp_status tftp_handle_data(tftp_session* session,
         }
         session->block_number++;
         session->window_index++;
-    } else if (data->block > session->block_number + 1) {
-        // Force sending a ACK with the last block_number we received
-        xprintf("Skipped: got %d, expected %d\n", data->block, session->block_number + 1);
-        session->window_index = session->window_size;
     } else {
-        xprintf("Resetting to block %d\n", data->block);
-        // Skip writing this block; subsequent blocks will get overwritten
-        // though.
-        session->block_number = data->block;
-        session->window_index = 1;
+        // Force sending a ACK with the last block_number we received
+        xprintf("Skipped: got %d, expected %d\n", session->block_number + block_delta,
+                session->block_number + 1);
+        session->window_index = session->window_size;
     }
 
     if (session->window_index == session->window_size ||
@@ -529,7 +528,7 @@ tftp_status tftp_handle_data(tftp_session* session,
         xprintf(" -> Ack %d\n", session->block_number);
         session->window_index = 0;
         OPCODE(ack_data, OPCODE_ACK);
-        ack_data->block = session->block_number;
+        ack_data->block = session->block_number & 0xffff;
         *resp_len = sizeof(*ack_data);
         if (session->block_number * session->block_size >= session->file_size) {
             return TFTP_TRANSFER_COMPLETED;
@@ -566,10 +565,15 @@ tftp_status tftp_handle_ack(tftp_session* session,
     tftp_data_msg* resp_data = (void*)resp;
 
     xprintf(" <- Ack %d\n", ack_data->block);
-    session->block_number = ack_data->block;
+
+    // Since we track blocks in 32 bits, but the packets only support 16 bits, calculate the
+    // signed 16 bit offset to determine the adjustment to the current position.
+    int16_t block_offset = ack_data->block - (uint16_t)session->block_number;
+    session->block_number += block_offset;
     session->window_index = 0;
 
-    if ((session->block_number + session->window_index) * session->block_size >= session->file_size) {
+    if (((session->block_number + session->window_index) * session->block_size) >=
+        session->file_size) {
         *resp_len = 0;
         return TFTP_TRANSFER_COMPLETED;
     }
@@ -892,7 +896,7 @@ tftp_status tftp_push_file(tftp_session* session,
                     }
                 }
                 if (ret < 0) {
-                    REPORT_ERR(opts, "failed to parse request");
+                    REPORT_ERR(opts, "failed during timeout processing");
                     return ret;
                 }
                 continue;
@@ -967,7 +971,7 @@ tftp_status tftp_handle_request(tftp_session* session,
                         }
                     }
                     if (ret < 0) {
-                        REPORT_ERR(opts, "failed to parse request");
+                        REPORT_ERR(opts, "failed during timeout processing");
                         return ret;
                     }
                 }

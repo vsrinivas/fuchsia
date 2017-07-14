@@ -14,6 +14,10 @@
  * option extension (RFC 2347) the block size (RFC 2348) timeout interval,
  * transfer size (RFC 2349) and the window size (RFC 7440) options.
  *
+ * It also supports block count rollover, which allows us to transfer files
+ * larger than 65536 * block size bytes. This is purported to be a common
+ * extension of the TFTP protocol.
+ *
  * This library does not deal with the transport of the protocol itself and
  * should be able to be plugged into an existing client or server program.
  *
@@ -80,7 +84,7 @@ typedef struct {
    size_t outbuf_sz;     // required
    tftp_mode* mode;
    size_t* block_size;
-   uint8_t* window_size;
+   uint16_t* window_size;
    uint8_t* timeout;
    char* err_msg;
    size_t err_msg_sz;
