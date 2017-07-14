@@ -5,6 +5,7 @@
 #pragma once
 
 #include <list>
+#include <ostream>
 #include <string>
 
 namespace maxwell {
@@ -15,8 +16,9 @@ struct Config {
 
   // Set to true if the MI Dashboard should be started.
   bool mi_dashboard;
-  // Set to true if the Kronk agent should be started.
-  bool kronk;
+
 };
+
+std::ostream& operator<< (std::ostream& out, const Config& config);
 
 }  // namespace maxwell

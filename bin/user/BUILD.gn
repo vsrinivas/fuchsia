@@ -6,8 +6,8 @@ declare_args() {
   # DEPRECATED: The below variables are deprecated.
   # Instead use a config json as described in README.md.
 
-  # if false, bypasses starting the MI Dashboard
-  mi_dashboard = true
+  # set to true to bypass mi_dashboard launch.
+  deprecated_no_mi_dashboard = false
 }
 
 source_set("user") {
@@ -36,6 +36,7 @@ executable("maxwell_main") {
 source_set("config") {
   sources = [
     "config.h",
+    "config.cc",
   ]
 }
 
@@ -67,8 +68,8 @@ source_set("user_intelligence_provider") {
 
   defines = []
 
-  if (mi_dashboard) {
-    defines += [ "DEPRECATED_MI_DASHBOARD" ]
+  if (deprecated_no_mi_dashboard) {
+    defines += [ "DEPRECATED_NO_MI_DASHBOARD" ]
   }
 }
 

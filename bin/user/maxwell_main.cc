@@ -87,7 +87,7 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 
   // Read values into the |out| struct.
   out->mi_dashboard = config_doc["mi_dashboard"].GetBool();
-#ifndef DEPRECATED_MI_DASHBOARD
+#ifdef DEPRECATED_NO_MI_DASHBOARD
   // TODO(thatguy): Remove this once references to it in Modular tests
   // have been removed.
   out->mi_dashboard = false;
@@ -131,6 +131,8 @@ int main(int argc, const char** argv) {
   if (!maxwell::LoadAndValidateConfig(config_path, &config)) {
     return 1;
   }
+
+  FTL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
   mtl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();

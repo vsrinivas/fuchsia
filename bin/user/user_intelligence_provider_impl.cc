@@ -96,28 +96,27 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     StartAgent(agent);
   }
 
-// Toggle using the "mi_dashboard" gn arg
-#ifdef MI_DASHBOARD
-  StartAgent(
-      "file:///system/apps/agents/mi_dashboard.dartx",
-      [=](const std::string& url, app::ServiceNamespace* agent_host) {
-        AddStandardServices(url, agent_host);
-        agent_host->AddService<maxwell::ContextDebug>(
-            [=](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
-              app::ConnectToService(context_services_.get(),
-                                    std::move(request));
-            });
-        agent_host->AddService<maxwell::SuggestionDebug>(
-            [=](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
-              app::ConnectToService(suggestion_services_.get(),
-                                    std::move(request));
-            });
-        agent_host->AddService<maxwell::UserActionLog>(
-            [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
-              user_action_log_->Duplicate(std::move(request));
-            });
-      });
-#endif
+  if (config.mi_dashboard) {
+    StartAgent(
+        "file:///system/apps/agents/mi_dashboard.dartx",
+        [=](const std::string& url, app::ServiceNamespace* agent_host) {
+          AddStandardServices(url, agent_host);
+          agent_host->AddService<maxwell::ContextDebug>(
+              [=](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
+                app::ConnectToService(context_services_.get(),
+                                      std::move(request));
+              });
+          agent_host->AddService<maxwell::SuggestionDebug>(
+              [=](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
+                app::ConnectToService(suggestion_services_.get(),
+                                      std::move(request));
+              });
+          agent_host->AddService<maxwell::UserActionLog>(
+              [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
+                user_action_log_->Duplicate(std::move(request));
+              });
+        });
+  }
 
   // Start privileged local Framework-style Agents.
   {
