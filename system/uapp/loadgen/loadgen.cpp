@@ -12,9 +12,9 @@
 #include <mxtl/limits.h>
 #include <mxtl/unique_ptr.h>
 
-static constexpr uint32_t kDefaultNumThreads = 64;
-static constexpr float kDefaultMinWorkMsec = 4.0f;
-static constexpr float kDefaultMaxWorkMsec = 8.5f;
+static constexpr uint32_t kDefaultNumThreads = 4;
+static constexpr float kDefaultMinWorkMsec = 5.0f;
+static constexpr float kDefaultMaxWorkMsec = 15.0f;
 static constexpr float kDefaultMinSleepMsec = 1.0f;
 static constexpr float kDefaultMaxSleepMsec = 2.5f;
 
@@ -82,16 +82,17 @@ mx_status_t LoadGeneratorThread::Start() {
 int LoadGeneratorThread::Run() {
     constexpr double kMinNum = 1.0;
     constexpr double kMaxNum = 100000000.0;
+    uint32_t ticks_per_msec = static_cast<uint32_t>(mx_ticks_per_second() / 1000);
     accumulator_ = MakeRandomDouble(kMinNum, kMaxNum);
 
     // While it is not time to quit, waste time performing pointless double
     // precision floating point math.
     while (!quit_) {
         double work_delay = MakeRandomDouble(min_work_msec(), max_work_msec());
-        mx_time_t work_deadline = mx_time_get(MX_CLOCK_MONOTONIC)
-                                + static_cast<mx_time_t>(work_delay * 1000000000.0);
+        uint64_t work_deadline_ticks = mx_ticks_get()
+                                     + static_cast<mx_time_t>(work_delay * ticks_per_msec);
 
-        while (!quit_ && (mx_time_get(MX_CLOCK_MONOTONIC) < work_deadline)) {
+        while (!quit_ && (mx_ticks_get() < work_deadline_ticks)) {
             accumulator_ += MakeRandomDouble(kMinNum, kMaxNum);
             accumulator_ *= MakeRandomDouble(kMinNum, kMaxNum);
             accumulator_ -= MakeRandomDouble(kMinNum, kMaxNum);
@@ -106,7 +107,7 @@ int LoadGeneratorThread::Run() {
 
         double sleep_delay = MakeRandomDouble(min_sleep_msec(), max_sleep_msec());
         mx_time_t sleep_deadline = mx_time_get(MX_CLOCK_MONOTONIC)
-                                 + static_cast<mx_time_t>(sleep_delay * 1000000000.0);
+                                 + static_cast<mx_time_t>(sleep_delay * 1000000.0);
 
         do {
             static constexpr mx_time_t max_sleep = MX_MSEC(10);
@@ -129,7 +130,7 @@ int LoadGeneratorThread::Run() {
 
 double LoadGeneratorThread::MakeRandomDouble(double min, double max) {
     double norm(rand_r(&seed_));
-    norm /= mxtl::numeric_limits<unsigned int>::max();
+    norm /= mxtl::numeric_limits<int>::max();
     return min + (norm * (max - min));
 }
 
