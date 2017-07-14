@@ -30,7 +30,7 @@ interface UserProvider {
   // Removes information of a user from the local user database.
   //
   // |account_id| is received from either AddUser() or PreviousUsers().
-  RemoveUser(string account_id);
+  RemoveUser(string account_id) => (string? error_code);
 
   // Uses the credentials provided in AddUser() to start a user session. This
   // would mean syncing with the user's ledger instance and displaying a user

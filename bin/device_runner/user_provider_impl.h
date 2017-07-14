@@ -42,7 +42,8 @@ class UserProviderImpl : UserProvider {
                const AddUserCallback& callback) override;
 
   // |UserProvider|
-  void RemoveUser(const fidl::String& account_id) override;
+  void RemoveUser(const fidl::String& account_id,
+                  const RemoveUserCallback& callback) override;
 
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);

@@ -19,12 +19,17 @@ interface AccountProvider {
   // application.
   Initialize(AccountProviderContext account_provider_context);
 
-  // Adds a new user account. This involves talking to the identity provider.
-  // |display_name| is a *temporary* field to associate a human-readable name
-  // with an account. In the future we want to get this from the identity
-  // provider.
+  // Adds a new user account. This involves talking to the identity provider and
+  // fetching profile attributes.
   AddAccount(IdentityProvider identity_provider)
        => (Account? account, string? error_code);
+
+  // Removes an existing user account. This involves talking to account's
+  // identity provider and revoking user credentials both locally and remotely.
+  // This operation also deletes cached tokens for the given account.
+  // TODO(ukode): Modify this api to take account_id and IDP as input once the
+  // Account struct is cleaned up.
+  RemoveAccount(Account account) => (AuthErr status);
 
   // Get a |TokenProviderFactory| associated with an |account_id|. It is used
   // by the Framework to provide a specialized instances of |TokenProvider| to

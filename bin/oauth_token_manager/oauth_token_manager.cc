@@ -62,6 +62,8 @@ constexpr char kGoogleOAuthAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
 constexpr char kGoogleOAuthTokenEndpoint[] =
     "https://www.googleapis.com/oauth2/v4/token";
+constexpr char kGoogleRevokeTokenEndpoint[] =
+    "https://accounts.google.com/o/oauth2/revoke";
 constexpr char kGooglePeopleGetEndpoint[] =
     "https://www.googleapis.com/plus/v1/people/me";
 constexpr char kFirebaseAuthEndpoint[] =
@@ -169,6 +171,36 @@ bool WriteCredsFile(const std::string& serialized_creds) {
   }
 
   return true;
+}
+
+// Fetch user's refresh token from local credential store. In case of errors
+// or account not found, an empty token is returned.
+std::string GetRefreshTokenFromCredsFile(const std::string& account_id) {
+  if (account_id.empty()) {
+    FTL_LOG(ERROR) << "Account id is empty.";
+    return "";
+  }
+
+  const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
+  if (credentials_storage == nullptr) {
+    FTL_LOG(ERROR) << "Failed to parse credentials.";
+    return "";
+  }
+
+  for (const auto* credential : *credentials_storage->creds()) {
+    if (credential->account_id()->str() == account_id) {
+      for (const auto* token : *credential->tokens()) {
+        switch (token->identity_provider()) {
+          case ::auth::IdentityProvider_GOOGLE:
+            return token->refresh_token()->str();
+          default:
+            FTL_LOG(WARNING) << "Unrecognized IdentityProvider"
+                             << token->identity_provider();
+        }
+      }
+    }
+  }
+  return "";
 }
 
 // Exactly one of success_callback and failure_callback is ever invoked.
@@ -368,6 +400,10 @@ class OAuthTokenManagerApp : AccountProvider {
                   const AddAccountCallback& callback) override;
 
   // |AccountProvider|
+  void RemoveAccount(AccountPtr account,
+                     const RemoveAccountCallback& callback) override;
+
+  // |AccountProvider|
   void GetTokenProviderFactory(
       const fidl::String& account_id,
       fidl::InterfaceRequest<TokenProviderFactory> request) override;
@@ -436,6 +472,7 @@ class OAuthTokenManagerApp : AccountProvider {
   class GoogleFirebaseTokensCall;
   class GoogleOAuthTokensCall;
   class GoogleUserCredsCall;
+  class GoogleRevokeTokensCall;
   class GoogleProfileAttributesCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OAuthTokenManagerApp);
@@ -581,7 +618,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     std::string url(kFirebaseAuthEndpoint);
     url += "?key=" + UrlEncode(firebase_api_key_);
 
-    // This flow exclusively branches below, so we need to put it in a shared
+    // This flow branches below, so we need to put it in a shared
     // container from which it can be removed once for all branches.
     FlowTokenHolder branch{flow};
 
@@ -730,7 +767,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
     }
 
     FTL_VLOG(1) << "Fetching access/id tokens for Account_ID:" << account_id_;
-    const std::string refresh_token = GetRefreshToken();
+    const std::string refresh_token = GetRefreshTokenFromCredsFile(account_id_);
     if (refresh_token.empty()) {
       // TODO(ukode): Need to differentiate between deleted users, users that
       // are not provisioned and Guest mode users. For now, return empty
@@ -781,32 +818,6 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
          [this](rapidjson::Document doc) {
            return GetShortLivedTokens(std::move(doc));
          });
-  }
-
-  // Read saved user's refresh token from Credential store. If account is not
-  // found, an empty token is returned.
-  std::string GetRefreshToken() {
-    // TODO(ukode): Read from app_->creds_ if valid before parsing.
-    const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
-    if (credentials_storage == nullptr) {
-      FTL_LOG(ERROR) << "Failed to parse credentials.";
-      return "";
-    }
-
-    for (const auto* credential : *credentials_storage->creds()) {
-      if (credential->account_id()->str() == account_id_) {
-        for (const auto* token : *credential->tokens()) {
-          switch (token->identity_provider()) {
-            case ::auth::IdentityProvider_GOOGLE:
-              return token->refresh_token()->str();
-            default:
-              FTL_LOG(WARNING) << "Unrecognized IdentityProvider"
-                               << token->identity_provider();
-          }
-        }
-      }
-    }
-    return "";
   }
 
   // Parse access and id tokens from OAUth endpoints into local token in-memory
@@ -1125,6 +1136,183 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   FTL_DISALLOW_COPY_AND_ASSIGN(GoogleUserCredsCall);
 };
 
+class OAuthTokenManagerApp::GoogleRevokeTokensCall
+    : Operation<modular::auth::AuthErrPtr> {
+ public:
+  GoogleRevokeTokensCall(OperationContainer* const container,
+                         AccountPtr account,
+                         OAuthTokenManagerApp* const app,
+                         const RemoveAccountCallback& callback)
+      : Operation("OAuthTokenManagerApp::GoogleRevokeTokensCall",
+                  container,
+                  callback),
+        account_(std::move(account)),
+        app_(app),
+        callback_(callback) {
+    Ready();
+  }
+
+ private:
+  // |Operation|
+  void Run() override {
+    FlowToken flow{this, &auth_err_};
+
+    if (!account_) {
+      Failure(flow, Status::BAD_REQUEST, "Account is null.");
+      return;
+    }
+
+    switch (account_->identity_provider) {
+      case IdentityProvider::DEV:
+        Success(flow);  // guest mode
+        return;
+      case IdentityProvider::GOOGLE:
+        break;
+      default:
+        Failure(flow, Status::BAD_REQUEST, "Unsupported IDP.");
+        return;
+    }
+
+    const std::string refresh_token =
+        GetRefreshTokenFromCredsFile(account_->id);
+    if (refresh_token.empty()) {
+      FTL_LOG(ERROR) << "Account: " << account_->id << " not found.";
+      Success(flow);  // Maybe a guest account.
+      return;
+    }
+
+    // delete local cache first.
+    if (app_->oauth_tokens_.find(account_->id) != app_->oauth_tokens_.end()) {
+      if (!app_->oauth_tokens_.erase(account_->id)) {
+        Failure(flow, Status::INTERNAL_ERROR,
+                "Unable to delete cached tokens for account:" +
+                    std::string(account_->id));
+        return;
+      }
+    }
+
+    // delete user credentials from local persistent storage.
+    if (!DeleteCredentials()) {
+      Failure(flow, Status::INTERNAL_ERROR,
+              "Unable to delete persistent credentials for account:" +
+                  std::string(account_->id));
+      return;
+    }
+
+    // revoke persistent tokens on backend IDP server.
+    app_->application_context_->ConnectToEnvironmentService(
+        network_service_.NewRequest());
+    network_service_->CreateURLLoader(url_loader_.NewRequest());
+
+    std::string url = kGoogleRevokeTokenEndpoint + std::string("?token=");
+    url += refresh_token;
+
+    std::string request_body = "";
+
+    // This flow branches below, so we need to put it in a shared container
+    // from which it can be removed once for all branches.
+    FlowTokenHolder branch{flow};
+
+    Post(request_body, url_loader_.get(), url,
+         [this, branch] {
+           std::unique_ptr<FlowToken> flow = branch.Continue();
+           FTL_CHECK(flow);
+           Success(*flow);
+         },
+         [this, branch](const Status status, const std::string error_message) {
+           std::unique_ptr<FlowToken> flow = branch.Continue();
+           FTL_CHECK(flow);
+           Failure(*flow, status, error_message);
+         },
+         [this](rapidjson::Document doc) {
+           return RevokeAllTokens(std::move(doc));
+         });
+  }
+
+  // Deletes existing user credentials for |account_->id|.
+  bool DeleteCredentials() {
+    const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
+    if (credentials_storage == nullptr) {
+      FTL_LOG(ERROR) << "Failed to parse credentials.";
+      return false;
+    }
+
+    // Delete |account_->id| credentials and reserialize existing users.
+    flatbuffers::FlatBufferBuilder builder;
+    std::vector<flatbuffers::Offset<::auth::UserCredential>> creds;
+
+    for (const auto* cred : *credentials_storage->creds()) {
+      if (cred->account_id()->str() == account_->id) {
+        // delete existing credentials
+        continue;
+      }
+
+      std::vector<flatbuffers::Offset<::auth::IdpCredential>> idp_creds;
+      for (const auto* idp_cred : *cred->tokens()) {
+        idp_creds.push_back(::auth::CreateIdpCredential(
+            builder, idp_cred->identity_provider(),
+            builder.CreateString(idp_cred->refresh_token())));
+      }
+
+      creds.push_back(::auth::CreateUserCredential(
+          builder, builder.CreateString(cred->account_id()),
+          builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
+              std::move(idp_creds))));
+    }
+
+    builder.Finish(::auth::CreateCredentialStore(
+        builder, builder.CreateVector(std::move(creds))));
+
+    std::string new_serialized_creds = std::string(
+        reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+        builder.GetSize());
+
+    // Add updated credentials to in-memory cache |creds_|.
+    app_->creds_ = ::auth::GetCredentialStore(new_serialized_creds.data());
+
+    return WriteCredsFile(new_serialized_creds);
+  }
+
+  // Invalidate both refresh and access tokens on backend IDP server.
+  // If the revocation is successfully processed, then the status code of the
+  // response is 200. For error conditions, a status code 400 is returned along
+  // with an error code in the response body.
+  bool RevokeAllTokens(rapidjson::Document status) {
+    FTL_VLOG(1) << "Revoke token api response: "
+                << modular::JsonValueToPrettyString(status);
+
+    return true;
+  }
+
+  void Success(FlowToken flow) {
+    // Set status to success
+    auth_err_ = auth::AuthErr::New();
+    auth_err_->status = Status::OK;
+    auth_err_->message = "";
+  }
+
+  void Failure(FlowToken flow,
+               const Status& status,
+               const std::string& error_message) {
+    FTL_LOG(ERROR) << "Failed with error status:" << status
+                   << " ,and message:" << error_message;
+    auth_err_ = auth::AuthErr::New();
+    auth_err_->status = status;
+    auth_err_->message = error_message;
+  }
+
+  AccountPtr account_;
+  OAuthTokenManagerApp* const app_;
+  const RemoveAccountCallback callback_;
+
+  network::NetworkServicePtr network_service_;
+  network::URLLoaderPtr url_loader_;
+
+  modular::auth::AuthErrPtr auth_err_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleRevokeTokensCall);
+};
+
 class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
  public:
   GoogleProfileAttributesCall(OperationContainer* const container,
@@ -1208,8 +1396,8 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   }
 
   void Failure(const Status& status, const std::string& error_message) {
-    FTL_VLOG(1) << "Error status code:" << status;
-    FTL_LOG(ERROR) << error_message;
+    FTL_LOG(ERROR) << "Failed with error status:" << status
+                   << " ,and message:" << error_message;
 
     // Account is missing profile attributes, but still valid.
     callback_(std::move(account_), error_message);
@@ -1265,7 +1453,6 @@ void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
                                       const AddAccountCallback& callback) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::AddAccount()";
   auto account = auth::Account::New();
-
   account->id = GenerateAccountId();
   account->identity_provider = identity_provider;
 
@@ -1289,6 +1476,14 @@ void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
     default:
       callback(nullptr, "Unrecognized Identity Provider");
   }
+}
+
+void OAuthTokenManagerApp::RemoveAccount(
+    AccountPtr account,
+    const RemoveAccountCallback& callback) {
+  FTL_VLOG(1) << "OAuthTokenManagerApp::RemoveAccount()";
+  new GoogleRevokeTokensCall(&operation_queue_, std::move(account), this,
+                             callback);
 }
 
 void OAuthTokenManagerApp::GetTokenProviderFactory(

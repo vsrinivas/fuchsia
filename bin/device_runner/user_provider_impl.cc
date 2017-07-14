@@ -213,40 +213,64 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
       });
 }
 
-// TODO(alhaad, security): This does not remove tokens stored by the token
-// manager. That should be done properly by invalidaing the tokens. Re-visit
-// this!
-void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
-  if (!users_storage_) {
+void UserProviderImpl::RemoveUser(const fidl::String& account_id,
+                                  const RemoveUserCallback& callback) {
+  auth::AccountPtr account;
+  if (users_storage_) {
+    for (const auto* user : *users_storage_->users()) {
+      if (user->id()->str() == account_id) {
+        account = Convert(user);
+      }
+    }
+  }
+
+  if (account.is_null()) {
+    callback("User not found.");
     return;
   }
 
-  flatbuffers::FlatBufferBuilder builder;
-  std::vector<flatbuffers::Offset<modular::UserStorage>> users;
-  for (const auto* user : *(users_storage_->users())) {
-    if (user->id()->str() == account_id) {
-      // TODO(alhaad): We need to delete the local ledger data for a user who
-      // has been removed. Re-visit this when sandboxing the user runner.
-      continue;
+  FTL_DCHECK(account_provider_);
+  account_provider_->RemoveAccount(std::move(account), [
+    this, account_id = account_id, callback
+  ](auth::AuthErrPtr auth_err) {
+    if (auth_err->status != auth::Status::OK) {
+      callback(auth_err->message);
+      return;
     }
 
-    users.push_back(modular::CreateUserStorage(
-        builder, builder.CreateString(user->id()), user->identity_provider(),
-        builder.CreateString(user->display_name()),
-        builder.CreateString(user->profile_url()),
-        builder.CreateString(user->image_url())));
-  }
+    // update user storage after deleting user credentials.
+    flatbuffers::FlatBufferBuilder builder;
+    std::vector<flatbuffers::Offset<modular::UserStorage>> users;
+    for (const auto* user : *(users_storage_->users())) {
+      if (user->id()->str() == account_id) {
+        // TODO(alhaad): We need to delete the local ledger data for a user who
+        // has been removed. Re-visit this when sandboxing the user runner.
+        continue;
+      }
 
-  builder.Finish(modular::CreateUsersStorage(
-      builder, builder.CreateVector(std::move(users))));
-  std::string new_serialized_users = std::string(
-      reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
-      builder.GetSize());
+      users.push_back(modular::CreateUserStorage(
+          builder, builder.CreateString(user->id()), user->identity_provider(),
+          builder.CreateString(user->display_name()),
+          builder.CreateString(user->profile_url()),
+          builder.CreateString(user->image_url())));
+    }
 
-  std::string error;
-  if (!WriteUsersDb(new_serialized_users, &error)) {
-    FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
-  }
+    builder.Finish(modular::CreateUsersStorage(
+        builder, builder.CreateVector(std::move(users))));
+    std::string new_serialized_users = std::string(
+        reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+        builder.GetSize());
+
+    std::string error;
+    if (!WriteUsersDb(new_serialized_users, &error)) {
+      FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
+      callback(error);
+      return;
+    }
+
+    callback("");  // success
+    return;
+  });
 }
 
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
