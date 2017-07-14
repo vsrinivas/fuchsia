@@ -487,6 +487,7 @@ class Record {
 
   // Context Switch record data.
   struct ContextSwitch {
+    Ticks timestamp;
     CpuNumber cpu_number;
     ThreadState outgoing_thread_state;
     ProcessThread outgoing_thread;

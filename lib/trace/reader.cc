@@ -633,7 +633,7 @@ bool TraceReader::ReadContextSwitchRecord(Chunk& record, RecordHeader header) {
     return false;
 
   record_consumer_(Record(Record::ContextSwitch{
-      cpu_number, outgoing_thread_state, outgoing_thread, incoming_thread}));
+      timestamp, cpu_number, outgoing_thread_state, outgoing_thread, incoming_thread}));
   return true;
 }
 
