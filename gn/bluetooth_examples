@@ -1,0 +1,18 @@
+{
+    "languages": [
+        "dart"
+    ],
+    "labels": [
+        "//apps/bluetooth/examples"
+    ],
+    "binaries": [
+        {
+            "binary": "gen/apps/bluetooth/examples/ble_scanner/ble_scanner.flx",
+            "bootfs_path": "apps/bluetooth_le_scanner"
+        },
+        {
+            "binary": "gen/apps/bluetooth/examples/settings/settings.flx",
+            "bootfs_path": "apps/bluetooth_settings_example"
+        }
+    ]
+}
