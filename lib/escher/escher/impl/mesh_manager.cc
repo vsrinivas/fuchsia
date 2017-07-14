@@ -61,6 +61,26 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
 
 MeshManager::MeshBuilder::~MeshBuilder() {}
 
+BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
+  FTL_DCHECK(vertex_count_ > 0);
+  // This method will need adjustments when we support 3D vertices.
+  FTL_DCHECK(spec_.flags & MeshAttribute::kPosition);
+  uint8_t* vertex_ptr = vertex_staging_buffer_;
+
+  vec2* pos = reinterpret_cast<vec2*>(vertex_ptr);
+  vec3 min(*pos, 0);
+  vec3 max(*pos, 0);
+
+  for (size_t i = 1; i < vertex_count_; ++i) {
+    vertex_ptr += vertex_stride_;
+    pos = reinterpret_cast<vec2*>(vertex_ptr);
+    min = glm::min(min, vec3(*pos, 0));
+    max = glm::max(max, vec3(*pos, 0));
+  }
+
+  return BoundingBox(min, max);
+}
+
 MeshPtr MeshManager::MeshBuilder::Build() {
   FTL_DCHECK(!is_built_);
   if (is_built_) {
@@ -91,9 +111,9 @@ MeshPtr MeshManager::MeshBuilder::Build() {
                             SemaphorePtr());
   index_writer_.Submit();
 
-  auto mesh = ftl::MakeRefCounted<Mesh>(manager_->resource_recycler(), spec_,
-                                        vertex_count_, index_count_,
-                                        vertex_buffer, std::move(index_buffer));
+  auto mesh = ftl::MakeRefCounted<Mesh>(
+      manager_->resource_recycler(), spec_, ComputeBoundingBox(), vertex_count_,
+      index_count_, vertex_buffer, std::move(index_buffer));
 
   mesh->SetWaitSemaphore(vertex_buffer->TakeWaitSemaphore());
   return mesh;

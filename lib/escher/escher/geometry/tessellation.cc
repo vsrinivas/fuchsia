@@ -125,6 +125,9 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
 
   auto mesh = builder->Build();
   FTL_DCHECK(mesh->num_indices() == index_count);
+  FTL_DCHECK(mesh->bounding_box() ==
+             BoundingBox(vec3(center.x - radius, center.y - radius, 0),
+                         vec3(center.x + radius, center.y + radius, 0)));
   return mesh;
 }
 
@@ -203,6 +206,10 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory,
 
   auto mesh = builder->Build();
   FTL_DCHECK(mesh->num_indices() == index_count);
+  FTL_DCHECK(
+      mesh->bounding_box() ==
+      BoundingBox(vec3(center.x - outer_radius, center.y - outer_radius, 0),
+                  vec3(center.x + outer_radius, center.y + outer_radius, 0)));
   return mesh;
 }
 

@@ -7,6 +7,7 @@
 #include <map>
 
 #include "escher/forward_declarations.h"
+#include "escher/geometry/bounding_box.h"
 #include "escher/resources/waitable_resource.h"
 #include "escher/shape/mesh_spec.h"
 
@@ -21,6 +22,7 @@ class Mesh : public WaitableResource {
 
   Mesh(ResourceRecycler* resource_recycler,
        MeshSpec spec,
+       BoundingBox bounding_box,
        uint32_t num_vertices,
        uint32_t num_indices,
        BufferPtr vertex_buffer,
@@ -30,7 +32,8 @@ class Mesh : public WaitableResource {
 
   ~Mesh() override;
 
-  const MeshSpec& spec() { return spec_; }
+  const MeshSpec& spec() const { return spec_; }
+  const BoundingBox& bounding_box() const { return bounding_box_; }
   uint32_t num_vertices() const { return num_vertices_; }
   uint32_t num_indices() const { return num_indices_; }
   vk::Buffer vertex_buffer() const { return vertex_buffer_; }
@@ -40,6 +43,7 @@ class Mesh : public WaitableResource {
 
  private:
   const MeshSpec spec_;
+  const BoundingBox bounding_box_;
   const uint32_t num_vertices_;
   const uint32_t num_indices_;
   const vk::Buffer vertex_buffer_;

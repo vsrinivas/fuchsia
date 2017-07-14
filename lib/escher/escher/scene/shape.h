@@ -44,6 +44,8 @@ class Shape {
     return mesh_;
   }
 
+  BoundingBox bounding_box() const;
+
  private:
   Type type_;
   ShapeModifiers modifiers_;

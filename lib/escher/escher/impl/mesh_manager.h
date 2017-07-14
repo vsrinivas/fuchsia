@@ -56,6 +56,8 @@ class MeshManager : public MeshBuilderFactory {
     MeshPtr Build() override;
 
    private:
+    BoundingBox ComputeBoundingBox() const;
+
     MeshManager* manager_;
     MeshSpec spec_;
     bool is_built_;

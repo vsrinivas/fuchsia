@@ -51,6 +51,8 @@ static_library("escher") {
     "escher_process_init.cc",
     "escher_process_init.h",
     "forward_declarations.h",
+    "geometry/bounding_box.cc",
+    "geometry/bounding_box.h",
     "geometry/quad.cc",
     "geometry/quad.h",
     "geometry/size_i.cc",

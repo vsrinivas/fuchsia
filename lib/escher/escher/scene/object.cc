@@ -80,4 +80,14 @@ Object Object::NewCircle(const mat4& transform,
                 Shape(Shape::Type::kCircle), std::move(material));
 }
 
+BoundingBox Object::bounding_box() const {
+  BoundingBox box = shape_.bounding_box();
+  for (auto& clipper : clippers_) {
+    box.Join(clipper.bounding_box());
+  }
+  // Don't intersect with the clippers, because we do not know the camera
+  // viewpoint.
+  return transform_ * box;
+}
+
 }  // namespace escher

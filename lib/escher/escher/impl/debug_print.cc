@@ -7,6 +7,7 @@
 // These should only be called by operator<<, so it's safe to elide them.
 #if !defined(NDEBUG)
 
+#include "escher/geometry/bounding_box.h"
 #include "escher/geometry/transform.h"
 #include "escher/impl/model_pipeline_spec.h"
 #include "escher/renderer/image.h"
@@ -150,6 +151,14 @@ std::ostream& operator<<(std::ostream& str, const ImageInfo& info) {
 std::ostream& operator<<(std::ostream& str, const ViewingVolume& volume) {
   return str << "ViewingVolume[w:" << volume.width() << " h:" << volume.height()
              << " t:" << volume.top() << " b:" << volume.bottom() << "]";
+}
+
+std::ostream& operator<<(std::ostream& str, const BoundingBox& box) {
+  if (box.is_empty()) {
+    return str << "BoundingBox[empty]";
+  } else {
+    return str << "BoundingBox[min" << box.min() << ", max" << box.max() << "]";
+  }
 }
 
 }  // namespace escher

@@ -33,4 +33,17 @@ Shape::Shape(MeshPtr mesh, ShapeModifiers modifiers)
 
 Shape::~Shape() {}
 
+BoundingBox Shape::bounding_box() const {
+  switch (type_) {
+    case Type::kRect:
+      return BoundingBox({0, 0, 0}, {1, 1, 0});
+    case Type::kCircle:
+      return BoundingBox({-1, -1, 0}, {1, 1, 0});
+    case Type::kMesh:
+      return mesh_->bounding_box();
+    case Type::kNone:
+      return BoundingBox();
+  }
+}
+
 }  // namespace escher

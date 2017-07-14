@@ -55,6 +55,11 @@ class Object {
   const MaterialPtr& material() const { return material_; }
   void set_material(MaterialPtr material) { material_ = std::move(material); }
 
+  // Return the bounding box that encompasses the object's shape, as well as
+  // all of its clippers (but not clippees, since their clipped bounds are
+  // by definition within the clippers' bounds).
+  BoundingBox bounding_box() const;
+
   Object& set_shape_modifiers(ShapeModifiers modifiers) {
     shape_.set_modifiers(modifiers);
     return *this;

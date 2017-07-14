@@ -8,11 +8,13 @@ executable("escher_unittests") {
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
   sources = [
+    "geometry/bounding_box_unittest.cc",
     "gpu_mem_unittest.cc",
     "hash_unittest.cc",
     "impl/glsl_compiler_unittest.cc",
     "impl/pipeline_cache_unittest.cc",
     "mesh_spec_unittest.cc",
+    "object_unittest.cc",
     "run_all_unittests.cc",
     "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",

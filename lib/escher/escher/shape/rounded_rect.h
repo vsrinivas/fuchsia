@@ -13,6 +13,7 @@ namespace escher {
 
 struct MeshSpec;
 
+// Specify a rounded-rect that is centered at (0,0).
 struct RoundedRectSpec {
   // Note: radii are in clockwise order, starting from top-left.
   RoundedRectSpec(float width,
