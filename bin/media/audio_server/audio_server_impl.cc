@@ -31,6 +31,21 @@ AudioServerImpl::AudioServerImpl()
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 
+  // TODO(johngro) : See MG-940
+  //
+  // Eliminate this as soon as we have a more official way of
+  // meeting real-time latency requirements.  The main mtl::MessageLoop is
+  // responsible for receiving audio payloads sent by applications, so it has
+  // real time requirements (just like the mixing threads do).  In a perfect
+  // world, however, we would want to have this task run on a thread which is
+  // different from the thread which is processing *all* audio server jobs (even
+  // non-realtime ones).  This, however, will take more significant
+  // restructuring.  We will cross that bridge when we have the TBD way to deal
+  // with realtime requirements in place.
+  task_runner_->PostTask([]() {
+      mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+  });
+
   // Set up our output manager.
   MediaResult res = output_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.

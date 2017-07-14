@@ -123,6 +123,9 @@ class MagentaOutput : public StandardOutputBase {
   mx_time_t underflow_cooldown_deadline_ = 0;
   TimelineRate local_to_frames_;
   TimelineFunction local_to_output_;
+
+  // TODO(johngro) : See MG-940.  eliminate this ASAP
+  bool mix_job_prio_bumped_ = false;
 };
 
 }  // namespace audio

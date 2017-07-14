@@ -295,6 +295,13 @@ void MagentaOutput::Cleanup() {
 bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
   int64_t now;
 
+  // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
+  // official way of meeting real-time latency requirements.
+  if (!mix_job_prio_bumped_) {
+      mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+      mix_job_prio_bumped_ = true;
+  }
+
   if (!started_) {
     audio2_rb_cmd_start_req_t req;
     audio2_rb_cmd_start_resp_t resp;
