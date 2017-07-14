@@ -341,6 +341,7 @@ void MsdIntelDevice::StartDeviceThread()
 
 int MsdIntelDevice::InterruptThreadLoop()
 {
+    magma::PlatformThreadHelper::SetCurrentThreadName("InterruptThread");
     DLOG("Interrupt thread started");
 
     while (true) {
@@ -366,6 +367,7 @@ int MsdIntelDevice::InterruptThreadLoop()
 
 void MsdIntelDevice::WaitThreadLoop()
 {
+    magma::PlatformThreadHelper::SetCurrentThreadName("FlipWaitThread");
     DLOG("Wait thread started");
 
     while (semaphore_port_->WaitOne()) {
@@ -515,6 +517,8 @@ void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request
 
 int MsdIntelDevice::DeviceThreadLoop()
 {
+    magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
+
     device_thread_id_ = std::make_unique<magma::PlatformThreadId>();
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 

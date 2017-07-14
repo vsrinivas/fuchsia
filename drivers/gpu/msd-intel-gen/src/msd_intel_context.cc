@@ -6,6 +6,7 @@
 #include "address_space.h"
 #include "command_buffer.h"
 #include "msd_intel_connection.h"
+#include "platform_thread.h"
 #include "platform_trace.h"
 
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
@@ -135,6 +136,7 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
 
         DASSERT(!wait_thread_.joinable());
         wait_thread_ = std::thread([this] {
+            magma::PlatformThreadHelper::SetCurrentThreadName("ConnectionWaitThread");
             DLOG("context wait thread started");
             while (semaphore_port_->WaitOne()) {
             }
