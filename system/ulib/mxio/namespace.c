@@ -467,9 +467,11 @@ static mx_status_t mxdir_misc(mxio_t* io, uint32_t op, int64_t off,
 
 static mxio_ops_t dir_ops = {
     .read = mxio_default_read,
-    //.read_at = mxio_default_read_at,
+    .read_at = mxio_default_read_at,
     .write = mxio_default_write,
-    //.write_at = mxio_default_write_at,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .misc = mxdir_misc,

@@ -67,7 +67,11 @@ static void mxwio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) 
 
 static mxio_ops_t mxio_waitable_ops = {
     .read = mxio_default_read,
+    .read_at = mxio_default_read_at,
     .write = mxio_default_write,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,

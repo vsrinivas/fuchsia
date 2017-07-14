@@ -26,7 +26,11 @@ static mx_status_t mxsvc_close(mxio_t* io) {
 
 static mxio_ops_t mx_svc_ops = {
     .read = mxio_default_read,
+    .read_at = mxio_default_read_at,
     .write = mxio_default_write,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,

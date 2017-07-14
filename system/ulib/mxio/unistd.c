@@ -866,7 +866,7 @@ ssize_t read(int fd, void* buf, size_t count) {
         mxio_wait_fd(fd, MXIO_EVT_READABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
-    return STATUS(status);
+    return status < 0 ? STATUS(status) : status;
 }
 
 ssize_t write(int fd, const void* buf, size_t count) {
@@ -887,7 +887,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
         mxio_wait_fd(fd, MXIO_EVT_WRITABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
-    return STATUS(status);
+    return status < 0 ? STATUS(status) : status;
 }
 
 ssize_t preadv(int fd, const struct iovec* iov, int count, off_t ofs) {
@@ -929,7 +929,7 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
         mxio_wait_fd(fd, MXIO_EVT_READABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
-    return STATUS(status);
+    return status < 0 ? STATUS(status) : status;
 }
 
 ssize_t pwritev(int fd, const struct iovec* iov, int count, off_t ofs) {
@@ -971,7 +971,7 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
         mxio_wait_fd(fd, MXIO_EVT_WRITABLE | MXIO_EVT_PEER_CLOSED, NULL, MX_TIME_INFINITE);
     }
     mxio_release(io);
-    return STATUS(status);
+    return status < 0 ? STATUS(status) : status;
 }
 
 int close(int fd) {
@@ -1963,4 +1963,47 @@ int ioctl(int fd, int req, ...) {
     va_end(ap);
     mxio_release(io);
     return STATUS(r);
+}
+
+ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr, socklen_t addrlen) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = io->ops->sendto(io, buf, buflen, flags, addr, addrlen);
+    mxio_release(io);
+    return r < 0 ? STATUS(r) : r;
+}
+
+ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    if (addr != NULL && addrlen == NULL) {
+        return ERRNO(EFAULT);
+    }
+    ssize_t r = io->ops->recvfrom(io, buf, buflen, flags, addr, addrlen);
+    mxio_release(io);
+    return r < 0 ? STATUS(r) : r;
+}
+
+ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = io->ops->sendmsg(io, msg, flags);
+    mxio_release(io);
+    return r < 0 ? STATUS(r) : r;
+}
+
+ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = io->ops->recvmsg(io, msg, flags);
+    mxio_release(io);
+    return r < 0 ? STATUS(r) : r;
 }

@@ -30,9 +30,11 @@ typedef struct mxio_namespace mxio_ns_t;
 
 typedef struct mxio_ops {
     ssize_t (*read)(mxio_t* io, void* data, size_t len);
-    ssize_t (*read_at)(mxio_t* io, void* data, size_t len, mx_off_t offset);
+    ssize_t (*read_at)(mxio_t* io, void* data, size_t len, off_t offset);
     ssize_t (*write)(mxio_t* io, const void* data, size_t len);
-    ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, mx_off_t offset);
+    ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, off_t offset);
+    ssize_t (*recvfrom)(mxio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen);
+    ssize_t (*sendto)(mxio_t* io, const void* data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen);
     ssize_t (*recvmsg)(mxio_t* io, struct msghdr* msg, int flags);
     ssize_t (*sendmsg)(mxio_t* io, const struct msghdr* msg, int flags);
     off_t (*seek)(mxio_t* io, off_t offset, int whence);
@@ -56,7 +58,6 @@ typedef struct mxio_ops {
 #define MXIO_FLAG_SOCKET_CONNECTING ((int32_t)1 << 4)
 #define MXIO_FLAG_SOCKET_CONNECTED ((int32_t)1 << 5)
 #define MXIO_FLAG_NONBLOCK ((int32_t)1 << 6)
-#define MXIO_FLAG_PIPE ((int32_t)1 << 7)
 
 // The subset of mxio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
@@ -173,6 +174,8 @@ ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
 ssize_t mxio_default_read_at(mxio_t* io, void* _data, size_t len, off_t offset);
 ssize_t mxio_default_write(mxio_t* io, const void* _data, size_t len);
 ssize_t mxio_default_write_at(mxio_t* io, const void* _data, size_t len, off_t offset);
+ssize_t mxio_default_recvfrom(mxio_t* io, void* _data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen);
+ssize_t mxio_default_sendto(mxio_t* io, const void* _data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen);
 ssize_t mxio_default_recvmsg(mxio_t* io, struct msghdr* msg, int flags);
 ssize_t mxio_default_sendmsg(mxio_t* io, const struct msghdr* msg, int flags);
 off_t mxio_default_seek(mxio_t* io, off_t offset, int whence);

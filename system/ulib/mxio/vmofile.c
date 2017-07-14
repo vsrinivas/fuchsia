@@ -48,11 +48,11 @@ static ssize_t vmofile_read(mxio_t* io, void* data, size_t len) {
     }
 }
 
-static ssize_t vmofile_read_at(mxio_t* io, void* data, size_t len, mx_off_t at) {
+static ssize_t vmofile_read_at(mxio_t* io, void* data, size_t len, off_t at) {
     vmofile_t* vf = (vmofile_t*)io;
 
     // make sure we're within the file's bounds
-    if (at > (vf->end - vf->off)) {
+    if (at > (off_t)(vf->end - vf->off)) {
         return MX_ERR_INVALID_ARGS;
     }
 
@@ -72,7 +72,7 @@ static ssize_t vmofile_read_at(mxio_t* io, void* data, size_t len, mx_off_t at) 
     }
 }
 
-static ssize_t vmofile_write_at(mxio_t* io, const void* data, size_t len, mx_off_t at) {
+static ssize_t vmofile_write_at(mxio_t* io, const void* data, size_t len, off_t at) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
@@ -200,6 +200,8 @@ static mxio_ops_t vmofile_ops = {
     .read_at = vmofile_read_at,
     .write = mxio_default_write,
     .write_at = vmofile_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = vmofile_seek,

@@ -80,7 +80,11 @@ static mx_status_t log_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) 
 
 static mxio_ops_t log_io_ops = {
     .read = mxio_default_read,
+    .read_at = mxio_default_read_at,
     .write = log_write,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,

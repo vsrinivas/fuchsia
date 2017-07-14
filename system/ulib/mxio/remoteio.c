@@ -378,7 +378,7 @@ static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
     return write_common(MXRIO_WRITE, io, _data, len, 0);
 }
 
-static ssize_t mxrio_write_at(mxio_t* io, const void* _data, size_t len, mx_off_t offset) {
+static ssize_t mxrio_write_at(mxio_t* io, const void* _data, size_t len, off_t offset) {
     return write_common(MXRIO_WRITE_AT, io, _data, len, offset);
 }
 
@@ -427,7 +427,7 @@ static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
     return read_common(MXRIO_READ, io, _data, len, 0);
 }
 
-static ssize_t mxrio_read_at(mxio_t* io, void* _data, size_t len, mx_off_t offset) {
+static ssize_t mxrio_read_at(mxio_t* io, void* _data, size_t len, off_t offset) {
     return read_common(MXRIO_READ_AT, io, _data, len, offset);
 }
 
@@ -883,6 +883,8 @@ static mxio_ops_t mx_remote_ops = {
     .read_at = mxrio_read_at,
     .write = mxrio_write,
     .write_at = mxrio_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .misc = mxrio_misc,

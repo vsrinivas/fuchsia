@@ -52,6 +52,28 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
     }
 }
 
+static ssize_t mxsio_recvfrom(mxio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+    struct iovec iov;
+    iov.iov_base = data;
+    iov.iov_len = len;
+
+    struct msghdr msg;
+    msg.msg_name = addr;
+    // the caller (recvfrom) checks if addrlen is NULL.
+    msg.msg_namelen = (addr == NULL) ? 0 : *addrlen;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0;
+
+    ssize_t r = io->ops->recvmsg(io, &msg, flags);
+    if (addr != NULL)
+        *addrlen = msg.msg_namelen;
+
+    return r;
+}
+
 static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
     int nonblock = rio->io.flags & MXIO_FLAG_NONBLOCK;
@@ -82,6 +104,24 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
         return r;
     }
 }
+
+static ssize_t mxsio_sendto(mxio_t* io, const void* data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen) {
+    struct iovec iov;
+    iov.iov_base = (void*)data;
+    iov.iov_len = len;
+
+    struct msghdr msg;
+    msg.msg_name = (void*)addr;
+    msg.msg_namelen = addrlen;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0; // this field is ignored
+
+    return io->ops->sendmsg(io, &msg, flags);
+}
+
 
 static ssize_t mxsio_recvmsg_stream(mxio_t* io, struct msghdr* msg, int flags) {
     if (flags != 0) {
@@ -493,7 +533,11 @@ static void mxsio_wait_end_dgram(mxio_t* io, mx_signals_t signals, uint32_t* _ev
 
 static mxio_ops_t mxio_socket_stream_ops = {
     .read = mxsio_read_stream,
+    .read_at = mxio_default_read_at,
     .write = mxsio_write_stream,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxsio_recvfrom,
+    .sendto = mxsio_sendto,
     .recvmsg = mxsio_recvmsg_stream,
     .sendmsg = mxsio_sendmsg_stream,
     .seek = mxio_default_seek,

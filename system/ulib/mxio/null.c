@@ -23,8 +23,24 @@ ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len) {
     return 0;
 }
 
+ssize_t mxio_default_read_at(mxio_t* io, void* _data, size_t len, off_t offset) {
+    return MX_ERR_WRONG_TYPE;
+}
+
 ssize_t mxio_default_write(mxio_t* io, const void* _data, size_t len) {
     return len;
+}
+
+ssize_t mxio_default_write_at(mxio_t* io, const void* _data, size_t len, off_t offset) {
+    return MX_ERR_WRONG_TYPE;
+}
+
+ssize_t mxio_default_recvfrom(mxio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+    return MX_ERR_WRONG_TYPE;
+}
+
+ssize_t mxio_default_sendto(mxio_t* io, const void* data, size_t len, int flags, const struct sockaddr* addr, socklen_t addrlen) {
+    return MX_ERR_WRONG_TYPE;
 }
 
 ssize_t mxio_default_recvmsg(mxio_t* io, struct msghdr* msg, int flags) {
@@ -82,7 +98,11 @@ mx_status_t mxio_default_get_vmo(mxio_t* io, mx_handle_t* out, size_t* off, size
 
 static mxio_ops_t mx_null_ops = {
     .read = mxio_default_read,
+    .read_at = mxio_default_read_at,
     .write = mxio_default_write,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxio_default_recvfrom,
+    .sendto = mxio_default_sendto,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,
