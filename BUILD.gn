@@ -6,9 +6,19 @@ group("modular") {
   testonly = true
 
   deps = [
+    ":modular_unittests",
     "examples",
     "services",
     "src",
     "tests",
+  ]
+}
+
+executable("modular_unittests") {
+  testonly = true
+
+  deps = [
+    "//apps/modular/lib/util:unittests",
+    "//apps/test_runner/src:gtest_main",
   ]
 }

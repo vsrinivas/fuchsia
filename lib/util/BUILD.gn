@@ -25,11 +25,10 @@ source_set("util") {
   ]
 }
 
-executable("modular_util_unittests") {
+source_set("unittests") {
   testonly = true
 
   sources = [
-    "//lib/ftl/test/run_all_unittests.cc",
     "string_escape_unittest.cc",
   ]
 
