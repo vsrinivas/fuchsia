@@ -64,11 +64,18 @@ static_assert(FVM_BLOCK_SIZE % sizeof(vpart_entry_t) == 0,
 static_assert(sizeof(vpart_entry_t) * FVM_MAX_ENTRIES % FVM_BLOCK_SIZE == 0,
               "VPart entries don't cleanly fit within block");
 
-typedef struct slice_entry {
-    uint32_t vpart; // '0' if unallocated
-    uint32_t vslice;
-} slice_entry_t;
+#define VPART_BITS 16
+#define VPART_MAX ((1UL << VPART_BITS) - 1)
+#define VSLICE_BITS 48
+#define VSLICE_MAX ((1UL << VSLICE_BITS) - 1)
+#define PSLICE_UNALLOCATED 0
 
+typedef struct slice_entry {
+    size_t vpart : VPART_BITS; // '0' if unallocated
+    size_t vslice : VSLICE_BITS;
+} __attribute__((packed)) slice_entry_t;
+
+static_assert(FVM_MAX_ENTRIES <= VPART_MAX, "vpart adress space too small");
 static_assert(sizeof(slice_entry_t) == 8, "Unexpected FVM slice entry size");
 static_assert(FVM_BLOCK_SIZE % sizeof(slice_entry_t) == 0,
               "FVM slice entry might cross block");

@@ -629,6 +629,70 @@ static bool TestVPartitionExtend(void) {
     END_TEST;
 }
 
+// Test allocating very sparse VPartition
+static bool TestVPartitionExtendSparse(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    uint64_t blk_size = 512;
+    uint64_t blk_count = 1 << 20;
+    uint64_t slice_size = 16 * blk_size;
+    ASSERT_EQ(StartFVMTest(blk_size, blk_count, slice_size, ramdisk_path,
+                           fvm_driver),
+              0, "error mounting FVM");
+
+    size_t slices_left = fvm::UsableSlicesCount(blk_size * blk_count, slice_size);
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    alloc_req_t request;
+    request.slice_count = 1;
+    slices_left--;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int vp_fd;
+    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    ASSERT_TRUE(checkWriteReadBlock(vp_fd, 0, 1), "");
+
+    // Double check that we can access a block at this vslice address
+    // (this isn't always possible; for certain slice sizes, blocks may be
+    // allocatable / freeable, but not addressable).
+    size_t bno = (VSLICE_MAX - 1) * (slice_size / blk_size);
+    ASSERT_EQ(bno / (slice_size / blk_size), (VSLICE_MAX - 1), "bno overflowed");
+    ASSERT_EQ((bno * blk_size) / blk_size, bno, "block access will overflow");
+
+    extend_request_t erequest;
+
+    // Try allocating at a location that's slightly too large
+    erequest.offset = VSLICE_MAX;
+    erequest.length = 1;
+    ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
+
+    // Try allocating at the largest offset
+    erequest.offset = VSLICE_MAX - 1;
+    erequest.length = 1;
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
+    ASSERT_TRUE(checkWriteReadBlock(vp_fd, bno, 1), "");
+
+    // Try freeing beyond largest offset
+    erequest.offset = VSLICE_MAX;
+    erequest.length = 1;
+    ASSERT_LT(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "Expected request failure");
+    ASSERT_TRUE(checkWriteReadBlock(vp_fd, bno, 1), "");
+
+    // Try freeing at the largest offset
+    erequest.offset = VSLICE_MAX - 1;
+    erequest.length = 1;
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "");
+    ASSERT_TRUE(checkNoAccessBlock(vp_fd, bno, 1), "");
+
+    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
 // Test removing slices from a VPartition.
 static bool TestVPartitionShrink(void) {
     BEGIN_TEST;
@@ -702,7 +766,7 @@ static bool TestVPartitionShrink(void) {
     // Try to shrink off the end (okay, since SOME of the slices are allocated)
     erequest.offset = 1;
     erequest.length = slice_count + 3;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "Expected request failure");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "");
 
     // The same request to shrink should now fail (NONE of the slices are
     // allocated)
@@ -713,6 +777,138 @@ static bool TestVPartitionShrink(void) {
     // ... unless we re-allocate and try again.
     ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
     ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "");
+
+    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
+// Test splitting a contiguous slice extent into multiple parts
+static bool TestVPartitionSplit(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
+    size_t disk_size = 512 * (1 << 20);
+
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    fvm_info_t fvm_info;
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    size_t slice_size = fvm_info.slice_size;
+    size_t slices_left = fvm::UsableSlicesCount(disk_size, slice_size);
+
+    // Allocate one VPart
+    alloc_req_t request;
+    size_t slice_count = 5;
+    request.slice_count = slice_count;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int vp_fd;
+    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    slices_left--;
+
+    // Confirm that the disk reports the correct number of slices
+    block_info_t info;
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+
+    extend_request_t reset_erequest;
+    reset_erequest.offset = 1;
+    reset_erequest.length = slice_count - 1;
+    extend_request_t mid_erequest;
+    mid_erequest.offset = 2;
+    mid_erequest.length = 1;
+    extend_request_t start_erequest;
+    start_erequest.offset = 1;
+    start_erequest.length = 1;
+    extend_request_t end_erequest;
+    end_erequest.offset = 3;
+    end_erequest.length = slice_count - 3;
+
+
+    auto verifyExtents = [=](bool start, bool mid, bool end) {
+        if (start) {
+            ASSERT_TRUE(checkWriteReadBlock(vp_fd, start_erequest.offset  * (slice_size / info.block_size), 1), "");
+        } else {
+            ASSERT_TRUE(checkNoAccessBlock(vp_fd, start_erequest.offset  * (slice_size / info.block_size), 1), "");
+        }
+        if (mid) {
+            ASSERT_TRUE(checkWriteReadBlock(vp_fd, mid_erequest.offset  * (slice_size / info.block_size), 1), "");
+        } else {
+            ASSERT_TRUE(checkNoAccessBlock(vp_fd, mid_erequest.offset  * (slice_size / info.block_size), 1), "");
+        }
+        if (end) {
+            ASSERT_TRUE(checkWriteReadBlock(vp_fd, end_erequest.offset  * (slice_size / info.block_size), 1), "");
+        } else {
+            ASSERT_TRUE(checkNoAccessBlock(vp_fd, end_erequest.offset  * (slice_size / info.block_size), 1), "");
+        }
+        return true;
+    };
+
+    // We should be able to split the extent.
+    ASSERT_TRUE(verifyExtents(true, true, true), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, false, true), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, true), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, false), "");
+
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0, "");
+
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, true, true), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, true), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, false), "");
+
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0, "");
+
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, true, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, false, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, false), "");
+
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0, "");
+
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, true, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, true, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, false), "");
+
+    // We should also be able to combine extents
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, true, false), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, true, false), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, true, true), "");
+
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &reset_erequest), 0, "");
+
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, true, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, true, true), "");
+
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &reset_erequest), 0, "");
+
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(false, false, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, false, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0, "");
+    ASSERT_TRUE(verifyExtents(true, true, true), "");
 
     ASSERT_EQ(close(vp_fd), 0, "");
     ASSERT_EQ(close(fd), 0, "");
@@ -1464,7 +1660,9 @@ RUN_TEST_MEDIUM(TestAllocateMany)
 RUN_TEST_MEDIUM(TestCloseDuringAccess)
 RUN_TEST_MEDIUM(TestReleaseDuringAccess)
 RUN_TEST_MEDIUM(TestVPartitionExtend)
+RUN_TEST_MEDIUM(TestVPartitionExtendSparse)
 RUN_TEST_MEDIUM(TestVPartitionShrink)
+RUN_TEST_MEDIUM(TestVPartitionSplit)
 RUN_TEST_MEDIUM(TestVPartitionDestroy)
 RUN_TEST_MEDIUM(TestSliceAccessContiguous)
 RUN_TEST_MEDIUM(TestSliceAccessMany)

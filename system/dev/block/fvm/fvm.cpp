@@ -21,6 +21,38 @@
 
 namespace fvm {
 
+mxtl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
+    MX_DEBUG_ASSERT(start() <= vslice);
+    MX_DEBUG_ASSERT(vslice < end());
+    mxtl::AllocChecker ac;
+    mxtl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice + 1));
+    if (!ac.check()) {
+        return nullptr;
+    } else if (!new_extent->pslices_.reserve(end() - vslice)) {
+        return nullptr;
+    }
+    for (size_t vs = vslice + 1; vs < end(); vs++) {
+        MX_ASSERT(new_extent->push_back(get(vs)));
+    }
+    while (!is_empty() && vslice + 1 != end()) {
+        pop_back();
+    }
+    return mxtl::move(new_extent);
+}
+
+
+bool SliceExtent::Merge(const SliceExtent& other) {
+    MX_DEBUG_ASSERT(end() == other.start());
+    if (!pslices_.reserve(other.size())) {
+        return false;
+    }
+
+    for (size_t vs = other.start(); vs < other.end(); vs++) {
+        MX_ASSERT(push_back(other.get(vs)));
+    }
+    return true;
+}
+
 VPartitionManager::VPartitionManager(mx_device_t* parent, const block_info_t& info)
     : ManagerDeviceType(parent), info_(info), metadata_(nullptr), metadata_size_(0),
       slice_size_(0) {}
@@ -264,15 +296,15 @@ mx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) con
     return MX_ERR_NO_SPACE;
 }
 
-mx_status_t VPartitionManager::AllocateSlices(VPartition* vp, uint32_t vslice_start,
+mx_status_t VPartitionManager::AllocateSlices(VPartition* vp, size_t vslice_start,
                                               size_t count) {
     mxtl::AutoLock lock(&lock_);
     return AllocateSlicesLocked(vp, vslice_start, count);
 }
 
-mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, uint32_t vslice_start,
+mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
                                                     size_t count) {
-    if (vslice_start + count > VSliceCount()) {
+    if (vslice_start + count > VSliceMax()) {
         return MX_ERR_INVALID_ARGS;
     }
 
@@ -285,23 +317,27 @@ mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, uint32_t vsl
             return MX_ERR_BAD_STATE;
         for (size_t i = 0; i < count; i++) {
             size_t pslice;
-            auto vslice = static_cast<uint32_t>(vslice_start + i);
-            if (vp->SliceGetLocked(vslice) != 0) {
+            auto vslice = vslice_start + i;
+            if (vp->SliceGetLocked(vslice) != PSLICE_UNALLOCATED) {
                 status = MX_ERR_INVALID_ARGS;
             }
-            if ((status != MX_OK) || (status = FindFreeSliceLocked(&pslice, hint)) != MX_OK) {
-                for (uint32_t j = 0; j < i; j++) {
+            if ((status != MX_OK) ||
+                ((status = FindFreeSliceLocked(&pslice, hint)) != MX_OK) ||
+                ((status = vp->SliceSetLocked(vslice, static_cast<uint32_t>(pslice)) != MX_OK))) {
+                for (int j = static_cast<int>(i - 1); j >= 0; j--) {
                     vslice = vslice_start + j;
-                    GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = 0;
+                    GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = PSLICE_UNALLOCATED;
                     vp->SliceFreeLocked(vslice);
                 }
 
                 return status;
             }
-            vp->SliceSetLocked(vslice, static_cast<uint32_t>(pslice));
             slice_entry_t* alloc_entry = GetSliceEntryLocked(pslice);
-            alloc_entry->vpart = static_cast<uint32_t>(vp->GetEntryIndex());
-            alloc_entry->vslice = vslice;
+            auto vpart = vp->GetEntryIndex();
+            MX_DEBUG_ASSERT(vpart <= VPART_MAX);
+            MX_DEBUG_ASSERT(vslice <= VSLICE_MAX);
+            alloc_entry->vpart = vpart & VPART_MAX;
+            alloc_entry->vslice = vslice & VSLICE_MAX;
             hint = pslice + 1;
         }
     }
@@ -310,27 +346,25 @@ mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, uint32_t vsl
         // Undo allocation in the event of failure; avoid holding VPartition
         // lock while writing to fvm.
         mxtl::AutoLock lock(&vp->lock_);
-        for (uint32_t j = 0; j < count; j++) {
+        for (int j = static_cast<int>(count - 1); j >= 0; j--) {
             auto vslice = vslice_start + j;
-            GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = 0;
+            GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = PSLICE_UNALLOCATED;
             vp->SliceFreeLocked(vslice);
         }
     }
     return status;
 }
 
-mx_status_t VPartitionManager::FreeSlices(VPartition* vp, uint32_t vslice_start,
+mx_status_t VPartitionManager::FreeSlices(VPartition* vp, size_t vslice_start,
                                           size_t count) {
     mxtl::AutoLock lock(&lock_);
     return FreeSlicesLocked(vp, vslice_start, count);
 }
 
-mx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint32_t vslice_start,
+mx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_start,
                                                 size_t count) {
-    if (vslice_start + count > VSliceCount() || count > VSliceCount()) {
+    if (vslice_start + count > VSliceMax() || count > VSliceMax()) {
         return MX_ERR_INVALID_ARGS;
-    } else if (vslice_start == 0) {
-        count = VSliceCount();
     }
 
     bool freed_something = false;
@@ -347,22 +381,41 @@ mx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint32_t vslice_
             return status;
         }
 
-        for (size_t i = 0; i < count; i++) {
-            auto vslice = vslice_start + i;
-            auto pslice = vp->SliceGetLocked(vslice);
-            if (pslice != 0) {
-                GetSliceEntryLocked(pslice)->vpart = 0;
-                vp->SliceFreeLocked(vslice);
-                freed_something = true;
+        if (vslice_start == 0) {
+            // Special case: Freeing entire VPartition
+            for (auto extent = vp->ExtentBegin(); extent.IsValid(); extent = vp->ExtentBegin()) {
+                while (!extent->is_empty()) {
+                    auto vslice = extent->end() - 1;
+                    GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = PSLICE_UNALLOCATED;
+                    MX_ASSERT(vp->SliceFreeLocked(vslice));
+                }
             }
-        }
 
-        // Remove device, VPartition if this was a request to free all slices.
-        if (vslice_start == 0 && freed_something) {
+            // Remove device, VPartition if this was a request to free all slices.
             device_remove(mxdev());
             auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
             entry->clear();
             vp->KillLocked();
+            freed_something = true;
+        } else {
+            for (int i = static_cast<int>(count - 1); i >= 0; i--) {
+                auto vslice = vslice_start + i;
+                if (vp->SliceCanFree(vslice)) {
+                    size_t pslice = vp->SliceGetLocked(vslice);
+                    if (!freed_something) {
+                        // The first 'free' is the only one which can fail -- it
+                        // has the potential to split extents, which may require
+                        // memory allocation.
+                        if (!vp->SliceFreeLocked(vslice)) {
+                            return MX_ERR_NO_MEMORY;
+                        }
+                    } else {
+                        MX_ASSERT(vp->SliceFreeLocked(vslice));
+                    }
+                    GetSliceEntryLocked(pslice)->vpart = 0;
+                    freed_something = true;
+                }
+            }
         }
     }
 
@@ -423,7 +476,7 @@ mx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
             return MX_ERR_BUFFER_TOO_SMALL;
         fvm_info_t* info = static_cast<fvm_info_t*>(reply);
         info->slice_size = SliceSize();
-        info->vslice_count = VSliceCount();
+        info->vslice_count = VSliceMax();
         *out_actual = sizeof(fvm_info_t);
         return MX_OK;
     }
@@ -443,10 +496,8 @@ void VPartitionManager::DdkRelease() {
     delete this;
 }
 
-VPartition::VPartition(VPartitionManager* vpm, size_t entry_index,
-                       mxtl::Array<uint32_t> slice_map)
-    : PartitionDeviceType(vpm->mxdev()), mgr_(vpm),
-      entry_index_(entry_index), slice_map_(mxtl::move(slice_map)) {
+VPartition::VPartition(VPartitionManager* vpm, size_t entry_index)
+    : PartitionDeviceType(vpm->mxdev()), mgr_(vpm), entry_index_(entry_index) {
 
     memcpy(&info_, &mgr_->info_, sizeof(block_info_t));
     info_.block_count = 0;
@@ -459,12 +510,7 @@ mx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
     MX_DEBUG_ASSERT(entry_index != 0);
 
     mxtl::AllocChecker ac;
-    mxtl::Array<uint32_t> slice_map(new (&ac) uint32_t[vpm->VSliceCount()](), vpm->VSliceCount());
-    if (!ac.check()) {
-        return MX_ERR_NO_MEMORY;
-    }
-
-    auto vp = mxtl::make_unique_checked<VPartition>(&ac, vpm, entry_index, mxtl::move(slice_map));
+    auto vp = mxtl::make_unique_checked<VPartition>(&ac, vpm, entry_index);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -478,6 +524,80 @@ static void vpart_block_complete(iotxn_t* txn, void* cookie) {
     memcpy(&cb, txn->extra, sizeof(void*));
     cb->complete(cookie, txn->status);
     iotxn_release(txn);
+}
+
+uint32_t VPartition::SliceGetLocked(size_t vslice) const {
+    MX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
+    auto extent = --slice_map_.upper_bound(vslice);
+    if (!extent.IsValid()) {
+        return 0;
+    }
+    MX_DEBUG_ASSERT(extent->start() <= vslice);
+    return extent->get(vslice);
+}
+
+mx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
+    MX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
+    auto extent = --slice_map_.upper_bound(vslice);
+    MX_DEBUG_ASSERT(!extent.IsValid() || extent->get(vslice) == PSLICE_UNALLOCATED);
+    if (extent.IsValid() && (vslice == extent->end())) {
+        // Easy case: append to existing slice
+        if (!extent->push_back(pslice)) {
+            return MX_ERR_NO_MEMORY;
+        }
+        MX_DEBUG_ASSERT(SliceGetLocked(vslice) == pslice);
+        AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
+        return MX_OK;
+    }
+
+    // Longer case: there is no extent for this vslice, so we should make
+    // one.
+    mxtl::AllocChecker ac;
+    mxtl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice));
+    if (!ac.check()) {
+        return MX_ERR_NO_MEMORY;
+    } else if (!new_extent->push_back(pslice)) {
+        return MX_ERR_NO_MEMORY;
+    }
+    MX_DEBUG_ASSERT(new_extent->GetKey() == vslice);
+    MX_DEBUG_ASSERT(new_extent->get(vslice) == pslice);
+    slice_map_.insert(mxtl::move(new_extent));
+
+    auto nextExtent = --slice_map_.upper_bound(vslice + 1);
+    if (nextExtent.IsValid() && (vslice + 1 == nextExtent->start())) {
+        // Try to coalesce with the next slice
+        extent = --slice_map_.upper_bound(vslice);
+        if (extent->Merge(*nextExtent)) {
+            slice_map_.erase(*nextExtent);
+        }
+    }
+
+    MX_DEBUG_ASSERT(SliceGetLocked(vslice) == pslice);
+    AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
+    return MX_OK;
+}
+
+bool VPartition::SliceFreeLocked(size_t vslice) TA_REQ(lock_) {
+    MX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
+    MX_DEBUG_ASSERT(SliceCanFree(vslice));
+    auto extent = --slice_map_.upper_bound(vslice);
+    if (vslice != extent->end() - 1) {
+        // Removing from the middle of an extent; this splits the extent in
+        // two.
+        auto new_extent = extent->Split(vslice);
+        if (new_extent == nullptr) {
+            return false;
+        }
+        slice_map_.insert(mxtl::move(new_extent));
+    }
+    // Removing from end of extent
+    extent->pop_back();
+    if (extent->is_empty()) {
+        slice_map_.erase(*extent);
+    }
+
+    AddBlocksLocked(-(mgr_->SliceSize() / info_.block_size));
+    return true;
 }
 
 void VPartition::Txn(uint32_t opcode, mx_handle_t vmo, uint64_t length,
@@ -495,6 +615,19 @@ void VPartition::Txn(uint32_t opcode, mx_handle_t vmo, uint64_t length,
     txn->cookie = cookie;
     memcpy(txn->extra, &callbacks_, sizeof(void*));
     DdkIotxnQueue(txn);
+}
+
+static mx_status_t RequestBoundCheck(const extend_request_t* request,
+                                     size_t vslice_max) {
+    if (request->offset == 0 || request->offset > vslice_max) {
+        return MX_ERR_OUT_OF_RANGE;
+    } else if (request->length > vslice_max) {
+        return MX_ERR_OUT_OF_RANGE;
+    } else if (request->offset + request->length < request->offset ||
+               request->offset + request->length > vslice_max) {
+        return MX_ERR_OUT_OF_RANGE;
+    }
+    return MX_OK;
 }
 
 // Device protocol (VPartition)
@@ -518,7 +651,7 @@ mx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
             return MX_ERR_BUFFER_TOO_SMALL;
         fvm_info_t* info = static_cast<fvm_info_t*>(reply);
         info->slice_size = mgr_->SliceSize();
-        info->vslice_count = mgr_->VSliceCount();
+        info->vslice_count = mgr_->VSliceMax();
         *out_actual = sizeof(fvm_info_t);
         return MX_OK;
     }
@@ -564,43 +697,28 @@ mx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         if (cmdlen < sizeof(extend_request_t))
             return MX_ERR_BUFFER_TOO_SMALL;
         const extend_request_t* request = static_cast<const extend_request_t*>(cmd);
-
-        if (request->offset == 0 ||
-            request->offset >= mxtl::numeric_limits<uint32_t>::max()) {
-            return MX_ERR_OUT_OF_RANGE;
+        mx_status_t status;
+        if ((status = RequestBoundCheck(request, mgr_->VSliceMax())) != MX_OK) {
+            return status;
         } else if (request->length == 0) {
-            // No-op extend request
             return MX_OK;
-        } else if (request->length >= mxtl::numeric_limits<uint32_t>::max()) {
-            return MX_ERR_OUT_OF_RANGE;
-        } else if (request->length + request->offset >= mxtl::numeric_limits<uint32_t>::max()) {
-            return MX_ERR_OUT_OF_RANGE;
         }
-
-        auto vslice_start = static_cast<uint32_t>(request->offset);
-        return mgr_->AllocateSlices(this, vslice_start, request->length);
+        return mgr_->AllocateSlices(this, request->offset, request->length);
     }
     case IOCTL_BLOCK_FVM_SHRINK: {
         if (cmdlen < sizeof(extend_request_t))
             return MX_ERR_BUFFER_TOO_SMALL;
         const extend_request_t* request = static_cast<const extend_request_t*>(cmd);
-
-        if (request->offset == 0 || request->offset >= mgr_->VSliceCount()) {
-            return MX_ERR_OUT_OF_RANGE;
+        mx_status_t status;
+        if ((status = RequestBoundCheck(request, mgr_->VSliceMax())) != MX_OK) {
+            return status;
         } else if (request->length == 0) {
-            // No-op shrink request
             return MX_OK;
-        } else if (request->length >= mgr_->VSliceCount()) {
-            return MX_ERR_OUT_OF_RANGE;
-        } else if (request->length + request->offset >= mgr_->VSliceCount()) {
-            return MX_ERR_OUT_OF_RANGE;
         }
-
-        return mgr_->FreeSlices(this, static_cast<uint32_t>(request->offset),
-                                request->length);
+        return mgr_->FreeSlices(this, request->offset, request->length);
     }
     case IOCTL_BLOCK_FVM_DESTROY: {
-        return mgr_->FreeSlices(this, 0, mgr_->VSliceCount());
+        return mgr_->FreeSlices(this, 0, mgr_->VSliceMax());
     }
     default:
         return MX_ERR_NOT_SUPPORTED;
@@ -653,8 +771,8 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
 
     const size_t disk_size = mgr_->DiskSize();
     const size_t slice_size = mgr_->SliceSize();
-    uint32_t vslice_start = static_cast<uint32_t>(txn->offset / slice_size);
-    uint32_t vslice_end = static_cast<uint32_t>((txn->offset + txn->length - 1) / slice_size);
+    size_t vslice_start = txn->offset / slice_size;
+    size_t vslice_end = (txn->offset + txn->length - 1) / slice_size;
 
     mxtl::AutoLock lock(&lock_);
     if (vslice_start == vslice_end) {
@@ -675,7 +793,7 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
     // First, check that all slices are allocated.
     // If any are missing, then this txn will fail.
     bool contiguous = true;
-    for (uint32_t vslice = vslice_start; vslice <= vslice_end; vslice++) {
+    for (size_t vslice = vslice_start; vslice <= vslice_end; vslice++) {
         if (SliceGetLocked(vslice) == FVM_SLICE_FREE) {
             iotxn_complete(txn, MX_ERR_OUT_OF_RANGE, 0);
             return;
@@ -755,7 +873,11 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
 }
 
 mx_off_t VPartition::DdkGetSize() {
-    return mgr_->DiskSize();
+    const mx_off_t size = mgr_->DiskSize() * mgr_->SliceSize();
+    if (size / mgr_->SliceSize() != size) {
+        return mxtl::numeric_limits<mx_off_t>::max();
+    }
+    return size;
 }
 
 void VPartition::DdkUnbind() {

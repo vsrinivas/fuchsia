@@ -45,12 +45,11 @@
 // Allocate a virtual partition with the requested length
 #define IOCTL_BLOCK_FVM_ALLOC \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 11)
-// Extend a virtual partition
+// Extend a virtual partition.
 #define IOCTL_BLOCK_FVM_EXTEND \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 12)
 // Shink a virtual partition. Returns "success" if ANY slices are
-// freed (if any slices are freed, the driver will attempt to free
-// all provided slices).
+// freed.
 #define IOCTL_BLOCK_FVM_SHRINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
 #define IOCTL_BLOCK_FVM_DESTROY \
