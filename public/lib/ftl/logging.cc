@@ -12,6 +12,8 @@
 
 #if defined(OS_ANDROID)
 #include <android/log.h>
+#elif defined(OS_IOS)
+#include <syslog.h>
 #endif
 
 namespace ftl {
@@ -80,6 +82,8 @@ LogMessage::~LogMessage() {
       break;
   }
   __android_log_write(priority, ANDROID_LOG_TAG, stream_.str().c_str());
+#elif defined(OS_IOS)
+  syslog(LOG_ALERT, "%s", stream_.str().c_str());
 #else
   std::cerr << stream_.str();
   std::cerr.flush();
