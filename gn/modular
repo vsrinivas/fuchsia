@@ -5,7 +5,7 @@
     ],
     "labels": [
         "//apps/modular",
-        "//apps/modular/lib/util:modular_util_unittests",
+        "//apps/modular:modular_unittests",
         "//apps/web_runner/services"
     ],
     "components": [
@@ -150,8 +150,8 @@
             "bootfs_path": "apps/modular_tests/remote_invoker_test"
         },
         {
-            "binary": "modular_util_unittests",
-            "bootfs_path": "test/modular_util_unittests"
+            "binary": "modular_unittests",
+            "bootfs_path": "test/modular_unittests"
         },
         {
             "binary": "null_module",
