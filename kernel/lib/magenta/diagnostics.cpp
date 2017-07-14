@@ -44,9 +44,6 @@ static ProcessWalker<ProcessCallbackType> MakeProcessWalker(ProcessCallbackType 
 
 static void DumpProcessListKeyMap() {
     printf("id  : process id number\n");
-    printf("-s  : state: R = running D = dead\n");
-    printf("#t  : number of threads\n");
-    printf("#pg : number of allocated pages\n");
     printf("#h  : total number of handles\n");
     printf("#jb : number of job handles\n");
     printf("#pr : number of process handles\n");
@@ -56,20 +53,9 @@ static void DumpProcessListKeyMap() {
     printf("#ch : number of channel handles\n");
     printf("#ev : number of event and event pair handles\n");
     printf("#po : number of port handles\n");
-}
-
-static char StateChar(const ProcessDispatcher& pd) {
-    switch (pd.state()) {
-        case ProcessDispatcher::State::INITIAL:
-            return 'I';
-        case ProcessDispatcher::State::RUNNING:
-            return 'R';
-        case ProcessDispatcher::State::DYING:
-            return 'Y';
-        case ProcessDispatcher::State::DEAD:
-            return 'D';
-    }
-    return '?';
+    printf("#so: number of sockets\n");
+    printf("#tm : number of timers\n");
+    printf("#fi : number of fifos\n");
 }
 
 static const char* ObjectTypeToString(mx_obj_type_t type) {
@@ -135,7 +121,7 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, buf_len, "%3u: %3u %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, buf_len, "%4u: %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
              types[MX_OBJ_TYPE_JOB],
              types[MX_OBJ_TYPE_PROCESS],
@@ -143,15 +129,16 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
              types[MX_OBJ_TYPE_VMO],
              types[MX_OBJ_TYPE_VMAR],
              types[MX_OBJ_TYPE_CHANNEL],
-             // Events and event pairs:
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
-             types[MX_OBJ_TYPE_PORT]
+             types[MX_OBJ_TYPE_PORT],
+             types[MX_OBJ_TYPE_SOCKET],
+             types[MX_OBJ_TYPE_TIMER],
+             types[MX_OBJ_TYPE_FIFO]
              );
 }
 
 void DumpProcessList() {
-    printf("%8s-s  #t  #pg  #h: #jb #pr #th #vo #vm #ch #ev #ip [  job:name]\n",
-           "id");
+    printf("%7s  #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi [name]\n", "id");
 
     auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
         char handle_counts[(MX_OBJ_TYPE_LAST * 4) + 1 + /*slop*/ 16];
@@ -159,13 +146,9 @@ void DumpProcessList() {
 
         char pname[MX_MAX_NAME_LEN];
         process->get_name(pname);
-        printf("%8" PRIu64 "-%c %3u %4zu %s [%5" PRIu64 ":%s]\n",
+        printf("%7" PRIu64 "%s [%s]\n",
                process->get_koid(),
-               StateChar(*process),
-               process->ThreadCount(),
-               process->PageCount(),
                handle_counts,
-               process->get_related_koid(),
                pname);
     });
     GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
