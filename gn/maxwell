@@ -77,5 +77,15 @@
             "binary": "context_coprocessors_unittest",
             "bootfs_path": "test/maxwell/context_coprocessors_unittest"
         }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/maxwell/default_config.json",
+            "file": "apps/maxwell/src/user/default_config.json"
+        },
+        {
+            "bootfs_path": "data/maxwell/test_config.json",
+            "file": "apps/maxwell/src/user/test_config.json"
+        }
     ]
 }
