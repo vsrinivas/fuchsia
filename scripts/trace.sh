@@ -68,8 +68,6 @@ done
 
 command="trace record --duration=${duration} --buffer-size=${buffer_size} $*"
 
-# since we can't observe trace completion, add a delay to compensate for lag
-delay=$(( $duration + 30 ))
 trace_file="trace_$(date +%Y-%m-%d_at_%H.%M.%S).json"
 host="$(netaddr --fuchsia)"
 
@@ -77,8 +75,6 @@ rm -f "${trace_file}"
 echo "Starting trace..." \
   && echo "Running: ${command}" \
   && ssh -q -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "${host}" "${command}" \
-  && echo "Sleeping ${delay} seconds..." \
-  && sleep "${delay}" \
   && echo "Downloading trace to ${trace_file}" \
   && scp -q -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "[${host}]:/tmp/trace.json" "${trace_file}"
 if [[ $? -ne 0 ]]; then
