@@ -11,7 +11,7 @@ namespace mx {
 
 class port : public object<port> {
 public:
-    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_IOPORT;
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_PORT;
 
     port() = default;
 

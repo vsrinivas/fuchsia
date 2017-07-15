@@ -33,15 +33,15 @@ Handler::~Handler() {
     Close();
 }
 
-mx_status_t Handler::SetAsyncCallback(const mx::port& dispatch_ioport) {
-    // queue a message on ioport whenever h_ is readable or closed
-    return h_.wait_async(dispatch_ioport, (uint64_t)(uintptr_t)this,
+mx_status_t Handler::SetAsyncCallback(const mx::port& dispatch_port) {
+    // queue a message on port whenever h_ is readable or closed
+    return h_.wait_async(dispatch_port, (uint64_t)(uintptr_t)this,
                          MX_CHANNEL_READABLE|MX_CHANNEL_PEER_CLOSED,
                          MX_WAIT_ASYNC_ONCE);
 }
 
-mx_status_t Handler::CancelAsyncCallback(const mx::port& dispatch_ioport) {
-    return dispatch_ioport.cancel(h_.get(), (uint64_t)(uintptr_t)this);
+mx_status_t Handler::CancelAsyncCallback(const mx::port& dispatch_port) {
+    return dispatch_port.cancel(h_.get(), (uint64_t)(uintptr_t)this);
 }
 
 void Handler::Close() {
@@ -61,7 +61,7 @@ VfsDispatcher::~VfsDispatcher() {
     // kill off worker threads, so no new cb activity
     // - send suicide events -- existing queue clears then workers exit
     // - join all threads
-    // close ioport so no queue new activity; no new handlers can be added,
+    // close port so no queue new activity; no new handlers can be added,
     // - remaining messages discarded
     // clean up and delete remaining handlers
 
@@ -110,7 +110,7 @@ int VfsDispatcher::Loop() {
     for (;;) {
         mx_port_packet_t packet;
 
-        if ((r = ioport_.wait(MX_TIME_INFINITE, &packet, 0u)) < 0) {
+        if ((r = port_.wait(MX_TIME_INFINITE, &packet, 0u)) < 0) {
             xprintf("mxio_dispatcher: port wait failed %d, worker exiting\n", r);
             return MX_OK;
         }
@@ -119,7 +119,7 @@ int VfsDispatcher::Loop() {
 
         if ((packet.signal.observed & MX_EVENT_SIGNALED) != 0) {
             // reset for the next thread
-            r = shutdown_event_.wait_async(ioport_, 0u, MX_EVENT_SIGNALED,
+            r = shutdown_event_.wait_async(port_, 0u, MX_EVENT_SIGNALED,
                                            MX_WAIT_ASYNC_ONCE);
             if (r != MX_OK) {
                 FS_TRACE_ERROR("vfs-dispatcher: error, couldn't reset thread event\n");
@@ -144,7 +144,7 @@ int VfsDispatcher::Loop() {
                 }
             }
             // maybe more work to do: re-arm handler to fire again
-            if ((r = handler->SetAsyncCallback(ioport_))!= MX_OK){
+            if ((r = handler->SetAsyncCallback(port_))!= MX_OK){
                 DisconnectHandler(handler, true);
                 goto free_handler;
             }
@@ -178,13 +178,13 @@ mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
     dispatcher->t_.reset(t, pool_size);
 
     mx_status_t status;
-    if ((status = mx::port::create(0, &dispatcher->ioport_)) != MX_OK) {
+    if ((status = mx::port::create(0, &dispatcher->port_)) != MX_OK) {
         return status;
     }
     if ((status = mx::event::create(0u, &dispatcher->shutdown_event_)) != MX_OK) {
         return status;
     }
-    status = dispatcher->shutdown_event_.wait_async(dispatcher->ioport_, 0u,
+    status = dispatcher->shutdown_event_.wait_async(dispatcher->port_, 0u,
                                                     MX_EVENT_SIGNALED,
                                                     MX_WAIT_ASYNC_ONCE);
     if (status != MX_OK) {
@@ -243,9 +243,9 @@ mx_status_t VfsDispatcher::AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, 
 
     mxtl::AutoLock md_lock(&lock_);
 
-    // set us up to receive read/close callbacks from handler on ioport_
+    // set us up to receive read/close callbacks from handler on port_
     mx_status_t status;
-    if ((status = handler->SetAsyncCallback(ioport_)) != MX_OK) {
+    if ((status = handler->SetAsyncCallback(port_)) != MX_OK) {
         return status;
     } else {
         handlers_.push_back(mxtl::move(handler));

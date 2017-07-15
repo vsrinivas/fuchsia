@@ -31,8 +31,8 @@ public:
     }
     ~Handler();
 
-    mx_status_t SetAsyncCallback(const mx::port& dispatch_ioport);
-    mx_status_t CancelAsyncCallback(const mx::port& dispatch_ioport);
+    mx_status_t SetAsyncCallback(const mx::port& dispatch_port);
+    mx_status_t CancelAsyncCallback(const mx::port& dispatch_port);
 
     mx_status_t ExecuteCallback(mxio_dispatcher_cb_t dispatch_cb) {
         return dispatch_cb(h_.get(), (void*) cb_, cookie_);
@@ -76,9 +76,9 @@ private:
     mxtl::DoublyLinkedList<mxtl::unique_ptr<Handler>> handlers_ __TA_GUARDED(lock_);
     uint32_t n_threads_;
 
-    // NOTE: ioport_ intentionally declared after handlers_, so it
+    // NOTE: port_ intentionally declared after handlers_, so it
     // is shut down before the handlers are destroyed.
-    mx::port ioport_;
+    mx::port port_;
 };
 
 } // namespace fs

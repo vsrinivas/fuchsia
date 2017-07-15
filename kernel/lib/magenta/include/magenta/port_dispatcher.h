@@ -138,7 +138,7 @@ public:
                            mx_rights_t* rights);
 
     ~PortDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_IOPORT; }
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PORT; }
 
     void on_zero_handles() final;
 

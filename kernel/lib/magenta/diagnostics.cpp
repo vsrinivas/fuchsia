@@ -81,7 +81,7 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_VMO: return "vmo";
         case MX_OBJ_TYPE_CHANNEL: return "channel";
         case MX_OBJ_TYPE_EVENT: return "event";
-        case MX_OBJ_TYPE_IOPORT: return "io-port";
+        case MX_OBJ_TYPE_PORT: return "port";
         case MX_OBJ_TYPE_INTERRUPT: return "interrupt";
         case MX_OBJ_TYPE_IOMAP: return "io-map";
         case MX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
@@ -145,7 +145,7 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
              types[MX_OBJ_TYPE_CHANNEL],
              // Events and event pairs:
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
-             types[MX_OBJ_TYPE_IOPORT]
+             types[MX_OBJ_TYPE_PORT]
              );
 }
 

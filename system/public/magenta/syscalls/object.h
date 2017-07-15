@@ -40,7 +40,7 @@ typedef enum {
     MX_OBJ_TYPE_VMO                 = 3,
     MX_OBJ_TYPE_CHANNEL             = 4,
     MX_OBJ_TYPE_EVENT               = 5,
-    MX_OBJ_TYPE_IOPORT              = 6,
+    MX_OBJ_TYPE_PORT                = 6,
     MX_OBJ_TYPE_INTERRUPT           = 9,
     MX_OBJ_TYPE_IOMAP               = 10,
     MX_OBJ_TYPE_PCI_DEVICE          = 11,

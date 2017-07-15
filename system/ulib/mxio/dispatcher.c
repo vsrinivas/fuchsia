@@ -41,13 +41,13 @@ typedef struct {
 struct mxio_dispatcher {
     mtx_t lock;
     list_node_t list;
-    mx_handle_t ioport;
+    mx_handle_t port;
     mxio_dispatcher_cb_t default_cb;
     thrd_t t;
 };
 
 static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
-    mx_handle_close(md->ioport);
+    mx_handle_close(md->port);
     free(md);
 }
 
@@ -76,7 +76,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool n
     destroy_handler(md, handler, need_close_cb);
 #else
     // Cancel the async wait operations.
-    mx_status_t r = mx_port_cancel(md->ioport, handler->h, (uint64_t)(uintptr_t)handler);
+    mx_status_t r = mx_port_cancel(md->port, handler->h, (uint64_t)(uintptr_t)handler);
     if (r) {
         printf("dispatcher: CANCEL FAILED %d\n", r);
     }
@@ -87,7 +87,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool n
     mx_port_packet_t packet;
     packet.key = (uint64_t)(uintptr_t)handler;
     packet.signal.observed = need_close_cb ? SIGNAL_NEEDS_CLOSE_CB : 0;
-    r = mx_port_queue(md->ioport, &packet, 0);
+    r = mx_port_queue(md->port, &packet, 0);
     if (r) {
         printf("dispatcher: PORT QUEUE FAILED %d\n", r);
     }
@@ -104,8 +104,8 @@ static int mxio_dispatcher_thread(void* _md) {
 
     for (;;) {
         mx_port_packet_t packet;
-        if ((r = mx_port_wait(md->ioport, MX_TIME_INFINITE, &packet, 0)) < 0) {
-            printf("dispatcher: ioport wait failed %d\n", r);
+        if ((r = mx_port_wait(md->port, MX_TIME_INFINITE, &packet, 0)) < 0) {
+            printf("dispatcher: port wait failed %d\n", r);
             break;
         }
         handler_t* handler = (void*)(uintptr_t)packet.key;
@@ -132,7 +132,7 @@ static int mxio_dispatcher_thread(void* _md) {
                 }
             }
 #if USE_WAIT_ONCE
-            if ((r = mx_object_wait_async(handler->h, md->ioport, (uint64_t)(uintptr_t)handler,
+            if ((r = mx_object_wait_async(handler->h, md->port, (uint64_t)(uintptr_t)handler,
                                           MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                           MX_WAIT_ASYNC_ONCE)) < 0) {
                 printf("dispatcher: could not re-arm: %p\n", handler);
@@ -160,7 +160,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     list_initialize(&md->list);
     mtx_init(&md->lock, mtx_plain);
     mx_status_t status;
-    if ((status = mx_port_create(0, &md->ioport)) < 0) {
+    if ((status = mx_port_create(0, &md->port)) < 0) {
         free(md);
         return status;
     }
@@ -213,13 +213,13 @@ mx_status_t mxio_dispatcher_add_etc(mxio_dispatcher_t* md, mx_handle_t h,
     mtx_lock(&md->lock);
     list_add_tail(&md->list, &handler->node);
 #if USE_WAIT_ONCE
-    if ((r = mx_object_wait_async(h, md->ioport, (uint64_t)(uintptr_t)handler,
+    if ((r = mx_object_wait_async(h, md->port, (uint64_t)(uintptr_t)handler,
                                   MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                   MX_WAIT_ASYNC_ONCE)) < 0) {
         list_delete(&handler->node);
     }
 #else
-    if ((r = mx_object_wait_async(h, md->ioport, (uint64_t)(uintptr_t)handler,
+    if ((r = mx_object_wait_async(h, md->port, (uint64_t)(uintptr_t)handler,
                                   MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                   MX_WAIT_ASYNC_REPEATING)) < 0) {
         list_delete(&handler->node);
