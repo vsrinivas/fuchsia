@@ -508,29 +508,31 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 			refs:            1,
 			writeBufFlushed: make(chan struct{}),
 		}
-		switch transProto {
-		case tcp.ProtocolNumber:
-			s0, s1, err := mx.NewSocket(0)
-			if err != nil {
-				return nil, err
+		if ep != nil {
+			switch transProto {
+			case tcp.ProtocolNumber:
+				s0, s1, err := mx.NewSocket(0)
+				if err != nil {
+					return nil, err
+				}
+				ios.dataHandle = mx.Handle(s0)
+				ios.peerDataHandle = mx.Handle(s1)
+				peerS, err = ios.peerDataHandle.Duplicate(mx.RightSameRights)
+				if err != nil {
+					ios.dataHandle.Close()
+					ios.peerDataHandle.Close()
+					return nil, err
+				}
+			case udp.ProtocolNumber:
+				c0, c1, err := mx.NewChannel(0)
+				if err != nil {
+					return nil, err
+				}
+				ios.dataHandle = c0.Handle
+				peerS = c1.Handle
+			default:
+				panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 			}
-			ios.dataHandle = mx.Handle(s0)
-			ios.peerDataHandle = mx.Handle(s1)
-			peerS, err = ios.peerDataHandle.Duplicate(mx.RightSameRights)
-			if err != nil {
-				ios.dataHandle.Close()
-				ios.peerDataHandle.Close()
-				return nil, err
-			}
-		case udp.ProtocolNumber:
-			c0, c1, err := mx.NewChannel(0)
-			if err != nil {
-				return nil, err
-			}
-			ios.dataHandle = c0.Handle
-			peerS = c1.Handle
-		default:
-			panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 		}
 	} else {
 		ios = iosOrig
