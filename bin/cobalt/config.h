@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This file contains copies of the contents of the config registration
-// files that are located in the Cobalt repo. The Cobalt client and 
+// files that are located in the Cobalt repo. The Cobalt client and
 // server need to share common configuration files and this constitutes
 // the client's copy.
 // TODO(azani) Find a better solution. We should be able to copy the
@@ -33,10 +33,13 @@ element {
   customer_id: 1
   project_id: 100
   id: 1
+  name: "Daily rare event counts"
+  description: "Daily counts of several events that are expected to occur rarely if ever."
   time_zone_policy: UTC
   parts {
     key: "Event name"
     value {
+      description: "Which rare event occured?"
     }
   }
 }
@@ -96,10 +99,13 @@ element {
   customer_id: 1
   project_id: 2
   id: 1
+  name: "Daily rare event counts"
+  description: "Daily counts of several events that are expected to occur rarely if ever."
   time_zone_policy: UTC
   parts {
     key: "Event name"
     value {
+      description: "Which rare event occured?"
     }
   }
 }
