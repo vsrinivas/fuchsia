@@ -72,11 +72,11 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
         case MDI_PLATFORM_DEVICE_DID:
             mdi_node_uint32(&node, &did);
             break;
-        case MDI_PLATFORM_DEVICE_MMIO:
-            mmio_count++;
+        case MDI_PLATFORM_MMIOS:
+            mmio_count = mdi_child_count(&node);
             break;
-        case MDI_PLATFORM_DEVICE_IRQ:
-            irq_count++;
+        case MDI_PLATFORM_IRQS:
+            irq_count = mdi_array_length(&node);
             break;
         }
     }

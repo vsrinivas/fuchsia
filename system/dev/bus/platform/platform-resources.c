@@ -76,52 +76,66 @@ mx_status_t platform_map_interrupt(platform_resources_t* resources, uint32_t ind
     return MX_OK;
 }
 
-static mx_status_t platform_add_mmio(platform_bus_t* bus, mdi_node_ref_t* node,
-                                     platform_mmio_t* out_mmio) {
-    uint64_t base = 0;
-    uint64_t length = 0;
-    mdi_node_ref_t  child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_BASE_PHYS:
-            mdi_node_uint64(&child, &base);
-            break;
-        case MDI_LENGTH:
-            mdi_node_uint64(&child, &length);
-            break;
+static mx_status_t platform_add_mmios(platform_bus_t* bus, mdi_node_ref_t* list_node,
+                                      platform_resources_t* resources) {
+    mdi_node_ref_t node;
+    platform_mmio_t* mmios = resources->mmios;
+
+    mdi_each_child(list_node, &node) {
+        uint64_t base = 0;
+        uint64_t length = 0;
+        mdi_node_ref_t  child;
+        mdi_each_child(&node, &child) {
+            switch (mdi_id(&child)) {
+            case MDI_BASE_PHYS:
+                mdi_node_uint64(&child, &base);
+                break;
+            case MDI_LENGTH:
+                mdi_node_uint64(&child, &length);
+                break;
+            }
         }
+
+        if (!base || !length) {
+            printf("platform_add_mmios: missing base or length\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        mmios->base = base;
+        mmios->length = length;
+        mx_status_t status = mx_resource_create(bus->resource, MX_RSRC_KIND_MMIO, base,
+                                                base + length - 1, &mmios->resource);
+        if (status != MX_OK) {
+            printf("platform_add_mmios: mx_resource_create failed %d\n", status);
+            return status;
+        }
+        mmios++;
     }
 
-    if (!base || !length) {
-        printf("platform_add_mmio: missing base or length\n");
-        return MX_ERR_INVALID_ARGS;
-    }
-
-    out_mmio->base = base;
-    out_mmio->length = length;
-    return mx_resource_create(bus->resource, MX_RSRC_KIND_MMIO, base, base + length - 1,
-                              &out_mmio->resource);
+    return MX_OK;
 }
 
-static mx_status_t platform_add_irq(platform_bus_t* bus, mdi_node_ref_t* node,
-                                    platform_irq_t* out_irq) {
-    uint32_t irq = UINT32_MAX;
-    mdi_node_ref_t  child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_IRQ:
-            mdi_node_uint32(&child, &irq);
-            break;
+static mx_status_t platform_add_irqs(platform_bus_t* bus, mdi_node_ref_t* array_node,
+                                     platform_resources_t* resources) {
+    uint32_t count = mdi_array_length(array_node);
+    platform_irq_t* irqs = resources->irqs;
+
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t irq;
+        mx_status_t status = mdi_array_uint32(array_node, i, &irq);
+        if (status != MX_OK) {
+            return status;
         }
+        irqs->irq = irq;
+        status = mx_resource_create(bus->resource, MX_RSRC_KIND_IRQ, irq, irq, &irqs->resource);
+        if (status != MX_OK) {
+            printf("platform_add_irqs: mx_resource_create failed %d\n", status);
+            return status;
+        }
+        irqs++;
     }
 
-    if (irq == UINT32_MAX) {
-        printf("platform_bus_add_irq: missing irq\n");
-        return MX_ERR_INVALID_ARGS;
-    }
-
-    out_irq->irq = irq;
-    return mx_resource_create(bus->resource, MX_RSRC_KIND_IRQ, irq, irq, &out_irq->resource);
+    return MX_OK;
 }
 
 void platform_init_resources(platform_resources_t* resources, uint32_t mmio_count,
@@ -143,22 +157,18 @@ void platform_init_resources(platform_resources_t* resources, uint32_t mmio_coun
 
 mx_status_t platform_add_resources(platform_bus_t* bus, platform_resources_t* resources,
                                    mdi_node_ref_t* node) {
-    uint32_t mmio_index = 0;
-    uint32_t irq_index = 0;
     mdi_node_ref_t child;
     mx_status_t status;
 
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_PLATFORM_DEVICE_MMIO:
-        case MDI_PLATFORM_BUS_MMIO:
-            if ((status = platform_add_mmio(bus, &child, &resources->mmios[mmio_index++])) != MX_OK) {
+        case MDI_PLATFORM_MMIOS:
+            if ((status = platform_add_mmios(bus, &child, resources)) != MX_OK) {
                 return status;
             }
             break;
-        case MDI_PLATFORM_DEVICE_IRQ:
-        case MDI_PLATFORM_BUS_IRQ:
-            if ((status = platform_add_irq(bus, &child, &resources->irqs[irq_index++])) != MX_OK) {
+        case MDI_PLATFORM_IRQS:
+            if ((status = platform_add_irqs(bus, &child, resources)) != MX_OK) {
                 return status;
             }
             break;

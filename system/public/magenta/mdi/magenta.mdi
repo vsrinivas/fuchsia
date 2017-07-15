@@ -23,15 +23,13 @@ uint32  platform.pid                      MDI_PLATFORM_PID                      
 list    platform.device                   MDI_PLATFORM_DEVICE                   202
 uint32  platform.device.did               MDI_PLATFORM_DEVICE_DID               203
 
-// platform.device.mmio has base-phys and length
-list    platform.device.mmio              MDI_PLATFORM_DEVICE_MMIO              204
+list    platform.bus                      MDI_PLATFORM_BUS                      204
 
-// platform.device.irq has irq
-list    platform.device.irq               MDI_PLATFORM_DEVICE_IRQ               205
+// platform.*.mmios elements have base-phys and length
+list mmios                                MDI_PLATFORM_MMIOS                    205
 
-list    platform.bus                      MDI_PLATFORM_BUS                      206
-list    platform.bus.mmio                 MDI_PLATFORM_BUS_MMIO                 207
-list    platform.bus.irq                  MDI_PLATFORM_BUS_IRQ                  208
+// list of IRQs for a platform device or bus
+array[uint32] irqs                        MDI_PLATFORM_IRQS                     206
 
 // Kernel Drivers
 
@@ -49,8 +47,6 @@ list    kernel.arm-gic-v3                 MDI_ARM_GIC_V3                        
 //       definition consistent with the PERIPH_BASE_VIRT definition in
 //       the targets rules.mk
 // GIC V3 uses base-virt
-// uint64  kernel.arm-gic-v3.base-virt
-// uint64  kernel.arm-gic-v3.base-phys
 uint64  kernel.arm-gic-v3.gicd-offset     MDI_ARM_GIC_V3_GICD_OFFSET            1011
 uint64  kernel.arm-gic-v3.gicr-offset     MDI_ARM_GIC_V3_GICR_OFFSET            1012
 uint64  kernel.arm-gic-v3.gicr-stride     MDI_ARM_GIC_V3_GICR_STRIDE            1013

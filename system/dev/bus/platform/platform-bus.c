@@ -154,17 +154,13 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     uint32_t mmio_count = 0;
     uint32_t irq_count = 0;
     if (mdi_find_node(&platform_node, MDI_PLATFORM_BUS, &bus_node) == MX_OK) {
-        mdi_each_child(&bus_node, &node) {
-            switch (mdi_id(&node)) {
-            case MDI_PLATFORM_BUS_MMIO:
-                mmio_count++;
-                break;
-            case MDI_PLATFORM_BUS_IRQ:
-                irq_count++;
-                break;
-            }
+        if (mdi_find_node(&bus_node, MDI_PLATFORM_MMIOS, &node) == MX_OK) {
+            mmio_count = mdi_child_count(&node);
         }
-    }
+        if (mdi_find_node(&bus_node, MDI_PLATFORM_IRQS, &node) == MX_OK) {
+            irq_count = mdi_array_length(&node);
+        }
+     }
 
     bus = calloc(1, sizeof(platform_bus_t) + mmio_count * sizeof(platform_mmio_t)
                  + irq_count * sizeof(platform_irq_t));

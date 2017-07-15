@@ -22,10 +22,12 @@ platform = {
 
     // Resources for the bcm-mailbox driver, which acts as our platform bus implementation
     bus = {
-        mmio = {
-            name = "arm-base"
-            base-phys = 0x3f00B000
-            length = 0x1000
+        mmios = {
+            {
+                name = "arm-base"
+                base-phys = 0x3f00B000
+                length = 0x1000
+            }
         }
     }
 
@@ -33,66 +35,68 @@ platform = {
     device = {
         name = "bcm-emmc"
         did = 1
-        mmio = {
-            name = "emmc"
-            base-phys = 0x3f300000
-            length = 0x1000
+        mmios = {
+            {
+                name = "emmc"
+                base-phys = 0x3f300000
+                length = 0x1000
+            }
         }
-        irq = {
-            name = "emmc"
-            irq = 62
-        }
+        irqs = [ 62 ]
     }
     device = {
         name = "bcm-i2c"
         did = 2
-        mmio = {
+        mmios = {
+            {
             name = "i2c-0"
-            base-phys = 0x3f205000
-            length = 0x1000
-        }
-        mmio = {
-            name = "i2c-1"
-            base-phys = 0x3f804000
-            length = 0x1000
-        }
-        mmio = {
-            name = "gpio"
-            base-phys = 0x3f200000
-            length = 0x1000
+                base-phys = 0x3f205000
+                length = 0x1000
+            }
+            {
+                name = "i2c-1"
+                base-phys = 0x3f804000
+                length = 0x1000
+            }
+            {
+                name = "gpio"
+                base-phys = 0x3f200000
+                length = 0x1000
+            }
         }
     }
     device = {
         name = "bcm-pcm"
         did = 3
-        mmio = {
-            name = "clock-ctl"
-            base-phys = 0x3f101000
-            length = 0x1000
-        }
-        mmio = {
-            name = "gpio"
-            base-phys = 0x3f200000
-            length = 0x1000
-        }
-        mmio = {
-            name = "i2s"
-            base-phys = 0x3f203000
-            length = 0x1000
+        mmios = {
+            {
+                name = "clock-ctl"
+                base-phys = 0x3f101000
+                length = 0x1000
+            }
+            {
+                name = "gpio"
+                base-phys = 0x3f200000
+                length = 0x1000
+            }
+            {
+                name = "i2s"
+                base-phys = 0x3f203000
+                length = 0x1000
+            }
         }
     }
     device = {
         name = "bcm-usb"
         did = 4
-        mmio = {
-            name = "usb-regs"
-            base-phys = 0x3f980000
-            length = 0x1000
+        mmios = {
+            {
+                name = "usb-regs"
+                base-phys = 0x3f980000
+                length = 0x1000
+            }
         }
-        irq = {
-            name = "usb"
-            irq = 9
-        }
+        irqs = [ 9 ]
     }
     device = {
         name = "bcm-display"
