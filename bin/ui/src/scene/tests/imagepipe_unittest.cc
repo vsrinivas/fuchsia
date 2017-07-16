@@ -21,8 +21,7 @@ namespace test {
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
  public:
   ImagePipeTest()
-      : escher::ResourceManager(escher::VulkanContext()),
-        command_buffer_sequencer_() {}
+      : escher::ResourceManager(nullptr), command_buffer_sequencer_() {}
 
   std::unique_ptr<SessionContext> CreateSessionContext() override {
     auto r = std::make_unique<ReleaseFenceSignallerForTest>(
