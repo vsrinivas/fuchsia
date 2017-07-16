@@ -10,6 +10,8 @@
 #include "ftl/macros.h"
 
 namespace escher {
+class Escher;
+
 namespace impl {
 class CommandBufferSequencer;
 class CommandBufferPool;
@@ -23,9 +25,10 @@ class SsdoSampler;
 // Implements the public Escher API.
 class EscherImpl {
  public:
-  EscherImpl(const VulkanContext& context);
+  EscherImpl(Escher* escher, const VulkanContext& context);
   ~EscherImpl();
 
+  Escher* escher() { return escher_; }
   const VulkanContext& vulkan_context();
   CommandBufferSequencer* command_buffer_sequencer();
   CommandBufferPool* command_buffer_pool();
@@ -51,6 +54,7 @@ class EscherImpl {
   void Cleanup();
 
  private:
+  Escher* const escher_;
   VulkanContext vulkan_context_;
   std::unique_ptr<CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<CommandBufferPool> command_buffer_pool_;

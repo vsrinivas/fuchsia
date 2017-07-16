@@ -4,6 +4,7 @@
 
 #include "escher/renderer/framebuffer.h"
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/vulkan_utils.h"
@@ -16,7 +17,18 @@ const ResourceTypeInfo Framebuffer::kTypeInfo("Framebuffer",
                                               ResourceType::kResource,
                                               ResourceType::kFramebuffer);
 
-Framebuffer::Framebuffer(impl::EscherImpl* escher,
+Framebuffer::Framebuffer(impl::EscherImpl* escher_impl,
+                         uint32_t width,
+                         uint32_t height,
+                         std::vector<ImagePtr> images,
+                         vk::RenderPass render_pass)
+    : Framebuffer(escher_impl->escher(),
+                  width,
+                  height,
+                  std::move(images),
+                  render_pass) {}
+
+Framebuffer::Framebuffer(Escher* escher,
                          uint32_t width,
                          uint32_t height,
                          std::vector<ImagePtr> images,

@@ -58,4 +58,8 @@ Image::~Image() {
   }
 }
 
+vk::DeviceSize Image::memory_offset() const {
+  return mem_->offset() + mem_offset_;
+}
+
 }  // namespace escher

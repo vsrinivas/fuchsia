@@ -21,12 +21,19 @@ static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
 #define GET_DEVICE_PROC_ADDR(XXX) \
   XXX = GetDeviceProcAddr<PFN_vk##XXX>(device, "vk" #XXX)
 
-VulkanDeviceQueues::ProcAddrs::ProcAddrs(vk::Device device) {
+VulkanDeviceQueues::ProcAddrs::ProcAddrs(
+    vk::Device device,
+    const std::set<std::string>& extension_names) {
   GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
   GET_DEVICE_PROC_ADDR(DestroySwapchainKHR);
   GET_DEVICE_PROC_ADDR(GetSwapchainImagesKHR);
   GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
   GET_DEVICE_PROC_ADDR(QueuePresentKHR);
+  if (extension_names.find(VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) !=
+      extension_names.end()) {
+    GET_DEVICE_PROC_ADDR(ImportSemaphoreFdKHX);
+    GET_DEVICE_PROC_ADDR(GetSemaphoreFdKHX);
+  }
 }
 
 namespace {
@@ -207,7 +214,7 @@ VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device,
       transfer_queue_family_(transfer_queue_family),
       instance_(std::move(instance)),
       params_(std::move(params)),
-      proc_addrs_(device_) {}
+      proc_addrs_(device_, params.extension_names) {}
 
 VulkanDeviceQueues::~VulkanDeviceQueues() {
   device_.destroy();

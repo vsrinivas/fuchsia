@@ -10,6 +10,7 @@
 #include "escher/shape/mesh_builder_factory.h"
 #include "escher/status.h"
 #include "escher/vk/vulkan_context.h"
+#include "escher/vk/vulkan_device_queues.h"
 #include "ftl/macros.h"
 #include "ftl/memory/ref_ptr.h"
 
@@ -24,7 +25,8 @@ class Escher : public MeshBuilderFactory {
   // Escher does not take ownership of the objects in the Vulkan context.  It is
   // up to the application to eventually destroy them, and also to ensure that
   // they outlive the Escher instance.
-  Escher(const VulkanContext& context);
+  // TODO: Get rid of VulkanContext; use VulkanDeviceQueues instead.
+  Escher(const VulkanContext& context, VulkanDeviceQueuesPtr device = nullptr);
   ~Escher();
 
   // Implement MeshBuilderFactory interface.
@@ -60,12 +62,14 @@ class Escher : public MeshBuilderFactory {
   impl::GpuUploader* gpu_uploader();
   impl::CommandBufferSequencer* command_buffer_sequencer();
   impl::CommandBufferPool* command_buffer_pool();
+  VulkanDeviceQueues* device() { return device_.get(); }
 
  private:
   // Friends that need access to impl_.
   friend class ResourceRecycler;
   friend class impl::GpuUploader;
 
+  VulkanDeviceQueuesPtr device_;
   std::unique_ptr<impl::EscherImpl> impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Escher);

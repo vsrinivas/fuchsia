@@ -25,6 +25,8 @@ class Semaphore : public ftl::RefCountedThreadSafe<Semaphore> {
   // Convenient.
   static SemaphorePtr New(vk::Device device);
 
+  vk::Semaphore vk_semaphore() const { return value_; }
+  // TODO: value is deprecated.
   vk::Semaphore value() const { return value_; }
 
  private:

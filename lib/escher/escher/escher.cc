@@ -9,14 +9,14 @@
 #include "escher/renderer/paper_renderer.h"
 #include "escher/renderer/texture.h"
 #include "escher/resources/resource_recycler.h"
-#include "escher/util/cplusplus.h"
 #include "escher/util/image_utils.h"
 #include "escher/vk/gpu_allocator.h"
 
 namespace escher {
 
-Escher::Escher(const VulkanContext& context)
-    : impl_(make_unique<impl::EscherImpl>(context)) {}
+Escher::Escher(const VulkanContext& context, VulkanDeviceQueuesPtr device)
+    : device_(std::move(device)),
+      impl_(std::make_unique<impl::EscherImpl>(this, context)) {}
 
 Escher::~Escher() {}
 

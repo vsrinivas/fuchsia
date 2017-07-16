@@ -52,11 +52,16 @@ class Image : public WaitableResource {
   uint32_t height() const { return info_.height; }
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
+  const GpuMemPtr& memory() const { return mem_; }
+  // Offset of the Image within it's GpuMem + the offset of the GpuMem within
+  // its slab.  NOTE: not the same as memory()->offset().
+  vk::DeviceSize memory_offset() const;
 
  private:
   const ImageInfo info_;
   const vk::Image image_;
   GpuMemPtr mem_;
+  const vk::DeviceSize mem_offset_ = 0;
   bool has_depth_;
   bool has_stencil_;
 

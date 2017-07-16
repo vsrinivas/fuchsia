@@ -16,7 +16,12 @@ class Framebuffer : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Framebuffer(impl::EscherImpl* escher,
+  Framebuffer(Escher* escher,
+              uint32_t width,
+              uint32_t height,
+              std::vector<ImagePtr> images,
+              vk::RenderPass render_pass);
+  Framebuffer(impl::EscherImpl* escher_impl,
               uint32_t width,
               uint32_t height,
               std::vector<ImagePtr> images,

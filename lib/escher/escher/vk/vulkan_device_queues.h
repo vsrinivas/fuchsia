@@ -30,13 +30,15 @@ class VulkanDeviceQueues
 
   // Contains dynamically-obtained addresses of device-specific functions.
   struct ProcAddrs {
-    ProcAddrs(vk::Device device);
+    ProcAddrs(vk::Device device, const std::set<std::string>& extension_names);
 
     PFN_vkCreateSwapchainKHR CreateSwapchainKHR = nullptr;
     PFN_vkDestroySwapchainKHR DestroySwapchainKHR = nullptr;
     PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR = nullptr;
     PFN_vkAcquireNextImageKHR AcquireNextImageKHR = nullptr;
     PFN_vkQueuePresentKHR QueuePresentKHR = nullptr;
+    PFN_vkImportSemaphoreFdKHX ImportSemaphoreFdKHX = nullptr;
+    PFN_vkGetSemaphoreFdKHX GetSemaphoreFdKHX = nullptr;
   };
 
   // Constructor.

@@ -12,7 +12,6 @@
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/profiling/timestamp_profiler.h"
 #include "escher/resources/resource_recycler.h"
-#include "escher/util/cplusplus.h"
 #include "escher/vk/gpu_allocator.h"
 #include "escher/vk/naive_gpu_allocator.h"
 
@@ -65,8 +64,9 @@ std::unique_ptr<MeshManager> NewMeshManager(
 
 }  // namespace
 
-EscherImpl::EscherImpl(const VulkanContext& context)
-    : vulkan_context_(context),
+EscherImpl::EscherImpl(Escher* escher, const VulkanContext& context)
+    : escher_(escher),
+      vulkan_context_(context),
       command_buffer_sequencer_(std::make_unique<CommandBufferSequencer>()),
       command_buffer_pool_(
           NewCommandBufferPool(context, command_buffer_sequencer_.get())),
