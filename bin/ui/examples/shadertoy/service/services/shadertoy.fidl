@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+module mozart.example;
+
 import "apps/mozart/services/scene/types.fidl";
 import "apps/mozart/services/images/image_pipe.fidl";
 

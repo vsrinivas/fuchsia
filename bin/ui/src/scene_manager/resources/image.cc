@@ -62,16 +62,6 @@ ImagePtr Image::New(Session* session,
         << "Image::CreateFromMemory(): height must be greater than 0.";
     return nullptr;
   }
-  if (image_info->stride < image_info->width * bytes_per_pixel) {
-    error_reporter->ERROR()
-        << "Image::CreateFromMemory(): stride too small for width.";
-    return nullptr;
-  }
-  if (image_info->stride % pixel_alignment != 0) {
-    error_reporter->ERROR()
-        << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
-    return nullptr;
-  }
 
   auto& caps = session->engine()->escher()->device()->caps();
   if (image_info->width > caps.max_image_width) {
@@ -91,6 +81,16 @@ ImagePtr Image::New(Session* session,
   if (memory->IsKindOf<HostMemory>()) {
     auto host_memory = memory->As<HostMemory>();
 
+    if (image_info->stride < image_info->width * bytes_per_pixel) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): stride too small for width.";
+      return nullptr;
+    }
+    if (image_info->stride % pixel_alignment != 0) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
+      return nullptr;
+    }
     if (image_info->tiling != mozart2::ImageInfo::Tiling::LINEAR) {
       error_reporter->ERROR()
           << "Image::CreateFromMemory(): tiling must be LINEAR for images "

@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/shadertoy_factory_impl.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_state.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_factory_impl.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_state.h"
 
-ShadertoyFactoryImpl::ShadertoyFactoryImpl(ShadertoyApp* app) : app_(app) {}
+namespace shadertoy {
+
+ShadertoyFactoryImpl::ShadertoyFactoryImpl(App* app) : app_(app) {}
 
 ShadertoyFactoryImpl::~ShadertoyFactoryImpl() = default;
 
-void ShadertoyFactoryImpl::TakeImagePipe(
-    ::fidl::InterfaceRequest<Shadertoy> toy_request,
+void ShadertoyFactoryImpl::NewImagePipeShadertoy(
+    ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
     ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe) {
   bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
@@ -18,17 +20,8 @@ void ShadertoyFactoryImpl::TakeImagePipe(
       std::move(toy_request));
 }
 
-void ShadertoyFactoryImpl::ExportMaterial(
-    ::fidl::InterfaceRequest<Shadertoy> toy_request,
-    mx::eventpair export_token) {
-  bindings_.AddBinding(
-      std::make_unique<ShadertoyImpl>(
-          ShadertoyState::NewForMaterial(app_, std::move(export_token))),
-      std::move(toy_request));
-}
-
-void ShadertoyFactoryImpl::CreateView(
-    ::fidl::InterfaceRequest<Shadertoy> toy_request,
+void ShadertoyFactoryImpl::NewViewShadertoy(
+    ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
     ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     bool handle_input_events) {
   bindings_.AddBinding(
@@ -36,3 +29,5 @@ void ShadertoyFactoryImpl::CreateView(
           app_, std::move(view_owner_request), handle_input_events)),
       std::move(toy_request));
 }
+
+}  // namespace shadertoy

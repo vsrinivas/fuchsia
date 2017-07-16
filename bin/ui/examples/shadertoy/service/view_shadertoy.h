@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "apps/mozart/examples/shadertoy/shadertoy_state.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_state.h"
+
+namespace shadertoy {
 
 // Subclass of ShadertoyState that displays content in a View, which responds
 // directly to touch input.  This is the easiest, but least flexible way to
@@ -12,11 +14,12 @@
 class ShadertoyStateForView : public ShadertoyState {
  public:
   ShadertoyStateForView(
-      ShadertoyApp* app,
+      App* app,
       ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       bool handle_input_events);
 
  private:
   void OnSetResolution() override;
-  escher::Framebuffer* GetOutputFramebuffer() override;
 };
+
+}  // namespace shadertoy

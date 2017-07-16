@@ -4,18 +4,21 @@
 
 #pragma once
 
-#include "apps/mozart/examples/shadertoy/glm_hack.h"
-#include "apps/mozart/examples/shadertoy/services/shadertoy.fidl.h"
+#include "apps/mozart/examples/shadertoy/service/glm_hack.h"
+#include "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl.h"
 #include "apps/mozart/services/images/image_pipe.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "escher/escher.h"
+#include "escher/util/stopwatch.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/weak_ptr.h"
+
+namespace shadertoy {
 
 class Compiler;
 class Pipeline;
 class Renderer;
-class ShadertoyApp;
+class App;
 using PipelinePtr = ftl::RefPtr<Pipeline>;
 
 // Core implementation of the Shadertoy API.  Subclasses must provide some
@@ -24,16 +27,12 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
  public:
   // Factory constructor.
   static ftl::RefPtr<ShadertoyState> NewForImagePipe(
-      ShadertoyApp* app,
+      App* app,
       ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe);
 
   // Factory constructor.
-  static ftl::RefPtr<ShadertoyState> NewForMaterial(ShadertoyApp* app,
-                                                    mx::eventpair export_token);
-
-  // Factory constructor.
   static ftl::RefPtr<ShadertoyState> NewForView(
-      ShadertoyApp* app,
+      App* app,
       ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       bool handle_input_events);
 
@@ -41,8 +40,9 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
 
   void SetPaused(bool paused);
 
-  void SetShaderCode(std::string glsl,
-                     const Shadertoy::SetShaderCodeCallback& callback);
+  void SetShaderCode(
+      std::string glsl,
+      const mozart::example::Shadertoy::SetShaderCodeCallback& callback);
 
   void SetResolution(uint32_t width, uint32_t height);
 
@@ -52,26 +52,42 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
                 ::fidl::InterfaceRequest<mozart2::ImagePipe> request);
 
  protected:
-  explicit ShadertoyState(ShadertoyApp* app);
-
-  void DrawFrame(uint64_t presentation_time);
-  void RequestFrame();
+  explicit ShadertoyState(App* app);
 
   // Tell the app to close the connection to this Shadertoy, and destroy it.
   void Close();
 
-  virtual void OnSetResolution() = 0;
-  virtual escher::Framebuffer* GetOutputFramebuffer() = 0;
+  // Subclasses must call this from DrawFrame().
+  void OnFramePresented(const mozart2::PresentationInfoPtr& info);
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
   escher::Escher* escher() const { return escher_; }
+  Renderer* renderer() const { return renderer_; }
+  const PipelinePtr& pipeline() const { return pipeline_; }
+  escher::Texture* channel0() const { return nullptr; }
+  escher::Texture* channel1() const { return nullptr; }
+  escher::Texture* channel2() const { return nullptr; }
+  escher::Texture* channel3() const { return nullptr; }
+  glm::vec4 i_mouse() const { return i_mouse_; }
+  ftl::WeakPtrFactory<ShadertoyState>* weak_ptr_factory() {
+    return &weak_ptr_factory_;
+  }
 
  private:
+  // Subclasses must implement this, and call OnFramePresented() from it.
+  virtual void DrawFrame(uint64_t presentation_time, float animation_time) = 0;
+
+  // Requests a frame to be drawn.
+  void RequestFrame(uint64_t presentation_time);
+
+  // Subclasses must implement this to react when the resolution changes.
+  virtual void OnSetResolution() = 0;
+
   static constexpr uint32_t kMaxWidth = 2048;
   static constexpr uint32_t kMaxHeight = 2048;
 
-  ShadertoyApp* const app_;
+  App* const app_;
   escher::Escher* const escher_;
   Compiler* const compiler_;
   Renderer* const renderer_;
@@ -80,4 +96,9 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
   uint32_t width_ = 0;
   uint32_t height_ = 0;
   glm::vec4 i_mouse_ = {0, 0, 0, 0};
+  bool is_paused_ = true;
+  bool is_drawing_ = false;
+  escher::Stopwatch stopwatch_;
 };
+
+}  // namespace shadertoy

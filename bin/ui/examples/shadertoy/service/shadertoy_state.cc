@@ -2,53 +2,58 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/shadertoy_state.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_state.h"
 
-#include "apps/mozart/examples/shadertoy/pipeline.h"
-#include "apps/mozart/examples/shadertoy/renderer.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_app.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_state_for_imagepipe.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_state_for_material.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_state_for_view.h"
+#include "apps/mozart/examples/shadertoy/service/pipeline.h"
+#include "apps/mozart/examples/shadertoy/service/renderer.h"
+#include "apps/mozart/examples/shadertoy/service/app.h"
+#include "apps/mozart/examples/shadertoy/service/imagepipe_shadertoy.h"
+#include "apps/mozart/examples/shadertoy/service/view_shadertoy.h"
+
+namespace shadertoy {
 
 ftl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
-    ShadertoyApp* app,
+    App* app,
     ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe) {
   return ftl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 
-ftl::RefPtr<ShadertoyState> ShadertoyState::NewForMaterial(
-    ShadertoyApp* app,
-    mx::eventpair export_token) {
-  return ftl::AdoptRef(
-      new ShadertoyStateForMaterial(app, std::move(export_token)));
-}
-
 ftl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
-    ShadertoyApp* app,
+    App* app,
     ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     bool handle_input_events) {
+  FTL_CHECK(false) << "unimplemented.";
+  return ftl::RefPtr<ShadertoyState>();
+#if 0
   return ftl::AdoptRef(new ShadertoyStateForView(
       app, std::move(view_owner_request), handle_input_events));
+#endif
 }
 
-ShadertoyState::ShadertoyState(ShadertoyApp* app)
+ShadertoyState::ShadertoyState(App* app)
     : app_(app),
       escher_(app_->escher()),
       compiler_(app_->compiler()),
       renderer_(app_->renderer()),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this),
+      stopwatch_(false) {}
 
 ShadertoyState::~ShadertoyState() = default;
 
 void ShadertoyState::SetPaused(bool paused) {
-  FTL_CHECK(false) << "unimplemented";
+  is_paused_ = paused;
+  if (is_paused_) {
+    stopwatch_.Stop();
+  } else {
+    stopwatch_.Start();
+  }
+  RequestFrame(0);
 }
 
 void ShadertoyState::SetShaderCode(
     std::string glsl,
-    const Shadertoy::SetShaderCodeCallback& callback) {
+    const mozart::example::Shadertoy::SetShaderCodeCallback& callback) {
   compiler_->Compile(std::string(glsl), [
     weak = weak_ptr_factory_.GetWeakPtr(), callback = callback
   ](Compiler::Result result) {
@@ -58,7 +63,7 @@ void ShadertoyState::SetShaderCode(
         callback(true);
         // Start rendering with the new pipeline.
         weak->pipeline_ = std::move(result.pipeline);
-        weak->RequestFrame();
+        weak->RequestFrame(0);
       } else {
         // Notify client that the code could not be successfully compiled.
         callback(false);
@@ -85,13 +90,13 @@ void ShadertoyState::SetResolution(uint32_t width, uint32_t height) {
   width_ = width;
   height_ = height;
   OnSetResolution();
-  RequestFrame();
+  RequestFrame(0);
 }
 
 void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
   if (i_mouse != i_mouse_) {
     i_mouse_ = i_mouse;
-    RequestFrame();
+    RequestFrame(0);
   }
 }
 
@@ -101,34 +106,25 @@ void ShadertoyState::SetImage(
   FTL_CHECK(false) << "unimplemented";
 }
 
-void ShadertoyState::DrawFrame(uint64_t presentation_time) {
-  if (!pipeline_) {
-    FTL_LOG(WARNING)
-        << "Frame should not have been scheduled without a pipeline available.";
+void ShadertoyState::RequestFrame(uint64_t presentation_time) {
+  if (is_drawing_ || is_paused_ || !pipeline_ || (width_ * height_ == 0)) {
     return;
   }
+  is_drawing_ = true;
 
-  if (width_ * height_ == 0) {
-    FTL_LOG(WARNING) << "Skipping frame with width=0 and/or height=0.";
-    return;
-  }
-
-  glm::vec4 i_mouse(1, 1, 1, 1);
-
-  FTL_CHECK(false) << "frame time unimplemented.";
-  float time = 0.f;
-
-  escher::SemaphorePtr sema;
-  FTL_CHECK(false) << "semaphore unimplemented.";
-
-  renderer_->DrawFrame(pipeline_, GetOutputFramebuffer(), nullptr, nullptr,
-                       nullptr, nullptr, i_mouse, time, std::move(sema));
+  // The stars have aligned; draw a frame.
+  DrawFrame(presentation_time, stopwatch_.GetElapsedSeconds());
 }
 
-void ShadertoyState::RequestFrame() {
-  FTL_CHECK(false) << "unimplemented";
+void ShadertoyState::OnFramePresented(
+    const mozart2::PresentationInfoPtr& info) {
+  FTL_DCHECK(is_drawing_);
+  is_drawing_ = false;
+  RequestFrame(info->presentation_time + info->presentation_interval);
 }
 
 void ShadertoyState::Close() {
   FTL_CHECK(false) << "unimplemented";
 }
+
+}  // namespace shadertoy

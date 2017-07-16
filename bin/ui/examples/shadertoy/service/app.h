@@ -5,31 +5,37 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_factory_impl.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_factory_impl.h"
 #include "escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
-#include "apps/mozart/examples/shadertoy/compiler.h"
-#include "apps/mozart/examples/shadertoy/renderer.h"
+#include "apps/mozart/examples/shadertoy/service/compiler.h"
+#include "apps/mozart/examples/shadertoy/service/renderer.h"
+
+namespace shadertoy {
 
 // A thin wrapper that manages connections to a ShadertoyFactoryImpl singleton.
 // TODO: clean up when there are no remaining bindings to Shadertoy nor
 // ShadertoyFactory.  What is the best-practice pattern to use here?
-class ShadertoyApp {
+class App {
  public:
-  ShadertoyApp(app::ApplicationContext* app_context, escher::Escher* escher);
-  ~ShadertoyApp();
+  App(app::ApplicationContext* app_context, escher::Escher* escher);
+  ~App();
 
   escher::Escher* escher() const { return escher_; }
   Compiler* compiler() { return &compiler_; }
   Renderer* renderer() { return &renderer_; }
 
+  static constexpr vk::Format kDefaultImageFormat = vk::Format::eB8G8R8A8Srgb;
+
  private:
   std::unique_ptr<ShadertoyFactoryImpl> factory_;
-  fidl::BindingSet<ShadertoyFactory> bindings_;
+  fidl::BindingSet<mozart::example::ShadertoyFactory> bindings_;
   escher::Escher* const escher_;
-  Compiler compiler_;
   Renderer renderer_;
+  Compiler compiler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ShadertoyApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
+
+}  // namespace shadertoy

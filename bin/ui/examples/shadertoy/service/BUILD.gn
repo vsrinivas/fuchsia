@@ -2,32 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("shadertoy") {
+executable("service") {
   output_name = "shadertoy_service"
 
   sources = [
+    "app.cc",
+    "app.h",
     "compiler.cc",
     "compiler.h",
+    "escher_utils.cc",
+    "escher_utils.h",
     "glm_hack.h",
+    "imagepipe_shadertoy.cc",
+    "imagepipe_shadertoy.h",
     "main.cc",
     "pipeline.cc",
     "pipeline.h",
     "renderer.cc",
     "renderer.h",
-    "shadertoy_app.cc",
-    "shadertoy_app.h",
     "shadertoy_factory_impl.cc",
     "shadertoy_factory_impl.h",
     "shadertoy_impl.cc",
     "shadertoy_impl.h",
-    "shadertoy_state_for_imagepipe.cc",
-    "shadertoy_state_for_imagepipe.h",
-    "shadertoy_state_for_material.cc",
-    "shadertoy_state_for_material.h",
-    "shadertoy_state_for_view.cc",
-    "shadertoy_state_for_view.h",
     "shadertoy_state.cc",
     "shadertoy_state.h",
+    "view_shadertoy.cc",
+    "view_shadertoy.h",
   ]
 
   deps = [
@@ -49,29 +49,5 @@ executable("shadertoy") {
     "//lib",
     "//lib/escher",
     "//third_party/glm",
-  ]
-}
-
-executable("shadertoy_client") {
-  output_name = "shadertoy_client"
-
-  sources = [
-    "client.cc",
-  ]
-
-  deps = [
-    "services",
-    ":shadertoy",
-    "//application/lib/app",
-    "//apps/mozart/lib/scene:client",
-    "//apps/mozart/lib/scene:session_helpers",
-    "//apps/mozart/services/scene",
-    "//lib/fidl/cpp/bindings",
-  ]
-
-  include_dirs = [
-    "//lib/escher",
-    "//third_party/glm",
-    "//lib",
   ]
 }

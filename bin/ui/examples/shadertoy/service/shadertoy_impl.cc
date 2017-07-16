@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/examples/shadertoy/shadertoy_impl.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_impl.h"
+
+namespace shadertoy {
 
 ShadertoyImpl::ShadertoyImpl(ftl::RefPtr<ShadertoyState> state)
     : state_(std::move(state)) {}
@@ -31,3 +33,5 @@ void ShadertoyImpl::SetImage(
     ::fidl::InterfaceRequest<mozart2::ImagePipe> request) {
   state_->SetImage(channel, std::move(request));
 }
+
+}  // namespace shadertoy

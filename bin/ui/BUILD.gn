@@ -209,8 +209,8 @@ package("shadertoy") {
   archive = true
 
   deps = [
-    "examples/shadertoy",
-    "examples/shadertoy:shadertoy_client",
+    "examples/shadertoy/client",
+    "examples/shadertoy/service",
   ]
 
   binaries = [

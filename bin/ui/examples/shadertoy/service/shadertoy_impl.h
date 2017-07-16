@@ -4,12 +4,14 @@
 
 #pragma once
 
-#include "apps/mozart/examples/shadertoy/services/shadertoy.fidl.h"
-#include "apps/mozart/examples/shadertoy/shadertoy_state.h"
+#include "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl.h"
+#include "apps/mozart/examples/shadertoy/service/shadertoy_state.h"
+
+namespace shadertoy {
 
 // Thin wrapper that delegates Shadertoy API calls to a (subclass of)
 // ShadertoyState.
-class ShadertoyImpl : public Shadertoy {
+class ShadertoyImpl : public mozart::example::Shadertoy {
  public:
   explicit ShadertoyImpl(ftl::RefPtr<ShadertoyState> state);
   ~ShadertoyImpl() override;
@@ -36,3 +38,5 @@ class ShadertoyImpl : public Shadertoy {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ShadertoyImpl);
 };
+
+}  // namespace shadertoy
