@@ -17,12 +17,11 @@ class GlslToSpirvCompiler;
 // push-constants for in/output.
 class ComputeShader {
  public:
-  ComputeShader(const VulkanContext& context,
+  ComputeShader(Escher* escher,
                 std::vector<vk::ImageLayout> layouts,
                 std::vector<vk::DescriptorType> buffer_types,
                 size_t push_constants_size,
-                const char* source_code,
-                GlslToSpirvCompiler* compiler);
+                const char* source_code);
   ~ComputeShader();
 
   // Update descriptors and push-constants, then dispatch x * y * z workgroups.

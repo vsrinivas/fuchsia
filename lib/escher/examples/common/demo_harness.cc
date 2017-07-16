@@ -92,8 +92,7 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
   FTL_CHECK(!swapchain_.swapchain);
   FTL_CHECK(swapchain_.images.empty());
   FTL_CHECK(!swapchain_image_owner_);
-  swapchain_image_owner_ =
-      std::make_unique<SwapchainImageOwner>(GetVulkanContext());
+  swapchain_image_owner_ = std::make_unique<SwapchainImageOwner>();
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
@@ -342,9 +341,8 @@ escher::VulkanContext DemoHarness::GetVulkanContext() {
   return device_queues_->GetVulkanContext();
 }
 
-DemoHarness::SwapchainImageOwner::SwapchainImageOwner(
-    const escher::VulkanContext& context)
-    : escher::ResourceManager(context) {}
+DemoHarness::SwapchainImageOwner::SwapchainImageOwner()
+    : escher::ResourceManager(nullptr) {}
 
 void DemoHarness::SwapchainImageOwner::OnReceiveOwnable(
     std::unique_ptr<escher::Resource> resource) {

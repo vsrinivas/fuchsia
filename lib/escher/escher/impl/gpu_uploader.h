@@ -16,9 +16,7 @@ class GpuUploader : public ResourceRecycler {
   explicit GpuUploader(Escher* escher,
                        CommandBufferPool* command_buffer_pool = nullptr,
                        GpuAllocator* allocator = nullptr);
-  explicit GpuUploader(EscherImpl* escher,
-                       CommandBufferPool* command_buffer_pool = nullptr,
-                       GpuAllocator* allocator = nullptr);
+
   ~GpuUploader();
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy this

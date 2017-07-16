@@ -25,11 +25,14 @@ class GpuUploader;
 
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
+//
+// NOTE: this does not prune entries!!  Once a new Image is created, it will
+// live until the cache is destroyed!!
 class ImageCache : public ResourceManager, public ImageFactory {
  public:
-  // The allocator is used to allocate memory for newly-created images.  The
-  // queue and CommandBufferPool are used to schedule image layout transitions.
-  ImageCache(const VulkanContext& context, GpuAllocator* allocator);
+  // The allocator is used to allocate memory for newly-created images.  If no
+  // allocator is provided, Escher's default allocator is used.
+  explicit ImageCache(Escher* escher, GpuAllocator* allocator = nullptr);
   ~ImageCache() override;
 
   // Obtain an unused Image with the required properties.  A new Image might be

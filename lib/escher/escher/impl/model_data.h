@@ -64,7 +64,8 @@ class ModelData {
     ModifierWobble wobble;
   };
 
-  ModelData(const VulkanContext& context, GpuAllocator* allocator);
+  // If no allocator is provided, Escher's default one will be used.
+  explicit ModelData(Escher* escher, GpuAllocator* allocator = nullptr);
   ~ModelData();
 
   vk::Device device() { return device_; }

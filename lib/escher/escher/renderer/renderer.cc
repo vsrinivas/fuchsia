@@ -4,6 +4,7 @@
 
 #include "escher/renderer/renderer.h"
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/image_cache.h"
@@ -16,16 +17,20 @@
 
 namespace escher {
 
-Renderer::Renderer(impl::EscherImpl* escher)
-    : escher_(escher),
-      context_(escher_->vulkan_context()),
+impl::EscherImpl* Renderer::escher_impl() const {
+  return escher_->impl();
+}
+
+Renderer::Renderer(Escher* escher)
+    : context_(escher->vulkan_context()),
+      escher_(escher),
       pool_(escher->command_buffer_pool()) {
-  escher_->IncrementRendererCount();
+  escher_impl()->IncrementRendererCount();
 }
 
 Renderer::~Renderer() {
   FTL_DCHECK(!current_frame_);
-  escher_->DecrementRendererCount();
+  escher_impl()->DecrementRendererCount();
 }
 
 void Renderer::BeginFrame() {
@@ -34,9 +39,9 @@ void Renderer::BeginFrame() {
   current_frame_ = pool_->GetCommandBuffer();
 
   FTL_DCHECK(!profiler_);
-  if (enable_profiling_ && escher_->supports_timer_queries()) {
+  if (enable_profiling_ && escher_impl()->supports_timer_queries()) {
     profiler_ = ftl::MakeRefCounted<TimestampProfiler>(
-        context_.device, escher_->timestamp_period());
+        context_.device, escher_impl()->timestamp_period());
     AddTimestamp("throwaway");  // Intel/Mesa workaround; see EndFrame().
     AddTimestamp("start of frame");
   }
@@ -83,7 +88,7 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
   }
   current_frame_ = nullptr;
 
-  escher_->Cleanup();
+  escher_impl()->Cleanup();
 }
 
 void Renderer::AddTimestamp(const char* name) {
@@ -114,7 +119,7 @@ void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
     const uint32_t width = stage.physical_size().width();
     const uint32_t height = stage.physical_size().height();
 
-    auto image_cache = escher_->image_cache();
+    auto image_cache = escher_impl()->image_cache();
     for (size_t i = 0; i < kSwapchainSize; ++i) {
       auto im =
           image_cache->NewImage({framebuffer_format, width, height, 1,

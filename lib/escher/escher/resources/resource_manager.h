@@ -20,8 +20,9 @@ namespace escher {
 // Not thread-safe.
 class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
  public:
-  explicit ResourceManager(const VulkanContext& context);
+  explicit ResourceManager(Escher* escher);
 
+  Escher* escher() { return escher_; }
   const VulkanContext& vulkan_context() const { return vulkan_context_; }
   vk::Device device() const { return vulkan_context_.device; }
 
@@ -31,6 +32,7 @@ class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
   // Must be implemented by subclasses.
   virtual void OnReceiveOwnable(std::unique_ptr<Resource> resource) = 0;
 
+  Escher* const escher_;
   VulkanContext vulkan_context_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResourceManager);

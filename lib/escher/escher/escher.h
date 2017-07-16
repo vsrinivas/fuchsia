@@ -56,20 +56,41 @@ class Escher : public MeshBuilderFactory {
 
   uint64_t GetNumGpuBytesAllocated();
 
-  const VulkanContext& vulkan_context();
+  VulkanDeviceQueues* device() const { return device_.get(); }
+  const VulkanContext& vulkan_context() const { return vulkan_context_; }
+
   ResourceRecycler* resource_recycler();
   GpuAllocator* gpu_allocator();
   impl::GpuUploader* gpu_uploader();
   impl::CommandBufferSequencer* command_buffer_sequencer();
+  impl::GlslToSpirvCompiler* glsl_compiler();
+
+  // Pool for CommandBuffers submitted on the main queue.
   impl::CommandBufferPool* command_buffer_pool();
-  VulkanDeviceQueues* device() { return device_.get(); }
+  // Pool for CommandBuffers submitted on the transfer queue (if one exists).
+  impl::CommandBufferPool* transfer_command_buffer_pool();
 
  private:
   // Friends that need access to impl_.
-  friend class ResourceRecycler;
+  friend class Renderer;
+  // friend class ResourceRecycler;
   friend class impl::GpuUploader;
+  // Provide access to internal Escher functionality.  Don't use this unless
+  // you are on the Escher team: your code will break.
+  impl::EscherImpl* impl() const { return impl_.get(); }
 
   VulkanDeviceQueuesPtr device_;
+  VulkanContext vulkan_context_;
+
+  std::unique_ptr<GpuAllocator> gpu_allocator_;
+  std::unique_ptr<impl::CommandBufferSequencer> command_buffer_sequencer_;
+  std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
+  std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;
+  std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
+
+  std::unique_ptr<impl::GpuUploader> gpu_uploader_;
+  std::unique_ptr<ResourceRecycler> resource_recycler_;
+
   std::unique_ptr<impl::EscherImpl> impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Escher);

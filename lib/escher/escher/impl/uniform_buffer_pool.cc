@@ -4,6 +4,7 @@
 
 #include "escher/impl/uniform_buffer_pool.h"
 
+#include "escher/escher.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/vk/gpu_allocator.h"
 
@@ -13,11 +14,11 @@ namespace impl {
 // TODO: obtain max uniform-buffer size from Vulkan.  64kB is typical.
 constexpr vk::DeviceSize kBufferSize = 65536;
 
-UniformBufferPool::UniformBufferPool(const VulkanContext& context,
+UniformBufferPool::UniformBufferPool(Escher* escher,
                                      GpuAllocator* allocator,
                                      vk::MemoryPropertyFlags additional_flags)
-    : ResourceManager(context),
-      allocator_(allocator),
+    : ResourceManager(escher),
+      allocator_(allocator ? allocator : escher->gpu_allocator()),
       flags_(additional_flags | vk::MemoryPropertyFlagBits::eHostVisible),
       buffer_size_(kBufferSize) {}
 

@@ -4,9 +4,14 @@
 
 #include "escher/resources/resource_manager.h"
 
+#include "escher/escher.h"
+
 namespace escher {
 
-ResourceManager::ResourceManager(const VulkanContext& context)
-    : vulkan_context_(context) {}
+// TODO: DemoHarness::SwapchainImageOwner is currently instantiated before
+// an Escher exists.  Fix this, then assert that Escher is non-null here.
+ResourceManager::ResourceManager(Escher* escher)
+    : escher_(escher),
+      vulkan_context_(escher ? escher->vulkan_context() : VulkanContext()) {}
 
 }  // namespace escher

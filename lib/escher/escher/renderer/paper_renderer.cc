@@ -44,43 +44,36 @@ constexpr uint32_t kLightingPassSampleCount = 1;
 
 }  // namespace
 
-PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
+PaperRenderer::PaperRenderer(Escher* escher)
     : Renderer(escher),
-      full_screen_(NewFullScreenMesh(escher->mesh_manager())),
-      image_cache_(escher->image_cache()),
+      full_screen_(NewFullScreenMesh(escher_impl()->mesh_manager())),
+      image_cache_(escher_impl()->image_cache()),
       // TODO: perhaps cache depth_format_ in EscherImpl.
       depth_format_(ESCHER_CHECKED_VK_RESULT(
           impl::GetSupportedDepthStencilFormat(context_.physical_device))),
       // TODO: could potentially share ModelData/PipelineCache/ModelRenderer
       // between multiple PaperRenderers.
-      model_data_(
-          std::make_unique<impl::ModelData>(context_, escher->gpu_allocator())),
+      model_data_(std::make_unique<impl::ModelData>(escher)),
       ssdo_(std::make_unique<impl::SsdoSampler>(
-          escher->resource_recycler(),
+          escher,
           full_screen_,
-          image_utils::NewNoiseImage(escher->image_cache(),
+          image_utils::NewNoiseImage(image_cache_,
                                      escher->gpu_uploader(),
                                      impl::SsdoSampler::kNoiseSize,
                                      impl::SsdoSampler::kNoiseSize,
                                      vk::ImageUsageFlagBits::eStorage),
-          escher->glsl_compiler(),
           model_data_.get())),
       ssdo_accelerator_(
-          std::make_unique<impl::SsdoAccelerator>(escher->glsl_compiler(),
-                                                  image_cache_,
-                                                  escher->resource_recycler())),
-      depth_to_color_(
-          std::make_unique<DepthToColor>(escher->glsl_compiler(),
-                                         image_cache_,
-                                         escher->resource_recycler())),
+          std::make_unique<impl::SsdoAccelerator>(escher, image_cache_)),
+      depth_to_color_(std::make_unique<DepthToColor>(escher, image_cache_)),
       clear_values_({vk::ClearColorValue(
                          std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
                      vk::ClearDepthStencilValue(kMaxDepth, 0)}) {}
 
 PaperRenderer::~PaperRenderer() {
-  escher_->command_buffer_pool()->Cleanup();
-  if (escher_->transfer_command_buffer_pool()) {
-    escher_->transfer_command_buffer_pool()->Cleanup();
+  escher()->command_buffer_pool()->Cleanup();
+  if (escher()->transfer_command_buffer_pool()) {
+    escher()->transfer_command_buffer_pool()->Cleanup();
   }
 }
 
@@ -92,14 +85,15 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
   auto command_buffer = current_frame();
 
   FramebufferPtr framebuffer = ftl::MakeRefCounted<Framebuffer>(
-      escher_, depth_image->width(), depth_image->height(),
+      escher(), depth_image->width(), depth_image->height(),
       std::vector<ImagePtr>{dummy_color_image, depth_image},
       model_renderer_->depth_prepass());
 
   float scale =
       static_cast<float>(depth_image->width()) / stage.physical_size().width();
-  FTL_DCHECK(scale == static_cast<float>(depth_image->height()) /
-                          stage.physical_size().height());
+  FTL_DCHECK(scale ==
+             static_cast<float>(depth_image->height()) /
+                 stage.physical_size().height());
   impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
       stage, model, camera, scale, sort_by_pipeline_, true, true, 1,
       TexturePtr(), command_buffer);
@@ -125,11 +119,11 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
   auto command_buffer = current_frame();
 
   auto fb_out = ftl::MakeRefCounted<Framebuffer>(
-      escher_, width, height, std::vector<ImagePtr>{color_out},
+      escher(), width, height, std::vector<ImagePtr>{color_out},
       ssdo_->render_pass());
 
   auto fb_aux = ftl::MakeRefCounted<Framebuffer>(
-      escher_, width, height, std::vector<ImagePtr>{color_aux},
+      escher(), width, height, std::vector<ImagePtr>{color_aux},
       ssdo_->render_pass());
 
   command_buffer->KeepAlive(fb_out);
@@ -138,11 +132,11 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
 #if SSDO_SAMPLING_USES_KERNEL
   TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_recycler(), depth_in, vk::Filter::eNearest,
+      escher()->resource_recycler(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
 
   TexturePtr output_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_recycler() color_out, vk::Filter::eNearest,
+      escher()->resource_recycler() color_out, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor);
 
   command_buffer->KeepAlive(depth_texture);
@@ -166,7 +160,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
 #else
   TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_recycler(), depth_in, vk::Filter::eNearest,
+      escher()->resource_recycler(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
   command_buffer->KeepAlive(depth_texture);
 
@@ -196,7 +190,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
   if (!kSkipFiltering) {
     {
       auto color_out_tex = ftl::MakeRefCounted<Texture>(
-          escher_->resource_recycler(), color_out, vk::Filter::eNearest);
+          escher()->resource_recycler(), color_out, vk::Filter::eNearest);
       command_buffer->KeepAlive(color_out_tex);
 
       impl::SsdoSampler::FilterConfig filter_config;
@@ -219,7 +213,7 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
     }
     {
       auto color_aux_tex = ftl::MakeRefCounted<Texture>(
-          escher_->resource_recycler(), color_aux, vk::Filter::eNearest);
+          escher()->resource_recycler(), color_aux, vk::Filter::eNearest);
       command_buffer->KeepAlive(color_aux_tex);
 
       impl::SsdoSampler::FilterConfig filter_config;
@@ -244,7 +238,7 @@ void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
   // create the ModelRenderer, and assume that it doesn't change.
   if (!model_renderer_) {
     model_renderer_ = std::make_unique<impl::ModelRenderer>(
-        escher_, model_data_.get(), pre_pass_color_format,
+        escher_impl(), model_data_.get(), pre_pass_color_format,
         lighting_pass_color_format, kLightingPassSampleCount,
         ESCHER_CHECKED_VK_RESULT(
             impl::GetSupportedDepthStencilFormat(context_.physical_device)));
@@ -376,7 +370,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
       image_cache_, depth_format_, ssdo_accel_width, ssdo_accel_height,
       vk::ImageUsageFlagBits::eSampled);
   TexturePtr ssdo_accel_depth_texture = ftl::MakeRefCounted<Texture>(
-      escher_->resource_recycler(), ssdo_accel_depth_image,
+      escher()->resource_recycler(), ssdo_accel_depth_image,
       vk::Filter::eNearest, vk::ImageAspectFlagBits::eDepth,
       // TODO: use a more descriptive enum than true.
       true);
@@ -437,7 +431,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     SubmitPartialFrame();
 
     illumination_texture = ftl::MakeRefCounted<Texture>(
-        escher_->resource_recycler(), illum1, vk::Filter::eNearest);
+        escher()->resource_recycler(), illum1, vk::Filter::eNearest);
 
     // Done after previous SubmitPartialFrame(), because this is needed by the
     // final lighting pass.
@@ -447,7 +441,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   // Use multisampling for final lighting pass, or not.
   if (kLightingPassSampleCount == 1) {
     FramebufferPtr lighting_fb = ftl::MakeRefCounted<Framebuffer>(
-        escher_, width, height,
+        escher(), width, height,
         std::vector<ImagePtr>{color_image_out, depth_image},
         model_renderer_->lighting_pass());
 
@@ -474,7 +468,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     ImagePtr depth_image_multisampled = image_cache_->NewImage(info);
 
     FramebufferPtr multisample_fb = ftl::MakeRefCounted<Framebuffer>(
-        escher_, width, height,
+        escher(), width, height,
         std::vector<ImagePtr>{color_image_multisampled,
                               depth_image_multisampled},
         model_renderer_->lighting_pass());

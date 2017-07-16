@@ -12,7 +12,6 @@
 #include "escher/examples/waterfall/scenes/scene.h"
 
 #include "escher/escher.h"
-#include "escher/escher_process_init.h"
 
 #include "escher/geometry/types.h"
 #include "escher/material/color_utils.h"

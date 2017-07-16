@@ -13,8 +13,9 @@
 namespace escher {
 namespace impl {
 
-ImageCache::ImageCache(const VulkanContext& context, GpuAllocator* allocator)
-    : ResourceManager(context), allocator_(allocator) {}
+ImageCache::ImageCache(Escher* escher, GpuAllocator* allocator)
+    : ResourceManager(escher),
+      allocator_(allocator ? allocator : escher->gpu_allocator()) {}
 
 ImageCache::~ImageCache() {}
 

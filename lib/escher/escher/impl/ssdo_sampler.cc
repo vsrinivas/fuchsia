@@ -4,6 +4,7 @@
 
 #include "escher/impl/ssdo_sampler.h"
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/glsl_compiler.h"
 #include "escher/impl/mesh_shader_binding.h"
@@ -611,29 +612,25 @@ vk::RenderPass CreateRenderPass(vk::Device device) {
 
 }  // namespace
 
-SsdoSampler::SsdoSampler(ResourceRecycler* resource_recycler,
+SsdoSampler::SsdoSampler(Escher* escher,
                          MeshPtr full_screen,
                          ImagePtr noise_image,
-                         GlslToSpirvCompiler* compiler,
                          ModelData* model_data)
-    : device_(resource_recycler->vulkan_context().device),
-      pool_(resource_recycler->vulkan_context(),
-            GetDescriptorSetLayoutCreateInfo(),
-            6),
+    : device_(escher->vulkan_context().device),
+      pool_(escher, GetDescriptorSetLayoutCreateInfo(), 6),
       full_screen_(full_screen),
-      noise_texture_(ftl::MakeRefCounted<Texture>(resource_recycler,
+      noise_texture_(ftl::MakeRefCounted<Texture>(escher->resource_recycler(),
                                                   noise_image,
                                                   vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
       // it.
       render_pass_(CreateRenderPass(device_)),
-      sampler_kernel_(resource_recycler->vulkan_context(),
+      sampler_kernel_(escher,
                       {vk::ImageLayout::eShaderReadOnlyOptimal,
                        vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral},
                       {},
                       sizeof(SamplerConfig),
-                      g_sampler_kernel_src,
-                      compiler) {
+                      g_sampler_kernel_src) {
   FTL_DCHECK(noise_image->width() == kNoiseSize &&
              noise_image->height() == kNoiseSize);
 
@@ -643,7 +640,7 @@ SsdoSampler::SsdoSampler(ResourceRecycler* resource_recycler,
   auto pipelines =
       CreatePipelines(device_, render_pass_,
                       model_data->GetMeshShaderBinding(full_screen_->spec()),
-                      pool_.layout(), compiler);
+                      pool_.layout(), escher->glsl_compiler());
   sampler_pipeline_ = pipelines.first;
   filter_pipeline_ = pipelines.second;
 }

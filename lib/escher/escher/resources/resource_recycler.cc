@@ -9,17 +9,17 @@
 
 namespace escher {
 
-ResourceRecycler::ResourceRecycler(Escher* escher)
-    : ResourceRecycler(escher->impl_.get()) {}
-
-ResourceRecycler::ResourceRecycler(impl::EscherImpl* escher)
-    : ResourceManager(escher->vulkan_context()), escher_(escher) {
-  Register(escher_->command_buffer_sequencer());
+ResourceRecycler::ResourceRecycler(Escher* escher) : ResourceManager(escher) {
+  // Register ourselves for sequence number updates. Register() is defined in
+  // our superclass CommandBufferSequenceListener.
+  Register(escher->command_buffer_sequencer());
 }
 
 ResourceRecycler::~ResourceRecycler() {
   FTL_DCHECK(unused_resources_.empty());
-  Unregister(escher_->command_buffer_sequencer());
+  // Unregister ourselves. Unregister() is defined in our superclass
+  // CommandBufferSequenceListener.
+  Unregister(escher()->command_buffer_sequencer());
 }
 
 void ResourceRecycler::OnReceiveOwnable(std::unique_ptr<Resource> resource) {

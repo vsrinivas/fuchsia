@@ -4,11 +4,11 @@
 
 #include "escher/util/depth_to_color.h"
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer.h"
-#include "escher/impl/image_cache.h"
+#include "escher/renderer/image_factory.h"
 #include "escher/renderer/texture.h"
 #include "escher/renderer/timestamper.h"
-#include "escher/resources/resource_recycler.h"
 #include "escher/vk/buffer.h"
 
 namespace {
@@ -35,12 +35,8 @@ constexpr char g_kernel_src[] = R"GLSL(
 
 namespace escher {
 
-DepthToColor::DepthToColor(impl::GlslToSpirvCompiler* compiler,
-                           impl::ImageCache* image_cache,
-                           ResourceRecycler* resource_recycler)
-    : compiler_(compiler),
-      image_cache_(image_cache),
-      resource_recycler_(resource_recycler) {}
+DepthToColor::DepthToColor(Escher* escher, ImageFactory* image_factory)
+    : escher_(escher), image_factory_(image_factory) {}
 
 TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
                                  const TexturePtr& depth_texture,
@@ -57,11 +53,11 @@ TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
   uint32_t work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);
   uint32_t work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);
 
-  ImagePtr tmp_image =
-      image_cache_->NewImage({vk::Format::eR8G8B8A8Unorm, width, width, 1,
-                              image_flags | vk::ImageUsageFlagBits::eStorage});
+  ImagePtr tmp_image = image_factory_->NewImage(
+      {vk::Format::eR8G8B8A8Unorm, width, width, 1,
+       image_flags | vk::ImageUsageFlagBits::eStorage});
   TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
-      resource_recycler_, tmp_image, vk::Filter::eNearest,
+      escher_->resource_recycler(), tmp_image, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
@@ -69,11 +65,10 @@ TexturePtr DepthToColor::Convert(impl::CommandBuffer* command_buffer,
   if (!kernel_) {
     FTL_DLOG(INFO) << "DepthToColor: Lazily instantiating kernel.";
     kernel_ = std::make_unique<impl::ComputeShader>(
-        image_cache_->vulkan_context(),
+        escher_,
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
-        std::vector<vk::DescriptorType>{},
-        0, g_kernel_src, compiler_);
+        std::vector<vk::DescriptorType>{}, 0, g_kernel_src);
   }
 
   kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,

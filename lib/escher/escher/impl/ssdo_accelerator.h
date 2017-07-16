@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include "escher/forward_declarations.h"
-#include "escher/impl/compute_shader.h"
-#include "escher/renderer/timestamper.h"
+#include "ftl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -15,9 +16,7 @@ namespace impl {
 // whether SSDO sampling/filtering can be skipped for a given pixel.
 class SsdoAccelerator {
  public:
-  SsdoAccelerator(GlslToSpirvCompiler* compiler,
-                  ImageCache* image_cache,
-                  ResourceRecycler* resource_recycler);
+  SsdoAccelerator(Escher* escher, ImageFactory* image_factory);
   ~SsdoAccelerator();
 
   // Generates a packed lookup table to accelerate SSDO sampling/filtering.
@@ -63,12 +62,8 @@ class SsdoAccelerator {
                                      vk::ImageUsageFlags image_flags,
                                      Timestamper* timestamper);
 
-  // Temporary, so that we can lazily initialize ComputeShaders as needed.
-  // Eventually, we'll know exactly which we need, and eagerly initialize them.
-  GlslToSpirvCompiler* compiler_;
-
-  ImageCache* const image_cache_;
-  ResourceRecycler* const resource_recycler_;
+  Escher* const escher_;
+  ImageFactory* const image_factory_;
 
   // Used by GenerateLookupTable().
   std::unique_ptr<ComputeShader> kernel_;
@@ -82,7 +77,6 @@ class SsdoAccelerator {
   // negligible cost.
   bool enabled_ = true;
 
-  FRIEND_REF_COUNTED_THREAD_SAFE(SsdoAccelerator);
   FTL_DISALLOW_COPY_AND_ASSIGN(SsdoAccelerator);
 };
 

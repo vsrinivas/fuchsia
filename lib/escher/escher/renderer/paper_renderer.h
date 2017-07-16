@@ -13,6 +13,8 @@ class DepthToColor;
 
 class PaperRenderer : public Renderer {
  public:
+  explicit PaperRenderer(Escher* escher);
+
   void DrawFrame(const Stage& stage,
                  const Model& model,
                  const Camera& camera,
@@ -40,8 +42,6 @@ class PaperRenderer : public Renderer {
   void CycleSsdoAccelerationMode();
 
  private:
-  friend class Escher;
-  PaperRenderer(impl::EscherImpl* escher);
   ~PaperRenderer() override;
 
   static constexpr uint32_t kFramebufferColorAttachmentIndex = 0;

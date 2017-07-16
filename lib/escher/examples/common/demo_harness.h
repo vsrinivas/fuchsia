@@ -82,7 +82,7 @@ class DemoHarness {
   // TODO: Find a nicer solution.
   class SwapchainImageOwner : public escher::ResourceManager {
    public:
-    explicit SwapchainImageOwner(const escher::VulkanContext& context);
+    SwapchainImageOwner();
 
    private:
     void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override;

@@ -112,11 +112,6 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
 GpuUploader::GpuUploader(Escher* escher,
                          CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
-    : GpuUploader(escher->impl_.get(), command_buffer_pool, allocator) {}
-
-GpuUploader::GpuUploader(impl::EscherImpl* escher,
-                         CommandBufferPool* command_buffer_pool,
-                         GpuAllocator* allocator)
     : ResourceRecycler(escher),
       command_buffer_pool_(command_buffer_pool ? command_buffer_pool
                                                : escher->command_buffer_pool()),

@@ -29,10 +29,10 @@ DescriptorSetAllocation::~DescriptorSetAllocation() {
 }
 
 DescriptorSetPool::DescriptorSetPool(
-    const VulkanContext& context,
+    Escher* escher,
     const vk::DescriptorSetLayoutCreateInfo& layout_info,
     uint32_t initial_capacity)
-    : ResourceManager(context),
+    : ResourceManager(escher),
       layout_(ESCHER_CHECKED_VK_RESULT(
           device().createDescriptorSetLayout(layout_info))) {
   std::map<vk::DescriptorType, uint32_t> descriptor_type_counts;

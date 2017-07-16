@@ -15,9 +15,7 @@ namespace escher {
 // directly bliting a depth image into a color image.
 class DepthToColor {
  public:
-  DepthToColor(impl::GlslToSpirvCompiler* compiler,
-               impl::ImageCache* image_cache,
-               ResourceRecycler* resource_recycler);
+  DepthToColor(Escher* escher, ImageFactory* image_factory);
 
   TexturePtr Convert(impl::CommandBuffer* command_buffer,
                      const TexturePtr& depth_texture,
@@ -25,9 +23,8 @@ class DepthToColor {
                      Timestamper* timestamper);
 
  private:
-  impl::GlslToSpirvCompiler* compiler_;
-  impl::ImageCache* const image_cache_;
-  ResourceRecycler* const resource_recycler_;
+  Escher* const escher_;
+  ImageFactory* const image_factory_;
   std::unique_ptr<impl::ComputeShader> kernel_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DepthToColor);

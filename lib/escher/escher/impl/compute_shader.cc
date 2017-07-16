@@ -4,6 +4,7 @@
 
 #include "escher/impl/compute_shader.h"
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/glsl_compiler.h"
 #include "escher/impl/vk/pipeline.h"
@@ -125,29 +126,27 @@ inline void InitWriteDescriptorSet(
 
 }  // namespace
 
-ComputeShader::ComputeShader(const VulkanContext& context,
+ComputeShader::ComputeShader(Escher* escher,
                              std::vector<vk::ImageLayout> layouts,
                              std::vector<vk::DescriptorType> buffer_types,
                              size_t push_constants_size,
-                             const char* source_code,
-                             GlslToSpirvCompiler* compiler)
-    : device_(context.device),
+                             const char* source_code)
+    : device_(escher->vulkan_context().device),
       descriptor_set_layout_bindings_(
           CreateLayoutBindings(layouts, buffer_types)),
       descriptor_set_layout_create_info_(
           CreateDescriptorSetLayoutCreateInfo(descriptor_set_layout_bindings_)),
       push_constants_size_(static_cast<uint32_t>(push_constants_size)),
-      pool_(context, descriptor_set_layout_create_info_),
+      pool_(escher, descriptor_set_layout_create_info_),
       pipeline_(CreatePipeline(device_,
                                pool_.layout(),
                                push_constants_size_,
                                source_code,
-                               compiler)) {
+                               escher->glsl_compiler())) {
   FTL_DCHECK(push_constants_size == push_constants_size_);  // detect overflow
   descriptor_image_info_.reserve(layouts.size());
   descriptor_buffer_info_.reserve(buffer_types.size());
-  descriptor_set_writes_.reserve(
-      layouts.size() + buffer_types.size());
+  descriptor_set_writes_.reserve(layouts.size() + buffer_types.size());
   for (uint32_t index = 0; index < layouts.size(); ++index) {
     // The other fields will be filled out during each call to Dispatch().
     vk::DescriptorImageInfo image_info;

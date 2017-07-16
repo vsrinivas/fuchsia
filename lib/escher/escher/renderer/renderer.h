@@ -38,9 +38,13 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
 
   void set_enable_profiling(bool enabled) { enable_profiling_ = enabled; }
 
+  Escher* escher() const { return escher_; }
+
  protected:
-  explicit Renderer(impl::EscherImpl* escher);
+  explicit Renderer(Escher* escher);
   virtual ~Renderer();
+
+  impl::EscherImpl* escher_impl() const;
 
   // Obtain a CommandBuffer, to record commands for the current frame.
   void BeginFrame();
@@ -54,10 +58,10 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
 
   impl::CommandBuffer* current_frame() { return current_frame_; }
 
-  impl::EscherImpl* const escher_;
   const VulkanContext context_;
 
  private:
+  Escher* const escher_;
   impl::CommandBufferPool* pool_;
   impl::CommandBuffer* current_frame_ = nullptr;
 

@@ -4,51 +4,17 @@
 
 #include "escher/impl/escher_impl.h"
 
+#include "escher/escher.h"
 #include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/glsl_compiler.h"
-#include "escher/impl/gpu_uploader.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/profiling/timestamp_profiler.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/vk/gpu_allocator.h"
-#include "escher/vk/naive_gpu_allocator.h"
 
 namespace escher {
 namespace impl {
 
 namespace {
-
-// Constructor helper.
-std::unique_ptr<CommandBufferPool> NewCommandBufferPool(
-    const VulkanContext& context,
-    CommandBufferSequencer* sequencer) {
-  return std::make_unique<CommandBufferPool>(context.device, context.queue,
-                                             context.queue_family_index,
-                                             sequencer, true);
-}
-
-// Constructor helper.
-std::unique_ptr<CommandBufferPool> NewTransferCommandBufferPool(
-    const VulkanContext& context,
-    CommandBufferSequencer* sequencer) {
-  if (!context.transfer_queue)
-    return nullptr;
-  else
-    return std::make_unique<CommandBufferPool>(
-        context.device, context.transfer_queue,
-        context.transfer_queue_family_index, sequencer, false);
-}
-
-// Constructor helper.
-std::unique_ptr<GpuUploader> NewGpuUploader(EscherImpl* escher,
-                                            CommandBufferPool* main_pool,
-                                            CommandBufferPool* transfer_pool,
-                                            GpuAllocator* allocator) {
-  return std::make_unique<GpuUploader>(
-      escher, transfer_pool ? transfer_pool : main_pool, allocator);
-}
 
 // Constructor helper.
 std::unique_ptr<MeshManager> NewMeshManager(
@@ -67,27 +33,13 @@ std::unique_ptr<MeshManager> NewMeshManager(
 EscherImpl::EscherImpl(Escher* escher, const VulkanContext& context)
     : escher_(escher),
       vulkan_context_(context),
-      command_buffer_sequencer_(std::make_unique<CommandBufferSequencer>()),
-      command_buffer_pool_(
-          NewCommandBufferPool(context, command_buffer_sequencer_.get())),
-      transfer_command_buffer_pool_(
-          NewTransferCommandBufferPool(context,
-                                       command_buffer_sequencer_.get())),
-      gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
-      gpu_uploader_(NewGpuUploader(this,
-                                   command_buffer_pool(),
-                                   transfer_command_buffer_pool(),
-                                   gpu_allocator())),
       pipeline_cache_(std::make_unique<PipelineCache>()),
-      resource_recycler_(std::make_unique<ResourceRecycler>(this)),
-      image_cache_(
-          std::make_unique<ImageCache>(vulkan_context_, gpu_allocator())),
-      mesh_manager_(NewMeshManager(command_buffer_pool(),
-                                   transfer_command_buffer_pool(),
-                                   gpu_allocator(),
-                                   gpu_uploader(),
-                                   resource_recycler_.get())),
-      glsl_compiler_(std::make_unique<GlslToSpirvCompiler>()),
+      image_cache_(std::make_unique<ImageCache>(escher)),
+      mesh_manager_(NewMeshManager(escher->command_buffer_pool(),
+                                   escher->transfer_command_buffer_pool(),
+                                   escher->gpu_allocator(),
+                                   escher->gpu_uploader(),
+                                   escher->resource_recycler())),
       renderer_count_(0) {
   FTL_DCHECK(context.instance);
   FTL_DCHECK(context.physical_device);
@@ -113,25 +65,26 @@ EscherImpl::~EscherImpl() {
 }
 
 void EscherImpl::Cleanup() {
-  command_buffer_pool_->Cleanup();
-  if (transfer_command_buffer_pool_)
-    transfer_command_buffer_pool_->Cleanup();
+  command_buffer_pool()->Cleanup();
+  if (auto pool = transfer_command_buffer_pool()) {
+    pool->Cleanup();
+  }
 }
 
 const VulkanContext& EscherImpl::vulkan_context() {
-  return vulkan_context_;
+  return escher_->vulkan_context();
 }
 
 CommandBufferSequencer* EscherImpl::command_buffer_sequencer() {
-  return command_buffer_sequencer_.get();
+  return escher_->command_buffer_sequencer();
 }
 
 CommandBufferPool* EscherImpl::command_buffer_pool() {
-  return command_buffer_pool_.get();
+  return escher_->command_buffer_pool();
 }
 
 CommandBufferPool* EscherImpl::transfer_command_buffer_pool() {
-  return transfer_command_buffer_pool_.get();
+  return escher_->transfer_command_buffer_pool();
 }
 
 ImageCache* EscherImpl::image_cache() {
@@ -143,19 +96,19 @@ MeshManager* EscherImpl::mesh_manager() {
 }
 
 GlslToSpirvCompiler* EscherImpl::glsl_compiler() {
-  return glsl_compiler_.get();
+  return escher_->glsl_compiler();
 }
 
 ResourceRecycler* EscherImpl::resource_recycler() {
-  return resource_recycler_.get();
+  return escher_->resource_recycler();
 }
 
 GpuAllocator* EscherImpl::gpu_allocator() {
-  return gpu_allocator_.get();
+  return escher_->gpu_allocator();
 }
 
 GpuUploader* EscherImpl::gpu_uploader() {
-  return gpu_uploader_.get();
+  return escher_->gpu_uploader();
 }
 
 }  // namespace impl

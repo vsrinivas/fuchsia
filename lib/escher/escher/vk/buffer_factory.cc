@@ -4,7 +4,7 @@
 
 #include "escher/vk/buffer_factory.h"
 
-#include "escher/impl/escher_impl.h"
+#include "escher/escher.h"
 
 namespace escher {
 
