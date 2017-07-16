@@ -39,35 +39,109 @@
 
 static spin_lock_t timer_lock;
 
-/**
- * @brief  Initialize a timer object
- */
-void timer_init(timer_t *timer)
-{
+void timer_init(timer_t *timer) {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
 }
 
-static void insert_timer_in_queue(uint cpu, timer_t *timer)
-{
+static void insert_timer_in_queue(uint cpu, timer_t *timer) {
     timer_t *entry;
 
     DEBUG_ASSERT(arch_ints_disabled());
 
     LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 "\n", timer, cpu, timer->scheduled_time);
 
+    // For inserting the timer we consider 3 cases. Let |c| and  |n| be the deadlines
+    // for the current and next timers already in the queue and (t) the deadline for
+    // the next with the slack range represented by |(| and |)|.
+    //
+    //  First case, no coalescing, effective slack is zero:
+    //
+    //    -----(---t---)--c------------------n------------> time
+    //
+    //   Second case, coalescing with |c| by firing late:
+    //
+    //    --------(----t--c-)----------------n------------> time
+    //
+    //   Third case, coalescing with |c| by firing early:
+    //
+    //    --------------(-c--t----)----------n------------> time
+    //
+    //   This case is handled as the first case in the next iteration
+    //
+    //    ----------------c--(---t---)-------n------------> time
+    //
+    //   In the case of overlapping two or more timers from the left
+    //   the timer is coalesced with the current |c| one.
+    //
+    //    --------(-----t--c-n)---------------------------> time
+    //
+    //    In the case of overlapping with two or more timers the distance |t|-|c| and |n|-|t|
+    //    is compared if first one is smaller the timer is coalesced with |c|. This is a
+    //    special case of the third case.
+    //
+    //    --------------(-c--t--n-)-----------------------> time
+
     list_for_every_entry(&percpu[cpu].timer_queue, entry, timer_t, node) {
-        if (TIME_GT(entry->scheduled_time, timer->scheduled_time)) {
+        if (TIME_GT(entry->scheduled_time, timer->scheduled_time + timer->slack)) {
+            //  First case: new timer latest is earlier than the earliest timer.
+            // Just add as is, without slack.
+            timer->slack = 0ull;
             list_add_before(&entry->node, &timer->node);
+            return;
+        }
+
+        if (TIME_GTE(entry->scheduled_time, timer->scheduled_time)) {
+            // Second case: coalesce with current timer by scheduling late.
+            timer->slack =  entry->scheduled_time - timer->scheduled_time;
+            timer->scheduled_time = entry->scheduled_time;
+            list_add_after(&entry->node, &timer->node);
+            return;
+        }
+
+        const timer_t* next =
+            list_next_type(&percpu[cpu].timer_queue, &entry->node, timer_t, node);
+
+        if ((next == NULL) || TIME_LT(next->scheduled_time, timer->scheduled_time)) {
+            // This case should be handled in a future loop iteration. This also covers
+            // the case when |next| has the same deadline as |entry|.
+            continue;
+        }
+
+        // The deadline falls in between current and next, but the slack can be large
+        // enough to encompass both.
+
+        lk_time_t delta_entry = timer->scheduled_time - entry->scheduled_time;
+        lk_time_t delta_next  = next->scheduled_time - timer->scheduled_time;
+
+        if (delta_next < delta_entry) {
+            // The next deadline is closer. Handle in the next loop.
+            continue;
+        }
+
+        if (TIME_GTE(entry->scheduled_time, timer->scheduled_time - timer->slack)) {
+            // Third case: coalesce with current timer by scheduling early.
+            timer->slack = entry->scheduled_time - timer->scheduled_time;
+            timer->scheduled_time = entry->scheduled_time;
+            list_add_after(&entry->node, &timer->node);
             return;
         }
     }
 
-    /* walked off the end of the list */
+    // Walked off the end of the list.
+    //
+    // It is possible that a variant of the third case can get here
+    // when |c| is the last:
+    //
+    // --------------(-c--t----)----------------------> time
+    //
+    // This case is not coalesced but the timer placement is correct.
+
     list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
-static void timer_set(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
-{
+void timer_set(timer_t *timer,
+               lk_time_t deadline, uint64_t slack,
+               timer_callback callback, void *arg) {
     LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
@@ -92,6 +166,7 @@ static void timer_set(timer_t *timer, lk_time_t deadline, timer_callback callbac
 
     /* set up the structure */
     timer->scheduled_time = deadline;
+    timer->slack = slack;
     timer->callback = callback;
     timer->arg = arg;
     timer->cancel = false;
@@ -114,33 +189,11 @@ out:
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
-/**
- * @brief  Set up a timer that executes once
- *
- * This function specifies a callback function to be run after a specified
- * deadline passes.  The function will be called one time.
- *
- * @param  timer The timer to use
- * @param  deadline The deadline, in ns, after which the timer is executed
- * @param  callback  The function to call when the timer expires
- * @param  arg  The argument to pass to the callback
- *
- * The timer function is declared as:
- *   enum handler_return callback(struct timer *, lk_time_t now, void *arg) { ... }
- */
-void timer_set_oneshot(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
-{
-    timer_set(timer, deadline, callback, arg);
+void timer_set_oneshot(
+    timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg) {
+    return timer_set(timer, deadline, 0ull, callback, arg);
 }
 
-/**
- * @brief  Cancel a pending timer
- *
- * Returns true if the timer was canceled before it was
- * scheduled in a cpu and false otherwise or if the timer
- * was not scheduled at all.
- *
- */
 bool timer_cancel(timer_t *timer)
 {
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
@@ -179,6 +232,10 @@ bool timer_cancel(timer_t *timer)
 
         /* remove our timer from the queue */
         list_delete(&timer->node);
+
+        /* TODO(cpu): if  after removing |timer| there is one other single timer with
+           the same scheduled_time and slack non-zero then it is possible to return
+           that timer to the ideal scheduled_time */
 
         /* see if we've just modified the head of this cpu's timer queue */
         /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
@@ -231,7 +288,8 @@ enum handler_return timer_tick(lk_time_t now)
         timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
         if (likely(timer == 0))
             break;
-        LTRACEF("next item on timer queue %p at %" PRIu64 " now %" PRIu64 " (%p, arg %p)\n", timer, timer->scheduled_time, now, timer->callback, timer->arg);
+        LTRACEF("next item on timer queue %p at %" PRIu64 " now %" PRIu64 " (%p, arg %p)\n",
+            timer, timer->scheduled_time, now, timer->callback, timer->arg);
         if (likely(TIME_LT(now, timer->scheduled_time)))
             break;
 
@@ -329,8 +387,6 @@ void timer_transition_off_cpu(uint old_cpu)
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
-/* This function is to be invoked after resume on each CPU that may have
- * had timers still on it, in order to restart hardware timers. */
 void timer_thaw_percpu(void)
 {
     DEBUG_ASSERT(arch_ints_disabled());

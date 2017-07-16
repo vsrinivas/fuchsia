@@ -75,7 +75,7 @@ static enum handler_return uart_irq_handler(void *arg)
 // for devices where the uart rx interrupt doesn't seem to work
 static enum handler_return uart_rx_poll(struct timer *t, lk_time_t now, void *arg)
 {
-    timer_set_oneshot(t, now + LK_MSEC(10), uart_rx_poll, NULL);
+    timer_set(t, now + LK_MSEC(10), LK_MSEC(1), uart_rx_poll, NULL);
     return platform_drain_debug_uart_rx();
 }
 
@@ -90,7 +90,8 @@ void platform_debug_start_uart_timer(void)
     if (!started) {
         started = true;
         timer_init(&uart_rx_poll_timer);
-        timer_set_oneshot(&uart_rx_poll_timer, current_time() + LK_MSEC(10), uart_rx_poll, NULL);
+        timer_set(
+            &uart_rx_poll_timer, current_time() + LK_MSEC(10), LK_MSEC(1), uart_rx_poll, NULL);
     }
 }
 
