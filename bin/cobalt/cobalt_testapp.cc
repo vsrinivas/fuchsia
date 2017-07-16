@@ -47,14 +47,11 @@ class CobaltTestApp {
   void RunTests() {
     // Start and connect to the cobalt fidl service.
     app::ServiceProviderPtr services;
-    app::ApplicationControllerPtr application_controller;
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "file://system/apps/cobalt";
     launch_info->services = services.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),
-                                            GetProxy(&application_controller));
-
-    FTL_LOG(INFO) << "CobaltTestApp";
+                                            GetProxy(&app_controller_));
 
     auto encoder_factory =
         app::ConnectToService<cobalt::CobaltEncoderFactory>(services.get());
@@ -73,16 +70,15 @@ class CobaltTestApp {
 
     // Send the observations.
     encoder->SendObservations([](cobalt::Status status) {
+      // TODO(azani, rudominer) Why is this callback not getting invoked?
       FTL_LOG(INFO) << "SendObservations => " << StatusToString(status);
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
     });
-    FTL_LOG(INFO) << "Done";
-
-    application_controller->Kill();
-    exit(0);
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> context_;
+  app::ApplicationControllerPtr app_controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
@@ -90,9 +86,17 @@ class CobaltTestApp {
 }  // namespace
 
 int main(int argc, const char** argv) {
+  FTL_LOG(INFO) << "CobaltTestApp";
   mtl::MessageLoop loop;
   CobaltTestApp app;
   app.RunTests();
+  // TODO(azani, rudominer) Posting the quit task here should be unnecessary
+  // because we do so in the callback to SendObservations(). But that callback
+  // appears to never get invoked for some reason and so we need to post it
+  // here or else the message loop never terminates.
+  loop.PostQuitTask();
+  FTL_LOG(INFO) << "Start";
   loop.Run();
+  FTL_LOG(INFO) << "Done";
   return 0;
 }
