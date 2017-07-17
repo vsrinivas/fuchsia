@@ -237,11 +237,11 @@ void ContextRepository::SetInternal(const std::string& topic,
                                     const std::string* json_value) {
   FTL_DCHECK(topic.find('\'') == std::string::npos) << topic;
   if (json_value != nullptr) {
-    FTL_LOG(INFO) << "ContextRepository::SetInternal(): " << topic << "|"
+    FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << "|"
                   << topic.length() << " = " << *json_value;
     values_[topic] = *json_value;
   } else {
-    FTL_LOG(INFO) << "ContextRepository::SetInternal(): " << topic << " = null";
+    FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << " = null";
     values_.erase(topic);
   }
 
