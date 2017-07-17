@@ -65,6 +65,18 @@ static mx_status_t ktrace_ioctl(void* ctx, uint32_t op,
         *out_actual = sizeof(uint32_t);
         return MX_OK;
     }
+    case IOCTL_KTRACE_START: {
+        if (cmdlen != sizeof(uint32_t)) {
+            return MX_ERR_INVALID_ARGS;
+        }
+        uint32_t group_mask = *(uint32_t *)cmd;
+        return mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, group_mask, NULL);
+    }
+    case IOCTL_KTRACE_STOP: {
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
+        return MX_OK;
+    }
     default:
         return MX_ERR_INVALID_ARGS;
     }
