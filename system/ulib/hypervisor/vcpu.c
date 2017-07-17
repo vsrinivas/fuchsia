@@ -7,7 +7,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <hypervisor/acpi.h>
 #include <hypervisor/block.h>
 #include <hypervisor/decode.h>
 #include <hypervisor/ports.h>
@@ -93,6 +92,7 @@
 #define I8042_DATA_TEST_RESPONSE                0x55
 
 /* PM register addresses. */
+#define PM1A_REGISTER_STATUS                    0x0
 #define PM1A_REGISTER_ENABLE                    (ACPI_PM1_REGISTER_WIDTH / 8)
 
 /* PCI BAR register addresses. */
@@ -223,6 +223,10 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         input_size = 1;
         packet.port_in_ret.u8 = I8042_STATUS_OUTPUT_FULL;
         break;
+    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
+        input_size = 2;
+        packet.port_in_ret.u16 = 0;
+        break;
 #if __x86_64__
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         input_size = 2;
@@ -259,9 +263,10 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     switch (port_out->port) {
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
+    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
+    case I8042_DATA_PORT:
     case I8253_CHANNEL_0:
     case I8253_CONTROL_PORT:
-    case I8042_DATA_PORT:
     case UART_INTERRUPT_ENABLE_PORT ... UART_LINE_CONTROL_IO_PORT - 1:
     case UART_LINE_CONTROL_IO_PORT + 1 ... UART_SCR_SCRATCH_IO_PORT:
         return MX_OK;
