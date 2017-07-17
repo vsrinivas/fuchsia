@@ -12,14 +12,9 @@
 
 namespace modular {
 
-namespace {
-
-constexpr char kUserRunnerUri[] = "file:///system/apps/user_runner";
-
-}  // namespace
-
 UserControllerImpl::UserControllerImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
+    const AppConfig& user_runner,
     AppConfigPtr user_shell,
     const AppConfig& story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
@@ -31,10 +26,8 @@ UserControllerImpl::UserControllerImpl(
       user_controller_binding_(this, std::move(user_controller_request)),
       done_(done) {
   // 1. Launch UserRunner in the current environment.
-  AppConfigPtr user_runner_config = AppConfig::New();
-  user_runner_config->url = kUserRunnerUri;
   user_runner_.reset(new AppClient<UserRunner>(app_context->launcher().get(),
-                                               std::move(user_runner_config)));
+                                               user_runner.Clone()));
 
   // 2. Initialize the UserRunner service.
   user_runner_->primary_service()->Initialize(

@@ -62,10 +62,12 @@ std::string GetRandomId() {
 
 UserProviderImpl::UserProviderImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
+    const AppConfig& user_runner,
     const AppConfig& default_user_shell,
     const AppConfig& story_shell,
     auth::AccountProvider* const account_provider)
     : app_context_(app_context),
+      user_runner_(user_runner),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
       account_provider_(account_provider) {
@@ -339,7 +341,7 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
                         ? default_user_shell_.Clone()
                         : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
-      app_context_, std::move(user_shell), story_shell_,
+      app_context_, user_runner_, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), std::move(account),
       std::move(params->view_owner), std::move(params->user_controller),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });

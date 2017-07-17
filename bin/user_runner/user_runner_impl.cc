@@ -115,9 +115,11 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    std::shared_ptr<app::ApplicationContext> const application_context)
+    std::shared_ptr<app::ApplicationContext> const application_context,
+    bool test)
     : binding_(new fidl::Binding<UserRunner>(this)),
       application_context_(application_context),
+      test_(test),
       user_shell_context_binding_(this) {
   binding_->set_connection_error_handler([this] { Terminate([] {}); });
 }
@@ -268,6 +270,9 @@ void UserRunnerImpl::Initialize(
 
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
+  if (test_) {
+    maxwell_config->args.push_back("--config=/system/data/maxwell/test_config.json");
+  }
 
   maxwell_.reset(
       new AppClientBase(user_scope_->GetLauncher(), std::move(maxwell_config)));

@@ -38,6 +38,7 @@ class UserControllerImpl : UserController, UserContext {
 
   UserControllerImpl(
       std::shared_ptr<app::ApplicationContext> app_context,
+      const AppConfig& user_runner,
       AppConfigPtr user_shell,
       const AppConfig& story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,

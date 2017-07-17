@@ -46,7 +46,8 @@ class VisibleStoriesHandler;
 
 class UserRunnerImpl : UserRunner, UserShellContext {
  public:
-  UserRunnerImpl(std::shared_ptr<app::ApplicationContext> application_context);
+  UserRunnerImpl(std::shared_ptr<app::ApplicationContext> application_context,
+                 bool test);
 
   ~UserRunnerImpl() override;
 
@@ -92,6 +93,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   std::unique_ptr<fidl::Binding<UserRunner>> binding_;
   std::shared_ptr<app::ApplicationContext> application_context_;
+  const bool test_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   auth::TokenProviderFactoryPtr token_provider_factory_;

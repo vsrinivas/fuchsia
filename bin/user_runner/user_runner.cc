@@ -18,9 +18,9 @@ namespace modular {
 // Implementation of the user runner app.
 class UserRunnerApp {
  public:
-  UserRunnerApp()
+  UserRunnerApp(bool test)
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        user_runner_impl_(application_context_) {
+        user_runner_impl_(application_context_, test) {
     application_context_->outgoing_services()->AddService<UserRunner>(
         [this](fidl::InterfaceRequest<UserRunner> request) {
           user_runner_impl_.Connect(std::move(request));
@@ -37,8 +37,10 @@ class UserRunnerApp {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  bool test = command_line.HasOption("test");
   mtl::MessageLoop loop;
-  modular::UserRunnerApp app;
+  modular::UserRunnerApp app(test);
   loop.Run();
   return 0;
 }

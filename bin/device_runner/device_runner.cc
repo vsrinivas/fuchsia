@@ -51,25 +51,39 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     device_shell.url = command_line.GetOptionValueWithDefault(
         "device_shell", "file:///system/apps/userpicker_device_shell");
-    user_shell.url = command_line.GetOptionValueWithDefault(
-        "user_shell", "file:///system/apps/armadillo_user_shell");
     story_shell.url = command_line.GetOptionValueWithDefault(
         "story_shell", "file:///system/apps/mondrian");
+    user_runner.url = command_line.GetOptionValueWithDefault(
+        "user_runner", "file:///system/apps/user_runner");
+    user_shell.url = command_line.GetOptionValueWithDefault(
+        "user_shell", "file:///system/apps/armadillo_user_shell");
 
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
+    test = command_line.HasOption("test");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
         &device_shell.args);
 
     ParseShellArgs(
+        command_line.GetOptionValueWithDefault("story_shell_args", ""),
+        &story_shell.args);
+
+    ParseShellArgs(
+        command_line.GetOptionValueWithDefault("user_runner_args", ""),
+        &user_runner.args);
+
+    ParseShellArgs(
         command_line.GetOptionValueWithDefault("user_shell_args", ""),
         &user_shell.args);
 
-    ParseShellArgs(
-        command_line.GetOptionValueWithDefault("story_shell_args", ""),
-        &story_shell.args);
+    if (test) {
+      device_shell.args.push_back("--test");
+      story_shell.args.push_back("--test");
+      user_runner.args.push_back("--test");
+      user_shell.args.push_back("--test");
+    }
   }
 
   static std::string GetUsage() {
@@ -82,10 +96,13 @@ class Settings {
       --story_shell_args=SHELL_ARGS
       --ignore_monitor
       --no_minfs
+      --test
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to 'file:///system/apps/userpicker_device_shell'.
                 For integration testing use "dev_device_shell".
+    USER_RUNNER: URL of the user runner to run.
+                Defaults to 'file:///system/apps/user_runner'.
     USER_SHELL: URL of the user shell to run.
                 Defaults to 'file:///system/apps/armadillo_user_shell'.
                 For integration testing use "dev_user_shell".
@@ -96,11 +113,13 @@ class Settings {
   }
 
   AppConfig device_shell;
-  AppConfig user_shell;
   AppConfig story_shell;
+  AppConfig user_runner;
+  AppConfig user_shell;
 
   bool ignore_monitor;
   bool no_minfs;
+  bool test;
 
  private:
   void ParseShellArgs(const std::string& value,
@@ -191,10 +210,15 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     ConnectToService(device_shell_->services(),
                      device_shell_view_provider.NewRequest());
 
+    // We still need to pass a request for root view to device shell since
+    // dev_device_shell (which mimics flutter behavior) blocks until it receives
+    // the root view request.
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
-    app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
-        std::move(root_view));
+    if (!settings_.test) {
+      app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
+          std::move(root_view));
+    }
 
     device_shell_->primary_service()->Initialize(
         device_shell_context_binding_.NewBinding());
@@ -217,7 +241,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
     // 4. Setup user provider.
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
-        app_context_, settings_.user_shell, settings_.story_shell,
+        app_context_, settings_.user_runner, settings_.user_shell,
+        settings_.story_shell,
         token_manager_->primary_service().get());
   }
 
