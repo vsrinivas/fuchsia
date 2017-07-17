@@ -129,9 +129,10 @@ void SuggestionEngineImpl::NotifyInteraction(
   debug_.OnSuggestionSelected(suggestion_prototype);
 
   if (suggestion_prototype) {
+    auto& proposal = suggestion_prototype->proposal;
     if (interaction->type == InteractionType::SELECTED) {
-      PerformActions(suggestion_prototype->proposal->on_selected,
-                     suggestion_prototype->proposal->display->color);
+      RemoveProposal(suggestion_prototype->source_url, proposal->id);
+      PerformActions(proposal->on_selected, proposal->display->color);
     }
   }
 }
