@@ -213,7 +213,7 @@ class OperationBase {
   ftl::WeakPtrFactory<OperationBase> weak_ptr_factory_;
 
   // Name used to label traces for this operation
-  const char* trace_name_;
+  const char* const trace_name_;
   // Unique identifier used to correlate trace events for this operation
   const uint64_t trace_id_;
   // Additional information added to trace events for this operation
