@@ -17,6 +17,7 @@
 #include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lib/console.h>
+#include <lib/crypto/global_prng.h>
 #include <lk/init.h>
 #include <string.h>
 #include <trace.h>
@@ -239,6 +240,20 @@ void vm_init_postheap(uint level) {
             vaddr = next_kernel_region_end;
         }
     }
+
+    // Reserve random padding of up to 64GB after first mapping. It will make
+    // the adjacent memory mappings (kstack_vmar, arena:handles and others) at
+    // non-static virtual addresses.
+    size_t entropy;
+    crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
+
+    size_t random_size = PAGE_ALIGN(entropy % (64ULL*GB));
+    const struct mmu_initial_mapping* first_mapping = mmu_initial_mappings;
+    vaddr_t end_first_mapping = first_mapping->virt + first_mapping->size;
+
+    status_t status = aspace->ReserveSpace("random_padding", random_size, end_first_mapping);
+    ASSERT(status == MX_OK);
+    LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 }
 
 void* paddr_to_kvaddr(paddr_t pa) {
