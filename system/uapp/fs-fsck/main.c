@@ -61,7 +61,7 @@ int parse_args(int argc, char** argv, fsck_options_t* options, disk_format_t* df
         }
     }
     if (*df == DISK_FORMAT_UNKNOWN) {
-        fprintf(stderr, "fs_fsck: Cannot format a device with filesystem '%s'\n", argv[2]);
+        fprintf(stderr, "fs_fsck: Cannot check a device with filesystem '%s'\n", argv[2]);
         return -1;
     }
     return 0;
@@ -77,11 +77,11 @@ int main(int argc, char** argv) {
     }
 
     if (options.verbose) {
-        printf("fs_fsck: Formatting device [%s]\n", devicepath);
+        printf("fs_fsck: Checking device [%s]\n", devicepath);
     }
 
     if ((r = fsck(devicepath, df, &options, launch_stdio_sync)) < 0) {
-        fprintf(stderr, "fs_fsck: Failed to format device: %d\n", r);
+        fprintf(stderr, "fs_fsck: Failed to check device: %d\n", r);
     }
     return r;
 }
