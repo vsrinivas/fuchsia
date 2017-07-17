@@ -1,5 +1,6 @@
-Fuchsia Open Source Template Repository
-=======================================
+tokio-fuchsia
+=============
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains a Rust crate that makes Magenta kernel objects
+available for waiting in the tokio-core reactor. It is intended for use
+with the Rust async ecosystem, including tokio-core and mio.
