@@ -7,24 +7,11 @@
 #include "escher/geometry/types.h"
 #include "escher/shape/mesh.h"
 #include "escher/util/debug_print.h"
+#include "escher/scene/shape_modifier.h"
 
 #include "ftl/logging.h"
 
 namespace escher {
-
-// Set of flags that specify modifications that should be made to a shape.
-// The specified modifiers must be compatible with each other, and the mesh
-// attribute layout (this is enforced by DCHECK, so go ahead and try).
-enum class ShapeModifier {
-  // Adds a sine-wave "wobble" to the shape's vertex shader.
-  kWobble = 1,
-};
-
-using ShapeModifiers = vk::Flags<ShapeModifier, uint32_t>;
-
-inline ShapeModifiers operator|(ShapeModifier bit0, ShapeModifier bit1) {
-  return ShapeModifiers(bit0) | bit1;
-}
 
 // Describes a planar shape primitive to be drawn.
 class Shape {
@@ -37,7 +24,9 @@ class Shape {
 
   Type type() const { return type_; }
   ShapeModifiers modifiers() const { return modifiers_; }
+  void set_mesh(MeshPtr mesh);
   void set_modifiers(ShapeModifiers modifiers) { modifiers_ = modifiers; }
+  void remove_modifier(ShapeModifier modifier) { modifiers_ &= ~modifier; }
 
   const MeshPtr& mesh() const {
     FTL_DCHECK(type_ == Type::kMesh);
@@ -51,9 +40,5 @@ class Shape {
   ShapeModifiers modifiers_;
   MeshPtr mesh_;
 };
-
-// Debugging.
-ESCHER_DEBUG_PRINTABLE(ShapeModifier);
-ESCHER_DEBUG_PRINTABLE(ShapeModifiers);
 
 }  // namespace escher

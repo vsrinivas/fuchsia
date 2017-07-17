@@ -24,7 +24,6 @@ enum class MeshAttribute {
   // float. Parameterization around the perimeter of an shape, which varies from
   // 0 - 1, and allows the vertex shader to know "where it is" on the shape.
   kPerimeterPos = 1 << 3,
-
   // Pseudo-attribute, used to obtain the vertex stride for the mesh.
   kStride = 1 << 4,
 };

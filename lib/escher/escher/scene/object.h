@@ -50,6 +50,7 @@ class Object {
 
   // The shape to draw.
   const Shape& shape() const { return shape_; }
+  Shape& mutable_shape() { return shape_; }
 
   // The material with which to fill the shape.
   const MaterialPtr& material() const { return material_; }
@@ -77,6 +78,9 @@ class Object {
   // DataT::kType.  Uses memcpy() to copy the DataT into shape_modifier_data_.
   template <typename DataT>
   void set_shape_modifier_data(const DataT& data);
+  // Remove both the shape modifier data and the flag from the shape.
+  template <typename DataT>
+  void remove_shape_modifier();
 
   // Return the list of objects whose shapes will be used to clip 'clippees()'.
   // It is OK for these objects to not have a material; in this case the objects
@@ -118,6 +122,12 @@ void Object::set_shape_modifier_data(const DataT& data) {
   auto& vect = shape_modifier_data_[DataT::kType];
   vect.resize(sizeof(DataT));
   memcpy(vect.data(), &data, sizeof(DataT));
+}
+
+template <typename DataT>
+void Object::remove_shape_modifier() {
+  shape_modifier_data_.erase(DataT::kType);
+  shape_.remove_modifier(DataT::kType);
 }
 
 template <typename DataT>

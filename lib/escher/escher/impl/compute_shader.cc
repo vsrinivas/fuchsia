@@ -197,6 +197,7 @@ void ComputeShader::Dispatch(std::vector<TexturePtr> textures,
     descriptor_set_writes_[binding].dstSet = descriptor_set;
     descriptor_buffer_info_[i].buffer = buffers[i]->get();
     descriptor_buffer_info_[i].range = buffers[i]->size();
+    command_buffer->KeepAlive(buffers[i]);
   }
   device_.updateDescriptorSets(
       static_cast<uint32_t>(descriptor_set_writes_.size()),

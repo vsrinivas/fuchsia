@@ -16,7 +16,10 @@
 namespace sketchy {
 
 Page::Page(escher::Escher* escher)
-    : escher_(escher), page_material_(ftl::MakeRefCounted<escher::Material>()) {
+    : escher_(escher),
+      page_material_(ftl::MakeRefCounted<escher::Material>()),
+      wobble_absorber_(
+          std::make_unique<escher::impl::WobbleModifierAbsorber>(escher)) {
   page_material_->set_color(vec3(0.6f, 0.6f, 0.6f));
 
   constexpr float h_step = 360.0 / kStrokeColorCount;
@@ -121,6 +124,7 @@ escher::Model* Page::GetModel(const escher::Stopwatch& stopwatch,
 
   model_ = std::make_unique<escher::Model>(std::move(objects));
   model_->set_time(current_time_sec);
+  wobble_absorber_->AbsorbWobbleIfAny(model_.get());
   return model_.get();
 }
 

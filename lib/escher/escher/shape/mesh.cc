@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "escher/shape/mesh.h"
-
-#include "escher/impl/escher_impl.h"
 #include "escher/resources/resource_recycler.h"
 #include "escher/vk/buffer.h"
 
@@ -29,16 +27,16 @@ Mesh::Mesh(ResourceRecycler* resource_recycler,
       bounding_box_(bounding_box),
       num_vertices_(num_vertices),
       num_indices_(num_indices),
-      vertex_buffer_(vertex_buffer->get()),
-      index_buffer_(index_buffer->get()),
-      vertex_buffer_ptr_(std::move(vertex_buffer)),
-      index_buffer_ptr_(std::move(index_buffer)),
+      vk_vertex_buffer_(vertex_buffer->get()),
+      vk_index_buffer_(index_buffer->get()),
+      vertex_buffer_(std::move(vertex_buffer)),
+      index_buffer_(std::move(index_buffer)),
       vertex_buffer_offset_(vertex_buffer_offset),
       index_buffer_offset_(index_buffer_offset) {
   FTL_DCHECK(num_vertices_ * spec_.GetStride() + vertex_buffer_offset_ <=
-             vertex_buffer_ptr_->size());
+             vertex_buffer_->size());
   FTL_DCHECK(num_indices_ * sizeof(uint32_t) + index_buffer_offset_ <=
-             index_buffer_ptr_->size());
+             index_buffer_->size());
 }
 
 Mesh::~Mesh() {}

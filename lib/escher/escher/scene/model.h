@@ -27,6 +27,7 @@ class Model {
 
   // Objects in back to front draw order.
   const std::vector<Object>& objects() const { return objects_; }
+  std::vector<Object>& mutable_objects() { return objects_; }
 
   // Time in seconds.
   float time() const { return time_; }

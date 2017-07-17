@@ -46,4 +46,9 @@ BoundingBox Shape::bounding_box() const {
   }
 }
 
+void Shape::set_mesh(MeshPtr mesh) {
+  FTL_DCHECK(type_ == Type::kMesh);
+  mesh_ = std::move(mesh);
+}
+
 }  // namespace escher

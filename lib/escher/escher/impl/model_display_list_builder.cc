@@ -10,6 +10,7 @@
 #include "escher/impl/model_pipeline_cache.h"
 #include "escher/impl/model_renderer.h"
 #include "escher/scene/camera.h"
+#include "escher/util/align.h"
 
 namespace escher {
 namespace impl {
@@ -106,7 +107,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
 
   auto& image_write = writes[1];
   image_write.dstSet = per_model_descriptor_set_;
-  image_write.dstBinding = ModelData::PerObject::kDescriptorSetSamplerBinding;
+  image_write.dstBinding = ModelData::PerModel::kDescriptorSetSamplerBinding;
   image_write.dstArrayElement = 0;
   image_write.descriptorCount = 1;
   image_write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
@@ -117,19 +118,6 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   image_write.pImageInfo = &image_info;
 
   device_.updateDescriptorSets(2, writes, 0, nullptr);
-}
-
-// If |position| is already aligned to |alignment|, return it.  Otherwise,
-// return the next-larger value that is so aligned.  If |alignment| is zero,
-// |position| is always considered to be aligned.
-static size_t AlignedToNext(size_t position, size_t alignment) {
-  if (alignment && position % alignment) {
-    size_t result = position + (alignment - position % alignment);
-    // TODO: remove DCHECK and add unit test.
-    FTL_DCHECK(result % alignment == 0);
-    return result;
-  }
-  return position;
 }
 
 void ModelDisplayListBuilder::AddClipperObject(const Object& object) {
@@ -284,7 +272,8 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
     sampler = white_texture_->sampler();
   }
 
-  if (object.shape().modifiers() | ShapeModifier::kWobble) {
+  // TODO: Remove when WobbleModifierAbsorber is stable.
+  if (object.shape().modifiers() & ShapeModifier::kWobble) {
     auto wobble = object.shape_modifier_data<ModifierWobble>();
     per_object->wobble = wobble ? *wobble : ModifierWobble();
   }

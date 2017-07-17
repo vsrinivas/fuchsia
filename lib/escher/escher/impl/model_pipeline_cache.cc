@@ -400,7 +400,6 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   std::future<SpirvData> vertex_spirv_future;
   std::future<SpirvData> fragment_spirv_future;
 
-  // The wobble modifier causes a different vertex shader to be used.
   if (spec.shape_modifiers & ShapeModifier::kWobble) {
     vertex_spirv_future =
         compiler_.Compile(vk::ShaderStageFlagBits::eVertex,

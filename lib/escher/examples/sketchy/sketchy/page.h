@@ -8,6 +8,7 @@
 #include <unordered_set>
 
 #include "escher/escher.h"
+#include "escher/impl/wobble_modifier_absorber.h"
 #include "escher/util/stopwatch.h"
 #include "sketchy/stroke.h"
 
@@ -52,6 +53,7 @@ class Page {
   escher::MaterialPtr stroke_materials_[kStrokeColorCount];
 
   std::unique_ptr<escher::Model> model_;
+  std::unique_ptr<escher::impl::WobbleModifierAbsorber> wobble_absorber_;
 };
 
 }  // namespace sketchy

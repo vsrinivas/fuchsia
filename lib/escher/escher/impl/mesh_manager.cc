@@ -95,6 +95,7 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   auto vertex_buffer = Buffer::New(manager_->resource_recycler(), allocator,
                                    vertex_count_ * vertex_stride_,
                                    vk::BufferUsageFlagBits::eVertexBuffer |
+                                       vk::BufferUsageFlagBits::eTransferSrc |
                                        vk::BufferUsageFlagBits::eTransferDst,
                                    vk::MemoryPropertyFlagBits::eDeviceLocal);
   auto index_buffer = Buffer::New(manager_->resource_recycler(), allocator,

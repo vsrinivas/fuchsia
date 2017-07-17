@@ -36,8 +36,10 @@ class Mesh : public WaitableResource {
   const BoundingBox& bounding_box() const { return bounding_box_; }
   uint32_t num_vertices() const { return num_vertices_; }
   uint32_t num_indices() const { return num_indices_; }
-  vk::Buffer vertex_buffer() const { return vertex_buffer_; }
-  vk::Buffer index_buffer() const { return index_buffer_; }
+  vk::Buffer vk_vertex_buffer() const { return vk_vertex_buffer_; }
+  vk::Buffer vk_index_buffer() const { return vk_index_buffer_; }
+  const BufferPtr& vertex_buffer() const { return vertex_buffer_; }
+  const BufferPtr& index_buffer() const { return index_buffer_; }
   vk::DeviceSize vertex_buffer_offset() const { return vertex_buffer_offset_; }
   vk::DeviceSize index_buffer_offset() const { return index_buffer_offset_; }
 
@@ -46,10 +48,10 @@ class Mesh : public WaitableResource {
   const BoundingBox bounding_box_;
   const uint32_t num_vertices_;
   const uint32_t num_indices_;
-  const vk::Buffer vertex_buffer_;
-  const vk::Buffer index_buffer_;
-  const BufferPtr vertex_buffer_ptr_;
-  const BufferPtr index_buffer_ptr_;
+  const vk::Buffer vk_vertex_buffer_;
+  const vk::Buffer vk_index_buffer_;
+  const BufferPtr vertex_buffer_;
+  const BufferPtr index_buffer_;
   const vk::DeviceSize vertex_buffer_offset_;
   const vk::DeviceSize index_buffer_offset_;
 

@@ -92,7 +92,6 @@ void Stroke::Tessellate() {
       vertex.pos = point_and_normal.first + vertex.pos_offset;
       vertex.perimeter_pos = cumulative_length * total_length_recip;
       vertex.uv = vec2(vertex.perimeter_pos, 1.f);
-
       builder->AddVertex(vertex);
 
       vertex.pos_offset *= -1.f;

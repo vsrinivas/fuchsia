@@ -122,11 +122,11 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
   AddWaitSemaphore(mesh->TakeWaitSemaphore(),
                    vk::PipelineStageFlagBits::eVertexInput);
 
-  vk::Buffer vbo = mesh->vertex_buffer();
+  vk::Buffer vbo = mesh->vk_vertex_buffer();
   vk::DeviceSize vbo_offset = mesh->vertex_buffer_offset();
   uint32_t vbo_binding = MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
   command_buffer_.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
-  command_buffer_.bindIndexBuffer(mesh->index_buffer(),
+  command_buffer_.bindIndexBuffer(mesh->vk_index_buffer(),
                                   mesh->index_buffer_offset(),
                                   vk::IndexType::eUint32);
   command_buffer_.drawIndexed(mesh->num_indices(), 1, 0, 0, 0);
