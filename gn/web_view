@@ -13,6 +13,7 @@
         "zlib"
     ],
     "packages": {
-        "web_view": "//apps/web_view"
+        "web_view": "//apps/web_view",
+        "web_view_test_package": "//apps/web_view:web_view_test_package"
     }
 }
