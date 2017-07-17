@@ -234,11 +234,6 @@ extern PFN_vkGetPhysicalDeviceMagmaPresentationSupportKHR
 
 // VK_KHR_sampler_mirror_clamp_to_edge
 
-extern PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX
-    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX;
-extern PFN_vkImportSemaphoreFdKHX vkImportSemaphoreFdKHX;
-extern PFN_vkGetSemaphoreFdKHX vkGetSemaphoreFdKHX;
-
 #ifdef __cplusplus
 }
 #endif

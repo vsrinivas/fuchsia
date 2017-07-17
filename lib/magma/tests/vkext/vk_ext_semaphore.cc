@@ -24,8 +24,6 @@ namespace {
 
 class VulkanTest {
 public:
-    static bool CheckExtensions();
-
     bool Initialize();
     static bool Exec(VulkanTest* t1, VulkanTest* t2);
 
@@ -34,6 +32,11 @@ private:
     bool InitImage();
 
     bool is_initialized_ = false;
+    PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX
+        vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_;
+    PFN_vkImportSemaphoreFdKHX vkImportSemaphoreFdKHX_;
+    PFN_vkGetSemaphoreFdKHX vkGetSemaphoreFdKHX_;
+
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_device_;
     VkQueue vk_queue_;
@@ -45,31 +48,6 @@ private:
     static constexpr uint32_t kSemaphoreCount = 2;
     std::vector<VkSemaphore> vk_semaphore_;
 };
-
-bool VulkanTest::CheckExtensions()
-{
-    uint32_t count;
-    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
-
-    std::vector<VkExtensionProperties> extension_properties(count);
-    result = vkEnumerateInstanceExtensionProperties(nullptr, &count, extension_properties.data());
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
-
-    uint32_t found_count = 0;
-
-    for (auto& prop : extension_properties) {
-        DLOG("extension name %s version %u", prop.extensionName, prop.specVersion);
-        if ((strcmp(prop.extensionName, VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME) ==
-             0) ||
-            (strcmp(prop.extensionName, VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME) == 0))
-            found_count++;
-    }
-
-    return found_count == 2;
-}
 
 bool VulkanTest::Initialize()
 {
@@ -86,6 +64,35 @@ bool VulkanTest::Initialize()
 
 bool VulkanTest::InitVulkan()
 {
+    VkResult result;
+
+    uint32_t extension_count;
+    result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
+
+    std::vector<VkExtensionProperties> extension_properties(extension_count);
+    result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count,
+                                                    extension_properties.data());
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
+
+    std::vector<const char*> instance_extensions{
+        VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME};
+    std::vector<const char*> device_extensions{VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME};
+
+    uint32_t found_count = 0;
+    for (auto& prop : extension_properties) {
+        DLOG("instance extension name %s version %u", prop.extensionName, prop.specVersion);
+        for (uint32_t i = 0; i < instance_extensions.size(); i++) {
+            if ((strcmp(prop.extensionName, instance_extensions[i]) == 0))
+                found_count++;
+        }
+    }
+
+    if (found_count != instance_extensions.size())
+        return DRETF(false, "failed to find instance extensions");
+
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
@@ -93,12 +100,11 @@ bool VulkanTest::InitVulkan()
         nullptr,                                // const VkApplicationInfo*    pApplicationInfo;
         0,                                      // uint32_t                    enabledLayerCount;
         nullptr,                                // const char* const*          ppEnabledLayerNames;
-        0,       // uint32_t                    enabledExtensionCount;
-        nullptr, // const char* const*          ppEnabledExtensionNames;
+        found_count,
+        instance_extensions.data(),
     };
     VkAllocationCallbacks* allocation_callbacks = nullptr;
     VkInstance instance;
-    VkResult result;
 
     if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS)
         return DRETF(false, "vkCreateInstance failed %d", result);
@@ -152,6 +158,30 @@ bool VulkanTest::InitVulkan()
     if (queue_family_index < 0)
         return DRETF(false, "couldn't find an appropriate queue");
 
+    result = vkEnumerateDeviceExtensionProperties(physical_devices[0], nullptr, &extension_count,
+                                                  nullptr);
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkEnumerateDeviceExtensionProperties returned %d\n", result);
+
+    extension_properties.resize(extension_count);
+    result = vkEnumerateDeviceExtensionProperties(physical_devices[0], nullptr, &extension_count,
+                                                  extension_properties.data());
+    if (result != VK_SUCCESS)
+        return DRETF(false, "vkEnumerateDeviceExtensionProperties returned %d\n", result);
+
+    found_count = 0;
+    for (auto& prop : extension_properties) {
+        DLOG("device extension name %s version %u", prop.extensionName, prop.specVersion);
+        for (uint32_t i = 0; i < device_extensions.size(); i++) {
+            if ((strcmp(prop.extensionName, device_extensions[i]) == 0))
+                found_count++;
+        }
+    }
+
+    if (found_count != device_extensions.size())
+        return DRETF(false, "failed to find device extensions");
+
+    // Create the device
     float queue_priorities[1] = {0.0};
 
     VkDeviceQueueCreateInfo queue_create_info = {.sType =
@@ -168,8 +198,9 @@ bool VulkanTest::InitVulkan()
                                      .pQueueCreateInfos = &queue_create_info,
                                      .enabledLayerCount = 0,
                                      .ppEnabledLayerNames = nullptr,
-                                     .enabledExtensionCount = 0,
-                                     .ppEnabledExtensionNames = nullptr,
+                                     .enabledExtensionCount =
+                                         static_cast<uint32_t>(device_extensions.size()),
+                                     .ppEnabledExtensionNames = device_extensions.data(),
                                      .pEnabledFeatures = nullptr};
     VkDevice vkdevice;
 
@@ -182,14 +213,31 @@ bool VulkanTest::InitVulkan()
 
     vkGetDeviceQueue(vkdevice, queue_family_index, 0, &vk_queue_);
 
+    // Get extension function pointers
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_ =
+        reinterpret_cast<PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX>(
+            vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceExternalSemaphorePropertiesKHX"));
+    if (!vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_)
+        return DRETF(false, "couldn't find vkGetPhysicalDeviceExternalSemaphorePropertiesKHX");
+
+    vkImportSemaphoreFdKHX_ = reinterpret_cast<PFN_vkImportSemaphoreFdKHX>(
+        vkGetDeviceProcAddr(vk_device_, "vkImportSemaphoreFdKHX"));
+    if (!vkImportSemaphoreFdKHX_)
+        return DRETF(false, "couldn't find vkImportSemaphoreFdKHX");
+
+    vkGetSemaphoreFdKHX_ = reinterpret_cast<PFN_vkGetSemaphoreFdKHX>(
+        vkGetDeviceProcAddr(vk_device_, "vkGetSemaphoreFdKHX"));
+    if (!vkGetSemaphoreFdKHX_)
+        return DRETF(false, "couldn't find vkGetSemaphoreFdKHX_");
+
     VkExternalSemaphorePropertiesKHX external_semaphore_properties;
     VkPhysicalDeviceExternalSemaphoreInfoKHX external_semaphore_info = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHX,
         .pNext = nullptr,
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
     };
-    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX(vk_physical_device_, &external_semaphore_info,
-                                                      &external_semaphore_properties);
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_(
+        vk_physical_device_, &external_semaphore_info, &external_semaphore_properties);
 
     EXPECT_EQ(external_semaphore_properties.exportFromImportedHandleTypes,
               VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX);
@@ -235,7 +283,8 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
 
     // Export semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        result = vkGetSemaphoreFdKHX(t1->vk_device_, t1->vk_semaphore_[i],
+        result =
+            t1->vkGetSemaphoreFdKHX_(t1->vk_device_, t1->vk_semaphore_[i],
                                      VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX, &fd[i]);
         if (result != VK_SUCCESS)
             return DRETF(false, "vkGetSemaphoreFdKHX returned %d", result);
@@ -250,7 +299,7 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
             .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
             .fd = fd[i]};
 
-        result = vkImportSemaphoreFdKHX(t2->vk_device_, &import_info);
+        result = t1->vkImportSemaphoreFdKHX_(t2->vk_device_, &import_info);
         if (result != VK_SUCCESS)
             return DRETF(false, "vkImportSemaphoreFdKHX failed: %d", result);
     }
@@ -260,7 +309,8 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
         auto platform_semaphore_export = magma::PlatformSemaphore::Import(fd[i]);
 
         // Export the imported semaphores
-        result = vkGetSemaphoreFdKHX(t2->vk_device_, t2->vk_semaphore_[i],
+        result =
+            t1->vkGetSemaphoreFdKHX_(t2->vk_device_, t2->vk_semaphore_[i],
                                      VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX, &fd[i]);
         if (result != VK_SUCCESS)
             return DRETF(false, "vkGetSemaphoreFdKHX returned %d", result);
@@ -291,7 +341,6 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
 
 TEST(VulkanExtension, SemaphoreImportExport)
 {
-    ASSERT_TRUE(VulkanTest::CheckExtensions());
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
     ASSERT_TRUE(t2.Initialize());
