@@ -68,12 +68,6 @@ void arch_zero_page(void *);
 /* give the specific arch a chance to override some routines */
 #include <arch/arch_ops.h>
 
-/* Demand that atomics are implemented using compiler builtins
- * (kernel/atomic.h), not arch specific code. */
-#if ARCH_IMPLEMENTS_ATOMICS
-#error "only built-in atomics supported"
-#endif
-
 __END_CDECLS
 
 #endif // !ASSEMBLY
