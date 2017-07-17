@@ -49,7 +49,12 @@ PageManager::PageManager(
   merge_resolver_->SetPageManager(this);
 }
 
-PageManager::~PageManager() {}
+PageManager::~PageManager() {
+  for (const auto& request : page_requests_) {
+    request.second(Status::INTERNAL_ERROR);
+  }
+  page_requests_.clear();
+}
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
                            std::function<void(Status)> on_done) {
