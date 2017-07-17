@@ -318,6 +318,11 @@ private:
 
 int blobstore_mkfs(int fd, uint64_t block_count);
 
+// Exclusively host-side functionality
+#ifndef __Fuchsia__
+int blobstore_add_blob(int fd, int data_fd);
+#endif
+
 zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd);
 zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd);
 zx_status_t blobstore_check(fbl::RefPtr<Blobstore> vnode);

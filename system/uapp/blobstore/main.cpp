@@ -61,19 +61,23 @@ int do_blobstore_check(int fd, int argc, char** argv) {
 int do_blobstore_add_blob(int fd, int argc, char** argv) {
     if (argc < 1) {
         fprintf(stderr, "Adding a blob requires an additional file argument\n");
+        close(fd);
         return -1;
     }
 
     int data_fd = open(argv[0], O_RDONLY, 0644);
     if (data_fd < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
+        close(fd);
         return -1;
     }
-
-    // TODO(smklein): Implement
-    fprintf(stderr, "Unimplemented: Adding blob %s\n", argv[0]);
+    int r;
+    if ((r = blobstore::blobstore_add_blob(fd, data_fd)) != 0) {
+        fprintf(stderr, "blobstore: Failed to add blob '%s'\n", argv[0]);
+    }
+    close(fd);
     close(data_fd);
-    return -1;
+    return r;
 }
 
 #endif
