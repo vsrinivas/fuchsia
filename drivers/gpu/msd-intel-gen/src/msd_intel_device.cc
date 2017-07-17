@@ -549,9 +549,15 @@ int MsdIntelDevice::DeviceThreadLoop()
             device_request_semaphore_->Wait();
         }
 
-        lock.lock();
-        ProcessDeviceRequests(std::move(device_request_list_));
-        device_request_list_.clear();
+        while (true) {
+            lock.lock();
+            if (!device_request_list_.size())
+                break;
+            auto request = std::move(device_request_list_.front());
+            device_request_list_.pop_front();
+            lock.unlock();
+            request->ProcessAndReply(this);
+        }
         lock.unlock();
 
         if (device_thread_quit_flag_)
@@ -575,23 +581,6 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
     render_engine_cs_->ProcessCompletedCommandBuffers(sequence_number);
 
     progress_->Completed(sequence_number);
-}
-
-void MsdIntelDevice::ProcessDeviceRequests(std::list<std::unique_ptr<DeviceRequest>> list)
-{
-    CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-    TRACE_DURATION("magma", "ProcessDeviceRequests");
-
-    while (list.size()) {
-        DLOG("list.size() %zu", list.size());
-
-        auto request = std::move(list.front());
-        list.pop_front();
-
-        DASSERT(request);
-        request->ProcessAndReply(this);
-    }
 }
 
 magma::Status MsdIntelDevice::ProcessInterrupts()

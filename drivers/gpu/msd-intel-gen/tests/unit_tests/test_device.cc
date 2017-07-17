@@ -217,10 +217,8 @@ public:
 
         auto processing_complete = std::make_shared<bool>(false);
 
-        std::list<std::unique_ptr<DeviceRequest>> list;
-        list.push_back(std::make_unique<TestRequest>(processing_complete));
-
-        device->ProcessDeviceRequests(std::move(list));
+        auto request = std::make_unique<TestRequest>(processing_complete);
+        request->ProcessAndReply(device.get());
 
         EXPECT_TRUE(processing_complete);
     }
