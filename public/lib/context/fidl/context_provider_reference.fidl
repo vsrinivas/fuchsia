@@ -5,48 +5,78 @@
 /// NOTE:
 /// This file is here for reference only, and is not currently used.
 
-module maxwell;
+// Exposes access to Context. Internally, context is composed of a series of
+// nodes, each of which has a class and metadata values. The most common class
+// is "entity" which holds a reference to user-data. Other classes include
+// "story" and "module".
+//
+// Each node is arranged in a hierarchy, such that any single node inherits
+// the metadata values from its ancestors. For this reason, a node is restricted
+// to having only one ancestor of a given class.
+//
+// When querying, a list of ContextSelector structs is given, each of which
+// "selects" a subset of all nodes of a given class based on metadata values.
 
-// Exposes access to Context values, each of which are explicitly named. Each
-// named Context value has a known/pre-defined value representation.
-//
-// This interface is meant to be used in the scope of a single Fuchsia
-// component.
-//
-// TODO(thatguy): There are no access controls as of yet.
+import "metadata.fidl";
+
+[ServiceName="maxwell.ContextProvider"]
 interface ContextProvider {
-  // When any of the conditions in 'query' change, a serialized ContextResult
-  // is sent to the MessageQueue identified by 'message_queue_token'.
+  // When any conditions that would cause the resulting set of context values
+  // selected by |query| to change, a ContextUpdate is sent to |listener|.
   //
-  // If current context values match the query, a result is immediately sent
-  // to the specified MessageQueue.
+  // The current state of values selected by |query| are sent to |listener|
+  // immediately.
   //
-  // The query will continue to stay active as long as the MessageQueue is
-  // not deleted.
-  //
-  // TODO(thatguy): Revisit serializing the ContextResult: we really shouldn't
-  // be serializing FIDL structs; it's just so convenient and there are no
-  // better options.
-  // TODO(thatguy): Add ACL checking for the Component scope in which this
-  // ContextProvider was created. Return errors here immediately, or in
-  // ContextResult if ACLs change after a valid Query() is started.
-  Subscribe(ContextQuery query, string message_queue_token);
+  // The subscription will continue to stay active as long as the |listener|
+  // handle is not closed.
+  Subscribe(ContextQuery query, ContextListener listener);
+
+  Get(ContextQuery query) => ContextUpdate result;
 };
 
-struct ContextResult {
-  // A map of the latest values of each label specified in the original
-  // ContextQuery.
-  map<string, string> results;
+interface ContextListener {
+  OnUpdate(ContextUpdate result);
+};
 
-  // TODO(thatguy): Eventually, add status information about, e.g., access
-  // control violations, etc.
+struct ContextValue {
+  // The type of value this describes.
+  ContextType type;
+
+  // If |type| == ContextType.ENTITY, contains the JSON encoded representation
+  // of the Entity's content.
+  // TODO(thatguy): When Entities are handles we can pass around, make this
+  // a FIDL handle to the entity.
+  string? entity_content;
+
+  // All metadata for the node (which is an instance of |type|), as well as
+  // all of its ancestors.
+  ContextMetadata meta;
+};
+
+struct ContextUpdate {
+  // A list of ContextValue for each key in |ContextQuery.selector|. An empty
+  // list means no values matched the given ContextSelector.
+  map<string, array<ContextValue>> values;
+};
+
+ContextSelector {
+  // A partial metadata struct. Any metadata value given in |meta| restricts
+  // the set of values in the eventual ContextUpdate to include only those
+  // whose metadata match values given.
+  //
+  // For example, to select all context values in a given story, one would
+  // specify:
+  //    meta.value["story"]["id"] = "..."
+  ContextMetadata meta;
+
+  // A string specifying the type of context object to return. Defaults to
+  // ContextType.ENTITY.
+  ContextType? type;
 };
 
 struct ContextQuery {
-  // A list of labels. When the value for any of these context labels changes,
-  // the new values will be sent to the client.
-  array<string> on_any_change;
-
-  // TODO(thatguy): Eventually add more powerful query/trigger conditions here.
-  // For now, this is all we will need for a while going forward.
+  // A map of ContextSelector structs. The keys are specified by the client.
+  // Each key gets a corresponding entry in |ContextUpdate.values| when it is
+  // generated in response to this query.
+  map<string, ContextSelector> selector;
 };

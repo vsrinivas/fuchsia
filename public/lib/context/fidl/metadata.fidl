@@ -1,0 +1,39 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+enum ContextType {
+  STORY,
+  MODULE,
+  ENTITY
+
+  // TODO(thatguy): Add LINK support.
+};
+
+struct ContextMetadata {
+  // A 2d map of ContextType -> key -> value for metadata associated with a
+  // value in the Context Service.
+  //
+  // TODO(thatguy): It would be better to explicitly create structs for each
+  // type and have an optional field here for each one. Unfortunately in
+  // Dart it is (currently) impossible to create a struct with optional fields
+  // without explicitly giving each field a value. Until this is fixed, we use
+  // a 2d map.
+  //
+  // Valid values for namespaces and keys:
+  //
+  //  ContextType     Key                 Type
+  //  STORY           id                  string
+  //
+  //  MODULE          name                string
+  //                  path                JSON-encoded array of strings
+  //                  url                 string
+  //
+  //  ENTITY          topic               string
+  //                  value_type          string
+  //                  ctime               int: seconds since epoch UTC
+  //                  mtime               int: seconds since epoch UTC
+  map<ContextType, map<string, string>> value;
+};
