@@ -51,57 +51,6 @@ mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, si
     return MX_OK;
 }
 
-// Number of blocks reserved for the Merkle Tree
-uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode) {
-    uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
-    return mxtl::roundup(size_merkle, kBlobstoreBlockSize) / kBlobstoreBlockSize;
-}
-
-// Get a pointer to the nth block of the bitmap.
-inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
-    assert(n * kBlobstoreBlockSize < bm.size());                  // Accessing beyond end of bitmap
-    assert(kBlobstoreBlockSize <= (n + 1) * kBlobstoreBlockSize); // Avoid overflow
-    return fs::GetBlock<kBlobstoreBlockSize>(bm.StorageUnsafe()->GetData(), n);
-}
-
-// Sanity check the metadata for the blobstore, given a maximum number of
-// available blocks.
-mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
-    if ((info->magic0 != kBlobstoreMagic0) ||
-        (info->magic1 != kBlobstoreMagic1)) {
-        fprintf(stderr, "blobstore: bad magic\n");
-        return MX_ERR_INVALID_ARGS;
-    }
-    if (info->version != kBlobstoreVersion) {
-        fprintf(stderr, "blobstore: FS Version: %08x. Driver version: %08x\n", info->version,
-                kBlobstoreVersion);
-        return MX_ERR_INVALID_ARGS;
-    }
-    if (info->block_size != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: bsz %u unsupported\n", info->block_size);
-        return MX_ERR_INVALID_ARGS;
-    }
-    if (info->block_count > max) {
-        fprintf(stderr, "blobstore: too large for device\n");
-        return MX_ERR_INVALID_ARGS;
-    }
-    if (info->blob_header_next != 0) {
-        fprintf(stderr, "blobstore: linked blob headers not yet supported\n");
-        return MX_ERR_INVALID_ARGS;
-    }
-    return MX_OK;
-}
-
-mx_status_t blobstore_get_blockcount(int fd, size_t* out) {
-    block_info_t info;
-    ssize_t r;
-    if ((r = ioctl_block_get_info(fd, &info)) < 0) {
-        return static_cast<mx_status_t>(r);
-    }
-    *out = (info.block_size * info.block_count) / kBlobstoreBlockSize;
-    return MX_OK;
-}
-
 } // namespace
 
 namespace blobstore {
@@ -114,32 +63,6 @@ fs::Dispatcher* VnodeBlob::GetDispatcher() {
 
 blobstore_inode_t* Blobstore::GetNode(size_t index) const {
     return &reinterpret_cast<blobstore_inode_t*>(node_map_->GetData())[index];
-}
-
-mx_status_t readblk(int fd, uint64_t bno, void* data) {
-    off_t off = bno * kBlobstoreBlockSize;
-    if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobstore: cannot seek to block %lu\n", bno);
-        return MX_ERR_IO;
-    }
-    if (read(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: cannot read block %lu\n", bno);
-        return MX_ERR_IO;
-    }
-    return MX_OK;
-}
-
-mx_status_t writeblk(int fd, uint64_t bno, const void* data) {
-    off_t off = bno * kBlobstoreBlockSize;
-    if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobstore: cannot seek to block %lu\n", bno);
-        return MX_ERR_IO;
-    }
-    if (write(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: cannot write block %lu\n", bno);
-        return MX_ERR_IO;
-    }
-    return MX_OK;
 }
 
 mx_status_t VnodeBlob::InitVmos() {
@@ -817,89 +740,6 @@ mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
     }
 
     return MX_OK;
-}
-
-int blobstore_mkfs(int fd) {
-    uint64_t blocks;
-    if (blobstore_get_blockcount(fd, &blocks)) {
-        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
-        return -1;
-    }
-
-    uint64_t inodes = 32768;
-
-    blobstore_info_t info;
-    memset(&info, 0x00, sizeof(info));
-    info.magic0 = kBlobstoreMagic0;
-    info.magic1 = kBlobstoreMagic1;
-    info.version = kBlobstoreVersion;
-    info.flags = kBlobstoreFlagClean;
-    info.block_size = kBlobstoreBlockSize;
-    info.block_count = blocks;
-    info.inode_count = inodes;
-    info.alloc_block_count = 0;
-    info.alloc_inode_count = 0;
-    info.blob_header_next = 0; // TODO(smklein): Allow chaining
-
-    xprintf("Blobstore Mkfs\n");
-    xprintf("Disk size  : %lu\n", blocks * kBlobstoreBlockSize);
-    xprintf("Block Size : %u\n", kBlobstoreBlockSize);
-    xprintf("Block Count: %lu\n", blocks);
-    xprintf("Inode Count: %lu\n", inodes);
-
-    // Determine the number of blocks necessary for the block map and node map.
-    uint64_t bbm_blocks = BlockMapBlocks(info);
-    uint64_t nbm_blocks = NodeMapBlocks(info);
-    RawBitmap abm;
-    if (abm.Reset(bbm_blocks * kBlobstoreBlockBits)) {
-        fprintf(stderr, "Couldn't allocate blobstore block map\n");
-        return -1;
-    } else if (abm.Shrink(info.block_count)) {
-        fprintf(stderr, "Couldn't shrink blobstore block map\n");
-        return -1;
-    }
-
-    if (info.inode_count * sizeof(blobstore_inode_t) != nbm_blocks * kBlobstoreBlockSize) {
-        fprintf(stderr, "For simplicity, inode table block must be entirely filled\n");
-        return -1;
-    }
-
-    // update block bitmap:
-    // reserve all blocks before the data storage area.
-    abm.Set(0, DataStartBlock(info));
-
-    // All in-memory structures have been created successfully. Dump everything to disk.
-    char block[kBlobstoreBlockSize];
-    mx_status_t status;
-
-    // write the root block to disk
-    memset(block, 0, sizeof(block));
-    memcpy(block, &info, sizeof(info));
-    if ((status = writeblk(fd, 0, block)) != MX_OK) {
-        fprintf(stderr, "Failed to write root block\n");
-        return status;
-    }
-
-    // write allocation bitmap to disk
-    for (uint64_t n = 0; n < bbm_blocks; n++) {
-        void* bmdata = get_raw_bitmap_data(abm, n);
-        if ((status = writeblk(fd, BlockMapStartBlock() + n, bmdata)) < 0) {
-            fprintf(stderr, "Failed to write blockmap block %lu\n", n);
-            return status;
-        }
-    }
-
-    // write node map to disk
-    for (uint64_t n = 0; n < nbm_blocks; n++) {
-        memset(block, 0, sizeof(block));
-        if (writeblk(fd, NodeMapStartBlock(info) + n, block)) {
-            fprintf(stderr, "blobstore: failed writing inode map\n");
-            return MX_ERR_IO;
-        }
-    }
-
-    xprintf("BLOBSTORE: mkfs success\n");
-    return 0;
 }
 
 } // namespace blobstore

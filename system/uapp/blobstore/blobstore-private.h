@@ -6,20 +6,25 @@
 
 #include "blobstore.h"
 
+#include <string.h>
+
 #include <bitmap/raw-bitmap.h>
 #include <digest/digest.h>
-#include <mx/event.h>
-#include <mx/vmo.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
-#include <block-client/client.h>
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
 #include <fs/vfs.h>
+
+#ifdef __Fuchsia__
+#include <block-client/client.h>
+#include <fs/mapped-vmo.h>
+#include <mx/event.h>
+#include <mx/vmo.h>
+#endif
 
 namespace blobstore {
 
@@ -56,6 +61,8 @@ constexpr BlobFlags kBlobOtherMask        = 0xFF000000;
 
 static_assert(((kBlobStateMask | kBlobOtherMask) & V_FLAG_RESERVED_MASK) == 0,
               "Blobstore flags conflict with VFS-reserved flags");
+
+#ifdef __Fuchsia__
 
 class VnodeBlob final : public fs::Vnode {
 public:
@@ -301,7 +308,9 @@ private:
     uint32_t alloc_blocks_;
 };
 
-int blobstore_mkfs(int fd);
+#endif
+
+int blobstore_mkfs(int fd, uint64_t block_count);
 
 mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd);
 mx_status_t blobstore_create(mxtl::RefPtr<Blobstore>* out, int blockfd);
@@ -309,5 +318,15 @@ mx_status_t blobstore_check(mxtl::RefPtr<Blobstore> vnode);
 
 mx_status_t readblk(int fd, uint64_t bno, void* data);
 mx_status_t writeblk(int fd, uint64_t bno, const void* data);
+
+uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode);
+// Get a pointer to the nth block of the bitmap.
+inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
+    assert(n * kBlobstoreBlockSize < bm.size());                  // Accessing beyond end of bitmap
+    assert(kBlobstoreBlockSize <= (n + 1) * kBlobstoreBlockSize); // Avoid overflow
+    return fs::GetBlock<kBlobstoreBlockSize>(bm.StorageUnsafe()->GetData(), n);
+}
+mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max);
+mx_status_t blobstore_get_blockcount(int fd, size_t* out);
 
 } // namespace blobstore

@@ -13,6 +13,7 @@ MODULE_NAME := blobstore
 # app main
 MODULE_SRCS := \
     $(LOCAL_DIR)/blobstore.cpp \
+    $(LOCAL_DIR)/blobstore-common.cpp \
     $(LOCAL_DIR)/blobstore-ops.cpp \
     $(LOCAL_DIR)/blobstore-check.cpp \
     $(LOCAL_DIR)/main.cpp \
@@ -34,5 +35,38 @@ MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/mxio \
     system/ulib/bitmap \
+
+include make/module.mk
+
+# host blobstore tool
+
+MODULE := $(LOCAL_DIR).host
+
+MODULE_NAME := blobstore
+
+MODULE_TYPE := hostapp
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/blobstore-common.cpp \
+    $(LOCAL_DIR)/main.cpp \
+    system/ulib/bitmap/raw-bitmap.cpp \
+    system/ulib/digest/digest.cpp \
+    system/ulib/digest/merkle-tree.cpp \
+    system/ulib/fs/vfs.cpp \
+    system/ulib/mxalloc/alloc_checker.cpp \
+    third_party/ulib/cryptolib/cryptolib.c \
+
+MODULE_COMPILEFLAGS := \
+    -Werror-implicit-function-declaration \
+    -Wstrict-prototypes -Wwrite-strings \
+    -Ithird_party/ulib/cryptolib/include \
+    -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/digest/include \
+    -Isystem/ulib/digest/include \
+    -Isystem/ulib/mxalloc/include \
+    -Isystem/ulib/mxcpp/include \
+    -Isystem/ulib/mxio/include \
+    -Isystem/ulib/mxtl/include \
+    -Isystem/ulib/fs/include \
 
 include make/module.mk

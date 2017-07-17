@@ -23,7 +23,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+#else
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
+#endif
 
 // clang-format off
 
@@ -38,9 +42,6 @@ constexpr uint32_t kBlobstoreBlockBits      = (kBlobstoreBlockSize * 8);
 constexpr uint32_t kBlobstoreBlockMapStart  = 1;
 constexpr uint32_t kBlobstoreInodeSize      = 64;
 constexpr uint32_t kBlobstoreInodesPerBlock = (kBlobstoreBlockSize / kBlobstoreInodeSize);
-
-static_assert(kBlobstoreBlockSize % PAGE_SIZE == 0,
-              "Blobstore block size should be a multiple of page size");
 
 // Notes:
 // - block 0 is always allocated
