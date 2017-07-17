@@ -659,6 +659,23 @@ class TraceWriter final {
     }
   }
 
+  // Writes a duration event record with arguments into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteDurationEventRecord(Ticks start_time,
+                                Ticks end_time,
+                                const ThreadRef& thread_ref,
+                                const StringRef& category_ref,
+                                const StringRef& name_ref,
+                                const ArgumentList<Args...>& args = {}) {
+    // For the moment we just write begin and end records.  There's an
+    // opportunity to save space by creating a new record type which coalesces
+    // the two.
+    WriteDurationBeginEventRecord(start_time, thread_ref, category_ref,
+                                  name_ref, std::forward(args));
+    WriteDurationEndEventRecord(end_time, thread_ref, category_ref, name_ref);
+  }
+
   // Writes a duration begin event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>

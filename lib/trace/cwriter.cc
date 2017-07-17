@@ -326,6 +326,22 @@ void ctrace_internal_write_counter_event_record(
       category_ref, &name_ref, id, args);
 }
 
+void ctrace_write_duration_event_record(
+    ctrace_writer_t* writer,
+    uint64_t start_time,
+    uint64_t end_time,
+    const ctrace_threadref_t* thread_ref,
+    const ctrace_stringref_t* category_ref,
+    const ctrace_stringref_t* name_ref,
+    const ctrace_arglist_t* c_args) {
+  // See TraceWriter::WriteDurationEventRecord.
+  ctrace_write_duration_begin_event_record(writer, start_time, thread_ref,
+                                           category_ref, name_ref, c_args);
+  ctrace_arglist_t empty_args = {0, nullptr};
+  ctrace_write_duration_end_event_record(writer, end_time, thread_ref,
+                                         category_ref, name_ref, &empty_args);
+}
+
 void ctrace_write_duration_begin_event_record(
     ctrace_writer_t* writer,
     uint64_t event_time,

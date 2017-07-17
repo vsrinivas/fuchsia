@@ -169,6 +169,16 @@ __WEAK void ctrace_write_counter_event_record(
   FTL_DCHECK(false);
 }
 
+__WEAK void ctrace_write_duration_event_record(
+    ctrace_writer_t* writer,
+    uint64_t start_time,
+    uint64_t end_time,
+    const ctrace_threadref_t* thread_ref,
+    const ctrace_stringref_t* category_ref,
+    const ctrace_stringref_t* name_ref,
+    const ctrace_arglist_t* args) {
+  FTL_DCHECK(false);
+}
 __WEAK void ctrace_write_duration_begin_event_record(
     ctrace_writer_t* writer,
     uint64_t ticks,

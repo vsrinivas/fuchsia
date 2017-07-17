@@ -122,6 +122,15 @@ void ctrace_write_counter_event_record(
     uint64_t id,
     const ctrace_arglist_t* args);
 
+void ctrace_write_duration_event_record(
+    ctrace_writer_t* writer,
+    uint64_t start_time,
+    uint64_t end_time,
+    const ctrace_threadref_t* thread_ref,
+    const ctrace_stringref_t* category_ref,
+    const ctrace_stringref_t* name_ref,
+    const ctrace_arglist_t* args);
+
 void ctrace_write_duration_begin_event_record(
     ctrace_writer_t* writer,
     uint64_t event_time,
