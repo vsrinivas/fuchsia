@@ -9,6 +9,7 @@
 #include "apps/tracing/lib/trace/writer.h"
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
 #include "lib/ftl/command_line.h"
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -20,9 +21,11 @@ class App {
   ~App();
 
  private:
+  uint32_t GetGroupMask();
   void UpdateState(tracing::writer::TraceState state);
 
-  void RestartTracing();
+  ftl::UniqueFD OpenKTrace();
+  void RestartTracing(uint32_t group_mask);
   void StopTracing();
 
   bool SendDevMgrCommand(std::string command);
