@@ -9,12 +9,12 @@
 #ifndef __KERNEL_MUTEX_H
 #define __KERNEL_MUTEX_H
 
-#include <magenta/atomic.h>
 #include <magenta/compiler.h>
 #include <magenta/thread_annotations.h>
 #include <assert.h>
 #include <debug.h>
 #include <stdint.h>
+#include <kernel/atomic.h>
 #include <kernel/thread.h>
 
 __BEGIN_CDECLS
@@ -79,4 +79,3 @@ __END_CDECLS
 #include <mxtl/mutex.h>
 
 #endif
-

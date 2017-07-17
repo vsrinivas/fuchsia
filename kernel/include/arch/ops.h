@@ -15,7 +15,7 @@
 #ifndef ASSEMBLY
 
 #include <arch/defines.h>
-#include <magenta/atomic.h>
+#include <kernel/atomic.h>
 #include <magenta/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -69,7 +69,7 @@ void arch_zero_page(void *);
 #include <arch/arch_ops.h>
 
 /* Demand that atomics are implemented using compiler builtins
- * (magenta/atomic.h), not arch specific code. */
+ * (kernel/atomic.h), not arch specific code. */
 #if ARCH_IMPLEMENTS_ATOMICS
 #error "only built-in atomics supported"
 #endif

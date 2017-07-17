@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/spinlock.h>
-#include <magenta/atomic.h>
 #include <arch/ops.h>
+#include <kernel/atomic.h>
 
 void arch_spin_lock(spin_lock_t *lock) {
     spin_lock_t val = arch_curr_cpu_num() + 1;

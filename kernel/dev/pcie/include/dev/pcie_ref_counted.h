@@ -8,7 +8,7 @@
 #pragma once
 
 #include <assert.h>
-#include <magenta/atomic.h>
+#include <kernel/atomic.h>
 #include <magenta/compiler.h>
 #include <mxtl/ref_counted.h>
 
