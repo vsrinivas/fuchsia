@@ -158,7 +158,7 @@ TEST_F(Elements, SsidTooLong) {
 
 TEST_F(Elements, SupportedRates) {
     std::vector<uint8_t> rates = { 1, 2, 3 };
-    EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, std::move(rates)));
+    EXPECT_TRUE(SupportedRatesElement::Create(buf_, sizeof(buf_), &actual_, rates));
     EXPECT_EQ(sizeof(SupportedRatesElement) + rates.size(), actual_);
 
     // Check that the rates are the same. mismatch will return a pair of iterators pointing to
@@ -194,6 +194,20 @@ TEST_F(Elements, CfParamSet) {
     EXPECT_EQ(2u, element->period);
     EXPECT_EQ(3u, element->max_duration);
     EXPECT_EQ(4u, element->dur_remaining);
+}
+
+TEST_F(Elements, Tim) {
+    std::vector<uint8_t> bmp = { 1, 2, 3, 4, 5 };
+    EXPECT_TRUE(TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, 3, bmp));
+    EXPECT_EQ(sizeof(TimElement) + bmp.size(), actual_);
+
+    auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
+    ASSERT_NE(nullptr, element);
+    EXPECT_EQ(1u, element->dtim_count);
+    EXPECT_EQ(2u, element->dtim_period);
+    EXPECT_EQ(3u, element->bmp_ctrl);
+    auto pair = std::mismatch(bmp.begin(), bmp.end(), element->bmp);
+    EXPECT_EQ(bmp.end(), pair.first);
 }
 
 TEST_F(Elements, Country) {

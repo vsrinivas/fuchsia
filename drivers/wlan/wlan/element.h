@@ -321,15 +321,26 @@ struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDs
 } __PACKED;
 
 struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count,
-                                          uint8_t period, uint16_t max_duration,
-                                          uint16_t dur_remaining);
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
+                       uint16_t max_duration, uint16_t dur_remaining);
 
     ElementHeader hdr;
     uint8_t count;
     uint8_t period;
     uint16_t max_duration;
     uint16_t dur_remaining;
+} __PACKED;
+
+struct TimElement : public Element<TimElement, element_id::kTim> {
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
+                       uint8_t dtim_period, uint8_t bmp_ctrl, const std::vector<uint8_t>& bmp);
+    static const size_t kMaxLen = 251;
+
+    ElementHeader hdr;
+    uint8_t dtim_count;
+    uint8_t dtim_period;
+    uint8_t bmp_ctrl;
+    uint8_t bmp[];
 } __PACKED;
 
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {

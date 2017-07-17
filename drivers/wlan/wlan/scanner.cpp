@@ -240,6 +240,12 @@ mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
             debugbcn("current channel: %u\n", dsss_params->current_chan);
             break;
         }
+        case element_id::kTim: {
+            auto tim = reader.read<TimElement>();
+            if (tim == nullptr) goto done_iter;
+            debugbcn("dtim count: %u\n", tim->dtim_count);
+            break;
+        }
         case element_id::kCountry: {
             auto country = reader.read<CountryElement>();
             if (country == nullptr) goto done_iter;
