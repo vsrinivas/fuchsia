@@ -12,6 +12,16 @@
 
 namespace registers {
 
+// PIPE_SRCSZ: Source image size for pipe.
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
+class PipeSourceSize : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x6001C;
+
+    DEF_FIELD(28, 16, horizontal_source_size);
+    DEF_FIELD(11, 0, vertical_source_size);
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
 class PlaneSurfaceAddress : public RegisterBase {
 public:
@@ -50,7 +60,10 @@ public:
     DEF_BIT(30, pipe_gamma_enable);
     DEF_BIT(29, remove_yuv_offset);
     DEF_BIT(28, yuv_range_correction_disable);
+
     DEF_FIELD(27, 24, source_pixel_format);
+    static constexpr uint32_t kFormatRgb8888 = 4;
+
     DEF_BIT(23, pipe_csc_enable);
     DEF_FIELD(22, 21, key_enable);
     DEF_BIT(20, rgb_color_order);
@@ -69,6 +82,16 @@ public:
     DEF_FIELD(5, 4, alpha_mode);
     DEF_BIT(3, allow_double_buffer_update_disable);
     DEF_FIELD(1, 0, plane_rotation);
+};
+
+// PLANE_BUF_CFG: Range of buffer used temporarily during scanout.
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
+class PlaneBufCfg : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x7027C;
+
+    DEF_FIELD(25, 16, buffer_end);
+    DEF_FIELD(9, 0, buffer_start);
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.444
@@ -135,12 +158,15 @@ public:
         DASSERT(pipe_number < kPipeCount);
     }
 
+    auto PipeSourceSize() { return GetReg<registers::PipeSourceSize>(); }
+
     // The following methods get the instance of the plane register for
     // Plane 1 of this pipe.
     auto PlaneSurfaceAddress() { return GetReg<registers::PlaneSurfaceAddress>(); }
     auto PlaneSurfaceStride() { return GetReg<registers::PlaneSurfaceStride>(); }
     auto PlaneSurfaceSize() { return GetReg<registers::PlaneSurfaceSize>(); }
     auto PlaneControl() { return GetReg<registers::PlaneControl>(); }
+    auto PlaneBufCfg() { return GetReg<registers::PlaneBufCfg>(); }
 
 private:
     template <class RegType> RegisterAddr<RegType> GetReg()

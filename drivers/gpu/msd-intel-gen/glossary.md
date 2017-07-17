@@ -30,3 +30,13 @@ The following terms and abbreviations are used in this codebase:
 * EDID: Extended Display Identification Data, a standard for data
   describing a display.  This data is provided by a display over the DDC
   protocol.
+
+* MSA: Main Stream Attributes, a chunk of data sent from a DisplayPort
+  source to a display (sink).
+
+* MST: Multi-Stream Transport, a DisplayPort mode in which two displays are
+  driven from a single DisplayPort port.
+
+* SST: Single Stream Transport, a DisplayPort mode.  This is the more
+  ordinary mode (as opposed to MST) in which a single display is driven
+  from one DisplayPort port.

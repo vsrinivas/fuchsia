@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "example_edid.h"
 #include "mock/mock_mmio.h"
 #include "modeset/displayport.h"
+#include "modeset/edid.h"
 #include "register_io.h"
 #include "registers.h"
 #include "registers_ddi.h"
 #include "registers_dpll.h"
+#include "registers_pipe.h"
+#include "registers_transcoder.h"
 #include "gtest/gtest.h"
 #include <stdarg.h>
 #include <stdint.h>
@@ -512,8 +516,10 @@ TEST(DisplayPort, LinkTraining)
     TestDevice* test_device = new TestDevice(reg_io.mmio());
     reg_io.InstallHook(std::unique_ptr<TestDevice>(test_device));
 
+    BaseEdid edid = GetExampleEdid();
+
     uint32_t ddi_number = 2;
-    EXPECT_TRUE(DisplayPort::PartiallyBringUpDisplay(&reg_io, ddi_number));
+    EXPECT_TRUE(DisplayPort::PartiallyBringUpDisplay(&reg_io, ddi_number, &edid));
 
     // Check that the training code leaves TRAINING_PATTERN_SET set to
     // 0, to end the sink device's training mode.
@@ -522,6 +528,111 @@ TEST(DisplayPort, LinkTraining)
     EXPECT_TRUE(
         dp_aux.DpcdRead(DisplayPort::DPCD_TRAINING_PATTERN_SET, &reg_byte, sizeof(reg_byte)));
     EXPECT_EQ(reg_byte, 0);
+}
+
+static void CheckRegs(RegisterIo* reg_io)
+{
+    uint32_t pipe_number = 1;  // Pipe B
+    uint32_t trans_number = 1; // Transcoder B
+    uint32_t ddi_number = 2;   // DDI C
+    registers::PipeRegs pipe(pipe_number);
+    registers::TranscoderRegs trans(trans_number);
+
+    // DisplayPort clock ratios.
+    auto data_m = trans.DataM().ReadFrom(reg_io);
+    auto data_n = trans.DataN().ReadFrom(reg_io);
+    auto link_m = trans.LinkM().ReadFrom(reg_io);
+    auto link_n = trans.LinkN().ReadFrom(reg_io);
+
+    EXPECT_EQ(data_m.tu_or_vcpayload_size().get(), 63u);
+    EXPECT_EQ(data_m.data_m_value().get(), 0x522222u);
+    EXPECT_EQ(data_n.data_n_value().get(), 0x800000u);
+    EXPECT_EQ(link_m.link_m_value().get(), 0x4901e5u);
+    EXPECT_EQ(link_n.link_n_value().get(), 0x800000u);
+
+    // CRT timing parameters.
+    auto h_total = trans.HTotal().ReadFrom(reg_io);
+    auto h_blank = trans.HBlank().ReadFrom(reg_io);
+    auto h_sync = trans.HSync().ReadFrom(reg_io);
+
+    auto v_total = trans.VTotal().ReadFrom(reg_io);
+    auto v_blank = trans.VBlank().ReadFrom(reg_io);
+    auto v_sync = trans.VSync().ReadFrom(reg_io);
+
+    EXPECT_EQ(h_total.count_active().get(), 1919u);
+    EXPECT_EQ(h_total.count_total().get(), 2079u);
+    EXPECT_EQ(h_blank.reg_value(), h_total.reg_value());
+    EXPECT_EQ(h_sync.sync_start().get(), 1967u);
+    EXPECT_EQ(h_sync.sync_end().get(), 1999u);
+
+    EXPECT_EQ(v_total.count_active().get(), 1199u);
+    EXPECT_EQ(v_total.count_total().get(), 1234u);
+    EXPECT_EQ(v_blank.reg_value(), v_total.reg_value());
+    EXPECT_EQ(v_sync.sync_start().get(), 1202u);
+    EXPECT_EQ(v_sync.sync_end().get(), 1208u);
+
+    // Pipe config.
+    auto pipe_size = pipe.PipeSourceSize().ReadFrom(reg_io);
+    EXPECT_EQ(pipe_size.horizontal_source_size().get(), 1919u);
+    EXPECT_EQ(pipe_size.vertical_source_size().get(), 1199u);
+
+    // Transcoder config.
+    auto clock_select = trans.ClockSelect().ReadFrom(reg_io);
+    EXPECT_EQ(clock_select.trans_clock_select().get(), ddi_number + 1);
+
+    auto msa_misc = trans.MsaMisc().ReadFrom(reg_io);
+    EXPECT_EQ(msa_misc.sync_clock().get(), 1u);
+
+    auto ddi_func = trans.DdiFuncControl().ReadFrom(reg_io);
+    EXPECT_EQ(ddi_func.trans_ddi_function_enable().get(), 1u);
+    EXPECT_EQ(ddi_func.ddi_select().get(), ddi_number);
+    EXPECT_EQ(ddi_func.trans_ddi_mode_select().get(), uint32_t{ddi_func.kModeDisplayPortSst});
+    EXPECT_EQ(ddi_func.bits_per_color().get(), 2u);
+    EXPECT_EQ(ddi_func.sync_polarity().get(), 1u);
+    EXPECT_EQ(ddi_func.dp_port_width_selection().get(), 1u);
+
+    // These values should get generalized when the software-under-test
+    // allocates plane buffer ranges rather than just using a fixed range.
+    auto buf_cfg = pipe.PlaneBufCfg().ReadFrom(reg_io);
+    EXPECT_EQ(buf_cfg.buffer_start().get(), 0x1beu);
+    EXPECT_EQ(buf_cfg.buffer_end().get(), 0x373u);
+
+    auto trans_conf = trans.Conf().ReadFrom(reg_io);
+    EXPECT_EQ(trans_conf.transcoder_enable().get(), 1u);
+
+    // Plane config.
+    auto plane_control = pipe.PlaneControl().ReadFrom(reg_io);
+    EXPECT_EQ(plane_control.plane_enable().get(), 1u);
+    EXPECT_EQ(plane_control.pipe_gamma_enable().get(), 1u);
+    EXPECT_EQ(plane_control.source_pixel_format().get(), uint32_t{plane_control.kFormatRgb8888});
+    EXPECT_EQ(plane_control.plane_gamma_disable().get(), 1u);
+
+    auto plane_size = pipe.PlaneSurfaceSize().ReadFrom(reg_io);
+    EXPECT_EQ(plane_size.width_minus_1().get(), 1919u);
+    EXPECT_EQ(plane_size.height_minus_1().get(), 1199u);
+
+    // Test for the hard-coded value for now.  Later the code will plumb
+    // through the framebuffer's stride.
+    auto plane_stride = pipe.PlaneSurfaceStride().ReadFrom(reg_io);
+    EXPECT_EQ(plane_stride.stride().get(), 0x87u);
+
+    // Test for the hard-coded value for now.
+    auto plane_addr = pipe.PlaneSurfaceAddress().ReadFrom(reg_io);
+    EXPECT_EQ(plane_addr.surface_base_address().get(), 0u);
+}
+
+TEST(DisplayPort, DisplayBringup)
+{
+    RegisterIo reg_io(MockMmio::Create(0x100000));
+    TestDevice* test_device = new TestDevice(reg_io.mmio());
+    reg_io.InstallHook(std::unique_ptr<TestDevice>(test_device));
+
+    BaseEdid edid = GetExampleEdid();
+
+    uint32_t ddi_number = 2;
+    EXPECT_TRUE(DisplayPort::PartiallyBringUpDisplay(&reg_io, ddi_number, &edid));
+
+    CheckRegs(&reg_io);
 }
 
 } // namespace

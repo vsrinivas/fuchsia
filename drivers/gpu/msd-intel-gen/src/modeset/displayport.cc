@@ -9,6 +9,8 @@
 #include "registers.h"
 #include "registers_ddi.h"
 #include "registers_dpll.h"
+#include "registers_pipe.h"
+#include "registers_transcoder.h"
 #include <algorithm>
 #include <chrono>
 #include <stdint.h>
@@ -424,15 +426,33 @@ bool DoLinkTraining(RegisterIo* reg_io, int32_t ddi_number)
     return result;
 }
 
+// Convert ratio x/y into the form used by the Link/Data M/N ratio registers.
+void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out)
+{
+    // The exact denominator (N) value shouldn't matter too much.  Larger
+    // values will tend to represent the ratio more accurately.  The value
+    // must fit into a 24-bit register, so use 1 << 23.
+    const uint32_t kDenominator = 1 << 23;
+    *n_out = kDenominator;
+    *m_out = static_cast<uint64_t>(x) * kDenominator / y;
+}
+
 } // namespace
 
-bool DisplayPort::PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_number)
+bool DisplayPort::PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_number, BaseEdid* edid)
 {
     // TODO(MA-150): Handle other DDIs.
     if (ddi_number != 2)
         return DRETF(false, "Only DDI C (DDI 2) is currently supported");
 
     uint32_t dpll_number = 1;
+
+    // Transcoder B can only take input from Pipe B.
+    uint32_t pipe_number = 1; // Pipe B
+    uint32_t trans_num = 1;   // Transcoder B
+
+    registers::PipeRegs pipe(pipe_number);
+    registers::TranscoderRegs trans(trans_num);
 
     // Enable power for this DDI.
     auto power_well = registers::PowerWellControl2::Get().ReadFrom(reg_io);
@@ -463,6 +483,172 @@ bool DisplayPort::PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_numbe
         return false;
     }
     magma::log(magma::LOG_INFO, "DDI %d: DisplayPort link training succeeded", ddi_number);
+
+    EdidTimingDesc* timing = &edid->preferred_timing;
+    if (timing->pixel_clock_10khz == 0)
+        return DRETF(false, "Timing descriptor not valid");
+
+    // Pixel clock rate: The rate at which pixels are sent, in pixels per
+    // second (Hz), divided by 10000.
+    uint32_t pixel_clock_rate = timing->pixel_clock_10khz;
+
+    uint32_t link_rate_mhz = 2700;
+    // This is the rate at which bits are sent on a single DisplayPort
+    // lane, in raw bits per second, divided by 10000.
+    uint32_t link_raw_bit_rate = link_rate_mhz * 100;
+    // Link symbol rate: The rate at which link symbols are sent on a
+    // single DisplayPort lane.  A link symbol is 10 raw bits (using 8b/10b
+    // encoding, which usually encodes an 8-bit data byte).
+    uint32_t link_symbol_rate = link_raw_bit_rate / 10;
+
+    uint32_t bits_per_pixel = 18; // 6 bits per color.
+    uint32_t lane_count = 2;
+
+    // Link M/N ratio: This is the ratio between two clock rates.  This
+    // ratio is specified in the DisplayPort standard.  The ratio value is
+    // sent across the DisplayPort link in the MSA (Main Stream Attribute)
+    // data, and the sink device can use it or ignore it.
+    //
+    // This ratio is: The fraction of link symbol clock ticks that should
+    // cause the pixel clock to tick.  Since DisplayPort does not allow
+    // color depths of less than 8 bits per pixel, this ratio cannot be
+    // more than 1.
+    uint32_t link_m;
+    uint32_t link_n;
+    CalculateRatio(pixel_clock_rate, link_symbol_rate, &link_m, &link_n);
+
+    // Data M/N ratio: This is the ratio between two bit rates.
+    //
+    // This ratio is: The fraction of the DisplayPort link capacity that is
+    // occupied with pixel data.  This must always be less than 1, since we
+    // can't use more than 100% of the link capacity.  This cannot be
+    // exactly 1, since some of the link capacity is required for control
+    // data.
+    uint32_t pixel_bit_rate = pixel_clock_rate * bits_per_pixel;
+    uint32_t total_link_bit_rate = link_symbol_rate * 8 * lane_count;
+    uint32_t data_m;
+    uint32_t data_n;
+    CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
+
+    auto data_m_reg = trans.DataM().FromValue(0);
+    data_m_reg.tu_or_vcpayload_size().set(63); // Size of 64, minus 1.
+    data_m_reg.data_m_value().set(data_m);
+    data_m_reg.WriteTo(reg_io);
+
+    auto data_n_reg = trans.DataN().FromValue(0);
+    data_n_reg.data_n_value().set(data_n);
+    data_n_reg.WriteTo(reg_io);
+
+    auto link_m_reg = trans.LinkM().FromValue(0);
+    link_m_reg.link_m_value().set(link_m);
+    link_m_reg.WriteTo(reg_io);
+
+    auto link_n_reg = trans.LinkN().FromValue(0);
+    link_n_reg.link_n_value().set(link_n);
+    link_n_reg.WriteTo(reg_io);
+
+    uint32_t h_active = timing->horizontal_addressable() - 1;
+    uint32_t h_sync_start = h_active + timing->horizontal_front_porch();
+    uint32_t h_sync_end = h_sync_start + timing->horizontal_sync_pulse_width();
+    uint32_t h_total = h_active + timing->horizontal_blanking();
+
+    uint32_t v_active = timing->vertical_addressable() - 1;
+    uint32_t v_sync_start = v_active + timing->vertical_front_porch();
+    uint32_t v_sync_end = v_sync_start + timing->vertical_sync_pulse_width();
+    uint32_t v_total = v_active + timing->vertical_blanking();
+
+    auto h_total_reg = trans.HTotal().FromValue(0);
+    h_total_reg.count_total().set(h_total);
+    h_total_reg.count_active().set(h_active);
+    h_total_reg.WriteTo(reg_io);
+    auto v_total_reg = trans.VTotal().FromValue(0);
+    v_total_reg.count_total().set(v_total);
+    v_total_reg.count_active().set(v_active);
+    v_total_reg.WriteTo(reg_io);
+
+    auto h_sync_reg = trans.HSync().FromValue(0);
+    h_sync_reg.sync_start().set(h_sync_start);
+    h_sync_reg.sync_end().set(h_sync_end);
+    h_sync_reg.WriteTo(reg_io);
+    auto v_sync_reg = trans.VSync().FromValue(0);
+    v_sync_reg.sync_start().set(v_sync_start);
+    v_sync_reg.sync_end().set(v_sync_end);
+    v_sync_reg.WriteTo(reg_io);
+
+    // The Intel docs say that HBlank should be programmed with the same
+    // values as HTotal.  Similarly, VBlank should be programmed with the
+    // same values as VTotal.  (See
+    // intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf,
+    // p.932, p.962, p.974, p.980.)
+    trans.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(reg_io);
+    trans.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(reg_io);
+
+    auto pipe_size = pipe.PipeSourceSize().FromValue(0);
+    pipe_size.horizontal_source_size().set(h_active);
+    pipe_size.vertical_source_size().set(v_active);
+    pipe_size.WriteTo(reg_io);
+
+    auto clock_select = trans.ClockSelect().FromValue(0);
+    clock_select.trans_clock_select().set(ddi_number + 1);
+    clock_select.WriteTo(reg_io);
+
+    auto msa_misc = trans.MsaMisc().FromValue(0);
+    msa_misc.sync_clock().set(1);
+    msa_misc.WriteTo(reg_io);
+
+    auto ddi_func = trans.DdiFuncControl().FromValue(0);
+    ddi_func.trans_ddi_function_enable().set(1);
+    ddi_func.ddi_select().set(ddi_number);
+    ddi_func.trans_ddi_mode_select().set(ddi_func.kModeDisplayPortSst);
+    ddi_func.bits_per_color().set(2);
+    ddi_func.port_sync_mode_master_select().set(0);
+    ddi_func.sync_polarity().set(1);
+    ddi_func.port_sync_mode_enable().set(0);
+    ddi_func.dp_vc_payload_allocate().set(0);
+    ddi_func.dp_port_width_selection().set(1);
+    ddi_func.WriteTo(reg_io);
+
+    // TODO(MA-150): Allocate ranges of the plane buffer properly rather
+    // than using the following fixed range.  This might involve checking
+    // what ranges have already been allocated for displays that were set
+    // up by the firmware's modesetting, or redoing the configuration of
+    // those displays from scratch.
+    auto buf_cfg = pipe.PlaneBufCfg().FromValue(0);
+    buf_cfg.buffer_start().set(0x1be);
+    buf_cfg.buffer_end().set(0x373);
+    buf_cfg.WriteTo(reg_io);
+
+    auto trans_conf = trans.Conf().FromValue(0);
+    trans_conf.transcoder_enable().set(1);
+    trans_conf.WriteTo(reg_io);
+
+    auto plane_control = pipe.PlaneControl().FromValue(0);
+    plane_control.plane_enable().set(1);
+    plane_control.pipe_gamma_enable().set(1);
+    plane_control.source_pixel_format().set(plane_control.kFormatRgb8888);
+    plane_control.plane_gamma_disable().set(1);
+    plane_control.WriteTo(reg_io);
+
+    auto plane_size = pipe.PlaneSurfaceSize().FromValue(0);
+    plane_size.width_minus_1().set(h_active);
+    plane_size.height_minus_1().set(v_active);
+    plane_size.WriteTo(reg_io);
+
+    // TODO(MA-150): Plumb through the framebuffer's stride value.
+    auto plane_stride = pipe.PlaneSurfaceStride().FromValue(0);
+    plane_stride.stride().set(0x87);
+    plane_stride.WriteTo(reg_io);
+
+    // The following write arms the writes to the plane registers written
+    // above.
+    auto plane_addr = pipe.PlaneSurfaceAddress().FromValue(0);
+    // TODO(MA-150): Plumb through the actual framebuffer address and use
+    // that.  For now, the following address will display something that is
+    // recognisable but misaligned, allowing us to check that the display
+    // has come up.
+    plane_addr.surface_base_address().set(0);
+    plane_addr.WriteTo(reg_io);
+
     return true;
 }
 
@@ -503,7 +689,7 @@ void DisplayPort::PartiallyBringUpDisplays(RegisterIo* reg_io)
             magma::log(magma::LOG_INFO,
                        "DDI %d: EDID: Read EDID data successfully, with correct header",
                        ddi_number);
-            PartiallyBringUpDisplay(reg_io, ddi_number);
+            PartiallyBringUpDisplay(reg_io, ddi_number, &edid);
         }
         ++logged_count;
     }

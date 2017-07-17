@@ -5,6 +5,7 @@
 #ifndef MODESET_DISPLAYPORT_H
 #define MODESET_DISPLAYPORT_H
 
+#include "edid.h"
 #include "magma_util/macros.h"
 #include "register_bitfields.h"
 #include "register_io.h"
@@ -119,7 +120,7 @@ public:
     };
 
     static bool FetchEdidData(RegisterIo* dev, uint32_t ddi_number, uint8_t* buf, uint32_t size);
-    static bool PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_number);
+    static bool PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_number, BaseEdid* edid);
     static void PartiallyBringUpDisplays(RegisterIo* reg_io);
 };
 

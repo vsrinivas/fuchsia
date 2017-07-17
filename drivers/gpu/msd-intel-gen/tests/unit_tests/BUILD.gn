@@ -23,6 +23,7 @@ source_set("tests_not_requiring_hardware") {
   testonly = true
 
   sources = [
+    "modeset/example_edid.cc",
     "modeset/test_displayport.cc",
     "modeset/test_edid.cc",
     "test_buffer.cc",
