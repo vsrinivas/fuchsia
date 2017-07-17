@@ -263,19 +263,6 @@ bool VmAspace::is_destroyed() const {
     return aspace_destroyed_;
 }
 
-//
-//  Try to pick the spot within specified gap
-//
-//  Arch can override this to impose it's own restrictions.
-
-__WEAK vaddr_t arch_mmu_pick_spot(const arch_aspace_t* aspace,
-                                  vaddr_t base, uint prev_region_mmu_flags,
-                                  vaddr_t end, uint next_region_mmu_flags,
-                                  vaddr_t align, size_t size, uint mmu_flags) {
-    // just align it by default
-    return ALIGN(base, align);
-}
-
 status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
                                      size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
                                      uint arch_mmu_flags) {
