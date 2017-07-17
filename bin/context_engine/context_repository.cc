@@ -97,6 +97,7 @@ bool EvaluateFilter(const ContextFilterPtr& filter,
                     const rapidjson::Value& value,
                     rapidjson::Document* output_value) {
   FTL_CHECK(output_value != nullptr);
+  if (!filter) return false;
 
   FilterFunction func;
   if (filter->is_partial_eq()) {
