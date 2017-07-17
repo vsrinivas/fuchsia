@@ -139,7 +139,7 @@ public:
     ~MagentaPlatformBuffer() override
     {
         if (map_count_ > 0)
-            UnmapCpu();
+            vmar_unmap();
         ReleasePages();
         if (paged_vmar_.get())
             paged_vmar_.destroy();
@@ -179,6 +179,15 @@ public:
 private:
     void ReleasePages();
 
+    mx_status_t vmar_unmap()
+    {
+        mx_status_t status =
+            mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(virt_addr_), size());
+        if (status == MX_OK)
+            virt_addr_ = nullptr;
+        return status;
+    }
+
     mx::vmo vmo_;
     uint64_t size_;
     uint64_t koid_;
@@ -217,9 +226,7 @@ bool MagentaPlatformBuffer::UnmapCpu()
         map_count_--;
         if (map_count_ == 0) {
             DLOG("map_count 0 unmapping vmo %p", this);
-            mx_status_t status =
-                mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(virt_addr_), size());
-            virt_addr_ = nullptr;
+            mx_status_t status = vmar_unmap();
             if (status != MX_OK)
                 DRETF(false, "failed to unmap vmo: %d", status);
         }
