@@ -123,6 +123,14 @@ bool EvaluateFilter(const ContextFilterPtr& filter,
 
 }  // namespace
 
+//// ContextValue
+ContextValue::ContextValue() : meta(ContextMetadata::New()) {
+  meta->value =
+      fidl::Map<ContextType, fidl::Map<fidl::String, fidl::String>>();
+  meta->value.mark_non_null();
+}
+
+//// ContextRepository
 ContextRepository::ContextRepository() : next_subscription_id_(0) {}
 ContextRepository::~ContextRepository() = default;
 
@@ -135,7 +143,7 @@ const std::string* ContextRepository::Get(const std::string& topic) const {
   auto it = values_.find(topic);
   if (it == values_.end())
     return nullptr;
-  return &it->second;
+  return &it->second.value;
 }
 
 // TODO(thatguy): Remove() is only used in tests. Deprecate in favor of
@@ -216,7 +224,7 @@ void ContextRepository::GetAllValuesInStoryScope(
     }
 
     if (entry_story_id == story_id && entry_local_topic == topic) {
-      output->push_back(entry.second);
+      output->push_back(entry.second.value);
     }
   }
 }
@@ -239,7 +247,7 @@ void ContextRepository::SetInternal(const std::string& topic,
   if (json_value != nullptr) {
     FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << "|"
                   << topic.length() << " = " << *json_value;
-    values_[topic] = *json_value;
+    values_[topic].value = *json_value;
   } else {
     FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << " = null";
     values_.erase(topic);
@@ -253,7 +261,7 @@ void ContextRepository::SetInternal(const std::string& topic,
     // Apply any new updates we are instructed to do.
     for (const auto& entry : new_updates) {
       topics_updated.insert(entry.first);
-      values_[entry.first] = entry.second;
+      values_[entry.first].value = entry.second;
     }
   }
 
@@ -287,7 +295,8 @@ bool ContextRepository::EvaluateQueryAndBuildUpdate(
     for (const auto& entry : values_) {
       if (!(*update_output))
         *update_output = ContextUpdate::New();
-      (*update_output)->values[entry.first] = entry.second;
+      (*update_output)->values[entry.first] = entry.second.value;
+      (*update_output)->meta[entry.first] = entry.second.meta.Clone();
     }
     return true;
   }
@@ -321,6 +330,7 @@ bool ContextRepository::EvaluateQueryAndBuildUpdate(
     if (!(*update_output))
       *update_output = ContextUpdate::New();
     (*update_output)->values[topic] = value_to_send;
+    (*update_output)->meta[topic] = values_[topic].meta.Clone();
   }
 
   return true;

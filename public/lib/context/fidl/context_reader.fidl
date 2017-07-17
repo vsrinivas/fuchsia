@@ -4,6 +4,8 @@
 
 module maxwell;
 
+import "metadata.fidl";
+
 // Exposes access to Context values, each of which are explicitly named by a
 // 'topic'. Each topic has a known/pre-defined value representation.
 //
@@ -37,6 +39,10 @@ struct ContextUpdate {
   //
   // Topics that don't have a current value are not present in |values|.
   map<string, string> values;
+
+  // Map of context topic to metadata. Every entry in |values| has a
+  // corresponding entry here.
+  map<string, ContextMetadata> meta;
 };
 
 struct ContextQuery {

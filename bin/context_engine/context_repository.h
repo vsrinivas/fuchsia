@@ -9,10 +9,12 @@
 #include <map>
 
 #include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "apps/maxwell/services/context/metadata.fidl.h"
 
 namespace maxwell {
 
 class ContextCoprocessor;  // See below for definition.
+struct ContextValue;       // See below.
 
 // Tracks current values of context topics as well as subscriptions to those
 // topics. Is responsible for notifying any subscribed clients whenever a topic
@@ -65,7 +67,7 @@ class ContextRepository {
                                    ContextUpdatePtr* update_output);
 
   // Keyed by context topic.
-  std::map<std::string, std::string> values_;
+  std::map<std::string, ContextValue> values_;
 
   struct Subscription {
     ContextQueryPtr query;
@@ -101,6 +103,13 @@ class ContextCoprocessor {
   virtual void ProcessTopicUpdate(const ContextRepository* repository,
                                   const std::set<std::string>& topics_updated,
                                   std::map<std::string, std::string>* out) = 0;
+};
+
+struct ContextValue {
+  ContextValue();
+
+  std::string value;
+  ContextMetadataPtr meta;
 };
 
 }  // namespace maxwell

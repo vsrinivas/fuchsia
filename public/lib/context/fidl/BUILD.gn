@@ -9,6 +9,7 @@ fidl("context") {
     "context_engine.fidl",
     "context_reader.fidl",
     "context_publisher.fidl",
+    "metadata.fidl",
   ]
 
   deps = [
