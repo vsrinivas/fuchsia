@@ -46,7 +46,7 @@ class LinkImpl::ReadCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    impl_->story_storage_->ReadLinkData(
+    impl_->link_storage_->ReadLinkData(
         impl_->link_path_,
         [this, flow](const fidl::String& json) {
           if (!json.is_null()) {
@@ -81,7 +81,7 @@ class LinkImpl::WriteCall : Operation<> {
     FTL_CHECK(!impl_->pending_write_call_);
     impl_->pending_write_call_ = true;
 
-    impl_->story_storage_->WriteLinkData(
+    impl_->link_storage_->WriteLinkData(
         impl_->link_path_, JsonValueToString(impl_->doc_), [this, flow] {
           Cont1(flow);
         });
@@ -89,7 +89,7 @@ class LinkImpl::WriteCall : Operation<> {
 
   void Cont1(FlowToken flow) {
     FTL_CHECK(impl_->pending_write_call_);
-    impl_->story_storage_->FlushWatchers(
+    impl_->link_storage_->FlushWatchers(
         [this, flow] {
           Cont2(flow);
         });
@@ -405,12 +405,10 @@ class LinkImpl::ChangeCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
-
-
-LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
+LinkImpl::LinkImpl(LinkStorage* const link_storage,
                    const LinkPathPtr& link_path)
     : link_path_(link_path.Clone()),
-      story_storage_(story_storage) {
+      link_storage_(link_storage) {
   new ReadCall(&operation_queue_, this, [this] {
       for (auto& request : requests_) {
         LinkConnection::New(this, next_connection_id_++, std::move(request));
@@ -419,12 +417,12 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
       ready_ = true;
     });
 
-  story_storage_->WatchLink(
+  link_storage_->WatchLink(
       link_path, this, [this](const fidl::String& json) { OnChange(json); });
 }
 
 LinkImpl::~LinkImpl() {
-  story_storage_->DropWatcher(this);
+  link_storage_->DropWatcher(this);
 }
 
 void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {

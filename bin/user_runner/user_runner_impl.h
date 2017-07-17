@@ -38,9 +38,9 @@ class ComponentContextImpl;
 class DeviceMapImpl;
 class FocusHandler;
 class LinkImpl;
+class LinkStorage;
 class MessageQueueManager;
 class RemoteInvokerImpl;
-class StoryStorageImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
@@ -140,7 +140,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   // HACK(mesch): The user shell link must be defined *before* the link storage
   // because it invokes a method of link storage (DropWatcher()) in its
   // destructor, which must happen before the link storage is destroyed.
-  std::unique_ptr<StoryStorageImpl> link_storage_;
+  std::unique_ptr<LinkStorage> link_storage_;
   std::unique_ptr<LinkImpl> user_shell_link_;
 
   AgentControllerPtr home_work_agent_controller_;

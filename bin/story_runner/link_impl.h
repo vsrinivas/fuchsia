@@ -48,7 +48,7 @@ class LinkImpl {
  public:
   // The |module_path| is the series of module names (where the last element is
   // the module that created this Link) that this Link is namespaced under.
-  LinkImpl(StoryStorageImpl* story_storage, const LinkPathPtr& link_path);
+  LinkImpl(LinkStorage* story_storage, const LinkPathPtr& link_path);
 
   ~LinkImpl();
 
@@ -129,7 +129,7 @@ class LinkImpl {
   const LinkPathPtr link_path_;
 
   // Link values are stored here.
-  StoryStorageImpl* const story_storage_;
+  LinkStorage* const link_storage_;
 
   // When the Link instance loses all its Link connections, this callback is
   // invoked. It will cause the Link instance to be deleted. Remaining

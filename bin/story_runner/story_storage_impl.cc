@@ -207,6 +207,8 @@ class StoryStorageImpl::FlushWatchersCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
 };
 
+LinkStorage::~LinkStorage() = default;
+
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
       story_page_(story_page) {}

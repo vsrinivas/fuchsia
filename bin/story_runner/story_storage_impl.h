@@ -19,13 +19,32 @@ namespace modular {
 
 class LinkImpl;
 
-// A wrapper around a ledger page to store links in a story that runs
-// asynchronous operations pertaining to one Story instance in a
-// dedicated OperationQueue instance.
-class StoryStorageImpl : PageClient {
+class LinkStorage {
  public:
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
+
+  virtual ~LinkStorage() = 0;
+
+  virtual void ReadLinkData(const LinkPathPtr& link_path,
+                            const DataCallback& callback) = 0;
+  virtual void WriteLinkData(const LinkPathPtr& link_path,
+                             const fidl::String& data,
+                             const SyncCallback& callback) = 0;
+
+  virtual void FlushWatchers(const SyncCallback& callback) = 0;
+  virtual void WatchLink(const LinkPathPtr& link_path, LinkImpl* impl,
+                         const DataCallback& watcher) = 0;
+  virtual void DropWatcher(LinkImpl* impl) = 0;
+
+  virtual void Sync(const SyncCallback& callback) = 0;
+};
+
+// A wrapper around a ledger page to store links in a story that runs
+// asynchronous operations pertaining to one Story instance in a
+// dedicated OperationQueue instance.
+class StoryStorageImpl : PageClient, public LinkStorage {
+ public:
   using AllModuleDataCallback = std::function<void(fidl::Array<ModuleDataPtr>)>;
   using ModuleDataCallback = std::function<void(ModuleDataPtr)>;
   using DeviceDataCallback =
@@ -35,10 +54,12 @@ class StoryStorageImpl : PageClient {
   explicit StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
 
-  void ReadLinkData(const LinkPathPtr& link_path, const DataCallback& callback);
-  void WriteLinkData(const LinkPathPtr& link_path,
-                     const fidl::String& data,
-                     const SyncCallback& callback);
+  // |LinkStorage|
+  void ReadLinkData(const LinkPathPtr& link_path,
+                    const DataCallback& callback) override;
+  // |LinkStorage|
+  void WriteLinkData(const LinkPathPtr& link_path, const fidl::String& data,
+                     const SyncCallback& callback) override;
 
   void ReadModuleData(const fidl::Array<fidl::String>& module_path,
                       const ModuleDataCallback& callback);
@@ -61,16 +82,20 @@ class StoryStorageImpl : PageClient {
   void Log(StoryContextLogPtr log_entry);
   void ReadLog(const LogCallback& callback);
 
-  void Sync(const SyncCallback& callback);
+  // |LinkStorage|
+  void Sync(const SyncCallback& callback) override;
 
   // When callback is invoked, all watcher notifications for pending changes are
   // guaranteed to have been received.
-  void FlushWatchers(const SyncCallback& callback);
+  // |LinkStorage|
+  void FlushWatchers(const SyncCallback& callback) override;
 
+  // |LinkStorage|
   void WatchLink(const LinkPathPtr& link_path,
                  LinkImpl* impl,
-                 const DataCallback& watcher);
-  void DropWatcher(LinkImpl* impl);
+                 const DataCallback& watcher) override;
+  // |LinkStorage|
+  void DropWatcher(LinkImpl* impl) override;
 
  private:
   // |PageClient|
