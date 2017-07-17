@@ -166,6 +166,13 @@ magma_status_t magma_alloc_command_buffer(magma_connection_t* connection, uint64
     if (!platform_buffer)
         return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
+    // Mapping can be expensive (mostly due to aslr);
+    // and we want to map this buffer on submit to pull out the batch buffer id (see below).
+    // To avoid mapping twice, we do an initial map here, so that when the client does map-unmap
+    // then submits, the mapping will probably still be alive inside the platform buffer.
+    void* data;
+    platform_buffer->MapCpu(&data);
+
     *buffer_out =
         reinterpret_cast<magma_buffer_t>(platform_buffer.release()); // Ownership passed across abi
 
