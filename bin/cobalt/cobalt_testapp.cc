@@ -10,9 +10,11 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
+#include "apps/cobalt_client/services/cobalt.fidl-sync.h"
 #include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/cobalt_client/services/customers.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -51,34 +53,32 @@ class CobaltTestApp {
     launch_info->url = "file://system/apps/cobalt";
     launch_info->services = services.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),
-                                            GetProxy(&app_controller_));
+                                            app_controller_.NewRequest());
 
-    auto encoder_factory =
-        app::ConnectToService<cobalt::CobaltEncoderFactory>(services.get());
-    cobalt::CobaltEncoderPtr encoder;
-    // TODO(azani): Switch to a test project.
-    encoder_factory->GetEncoder(kTestAppProjectId, GetProxy(&encoder));
+    app::ConnectToService(services.get(),
+                          fidl::GetSynchronousProxy(&encoder_factory_));
+    encoder_factory_->GetEncoder(kTestAppProjectId,
+                                 GetSynchronousProxy(&encoder_));
 
+    cobalt::Status status;
     // Add 7 observations of rare event 1 to the envelope.
     for (int i = 0; i < 7; i++) {
-      encoder->AddStringObservation(
-          kRareEventMetricId, kRareEventEncodingId, kRareEventObservation1,
-          [i](cobalt::Status status) {
-            FTL_LOG(INFO) << "Add(Rare-event-1) => " << StatusToString(status);
-          });
+      encoder_->AddStringObservation(kRareEventMetricId, kRareEventEncodingId,
+                                     kRareEventObservation1, &status);
+      FTL_LOG(INFO) << "Add(Rare-event-1) => " << StatusToString(status);
     }
 
     // Send the observations.
-    encoder->SendObservations([](cobalt::Status status) {
-      // TODO(azani, rudominer) Why is this callback not getting invoked?
-      FTL_LOG(INFO) << "SendObservations => " << StatusToString(status);
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    });
+    encoder_->SendObservations(&status);
+    FTL_LOG(INFO) << "SendObservations => " << StatusToString(status);
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> context_;
   app::ApplicationControllerPtr app_controller_;
+  fidl::SynchronousInterfacePtr<cobalt::CobaltEncoderFactory> encoder_factory_;
+  fidl::SynchronousInterfacePtr<cobalt::CobaltEncoder> encoder_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
@@ -90,11 +90,6 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   CobaltTestApp app;
   app.RunTests();
-  // TODO(azani, rudominer) Posting the quit task here should be unnecessary
-  // because we do so in the callback to SendObservations(). But that callback
-  // appears to never get invoked for some reason and so we need to post it
-  // here or else the message loop never terminates.
-  loop.PostQuitTask();
   FTL_LOG(INFO) << "Start";
   loop.Run();
   FTL_LOG(INFO) << "Done";

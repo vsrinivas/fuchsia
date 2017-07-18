@@ -25,7 +25,7 @@ executable("cobalt_testapp") {
 
   deps = [
     "//application/lib/app",
-    "//apps/cobalt_client/services:cobalt",
+    "//apps/cobalt_client/services:cobalt_sync",
     "//lib/ftl",
     "//lib/mtl",
   ]
