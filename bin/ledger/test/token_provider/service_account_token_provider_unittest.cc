@@ -184,6 +184,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
 
 TEST_F(ServiceAccountTokenProviderTest, IncorrectCredentials) {
   EXPECT_FALSE(token_provider_.LoadCredentials(GetConfigFile("")));
+  EXPECT_FALSE(token_provider_.LoadCredentials(GetConfigFile("{}")));
   EXPECT_FALSE(
       token_provider_.LoadCredentials(GetConfigFile(kWrongKeyTestConfig)));
 }

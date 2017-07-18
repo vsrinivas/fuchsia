@@ -9,6 +9,7 @@
 #include <openssl/hmac.h>
 #include <openssl/pem.h>
 #include <rapidjson/document.h>
+#include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <time.h>
@@ -25,10 +26,36 @@
 namespace test {
 
 namespace {
-constexpr const char* kExpectedJsonFieldsInServiceAccount[] = {
-    "private_key", "client_email", "client_id"};
-constexpr const char* kExpectedJsonFieldsInIdentityResponse[] = {"idToken",
-                                                                 "expiresIn"};
+const char kServiceAccountConfigurationSchema[] = R"({
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "private_key": {
+      "type": "string"
+    },
+    "client_email": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    }
+  },
+  "required": ["private_key", "client_email", "client_id"]
+})";
+
+const char kIdentityResponseSchema[] = R"({
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "idToken": {
+      "type": "string"
+    },
+    "expiresIn": {
+      "type": "string"
+    }
+  },
+  "required": ["idToken", "expiresIn"]
+})";
 
 std::string GetHeader() {
   rapidjson::StringBuffer string_buffer;
@@ -56,6 +83,28 @@ modular::auth::AuthErrPtr GetError(modular::auth::Status status,
   return error;
 }
 
+std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
+  rapidjson::Document schema_document;
+  if (schema_document.Parse(schemaSpec).HasParseError()) {
+    FTL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
+  }
+  return std::make_unique<rapidjson::SchemaDocument>(schema_document);
+}
+
+bool ValidateSchema(const rapidjson::Value& value,
+                    const rapidjson::SchemaDocument& schema) {
+  rapidjson::SchemaValidator validator(schema);
+  if (!value.Accept(validator)) {
+    rapidjson::StringBuffer uri_buffer;
+    validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
+    FTL_LOG(ERROR) << "Incorrect schema at " << uri_buffer.GetString()
+                   << " , schema violation: "
+                   << validator.GetInvalidSchemaKeyword();
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 struct ServiceAccountTokenProvider::Credentials {
@@ -63,6 +112,8 @@ struct ServiceAccountTokenProvider::Credentials {
   std::string client_id;
 
   bssl::UniquePtr<EVP_PKEY> private_key;
+
+  std::unique_ptr<rapidjson::SchemaDocument> response_schema;
 };
 
 struct ServiceAccountTokenProvider::CachedToken {
@@ -99,14 +150,9 @@ bool ServiceAccountTokenProvider::LoadCredentials(
     return false;
   }
 
-  for (size_t i = 0; i < arraysize(kExpectedJsonFieldsInServiceAccount); ++i) {
-    if (!document.HasMember(kExpectedJsonFieldsInServiceAccount[i]) ||
-        !document[kExpectedJsonFieldsInServiceAccount[i]].IsString()) {
-      FTL_LOG(ERROR) << "Unable to find field: "
-                     << kExpectedJsonFieldsInServiceAccount[i]
-                     << " in file: " << json_file;
-      return false;
-    }
+  auto service_account_schema = InitSchema(kServiceAccountConfigurationSchema);
+  if (!ValidateSchema(document, *service_account_schema)) {
+    return false;
   }
 
   credentials_ = std::make_unique<Credentials>();
@@ -123,6 +169,8 @@ bool ServiceAccountTokenProvider::LoadCredentials(
     FTL_LOG(ERROR) << "Provided key is not a RSA key.";
     return false;
   }
+
+  credentials_->response_schema = InitSchema(kIdentityResponseSchema);
 
   return true;
 }
@@ -356,18 +404,11 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     return;
   }
 
-  for (size_t i = 0; i < arraysize(kExpectedJsonFieldsInIdentityResponse);
-       ++i) {
-    if (!document.HasMember(kExpectedJsonFieldsInIdentityResponse[i]) ||
-        !document[kExpectedJsonFieldsInIdentityResponse[i]].IsString()) {
-      ResolveCallbacks(
-          api_key, nullptr,
-          GetError(modular::auth::Status::BAD_RESPONSE,
-                   "Unable to find field '" +
-                       std::string(kExpectedJsonFieldsInIdentityResponse[i]) +
-                       "' in response: " + response_body));
-      return;
-    }
+  if (!ValidateSchema(document, *credentials_->response_schema)) {
+    ResolveCallbacks(api_key, nullptr,
+                     GetError(modular::auth::Status::BAD_RESPONSE,
+                              "Malformed response: " + response_body));
+    return;
   }
 
   auto cached_token = std::make_unique<CachedToken>();
