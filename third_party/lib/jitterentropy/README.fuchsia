@@ -1,0 +1,12 @@
+Source: https://github.com/smuellerDD/jitterentropy-library
+Commit: 3804c8408e0152173ce9690c4618cc45541da2e8
+License: Dual-licensed GPLv2/BSD-3-Clause
+Version: 2.1.0
+
+Modifications:
+- Removed the following files, since they used different licenses or contained
+  code from other projects with different licenses:
+    * arch/
+    * doc/jitterentropy.3
+    * jitterentropy-base-user.h
+ - Removed COPYING.gplv2
