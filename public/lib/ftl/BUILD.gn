@@ -286,6 +286,8 @@ if (is_fuchsia) {
       ":ftl_logging",
     ]
     libraries = [ {
+          # libftl_logging.so is depended on by FIDL generated code which is used in some drivers.
+          used_by_drivers = true
           name = "libftl_logging.so"
         } ]
   }
