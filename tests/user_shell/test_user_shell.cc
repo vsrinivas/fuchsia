@@ -4,10 +4,8 @@
 
 #include <memory>
 
-#include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -19,10 +17,8 @@
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -30,27 +26,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
-
-constexpr char kUserShell[] =
-    "https://fuchsia.googlesource.com/modular/"
-    "services/user/user_shell.fidl#modular.UserShell";
-
-constexpr char kTestUserShellApp[] =
-    "https://fuchsia.googlesource.com/modular/"
-    "tests/user_shell/test_user_shell.cc#TestUserShellApp";
-
-bool IsRunning(const modular::StoryState state) {
-  switch (state) {
-    case modular::StoryState::STARTING:
-    case modular::StoryState::RUNNING:
-    case modular::StoryState::DONE:
-      return true;
-    case modular::StoryState::INITIAL:
-    case modular::StoryState::STOPPED:
-    case modular::StoryState::ERROR:
-      return false;
-  }
-}
 
 class Settings {
  public:
@@ -65,43 +40,6 @@ class Settings {
 
   std::string first_module;
   std::string second_module;
-};
-
-// A simple link watcher implementation that after every 5 updates of a Link
-// invokes a "continue" callback. Used to push the test sequence forward after a
-// module in the test story was running for a bit.
-class LinkChangeCountWatcherImpl : modular::LinkWatcher {
- public:
-  LinkChangeCountWatcherImpl() : binding_(this) {}
-  ~LinkChangeCountWatcherImpl() override = default;
-
-  // Registers itself as watcher on the given link. Only one link at a time can
-  // be watched.
-  void Watch(modular::LinkPtr* const link) {
-    (*link)->Watch(binding_.NewBinding());
-    data_count_ = 0;
-  }
-
-  // Deregisters itself from the watched link.
-  void Reset() { binding_.Close(); }
-
-  // Sets the function where to continue after enough changes were observed on
-  // the link.
-  void Continue(std::function<void()> at) { continue_ = at; }
-
- private:
-  // |LinkWatcher|
-  void Notify(const fidl::String& json) override {
-    if (++data_count_ % 5 == 0) {
-      continue_();
-    }
-  }
-
-  int data_count_{};
-  std::function<void()> continue_;
-  fidl::Binding<modular::LinkWatcher> binding_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
 };
 
 // A simple story watcher implementation that invokes a "continue" callback when
@@ -460,22 +398,8 @@ class TestUserShellApp
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
           story1_get_controller_.Pass();
           story_info_ = std::move(story_info);
-          TestStory1_SetRootLink();
+          TestStory1_Run(0);
         });
-  }
-
-  // Totally tentative use of the root module link: Tell the root module under
-  // what user shell it's running.
-  void TestStory1_SetRootLink() {
-    story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                               root_link_.NewRequest());
-
-    std::vector<std::string> segments{kUserShell};
-    root_link_->Set(
-        fidl::Array<fidl::String>::From(segments),
-        modular::JsonValueToString(modular::JsonValue(kTestUserShellApp)));
-
-    TestStory1_Run(0);
   }
 
   TestPoint story1_run_{"Story1 Run"};
@@ -484,13 +408,7 @@ class TestUserShellApp
     if (!story_controller_) {
       story_provider_->GetController(story_info_->id,
                                      story_controller_.NewRequest());
-      story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                                 root_link_.NewRequest());
     }
-
-    link_change_count_watcher_.Continue(
-        [this, round] { TestStory1_Cycle(round); });
-    link_change_count_watcher_.Watch(&root_link_);
 
     story_done_watcher_.Continue([this] {
       story_controller_->Stop([this] {
@@ -516,41 +434,6 @@ class TestUserShellApp
       story_controller_->AddModule(fidl::Array<fidl::String>::New(0), "second",
                                    settings_.second_module, "root2", nullptr);
     }
-  }
-
-  // Every five counter increments, we dehydrate and rehydrate the story, until
-  // the story stops itself when it reaches 11 counter increments.
-  void TestStory1_Cycle(const int round) {
-    story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,
-                                             modular::StoryState state) {
-      FTL_DCHECK(!story_info.is_null());
-      FTL_DCHECK(IsRunning(state));
-      story_controller_->Stop([this, round] {
-        TeardownStoryController();
-
-        // When the story stops, we start it again.
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this, round] {
-              story_provider_->GetStoryInfo(
-                  story_info_->id,
-                  [this, round](modular::StoryInfoPtr story_info) {
-                    FTL_DCHECK(!story_info.is_null());
-
-                    // Can't use the StoryController here because we closed it
-                    // in TeardownStoryController().
-                    story_provider_->RunningStories(
-                        [this, round](fidl::Array<fidl::String> story_ids) {
-                          auto n = count(story_ids.begin(), story_ids.end(),
-                                         story_info_->id);
-                          FTL_DCHECK(n == 0);
-
-                          TestStory1_Run(round + 1);
-                        });
-                  });
-            },
-            ftl::TimeDelta::FromSeconds(2));
-      });
-    });
   }
 
   TestPoint story2_create_{"Story2 Create"};
@@ -686,9 +569,7 @@ class TestUserShellApp
     story_done_watcher_.Reset();
     story_modules_watcher_.Reset();
     story_links_watcher_.Reset();
-    link_change_count_watcher_.Reset();
     story_controller_.reset();
-    root_link_.reset();
   }
 
   const Settings settings_;
@@ -697,14 +578,12 @@ class TestUserShellApp
   StoryDoneWatcherImpl story_done_watcher_;
   StoryModulesWatcherImpl story_modules_watcher_;
   StoryLinksWatcherImpl story_links_watcher_;
-  LinkChangeCountWatcherImpl link_change_count_watcher_;
 
   std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
-  modular::LinkPtr root_link_;
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
 

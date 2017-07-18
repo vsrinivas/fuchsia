@@ -10,6 +10,7 @@ group("tests") {
     "component_context",
     "context_link",
     "last_focus_time",
+    "link_data",
     "parent_child",
     "queue_persistence",
     "remote",
