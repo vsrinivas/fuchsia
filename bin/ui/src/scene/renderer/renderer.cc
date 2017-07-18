@@ -45,15 +45,7 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
   // Construct a display list from the tree.
   Visitor v(default_material_);
   scene->Accept(&v);
-  std::vector<escher::Object> objects = v.TakeDisplayList();
-
-  // Add a background.
-  auto background_material = ftl::MakeRefCounted<escher::Material>();
-  background_material->set_color(escher::vec3(0.8f, 0.8f, 0.8f));
-  objects.push_back(escher::Object::NewRect(
-      escher::vec2(0.f, 0.f), screen_dimensions, 0.f, background_material));
-
-  return objects;
+  return v.TakeDisplayList();
 }
 
 void Renderer::SetCamera(CameraPtr camera) {
