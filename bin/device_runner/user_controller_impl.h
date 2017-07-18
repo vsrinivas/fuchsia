@@ -37,7 +37,7 @@ class UserControllerImpl : UserController, UserContext {
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
-      std::shared_ptr<app::ApplicationContext> app_context,
+      app::ApplicationLauncher* const application_launcher,
       AppConfigPtr user_runner,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,

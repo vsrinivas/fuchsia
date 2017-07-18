@@ -19,7 +19,9 @@ executable("modular_unittests") {
 
   deps = [
     "//apps/modular/lib/ledger:unittests",
+    "//apps/modular/lib/testing:unittests",
     "//apps/modular/lib/util:unittests",
+    "//apps/modular/src/device_runner:unittests",
     "//apps/test_runner/src:gtest_main",
   ]
 }
