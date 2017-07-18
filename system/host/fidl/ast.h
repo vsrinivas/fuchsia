@@ -59,6 +59,7 @@ struct DefaultLiteral : public Literal {
 };
 
 struct Constant {
+    virtual ~Constant() {}
 };
 
 struct IdentifierConstant : Constant {
