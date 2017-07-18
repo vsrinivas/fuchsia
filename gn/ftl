@@ -6,6 +6,8 @@
         "//lib/ftl:ftl_unittests(//build/toolchain:host_x64)"
     ],
     "packages": {
-        "ftl": "//lib/ftl:package"
+        "ftl": "//lib/ftl:package",
+        "ftl_logging": "//lib/ftl:logging_package",
+        "ftl_unittests": "//lib/ftl:unittests_package"
     }
 }
