@@ -13,8 +13,6 @@
 
 namespace ftl {
 
-class CommandLine;
-
 // Settings which control the behavior of FTL logging.
 struct LogSettings {
   // The minimum logging level.
@@ -44,31 +42,6 @@ FTL_EXPORT LogSettings GetLogSettings();
 // Gets the minimum log level for the current process. Never returs a value
 // higher than LOG_FATAL.
 FTL_EXPORT int GetMinLogLevel();
-
-// Parses log settings from standard command-line options.
-//
-// Recognizes the following options:
-//   --verbose         : sets |min_log_level| to -1
-//   --verbose=<level> : sets |min_log_level| to -level
-//   --quiet           : sets |min_log_level| to +1 (LOG_WARNING)
-//   --quiet=<level>   : sets |min_log_level| to +level
-//   --log-file=<file> : sets |log_file| to file, uses default output if empty
-//
-// Quiet supersedes verbose if both are specified.
-//
-// Returns false and leaves |out_settings| unchanged if there was an
-// error parsing the options.  Otherwise updates |out_settings| with any
-// values which were overridden by the command-line.
-FTL_EXPORT bool ParseLogSettings(const ftl::CommandLine& command_line,
-                                 LogSettings* out_settings);
-
-// Parses and applies log settings from standard command-line options.
-// Returns false and leaves the active settings unchanged if there was an
-// error parsing the options.
-//
-// See |ParseLogSettings| for syntax.
-FTL_EXPORT bool SetLogSettingsFromCommandLine(
-    const ftl::CommandLine& command_line);
 
 }  // namespace ftl
 

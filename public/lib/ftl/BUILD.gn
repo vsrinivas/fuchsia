@@ -11,10 +11,25 @@ if (is_android) {
   import("//build/config/android/config.gni")
 }
 
-config("thread_safety_warning") {
-  if (is_fuchsia) {
-    cflags = [ "-Wthread-safety" ]
-  }
+source_set("ftl_common") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "arraysize.h",
+    "build_config.h",
+    "compiler_specific.h",
+    "ftl_export.h",
+    "macros.h",
+  ]
+}
+
+source_set("ftl_header_only_types") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "functional/closure.h",
+    "time/time_delta.h",
+  ]
 }
 
 # These are sources that store static global state that may impose potential
@@ -23,11 +38,13 @@ source_set("stateful_sources") {
   visibility = [ ":*" ]
 
   sources = [
-    "build_config.h",
-    "ftl_export.h",
     "log_level.h",
     "log_settings.h",
     "log_settings_state.cc",
+  ]
+
+  public_deps = [
+    ":ftl_common",
   ]
 }
 
@@ -35,12 +52,10 @@ source_set("ftl_lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "arraysize.h",
     "command_line.cc",
     "command_line.h",
-    "compiler_specific.h",
-    "debug/debugger.cc",
-    "debug/debugger.h",
+    "log_settings_command_line.cc",
+    "log_settings_command_line.h",
 
     # TODO(abarth): Move files/* out to its own library.
     "files/directory.cc",
@@ -58,13 +73,8 @@ source_set("ftl_lib") {
     "files/unique_fd.h",
     "functional/apply.h",
     "functional/cancelable_callback.h",
-    "functional/closure.h",
     "functional/make_copyable.h",
     "inttypes.h",
-    "log_settings.cc",
-    "logging.cc",
-    "logging.h",
-    "macros.h",
     "memory/ref_counted.h",
     "memory/ref_counted_internal.h",
     "memory/ref_ptr.h",
@@ -112,7 +122,6 @@ source_set("ftl_lib") {
     "threading/thread.h",
     "time/stopwatch.cc",
     "time/stopwatch.h",
-    "time/time_delta.h",
     "time/time_point.cc",
     "time/time_point.h",
   ]
@@ -133,38 +142,67 @@ source_set("ftl_lib") {
     ]
   }
 
+  if (is_fuchsia) {
+    libs = [ "magenta" ]
+  }
+
+  public_deps = [
+    ":ftl_common",
+    ":ftl_logging",
+  ]
+}
+
+source_set("ftl_logging_lib") {
+  visibility = [
+    ":ftl_logging",
+    ":ftl_logging_shlib",
+  ]
+  sources = [
+    "debug/debugger.cc",
+    "debug/debugger.h",
+    "log_settings.cc",
+    "logging.cc",
+    "logging.h",
+  ]
+
   if (is_android) {
     defines = [ "ANDROID_LOG_TAG=$android_log_tag" ]
     libs = [ "log" ]
   }
 
-  if (is_fuchsia) {
-    libs = [ "magenta" ]
-  }
-
-  public_configs = [ ":thread_safety_warning" ]
-
   public_deps = [
+    ":ftl_common",
+    ":ftl_header_only_types",
     ":stateful_sources",
   ]
 }
 
 if (is_fuchsia) {
-
-fuchsia_shared_library("ftl") {
-  public_deps = [
-    ":ftl_lib",
-  ]
-}
-
+  fuchsia_shared_library("ftl_logging") {
+    public_deps = [
+      ":ftl_logging_lib",
+    ]
+  }
 } else {
-
-group("ftl") {
-  public_deps = [
-    ":ftl_lib",
-  ]
+  group("ftl_logging") {
+    public_deps = [
+      ":ftl_logging_lib",
+    ]
+  }
 }
 
+if (is_fuchsia) {
+  fuchsia_shared_library("ftl") {
+    public_deps = [
+      ":ftl_lib",
+    ]
+  }
+} else {
+  group("ftl") {
+    public_deps = [
+      ":ftl_lib",
+    ]
+  }
 }
 
 source_set("ftl_printers") {
@@ -223,6 +261,7 @@ executable("ftl_unittests") {
 
   deps = [
     ":ftl",
+    ":ftl_logging",
     ":ftl_printers",
     "//third_party/gtest",
   ]
@@ -230,19 +269,35 @@ executable("ftl_unittests") {
 
 if (is_fuchsia) {
   package("package") {
-    testonly = true
-
     package_name = "ftl"
 
     deps = [
       ":ftl",
-      ":ftl_unittests",
     ]
 
     libraries = [ {
           name = "libftl.so"
         } ]
+  }
 
+  package("logging_package") {
+    package_name = "ftl_logging"
+    deps = [
+      ":ftl_logging",
+    ]
+    libraries = [ {
+          name = "libftl_logging.so"
+        } ]
+  }
+
+  package("unittests_package") {
+    package_name = "ftl_unittests"
+
+    testonly = true
+
+    deps = [
+      ":ftl_unittests",
+    ]
     tests = [ {
           name = "ftl_unittests"
         } ]
