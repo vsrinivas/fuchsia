@@ -16,6 +16,7 @@
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
