@@ -83,6 +83,7 @@ class Settings {
       story_shell.args.push_back("--test");
       user_runner.args.push_back("--test");
       user_shell.args.push_back("--test");
+      test_name = FindTestName(user_shell.url, user_shell.args);
     }
   }
 
@@ -117,6 +118,7 @@ class Settings {
   AppConfig user_runner;
   AppConfig user_shell;
 
+  std::string test_name;
   bool ignore_monitor;
   bool no_minfs;
   bool test;
@@ -150,6 +152,29 @@ class Settings {
     if (!arg.empty()) {
       args->push_back(arg);
     }
+  }
+
+  // Extract the test name using knowledge of how Modular structures its
+  // command lines for testing.
+  static std::string FindTestName(
+      const fidl::String& user_shell,
+      const fidl::Array<fidl::String>& user_shell_args) {
+    const std::string kRootModule = "--root_module";
+    std::string result = user_shell;
+
+    for (size_t i = 0; i < user_shell_args.size(); ++i) {
+      const auto& arg = user_shell_args[i].get();
+      if (arg.substr(0, kRootModule.size()) == kRootModule) {
+        result = arg.substr(kRootModule.size());
+      }
+    }
+
+    const auto index = result.find_last_of('/');
+    if (index == std::string::npos) {
+      return result;
+    }
+
+    return result.substr(index + 1);
   }
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Settings);
@@ -200,6 +225,16 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 0. Initialize tracing
     tracing::InitializeTracer(app_context_.get(), {"device_runner"});
 
+    if (settings_.test) {
+      FTL_LOG(INFO)
+          << std::endl
+          << std::endl
+          << "======================== Starting Test [" << settings_.test_name
+          << "]" << std::endl
+          << "============================================================"
+          << std::endl;
+    }
+
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
@@ -242,8 +277,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 4. Setup user provider.
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
         app_context_, settings_.user_runner, settings_.user_shell,
-        settings_.story_shell,
-        token_manager_->primary_service().get());
+        settings_.story_shell, token_manager_->primary_service().get());
   }
 
   // |DeviceShellContext|
@@ -258,13 +292,23 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // arbitrary. We terminate device shell last so that in tests
     // testing::Teardown() is invoked at the latest possible time. Right now it
     // just demonstrates that AppTerminate() works as we like it to.
-    FTL_LOG(INFO) << "DeviceShellContext::Shutdown()";
+    FTL_DLOG(INFO) << "DeviceShellContext::Shutdown()";
+
+    if (settings_.test) {
+      FTL_LOG(INFO)
+          << std::endl
+          << "============================================================"
+          << std::endl
+          << "======================== [" << settings_.test_name << "] Done";
+    }
+
     user_provider_impl_->Teardown([this] {
-      FTL_LOG(INFO) << "- UserProvider down";
+      FTL_DLOG(INFO) << "- UserProvider down";
       token_manager_->AppTerminate([this] {
-        FTL_LOG(INFO) << "- AuthProvider down";
+        FTL_DLOG(INFO) << "- AuthProvider down";
         device_shell_->AppTerminate([this] {
-          FTL_LOG(INFO) << "- DeviceShell down";
+          FTL_DLOG(INFO) << "- DeviceShell down";
+          FTL_LOG(INFO) << "Clean Shutdown";
           mtl::MessageLoop::GetCurrent()->PostQuitTask();
         });
       });

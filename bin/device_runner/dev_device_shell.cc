@@ -69,8 +69,6 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void Terminate(const TerminateCallback& done) override {
-    FTL_LOG(INFO) << "DeviceShell::Terminate()";
-
     if (settings_.test) {
       modular::testing::Teardown([this, done] { Exit(done); });
     } else {
