@@ -60,6 +60,7 @@ def main():
     if not args.ignore_skia:
         # Disable some Skia features not needed for host builds.
         # This is needed in order to build the Flutter shell.
+        gn_args += " skia_enable_flutter_defines=true"
         gn_args += " skia_use_dng_sdk=false"
         gn_args += " skia_use_fontconfig=false"
         gn_args += " skia_use_libwebp=false"
