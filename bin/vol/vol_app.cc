@@ -124,7 +124,7 @@ class VolApp {
  private:
   void Usage() {
     std::cout << "\n";
-    std::cout << "vol <args>\"\n";
+    std::cout << "vol <args>\n";
     std::cout << "    --show       show system audio status\n";
     std::cout << "    --gain=<db>  set system audio gain\n";
     std::cout << "    --mute       mute system audio\n";
