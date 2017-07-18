@@ -4,7 +4,6 @@
 
 #include "apps/modular/src/device_runner/user_provider_impl.h"
 
-#include "apps/modular/lib/ledger/constants.h"
 #include "apps/modular/src/device_runner/users_generated.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -13,14 +12,6 @@
 #include "lib/ftl/strings/string_printf.h"
 
 namespace modular {
-
-// Template specializations for fidl services that don't have a Terminate()
-// method.
-template <>
-void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
-    const std::function<void()>& done) {
-  service_.set_connection_error_handler(done);
-}
 
 namespace {
 
@@ -256,43 +247,6 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
   if (!WriteUsersDb(new_serialized_users, &error)) {
     FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
   }
-}
-
-// TODO(alhaad): The device runner should not be accessing the ledger like this.
-// Get rid of this code once we have better alternatives!
-void UserProviderImpl::ResetUserLedgerState(const fidl::String& account_id) {
-  // Start the ledger.
-  AppConfigPtr ledger_config = AppConfig::New();
-  ledger_config->url = kLedgerAppUrl;
-  ledger_config->args = fidl::Array<fidl::String>::New(1);
-  ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-  auto ledger_app_client = new AppClient<ledger::LedgerRepositoryFactory>(
-      app_context_->launcher().get(), std::move(ledger_config));
-
-  // Get token provider factory for this user.
-  auth::TokenProviderFactoryPtr token_provider_factory;
-  account_provider_->GetTokenProviderFactory(
-      account_id, token_provider_factory.NewRequest());
-
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
-  token_provider_factory->GetTokenProvider(
-      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
-
-  auto firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = kFirebaseServerId;
-  firebase_config->api_key = kFirebaseApiKey;
-
-  ledger_app_client->primary_service()->EraseRepository(
-      kLedgerDataBaseDir + std::string(account_id), std::move(firebase_config),
-      std::move(ledger_token_provider_for_erase),
-      [ledger_app_client](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "EraseRepository failed: " << status;
-        }
-
-        ledger_app_client->AppTerminate(
-            [ledger_app_client] { delete ledger_app_client; });
-      });
 }
 
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,

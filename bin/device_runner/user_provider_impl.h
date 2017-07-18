@@ -44,9 +44,6 @@ class UserProviderImpl : UserProvider {
   // |UserProvider|
   void RemoveUser(const fidl::String& account_id) override;
 
-  // |UserProvider|
-  void ResetUserLedgerState(const fidl::String& account_id) override;
-
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
