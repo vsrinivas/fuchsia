@@ -8,9 +8,6 @@
 
 __BEGIN_CDECLS
 
-typedef int MX_PORT_OPT_V2_DEPRECATED __attribute__((deprecated("use 0 instead")));
-#define MX_PORT_OPT_V2 ((MX_PORT_OPT_V2_DEPRECATED) 0)
-
 // mx_object_wait_async() options
 #define MX_WAIT_ASYNC_ONCE          0u
 #define MX_WAIT_ASYNC_REPEATING     1u
