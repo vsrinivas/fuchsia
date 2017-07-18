@@ -5,11 +5,6 @@
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 
-declare_args() {
-  # Run the strip tool on libraries and binaries
-  use_strip = true
-}
-
 if (host_cpu == "arm64") {
   _clang_cpu = "aarch64"
 } else if (host_cpu == "x64") {
@@ -92,6 +87,8 @@ template("clang_toolchain") {
     cxx = compiler_prefix + "${prefix}/clang++"
     ar = "${prefix}/llvm-ar"
     ld = cxx
+
+    forward_variables_from(invoker, ["use_strip"])
     if (use_strip) {
       clang_strip = "${prefix}/strip"
       strip = clang_strip

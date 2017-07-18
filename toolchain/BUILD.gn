@@ -6,6 +6,7 @@ import("//build/toolchain/clang_toolchain.gni")
 import("//build/config/fuchsia/config.gni")
 
 clang_toolchain("host_${host_cpu}") {
+  use_strip = false
   toolchain_cpu = host_cpu
   toolchain_os = host_os
 }

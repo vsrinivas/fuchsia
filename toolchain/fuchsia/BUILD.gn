@@ -7,6 +7,7 @@ import("//build/config/fuchsia/config.gni")
 
 template("fuchsia_toolchain") {
   clang_toolchain(target_name) {
+    use_strip = true
     forward_variables_from(invoker, "*")
 
     toolchain_cpu = target_cpu
