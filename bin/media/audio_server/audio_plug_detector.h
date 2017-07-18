@@ -28,10 +28,8 @@ class AudioPlugDetector {
   void Stop();
 
  private:
-  enum class DevNodeType { AUDIO, AUDIO2_OUTPUT };
-
-  void AddAudioDevice(int dir_fd, const std::string& name, DevNodeType type);
-  std::vector<std::unique_ptr<mtl::DeviceWatcher>> watchers_;
+  void AddAudioDevice(int dir_fd, const std::string& name);
+  std::unique_ptr<mtl::DeviceWatcher> watcher_;
   AudioOutputManager* manager_;
 };
 

@@ -22,8 +22,6 @@ executable("audio_server") {
     "platform/generic/output_formatter.cc",
     "platform/generic/standard_output_base.cc",
     "platform/generic/throttle_output.cc",
-    "platform/usb/usb_output.cc",
-    "platform/usb/usb_output.h",
   ]
 
   public_deps = [
