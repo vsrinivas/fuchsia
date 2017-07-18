@@ -399,6 +399,15 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcsLoad* v
 
 static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state) {
     switch (guest_state->rcx) {
+    // Guests can't control most perf/power/metrics. We typically disable them through
+    // CPUID leaves, but for these MSRs Linux assumes that they work based on CPU version.
+    // If we fault, Linux will detect it and ignore them.
+    case X86_MSR_IA32_PPERF:
+    case X86_MSR_IA32_RAPL_POWER_UNIT:
+    case X86_MSR_IA32_SMI_COUNT:
+    case X86_MSR_IA32_TEMPERATURE_TARGET:
+        issue_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
+        return MX_OK;
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info);
         guest_state->rax = kLocalApicPhysBase;
