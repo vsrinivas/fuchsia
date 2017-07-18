@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
           }
 
           // Quality set to 0 as it is not used for PNG
-          SkData* data = sk_image->encode(SkEncodedImageFormat::kPNG, 0);
+          sk_sp<SkData> data = sk_image->encodeToData(SkEncodedImageFormat::kPNG, 0);
 
           int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
           if (fd == -1) {
