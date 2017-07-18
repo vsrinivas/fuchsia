@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "sketchy/stroke_fitter.h"
+#include "sketchy/debug_print.h"
 
 namespace sketchy {
 
@@ -111,6 +112,8 @@ void StrokeFitter::FitSampleRange(int start_index,
                                   int end_index,
                                   vec2 left_tangent,
                                   vec2 right_tangent) {
+  FTL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent))
+      << "  left: " << left_tangent << "  right: " << right_tangent;
   FTL_DCHECK(end_index > start_index);
   if (end_index - start_index == 1) {
     // Only two points... use a heuristic.
@@ -171,9 +174,18 @@ void StrokeFitter::FitSampleRange(int start_index,
 
   // Error is too large... split into two ranges and fit each.
   FTL_DCHECK(split_index > start_index && split_index < end_index);
-  vec2 middle_tangent = points_[split_index + 1] - points_[split_index - 1];
-  FitSampleRange(start_index, split_index, left_tangent, middle_tangent * -1.f);
-  FitSampleRange(split_index, end_index, middle_tangent, right_tangent);
+  // Compute the tangent on each side of the split point.
+  // TODO: some filtering may be desirable here.
+  vec2 right_middle_tangent = points_[split_index + 1] - points_[split_index];
+  if (glm::length(right_middle_tangent) == 0.f) {
+    // The two points on either side of the split point are identical: the
+    // user's path doubled back upon itself.  Instead, compute the tangent using
+    // the point at the split-index.
+    right_middle_tangent = points_[split_index + 1] - points_[split_index];
+  }
+  vec2 left_middle_tangent = right_middle_tangent * -1.f;
+  FitSampleRange(start_index, split_index, left_tangent, left_middle_tangent);
+  FitSampleRange(split_index, end_index, right_middle_tangent, right_tangent);
 }
 
 }  // namespace sketchy

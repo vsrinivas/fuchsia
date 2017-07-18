@@ -4,6 +4,8 @@
 
 #include "sketchy/page.h"
 
+#include <algorithm>
+
 #include "escher/material/color_utils.h"
 #include "escher/scene/model.h"
 #include "escher/scene/object.h"
@@ -56,8 +58,10 @@ std::vector<size_t> Page::ComputeVertexCounts(const StrokePath& path) {
   for (auto& seg : path) {
     constexpr float kPixelsPerDivision = 4;
     size_t divisions = static_cast<size_t>(seg.length() / kPixelsPerDivision);
-    // Each "division" of the stroke consists of two vertices.
-    counts.push_back(divisions ? divisions * 2 : 2);
+    // Each "division" of the stroke consists of two vertices, and we need at
+    // least 2 divisions or else Stroke::Tessellate() might barf when computing
+    // the "param_incr".
+    counts.push_back(std::max(divisions * 2, 4UL));
   }
   return counts;
 }
