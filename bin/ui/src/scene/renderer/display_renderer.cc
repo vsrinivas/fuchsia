@@ -47,7 +47,9 @@ void DisplayRenderer::DrawFrame() {
 
   escher::Stage stage;
   stage.Resize(escher::SizeI(width, height), 1.0, escher::SizeI(0, 0));
-  constexpr float kTop = 50;
+  // TODO(MZ-194): Define these properties on the Scene instead of hardcoding
+  // them here.
+  constexpr float kTop = 1000;
   constexpr float kBottom = 0;
   stage.set_viewing_volume({width, height, kTop, kBottom});
   stage.set_key_light(escher::DirectionalLight(
