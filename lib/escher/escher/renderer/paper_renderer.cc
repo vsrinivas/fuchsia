@@ -66,9 +66,9 @@ PaperRenderer::PaperRenderer(Escher* escher)
       ssdo_accelerator_(
           std::make_unique<impl::SsdoAccelerator>(escher, image_cache_)),
       depth_to_color_(std::make_unique<DepthToColor>(escher, image_cache_)),
-      clear_values_({vk::ClearColorValue(
-                         std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
-                     vk::ClearDepthStencilValue(kMaxDepth, 0)}) {}
+      clear_values_(
+          {vk::ClearColorValue(std::array<float, 4>{{0.f, 0.f, 0.f, 1.f}}),
+           vk::ClearDepthStencilValue(kMaxDepth, 0)}) {}
 
 PaperRenderer::~PaperRenderer() {
   escher()->command_buffer_pool()->Cleanup();
@@ -91,9 +91,8 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
 
   float scale =
       static_cast<float>(depth_image->width()) / stage.physical_size().width();
-  FTL_DCHECK(scale ==
-             static_cast<float>(depth_image->height()) /
-                 stage.physical_size().height());
+  FTL_DCHECK(scale == static_cast<float>(depth_image->height()) /
+                          stage.physical_size().height());
   impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
       stage, model, camera, scale, sort_by_pipeline_, true, true, 1,
       TexturePtr(), command_buffer);
