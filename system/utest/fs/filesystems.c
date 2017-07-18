@@ -254,6 +254,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_hardlinks = true,
         .supports_watchers = true,
         .supports_create_by_vmo = true,
+        .supports_mmap = true,
         .nsec_granularity = 1,
     },
     {"minfs",
@@ -263,6 +264,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_hardlinks = true,
         .supports_watchers = true,
         .supports_create_by_vmo = false,
+        .supports_mmap = false,
         .nsec_granularity = 1,
     },
     {"thinfs",
@@ -272,6 +274,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_hardlinks = false,
         .supports_watchers = false,
         .supports_create_by_vmo = false,
+        .supports_mmap = false,
         .nsec_granularity = MX_SEC(2),
     },
 };

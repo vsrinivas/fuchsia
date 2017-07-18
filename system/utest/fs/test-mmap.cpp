@@ -1,0 +1,216 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <magenta/compiler.h>
+#include <magenta/syscalls.h>
+#include <unittest/unittest.h>
+
+#include "filesystems.h"
+
+// Certain filesystems delay creation of internal structures
+// until the file is initially accessed. Test that we can
+// actually mmap properly before the file has otherwise been
+// accessed.
+bool test_mmap_empty(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    constexpr char kFilename[] = "::mmap_empty";
+    int fd = open(kFilename, O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    char tmp[] = "this is a temporary buffer";
+    void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    ASSERT_NEQ(addr, MAP_FAILED, "");
+    ASSERT_EQ(write(fd, tmp, sizeof(tmp)), sizeof(tmp), "");
+    ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0, "");
+
+    ASSERT_EQ(munmap(addr, PAGE_SIZE), 0, "munmap failed");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(kFilename), 0);
+    END_TEST;
+}
+
+// Test that a file's writes are properly propagated to
+// a read-only buffer.
+bool test_mmap_readable(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    constexpr char kFilename[] = "::mmap_readable";
+    int fd = open(kFilename, O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    char tmp1[] = "this is a temporary buffer";
+    char tmp2[] = "and this is a secondary buffer";
+    ASSERT_EQ(write(fd, tmp1, sizeof(tmp1)), sizeof(tmp1), "");
+
+    // Demonstrate that a simple buffer can be mapped
+    void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    ASSERT_NEQ(addr, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0, "");
+
+    // Show that if we keep writing to the file, the mapping
+    // is also updated
+    ASSERT_EQ(write(fd, tmp2, sizeof(tmp2)), sizeof(tmp2), "");
+    void* addr2 = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(addr) + sizeof(tmp1));
+    ASSERT_EQ(memcmp(addr2, tmp2, sizeof(tmp2)), 0, "");
+
+    // But the original part of the mapping is unchanged
+    ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0, "");
+
+    ASSERT_EQ(munmap(addr, PAGE_SIZE), 0, "munmap failed");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(kFilename), 0);
+    END_TEST;
+}
+
+// Test that a mapped buffer's writes are properly propagated
+// to the file.
+bool test_mmap_writable(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    constexpr char kFilename[] = "::mmap_writable";
+    int fd = open(kFilename, O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    char tmp1[] = "this is a temporary buffer";
+    char tmp2[] = "and this is a secondary buffer";
+    ASSERT_EQ(write(fd, tmp1, sizeof(tmp1)), sizeof(tmp1), "");
+
+    // Demonstrate that a simple buffer can be mapped
+    void* addr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    ASSERT_NEQ(addr, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0, "");
+
+    // Extend the file length up to the necessary size
+    ASSERT_EQ(ftruncate(fd, sizeof(tmp1) + sizeof(tmp2)), 0, "");
+
+    // Write to the file in the mapping
+    void* addr2 = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(addr) + sizeof(tmp1));
+    memcpy(addr2, tmp2, sizeof(tmp2));
+
+    // Verify the write by reading from the file
+    char buf[sizeof(tmp2)];
+    ASSERT_EQ(read(fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(memcmp(buf, tmp2, sizeof(tmp2)), 0, "");
+    // But the original part of the mapping is unchanged
+    ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0, "");
+
+    // Extending the file beyond the mapping should still leave the first page
+    // accessible
+    ASSERT_EQ(ftruncate(fd, PAGE_SIZE * 2), 0, "");
+    ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0, "");
+    ASSERT_EQ(memcmp(addr2, tmp2, sizeof(tmp2)), 0, "");
+    for (size_t i = sizeof(tmp1) + sizeof(tmp2); i < PAGE_SIZE; i++) {
+        auto caddr = reinterpret_cast<char*>(addr);
+        ASSERT_EQ(caddr[i], 0, "");
+    }
+
+    ASSERT_EQ(munmap(addr, PAGE_SIZE), 0, "munmap failed");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(kFilename), 0);
+
+    END_TEST;
+}
+
+// Test that the mapping of a file remains usable even after
+// the file has been closed / unlinked / renamed.
+bool test_mmap_unlinked(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    constexpr char kFilename[] = "::mmap_unlinked";
+    int fd = open(kFilename, O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    char tmp[] = "this is a temporary buffer";
+    ASSERT_EQ(write(fd, tmp, sizeof(tmp)), sizeof(tmp), "");
+
+    // Demonstrate that a simple buffer can be mapped
+    void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    ASSERT_NEQ(addr, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0, "");
+
+    // If we close the file, we can still access the mapping
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0, "");
+
+    // If we rename the file, we can still access the mapping
+    ASSERT_EQ(rename(kFilename, "::otherfile"), 0, "");
+    ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0, "");
+
+    // If we unlink the file, we can still access the mapping
+    ASSERT_EQ(unlink("::otherfile"), 0);
+    ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0, "");
+
+    ASSERT_EQ(munmap(addr, PAGE_SIZE), 0, "munmap failed");
+    END_TEST;
+}
+
+// Test that mmap fails with appropriate error codes when
+// we expect.
+bool test_mmap_evil(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    // Try (and fail) to mmap a directory
+    ASSERT_EQ(mkdir("::mydir", 0666), 0, "");
+    int fd = open("::mydir", O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(rmdir("::mydir"), 0, "");
+
+    fd = open("::myfile", O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    // Mmap without MAP_PRIVATE or MAP_SHARED
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EINVAL, "");
+    errno = 0;
+    // Mmap with unaligned offset
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 1), MAP_FAILED, "");
+    ASSERT_EQ(errno, EINVAL, "");
+    errno = 0;
+    // Mmap with a length of zero
+    ASSERT_EQ(mmap(NULL, 0, PROT_READ, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EINVAL, "");
+    errno = 0;
+
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::myfile"), 0, "");
+    END_TEST;
+}
+
+RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
+    RUN_TEST_MEDIUM(test_mmap_empty)
+    RUN_TEST_MEDIUM(test_mmap_readable)
+    RUN_TEST_MEDIUM(test_mmap_writable)
+    RUN_TEST_MEDIUM(test_mmap_unlinked)
+    RUN_TEST_MEDIUM(test_mmap_evil)
+)

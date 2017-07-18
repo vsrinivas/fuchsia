@@ -204,6 +204,28 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     return actual;
 }
 
+
+mx_status_t VnodeFile::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
+    if (vmo_ == MX_HANDLE_INVALID) {
+        // First access to the file? Allocate it.
+        mx_status_t status;
+        if ((status = mx_vmo_create(0, 0, &vmo_)) != MX_OK) {
+            return status;
+        }
+    }
+
+    mx_rights_t rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP;
+    rights |= (flags & MXIO_MMAP_FLAG_READ) ? MX_RIGHT_READ : 0;
+    rights |= (flags & MXIO_MMAP_FLAG_WRITE) ? MX_RIGHT_WRITE : 0;
+    rights |= (flags & MXIO_MMAP_FLAG_EXEC) ? MX_RIGHT_EXECUTE : 0;
+
+    return mx_handle_duplicate(vmo_, rights, out);
+}
+
+mx_status_t VnodeDir::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
+    return MX_ERR_ACCESS_DENIED;
+}
+
 bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
 mx_handle_t VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
 mx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }

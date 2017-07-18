@@ -69,6 +69,7 @@ private:
     ssize_t Write(const void* data, size_t len, size_t off) final;
     mx_status_t Truncate(size_t len) final;
     mx_status_t Getattr(vnattr_t* a) final;
+    mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) final;
 
     mx_handle_t vmo_;
     mx_off_t length_;
@@ -120,6 +121,7 @@ private:
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
     mx_status_t Getattr(vnattr_t* a) final;
+    mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) final;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) final;
 

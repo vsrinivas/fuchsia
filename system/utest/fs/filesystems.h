@@ -27,6 +27,7 @@ typedef struct fs_info {
     bool supports_hardlinks;
     bool supports_watchers;
     bool supports_create_by_vmo;
+    bool supports_mmap;
     int64_t nsec_granularity;
 } fs_info_t;
 
