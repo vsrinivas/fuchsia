@@ -13,7 +13,7 @@
 #include "escher/util/image_utils.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

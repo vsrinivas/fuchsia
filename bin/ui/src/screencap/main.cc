@@ -12,7 +12,7 @@
 #include "apps/mozart/services/buffers/buffer.fidl.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkEncodedImageFormat.h"

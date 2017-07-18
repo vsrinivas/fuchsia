@@ -7,7 +7,7 @@
 #include "apps/mozart/src/scene/scene_manager_app.h"
 #include "lib/escher/examples/common/demo_harness_fuchsia.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/io/device_watcher.h"
 #include "lib/mtl/tasks/message_loop.h"

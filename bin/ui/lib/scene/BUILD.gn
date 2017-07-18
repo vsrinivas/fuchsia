@@ -38,6 +38,10 @@ source_set("client") {
   public_deps = [
     ":session_helpers",
   ]
+
+  deps = [
+    "//lib/ftl",
+  ]
 }
 
 source_set("skia") {

@@ -8,7 +8,7 @@
 #include "apps/mozart/services/input/input_device_registry.fidl.h"
 #include "apps/mozart/src/input_reader/input_reader.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_printf.h"
