@@ -5,6 +5,7 @@
 #include "apps/tracing/src/trace_manager/app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

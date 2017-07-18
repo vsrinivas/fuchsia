@@ -4,7 +4,7 @@
 
 #include "apps/tracing/src/ktrace_provider/app.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using namespace ktrace_provider;
