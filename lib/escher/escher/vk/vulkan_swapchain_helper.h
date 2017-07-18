@@ -27,8 +27,10 @@ class VulkanSwapchainHelper {
   RendererPtr renderer_;
   vk::Device device_;
   vk::Queue queue_;
-  SemaphorePtr image_available_semaphore_;
-  SemaphorePtr render_finished_semaphore_;
+
+  size_t next_semaphore_index_ = 0;
+  std::vector<SemaphorePtr> image_available_semaphores_;
+  std::vector<SemaphorePtr> render_finished_semaphores_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(VulkanSwapchainHelper);
 };

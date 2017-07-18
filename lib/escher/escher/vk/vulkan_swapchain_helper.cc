@@ -18,8 +18,10 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
       renderer_(renderer),
       device_(renderer->vulkan_context().device),
       queue_(renderer->vulkan_context().queue) {
-  image_available_semaphore_ = Semaphore::New(device_);
-  render_finished_semaphore_ = Semaphore::New(device_);
+  for (size_t i = 0; i < swapchain_.images.size(); ++i) {
+    image_available_semaphores_.push_back(Semaphore::New(device_));
+    render_finished_semaphores_.push_back(Semaphore::New(device_));
+  }
 }
 
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
@@ -31,9 +33,14 @@ void VulkanSwapchainHelper::DrawFrame(const Stage& stage, const Model& model) {
 void VulkanSwapchainHelper::DrawFrame(const Stage& stage,
                                       const Model& model,
                                       const Camera& camera) {
+  auto& image_available_semaphore =
+      image_available_semaphores_[next_semaphore_index_];
+  auto& render_finished_semaphore =
+      render_finished_semaphores_[next_semaphore_index_];
+
   auto result =
       device_.acquireNextImageKHR(swapchain_.swapchain, UINT64_MAX,
-                                  image_available_semaphore_->value(), nullptr);
+                                  image_available_semaphore->value(), nullptr);
 
   if (result.result == vk::Result::eSuboptimalKHR) {
     FTL_DLOG(WARNING) << "suboptimal swapchain configuration";
@@ -43,18 +50,20 @@ void VulkanSwapchainHelper::DrawFrame(const Stage& stage,
     return;
   }
   uint32_t swapchain_index = result.value;
+  next_semaphore_index_ =
+      (next_semaphore_index_ + 1) % swapchain_.images.size();
 
   // Render the scene.  The Renderer will wait for acquireNextImageKHR() to
   // signal the semaphore.
   auto& image = swapchain_.images[swapchain_index];
-  image->SetWaitSemaphore(image_available_semaphore_);
-  renderer_->DrawFrame(stage, model, camera, image, render_finished_semaphore_,
+  image->SetWaitSemaphore(image_available_semaphore);
+  renderer_->DrawFrame(stage, model, camera, image, render_finished_semaphore,
                        nullptr);
 
   // When the image is completely rendered, present it.
   vk::PresentInfoKHR info;
   info.waitSemaphoreCount = 1;
-  auto sema = render_finished_semaphore_->value();
+  auto sema = render_finished_semaphore->value();
   info.pWaitSemaphores = &sema;
   info.swapchainCount = 1;
   info.pSwapchains = &swapchain_.swapchain;
