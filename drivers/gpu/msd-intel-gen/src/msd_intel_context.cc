@@ -194,8 +194,12 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock)
             // the next ProcessPendingFlip will see an empty semaphore array for the front request.
             bool result = semaphore_port_->AddWaitSet(
                 std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
-            DASSERT(result);
-            break;
+            if (result) {
+                break;
+            } else {
+                magma::log(magma::LOG_WARNING,
+                           "SubmitPendingCommandBuffer: failed to add to waitset");
+            }
         }
     }
 

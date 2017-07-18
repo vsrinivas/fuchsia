@@ -464,8 +464,11 @@ void MsdIntelDevice::ProcessPendingFlip()
             // the next ProcessPendingFlip will see an empty semaphore array for the front request.
             bool result = semaphore_port_->AddWaitSet(
                 std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
-            DASSERT(result);
-            break;
+            if (result) {
+                break;
+            } else {
+                magma::log(magma::LOG_WARNING, "ProcessPendingFlip: failed to add to waitset");
+            }
         }
     }
 }
@@ -494,8 +497,11 @@ void MsdIntelDevice::ProcessPendingFlipSync()
             DLOG("adding waitset with flip ready semaphore");
             bool result = semaphore_port_->AddWaitSet(
                 std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
-            DASSERT(result);
-            break;
+            if (result) {
+                break;
+            } else {
+                magma::log(magma::LOG_WARNING, "ProcessPendingFlipSync: failed to add to waitset");
+            }
         }
     }
 }
