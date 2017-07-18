@@ -1,10 +1,10 @@
 # Documentation
 
-Documentation for configuring Ledger on a Fuchsia device:
+Documentation for using Ledger:
 
  - [User Guide](user_guide.md)
 
-Documentation for using Ledger in client apps:
+Documentation for integrating with Ledger in client apps:
 
  - [API Guide](api_guide.md)
  - [Examples](examples.md)

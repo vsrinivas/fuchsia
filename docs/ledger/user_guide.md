@@ -34,16 +34,17 @@ using a communal cloud instance.
 
 ## Reset
 
-To erase all data (local on the given device and remote) of the current user,
-long press on the "logout" button in the user shell. This will automatically log
-the user out while Ledger is erased. This needs to be done on every device that
-syncs the data of the given user.
+Deleting persistent storage (e.g. `rm -rf /data`) does not erase the Ledger
+state in the cloud, which will be synced back the next time a user signs in.
 
-If for any reason we neglect to wipe the state on one of the devices and attempt
-to sync with the remote state that was reset, Ledger will detect it and drop the
-local state at the leftover device. When that happens, logging out and back in
-restores Ledger to usable state. (FW-213 tracks making the logout automatic)
+In order to reset the Ledger state in the cloud, visit
+https://fuchsia-ledger.firebaseapp.com/ , sign in with the account you want to
+reset and hit the erase button.
 
+Any device that has local account state synced with the cloud before the erase
+becomes at this point incompatible with the cloud. Ledger will detect this on
+each device upon the next attempt to sync, erase all local data and log the user
+out. The account is usable again immediately after logging back in.
 
 ## Debug and inspect
 
