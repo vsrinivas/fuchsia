@@ -155,7 +155,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
-    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnAdd()";
+    FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnAdd()";
     for (auto& suggestion : suggestions) {
       FTL_LOG(INFO) << "  " << suggestion->uuid << " "
                     << suggestion->display->headline;
@@ -164,13 +164,13 @@ class DevUserShellApp : modular::StoryWatcher,
 
   // |SuggestionListener|
   void OnRemove(const fidl::String& suggestion_id) override {
-    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnRemove() "
+    FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemove() "
                   << suggestion_id;
   }
 
   // |SuggestionListener|
   void OnRemoveAll() override {
-    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnRemoveAll()";
+    FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemoveAll()";
   }
 
   const Settings settings_;

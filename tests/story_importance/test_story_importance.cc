@@ -92,7 +92,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
  private:
   // |StoryWatcher|
   void OnStateChange(modular::StoryState state) override {
-    FTL_LOG(INFO) << "OnStateChange() " << state;
+    FTL_VLOG(4) << "OnStateChange() " << state;
     if (state != modular::StoryState::RUNNING) {
       return;
     }
@@ -129,7 +129,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
  private:
   // |FocusWatcher|
   void OnFocusChange(modular::FocusInfoPtr info) override {
-    FTL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
+    FTL_VLOG(4) << "OnFocusChange() " << info->focused_story_id;
     continue_();
   }
 
@@ -154,7 +154,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     query->topics.resize(0);
     context_provider->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(WARNING) << "Lost connection to ContextProvider."; });
+        [] { FTL_LOG(ERROR) << "Lost connection to ContextProvider."; });
   }
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
@@ -167,10 +167,10 @@ class ContextListenerImpl : maxwell::ContextListener {
  private:
   // |ContextListener|
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
+    FTL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      FTL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << i.GetKey() << " "
+      FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << i.GetKey() << " "
                     << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
@@ -251,7 +251,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   TestPoint get_context_home_{"GetContextHome()"};
 
   void GetContextHome(const fidl::String& topic, const fidl::String& value) {
-    FTL_LOG(INFO) << "Context " << topic << " " << value;
+    FTL_VLOG(4) << "Context " << topic << " " << value;
     if (topic == kTopic && value == "\"home\"" && !story1_context_) {
       story1_context_ = true;
       get_context_home_.Pass();
@@ -346,13 +346,13 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
           if (importance.find(story1_id_) == importance.end()) {
             modular::testing::Fail("No importance for story1");
           } else {
-            FTL_LOG(INFO) << "Story1 importance " << importance[story1_id_];
+            FTL_VLOG(4) << "Story1 importance " << importance[story1_id_];
           }
 
           if (importance.find(story2_id_) == importance.end()) {
             modular::testing::Fail("No importance for story2");
           } else {
-            FTL_LOG(INFO) << "Story2 importance " << importance[story2_id_];
+            FTL_VLOG(4) << "Story2 importance " << importance[story2_id_];
           }
 
           if (importance[story1_id_] > 0.1f) {
@@ -392,7 +392,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
           if (importance.find(story1_id_) == importance.end()) {
             modular::testing::Fail("No importance for story1");
           } else {
-            FTL_LOG(INFO) << "Story1 importance " << importance[story1_id_];
+            FTL_VLOG(4) << "Story1 importance " << importance[story1_id_];
           }
 
           if (importance[story1_id_] < 0.4f) {
