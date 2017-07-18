@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/ftl/portable_unistd.h"
 #include "lib/ftl/files/file_descriptor.h"
 
 #include <fcntl.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include <string>
 #include <vector>
