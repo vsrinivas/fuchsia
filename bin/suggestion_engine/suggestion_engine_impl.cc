@@ -242,11 +242,14 @@ void SuggestionEngineImpl::PerformActions(
         if (story_provider_) {
           const auto& add_module_to_story = action->get_add_module_to_story();
           const auto& story_id = add_module_to_story->story_id;
-          const auto& module_id = add_module_to_story->module_url;
+          const auto& module_name = add_module_to_story->module_name;
+          const auto& module_url = add_module_to_story->module_url;
           const auto& link_name = add_module_to_story->link_name;
           const auto& module_path = add_module_to_story->module_path;
+          const auto& surface_relation =
+                              add_module_to_story->surface_relation;
 
-          FTL_LOG(INFO) << "Adding module " << module_id << " to story "
+          FTL_LOG(INFO) << "Adding module " << module_url << " to story "
                         << story_id;
 
           modular::StoryControllerPtr story_controller;
@@ -260,8 +263,9 @@ void SuggestionEngineImpl::PerformActions(
                       add_module_to_story->initial_data);
           }
 
-          story_controller->AddModule(module_path.Clone(), module_id, module_id,
-                                      link_name, nullptr);
+          story_controller->AddModule(module_path.Clone(), module_name,
+                                      module_url, link_name,
+                                      surface_relation.Clone());
         } else {
           FTL_LOG(WARNING) << "Unable to add module; no story provider";
         }
