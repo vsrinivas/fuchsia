@@ -68,6 +68,47 @@ FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
     return list_head;
 }
 
+// This removes up to |count| threads from the list specified by |node|,
+// and it wakes those threads.  It returns the new list head (i.e. the list
+// of remaining nodes), which may be null (empty).
+//
+// This will always remove at least one node, because it requires that
+// |count| is non-zero and |list_head| is a non-empty list.
+//
+// RemoveFromHead() is similar, except that it produces a list of removed
+// threads without waking them.
+FutexNode* FutexNode::WakeThreads(FutexNode* node, uint32_t count,
+                                  uintptr_t old_hash_key, bool* out_any_woken) {
+    ASSERT(node);
+    ASSERT(count != 0);
+
+    FutexNode* const list_end = node->queue_prev_;
+    for (uint32_t i = 0; i < count; i++) {
+        DEBUG_ASSERT(node->GetKey() == old_hash_key);
+        // Clear this field to avoid any possible confusion.
+        node->set_hash_key(0);
+
+        const bool is_last_node = (node == list_end);
+        FutexNode* next = node->queue_next_;
+        // This call can cause |node| to be freed, so we must not
+        // dereference |node| after this.
+        if (node->WakeThread())
+            *out_any_woken = true;
+
+        if (is_last_node) {
+            // We have reached the end of the list, so we are removing all
+            // the entries from the list.  Return an empty list of
+            // remaining nodes.
+            return nullptr;
+        }
+        node = next;
+    }
+
+    // Restore the list invariant for the list of remaining waiter nodes.
+    RelinkAsAdjacent(list_end, node);
+    return node;
+}
+
 // This removes up to |count| nodes from |list_head|.  It returns the new
 // list head (i.e. the list of remaining nodes), which may be null (empty).
 // On return, |list_head| is the list of nodes that were removed --
@@ -75,6 +116,9 @@ FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
 //
 // This will always remove at least one node, because it requires that
 // |count| is non-zero and |list_head| is a non-empty list.
+//
+// WakeThreads() is similar, except that it wakes the threads that it
+// removes from the list.
 FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
                                      uintptr_t old_hash_key,
                                      uintptr_t new_hash_key) {
@@ -127,55 +171,37 @@ status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_S
     return result;
 }
 
-bool FutexNode::WakeThreads(FutexNode* head) {
-    bool any_woken = false;
+// This returns whether the thread was woken.  This will usually return
+// true, but can sometimes return false if our wakeup coincides with the
+// thread waking up from a timeout.
+bool FutexNode::WakeThread() {
+    // We must be careful to correctly handle the case where the thread
+    // for |this| wakes and exits, deleting |this|.  There are two
+    // cases to consider:
+    //  1) The thread's wait times out, or the thread is killed or
+    //     suspended.  In those cases, FutexWait() will reacquire the
+    //     FutexContext lock.  We are currently holding that lock, so
+    //     FutexWait() will not race with us.
+    //  2) The thread is woken by our wait_queue_wake_one() call.  In
+    //     this case, FutexWait() will *not* reacquire the FutexContext
+    //     lock.  To handle this correctly, we must not access |this|
+    //     after wait_queue_wake_one().
 
-    if (!head)
-        return any_woken;
+    // We must do this before we wake the thread, to handle case 2.
+    MarkAsNotInQueue();
 
-    FutexNode* node = head;
-    do {
-        FutexNode* next = node->queue_next_;
-
-        // We must be careful to correctly handle the case where the thread
-        // for |node| wakes and exits, deleting |node|.  There are two
-        // cases to consider:
-        //  1) The thread's wait times out, or the thread is killed or
-        //     suspended.  In those cases, FutexWait() will reacquire the
-        //     FutexContext lock.  We are currently holding that lock, so
-        //     FutexWait() will not race with us.
-        //  2) The thread is woken by our wait_queue_wake_one() call.  In
-        //     this case, FutexWait() will *not* reacquire the FutexContext
-        //     lock.  To handle this correctly, we must not access |node|
-        //     after wait_queue_wake_one().
-
-        // We must do this before we wake the thread, to handle case 2.
-        node->MarkAsNotInQueue();
-
-        // Place waiting threads in the runnable state, but do not reschedule
-        // yet.  Our caller is currently holding the main futex_lock, and
-        // threads which get woken by this action are going to immediately
-        // attempt to obtain the main futex_lock.  If we indicate that threads
-        // were woken during this process, our caller will release the lock and
-        // then arrange for a reschedule operation (which leads to a smoother
-        // transition)
-        THREAD_LOCK(state);
-        if (wait_queue_wake_one(&node->wait_queue_,
-                                /* reschedule */ false,
-                                MX_OK)) {
-            any_woken = true;
-        }
-        THREAD_UNLOCK(state);
-
-        node = next;
-
-        // In the following comparison, |head| could be a dangling pointer
-        // by this point.  That is odd, but safe.  |head| is only used for
-        // comparison, and nothing could have been added to the list after
-        // |head| was freed.
-    } while (node != head);
-
-    return any_woken;
+    // Place the waiting thread in the runnable state, but do not
+    // reschedule yet.  Our caller is currently holding the main
+    // futex_lock, and any threads which get woken by this action are going
+    // to immediately attempt to obtain the main futex_lock.  If we
+    // indicate that the thread was woken during this process, our caller
+    // will release the lock and then arrange for a reschedule operation
+    // (which leads to a smoother transition).
+    THREAD_LOCK(state);
+    bool woken = wait_queue_wake_one(
+        &wait_queue_, /* reschedule */ false, MX_OK);
+    THREAD_UNLOCK(state);
+    return woken;
 }
 
 // Set |node1| and |node2|'s list pointers so that |node1| is immediately

@@ -121,20 +121,16 @@ status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
     }
     DEBUG_ASSERT(node->GetKey() == futex_key);
 
-    FutexNode* wake_head = node;
-    node = FutexNode::RemoveFromHead(node, count, futex_key, 0u);
-    // node is now the new blocked thread list head
+    bool any_woken = false;
+    FutexNode* remaining_waiters =
+        FutexNode::WakeThreads(node, count, futex_key, &any_woken);
 
-    if (node != nullptr) {
-        DEBUG_ASSERT(node->GetKey() == futex_key);
-        futex_table_.insert(node);
+    if (remaining_waiters) {
+        DEBUG_ASSERT(remaining_waiters->GetKey() == futex_key);
+        futex_table_.insert(remaining_waiters);
     }
 
-    // Traversing this list of threads must be done while holding the
-    // lock, because any of these threads might wake up from a timeout
-    // and call FutexWait(), which would clobber the "next" pointer in
-    // the thread's FutexNode.
-    if (FutexNode::WakeThreads(wake_head)) {
+    if (any_woken) {
         lock.release();
         thread_reschedule();
     }
@@ -171,12 +167,9 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
         return MX_OK;
     }
 
-    FutexNode* wake_head;
-    if (wake_count == 0) {
-        wake_head = nullptr;
-    } else {
-        wake_head = node;
-        node = FutexNode::RemoveFromHead(node, wake_count, wake_key, 0u);
+    bool any_woken = false;
+    if (wake_count > 0) {
+        node = FutexNode::WakeThreads(node, wake_count, wake_key, &any_woken);
     }
 
     // node is now the head of wake_ptr futex after possibly removing some threads to wake
@@ -199,7 +192,7 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
         futex_table_.insert(node);
     }
 
-    if (FutexNode::WakeThreads(wake_head)) {
+    if (any_woken) {
         lock.release();
         thread_reschedule();
     }

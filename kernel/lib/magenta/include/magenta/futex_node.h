@@ -33,6 +33,9 @@ public:
 
     static FutexNode* RemoveNodeFromList(FutexNode* list_head, FutexNode* node);
 
+    static FutexNode* WakeThreads(FutexNode* node, uint32_t count,
+                                  uintptr_t old_hash_key, bool* out_any_woken);
+
     static FutexNode* RemoveFromHead(FutexNode* list_head,
                                      uint32_t count,
                                      uintptr_t old_hash_key,
@@ -40,10 +43,6 @@ public:
 
     // This must be called with |mutex| held and returns without |mutex| held.
     status_t BlockThread(Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
-
-    // wakes the list of threads starting with node |head|.  Returns true if at
-    // least one thread was woken.
-    static bool WakeThreads(FutexNode* head);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;
@@ -56,6 +55,8 @@ public:
 private:
     static void RelinkAsAdjacent(FutexNode* node1, FutexNode* node2);
     static void SpliceNodes(FutexNode* node1, FutexNode* node2);
+
+    bool WakeThread();
 
     void MarkAsNotInQueue();
 
