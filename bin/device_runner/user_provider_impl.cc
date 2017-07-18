@@ -295,7 +295,7 @@ void UserProviderImpl::LoginInternal(auth::AccountPtr account,
                         ? default_user_shell_.Clone()
                         : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
-      app_context_, user_runner_, std::move(user_shell), story_shell_,
+      app_context_, user_runner_.Clone(), std::move(user_shell), story_shell_.Clone(),
       std::move(token_provider_factory), std::move(account),
       std::move(params->view_owner), std::move(params->user_controller),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });

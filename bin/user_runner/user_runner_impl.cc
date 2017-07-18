@@ -116,7 +116,7 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 
 UserRunnerImpl::UserRunnerImpl(
     std::shared_ptr<app::ApplicationContext> const application_context,
-    bool test)
+    const bool test)
     : binding_(new fidl::Binding<UserRunner>(this)),
       application_context_(application_context),
       test_(test),

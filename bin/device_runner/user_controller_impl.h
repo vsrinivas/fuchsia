@@ -38,9 +38,9 @@ class UserControllerImpl : UserController, UserContext {
 
   UserControllerImpl(
       std::shared_ptr<app::ApplicationContext> app_context,
-      const AppConfig& user_runner,
+      AppConfigPtr user_runner,
       AppConfigPtr user_shell,
-      const AppConfig& story_shell,
+      AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,

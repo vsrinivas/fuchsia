@@ -18,7 +18,7 @@ namespace modular {
 // Implementation of the user runner app.
 class UserRunnerApp {
  public:
-  UserRunnerApp(bool test)
+  UserRunnerApp(const bool test)
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         user_runner_impl_(application_context_, test) {
     application_context_->outgoing_services()->AddService<UserRunner>(
@@ -38,7 +38,7 @@ class UserRunnerApp {
 
 int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  bool test = command_line.HasOption("test");
+  const bool test = command_line.HasOption("test");
   mtl::MessageLoop loop;
   modular::UserRunnerApp app(test);
   loop.Run();

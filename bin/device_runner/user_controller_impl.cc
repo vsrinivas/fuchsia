@@ -14,9 +14,9 @@ namespace modular {
 
 UserControllerImpl::UserControllerImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
-    const AppConfig& user_runner,
+    AppConfigPtr user_runner,
     AppConfigPtr user_shell,
-    const AppConfig& story_shell,
+    AppConfigPtr story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -27,11 +27,11 @@ UserControllerImpl::UserControllerImpl(
       done_(done) {
   // 1. Launch UserRunner in the current environment.
   user_runner_.reset(new AppClient<UserRunner>(app_context->launcher().get(),
-                                               user_runner.Clone()));
+                                               std::move(user_runner)));
 
   // 2. Initialize the UserRunner service.
   user_runner_->primary_service()->Initialize(
-      std::move(account), std::move(user_shell), story_shell.Clone(),
+      std::move(account), std::move(user_shell), std::move(story_shell),
       std::move(token_provider_factory), user_context_binding_.NewBinding(),
       std::move(view_owner_request));
 }
