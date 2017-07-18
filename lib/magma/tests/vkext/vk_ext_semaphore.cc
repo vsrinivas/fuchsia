@@ -79,7 +79,8 @@ bool VulkanTest::InitVulkan()
 
     std::vector<const char*> instance_extensions{
         VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME};
-    std::vector<const char*> device_extensions{VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME};
+    std::vector<const char*> device_extensions{VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+                                               VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME};
 
     uint32_t found_count = 0;
     for (auto& prop : extension_properties) {
@@ -93,14 +94,15 @@ bool VulkanTest::InitVulkan()
     if (found_count != instance_extensions.size())
         return DRETF(false, "failed to find instance extensions");
 
+    std::vector<const char*> layers{"VK_LAYER_LUNARG_standard_validation"};
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
         0,                                      // VkInstanceCreateFlags       flags;
         nullptr,                                // const VkApplicationInfo*    pApplicationInfo;
-        0,                                      // uint32_t                    enabledLayerCount;
-        nullptr,                                // const char* const*          ppEnabledLayerNames;
-        found_count,
+        static_cast<uint32_t>(layers.size()),   // uint32_t                    enabledLayerCount;
+        layers.data(),                          // const char* const*          ppEnabledLayerNames;
+        static_cast<uint32_t>(instance_extensions.size()),
         instance_extensions.data(),
     };
     VkAllocationCallbacks* allocation_callbacks = nullptr;
@@ -230,7 +232,9 @@ bool VulkanTest::InitVulkan()
     if (!vkGetSemaphoreFdKHX_)
         return DRETF(false, "couldn't find vkGetSemaphoreFdKHX_");
 
-    VkExternalSemaphorePropertiesKHX external_semaphore_properties;
+    VkExternalSemaphorePropertiesKHX external_semaphore_properties = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHX,
+    };
     VkPhysicalDeviceExternalSemaphoreInfoKHX external_semaphore_info = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHX,
         .pNext = nullptr,
