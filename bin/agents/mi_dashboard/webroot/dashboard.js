@@ -370,6 +370,16 @@ function processComplexStoryTopic(storyId,complexTopic,rawValue) {
       // This topic contains informationa about a focal entity
       updateFocalEntityInStory(storyId,moduleHash,moduleTopic,rawValue);
     }
+  } else {
+    var linkRegex = /link\/(.+)/;
+    var linkRegexResults = complexTopic.match(linkRegex);
+
+    if (linkRegexResults != null && linkRegexResults[1] != null) {
+      var entityElems = getOrCreateEntityOverviewElements(storyId,
+                          null, // null indicates a context link entity
+                          linkRegexResults[1]); // entity topic name
+      setEntityValue(rawValue,entityElems);
+    }
   }
 }
 
@@ -386,6 +396,38 @@ function updateModuleInStory(storyId,moduleHash,rawData) {
     }
     setModulePath(modulePath,moduleElems);
   }
+}
+
+function getOrCreateContextLinkElement(storyId) {
+  var linkElemId = storyId + '-contextlink';
+  // context link elems are stored alongside the modules
+  var linkElems = _modules[linkElemId];
+  if (linkElems == null) {
+    // <li id="b234kj2jn5j34342l3k3-mdece" class="mdc-list-item module-list-item">
+    //   <span class="module-url mdc-list-item__text">
+    //     file:///system/apps/maxwell_btr
+    //     <span class="module-path mdc-list-item__text__secondary">
+    //       root
+    //     </span>
+    //   </span>
+    // </li>
+    var linkTitleElem = $('<span/>').addClass('module-url')
+      .addClass('mdc-list-item__text')
+      .text('context link');
+
+    var linkListElem = $('<li/>').attr('id',linkElemId)
+      .addClass('mdc-list-item')
+      .addClass('module-list-item')
+      .addClass('context-link-item')
+      .append(linkTitleElem);
+
+    var storyElems = getOrCreateStoryOverviewElements(storyId);
+    // Insert the context link list item after the story list item
+    storyElems.find('.story-list-item').after(linkListElem);
+
+    linkElems = _modules[linkElemId] = linkListElem;
+  }
+  return linkElems;
 }
 
 function getOrCreateModuleOverviewElements(storyId,moduleHash) {
@@ -445,7 +487,12 @@ function updateFocalEntityInStory(storyId,moduleHash,entityTopic,rawValue) {
 }
 
 function getOrCreateEntityOverviewElements(storyId,moduleHash,entityTopic) {
-  var entityElemId = storyId + '-' + moduleHash + '-' + entityTopic;
+  var entityElemId;
+  if (moduleHash == null || moduleHash == 'contextlink') {
+    entityElemId = storyId + '-contextlink-' + entityTopic;
+  } else {
+    entityElemId = storyId + '-' + moduleHash + '-' + entityTopic;
+  }
   var entityElems = _entities[entityElemId];
   if (entityElems == null) {
     // <li id="b234kj2jn5j34342l3k3-mdece-raw/text" class="mdc-list-item entity-list-item">
@@ -472,7 +519,12 @@ function getOrCreateEntityOverviewElements(storyId,moduleHash,entityTopic) {
 
     entityListElem.append(entityNameElem);
 
-    var moduleElems = getOrCreateModuleOverviewElements(storyId,moduleHash);
+    var moduleElems;
+    if (moduleHash == null || moduleHash == 'contextlink') {
+      moduleElems = getOrCreateContextLinkElement(storyId);
+    } else {
+      moduleElems = getOrCreateModuleOverviewElements(storyId,moduleHash);
+    }
     entityListElem.insertAfter(moduleElems);
 
     entityElems = _entities[entityElemId] = entityListElem;

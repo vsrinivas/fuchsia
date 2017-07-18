@@ -34,6 +34,10 @@ body {
   color: darkgrey;
 }
 
+.context-link-item {
+  height: 24px;
+}
+
 .context-subscribers-card {
   grid-column-end: span 4;
 }
