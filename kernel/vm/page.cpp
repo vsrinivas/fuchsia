@@ -10,10 +10,13 @@
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
+#include <trace.h>
 #include <vm/page.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
+
+#define LOCAL_TRACE 0
 
 const char* page_state_to_string(unsigned int state) {
     switch (state) {
@@ -34,9 +37,9 @@ const char* page_state_to_string(unsigned int state) {
     }
 }
 
-void dump_page(const vm_page_t* page) {
-    printf("page %p: address %#" PRIxPTR " state %s flags %#x\n", page, vm_page_to_paddr(page),
-           page_state_to_string(page->state), page->flags);
+void vm_page::dump() const {
+    printf("page %p: address %#" PRIxPTR " state %s flags %#x\n", this, paddr(),
+           page_state_to_string(state), flags);
 }
 
 static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
@@ -56,14 +59,14 @@ static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
 
         vm_page* page = reinterpret_cast<vm_page*>(argv[2].u);
 
-        dump_page(page);
+        page->dump();
     } else if (!strcmp(argv[1].str, "hexdump")) {
         if (argc < 2)
             goto notenoughargs;
 
         vm_page* page = reinterpret_cast<vm_page*>(argv[2].u);
 
-        paddr_t pa = vm_page_to_paddr(page);
+        paddr_t pa = page->paddr();
         void* ptr = paddr_to_physmap(pa);
         if (!ptr) {
             printf("bad page or page not mapped in kernel space\n");

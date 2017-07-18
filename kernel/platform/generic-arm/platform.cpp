@@ -70,7 +70,7 @@ static bool uart_disabled = false;
 // at the moment, only support 1 arena
 static pmm_arena_info_t mem_arena = {
     /* .name */ "sdram",
-    /* .flags */ PMM_ARENA_FLAG_KMAP,
+    /* .flags */ 0,
     /* .priority */ 0,
     /* .base */ 0, // filled in by bootdata
     /* .size */ 0, // filled in by bootdata

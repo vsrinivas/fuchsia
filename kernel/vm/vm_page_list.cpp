@@ -151,8 +151,10 @@ size_t VmPageList::FreeAllPages() {
 
     // per page get a reference to the page pointer inside the page list node
     auto per_page_func = [&](vm_page*& p, uint64_t offset) {
+
+
         // add the page to our list and null out the inner node
-        list_add_tail(&list, &p->free.node);
+        list_add_tail(&list, &p->queue_node);
         p = nullptr;
         count++;
         return ZX_ERR_NEXT;

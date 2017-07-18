@@ -42,7 +42,7 @@ public:
         return virt_;
     }
     paddr_t paddr() const {
-        return likely(page_) ? vm_page_to_paddr(page_) : kInvalidPaddr;
+        return likely(page_) ? page_->paddr() : kInvalidPaddr;
     }
 
 private:

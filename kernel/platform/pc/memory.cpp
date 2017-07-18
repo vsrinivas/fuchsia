@@ -94,7 +94,7 @@ static zx_status_t mem_arena_init(boot_addr_range_t* range) {
     pmm_arena_info_t base_arena;
     snprintf(base_arena.name, sizeof(base_arena.name), "%s", "memory");
     base_arena.priority = 1;
-    base_arena.flags = PMM_ARENA_FLAG_KMAP;
+    base_arena.flags = 0;
 
     for (range->reset(range), range->advance(range); !range->is_reset; range->advance(range)) {
         LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %smemory.\n",

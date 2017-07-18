@@ -475,11 +475,11 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             // TODO: figure out a better handle to hang this off to and push this copy code into
             // that dispatcher.
 
-            size_t state_count[_VM_PAGE_STATE_COUNT] = {};
+            size_t state_count[VM_PAGE_STATE_COUNT_] = {};
             pmm_count_total_states(state_count);
 
             size_t total = 0;
-            for (int i = 0; i < _VM_PAGE_STATE_COUNT; i++) {
+            for (int i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
                 total += state_count[i];
             }
 

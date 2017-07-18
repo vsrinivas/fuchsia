@@ -33,6 +33,7 @@
 #include <platform/pc/smbios.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/bootalloc.h>
 #include <vm/bootreserve.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -144,9 +145,6 @@ static int process_bootitem(bootdata_t* bd, void* item) {
     }
     return 0;
 }
-
-extern "C" void* boot_alloc_mem(size_t len);
-extern "C" void boot_alloc_reserve(uintptr_t phys, size_t _len);
 
 static void process_bootdata(bootdata_t* hdr, uintptr_t phys, bool verify) {
     if ((hdr->type != BOOTDATA_CONTAINER) ||
@@ -677,7 +675,7 @@ static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t*
 
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
-    list_for_every_entry (&list, p, vm_page_t, free.node) {
+    list_for_every_entry (&list, p, vm_page_t, queue_node) {
         p->state = VM_PAGE_STATE_WIRED;
     }
 }

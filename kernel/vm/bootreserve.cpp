@@ -78,7 +78,7 @@ void boot_reserve_wire() {
 
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
-    list_for_every_entry (&reserved_page_list, p, vm_page_t, free.node) {
+    list_for_every_entry (&reserved_page_list, p, vm_page_t, queue_node) {
         p->state = VM_PAGE_STATE_WIRED;
     }
 }

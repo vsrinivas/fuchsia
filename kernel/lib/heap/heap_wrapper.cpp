@@ -138,15 +138,15 @@ void* heap_page_alloc(size_t pages) {
     list_node list = LIST_INITIAL_VALUE(list);
 
     paddr_t pa;
-    size_t allocated = pmm_alloc_contiguous(pages, PMM_ALLOC_FLAG_KMAP, PAGE_SIZE_SHIFT, &pa, &list);
+    size_t allocated = pmm_alloc_contiguous(pages, 0, PAGE_SIZE_SHIFT, &pa, &list);
     if (allocated == 0) {
         return nullptr;
     }
 
     // mark all of the allocated page as HEAP
     vm_page_t *p, *temp;
-    list_for_every_entry_safe (&list, p, temp, vm_page_t, free.node) {
-        list_delete(&p->free.node);
+    list_for_every_entry_safe (&list, p, temp, vm_page_t, queue_node) {
+        list_delete(&p->queue_node);
         p->state = VM_PAGE_STATE_HEAP;
     }
 
@@ -170,9 +170,9 @@ void heap_page_free(void* _ptr, size_t pages) {
         vm_page_t* p = paddr_to_vm_page(vaddr_to_paddr(ptr));
         if (p) {
             DEBUG_ASSERT(p->state == VM_PAGE_STATE_HEAP);
-            DEBUG_ASSERT(!list_in_list(&p->free.node));
+            DEBUG_ASSERT(!list_in_list(&p->queue_node));
 
-            list_add_tail(&list, &p->free.node);
+            list_add_tail(&list, &p->queue_node);
         }
 
         ptr += PAGE_SIZE;

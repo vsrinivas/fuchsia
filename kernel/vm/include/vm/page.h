@@ -9,59 +9,60 @@
 
 #include <list.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
-
-// forward declare
-class VmObject;
-
-#define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
-#define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
-
-// core per page structure
-typedef struct vm_page {
-    struct {
-        uint32_t flags : 8;
-        uint32_t state : 3;
-    };
-    uint32_t map_count;
-
-    union {
-        struct {
-            // in allocated/just freed state, use a linked list to hold the page in a queue
-            struct list_node node;
-        } free;
-        struct {
-            // attached to a vm object
-            uint64_t offset; // unused currently
-            VmObject* obj;   // unused currently
-
-            uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
-        } object;
-
-        uint8_t pad[24]; // pad out to 32 bytes
-    };
-} vm_page_t;
-
-// pmm will maintain pages of this size
-#define VM_PAGE_STRUCT_SIZE (sizeof(vm_page_t))
-static_assert(sizeof(vm_page_t) == 32, "");
+#include <fbl/algorithm.h>
 
 enum vm_page_state {
     VM_PAGE_STATE_FREE,
     VM_PAGE_STATE_ALLOC,
+    VM_PAGE_STATE_OBJECT,
     VM_PAGE_STATE_WIRED,
     VM_PAGE_STATE_HEAP,
-    VM_PAGE_STATE_OBJECT,
-    VM_PAGE_STATE_MMU, /* allocated to serve arch-specific mmu purposes */
-    VM_PAGE_STATE_IOMMU, /* allocated for platform-specific iommu structures */
+    VM_PAGE_STATE_MMU, // allocated to serve arch-specific mmu purposes
+    VM_PAGE_STATE_IOMMU, // allocated for platform-specific iommu structures
 
-    _VM_PAGE_STATE_COUNT
+    VM_PAGE_STATE_COUNT_
 };
 
-// helpers
-static inline bool page_is_free(const vm_page_t* page) {
-    return page->state == VM_PAGE_STATE_FREE;
-}
+#define VM_PAGE_STATE_BITS 3
+static_assert((1u << VM_PAGE_STATE_BITS) >= VM_PAGE_STATE_COUNT_, "");
 
+// core per page structure allocated at pmm arena creation time
+typedef struct vm_page {
+    struct list_node queue_node;
+    paddr_t paddr_priv; // use paddr() accessor
+    // offset 0x18
+
+    struct {
+        uint32_t flags : 8;
+        uint32_t state : VM_PAGE_STATE_BITS;
+    };
+    // offset: 0x1c
+
+    union {
+        struct {
+#define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
+#define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
+
+            uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
+        } object; // attached to a vm object
+    };
+
+    // helper routines
+    bool is_free() const {
+        return state == VM_PAGE_STATE_FREE;
+    }
+
+    void dump() const;
+
+    // return the physical address
+    // future plan to store in a compressed form
+    paddr_t paddr() const { return paddr_priv; }
+} vm_page_t;
+
+// assert that the page structure isn't growing uncontrollably
+static_assert(sizeof(vm_page) == 0x20, "");
+
+// helpers
 const char* page_state_to_string(unsigned int state);
-void dump_page(const vm_page_t* page);
