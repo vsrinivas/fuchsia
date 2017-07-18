@@ -46,7 +46,7 @@ source_set("serialization") {
   ]
 
   public_deps = [
-    "//lib/ftl",
+    "//lib/ftl:ftl_logging",
     "//lib/fidl/cpp/waiter",
     "//magenta/system/ulib/mx",
   ]
