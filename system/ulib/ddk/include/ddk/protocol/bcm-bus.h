@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/driver.h>
 #include <magenta/compiler.h>
 
 __BEGIN_CDECLS;

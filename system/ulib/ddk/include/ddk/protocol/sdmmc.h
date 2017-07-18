@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <magenta/compiler.h>
 

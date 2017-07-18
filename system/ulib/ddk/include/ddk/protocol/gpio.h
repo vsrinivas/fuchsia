@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
+#include <magenta/types.h>
+
 __BEGIN_CDECLS;
 
 // flags for gpio_config()

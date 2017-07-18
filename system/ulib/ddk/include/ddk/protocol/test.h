@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/driver.h>
 #include <magenta/device/test.h>
 
 typedef test_ioctl_test_report_t test_report_t;

@@ -4,11 +4,9 @@
 
 #pragma once
 
-#include <ddk/driver.h>
 #include <magenta/compiler.h>
+#include <magenta/types.h>
 #include <magenta/device/ethernet.h>
-#include <magenta/hw/usb.h>
-#include <stdbool.h>
 
 __BEGIN_CDECLS;
 

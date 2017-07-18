@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <ddk/driver.h>
+#include <magenta/types.h>
 
 __BEGIN_CDECLS;
 
