@@ -66,6 +66,9 @@ class Station {
     mx_status_t HandleEth(const Packet* packet);
     mx_status_t HandleTimeout();
 
+    mx_status_t PreChannelChange(wlan_channel_t chan);
+    mx_status_t PostChannelChange();
+
     const Timer& timer() const { return *timer_; }
 
 

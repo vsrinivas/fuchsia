@@ -389,11 +389,17 @@ bool Mlme::IsStaValid() const {
 
 mx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
+    if (IsStaValid()) {
+        sta_->PreChannelChange(chan);
+    }
     return MX_OK;
 }
 
 mx_status_t Mlme::PostChannelChange() {
     debugfn();
+    if (IsStaValid()) {
+        sta_->PostChannelChange();
+    }
     return MX_OK;
 }
 

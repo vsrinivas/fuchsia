@@ -668,6 +668,36 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
     return status;
 }
 
+mx_status_t Station::PreChannelChange(wlan_channel_t chan) {
+    debugfn();
+    if (state_ != WlanState::kAssociated) {
+        return MX_OK;
+    }
+
+    auto assoc_chan_num = channel().channel_num;
+    auto current_chan_num = device_->GetState()->channel().channel_num;
+    if (current_chan_num == assoc_chan_num) {
+        // TODO(hahnr): send Null data frame and enter PS mode.
+        // TODO(hahnr): start buffering tx packets (not here though)
+    }
+    return MX_OK;
+}
+
+mx_status_t Station::PostChannelChange() {
+    debugfn();
+    if (state_ != WlanState::kAssociated) {
+        return MX_OK;
+    }
+
+    auto assoc_chan_num = channel().channel_num;
+    auto current_chan_num = device_->GetState()->channel().channel_num;
+    if (current_chan_num == assoc_chan_num) {
+        // TODO(hahnr): send Null data frame and exit PS mode.
+        // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.
+    }
+    return MX_OK;
+}
+
 uint16_t Station::next_seq() {
     uint16_t seq = device_->GetState()->next_seq();
     if (seq == last_seq_) {
