@@ -429,7 +429,7 @@ void xhci_wait_bits64(volatile uint64_t* ptr, uint64_t bits, uint64_t expected) 
     }
 }
 
-void xhci_start(xhci_t* xhci) {
+mx_status_t xhci_start(xhci_t* xhci) {
     volatile uint32_t* usbcmd = &xhci->op_regs->usbcmd;
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
 
@@ -443,6 +443,13 @@ void xhci_start(xhci_t* xhci) {
     XHCI_SET32(usbcmd, USBCMD_HCRST, USBCMD_HCRST);
     xhci_wait_bits(usbcmd, USBCMD_HCRST, 0);
     xhci_wait_bits(usbsts, USBSTS_CNR, 0);
+
+    // enable bus master
+    mx_status_t status = pci_enable_bus_master(&xhci->pci, true);
+    if (status < 0) {
+        printf("usb_xhci_bind enable_bus_master failed %d\n", status);
+        return status;
+    }
 
     // setup operational registers
     xhci_op_regs_t* op_regs = xhci->op_regs;
@@ -466,6 +473,7 @@ void xhci_start(xhci_t* xhci) {
     xhci_wait_bits(usbsts, USBSTS_HCH, 0);
 
     xhci_start_device_thread(xhci);
+    return MX_OK;
 }
 
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
