@@ -19,6 +19,8 @@ static bool	os_overcommits;
 
 #ifdef __Fuchsia__
 
+#include <threads.h>
+
 #include <magenta/process.h>
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
@@ -26,94 +28,69 @@ static bool	os_overcommits;
 // Reserve a terabyte of address space for heap allocations.
 #define VMAR_SIZE (1ull << 40)
 
-static const char mmap_vmo_name[] = "jemalloc-heap";
+#define MMAP_VMO_NAME "jemalloc-heap"
 
 // malloc wants to manage both address space and memory mapped within
 // chunks of address space. To maintain claims to address space we
 // must use our own vmar.
-static mx_handle_t pages_vmar;
 static uintptr_t pages_base;
+static mx_handle_t pages_vmar;
+static mx_handle_t pages_vmo;
 
-void* fuchsia_pages_map(void* start, size_t len, bool commit, bool fixed) {
-	uint32_t mx_flags = 0u;
-	if (commit)
-		mx_flags |= (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-	if (fixed)
-		mx_flags |= MX_VM_FLAG_SPECIFIC;
+// Protect reservations to the pages_vmar.
+static mtx_t vmar_lock;
 
-	if (len == 0) {
-		errno = EINVAL;
-		return NULL;
-	}
+static void* fuchsia_pages_map(void* start, size_t len) {
 	if (len >= PTRDIFF_MAX) {
-		errno = ENOMEM;
 		return NULL;
 	}
 
 	// round up to page size
 	len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-	size_t offset = 0;
-	mx_status_t status = MX_OK;
-	if (fixed) {
-		if ((uintptr_t)start < pages_base) {
+	mtx_lock(&vmar_lock);
+
+	// If we are given a base address, then jemalloc's internal
+	// bookkeeping expects to be able to extend an allocation at
+	// that bit of the address space, and so we just directly
+	// compute an offset. If we are not, ask for a new random
+	// region from the pages_vmar.
+
+	// TODO(kulakowski) Extending a region might fail. Investigate
+	// whether it is worthwhile teaching jemalloc about vmars and
+	// vmos at the extent.c or arena.c layer.
+	size_t offset;
+	if (start != NULL) {
+		uintptr_t addr = (uintptr_t)start;
+		if (addr < pages_base)
 			abort();
-		}
-		offset = (uintptr_t)start - pages_base;
+		offset = addr - pages_base;
+	} else {
+		// TODO(kulakowski) Use MG-942 instead of having to
+		// allocate and destroy under a lock.
+		mx_handle_t subvmar;
+		uintptr_t subvmar_base;
+		mx_status_t status = _mx_vmar_allocate(pages_vmar, 0u, len,
+		    MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+		    &subvmar, &subvmar_base);
+		if (status != MX_OK)
+			abort();
+		_mx_vmar_destroy(subvmar);
+		_mx_handle_close(subvmar);
+		offset = subvmar_base - pages_base;
 	}
 
-	mx_handle_t vmo;
 	uintptr_t ptr = 0;
-	if (_mx_vmo_create(len, 0, &vmo) < 0) {
-		errno = ENOMEM;
-		return NULL;
-	}
-	_mx_object_set_property(vmo, MX_PROP_NAME, mmap_vmo_name, strlen(mmap_vmo_name));
-
-	status = _mx_vmar_map(pages_vmar, offset, vmo, 0u, len, mx_flags, &ptr);
-	_mx_handle_close(vmo);
-	if (status < 0) {
-		goto fail;
+	uint32_t mx_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
+	    MX_VM_FLAG_SPECIFIC;
+	mx_status_t status = _mx_vmar_map(pages_vmar, offset, pages_vmo,
+	    offset, len, mx_flags, &ptr);
+	if (status != MX_OK) {
+		ptr = 0u;
 	}
 
+	mtx_unlock(&vmar_lock);
 	return (void*)ptr;
-
-fail:
-	switch (status) {
-	case MX_ERR_BAD_HANDLE:
-		errno = EBADF;
-		break;
-	case MX_ERR_NOT_SUPPORTED:
-		errno = ENODEV;
-		break;
-	case MX_ERR_ACCESS_DENIED:
-		errno = EACCES;
-		break;
-	case MX_ERR_NO_MEMORY:
-		errno = ENOMEM;
-		break;
-	case MX_ERR_INVALID_ARGS:
-	case MX_ERR_BAD_STATE:
-	default:
-		errno = EINVAL;
-	}
-	return NULL;
-}
-
-static void* fuchsia_pages_alloc(void* addr, size_t size, bool commit) {
-	/*
-	 * We don't use fixed=false here, because it can cause the *replacement*
-	 * of existing mappings, and we only want to create new mappings.
-	 */
-	void* ret = fuchsia_pages_map(addr, size, commit, /* fixed */ false);
-	if (addr != NULL && ret != addr && ret != NULL) {
-		/*
-		 * We succeeded in mapping memory, but not in the right place.
-		 */
-		pages_unmap(ret, size);
-		ret = NULL;
-	}
-	return ret;
 }
 
 static mx_status_t fuchsia_pages_free(void* addr, size_t size) {
@@ -121,7 +98,8 @@ static mx_status_t fuchsia_pages_free(void* addr, size_t size) {
 	return _mx_vmar_unmap(pages_vmar, ptr, size);
 }
 
-static void* fuchsia_pages_trim(void* ret, void* addr, size_t size, size_t alloc_size, size_t leadsize) {
+static void* fuchsia_pages_trim(void* ret, void* addr, size_t size,
+    size_t alloc_size, size_t leadsize) {
 	size_t trailsize = alloc_size - leadsize - size;
 
 	if (leadsize != 0)
@@ -129,21 +107,6 @@ static void* fuchsia_pages_trim(void* ret, void* addr, size_t size, size_t alloc
 	if (trailsize != 0)
 		pages_unmap((void *)((uintptr_t)ret + size), trailsize);
 	return (ret);
-}
-
-static bool fuchsia_pages_commit(void* addr, size_t size, bool commit) {
-	void *result = fuchsia_pages_map(addr, size, commit, /* fixed */ true);
-	if (result == NULL)
-		return (true);
-	if (result != addr) {
-		/*
-		 * We succeeded in mapping memory, but not in the right
-		 * place.
-		 */
-		pages_unmap(result, size);
-		return (true);
-	}
-	return (false);
 }
 
 #endif
@@ -166,7 +129,7 @@ pages_map(void *addr, size_t size, bool *commit)
 	ret = VirtualAlloc(addr, size, MEM_RESERVE | (*commit ? MEM_COMMIT : 0),
 	    PAGE_READWRITE);
 #elif __Fuchsia__
-	ret = fuchsia_pages_alloc(addr, size, *commit);
+	ret = fuchsia_pages_map(addr, size);
 #else
 	/*
 	 * We don't use MAP_FIXED here, because it can cause the *replacement*
@@ -271,7 +234,7 @@ pages_commit_impl(void *addr, size_t size, bool commit)
 	return (commit ? (addr != VirtualAlloc(addr, size, MEM_COMMIT,
 	    PAGE_READWRITE)) : (!VirtualFree(addr, size, MEM_DECOMMIT)));
 #elif __Fuchsia__
-	return fuchsia_pages_commit(addr, size, commit);
+	not_reached();
 #else
 	{
 		int prot = commit ? PAGES_PROT_COMMIT : PAGES_PROT_DECOMMIT;
@@ -433,9 +396,18 @@ pages_boot(void)
 					       vmar_flags, &pages_vmar, &pages_base);
 	if (status != MX_OK)
 		abort();
+	status = _mx_vmo_create(VMAR_SIZE, 0, &pages_vmo);
+	if (status != MX_OK)
+		abort();
+	status = _mx_object_set_property(pages_vmo, MX_PROP_NAME, MMAP_VMO_NAME,
+	    strlen(MMAP_VMO_NAME));
+	if (status != MX_OK)
+		abort();
 #endif
 
-#ifdef JEMALLOC_SYSCTL_VM_OVERCOMMIT
+#if defined(__Fuchsia__)
+	os_overcommits = true;
+#elif defined(JEMALLOC_SYSCTL_VM_OVERCOMMIT)
 	os_overcommits = os_overcommits_sysctl();
 #elif defined(JEMALLOC_PROC_SYS_VM_OVERCOMMIT_MEMORY)
 	os_overcommits = os_overcommits_proc();
