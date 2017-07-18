@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/device/audio.h>
 #include <magenta/device/midi.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -18,7 +17,6 @@
 
 #include "midi.h"
 
-#define DEV_AUDIO   "/dev/class/audio"
 #define DEV_MIDI    "/dev/class/midi"
 
 #define MAX_AMPLITUDE 32767.0f
@@ -198,6 +196,12 @@ static int open_source(void) {
 }
 
 static int open_sink(uint32_t* out_sample_rate) {
+    // TODO(johngro) : Fix this.  This code used to interface with the old
+    // driver interface which has since been removed.  Either wire it directly
+    // to the driver level using the audio-utils library, or move the example up
+    // to drivers/audio in Fuchsia and have it interface to the system-wide
+    // mixer.
+#if 0
     struct dirent* de;
     DIR* dir = opendir(DEV_AUDIO);
     if (!dir) {
@@ -268,6 +272,7 @@ next:
     }
 
     closedir(dir);
+#endif
     return -1;
 
 }
