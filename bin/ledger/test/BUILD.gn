@@ -24,6 +24,7 @@ source_set("lib") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
+    "token_provider",
   ]
 
   deps = [

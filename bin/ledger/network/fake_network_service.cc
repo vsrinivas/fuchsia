@@ -18,6 +18,10 @@ network::URLRequest* FakeNetworkService::GetRequest() {
   return request_received_.get();
 }
 
+void FakeNetworkService::ResetRequest() {
+  request_received_.reset();
+}
+
 void FakeNetworkService::SetResponse(network::URLResponsePtr response) {
   response_to_return_ = std::move(response);
 }

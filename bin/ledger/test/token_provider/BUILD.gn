@@ -1,0 +1,47 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("token_provider") {
+  testonly = true
+
+  sources = [
+    "service_account_token_provider.cc",
+    "service_account_token_provider.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/network",
+    "//apps/modular/services/auth",
+    "//lib/ftl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/glue/crypto",
+    "//lib/mtl",
+    "//third_party/rapidjson",
+    "//third_party/boringssl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "service_account_token_provider_unittest.cc",
+  ]
+
+  deps = [
+    ":token_provider",
+    "//apps/ledger/src/network:fake",
+    "//apps/ledger/src/test:lib",
+    "//third_party/gtest",
+    "//third_party/rapidjson",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

@@ -18,6 +18,7 @@ class FakeNetworkService : public NetworkService {
   ~FakeNetworkService() override;
 
   network::URLRequest* GetRequest();
+  void ResetRequest();
 
   void SetResponse(network::URLResponsePtr response);
 
