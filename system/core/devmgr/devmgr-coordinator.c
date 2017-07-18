@@ -15,6 +15,7 @@
 #include <magenta/ktrace.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/policy.h>
 #include <magenta/device/dmctl.h>
 #include <mxio/io.h>
 
@@ -1338,6 +1339,14 @@ device_t* coordinator_init(mx_handle_t root_job) {
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job);
     if (status < 0) {
         log(ERROR, "devcoord: unable to create devhost job\n");
+    }
+    static const mx_policy_basic_t policy[] = {
+        { MX_POL_BAD_HANDLE, MX_POL_ACTION_EXCEPTION },
+    };
+    status = mx_job_set_policy(devhost_job, MX_JOB_POL_RELATIVE,
+                               MX_JOB_POL_BASIC, &policy, countof(policy));
+    if (status < 0) {
+        log(ERROR, "devcoord: mx_job_set_policy() failed\n");
     }
     mx_object_set_property(devhost_job, MX_PROP_NAME, "magenta-drivers", 15);
 
