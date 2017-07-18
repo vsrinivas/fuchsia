@@ -4,51 +4,35 @@
 
 #include "apps/ledger/src/glue/crypto/base64.h"
 
-#include <openssl/base64.h>
-
+#include "apps/ledger/src/third_party/modp_b64/modp_b64.h"
 #include "lib/ftl/logging.h"
 
 namespace glue {
 
-namespace {
-
-const uint8_t* ToUnsigned(ftl::StringView str) {
-  return reinterpret_cast<const uint8_t*>(str.data());
-}
-
-uint8_t* ToUnsigned(std::string& str) {
-  return reinterpret_cast<uint8_t*>(&str[0]);
-}
-
-}  // namespace
-
-void Base64Encode(ftl::StringView input, std::string* output) {
+void Base64UrlEncode(ftl::StringView input, std::string* output) {
   std::string tmp_output;
-  size_t output_length;
-  FTL_CHECK(EVP_EncodedLength(&output_length, input.size()));
+  size_t output_length = modp_b64_encode_strlen(input.size());
   // In C++11, std::string guarantees that tmp_output[tmp_output.size()] is
-  // legal and points to a '\0' character. The last byte of EVP_EncodeBlock() is
+  // legal and points to a '\0' character. The last byte of modp_b64_encode() is
   // a '\0' that will override tmp_output[tmp_output.size()].
-  tmp_output.resize(output_length - 1);
-  EVP_EncodeBlock(ToUnsigned(tmp_output), ToUnsigned(input), input.size());
+  tmp_output.resize(output_length);
+  size_t written = modp_b64_encode(&tmp_output[0], input.data(), input.size());
+  FTL_DCHECK(output_length == written);
   output->swap(tmp_output);
 }
 
-bool Base64Decode(ftl::StringView input, std::string* output) {
+bool Base64UrlDecode(ftl::StringView input, std::string* output) {
   std::string tmp_output;
-  size_t output_maxlength;
-  if (!EVP_DecodedLength(&output_maxlength, input.size()))
-    return false;
+  size_t output_maxlength = modp_b64_decode_len(input.size());
   tmp_output.resize(output_maxlength);
-  size_t output_length;
-  bool result =
-      EVP_DecodeBase64(ToUnsigned(tmp_output), &output_length, output_maxlength,
-                       ToUnsigned(input), input.size());
-  if (result) {
-    tmp_output.resize(output_length);
-    output->swap(tmp_output);
+  size_t output_length =
+      modp_b64_decode(&tmp_output[0], input.data(), input.size());
+  if (output_length == MODP_B64_ERROR) {
+    return false;
   }
-  return result;
+  tmp_output.resize(output_length);
+  output->swap(tmp_output);
+  return true;
 }
 
 }  // namespace glue

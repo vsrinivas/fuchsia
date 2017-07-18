@@ -14,7 +14,7 @@ export class AppComponent {
   delayBetweenEraseStagesMillis = 3000
   authenticated = false;
   uid = null;
-  version = 15;
+  version = 16;
   deleteInProgress = false;
 
   user: Observable<firebase.User>;

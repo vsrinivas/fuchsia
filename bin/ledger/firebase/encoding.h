@@ -33,7 +33,7 @@ std::string EncodeValue(convert::ExtendedStringView bytes);
 // Returns true iff the key or value was correctly decoded and stored in |out|.
 // We don't need separate methods for keys and values, as the decoding algorithm
 // is identical.
-bool Decode(const std::string& input, std::string* output);
+bool Decode(convert::ExtendedStringView input, std::string* output);
 
 }  // namespace firebase
 

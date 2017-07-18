@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/ledger/src/firebase/encoding.h"
+#include "apps/ledger/src/glue/crypto/rand.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/strings/utf_codecs.h"
 
@@ -126,6 +127,18 @@ TEST(EncodingTest, BackAndForth) {
   EXPECT_EQ(s, ret_key);
   EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));
   EXPECT_EQ(s, ret_value);
+
+  // Check random sequence of size less or equals 3.
+  for (size_t i = 0; i < 10000; ++i) {
+    size_t size = glue::RandUint64() % 4;
+    char buffer[size];
+    ftl::StringView view(buffer, size);
+    glue::RandBytes(buffer, size);
+    EXPECT_TRUE(Decode(EncodeKey(view), &ret_key));
+    EXPECT_EQ(view, ret_key);
+    EXPECT_TRUE(Decode(EncodeValue(view), &ret_value));
+    EXPECT_EQ(view, ret_value);
+  }
 }
 
 TEST(EncodingTest, Keys) {
@@ -135,7 +148,7 @@ TEST(EncodingTest, Keys) {
   EXPECT_EQ("YWJjLw==B", EncodeKey("abc/"));
   EXPECT_EQ("I1tdIQ==B", EncodeKey("#[]!"));
   EXPECT_EQ("fw==B", EncodeKey("\x7F"));
-  EXPECT_EQ("-w==B", EncodeKey("\xFF"));
+  EXPECT_EQ("_w==B", EncodeKey("\xFF"));
   EXPECT_EQ("Ig==B", EncodeKey("\""));
   EXPECT_EQ("Kw==B", EncodeKey("+"));
 }
@@ -147,7 +160,7 @@ TEST(EncodingTest, Values) {
   EXPECT_EQ("abc/V", EncodeValue("abc/"));
   EXPECT_EQ("#[]!V", EncodeValue("#[]!"));
   EXPECT_EQ("fw==B", EncodeValue("\x7F"));
-  EXPECT_EQ("-w==B", EncodeValue("\xFF"));
+  EXPECT_EQ("_w==B", EncodeValue("\xFF"));
   EXPECT_EQ("Ig==B", EncodeValue("\""));
   EXPECT_EQ("Iy9cIT9bXQ==B", EncodeValue("#/\\!?[]"));
   EXPECT_EQ("+V", EncodeValue("+"));

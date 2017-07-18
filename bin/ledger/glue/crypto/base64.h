@@ -11,13 +11,13 @@
 
 namespace glue {
 
-// Encodes the input string in base64. The encoding can be done in-place.
-void Base64Encode(ftl::StringView input, std::string* output);
+// Encodes the input string in base64url. The encoding can be done in-place.
+void Base64UrlEncode(ftl::StringView input, std::string* output);
 
-// Decodes the base64 input string. Returns true if successful and false
+// Decodes the base64url input string. Returns true if successful and false
 // otherwise. The output string is only modified if successful. The decoding can
 // be done in-place.
-bool Base64Decode(ftl::StringView input, std::string* output);
+bool Base64UrlDecode(ftl::StringView input, std::string* output);
 
 }  // namespace glue
 

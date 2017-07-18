@@ -47,9 +47,7 @@ std::string Encode(ftl::StringView s, bool verbatim) {
   }
 
   std::string encoded;
-  glue::Base64Encode(s, &encoded);
-  std::replace(encoded.begin(), encoded.end(), '/', '-');
-  std::replace(encoded.begin(), encoded.end(), '+', '_');
+  glue::Base64UrlEncode(s, &encoded);
   return encoded + "B";
 }
 
@@ -77,21 +75,20 @@ std::string EncodeValue(convert::ExtendedStringView bytes) {
   return Encode(bytes, CanValueBeVerbatim(bytes));
 }
 
-bool Decode(const std::string& input, std::string* output) {
+bool Decode(convert::ExtendedStringView input, std::string* output) {
   if (input.empty()) {
     return false;
   }
 
+  ftl::StringView data = input.substr(0, input.size() - 1);
+
   if (input.back() == 'V') {
-    *output = std::string(input.data(), input.size() - 1);
+    *output = data.ToString();
     return true;
   }
 
   if (input.back() == 'B') {
-    std::string encoded(input.data(), input.size() - 1);
-    std::replace(encoded.begin(), encoded.end(), '_', '+');
-    std::replace(encoded.begin(), encoded.end(), '-', '/');
-    return glue::Base64Decode(encoded, output);
+    return glue::Base64UrlDecode(data, output);
   }
 
   return false;

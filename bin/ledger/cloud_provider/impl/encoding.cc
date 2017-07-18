@@ -155,13 +155,13 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
   // TODO(ppi): use a JSON schema to validate the format.
   CommitId commit_id;
   if (!value.HasMember(kIdKey) || !value[kIdKey].IsString() ||
-      !firebase::Decode(value[kIdKey].GetString(), &commit_id)) {
+      !firebase::Decode(value[kIdKey], &commit_id)) {
     return false;
   }
 
   Data commit_content;
   if (!value.HasMember(kContentKey) || !value[kContentKey].IsString() ||
-      !firebase::Decode(value[kContentKey].GetString(), &commit_content)) {
+      !firebase::Decode(value[kContentKey], &commit_content)) {
     return false;
   }
 
@@ -169,13 +169,13 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
   if (value.HasMember(kObjectsKey)) {
     for (auto& it : value[kObjectsKey].GetObject()) {
       ObjectId storage_object_id;
-      if (!firebase::Decode(it.name.GetString(), &storage_object_id)) {
+      if (!firebase::Decode(it.name, &storage_object_id)) {
         return false;
       }
 
       Data storage_object_data;
       if (!it.value.IsString() ||
-          !firebase::Decode(it.value.GetString(), &storage_object_data)) {
+          !firebase::Decode(it.value, &storage_object_data)) {
         return false;
       }
       storage_objects[storage_object_id] = storage_object_data;

@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_CONVERT_CONVERT_H_
 
 #include <leveldb/db.h>
+#include <rapidjson/document.h>
 #include <string>
 
 #include "apps/ledger/src/convert/bytes_generated.h"
@@ -31,6 +32,10 @@ class ExtendedStringView : public ftl::StringView {
   ExtendedStringView(const std::string& string) : ftl::StringView(string) {}
   constexpr ExtendedStringView(ftl::StringView string_view)
       : ftl::StringView(string_view) {}
+  ExtendedStringView(const rapidjson::Value& value)
+      : ftl::StringView(value.GetString(), value.GetStringLength()) {
+    FTL_DCHECK(value.IsString());
+  }
   template <size_t N>
   constexpr ExtendedStringView(const char (&str)[N]) : ftl::StringView(str) {}
   ExtendedStringView(const flatbuffers::Vector<uint8_t>* byte_storage)
