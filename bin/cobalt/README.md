@@ -31,7 +31,10 @@ From within the running instance of fuchsia type:
 $ system/test/cobalt_testapp
 ```
 
-If all goes fine, you should see "CobaltTestApp" then "Done".
+If all goes fine, you should see log messages with all responses from
+Cobalt indicated as `OK.`
 
-If you have access to the Cobalt production cluster, look at the logs in the
-shuffler for 7 observations.
+The test app adds 7 observations to metric 1 of project ID 2 each time it
+is invoked. You can use the Cobalt report client to generate a report
+that witnesses this. See the description of the report client in
+//apps/cobalt_client/README.md.
