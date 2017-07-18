@@ -36,7 +36,6 @@ std::string ModulePathShortHash(const fidl::Array<fidl::String>& module_path) {
     FTL_LOG(FATAL) << "Could not SHA1_Init().";
   }
   for (const auto& part : module_path) {
-    FTL_LOG(INFO) << "About to SHA1 " << part;
     FTL_CHECK(SHA1_Update(&sha_ctx, part.data(), part.size()) == 1);
   }
 

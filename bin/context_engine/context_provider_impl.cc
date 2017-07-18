@@ -33,9 +33,9 @@ void ContextProviderImpl::Subscribe(
       repository_->AddSubscription(std::move(query), it->listener.get());
 
   it->listener.set_connection_error_handler([=] {
-    listeners_.erase(it);
     repository_->RemoveSubscription(it->repo_subscription_id);
     debug_->OnRemoveSubscription(it->debug_subscription_id);
+    listeners_.erase(it);
   });
 }
 

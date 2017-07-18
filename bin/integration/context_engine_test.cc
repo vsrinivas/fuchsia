@@ -23,7 +23,8 @@ ComponentScopePtr MakeModuleScope(const std::string& module_url,
   auto module_scope = ModuleScope::New();
   module_scope->url = module_url;
   module_scope->story_id = story_id;
-  module_scope->module_path = fidl::Array<fidl::String>::New(0);
+  module_scope->module_path = fidl::Array<fidl::String>::New(1);
+  module_scope->module_path[0] = module_url;
   scope->set_module_scope(std::move(module_scope));
   return scope;
 }
@@ -47,6 +48,10 @@ class TestListener : public ContextListener {
   // Binds a new handle to |binding_| and returns it.
   fidl::InterfaceHandle<ContextListener> GetHandle() {
     return binding_.NewBinding();
+  }
+
+  void Reset() {
+    last_update_.reset();
   }
 
  private:
@@ -146,7 +151,20 @@ TEST_F(ContextEngineTest, CloseProvider) {
   provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
 
   WAIT_UNTIL(listener2.PopLast());
-  ASYNC_CHECK(!listener1.PeekLast());
+  // Since the ContextProvider owns subscriptions, and we closed it
+  // (through InitProvider), we should not have seen our listener
+  // notified of the published topic.
+  //
+  // Unfortunately, it's a race between when the subscription is
+  // actually removed on the service side, so we can't check it here.
+  // EXPECT_FALSE(listener1.PeekLast());
+
+  // However, by now (after the WAIT_UNTIL) we always seem to have
+  // caught up, so try changing the value here.
+  listener1.Reset();
+  publisher_->Publish("topic", "\"still don't crash\"");
+  WAIT_UNTIL(listener2.PopLast());
+  EXPECT_FALSE(listener1.PeekLast());
 }
 
 TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
@@ -158,8 +176,8 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
   publisher_->Publish("/topic", "1");
 
   TestListener listener;
-  // 81736358b1645103ae83247b10c5f82af641ddfc is the SHA1 of "url".
-  const char kSha1OfUrl[] = "81736358b1645103ae83247b10c5f82af641ddfc";
+  // This is the 5-char prefix of the sha1 of url.
+  const char kSha1OfUrl[] = "81736";
   const std::string kTopicString =
       MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic");
   provider_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
