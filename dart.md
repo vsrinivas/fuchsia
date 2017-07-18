@@ -215,9 +215,8 @@ will make all log statements appear in the console.
 
 The Dart SDK built in the Fuchsia tree has a version of the analysis service
 which understands the structure of the Fuchsia directory. In the `dartlang` Atom
-plugin, set the Dart SDK as `out/<build-type>/<host-flavor>/dart-sdk` (e.g.
-`out/debug-x86-64/host_x64/dart-sdk`). Packages and apps with build targets
-should now be error-free.
+plugin, set the Dart SDK as `//dart/tools/sdks/<linux|mac>/dart-sdk`. Packages
+and apps with build targets should now be error-free.
 Note that in order for the plugin to locate a Dart package, it needs a marker:
 add an empty `pubspec.yaml` file at the root of the package.
 
