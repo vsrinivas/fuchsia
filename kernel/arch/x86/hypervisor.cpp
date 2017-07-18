@@ -716,18 +716,21 @@ status_t VmcsPerCpu::Setup(uint16_t vpid, paddr_t pml4_address, paddr_t apic_acc
     edit_msr_list(&host_msr_page_, 2, X86_MSR_IA32_LSTAR, read_msr(X86_MSR_IA32_LSTAR));
     edit_msr_list(&host_msr_page_, 3, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
     edit_msr_list(&host_msr_page_, 4, X86_MSR_IA32_TSC_ADJUST, read_msr(X86_MSR_IA32_TSC_ADJUST));
+    edit_msr_list(&host_msr_page_, 5, X86_MSR_IA32_TSC_AUX, read_msr(X86_MSR_IA32_TSC_AUX));
+
     vmcs_write(VmcsField64::EXIT_MSR_LOAD_ADDRESS, host_msr_page_.PhysicalAddress());
-    vmcs_write(VmcsField32::EXIT_MSR_LOAD_COUNT, 5);
+    vmcs_write(VmcsField32::EXIT_MSR_LOAD_COUNT, 6);
 
     edit_msr_list(&guest_msr_page_, 0, X86_MSR_IA32_KERNEL_GS_BASE, 0);
     edit_msr_list(&guest_msr_page_, 1, X86_MSR_IA32_STAR, 0);
     edit_msr_list(&guest_msr_page_, 2, X86_MSR_IA32_LSTAR, 0);
     edit_msr_list(&guest_msr_page_, 3, X86_MSR_IA32_FMASK, 0);
     edit_msr_list(&guest_msr_page_, 4, X86_MSR_IA32_TSC_ADJUST, 0);
+    edit_msr_list(&guest_msr_page_, 5, X86_MSR_IA32_TSC_AUX, 0);
     vmcs_write(VmcsField64::EXIT_MSR_STORE_ADDRESS, guest_msr_page_.PhysicalAddress());
-    vmcs_write(VmcsField32::EXIT_MSR_STORE_COUNT, 5);
+    vmcs_write(VmcsField32::EXIT_MSR_STORE_COUNT, 6);
     vmcs_write(VmcsField64::ENTRY_MSR_LOAD_ADDRESS, guest_msr_page_.PhysicalAddress());
-    vmcs_write(VmcsField32::ENTRY_MSR_LOAD_COUNT, 5);
+    vmcs_write(VmcsField32::ENTRY_MSR_LOAD_COUNT, 6);
 
     // Setup VMCS host state.
     //
@@ -998,6 +1001,7 @@ status_t VmcsContext::Create(VmxonContext* hypervisor,
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_FMASK);
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
 
     // Setup common APIC access.
     status = ctx->apic_address_page_.Alloc(vmx_info, 0);
