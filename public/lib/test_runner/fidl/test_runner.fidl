@@ -14,10 +14,12 @@ struct TestResult {
 // This service is included in the ApplicationEnvironment of multi-process tests
 // that are launched by the test runner harness. Test processes can connect to
 // this service to log failures, signal crashes, and signal completion.
+// The empty return acknowledges that the connection to TestRunner was
+// successful.
 [ServiceName="test_runner.TestRunner"]
 interface TestRunner {
   // Tells the test runner how to identify this test program.
-  Identify(string program_name);
+  Identify(string program_name) => ();
 
   // Tells the test runner that a paritcular test case finished. May be called
   // multiple times.

@@ -13,7 +13,8 @@
 
 namespace test_runner {
 
-void NullTestRunner::Identify(const ::fidl::String& program_name) {}
+void NullTestRunner::Identify(const ::fidl::String& program_name,
+                              const IdentifyCallback& callback) {}
 
 void NullTestRunner::ReportResult(TestResultPtr result) {}
 
@@ -60,7 +61,7 @@ void Reporter::Start(app::ApplicationContext* context) {
     });
   }
 
-  test_runner()->Identify(identity_);
+  test_runner()->Identify(identity_, [this] { connected_ = true; });
 
   mtl::MessageLoop::GetCurrent()->AddHandler(
     this, queue_->event()->get(), ResultsQueue::kSignal);
@@ -72,4 +73,7 @@ void Reporter::Stop() {
   });
 }
 
+bool Reporter::connected() {
+  return connected_;
+}
 }  // namespace test_runner

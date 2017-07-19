@@ -84,8 +84,10 @@ void TestRunnerImpl::TeardownAfterTermination() {
   teardown_after_termination_ = true;
 }
 
-void TestRunnerImpl::Identify(const fidl::String& program_name) {
+void TestRunnerImpl::Identify(const fidl::String& program_name,
+                              const IdentifyCallback& callback) {
   program_name_ = program_name;
+  callback();
 }
 
 void TestRunnerImpl::ReportResult(TestResultPtr result) {

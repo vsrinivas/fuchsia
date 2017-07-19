@@ -7,9 +7,9 @@
 
 #include <memory>
 #include "application/lib/app/application_context.h"
-#include "apps/test_runner/services/test_runner.fidl.h"
 #include "apps/test_runner/lib/scope.h"
 #include "apps/test_runner/lib/test_runner_store_impl.h"
+#include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/ftl/tasks/one_shot_timer.h"
 
 namespace test_runner {
@@ -47,7 +47,8 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(const fidl::String& program_name) override;
+  void Identify(const fidl::String& program_name,
+                const IdentifyCallback& callback) override;
   // |TestRunner|
   void ReportResult(TestResultPtr result) override;
   // |TestRunner|

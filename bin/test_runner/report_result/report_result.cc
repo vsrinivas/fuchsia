@@ -21,7 +21,7 @@ class Reporter {
   ~Reporter() {}
 
   void Start() {
-    test_runner_->Identify(name_);
+    test_runner_->Identify(name_, []{});
     stopwatch_.Start();
   }
 
