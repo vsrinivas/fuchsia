@@ -209,8 +209,9 @@ set +e
 mcpy_loc=$(which mcopy)
 mmd_loc=$(which mmd)
 lz4_path=$(which lz4)
+mdir_loc=$(which mdir)
 
-if [ "$mcpy_loc" = "" ] || [ "$mmd_loc" = "" ]; then
+if [ "$mcpy_loc" = "" ] || [ "$mmd_loc" = "" ] || [ "$mdir_loc" == "" ]; then
   echo "Unable to find necessary mtools binaries, please install a copy of"\
     "mtools."
   exit -1
@@ -275,7 +276,7 @@ imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcp
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
   --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
-  --bootdata="$bootdata" --boot_manifest="$boot_manifest" )
+  --bootdata="$bootdata" --boot_manifest="$boot_manifest" --mdir_path="$mdir_loc" )
 
 if [ "$enable_thread_exp" -eq 0 ]; then
   imager_cmd+=("--disable_thread_exp")

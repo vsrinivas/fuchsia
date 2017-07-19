@@ -23,7 +23,11 @@ def _get_file_len(path):
     finally:
         os.close(fd)
 
-def process_manifest(manifest_path, disk_path, minfs_bin, minfs_cmd, created_dirs):
+def process_manifest(manifest_path, disk_path, minfs_bin, created_dirs):
+    mkdir_cmd = [minfs_bin, disk_path, "mkdir", None]
+    cp_cmd = [minfs_bin, disk_path, "cp", None, None]
+    ls_cmd = [minfs_bin, disk_path, "ls", None]
+
     file_count = 0
     with open(manifest_path, "r") as manifest_file:
         for line in manifest_file:
@@ -53,7 +57,7 @@ def process_manifest(manifest_path, disk_path, minfs_bin, minfs_cmd, created_dir
             while len(dirs_to_make) > 0:
                 dir_path = os.path.join(dir_path, dirs_to_make.pop())
 
-                mkdir_cmd = [minfs_bin, disk_path, "mkdir", "::%s" % dir_path]
+                mkdir_cmd[3] = "::%s" % dir_path
                 try:
                     subprocess.check_call(mkdir_cmd)
                 except (subprocess.CalledProcessError):
@@ -67,23 +71,35 @@ def process_manifest(manifest_path, disk_path, minfs_bin, minfs_cmd, created_dir
                 created_dirs.add(dir_path)
 
             targ_path = "::%s" % parts[0]
-            minfs_cmd[3] = parts[1]
-            minfs_cmd[4] = targ_path
+
+            # some status output
+            sys.stdout.write("%s\r" % (" " * 100))
+            sys.stdout.write("Copying '%s' \r" % parts[0])
+            sys.stdout.flush()
+            ls_cmd[3] = targ_path
 
             try:
-                subprocess.check_call(minfs_cmd)
+              subprocess.check_call(ls_cmd)
+              print "File '%s' from '%s' is included twice." % (targ_path, parts[1])
+              sys.exit(-1)
             except (subprocess.CalledProcessError):
-                print "Error copying file %s command %s" % (parts[1], minfs_cmd)
+              pass
+            except (OSError):
+              print "Unable to execute minfs"
+              sys.exit(-1)
+
+            cp_cmd[3] = parts[1]
+            cp_cmd[4] = targ_path
+            try:
+                subprocess.check_call(cp_cmd)
+            except (subprocess.CalledProcessError):
+                print "Error copying file %s command %s" % (parts[1], cp_cmd)
                 sys.exit(-1)
             except (OSError):
                 print "Unable to execute minfs"
                 sys.exit(-1)
 
             file_count += 1
-            # some status output
-            sys.stdout.write("%s\r" % (" " * 100))
-            sys.stdout.write("Copying '%s' \r" % parts[0])
-            sys.stdout.flush()
     return file_count
 
 def build_minfs_image(manifests, minfs_image_path, minfs_bin):
@@ -97,13 +113,11 @@ def build_minfs_image(manifests, minfs_image_path, minfs_bin):
     minfs_image_len = _get_file_len(minfs_image_path)
     disk_path = "%s@%d" % (minfs_image_path, minfs_image_len)
 
-    minfs_cmd = [minfs_bin, disk_path, "cp", None, None]
-
     # parse the manifest files and find the files to copy
     file_count = 0
     created_dirs = set()
     for manifest_path in manifests:
         file_count += process_manifest(manifest_path, disk_path, minfs_bin,
-                minfs_cmd, created_dirs)
+                                       created_dirs)
 
     return file_count

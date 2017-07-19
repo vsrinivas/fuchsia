@@ -46,7 +46,20 @@ def compress_file(lz4_path, source, dest, working_dir):
 
   return True
 
-def cp_fat(mcopy_path, target_disk, local_path, remote_path, working_dir):
+def cp_fat(mcopy_path, mdir_path, target_disk, local_path, remote_path, working_dir):
+  mdir_cmd = [mdir_path, "-i", target_disk, "::%s" % remote_path]
+
+  with open('/dev/null', 'w') as f:
+    try:
+      subprocess.call(mdir_cmd, cwd=working_dir, stdout=f, stderr=f)
+      print "File '%s' already exists." % remote_path
+      return False
+    except (subprocess.CalledProcessError):
+      pass
+    except (OSError):
+      print "Unable to execute %s" % mdir_path
+      return False
+
   mcpy_cmd = [mcopy_path, "-i", target_disk, local_path, "::%s" % remote_path]
 
   try:
@@ -127,6 +140,8 @@ parser.add_argument('--kernel_cmdline', action='store', required=False,
 parser.add_argument('--disable_thread_exp', action='store_const',
                     required=False, default=False, const=True,
                     help="Whether to disable experimental thread priorization")
+parser.add_argument('--mdir_path', action='store', required=True,
+                    help='Path to mdir binary')
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -136,7 +151,7 @@ build_dir_magenta = args.build_dir_magenta
 bootdata = args.bootdata
 kernel_cmdline = args.kernel_cmdline
 enable_thread_exp = not args.disable_thread_exp
-
+mdir_path = args.mdir_path
 
 # if bootloader was not supplied, find it relative to the magenta build dir
 if bootloader is None:
@@ -247,8 +262,7 @@ with open(package_list) as package_list_file:
         if is_non_empty_file(package_boot_manifest):
             boot_manifests.append(package_boot_manifest)
 
-file_count = manifest.build_minfs_image(system_manifests, \
-                                        disk_path, minfs_bin)
+file_count = manifest.build_minfs_image(system_manifests, disk_path, minfs_bin)
 
 print "\nCopied %i files" % file_count
 
@@ -270,10 +284,13 @@ if len(boot_manifests) != 0:
     subprocess.check_call(bootdata_mkfs_cmd, cwd=working_dir)
     bootdata = out_bootdata
 
-if not (cp_fat(mcopy_path, disk_path_efi, bootloader, bootloader_remote_path,
-               working_dir) and
-        cp_fat(mcopy_path, disk_path_efi, kernel, FILE_KERNEL, working_dir) and
-        cp_fat(mcopy_path, disk_path_efi, bootdata, FILE_KERNEL_RD,
+if not (cp_fat(mcopy_path, mdir_path, disk_path_efi, bootloader,
+               bootloader_remote_path, working_dir)
+        and
+        cp_fat(mcopy_path, mdir_path, disk_path_efi, kernel, FILE_KERNEL,
+               working_dir)
+        and
+        cp_fat(mcopy_path, mdir_path, disk_path_efi, bootdata, FILE_KERNEL_RD,
                working_dir)):
   sys.exit(-1)
 
@@ -286,7 +303,7 @@ with open(kernel_cmdline, "a+") as kcmd:
   kcmd.write(" %s=%s" % ("thread.set.priority.allowed",
                          "true" if enable_thread_exp else "false"))
 
-if not cp_fat(mcopy_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_CMDLINE, working_dir):
+if not cp_fat(mcopy_path, mdir_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_CMDLINE, working_dir):
   print "Could not copy kernel cmdline"
   sys.exit(-1)
 
