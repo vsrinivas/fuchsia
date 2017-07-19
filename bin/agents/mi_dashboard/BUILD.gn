@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 import("//apps/dart_content_handler/dart_app.gni")
+import("//packages/package.gni")
 
-dart_app("mi_dashboard") {
+dart_app("mi_dashboard_dart") {
   output_name = "agents/mi_dashboard.dartx"
 
   main_dart = "main.dart"
@@ -21,5 +22,52 @@ dart_app("mi_dashboard") {
     "//apps/maxwell/services/user:user_dart",
     "//lib/fidl/dart",
     "//third_party/dart-pkg/pub/http",
+  ]
+}
+
+package("mi_dashboard") {
+  # this should be set to true once dart packages can be archives
+  archive = false
+
+  deps = [
+    ":mi_dashboard_dart",
+  ]
+
+  binaries = [ {
+        name = "agents/mi_dashboard.dartx"
+        dest = "app"
+      } ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//apps/maxwell/src/agents/mi_dashboard/webroot/index.html")
+      dest = "mi_dashboard/webroot/index.html"
+    },
+    {
+      path = rebase_path(
+              "//apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.js")
+      dest = "mi_dashboard/webroot/dashboard.js"
+    },
+    {
+      path = rebase_path(
+              "//apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.css")
+      dest = "mi_dashboard/webroot/dashboard.css"
+    },
+    {
+      path =
+          rebase_path("//apps/maxwell/src/agents/mi_dashboard/webroot/logo.png")
+      dest = "mi_dashboard/webroot/logo.png"
+    },
+    {
+      path =
+          rebase_path("//apps/maxwell/src/agents/mi_dashboard/webroot/logo.png")
+      dest = "mi_dashboard/webroot/logo.png"
+    },
+    {
+      path =
+          rebase_path("//apps/maxwell/src/agents/mi_dashboard/dashboard.config")
+      dest = "mi_dashboard/dashboard.config"
+    },
   ]
 }
