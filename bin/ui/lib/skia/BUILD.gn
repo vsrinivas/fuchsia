@@ -43,33 +43,16 @@ source_set("vmo") {
   sources = [
     "skia_vmo_data.cc",
     "skia_vmo_data.h",
-    "skia_vmo_image.cc",
-    "skia_vmo_image.h",
-    "skia_vmo_surface.cc",
-    "skia_vmo_surface.h",
+  ]
+
+  deps = [
+    "//apps/tracing/lib/trace",
   ]
 
   public_deps = [
-    "//apps/mozart/services/buffers",
-    "//apps/mozart/services/buffers/cpp",
-    "//apps/mozart/services/composition",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",
   ]
-
-  configs += [ "//apps/mozart:vulkan_config" ]
-
-  if (mozart_use_vulkan) {
-    sources += [
-      "vk_vmo_image_generator.cc",
-      "vk_vmo_image_generator.h",
-    ]
-    public_deps += [
-      "//flutter/vulkan",
-      "//magma:vulkan",
-      "//third_party/skia:gpu",
-    ]
-  }
 }
