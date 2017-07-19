@@ -7,7 +7,6 @@
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/src/audio/usb_audio_enum.h"
 #include "apps/media/src/fidl/fidl_type_conversions.h"
-#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
