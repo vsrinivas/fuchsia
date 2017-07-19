@@ -101,8 +101,9 @@ private:
     mx_status_t Read(block_fifo_request_t* requests, uint32_t* count);
     mx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
+    mx::fifo fifo_;
+
     mxtl::Mutex server_lock_;
-    mx::fifo fifo_ TA_GUARDED(server_lock_);
     mxtl::WAVLTree<vmoid_t, mxtl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
     mxtl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
     vmoid_t last_id TA_GUARDED(server_lock_);

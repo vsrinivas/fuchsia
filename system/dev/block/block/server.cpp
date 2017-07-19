@@ -115,7 +115,7 @@ mx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
     return MX_OK;
 }
 
-mx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) TA_NO_THREAD_SAFETY_ANALYSIS {
+mx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
     // Keep trying to read messages from the fifo until we have a reason to
     // terminate
     while (true) {
@@ -326,7 +326,6 @@ BlockServer::~BlockServer() {
 }
 
 void BlockServer::ShutDown() {
-    mxtl::AutoLock server_lock(&server_lock_);
     // Identify that the server should stop reading and return,
     // implicitly closing the fifo.
     fifo_.signal(0, kSignalFifoTerminate);
