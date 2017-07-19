@@ -130,6 +130,13 @@ typedef struct {
     fake_socket_t* out_sock;
 } transport_info_t;
 
+void clear_sockets(void) {
+    client_out_socket.read_ndx = 0;
+    client_out_socket.write_ndx = 0;
+    server_out_socket.read_ndx = 0;
+    server_out_socket.write_ndx = 0;
+}
+
 // Initialize "sockets" for either client or server.
 void transport_init(transport_info_t* transport_info, bool is_server) {
     if (is_server) {
@@ -139,8 +146,6 @@ void transport_init(transport_info_t* transport_info, bool is_server) {
         transport_info->in_sock = &server_out_socket;
         transport_info->out_sock = &client_out_socket;
     }
-    transport_info->in_sock->read_ndx = 0;
-    transport_info->out_sock->write_ndx = 0;
 }
 
 // Write to our circular message buffer.
@@ -362,6 +367,8 @@ bool run_one_send_test(struct test_params *tp) {
     BEGIN_TEST;
     int init_result = initialize_files(tp);
     ASSERT_EQ(init_result, 0, "failure to initialize state");
+
+    clear_sockets();
 
     pthread_t send_thread, recv_thread;
     pthread_create(&send_thread, NULL, tftp_send_main, tp);
