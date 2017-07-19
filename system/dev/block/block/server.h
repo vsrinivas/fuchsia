@@ -98,6 +98,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
     BlockServer();
 
+    mx_status_t Read(block_fifo_request_t* requests, uint32_t* count);
     mx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
     mxtl::Mutex server_lock_;

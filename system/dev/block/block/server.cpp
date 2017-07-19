@@ -11,6 +11,7 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
+#include <mx/fifo.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
@@ -18,34 +19,23 @@
 
 #include "server.h"
 
-static mx_status_t do_read(mx_handle_t fifo, block_fifo_request_t* requests, uint32_t* count) {
-    mx_status_t status;
-    while (true) {
-        status = mx_fifo_read(fifo, requests, sizeof(block_fifo_request_t), count);
-        if (status == MX_ERR_SHOULD_WAIT) {
-            mx_signals_t signals;
-            if ((status = mx_object_wait_one(fifo,
-                                             MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                             MX_TIME_INFINITE, &signals)) != MX_OK) {
-                return status;
-            } else if (signals & MX_FIFO_PEER_CLOSED) {
-                return MX_ERR_PEER_CLOSED;
-            }
-            // Try reading again...
-        } else {
-            return status;
-        }
-    }
-}
+// This signal is set on the FIFO when the server should be instructed
+// to terminate. Note that the block client (other end of the fifo) can
+// currently also set this bit as an alternative mechanism to shut down
+// the block server.
+//
+// If additional signals are set on the FIFO, it should be noted that
+// block clients will also be able to manipulate them.
+constexpr mx_signals_t kSignalFifoTerminate = MX_USER_SIGNAL_0;
 
-static void OutOfBandErrorRespond(mx_handle_t fifo, mx_status_t status, txnid_t txnid) {
+static void OutOfBandErrorRespond(const mx::fifo& fifo, mx_status_t status, txnid_t txnid) {
     block_fifo_response_t response;
     response.status = status;
     response.txnid = txnid;
     response.count = 0;
 
     uint32_t actual;
-    status = mx_fifo_write(fifo, &response, sizeof(block_fifo_response_t), &actual);
+    status = fifo.write(&response, sizeof(block_fifo_response_t), &actual);
     if (status != MX_OK) {
         fprintf(stderr, "Block Server I/O error: Could not write response\n");
     }
@@ -77,7 +67,7 @@ mx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
     return MX_OK;
 fail:
     if (do_respond) {
-        OutOfBandErrorRespond(fifo_, MX_ERR_IO, response_.txnid);
+        OutOfBandErrorRespond(mx::unowned_fifo::wrap(fifo_), MX_ERR_IO, response_.txnid);
     }
     return MX_ERR_IO;
 }
@@ -123,6 +113,27 @@ mx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
         return MX_ERR_INVALID_ARGS;
     }
     return MX_OK;
+}
+
+mx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) TA_NO_THREAD_SAFETY_ANALYSIS {
+    // Keep trying to read messages from the fifo until we have a reason to
+    // terminate
+    while (true) {
+        mx_status_t status = fifo_.read(requests, sizeof(block_fifo_request_t), count);
+        if (status == MX_ERR_SHOULD_WAIT) {
+            mx_signals_t waitfor = MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED | kSignalFifoTerminate;
+            mx_signals_t observed;
+            if ((status = fifo_.wait_one(waitfor, MX_TIME_INFINITE, &observed)) != MX_OK) {
+                return status;
+            }
+            if ((observed & MX_FIFO_PEER_CLOSED) || (observed & kSignalFifoTerminate)) {
+                return MX_ERR_PEER_CLOSED;
+            }
+            // Try reading again...
+        } else {
+            return status;
+        }
+    }
 }
 
 mx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
@@ -225,19 +236,13 @@ static block_callbacks_t cb = {
 };
 
 mx_status_t BlockServer::Serve(block_protocol_t* proto) {
-
     block_set_callbacks(proto, &cb);
 
     mx_status_t status;
     block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
     uint32_t count;
-    mx_handle_t fifo;
-    {
-        mxtl::AutoLock server_lock(&server_lock_);
-        fifo = fifo_.get();
-    }
     while (true) {
-        if ((status = do_read(fifo, &requests[0], &count)) != MX_OK) {
+        if ((status = Read(requests, &count) != MX_OK)) {
             return status;
         }
 
@@ -251,14 +256,14 @@ mx_status_t BlockServer::Serve(block_protocol_t* proto) {
             if (!iobuf.IsValid()) {
                 // Operation which is not accessing a valid vmo
                 if (wants_reply) {
-                    OutOfBandErrorRespond(fifo, MX_ERR_IO, txnid);
+                    OutOfBandErrorRespond(fifo_, MX_ERR_IO, txnid);
                 }
                 continue;
             }
             if (txnid >= MAX_TXN_COUNT || txns_[txnid] == nullptr) {
                 // Operation which is not accessing a valid txn
                 if (wants_reply) {
-                    OutOfBandErrorRespond(fifo, MX_ERR_IO, txnid);
+                    OutOfBandErrorRespond(fifo_, MX_ERR_IO, txnid);
                 }
                 continue;
             }
@@ -302,7 +307,7 @@ mx_status_t BlockServer::Serve(block_protocol_t* proto) {
             case BLOCKIO_CLOSE_VMO: {
                 tree_.erase(*iobuf);
                 if (wants_reply) {
-                    OutOfBandErrorRespond(fifo, MX_OK, txnid);
+                    OutOfBandErrorRespond(fifo_, MX_OK, txnid);
                 }
                 break;
             }
@@ -322,9 +327,9 @@ BlockServer::~BlockServer() {
 
 void BlockServer::ShutDown() {
     mxtl::AutoLock server_lock(&server_lock_);
-    // Explicitly close the fifo so the server, when done dispatching
-    // requests, will stop reading and return.
-    fifo_.reset();
+    // Identify that the server should stop reading and return,
+    // implicitly closing the fifo.
+    fifo_.signal(0, kSignalFifoTerminate);
 }
 
 // C declarations
