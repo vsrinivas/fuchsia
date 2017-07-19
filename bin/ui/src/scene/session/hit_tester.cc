@@ -83,6 +83,9 @@ void HitTester::AccumulateHitsLocal(Node* node) {
 }
 
 void HitTester::AccumulateHitsInner(Node* node) {
+  if (node->clip_to_self() && !IsRayWithinPartsInner(node, ray_info_->ray))
+    return;
+
   float distance;
   if (tag_info_ && node->GetIntersection(ray_info_->ray, &distance)) {
     tag_info_->ReportIntersection(distance);
@@ -90,6 +93,41 @@ void HitTester::AccumulateHitsInner(Node* node) {
 
   ForEachDirectDescendantFrontToBack(
       *node, [this](Node* node) { AccumulateHitsOuter(node); });
+}
+
+bool HitTester::IsRayWithinPartsInner(Node* node, const escher::ray4& ray) {
+  return ForEachPartFrontToBackUntilTrue(*node, [&ray](Node* node) {
+    return IsRayWithinClippedContentOuter(node, ray);
+  });
+}
+
+bool HitTester::IsRayWithinClippedContentOuter(Node* node,
+                                               const escher::ray4& ray) {
+  if (node->transform().IsIdentity()) {
+    return IsRayWithinClippedContentInner(node, ray);
+  }
+
+  auto inverse_transform =
+      glm::inverse(static_cast<escher::mat4>(node->transform()));
+  escher::ray4 local_ray = inverse_transform * ray;
+  return IsRayWithinClippedContentInner(node, local_ray);
+}
+
+bool HitTester::IsRayWithinClippedContentInner(Node* node,
+                                               const escher::ray4& ray) {
+  float distance;
+  if (node->GetIntersection(ray, &distance))
+    return true;
+
+  if (IsRayWithinPartsInner(node, ray))
+    return true;
+
+  if (node->clip_to_self())
+    return false;
+
+  return ForEachChildAndImportFrontToBackUntilTrue(*node, [&ray](Node* node) {
+    return IsRayWithinClippedContentOuter(node, ray);
+  });
 }
 
 }  // namespace scene

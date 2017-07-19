@@ -65,7 +65,8 @@ class Node : public Resource {
   void RemoveImport(Import* import) override;
 
   // Computes the closest point of intersection between the ray's origin
-  // and the front side of the node's own content, excluding its descendents.
+  // and the front side of the node's own content, excluding its descendants.
+  // Does not apply clipping.
   //
   // |out_distance| is set to the distance from the ray's origin to the
   // closest point of intersection in multiples of the ray's direction vector.

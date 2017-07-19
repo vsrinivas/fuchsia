@@ -261,6 +261,40 @@ TEST_F(HitTestTest, SuppressNode25FromNode1) {
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
+TEST_F(HitTestTest, Clipping) {
+  // Try to hit 10 from the top left corner, with clipping applied
+  // to a rectangle added as a part in 25, which contains 10.
+  // We move this part around and turn clipping on and off to see what happens
+  // when the clip is intersected or not.
+  Apply(NewCreateEntityNodeOp(11));
+  Apply(NewAddPartOp(3, 11));
+  Apply(NewCreateShapeNodeOp(12));
+  Apply(NewSetShapeOp(12, 20));
+  Apply(NewAddChildOp(11, 12));
+
+  // Initially, position the clip shape someplace far away from the content.
+  // This causes 10 to be outside of its containing clip region.
+  Apply(NewSetTranslationOp(11, (float[3]){20.f, 20.f, 0.f}));
+  Apply(NewSetClipOp(3, 0, true));
+  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector, {});
+
+  // Now disable clipping and try again.
+  Apply(NewSetClipOp(3, 0, false));
+  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+              {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
+
+  // Move the clip shape so it covers the part of 10 that we're hitting
+  // and reenable clipping.
+  Apply(NewSetTranslationOp(11, (float[3]){-4.f, -4.f, 0.f}));
+  Apply(NewSetClipOp(3, 0, true));
+  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+              {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
+              {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
+}
+
 }  // namespace test
 }  // namespace scene
 }  // namespace mozart

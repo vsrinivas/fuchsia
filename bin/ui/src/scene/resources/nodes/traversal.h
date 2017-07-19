@@ -61,5 +61,48 @@ void ForEachDirectDescendantFrontToBack(const Node& node,
   ForEachPartFrontToBack(node, func);
 }
 
+//
+// Traversals with early termination once the functor returns true.
+//
+// The functor's signature must be |bool(const Node* node)|.
+//
+
+template <typename Callable>
+bool ForEachPartFrontToBackUntilTrue(const Node& node, const Callable& func) {
+  // Process most recently added parts first.
+  for (auto it = node.parts().rbegin(); it != node.parts().rend(); ++it) {
+    if (func(it->get()))
+      return true;
+  }
+  return false;
+}
+
+template <typename Callable>
+bool ForEachChildFrontToBackUntilTrue(const Node& node, const Callable& func) {
+  // Process most recently added children first.
+  for (auto it = node.children().rbegin(); it != node.children().rend(); ++it) {
+    if (func(it->get()))
+      return true;
+  }
+  return false;
+}
+
+template <typename Callable>
+bool ForEachImportFrontToBackUntilTrue(const Node& node, const Callable& func) {
+  // Process most recently added imports first.
+  for (auto it = node.imports().rbegin(); it != node.imports().rend(); ++it) {
+    if (func(static_cast<Node*>((*it)->delegate())))
+      return true;
+  }
+  return false;
+}
+
+template <typename Callable>
+bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node,
+                                               const Callable& func) {
+  return ForEachChildFrontToBackUntilTrue(node, func) ||
+         ForEachImportFrontToBackUntilTrue(node, func);
+}
+
 }  // namespace scene
 }  // namespace mozart
