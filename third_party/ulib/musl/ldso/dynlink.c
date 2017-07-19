@@ -1078,6 +1078,37 @@ __NO_SAFESTACK static void trace_load(struct dso* p) {
     ++seqno;
 }
 
+__NO_SAFESTACK static void do_tls_layout(struct dso* p,
+                                         char* tls_buffer, int n_th) {
+    if (p->tls.size == 0)
+        return;
+
+    p->tls_id = ++tls_cnt;
+    tls_align = MAXP2(tls_align, p->tls.align);
+#ifdef TLS_ABOVE_TP
+    p->tls.offset =
+        tls_offset +
+        ((tls_align - 1) & -(tls_offset + (uintptr_t)p->tls.image));
+    tls_offset += p->tls.size;
+#else
+    tls_offset += p->tls.size + p->tls.align - 1;
+    tls_offset -= (tls_offset + (uintptr_t)p->tls.image) & (p->tls.align - 1);
+    p->tls.offset = tls_offset;
+#endif
+
+    if (tls_buffer != NULL) {
+        p->new_dtv = (void*)(-sizeof(size_t) &
+                             (uintptr_t)(tls_buffer + sizeof(size_t)));
+        p->new_tls = (void*)(p->new_dtv + n_th * (tls_cnt + 1));
+    }
+
+    if (tls_tail)
+        tls_tail->next = &p->tls;
+    else
+        libc.tls_head = &p->tls;
+    tls_tail = &p->tls;
+}
+
 __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
                                                    const char* name,
                                                    int rtld_mode,
@@ -1156,27 +1187,8 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
     p->name = (void*)&p->buf[ndeps];
     memcpy(p->name, name, namelen);
     format_build_id_log(p, p->name + namelen, p->name, namelen);
-    char* tls_buffer = p->name + namelen + build_id_log_len;
-    if (p->tls.image) {
-        p->tls_id = ++tls_cnt;
-        tls_align = MAXP2(tls_align, p->tls.align);
-#ifdef TLS_ABOVE_TP
-        p->tls.offset = tls_offset + ((tls_align - 1) & -(tls_offset + (uintptr_t)p->tls.image));
-        tls_offset += p->tls.size;
-#else
-        tls_offset += p->tls.size + p->tls.align - 1;
-        tls_offset -= (tls_offset + (uintptr_t)p->tls.image) & (p->tls.align - 1);
-        p->tls.offset = tls_offset;
-#endif
-        p->new_dtv = (void*)(-sizeof(size_t) &
-                             (uintptr_t)(tls_buffer + sizeof(size_t)));
-        p->new_tls = (void*)(p->new_dtv + n_th * (tls_cnt + 1));
-        if (tls_tail)
-            tls_tail->next = &p->tls;
-        else
-            libc.tls_head = &p->tls;
-        tls_tail = &p->tls;
-    }
+    if (runtime)
+        do_tls_layout(p, p->name + namelen + build_id_log_len, n_th);
 
     tail->next = p;
     p->prev = tail;
@@ -1244,11 +1256,6 @@ __NO_SAFESTACK static void load_preload(char* s) {
         load_library(s, 0, NULL, &p);
         *z = tmp;
     }
-}
-
-__NO_SAFESTACK static void make_global(struct dso* p) {
-    for (; p; p = p->next)
-        p->global = 1;
 }
 
 __NO_SAFESTACK NO_ASAN static void do_mips_relocs(struct dso* p, size_t* got) {
@@ -1636,12 +1643,26 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     /* Initial dso chain consists only of the app. */
     head = tail = &app;
 
-    /* Load preload/needed libraries, add their symbols to the global
-     * namespace, and perform all remaining relocations. */
+    // Load preload/needed libraries, add their symbols to the global
+    // namespace, and perform all remaining relocations.
+    //
+    // Do TLS layout for DSOs after loading, but before relocation.
+    // This needs to be after the main program's TLS setup (just
+    // above), which has to be the first since it can use static TLS
+    // offsets (local-exec TLS model) that are presumed to start at
+    // the beginning of the static TLS block.  But we may have loaded
+    // some libraries (sanitizer runtime) before that, so we don't do
+    // each library's TLS setup directly in load_library_vmo.
+
     if (ld_preload)
         load_preload(ld_preload);
     load_deps(&app);
-    make_global(&app);
+
+    app.global = 1;
+    for (struct dso* p = app.next; p != NULL; p = p->next) {
+        p->global = 1;
+        do_tls_layout(p, NULL, 0);
+    }
 
     for (size_t i = 0; app.dynv[i].d_tag; i++) {
         if (!DT_DEBUG_INDIRECT && app.dynv[i].d_tag == DT_DEBUG)
