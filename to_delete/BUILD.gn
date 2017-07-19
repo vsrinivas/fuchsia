@@ -2,21 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("netconnector") {
-  deps = [
-    ":examples",
-    ":services",
-  ]
-}
+import("//packages/package.gni")
 
-group("examples") {
-  deps = [
-    "//apps/netconnector/examples/netconnector_example",
-  ]
-}
+package("netconnector") {
+  app = true
 
-group("services") {
   deps = [
-    "//apps/netconnector/src",
+    "//apps/netconnector/src:netconnector",
   ]
+
+  binaries = [ {
+        name = "netconnector"
+      } ]
+
+  resources = [ {
+        path = rebase_path("src/netconnector.config")
+        dest = "netconnector/netconnector.config"
+      } ]
 }

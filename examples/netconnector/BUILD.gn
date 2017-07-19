@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("netconnector_example") {
+import("//packages/package.gni")
+
+executable("netconnector_example_bin") {
+  output_name = "netconnector_example"
+
   sources = [
     "main.cc",
     "netconnector_example_impl.cc",
@@ -18,4 +22,16 @@ executable("netconnector_example") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+}
+
+package("netconnector_example") {
+  app = true
+
+  deps = [
+    ":netconnector_example_bin",
+  ]
+
+  binaries = [ {
+        name = "netconnector_example"
+      } ]
 }
