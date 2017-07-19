@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "command_buffer.h"
-#include "address_space.h"
 #include "engine_command_streamer.h"
 #include "instructions.h"
 #include "msd_intel_context.h"
@@ -91,7 +90,6 @@ bool CommandBuffer::InitializeResources(
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
 {
-    TRACE_DURATION("magma", "InitializeResources");
     if (!magma::CommandBuffer::initialized())
         return DRETF(false, "base command buffer not initialized");
 
@@ -110,13 +108,6 @@ bool CommandBuffer::InitializeResources(
         exec_resources_.emplace_back(
             ExecResource{buffers[i], resource(i).offset(), resource(i).length()});
         buffers[i]->IncrementInflightCounter();
-        {
-            TRACE_DURATION("magma", "PinPages");
-            uint64_t num_pages = AddressSpace::GetMappedSize(resource(i).length()) >> PAGE_SHIFT;
-            DASSERT(magma::is_page_aligned(resource(i).offset()));
-            uint64_t page_offset = resource(i).offset() >> PAGE_SHIFT;
-            buffers[i]->platform_buffer()->PinPages(page_offset, num_pages);
-        }
     }
 
     wait_semaphores_ = std::move(wait_semaphores);
