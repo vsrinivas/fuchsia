@@ -27,7 +27,6 @@ package("mozart_tests") {
   testonly = true
 
   deps = [
-    "services/composition/cpp:apptests",
     "services/geometry/cpp:apptests",
     "src/input_reader/tests",
     "src/scene/tests",
@@ -35,9 +34,6 @@ package("mozart_tests") {
   ]
 
   tests = [
-    {
-      name = "compositor_services_apptests"
-    },
     {
       name = "scene_manager_apptests"
     },

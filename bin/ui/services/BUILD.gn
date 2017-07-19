@@ -4,10 +4,6 @@
 
 group("services") {
   public_deps = [
-    "buffers",
-    "buffers/cpp",
-    "composition",
-    "composition/cpp",
     "geometry",
     "geometry/cpp",
     "images2",
