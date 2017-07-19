@@ -5,6 +5,7 @@
 /gdb
 /linux64/bootserver
 /linux64/bootserver.stamp
+/linux64/clang.stamp
 /linux64/cmake.stamp
 /linux64/._go
 /linux64/gdb
@@ -25,9 +26,9 @@
 /linux64/qemu.stamp
 /linux64/rust.stamp
 /linux64/sysroot.stamp
-/linux64/toolchain.stamp
 /mac64/bootserver
 /mac64/bootserver.stamp
+/mac/clang.stamp
 /mac/cmake.stamp
 /mac/gdb
 /mac/gdb.stamp
@@ -46,7 +47,6 @@
 /mac/qemu
 /mac/qemu.stamp
 /mac/rust.stamp
-/mac/toolchain.stamp
 /qemu
 /rust
 /sysroot

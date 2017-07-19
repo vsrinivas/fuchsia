@@ -65,8 +65,8 @@ function download_gn() {
   download_tool gn "gn/${HOST_PLATFORM}"
 }
 
-function download_toolchain() {
-  download_host_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
+function download_clang() {
+  download_cipd_package clang clang "${SCRIPT_ROOT}/toolchain/clang+llvm-${HOST_TRIPLE}"
 }
 
 function download_rust() {
@@ -101,7 +101,7 @@ function download_gdb() {
 function download_all_default() {
   download_ninja
   download_gn
-  download_toolchain
+  download_clang
   download_rust
   download_go
   download_godepfile
@@ -131,8 +131,8 @@ case ${i} in
     has_arguments="true"
     shift
     ;;
-  --toolchain)
-    download_toolchain
+  --clang)
+    download_clang
     has_arguments="true"
     shift
     ;;
