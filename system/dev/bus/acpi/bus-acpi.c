@@ -7,8 +7,10 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/acpi.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
 
@@ -235,20 +237,56 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
     char name[5] = { 0 };
     memcpy(name, &info->Name, sizeof(name) - 1);
 
+    mx_device_prop_t props[4];
+    int propcount = 0;
+
     // Publish HID in device props
     const char* hid = (const char*)info->HardwareId.String;
-    mx_device_prop_t props[2];
     if ((info->Valid & ACPI_VALID_HID) &&
             (info->HardwareId.Length > 0) &&
-            (info->HardwareId.Length <= sizeof(uint64_t))) {
-        props[0].id = BIND_ACPI_HID_0_3;
-        props[0].value = htobe32(*((uint32_t*)(hid)));
-        props[1].id = BIND_ACPI_HID_4_7;
-        props[1].value = htobe32(*((uint32_t*)(hid + 4)));
-    } else {
-        xprintf("acpi-bus: device %s has no HID\n", name);
-        hid = NULL;
+            ((info->HardwareId.Length - 1) <= sizeof(uint64_t))) {
+        props[propcount].id = BIND_ACPI_HID_0_3;
+        props[propcount++].value = htobe32(*((uint32_t*)(hid)));
+        props[propcount].id = BIND_ACPI_HID_4_7;
+        props[propcount++].value = htobe32(*((uint32_t*)(hid + 4)));
     }
+
+    // Publish the first CID in device props
+    const char* cid = (const char*)info->CompatibleIdList.Ids[0].String;
+    if ((info->Valid & ACPI_VALID_CID) &&
+            (info->CompatibleIdList.Count > 0) &&
+            ((info->CompatibleIdList.Ids[0].Length - 1) <= sizeof(uint64_t))) {
+        props[propcount].id = BIND_ACPI_CID_0_3;
+        props[propcount++].value = htobe32(*((uint32_t*)(cid)));
+        props[propcount].id = BIND_ACPI_CID_4_7;
+        props[propcount++].value = htobe32(*((uint32_t*)(cid + 4)));
+    }
+
+#if TRACE
+    printf("acpi-bus: got device %s\n", name);
+    if (info->Valid & ACPI_VALID_HID) {
+        printf("     HID=%s\n", info->HardwareId.String);
+    } else {
+        printf("     HID=invalid\n");
+    }
+    if (info->Valid & ACPI_VALID_ADR) {
+        printf("     ADR=0x%" PRIx64 "\n", (uint64_t)info->Address);
+    } else {
+        printf("     ADR=invalid\n");
+    }
+    if (info->Valid & ACPI_VALID_CID) {
+        printf("    CIDS=%d\n", info->CompatibleIdList.Count);
+        for (uint i = 0; i < info->CompatibleIdList.Count; i++) {
+            printf("     [%u] %s\n", i, info->CompatibleIdList.Ids[i].String);
+        }
+    } else {
+        printf("     CID=invalid\n");
+    }
+    printf("    devprops:\n");
+    for (int i = 0; i < propcount; i++) {
+        printf("     [%d] id=0x%08x value=0x%08x\n", i, props[i].id, props[i].value);
+    }
+#endif
 
     // TODO: publish pciroot and other acpi devices in separate devhosts?
 
@@ -266,24 +304,18 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
         .ops = &acpi_device_proto,
         .proto_id = MX_PROTOCOL_ACPI,
         .proto_ops = &acpi_proto,
-        .props = (hid != NULL) ? props : NULL,
-        .prop_count = (hid != NULL) ? countof(props) : 0,
+        .props = (propcount > 0) ? props : NULL,
+        .prop_count = propcount,
     };
 
     mx_status_t status;
     if ((status = device_add(parent, &args, &dev->mxdev)) != MX_OK) {
-        xprintf("acpi-bus: error %d in device_add, parent=%s(%p) hid=%s\n", status, device_get_name(parent), parent, hid);
+        xprintf("acpi-bus: error %d in device_add, parent=%s(%p)\n", status, device_get_name(parent), parent);
         free(dev);
         return NULL;
     } else {
-        if (hid) {
-            xprintf("acpi-bus: published device %s(%p), parent=%s(%p), hid=%s props=0x%x,0x%x handle=%p\n",
-                    name, dev, device_get_name(parent), parent,
-                    hid, props[0].value, props[1].value, (void*)dev->ns_node);
-        } else {
-            xprintf("acpi-bus: published device %s(%p), parent=%s(%p), handle=%p\n",
-                    name, dev, device_get_name(parent), parent, (void*)dev->ns_node);
-        }
+        xprintf("acpi-bus: published device %s(%p), parent=%s(%p), handle=%p\n",
+                name, dev, device_get_name(parent), parent, (void*)dev->ns_node);
         return dev->mxdev;
     }
 }
