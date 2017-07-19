@@ -393,75 +393,6 @@ static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
     PrintVmoDumpHeader(/* handles */ false);
 }
 
-class JobDumper final : public JobEnumerator {
-public:
-    JobDumper(mx_koid_t self) : self_(self) {}
-    JobDumper(const JobDumper&) = delete;
-
-    // Returns true if this object has ever printed anything.
-    bool printed() const { return printed_; }
-
-private:
-    // This is called by JobDispatcher::EnumerateChildren() which acquires JobDispatcher::lock_
-    // first, making it safe to access job->process_count_ etc, but there's no reasonable way to
-    // express this fact via thread safety annotations so we disable the analysis for this function.
-    bool OnJob(JobDispatcher* job) final TA_NO_THREAD_SAFETY_ANALYSIS {
-        printf("- %" PRIu64 " child job (%" PRIu32 " processes)\n",
-            job->get_koid(), job->process_count());
-        printed_ = true;
-        return true;
-    }
-
-    bool OnProcess(ProcessDispatcher* proc) final {
-        auto id = proc->get_koid();
-        if (id != self_) {
-            char pname[MX_MAX_NAME_LEN];
-            proc->get_name(pname);
-            printf("- %" PRIu64 " proc [%s]\n", id, pname);
-            printed_ = true;
-        }
-        return true;
-    }
-
-    const mx_koid_t self_;
-    bool printed_ = false;
-};
-
-void DumpJobTreeForProcess(mx_koid_t id) {
-    auto pd = ProcessDispatcher::LookupProcessById(id);
-    if (!pd) {
-        printf("process not found!\n");
-        return;
-    }
-
-    auto job = pd->job();
-    if (!job) {
-        printf("process has no job!!\n");
-        return;
-    }
-
-    char pname[MX_MAX_NAME_LEN];
-    pd->get_name(pname);
-
-    printf("process %" PRIu64 " [%s]\n", id, pname);
-    printf("in job [%" PRIu64 "]", job->get_koid());
-
-    auto parent = job;
-    while (true) {
-        parent = parent->parent();
-        if (!parent)
-            break;
-        printf("-->[%" PRIu64 "]", parent->get_koid());
-    }
-    printf("\n");
-
-    JobDumper dumper(id);
-    job->EnumerateChildren(&dumper, /* recurse */ true);
-    if (!dumper.printed()) {
-        printf("no jobs/processes\n");
-    }
-}
-
 void KillProcess(mx_koid_t id) {
     // search the process list and send a kill if found
     auto pd = ProcessDispatcher::LookupProcessById(id);
@@ -836,7 +767,6 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("                     : dump process/all/hidden VMOs\n");
         printf("                 -u? : fix all sizes to the named unit\n");
         printf("                       where ? is one of [BkMGTPE]\n");
-        printf("%s jb   <pid>        : list job tree\n", argv[0].str);
         printf("%s kill <pid>        : kill process\n", argv[0].str);
         printf("%s asd  <pid>|kernel : dump process/kernel address space\n",
                argv[0].str);
@@ -895,10 +825,6 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         } else {
             DumpProcessVmObjects(argv[2].u, format_unit);
         }
-    } else if (strcmp(argv[1].str, "jb") == 0) {
-        if (argc < 3)
-            goto usage;
-        DumpJobTreeForProcess(argv[2].u);
     } else if (strcmp(argv[1].str, "kill") == 0) {
         if (argc < 3)
             goto usage;
