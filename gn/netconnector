@@ -2,23 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//apps/netconnector"
-    ],
-    "resources": [
-        {
-            "bootfs_path": "data/netconnector/netconnector.config",
-            "file": "apps/netconnector/src/netconnector.config"
-        }
-    ],
-    "binaries": [
-        {
-            "binary": "netconnector",
-            "bootfs_path": "apps/netconnector"
-        },
-        {
-            "binary": "netconnector_example",
-            "bootfs_path": "apps/netconnector_example"
-        }
-    ]
+    "packages": {
+        "netconnector_example": "//apps/netconnector/examples/netconnector_example",
+        "netconnector": "//apps/netconnector"
+    }
 }
