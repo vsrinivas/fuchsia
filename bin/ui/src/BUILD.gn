@@ -4,7 +4,6 @@
 
 group("src") {
   public_deps = [
-    "compositor",
     "ime",
     "input",
     "launch",

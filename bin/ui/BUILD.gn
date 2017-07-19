@@ -105,29 +105,6 @@ package("view_manager_service") {
       } ]
 }
 
-package("compositor_service") {
-  archive = true
-
-  deps = [
-    "src/compositor",
-  ]
-
-  binaries = [ {
-        name = "compositor_service"
-        dest = "app"
-      } ]
-
-  resources = [ {
-        path = rebase_path("src/compositor/compositor.config")
-        dest = "compositor.config"
-      } ]
-
-  meta = [ {
-        path = rebase_path("src/compositor/meta/sandbox")
-        dest = "sandbox"
-      } ]
-}
-
 package("jank_view") {
   archive = true
 
