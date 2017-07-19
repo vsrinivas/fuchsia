@@ -6,7 +6,7 @@ group("services") {
   public_deps = [
     "geometry",
     "geometry/cpp",
-    "images2",
+    "images",
     "input",
     "input/cpp",
     "presentation",

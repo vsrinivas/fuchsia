@@ -7,9 +7,9 @@ module mozart2;
 import "apps/mozart/services/scene/nodes.fidl";
 import "apps/mozart/services/scene/shapes.fidl";
 import "apps/mozart/services/scene/types.fidl";
-import "apps/mozart/services/images2/image_info.fidl";
-import "apps/mozart/services/images2/image_pipe.fidl";
-import "apps/mozart/services/images2/memory_type.fidl";
+import "apps/mozart/services/images/image_info.fidl";
+import "apps/mozart/services/images/image_pipe.fidl";
+import "apps/mozart/services/images/memory_type.fidl";
 
 // These are all of the types of resources that can be created within a
 // |Session|.

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import "apps/mozart/examples/shadertoy/services/shadertoy.fidl";
-import "apps/mozart/services/images2/image_pipe.fidl";
+import "apps/mozart/services/images/image_pipe.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // ShadertoyFactory provides a number of methods for creating |Shadertoy|

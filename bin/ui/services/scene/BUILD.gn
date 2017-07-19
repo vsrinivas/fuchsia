@@ -18,7 +18,7 @@ fidl("scene") {
 
   public_deps = [
     "//apps/mozart/services/geometry",
-    "//apps/mozart/services/images2",
+    "//apps/mozart/services/images",
     "//apps/mozart/services/presentation:presentation_info",
   ]
 }

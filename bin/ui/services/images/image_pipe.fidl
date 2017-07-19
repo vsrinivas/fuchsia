@@ -1,7 +1,7 @@
 module mozart2;
 
-import "apps/mozart/services/images2/image_info.fidl";
-import "apps/mozart/services/images2/memory_type.fidl";
+import "apps/mozart/services/images/image_info.fidl";
+import "apps/mozart/services/images/memory_type.fidl";
 import "apps/mozart/services/presentation/presentation_info.fidl";
 
 // ImagePipe is a mechanism for streaming shared images between a producer

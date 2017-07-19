@@ -9,7 +9,7 @@
 
 #include <deque>
 
-#include "apps/mozart/services/images2/image_pipe.fidl.h"
+#include "apps/mozart/services/images/image_pipe.fidl.h"
 #include "apps/mozart/src/scene/acquire_fence.h"
 #include "apps/mozart/src/scene/resources/image.h"
 #include "apps/mozart/src/scene/resources/image_base.h"

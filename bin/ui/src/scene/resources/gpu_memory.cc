@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 
-#include "apps/mozart/services/images2/memory_type.fidl.h"
+#include "apps/mozart/services/images/memory_type.fidl.h"
 
 namespace mozart {
 namespace scene {

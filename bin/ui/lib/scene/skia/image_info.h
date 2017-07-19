@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/images2/image_info.fidl.h"
+#include "apps/mozart/services/images/image_info.fidl.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 
 namespace mozart {

@@ -4,8 +4,6 @@
 
 #include "apps/mozart/src/scene/resources/host_memory.h"
 
-//#include "apps/mozart/services/images2/memory_type.fidl.h"
-
 namespace mozart {
 namespace scene {
 

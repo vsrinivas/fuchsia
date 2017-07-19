@@ -6,7 +6,7 @@
 
 #include "apps/mozart/examples/shadertoy/glm_hack.h"
 #include "apps/mozart/examples/shadertoy/services/shadertoy.fidl.h"
-#include "apps/mozart/services/images2/image_pipe.fidl.h"
+#include "apps/mozart/services/images/image_pipe.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "escher/escher.h"
 #include "lib/ftl/memory/ref_counted.h"

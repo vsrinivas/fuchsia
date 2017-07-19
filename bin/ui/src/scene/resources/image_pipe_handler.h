@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/images2/image_pipe.fidl.h"
+#include "apps/mozart/services/images/image_pipe.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace mozart {

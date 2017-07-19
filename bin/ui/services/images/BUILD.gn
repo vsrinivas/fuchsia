@@ -4,7 +4,7 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("images2") {
+fidl("images") {
   sources = [
     "image_info.fidl",
     "image_pipe.fidl",
