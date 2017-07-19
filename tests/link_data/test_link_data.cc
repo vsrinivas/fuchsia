@@ -275,9 +275,9 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   // the story stops itself when it reaches 11 counter increments.
   void TestStory1_Cycle(const int round) {
     // TODO(mesch): We want to test more decisively here.
-    if (round == 1) {
+    if (round == 0) {
       story1_cycle1_.Pass();
-    } else if (round == 2) {
+    } else if (round == 1) {
       story1_cycle2_.Pass();
     }
 
