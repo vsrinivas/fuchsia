@@ -35,7 +35,6 @@ executable("shadertoy") {
     "//application/lib/app",
     "//apps/mozart/services/scene",
     "//apps/mozart/lib/scene:session_helpers",
-    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",
     "//apps/tracing/lib/trace:provider",
     "//lib/escher/escher",
@@ -66,7 +65,6 @@ executable("shadertoy_client") {
     "//application/lib/app",
     "//apps/mozart/lib/scene:client",
     "//apps/mozart/lib/scene:session_helpers",
-    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",
     "//lib/fidl/cpp/bindings",
   ]

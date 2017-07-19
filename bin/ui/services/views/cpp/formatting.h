@@ -7,7 +7,6 @@
 
 #include <iosfwd>
 
-#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/geometry/cpp/formatting.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/formatting.h"

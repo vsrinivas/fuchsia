@@ -31,7 +31,6 @@
 #include "apps/mozart/lib/scene/client/session.h"
 #include "apps/mozart/lib/scene/session_helpers.h"
 #include "apps/mozart/lib/scene/types.h"
-#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/scene/ops.fidl.h"
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"

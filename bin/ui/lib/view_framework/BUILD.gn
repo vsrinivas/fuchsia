@@ -13,8 +13,6 @@ source_set("view_framework") {
     "//application/services",
     "//apps/mozart/lib/scene:client",
     "//apps/mozart/lib/scene:session_helpers",
-    "//apps/mozart/services/composition",
-    "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
     "//apps/mozart/services/scene",
     "//apps/mozart/services/views",

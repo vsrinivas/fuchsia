@@ -9,8 +9,6 @@ source_set("internal") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/composition",
-    "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",

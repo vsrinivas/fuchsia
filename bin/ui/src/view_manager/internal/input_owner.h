@@ -5,7 +5,6 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 
-#include "apps/mozart/services/composition/hit_tests.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 

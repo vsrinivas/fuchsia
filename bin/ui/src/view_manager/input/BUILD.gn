@@ -12,8 +12,6 @@ source_set("input") {
 
   public_deps = [
     "//application/lib/app",
-    "//apps/mozart/services/composition",
-    "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/input",
     "//apps/mozart/services/input/cpp",

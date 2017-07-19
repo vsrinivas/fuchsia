@@ -13,7 +13,6 @@ executable("hello_scene_manager") {
     "//application/lib/app",
     "//apps/mozart/lib/scene:client",
     "//apps/mozart/lib/scene:session_helpers",
-    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",
     "//apps/mozart/src/scene/tests:util",
     "//lib/escher/escher",

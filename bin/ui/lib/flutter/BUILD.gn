@@ -11,7 +11,6 @@ dart_package("flutter") {
 
   deps = [
     "//application/lib/app/dart",
-    "//apps/mozart/services/composition:composition_dart",
     "//apps/mozart/services/geometry:geometry_dart",
     "//apps/mozart/services/views:views_dart",
     "//lib/flutter/packages/flutter",

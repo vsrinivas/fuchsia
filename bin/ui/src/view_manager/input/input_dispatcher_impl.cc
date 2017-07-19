@@ -6,7 +6,6 @@
 
 #include <queue>
 
-#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
