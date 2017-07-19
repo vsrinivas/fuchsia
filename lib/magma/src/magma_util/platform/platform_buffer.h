@@ -10,6 +10,7 @@
 
 namespace magma {
 
+// In general only the const functions in this class must be implemented in a threadsafe way
 class PlatformBuffer {
 public:
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size, const char* name);
@@ -19,13 +20,13 @@ public:
     virtual ~PlatformBuffer() {}
 
     // returns the size of the buffer
-    virtual uint64_t size() = 0;
+    virtual uint64_t size() const = 0;
 
     // returns a unique, immutable id for the underlying memory object
-    virtual uint64_t id() = 0;
+    virtual uint64_t id() const = 0;
 
     // on success, duplicate of the underlying handle which is owned by the caller
-    virtual bool duplicate_handle(uint32_t* handle_out) = 0;
+    virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 

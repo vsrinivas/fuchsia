@@ -146,11 +146,11 @@ public:
     }
 
     // PlatformBuffer implementation
-    uint64_t size() override { return size_; }
+    uint64_t size() const override { return size_; }
 
-    uint64_t id() override { return koid_; }
+    uint64_t id() const override { return koid_; }
 
-    bool duplicate_handle(uint32_t* handle_out) override
+    bool duplicate_handle(uint32_t* handle_out) const override
     {
         mx::vmo duplicate;
         mx_status_t status = vmo_.duplicate(MX_RIGHT_SAME_RIGHTS, &duplicate);
