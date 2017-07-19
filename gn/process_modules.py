@@ -68,7 +68,8 @@ class Amalgamation:
         # and remove.
         for label in config.get("labels", []):
             self.deps.append(label)
-        for b in config.get("binaries", []):
+        binaries_and_drivers = config.get("binaries", []) + config.get("drivers", [])
+        for b in binaries_and_drivers:
             if b["binary"] in self.omit_files:
                 continue
             file = {}
@@ -76,7 +77,7 @@ class Amalgamation:
             file["bootfs_path"] = b["bootfs_path"]
             file["default"] = b.has_key("default")
             self.system.add_file(file)
-        for d in config.get("drivers", []):
+        for d in config.get("early_boot", []):
             if d["binary"] in self.omit_files:
                 continue
             file = {}

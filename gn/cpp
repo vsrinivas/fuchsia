@@ -1,5 +1,5 @@
 {
-    "drivers": [
+    "early_boot": [
         {
             "binary": "sysroot/lib/libc++.so.2",
             "bootfs_path": "lib/libc++.so.2"
