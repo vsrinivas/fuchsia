@@ -1,4 +1,7 @@
 {
+    "languages": [
+        "dart"
+    ],
     "imports": [
         "calendar",
         "chat",
@@ -7,13 +10,10 @@
         "music",
         "video"
     ],
-    "labels": [
-        "//apps/modules/common",
-        "//apps/modules/common:test"
-    ],
-    "languages": [
-        "dart"
-    ],
+    "packages": {
+        "modules_tests": "//apps/modules/common:modules_tests",
+        "modules": "//apps/modules/common:modules"
+    },
     "components": [
         "apps/modules/common/modules/gallery/gallery_component.json",
         "apps/modules/common/modules/interactive_receipt/interactive_receipt_component.json",
@@ -25,87 +25,5 @@
         "apps/modules/common/modules/youtube_video/youtube_video_component.json",
         "apps/modules/music/modules/music_album/music_album_component.json",
         "apps/modules/music/modules/music_artist/music_artist_component.json"
-    ],
-    "binaries": [
-        {
-            "binary": "gen/apps/modules/common/modules/chess/chess.flx",
-            "bootfs_path": "apps/chess"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/color/color.flx",
-            "bootfs_path": "apps/color"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/image/image.flx",
-            "bootfs_path": "apps/image"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/gallery/gallery.flx",
-            "bootfs_path": "apps/gallery"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/hotel_confirmation/hotel_confirmation.flx",
-            "bootfs_path": "apps/hotel_confirmation"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/interactive_receipt/interactive_receipt.flx",
-            "bootfs_path": "apps/interactive_receipt"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/location_details/location_details.flx",
-            "bootfs_path": "apps/location_details"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/map/map.flx",
-            "bootfs_path": "apps/map"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/weather_forecast/weather_forecast.flx",
-            "bootfs_path": "apps/weather_forecast"
-        },
-        {
-            "binary": "weather_agent.dartx",
-            "bootfs_path": "apps/weather_agent"
-        },
-        {
-            "binary": "location_agent.dartx",
-            "bootfs_path": "apps/location_agent"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/travel_info/travel_info.flx",
-            "bootfs_path": "apps/travel_info"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/usps/usps.flx",
-            "bootfs_path": "apps/usps"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/youtube_related_videos/youtube_related_videos.flx",
-            "bootfs_path": "apps/youtube_related_videos"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/youtube_story/youtube_story.flx",
-            "bootfs_path": "apps/youtube_story"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/youtube_thumbnail/youtube_thumbnail.flx",
-            "bootfs_path": "apps/youtube_thumbnail"
-        },
-        {
-            "binary": "gen/apps/modules/common/modules/youtube_video/youtube_video.flx",
-            "bootfs_path": "apps/youtube_video"
-        }
-    ],
-    "resources": [
-        {
-            "default": "true",
-            "bootfs_path": "data/modules/config.json",
-            "file": "apps/modules/common/config.json"
-        },
-        {
-            "default": "true",
-            "bootfs_path": "data/modules/contacts.json",
-            "file": "apps/modules/chat/agents/content_provider/assets/contacts.json"
-        }
     ]
 }
