@@ -2,7 +2,7 @@
   "tests":[
     {
       "name":"modular_unittests",
-      "exec":"/system/tests/modular_unittests"
+      "exec":"/system/test/modular_unittests"
     },
     {
       "name":"user_shell",
