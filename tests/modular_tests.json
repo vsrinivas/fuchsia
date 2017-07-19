@@ -14,6 +14,18 @@
       }
     },
     {
+      "name":"suggestion",
+      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=suggestion_test_user_shell --story_shell=dev_story_shell",
+      "copy":{
+        "/system/apps/modular_tests":[
+          "suggestion_proposal_test_module"
+        ],
+        "/system/apps":[
+          "suggestion_test_user_shell"
+        ]
+      }
+    },
+    {
       "name":"link_data",
       "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_link_data --story_shell=dev_story_shell",
       "copy":{
