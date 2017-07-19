@@ -168,9 +168,13 @@ static int xhci_irq_thread(void* arg) {
     xprintf("xhci_irq_thread start\n");
 
     // xhci_start will block, so do this part here instead of in usb_xhci_bind
-    xhci_start(xhci);
+    mx_status_t status = xhci_start(xhci);
+    if (status != MX_OK) {
+        free(xhci);
+        return status;
+    }
 
-    device_add_args_t args = {
+   device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "xhci",
         .ctx = xhci,
@@ -179,7 +183,7 @@ static int xhci_irq_thread(void* arg) {
         .proto_ops = &xhci_hci_protocol,
     };
 
-    mx_status_t status = device_add(xhci->parent, &args, &xhci->mxdev);
+    status = device_add(xhci->parent, &args, &xhci->mxdev);
     if (status != MX_OK) {
         free(xhci);
         return status;
@@ -240,14 +244,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     if (status != MX_OK) {
         printf("usb_xhci_bind could not find bar\n");
         status = MX_ERR_INTERNAL;
-        goto error_return;
-    }
-
-    // enable bus master
-    status = pci_enable_bus_master(&pci, true);
-    if (status < 0) {
-        printf("usb_xhci_bind enable_bus_master failed %d\n", status);
-        goto error_return;
+         goto error_return;
     }
 
     // select our IRQ mode
@@ -278,6 +275,8 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     // stash this here for the startup thread to call device_add() with
     xhci->parent = dev;
+    // used for enabling bus mastering
+    memcpy(&xhci->pci, &pci, sizeof(pci_protocol_t));
 
     status = xhci_init(xhci, mmio);
     if (status != MX_OK) {
