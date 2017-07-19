@@ -7,11 +7,9 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 fi
 
-grubdisk="$FUCHSIA_OUT_DIR/${FUCHSIA_GCE_GRUB}.raw"
+$FUCHSIA_ROOT/scripts/gce/gce make-grub-image || exit 1
 
-makefile 1m "$grubdisk"
-    
-$FUCHSIA_SCRIPTS_DIR/grubdisk/build-all.sh "$grubdisk"
+grubdisk="$FUCHSIA_OUT_DIR/${FUCHSIA_GCE_GRUB}.raw"
 
 tmp="$(mktemp -d)"
 if [[ ! -d $tmp ]]; then
