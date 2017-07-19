@@ -7,13 +7,13 @@ import("//lib/fidl/fidl.gni")
 fidl("scene") {
   sources = [
     "display_info.fidl",
-    "scene_manager.fidl",
     "nodes.fidl",
     "ops.fidl",
     "resources.fidl",
+    "scene_manager.fidl",
     "session.fidl",
     "shapes.fidl",
-    "types.fidl"
+    "types.fidl",
   ]
 
   public_deps = [

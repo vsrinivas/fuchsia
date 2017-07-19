@@ -221,7 +221,8 @@ package("shadertoy") {
     {
       name = "shadertoy_client"
       dest = "app"
-    } ]
+    },
+  ]
 }
 
 package("mozart") {

@@ -27,7 +27,5 @@ executable("hello_scene_manager") {
     "//lib",
   ]
 
-  defines = [
-    "GLM_ENABLE_EXPERIMENTAL",
-  ]
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
 }
