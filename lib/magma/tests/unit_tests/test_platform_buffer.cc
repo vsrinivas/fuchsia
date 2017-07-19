@@ -211,6 +211,23 @@ public:
             EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
         }
     }
+
+    static void CommitPages(uint32_t num_pages)
+    {
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(num_pages * PAGE_SIZE, "test");
+
+        // start of range invalid
+        EXPECT_FALSE(buffer->CommitPages(num_pages, 1));
+        // end of range invalid
+        EXPECT_FALSE(buffer->CommitPages(0, num_pages + 1));
+        // one page in the middle
+        EXPECT_TRUE(buffer->CommitPages(num_pages / 2, 1));
+        // entire buffer
+        EXPECT_TRUE(buffer->CommitPages(0, num_pages));
+        // entire buffer again
+        EXPECT_TRUE(buffer->CommitPages(0, num_pages));
+    }
 };
 
 TEST(PlatformBuffer, Basic)
@@ -226,4 +243,9 @@ TEST(PlatformBuffer, Basic)
 
 TEST(PlatformBuffer, BufferPassing) { TestPlatformBuffer::BufferPassing(); }
 
-TEST(PlatformBuffer, PinRanges) { TestPlatformBuffer::PinRanges(10); }
+TEST(PlatformBuffer, Commit)
+{
+    TestPlatformBuffer::CommitPages(1);
+    TestPlatformBuffer::CommitPages(16);
+    TestPlatformBuffer::CommitPages(1024);
+}

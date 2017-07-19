@@ -161,6 +161,7 @@ public:
     }
 
     // PlatformBuffer implementation
+    bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
     bool MapCpu(void** addr_out) override;
     bool UnmapCpu() override;
 
@@ -235,27 +236,42 @@ bool MagentaPlatformBuffer::UnmapCpu()
     return DRETF(false, "attempting to unmap buffer that isnt mapped");
 }
 
-bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_count)
+bool MagentaPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_count) const
 {
+    TRACE_DURATION("magma", "CommitPages");
     if (!page_count)
         return true;
 
     if ((start_page_index + page_count) * PAGE_SIZE > size())
         return DRETF(false, "offset + length greater than buffer size");
 
-    mx_status_t status;
-    {
-        TRACE_DURATION("magma", "vmo commit");
-        status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
-                               page_count * PAGE_SIZE, nullptr, 0);
-    }
+    mx_status_t status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
+                                       page_count * PAGE_SIZE, nullptr, 0);
+
     if (status == MX_ERR_NO_MEMORY)
-        return DRETF(false, "Kernel returned MX_ERR_NO_MEMORY when attempting to commit %u vmo "
-                            "pages (%u bytes).\nThis means the system has run out of physical memory and "
-                            "things will now start going very badly.\nPlease stop using so much "
-                            "physical memory :)", page_count, PAGE_SIZE*page_count);
+        return DRETF(false,
+                     "Kernel returned MX_ERR_NO_MEMORY when attempting to commit %u vmo "
+                     "pages (%u bytes).\nThis means the system has run out of physical memory and "
+                     "things will now start going very badly.\nPlease stop using so much "
+                     "physical memory or download more RAM at www.downloadmoreram.com :)",
+                     page_count, PAGE_SIZE * page_count);
     else if (status != MX_OK)
         return DRETF(false, "failed to commit vmo pages: %d", status);
+
+    return true;
+}
+
+bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_count)
+{
+    mx_status_t status;
+    if (!page_count)
+        return true;
+
+    if ((start_page_index + page_count) * PAGE_SIZE > size())
+        return DRETF(false, "offset + length greater than buffer size");
+
+    if (!CommitPages(start_page_index, page_count))
+        return DRETF(false, "failed to commit pages");
 
     status = vmo_.op_range(MX_VMO_OP_LOCK, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
                            nullptr, 0);

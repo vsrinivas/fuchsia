@@ -28,7 +28,9 @@ public:
     // on success, duplicate of the underlying handle which is owned by the caller
     virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 
-    static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
+    // ensures the specified pages are backed by real memory
+    // note: the implementation of this function is required to be threadsafe
+    virtual bool CommitPages(uint32_t start_page_index, uint32_t page_count) const = 0;
 
     virtual bool MapCpu(void** addr_out) = 0;
     virtual bool UnmapCpu() = 0;
@@ -42,6 +44,8 @@ public:
     virtual bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                                  uint64_t addr_out[]) = 0;
     virtual bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) = 0;
+
+    static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 };
 
 } // namespace magma
