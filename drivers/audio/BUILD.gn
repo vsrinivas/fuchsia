@@ -36,7 +36,6 @@ package("audio") {
   libraries = [
     {
       name = "libaudio-dispatcher-pool.so"
-      used_by_drivers = true
     }
   ]
 }
