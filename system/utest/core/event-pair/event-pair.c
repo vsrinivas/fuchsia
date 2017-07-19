@@ -28,14 +28,16 @@ static bool create_test(void) {
         mx_status_t status = mx_object_get_info(h[0], MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
         ASSERT_EQ(status, MX_OK, "");
         EXPECT_EQ(info.rights,
-                  MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE,
+                  MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ |
+                  MX_RIGHT_WRITE | MX_RIGHT_SIGNAL | MX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
         EXPECT_EQ(info.type, (uint32_t)MX_OBJ_TYPE_EVENT_PAIR, "wrong type");
         memset(&info, 0, sizeof(info));
         status = mx_object_get_info(h[1], MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
         ASSERT_EQ(status, MX_OK, "");
         EXPECT_EQ(info.rights,
-                  MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE,
+                  MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ |
+                  MX_RIGHT_WRITE | MX_RIGHT_SIGNAL | MX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
         EXPECT_EQ(info.type, (uint32_t)MX_OBJ_TYPE_EVENT_PAIR, "wrong type");
 

@@ -27,7 +27,8 @@ When all the handles to one of the objects have been closed, the *MX_EPAIR_PEER_
 signal will be asserted on the opposing object.
 
 The newly-created handles will have the *MX_RIGHT_TRANSFER*,
-*MX_RIGHT_DUPLICATE*, *MX_RIGHT_READ*, and *MX_RIGHT_WRITE* rights.
+*MX_RIGHT_DUPLICATE*, *MX_RIGHT_READ*, *MX_RIGHT_WRITE*, *MX_RIGHT_SIGNAL*,
+and *MX_RIGHT_SIGNAL_PEER* rights.
 
 Currently, no options are supported, so *options* must be set to 0.
 
@@ -45,12 +46,6 @@ error code is returned.
 **MX_ERR_NOT_SUPPORTED**  *options* has an unsupported flag set (i.e., is not 0).
 
 **MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
-
-
-## NOTES
-
-The right *MX_RIGHT_WRITE* gates both the ability to modify the object's signals
-and the signals of the object's peer.  These should probably become distinct rights.
 
 
 ## SEE ALSO

@@ -19,7 +19,7 @@ is, its *MX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
 manipulated using **object_signal**().
 
 The newly-created handle will have the *MX_RIGHT_TRANSFER*, *MX_RIGHT_DUPLICATE*,
-*MX_RIGHT_READ*, and *MX_RIGHT_WRITE* rights.
+*MX_RIGHT_READ*, *MX_RIGHT_WRITE*, and *MX_RIGHT_SIGNAL* rights.
 
 ## RETURN VALUE
 

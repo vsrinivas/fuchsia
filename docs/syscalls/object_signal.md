@@ -45,7 +45,8 @@ In the event of failure, a negative error value is returned.
 
 **MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**MX_ERR_ACCESS_DENIED**  *handle* lacks the right *MX_RIGHT_WRITE*.
+**MX_ERR_ACCESS_DENIED**  *handle* lacks the right **MX_RIGHT_SIGNAL** (for **mx_object_signal**()) or
+**MX_RIGHT_SIGNAL_PEER** (for **mx_object_signal_peer**()).
 
 **MX_ERR_INVALID_ARGS**  *clear_mask* or *set_mask* contain bits that are not allowed.
 

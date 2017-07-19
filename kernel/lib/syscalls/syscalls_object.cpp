@@ -662,7 +662,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
 
-    auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &dispatcher);
+    auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_SIGNAL, &dispatcher);
     if (status != MX_OK)
         return status;
 
@@ -675,7 +675,7 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
 
-    auto status = up->GetDispatcher(handle_value, &dispatcher);
+    auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_SIGNAL_PEER, &dispatcher);
     if (status != MX_OK)
         return status;
 

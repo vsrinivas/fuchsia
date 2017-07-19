@@ -33,7 +33,7 @@ static bool handle_info_test(void) {
     ASSERT_EQ(status, MX_OK, "handle should be valid");
 
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-                            MX_RIGHT_READ | MX_RIGHT_WRITE;
+                            MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_SIGNAL;
 
     EXPECT_GT(info.koid, 0ULL, "object id should be positive");
     EXPECT_EQ(info.type, (uint32_t)MX_OBJ_TYPE_EVENT, "handle should be an event");

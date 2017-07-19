@@ -183,6 +183,8 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_DESTROY          ((mx_rights_t)1u << 9)
 #define MX_RIGHT_SET_POLICY       ((mx_rights_t)1u << 10)
 #define MX_RIGHT_GET_POLICY       ((mx_rights_t)1u << 11)
+#define MX_RIGHT_SIGNAL           ((mx_rights_t)1u << 12)
+#define MX_RIGHT_SIGNAL_PEER      ((mx_rights_t)1u << 13)
 
 #define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
 
