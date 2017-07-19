@@ -258,9 +258,6 @@ package("mozart") {
       name = "print_input"
     },
     {
-      name = "screencap"
-    },
-    {
       name = "shadertoy_service"
     },
     {
