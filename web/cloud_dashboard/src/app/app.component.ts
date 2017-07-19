@@ -11,10 +11,11 @@ import * as firebase from 'firebase/app';
 })
 export class AppComponent {
   title = 'Ledger Dashboard';
-  delayBetweenEraseStagesMillis = 3000
+  delayBetweenEraseStagesMillis = 3000;
   authenticated = false;
   uid = null;
-  version = 16;
+  version = 0;
+  loading = true;
   deleteInProgress = false;
 
   user: Observable<firebase.User>;
@@ -43,18 +44,29 @@ export class AppComponent {
     this.afAuth.auth.signOut();
   }
 
-  userPath() {
-    return '/__default__V/' + this.uid + '/' + String(this.version);
+  rootPath() {
+    return '/__default__V/' + this.uid;
+  }
+
+  versionPath() {
+    return this.rootPath() + '/' + this.version;
   }
 
   userDevicesPath() {
-    return this.userPath() + '/__metadata/devices';
+    return this.versionPath() + '/__metadata/devices';
   }
 
   registerWatchers() {
-    this.devices = this.db.list(this.userDevicesPath());
-    this.root = this.db.list(this.userPath());
-
+    this.root = this.db.list(this.rootPath());
+    this.root.subscribe((state) => {
+      for (const version_object of state) {
+        if (Number(version_object.$key) > Number(this.version)) {
+          this.version = version_object.$key;
+        }
+      }
+      this.devices = this.db.list(this.userDevicesPath());
+      this.loading = false;
+    });
   }
 
   unregisterWatchers() {

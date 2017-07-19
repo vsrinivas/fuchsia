@@ -26,9 +26,16 @@
     <button (click)="logout()">Logout</button>
   </div>
 
-  <!-- Devices -->
-  <div>
-    <h2>Devices</h2>
+  <!-- State -->
+  <h2>State</h2>
+  <div *ngIf="loading">
+    <p>Loading the state.</p>
+  </div>
+  <div *ngIf="!loading && !version">
+    <p>Ledger is empty.</p>
+  </div>
+  <div *ngIf="!loading && version">
+    <p>Looking at serialization version <b>{{ version }}</b>.
     <p>There are <b>{{ (devices | async)?.length }}</b> devices syncing.</p>
     <ul>
       <li class="text" *ngFor="let device of devices | async">
