@@ -9,22 +9,30 @@
 namespace modular {
 namespace testing {
 
-static test_runner::TestRunnerPtr g_test_runner;
-static test_runner::TestRunnerStorePtr g_test_runner_store;
-static std::set<std::string> g_test_points;
+namespace {
+test_runner::TestRunnerPtr g_test_runner;
+test_runner::TestRunnerStorePtr g_test_runner_store;
+std::set<std::string> g_test_points;
+bool g_connected;
+}  // namespace
 
 void Init(app::ApplicationContext* app_context, const std::string& identity) {
-  FTL_DCHECK(app_context);
-  FTL_DCHECK(!g_test_runner.is_bound());
-  FTL_DCHECK(!g_test_runner_store.is_bound());
+  FTL_CHECK(app_context);
+  FTL_CHECK(!g_test_runner.is_bound());
+  FTL_CHECK(!g_test_runner_store.is_bound());
 
   g_test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_connection_error_handler([] {
-    FTL_LOG(FATAL) << "Could not connect to TestRunner. Make sure the test is "
-                      "running under a TestRunner environment.";
+    if (g_connected) {
+      FTL_LOG(FATAL) << "Lost connection to TestRunner. Did the active test "
+                        "call Logout() while modules were still running?";
+    } else {
+      FTL_LOG(ERROR) << "This application must be run under test_runner.";
+      exit(1);
+    }
   });
-  g_test_runner->Identify(identity);
+  g_test_runner->Identify(identity, [] { g_connected = true; });
   g_test_runner->SetTestPointCount(g_test_points.size());
   g_test_runner_store =
       app_context->ConnectToEnvironmentService<test_runner::TestRunnerStore>();
@@ -71,7 +79,7 @@ void WillTerminate(double withinSeconds) {
 }
 
 test_runner::TestRunnerStore* GetStore() {
-  FTL_DCHECK(g_test_runner_store.is_bound());
+  FTL_CHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();
 }
 
