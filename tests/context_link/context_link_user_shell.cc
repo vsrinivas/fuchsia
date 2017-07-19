@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <string>
+#include <sstream>
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
@@ -34,7 +35,7 @@ namespace {
 
 constexpr char kModuleUrl[] =
     "file:///system/apps/modular_tests/context_link_module";
-constexpr char kTopic[] = "/context_link_test";
+constexpr char kTopic[] = "context_link_test";
 constexpr char kLink[] = "context_link";
 
 // A context provider watcher implementation.
@@ -166,7 +167,11 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   int get_context_topic_2_called_{};
 
   void GetContextTopic(const fidl::String& topic, const fidl::String& value) {
-    if (topic != kTopic) {
+    // The context link topic is derived from the story id in which it was
+    // published.
+    std::ostringstream expected_topic;
+    expected_topic << "/story/id/" << story_id_ << "/link/" << kTopic;
+    if (topic != expected_topic.str()) {
       return;
     }
 
