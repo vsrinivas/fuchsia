@@ -34,7 +34,7 @@
 #include "apps/mozart/services/scene/ops.fidl.h"
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
-#include "apps/mozart/src/scene/tests/util.h"
+#include "apps/mozart/src/scene_manager/tests/util.h"
 
 using namespace mozart;
 using namespace mozart::client;

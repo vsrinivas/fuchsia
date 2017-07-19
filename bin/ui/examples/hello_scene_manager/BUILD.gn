@@ -14,7 +14,7 @@ executable("hello_scene_manager") {
     "//apps/mozart/lib/scene:client",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/scene",
-    "//apps/mozart/src/scene/tests:util",
+    "//apps/mozart/src/scene_manager/tests:util",
     "//lib/escher/escher",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

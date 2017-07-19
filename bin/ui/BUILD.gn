@@ -29,7 +29,7 @@ package("mozart_tests") {
   deps = [
     "services/geometry/cpp:apptests",
     "src/input_reader/tests",
-    "src/scene/tests",
+    "src/scene_manager/tests",
     "src/view_manager/tests",
   ]
 

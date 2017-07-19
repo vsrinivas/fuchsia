@@ -9,7 +9,7 @@ group("src") {
     "launch",
     "print_input",
     "root_presenter",
-    "scene",
+    "scene_manager",
     "view_manager",
   ]
 }
