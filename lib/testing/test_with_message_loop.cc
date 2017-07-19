@@ -17,13 +17,14 @@ bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
   auto canceled = std::make_shared<bool>(false);
   bool timed_out = false;
   message_loop->task_runner()->PostDelayedTask(
-          [ message_loop, canceled, &timed_out ] {
-            if (*canceled) {
-              return;
-            }
-            timed_out = true;
-            message_loop->QuitNow();
-          }, timeout);
+      [message_loop, canceled, &timed_out] {
+        if (*canceled) {
+          return;
+        }
+        timed_out = true;
+        message_loop->QuitNow();
+      },
+      timeout);
   message_loop->Run();
   // Another task can call QuitNow() on the message loop, which exits the
   // message loop before the delayed task executes, in which case |timed_out| is

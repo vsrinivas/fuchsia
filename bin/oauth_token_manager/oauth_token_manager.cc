@@ -1093,8 +1093,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     app_->application_context_->launcher()->CreateApplication(
         std::move(web_view_launch_info), web_view_controller_.NewRequest());
     web_view_controller_.set_connection_error_handler([this] {
-      FTL_CHECK(false)
-          << "web_view not found at " << kWebViewUrl << ".";
+      FTL_CHECK(false) << "web_view not found at " << kWebViewUrl << ".";
     });
 
     mozart::ViewOwnerPtr view_owner;

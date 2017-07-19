@@ -13,7 +13,7 @@
 namespace modular {
 
 UserControllerImpl::UserControllerImpl(
-    app::ApplicationLauncher* const  application_launcher,
+    app::ApplicationLauncher* const application_launcher,
     AppConfigPtr user_runner,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
@@ -26,8 +26,8 @@ UserControllerImpl::UserControllerImpl(
       user_controller_binding_(this, std::move(user_controller_request)),
       done_(done) {
   // 1. Launch UserRunner in the current environment.
-  user_runner_.reset(new AppClient<UserRunner>(application_launcher,
-                                               std::move(user_runner)));
+  user_runner_.reset(
+      new AppClient<UserRunner>(application_launcher, std::move(user_runner)));
 
   // 2. Initialize the UserRunner service.
   user_runner_->primary_service()->Initialize(

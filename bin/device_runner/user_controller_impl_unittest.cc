@@ -15,13 +15,14 @@ class TestApplicationLauncher : app::ApplicationLauncher {
  public:
   TestApplicationLauncher(
       fidl::InterfaceRequest<app::ApplicationLauncher> request)
-    : binding_ (this, std::move(request)) {}
+      : binding_(this, std::move(request)) {}
 
   app::ApplicationLaunchInfoPtr last_launch_info;
 
  private:
-  void CreateApplication(app::ApplicationLaunchInfoPtr launch_info,
-                         fidl::InterfaceRequest<app::ApplicationController> request) {
+  void CreateApplication(
+      app::ApplicationLaunchInfoPtr launch_info,
+      fidl::InterfaceRequest<app::ApplicationController> request) {
     last_launch_info = std::move(launch_info);
   }
 
@@ -34,7 +35,8 @@ class UserControllerImplTest : public testing::TestWithMessageLoop {};
 
 TEST_F(UserControllerImplTest, StartUserRunner) {
   app::ApplicationLauncherPtr application_launcher_ptr;
-  TestApplicationLauncher test_application_launcher(application_launcher_ptr.NewRequest());
+  TestApplicationLauncher test_application_launcher(
+      application_launcher_ptr.NewRequest());
   ASSERT_TRUE(test_application_launcher.last_launch_info.is_null());
 
   std::string url = "test url string";
@@ -45,13 +47,11 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   auto token_provider_factory_request = token_provider_factory_ptr.NewRequest();
 
   UserControllerPtr user_controller_ptr;
-  UserControllerImpl impl(application_launcher_ptr.get(), app_config.Clone(),
-                          app_config.Clone(), app_config.Clone(),
-                          std::move(token_provider_factory_ptr),
-                          nullptr /* account */,
-                          nullptr /* view_owner_request */,
-                          user_controller_ptr.NewRequest(),
-                          nullptr /* done_callback */);
+  UserControllerImpl impl(
+      application_launcher_ptr.get(), app_config.Clone(), app_config.Clone(),
+      app_config.Clone(), std::move(token_provider_factory_ptr),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      user_controller_ptr.NewRequest(), nullptr /* done_callback */);
 
   EXPECT_TRUE(RunLoopUntil([&test_application_launcher] {
     return !test_application_launcher.last_launch_info.is_null();

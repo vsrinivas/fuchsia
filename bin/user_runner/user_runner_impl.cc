@@ -271,7 +271,8 @@ void UserRunnerImpl::Initialize(
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
   if (test_) {
-    maxwell_config->args.push_back("--config=/system/data/maxwell/test_config.json");
+    maxwell_config->args.push_back(
+        "--config=/system/data/maxwell/test_config.json");
   }
 
   maxwell_.reset(

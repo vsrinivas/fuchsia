@@ -170,7 +170,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
       FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << i.GetKey() << " "
-                    << i.GetValue();
+                  << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
   }

@@ -229,9 +229,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
                                root_link_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
-    root_link_->Set(
-        fidl::Array<fidl::String>::From(segments),
-        modular::JsonValueToString(modular::JsonValue(kTestApp)));
+    root_link_->Set(fidl::Array<fidl::String>::From(segments),
+                    modular::JsonValueToString(modular::JsonValue(kTestApp)));
 
     TestStory1_Run(0);
   }
