@@ -57,6 +57,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/cpu_topology.cpp \
 	$(LOCAL_DIR)/debugger.cpp \
 	$(LOCAL_DIR)/descriptor.cpp \
+	$(LOCAL_DIR)/timer_freq.cpp \
 	$(LOCAL_DIR)/faults.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/gdt.S \

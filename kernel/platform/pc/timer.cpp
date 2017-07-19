@@ -8,7 +8,6 @@
 #include <sys/types.h>
 
 #include <assert.h>
-#include <bits.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
@@ -17,6 +16,7 @@
 
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
+#include <arch/x86/timer_freq.h>
 #include <arch/x86/feature.h>
 #include <lib/fixed_point.h>
 #include <lk/init.h>
@@ -32,8 +32,6 @@
 #include <platform/pc/hpet.h>
 #include <platform/timer.h>
 #include "platform_p.h"
-
-#define MSR_PLATFORM_INFO 0xCE
 
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
@@ -266,110 +264,11 @@ static inline void hpet_calibration_cycle_cleanup(void)
     hpet_disable();
 }
 
-static uint64_t lookup_core_crystal_freq(void) {
-    // The APIC frequency is the core crystal clock frequency if it is
-    // enumerated in the CPUID leaf 0x15, or the processor's bus clock
-    // frequency.
-    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
-    if (tsc_leaf && tsc_leaf->c != 0) {
-        return tsc_leaf->c;
-    }
-
-    switch (x86_microarch) {
-        case X86_MICROARCH_INTEL_SKYLAKE:
-        case X86_MICROARCH_INTEL_KABYLAKE:
-            return 24u * 1000 * 1000;
-        case X86_MICROARCH_INTEL_SANDY_BRIDGE:
-        case X86_MICROARCH_INTEL_IVY_BRIDGE:
-        case X86_MICROARCH_INTEL_HASWELL:
-        case X86_MICROARCH_INTEL_BROADWELL: {
-            uint64_t platform_info;
-            if (read_msr_safe(MSR_PLATFORM_INFO, &platform_info) == MX_OK) {
-                uint64_t bus_freq_mult = (platform_info >> 8) & 0xf;
-                return bus_freq_mult * 100 * 1000 * 1000;
-            }
-            break;
-        }
-        case X86_MICROARCH_AMD_BULLDOZER:
-        case X86_MICROARCH_AMD_JAGUAR:
-        case X86_MICROARCH_AMD_ZEN:
-            // 15h-17h BKDGs mention the APIC timer rate is 2xCLKIN,
-            // which experimentally appears to be 100Mhz always
-            return 100 * 1000 * 1000;
-        case X86_MICROARCH_UNKNOWN:
-            break;
-    }
-
-    return 0;
-}
-
-static uint64_t compute_p_state_clock(uint64_t p_state_msr) {
-    // is it valid?
-    if (!BIT(p_state_msr, 63))
-        return 0;
-
-    // different AMD microarchitectures use slightly different formulas to compute
-    // the effective clock rate of a P state
-    uint64_t clock = 0;
-    switch (x86_microarch) {
-        case X86_MICROARCH_AMD_BULLDOZER:
-        case X86_MICROARCH_AMD_JAGUAR: {
-            uint64_t did = BITS_SHIFT(p_state_msr, 8, 6);
-            uint64_t fid = BITS(p_state_msr, 5, 0);
-
-            clock = (100 * (fid + 0x10) / (1 << did)) * 1000 * 1000;
-            break;
-        }
-        case X86_MICROARCH_AMD_ZEN: {
-            uint64_t fid = BITS(p_state_msr, 7, 0);
-
-            clock = (fid * 25) * 1000 * 1000;
-            break;
-        }
-        default:
-            break;
-    }
-
-    return clock;
-}
-
-static uint64_t lookup_tsc_freq(void) {
-    if (x86_vendor == X86_VENDOR_INTEL) {
-        const uint64_t core_crystal_clock_freq = lookup_core_crystal_freq();
-
-        // If this leaf is present, then 18.18.3 (Determining the Processor Base
-        // Frequency) documents this as the nominal TSC frequency.
-        const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
-        if (tsc_leaf) {
-            return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
-        }
-    } else if (x86_vendor == X86_VENDOR_AMD) {
-        uint32_t p0_state_msr = 0xc0010064; // base P-state MSR
-        switch (x86_microarch) {
-            // TSC is invariant on these architectures and defined as running at
-            // P0 clock, so compute it
-            case X86_MICROARCH_AMD_ZEN: {
-                // According to the Family 17h PPR, the first P-state MSR is indeed
-                // P0 state and appears to be experimentally so
-                uint64_t p0_state;
-                if (read_msr_safe(p0_state_msr, &p0_state) != MX_OK)
-                    break;
-
-                return compute_p_state_clock(p0_state);
-            }
-            default:
-                break;
-        }
-    }
-
-    return 0;
-}
-
 static void calibrate_apic_timer(void)
 {
     ASSERT(arch_ints_disabled());
 
-    const uint64_t apic_freq = lookup_core_crystal_freq();
+    const uint64_t apic_freq = x86_lookup_core_crystal_freq();
     if (apic_freq != 0) {
         ASSERT(apic_freq / 1000 <= UINT32_MAX);
         apic_ticks_per_ms = static_cast<uint32_t>(apic_freq / 1000);
@@ -456,7 +355,7 @@ static void calibrate_tsc(void)
 {
     ASSERT(arch_ints_disabled());
 
-    const uint64_t tsc_freq = lookup_tsc_freq();
+    const uint64_t tsc_freq = x86_lookup_tsc_freq();
     if (tsc_freq != 0) {
         tsc_ticks_per_ms = tsc_freq / 1000;
         printf("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
