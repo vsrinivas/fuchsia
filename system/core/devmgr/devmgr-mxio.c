@@ -167,8 +167,6 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
         memfs_mount(vfs_create_global_root(), systemfs_get_root());
     }
     bootfs_parse(vmo, size, &callback, &cd);
-    printf("devmgr: bootfs #%u contains %u file%s\n",
-           n, cd.file_count, (cd.file_count == 1) ? "" : "s");
     return cd.file_count;
 }
 
@@ -280,7 +278,6 @@ static void setup_bootfs(void) {
             case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
                 mx_handle_t bootfs_vmo;
-                printf("devmgr: decompressing bootfs #%u\n", idx);
                 status = decompress_bootdata(mx_vmar_root_self(), vmo,
                                              off, bootdata.length + sizeof(bootdata),
                                              &bootfs_vmo, &errmsg);
