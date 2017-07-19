@@ -5,8 +5,6 @@
 module mozart;
 
 import "application/services/service_provider.fidl";
-import "apps/mozart/services/composition/scenes.fidl";
-import "apps/mozart/services/composition/scheduling.fidl";
 import "apps/mozart/services/views/view_containers.fidl";
 import "apps/mozart/services/views/view_properties.fidl";
 import "apps/mozart/services/views/view_token.fidl";

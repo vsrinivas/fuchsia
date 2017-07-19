@@ -4,7 +4,6 @@
 
 module mozart;
 
-import "apps/mozart/services/composition/scene_token.fidl";
 import "apps/mozart/services/views/view_properties.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
