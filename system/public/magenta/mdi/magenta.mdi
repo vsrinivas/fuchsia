@@ -25,11 +25,16 @@ uint32  platform.device.did               MDI_PLATFORM_DEVICE_DID               
 
 list    platform.bus                      MDI_PLATFORM_BUS                      204
 
+list    platform.bus.gpios                MDI_PLATFORM_BUS_GPIOS                205
+uint32  platform.bus.gpios.start          MDI_PLATFORM_BUS_GPIOS_START          206
+uint32  platform.bus.gpios.count          MDI_PLATFORM_BUS_GPIOS_COUNT          207
+uint32  platform.bus.gpios.mmio_index     MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX     208
+
 // platform.*.mmios elements have base-phys and length
-list mmios                                MDI_PLATFORM_MMIOS                    205
+list mmios                                MDI_PLATFORM_MMIOS                    210
 
 // list of IRQs for a platform device or bus
-array[uint32] irqs                        MDI_PLATFORM_IRQS                     206
+array[uint32] irqs                        MDI_PLATFORM_IRQS                     211
 
 // Kernel Drivers
 

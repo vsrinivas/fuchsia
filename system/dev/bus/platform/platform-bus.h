@@ -38,6 +38,8 @@ typedef struct {
     mx_device_t* mxdev;
     pbus_interface_t interface;
     mx_handle_t resource;   // root resource for platform bus
+    mdi_node_ref_t  platform_node;
+    mdi_node_ref_t  bus_node;
     uintptr_t mdi_addr;
     size_t mdi_size;
     mx_handle_t mdi_handle;

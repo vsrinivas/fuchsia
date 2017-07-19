@@ -26,47 +26,68 @@ static void platform_bus_release_mdi(platform_bus_t* bus) {
     }
 }
 
-static mx_status_t platform_bus_publish_devices(platform_bus_t* bus) {
-    mdi_node_ref_t root_node;
+static void platform_bus_add_gpios(platform_bus_t* bus) {
+    mdi_node_ref_t  gpios, gpio_node, node;
+    if (mdi_find_node(&bus->bus_node, MDI_PLATFORM_BUS_GPIOS, &gpios) == MX_OK) {
+        mdi_each_child(&gpios, &gpio_node) {
+            uint32_t start, count, mmio_index;
 
-    mx_status_t status = mdi_init((void *)bus->mdi_addr, bus->mdi_size, &root_node);
-    if (status != MX_OK) {
-        goto fail;
-    }
+            if (mdi_find_node(&gpio_node, MDI_PLATFORM_BUS_GPIOS_START, &node) != MX_OK) {
+                printf("platform_bus_add_gpios: could not find MDI_PLATFORM_BUS_GPIOS_START\n");
+                continue;
+            }
+            mdi_node_uint32(&node, &start);
+            if (mdi_find_node(&gpio_node, MDI_PLATFORM_BUS_GPIOS_COUNT, &node) != MX_OK) {
+                printf("platform_bus_add_gpios: could not find MDI_PLATFORM_BUS_GPIOS_COUNT\n");
+                continue;
+            }
+            mdi_node_uint32(&node, &count);
+            if (mdi_find_node(&gpio_node, MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX, &node) != MX_OK) {
+                printf("platform_bus_add_gpios: could not find MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX\n");
+                continue;
+            }
+            mdi_node_uint32(&node, &mmio_index);
 
-    mdi_node_ref_t  platform_node;
-    if (mdi_find_node(&root_node, MDI_PLATFORM, &platform_node) != MX_OK) {
-        printf("platform_bus_bind: couldn't find MDI_PLATFORM\n");
-        goto fail;
-    }
+            const uint32_t* irqs = NULL;
+            uint32_t irq_count = 0;
+            if (mdi_find_node(&gpio_node, MDI_PLATFORM_IRQS, &node) == MX_OK) {
+                irqs = mdi_array_values(&node);
+                irq_count = mdi_array_length(&node);
+            }
 
-    mdi_node_ref_t  device_node;
-    mdi_each_child(&platform_node, &device_node) {
-        if (mdi_id(&device_node) != MDI_PLATFORM_DEVICE) {
-            continue;
+           pbus_interface_add_gpios(&bus->interface, start, count, mmio_index, irqs, irq_count);
         }
-        // TODO(voydanoff) better to just continue with next device?
-        mx_status_t status = platform_bus_publish_device(bus, &device_node);
-        if (status != MX_OK) {
-            goto fail;
+    }
+}
+
+static void platform_bus_publish_devices(platform_bus_t* bus) {
+    mdi_node_ref_t  node;
+    mdi_each_child(&bus->platform_node, &node) {
+        if (mdi_id(&node) == MDI_PLATFORM_DEVICE) {
+            platform_bus_publish_device(bus, &node);
         }
     }
-
-fail:
-    // don't need MDI any more
-    platform_bus_release_mdi(bus);
-
-    return status;
 }
 
 mx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
+    if (!interface) {
+        return MX_ERR_INVALID_ARGS;
+    }
     platform_bus_t* bus = ctx;
     memcpy(&bus->interface, interface, sizeof(bus->interface));
-    return platform_bus_publish_devices(bus);
+
+    platform_bus_add_gpios(bus);
+    platform_bus_publish_devices(bus);
+    return MX_OK;
 }
 
 static mx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    return MX_ERR_NOT_SUPPORTED;
+    platform_bus_t* bus = ctx;
+
+    if (bus->interface.ops == NULL) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
+    return pbus_interface_get_protocol(&bus->interface, proto_id, out);
 }
 
 static mx_status_t platform_bus_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
@@ -173,6 +194,8 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     bus->resource = get_root_resource();
     bus->vid = vid;
     bus->pid = pid;
+    memcpy(&bus->platform_node, &platform_node, sizeof(bus->platform_node));
+    memcpy(&bus->bus_node, &bus_node, sizeof(bus->bus_node));
     bus->mdi_addr = mdi_addr;
     bus->mdi_size = mdi_size;
     bus->mdi_handle = mdi_handle;

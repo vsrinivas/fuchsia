@@ -42,6 +42,7 @@ mx_status_t mdi_node_boolean(const mdi_node_ref_t* ref, bool* out_value);
 const char* mdi_node_string(const mdi_node_ref_t* ref);
 
 // array element accessors
+const void* mdi_array_values(const mdi_node_ref_t* ref);
 uint32_t mdi_array_length(const mdi_node_ref_t* ref);
 mx_status_t mdi_array_uint8(const mdi_node_ref_t* ref, uint8_t index, uint8_t* out_value);
 mx_status_t mdi_array_int32(const mdi_node_ref_t* ref, uint32_t index, int32_t* out_value);

@@ -23,7 +23,7 @@ static mx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
     if (bus->interface.ops == NULL) {
         return MX_ERR_NOT_SUPPORTED;
     }
-    return bus->interface.ops->get_protocol(bus->interface.ctx, proto_id, out);
+    return pbus_interface_get_protocol(&bus->interface, proto_id, out);
 }
 
 static mx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,

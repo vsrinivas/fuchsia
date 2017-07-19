@@ -101,6 +101,15 @@ const char* mdi_node_string(const mdi_node_ref_t* ref) {
     return (const char *)(ref->node + 1);
 }
 
+const void* mdi_array_values(const mdi_node_ref_t* ref) {
+    if (mdi_node_type(ref) == MDI_ARRAY) {
+        return ref->node + 1;
+    } else {
+        xprintf("%s: bad node type for mdi_array_values\n", __FUNCTION__);
+        return NULL;
+    }
+}
+
 uint32_t mdi_array_length(const mdi_node_ref_t* ref) {
     if (mdi_node_type(ref) == MDI_ARRAY) {
         return ref->node->value.child_count;
