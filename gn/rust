@@ -10,12 +10,8 @@
     "labels": [
         "//apps/xi",
         "//rust/ledger_example",
-        "//rust/magenta-rs/examples",
-        "//rust/rust_sample_module"
+        "//rust/magenta-rs/examples"
     ],
-    "packages": {
-        "rust_sample_module": "//rust/rust_sample_module:package"
-    },
     "binaries": [
         {
             "binary": "mx_toy",
