@@ -26,6 +26,6 @@ fuchsia_shared_library("swapchain") {
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:layer_common",
     "$magma_build_root/src/display_pipe",
-    "$mozart_build_root/services/images2:images2_sync",
+    "$mozart_build_root/services/images:images_sync",
   ]
 }

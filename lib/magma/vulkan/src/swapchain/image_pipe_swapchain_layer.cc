@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "apps/mozart/services/images2/image_pipe.fidl-sync.h"
+#include "apps/mozart/services/images/image_pipe.fidl-sync.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer_config.h"

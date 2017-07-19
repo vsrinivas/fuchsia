@@ -30,7 +30,7 @@ executable("display_pipe_service") {
     "$magma_build_root:libmagma",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
-    "//apps/mozart/services/images2",
+    "//apps/mozart/services/images",
     "//application/lib/app",
     "//lib/mtl",
     "//magenta/system/ulib/mx",

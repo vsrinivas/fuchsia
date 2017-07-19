@@ -9,6 +9,6 @@ fidl("services") {
     "display_provider.fidl",
   ]
   deps = [
-    "//apps/mozart/services/images2",
+    "//apps/mozart/services/images",
   ]
 }
