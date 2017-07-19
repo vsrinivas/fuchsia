@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-FUCHSIA_VBOX_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export FUCHSIA_VBOX_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$FUCHSIA_VBOX_SCRIPT_DIR/env.sh"
 
 usage() {
@@ -24,7 +24,11 @@ case "$1" in
 
   start)
     shift
-    VBoxManage startvm "${FUCHSIA_VBOX_NAME}" "$@"
+    if [[ $(uname) == "Linux" && -z $DISPLAY ]]; then
+      VBoxHeadless -s "${FUCHSIA_VBOX_NAME}" "$@"
+    else
+      VBoxManage startvm "${FUCHSIA_VBOX_NAME}" "$@"
+    fi
     ;;
   off|stop)
     shift

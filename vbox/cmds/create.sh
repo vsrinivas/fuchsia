@@ -3,6 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+if [[ ! -e $FUCHSIA_VBOX_VMDK ]]; then
+  "${FUCHSIA_VBOX_SCRIPT_DIR}/fbox.sh" build-disk || exit $?
+fi
+
 if ! VBoxManage list vms | grep "\"$FUCHSIA_VBOX_NAME\""; then
   VBoxManage createvm --name "${FUCHSIA_VBOX_NAME}" --register
 else
@@ -14,7 +18,6 @@ if VBoxManage list runningvms | grep "\"$FUCHSIA_VBOX_NAME\"" 2> /dev/null; then
 fi
 
 VBoxManage modifyvm "${FUCHSIA_VBOX_NAME}" \
-  --paravirtprovider=kvm \
   --memory $FUCHSIA_VBOX_RAM \
   --audio null \
   --audiocontroller hda \
@@ -23,11 +26,9 @@ VBoxManage modifyvm "${FUCHSIA_VBOX_NAME}" \
   --hpet on \
   --pae on \
   --longmode on \
-  --cpuid-portability-level 0 \
   --cpus $FUCHSIA_VBOX_CPUS \
   --hwvirtex on \
   --vram 128 \
-  --accelerate3d on \
   --firmware efi \
   --nestedpaging on \
   --nic1 "nat" \
@@ -39,12 +40,11 @@ VBoxManage modifyvm "${FUCHSIA_VBOX_NAME}" \
   --vtxvpid on \
   --largepages on \
   --usbehci off \
-  --usbxhci off \
   --keyboard usb \
   --mouse usbtablet
 
 if $existing; then
-	VBoxManage storagectl "${FUCHSIA_VBOX_NAME}" --name STORAGE --remove
+	VBoxManage storagectl "${FUCHSIA_VBOX_NAME}" --name STORAGE --remove > /dev/null 2>&1
 fi
 
 VBoxManage storagectl "${FUCHSIA_VBOX_NAME}" --name STORAGE \
@@ -58,4 +58,4 @@ VBoxManage storageattach "${FUCHSIA_VBOX_NAME}" --storagectl STORAGE \
   --device 0 \
   --type hdd \
   --nonrotational on \
-  --medium "${FUCHSIA_VBOX_VDI}"
+  --medium "${FUCHSIA_VBOX_VMDK}"

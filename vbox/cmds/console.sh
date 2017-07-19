@@ -9,4 +9,8 @@ oldtty=$(stty -g)
 trap "stty $oldtty" EXIT
 echo "Connecting to ${FUCHSIA_OUT_DIR}/vbox/${FUCHSIA_VBOX_NAME}.sock"
 echo "Use CTRL+Q to exit the serial console"
-socat stdio,rawer,escape=0x11 unix-connect:${FUCHSIA_OUT_DIR}/vbox/${FUCHSIA_VBOX_NAME}.sock
+raw=rawer
+if [[ $(uname) = 'Linux' ]]; then
+  raw=raw,echo=0
+fi
+socat stdio,$raw,escape=0x11 unix-connect:${FUCHSIA_OUT_DIR}/vbox/${FUCHSIA_VBOX_NAME}.sock

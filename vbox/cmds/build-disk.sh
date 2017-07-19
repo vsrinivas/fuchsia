@@ -3,19 +3,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-mkdir -p $(dirname $FUCHSIA_VBOX_VDI)
+mkdir -p $(dirname $FUCHSIA_VBOX_RAW)
 
-if [[ ! -e ${FUCHSIA_VBOX_SOURCE_DISK} ]]; then
-  echo "$FUCHSIA_VBOX_SOURCE_DISK not found, building..."
-  "${FUCHSIA_SCRIPTS_DIR}/installer/build-installable-userfs.sh"
+mfv=$FUCHSIA_BUILD_DIR/host_x64/make-fuchsia-vol
+
+if [[ ! -x $mfv ]]; then
+	echo "You need to build the 'make-fuchsia-vol' package" >&2
+	exit 1
 fi
 
-if [[ -e ${FUCHSIA_VBOX_VDI} ]]; then
-	uuid=$(VBoxManage showmediuminfo out/vbox/efi_fs.vdi  | grep UUID: | head -n 1 | awk '{print $2}')
-	if [[ -n "${uuid}" ]]; then
-		uuid="--uuid=${uuid}"
-		rm "${FUCHSIA_VBOX_VDI}"
-	fi
+if [[ ! -e $FUCHSIA_VBOX_RAW ]]; then
+	echo "Allocating raw image space"
+	case $(uname) in
+		Linux)
+			fallocate -l $FUCHSIA_VBOX_DISK_SIZE $FUCHSIA_VBOX_RAW
+			;;
+		Darwin)
+			mkfile -n $FUCHSIA_VBOX_DISK_SIZE $FUCHSIA_VBOX_RAW
+			;;
+		*)
+			echo "Unsupported platform" >&2
+			exit 1
+			;;
+	esac
 fi
 
-VBoxManage convertfromraw $uuid "${FUCHSIA_VBOX_SOURCE_DISK}" "${FUCHSIA_VBOX_VDI}"
+if [[ ! -e $FUCHSIA_VBOX_VMDK ]]; then
+	VBoxManage internalcommands createrawvmdk -filename ${FUCHSIA_VBOX_VMDK} -rawdisk ${FUCHSIA_VBOX_RAW}
+fi
+
+if [[ ! -e $FUCHSIA_BUILD_DIR/cmdline ]]; then
+	echo "$FUCHSIA_BUILD_DIR/cmdline is not present. Populate it to set a kernel command line"
+fi
+
+# builds/updates the disk image:
+if ! "$mfv" "$@" "$FUCHSIA_VBOX_RAW" ; then
+	echo "Raw disk image build failed" >&2
+	exit 1
+fi
