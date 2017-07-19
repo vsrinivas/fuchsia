@@ -16,7 +16,6 @@
         "hello_material": "//apps/mozart:hello_material",
         "shapes_view": "//apps/mozart:shapes_view",
         "noodles_view": "//apps/mozart:noodles_view",
-        "compositor_service": "//apps/mozart:compositor_service",
         "jank_view": "//apps/mozart:jank_view",
         "paint_view": "//apps/mozart:paint_view",
         "root_presenter": "//apps/mozart:root_presenter",
