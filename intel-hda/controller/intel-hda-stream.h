@@ -11,7 +11,7 @@
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
-#include "drivers/audio/audio-proto/audio2-proto.h"
+#include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
 
@@ -28,11 +28,11 @@ public:
     enum class Type { INVALID, INPUT, OUTPUT, BIDIR };
 
     union RequestBufferType {
-        audio2_proto::CmdHdr                 hdr;
-        audio2_proto::RingBufGetFifoDepthReq get_fifo_depth;
-        audio2_proto::RingBufGetBufferReq    get_buffer;
-        audio2_proto::RingBufStartReq        start;
-        audio2_proto::RingBufStopReq         stop;
+        audio_proto::CmdHdr                 hdr;
+        audio_proto::RingBufGetFifoDepthReq get_fifo_depth;
+        audio_proto::RingBufGetBufferReq    get_buffer;
+        audio_proto::RingBufStartReq        start;
+        audio_proto::RingBufStopReq         stop;
     };
 
     // Hardware allows buffer descriptor lists (BDLs) to be up to 256
@@ -89,12 +89,12 @@ private:
     void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
 
     // Client request handlers
-    mx_status_t ProcessGetFifoDepthLocked(const audio2_proto::RingBufGetFifoDepthReq& req)
+    mx_status_t ProcessGetFifoDepthLocked(const audio_proto::RingBufGetFifoDepthReq& req)
         TA_REQ(channel_lock_);
-    mx_status_t ProcessGetBufferLocked(const audio2_proto::RingBufGetBufferReq& req)
+    mx_status_t ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req)
         TA_REQ(channel_lock_);
-    mx_status_t ProcessStartLocked(const audio2_proto::RingBufStartReq& req) TA_REQ(channel_lock_);
-    mx_status_t ProcessStopLocked(const audio2_proto::RingBufStopReq& req) TA_REQ(channel_lock_);
+    mx_status_t ProcessStartLocked(const audio_proto::RingBufStartReq& req) TA_REQ(channel_lock_);
+    mx_status_t ProcessStopLocked(const audio_proto::RingBufStopReq& req) TA_REQ(channel_lock_);
 
     // Release the client ring buffer (if one has been assigned)
     void ReleaseRingBufferLocked() TA_REQ(channel_lock_);

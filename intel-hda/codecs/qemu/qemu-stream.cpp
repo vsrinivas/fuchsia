@@ -45,12 +45,12 @@ void QemuStream::OnDeactivateLocked() {
     DisableConverterLocked(true);
 }
 
-mx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt) {
+mx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
     // Check the format arguments.
     if ((fmt.channels != 1) && (fmt.channels != 2))
         return MX_ERR_NOT_SUPPORTED;
 
-    if (fmt.sample_format != AUDIO2_SAMPLE_FORMAT_16BIT)
+    if (fmt.sample_format != AUDIO_SAMPLE_FORMAT_16BIT)
         return MX_ERR_NOT_SUPPORTED;
 
     switch (fmt.frames_per_second) {

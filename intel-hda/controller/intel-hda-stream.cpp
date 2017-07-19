@@ -181,7 +181,7 @@ case _ioctl:                                                    \
                   req_size, sizeof(req._payload));              \
         return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)) {  \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {  \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
         return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
@@ -213,16 +213,16 @@ mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
                 req.hdr.transaction_id,
                 req_size);
 
-    if (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)
+    if (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)
         return MX_ERR_INVALID_ARGS;
 
     // Strip the NO_ACK flag from the request before deciding the dispatch target.
-    auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
+    auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-    HANDLE_REQ(AUDIO2_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, ProcessGetFifoDepthLocked, false);
-    HANDLE_REQ(AUDIO2_RB_CMD_GET_BUFFER,     get_buffer,     ProcessGetBufferLocked,    false);
-    HANDLE_REQ(AUDIO2_RB_CMD_START,          start,          ProcessStartLocked,        false);
-    HANDLE_REQ(AUDIO2_RB_CMD_STOP,           stop,           ProcessStopLocked,         false);
+    HANDLE_REQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, ProcessGetFifoDepthLocked, false);
+    HANDLE_REQ(AUDIO_RB_CMD_GET_BUFFER,     get_buffer,     ProcessGetBufferLocked,    false);
+    HANDLE_REQ(AUDIO_RB_CMD_START,          start,          ProcessStartLocked,        false);
+    HANDLE_REQ(AUDIO_RB_CMD_STOP,           stop,           ProcessStopLocked,         false);
     default:
         DEBUG_LOG("Unrecognized command ID 0x%04x\n", req.hdr.cmd);
         return MX_ERR_INVALID_ARGS;
@@ -255,9 +255,9 @@ void IntelHDAStream::ProcessStreamIRQ() {
         return;
 
     if (sts & HDA_SD_REG_STS8_BCIS) {
-        audio2_proto::RingBufPositionNotify msg;
-        msg.hdr.cmd = AUDIO2_RB_POSITION_NOTIFY;
-        msg.hdr.transaction_id = AUDIO2_INVALID_TRANSACTION_ID;
+        audio_proto::RingBufPositionNotify msg;
+        msg.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
+        msg.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
         msg.ring_buffer_pos = REG_RD(&regs_->lpib);
         irq_channel_->Write(&msg, sizeof(msg));
     }
@@ -292,10 +292,10 @@ void IntelHDAStream::DeactivateLocked() {
 }
 
 mx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
-        const audio2_proto::RingBufGetFifoDepthReq& req) {
+        const audio_proto::RingBufGetFifoDepthReq& req) {
     MX_DEBUG_ASSERT(channel_ != nullptr);
 
-    audio2_proto::RingBufGetFifoDepthResp resp;
+    audio_proto::RingBufGetFifoDepthResp resp;
     resp.hdr = req.hdr;
 
     // We don't know what our FIFO depth is going to be if our format has not
@@ -312,10 +312,10 @@ mx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
     return channel_->Write(&resp, sizeof(resp));
 }
 
-mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGetBufferReq& req) {
+mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req) {
     mx::vmo ring_buffer_vmo;
     mx::vmo client_rb_handle;
-    audio2_proto::RingBufGetBufferResp resp;
+    audio_proto::RingBufGetBufferResp resp;
     uint64_t tmp;
     uint32_t rb_size;
 
@@ -523,8 +523,8 @@ finished:
     }
 }
 
-mx_status_t IntelHDAStream::ProcessStartLocked(const audio2_proto::RingBufStartReq& req) {
-    audio2_proto::RingBufStartResp resp;
+mx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartReq& req) {
+    audio_proto::RingBufStartResp resp;
     uint32_t ctl_val;
 
     resp.hdr = req.hdr;
@@ -598,8 +598,8 @@ finished:
     return channel_->Write(&resp, sizeof(resp));
 }
 
-mx_status_t IntelHDAStream::ProcessStopLocked(const audio2_proto::RingBufStopReq& req) {
-    audio2_proto::RingBufStopResp resp;
+mx_status_t IntelHDAStream::ProcessStopLocked(const audio_proto::RingBufStopReq& req) {
+    audio_proto::RingBufStopResp resp;
     resp.hdr = req.hdr;
 
     if (running_) {

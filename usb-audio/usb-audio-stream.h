@@ -11,7 +11,7 @@
 #include <mx/vmo.h>
 #include <mxtl/mutex.h>
 
-#include "drivers/audio/audio-proto/audio2-proto.h"
+#include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 
 namespace audio {
@@ -19,10 +19,10 @@ namespace usb {
 
 struct AudioStreamProtocol : public ddk::internal::base_protocol {
     explicit AudioStreamProtocol(bool is_input) {
-        ddk_proto_id_ = is_input ? MX_PROTOCOL_AUDIO2_INPUT : MX_PROTOCOL_AUDIO2_OUTPUT;
+        ddk_proto_id_ = is_input ? MX_PROTOCOL_AUDIO_INPUT : MX_PROTOCOL_AUDIO_OUTPUT;
     }
 
-    bool is_input() const { return (ddk_proto_id_ == MX_PROTOCOL_AUDIO2_INPUT); }
+    bool is_input() const { return (ddk_proto_id_ == MX_PROTOCOL_AUDIO_INPUT); }
 };
 
 class UsbAudioStream;
@@ -82,7 +82,7 @@ private:
                      usb_endpoint_descriptor_t* usb_endpoint,
                      usb_audio_ac_format_type_i_desc* format_desc);
     bool ValidateSampleRate(uint32_t rate) const;
-    bool ValidateSetFormatRequest(const audio2_proto::StreamSetFmtReq& req);
+    bool ValidateSetFormatRequest(const audio_proto::StreamSetFmtReq& req);
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
     mx_status_t ProcessStreamChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
@@ -90,23 +90,23 @@ private:
 
     // Stream command handlers
     mx_status_t OnSetStreamFormatLocked(DispatcherChannel* channel,
-                                        const audio2_proto::StreamSetFmtReq& req)
+                                        const audio_proto::StreamSetFmtReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnGetGainLocked(DispatcherChannel* channel, const audio2_proto::GetGainReq& req)
+    mx_status_t OnGetGainLocked(DispatcherChannel* channel, const audio_proto::GetGainReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnSetGainLocked(DispatcherChannel* channel, const audio2_proto::SetGainReq& req)
+    mx_status_t OnSetGainLocked(DispatcherChannel* channel, const audio_proto::SetGainReq& req)
         __TA_REQUIRES(lock_);
     mx_status_t OnPlugDetectLocked(DispatcherChannel* channel,
-                                   const audio2_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
+                                   const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
 
     // Ring buffer command handlers
     mx_status_t OnGetFifoDepthLocked(DispatcherChannel* channel,
-            const audio2_proto::RingBufGetFifoDepthReq& req) __TA_REQUIRES(lock_);
+            const audio_proto::RingBufGetFifoDepthReq& req) __TA_REQUIRES(lock_);
     mx_status_t OnGetBufferLocked(DispatcherChannel* channel,
-            const audio2_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
-    mx_status_t OnStartLocked(DispatcherChannel* channel, const audio2_proto::RingBufStartReq& req)
+            const audio_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
+    mx_status_t OnStartLocked(DispatcherChannel* channel, const audio_proto::RingBufStartReq& req)
         __TA_REQUIRES(lock_);
-    mx_status_t OnStopLocked(DispatcherChannel* channel, const audio2_proto::RingBufStopReq& req)
+    mx_status_t OnStopLocked(DispatcherChannel* channel, const audio_proto::RingBufStopReq& req)
         __TA_REQUIRES(lock_);
 
     void IotxnComplete(iotxn_t* txn);
@@ -123,7 +123,7 @@ private:
     // TODO(johngro) : support parsing and selecting from all of the format
     // descriptors present for a stream, not just a single format (with multiple
     // sample rates).
-    audio2_sample_format_t          sample_format_;
+    audio_sample_format_t          sample_format_;
     mxtl::unique_ptr<uint32_t[]>    sample_rates_;
     uint32_t                        channel_count_;
     uint32_t                        frame_size_;
@@ -149,8 +149,8 @@ private:
         __TA_GUARDED(txn_lock_) = RingBufferState::STOPPED;
 
     union {
-        audio2_proto::RingBufStopResp  stop;
-        audio2_proto::RingBufStartResp start;
+        audio_proto::RingBufStopResp  stop;
+        audio_proto::RingBufStartResp start;
     } pending_job_resp_ __TA_GUARDED(txn_lock_);
 
     list_node_t                     free_iotxn_ __TA_GUARDED(txn_lock_);

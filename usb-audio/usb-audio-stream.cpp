@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <magenta/device/audio2.h>
+#include <magenta/device/audio.h>
 #include <magenta/device/usb.h>
 #include <magenta/hw/usb-audio.h>
 #include <magenta/process.h>
@@ -98,9 +98,9 @@ mx_status_t UsbAudioStream::Bind(const char* devname,
             return MX_ERR_NOT_SUPPORTED;
         }
         switch (format_desc->bBitResolution) {
-        case 8:  sample_format_ = AUDIO2_SAMPLE_FORMAT_8BIT; break;
-        case 16: sample_format_ = AUDIO2_SAMPLE_FORMAT_16BIT; break;
-        case 32: sample_format_ = AUDIO2_SAMPLE_FORMAT_32BIT; break;
+        case 8:  sample_format_ = AUDIO_SAMPLE_FORMAT_8BIT; break;
+        case 16: sample_format_ = AUDIO_SAMPLE_FORMAT_16BIT; break;
+        case 32: sample_format_ = AUDIO_SAMPLE_FORMAT_32BIT; break;
         }
     } break;
 
@@ -115,11 +115,11 @@ mx_status_t UsbAudioStream::Bind(const char* devname,
         }
         switch (format_desc->bBitResolution) {
         case 20: sample_format_ = (format_desc->bSubFrameSize == 3)
-                                ? AUDIO2_SAMPLE_FORMAT_20BIT_PACKED
-                                : AUDIO2_SAMPLE_FORMAT_20BIT_IN32;
+                                ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED
+                                : AUDIO_SAMPLE_FORMAT_20BIT_IN32;
         case 24: sample_format_ = (format_desc->bSubFrameSize == 3)
-                                ? AUDIO2_SAMPLE_FORMAT_24BIT_PACKED
-                                : AUDIO2_SAMPLE_FORMAT_24BIT_IN32;
+                                ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED
+                                : AUDIO_SAMPLE_FORMAT_24BIT_IN32;
         }
     } break;
 
@@ -234,7 +234,7 @@ bool UsbAudioStream::ValidateSampleRate(uint32_t rate) const {
     }
 }
 
-bool UsbAudioStream::ValidateSetFormatRequest(const audio2_proto::StreamSetFmtReq& req) {
+bool UsbAudioStream::ValidateSetFormatRequest(const audio_proto::StreamSetFmtReq& req) {
     return ((req.channels == channel_count_) &&
             (req.sample_format == sample_format_) &&
             ValidateSampleRate(req.frames_per_second));
@@ -270,7 +270,7 @@ mx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
                                      const void* in_buf, size_t in_len,
                                      void* out_buf, size_t out_len, size_t* out_actual) {
     // The only IOCTL we support is get channel.
-    if (op != AUDIO2_IOCTL_GET_CHANNEL) {
+    if (op != AUDIO_IOCTL_GET_CHANNEL) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -323,7 +323,7 @@ case _ioctl:                                                    \
                   req_size, sizeof(req._payload));              \
         return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)) {  \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {  \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
         return MX_ERR_INVALID_ARGS;                                \
     }                                                           \
@@ -335,11 +335,11 @@ mx_status_t UsbAudioStream::ProcessStreamChannelLocked(DispatcherChannel* channe
     // dispatching audio driver requests into some form of utility class so it
     // can be shared with the IntelHDA codec implementations as well.
     union {
-        audio2_proto::CmdHdr          hdr;
-        audio2_proto::StreamSetFmtReq set_format;
-        audio2_proto::GetGainReq      get_gain;
-        audio2_proto::SetGainReq      set_gain;
-        audio2_proto::PlugDetectReq   plug_detect;
+        audio_proto::CmdHdr          hdr;
+        audio_proto::StreamSetFmtReq set_format;
+        audio_proto::GetGainReq      get_gain;
+        audio_proto::SetGainReq      set_gain;
+        audio_proto::PlugDetectReq   plug_detect;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -352,16 +352,16 @@ mx_status_t UsbAudioStream::ProcessStreamChannelLocked(DispatcherChannel* channe
         return res;
 
     if ((req_size < sizeof(req.hdr) ||
-        (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
+        (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
         return MX_ERR_INVALID_ARGS;
 
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
-    auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
+    auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT,  set_format,  OnSetStreamFormatLocked, false);
-        HANDLE_REQ(AUDIO2_STREAM_CMD_GET_GAIN,    get_gain,    OnGetGainLocked,         false);
-        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_GAIN,    set_gain,    OnSetGainLocked,         true);
-        HANDLE_REQ(AUDIO2_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,      true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  OnSetStreamFormatLocked, false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    OnGetGainLocked,         false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    OnSetGainLocked,         true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,      true);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
             return MX_ERR_NOT_SUPPORTED;
@@ -372,11 +372,11 @@ mx_status_t UsbAudioStream::ProcessRingBufChannelLocked(DispatcherChannel* chann
     MX_DEBUG_ASSERT(channel != nullptr);
 
     union {
-        audio2_proto::CmdHdr                 hdr;
-        audio2_proto::RingBufGetFifoDepthReq get_fifo_depth;
-        audio2_proto::RingBufGetBufferReq    get_buffer;
-        audio2_proto::RingBufStartReq        rb_start;
-        audio2_proto::RingBufStopReq         rb_stop;
+        audio_proto::CmdHdr                 hdr;
+        audio_proto::RingBufGetFifoDepthReq get_fifo_depth;
+        audio_proto::RingBufGetBufferReq    get_buffer;
+        audio_proto::RingBufStartReq        rb_start;
+        audio_proto::RingBufStopReq         rb_stop;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -389,16 +389,16 @@ mx_status_t UsbAudioStream::ProcessRingBufChannelLocked(DispatcherChannel* chann
         return res;
 
     if ((req_size < sizeof(req.hdr) ||
-        (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
+        (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
         return MX_ERR_INVALID_ARGS;
 
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
-    auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
+    auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HANDLE_REQ(AUDIO2_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepthLocked, false);
-        HANDLE_REQ(AUDIO2_RB_CMD_GET_BUFFER,     get_buffer,     OnGetBufferLocked,    false);
-        HANDLE_REQ(AUDIO2_RB_CMD_START,          rb_start,       OnStartLocked,        false);
-        HANDLE_REQ(AUDIO2_RB_CMD_STOP,           rb_stop,        OnStopLocked,         false);
+        HANDLE_REQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepthLocked, false);
+        HANDLE_REQ(AUDIO_RB_CMD_GET_BUFFER,     get_buffer,     OnGetBufferLocked,    false);
+        HANDLE_REQ(AUDIO_RB_CMD_START,          rb_start,       OnStartLocked,        false);
+        HANDLE_REQ(AUDIO_RB_CMD_STOP,           rb_stop,        OnStopLocked,         false);
         default:
             DEBUG_LOG("Unrecognized ring buffer command 0x%04x\n", req.hdr.cmd);
             return MX_ERR_NOT_SUPPORTED;
@@ -409,11 +409,11 @@ mx_status_t UsbAudioStream::ProcessRingBufChannelLocked(DispatcherChannel* chann
 #undef HANDLE_REQ
 
 mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
-                                                    const audio2_proto::StreamSetFmtReq& req) {
+                                                    const audio_proto::StreamSetFmtReq& req) {
     MX_DEBUG_ASSERT(channel != nullptr);
 
     mx::channel client_rb_channel;
-    audio2_proto::StreamSetFmtResp resp;
+    audio_proto::StreamSetFmtResp resp;
     resp.hdr = req.hdr;
 
     // Only the privleged stream channel is allowed to change the format.
@@ -524,9 +524,9 @@ finished:
 }
 
 mx_status_t UsbAudioStream::OnGetGainLocked(DispatcherChannel* channel,
-                                            const audio2_proto::GetGainReq& req) {
+                                            const audio_proto::GetGainReq& req) {
     MX_DEBUG_ASSERT(channel != nullptr);
-    audio2_proto::GetGainResp resp;
+    audio_proto::GetGainResp resp;
 
     resp.hdr       = req.hdr;
     resp.cur_mute  = false;
@@ -540,16 +540,16 @@ mx_status_t UsbAudioStream::OnGetGainLocked(DispatcherChannel* channel,
 }
 
 mx_status_t UsbAudioStream::OnSetGainLocked(DispatcherChannel* channel,
-                                            const audio2_proto::SetGainReq& req) {
+                                            const audio_proto::SetGainReq& req) {
     MX_DEBUG_ASSERT(channel != nullptr);
-    if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)
+    if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return MX_OK;
 
-    audio2_proto::SetGainResp resp;
+    audio_proto::SetGainResp resp;
     resp.hdr = req.hdr;
 
-    bool illegal_mute = (req.flags & AUDIO2_SGF_MUTE_VALID) && (req.flags & AUDIO2_SGF_MUTE);
-    bool illegal_gain = (req.flags & AUDIO2_SGF_GAIN_VALID) && (req.gain != 0.0f);
+    bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE);
+    bool illegal_gain = (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0.0f);
 
     resp.cur_mute = false;
     resp.cur_gain = 0.0;
@@ -561,22 +561,22 @@ mx_status_t UsbAudioStream::OnSetGainLocked(DispatcherChannel* channel,
 }
 
 mx_status_t UsbAudioStream::OnPlugDetectLocked(DispatcherChannel* channel,
-                                               const audio2_proto::PlugDetectReq& req) {
-    if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)
+                                               const audio_proto::PlugDetectReq& req) {
+    if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
         return MX_OK;
 
-    audio2_proto::PlugDetectResp resp;
+    audio_proto::PlugDetectResp resp;
     resp.hdr   = req.hdr;
-    resp.flags = static_cast<audio2_pd_notify_flags_t>(AUDIO2_PDNF_HARDWIRED |
-                                                       AUDIO2_PDNF_PLUGGED);
+    resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
+                                                       AUDIO_PDNF_PLUGGED);
     resp.plug_state_time = create_time_;
 
     return channel->Write(&resp, sizeof(resp));
 }
 
 mx_status_t UsbAudioStream::OnGetFifoDepthLocked(DispatcherChannel* channel,
-                                                 const audio2_proto::RingBufGetFifoDepthReq& req) {
-    audio2_proto::RingBufGetFifoDepthResp resp;
+                                                 const audio_proto::RingBufGetFifoDepthReq& req) {
+    audio_proto::RingBufGetFifoDepthResp resp;
 
     resp.hdr = req.hdr;
     resp.result = MX_OK;
@@ -586,8 +586,8 @@ mx_status_t UsbAudioStream::OnGetFifoDepthLocked(DispatcherChannel* channel,
 }
 
 mx_status_t UsbAudioStream::OnGetBufferLocked(DispatcherChannel* channel,
-                                              const audio2_proto::RingBufGetBufferReq& req) {
-    audio2_proto::RingBufGetBufferResp resp;
+                                              const audio_proto::RingBufGetBufferReq& req) {
+    audio_proto::RingBufGetBufferResp resp;
     mx::vmo client_rb_handle;
     uint32_t map_flags, client_rights;
 
@@ -673,8 +673,8 @@ finished:
 }
 
 mx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
-                                          const audio2_proto::RingBufStartReq& req) {
-    audio2_proto::RingBufStartResp resp;
+                                          const audio_proto::RingBufStartReq& req) {
+    audio_proto::RingBufStartResp resp;
     resp.hdr = req.hdr;
     resp.start_ticks = 0;
 
@@ -745,7 +745,7 @@ mx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
 }
 
 mx_status_t UsbAudioStream::OnStopLocked(DispatcherChannel* channel,
-                                         const audio2_proto::RingBufStopReq& req) {
+                                         const audio_proto::RingBufStopReq& req) {
     mxtl::AutoLock txn_lock(&txn_lock_);
 
     // TODO(johngro): We currently cannot cancel USB transactions once queued.
@@ -753,7 +753,7 @@ mx_status_t UsbAudioStream::OnStopLocked(DispatcherChannel* channel,
     // transactions instead of having an intermediate STOPPING state we use to
     // wait for the transactions in flight to finish via IotxnComplete.
     if (ring_buffer_state_ != RingBufferState::STARTED) {
-        audio2_proto::RingBufStopResp resp;
+        audio_proto::RingBufStopResp resp;
 
         txn_lock.release();
         resp.hdr = req.hdr;
@@ -778,9 +778,9 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     };
 
     union {
-        audio2_proto::RingBufStopResp  stop;
-        audio2_proto::RingBufStartResp start;
-        audio2_proto::RingBufPositionNotify notify_pos;
+        audio_proto::RingBufStopResp  stop;
+        audio_proto::RingBufStartResp start;
+        audio_proto::RingBufPositionNotify notify_pos;
     } resp;
 
     uint64_t complete_time = mx_ticks_get();
@@ -917,8 +917,8 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
             break;
 
         case Action::NOTIFY_POSITION:
-            resp.notify_pos.hdr.cmd = AUDIO2_RB_POSITION_NOTIFY;
-            resp.notify_pos.hdr.transaction_id = AUDIO2_INVALID_TRANSACTION_ID;
+            resp.notify_pos.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
+            resp.notify_pos.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
             rb_channel_->Write(&resp.notify_pos, sizeof(resp.notify_pos));
             break;
 
