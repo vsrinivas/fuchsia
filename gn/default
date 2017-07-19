@@ -29,6 +29,7 @@
         "libc-tests",
         "lua",
         "magenta_benchmarks",
+        "make-fuchsia-vol",
         "maxwell",
         "media",
         "mi_dashboard",
