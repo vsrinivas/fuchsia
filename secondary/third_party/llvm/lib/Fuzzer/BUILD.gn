@@ -39,7 +39,6 @@ static_library("Fuzzer") {
     "FuzzerShmemWindows.cpp",
     "FuzzerTracePC.cpp",
     "FuzzerTracePC.h",
-    "FuzzerTraceState.cpp",
     "FuzzerUtil.cpp",
     "FuzzerUtilDarwin.cpp",
     "FuzzerUtil.h",
