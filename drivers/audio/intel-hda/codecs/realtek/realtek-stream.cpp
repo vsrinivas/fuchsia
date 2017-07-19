@@ -191,12 +191,12 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
         // Inform anyone who has registered for notification.
         MX_DEBUG_ASSERT(pc_.async_plug_det);
         if (!plug_notify_targets_.is_empty()) {
-            audio2_proto::PlugDetectNotify notif;
+            audio_proto::PlugDetectNotify notif;
 
-            notif.hdr.cmd = AUDIO2_STREAM_PLUG_DETECT_NOTIFY;
-            notif.hdr.transaction_id = AUDIO2_INVALID_TRANSACTION_ID;
-            notif.flags = static_cast<audio2_pd_notify_flags_t>(
-                    (plug_state_ ? AUDIO2_PDNF_PLUGGED : 0) | AUDIO2_PDNF_CAN_NOTIFY);
+            notif.hdr.cmd = AUDIO_STREAM_PLUG_DETECT_NOTIFY;
+            notif.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
+            notif.flags = static_cast<audio_pd_notify_flags_t>(
+                    (plug_state_ ? AUDIO_PDNF_PLUGGED : 0) | AUDIO_PDNF_CAN_NOTIFY);
             notif.plug_state_time = last_plug_time_;
 
             for (auto iter = plug_notify_targets_.begin(); iter != plug_notify_targets_.end(); ) {
@@ -219,7 +219,7 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
     return MX_OK;
 }
 
-mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt) {
+mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
     // Check the format arguments.
     if (!fmt.channels || (fmt.channels > conv_.widget_caps.ch_count()))
         return MX_ERR_NOT_SUPPORTED;
@@ -256,7 +256,7 @@ mx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) 
     return MX_OK;
 }
 
-void RealtekStream::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
+void RealtekStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
     MX_DEBUG_ASSERT(out_resp);
 
     if (conv_.has_amp) {
@@ -275,19 +275,19 @@ void RealtekStream::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
     out_resp->can_mute = can_mute();
 }
 
-void RealtekStream::OnSetGainLocked(const audio2_proto::SetGainReq& req,
-                                    audio2_proto::SetGainResp* out_resp) {
+void RealtekStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
+                                    audio_proto::SetGainResp* out_resp) {
     mx_status_t res  = MX_OK;
     bool mute_target = cur_mute_;
-    bool set_mute    = req.flags & AUDIO2_SGF_MUTE_VALID;
-    bool set_gain    = req.flags & AUDIO2_SGF_GAIN_VALID;
+    bool set_mute    = req.flags & AUDIO_SGF_MUTE_VALID;
+    bool set_gain    = req.flags & AUDIO_SGF_GAIN_VALID;
 
     if (set_mute || set_gain) {
         if (set_mute) {
             if (!can_mute()) {
                 res = MX_ERR_INVALID_ARGS;
             } else {
-                mute_target = req.flags & AUDIO2_SGF_MUTE;
+                mute_target = req.flags & AUDIO_SGF_MUTE;
             }
         }
 
@@ -311,8 +311,8 @@ void RealtekStream::OnSetGainLocked(const audio2_proto::SetGainReq& req,
 }
 
 void RealtekStream::OnPlugDetectLocked(DispatcherChannel* response_channel,
-                                       const audio2_proto::PlugDetectReq& req,
-                                       audio2_proto::PlugDetectResp* out_resp) {
+                                       const audio_proto::PlugDetectReq& req,
+                                       audio_proto::PlugDetectResp* out_resp) {
     MX_DEBUG_ASSERT(response_channel != nullptr);
 
     // If our pin cannot perform presence detection, just fall back on the base class impl.
@@ -325,17 +325,17 @@ void RealtekStream::OnPlugDetectLocked(DispatcherChannel* response_channel,
         // If we are capible of asynch plug detection, add or remove this client
         // to/from the notify list before reporting the current state.  Apps
         // should not be setting both flags, but if they do, disable wins.
-        if (req.flags & AUDIO2_PDF_DISABLE_NOTIFICATIONS) {
+        if (req.flags & AUDIO_PDF_DISABLE_NOTIFICATIONS) {
             RemovePDNotificationTgtLocked(*response_channel);
-        } else if (req.flags & AUDIO2_PDF_ENABLE_NOTIFICATIONS) {
+        } else if (req.flags & AUDIO_PDF_ENABLE_NOTIFICATIONS) {
             AddPDNotificationTgtLocked(response_channel);
         }
 
         // Report the current plug detection state if the client expects a response.
         if (out_resp) {
-            out_resp->flags  = static_cast<audio2_pd_notify_flags_t>(
-                               (plug_state_ ? AUDIO2_PDNF_PLUGGED : 0) |
-                               (pc_.async_plug_det ? AUDIO2_PDNF_CAN_NOTIFY : 0));
+            out_resp->flags  = static_cast<audio_pd_notify_flags_t>(
+                               (plug_state_ ? AUDIO_PDNF_PLUGGED : 0) |
+                               (pc_.async_plug_det ? AUDIO_PDNF_CAN_NOTIFY : 0));
             out_resp->plug_state_time = last_plug_time_;
         }
     } else {

@@ -26,23 +26,23 @@ bool SampleCaps::SupportsRate(uint32_t rate) const {
     return false;
 }
 
-bool SampleCaps::SupportsFormat(audio2_sample_format_t sample_format) const {
+bool SampleCaps::SupportsFormat(audio_sample_format_t sample_format) const {
     // Intel HDA controllers should always use host-endian for the samples fed
     // to the DMA engine, and do not support unsigned audio samples.
-    if (sample_format & (AUDIO2_SAMPLE_FORMAT_FLAG_UNSIGNED |
-                         AUDIO2_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN))
+    if (sample_format & (AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED |
+                         AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN))
         return false;
 
     // TODO(johngro) : Should we be doing specific bitstream/codec matching for
     // compressed audio passthru?  If so, how?
-    if (sample_format == AUDIO2_SAMPLE_FORMAT_BITSTREAM)
+    if (sample_format == AUDIO_SAMPLE_FORMAT_BITSTREAM)
         return ((pcm_formats_ & IHDA_PCM_FORMAT_AC3) != 0);
 
     // If the user want's float32, need to have support for float (in the
     // formats field) and 32 bit containers (in the size/rate field)
-    if (sample_format == AUDIO2_SAMPLE_FORMAT_32BIT_FLOAT)
+    if (sample_format == AUDIO_SAMPLE_FORMAT_32BIT_FLOAT)
         return ((pcm_formats_ & IHDA_PCM_FORMAT_FLOAT32) != 0)
-            && ((pcm_size_rate_ & AUDIO2_SAMPLE_FORMAT_32BIT) != 0);
+            && ((pcm_size_rate_ & AUDIO_SAMPLE_FORMAT_32BIT) != 0);
 
     // User is requesting a PCM format.  Start with checking for basic support,
     // then match the user's request against the set of containers Intel HDA can
@@ -51,11 +51,11 @@ bool SampleCaps::SupportsFormat(audio2_sample_format_t sample_format) const {
         return false;
 
     switch (sample_format) {
-        case AUDIO2_SAMPLE_FORMAT_8BIT:       return ((pcm_size_rate_ & IHDA_PCM_SIZE_8BITS) != 0);
-        case AUDIO2_SAMPLE_FORMAT_16BIT:      return ((pcm_size_rate_ & IHDA_PCM_SIZE_16BITS) != 0);
-        case AUDIO2_SAMPLE_FORMAT_20BIT_IN32: return ((pcm_size_rate_ & IHDA_PCM_SIZE_20BITS) != 0);
-        case AUDIO2_SAMPLE_FORMAT_24BIT_IN32: return ((pcm_size_rate_ & IHDA_PCM_SIZE_24BITS) != 0);
-        case AUDIO2_SAMPLE_FORMAT_32BIT:      return ((pcm_size_rate_ & IHDA_PCM_SIZE_32BITS) != 0);
+        case AUDIO_SAMPLE_FORMAT_8BIT:       return ((pcm_size_rate_ & IHDA_PCM_SIZE_8BITS) != 0);
+        case AUDIO_SAMPLE_FORMAT_16BIT:      return ((pcm_size_rate_ & IHDA_PCM_SIZE_16BITS) != 0);
+        case AUDIO_SAMPLE_FORMAT_20BIT_IN32: return ((pcm_size_rate_ & IHDA_PCM_SIZE_20BITS) != 0);
+        case AUDIO_SAMPLE_FORMAT_24BIT_IN32: return ((pcm_size_rate_ & IHDA_PCM_SIZE_24BITS) != 0);
+        case AUDIO_SAMPLE_FORMAT_32BIT:      return ((pcm_size_rate_ & IHDA_PCM_SIZE_32BITS) != 0);
         default: return false;
     }
 }

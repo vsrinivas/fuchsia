@@ -13,7 +13,7 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
-#include "drivers/audio/audio-proto/audio2-proto.h"
+#include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
@@ -80,16 +80,16 @@ protected:
         __TA_REQUIRES(obj_lock_);
     virtual mx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock_);
-    virtual mx_status_t BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
+    virtual mx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
     virtual mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock_);
-    virtual void OnGetGainLocked(audio2_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
-    virtual void OnSetGainLocked(const audio2_proto::SetGainReq& req,
-                                 audio2_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
+    virtual void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
+    virtual void OnSetGainLocked(const audio_proto::SetGainReq& req,
+                                 audio_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
     virtual void OnPlugDetectLocked(DispatcherChannel* response_channel,
-                                    const audio2_proto::PlugDetectReq& req,
-                                    audio2_proto::PlugDetectResp* out_resp)
+                                    const audio_proto::PlugDetectReq& req,
+                                    audio_proto::PlugDetectResp* out_resp)
         __TA_REQUIRES(obj_lock_);
 
     // Debug logging
@@ -118,14 +118,14 @@ protected:
 private:
     mx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
     mx_status_t DoSetStreamFormatLocked(DispatcherChannel* channel,
-                                        const audio2_proto::StreamSetFmtReq& fmt)
+                                        const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
-    mx_status_t DoGetGainLocked(DispatcherChannel* channel, const audio2_proto::GetGainReq& req)
+    mx_status_t DoGetGainLocked(DispatcherChannel* channel, const audio_proto::GetGainReq& req)
         __TA_REQUIRES(obj_lock_);
-    mx_status_t DoSetGainLocked(DispatcherChannel* channel, const audio2_proto::SetGainReq& req)
+    mx_status_t DoSetGainLocked(DispatcherChannel* channel, const audio_proto::SetGainReq& req)
         __TA_REQUIRES(obj_lock_);
     mx_status_t DoPlugDetectLocked(DispatcherChannel* channel,
-                                   const audio2_proto::PlugDetectReq& req) __TA_REQUIRES(obj_lock_);
+                                   const audio_proto::PlugDetectReq& req) __TA_REQUIRES(obj_lock_);
 
     mx_status_t DeviceIoctl(uint32_t op,
                             const void* in_buf,
@@ -151,11 +151,11 @@ private:
 
     mxtl::RefPtr<DispatcherChannel> stream_channel_ __TA_GUARDED(obj_lock_);
 
-    uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO2_INVALID_TRANSACTION_ID;
+    uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;
     uint16_t encoded_fmt_     __TA_GUARDED(obj_lock_);
     uint32_t unsol_tag_count_ __TA_GUARDED(obj_lock_) = 0;
 
-    static mx_status_t EncodeStreamFormat(const audio2_proto::StreamSetFmtReq& fmt,
+    static mx_status_t EncodeStreamFormat(const audio_proto::StreamSetFmtReq& fmt,
                                           uint16_t* encoded_fmt_out);
 
     static mx_protocol_device_t STREAM_DEVICE_THUNKS;

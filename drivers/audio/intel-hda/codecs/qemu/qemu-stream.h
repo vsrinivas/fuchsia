@@ -26,7 +26,7 @@ protected:
     // IntelHDAStreamBase implementation
     mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock()) final;
     void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock()) final;
-    mx_status_t BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
+    mx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock()) final;
     mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock()) final;

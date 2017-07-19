@@ -41,16 +41,16 @@ protected:
         __TA_REQUIRES(obj_lock()) final;
     mx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock()) final;
-    mx_status_t BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
+    mx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock()) final;
     mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock()) final;
-    void OnGetGainLocked(audio2_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
-    void OnSetGainLocked(const audio2_proto::SetGainReq& req,
-                         audio2_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+    void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+    void OnSetGainLocked(const audio_proto::SetGainReq& req,
+                         audio_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
     void OnPlugDetectLocked(DispatcherChannel* response_channel,
-                            const audio2_proto::PlugDetectReq& req,
-                            audio2_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+                            const audio_proto::PlugDetectReq& req,
+                            audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock()) final;
 
 private:
     struct Command {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/device/audio2.h>
+#include <magenta/device/audio.h>
 #include <stdint.h>
 
 namespace audio {
@@ -140,7 +140,7 @@ struct SampleCaps {
           pcm_formats_(formats) { }
 
     bool SupportsRate(uint32_t rate) const;
-    bool SupportsFormat(audio2_sample_format_t sample_format) const;
+    bool SupportsFormat(audio_sample_format_t sample_format) const;
 
     uint32_t pcm_size_rate_ = 0;
     uint32_t pcm_formats_ = 0;

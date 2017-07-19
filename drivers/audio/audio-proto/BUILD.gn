@@ -4,7 +4,7 @@
 
 source_set("audio-proto") {
     sources = [
-        "audio2-proto.cpp",
-        "audio2-proto.h",
+        "audio-proto.cpp",
+        "audio-proto.h",
     ]
 }
