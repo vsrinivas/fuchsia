@@ -51,9 +51,9 @@ TEST_F(SessionTest, AddAndRemoveResource) {
 TEST_F(SessionTest, Labeling) {
   const ResourceId kNodeId = 1;
   const std::string kShortLabel = "test!";
-  const std::string kLongLabel = std::string('x', mozart2::kLabelMaxLength);
+  const std::string kLongLabel = std::string(mozart2::kLabelMaxLength, 'x');
   const std::string kTooLongLabel =
-      std::string('?', mozart2::kLabelMaxLength + 1);
+      std::string(mozart2::kLabelMaxLength + 1, '?');
 
   EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
