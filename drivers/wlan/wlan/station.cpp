@@ -677,7 +677,7 @@ mx_status_t Station::PreChannelChange(wlan_channel_t chan) {
     auto assoc_chan_num = channel().channel_num;
     auto current_chan_num = device_->GetState()->channel().channel_num;
     if (current_chan_num == assoc_chan_num) {
-        // TODO(hahnr): send Null data frame and enter PS mode.
+        SetPowerManagementMode(true);
         // TODO(hahnr): start buffering tx packets (not here though)
     }
     return MX_OK;
@@ -692,8 +692,43 @@ mx_status_t Station::PostChannelChange() {
     auto assoc_chan_num = channel().channel_num;
     auto current_chan_num = device_->GetState()->channel().channel_num;
     if (current_chan_num == assoc_chan_num) {
-        // TODO(hahnr): send Null data frame and exit PS mode.
+        SetPowerManagementMode(false);
         // TODO(hahnr): wait for TIM, and PS-POLL all buffered frames from AP.
+    }
+    return MX_OK;
+}
+
+mx_status_t Station::SetPowerManagementMode(bool ps_mode) {
+    if (state_ != WlanState::kAssociated) {
+        warnf("cannot adjust power management before being associated\n");
+        return MX_OK;
+    }
+
+    const DeviceAddress& mymac = device_->GetState()->address();
+    size_t len = sizeof(DataFrameHeader);
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<DataFrameHeader>(0);
+    hdr->fc.set_type(kData);
+    hdr->fc.set_subtype(kNull);
+    hdr->fc.set_pwr_mgmt(ps_mode);
+    hdr->fc.set_to_ds(1);
+
+    std::memcpy(hdr->addr1, bss_->bssid.data(), sizeof(hdr->addr1));
+    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
+    std::memcpy(hdr->addr3, bss_->bssid.data(), sizeof(hdr->addr3));
+    uint16_t seq = device_->GetState()->next_seq();
+    hdr->sc.set_seq(seq);
+
+    mx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != MX_OK) {
+        errorf("could not send power management packet: %d\n", status);
+        return status;
     }
     return MX_OK;
 }

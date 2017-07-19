@@ -79,6 +79,8 @@ class Station {
     mx_status_t SendAssocResponse(AssociateResultCodes code);
     mx_status_t SendDisassociateIndication(uint16_t code);
 
+    mx_status_t SetPowerManagementMode(bool ps_mode);
+
     uint16_t next_seq();
 
     DeviceInterface* device_;
