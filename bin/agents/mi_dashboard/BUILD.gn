@@ -61,11 +61,6 @@ package("mi_dashboard") {
     },
     {
       path =
-          rebase_path("//apps/maxwell/src/agents/mi_dashboard/webroot/logo.png")
-      dest = "mi_dashboard/webroot/logo.png"
-    },
-    {
-      path =
           rebase_path("//apps/maxwell/src/agents/mi_dashboard/dashboard.config")
       dest = "mi_dashboard/dashboard.config"
     },
