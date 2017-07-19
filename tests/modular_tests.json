@@ -1,6 +1,10 @@
 {
   "tests":[
     {
+      "name":"modular_unittests",
+      "exec":"/system/tests/modular_unittests"
+    },
+    {
       "name":"user_shell",
       "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_user_shell --story_shell=dev_story_shell",
       "copy":{

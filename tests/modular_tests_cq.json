@@ -1,0 +1,8 @@
+{
+  "tests":[
+    {
+      "name":"modular_unittests",
+      "exec":"/system/tests/modular_unittests"
+    }
+  ]
+}
