@@ -21,6 +21,10 @@
 #include <string.h>
 #include <trace.h>
 
+#if WITH_LIB_MAGENTA
+#include <magenta/diagnostics.h>
+#endif // WITH_LIB_MAGENTA
+
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 #define TRACE_PAGE_FAULT 0
 
@@ -37,8 +41,6 @@ static inline void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
 void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
     vmm_context_switch(reinterpret_cast<VmAspace*>(oldspace), reinterpret_cast<VmAspace*>(newaspace));
 }
-
-void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
 status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 

@@ -42,3 +42,8 @@ status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
 status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
                                   user_ptr<mx_info_vmo_t> vmos, size_t max,
                                   size_t* actual, size_t* available);
+
+// Prints (with the supplied prefix) the number of mapped, committed bytes for
+// each process in the system whose page count > |min_pages|. Does not take
+// sharing into account, and does not count unmapped VMOs.
+void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);

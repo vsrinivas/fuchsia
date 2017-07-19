@@ -727,13 +727,14 @@ static int hwd_thread(void* arg) {
     }
 }
 
-void DumpProcessMemoryUsage(const char* prefix, size_t limit) {
+void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
     auto walker = MakeProcessWalker([&](ProcessDispatcher* process) {
         size_t pages = process->PageCount();
-        if (pages > limit) {
+        if (pages >= min_pages) {
             char pname[MX_MAX_NAME_LEN];
             process->get_name(pname);
-            printf("%s%s: %zu MB\n", prefix, pname, pages / 256);
+            printf("%sproc %5" PRIu64 " %4zuM '%s'\n",
+                   prefix, process->get_koid(), pages / 256, pname);
         }
     });
     GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
