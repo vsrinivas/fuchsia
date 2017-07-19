@@ -198,9 +198,7 @@ static int xhci_irq_thread(void* arg) {
 
         wait_res = mx_interrupt_wait(xhci->irq_handle);
         if (wait_res != MX_OK) {
-            if (wait_res != MX_ERR_CANCELED) {
-                printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
-            }
+            printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
             mx_interrupt_complete(xhci->irq_handle);
             break;
         }
