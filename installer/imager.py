@@ -124,6 +124,9 @@ parser.add_argument('--bootdata', action='store', required=False,
                     assumed to be relative to --build_dir""")
 parser.add_argument('--kernel_cmdline', action='store', required=False,
                     help="""Path to a file with kernel command line options""")
+parser.add_argument('--disable_thread_exp', action='store_const',
+                    required=False, default=False, const=True,
+                    help="Whether to disable experimental thread priorization")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -132,6 +135,8 @@ kernel = args.kernel
 build_dir_magenta = args.build_dir_magenta
 bootdata = args.bootdata
 kernel_cmdline = args.kernel_cmdline
+enable_thread_exp = not args.disable_thread_exp
+
 
 # if bootloader was not supplied, find it relative to the magenta build dir
 if bootloader is None:
@@ -272,12 +277,20 @@ if not (cp_fat(mcopy_path, disk_path_efi, bootloader, bootloader_remote_path,
                working_dir)):
   sys.exit(-1)
 
-if kernel_cmdline:
-    if not cp_fat(mcopy_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_CMDLINE, working_dir):
-        print "Could not copy kernel cmdline"
-        sys.exit(-1)
-    print "Copied command line \"%s\"" % kernel_cmdline
+if not kernel_cmdline:
+  kernel_cmdline = os.path.join(args.temp_dir, "kernel_cmdline")
+  if os.path.exists(kernel_cmdline):
+    os.remove(kernel_cmdline)
 
+with open(kernel_cmdline, "a+") as kcmd:
+  kcmd.write(" %s=%s" % ("thread.set.priority.allowed",
+                         "true" if enable_thread_exp else "false"))
+
+if not cp_fat(mcopy_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_CMDLINE, working_dir):
+  print "Could not copy kernel cmdline"
+  sys.exit(-1)
+
+print "Copied command line \"%s\"" % kernel_cmdline
 
 compressed_disk_efi = "%s.lz4" % disk_path_efi
 print "Compressing ESP disk image to %s" % compressed_disk_efi

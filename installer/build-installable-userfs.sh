@@ -52,8 +52,9 @@ kernel_cmdline=""
 bootdata=""
 kernel_args=""
 boot_manifest=""
+enable_thread_exp=1
 
-while getopts ":u:hrdp:b:m:e:a:t:c:x:o:w:" opt; do
+while getopts ":u:hrdp:b:m:e:a:t:c:x:o:w:j" opt; do
   case $opt in
     u)
       bytes_sys=$(($OPTARG * 1024 * 1024 * 1024))
@@ -79,7 +80,11 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:o:w:" opt; do
         "supplied, these options will be appended to the command line file."
       echo "-x: bootdata location"
       echo "-w: location of the boot partition manifest"
+      echo "-j: disable experimental thread prioritization"
       exit 0
+      ;;
+    j)
+      enable_thread_exp=0
       ;;
     r)
       release=1
@@ -260,16 +265,26 @@ fi
 
 if [ "$kernel_args" != "" ]; then
   if [ "$kernel_cmdline" = "" ]; then
-    echo "$kernel_args" > "$kernel_cmd_staging"
+    printf "$kernel_args" > "$kernel_cmd_staging"
   else
-    echo " $kernel_args" >> "$kernel_cmd_staging"
+    printf "$kernel_args" >> "$kernel_cmd_staging"
   fi
 fi
 
-"${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
+imager_cmd=( "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
   --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
-  --kernel_cmdline="$kernel_cmd_staging" --bootdata="$bootdata" --boot_manifest="$boot_manifest"
+  --bootdata="$bootdata" --boot_manifest="$boot_manifest" )
+
+if [ "$enable_thread_exp" -eq 0 ]; then
+  imager_cmd+=("--disable_thread_exp")
+fi
+
+if [ "$kernel_cmdline" != "" ] || [ "$kernel_args" != "" ]; then
+  imager_cmd+=("--kernel_cmdline=${kernel_cmd_staging}")
+fi
+
+${imager_cmd[@]}
 
 echo "Built disks: $disk_path_efi & $disk_path"
