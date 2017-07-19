@@ -62,11 +62,7 @@ SECTIONS {
         *(.hash)
     } :rodata
     .gnu.hash : { *(.gnu.hash) }
-    .dynsym : {
-        HIDDEN(DATA_START_dynsym = .);
-        *(.dynsym)
-        HIDDEN(DATA_END_dynsym = .);
-    }
+    .dynsym : { *(.dynsym) }
     .dynstr : { *(.dynstr) }
 
     .rodata : {
@@ -108,7 +104,6 @@ SECTIONS {
            "rodso code must avoid writable data sections!")
 
     . = ALIGN(CONSTANT(MAXPAGESIZE));
-    HIDDEN(CODE_START = .);
 
     .text : {
         *(.text.unlikely .text.*_unlikely .text.unlikely.*)
@@ -129,7 +124,6 @@ SECTIONS {
          * (.shstrtab, section headers, .symtab if not stripped, etc.).
          */
         . = ALIGN(CONSTANT(MAXPAGESIZE));
-        HIDDEN(CODE_END = .);
     } :code
 }
 

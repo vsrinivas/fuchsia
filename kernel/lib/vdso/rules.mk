@@ -27,7 +27,8 @@ MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h: scripts/gen-rodso-code.sh $(vdso-filename)
 	@$(MKDIR)
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(SHELLEXEC) $< '$(NM)' $@.new VDSO $(vdso-filename)
+	$(NOECHO)$(SHELLEXEC) $< '$(NM)' '$(READELF)' \
+	    $@.new VDSO $(vdso-filename)
 	@mv -f $@.new $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
 MODULE_COMPILEFLAGS += -I$(BUILDDIR)/$(LOCAL_DIR)
