@@ -260,14 +260,14 @@ tftp_status tftp_generate_write_request(tftp_session* session,
     if (left < kMaxTsizeOpt) {
         return TFTP_ERR_BUFFER_TOO_SMALL;
     }
-    append_option(&body, &left, kTsize, "%ld", datalen);
+    append_option(&body, &left, kTsize, "%zu", datalen);
     session->file_size = datalen;
 
     if (block_size > 0) {
         if (left < kMaxBlkSizeOpt) {
             return TFTP_ERR_BUFFER_TOO_SMALL;
         }
-        append_option(&body, &left, kBlkSize, "%ld", block_size);
+        append_option(&body, &left, kBlkSize, "%zu", block_size);
         session->options.block_size = block_size;
         session->options.requested |= BLOCKSIZE_OPTION;
     }
