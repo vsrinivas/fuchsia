@@ -38,6 +38,22 @@ function download_executable() {
   chmod a+x "${tool_path}"
 }
 
+# download_zip <name> <base url> <unzip directory> <base path>
+function download_zip() {
+  local name="${1}"
+  local base_url="${2}"
+  local unzip_dir="${3}"
+  local base_path="${4}"
+  local zip_path="${base_path}.zip"
+
+  download_file_if_needed "${name}" "${base_url}" "${base_path}" ".zip"
+  if [[ -f "${zip_path}" ]]; then
+    mkdir -p -- "${unzip_dir}"
+    (cd -- "${unzip_dir}" && rm -rf -- "${name}" && unzip -q "${zip_path}")
+    rm -f -- "${zip_path}"
+  fi
+}
+
 # download_tarball <name> <base url> <untar directory> <base path>
 function download_tarball() {
   local name="${1}"

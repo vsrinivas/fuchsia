@@ -7,15 +7,22 @@ set -e
 
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
 readonly FUCHSIA_URL_BASE="https://storage.googleapis.com/fuchsia-build/fuchsia"
+readonly FUCHSIA_CIPD_URL="https://storage.googleapis.com/fuchsia"
+
+readonly HOST_ARCH=$(uname -m)
+readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
+readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
 . "${SCRIPT_ROOT}/download.sh"
 
 case "$(uname -s)" in
   Darwin)
     readonly HOST_PLATFORM="mac"
+    readonly CIPD_PLATFORM="mac-amd64"
     ;;
   Linux)
     readonly HOST_PLATFORM="linux64"
+    readonly CIPD_PLATFORM="linux-amd64"
     ;;
   *)
     echo "Unknown operating system. Cannot install build tools."
@@ -38,6 +45,16 @@ function download_host_tarball() {
   local untar_dir="${3}"
   local base_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
   download_tarball "${name}" "${FUCHSIA_URL_BASE}/${base_url}" "${untar_dir}" "${base_path}"
+}
+
+# download_cipd_package <name> <package name> <unpackage directory>
+function download_cipd_package() {
+  local name="${1}"
+  local package="${2}"
+  local unpackage_dir="${3}"
+  local base_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
+
+  download_zip "${name}" "${FUCHSIA_CIPD_URL}/${package}/${CIPD_PLATFORM}" "${unpackage_dir}" "${base_path}"
 }
 
 function download_ninja() {
