@@ -8,18 +8,18 @@
 #include <string>
 #include <thread>
 
-#include <magenta/device/audio2.h>
+#include <magenta/device/audio.h>
 #include <magenta/types.h>
 #include <mxtl/unique_ptr.h>
 
 #include "apps/media/src/framework/models/active_source.h"
 #include "apps/media/src/framework/types/audio_stream_type.h"
 
-namespace audio2 {
+namespace audio {
 namespace utils {
 class AudioInput;
 }  // namespace utils
-}  // namespace audio2
+}  // namespace audio
 
 namespace media {
 // audio input as an ActiveSource.
@@ -67,11 +67,11 @@ class AudioInput : public ActiveSource {
   }
 
   // The fields below need to be stable while the worker thread is operating.
-  mxtl::unique_ptr<audio2::utils::AudioInput> audio_input_;
+  mxtl::unique_ptr<audio::utils::AudioInput> audio_input_;
   std::vector<uint32_t> frame_rates_;
   uint32_t configured_frames_per_second_;
   uint16_t configured_channels_;
-  audio2_sample_format_t configured_sample_format_;
+  audio_sample_format_t configured_sample_format_;
   uint32_t configured_bytes_per_frame_;
   SupplyCallback supply_callback_;
   PayloadAllocator* allocator_;

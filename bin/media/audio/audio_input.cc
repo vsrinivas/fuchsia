@@ -4,7 +4,7 @@
 
 #include "apps/media/src/audio/audio_input.h"
 
-#include <audio2-utils/audio-input.h>
+#include <audio-utils/audio-input.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <magenta/device/audio.h>
@@ -36,7 +36,7 @@ std::shared_ptr<AudioInput> AudioInput::Create(const std::string& device_path) {
 AudioInput::AudioInput(const std::string& device_path)
     : allocator_(PayloadAllocator::GetDefault()),
       state_(State::kUninitialized) {
-  audio_input_ = audio2::utils::AudioInput::Create(device_path.c_str());
+  audio_input_ = audio::utils::AudioInput::Create(device_path.c_str());
 }
 
 mx_status_t AudioInput::Initalize() {
@@ -60,7 +60,7 @@ mx_status_t AudioInput::Initalize() {
 
   configured_frames_per_second_ = 48000;
   configured_channels_ = 1;
-  configured_sample_format_ = AUDIO2_SAMPLE_FORMAT_16BIT;
+  configured_sample_format_ = AUDIO_SAMPLE_FORMAT_16BIT;
   configured_bytes_per_frame_ = 2;
 
   return MX_OK;
@@ -119,20 +119,20 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
   configured_channels_ = stream_type->audio()->channels();
   switch (stream_type->audio()->sample_format()) {
     case AudioStreamType::SampleFormat::kUnsigned8:
-      configured_sample_format_ = static_cast<audio2_sample_format_t>(
-          AUDIO2_SAMPLE_FORMAT_8BIT | AUDIO2_SAMPLE_FORMAT_FLAG_UNSIGNED);
+      configured_sample_format_ = static_cast<audio_sample_format_t>(
+          AUDIO_SAMPLE_FORMAT_8BIT | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);
       break;
 
     case AudioStreamType::SampleFormat::kSigned16:
-      configured_sample_format_ = AUDIO2_SAMPLE_FORMAT_16BIT;
+      configured_sample_format_ = AUDIO_SAMPLE_FORMAT_16BIT;
       break;
 
     case AudioStreamType::SampleFormat::kSigned24In32:
-      configured_sample_format_ = AUDIO2_SAMPLE_FORMAT_24BIT_IN32;
+      configured_sample_format_ = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
       break;
 
     case AudioStreamType::SampleFormat::kFloat:
-      configured_sample_format_ = AUDIO2_SAMPLE_FORMAT_32BIT_FLOAT;
+      configured_sample_format_ = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
       break;
 
     default:

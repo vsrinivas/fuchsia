@@ -32,7 +32,7 @@ source_set("audio") {
     "//apps/media/src/framework",
     "//apps/media/src/util",
     "//lib/ftl",
-    "//magenta/system/ulib/audio2-utils",
+    "//magenta/system/ulib/audio-utils",
   ]
 }
 

@@ -17,7 +17,7 @@ namespace media {
 
 // static
 const std::string AudioInputEnum::kAudioInputDeviceClassPath =
-  "/dev/class/audio2-input";
+  "/dev/class/audio-input";
 
 AudioInputEnum::AudioInputEnum() {
   DIR* dir = opendir(kAudioInputDeviceClassPath.c_str());
