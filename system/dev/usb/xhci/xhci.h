@@ -90,7 +90,6 @@ struct xhci {
 
     // used by the start thread
     mx_device_t* parent;
-    pci_protocol_t pci;
 
     // MMIO data structures
     xhci_cap_regs_t* cap_regs;
@@ -174,7 +173,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);
 void xhci_endpoint_free(xhci_endpoint_t* ep);
 int xhci_get_ep_state(xhci_endpoint_t* ep);
-mx_status_t xhci_start(xhci_t* xhci);
+void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
