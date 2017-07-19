@@ -98,6 +98,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                              bool* all_success, bool enable_crash_handler) {
     if (utest_test_type & test_type) {
         unittest_printf_critical("    %-51s [RUNNING]", name);
+        mx_time_t start_time = mx_time_get(MX_CLOCK_MONOTONIC);
         struct test_info test_info = { .all_ok = true, NULL };
         *current_test_info = &test_info;
         // The crash handler is disabled by default. To enable, the test should
@@ -117,13 +118,18 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
         } else if (!test()) {
             test_info.all_ok = false;
         }
+
         // Recheck all_ok in case there was a failure in a C++ destructor
         // after the "return" statement in END_TEST.
-        if (test_info.all_ok) {
-            unittest_printf_critical(" [PASSED] \n");
-        } else {
+        if (!test_info.all_ok)
             *all_success = false;
-        }
+
+        mx_time_t end_time = mx_time_get(MX_CLOCK_MONOTONIC);
+        mx_time_t time_taken_ms = (end_time - start_time) / 1000000;
+        unittest_printf_critical(" [%s] (%d ms)\n",
+                                 test_info.all_ok ? "PASSED" : "FAILED",
+                                 (int)time_taken_ms);
+
         *current_test_info = NULL;
     } else {
         unittest_printf_critical("    %-51s [IGNORED]\n", name);
