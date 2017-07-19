@@ -26,6 +26,12 @@ class Framebuffer : public Resource {
               uint32_t height,
               std::vector<ImagePtr> images,
               vk::RenderPass render_pass);
+  Framebuffer(Escher* escher, ImagePtr color_image, vk::RenderPass render_pass);
+  Framebuffer(Escher* escher,
+              ImagePtr color_image,
+              ImagePtr depth_image,
+              vk::RenderPass render_pass);
+
   ~Framebuffer() override;
 
   // TODO: make private... client shouldn't need access to this.

@@ -40,6 +40,8 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
 
   Escher* escher() const { return escher_; }
 
+  uint64_t frame_number() const { return frame_number_; }
+
  protected:
   explicit Renderer(Escher* escher);
   virtual ~Renderer();

@@ -29,6 +29,26 @@ Framebuffer::Framebuffer(impl::EscherImpl* escher_impl,
                   render_pass) {}
 
 Framebuffer::Framebuffer(Escher* escher,
+                         ImagePtr color_image,
+                         vk::RenderPass render_pass)
+    : Framebuffer(escher,
+                  color_image->width(),
+                  color_image->height(),
+                  std::vector<ImagePtr>{std::move(color_image)},
+                  render_pass) {}
+
+Framebuffer::Framebuffer(Escher* escher,
+                         ImagePtr color_image,
+                         ImagePtr depth_image,
+                         vk::RenderPass render_pass)
+    : Framebuffer(
+          escher,
+          color_image->width(),
+          color_image->height(),
+          std::vector<ImagePtr>{std::move(color_image), std::move(depth_image)},
+          render_pass) {}
+
+Framebuffer::Framebuffer(Escher* escher,
                          uint32_t width,
                          uint32_t height,
                          std::vector<ImagePtr> images,
