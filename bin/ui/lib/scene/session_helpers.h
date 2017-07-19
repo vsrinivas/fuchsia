@@ -135,6 +135,9 @@ mozart2::OpPtr NewSetColorOp(uint32_t node_id,
                              uint8_t blue,
                              uint8_t alpha);
 
+// Event operations.
+mozart2::OpPtr NewSetEventMaskOp(uint32_t resource_id, uint32_t event_mask);
+
 // Diagnostic operations.
 mozart2::OpPtr NewSetLabelOp(uint32_t resource_id, const std::string& label);
 

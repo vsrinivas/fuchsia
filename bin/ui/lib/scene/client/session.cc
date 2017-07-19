@@ -10,15 +10,20 @@
 namespace mozart {
 namespace client {
 
-Session::Session(mozart2::SessionPtr session) : session_(std::move(session)) {
+Session::Session(
+    mozart2::SessionPtr session,
+    fidl::InterfaceRequest<mozart2::SessionListener> session_listener)
+    : session_(std::move(session)), session_listener_binding_(this) {
   FTL_DCHECK(session_);
+  if (session_listener.is_pending())
+    session_listener_binding_.Bind(std::move(session_listener));
 }
 
-Session::Session(mozart2::SceneManager* scene_manager,
-                 mozart2::SessionListenerPtr session_listener) {
+Session::Session(mozart2::SceneManager* scene_manager)
+    : session_listener_binding_(this) {
   FTL_DCHECK(scene_manager);
   scene_manager->CreateSession(session_.NewRequest(),
-                               std::move(session_listener));
+                               session_listener_binding_.NewBinding());
 }
 
 Session::~Session() {
@@ -85,6 +90,16 @@ void Session::HitTest(uint32_t node_id,
 
   session_->HitTest(node_id, std::move(ray_origin_vec),
                     std::move(ray_direction_vec), std::move(callback));
+}
+
+void Session::OnError(const fidl::String& error) {
+  FTL_LOG(ERROR) << "Session error: " << error;
+}
+
+void Session::OnEvent(uint64_t presentation_time,
+                      fidl::Array<mozart2::EventPtr> events) {
+  if (event_handler_)
+    event_handler_(presentation_time, std::move(events));
 }
 
 }  // namespace client

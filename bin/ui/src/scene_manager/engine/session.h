@@ -123,6 +123,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
   bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
   bool ApplySetColorOp(const mozart2::SetColorOpPtr& op);
+  bool ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op);
   bool ApplySetLabelOp(const mozart2::SetLabelOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().

@@ -4,6 +4,7 @@
 
 module mozart2;
 
+import "apps/mozart/services/scene/events.fidl";
 import "apps/mozart/services/scene/resources.fidl";
 
 // Operations that are used to modify the state of a |Session|.
@@ -39,6 +40,9 @@ union Op {
 
   SetTextureOp set_texture;
   SetColorOp set_color;
+
+  // Events.
+  SetEventMaskOp set_event_mask;
 
   // Diagnostic operations.
   SetLabelOp set_label;
@@ -363,4 +367,18 @@ struct SetTextureOp {
 struct SetColorOp {
   uint32 material_id;
   ColorRgbaValue color;
+};
+
+// Sets which events a resource should deliver to the session listener.
+// This operation replaces any prior event mask for the resource.
+//
+// The initial event mask for a resource is zero, meaning no events are
+// reported.
+//
+// Constraints:
+// - |resource_id| is a valid resource id
+// - |event_mask| is zero or a combination of |k*EventMask| bits OR'ed together.
+struct SetEventMaskOp {
+  uint32 id;
+  uint32 event_mask;
 };

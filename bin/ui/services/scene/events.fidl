@@ -1,0 +1,31 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart2;
+
+import "apps/mozart/services/scene/types.fidl";
+
+// Reports metrics information.
+// This event type is only reported for node resources.
+const uint32 kMetricsEventMask = 1;
+
+// These are all of the types of events which can be reported by a |Session|.
+// Use |SetEventMaskOp| to enable event delivery for a resource.
+union Event {
+  MetricsEvent metrics;
+};
+
+// Provides rendering target metrics information about the specified node.
+//
+// This event is delivered when the following conditions are true:
+// - The node is a descendant of a |Scene|.
+// - The node's metrics have changed since they were last delivered, or since
+//   |kMetricsEventMask| transitioned from a disabled state to an enabled state.
+//
+// Subscribe to this event to receive information about the scale factors you
+// should apply when generating textures for your nodes.
+struct MetricsEvent {
+  uint32 node_id;
+  Metrics metrics;
+};

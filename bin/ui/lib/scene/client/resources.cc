@@ -26,6 +26,10 @@ void Resource::ExportAsRequest(mx::eventpair* out_import_token) {
       mozart::NewExportResourceOpAsRequest(id(), out_import_token));
 }
 
+void Resource::SetEventMask(uint32_t event_mask) {
+  session_->Enqueue(mozart::NewSetEventMaskOp(id(), event_mask));
+}
+
 void Resource::SetLabel(const std::string& label) {
   session_->Enqueue(mozart::NewSetLabelOp(id(), label));
 }

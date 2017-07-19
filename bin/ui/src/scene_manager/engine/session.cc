@@ -102,6 +102,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetTextureOp(op->get_set_texture());
     case mozart2::Op::Tag::SET_COLOR:
       return ApplySetColorOp(op->get_set_color());
+    case mozart2::Op::Tag::SET_EVENT_MASK:
+      return ApplySetEventMaskOp(op->get_set_event_mask());
     case mozart2::Op::Tag::SET_LABEL:
       return ApplySetLabelOp(op->get_set_label());
     case mozart2::Op::Tag::__UNKNOWN__:
@@ -365,6 +367,10 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
     material->SetColor(red, green, blue, alpha);
     return true;
   }
+  return false;
+}
+
+bool Session::ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op) {
   return false;
 }
 

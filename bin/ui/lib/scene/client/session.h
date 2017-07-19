@@ -6,6 +6,7 @@
 
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 #include <functional>
 
@@ -19,7 +20,7 @@ namespace client {
 // Wraps a Mozart session.
 // Maintains a queue of pending operations and assists with allocation of
 // resource ids.
-class Session {
+class Session : private mozart2::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
@@ -30,13 +31,20 @@ class Session {
   using HitTestCallback =
       std::function<void(fidl::Array<mozart2::HitPtr> hits)>;
 
-  // Wraps the provided session.
-  explicit Session(mozart2::SessionPtr session);
+  // Called when session events are received.
+  using EventHandler = std::function<void(uint64_t presentation_time,
+                                          fidl::Array<mozart2::EventPtr>)>;
 
-  // Creates a new session using the provided scene manager.
+  // Wraps the provided session and session listener.
+  // The listener is optional.
+  explicit Session(mozart2::SessionPtr session,
+                   fidl::InterfaceRequest<mozart2::SessionListener>
+                       session_listener = nullptr);
+
+  // Creates a new session using the provided scene manager and binds the
+  // session listener to this object.
   // The scene manager itself is not retained after construction.
-  explicit Session(mozart2::SceneManager* scene_manager,
-                   mozart2::SessionListenerPtr session_listener = nullptr);
+  explicit Session(mozart2::SceneManager* scene_manager);
 
   // Destroys the session.
   // All resources must be released prior to destruction.
@@ -45,6 +53,11 @@ class Session {
   // Sets a callback which is invoked if the session dies.
   void set_connection_error_handler(ftl::Closure closure) {
     session_.set_connection_error_handler(std::move(closure));
+  }
+
+  // Sets a callback which is invoked when events are received.
+  void set_event_handler(EventHandler event_handler) {
+    event_handler_ = std::move(event_handler);
   }
 
   // Gets a pointer to the underlying session interface.
@@ -84,6 +97,11 @@ class Session {
                HitTestCallback callback);
 
  private:
+  // |mozart2::SessionListener|
+  void OnError(const fidl::String& error) override;
+  void OnEvent(uint64_t presentation_time,
+               fidl::Array<mozart2::EventPtr> events) override;
+
   mozart2::SessionPtr session_;
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
@@ -91,6 +109,9 @@ class Session {
   fidl::Array<mozart2::OpPtr> ops_;
   fidl::Array<mx::event> acquire_fences_;
   fidl::Array<mx::event> release_fences_;
+
+  EventHandler event_handler_;
+  fidl::Binding<mozart2::SessionListener> session_listener_binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Session);
 };

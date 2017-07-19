@@ -148,3 +148,30 @@ enum HitTestBehavior {
   // Suppress hit testing of the node and everything it contains.
   kSuppress,
 };
+
+// Rendering target metrics associated with a node.
+// See also |MetricsEvent|.
+struct Metrics {
+  // The ratio between the size of one logical pixel within the node's local
+  // coordinate system and the size of one physical pixel of the rendering
+  // target.
+  //
+  // This scale factors change in relation to the resolution of the rendering
+  // target and the scale transformations applied by containing nodes.
+  // They are always strictly positive and non-zero.
+  //
+  // For example, suppose the rendering target is a high resolution display
+  // with a device pixel ratio of 2.0 meaning that each logical pixel
+  // within the model corresponds to two physical pixels of the display.
+  // Assuming no scale transformations affect the node, then its metrics event
+  // will report a scale factor of 2.0.
+  //
+  // Building on this example, if instead the node's parent applies a
+  // scale transformation of 0.25 to the node, then the node's metrics event
+  // will report a scale factor of 0.5 indicating that the node should render
+  // its content at a reduced resolution and level of detail since a smaller
+  // area of physical pixels (half the size in each dimension) will be rendered.
+  float scale_x;
+  float scale_y;
+  float scale_z;
+};

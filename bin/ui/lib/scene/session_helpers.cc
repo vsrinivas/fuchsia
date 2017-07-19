@@ -612,6 +612,17 @@ mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
   return op;
 }
 
+mozart2::OpPtr NewSetEventMaskOp(uint32_t resource_id, uint32_t event_mask) {
+  auto set_event_mask_op = mozart2::SetEventMaskOp::New();
+  set_event_mask_op->id = resource_id;
+  set_event_mask_op->event_mask = event_mask;
+
+  auto op = mozart2::Op::New();
+  op->set_set_event_mask(std::move(set_event_mask_op));
+
+  return op;
+}
+
 mozart2::OpPtr NewSetLabelOp(uint32_t resource_id, const std::string& label) {
   auto set_label_op = mozart2::SetLabelOp::New();
   set_label_op->id = resource_id;

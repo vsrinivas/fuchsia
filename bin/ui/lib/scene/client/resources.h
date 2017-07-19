@@ -31,6 +31,9 @@ class Resource {
   // which allows it to be imported into other sessions.
   void ExportAsRequest(mx::eventpair* out_import_token);
 
+  // Sets which events a resource should deliver to the session listener.
+  void SetEventMask(uint32_t event_mask);
+
   // Sets a label to help developers identify the purpose of the resource
   // when using diagnostic tools.
   void SetLabel(const std::string& label);

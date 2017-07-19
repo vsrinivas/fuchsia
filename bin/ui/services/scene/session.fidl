@@ -196,6 +196,17 @@ struct Hit {
   float distance;
 };
 
+// Listens for events which occur within the session.
 interface SessionListener {
+  // Called when an error has occurred and the session will be torn down.
   OnError(string error);
+
+  // Called to deliver a batch of one or more events to the listener.
+  // Use |SetEventMaskOp| to enable event delivery for a resource.
+  //
+  // The |presentation_time| timestamp indicates the presentation time
+  // associated with the state of the scene graph about which the events
+  // were produced.  The timestamp increases monotonically but successive
+  // batches of events may have the same presentation time.
+  OnEvent(uint64 presentation_time, array<Event> events);
 };
