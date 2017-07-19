@@ -2,16 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("media") {
-  deps = [
-    ":examples",
-    ":services",
-    ":tools",
-  ]
-}
+import("//packages/package.gni")
 
 group("services") {
-  deps = [
+  public_deps = [
     "//apps/media/src/audio_policy_service",
     "//apps/media/src/audio_server",
     "//apps/media/src/flog_service",
@@ -21,14 +15,14 @@ group("services") {
 }
 
 group("tools") {
-  deps = [
-    "//apps/media/tools/vol",
+  public_deps = [
     "//apps/media/tools/flog_viewer",
+    "//apps/media/tools/vol",
   ]
 }
 
 group("examples") {
-  deps = [
+  public_deps = [
     "//apps/media/examples/audio_player",
     "//apps/media/examples/master_gain",
     "//apps/media/examples/media_player",
@@ -37,8 +31,77 @@ group("examples") {
   ]
 }
 
-group("tests") {
+package("media") {
+  app = true
+
+  deps = [
+    ":examples",
+    ":services",
+    ":tools",
+  ]
+
+  binaries = [
+    {
+      name = "audio_player"
+    },
+
+    {
+      name = "audio_policy_service"
+    },
+
+    {
+      name = "audio_server"
+    },
+
+    {
+      name = "flog_service"
+    },
+
+    {
+      name = "flog_viewer"
+    },
+
+    {
+      name = "master_gain"
+    },
+
+    {
+      name = "media_player"
+    },
+
+    {
+      name = "media_player_flutter"
+      source = "gen/apps/media/examples/media_player_flutter/media_player_flutter.flx"
+    },
+
+    {
+      name = "media_service"
+    },
+
+    {
+      name = "net_media_service"
+    },
+
+    {
+      name = "vol"
+    },
+
+    {
+      name = "vu_meter"
+    },
+  ]
+
+  resources = [ {
+        path = rebase_path(
+                "examples/media_player_flutter/media_player_flutter.config")
+        dest = "media_player_flutter/media_player_flutter.config"
+      } ]
+}
+
+package("tests") {
   testonly = true
+
+  package_name = "media_tests"
 
   deps = [
     "//apps/media/lib/timeline:tests",
@@ -48,5 +111,35 @@ group("tests") {
     "//apps/media/src/media_service:tests",
     "//apps/media/src/net_media_service:tests",
     "//apps/media/src/util:tests",
+  ]
+
+  tests = [
+    {
+      name = "media_audio_tests"
+    },
+
+    {
+      name = "media_demux_tests"
+    },
+
+    {
+      name = "media_lib_timeline_tests"
+    },
+
+    {
+      name = "media_lib_transport_tests"
+    },
+
+    {
+      name = "media_service_tests"
+    },
+
+    {
+      name = "media_util_tests"
+    },
+
+    {
+      name = "net_media_service_tests"
+    },
   ]
 }
