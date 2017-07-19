@@ -72,8 +72,8 @@ mx_status_t WAVSource::Initialize(const char* filename) {
     }
 
     switch (wav_info.bits_per_sample) {
-        case 8:  audio_format_.sample_format = AUDIO2_SAMPLE_FORMAT_8BIT; break;
-        case 16: audio_format_.sample_format = AUDIO2_SAMPLE_FORMAT_16BIT; break;
+        case 8:  audio_format_.sample_format = AUDIO_SAMPLE_FORMAT_8BIT; break;
+        case 16: audio_format_.sample_format = AUDIO_SAMPLE_FORMAT_16BIT; break;
         default:
             printf("Unsupported bits per sample (%hu)\n", wav_info.bits_per_sample);
             return MX_ERR_INVALID_ARGS;

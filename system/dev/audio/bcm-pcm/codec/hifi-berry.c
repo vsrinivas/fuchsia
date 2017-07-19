@@ -141,9 +141,9 @@ mx_status_t hifiberry_init(void) {
     return MX_OK;
 }
 
-bool hifiberry_is_valid_mode(audio2_stream_cmd_set_format_req_t req) {
+bool hifiberry_is_valid_mode(audio_stream_cmd_set_format_req_t req) {
 
-    uint32_t mode = req.sample_format & (AUDIO2_SAMPLE_FORMAT_16BIT);
+    uint32_t mode = req.sample_format & (AUDIO_SAMPLE_FORMAT_16BIT);
     if (!mode)
         return false;
 

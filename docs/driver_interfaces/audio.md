@@ -5,12 +5,6 @@ in Magenta.  It is meant to serve as a reference for both users and
 driver-authors, and to unambiguously define the interface contract which drivers
 must implement and users must follow.
 
-Note: Throughout this document you will see names which use some form of
-"audio2" prefix instead of simply audio.  The audio driver interface is in the
-process of being migrated from audio to audio2.  When everything has been
-migrated, the old interface will be retired and the names used in the new
-interface update to use "audio" instead of "audio2".
-
 ## Overview
 
 Audio streams are device nodes published by driver services intended to be used
@@ -85,10 +79,10 @@ Generally, the operations conducted over the ring buffer channel include...
 ### Protocol definition
 
 In order to use the C API definitions of the
-[audio2](../../system/public/magenta/device/audio2.h) protocol, applications and
+[audio](../../system/public/magenta/device/audio.h) protocol, applications and
 drivers simply say
 ```C
-#include <device/audio2.h>
+#include <device/audio.h>
 ```
 
 ### Device nodes
@@ -101,13 +95,13 @@ by the drivers.
 
 Stream Type | Protocol | Location
 ------------|----------|---------
-Input | `MX_PROTOCOL_AUDIO2_INPUT` | /dev/class/audio2-input
-Output | `MX_PROTOCOL_AUDIO2_OUTPUT` | /dev/class/audio2-output
+Input | `MX_PROTOCOL_AUDIO_INPUT` | /dev/class/audio-input
+Output | `MX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
 
 ### Establishing the stream channel
 
 After opening the device node, client applications may obtain a stream channel
-for subsequent communication using the `AUDIO2_IOCTL_GET_CHANNEL` ioctl.  For
+for subsequent communication using the `AUDIO_IOCTL_GET_CHANNEL` ioctl.  For
 example...
 ```C
 mx_handle_t OpenStream(const char* dev_node_path) {
@@ -119,7 +113,7 @@ mx_handle_t OpenStream(const char* dev_node_path) {
         return ret;
     }
 
-    ssize_t res = mxio_ioctl(fd, AUDIO2_IOCTL_GET_CHANNEL,
+    ssize_t res = mxio_ioctl(fd, AUDIO_IOCTL_GET_CHANNEL,
                              nullptr, 0,
                              &ret, sizeof(ret));
     close(fd);
@@ -143,7 +137,7 @@ any on-going streaming operations in the process.
 
 All of the messages and message payloads which may be sent or received over
 stream and ring buffer channels are defined in the
-[audio2](../../system/public/magenta/device/audio2.h) protocol header.  Messages
+[audio](../../system/public/magenta/device/audio.h) protocol header.  Messages
 may be sent to the driver using the
 [mx_channel_write(...)](../syscalls/channel_write.md) syscall.  If a response is
 expected, it may be read using the
@@ -156,19 +150,19 @@ of channels have messages (either expected responses or asynchronous
 notifications) to be read.
 
 All messages either sent or received over stream an ring buffer channels are
-prefaced with an `audio2_cmd_hdr_t` structure which contains a 32-bit
-transaction ID and an `audio2_cmd_hdr_t` enumeration value indicating the
+prefaced with an `audio_cmd_hdr_t` structure which contains a 32-bit
+transaction ID and an `audio_cmd_hdr_t` enumeration value indicating the
 specific command being requested by the application, the specific command being
 responded to by the driver, or the asynchronous notification being delivered by
 the driver to the application.
 
 When sending a command to the driver, applications **must** place a transaction
 ID in the header's `transaction_id` field which is not equal to
-`AUDIO2_INVALID_TRANSACTION_ID`.  If a response to a command needs to be sent by
+`AUDIO_INVALID_TRANSACTION_ID`.  If a response to a command needs to be sent by
 the driver to the application, the driver **must** use the transaction ID and
-`audio2_cmd_t` values sent by the client during the request.  When sending
+`audio_cmd_t` values sent by the client during the request.  When sending
 asynchronous notification to the application, the driver **must** use
-`AUDIO2_INVALID_TRANSACTION_ID` as the transaction ID for the message.
+`AUDIO_INVALID_TRANSACTION_ID` as the transaction ID for the message.
 Transaction IDs may be used by clients for whatever purpose they desire, however
 if the IDs are kept unique across all transactions in-flight, the
 [mx_channel_call(...)](../syscalls/channel_call.md) may be used to implement a
@@ -182,8 +176,8 @@ and **must** close the channel, terminating any operations which happen to be in
 flight at the time.  Additionally, they **may** log a message to a central
 logging service to assist in application developers in debugging the cause of
 the protocol violation.  Examples of protocol violation include...
- * Using `AUDIO2_INVALID_TRANSACTION_ID` as the value of `message.hdr.transaction_id`
- * Using a value not present in the `audio2_cmd_t` enumeration as the value of `message.hdr.cmd`
+ * Using `AUDIO_INVALID_TRANSACTION_ID` as the value of `message.hdr.transaction_id`
+ * Using a value not present in the `audio_cmd_t` enumeration as the value of `message.hdr.cmd`
  * Supplying a payload whose size does not match the size of the request payload for a given
    command.
 
@@ -191,11 +185,11 @@ the protocol violation.  Examples of protocol violation include...
 
 ### Sample Formats
 
-Sample formats are described using the `audio2_sample_format_t` type.  It is a
+Sample formats are described using the `audio_sample_format_t` type.  It is a
 bitfield style enumeration which describes either the numeric encoding of the
 uncompressed LPCM audio samples as they reside in memory, or indicating that the
 audio stream consists of a compressed bitstream instead of uncompressed LPCM
-samples.  Refer to the [audio2](../../system/public/magenta/device/audio2.h)
+samples.  Refer to the [audio](../../system/public/magenta/device/audio.h)
 protocol header for exact symbol definitions.
 
 Notes
@@ -244,7 +238,7 @@ Notes
 ### Setting the desired stream format
 
 In order to select a stream format, applications send an
-`AUDIO2_STREAM_CMD_SET_FORMAT` message over the stream channel.  In the message,
+`AUDIO_STREAM_CMD_SET_FORMAT` message over the stream channel.  In the message,
 for uncompressed audio streams, the application specifies
  * The frame rate of the stream in Hz using the `frames_per_second` field (in the
    case of an uncompressed audio stream).
@@ -253,7 +247,7 @@ for uncompressed audio streams, the application specifies
    Sample Formats, above)
 
 Success or failure, drivers **must** respond to a request to set format using a
-`audio2_stream_cmd_set_format_resp_t`.
+`audio_stream_cmd_set_format_resp_t`.
 
 In the case of success, drivers **must** set the `result` field of the response
 to `MX_OK` and **must** return a new ring buffer channel over which streaming
@@ -275,7 +269,7 @@ channel as is mandated for a successful operation.
 ### Hardware gain control capability reporting
 
 In order to determine a stream's gain control capabilities, applications send an
-`AUDIO2_STREAM_CMD_GET_GAIN` message over the stream channel.  No parameters
+`AUDIO_STREAM_CMD_GET_GAIN` message over the stream channel.  No parameters
 need to be supplied with this message.  All stream drivers **must** respond to
 this message, regardless of whether or not the stream hardware is capable of any
 gain control.  All gain values are expressed using 32 bit floating point numbers
@@ -303,19 +297,19 @@ situation, but drivers **should** report their step size as 0.0.
 ### Setting hardware gain control levels
 
 In order to change a stream's current gain settings, applications send an
-`AUDIO2_STREAM_CMD_SET_GAIN` message over the stream channel.  Two parameters
+`AUDIO_STREAM_CMD_SET_GAIN` message over the stream channel.  Two parameters
 are supplied with this message, a set of flags which control the request, and a
 float indicating the dB gain which should be applied to the stream.
 
 Three valid flags are currently defined.
- * `AUDIO2_SGF_MUTE_VALID`.  Set when the application wishes to set the
+ * `AUDIO_SGF_MUTE_VALID`.  Set when the application wishes to set the
    muted/un-muted state of the stream.  Clear if the application wishes to
    preserve the current muted/un-muted state.
- * `AUDIO2_SGF_GAIN_VALID`.  Set when the application wishes to set the
+ * `AUDIO_SGF_GAIN_VALID`.  Set when the application wishes to set the
    dB gain state of the stream.  Clear if the application wishes to
    preserve the current gain state.
- * `AUDIO2_SGF_MUTE`.  Indicates the application's desired mute/un-mute state
-   for the stream.  Significant only if `AUDIO2_SGF_MUTE_VALID` is also set.
+ * `AUDIO_SGF_MUTE`.  Indicates the application's desired mute/un-mute state
+   for the stream.  Significant only if `AUDIO_SGF_MUTE_VALID` is also set.
 
 Drivers **must** fail the request with an `MX_ERR_INVALID_ARGS` result if the
 application's request is incompatible with the stream's capabilities.
@@ -331,7 +325,7 @@ will result in a gain of -33.5 being applied.  A request for a gain of -33.2 dB
 will result in a gain of -33.0 being applied.
 
 Applications **may** choose not to receive an acknowledgement of a SET_GAIN
-command by setting the `AUDIO2_FLAG_NO_ACK` flag on their command.  No response
+command by setting the `AUDIO_FLAG_NO_ACK` flag on their command.  No response
 message will be sent to the application, regardless of the success or failure of
 the command.  If an acknowledgement was requested by the application, drivers
 respond with a message indicating the success or failure of the operation as
@@ -357,25 +351,25 @@ The ability to query the currently plugged or unplugged state of a stream, and
 to register for asynchonous notifications of plug state changes (if supported)
 is handled via plug detection messages.
 
-### AUDIO2_STREAM_CMD_PLUG_DETECT
+### AUDIO_STREAM_CMD_PLUG_DETECT
 
 In order to determine a stream's plug detection capabilities, current plug
 state, and to enable or disable for asynchronous plug detection notifications,
-applications send a `AUDIO2_STREAM_CMD_PLUG_DETECT` command over the stream
-channel.  Drivers respond with a set of `audio2_pd_notify_flags_t`, along with a
+applications send a `AUDIO_STREAM_CMD_PLUG_DETECT` command over the stream
+channel.  Drivers respond with a set of `audio_pd_notify_flags_t`, along with a
 timestamp referenced from MX_CLOCK_MONOTONIC indicating the last time the plug
 state changed.
 
 Three valid flags are currently defined.
- * `AUDIO2_PDNF_HARDWIRED`.  Set when the stream hardware is considered to be
+ * `AUDIO_PDNF_HARDWIRED`.  Set when the stream hardware is considered to be
    "hardwired".  In other words, the stream is considered to be connected as
    long as the device is published.  Examples include a set of built in
    speakers, a pair of USB headphones, or a plug-able audio device with no plug
    detect functionality.
- * `AUDIO2_PDNF_CAN_NOTIFY`.  Set when the stream hardware is capable of
+ * `AUDIO_PDNF_CAN_NOTIFY`.  Set when the stream hardware is capable of
    asynchronously detecting that a device's plug state has changed and sending a
    notification message if requested by the application.
- * `AUDIO2_PDNF_PLUGGED`  Set when the stream hardware considers the
+ * `AUDIO_PDNF_PLUGGED`  Set when the stream hardware considers the
    stream to be currently in the "plugged-in" state.
 
 Drivers for "hardwired" streams **must not** set the `CAN_NOTIFY` flag, and
@@ -384,27 +378,27 @@ response to the `PLUG_DETECT` message **should** always be set to the time at
 which the stream device was published by the driver.
 
 Applications **may** choose not to receive an acknowledgement of a `PLUG_DETECT`
-command by setting the `AUDIO2_FLAG_NO_ACK` flag on their command.  No response
+command by setting the `AUDIO_FLAG_NO_ACK` flag on their command.  No response
 message will be sent to the application, regardless of the success or failure of
 the command.  The most common use for this would be when an application wanted
 to disable asynchronous plug state detection messages and was not actually
 interested in the current plugged/unplugged state of the stream.
 
-### AUDIO2_STREAM_PLUG_DETECT_NOTIFY
+### AUDIO_STREAM_PLUG_DETECT_NOTIFY
 
 Applications may request that streams send them asynchronous notifications of
-plug state changes using the flags field of the `AUDIO2_STREAM_CMD_PLUG_DETECT`
+plug state changes using the flags field of the `AUDIO_STREAM_CMD_PLUG_DETECT`
 command.
 
 Two valid flags are currently defined.
- * `AUDIO2_PDF_ENABLE NOTIFICATIONS` Set by applications in order to
-   request that `AUDIO2_STREAM_PLUG_DETECT_NOTIFY`
- * `AUDIO2_PDF_DISABLE_NOTIFICATIONS` Set by applications in order to
-   stop new `AUDIO2_STREAM_PLUG_DETECT_NOTIFY` messages from being sent.
+ * `AUDIO_PDF_ENABLE NOTIFICATIONS` Set by applications in order to
+   request that `AUDIO_STREAM_PLUG_DETECT_NOTIFY`
+ * `AUDIO_PDF_DISABLE_NOTIFICATIONS` Set by applications in order to
+   stop new `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages from being sent.
 
 In order to request the current plug state without altering the current
 notification enable/disable state, clients simply set neither flag by passing
-either 0, or the value `AUDIO2_PDF_NONE`.  Clients **should** not set both flags
+either 0, or the value `AUDIO_PDF_NONE`.  Clients **should** not set both flags
 at the same time.  If they do, drivers **must** interpret this to mean that the
 final state of the system should be disabled.
 
@@ -415,7 +409,7 @@ capable of detecting plug state changes asynchronously.  Applications may still
 learn of plug state changes, but will need to do so by polling with repeated
 `PLUG_DETECT` commands.  Drivers for streams which do not set the `CAN_NOTIFY`
 flag are free to ignore enable/disable notification requests from applications,
-and **must** not ever send an `AUDIO2_STREAM_PLUG_DETECT_NOTIFY` message.
+and **must** not ever send an `AUDIO_STREAM_PLUG_DETECT_NOTIFY` message.
 
 ## Access control capability detection and signaling
 
@@ -460,7 +454,7 @@ captured data.
 ### Determining the FIFO depth
 
 Applications determine stream's FIFO depth using the
-`AUDIO2_RB_CMD_GET_FIFO_DEPTH` command.  Drivers **must** return their FIFO
+`AUDIO_RB_CMD_GET_FIFO_DEPTH` command.  Drivers **must** return their FIFO
 depth, expressed in bytes, in the `fifo_depth` field of the response.  In order
 to ensure proper playback or capture of audio, applications and drivers must be
 careful to respect this value.  This is to say that drivers must not read beyond
@@ -478,7 +472,7 @@ Once an application has successfully set the format of a stream, it will receive
 a new [channel](../objects/channel.md) representing its connection to the
 stream's ring-buffer.  In order to send or receive audio, the application must
 first establish a shared memory buffer.  This is done by sending an
-`AUDIO2_RB_CMD_GET_BUFFER` request over the ring-buffer channel.  This may only
+`AUDIO_RB_CMD_GET_BUFFER` request over the ring-buffer channel.  This may only
 be done while the ring-buffer is stopped.  Applications **must** specify two
 parameters when requesting a ring buffer.
 
@@ -499,7 +493,7 @@ frames.
 > client asked for.
 
 #### `notifications_per_ring`
-The number of position update notifications (`audio2_rb_position_notify_t`) the
+The number of position update notifications (`audio_rb_position_notify_t`) the
 client would like the driver to send per cycle through the ring buffer.  Drivers
 should attempt to space the notifications as uniformly throughout the ring as
 their hardware design allows, but clients may not rely on perfectly uniform
@@ -508,7 +502,7 @@ notifications at all and may choose to run using only start time and FIFO depth
 information to determine the driver's playout or capture position.
 
 Success or failure, drivers **must** respond to a `GET_BUFFER` request using an
-`audio2_rb_cmd_get_buffer_resp_t` message.  If the driver fails the request
+`audio_rb_cmd_get_buffer_resp_t` message.  If the driver fails the request
 because a buffer has already been established and the ring-buffer has already
 been started, it **must not** either stop the ring-buffer, or discard the
 existing shared memory.  If the application requests a new buffer after having
@@ -525,7 +519,7 @@ data in the buffer in the case of capture.
 ### Starting and Stopping the ring-buffer
 
 Clients may request that a ring-buffer start or stop using the
-`AUDIO2_RB_CMD_START` and `AUDIO2_RB_CMD_STOP` commands.  Success or failure,
+`AUDIO_RB_CMD_START` and `AUDIO_RB_CMD_STOP` commands.  Success or failure,
 drivers **must** send a response to these requests.  Attempting to start a
 stream which is already started **must** be considered a failure.  Attempting to
 stop a stream which is already stopped **should** be considered a success.
@@ -568,7 +562,7 @@ response has been enqueued.
 If requested by the application during the `GET_BUFFER` operation, the driver
 will periodically send updates to the application informing it of its current
 production or consumption position in the buffer.  This position is expressed in
-bytes in the `ring_buffer_pos` field of the `audio2_rb_position_notify_t`
+bytes in the `ring_buffer_pos` field of the `audio_rb_position_notify_t`
 message.  These messages will only ever be sent while the ring-buffer is
 started.  Note, these position notifications indicate where in the buffer the
 driver has consumed or produced data, *not* where the nominal playback or

@@ -21,10 +21,10 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     if (format.channels > 8) return MX_ERR_INVALID_ARGS;
     if (format.frame_rate == 0) return MX_ERR_INVALID_ARGS;
 
-    bool inv_endian = (format.sample_format & AUDIO2_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) != 0;
-    bool unsigned_fmt = (format.sample_format & AUDIO2_SAMPLE_FORMAT_FLAG_UNSIGNED) != 0;
-    auto noflag_format = static_cast<audio2_sample_format_t>(
-            (format.sample_format & ~AUDIO2_SAMPLE_FORMAT_FLAG_MASK));
+    bool inv_endian = (format.sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) != 0;
+    bool unsigned_fmt = (format.sample_format & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) != 0;
+    auto noflag_format = static_cast<audio_sample_format_t>(
+            (format.sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK));
 
     // TODO(johngro): deal with endianness.  Right now, we just assume that we
     // are on a little endian system and demand that the samples given to us be
@@ -42,27 +42,27 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     // compatible format on the fly.
     //
     // Only 8 bit formats are unsigned.
-    if ((noflag_format == AUDIO2_SAMPLE_FORMAT_8BIT) != unsigned_fmt)
+    if ((noflag_format == AUDIO_SAMPLE_FORMAT_8BIT) != unsigned_fmt)
         return MX_ERR_NOT_SUPPORTED;
 
     wav_hdr.format = FORMAT_LPCM;
 
     switch (noflag_format) {
     // 8-bit WAV PCM is unsigned.
-    case AUDIO2_SAMPLE_FORMAT_8BIT:         wav_hdr.bits_per_sample = 8; break;
-    case AUDIO2_SAMPLE_FORMAT_16BIT:        wav_hdr.bits_per_sample = 16; break;
-    case AUDIO2_SAMPLE_FORMAT_24BIT_PACKED: wav_hdr.bits_per_sample = 24; break;
+    case AUDIO_SAMPLE_FORMAT_8BIT:         wav_hdr.bits_per_sample = 8; break;
+    case AUDIO_SAMPLE_FORMAT_16BIT:        wav_hdr.bits_per_sample = 16; break;
+    case AUDIO_SAMPLE_FORMAT_24BIT_PACKED: wav_hdr.bits_per_sample = 24; break;
 
-    case AUDIO2_SAMPLE_FORMAT_32BIT_FLOAT:
+    case AUDIO_SAMPLE_FORMAT_32BIT_FLOAT:
         wav_hdr.format = FORMAT_IEEE_FLOAT;
         // deliberate fall-thru
-    case AUDIO2_SAMPLE_FORMAT_32BIT:
+    case AUDIO_SAMPLE_FORMAT_32BIT:
         wav_hdr.bits_per_sample = 32;
         break;
 
-    case AUDIO2_SAMPLE_FORMAT_20BIT_PACKED:
-    case AUDIO2_SAMPLE_FORMAT_20BIT_IN32:
-    case AUDIO2_SAMPLE_FORMAT_24BIT_IN32:
+    case AUDIO_SAMPLE_FORMAT_20BIT_PACKED:
+    case AUDIO_SAMPLE_FORMAT_20BIT_IN32:
+    case AUDIO_SAMPLE_FORMAT_24BIT_IN32:
     default:
         return MX_ERR_NOT_SUPPORTED;
     }

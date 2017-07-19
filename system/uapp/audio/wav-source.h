@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <audio2-utils/audio-stream.h>
+#include <audio-utils/audio-stream.h>
 #include <magenta/types.h>
 
 #include "wav-common.h"
 
 class WAVSource : public WAVCommon,
-                  public audio2::utils::AudioSource {
+                  public audio::utils::AudioSource {
 public:
     WAVSource() { }
     mx_status_t Initialize(const char* filename);

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <audio2-utils/audio-device-stream.h>
-#include <audio2-utils/audio-input.h>
-#include <audio2-utils/audio-output.h>
+#include <audio-utils/audio-device-stream.h>
+#include <audio-utils/audio-input.h>
+#include <audio-utils/audio-output.h>
 #include <magenta/types.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
@@ -217,9 +217,9 @@ int main(int argc, const char** argv) {
     print_usage.cancel();
 
     // Open the selected stream.
-    mxtl::unique_ptr<audio2::utils::AudioDeviceStream> stream;
-    if (input) stream = audio2::utils::AudioInput::Create(dev_num);
-    else       stream = audio2::utils::AudioOutput::Create(dev_num);
+    mxtl::unique_ptr<audio::utils::AudioDeviceStream> stream;
+    if (input) stream = audio::utils::AudioInput::Create(dev_num);
+    else       stream = audio::utils::AudioOutput::Create(dev_num);
     if (stream == nullptr) {
         printf("Out of memory!\n");
         return MX_ERR_NO_MEMORY;
@@ -246,7 +246,7 @@ int main(int argc, const char** argv) {
 
         SineSource sine_source(tone_freq, 1.0, duration);
         printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
-        return static_cast<audio2::utils::AudioOutput*>(stream.get())->Play(sine_source);
+        return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
     }
 
     case Command::PLAY: {
@@ -260,7 +260,7 @@ int main(int argc, const char** argv) {
         if (res != MX_OK)
             return res;
 
-        return static_cast<audio2::utils::AudioOutput*>(stream.get())->Play(wav_source);
+        return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
     }
 
     case Command::RECORD: {
@@ -272,7 +272,7 @@ int main(int argc, const char** argv) {
         // TODO(johngro): add the ability to configure the capture format
         static constexpr uint32_t frames_per_second = 48000u;
         static constexpr uint16_t channels = 1u;
-        static constexpr audio2_sample_format_t sample_format = AUDIO2_SAMPLE_FORMAT_16BIT;
+        static constexpr audio_sample_format_t sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
 
         res = stream->SetFormat(frames_per_second, channels, sample_format);
         if (res != MX_OK) {
@@ -286,7 +286,7 @@ int main(int argc, const char** argv) {
         if (res != MX_OK)
             return res;
 
-        return static_cast<audio2::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
+        return static_cast<audio::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
     }
 
     default:

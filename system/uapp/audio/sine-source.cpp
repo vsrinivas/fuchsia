@@ -11,7 +11,7 @@
 
 constexpr uint32_t FRAME_RATE = 48000;
 constexpr uint32_t CHANNELS = 2;
-constexpr audio2_sample_format_t SAMPLE_FORMAT = AUDIO2_SAMPLE_FORMAT_16BIT;
+constexpr audio_sample_format_t SAMPLE_FORMAT = AUDIO_SAMPLE_FORMAT_16BIT;
 constexpr uint32_t FRAME_SIZE = 4;
 
 SineSource::SineSource(float freq, float amp, float duration_secs) {

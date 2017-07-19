@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <audio2-utils/audio-stream.h>
+#include <audio-utils/audio-stream.h>
 #include <magenta/types.h>
 
-class SineSource : public audio2::utils::AudioSource {
+class SineSource : public audio::utils::AudioSource {
 public:
     SineSource(float freq, float amp, float duration_secs);
 

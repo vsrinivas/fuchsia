@@ -17,7 +17,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
-#include <magenta/device/audio2.h>
+#include <magenta/device/audio.h>
 #include <magenta/device/i2c.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
@@ -59,12 +59,12 @@
 // clang-format on
 
 typedef union {
-    audio2_cmd_hdr_t hdr;
-    audio2_rb_cmd_get_buffer_req_t get_buffer_req;
-    audio2_stream_cmd_set_format_req_t set_fmt_req;
-    audio2_rb_cmd_start_req_t start_req;
-    audio2_rb_cmd_stop_req_t stop_req;
-    audio2_rb_cmd_get_fifo_depth_req_t get_fifo_req;
+    audio_cmd_hdr_t hdr;
+    audio_rb_cmd_get_buffer_req_t get_buffer_req;
+    audio_stream_cmd_set_format_req_t set_fmt_req;
+    audio_rb_cmd_start_req_t start_req;
+    audio_rb_cmd_stop_req_t stop_req;
+    audio_rb_cmd_get_fifo_depth_req_t get_fifo_req;
 } buffer_packet_t;
 
 typedef struct {
@@ -188,8 +188,8 @@ static int pcm_notify_thread(void* arg) {
         mx_paddr_t pos = bcm_dma_get_position(&ctx->dma);
         bcm_dma_paddr_to_offset(&ctx->dma, pos, &offset);
 
-        audio2_rb_position_notify_t resp;
-        resp.hdr.cmd = AUDIO2_RB_POSITION_NOTIFY;
+        audio_rb_position_notify_t resp;
+        resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
         resp.ring_buffer_pos = offset;
 
         status = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), NULL, 0);
@@ -201,8 +201,8 @@ static int pcm_notify_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t pcm_get_fifo_depth(bcm_pcm_t* ctx, audio2_rb_cmd_get_fifo_depth_req_t req) {
-    audio2_rb_cmd_get_fifo_depth_resp_t resp;
+static mx_status_t pcm_get_fifo_depth(bcm_pcm_t* ctx, audio_rb_cmd_get_fifo_depth_req_t req) {
+    audio_rb_cmd_get_fifo_depth_resp_t resp;
     resp.hdr = req.hdr;
     resp.result = MX_OK;
     resp.fifo_depth = 64;
@@ -228,14 +228,14 @@ static mx_status_t pcm_stop_locked(bcm_pcm_t* ctx) {
     return res;
 }
 
-static mx_status_t pcm_stop_req(bcm_pcm_t* ctx, audio2_rb_cmd_stop_req_t req) {
+static mx_status_t pcm_stop_req(bcm_pcm_t* ctx, audio_rb_cmd_stop_req_t req) {
 
     mtx_lock(&ctx->pcm_lock);
     mx_status_t res;
 
     res = pcm_stop_locked(ctx);
 
-    audio2_rb_cmd_stop_resp_t resp;
+    audio_rb_cmd_stop_resp_t resp;
     resp.result = res;
     resp.hdr = req.hdr;
 
@@ -244,9 +244,9 @@ static mx_status_t pcm_stop_req(bcm_pcm_t* ctx, audio2_rb_cmd_stop_req_t req) {
     return res;
 }
 
-static mx_status_t pcm_start(bcm_pcm_t* ctx, audio2_rb_cmd_start_req_t req) {
+static mx_status_t pcm_start(bcm_pcm_t* ctx, audio_rb_cmd_start_req_t req) {
 
-    audio2_rb_cmd_start_resp_t resp;
+    audio_rb_cmd_start_resp_t resp;
     mx_status_t status = MX_OK;
 
     mtx_lock(&ctx->pcm_lock);
@@ -324,9 +324,9 @@ static mx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx) {
     return MX_OK;
 }
 
-static mx_status_t pcm_set_stream_fmt(bcm_pcm_t* ctx, audio2_stream_cmd_set_format_req_t req) {
+static mx_status_t pcm_set_stream_fmt(bcm_pcm_t* ctx, audio_stream_cmd_set_format_req_t req) {
     mx_status_t status;
-    audio2_stream_cmd_set_format_resp_t resp;
+    audio_stream_cmd_set_format_resp_t resp;
     mx_handle_t ret_handle = MX_HANDLE_INVALID;
 
     mtx_lock(&ctx->pcm_lock);
@@ -395,7 +395,7 @@ set_stream_fail:
 
 set_stream_done:
     resp.hdr.transaction_id = req.hdr.transaction_id;
-    resp.hdr.cmd = AUDIO2_STREAM_CMD_SET_FORMAT;
+    resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
     resp.result = status;
 
     status = mx_channel_write(ctx->stream_ch, 0, &resp, sizeof(resp), &ret_handle, 1);
@@ -419,13 +419,13 @@ static void pcm_audio_sink_unbind(void* ctx) {
     device_remove(pcm->mxdev);
 }
 
-static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio2_rb_cmd_get_buffer_req_t req) {
+static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio_rb_cmd_get_buffer_req_t req) {
 
     mtx_lock(&ctx->pcm_lock);
 
     mx_status_t status = MX_OK;
 
-    audio2_rb_cmd_get_buffer_resp_t resp;
+    audio_rb_cmd_get_buffer_resp_t resp;
     resp.hdr = req.hdr;
 
     if (ctx->buffer_vmo != MX_HANDLE_INVALID) {
@@ -536,18 +536,18 @@ static int pcm_port_thread(void* arg) {
 
             if (channel == ctx->stream_ch) {
                 switch (req.hdr.cmd) {
-                    HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT, set_fmt_req, pcm_set_stream_fmt);
+                    HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT, set_fmt_req, pcm_set_stream_fmt);
                 default:
                     xprintf("unrecognized stream command\n");
                     break;
                 }
             } else if (channel == ctx->buffer_ch) {
                 switch (req.hdr.cmd) {
-                    HANDLE_REQ(AUDIO2_RB_CMD_START, start_req, pcm_start);
-                    HANDLE_REQ(AUDIO2_RB_CMD_STOP, stop_req, pcm_stop_req);
-                    HANDLE_REQ(AUDIO2_RB_CMD_GET_BUFFER, get_buffer_req, pcm_get_buffer);
-                    HANDLE_REQ(AUDIO2_RB_CMD_GET_FIFO_DEPTH, get_fifo_req, pcm_get_fifo_depth);
-                case AUDIO2_RB_POSITION_NOTIFY:
+                    HANDLE_REQ(AUDIO_RB_CMD_START, start_req, pcm_start);
+                    HANDLE_REQ(AUDIO_RB_CMD_STOP, stop_req, pcm_stop_req);
+                    HANDLE_REQ(AUDIO_RB_CMD_GET_BUFFER, get_buffer_req, pcm_get_buffer);
+                    HANDLE_REQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_req, pcm_get_fifo_depth);
+                case AUDIO_RB_POSITION_NOTIFY:
                 default:
                     xprintf("unrecognized buffer command\n");
                     break;
@@ -574,7 +574,7 @@ static int pcm_port_thread(void* arg) {
 }
 #undef HANDLE_REQ
 
-static mx_status_t pcm_audio2_sink_ioctl(void* ctx, uint32_t op,
+static mx_status_t pcm_audio_sink_ioctl(void* ctx, uint32_t op,
                                          const void* in_buf, size_t in_len,
                                          void* out_buf, size_t out_len, size_t* out_actual) {
 
@@ -584,7 +584,7 @@ static mx_status_t pcm_audio2_sink_ioctl(void* ctx, uint32_t op,
     mx_status_t status = MX_OK;
     mx_handle_t* reply = out_buf;
 
-    if (op != AUDIO2_IOCTL_GET_CHANNEL) {
+    if (op != AUDIO_IOCTL_GET_CHANNEL) {
         status = MX_ERR_INVALID_ARGS;
         goto pcm_ioctl_end;
     }
@@ -657,7 +657,7 @@ static mx_protocol_device_t pcm_audio_ctx_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .unbind = pcm_audio_sink_unbind,
     .release = pcm_audio_sink_release,
-    .ioctl = pcm_audio2_sink_ioctl,
+    .ioctl = pcm_audio_sink_ioctl,
 };
 
 static int pcm_bootstrap_thread(void* arg) {
@@ -703,7 +703,7 @@ static int pcm_bootstrap_thread(void* arg) {
         .name = "pcm0",
         .ctx = pcm_ctx,
         .ops = &pcm_audio_ctx_device_proto,
-        .proto_id = MX_PROTOCOL_AUDIO2_OUTPUT,
+        .proto_id = MX_PROTOCOL_AUDIO_OUTPUT,
     };
 
     status = device_add(pcm_ctx->parent, &args, &pcm_ctx->mxdev);
