@@ -11,13 +11,18 @@ namespace mozart {
 namespace scene {
 
 SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 float device_pixel_ratio,
                                  Params* params,
                                  std::unique_ptr<DemoHarness> demo_harness)
     : application_context_(app_context),
       demo_harness_(std::move(demo_harness)),
       vulkan_context_(demo_harness_->GetVulkanContext()),
       escher_(vulkan_context_),
+      display_(width, height, device_pixel_ratio),
       scene_manager_(std::make_unique<SceneManagerImpl>(
+          &display_,
           &escher_,
           std::make_unique<FrameScheduler>(&display_),
           std::make_unique<escher::VulkanSwapchain>(

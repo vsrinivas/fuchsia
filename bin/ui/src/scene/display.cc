@@ -9,7 +9,11 @@
 namespace mozart {
 namespace scene {
 
-Display::Display() : first_vsync_(mx_time_get(MX_CLOCK_MONOTONIC)) {}
+Display::Display(uint32_t width, uint32_t height, float device_pixel_ratio)
+    : first_vsync_(mx_time_get(MX_CLOCK_MONOTONIC)),
+      width_(width),
+      height_(height),
+      device_pixel_ratio_(device_pixel_ratio) {}
 
 uint64_t Display::GetLastVsyncTime() const {
   uint64_t current_time = mx_time_get(MX_CLOCK_MONOTONIC);

@@ -18,11 +18,7 @@ class Display {
   // (vsync).
   static constexpr uint64_t kHardcodedPresentationIntervalNanos = 16'666'667;
 
-  static constexpr uint32_t kHardcodedDisplayWidth = 2160;
-  static constexpr uint32_t kHardcodedDisplayHeight = 1440;
-  static constexpr float kHardcodedDevicePixelRatio = 2.f;
-
-  Display();
+  Display(uint32_t width, uint32_t height, float device_pixel_ratio);
 
   // Obtain the time of the last Vsync, in nanoseconds.
   uint64_t GetLastVsyncTime() const;
@@ -30,8 +26,15 @@ class Display {
   // Obtain the interval between Vsyncs.
   uint64_t GetVsyncInterval() const;
 
+  uint32_t width() const { return width_; }
+  uint32_t height() const { return height_; }
+  float device_pixel_ratio() const { return device_pixel_ratio_; }
+
  private:
   uint64_t first_vsync_;
+  uint32_t width_;
+  uint32_t height_;
+  float device_pixel_ratio_;
 };
 
 }  // namespace scene

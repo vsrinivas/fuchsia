@@ -35,6 +35,8 @@ source_set("common") {
     "acquire_fence_set.h",
     "display.cc",
     "display.h",
+    "display_watcher.cc",
+    "display_watcher.h",
     "fence.h",
     "frame_scheduler.cc",
     "frame_scheduler.h",

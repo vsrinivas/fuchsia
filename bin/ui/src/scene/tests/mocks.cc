@@ -43,8 +43,9 @@ void SessionHandlerForTest::Connect(
 }
 
 SceneManagerImplForTest::SceneManagerImplForTest(
+    Display* display,
     std::unique_ptr<SessionContext> session_context)
-    : SceneManagerImpl(std::move(session_context), nullptr) {}
+    : SceneManagerImpl(display, std::move(session_context), nullptr) {}
 
 ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)

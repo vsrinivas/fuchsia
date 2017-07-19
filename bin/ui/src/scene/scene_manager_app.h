@@ -26,6 +26,9 @@ class SceneManagerApp {
   };
 
   SceneManagerApp(app::ApplicationContext* app_context,
+                  uint32_t width,
+                  uint32_t height,
+                  float device_pixel_ratio,
                   Params* params,
                   std::unique_ptr<DemoHarness> harness);
   ~SceneManagerApp();
@@ -36,11 +39,10 @@ class SceneManagerApp {
   std::unique_ptr<DemoHarness> demo_harness_;
   escher::VulkanContext vulkan_context_;
   escher::Escher escher_;
+  Display display_;
   std::unique_ptr<SceneManagerImpl> scene_manager_;
 
   fidl::BindingSet<mozart2::SceneManager> bindings_;
-
-  Display display_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
 };

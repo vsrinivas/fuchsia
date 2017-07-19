@@ -47,7 +47,8 @@ class SessionHandlerForTest : public SessionHandler {
 // Subclass SceneManagerImpl to make testing easier.
 class SceneManagerImplForTest : public SceneManagerImpl {
  public:
-  SceneManagerImplForTest(std::unique_ptr<SessionContext> session_context);
+  SceneManagerImplForTest(Display* display,
+                          std::unique_ptr<SessionContext> session_context);
 };
 
 class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
