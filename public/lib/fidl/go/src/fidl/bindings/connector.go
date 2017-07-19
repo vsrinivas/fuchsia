@@ -69,7 +69,9 @@ retry:
 		handles = make([]mx.Handle, numHandles)
 		goto retry
 	case mx.ErrShouldWait:
-		waitId := c.waiter.AsyncWait(c.channel.Handle, mx.SignalChannelReadable, c.waitChan)
+		waitId := c.waiter.AsyncWait(c.channel.Handle,
+			mx.SignalChannelReadable|mx.SignalChannelPeerClosed,
+			c.waitChan)
 		select {
 		case <-c.waitChan:
 			// We've got a message. Retry reading.

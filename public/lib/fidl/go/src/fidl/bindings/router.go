@@ -67,7 +67,9 @@ func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 			handles = make([]mx.Handle, numHandles)
 			goto retry
 		case mx.ErrShouldWait:
-			w.waitId = w.waiter.AsyncWait(w.channel.Handle, mx.SignalChannelReadable, w.waitChan)
+			w.waitId = w.waiter.AsyncWait(w.channel.Handle,
+				mx.SignalChannelReadable|mx.SignalChannelPeerClosed,
+				w.waitChan)
 			return nil
 		default:
 			return err
@@ -103,11 +105,13 @@ func (w *routerWorker) runLoop() error {
 			}
 		case request := <-w.requestChan:
 			err := w.channel.Write(request.message.Bytes, request.message.Handles, 0)
-			if err != nil {
-				return err
-			}
 			if request.responseChan != nil {
 				w.responders[request.message.Header.RequestId] = request.responseChan
+			}
+			// Returns an error after registering the responseChan
+			// so that the error will be reported to the chan.
+			if err != nil {
+				return err
 			}
 		case <-w.done:
 			return mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.routerWoker.runLoop"}
