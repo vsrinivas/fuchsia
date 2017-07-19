@@ -40,6 +40,13 @@ size_t strlen(const char* s) {
     return len;
 }
 
+size_t strnlen(const char* s, size_t max) {
+    size_t len = 0;
+    while (len < max && *s++)
+        len++;
+    return len;
+}
+
 char* strchr(const char* s, int c) {
     while (*s != c && *s++) ;
     if (*s != c) return 0;
@@ -59,3 +66,16 @@ char* strncpy(char* dst, const char* src, size_t len) {
     }
     return dst;
 }
+
+int strncmp(const char* s1, const char* s2, size_t len) {
+    while (len-- > 0) {
+        int diff = *s1 - *s2;
+        if (diff != 0 || *s1 == '\0') {
+            return diff;
+        }
+        s1++;
+        s2++;
+    }
+    return 0;
+}
+

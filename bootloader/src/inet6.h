@@ -134,10 +134,12 @@ int udp6_send(const void* data, size_t len,
               const ip6_addr* daddr, uint16_t dport,
               uint16_t sport);
 
-// implement to recive UDP packets
-void udp6_recv(void* data, size_t len,
-               const ip6_addr* daddr, uint16_t dport,
-               const ip6_addr* saddr, uint16_t sport);
+// handle a netboot UDP packet
+void netboot_recv(void* data, size_t len, const ip6_addr* saddr, uint16_t sport);
+
+// handle a TFTP (over UDP) packet
+void tftp_recv (void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
+                const ip6_addr* saddr, uint16_t sport);
 
 // NOTES
 //

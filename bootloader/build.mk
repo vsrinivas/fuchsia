@@ -6,6 +6,8 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+EFI_LIBDIRS	:= system/ulib/tftp
+
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 EFI_CC		:= $(CLANG_TOOLCHAIN_PREFIX)clang
 EFI_LD		:= $(CLANG_TOOLCHAIN_PREFIX)lld-link
@@ -18,6 +20,7 @@ EFI_CFLAGS	:= -fshort-wchar -fno-stack-protector -mno-red-zone
 EFI_CFLAGS	+= -Wall -std=c99
 EFI_CFLAGS	+= -ffreestanding -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
 EFI_CFLAGS	+= -Isystem/public -Isystem/private
+EFI_CFLAGS	+= $(foreach LIBDIR,$(EFI_LIBDIRS),-I$(LIBDIR)/include)
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 EFI_CFLAGS	+= --target=x86_64-windows-msvc
 else
@@ -61,9 +64,12 @@ EFI_SOURCES += \
     $(LOCAL_DIR)/lib/printf.c \
     $(LOCAL_DIR)/lib/stdlib.c \
     $(LOCAL_DIR)/lib/string.c \
+    $(LOCAL_DIR)/lib/inet.c \
 
 EFI_OBJS := $(patsubst $(LOCAL_DIR)/%.c,$(BUILDDIR)/bootloader/%.o,$(EFI_SOURCES))
 EFI_DEPS := $(patsubst %.o,%.d,$(EFI_OBJS))
+EFI_LIBS := $(foreach LIBDIR,$(EFI_LIBDIRS), \
+                 $(BUILDDIR)/EFI_libs/lib$(notdir $(LIBDIR)).a)
 
 $(BUILDDIR)/bootloader/%.o : $(LOCAL_DIR)/%.c
 	@$(MKDIR)
@@ -72,14 +78,14 @@ $(BUILDDIR)/bootloader/%.o : $(LOCAL_DIR)/%.c
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 
-$(EFI_BOOTLOADER): $(EFI_OBJS)
+$(EFI_BOOTLOADER): $(EFI_OBJS) $(EFI_LIBS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(EFI_LD) /out:$@ $(EFI_LDFLAGS) $^
 
 else
 
-$(EFI_SO): $(EFI_OBJS)
+$(EFI_SO): $(EFI_OBJS) $(EFI_LIBS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(EFI_LD) -o $@ $(EFI_LDFLAGS) $^

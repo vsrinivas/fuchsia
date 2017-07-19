@@ -312,6 +312,9 @@ ALLHOST_APPS :=
 # host libs to build
 ALLHOST_LIBS :=
 
+# EFI libs to build
+ALLEFI_LIBS :=
+
 # sysroot (exported libraries and headers)
 SYSROOT_DEPS :=
 
@@ -564,6 +567,25 @@ endif
 
 # try to have the compiler output colorized error messages if available
 export GCC_COLORS ?= 1
+
+# setup bootloader toolchain
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+EFI_AR := $(CLANG_TOOLCHAIN_PREFIX)llvm-ar
+EFI_CC := $(CLANG_TOOLCHAIN_PREFIX)clang
+EFI_CXX := $(CLANG_TOOLCHAIN_PREFIX)clang++
+EFI_COMPILEFLAGS := --target=x86_64-windows-msvc
+else
+EFI_AR := $(TOOLCHAIN_PREFIX)ar
+EFI_CC := $(TOOLCHAIN_PREFIX)gcc
+EFI_CXX := $(TOOLCHAIN_PREFIX)g++
+EFI_COMPILEFLAGS := -fPIE
+endif
+
+EFI_OPTFLAGS := -O2
+EFI_COMPILEFLAGS += -fno-stack-protector -mno-red-zone
+EFI_COMPILEFLAGS += -nostdinc
+EFI_COMPILEFLAGS += -Wall
+EFI_CFLAGS := -fshort-wchar -std=c99 -ffreestanding
 
 # setup host toolchain
 # default to prebuilt clang

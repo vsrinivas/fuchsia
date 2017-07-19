@@ -7,19 +7,22 @@
 #include <string.h>
 
 #include <inet6.h>
+#include <magenta/boot/netboot.h>
 
-#if 1
+// Enable at your own risk. Some of these packet errors can be fairly
+// common when the buffers start to overflow.
+#if 0
 #define BAD(n, ...)                 \
     do {                            \
         printf("error: ");          \
-        printf(n, ##__VA_ARGS__); \
+        printf(n, ##__VA_ARGS__);   \
         printf("\n");               \
         return;                     \
     } while (0)
 #else
-#define BAD(n)  \
-    do {        \
-        return; \
+#define BAD(n, ...)  \
+    do {             \
+        return;      \
     } while (0)
 #endif
 
@@ -208,12 +211,16 @@ int udp6_send(const void* data, size_t dlen, const ip6_addr* daddr, uint16_t dpo
     size_t length = dlen + UDP_HDR_LEN;
     udp_pkt* p = eth_get_buffer(ETH_MTU + 2);
 
-    if (p == 0)
+    if (p == NULL)
         return -1;
-    if (dlen > UDP6_MAX_PAYLOAD)
+    if (dlen > UDP6_MAX_PAYLOAD) {
+        printf("Internal error: UDP write request is too long\n");
         goto fail;
-    if (ip6_setup((void*)p, daddr, length, HDR_UDP))
+    }
+    if (ip6_setup((void*)p, daddr, length, HDR_UDP)) {
+        printf("Error: ip6_setup failed!\n");
         goto fail;
+    }
 
     // udp header
     p->udp.src_port = htons(sport);
@@ -237,12 +244,16 @@ static int icmp6_send(const void* data, size_t length, const ip6_addr* daddr) {
     icmp6_hdr* icmp;
 
     p = eth_get_buffer(ETH_MTU + 2);
-    if (p == 0)
+    if (p == NULL)
         return -1;
-    if (length > ICMP6_MAX_PAYLOAD)
+    if (length > ICMP6_MAX_PAYLOAD) {
+        printf("Internal error: ICMP write request is too long\n");
         goto fail;
-    if (ip6_setup(p, daddr, length, HDR_ICMP6))
+    }
+    if (ip6_setup(p, daddr, length, HDR_ICMP6)) {
+        printf("Error: ip6_setup failed!\n");
         goto fail;
+    }
 
     icmp = (void*)p->data;
     memcpy(icmp, data, length);
@@ -254,14 +265,16 @@ fail:
     return -1;
 }
 
-void _udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
+void udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
     udp_hdr* udp = _data;
     uint16_t sum, n;
 
     if (len < UDP_HDR_LEN)
         BAD("Bogus Header Len");
+
     if (udp->checksum == 0)
-        BAD("Checksum Invalid");
+        BAD("Missing checksum");
+
     if (udp->checksum == 0xFFFF)
         udp->checksum = 0;
 
@@ -277,9 +290,21 @@ void _udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
         BAD("Packet Too Short");
     len = n - UDP_HDR_LEN;
 
-    udp6_recv((uint8_t*)_data + UDP_HDR_LEN, len,
-              (void*)ip->dst, ntohs(udp->dst_port),
-              (void*)ip->src, ntohs(udp->src_port));
+    uint16_t dport = ntohs(udp->dst_port);
+    uint16_t sport = ntohs(udp->src_port);
+
+    switch (dport) {
+    case NB_SERVER_PORT:
+        netboot_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->src, sport);
+        break;
+    case NB_TFTP_INCOMING_PORT:
+    case NB_TFTP_OUTGOING_PORT:
+        tftp_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->dst, dport, (void*)ip->src, sport);
+        break;
+    default:
+        // Ignore
+        return;
+    }
 }
 
 void icmp6_recv(ip6_hdr* ip, void* _data, size_t len) {
@@ -340,10 +365,8 @@ void eth_recv(void* _data, size_t len) {
 
     if (len < (ETH_HDR_LEN + IP6_HDR_LEN))
         BAD("Bogus Header Len");
-    if (data[12] != (ETH_IP6 >> 8))
-        return;
-    if (data[13] != (ETH_IP6 & 0xFF))
-        return;
+    if (data[12] != (ETH_IP6 >> 8) || data[13] != (ETH_IP6 & 0xFF))
+        BAD("Not IP6");
 
     ip = (void*)(data + ETH_HDR_LEN);
     data += (ETH_HDR_LEN + IP6_HDR_LEN);
@@ -378,7 +401,7 @@ void eth_recv(void* _data, size_t len) {
     }
 
     if (ip->next_header == HDR_UDP) {
-        _udp6_recv(ip, data, len);
+        udp6_recv(ip, data, len);
         return;
     }
 

@@ -10,6 +10,27 @@
 #include <netifc.h>
 
 #include <magenta/boot/netboot.h>
+#include <tftp/tftp.h>
+
+#define TFTP_BUF_SZ 2048
+char tftp_session_scratch[TFTP_BUF_SZ];
+char tftp_out_scratch[TFTP_BUF_SZ];
+
+// item being downloaded
+static nbfile* item;
+
+// TFTP file state
+typedef struct {
+    nbfile* netboot_file_data;
+    size_t file_size;
+    unsigned int progress_reported;
+} file_info_t;
+
+// TFTP transport state
+typedef struct {
+    struct ip6_addr_t dest_addr;
+    uint16_t dest_port;
+} transport_info_t;
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;
@@ -19,9 +40,6 @@ static uint32_t last_ack_arg = 0;
 
 static int nb_boot_now = 0;
 static int nb_active = 0;
-
-// item being downloaded
-static nbfile* item;
 
 static char advertise_nodename[64] = "";
 static char advertise_data[256] = "nodename=magenta";
@@ -52,15 +70,10 @@ static void advertise(void) {
               NB_ADVERT_PORT, NB_SERVER_PORT);
 }
 
-void udp6_recv(void* data, size_t len,
-               const ip6_addr* daddr, uint16_t dport,
-               const ip6_addr* saddr, uint16_t sport) {
+void netboot_recv(void* data, size_t len, const ip6_addr* saddr, uint16_t sport) {
     nbmsg* msg = data;
     nbmsg ack;
     int do_transmit = 1;
-
-    if (dport != NB_SERVER_PORT)
-        return;
 
     if (len < sizeof(nbmsg))
         return;
@@ -158,6 +171,106 @@ transmit:
         //   ack.magic, ack.cookie, ack.cmd, ack.arg);
 
         udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT);
+    }
+}
+
+static tftp_status buffer_open(const char* filename, size_t size, void* cookie) {
+    file_info_t* file_info = cookie;
+    file_info->netboot_file_data = netboot_get_buffer(filename, size);
+    if (file_info->netboot_file_data == NULL) {
+        printf("netboot: unrecognized file %s - rejecting\n", filename);
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    file_info->netboot_file_data->offset = 0;
+    printf("Receiving %s [%lu bytes]... ", filename, (unsigned long)size);
+    file_info->file_size = size;
+    file_info->progress_reported = 0;
+    return TFTP_NO_ERROR;
+}
+
+static tftp_status buffer_write(const void* data, size_t* len, off_t offset, void* cookie) {
+    file_info_t* file_info = cookie;
+    nbfile* nb_buf_info = file_info->netboot_file_data;
+    if (offset > nb_buf_info->size || (offset + *len) > nb_buf_info->size) {
+        printf("netboot: attempt to write past end of buffer\n");
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    memcpy(&nb_buf_info->data[offset], data, *len);
+    nb_buf_info->offset = offset + *len;
+    unsigned int progress_pct = offset / (file_info->file_size / 100);
+    if ((progress_pct > file_info->progress_reported) &&
+        (progress_pct - file_info->progress_reported >= 5)) {
+        printf("%u%%... ", progress_pct);
+        file_info->progress_reported = progress_pct;
+    }
+    return TFTP_NO_ERROR;
+}
+
+static void buffer_close(void* cookie) {
+    file_info_t* file_info = cookie;
+    file_info->netboot_file_data = NULL;
+    printf("Done\n");
+}
+
+static int udp_send(void* data, size_t len, void* cookie) {
+    transport_info_t* transport_info = cookie;
+    int bytes_sent = udp6_send(data, len, &transport_info->dest_addr, transport_info->dest_port,
+                               NB_TFTP_OUTGOING_PORT);
+    return bytes_sent < 0 ? TFTP_ERR_IO : bytes_sent;
+}
+
+static int udp_timeout_set(uint32_t timeout_ms, void* cookie) {
+    // TODO
+    return 0;
+}
+
+void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
+               const ip6_addr* saddr, uint16_t sport) {
+    static tftp_session* session = NULL;
+    static file_info_t file_info = {.netboot_file_data = NULL};
+    static transport_info_t transport_info = {};
+
+    if (dport == NB_TFTP_INCOMING_PORT) {
+        if (session != NULL) {
+            printf("Aborting to service new connection\n");
+        }
+        // Start TFTP session
+        int ret = tftp_init(&session, tftp_session_scratch, sizeof(tftp_session_scratch));
+        if (ret != TFTP_NO_ERROR) {
+            printf("netboot: failed to initiate tftp session\n");
+            session = NULL;
+            return;
+        }
+
+        // Initialize file interface
+        tftp_file_interface file_ifc = {NULL, buffer_open, NULL, buffer_write, buffer_close};
+        tftp_session_set_file_interface(session, &file_ifc);
+
+        // Initialize transport interface
+        memcpy(&transport_info.dest_addr, saddr, sizeof(struct ip6_addr_t));
+        transport_info.dest_port = sport;
+        tftp_transport_interface transport_ifc = {udp_send, NULL, udp_timeout_set};
+        tftp_session_set_transport_interface(session, &transport_ifc);
+    } else if (!session) {
+        // Ignore anything sent to the outgoing port unless we've already established a connection
+        return;
+    }
+
+    size_t outlen = sizeof(tftp_out_scratch);
+
+    char err_msg[128];
+    tftp_handler_opts handler_opts = {.inbuf = data,
+                                      .inbuf_sz = len,
+                                      .outbuf = tftp_out_scratch,
+                                      .outbuf_sz = outlen,
+                                      .err_msg = err_msg,
+                                      .err_msg_sz = sizeof(err_msg)};
+    tftp_status status = tftp_handle_msg(session, &transport_info, &file_info, &handler_opts);
+    if (status < 0) {
+        printf("netboot: tftp protocol error: %s\n", err_msg);
+        session = NULL;
+    } else if (status == TFTP_TRANSFER_COMPLETED) {
+        session = NULL;
     }
 }
 

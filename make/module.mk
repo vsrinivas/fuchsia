@@ -152,7 +152,11 @@ else
 ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hostlib))
 include make/hcompile.mk
 else
+ifeq ($(MODULE_TYPE),efilib)
+include make/ecompile.mk
+else
 include make/ucompile.mk
+endif
 endif
 endif
 

@@ -52,3 +52,13 @@ MODULE_TYPE := hostlib
 MODULE_SRCS := $(LOCAL_DIR)/tftp.c
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).efilib
+
+MODULE_NAME := tftp
+
+MODULE_TYPE := efilib
+
+MODULE_SRCS := $(LOCAL_DIR)/tftp.c
+
+include make/module.mk
