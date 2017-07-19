@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("src") {
-  deps = [
+  public_deps = [
     "//apps/ledger/src/app",
     "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
@@ -23,7 +23,7 @@ group("src") {
 group("tests") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":ledger_unittests",
     "//apps/ledger/src/test/benchmark",
     "//apps/ledger/src/test/e2e_local",

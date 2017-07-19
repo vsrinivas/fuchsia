@@ -5,7 +5,7 @@
 group("convergence") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":ledger_benchmark_convergence",
   ]
 }

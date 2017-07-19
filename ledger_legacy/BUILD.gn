@@ -2,17 +2,118 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("ledger") {
+import("//packages/package.gni")
+
+package("ledger") {
+  app = true
+
   deps = [
-    "//apps/ledger/services",
     "//apps/ledger/src",
+  ]
+
+  binaries = [
+    {
+      name = "cloud_sync"
+      source = "ledger_tool"
+    },
+
+    {
+      name = "ledger_tool"
+    },
+
+    {
+      name = "ledger"
+    },
   ]
 }
 
-group("tests") {
+package("ledger_tests") {
   testonly = true
+  app = true
 
   deps = [
     "//apps/ledger/src:tests",
+  ]
+
+  binaries = [
+    {
+      name = "launch_benchmark"
+    },
+
+    {
+      name = "ledger_benchmark_convergence"
+    },
+
+    {
+      name = "ledger_benchmark_put"
+    },
+
+    {
+      name = "ledger_benchmark_sync"
+    },
+  ]
+  tests = [
+    {
+      name = "ledger_integration_tests"
+    },
+
+    {
+      name = "ledger_unittests"
+    },
+
+    {
+      name = "ledger_e2e_local"
+    },
+
+    {
+      name = "ledger_e2e_sync"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("src/test/benchmark/convergence/convergence.tspec")
+      dest = "ledger/benchmark/convergence.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/transaction.tspec")
+      dest = "ledger/benchmark/transaction.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/entry_count.tspec")
+      dest = "ledger/benchmark/entry_count.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/entry_count_update.tspec")
+      dest = "ledger/benchmark/entry_count_update.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/key_size.tspec")
+      dest = "ledger/benchmark/key_size.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/put.tspec")
+      dest = "ledger/benchmark/put.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/transaction_size.tspec")
+      dest = "ledger/benchmark/transaction_size.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/put/value_size.tspec")
+      dest = "ledger/benchmark/value_size.tspec"
+    },
+
+    {
+      path = rebase_path("src/test/benchmark/sync/sync.tspec")
+      dest = "ledger/benchmark/sync.tspec"
+    },
   ]
 }

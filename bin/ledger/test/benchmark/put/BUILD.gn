@@ -5,7 +5,7 @@
 group("put") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":ledger_benchmark_put",
   ]
 }

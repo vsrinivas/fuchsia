@@ -5,7 +5,7 @@
 group("benchmark") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":launch_benchmark",
     "//apps/ledger/src/test/benchmark/convergence",
     "//apps/ledger/src/test/benchmark/lib",
