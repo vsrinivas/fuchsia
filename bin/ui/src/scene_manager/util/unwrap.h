@@ -7,8 +7,7 @@
 #include "apps/mozart/services/scene/types.fidl.h"
 #include "lib/escher/escher/geometry/transform.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 inline escher::vec2 Unwrap(const mozart2::vec2Ptr& args) {
   return {args->x, args->y};
@@ -107,5 +106,4 @@ inline escher::quat UnwrapQuaternion(const mozart2::QuaternionValuePtr& val) {
   return Unwrap(val->value);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

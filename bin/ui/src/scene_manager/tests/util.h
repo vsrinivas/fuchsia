@@ -10,8 +10,7 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 // How long to run the message loop when we want to allow a task in the
@@ -35,5 +34,4 @@ mx::vmo CopyVmo(const mx::vmo& vmo);
 ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size);
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

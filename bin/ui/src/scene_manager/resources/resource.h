@@ -12,8 +12,7 @@
 #include "apps/mozart/src/scene_manager/resources/resource_type_info.h"
 #include "lib/ftl/memory/ref_counted.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class ErrorReporter;
 class Session;
@@ -35,7 +34,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
   // The session this Resource lives in and the id it was created with there.
   Session* session() const { return session_; }
-  ResourceId id() const { return id_; }
+  mozart::ResourceId id() const { return id_; }
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.
@@ -78,7 +77,9 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   virtual void RemoveImport(Import* import);
 
  protected:
-  Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
+  Resource(Session* session,
+           mozart::ResourceId id,
+           const ResourceTypeInfo& type_info);
 
   friend class ResourceMap;
   friend class Import;
@@ -90,7 +91,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
  private:
   Session* const session_;
-  const ResourceId id_;
+  const mozart::ResourceId id_;
   const ResourceTypeInfo& type_info_;
   std::string label_;
   std::vector<Import*> imports_;
@@ -98,5 +99,4 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
 using ResourcePtr = ftl::RefPtr<Resource>;
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

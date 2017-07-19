@@ -17,8 +17,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "apps/mozart/src/scene_manager/resources/resource_linker.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 using SessionId = uint64_t;
 
@@ -150,5 +149,4 @@ class SessionContext : public FrameSchedulerListener {
   FTL_DISALLOW_COPY_AND_ASSIGN(SessionContext);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

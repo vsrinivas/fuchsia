@@ -4,11 +4,10 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/planar_shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 PlanarShape::PlanarShape(Session* session,
-                         ResourceId id,
+                         mozart::ResourceId id,
                          const ResourceTypeInfo& type_info)
     : Shape(session, id, type_info) {}
 
@@ -38,5 +37,4 @@ bool PlanarShape::GetIntersection(const escher::ray4& ray,
   return true;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -7,8 +7,7 @@
 #include "apps/mozart/services/scene/types.fidl.h"
 #include "lib/escher/escher/geometry/transform.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 inline mozart2::mat4Ptr Wrap(const escher::mat4& args) {
   auto result = mozart2::mat4::New();
@@ -33,5 +32,4 @@ inline mozart2::mat4Ptr Wrap(const escher::mat4& args) {
   return result;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

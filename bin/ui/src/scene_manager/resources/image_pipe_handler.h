@@ -7,15 +7,14 @@
 #include "apps/mozart/services/images/image_pipe.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class ImagePipe;
 
 class ImagePipeHandler : public mozart2::ImagePipe {
  public:
   ImagePipeHandler(::fidl::InterfaceRequest<mozart2::ImagePipe> request,
-                   mozart::scene::ImagePipe* image_pipe);
+                   scene_manager::ImagePipe* image_pipe);
 
  private:
   void AddImage(uint32_t image_id,
@@ -32,8 +31,7 @@ class ImagePipeHandler : public mozart2::ImagePipe {
                     const PresentImageCallback& callback) override;
 
   ::fidl::Binding<mozart2::ImagePipe> binding_;
-  mozart::scene::ImagePipe* image_pipe_;
+  scene_manager::ImagePipe* image_pipe_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

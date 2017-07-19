@@ -23,8 +23,7 @@
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 void GpuMemory::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
@@ -86,5 +85,4 @@ void Import::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

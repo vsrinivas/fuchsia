@@ -4,15 +4,15 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Shape::kTypeInfo = {ResourceType::kShape, "Shape"};
 
-Shape::Shape(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
+Shape::Shape(Session* session,
+             mozart::ResourceId id,
+             const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

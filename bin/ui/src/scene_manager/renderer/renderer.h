@@ -14,8 +14,7 @@
 
 #include "escher/scene/object.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Camera;
 class FrameScheduler;
@@ -49,7 +48,9 @@ class Renderer : public Resource {
   // Renderer is a "leaf interface" of the Session API.  Even though it has
   // subclasses, these present exactly the same interface to callers, therefore
   // we don't waste valuable ResourceTypeInfo bits to distinguish them.
-  Renderer(Session* session, ResourceId id, FrameScheduler* frame_scheduler);
+  Renderer(Session* session,
+           mozart::ResourceId id,
+           FrameScheduler* frame_scheduler);
 
  private:
   class Visitor : public ResourceVisitor {
@@ -92,5 +93,4 @@ class Renderer : public Resource {
 
 using RendererPtr = ftl::RefPtr<Renderer>;
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

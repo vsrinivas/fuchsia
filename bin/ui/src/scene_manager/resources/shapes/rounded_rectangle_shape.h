@@ -9,15 +9,14 @@
 #include "escher/forward_declarations.h"
 #include "escher/shape/rounded_rect.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class RoundedRectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
   RoundedRectangleShape(Session* session,
-                        ResourceId id,
+                        mozart::ResourceId id,
                         const escher::RoundedRectSpec& spec,
                         escher::MeshPtr mesh);
 
@@ -44,5 +43,4 @@ class RoundedRectangleShape final : public PlanarShape {
   escher::MeshPtr mesh_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

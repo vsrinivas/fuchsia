@@ -13,8 +13,7 @@
 
 #include "gtest/gtest.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 class SceneManagerTest : public ::testing::Test {
@@ -37,5 +36,4 @@ class SceneManagerTest : public ::testing::Test {
 };
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

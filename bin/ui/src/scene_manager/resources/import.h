@@ -8,8 +8,7 @@
 #include "lib/ftl/macros.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Import;
 using ImportPtr = ftl::RefPtr<Import>;
@@ -25,7 +24,7 @@ class Import final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   Import(Session* session,
-         ResourceId id,
+         mozart::ResourceId id,
          mozart2::ImportSpec spec,
          mx::eventpair import_token);
 
@@ -86,5 +85,4 @@ class Import final : public Resource {
   FTL_DISALLOW_COPY_AND_ASSIGN(Import);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -7,13 +7,11 @@
 
 #include <ostream>
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op);
 std::ostream& operator<<(std::ostream& stream,
                          const mozart2::CreateResourceOpPtr& op);
 std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag);
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

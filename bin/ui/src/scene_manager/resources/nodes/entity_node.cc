@@ -4,14 +4,12 @@
 
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo EntityNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kEntityNode, "EntityNode"};
 
-EntityNode::EntityNode(Session* session, ResourceId node_id)
+EntityNode::EntityNode(Session* session, mozart::ResourceId node_id)
     : Node(session, node_id, EntityNode::kTypeInfo) {}
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -4,14 +4,12 @@
 
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Scene::kTypeInfo = {
     ResourceType::kNode | ResourceType::kScene, "Scene"};
 
-Scene::Scene(Session* session, ResourceId node_id)
+Scene::Scene(Session* session, mozart::ResourceId node_id)
     : Node(session, node_id, Scene::kTypeInfo) {}
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

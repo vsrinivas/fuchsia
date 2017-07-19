@@ -11,8 +11,7 @@
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 namespace {
 const std::string kDisplayDir = "/dev/class/display";
@@ -64,5 +63,4 @@ void DisplayWatcher::WaitForDisplay() {
       });
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

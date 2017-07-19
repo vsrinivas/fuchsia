@@ -13,8 +13,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/mtl/io/device_watcher.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Waits for a display device to be available, and returns the display
 // attributes through a callback.
@@ -42,5 +41,4 @@ class DisplayWatcher {
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

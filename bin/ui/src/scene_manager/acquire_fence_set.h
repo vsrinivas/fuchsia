@@ -15,8 +15,7 @@
 
 #include "apps/mozart/src/scene_manager/fence.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Provides access to the consumption fences associated with a call to
 // |Present|.
@@ -59,5 +58,4 @@ class AcquireFenceSet : private mtl::MessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(AcquireFenceSet);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -12,8 +12,7 @@
 
 #include "gtest/gtest.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 namespace {
 using escher::vec2;
@@ -32,8 +31,8 @@ constexpr vec4 kAngledVector{2.f, -1.f, -.5f, 0.f};
 using ShapeTest = SessionTest;
 
 TEST_F(ShapeTest, Circle) {
-  const ResourceId id = 1;
-  EXPECT_TRUE(Apply(NewCreateCircleOp(id, 50.f)));
+  const mozart::ResourceId id = 1;
+  EXPECT_TRUE(Apply(mozart::NewCreateCircleOp(id, 50.f)));
 
   auto circle = FindResource<CircleShape>(id);
   ASSERT_NE(nullptr, circle.get());
@@ -91,8 +90,8 @@ TEST_F(ShapeTest, Circle) {
 }
 
 TEST_F(ShapeTest, Rectangle) {
-  const ResourceId id = 1;
-  EXPECT_TRUE(Apply(NewCreateRectangleOp(id, 30.f, 40.f)));
+  const mozart::ResourceId id = 1;
+  EXPECT_TRUE(Apply(mozart::NewCreateRectangleOp(id, 30.f, 40.f)));
 
   auto rectangle = FindResource<RectangleShape>(id);
   ASSERT_NE(nullptr, rectangle.get());
@@ -154,9 +153,9 @@ TEST_F(ShapeTest, Rectangle) {
 // TODO(MZ-159): This test needs a rounded rect factory to run but it is
 // not currently available in the session context for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
-  const ResourceId id = 1;
-  EXPECT_TRUE(
-      Apply(NewCreateRoundedRectangleOp(id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
+  const mozart::ResourceId id = 1;
+  EXPECT_TRUE(Apply(
+      mozart::NewCreateRoundedRectangleOp(id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
 
   auto rounded_rectangle = FindResource<RoundedRectangleShape>(id);
   ASSERT_NE(nullptr, rounded_rectangle.get());
@@ -228,5 +227,4 @@ TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

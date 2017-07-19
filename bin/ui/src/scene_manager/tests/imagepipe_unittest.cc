@@ -14,8 +14,7 @@
 #include "apps/mozart/src/scene_manager/tests/session_test.h"
 #include "apps/mozart/src/scene_manager/tests/util.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
@@ -265,5 +264,4 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 // - Test what happens if you present an image twice.
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

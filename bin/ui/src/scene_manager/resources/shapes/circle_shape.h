@@ -6,14 +6,13 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/planar_shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class CircleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  CircleShape(Session* session, ResourceId id, float initial_radius);
+  CircleShape(Session* session, mozart::ResourceId id, float initial_radius);
 
   float radius() const { return radius_; }
 
@@ -32,5 +31,4 @@ class CircleShape final : public PlanarShape {
   float radius_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

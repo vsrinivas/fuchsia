@@ -13,8 +13,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/gtest/include/gtest/gtest_prod.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 /// Allows linking of resources in different sessions. Accepts a resource and
 /// one endpoint of an event pair for export. That exported resource can be
@@ -88,5 +87,4 @@ class ResourceLinker : private mtl::MessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

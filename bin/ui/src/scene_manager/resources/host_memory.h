@@ -11,8 +11,7 @@
 #include "escher/vk/gpu_mem.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class HostMemory;
 using HostMemoryPtr = ftl::RefPtr<HostMemory>;
@@ -23,14 +22,17 @@ class HostMemory : public Memory {
   static const ResourceTypeInfo kTypeInfo;
 
   // Constructor for host memory.
-  HostMemory(Session* session, ResourceId id, mx::vmo vmo, uint64_t vmo_size);
+  HostMemory(Session* session,
+             mozart::ResourceId id,
+             mx::vmo vmo,
+             uint64_t vmo_size);
 
   // Helper method for creating HostMemory object from a mozart2::Memory.
   // Create a HostMemory resource object from a CPU host memory-backed VMO.
   //
   // Returns the created HostMemory object or nullptr if there was an error.
   static HostMemoryPtr New(Session* session,
-                           ResourceId id,
+                           mozart::ResourceId id,
                            vk::Device device,
                            mx::vmo vmo,
                            ErrorReporter* error_reporter);
@@ -38,7 +40,7 @@ class HostMemory : public Memory {
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
   static HostMemoryPtr New(Session* session,
-                           ResourceId id,
+                           mozart::ResourceId id,
                            vk::Device device,
                            const mozart2::MemoryPtr& args,
                            ErrorReporter* error_reporter);
@@ -53,5 +55,4 @@ class HostMemory : public Memory {
   uint64_t size_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

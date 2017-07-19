@@ -7,8 +7,7 @@
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
                                  uint32_t width,
@@ -40,5 +39,4 @@ SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
 
 SceneManagerApp::~SceneManagerApp() {}
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

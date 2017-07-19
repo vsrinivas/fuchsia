@@ -4,15 +4,13 @@
 
 #include "apps/mozart/src/scene_manager/resources/memory.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
 Memory::Memory(Session* session,
-               ResourceId id,
+               mozart::ResourceId id,
                const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {}
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

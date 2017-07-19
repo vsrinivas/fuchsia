@@ -16,8 +16,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/thread.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class FrameScheduler;
 
@@ -51,5 +50,4 @@ class SceneManagerImpl : public mozart2::SceneManager {
   std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

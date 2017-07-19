@@ -9,19 +9,18 @@
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
 #include "apps/mozart/src/scene_manager/session/session.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo ImagePipe::kTypeInfo = {
     ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
 
-ImagePipe::ImagePipe(Session* session, ResourceId id)
+ImagePipe::ImagePipe(Session* session, mozart::ResourceId id)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       images_(session->error_reporter()) {}
 
 ImagePipe::ImagePipe(Session* session,
-                     ResourceId id,
+                     mozart::ResourceId id,
                      ::fidl::InterfaceRequest<mozart2::ImagePipe> request)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
@@ -134,7 +133,7 @@ void ImagePipe::PresentImage(
 
 bool ImagePipe::Update(uint64_t presentation_time,
                        uint64_t presentation_interval) {
-  ResourceId next_image_id = current_image_id_;
+  mozart::ResourceId next_image_id = current_image_id_;
   mx::event next_release_fence;
 
   while (!frames_.empty() &&
@@ -194,5 +193,4 @@ const escher::ImagePtr& ImagePipe::GetEscherImage() {
   return kNullEscherImage;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

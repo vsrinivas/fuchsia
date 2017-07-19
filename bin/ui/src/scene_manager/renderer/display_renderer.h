@@ -8,13 +8,12 @@
 
 #include "escher/vk/vulkan_swapchain_helper.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class DisplayRenderer final : public Renderer {
  public:
   DisplayRenderer(Session* session,
-                  ResourceId id,
+                  mozart::ResourceId id,
                   FrameScheduler* frame_scheduler,
                   escher::PaperRendererPtr paper_renderer,
                   escher::VulkanSwapchain swapchain);
@@ -29,5 +28,4 @@ class DisplayRenderer final : public Renderer {
   escher::VulkanSwapchainHelper swapchain_helper_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

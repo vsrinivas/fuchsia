@@ -4,12 +4,11 @@
 
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 
-Camera::Camera(Session* session, ResourceId id, ScenePtr scene)
+Camera::Camera(Session* session, mozart::ResourceId id, ScenePtr scene)
     : Resource(session, id, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
 void Camera::SetProjection(const glm::vec3& eye_position,
@@ -32,5 +31,4 @@ escher::Camera Camera::GetEscherCamera(
   }
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

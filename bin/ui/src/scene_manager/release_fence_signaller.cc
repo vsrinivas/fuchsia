@@ -4,8 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 ReleaseFenceSignaller::ReleaseFenceSignaller(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
@@ -55,5 +54,4 @@ void ReleaseFenceSignaller::OnCommandBufferFinished(uint64_t sequence_number) {
   }
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -6,8 +6,7 @@
 #include "lib/fidl/cpp/waiter/default.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 static mx_signals_t kEventPairDeathSignals = MX_EPAIR_PEER_CLOSED;
 
@@ -200,5 +199,4 @@ void ResourceLinker::PerformLinkingNow(mx_koid_t import_koid) {
   }
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

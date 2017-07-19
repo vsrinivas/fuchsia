@@ -6,8 +6,7 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // A shape that lies within the Z=0 plane of the local coordinate system.
 // As a result, |GetIntersection()| is implemented by intersecting a ray
@@ -23,9 +22,8 @@ class PlanarShape : public Shape {
 
  protected:
   PlanarShape(Session* session,
-              ResourceId id,
+              mozart::ResourceId id,
               const ResourceTypeInfo& type_info);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

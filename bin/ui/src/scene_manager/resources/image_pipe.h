@@ -21,8 +21,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class ImagePipe;
 using ImagePipePtr = ftl::RefPtr<ImagePipe>;
@@ -31,9 +30,9 @@ class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, ResourceId id);
+  ImagePipe(Session* session, mozart::ResourceId id);
   ImagePipe(Session* session,
-            ResourceId id,
+            mozart::ResourceId id,
             ::fidl::InterfaceRequest<mozart2::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
@@ -87,7 +86,7 @@ class ImagePipe : public ImageBase {
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
   struct Frame {
-    ResourceId image_id;
+    mozart::ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<AcquireFence> acquire_fence;
     mx::event release_fence;
@@ -99,7 +98,7 @@ class ImagePipe : public ImageBase {
   std::deque<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
 
-  ResourceId current_image_id_ = 0;
+  mozart::ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
   mx::event current_release_fence_;
 
@@ -109,5 +108,4 @@ class ImagePipe : public ImageBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(ImagePipe);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

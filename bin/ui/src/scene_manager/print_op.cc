@@ -4,8 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/print_op.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 using mozart2::Op;
 using mozart2::OpPtr;
@@ -170,5 +169,4 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag) {
   }
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -4,8 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/tests/mocks.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 SessionHandlerForTest::SessionHandlerForTest(
@@ -70,5 +69,4 @@ std::unique_ptr<SessionHandler> SessionContextForTest::CreateSessionHandler(
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -10,8 +10,7 @@
 #include "apps/mozart/src/scene_manager/fence.h"
 #include "apps/mozart/src/scene_manager/tests/util.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 class AcquireFenceSetTest : public ::testing::Test {};
@@ -110,5 +109,4 @@ TEST_F(AcquireFenceSetTest, DestroyWhileWaiting) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

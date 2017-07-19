@@ -11,8 +11,7 @@
 
 #include "apps/mozart/src/scene_manager/resources/resource_visitor.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Resource;
 
@@ -60,5 +59,4 @@ class DumpVisitor : public ResourceVisitor {
   uint32_t indentation_ = 0u;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

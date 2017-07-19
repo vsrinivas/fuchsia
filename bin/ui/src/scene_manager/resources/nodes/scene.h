@@ -7,8 +7,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/node.h"
 #include "lib/ftl/macros.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Scene;
 using ScenePtr = ftl::RefPtr<Scene>;
@@ -17,7 +16,7 @@ class Scene final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Scene(Session* session, ResourceId node_id);
+  Scene(Session* session, mozart::ResourceId node_id);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
@@ -26,5 +25,4 @@ class Scene final : public Node {
   FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

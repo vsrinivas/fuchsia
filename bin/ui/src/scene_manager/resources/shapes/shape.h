@@ -8,8 +8,7 @@
 #include "escher/geometry/types.h"
 #include "escher/scene/object.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Shape : public Resource {
  public:
@@ -32,10 +31,11 @@ class Shape : public Resource {
       const escher::MaterialPtr& material) = 0;
 
  protected:
-  Shape(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
+  Shape(Session* session,
+        mozart::ResourceId id,
+        const ResourceTypeInfo& type_info);
 };
 
 using ShapePtr = ftl::RefPtr<Shape>;
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

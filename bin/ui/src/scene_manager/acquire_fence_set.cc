@@ -7,8 +7,7 @@
 #include <mx/time.h>
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 AcquireFenceSet::AcquireFenceSet(::fidl::Array<mx::event> acquire_fences)
     : fences_(std::move(acquire_fences)) {}
@@ -81,5 +80,4 @@ void AcquireFenceSet::OnHandleReady(mx_handle_t handle,
   }
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

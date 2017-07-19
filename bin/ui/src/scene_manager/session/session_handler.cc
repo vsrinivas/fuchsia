@@ -7,8 +7,7 @@
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 SessionHandler::SessionHandler(
     SessionContext* session_context,
@@ -16,7 +15,7 @@ SessionHandler::SessionHandler(
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
     : session_context_(session_context),
-      session_(::ftl::MakeRefCounted<scene::Session>(
+      session_(::ftl::MakeRefCounted<scene_manager::Session>(
           session_id,
           session_context_,
           static_cast<ErrorReporter*>(this))) {
@@ -99,5 +98,4 @@ void SessionHandler::TearDown() {
   session_->TearDown();
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

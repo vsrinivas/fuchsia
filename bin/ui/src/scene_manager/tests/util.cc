@@ -8,8 +8,7 @@
 
 #include "lib/ftl/synchronization/waitable_event.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 bool IsEventSignalled(const mx::event& fence, mx_signals_t signal) {
@@ -55,5 +54,4 @@ ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

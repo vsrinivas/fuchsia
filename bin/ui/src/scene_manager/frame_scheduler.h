@@ -13,8 +13,7 @@ namespace ftl {
 class TaskRunner;
 }  // namespace ftl
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Display;
 class Renderer;
@@ -97,5 +96,4 @@ class FrameScheduler {
   FTL_DISALLOW_COPY_AND_ASSIGN(FrameScheduler);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

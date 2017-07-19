@@ -9,14 +9,13 @@
 #include "apps/mozart/src/scene_manager/resources/material.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class ShapeNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ShapeNode(Session* session, ResourceId node_id);
+  ShapeNode(Session* session, mozart::ResourceId node_id);
 
   void SetMaterial(MaterialPtr material);
   void SetShape(ShapePtr shape);
@@ -34,5 +33,4 @@ class ShapeNode final : public Node {
   ShapePtr shape_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

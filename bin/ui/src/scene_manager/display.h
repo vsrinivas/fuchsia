@@ -6,8 +6,7 @@
 
 #include <cstdint>
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Display is a placeholder that provides make-believe values for screen
 // resolution, vsync interval, last vsync time, etc.
@@ -37,5 +36,4 @@ class Display {
   float device_pixel_ratio_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

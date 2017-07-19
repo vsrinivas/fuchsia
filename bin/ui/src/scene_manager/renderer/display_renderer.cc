@@ -12,11 +12,10 @@
 #include "escher/scene/stage.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 DisplayRenderer::DisplayRenderer(Session* session,
-                                 ResourceId id,
+                                 mozart::ResourceId id,
                                  FrameScheduler* frame_scheduler,
                                  escher::PaperRendererPtr paper_renderer,
                                  escher::VulkanSwapchain swapchain)
@@ -60,5 +59,4 @@ void DisplayRenderer::DrawFrame() {
       stage, model, camera()->GetEscherCamera(stage.viewing_volume()));
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

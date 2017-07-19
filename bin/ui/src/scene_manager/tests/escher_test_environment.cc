@@ -9,8 +9,7 @@
 static constexpr uint32_t kScreenWidth = 2160;
 static constexpr uint32_t kScreenHeight = 1440;
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 void EscherTestEnvironment::SetUp(std::string tests_name) {
@@ -28,5 +27,4 @@ void EscherTestEnvironment::TearDown() {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

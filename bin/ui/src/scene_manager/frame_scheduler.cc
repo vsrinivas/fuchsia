@@ -11,8 +11,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Hard-coded estimate of how long it takes the SceneManager to render a frame.
 // TODO: more sophisticated prediction.
@@ -198,5 +197,4 @@ void FrameScheduler::DrawFrame() {
   renderer->DrawFrame();
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

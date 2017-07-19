@@ -6,17 +6,15 @@
 
 #include "apps/mozart/src/scene_manager/resources/nodes/node.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class EntityNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  EntityNode(Session* session, ResourceId node_id);
+  EntityNode(Session* session, mozart::ResourceId node_id);
 
   void Accept(class ResourceVisitor* visitor) override;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

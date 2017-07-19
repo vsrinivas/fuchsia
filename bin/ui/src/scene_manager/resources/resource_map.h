@@ -9,8 +9,7 @@
 
 #include <unordered_map>
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class ResourceMap {
  public:
@@ -22,11 +21,11 @@ class ResourceMap {
 
   // Attempt to add the resource; return true if successful.  Return false if
   // the ID is already present in the map, which is left unchanged.
-  bool AddResource(ResourceId id, ResourcePtr resource);
+  bool AddResource(mozart::ResourceId id, ResourcePtr resource);
 
   // Attempt to remove the specified resource.  Return true if successful, and
   // false if the ID was not present in the map.
-  bool RemoveResource(ResourceId id);
+  bool RemoveResource(mozart::ResourceId id);
 
   size_t size() const { return resources_.size(); }
 
@@ -37,7 +36,7 @@ class ResourceMap {
   // example:
   // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
-  ftl::RefPtr<ResourceT> FindResource(ResourceId id) {
+  ftl::RefPtr<ResourceT> FindResource(mozart::ResourceId id) {
     auto it = resources_.find(id);
 
     if (it == resources_.end()) {
@@ -59,9 +58,8 @@ class ResourceMap {
   }
 
  private:
-  std::unordered_map<ResourceId, ResourcePtr> resources_;
+  std::unordered_map<mozart::ResourceId, ResourcePtr> resources_;
   ErrorReporter* const error_reporter_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

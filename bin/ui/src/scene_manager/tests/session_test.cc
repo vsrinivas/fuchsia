@@ -9,8 +9,7 @@
 
 #include "apps/mozart/src/scene_manager/tests/mocks.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 void SessionTest::SetUp() {
@@ -91,5 +90,4 @@ void SessionThreadedTest::PostTask(ftl::AutoResetWaitableEvent& latch,
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

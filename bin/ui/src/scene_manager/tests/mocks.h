@@ -9,8 +9,7 @@
 #include "apps/mozart/src/scene_manager/session/session_context.h"
 #include "apps/mozart/src/scene_manager/session/session_handler.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 // Subclass SessionHandler to make testing easier.
@@ -79,5 +78,4 @@ class SessionContextForTest : public SessionContext {
 };
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

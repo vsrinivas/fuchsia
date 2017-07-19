@@ -6,8 +6,7 @@
 
 #include <magenta/syscalls.h>
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 Display::Display(uint32_t width, uint32_t height, float device_pixel_ratio)
     : first_vsync_(mx_time_get(MX_CLOCK_MONOTONIC)),
@@ -27,5 +26,4 @@ uint64_t Display::GetVsyncInterval() const {
   return kHardcodedPresentationIntervalNanos;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

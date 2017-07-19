@@ -14,8 +14,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // TODO(MZ-142): SceneManagerApp shouldn't inherit from Demo.
 class SceneManagerApp {
@@ -47,5 +46,4 @@ class SceneManagerApp {
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

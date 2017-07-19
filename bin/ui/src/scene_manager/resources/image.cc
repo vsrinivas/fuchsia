@@ -9,14 +9,13 @@
 #include "apps/mozart/src/scene_manager/session/session.h"
 #include "escher/util/image_utils.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
 Image::Image(Session* session,
-             ResourceId id,
+             mozart::ResourceId id,
              MemoryPtr memory,
              escher::ImagePtr image)
     : ImageBase(session, id, Image::kTypeInfo),
@@ -24,7 +23,7 @@ Image::Image(Session* session,
       image_(std::move(image)) {}
 
 Image::Image(Session* session,
-             ResourceId id,
+             mozart::ResourceId id,
              GpuMemoryPtr memory,
              escher::ImageInfo image_info,
              vk::Image vk_image)
@@ -37,7 +36,7 @@ Image::Image(Session* session,
           static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem())) {}
 
 ImagePtr Image::New(Session* session,
-                    ResourceId id,
+                    mozart::ResourceId id,
                     MemoryPtr memory,
                     const mozart2::ImageInfoPtr& image_info,
                     uint64_t memory_offset,
@@ -162,7 +161,7 @@ ImagePtr Image::New(Session* session,
 }
 
 ImagePtr Image::NewForTesting(Session* session,
-                              ResourceId id,
+                              mozart::ResourceId id,
                               escher::ResourceManager* image_owner,
                               MemoryPtr host_memory) {
   escher::ImagePtr escher_image = ftl::MakeRefCounted<escher::Image>(
@@ -171,5 +170,4 @@ ImagePtr Image::NewForTesting(Session* session,
   return ftl::AdoptRef(new Image(session, id, host_memory, escher_image));
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -7,8 +7,7 @@
 
 class DemoHarness;
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 class EscherTestEnvironment {
@@ -23,5 +22,4 @@ class EscherTestEnvironment {
 };
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

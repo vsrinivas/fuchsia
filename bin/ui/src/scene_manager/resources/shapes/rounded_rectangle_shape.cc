@@ -7,8 +7,7 @@
 #include "escher/shape/mesh.h"
 #include "escher/shape/rounded_rect_factory.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRoundedRectangle,
@@ -16,7 +15,7 @@ const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
 
 RoundedRectangleShape::RoundedRectangleShape(
     Session* session,
-    ResourceId id,
+    mozart::ResourceId id,
     const escher::RoundedRectSpec& spec,
     escher::MeshPtr mesh)
     : PlanarShape(session, id, RoundedRectangleShape::kTypeInfo),
@@ -33,5 +32,4 @@ escher::Object RoundedRectangleShape::GenerateRenderObject(
   return escher::Object(transform, mesh_, material);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

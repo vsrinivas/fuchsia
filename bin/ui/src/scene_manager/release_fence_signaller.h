@@ -13,8 +13,7 @@
 
 #include "apps/mozart/src/scene_manager/fence.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Signals a fence when all CommandBuffers started before the time of the
 // fence's submission are finished. Used to ensure it is safe to release
@@ -58,5 +57,4 @@ class ReleaseFenceSignaller
   escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

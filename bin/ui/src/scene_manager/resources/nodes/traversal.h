@@ -7,8 +7,7 @@
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/node.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 //
 // Front-to-back traversals.
@@ -104,5 +103,4 @@ bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node,
          ForEachImportFrontToBackUntilTrue(node, func);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

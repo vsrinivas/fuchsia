@@ -7,8 +7,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 HitTester::HitTester() {}
 
@@ -130,5 +129,4 @@ bool HitTester::IsRayWithinClippedContentInner(Node* node,
   });
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

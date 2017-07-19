@@ -6,13 +6,12 @@
 
 #include <utility>
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo ShapeNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kShapeNode, "ShapeNode"};
 
-ShapeNode::ShapeNode(Session* session, ResourceId node_id)
+ShapeNode::ShapeNode(Session* session, mozart::ResourceId node_id)
     : Node(session, node_id, ShapeNode::kTypeInfo) {}
 
 void ShapeNode::SetMaterial(MaterialPtr material) {
@@ -28,5 +27,4 @@ bool ShapeNode::GetIntersection(const escher::ray4& ray,
   return shape_ && shape_->GetIntersection(ray, out_distance);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

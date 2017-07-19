@@ -9,11 +9,11 @@
 #include "gtest/gtest.h"
 #include "lib/mtl/threading/thread.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
-class SessionTest : public ::testing::Test, public scene::ErrorReporter {
+class SessionTest : public ::testing::Test,
+                    public scene_manager::ErrorReporter {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
@@ -33,7 +33,7 @@ class SessionTest : public ::testing::Test, public scene::ErrorReporter {
   bool Apply(mozart2::OpPtr op) { return session_->ApplyOp(std::move(op)); }
 
   template <class ResourceT>
-  ftl::RefPtr<ResourceT> FindResource(ResourceId id) {
+  ftl::RefPtr<ResourceT> FindResource(mozart::ResourceId id) {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
@@ -72,5 +72,4 @@ class SessionThreadedTest : public SessionTest {
 };
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

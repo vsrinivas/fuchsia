@@ -9,8 +9,7 @@
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "lib/escher/escher/geometry/transform.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Node;
 using NodePtr = ftl::RefPtr<Node>;
@@ -77,7 +76,9 @@ class Node : public Resource {
                                float* out_distance) const;
 
  protected:
-  Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
+  Node(Session* session,
+       mozart::ResourceId node_id,
+       const ResourceTypeInfo& type_info);
 
  private:
   void InvalidateGlobalTransform();
@@ -110,5 +111,4 @@ inline const escher::mat4& Node::GetGlobalTransform() const {
   return global_transform_;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

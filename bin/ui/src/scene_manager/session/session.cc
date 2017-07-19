@@ -28,8 +28,7 @@
 #include "escher/shape/mesh.h"
 #include "escher/shape/rounded_rect_factory.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 namespace {
 
@@ -115,10 +114,11 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
 }
 
 bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
-  const ResourceId id = op->id;
+  const mozart::ResourceId id = op->id;
   if (id == 0) {
     error_reporter_->ERROR()
-        << "scene::Session::ApplyCreateResourceOp(): invalid ID: " << op;
+        << "scene_manager::Session::ApplyCreateResourceOp(): invalid ID: "
+        << op;
     return false;
   }
 
@@ -232,8 +232,9 @@ bool Session::ApplySetTagOp(const mozart2::SetTagOpPtr& op) {
 bool Session::ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene::Session::ApplySetTranslationOp(): "
-                                  "unimplemented for variable value.";
+      error_reporter_->ERROR()
+          << "scene_manager::Session::ApplySetTranslationOp(): "
+             "unimplemented for variable value.";
       return false;
     }
     return node->SetTranslation(UnwrapVector3(op->value));
@@ -244,7 +245,7 @@ bool Session::ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op) {
 bool Session::ApplySetScaleOp(const mozart2::SetScaleOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene::Session::ApplySetScaleOp(): "
+      error_reporter_->ERROR() << "scene_manager::Session::ApplySetScaleOp(): "
                                   "unimplemented for variable value.";
       return false;
     }
@@ -256,8 +257,9 @@ bool Session::ApplySetScaleOp(const mozart2::SetScaleOpPtr& op) {
 bool Session::ApplySetRotationOp(const mozart2::SetRotationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene::Session::ApplySetRotationOp(): "
-                                  "unimplemented for variable value.";
+      error_reporter_->ERROR()
+          << "scene_manager::Session::ApplySetRotationOp(): "
+             "unimplemented for variable value.";
       return false;
     }
     return node->SetRotation(UnwrapQuaternion(op->value));
@@ -268,7 +270,7 @@ bool Session::ApplySetRotationOp(const mozart2::SetRotationOpPtr& op) {
 bool Session::ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene::Session::ApplySetAnchorOp(): "
+      error_reporter_->ERROR() << "scene_manager::Session::ApplySetAnchorOp(): "
                                   "unimplemented for variable value.";
       return false;
     }
@@ -300,8 +302,9 @@ bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
 bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
   if (op->clip_id != 0) {
     // TODO(MZ-167): Support non-zero clip_id.
-    error_reporter_->ERROR() << "scene::Session::ApplySetClipOp(): only "
-                                "clip_to_self is implemented.";
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetClipOp(): only "
+           "clip_to_self is implemented.";
     return false;
   }
 
@@ -351,7 +354,7 @@ bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
 bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
   if (auto material = resources_.FindResource<Material>(op->material_id)) {
     if (IsVariable(op->color)) {
-      error_reporter_->ERROR() << "scene::Session::ApplySetColorOp(): "
+      error_reporter_->ERROR() << "scene_manager::Session::ApplySetColorOp(): "
                                   "unimplemented for variable color.";
       return false;
     }
@@ -372,8 +375,9 @@ bool Session::ApplySetCameraProjectionOp(
   // TODO(MZ-123): support variables.
   if (IsVariable(op->eye_position) || IsVariable(op->eye_look_at) ||
       IsVariable(op->eye_up) || IsVariable(op->fovy)) {
-    error_reporter_->ERROR() << "scene::Session::ApplySetCameraProjectionOp(): "
-                                "unimplemented: variable properties.";
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetCameraProjectionOp(): "
+           "unimplemented: variable properties.";
     return false;
   } else if (auto camera = resources_.FindResource<Camera>(op->camera_id)) {
     camera->SetProjection(UnwrapVector3(op->eye_position),
@@ -388,12 +392,14 @@ bool Session::ApplySetLightIntensityOp(
     const mozart2::SetLightIntensityOpPtr& op) {
   // TODO(MZ-123): support variables.
   if (IsVariable(op->intensity)) {
-    error_reporter_->ERROR() << "scene::Session::ApplySetLightIntensityOp(): "
-                                "unimplemented: variable intensity.";
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetLightIntensityOp(): "
+           "unimplemented: variable intensity.";
     return false;
   } else if (!IsFloat(op->intensity)) {
-    error_reporter_->ERROR() << "scene::Session::ApplySetLightIntensityOp(): "
-                                "intensity is not a float.";
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetLightIntensityOp(): "
+           "intensity is not a float.";
     return false;
   } else if (auto light =
                  resources_.FindResource<DirectionalLight>(op->light_id)) {
@@ -410,12 +416,14 @@ bool Session::ApplySetLabelOp(const mozart2::SetLabelOpPtr& op) {
   return false;
 }
 
-bool Session::ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args) {
+bool Session::ApplyCreateMemory(mozart::ResourceId id,
+                                const mozart2::MemoryPtr& args) {
   auto memory = CreateMemory(id, args);
   return memory ? resources_.AddResource(id, std::move(memory)) : false;
 }
 
-bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
+bool Session::ApplyCreateImage(mozart::ResourceId id,
+                               const mozart2::ImagePtr& args) {
   if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
     if (auto image = CreateImage(id, memory, args)) {
       return resources_.AddResource(id, std::move(image));
@@ -425,45 +433,48 @@ bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
   return false;
 }
 
-bool Session::ApplyCreateImagePipe(ResourceId id,
+bool Session::ApplyCreateImagePipe(mozart::ResourceId id,
                                    const mozart2::ImagePipeArgsPtr& args) {
   auto image_pipe = ftl::MakeRefCounted<ImagePipe>(
       this, id, std::move(args->image_pipe_request));
   return resources_.AddResource(id, image_pipe);
 }
 
-bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
+bool Session::ApplyCreateBuffer(mozart::ResourceId id,
+                                const mozart2::BufferPtr& args) {
   error_reporter_->ERROR()
-      << "scene::Session::ApplyCreateBuffer(): unimplemented";
+      << "scene_manager::Session::ApplyCreateBuffer(): unimplemented";
   return false;
 }
 
-bool Session::ApplyCreateScene(ResourceId id, const mozart2::ScenePtr& args) {
+bool Session::ApplyCreateScene(mozart::ResourceId id,
+                               const mozart2::ScenePtr& args) {
   auto scene = CreateScene(id, args);
   return scene ? resources_.AddResource(id, std::move(scene)) : false;
 }
 
-bool Session::ApplyCreateCamera(ResourceId id, const mozart2::CameraPtr& args) {
+bool Session::ApplyCreateCamera(mozart::ResourceId id,
+                                const mozart2::CameraPtr& args) {
   auto camera = CreateCamera(id, args);
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
 
 bool Session::ApplyCreateDisplayRenderer(
-    ResourceId id,
+    mozart::ResourceId id,
     const mozart2::DisplayRendererPtr& args) {
   auto renderer = CreateDisplayRenderer(id, args);
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
 bool Session::ApplyCreateImagePipeRenderer(
-    ResourceId id,
+    mozart::ResourceId id,
     const mozart2::ImagePipeRendererPtr& args) {
   auto renderer = CreateImagePipeRenderer(id, args);
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
 bool Session::ApplyCreateDirectionalLight(
-    ResourceId id,
+    mozart::ResourceId id,
     const mozart2::DirectionalLightPtr& args) {
   if (!AssertValueIsOfType(args->direction, kVec3ValueTypes) ||
       !AssertValueIsOfType(args->intensity, kFloatValueTypes)) {
@@ -473,7 +484,7 @@ bool Session::ApplyCreateDirectionalLight(
   // TODO(MZ-123): support variables.
   if (IsVariable(args->direction) || IsVariable(args->intensity)) {
     error_reporter_->ERROR()
-        << "scene::Session::ApplyCreateDirectionalLight(): "
+        << "scene_manager::Session::ApplyCreateDirectionalLight(): "
            "unimplemented: variable direction/intensity.";
     return false;
   }
@@ -484,7 +495,7 @@ bool Session::ApplyCreateDirectionalLight(
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
-bool Session::ApplyCreateRectangle(ResourceId id,
+bool Session::ApplyCreateRectangle(mozart::ResourceId id,
                                    const mozart2::RectanglePtr& args) {
   if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
       !AssertValueIsOfType(args->height, kFloatValueTypes)) {
@@ -493,8 +504,9 @@ bool Session::ApplyCreateRectangle(ResourceId id,
 
   // TODO(MZ-123): support variables.
   if (IsVariable(args->width) || IsVariable(args->height)) {
-    error_reporter_->ERROR() << "scene::Session::ApplyCreateRectangle(): "
-                                "unimplemented: variable width/height.";
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplyCreateRectangle(): "
+           "unimplemented: variable width/height.";
     return false;
   }
 
@@ -504,7 +516,7 @@ bool Session::ApplyCreateRectangle(ResourceId id,
 }
 
 bool Session::ApplyCreateRoundedRectangle(
-    ResourceId id,
+    mozart::ResourceId id,
     const mozart2::RoundedRectanglePtr& args) {
   if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
       !AssertValueIsOfType(args->height, kFloatValueTypes) ||
@@ -521,7 +533,7 @@ bool Session::ApplyCreateRoundedRectangle(
       IsVariable(args->bottom_left_radius) ||
       IsVariable(args->bottom_right_radius)) {
     error_reporter_->ERROR()
-        << "scene::Session::ApplyCreateRoundedRectangle(): "
+        << "scene_manager::Session::ApplyCreateRoundedRectangle(): "
            "unimplemented: variable width/height/radii.";
     return false;
   }
@@ -535,14 +547,15 @@ bool Session::ApplyCreateRoundedRectangle(
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
-bool Session::ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args) {
+bool Session::ApplyCreateCircle(mozart::ResourceId id,
+                                const mozart2::CirclePtr& args) {
   if (!AssertValueIsOfType(args->radius, kFloatValueTypes)) {
     return false;
   }
 
   // TODO(MZ-123): support variables.
   if (IsVariable(args->radius)) {
-    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
+    error_reporter_->ERROR() << "scene_manager::Session::ApplyCreateCircle(): "
                                 "unimplemented: variable radius.";
     return false;
   }
@@ -551,44 +564,45 @@ bool Session::ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args) {
   return circle ? resources_.AddResource(id, std::move(circle)) : false;
 }
 
-bool Session::ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args) {
+bool Session::ApplyCreateMesh(mozart::ResourceId id,
+                              const mozart2::MeshPtr& args) {
   error_reporter_->ERROR()
-      << "scene::Session::ApplyCreateMesh(): unimplemented";
+      << "scene_manager::Session::ApplyCreateMesh(): unimplemented";
   return false;
 }
 
-bool Session::ApplyCreateMaterial(ResourceId id,
+bool Session::ApplyCreateMaterial(mozart::ResourceId id,
                                   const mozart2::MaterialPtr& args) {
   auto material = CreateMaterial(id);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
-bool Session::ApplyCreateClipNode(ResourceId id,
+bool Session::ApplyCreateClipNode(mozart::ResourceId id,
                                   const mozart2::ClipNodePtr& args) {
   auto node = CreateClipNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateEntityNode(ResourceId id,
+bool Session::ApplyCreateEntityNode(mozart::ResourceId id,
                                     const mozart2::EntityNodePtr& args) {
   auto node = CreateEntityNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateShapeNode(ResourceId id,
+bool Session::ApplyCreateShapeNode(mozart::ResourceId id,
                                    const mozart2::ShapeNodePtr& args) {
   auto node = CreateShapeNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateVariable(ResourceId id,
+bool Session::ApplyCreateVariable(mozart::ResourceId id,
                                   const mozart2::VariablePtr& args) {
   error_reporter_->ERROR()
-      << "scene::Session::ApplyCreateVariable(): unimplemented";
+      << "scene_manager::Session::ApplyCreateVariable(): unimplemented";
   return false;
 }
 
-ResourcePtr Session::CreateMemory(ResourceId id,
+ResourcePtr Session::CreateMemory(mozart::ResourceId id,
                                   const mozart2::MemoryPtr& args) {
   vk::Device device = context()->vk_device();
   switch (args->memory_type) {
@@ -599,18 +613,19 @@ ResourcePtr Session::CreateMemory(ResourceId id,
   }
 }
 
-ResourcePtr Session::CreateImage(ResourceId id,
+ResourcePtr Session::CreateImage(mozart::ResourceId id,
                                  MemoryPtr memory,
                                  const mozart2::ImagePtr& args) {
   return Image::New(this, id, memory, args->info, args->memory_offset,
                     error_reporter_);
 }
 
-ResourcePtr Session::CreateScene(ResourceId id, const mozart2::ScenePtr& args) {
+ResourcePtr Session::CreateScene(mozart::ResourceId id,
+                                 const mozart2::ScenePtr& args) {
   return ftl::MakeRefCounted<Scene>(this, id);
 }
 
-ResourcePtr Session::CreateCamera(ResourceId id,
+ResourcePtr Session::CreateCamera(mozart::ResourceId id,
                                   const mozart2::CameraPtr& args) {
   if (auto scene = resources_.FindResource<Scene>(args->scene_id)) {
     return ftl::MakeRefCounted<Camera>(this, id, std::move(scene));
@@ -619,7 +634,7 @@ ResourcePtr Session::CreateCamera(ResourceId id,
 }
 
 ResourcePtr Session::CreateDisplayRenderer(
-    ResourceId id,
+    mozart::ResourceId id,
     const mozart2::DisplayRendererPtr& args) {
   return ftl::MakeRefCounted<DisplayRenderer>(
       this, id, context()->frame_scheduler(), context()->GetPaperRenderer(),
@@ -627,45 +642,48 @@ ResourcePtr Session::CreateDisplayRenderer(
 }
 
 ResourcePtr Session::CreateImagePipeRenderer(
-    ResourceId id,
+    mozart::ResourceId id,
     const mozart2::ImagePipeRendererPtr& args) {
-  error_reporter_->ERROR() << "scene::Session::CreateImagePipeRenderer(): "
-                              "unimplemented.";
+  error_reporter_->ERROR()
+      << "scene_manager::Session::CreateImagePipeRenderer(): "
+         "unimplemented.";
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateDirectionalLight(ResourceId id,
+ResourcePtr Session::CreateDirectionalLight(mozart::ResourceId id,
                                             escher::vec3 direction,
                                             float intensity) {
   return ftl::MakeRefCounted<DirectionalLight>(this, id, direction, intensity);
 }
 
-ResourcePtr Session::CreateClipNode(ResourceId id,
+ResourcePtr Session::CreateClipNode(mozart::ResourceId id,
                                     const mozart2::ClipNodePtr& args) {
-  error_reporter_->ERROR() << "scene::Session::CreateClipNode(): "
+  error_reporter_->ERROR() << "scene_manager::Session::CreateClipNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateEntityNode(ResourceId id,
+ResourcePtr Session::CreateEntityNode(mozart::ResourceId id,
                                       const mozart2::EntityNodePtr& args) {
   return ftl::MakeRefCounted<EntityNode>(this, id);
 }
 
-ResourcePtr Session::CreateShapeNode(ResourceId id,
+ResourcePtr Session::CreateShapeNode(mozart::ResourceId id,
                                      const mozart2::ShapeNodePtr& args) {
   return ftl::MakeRefCounted<ShapeNode>(this, id);
 }
 
-ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {
+ResourcePtr Session::CreateCircle(mozart::ResourceId id, float initial_radius) {
   return ftl::MakeRefCounted<CircleShape>(this, id, initial_radius);
 }
 
-ResourcePtr Session::CreateRectangle(ResourceId id, float width, float height) {
+ResourcePtr Session::CreateRectangle(mozart::ResourceId id,
+                                     float width,
+                                     float height) {
   return ftl::MakeRefCounted<RectangleShape>(this, id, width, height);
 }
 
-ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
+ResourcePtr Session::CreateRoundedRectangle(mozart::ResourceId id,
                                             float width,
                                             float height,
                                             float top_left_radius,
@@ -674,8 +692,9 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
                                             float bottom_left_radius) {
   auto factory = context()->escher_rounded_rect_factory();
   if (!factory) {
-    error_reporter_->ERROR() << "scene::Session::CreateRoundedRectangle(): "
-                                "no RoundedRectFactory available.";
+    error_reporter_->ERROR()
+        << "scene_manager::Session::CreateRoundedRectangle(): "
+           "no RoundedRectFactory available.";
     return ResourcePtr();
   }
 
@@ -689,7 +708,7 @@ ResourcePtr Session::CreateRoundedRectangle(ResourceId id,
       this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
 }
 
-ResourcePtr Session::CreateMaterial(ResourceId id) {
+ResourcePtr Session::CreateMaterial(mozart::ResourceId id) {
   return ftl::MakeRefCounted<Material>(this, id);
 }
 
@@ -736,7 +755,7 @@ bool Session::AssertValueIsOfType(const mozart2::ValuePtr& value,
     }
     str << ").";
   }
-  error_reporter_->ERROR() << "scene::Session: received value of type: "
+  error_reporter_->ERROR() << "scene_manager::Session: received value of type: "
                            << value->which() << str.str();
   return false;
 }
@@ -828,7 +847,7 @@ bool Session::ApplyUpdate(Session::Update* update) {
     for (auto& op : update->ops) {
       if (!ApplyOp(op)) {
         error_reporter_->ERROR()
-            << "scene::Session::ApplyOp() failed to apply Op: " << op;
+            << "scene_manager::Session::ApplyOp() failed to apply Op: " << op;
         return false;
       }
     }
@@ -872,5 +891,4 @@ void Session::BeginTearDown() {
   FTL_DCHECK(!is_valid());
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

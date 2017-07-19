@@ -4,14 +4,13 @@
 
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo HostMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kHostMemory, "HostMemory"};
 
 HostMemory::HostMemory(Session* session,
-                       ResourceId id,
+                       mozart::ResourceId id,
                        mx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
@@ -20,12 +19,12 @@ HostMemory::HostMemory(Session* session,
       size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session,
-                              ResourceId id,
+                              mozart::ResourceId id,
                               vk::Device device,
                               const mozart2::MemoryPtr& args,
                               ErrorReporter* error_reporter) {
   if (args->memory_type != mozart2::MemoryType::HOST_MEMORY) {
-    error_reporter->ERROR() << "scene::HostMemory::New(): "
+    error_reporter->ERROR() << "scene_manager::HostMemory::New(): "
                                "Memory must be of type HOST_MEMORY.";
     return nullptr;
   }
@@ -33,7 +32,7 @@ HostMemoryPtr HostMemory::New(Session* session,
 }
 
 HostMemoryPtr HostMemory::New(Session* session,
-                              ResourceId id,
+                              mozart::ResourceId id,
                               vk::Device device,
                               mx::vmo vmo,
                               ErrorReporter* error_reporter) {
@@ -42,5 +41,4 @@ HostMemoryPtr HostMemory::New(Session* session,
   return ftl::MakeRefCounted<HostMemory>(session, id, std::move(vmo), vmo_size);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

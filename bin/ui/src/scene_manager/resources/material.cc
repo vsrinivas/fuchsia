@@ -9,13 +9,12 @@
 #include "apps/mozart/src/scene_manager/resources/image_pipe.h"
 #include "apps/mozart/src/scene_manager/session/session.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
 
-Material::Material(Session* session, ResourceId id)
+Material::Material(Session* session, mozart::ResourceId id)
     : Resource(session, id, Material::kTypeInfo),
       escher_material_(ftl::MakeRefCounted<escher::Material>()) {}
 
@@ -47,5 +46,4 @@ void Material::UpdateEscherMaterial() {
   }
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

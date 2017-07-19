@@ -7,15 +7,14 @@
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "escher/geometry/types.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class DirectionalLight final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
   DirectionalLight(Session* session,
-                   ResourceId id,
+                   mozart::ResourceId id,
                    const escher::vec3& direction,
                    float intensity);
 
@@ -32,5 +31,4 @@ class DirectionalLight final : public Resource {
   float intensity_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

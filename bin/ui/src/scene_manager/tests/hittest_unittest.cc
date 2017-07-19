@@ -10,8 +10,7 @@
 
 #include "gtest/gtest.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 namespace {
 using vec3 = escher::vec3;
@@ -59,48 +58,48 @@ class HitTestTest : public SessionTest {
   void SetUp() override {
     SessionTest::SetUp();
 
-    Apply(NewCreateRectangleOp(20, 8.f, 8.f));
+    Apply(mozart::NewCreateRectangleOp(20, 8.f, 8.f));
 
-    Apply(NewCreateEntityNodeOp(1));
+    Apply(mozart::NewCreateEntityNodeOp(1));
 
-    Apply(NewCreateEntityNodeOp(2));
-    Apply(NewSetTagOp(2, 100));
-    Apply(NewAddChildOp(1, 2));
+    Apply(mozart::NewCreateEntityNodeOp(2));
+    Apply(mozart::NewSetTagOp(2, 100));
+    Apply(mozart::NewAddChildOp(1, 2));
 
-    Apply(NewCreateEntityNodeOp(3));
-    Apply(NewSetTagOp(3, 25));
-    Apply(NewSetTranslationOp(3, (float[3]){4.f, 4.f, 0.f}));
-    Apply(NewAddChildOp(2, 3));
+    Apply(mozart::NewCreateEntityNodeOp(3));
+    Apply(mozart::NewSetTagOp(3, 25));
+    Apply(mozart::NewSetTranslationOp(3, (float[3]){4.f, 4.f, 0.f}));
+    Apply(mozart::NewAddChildOp(2, 3));
 
-    Apply(NewCreateShapeNodeOp(4));
-    Apply(NewSetTagOp(4, 10));
-    Apply(NewSetShapeOp(4, 20));
-    Apply(NewSetTranslationOp(4, (float[3]){0.f, 0.f, 2.f}));
-    Apply(NewAddChildOp(3, 4));
+    Apply(mozart::NewCreateShapeNodeOp(4));
+    Apply(mozart::NewSetTagOp(4, 10));
+    Apply(mozart::NewSetShapeOp(4, 20));
+    Apply(mozart::NewSetTranslationOp(4, (float[3]){0.f, 0.f, 2.f}));
+    Apply(mozart::NewAddChildOp(3, 4));
 
-    Apply(NewCreateEntityNodeOp(5));
-    Apply(NewSetTagOp(5, 20));
-    Apply(NewSetTranslationOp(5, (float[3]){5.f, 5.f, 1.f}));
-    Apply(NewAddChildOp(3, 5));
+    Apply(mozart::NewCreateEntityNodeOp(5));
+    Apply(mozart::NewSetTagOp(5, 20));
+    Apply(mozart::NewSetTranslationOp(5, (float[3]){5.f, 5.f, 1.f}));
+    Apply(mozart::NewAddChildOp(3, 5));
 
-    Apply(NewCreateShapeNodeOp(6));
-    Apply(NewSetShapeOp(6, 20));
-    Apply(NewAddChildOp(5, 6));
+    Apply(mozart::NewCreateShapeNodeOp(6));
+    Apply(mozart::NewSetShapeOp(6, 20));
+    Apply(mozart::NewAddChildOp(5, 6));
 
-    Apply(NewCreateEntityNodeOp(7));
-    Apply(NewSetTagOp(7, 35));
-    Apply(NewSetTranslationOp(7, (float[3]){10.f, 0.f, 1.f}));
-    Apply(NewAddChildOp(2, 7));
+    Apply(mozart::NewCreateEntityNodeOp(7));
+    Apply(mozart::NewSetTagOp(7, 35));
+    Apply(mozart::NewSetTranslationOp(7, (float[3]){10.f, 0.f, 1.f}));
+    Apply(mozart::NewAddChildOp(2, 7));
 
-    Apply(NewCreateShapeNodeOp(8));
-    Apply(NewSetTagOp(8, 30));
-    Apply(NewSetShapeOp(8, 20));
-    Apply(NewSetTranslationOp(8, (float[3]){4.f, 4.f, 0.f}));
-    Apply(NewAddChildOp(7, 8));
+    Apply(mozart::NewCreateShapeNodeOp(8));
+    Apply(mozart::NewSetTagOp(8, 30));
+    Apply(mozart::NewSetShapeOp(8, 20));
+    Apply(mozart::NewSetTranslationOp(8, (float[3]){4.f, 4.f, 0.f}));
+    Apply(mozart::NewAddChildOp(7, 8));
 
-    Apply(NewCreateEntityNodeOp(9));
-    Apply(NewSetTagOp(9, 1));
-    Apply(NewAddChildOp(1, 9));
+    Apply(mozart::NewCreateEntityNodeOp(9));
+    Apply(mozart::NewSetTagOp(9, 1));
+    Apply(mozart::NewAddChildOp(1, 9));
   }
 
  protected:
@@ -252,7 +251,8 @@ TEST_F(HitTestTest, HitBoth20And30FromNode1) {
 }
 
 TEST_F(HitTestTest, SuppressNode25FromNode1) {
-  Apply(NewSetHitTestBehaviorOp(3, mozart2::HitTestBehavior::kSuppress));
+  Apply(
+      mozart::NewSetHitTestBehaviorOp(3, mozart2::HitTestBehavior::kSuppress));
 
   // While we would have hit 20 and 25, we suppressed node 3 so neither appears.
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
@@ -266,20 +266,20 @@ TEST_F(HitTestTest, Clipping) {
   // to a rectangle added as a part in 25, which contains 10.
   // We move this part around and turn clipping on and off to see what happens
   // when the clip is intersected or not.
-  Apply(NewCreateEntityNodeOp(11));
-  Apply(NewAddPartOp(3, 11));
-  Apply(NewCreateShapeNodeOp(12));
-  Apply(NewSetShapeOp(12, 20));
-  Apply(NewAddChildOp(11, 12));
+  Apply(mozart::NewCreateEntityNodeOp(11));
+  Apply(mozart::NewAddPartOp(3, 11));
+  Apply(mozart::NewCreateShapeNodeOp(12));
+  Apply(mozart::NewSetShapeOp(12, 20));
+  Apply(mozart::NewAddChildOp(11, 12));
 
   // Initially, position the clip shape someplace far away from the content.
   // This causes 10 to be outside of its containing clip region.
-  Apply(NewSetTranslationOp(11, (float[3]){20.f, 20.f, 0.f}));
-  Apply(NewSetClipOp(3, 0, true));
+  Apply(mozart::NewSetTranslationOp(11, (float[3]){20.f, 20.f, 0.f}));
+  Apply(mozart::NewSetClipOp(3, 0, true));
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector, {});
 
   // Now disable clipping and try again.
-  Apply(NewSetClipOp(3, 0, false));
+  Apply(mozart::NewSetClipOp(3, 0, false));
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
              {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
@@ -287,8 +287,8 @@ TEST_F(HitTestTest, Clipping) {
 
   // Move the clip shape so it covers the part of 10 that we're hitting
   // and reenable clipping.
-  Apply(NewSetTranslationOp(11, (float[3]){-4.f, -4.f, 0.f}));
-  Apply(NewSetClipOp(3, 0, true));
+  Apply(mozart::NewSetTranslationOp(11, (float[3]){-4.f, -4.f, 0.f}));
+  Apply(mozart::NewSetClipOp(3, 0, true));
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
              {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
@@ -296,5 +296,4 @@ TEST_F(HitTestTest, Clipping) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

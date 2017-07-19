@@ -13,10 +13,9 @@
 #include "apps/mozart/src/scene_manager/display_watcher.h"
 #include "apps/mozart/src/scene_manager/scene_manager_app.h"
 
-int main(int argc, const char** argv) {
-  using namespace mozart;
-  using namespace mozart::scene;
+using namespace scene_manager;
 
+int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   if (!ftl::SetLogSettingsFromCommandLine(command_line))
     return 1;

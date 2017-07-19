@@ -9,8 +9,7 @@
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 #include "apps/mozart/src/scene_manager/tests/util.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 class ReleaseFenceSignallerTest
@@ -58,5 +57,4 @@ TEST_F(ReleaseFenceSignallerTest, FencesSignalledProperly) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

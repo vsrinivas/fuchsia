@@ -6,8 +6,7 @@
 
 #include <mx/event.h>
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Signal values used to signal a mx::event that represents a fence.
 // e.g.: fence.signal(0u, kFenceSignalled);
@@ -15,5 +14,4 @@ constexpr mx_status_t kFenceSignalled = MX_USER_SIGNAL_0;
 constexpr mx_status_t kFenceSignalledOrClosed =
     MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE;
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

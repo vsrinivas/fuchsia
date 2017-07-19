@@ -7,8 +7,7 @@
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "escher/material/material.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class ImageBase;
 using ImageBasePtr = ftl::RefPtr<ImageBase>;
@@ -20,7 +19,7 @@ class Material : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Material(Session* session, ResourceId id);
+  Material(Session* session, mozart::ResourceId id);
 
   void SetColor(float red, float green, float blue, float alpha);
   void SetTexture(ImageBasePtr texture_image);
@@ -47,5 +46,4 @@ class Material : public Resource {
   ImageBasePtr texture_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

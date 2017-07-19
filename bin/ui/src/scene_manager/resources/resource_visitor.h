@@ -4,8 +4,7 @@
 
 #pragma once
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Import;
 class GpuMemory;
@@ -55,5 +54,4 @@ class ResourceVisitor {
   virtual void Visit(Import* r) = 0;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -7,8 +7,7 @@
 #include <mx/time.h>
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 AcquireFence::AcquireFence(mx::event fence) : fence_(std::move(fence)) {
   FTL_DCHECK(fence_);
@@ -83,5 +82,4 @@ void AcquireFence::OnHandleReady(mx_handle_t handle,
   callback();
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

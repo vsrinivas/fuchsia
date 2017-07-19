@@ -4,12 +4,11 @@
 
 #include "apps/mozart/src/scene_manager/resources/image_pipe.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 ImagePipeHandler::ImagePipeHandler(
     ::fidl::InterfaceRequest<mozart2::ImagePipe> request,
-    mozart::scene::ImagePipe* image_pipe)
+    scene_manager::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
   binding_.set_connection_error_handler(
       [image_pipe] { image_pipe->OnConnectionError(); });
@@ -38,5 +37,4 @@ void ImagePipeHandler::PresentImage(uint32_t image_id,
                             callback);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

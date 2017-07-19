@@ -14,8 +14,7 @@
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "lib/ftl/tasks/task_runner.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 using SessionId = uint64_t;
 
@@ -54,9 +53,10 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // Return the total number of existing resources associated with this Session.
   size_t GetTotalResourceCount() const { return resource_count_; }
 
-  // Return the number of resources that a client can identify via a ResourceId.
-  // This number is decremented when a ReleaseResourceOp is applied.  However,
-  // the resource may continue to exist if it is referenced by other resources.
+  // Return the number of resources that a client can identify via a
+  // mozart::ResourceId. This number is decremented when a ReleaseResourceOp is
+  // applied.  However, the resource may continue to exist if it is referenced
+  // by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
   // Called only by SessionContext. Use BeginTearDown() instead when you need to
@@ -126,59 +126,69 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetLabelOp(const mozart2::SetLabelOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
-  bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
-  bool ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args);
-  bool ApplyCreateImagePipe(ResourceId id,
+  bool ApplyCreateMemory(mozart::ResourceId id, const mozart2::MemoryPtr& args);
+  bool ApplyCreateImage(mozart::ResourceId id, const mozart2::ImagePtr& args);
+  bool ApplyCreateImagePipe(mozart::ResourceId id,
                             const mozart2::ImagePipeArgsPtr& args);
-  bool ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args);
-  bool ApplyCreateScene(ResourceId id, const mozart2::ScenePtr& args);
-  bool ApplyCreateCamera(ResourceId id, const mozart2::CameraPtr& args);
-  bool ApplyCreateDisplayRenderer(ResourceId id,
+  bool ApplyCreateBuffer(mozart::ResourceId id, const mozart2::BufferPtr& args);
+  bool ApplyCreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
+  bool ApplyCreateCamera(mozart::ResourceId id, const mozart2::CameraPtr& args);
+  bool ApplyCreateDisplayRenderer(mozart::ResourceId id,
                                   const mozart2::DisplayRendererPtr& args);
-  bool ApplyCreateImagePipeRenderer(ResourceId id,
+  bool ApplyCreateImagePipeRenderer(mozart::ResourceId id,
                                     const mozart2::ImagePipeRendererPtr& args);
-  bool ApplyCreateDirectionalLight(ResourceId id,
+  bool ApplyCreateDirectionalLight(mozart::ResourceId id,
                                    const mozart2::DirectionalLightPtr& args);
-  bool ApplyCreateRectangle(ResourceId id, const mozart2::RectanglePtr& args);
-  bool ApplyCreateRoundedRectangle(ResourceId id,
+  bool ApplyCreateRectangle(mozart::ResourceId id,
+                            const mozart2::RectanglePtr& args);
+  bool ApplyCreateRoundedRectangle(mozart::ResourceId id,
                                    const mozart2::RoundedRectanglePtr& args);
-  bool ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args);
-  bool ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args);
-  bool ApplyCreateMaterial(ResourceId id, const mozart2::MaterialPtr& args);
-  bool ApplyCreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
-  bool ApplyCreateEntityNode(ResourceId id, const mozart2::EntityNodePtr& args);
-  bool ApplyCreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
-  bool ApplyCreateVariable(ResourceId id, const mozart2::VariablePtr& args);
+  bool ApplyCreateCircle(mozart::ResourceId id, const mozart2::CirclePtr& args);
+  bool ApplyCreateMesh(mozart::ResourceId id, const mozart2::MeshPtr& args);
+  bool ApplyCreateMaterial(mozart::ResourceId id,
+                           const mozart2::MaterialPtr& args);
+  bool ApplyCreateClipNode(mozart::ResourceId id,
+                           const mozart2::ClipNodePtr& args);
+  bool ApplyCreateEntityNode(mozart::ResourceId id,
+                             const mozart2::EntityNodePtr& args);
+  bool ApplyCreateShapeNode(mozart::ResourceId id,
+                            const mozart2::ShapeNodePtr& args);
+  bool ApplyCreateVariable(mozart::ResourceId id,
+                           const mozart2::VariablePtr& args);
 
   // Actually create resources.
-  ResourcePtr CreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
-  ResourcePtr CreateImage(ResourceId id,
+  ResourcePtr CreateMemory(mozart::ResourceId id,
+                           const mozart2::MemoryPtr& args);
+  ResourcePtr CreateImage(mozart::ResourceId id,
                           MemoryPtr memory,
                           const mozart2::ImagePtr& args);
-  ResourcePtr CreateScene(ResourceId id, const mozart2::ScenePtr& args);
-  ResourcePtr CreateCamera(ResourceId id, const mozart2::CameraPtr& args);
-  ResourcePtr CreateDisplayRenderer(ResourceId id,
+  ResourcePtr CreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
+  ResourcePtr CreateCamera(mozart::ResourceId id,
+                           const mozart2::CameraPtr& args);
+  ResourcePtr CreateDisplayRenderer(mozart::ResourceId id,
                                     const mozart2::DisplayRendererPtr& args);
   ResourcePtr CreateImagePipeRenderer(
-      ResourceId id,
+      mozart::ResourceId id,
       const mozart2::ImagePipeRendererPtr& args);
-  ResourcePtr CreateDirectionalLight(ResourceId id,
+  ResourcePtr CreateDirectionalLight(mozart::ResourceId id,
                                      escher::vec3 direction,
                                      float intensity);
-  ResourcePtr CreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
-  ResourcePtr CreateEntityNode(ResourceId id,
+  ResourcePtr CreateClipNode(mozart::ResourceId id,
+                             const mozart2::ClipNodePtr& args);
+  ResourcePtr CreateEntityNode(mozart::ResourceId id,
                                const mozart2::EntityNodePtr& args);
-  ResourcePtr CreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
-  ResourcePtr CreateCircle(ResourceId id, float initial_radius);
-  ResourcePtr CreateRectangle(ResourceId id, float width, float height);
-  ResourcePtr CreateRoundedRectangle(ResourceId id,
+  ResourcePtr CreateShapeNode(mozart::ResourceId id,
+                              const mozart2::ShapeNodePtr& args);
+  ResourcePtr CreateCircle(mozart::ResourceId id, float initial_radius);
+  ResourcePtr CreateRectangle(mozart::ResourceId id, float width, float height);
+  ResourcePtr CreateRoundedRectangle(mozart::ResourceId id,
                                      float width,
                                      float height,
                                      float top_left_radius,
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);
-  ResourcePtr CreateMaterial(ResourceId id);
+  ResourcePtr CreateMaterial(mozart::ResourceId id);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does
@@ -228,5 +238,4 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool is_valid_ = true;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

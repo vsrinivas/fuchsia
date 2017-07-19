@@ -4,13 +4,14 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
 
-CircleShape::CircleShape(Session* session, ResourceId id, float initial_radius)
+CircleShape::CircleShape(Session* session,
+                         mozart::ResourceId id,
+                         float initial_radius)
     : PlanarShape(session, id, CircleShape::kTypeInfo),
       radius_(initial_radius) {}
 
@@ -24,5 +25,4 @@ escher::Object CircleShape::GenerateRenderObject(
   return escher::Object::NewCircle(transform, radius_, material);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

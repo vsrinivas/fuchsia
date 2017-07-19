@@ -4,19 +4,17 @@
 
 #include "apps/mozart/src/scene_manager/resources/lights/directional_light.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo DirectionalLight::kTypeInfo = {
     ResourceType::kDirectionalLight, "DirectionalLight"};
 
 DirectionalLight::DirectionalLight(Session* session,
-                                   ResourceId id,
+                                   mozart::ResourceId id,
                                    const escher::vec3& direction,
                                    float intensity)
     : Resource(session, id, DirectionalLight::kTypeInfo),
       direction_(direction),
       intensity_(intensity) {}
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -11,8 +11,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/tasks/task_runner.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class SceneManagerImpl;
 
@@ -28,7 +27,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
                  ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
   ~SessionHandler() override;
 
-  scene::Session* session() const { return session_.get(); }
+  scene_manager::Session* session() const { return session_.get(); }
 
  protected:
   // mozart2::Session interface methods.
@@ -61,7 +60,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   void TearDown();
 
   SessionContext* const session_context_;
-  scene::SessionPtr session_;
+  scene_manager::SessionPtr session_;
 
   ::fidl::BindingSet<mozart2::Session> bindings_;
   ::fidl::InterfacePtrSet<mozart2::SessionListener> listeners_;
@@ -69,5 +68,4 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   ::fidl::Array<mozart2::OpPtr> buffered_ops_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

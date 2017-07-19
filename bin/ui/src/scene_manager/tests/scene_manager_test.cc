@@ -6,8 +6,7 @@
 
 #include "apps/mozart/lib/tests/test_with_message_loop.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 void SceneManagerTest::SetUp() {
@@ -46,5 +45,4 @@ void SceneManagerTest::TearDown() {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

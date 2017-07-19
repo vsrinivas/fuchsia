@@ -16,14 +16,13 @@
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
                                               "Renderer"};
 
 Renderer::Renderer(Session* session,
-                   ResourceId id,
+                   mozart::ResourceId id,
                    FrameScheduler* frame_scheduler)
     : Resource(session, id, Renderer::kTypeInfo),
       frame_scheduler_(frame_scheduler) {
@@ -211,5 +210,4 @@ void Renderer::Visitor::Visit(DirectionalLight* r) {
   FTL_CHECK(false);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -11,8 +11,7 @@
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "lib/escher/escher/geometry/types.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 namespace {
 
@@ -30,7 +29,7 @@ constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode;
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 
 Node::Node(Session* session,
-           ResourceId node_id,
+           mozart::ResourceId node_id,
            const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
@@ -49,8 +48,9 @@ bool Node::AddChild(NodePtr child_node) {
   // add verification to reject such operations.
 
   if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR() << "scene::Node::AddChild(): node of type '"
-                              << type_name() << "' cannot have children.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::AddChild(): node of type '" << type_name()
+        << "' cannot have children.";
     return false;
   }
 
@@ -70,7 +70,7 @@ bool Node::AddChild(NodePtr child_node) {
 
 bool Node::AddPart(NodePtr part_node) {
   if (!(type_flags() & kHasParts)) {
-    error_reporter()->ERROR() << "scene::Node::AddPart(): node of type "
+    error_reporter()->ERROR() << "scene_manager::Node::AddPart(): node of type "
                               << type_name() << " cannot have parts.";
     return false;
   }
@@ -132,8 +132,9 @@ bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
 
 bool Node::DetachChildren() {
   if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR() << "scene::Node::DetachChildren(): node of type '"
-                              << type_name() << "' cannot have children.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::DetachChildren(): node of type '"
+        << type_name() << "' cannot have children.";
     return false;
   }
   for (auto& child : children_) {
@@ -152,8 +153,9 @@ bool Node::SetTagValue(uint32_t tag_value) {
 
 bool Node::SetTransform(const escher::Transform& transform) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scene::Node::SetTransform(): node of type "
-                              << type_name() << " cannot have transform set.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetTransform(): node of type " << type_name()
+        << " cannot have transform set.";
     return false;
   }
   transform_ = transform;
@@ -163,8 +165,9 @@ bool Node::SetTransform(const escher::Transform& transform) {
 
 bool Node::SetTranslation(const escher::vec3& translation) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scene::Node::SetTranslation(): node of type "
-                              << type_name() << " cannot have translation set.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetTranslation(): node of type " << type_name()
+        << " cannot have translation set.";
     return false;
   }
   transform_.translation = translation;
@@ -174,8 +177,9 @@ bool Node::SetTranslation(const escher::vec3& translation) {
 
 bool Node::SetScale(const escher::vec3& scale) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scene::Node::SetScale(): node of type "
-                              << type_name() << " cannot have scale set.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetScale(): node of type " << type_name()
+        << " cannot have scale set.";
     return false;
   }
   transform_.scale = scale;
@@ -185,8 +189,9 @@ bool Node::SetScale(const escher::vec3& scale) {
 
 bool Node::SetRotation(const escher::quat& rotation) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scene::Node::SetRotation(): node of type "
-                              << type_name() << " cannot have rotation set.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetRotation(): node of type " << type_name()
+        << " cannot have rotation set.";
     return false;
   }
   transform_.rotation = rotation;
@@ -196,8 +201,9 @@ bool Node::SetRotation(const escher::quat& rotation) {
 
 bool Node::SetAnchor(const escher::vec3& anchor) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scene::Node::SetAnchor(): node of type "
-                              << type_name() << " cannot have anchor set.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetAnchor(): node of type " << type_name()
+        << " cannot have anchor set.";
     return false;
   }
   transform_.anchor = anchor;
@@ -207,8 +213,9 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
 
 bool Node::SetClipToSelf(bool clip_to_self) {
   if (!(type_flags() & kHasClip)) {
-    error_reporter()->ERROR() << "scene::Node::SetClipToSelf(): node of type "
-                              << type_name() << " cannot have clip params set.";
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetClipToSelf(): node of type " << type_name()
+        << " cannot have clip params set.";
     return false;
   }
   clip_to_self_ = clip_to_self;
@@ -263,5 +270,4 @@ bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   return false;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

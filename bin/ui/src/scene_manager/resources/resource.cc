@@ -9,13 +9,12 @@
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/session/session.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
 Resource::Resource(Session* session,
-                   ResourceId id,
+                   mozart::ResourceId id,
                    const ResourceTypeInfo& type_info)
     : session_(session), id_(id), type_info_(type_info) {
   FTL_DCHECK(session);
@@ -62,5 +61,4 @@ Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

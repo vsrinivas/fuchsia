@@ -8,8 +8,7 @@
 
 #include "apps/mozart/src/scene_manager/session/hit.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class Node;
 class Session;
@@ -99,5 +98,4 @@ class HitTester {
   RayInfo* ray_info_ = nullptr;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

@@ -12,8 +12,7 @@
 #include "apps/mozart/src/scene_manager/tests/scene_manager_test.h"
 #include "apps/mozart/src/scene_manager/tests/util.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 TEST_F(SceneManagerTest, CreateAndDestroySession) {
@@ -58,14 +57,14 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
 
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateCircleOp(1, 50.f));
-    ops.push_back(NewCreateCircleOp(2, 25.f));
+    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
+    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
     sess1a->Enqueue(std::move(ops));
   }
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateCircleOp(1, 50.f));
-    ops.push_back(NewCreateCircleOp(2, 25.f));
+    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
+    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
     sess2a->Enqueue(std::move(ops));
   }
   RUN_MESSAGE_LOOP_UNTIL(handler1->enqueue_count() == 1);
@@ -111,21 +110,21 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   // Enqueue ops via sess1a.
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateCircleOp(1, 50.f));
-    ops.push_back(NewCreateCircleOp(2, 25.f));
+    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
+    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
     sess1a->Enqueue(std::move(ops));
   }
   // Enqueue ops via sess1b.
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateEntityNodeOp(3));
+    ops.push_back(mozart::NewCreateEntityNodeOp(3));
     sess1b->Enqueue(std::move(ops));
   }
   // Enqueue ops via sess1c.
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateShapeNodeOp(4));
-    ops.push_back(NewCreateShapeNodeOp(5));
+    ops.push_back(mozart::NewCreateShapeNodeOp(4));
+    ops.push_back(mozart::NewCreateShapeNodeOp(5));
     sess1c->Enqueue(std::move(ops));
   }
 
@@ -134,10 +133,10 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 3);
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewAddChildOp(3, 4));
-    ops.push_back(NewAddChildOp(3, 5));
-    ops.push_back(NewSetShapeOp(4, 1));
-    ops.push_back(NewSetShapeOp(5, 2));
+    ops.push_back(mozart::NewAddChildOp(3, 4));
+    ops.push_back(mozart::NewAddChildOp(3, 5));
+    ops.push_back(mozart::NewSetShapeOp(4, 1));
+    ops.push_back(mozart::NewSetShapeOp(5, 2));
     sess1d->Enqueue(std::move(ops));
     sess1d->Present(0u, ::fidl::Array<mx::event>::New(0),
                     ::fidl::Array<mx::event>::New(0),
@@ -155,7 +154,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
     ::fidl::Array<mozart2::OpPtr> ops;
     FTL_LOG(INFO)
         << "The subsequent 'resource already exists' error is expected";
-    ops.push_back(NewCreateEntityNodeOp(3));  // already exists!
+    ops.push_back(mozart::NewCreateEntityNodeOp(3));  // already exists!
     sess1b->Enqueue(std::move(ops));
     sess1b->Present(0u, ::fidl::Array<mx::event>::New(0),
                     ::fidl::Array<mx::event>::New(0),
@@ -199,8 +198,8 @@ TEST_F(SceneManagerTest, ReleaseFences) {
 
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateCircleOp(1, 50.f));
-    ops.push_back(NewCreateCircleOp(2, 25.f));
+    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
+    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
   }
   RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
@@ -261,8 +260,8 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
 
   {
     ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(NewCreateCircleOp(1, 50.f));
-    ops.push_back(NewCreateCircleOp(2, 25.f));
+    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
+    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
   }
   RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
@@ -305,5 +304,4 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

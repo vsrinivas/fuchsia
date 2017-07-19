@@ -14,8 +14,7 @@
 #include "lib/mtl/threading/thread.h"
 #include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace test {
 
 using ResourceLinkerTest = SessionTest;
@@ -61,7 +60,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
-  );
+                        );
 
   // Make sure the closure and its assertions are not skipped.
   ASSERT_TRUE(did_resolve);
@@ -170,7 +169,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
-  );
+                        );
   ASSERT_FALSE(did_resolve);
   ASSERT_EQ(0u, linker.UnresolvedExports());
   ASSERT_EQ(1u, linker.UnresolvedImports());
@@ -215,7 +214,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     linker.ImportResource(mozart2::ImportSpec::NODE,         // import spec
                           std::move(duplicate_destination),  // import handle
                           resolution_handler  // import resolution handler
-    );
+                          );
     ASSERT_EQ(0u, resolution_count);
     ASSERT_EQ(0u, linker.UnresolvedExports());
     ASSERT_EQ(i, linker.UnresolvedImports());
@@ -230,5 +229,4 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
 }
 
 }  // namespace test
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

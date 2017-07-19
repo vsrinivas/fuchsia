@@ -6,13 +6,12 @@
 
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 namespace {
 // Resources that are created to be |Import| delegates are not
 // directly owned by the |ResourceMap|. Instead, they are owned by the import
 // resources themselves. So we give them an id of 0, which is reserved.
-constexpr ResourceId kDelegateResourceId = 0u;
+constexpr mozart::ResourceId kDelegateResourceId = 0u;
 
 ResourcePtr CreateDelegate(Session* session, mozart2::ImportSpec spec) {
   switch (spec) {
@@ -27,7 +26,7 @@ constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
 Import::Import(Session* session,
-               ResourceId id,
+               mozart::ResourceId id,
                mozart2::ImportSpec spec,
                mx::eventpair import_token)
     : Resource(session, id, Import::kTypeInfo),
@@ -60,5 +59,4 @@ void Import::UnbindImportedResource() {
   imported_resource_ = nullptr;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

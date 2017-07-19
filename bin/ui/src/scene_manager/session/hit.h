@@ -6,8 +6,7 @@
 
 #include "lib/escher/escher/geometry/types.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Describes where a hit occurred within the content of a tagged node.
 struct Hit {
@@ -27,5 +26,4 @@ struct Hit {
   float distance;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

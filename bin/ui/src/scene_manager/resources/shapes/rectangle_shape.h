@@ -6,15 +6,14 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/planar_shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 class RectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
   RectangleShape(Session* session,
-                 ResourceId id,
+                 mozart::ResourceId id,
                  float initial_width,
                  float initial_height);
 
@@ -37,5 +36,4 @@ class RectangleShape final : public PlanarShape {
   float height_;
 };
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

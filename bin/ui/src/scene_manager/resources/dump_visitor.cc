@@ -23,8 +23,7 @@
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 DumpVisitor::DumpVisitor(std::ostream& output) : output_(output) {}
 
@@ -281,5 +280,4 @@ void DumpVisitor::EndLine() {
   property_count_ = 0u;
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

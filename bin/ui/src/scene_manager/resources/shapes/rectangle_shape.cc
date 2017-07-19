@@ -4,14 +4,13 @@
 
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 const ResourceTypeInfo RectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRectangle, "RectangleShape"};
 
 RectangleShape::RectangleShape(Session* session,
-                               ResourceId id,
+                               mozart::ResourceId id,
                                float initial_width,
                                float initial_height)
     : PlanarShape(session, id, RectangleShape::kTypeInfo),
@@ -37,5 +36,4 @@ escher::Object RectangleShape::GenerateRenderObject(
   return escher::Object::NewRect(transform * rect_transform, material);
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

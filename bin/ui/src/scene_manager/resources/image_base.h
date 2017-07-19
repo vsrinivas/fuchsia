@@ -7,8 +7,7 @@
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "apps/mozart/src/scene_manager/session/session.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Abstract superclass for Image and ImagePipe.
 class ImageBase : public Resource {
@@ -19,10 +18,11 @@ class ImageBase : public Resource {
   virtual const escher::ImagePtr& GetEscherImage() = 0;
 
  protected:
-  ImageBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
+  ImageBase(Session* session,
+            mozart::ResourceId id,
+            const ResourceTypeInfo& type_info);
 };
 
 using ImageBasePtr = ftl::RefPtr<ImageBase>;
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

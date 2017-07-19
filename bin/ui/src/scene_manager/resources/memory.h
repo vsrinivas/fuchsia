@@ -11,8 +11,7 @@
 #include "escher/vk/gpu_mem.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 // Base class for Resource objects that wrap memory. Subclassed by GpuMemory
 // and HostMemory.
@@ -21,10 +20,11 @@ class Memory : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
  protected:
-  Memory(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
+  Memory(Session* session,
+         mozart::ResourceId id,
+         const ResourceTypeInfo& type_info);
 };
 
 using MemoryPtr = ftl::RefPtr<Memory>;
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager

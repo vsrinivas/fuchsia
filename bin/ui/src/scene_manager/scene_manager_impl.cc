@@ -6,8 +6,7 @@
 
 #include "apps/mozart/src/scene_manager/display.h"
 
-namespace mozart {
-namespace scene {
+namespace scene_manager {
 
 SceneManagerImpl::SceneManagerImpl(
     Display* display,
@@ -58,5 +57,4 @@ void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   callback(std::move(info));
 }
 
-}  // namespace scene
-}  // namespace mozart
+}  // namespace scene_manager
