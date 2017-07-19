@@ -5,8 +5,7 @@
     ],
     "labels": [
         "//apps/modular",
-        "//apps/modular:modular_unittests",
-        "//apps/web_runner/services"
+        "//apps/modular:modular_unittests"
     ],
     "components": [
         "apps/modular/src/component_manager/component_manager.json",
