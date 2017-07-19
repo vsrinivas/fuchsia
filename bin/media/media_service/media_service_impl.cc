@@ -4,6 +4,7 @@
 
 #include "apps/media/src/media_service/media_service_impl.h"
 
+#include "apps/media/services/audio_policy_service.fidl.h"
 #include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/src/media_service/audio_capturer_impl.h"
 #include "apps/media/src/media_service/file_reader_impl.h"
@@ -105,6 +106,12 @@ void MediaServiceImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
   AudioServerPtr audio_service =
       application_context()->ConnectToEnvironmentService<media::AudioServer>();
+
+  // Ensure that the audio policy service is running so that the system audio
+  // gain is properly set.
+  // TODO(dalesat): Remove this when the policy service owns creating renderers.
+  application_context()
+      ->ConnectToEnvironmentService<media::AudioPolicyService>();
 
   audio_service->CreateRenderer(std::move(audio_renderer_request),
                                 std::move(media_renderer_request));
