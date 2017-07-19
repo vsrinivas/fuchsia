@@ -14,7 +14,6 @@
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -164,7 +163,7 @@ class DevUserShellApp : modular::StoryWatcher,
   // |SuggestionListener|
   void OnRemove(const fidl::String& suggestion_id) override {
     FTL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemove() "
-                  << suggestion_id;
+                << suggestion_id;
   }
 
   // |SuggestionListener|
