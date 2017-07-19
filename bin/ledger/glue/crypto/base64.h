@@ -11,8 +11,8 @@
 
 namespace glue {
 
-// Encodes the input string in base64url. The encoding can be done in-place.
-void Base64UrlEncode(ftl::StringView input, std::string* output);
+// Encodes the input string in base64url.
+std::string Base64UrlEncode(ftl::StringView input);
 
 // Decodes the base64url input string. Returns true if successful and false
 // otherwise. The output string is only modified if successful. The decoding can

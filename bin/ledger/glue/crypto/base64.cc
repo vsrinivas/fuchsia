@@ -9,16 +9,16 @@
 
 namespace glue {
 
-void Base64UrlEncode(ftl::StringView input, std::string* output) {
-  std::string tmp_output;
+std::string Base64UrlEncode(ftl::StringView input) {
+  std::string output;
   size_t output_length = modp_b64_encode_strlen(input.size());
-  // In C++11, std::string guarantees that tmp_output[tmp_output.size()] is
+  // In C++11, std::string guarantees that output[output.size()] is
   // legal and points to a '\0' character. The last byte of modp_b64_encode() is
-  // a '\0' that will override tmp_output[tmp_output.size()].
-  tmp_output.resize(output_length);
-  size_t written = modp_b64_encode(&tmp_output[0], input.data(), input.size());
+  // a '\0' that will override output[output.size()].
+  output.resize(output_length);
+  size_t written = modp_b64_encode(&output[0], input.data(), input.size());
   FTL_DCHECK(output_length == written);
-  output->swap(tmp_output);
+  return output;
 }
 
 bool Base64UrlDecode(ftl::StringView input, std::string* output) {

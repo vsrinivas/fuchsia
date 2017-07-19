@@ -25,16 +25,15 @@ namespace {
 
 // Encodes opaque bytes in a way that is usable as a directory name.
 std::string GetDirectoryName(ftl::StringView bytes) {
-  std::string encoded;
-  glue::Base64UrlEncode(bytes, &encoded);
-  return encoded;
+  return glue::Base64UrlEncode(bytes);
 }
 
 // Decodes opaque bytes used as a directory names into an id. This is the
 // opposite transformation of GetDirectoryName.
 std::string GetObjectId(ftl::StringView bytes) {
   std::string decoded;
-  glue::Base64UrlDecode(bytes, &decoded);
+  bool result = glue::Base64UrlDecode(bytes, &decoded);
+  FTL_DCHECK(result);
   return decoded;
 }
 

@@ -47,8 +47,7 @@ std::string Encode(ftl::StringView s, bool verbatim) {
   }
 
   std::string encoded;
-  glue::Base64UrlEncode(s, &encoded);
-  return encoded + "B";
+  return glue::Base64UrlEncode(s) + "B";
 }
 
 }  // namespace
