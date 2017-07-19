@@ -5,7 +5,7 @@
 #include "apps/media/src/audio_server/platform/magenta/magenta_output.h"
 
 #include <fcntl.h>
-#include <magenta/device/audio2.h>
+#include <magenta/device/audio.h>
 #include <magenta/process.h>
 #include <mxio/io.h>
 #include <mxtl/atomic.h>
@@ -23,8 +23,8 @@ namespace audio {
 
 static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint16_t kDefaultChannelCount = 2;
-static constexpr audio2_sample_format_t kDefaultAudio2Fmt =
-    AUDIO2_SAMPLE_FORMAT_16BIT;
+static constexpr audio_sample_format_t kDefaultAudioFmt =
+    AUDIO_SAMPLE_FORMAT_16BIT;
 static constexpr AudioSampleFormat kDefaultMediaFrameworkFmt =
     AudioSampleFormat::SIGNED_16;
 static constexpr uint32_t kDefaultFrameSize = 4;
@@ -114,13 +114,13 @@ MediaResult MagentaOutput::Init() {
   auto cleanup = mxtl::MakeAutoCall([&]() { Cleanup(); });
 
   {
-    audio2_stream_cmd_set_format_req_t req;
-    audio2_stream_cmd_set_format_resp_t resp;
-    req.hdr.cmd = AUDIO2_STREAM_CMD_SET_FORMAT;
+    audio_stream_cmd_set_format_req_t req;
+    audio_stream_cmd_set_format_resp_t resp;
+    req.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
     req.hdr.transaction_id = TXID;
     req.frames_per_second = kDefaultFramesPerSec;
     req.channels = kDefaultChannelCount;
-    req.sample_format = kDefaultAudio2Fmt;
+    req.sample_format = kDefaultAudioFmt;
 
     res = SyncDriverCall(stream_channel_,
                          req,
@@ -138,10 +138,10 @@ MediaResult MagentaOutput::Init() {
   // supported by the stream.  For now, process the result(s) using the
   // EventReflector asynchronously, not here.
   {
-    audio2_stream_cmd_plug_detect_req_t req;
-    req.hdr.cmd = AUDIO2_STREAM_CMD_PLUG_DETECT;
+    audio_stream_cmd_plug_detect_req_t req;
+    req.hdr.cmd = AUDIO_STREAM_CMD_PLUG_DETECT;
     req.hdr.transaction_id = std::numeric_limits<mx_txid_t>::max();
-    req.flags = AUDIO2_PDF_ENABLE_NOTIFICATIONS;
+    req.flags = AUDIO_PDF_ENABLE_NOTIFICATIONS;
 
     res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != MX_OK) {
@@ -166,10 +166,10 @@ MediaResult MagentaOutput::Init() {
   // how far ahead of the current playout position (in bytes) the hardware may
   // read.
   {
-    audio2_rb_cmd_get_fifo_depth_req req;
-    audio2_rb_cmd_get_fifo_depth_resp resp;
+    audio_rb_cmd_get_fifo_depth_req req;
+    audio_rb_cmd_get_fifo_depth_resp resp;
 
-    req.hdr.cmd = AUDIO2_RB_CMD_GET_FIFO_DEPTH;
+    req.hdr.cmd = AUDIO_RB_CMD_GET_FIFO_DEPTH;
     req.hdr.transaction_id = TXID;
 
     res = SyncDriverCall(rb_channel_, req, &resp);
@@ -201,10 +201,10 @@ MediaResult MagentaOutput::Init() {
 
   // Request a ring-buffer VMO from the ring buffer channel.
   {
-    audio2_rb_cmd_get_buffer_req_t req;
-    audio2_rb_cmd_get_buffer_resp_t resp;
+    audio_rb_cmd_get_buffer_req_t req;
+    audio_rb_cmd_get_buffer_resp_t resp;
 
-    req.hdr.cmd = AUDIO2_RB_CMD_GET_BUFFER;
+    req.hdr.cmd = AUDIO_RB_CMD_GET_BUFFER;
     req.hdr.transaction_id = TXID;
     req.min_ring_buffer_frames = kDefaultRingBufferFrames;
     req.notifications_per_ring = 0;
@@ -271,10 +271,10 @@ MediaResult MagentaOutput::Init() {
 
 void MagentaOutput::Cleanup() {
   if (started_) {
-    audio2_rb_cmd_stop_req_t req;
-    audio2_rb_cmd_stop_resp_t resp;
+    audio_rb_cmd_stop_req_t req;
+    audio_rb_cmd_stop_resp_t resp;
 
-    req.hdr.cmd = AUDIO2_RB_CMD_STOP;
+    req.hdr.cmd = AUDIO_RB_CMD_STOP;
     req.hdr.transaction_id = TXID;
 
     SyncDriverCall(rb_channel_, req, &resp);
@@ -303,10 +303,10 @@ bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
   }
 
   if (!started_) {
-    audio2_rb_cmd_start_req_t req;
-    audio2_rb_cmd_start_resp_t resp;
+    audio_rb_cmd_start_req_t req;
+    audio_rb_cmd_start_resp_t resp;
 
-    req.hdr.cmd = AUDIO2_RB_CMD_START;
+    req.hdr.cmd = AUDIO_RB_CMD_START;
     req.hdr.transaction_id = TXID;
 
     mx_status_t res = SyncDriverCall(rb_channel_, req, &resp);
@@ -513,9 +513,9 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
   FTL_DCHECK(channel != nullptr);
 
   union {
-    audio2_cmd_hdr_t hdr;
-    audio2_stream_cmd_plug_detect_resp_t pd_resp;
-    audio2_stream_plug_detect_notify_t   pd_notify;
+    audio_cmd_hdr_t hdr;
+    audio_stream_cmd_plug_detect_resp_t pd_resp;
+    audio_stream_plug_detect_notify_t   pd_notify;
   } msg;
 
   uint32_t bytes;
@@ -528,7 +528,7 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
   // The only types of messages we expect at the moment are reponses to the plug
   // detect command, and asynchronous plug detection notifications.
   switch (msg.hdr.cmd) {
-    case AUDIO2_STREAM_CMD_PLUG_DETECT: {
+    case AUDIO_STREAM_CMD_PLUG_DETECT: {
       if (bytes != sizeof(msg.pd_resp)) {
         FTL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_resp)
@@ -540,11 +540,11 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
       // polling, set up that polling now.
 
       const auto& m = msg.pd_resp;
-      HandlePlugStateChange(m.flags & AUDIO2_PDNF_PLUGGED, m.plug_state_time);
+      HandlePlugStateChange(m.flags & AUDIO_PDNF_PLUGGED, m.plug_state_time);
       return MX_OK;
     }
 
-    case AUDIO2_STREAM_PLUG_DETECT_NOTIFY: {
+    case AUDIO_STREAM_PLUG_DETECT_NOTIFY: {
       if (bytes != sizeof(msg.pd_notify)) {
         FTL_LOG(ERROR) << "Bad message length.  Expected "
                        << sizeof(msg.pd_notify) << " Got "
@@ -553,7 +553,7 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
       }
 
       const auto& m = msg.pd_notify;
-      HandlePlugStateChange(m.flags & AUDIO2_PDNF_PLUGGED, m.plug_state_time);
+      HandlePlugStateChange(m.flags & AUDIO_PDNF_PLUGGED, m.plug_state_time);
       return MX_OK;
     }
 

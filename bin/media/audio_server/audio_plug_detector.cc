@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <magenta/compiler.h>
-#include <magenta/device/audio2.h>
+#include <magenta/device/audio.h>
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
 #include <mx/channel.h>
@@ -25,7 +25,7 @@
 namespace media {
 namespace audio {
 
-static const char* AUDIO2_OUTPUT_DEVNODES = "/dev/class/audio2-output";
+static const char* AUDIO_OUTPUT_DEVNODES = "/dev/class/audio-output";
 
 AudioPlugDetector::~AudioPlugDetector() {
   FTL_DCHECK(manager_ == nullptr);
@@ -49,7 +49,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
   // Record our new manager
   manager_ = manager;
 
-  watcher_ = mtl::DeviceWatcher::Create(AUDIO2_OUTPUT_DEVNODES,
+  watcher_ = mtl::DeviceWatcher::Create(AUDIO_OUTPUT_DEVNODES,
       [this](int dir_fd, std::string filename) {
         AddAudioDevice(dir_fd, filename);
       });
@@ -57,7 +57,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
   if (watcher_ == nullptr) {
     FTL_LOG(ERROR)
         << "AudioPlugDetector failed to create DeviceWatcher for \""
-        << AUDIO2_OUTPUT_DEVNODES
+        << AUDIO_OUTPUT_DEVNODES
         << "\".";
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
@@ -90,10 +90,10 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
   mx::channel channel;
   ssize_t res;
 
-  res = ioctl_audio2_get_channel(dev_node.get(),
+  res = ioctl_audio_get_channel(dev_node.get(),
                                  channel.reset_and_get_address());
   if (res < 0) {
-    FTL_LOG(INFO) << "Failed to open channel to Audio2 output (res " << res
+    FTL_LOG(INFO) << "Failed to open channel to Audio output (res " << res
                   << ")";
     return;
   }
