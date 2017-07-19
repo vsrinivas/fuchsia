@@ -2,27 +2,7 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//libc-tests"
-    ],
-    "resources": [
-        {
-            "bootfs_path": "test/testdata/fdopen_testdata",
-            "file": "libc-tests/third_party/nacl-ported-tests/fdopen_test/fdopen_testdata"
-        }
-    ],
-    "binaries": [
-        {
-            "binary": "libc-tests",
-            "bootfs_path": "test/libc-tests"
-        },
-        {
-            "binary": "libc-tests-broken",
-            "bootfs_path": "bin/libc-tests-broken"
-        },
-        {
-            "binary": "libc-large-tests",
-            "bootfs_path": "test/libc-large-tests"
-        }
-    ]
+    "packages": {
+        "libc-tests": "//libc-tests"
+    }
 }
