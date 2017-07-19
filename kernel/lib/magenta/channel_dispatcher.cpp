@@ -315,7 +315,6 @@ status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mas
 int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> msg) {
     DEBUG_ASSERT(armed());
 
-    txid_ = msg->get_txid();
     msg_ = mxtl::move(msg);
     status_ = MX_OK;
     return event_.Signal(MX_OK);
