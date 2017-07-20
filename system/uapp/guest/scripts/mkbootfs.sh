@@ -13,6 +13,7 @@ BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
 KERNEL="${2:-$BUILDDIR/magenta.bin}"
 BOOTDATA="${3:-$BUILDDIR/bootdata.bin}"
 LINUX="${4:-$BUILDDIR/linux-x86/arch/x86_64/boot/bzImage}"
+INITRD="${4:-$BUILDDIR/initrd-x86/initrd.gz}"
 
 echo "
 data/dsdt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/dsdt.aml
@@ -25,6 +26,9 @@ if [ -f "$LINUX" ]; then
     echo "data/bzImage=$LINUX" >> /tmp/guest.manifest
 fi
 
+if [ -f "$INITRD" ]; then
+    echo "data/initrd=$INITRD" >> /tmp/guest.manifest
+fi
 $BUILDDIR/tools/mkbootfs \
     --target=boot \
     -o $BUILDDIR/bootdata-with-kernel.bin \
