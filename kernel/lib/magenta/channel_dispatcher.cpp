@@ -312,7 +312,7 @@ status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mas
 }
 
 ChannelDispatcher::MessageWaiter::~MessageWaiter() {
-    if (unlikely(channel_ != nullptr)) {
+    if (unlikely(channel_)) {
         channel_->RemoveWaiter(this);
     }
     DEBUG_ASSERT(!InContainer());
@@ -320,7 +320,7 @@ ChannelDispatcher::MessageWaiter::~MessageWaiter() {
 
 mx_status_t ChannelDispatcher::MessageWaiter::BeginWait(mxtl::RefPtr<ChannelDispatcher> channel,
                                                         mx_txid_t txid) {
-    if (unlikely(channel_ != nullptr)) {
+    if (unlikely(channel_)) {
         return MX_ERR_BAD_STATE;
     }
     DEBUG_ASSERT(!InContainer());
@@ -333,7 +333,7 @@ mx_status_t ChannelDispatcher::MessageWaiter::BeginWait(mxtl::RefPtr<ChannelDisp
 }
 
 int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> msg) {
-    DEBUG_ASSERT(armed());
+    DEBUG_ASSERT(channel_);
 
     msg_ = mxtl::move(msg);
     status_ = MX_OK;
@@ -342,13 +342,13 @@ int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> ms
 
 int ChannelDispatcher::MessageWaiter::Cancel(status_t status) {
     DEBUG_ASSERT(!InContainer());
-    DEBUG_ASSERT(armed());
+    DEBUG_ASSERT(channel_);
     status_ = status;
     return event_.Signal(status);
 }
 
 mx_status_t ChannelDispatcher::MessageWaiter::Wait(lk_time_t deadline) {
-    if (unlikely(!armed())) {
+    if (unlikely(!channel_)) {
         return MX_ERR_BAD_STATE;
     }
     return event_.Wait(deadline);
@@ -356,7 +356,7 @@ mx_status_t ChannelDispatcher::MessageWaiter::Wait(lk_time_t deadline) {
 
 // Returns any delivered message via out and the status.
 mx_status_t ChannelDispatcher::MessageWaiter::EndWait(mxtl::unique_ptr<MessagePacket>* out) {
-    if (unlikely(!armed())) {
+    if (unlikely(!channel_)) {
         return MX_ERR_BAD_STATE;
     }
     *out = mxtl::move(msg_);

@@ -79,8 +79,6 @@ public:
         mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out);
 
     private:
-        bool armed() const { return channel_ != nullptr; }
-
         mxtl::RefPtr<ChannelDispatcher> channel_;
         mxtl::unique_ptr<MessagePacket> msg_;
         // TODO(teisenbe/swetland): Investigate hoisting this outside to reduce
