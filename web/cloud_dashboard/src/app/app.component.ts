@@ -63,11 +63,13 @@ export class AppComponent {
   registerWatchers() {
     this.root = this.db.list(this.rootPath());
     this.root.subscribe((state) => {
+      let next_version = 0;
       for (const version_object of state) {
-        if (Number(version_object.$key) > Number(this.version)) {
-          this.version = version_object.$key;
+        if (Number(version_object.$key) > Number(next_version)) {
+          next_version = version_object.$key;
         }
       }
+      this.version = next_version;
       this.devices = this.db.list(this.userDevicesPath());
       this.loading = false;
     });
