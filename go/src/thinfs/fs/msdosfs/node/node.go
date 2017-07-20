@@ -15,10 +15,10 @@ import (
 
 const (
 	// This file size cap is a fundamental limit of FAT filesystems
-	maxSizeFile = int64(0xFFFFFFFF)
+	MaxSizeFile = int64(0xFFFFFFFF)
 
 	// All direntries must be indexable by a 16-bit integer (for historical reasons)
-	maxSizeDirectory = int64((1 << 16) * direntry.DirentrySize)
+	MaxSizeDirectory = int64((1 << 16) * direntry.DirentrySize)
 )
 
 // node represents a regular FAT node (either a file or a directory).
@@ -232,9 +232,9 @@ func (n *node) writeAt(buf []byte, off int64) (int, error) {
 
 	// If (and only if) the write increases the size of the file, this variable holds the new size.
 	maxPotentialSize := off + int64(len(buf))
-	maxNodeSize := maxSizeFile
+	maxNodeSize := MaxSizeFile
 	if n.IsDirectory() {
-		maxNodeSize = maxSizeDirectory
+		maxNodeSize = MaxSizeDirectory
 	}
 	writeBuf := buf
 

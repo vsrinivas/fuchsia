@@ -248,6 +248,10 @@ func (f *file) Truncate(size uint64) error {
 		return fs.ErrPermission
 	}
 
+	if size > uint64(node.MaxSizeFile) {
+		return fs.ErrInvalidArgs
+	}
+
 	f.node.Lock()
 	defer f.node.Unlock()
 	if size > uint64(f.node.Size()) {

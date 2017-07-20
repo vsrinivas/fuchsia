@@ -776,15 +776,15 @@ func TestLargestNode(t *testing.T) {
 	doRoot := false
 	doDirectory := false
 	glog.Info("Testing FAT32 File")
-	doTest(metadata, maxSizeFile, fat32, doRoot, doDirectory) // FAT32 file
+	doTest(metadata, MaxSizeFile, fat32, doRoot, doDirectory) // FAT32 file
 	doRoot = true
 	doDirectory = true
 	glog.Info("Testing FAT32 Root")
-	doTest(metadata, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 root
+	doTest(metadata, MaxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 root
 	doRoot = false
 	doDirectory = true
 	glog.Info("Testing FAT32 Directory")
-	doTest(metadata, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 non-root directory
+	doTest(metadata, MaxSizeDirectory, fat32, doRoot, doDirectory) // FAT32 non-root directory
 	cleanup(fileBackedFAT, metadata)
 
 	fileBackedFAT, metadata = setupFAT16(t, "50M", false)
@@ -797,7 +797,7 @@ func TestLargestNode(t *testing.T) {
 	doRoot = false
 	doDirectory = true
 	glog.Info("Testing FAT16 Directory")
-	doTest(metadata, maxSizeDirectory, fat32, doRoot, doDirectory) // FAT16 non-root directory
+	doTest(metadata, MaxSizeDirectory, fat32, doRoot, doDirectory) // FAT16 non-root directory
 	cleanup(fileBackedFAT, metadata)
 }
 
