@@ -286,7 +286,7 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
                 auto tim = reader.read<TimElement>();
                 if (tim == nullptr) goto done_iter;
                 if (tim->traffic_buffered(aid_)) {
-                    // TODO(hahnr): PS-POLL traffic from AP.
+                    SendPsPoll();
                 }
                 break;
             }
@@ -464,6 +464,12 @@ mx_status_t Station::HandleData(const Packet* packet) {
         return MX_ERR_IO;
     }
     MX_DEBUG_ASSERT(packet->len() >= kDataPayloadHeader);
+
+    // PS-POLL if there are more buffered unicast frames.
+    bool unicast = !(hdr->addr1[0] & 1);
+    if (hdr->fc.more_data() && unicast) {
+        SendPsPoll();
+    }
 
     const size_t eth_len = packet->len() - kDataPayloadHeader + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
@@ -749,6 +755,38 @@ mx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     std::memcpy(hdr->addr3, bss_->bssid.data(), sizeof(hdr->addr3));
     uint16_t seq = device_->GetState()->next_seq();
     hdr->sc.set_seq(seq);
+
+    mx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != MX_OK) {
+        errorf("could not send power management packet: %d\n", status);
+        return status;
+    }
+    return MX_OK;
+}
+
+mx_status_t Station::SendPsPoll() {
+    // TODO(hahnr): We should probably wait for an RSNA if the network is an RSN. Else we cannot
+    // work with the incoming data frame.
+    if (state_ != WlanState::kAssociated) {
+        warnf("cannot send ps-poll before being associated\n");
+        return MX_OK;
+    }
+
+    const DeviceAddress& mymac = device_->GetState()->address();
+    size_t len = sizeof(PsPollFrame);
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto frame = packet->mut_field<PsPollFrame>(0);
+    frame->fc.set_type(kControl);
+    frame->fc.set_subtype(kPsPoll);
+    frame->aid = aid_;
+    std::memcpy(frame->bssid, bss_->bssid.data(), sizeof(frame->bssid));
+    std::memcpy(frame->ta, mymac.data(), sizeof(frame->ta));
 
     mx_status_t status = device_->SendWlan(std::move(packet));
     if (status != MX_OK) {

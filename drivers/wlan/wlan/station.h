@@ -80,6 +80,7 @@ class Station {
     mx_status_t SendDisassociateIndication(uint16_t code);
 
     mx_status_t SetPowerManagementMode(bool ps_mode);
+    mx_status_t SendPsPoll();
 
     uint16_t next_seq();
 

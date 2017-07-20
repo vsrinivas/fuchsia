@@ -446,6 +446,14 @@ struct DataFrameHeader {
     // TODO(tkilbourn): HT Control field, or use a separate struct
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.3.1.5
+struct PsPollFrame {
+    FrameControl fc;
+    uint16_t aid;
+    uint8_t bssid[6];
+    uint8_t ta[6];
+} __PACKED;
+
 // IEEE Std 802.2, 1998 Edition, 3.2
 struct LlcHeader {
     uint8_t dsap;
