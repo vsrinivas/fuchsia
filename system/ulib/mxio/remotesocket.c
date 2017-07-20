@@ -555,7 +555,11 @@ static mxio_ops_t mxio_socket_stream_ops = {
 
 static mxio_ops_t mxio_socket_dgram_ops = {
     .read = mxsio_read_dgram,
+    .read_at = mxio_default_read_at,
     .write = mxsio_write_dgram,
+    .write_at = mxio_default_write_at,
+    .recvfrom = mxsio_recvfrom,
+    .sendto = mxsio_sendto,
     .recvmsg = mxsio_recvmsg_dgram,
     .sendmsg = mxsio_sendmsg_dgram,
     .seek = mxio_default_seek,
