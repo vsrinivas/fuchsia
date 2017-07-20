@@ -37,7 +37,11 @@ export class AppComponent {
   }
 
   login() {
-    this.afAuth.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    let provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    this.afAuth.auth.signInWithPopup(provider);
   }
 
   logout() {
