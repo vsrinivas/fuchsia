@@ -20,14 +20,17 @@ HostCanvasCycler::HostCanvasCycler(mozart::client::Session* session)
 
 HostCanvasCycler::~HostCanvasCycler() = default;
 
-SkCanvas* HostCanvasCycler::AcquireCanvas(uint32_t width, uint32_t height) {
+SkCanvas* HostCanvasCycler::AcquireCanvas(float logical_width,
+                                          float logical_height,
+                                          float scale_x,
+                                          float scale_y) {
   FTL_DCHECK(!acquired_surface_);
 
   // Update the surface pool and content shape.
   mozart2::ImageInfo image_info;
-  image_info.width = width;
-  image_info.height = height;
-  image_info.stride = width * 4u;
+  image_info.width = logical_width * scale_x;
+  image_info.height = logical_height * scale_y;
+  image_info.stride = image_info.width * 4u;
   image_info.pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
   image_info.color_space = mozart2::ImageInfo::ColorSpace::SRGB;
   image_info.tiling = mozart2::ImageInfo::Tiling::LINEAR;
@@ -36,8 +39,13 @@ SkCanvas* HostCanvasCycler::AcquireCanvas(uint32_t width, uint32_t height) {
   // Acquire the surface.
   acquired_surface_ = surface_pool_.GetSkSurface(surface_index_);
   FTL_DCHECK(acquired_surface_);
-  acquired_surface_->getCanvas()->save();
-  return acquired_surface_->getCanvas();
+  logical_width_ = logical_width;
+  logical_height_ = logical_height;
+
+  SkCanvas* canvas = acquired_surface_->getCanvas();
+  canvas->save();
+  canvas->scale(scale_x, scale_y);
+  return canvas;
 }
 
 void HostCanvasCycler::ReleaseAndSwapCanvas() {
@@ -54,8 +62,7 @@ void HostCanvasCycler::ReleaseAndSwapCanvas() {
 
   if (reconfigured_) {
     mozart::client::Rectangle content_rect(content_node_.session(),
-                                           surface_pool_.image_info()->width,
-                                           surface_pool_.image_info()->height);
+                                           logical_width_, logical_height_);
     content_node_.SetShape(content_rect);
     reconfigured_ = false;
   }

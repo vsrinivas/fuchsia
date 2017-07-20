@@ -17,12 +17,18 @@ SkiaView::SkiaView(ViewManagerPtr view_manager,
 SkiaView::~SkiaView() = default;
 
 SkCanvas* SkiaView::AcquireCanvas() {
-  if (!has_size())
+  if (!has_logical_size() || !has_metrics())
     return nullptr;
 
-  canvas_cycler_.SetTranslation(
-      (float[]){size().width * .5f, size().height * .5f, 0u});
-  return canvas_cycler_.AcquireCanvas(size().width, size().height);
+  SkCanvas* canvas =
+      canvas_cycler_.AcquireCanvas(logical_size().width, logical_size().height,
+                                   metrics().scale_x, metrics().scale_y);
+  if (!canvas)
+    return canvas;
+
+  canvas_cycler_.SetTranslation(logical_size().width * .5f,
+                                logical_size().height * .5f, 0.f);
+  return canvas;
 }
 
 void SkiaView::ReleaseAndSwapCanvas() {

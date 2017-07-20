@@ -23,17 +23,14 @@ PaintView::PaintView(
 
 PaintView::~PaintView() = default;
 
-void PaintView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
-  InvalidateScene();
-}
-
 void PaintView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
   SkCanvas* canvas = AcquireCanvas();
-  if (canvas) {
-    DrawContent(canvas);
-    ReleaseAndSwapCanvas();
-  }
+  if (!canvas)
+    return;
+
+  DrawContent(canvas);
+  ReleaseAndSwapCanvas();
 }
 
 void PaintView::DrawContent(SkCanvas* canvas) {

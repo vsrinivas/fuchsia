@@ -12,12 +12,10 @@
 namespace mozart {
 namespace {
 
-mozart2::SessionPtr CreateSession(ViewManager* view_manager) {
-  mozart2::SessionPtr session;
+mozart2::SceneManagerPtr GetSceneManager(ViewManager* view_manager) {
   mozart2::SceneManagerPtr scene_manager;
   view_manager->GetSceneManager(scene_manager.NewRequest());
-  scene_manager->CreateSession(session.NewRequest(), nullptr);
-  return session;
+  return scene_manager;
 }
 
 }  // namespace
@@ -29,7 +27,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
       view_listener_binding_(this),
       view_container_listener_binding_(this),
       input_listener_binding_(this),
-      session_(CreateSession(view_manager_.get())),
+      session_(GetSceneManager(view_manager_.get()).get()),
       parent_node_(&session_) {
   FTL_DCHECK(view_manager_);
   FTL_DCHECK(view_owner_request);
@@ -43,6 +41,11 @@ BaseView::BaseView(ViewManagerPtr view_manager,
   app::ConnectToService(GetViewServiceProvider(),
                         input_connection_.NewRequest());
   input_connection_->SetEventListener(input_listener_binding_.NewBinding());
+
+  session_.set_event_handler(std::bind(&BaseView::HandleSessionEvents, this,
+                                       std::placeholders::_1,
+                                       std::placeholders::_2));
+  parent_node_.SetEventMask(mozart2::kMetricsEventMask);
 }
 
 BaseView::~BaseView() = default;
@@ -94,10 +97,51 @@ void BaseView::PresentScene() {
   });
 }
 
+void BaseView::HandleSessionEvents(uint64_t presentation_time,
+                                   fidl::Array<mozart2::EventPtr> events) {
+  mozart2::Metrics* new_metrics = nullptr;
+  for (const auto& event : events) {
+    if (event->is_metrics() &&
+        event->get_metrics()->node_id == parent_node_.id()) {
+      new_metrics = event->get_metrics()->metrics.get();
+    }
+  }
+
+  if (new_metrics && !original_metrics_.Equals(*new_metrics)) {
+    original_metrics_ = *new_metrics;
+    AdjustMetricsAndPhysicalSize();
+  }
+
+  OnSessionEvent(presentation_time, std::move(events));
+}
+
+void BaseView::SetNeedSquareMetrics(bool enable) {
+  if (need_square_metrics_ == enable)
+    return;
+  need_square_metrics_ = true;
+  AdjustMetricsAndPhysicalSize();
+}
+
+void BaseView::AdjustMetricsAndPhysicalSize() {
+  adjusted_metrics_ = original_metrics_;
+  if (need_square_metrics_) {
+    adjusted_metrics_.scale_x = adjusted_metrics_.scale_y =
+        std::max(original_metrics_.scale_x, original_metrics_.scale_y);
+  }
+
+  physical_size_.width = logical_size_.width * adjusted_metrics_.scale_x;
+  physical_size_.height = logical_size_.height * adjusted_metrics_.scale_y;
+
+  InvalidateScene();
+}
+
 void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 
 void BaseView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {}
+
+void BaseView::OnSessionEvent(uint64_t presentation_time,
+                              fidl::Array<mozart2::EventPtr> events) {}
 
 bool BaseView::OnInputEvent(mozart::InputEventPtr event) {
   return false;
@@ -116,7 +160,12 @@ void BaseView::OnPropertiesChanged(
 
   ViewPropertiesPtr old_properties = std::move(properties_);
   properties_ = std::move(properties);
-  size_ = *properties_->view_layout->size;
+
+  if (!logical_size_.Equals(*properties_->view_layout->size)) {
+    logical_size_ = *properties_->view_layout->size;
+    AdjustMetricsAndPhysicalSize();
+  }
+
   OnPropertiesChanged(std::move(old_properties));
 
   callback();

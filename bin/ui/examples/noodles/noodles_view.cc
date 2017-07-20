@@ -46,14 +46,10 @@ NoodlesView::NoodlesView(
 
 NoodlesView::~NoodlesView() {}
 
-void NoodlesView::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr old_properties) {
-  InvalidateScene();
-}
-
 void NoodlesView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
-  if (!has_size())
+  SkCanvas* canvas = AcquireCanvas();
+  if (!canvas)
     return;
 
   // Update the animation state.
@@ -66,12 +62,8 @@ void NoodlesView::OnSceneInvalidated(
   }
   const float phase =
       (presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed;
-
-  SkCanvas* canvas = AcquireCanvas();
-  if (canvas) {
-    Draw(canvas, phase);
-    ReleaseAndSwapCanvas();
-  }
+  Draw(canvas, phase);
+  ReleaseAndSwapCanvas();
 
   // Animate.
   InvalidateScene();
@@ -83,8 +75,8 @@ void NoodlesView::Draw(SkCanvas* canvas, float phase) {
 
   canvas->clear(SK_ColorBLACK);
 
-  double cx = size().width * 0.5;
-  double cy = size().height * 0.5;
+  double cx = logical_size().width * 0.5;
+  double cy = logical_size().height * 0.5;
   canvas->translate(cx, cy);
 
   for (int i = 0; i < count; i++, phase += 0.1) {

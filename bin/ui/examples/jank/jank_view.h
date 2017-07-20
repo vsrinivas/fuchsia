@@ -38,7 +38,6 @@ class JankView : public mozart::SkiaView {
   static const Button kButtons[];
 
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnSceneInvalidated(
       mozart2::PresentationInfoPtr presentation_info) override;
   bool OnInputEvent(mozart::InputEventPtr event) override;
@@ -49,11 +48,6 @@ class JankView : public mozart::SkiaView {
 
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> typeface_;
-
-  uint32_t margin_{};
-  uint32_t button_width_{};
-  uint32_t button_height_{};
-  uint32_t text_size_{};
 
   ftl::TimePoint stutter_end_time_;
 

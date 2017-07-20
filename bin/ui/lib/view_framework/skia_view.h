@@ -24,6 +24,11 @@ class SkiaView : public BaseView {
   // At most one canvas can be acquired at a time.
   // The client is responsible for clearing the canvas.
   // Returns nullptr if the view does not have a size.
+  //
+  // The returned canvas uses the view's logical coordinate system but is
+  // backed by a surface with the same |physical_size()| as the view.
+  // In other words any content which the view draws into the canvas will
+  // automatically be scaled according to the view's |metrics()|.
   SkCanvas* AcquireCanvas();
 
   // Releases the canvas most recently acquired using |AcquireCanvas()|.

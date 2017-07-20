@@ -43,31 +43,30 @@ ShapesView::ShapesView(
 
 ShapesView::~ShapesView() {}
 
-void ShapesView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
-  if (!has_size())
+void ShapesView::OnSceneInvalidated(
+    mozart2::PresentationInfoPtr presentation_info) {
+  if (!has_logical_size())
     return;
 
-  const float center_x = size().width * .5f;
-  const float center_y = size().height * .5f;
-  float card_corner_radius = kCardCornerRadius * device_pixel_ratio();
-  float circle_radius = kCircleRadius * device_pixel_ratio();
+  const float center_x = logical_size().width * .5f;
+  const float center_y = logical_size().height * .5f;
 
-  mozart::client::Rectangle background_shape(session(), size().width,
-                                             size().height);
+  mozart::client::Rectangle background_shape(session(), logical_size().width,
+                                             logical_size().height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(
-      (float[]){center_x, center_y, kBackgroundElevation});
+  background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
 
   mozart::client::RoundedRectangle card_shape(
-      session(), size().width * .9f, size().height * .9f, card_corner_radius,
-      card_corner_radius, card_corner_radius, card_corner_radius);
+      session(), logical_size().width * .9f, logical_size().height * .9f,
+      kCardCornerRadius, kCardCornerRadius, kCardCornerRadius,
+      kCardCornerRadius);
   card_node_.SetShape(card_shape);
   card_node_.SetTranslation((float[]){center_x, center_y, kCardElevation});
 
-  mozart::client::Circle circle_shape(session(), circle_radius);
+  mozart::client::Circle circle_shape(session(), kCircleRadius);
   circle_node_.SetShape(circle_shape);
-  circle_node_.SetTranslation(
-      (float[]){size().width * .85f, size().height * .85f, kCircleElevation});
+  circle_node_.SetTranslation(logical_size().width * .85f,
+                              logical_size().height * .85f, kCircleElevation);
 
   session()->Present(0, [](mozart2::PresentationInfoPtr info) {});
 }

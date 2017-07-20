@@ -42,25 +42,16 @@ JankView::JankView(mozart::ViewManagerPtr view_manager,
 
 JankView::~JankView() = default;
 
-void JankView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
-  InvalidateScene();
-
-  margin_ = kMargin * device_pixel_ratio();
-  button_width_ = kButtonWidth * device_pixel_ratio();
-  button_height_ = kButtonHeight * device_pixel_ratio();
-  text_size_ = kTextSize * device_pixel_ratio();
-}
-
 void JankView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
-  if (!has_size() || !typeface_)
+  if (!typeface_)
     return;
 
   SkCanvas* canvas = AcquireCanvas();
-  if (canvas) {
-    DrawContent(canvas);
-    ReleaseAndSwapCanvas();
-  }
+  if (!canvas)
+    return;
+  DrawContent(canvas);
+  ReleaseAndSwapCanvas();
 
   // Stutter if needed.
   if (stutter_end_time_ > ftl::TimePoint::Now())
@@ -77,12 +68,12 @@ void JankView::DrawContent(SkCanvas* canvas) {
       1, 1};
   canvas->clear(SkHSVToColor(hsv));
 
-  SkScalar x = margin_;
-  SkScalar y = margin_;
+  SkScalar x = kMargin;
+  SkScalar y = kMargin;
   for (const auto& button : kButtons) {
     DrawButton(canvas, button.label,
-               SkRect::MakeXYWH(x, y, button_width_, button_height_));
-    y += button_height_ + margin_;
+               SkRect::MakeXYWH(x, y, kButtonWidth, kButtonHeight));
+    y += kButtonHeight + kMargin;
   }
 }
 
@@ -98,7 +89,7 @@ void JankView::DrawButton(SkCanvas* canvas,
 
   SkPaint textPaint;
   textPaint.setColor(SK_ColorBLACK);
-  textPaint.setTextSize(text_size_ * device_pixel_ratio());
+  textPaint.setTextSize(kTextSize);
   textPaint.setTextEncoding(SkPaint::kUTF8_TextEncoding);
   textPaint.setTypeface(typeface_);
   textPaint.setAntiAlias(true);
@@ -115,11 +106,11 @@ bool JankView::OnInputEvent(mozart::InputEventPtr event) {
     if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
       SkScalar x = pointer->x;
       SkScalar y = pointer->y;
-      if (x >= margin_ && x <= button_width_ + margin_) {
-        int index = (y - margin_) / (button_height_ + margin_);
+      if (x >= kMargin && x <= kButtonWidth + kMargin) {
+        int index = (y - kMargin) / (kButtonHeight + kMargin);
         if (index >= 0 &&
             size_t(index) < sizeof(kButtons) / sizeof(kButtons[0]) &&
-            y < (button_height_ + margin_) * (index + 1))
+            y < (kButtonHeight + kMargin) * (index + 1))
           OnClick(kButtons[index]);
         return true;
       }

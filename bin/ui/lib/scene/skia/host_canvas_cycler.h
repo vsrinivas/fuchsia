@@ -20,7 +20,10 @@ class HostCanvasCycler : public mozart::client::EntityNode {
   // Acquires a canvas for rendering.
   // At most one canvas can be acquired at a time.
   // The client is responsible for clearing the canvas.
-  SkCanvas* AcquireCanvas(uint32_t width, uint32_t height);
+  SkCanvas* AcquireCanvas(float logical_width,
+                          float logical_height,
+                          float scale_x,
+                          float scale_y);
 
   // Releases the canvas most recently acquired using |AcquireCanvas()|.
   // Sets the content node's texture to be backed by the canvas.
@@ -35,6 +38,8 @@ class HostCanvasCycler : public mozart::client::EntityNode {
   sk_sp<SkSurface> acquired_surface_;
   bool reconfigured_ = false;
   uint32_t surface_index_ = 0u;
+  float logical_width_ = 0.f;
+  float logical_height_ = 0.f;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HostCanvasCycler);
 };

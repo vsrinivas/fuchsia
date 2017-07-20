@@ -143,7 +143,7 @@ void TileView::UpdateScene() {
       (params_.orientation_mode == TileParams::OrientationMode::kVertical);
 
   uint32_t index = 0;
-  uint32_t space = vertical ? size().height : size().width;
+  uint32_t space = vertical ? logical_size().height : logical_size().width;
   uint32_t base = space / views_.size();
   uint32_t excess = space % views_.size();
   uint32_t offset = 0;
@@ -161,26 +161,22 @@ void TileView::UpdateScene() {
     if (vertical) {
       layout_bounds.x = 0;
       layout_bounds.y = offset;
-      layout_bounds.width = size().width;
+      layout_bounds.width = logical_size().width;
       layout_bounds.height = extent;
     } else {
       layout_bounds.x = offset;
       layout_bounds.y = 0;
       layout_bounds.width = extent;
-      layout_bounds.height = size().height;
+      layout_bounds.height = logical_size().height;
     }
     offset += extent;
 
     auto view_properties = mozart::ViewProperties::New();
     view_properties->view_layout = mozart::ViewLayout::New();
-    view_properties->view_layout->size = mozart::Size::New();
+    view_properties->view_layout->size = mozart::SizeF::New();
     view_properties->view_layout->size->width = layout_bounds.width;
     view_properties->view_layout->size->height = layout_bounds.height;
-    view_properties->view_layout->inset = mozart::Inset::New();
-    view_properties->view_layout->inset->top = 0;
-    view_properties->view_layout->inset->right = 0;
-    view_properties->view_layout->inset->bottom = 0;
-    view_properties->view_layout->inset->left = 0;
+    view_properties->view_layout->inset = mozart::InsetF::New();
 
     if (!view_data->view_properties.Equals(view_properties)) {
       view_data->view_properties = view_properties.Clone();
@@ -188,8 +184,7 @@ void TileView::UpdateScene() {
                                              std::move(view_properties));
     }
 
-    view_data->host_node.SetTranslation(
-        (float[]){layout_bounds.x, layout_bounds.y, 0u});
+    view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
 
   session()->Present(0, [](mozart2::PresentationInfoPtr info) {});

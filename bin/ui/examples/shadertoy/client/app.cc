@@ -43,7 +43,7 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
   fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
-                                    std::move(image_pipe_handle));
+                                            std::move(image_pipe_handle));
   shadertoy_.set_connection_error_handler([this] {
     FTL_LOG(INFO) << "Lost connection to Shadertoy.";
     loop_->QuitNow();
@@ -70,8 +70,8 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
   material.SetTexture(image_pipe_id);
   session_.ReleaseResource(image_pipe_id);
 
-  const float width = static_cast<float>(display_info->width);
-  const float height = static_cast<float>(display_info->height);
+  const float width = static_cast<float>(display_info->physical_width);
+  const float height = static_cast<float>(display_info->physical_height);
   scene_ = std::make_unique<ExampleScene>(&session_, material, width, height);
 
   start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);

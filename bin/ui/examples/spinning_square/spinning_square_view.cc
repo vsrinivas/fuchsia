@@ -40,29 +40,25 @@ SpinningSquareView::SpinningSquareView(
 
 SpinningSquareView::~SpinningSquareView() {}
 
-void SpinningSquareView::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr old_properties) {
-  InvalidateScene();
-}
-
 void SpinningSquareView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
-  if (!has_size())
+  if (!has_logical_size())
     return;
 
   uint64_t presentation_time = presentation_info->presentation_time;
   if (!start_time_)
     start_time_ = presentation_time;
 
-  const float center_x = size().width * .5f;
-  const float center_y = size().height * .5f;
-  const float square_size = std::min(size().width, size().height) * .6f;
+  const float center_x = logical_size().width * .5f;
+  const float center_y = logical_size().height * .5f;
+  const float square_size =
+      std::min(logical_size().width, logical_size().height) * .6f;
   const float t = fmod(
       (presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
   const float angle = t * M_PI * 2;
 
-  mozart::client::Rectangle background_shape(session(), size().width,
-                                             size().height);
+  mozart::client::Rectangle background_shape(session(), logical_size().width,
+                                             logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(
       (float[]){center_x, center_y, kBackgroundElevation});

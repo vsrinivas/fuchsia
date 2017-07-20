@@ -60,16 +60,40 @@ class BaseView : private ViewListener,
   // Returns nullptr if unknown.
   const ViewProperties* properties() const { return properties_.get(); }
 
-  // Returns true if the view has a non-empty size.
-  bool has_size() const { return size_.width > 0 && size_.height > 0; }
-
-  // Gets the size of the view.
-  const mozart::Size& size() const { return size_; }
-
-  // Gets the view's device pixel ratio.
-  float device_pixel_ratio() const {
-    return properties_ ? properties_->display_metrics->device_pixel_ratio : 1.f;
+  // Returns true if the view has a non-empty size in logical pixels.
+  bool has_logical_size() const {
+    return logical_size_.width > 0.f && logical_size_.height > 0.f;
   }
+
+  // Gets the size of the view in logical pixels.
+  // This value is zero until the view receives a layout from its parent.
+  const mozart::SizeF& logical_size() const { return logical_size_; }
+
+  // Returns true if the view has a non-empty size in physical pixels.
+  bool has_physical_size() const {
+    return physical_size_.width > 0 && physical_size_.height > 0;
+  }
+
+  // Gets the size of the view in physical pixels.
+  // This value is zero until the view receives a layout from its parent
+  // and metrics from its session.
+  const mozart::Size& physical_size() const { return physical_size_; }
+
+  // When true, the session provided metrics are adjusted such that the
+  // X and Y scale factors are made equal before computing the physical size.
+  // The default is false in which case the X and Y scale factors may differ.
+  bool need_square_metrics() const { return need_square_metrics_; }
+  void SetNeedSquareMetrics(bool enable);
+
+  // Returns true if the view has received metrics from its session.
+  bool has_metrics() const {
+    return adjusted_metrics_.scale_x > 0.f && adjusted_metrics_.scale_y > 0.f &&
+           adjusted_metrics_.scale_z > 0.f;
+  }
+
+  // Gets the view's metrics.
+  // This value is zero until the view receives metrics from its session.
+  const mozart2::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
   InputConnection* input_connection() { return input_connection_.get(); }
@@ -101,6 +125,12 @@ class BaseView : private ViewListener,
   virtual void OnSceneInvalidated(
       mozart2::PresentationInfoPtr presentation_info);
 
+  // Called when session events are received.
+  //
+  // The default implementation does nothing.
+  virtual void OnSessionEvent(uint64_t presentation_time,
+                              fidl::Array<mozart2::EventPtr> events);
+
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
   // should continue propagating to other views which may handle it themselves.
@@ -109,9 +139,13 @@ class BaseView : private ViewListener,
   virtual bool OnInputEvent(mozart::InputEventPtr event);
 
   // Called when a child is attached.
+  //
+  // The default implementation does nothing.
   virtual void OnChildAttached(uint32_t child_key, ViewInfoPtr child_view_info);
 
   // Called when a child becomes unavailable.
+  //
+  // The default implementation does nothing.
   virtual void OnChildUnavailable(uint32_t child_key);
 
  private:
@@ -132,6 +166,9 @@ class BaseView : private ViewListener,
                const OnEventCallback& callback) override;
 
   void PresentScene();
+  void HandleSessionEvents(uint64_t presentation_time,
+                           fidl::Array<mozart2::EventPtr> events);
+  void AdjustMetricsAndPhysicalSize();
 
   ViewManagerPtr view_manager_;
   fidl::Binding<ViewListener> view_listener_binding_;
@@ -143,7 +180,11 @@ class BaseView : private ViewListener,
   ViewContainerPtr view_container_;
   InputConnectionPtr input_connection_;
   ViewPropertiesPtr properties_;
-  Size size_;
+  SizeF logical_size_;
+  Size physical_size_;
+  bool need_square_metrics_ = false;
+  mozart2::Metrics original_metrics_;
+  mozart2::Metrics adjusted_metrics_;
   mozart::client::Session session_;
   mozart::client::ImportNode parent_node_;
 

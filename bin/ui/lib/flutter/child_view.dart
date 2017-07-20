@@ -213,18 +213,18 @@ class ChildViewConnection {
   }
 
   ViewProperties _createViewProperties(
-      int physicalWidth,
-      int physicalHeight,
+      double width,
+      double height,
       double devicePixelRatio,
-      int insetTop,
-      int insetRight,
-      int insetBottom,
-      int insetLeft) {
+      double insetTop,
+      double insetRight,
+      double insetBottom,
+      double insetLeft) {
     if (_currentViewProperties != null &&
         _currentViewProperties.displayMetrics.devicePixelRatio ==
             devicePixelRatio &&
-        _currentViewProperties.viewLayout.size.width == physicalWidth &&
-        _currentViewProperties.viewLayout.size.height == physicalHeight &&
+        _currentViewProperties.viewLayout.size.width == width &&
+        _currentViewProperties.viewLayout.size.height == height &&
         _currentViewProperties.viewLayout.inset.top == insetTop &&
         _currentViewProperties.viewLayout.inset.right == insetRight &&
         _currentViewProperties.viewLayout.inset.bottom == insetBottom &&
@@ -232,10 +232,10 @@ class ChildViewConnection {
 
     DisplayMetrics displayMetrics = new DisplayMetrics()
       ..devicePixelRatio = devicePixelRatio;
-    fidl.Size size = new fidl.Size()
-      ..width = physicalWidth
-      ..height = physicalHeight;
-    fidl.Inset inset = new fidl.Inset()
+    fidl.SizeF size = new fidl.SizeF()
+      ..width = width
+      ..height = height;
+    fidl.InsetF inset = new fidl.InsetF()
       ..top = insetTop
       ..right = insetRight
       ..bottom = insetBottom
@@ -250,25 +250,19 @@ class ChildViewConnection {
   }
 
   void _setChildProperties(
-      int physicalWidth,
-      int physicalHeight,
+      double width,
+      double height,
       double devicePixelRatio,
-      int insetTop,
-      int insetRight,
-      int insetBottom,
-      int insetLeft) {
+      double insetTop,
+      double insetRight,
+      double insetBottom,
+      double insetLeft) {
     assert(_attached);
     assert(_attachments == 1);
     assert(_viewKey != null);
     if (_viewContainer == null) return;
-    ViewProperties viewProperties = _createViewProperties(
-        physicalWidth,
-        physicalHeight,
-        devicePixelRatio,
-        insetTop,
-        insetRight,
-        insetBottom,
-        insetLeft);
+    ViewProperties viewProperties = _createViewProperties(width, height,
+        devicePixelRatio, insetTop, insetRight, insetBottom, insetLeft);
     if (viewProperties == null) return;
     _viewContainer.setChildProperties(_viewKey, viewProperties);
   }
@@ -358,17 +352,17 @@ class _RenderChildView extends RenderBox {
 
   TextPainter _debugErrorMessage;
 
-  int _physicalWidth;
-  int _physicalHeight;
+  double _width;
+  double _height;
 
   @override
   void performLayout() {
     size = constraints.biggest;
     if (_connection != null) {
-      _physicalWidth = (size.width * scale).round();
-      _physicalHeight = (size.height * scale).round();
+      _width = size.width;
+      _height = size.height;
       _connection._setChildProperties(
-          _physicalWidth, _physicalHeight, scale, 0, 0, 0, 0);
+          _width, _height, scale, 0.0, 0.0, 0.0, 0.0);
       assert(() {
         if (_viewContainer == null) {
           _debugErrorMessage ??= new TextPainter(
@@ -391,9 +385,8 @@ class _RenderChildView extends RenderBox {
     if (_connection?._viewInfo != null) {
       context.addLayer(new ChildSceneLayer(
         offset: offset,
-        devicePixelRatio: scale,
-        physicalWidth: _physicalWidth,
-        physicalHeight: _physicalHeight,
+        width: _width,
+        height: _height,
         sceneHost: _connection._sceneHost,
         hitTestable: hitTestable,
       ));
@@ -423,9 +416,8 @@ class ChildSceneLayer extends Layer {
   /// All of the arguments must not be null.
   ChildSceneLayer({
     this.offset: Offset.zero,
-    this.devicePixelRatio: 1.0,
-    this.physicalWidth: 0,
-    this.physicalHeight: 0,
+    this.width: 0.0,
+    this.height: 0.0,
     this.sceneHost,
     this.hitTestable: true,
   });
@@ -433,14 +425,11 @@ class ChildSceneLayer extends Layer {
   /// Offset from parent in the parent's coordinate system.
   Offset offset;
 
-  /// The number of physical pixels the child should produce for each logical pixel.
-  double devicePixelRatio;
+  /// The horizontal extent of the child, in logical pixels.
+  double width;
 
-  /// The horizontal extent of the child, in physical pixels.
-  int physicalWidth;
-
-  /// The vertical extent of the child, in physical pixels.
-  int physicalHeight;
+  /// The vertical extent of the child, in logical pixels.
+  double height;
 
   /// The host site for content rendered by the child.
   ui.SceneHost sceneHost;
@@ -454,9 +443,8 @@ class ChildSceneLayer extends Layer {
   void addToScene(ui.SceneBuilder builder, Offset layerOffset) {
     builder.addChildScene(
       offset: offset + layerOffset,
-      devicePixelRatio: devicePixelRatio,
-      physicalWidth: physicalWidth,
-      physicalHeight: physicalHeight,
+      width: width,
+      height: height,
       sceneHost: sceneHost,
       hitTestable: hitTestable,
     );
@@ -466,9 +454,8 @@ class ChildSceneLayer extends Layer {
   void debugFillDescription(List<String> description) {
     super.debugFillDescription(description);
     description.add('offset: $offset');
-    description.add('physicalWidth: $physicalWidth');
-    description.add('physicalHeight: $physicalHeight');
-    description.add('devicePixelRatio: $devicePixelRatio');
+    description.add('width: $width');
+    description.add('height: $height');
     description.add('sceneHost: $sceneHost');
     description.add('hitTestable: $hitTestable');
   }

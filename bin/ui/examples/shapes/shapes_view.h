@@ -22,7 +22,8 @@ class ShapesView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
+  void OnSceneInvalidated(
+      mozart2::PresentationInfoPtr presentation_info) override;
 
   mozart::client::ShapeNode background_node_;
   mozart::client::ShapeNode card_node_;
