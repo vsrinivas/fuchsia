@@ -183,10 +183,28 @@ bool test_truncate_large(void) {
     END_TEST;
 }
 
+bool test_truncate_errno(void) {
+    BEGIN_TEST;
+
+    int fd = open("::truncate_errno", O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0, "");
+
+    ASSERT_EQ(ftruncate(fd, -1), -1, "");
+    ASSERT_EQ(errno, EINVAL, "");
+    errno = 0;
+    ASSERT_EQ(ftruncate(fd, 1UL << 60), -1, "");
+    ASSERT_EQ(errno, EINVAL, "");
+
+    ASSERT_EQ(unlink("::truncate_errno"), 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(truncate_tests,
     RUN_TEST_MEDIUM(test_truncate_small)
     RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, false>))
     RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, false>))
     RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, false>))
     RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, true>))
+    RUN_TEST_MEDIUM(test_truncate_errno)
 )

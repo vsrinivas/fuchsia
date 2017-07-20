@@ -366,7 +366,9 @@ mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
 
 mx_status_t VnodeFile::Truncate(size_t len) {
     mx_status_t status;
-    len = len > kMemfsMaxFileSize ? kMemfsMaxFileSize : len;
+    if (len > kMemfsMaxFileSize) {
+        return MX_ERR_INVALID_ARGS;
+    }
 
     if (vmo_ == MX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
