@@ -15,7 +15,5 @@ group("examples") {
     "shapes",
     "spinning_square",
     "tile",
-    "vkcube_mozart",
-    "vkcube_mozart:vkcube_image_pipe",
   ]
 }

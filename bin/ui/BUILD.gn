@@ -240,12 +240,6 @@ package("mozart") {
       name = "hello_scene_manager"
     },
     {
-      name = "vkcube_mozart"
-    },
-    {
-      name = "vkcube_image_pipe"
-    },
-    {
       name = "input"
     },
     {
