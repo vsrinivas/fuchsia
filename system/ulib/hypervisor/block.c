@@ -21,31 +21,36 @@
 
 typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
 
-mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port, uint8_t* input_size,
-                                     mx_guest_port_in_ret_t* port_in_ret) {
+mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
+                                     uint8_t access_size, io_packet_t* io_packet) {
     switch (port) {
     case VIRTIO_PCI_QUEUE_SIZE:
-        *input_size = 2;
-        port_in_ret->u16 = VIRTIO_QUEUE_SIZE;
+        if (access_size != 2)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u16 = VIRTIO_QUEUE_SIZE;
         return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
-        *input_size = 1;
-        port_in_ret->u8 = 0;
+        if (access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = 0;
         return MX_OK;
     case VIRTIO_PCI_ISR_STATUS:
-        *input_size = 1;
-        port_in_ret->u8 = 1;
+        if (access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = 1;
         return MX_OK;
     case VIRTIO_PCI_CONFIG_OFFSET_NOMSI ...
          VIRTIO_PCI_CONFIG_OFFSET_NOMSI + sizeof(virtio_blk_config_t) - 1: {
+        if (access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+
         virtio_blk_config_t config;
         memset(&config, 0, sizeof(virtio_blk_config_t));
         config.capacity = guest_state->block_size / SECTOR_SIZE;
         config.blk_size = PAGE_SIZE;
 
-        *input_size = 1;
         uint8_t* buf = (uint8_t*)&config;
-        port_in_ret->u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
+        io_packet->u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
         return MX_OK;
     }}
 
@@ -58,21 +63,21 @@ static uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global
     return io_apic_state->redirect[global_irq * 2] & UINT8_MAX;
 }
 
-mx_status_t handle_virtio_block_write(vcpu_context_t* context, uint16_t port,
-                                      const mx_guest_port_out_t* port_out) {
-    void* mem_addr = context->guest_state->mem_addr;
-    size_t mem_size = context->guest_state->mem_size;
-    int block_fd = context->guest_state->block_fd;
-    virtio_queue_t* queue = &context->guest_state->block_queue;
+mx_status_t handle_virtio_block_write(vcpu_context_t* vcpu_context, uint16_t port,
+                                      const mx_guest_io_t* io) {
+    void* mem_addr = vcpu_context->guest_state->mem_addr;
+    size_t mem_size = vcpu_context->guest_state->mem_size;
+    int block_fd = vcpu_context->guest_state->block_fd;
+    virtio_queue_t* queue = &vcpu_context->guest_state->block_queue;
     switch (port) {
     case VIRTIO_PCI_DEVICE_STATUS:
-        if (port_out->access_size != 1)
+        if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
         return MX_OK;
     case VIRTIO_PCI_QUEUE_PFN: {
-        if (port_out->access_size != 4)
+        if (io->access_size != 4)
             return MX_ERR_IO_DATA_INTEGRITY;
-        queue->desc = mem_addr + (port_out->u32 * PAGE_SIZE);
+        queue->desc = mem_addr + (io->u32 * PAGE_SIZE);
         queue->avail = (void*)&queue->desc[queue->size];
         queue->used_event = (void*)&queue->avail->ring[queue->size];
         queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
@@ -86,22 +91,22 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* context, uint16_t port,
         return MX_OK;
     }
     case VIRTIO_PCI_QUEUE_SIZE:
-        if (port_out->access_size != 2)
+        if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
-        queue->size = port_out->u16;
+        queue->size = io->u16;
         return MX_OK;
     case VIRTIO_PCI_QUEUE_SELECT:
-        if (port_out->access_size != 2)
+        if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
-        if (port_out->u16 != 0) {
+        if (io->u16 != 0) {
             fprintf(stderr, "Only one queue per device is supported\n");
             return MX_ERR_NOT_SUPPORTED;
         }
         return MX_OK;
     case VIRTIO_PCI_QUEUE_NOTIFY: {
-        if (port_out->access_size != 2)
+        if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
-        if (port_out->u16 != 0) {
+        if (io->u16 != 0) {
             fprintf(stderr, "Only one queue per device is supported\n");
             return MX_ERR_NOT_SUPPORTED;
         }
@@ -115,9 +120,9 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* context, uint16_t port,
             fprintf(stderr, "Block device operation failed %d\n", status);
             return status;
         }
-        uint8_t interrupt = irq_redirect(&context->guest_state->io_apic_state,
-                                         PCI_INTERRUPT_VIRTIO_BLOCK);
-        return mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_INTERRUPT,
+        uint32_t interrupt = irq_redirect(&vcpu_context->guest_state->io_apic_state,
+                                          PCI_INTERRUPT_VIRTIO_BLOCK);
+        return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_INTERRUPT,
                                 &interrupt, sizeof(interrupt), NULL, 0);
     }}
 

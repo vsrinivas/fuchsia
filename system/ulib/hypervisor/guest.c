@@ -18,7 +18,6 @@ static const uint64_t kAddr1mb      = 0x0000000000100000;
 static const uint64_t kAddr3500mb   = 0x00000000e0000000;
 static const uint64_t kAddr4000mb   = 0x0000000100000000;
 
-static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 static const size_t kMaxSize = 512ull << 30;
 static const size_t kMinSize = 4 * (4 << 10);
 
@@ -68,25 +67,6 @@ static uintptr_t page_table(uintptr_t addr, size_t size, size_t l1_page_size, ui
     return l0_pte_off;
 }
 #endif // __x86_64__
-
-mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phys_mem) {
-    if (size % PAGE_SIZE != 0)
-        return MX_ERR_INVALID_ARGS;
-    if (size > kMaxSize || size < kMinSize)
-        return MX_ERR_OUT_OF_RANGE;
-
-    mx_status_t status = mx_vmo_create(size, 0, phys_mem);
-    if (status != MX_OK)
-        return status;
-
-    status = mx_vmar_map(mx_vmar_root_self(), 0, *phys_mem, 0, size, kMapFlags, addr);
-    if (status != MX_OK) {
-        mx_handle_close(*phys_mem);
-        return status;
-    }
-
-    return MX_OK;
-}
 
 mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off) {
     if (size % PAGE_SIZE != 0)

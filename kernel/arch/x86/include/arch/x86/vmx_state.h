@@ -39,6 +39,8 @@
 
 #ifndef ASSEMBLY
 
+#include <sys/types.h>
+
 /* Holds the register state used to restore a host. */
 struct HostState {
     // Return address.

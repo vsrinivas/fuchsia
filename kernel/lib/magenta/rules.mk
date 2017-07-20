@@ -23,7 +23,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/guest_dispatcher.cpp \
     $(LOCAL_DIR)/handle.cpp \
     $(LOCAL_DIR)/handle_reaper.cpp \
-    $(LOCAL_DIR)/hypervisor_dispatcher.cpp \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/io_mapping_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \
@@ -43,6 +42,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/timer_dispatcher.cpp \
     $(LOCAL_DIR)/user_copy.cpp \
     $(LOCAL_DIR)/user_thread.cpp \
+    $(LOCAL_DIR)/vcpu_dispatcher.cpp \
     $(LOCAL_DIR)/vm_address_region_dispatcher.cpp \
     $(LOCAL_DIR)/vm_object_dispatcher.cpp \
     $(LOCAL_DIR)/wait_state_observer.cpp \
@@ -53,6 +53,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS := \
     kernel/lib/dpc \
+    kernel/lib/hypervisor \
     kernel/lib/mxtl \
     kernel/dev/interrupt \
     kernel/dev/udisplay \

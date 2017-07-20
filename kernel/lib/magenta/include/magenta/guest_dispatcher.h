@@ -6,40 +6,28 @@
 
 #pragma once
 
-#include <magenta/hypervisor_dispatcher.h>
-#include <mxtl/canary.h>
+#include <magenta/dispatcher.h>
+#include <magenta/syscalls/hypervisor.h>
+
+class Guest;
+class VmObject;
 
 class GuestDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
-                              mxtl::RefPtr<VmObject> phys_mem,
-                              mxtl::RefPtr<FifoDispatcher> ctl_fifo,
+    static mx_status_t Create(mxtl::RefPtr<VmObject> physmem,
                               mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
-
     ~GuestDispatcher();
 
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_GUEST; }
+    Guest* guest() const { return guest_.get(); }
 
-    mx_status_t Enter();
-    mx_status_t MemTrap(mx_vaddr_t guest_paddr, size_t size);
-    mx_status_t Interrupt(uint8_t interrupt);
-    mx_status_t SetGpr(const mx_guest_gpr_t& guest_gpr);
-    mx_status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
-#if ARCH_X86_64
-    mx_status_t SetApicMem(mxtl::RefPtr<VmObject> apic_mem);
-#endif // ARCH_X86_64
-
-    mx_status_t set_ip(uintptr_t guest_ip);
-#if ARCH_X86_64
-    mx_status_t set_cr3(uintptr_t guest_cr3);
-#endif // ARCH_X86_64
+    mx_status_t SetTrap(mx_trap_address_space_t aspace, mx_vaddr_t addr, size_t len,
+                        mxtl::RefPtr<FifoDispatcher> fifo);
 
 private:
     mxtl::Canary<mxtl::magic("GSTD")> canary_;
-    mxtl::RefPtr<HypervisorDispatcher> hypervisor_;
-    mxtl::unique_ptr<GuestContext> context_;
+    mxtl::unique_ptr<Guest> guest_;
 
-    explicit GuestDispatcher(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
-                             mxtl::unique_ptr<GuestContext> context);
+    explicit GuestDispatcher(mxtl::unique_ptr<Guest> guest);
 };

@@ -5,13 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #define FUNCTION(x)     .global x; .type x,STT_FUNC; x:
-#define UART_IO_PORT    0x3f8
+#define EXIT_TEST_PORT  0xff
+#define UART_PORT       0x03f8
 #define IA32_GS_BASE    0xc0000101
 #define VMO_SIZE        0x200000
 .text
 
-FUNCTION(guest_start)
-    mov $UART_IO_PORT, %dx
+FUNCTION(vcpu_resume_start)
+    mov $UART_PORT, %dx
     mov $'m', %al
     out %al, %dx
     mov $'x', %al
@@ -28,10 +29,10 @@ FUNCTION(guest_start)
     xor %eax, %eax
     cpuid
 
-    vmcall
-FUNCTION(guest_end)
+    out %al, $EXIT_TEST_PORT
+FUNCTION(vcpu_resume_end)
 
-FUNCTION(guest_set_gpr_start)
+FUNCTION(vcpu_read_write_state_start)
     add $1, %rax
     add $2, %rcx
     add $3, %rdx
@@ -51,12 +52,10 @@ FUNCTION(guest_set_gpr_start)
 
     stc
 
-    vmcall
-FUNCTION(guest_set_gpr_end)
+    out %al, $EXIT_TEST_PORT
+FUNCTION(vcpu_read_write_state_end)
 
-FUNCTION(guest_mem_trap_start)
+FUNCTION(guest_set_trap_start)
     mov $VMO_SIZE, %rdx
     mov -0x1000(%rdx), %rax
-
-    vmcall
-FUNCTION(guest_mem_trap_end)
+FUNCTION(guest_set_trap_end)

@@ -117,10 +117,242 @@
 // From a given address, get the PCI device index.
 #define PCI_DEVICE(addr)                        (((addr - PCI_PHYS_BASE(0, 0, 0)) >> 15) & 0x1f)
 
+/* Interrupt vectors. */
+#define X86_INT_GP_FAULT                        0xd
+
 static const uint16_t kPciDeviceBarSize[] = {
     0x10,   // PCI_DEVICE_ROOT_COMPLEX
     0x40,   // PCI_DEVICE_VIRTIO_BLOCK
 };
+
+static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
+                                     const mx_guest_memory_t* memory, instruction_t* inst) {
+    MX_ASSERT(memory->addr >= LOCAL_APIC_PHYS_BASE);
+    mx_vaddr_t offset = memory->addr - LOCAL_APIC_PHYS_BASE;
+    switch (offset) {
+    case LOCAL_APIC_REGISTER_VERSION: {
+        // From Intel Volume 3, Section 10.4.8.
+        //
+        // We choose 15H as it causes us to be seen as a modern APIC by Linux,
+        // and is the highest non-reserved value.
+        const uint32_t version = 0x15;
+        const uint32_t max_lvt_entry = 0x6; // LVT entries minus 1.
+        const uint32_t eoi_suppression = 0; // Disable support for EOI-broadcast suppression.
+        return inst_read32(inst, version | (max_lvt_entry << 16) | (eoi_suppression << 24));
+    }
+    case LOCAL_APIC_REGISTER_ESR:
+        // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
+        // ESR, software should first write to it.
+        //
+        // Therefore, we ignore writes to the ESR.
+        if (inst->type == INST_MOV_WRITE)
+            return MX_OK;
+    case LOCAL_APIC_REGISTER_ISR_31_0 ... LOCAL_APIC_REGISTER_ISR_255_224:
+    case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
+        return inst_read32(inst, 0);
+    case LOCAL_APIC_REGISTER_DFR:
+    case LOCAL_APIC_REGISTER_ID:
+    case LOCAL_APIC_REGISTER_LDR:
+    case LOCAL_APIC_REGISTER_LVT_ERROR:
+    case LOCAL_APIC_REGISTER_LVT_LINT0:
+    case LOCAL_APIC_REGISTER_LVT_LINT1:
+    case LOCAL_APIC_REGISTER_LVT_PERFMON:
+    case LOCAL_APIC_REGISTER_LVT_THERMAL:
+    case LOCAL_APIC_REGISTER_LVT_TIMER:
+    case LOCAL_APIC_REGISTER_SVR:
+        return inst_rw32(inst, local_apic_state->apic_addr + offset);
+    case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
+        uint32_t initial_count;
+        mx_status_t status = inst_write32(inst, &initial_count);
+        if (status != MX_OK)
+            return status;
+        return initial_count > 0 ? MX_ERR_NOT_SUPPORTED : MX_OK;
+    }}
+
+    fprintf(stderr, "Unhandled local APIC %#lx\n", offset);
+    return MX_ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
+                                  const mx_guest_memory_t* memory, instruction_t* inst) {
+    MX_ASSERT(memory->addr >= IO_APIC_PHYS_BASE);
+    mx_vaddr_t offset = memory->addr - IO_APIC_PHYS_BASE;
+    switch (offset) {
+    case IO_APIC_IOREGSEL: {
+        mx_status_t status = inst_write32(inst, &io_apic_state->select);
+        if (status != MX_OK)
+            return status;
+        return io_apic_state->select > UINT8_MAX ? MX_ERR_INVALID_ARGS : MX_OK;
+    }
+    case IO_APIC_IOWIN:
+        switch (io_apic_state->select) {
+        case IO_APIC_REGISTER_ID:
+            return inst_rw32(inst, &io_apic_state->id);
+        case IO_APIC_REGISTER_VER:
+            // There are two redirect offsets per redirection entry. We return
+            // the maximum redirection entry index.
+            //
+            // From Intel 82093AA, Section 3.2.2.
+            return inst_read32(inst, (IO_APIC_REDIRECT_OFFSETS / 2 - 1) << 16 | IO_APIC_VERSION);
+        case IO_APIC_REGISTER_ARBITRATION:
+            // Since we have a single I/O APIC, it is always the winner
+            // of arbitration and its arbitration register is always 0.
+            return inst_read32(inst, 0);
+        case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
+            uint32_t i = io_apic_state->select - FIRST_REDIRECT_OFFSET;
+            return inst_rw32(inst, io_apic_state->redirect + i);
+        }}
+    }
+
+    fprintf(stderr, "Unhandled IO APIC %#lx\n", offset);
+    return MX_ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
+                                     const mx_guest_memory_t* memory, instruction_t* inst,
+                                     uint8_t device, uint16_t vendor_id, uint16_t device_id) {
+    MX_ASSERT(memory->addr >= PCI_PHYS_BASE(0, device, 0));
+    mx_vaddr_t offset = memory->addr - PCI_PHYS_BASE(0, device, 0);
+    switch (offset) {
+    case PCI_CONFIG_VENDOR_ID:
+        return inst_read16(inst, vendor_id);
+    case PCI_CONFIG_DEVICE_ID:
+        return inst_read16(inst, device_id);
+    case PCI_CONFIG_COMMAND:
+        return inst_rw16(inst, &pci_device_state->command);
+    case PCI_CONFIG_STATUS:
+        switch (inst->type) {
+        case INST_MOV_READ:
+            return inst_read16(inst, PCI_STATUS_INTERRUPT);
+        case INST_TEST:
+            return inst_test8(inst, PCI_STATUS_NEW_CAPS, PCI_STATUS_INTERRUPT);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+    case PCI_CONFIG_HEADER_TYPE:
+        return inst_read8(inst, PCI_HEADER_TYPE_STANDARD);
+    case PCI_CONFIG_INTERRUPT_PIN:
+        return inst_read8(inst, 1);
+    case PCI_CONFIG_CAPABILITIES:
+    case PCI_CONFIG_CLASS_CODE:
+    case PCI_CONFIG_CLASS_CODE_BASE:
+    case PCI_CONFIG_CLASS_CODE_SUB:
+    case PCI_CONFIG_REVISION_ID:
+        return inst_read8(inst, 0);
+    case PCI_REGISTER_BAR_0: {
+        uint32_t* bar = &pci_device_state->bar[0];
+        const uint32_t value = (pci_device_state->command & PCI_COMMAND_IO_EN) ?
+                               *bar | PCI_BAR_IO_TYPE_PIO : UINT32_MAX;
+        switch (inst->type) {
+        case INST_MOV_READ:
+            return inst_read32(inst, value);
+        case INST_MOV_WRITE: {
+            mx_status_t status = inst_write32(inst, bar);
+            if (status != MX_OK)
+                return status;
+            // We zero bits in the BAR in order to set the size.
+            *bar &= ~(kPciDeviceBarSize[device] - 1);
+            *bar |= PCI_BAR_IO_TYPE_PIO;
+            return MX_OK;
+        }
+        case INST_TEST:
+            return inst_test8(inst, PCI_BAR_IO_TYPE_PIO, value);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+    }
+    case PCI_REGISTER_BAR_1:
+    case PCI_REGISTER_BAR_2:
+    case PCI_REGISTER_BAR_3:
+    case PCI_REGISTER_BAR_4:
+    case PCI_REGISTER_BAR_5: {
+        uint32_t default_bar = 0;
+        return inst_rw32(inst, &default_bar);
+    }}
+
+    fprintf(stderr, "Unhandled PCI device %d %#lx\n", device, offset);
+    return MX_ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, instruction_t* inst) {
+    fprintf(stderr, "Unhandled address %#lx\n", memory->addr);
+    if (inst->type == INST_MOV_READ)
+        *inst->reg = UINT64_MAX;
+    return MX_OK;
+}
+
+static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_memory_t* memory) {
+    mx_vcpu_state_t vcpu_state;
+    mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
+                                          NULL, 0, &vcpu_state, sizeof(vcpu_state));
+    if (status != MX_OK)
+        return status;
+
+    instruction_t inst;
+#if __aarch64__
+    status = MX_ERR_NOT_SUPPORTED;
+#elif __x86_64__
+    status = inst_decode(memory->inst_buf, memory->inst_len, &vcpu_state, &inst);
+#else
+#error Unsupported architecture
+#endif
+
+    if (status != MX_OK) {
+        fprintf(stderr, "Unsupported instruction:");
+#if __x86_64__
+        for (uint8_t i = 0; i < memory->inst_len; i++)
+            fprintf(stderr, " %x", memory->inst_buf[i]);
+#endif // __x86_64__
+        fprintf(stderr, "\n");
+    } else {
+        status = MX_ERR_UNAVAILABLE;
+        guest_state_t* guest_state = vcpu_context->guest_state;
+        switch (memory->addr) {
+        case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
+            status = handle_local_apic(&vcpu_context->local_apic_state, memory, &inst);
+            break;
+        case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
+            mtx_lock(&guest_state->mutex);
+            status = handle_io_apic(&guest_state->io_apic_state, memory, &inst);
+            mtx_unlock(&guest_state->mutex);
+            break;
+        case PCI_PHYS_BASE(0, PCI_DEVICE_ROOT_COMPLEX, 0) ...
+             PCI_PHYS_TOP(0, PCI_DEVICE_ROOT_COMPLEX, 0): {
+            mtx_lock(&guest_state->mutex);
+            pci_device_state_t* pci_device_state =
+                &guest_state->pci_device_state[PCI_DEVICE_ROOT_COMPLEX];
+            status = handle_pci_device(pci_device_state, memory, &inst, PCI_DEVICE_ROOT_COMPLEX,
+                                       PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35);
+            mtx_unlock(&guest_state->mutex);
+            break;
+        }
+        case PCI_PHYS_BASE(0, PCI_DEVICE_VIRTIO_BLOCK, 0) ...
+             PCI_PHYS_TOP(0, PCI_DEVICE_VIRTIO_BLOCK, 0): {
+            mtx_lock(&guest_state->mutex);
+            pci_device_state_t* pci_device_state =
+                &guest_state->pci_device_state[PCI_DEVICE_VIRTIO_BLOCK];
+            status = handle_pci_device(pci_device_state, memory, &inst, PCI_DEVICE_VIRTIO_BLOCK,
+                                       PCI_VENDOR_ID_VIRTIO, PCI_DEVICE_ID_VIRTIO_BLOCK);
+            mtx_unlock(&guest_state->mutex);
+            break;
+        }
+        default:
+            status = unhandled_memory(memory, &inst);
+            break;
+        }
+    }
+
+    if (status != MX_OK) {
+        uint32_t vector = X86_INT_GP_FAULT;
+        return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_INTERRUPT,
+                                &vector, sizeof(vector), NULL, 0);
+    } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
+        // If there was an attempt to read or test memory, update the GPRs.
+        return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
+                                &vcpu_state, sizeof(vcpu_state), NULL, 0);
+    }
+    return status;
+}
 
 static uint8_t to_bcd(uint8_t binary) {
     return ((binary / 10) << 4) | (binary % 10);
@@ -184,419 +416,174 @@ static uint16_t pci_device(pci_device_state_t* pci_device_state, uint16_t port,
     return PCI_DEVICE_INVALID;
 }
 
-static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_in_t* port_in) {
-    uint8_t input_size = 0;
-    mx_guest_packet_t packet;
-    memset(&packet, 0, sizeof(packet));
-    packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
+static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
+#if __x86_64__
+    mx_vcpu_state_t state;
+    mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
+                                          NULL, 0, &state, sizeof(state));
+    if (status != MX_OK)
+        return status;
 
-    mx_status_t status = MX_OK;
-    io_port_state_t* io_port_state = &context->guest_state->io_port_state;
-    switch (port_in->port) {
+    io_packet_t* io_packet = (io_packet_t*)&state.rax;
+    io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
+    switch (io->port) {
     case UART_LINE_CONTROL_IO_PORT:
-        input_size = 1;
-        packet.port_in_ret.u8 = io_port_state->uart_line_control;
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = io_port_state->uart_line_control;
         break;
     case UART_INTERRUPT_ENABLE_PORT:
     case UART_MODEM_CONTROL_IO_PORT:
-        input_size = 1;
-        packet.port_in_ret.u8 = 0;
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = 0;
         break;
     case UART_LINE_STATUS_IO_PORT:
-        input_size = 1;
-        packet.port_in_ret.u8 = UART_STATUS_IDLE | UART_STATUS_EMPTY;
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = UART_STATUS_IDLE | UART_STATUS_EMPTY;
         break;
-    case RTC_DATA_PORT: {
-        input_size = 1;
-        status = handle_rtc(io_port_state->rtc_index, &packet.port_in_ret.u8);
+    case RTC_DATA_PORT:
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        status = handle_rtc(io_port_state->rtc_index, &io_packet->u8);
+        if (status != MX_OK)
+            return status;
         break;
-    }
     case I8042_DATA_PORT:
-        input_size = 1;
-        if (io_port_state->i8042_command == I8042_COMMAND_TEST) {
-            packet.port_in_ret.u8 = I8042_DATA_TEST_RESPONSE;
-        } else {
-            packet.port_in_ret.u8 = 0;
-        }
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = io_port_state->i8042_command == I8042_COMMAND_TEST ?
+                       I8042_DATA_TEST_RESPONSE : 0;
         break;
     case I8042_COMMAND_PORT:
-        input_size = 1;
-        packet.port_in_ret.u8 = I8042_STATUS_OUTPUT_FULL;
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = I8042_STATUS_OUTPUT_FULL;
         break;
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-        input_size = 2;
-        packet.port_in_ret.u16 = 0;
+        if (io->access_size != 2)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u16 = 0;
         break;
-#if __x86_64__
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-        input_size = 2;
-        packet.port_in_ret.u16 = io_port_state->pm1_enable;
+        if (io->access_size != 2)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u16 = io_port_state->pm1_enable;
         break;
     case PIC1_DATA_PORT:
-        input_size = 1;
-        packet.port_in_ret.u8 = PIC_INVALID;
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_packet->u8 = PIC_INVALID;
         break;
-#endif // __x86_64__
     default: {
         uint16_t port_off;
-        switch (pci_device(context->guest_state->pci_device_state, port_in->port, &port_off)) {
+        switch (pci_device(vcpu_context->guest_state->pci_device_state, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK:
-            status = handle_virtio_block_read(context->guest_state, port_off, &input_size,
-                                              &packet.port_in_ret);
+            status = handle_virtio_block_read(vcpu_context->guest_state, port_off, io->access_size,
+                                              io_packet);
+            if (status != MX_OK)
+                return status;
             break;
         default:
-            fprintf(stderr, "Unhandled port in %#x\n", port_in->port);
+            fprintf(stderr, "Unhandled port in %#x\n", io->port);
             return MX_ERR_NOT_SUPPORTED;
         }
     }}
 
-    if (status != MX_OK)
-        return status;
-    if (port_in->access_size != input_size)
-        return MX_ERR_IO_DATA_INTEGRITY;
-    uint32_t num_packets;
-    return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
+    return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
+                            &state, sizeof(state), NULL, 0);
+#else // __x86_64__
+    return MX_ERR_NOT_SUPPORTED;
+#endif // __x86_64__
 }
 
-static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_out_t* port_out) {
-    io_port_state_t* io_port_state = &context->guest_state->io_port_state;
-    switch (port_out->port) {
-    case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
-    case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
-    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
+static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
+#if __x86_64__
+    io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
+    switch (io->port) {
     case I8042_DATA_PORT:
     case I8253_CHANNEL_0:
     case I8253_CONTROL_PORT:
+    case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
+    case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
+    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case UART_INTERRUPT_ENABLE_PORT ... UART_LINE_CONTROL_IO_PORT - 1:
     case UART_LINE_CONTROL_IO_PORT + 1 ... UART_SCR_SCRATCH_IO_PORT:
         return MX_OK;
     case UART_RECEIVE_IO_PORT:
-        for (int i = 0; i < port_out->access_size; i++) {
-            io_port_state->buffer[io_port_state->offset++] = port_out->data[i];
-            if (io_port_state->offset == IO_BUFFER_SIZE || port_out->data[i] == '\r') {
+        for (int i = 0; i < io->access_size; i++) {
+            io_port_state->buffer[io_port_state->offset++] = io->data[i];
+            if (io_port_state->offset == IO_BUFFER_SIZE || io->data[i] == '\r') {
                 printf("%.*s", io_port_state->offset, io_port_state->buffer);
                 io_port_state->offset = 0;
             }
         }
         return MX_OK;
     case UART_LINE_CONTROL_IO_PORT:
-        if (port_out->access_size != 1)
+        if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->uart_line_control = port_out->u8;
+        io_port_state->uart_line_control = io->u8;
         return MX_OK;
     case RTC_INDEX_PORT:
-        if (port_out->access_size != 1)
+        if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->rtc_index = port_out->u8;
+        io_port_state->rtc_index = io->u8;
         return MX_OK;
     case I8042_COMMAND_PORT:
-        if (port_out->access_size != 1)
+        if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->i8042_command = port_out->u8;
+        io_port_state->i8042_command = io->u8;
         return MX_OK;
-#if __x86_64__
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-        if (port_out->access_size != 2)
+        if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->pm1_enable = port_out->u16;
+        io_port_state->pm1_enable = io->u16;
         return MX_OK;
-#endif // __x86_64__
     }
 
     uint16_t port_off;
-    switch (pci_device(context->guest_state->pci_device_state, port_out->port, &port_off)) {
+    switch (pci_device(vcpu_context->guest_state->pci_device_state, io->port, &port_off)) {
     case PCI_DEVICE_VIRTIO_BLOCK:
-        return handle_virtio_block_write(context, port_off, port_out);
+        return handle_virtio_block_write(vcpu_context, port_off, io);
     }
 
-    fprintf(stderr, "Unhandled port out %#x\n", port_out->port);
+    fprintf(stderr, "Unhandled port out %#x\n", io->port);
     return MX_ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
-                                     const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
-    MX_ASSERT(mem_trap->guest_paddr >= LOCAL_APIC_PHYS_BASE);
-    mx_vaddr_t offset = mem_trap->guest_paddr - LOCAL_APIC_PHYS_BASE;
-    switch (offset) {
-    case LOCAL_APIC_REGISTER_VERSION: {
-        // From Intel Volume 3, Section 10.4.8.
-        //
-        // We choose 15H as it causes us to be seen as a modern APIC by Linux,
-        // and is the highest non-reserved value.
-        const uint32_t version = 0x15;
-        const uint32_t max_lvt_entry = 0x6; // LVT entries minus 1.
-        const uint32_t eoi_suppression = 0; // Disable support for EOI-broadcast suppression.
-        return inst_read32(inst, version | (max_lvt_entry << 16) | (eoi_suppression << 24));
-    }
-    case LOCAL_APIC_REGISTER_ESR:
-        // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
-        // ESR, software should first write to it.
-        //
-        // Therefore, we ignore writes to the ESR.
-        if (inst->type == INST_MOV_WRITE)
-            return MX_OK;
-    case LOCAL_APIC_REGISTER_ISR_31_0 ... LOCAL_APIC_REGISTER_ISR_255_224:
-    case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
-        return inst_read32(inst, 0);
-    case LOCAL_APIC_REGISTER_ID:
-    case LOCAL_APIC_REGISTER_LDR:
-    case LOCAL_APIC_REGISTER_DFR:
-    case LOCAL_APIC_REGISTER_SVR:
-    case LOCAL_APIC_REGISTER_LVT_TIMER:
-    case LOCAL_APIC_REGISTER_LVT_THERMAL:
-    case LOCAL_APIC_REGISTER_LVT_PERFMON:
-    case LOCAL_APIC_REGISTER_LVT_LINT0:
-    case LOCAL_APIC_REGISTER_LVT_LINT1:
-    case LOCAL_APIC_REGISTER_LVT_ERROR:
-        return inst_rw32(inst, local_apic_state->apic_addr + offset);
-    case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
-        uint32_t initial_count;
-        mx_status_t status = inst_write32(inst, &initial_count);
-        if (status != MX_OK)
-            return status;
-        return initial_count > 0 ? MX_ERR_NOT_SUPPORTED : MX_OK;
-    }}
-
-    fprintf(stderr, "Unhandled local APIC %#lx\n", offset);
+#else // __x86_64__
     return MX_ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
-                                  const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
-    MX_ASSERT(mem_trap->guest_paddr >= IO_APIC_PHYS_BASE);
-    mx_vaddr_t offset = mem_trap->guest_paddr - IO_APIC_PHYS_BASE;
-    switch (offset) {
-    case IO_APIC_IOREGSEL: {
-        mx_status_t status = inst_write32(inst, &io_apic_state->select);
-        if (status != MX_OK)
-            return status;
-        return io_apic_state->select > UINT8_MAX ? MX_ERR_INVALID_ARGS : MX_OK;
-    }
-    case IO_APIC_IOWIN:
-        switch (io_apic_state->select) {
-        case IO_APIC_REGISTER_ID:
-            return inst_rw32(inst, &io_apic_state->id);
-        case IO_APIC_REGISTER_VER:
-            // There are two redirect offsets per redirection entry. We return
-            // the maximum redirection entry index.
-            //
-            // From Intel 82093AA, Section 3.2.2.
-            return inst_read32(inst, (IO_APIC_REDIRECT_OFFSETS / 2 - 1) << 16 | IO_APIC_VERSION);
-        case IO_APIC_REGISTER_ARBITRATION:
-            // Since we have a single I/O APIC, it is always the winner
-            // of arbitration and its arbitration register is always 0.
-            return inst_read32(inst, 0);
-        case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
-            uint32_t i = io_apic_state->select - FIRST_REDIRECT_OFFSET;
-            return inst_rw32(inst, io_apic_state->redirect + i);
-        }}
-    }
-
-    fprintf(stderr, "Unhandled IO APIC %#lx\n", offset);
-    return MX_ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
-                                     const mx_guest_mem_trap_t* mem_trap, instruction_t* inst,
-                                     uint8_t device, uint16_t vendor_id, uint16_t device_id) {
-    MX_ASSERT(mem_trap->guest_paddr >= PCI_PHYS_BASE(0, device, 0));
-    mx_vaddr_t offset = mem_trap->guest_paddr - PCI_PHYS_BASE(0, device, 0);
-    switch (offset) {
-    case PCI_CONFIG_VENDOR_ID:
-        return inst_read16(inst, vendor_id);
-    case PCI_CONFIG_DEVICE_ID:
-        return inst_read16(inst, device_id);
-    case PCI_CONFIG_COMMAND:
-        return inst_rw16(inst, &pci_device_state->command);
-    case PCI_CONFIG_STATUS:
-        switch (inst->type) {
-        case INST_MOV_READ:
-            return inst_read16(inst, PCI_STATUS_INTERRUPT);
-        case INST_TEST:
-            return inst_test8(inst, PCI_STATUS_NEW_CAPS, PCI_STATUS_INTERRUPT);
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    case PCI_CONFIG_HEADER_TYPE:
-        return inst_read8(inst, PCI_HEADER_TYPE_STANDARD);
-    case PCI_CONFIG_INTERRUPT_PIN:
-        return inst_read8(inst, 1);
-    case PCI_CONFIG_REVISION_ID:
-    case PCI_CONFIG_CLASS_CODE:
-    case PCI_CONFIG_CLASS_CODE_SUB:
-    case PCI_CONFIG_CLASS_CODE_BASE:
-    case PCI_CONFIG_CAPABILITIES:
-        return inst_read8(inst, 0);
-    case PCI_REGISTER_BAR_0: {
-        uint32_t* bar = &pci_device_state->bar[0];
-        const uint32_t value = (pci_device_state->command & PCI_COMMAND_IO_EN) ?
-                               *bar | PCI_BAR_IO_TYPE_PIO : UINT32_MAX;
-        switch (inst->type) {
-        case INST_MOV_READ:
-            return inst_read32(inst, value);
-        case INST_MOV_WRITE: {
-            mx_status_t status = inst_write32(inst, bar);
-            if (status != MX_OK)
-                return status;
-            // We zero bits in the BAR in order to set the size.
-            *bar &= ~(kPciDeviceBarSize[device] - 1);
-            *bar |= PCI_BAR_IO_TYPE_PIO;
-            return MX_OK;
-        }
-        case INST_TEST:
-            return inst_test8(inst, PCI_BAR_IO_TYPE_PIO, value);
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    }
-    case PCI_REGISTER_BAR_1:
-    case PCI_REGISTER_BAR_2:
-    case PCI_REGISTER_BAR_3:
-    case PCI_REGISTER_BAR_4:
-    case PCI_REGISTER_BAR_5: {
-        uint32_t default_bar = 0;
-        return inst_rw32(inst, &default_bar);
-    }}
-
-    fprintf(stderr, "Unhandled PCI device %d %#lx\n", device, offset);
-    return MX_ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t unhandled_mem_trap(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
-    fprintf(stderr, "Unhandled address %#lx\n", mem_trap->guest_paddr);
-    if (inst->type == INST_MOV_READ)
-        *inst->reg = UINT64_MAX;
-    return MX_OK;
-}
-
-static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_trap_t* mem_trap) {
-    mx_guest_gpr_t guest_gpr;
-    mx_status_t status = mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_GET_GPR,
-                                          NULL, 0, &guest_gpr, sizeof(guest_gpr));
-    if (status != MX_OK)
-        return status;
-
-    instruction_t inst;
-#if __aarch64__
-    status = MX_ERR_NOT_SUPPORTED;
-#elif __x86_64__
-    status = inst_decode(mem_trap->instruction_buffer, mem_trap->instruction_length, &guest_gpr,
-                         &inst);
-#else
-#error Unsupported architecture
-#endif
-
-    if (status != MX_OK) {
-        fprintf(stderr, "Unsupported instruction:");
-#if __x86_64__
-        for (uint8_t i = 0; i < mem_trap->instruction_length; i++)
-            fprintf(stderr, " %x", mem_trap->instruction_buffer[i]);
 #endif // __x86_64__
-        fprintf(stderr, "\n");
-    } else {
-        status = MX_ERR_UNAVAILABLE;
-        guest_state_t* guest_state = context->guest_state;
-        switch (mem_trap->guest_paddr) {
-        case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
-            status = handle_local_apic(&context->local_apic_state, mem_trap, &inst);
-            break;
-        case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
-            mtx_lock(&guest_state->mutex);
-            status = handle_io_apic(&guest_state->io_apic_state, mem_trap, &inst);
-            mtx_unlock(&guest_state->mutex);
-            break;
-        case PCI_PHYS_BASE(0, PCI_DEVICE_ROOT_COMPLEX, 0) ...
-             PCI_PHYS_TOP(0, PCI_DEVICE_ROOT_COMPLEX, 0): {
-            mtx_lock(&guest_state->mutex);
-            pci_device_state_t* pci_device_state =
-                &guest_state->pci_device_state[PCI_DEVICE_ROOT_COMPLEX];
-            status = handle_pci_device(pci_device_state, mem_trap, &inst, PCI_DEVICE_ROOT_COMPLEX,
-                                       PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35);
-            mtx_unlock(&guest_state->mutex);
-            break;
-        }
-        case PCI_PHYS_BASE(0, PCI_DEVICE_VIRTIO_BLOCK, 0) ...
-             PCI_PHYS_TOP(0, PCI_DEVICE_VIRTIO_BLOCK, 0): {
-            mtx_lock(&guest_state->mutex);
-            pci_device_state_t* pci_device_state =
-                &guest_state->pci_device_state[PCI_DEVICE_VIRTIO_BLOCK];
-            status = handle_pci_device(pci_device_state, mem_trap, &inst, PCI_DEVICE_VIRTIO_BLOCK,
-                                       PCI_VENDOR_ID_VIRTIO, PCI_DEVICE_ID_VIRTIO_BLOCK);
-            mtx_unlock(&guest_state->mutex);
-            break;
-        }
-        default:
-            status = unhandled_mem_trap(mem_trap, &inst);
-            break;
-        }
-    }
-
-    mx_guest_packet_t packet;
-    packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
-    packet.mem_trap_ret.fault = status != MX_OK;
-
-    // If there was an attempt to read or test memory, update the GPRs.
-    if (status == MX_OK && (inst.type == INST_MOV_READ || inst.type == INST_TEST)) {
-        status = mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
-                                  &guest_gpr, sizeof(guest_gpr), NULL, 0);
-        if (status != MX_OK)
-            return status;
-    }
-    uint32_t num_packets;
-    return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
 }
 
-static mx_status_t vcpu_wait(mx_handle_t vcpu_fifo, mx_signals_t signals) {
-    mx_signals_t observed = 0;
-    while (!(observed & signals)) {
-        mx_status_t status = mx_object_wait_one(vcpu_fifo, signals | MX_FIFO_PEER_CLOSED,
-                                                MX_TIME_INFINITE, &observed);
-        if (status != MX_OK)
-            return status;
-        if (observed & MX_FIFO_PEER_CLOSED)
-            return MX_ERR_PEER_CLOSED;
-    }
-    return MX_OK;
+static mx_status_t handle_io(vcpu_context_t* vcpu_context, mx_guest_io_t* io) {
+    mtx_lock(&vcpu_context->guest_state->mutex);
+    mx_status_t status = io->input ?
+                         handle_input(vcpu_context, io) : handle_output(vcpu_context, io);
+    mtx_unlock(&vcpu_context->guest_state->mutex);
+    return status;
 }
 
-mx_status_t vcpu_loop(vcpu_context_t* context) {
-    mx_guest_packet_t packet[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
+mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
     while (true) {
-        mx_status_t status = vcpu_wait(context->vcpu_fifo, MX_FIFO_READABLE);
-        if (status != MX_OK) {
-            fprintf(stderr, "Failed to wait for readable on the VCPU: %d\n", status);
-            return status;
-        }
-
-        uint32_t num_packets;
-        status = mx_fifo_read(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
+        mx_guest_packet_t packet;
+        mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
+                                              NULL, 0, &packet, sizeof(packet));
         if (status != MX_OK)
             return status;
-
-        for (uint32_t i = 0; i < num_packets; i++) {
-            mx_status_t status;
-            switch (packet[i].type) {
-            case MX_GUEST_PKT_TYPE_PORT_IN:
-                mtx_lock(&context->guest_state->mutex);
-                status = handle_port_in(context, &packet[i].port_in);
-                mtx_unlock(&context->guest_state->mutex);
-                break;
-            case MX_GUEST_PKT_TYPE_PORT_OUT:
-                mtx_lock(&context->guest_state->mutex);
-                status = handle_port_out(context, &packet[i].port_out);
-                mtx_unlock(&context->guest_state->mutex);
-                break;
-            case MX_GUEST_PKT_TYPE_MEM_TRAP:
-                status = handle_mem_trap(context, &packet[i].mem_trap);
-                break;
-            default:
-                fprintf(stderr, "Unhandled guest packet %d\n", packet[i].type);
-                return MX_ERR_NOT_SUPPORTED;
-            }
-            if (status != MX_OK) {
-                fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet[i].type, status);
-                return status;
-            }
+        switch (packet.type) {
+        case MX_GUEST_PKT_TYPE_MEMORY:
+            status = handle_memory(vcpu_context, &packet.memory);
+            break;
+        case MX_GUEST_PKT_TYPE_IO:
+            status = handle_io(vcpu_context, &packet.io);
+            break;
+        default:
+            fprintf(stderr, "Unhandled guest packet %d\n", packet.type);
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
+            return status;
         }
     }
 }

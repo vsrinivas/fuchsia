@@ -48,42 +48,42 @@ static uint8_t register_id(uint8_t mod_rm, bool rex_r) {
     return ((mod_rm >> 3) & 0b111) + (rex_r ? 0b1000 : 0);
 }
 
-static uint64_t* select_register(mx_guest_gpr_t* guest_gpr, uint8_t register_id) {
+static uint64_t* select_register(mx_vcpu_state_t* vcpu_state, uint8_t register_id) {
     // From Intel Volume 2, Section 2.1.
     switch (register_id) {
     // From Intel Volume 2, Section 2.1.5.
     case 0:
-        return &guest_gpr->rax;
+        return &vcpu_state->rax;
     case 1:
-        return &guest_gpr->rcx;
+        return &vcpu_state->rcx;
     case 2:
-        return &guest_gpr->rdx;
+        return &vcpu_state->rdx;
     case 3:
-        return &guest_gpr->rbx;
+        return &vcpu_state->rbx;
     case 4:
-        return &guest_gpr->rsp;
+        return &vcpu_state->rsp;
     case 5:
-        return &guest_gpr->rbp;
+        return &vcpu_state->rbp;
     case 6:
-        return &guest_gpr->rsi;
+        return &vcpu_state->rsi;
     case 7:
-        return &guest_gpr->rdi;
+        return &vcpu_state->rdi;
     case 8:
-        return &guest_gpr->r8;
+        return &vcpu_state->r8;
     case 9:
-        return &guest_gpr->r9;
+        return &vcpu_state->r9;
     case 10:
-        return &guest_gpr->r10;
+        return &vcpu_state->r10;
     case 11:
-        return &guest_gpr->r11;
+        return &vcpu_state->r11;
     case 12:
-        return &guest_gpr->r12;
+        return &vcpu_state->r12;
     case 13:
-        return &guest_gpr->r13;
+        return &vcpu_state->r13;
     case 14:
-        return &guest_gpr->r14;
+        return &vcpu_state->r14;
     case 15:
-        return &guest_gpr->r15;
+        return &vcpu_state->r15;
     default:
         return NULL;
     }
@@ -110,7 +110,7 @@ mx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
     return MX_OK;
 }
 
-mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr_t* guest_gpr,
+mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_state_t* vcpu_state,
                         instruction_t* inst) {
     if (inst_len == 0)
         return MX_ERR_BAD_STATE;
@@ -159,7 +159,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr
         inst->type = INST_MOV_WRITE;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
-        inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
         return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
     // Move r/m to r.
@@ -169,7 +169,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr
         inst->type = INST_MOV_READ;
         inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
-        inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
         return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
     // Move imm to r/m.
@@ -196,7 +196,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr
         inst->type = INST_MOV_READ;
         inst->mem = 1;
         inst->imm = 0;
-        inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
         return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
     // Move (16-bit) with zero-extend r/m to r.
@@ -208,7 +208,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr
         inst->type = INST_MOV_READ;
         inst->mem = 2;
         inst->imm = 0;
-        inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
+        inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r));
         inst->flags = NULL;
         return inst->reg == NULL ? MX_ERR_NOT_SUPPORTED : MX_OK;
     // Logical compare (8-bit) imm with r/m.
@@ -223,7 +223,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr
         inst->mem = 1;
         inst->imm = 0;
         inst->reg = NULL;
-        inst->flags = &guest_gpr->flags;
+        inst->flags = &vcpu_state->flags;
         memcpy(&inst->imm, inst_buf + disp_size + 2, 1);
         return MX_OK;
     default:

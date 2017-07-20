@@ -24,8 +24,6 @@ struct vring_used;
 typedef struct local_apic_state {
     // Address of the local APIC.
     void* apic_addr;
-    // VMO representing the local APIC.
-    mx_handle_t apic_mem;
 } local_apic_state_t;
 
 /* Stores the IO APIC state across VM exits. */
@@ -53,6 +51,13 @@ typedef struct io_port_state {
     // State of the UART line control register.
     uint8_t uart_line_control;
 } io_port_state_t;
+
+typedef union io_packet {
+    uint8_t u8;
+    uint16_t u16;
+    uint32_t u32;
+    uint8_t data[4];
+} io_packet_t;
 
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
@@ -96,9 +101,7 @@ typedef struct guest_state {
 } guest_state_t;
 
 typedef struct vcpu_context {
-    mx_handle_t guest;
-    mx_handle_t vcpu_fifo;
-
+    mx_handle_t vcpu;
     local_apic_state_t local_apic_state;
     guest_state_t* guest_state;
 } vcpu_context_t;

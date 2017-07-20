@@ -176,7 +176,7 @@ mx_status_t setup_magenta(const uintptr_t addr, const size_t size, const uintptr
     if (bootdata_path) {
         int boot_fd = open(bootdata_path, O_RDONLY);
         if (boot_fd < 0) {
-            fprintf(stderr, "Failed to open BOOTFS image image \"%s\"\n", bootdata_path);
+            fprintf(stderr, "Failed to open BOOTFS image \"%s\"\n", bootdata_path);
             return MX_ERR_IO;
         }
 

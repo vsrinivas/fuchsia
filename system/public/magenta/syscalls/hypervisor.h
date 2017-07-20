@@ -12,23 +12,77 @@
 __BEGIN_CDECLS
 
 // Opcodes for mx_hypervisor_op().
+#define MX_HYPERVISOR_OP_GUEST_CREATE       1u
+#define MX_HYPERVISOR_OP_GUEST_SET_TRAP     2u
+#define MX_HYPERVISOR_OP_VCPU_CREATE        3u
+#define MX_HYPERVISOR_OP_VCPU_RESUME        4u
+#define MX_HYPERVISOR_OP_VCPU_INTERRUPT     5u
+#define MX_HYPERVISOR_OP_VCPU_READ_STATE    6u
+#define MX_HYPERVISOR_OP_VCPU_WRITE_STATE   7u
 
-#define MX_HYPERVISOR_OP_GUEST_CREATE           1u
-#define MX_HYPERVISOR_OP_GUEST_ENTER            2u
-#define MX_HYPERVISOR_OP_GUEST_MEM_TRAP         3u
-#define MX_HYPERVISOR_OP_GUEST_INTERRUPT        4u
+#define MX_GUEST_MAX_PKT_SIZE               32u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_GPR          5u
-#define MX_HYPERVISOR_OP_GUEST_GET_GPR          6u
+// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+#define X86_MAX_INST_LEN                    15u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP     7u
+typedef enum mx_trap_address_space {
+    MX_TRAP_MEMORY = 1,
+    MX_TRAP_IO     = 2,
+} mx_trap_address_space_t;
 
+// Packets for processing guest state.
+typedef struct mx_guest_io {
+    uint16_t port;
+    uint8_t access_size;
+    bool input;
+    union {
+        uint8_t u8;
+        uint16_t u16;
+        uint32_t u32;
+        uint8_t data[4];
+    };
+} mx_guest_io_t;
+
+typedef struct mx_guest_memory {
+    mx_vaddr_t addr;
+#if __aarch64__
+    uint32_t inst;
+#elif __x86_64__
+    uint8_t inst_len;
+    uint8_t inst_buf[X86_MAX_INST_LEN];
+#endif
+} mx_guest_memory_t;
+
+typedef enum mx_guest_packet_type {
+    MX_GUEST_PKT_TYPE_MEMORY    = 1,
+    MX_GUEST_PKT_TYPE_IO        = 2,
+} mx_guest_packet_type_t;
+
+typedef struct mx_guest_packet {
+    uint8_t type;
+    union {
+        // MX_GUEST_PKT_TYPE_MEMORY
+        mx_guest_memory_t memory;
+        // MX_GUEST_PKT_TYPE_IO
+        mx_guest_io_t io;
+    };
+} mx_guest_packet_t;
+
+static_assert(sizeof(mx_guest_packet_t) <= MX_GUEST_MAX_PKT_SIZE,
+              "size of mx_guest_packet_t must not exceed "
+              "MX_GUEST_MAX_PKT_SIZE");
+
+// Structure to create a VCPU for a guest.
+typedef struct mx_vcpu_create_args {
+    mx_vaddr_t ip;
 #if __x86_64__
-#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3    8u
-#define MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM     9u
+    mx_vaddr_t cr3;
+    mx_handle_t apic_vmo;
 #endif // __x86_64__
+} mx_vcpu_create_args_t;
 
-typedef struct mx_guest_gpr {
+// Structure to read and write VCPU state.
+typedef struct mx_vcpu_state {
 #if __aarch64__
     uint64_t r[31];
 #elif __x86_64__
@@ -50,78 +104,7 @@ typedef struct mx_guest_gpr {
     uint64_t r15;
     // Only the user-controllable lower 16-bits of the flags register.
     uint16_t flags;
-#else
-#error Unsupported architecture
 #endif
-} mx_guest_gpr_t;
-
-// Packets for communication over the control FIFO.
-
-#define MX_GUEST_PKT_TYPE_PORT_IN               1u
-#define MX_GUEST_PKT_TYPE_PORT_OUT              2u
-#define MX_GUEST_PKT_TYPE_MEM_TRAP              3u
-
-typedef struct mx_guest_port_in {
-    uint16_t port;
-    uint8_t access_size;
-} mx_guest_port_in_t;
-
-typedef struct mx_guest_port_in_ret {
-    union {
-        uint8_t u8;
-        uint16_t u16;
-        uint32_t u32;
-        uint8_t data[4];
-    };
-} mx_guest_port_in_ret_t;
-
-typedef struct mx_guest_port_out {
-    uint16_t port;
-    uint8_t access_size;
-    union {
-        uint8_t u8;
-        uint16_t u16;
-        uint32_t u32;
-        uint8_t data[4];
-    };
-} mx_guest_port_out_t;
-
-#define X86_MAX_INST_LEN                        15u
-
-typedef struct mx_guest_mem_trap {
-#if __aarch64__
-    uint32_t instruction;
-#elif __x86_64__
-    uint8_t instruction_length;
-    // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-    uint8_t instruction_buffer[X86_MAX_INST_LEN];
-#else
-#error Unsupported architecture
-#endif
-    mx_vaddr_t guest_paddr;
-} mx_guest_mem_trap_t;
-
-typedef struct mx_guest_mem_trap_ret {
-    bool fault;
-} mx_guest_mem_trap_ret_t;
-
-typedef struct mx_guest_packet {
-    uint8_t type;
-    union {
-        // MX_GUEST_PKT_TYPE_PORT_IN
-        mx_guest_port_in_t port_in;
-        mx_guest_port_in_ret_t port_in_ret;
-        // MX_GUEST_PKT_TYPE_PORT_OUT
-        mx_guest_port_out_t port_out;
-        // MX_GUEST_PKT_TYPE_MEM_TRAP
-        mx_guest_mem_trap_t mem_trap;
-        mx_guest_mem_trap_ret_t mem_trap_ret;
-    };
-} mx_guest_packet_t;
-
-#define MX_GUEST_MAX_PKT_SIZE                   32u
-static_assert(sizeof(mx_guest_packet_t) <= MX_GUEST_MAX_PKT_SIZE,
-              "size of mx_guest_packet_t must not exceed "
-              "MX_GUEST_MAX_PKT_SIZE");
+} mx_vcpu_state_t;
 
 __END_CDECLS

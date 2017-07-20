@@ -13,129 +13,140 @@
 #include <magenta/types.h>
 #include <unittest/unittest.h>
 
+static const uint8_t kExitTestPort = 0xff;
+static const uint16_t kUartPort = 0x03f8;
+static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 static const uint64_t kVmoSize = 2 << 20;
 
-extern const char guest_start[];
-extern const char guest_end[];
-
-extern const char guest_set_gpr_start[];
-extern const char guest_set_gpr_end[];
-
-extern const char guest_mem_trap_start[];
-extern const char guest_mem_trap_end[];
+extern const char vcpu_resume_start[];
+extern const char vcpu_resume_end[];
+extern const char vcpu_read_write_state_start[];
+extern const char vcpu_read_write_state_end[];
+extern const char guest_set_trap_start[];
+extern const char guest_set_trap_end[];
 
 typedef struct test {
     bool supported;
 
-    mx_handle_t hypervisor;
-    mx_handle_t guest_phys_mem;
-    mx_handle_t guest_ctl_fifo;
     mx_handle_t guest;
+    mx_handle_t guest_physmem;
 
+    mx_handle_t vcpu;
 #if __x86_64__
-    mx_handle_t guest_apic_mem;
+    mx_handle_t vcpu_apicmem;
 #endif // __x86_64__
 } test_t;
 
 
 static bool setup(test_t *test, const char *start, const char *end) {
-    mx_status_t status = mx_hypervisor_create(MX_HANDLE_INVALID, 0,
-                                              &test->hypervisor);
+    ASSERT_EQ(mx_vmo_create(kVmoSize, 0, &test->guest_physmem), MX_OK, "");
+
+    uintptr_t addr;
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, test->guest_physmem, 0, kVmoSize, kMapFlags,
+                          &addr),
+              MX_OK, "");
+
+    struct {
+        uint32_t options;
+        mx_handle_t physmem_vmo;
+    } guest_create_args = { 0, test->guest_physmem };
+    mx_status_t status = mx_hypervisor_op(MX_HANDLE_INVALID, MX_HYPERVISOR_OP_GUEST_CREATE,
+                                          &guest_create_args, sizeof(guest_create_args),
+                                          &test->guest, sizeof(test->guest));
     test->supported = status != MX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         return true;
     }
     ASSERT_EQ(status, MX_OK, "");
 
-    uintptr_t addr;
-    ASSERT_EQ(guest_create_phys_mem(&addr, kVmoSize, &test->guest_phys_mem),
-              MX_OK, "");
-
-    ASSERT_EQ(guest_create(test->hypervisor, test->guest_phys_mem,
-                           &test->guest_ctl_fifo, &test->guest), MX_OK, "");
-
     // Setup the guest.
-    uintptr_t guest_ip = 0;
-    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_ip),
-              MX_OK, "");
+    uintptr_t guest_ip;
+    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_ip), MX_OK, "");
 
 #if __x86_64__
     memcpy((void*)(addr + guest_ip), start, end - start);
-    uintptr_t guest_cr3 = 0;
-    ASSERT_EQ(mx_hypervisor_op(test->guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
-                               &guest_cr3, sizeof(guest_cr3), NULL, 0),
-              MX_OK, "");
-
-    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &test->guest_apic_mem), MX_OK, "");
-    ASSERT_EQ(mx_hypervisor_op(test->guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
-                               &test->guest_apic_mem,
-                               sizeof(test->guest_apic_mem), NULL, 0),
-              MX_OK, "");
+    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), MX_OK, "");
 #endif // __x86_64__
 
-    ASSERT_EQ(mx_hypervisor_op(test->guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
-                               &guest_ip, sizeof(guest_ip), NULL, 0),
-              MX_OK, "");
+    struct {
+        uint32_t options;
+        mx_vcpu_create_args_t args;
+    } vcpu_create_args = {
+        0,
+        {
+            guest_ip,
+#if __x86_64__
+            0 /* cr3 */, test->vcpu_apicmem,
+#endif // __x86_64__
+        },
+    };
+    status = mx_hypervisor_op(test->guest, MX_HYPERVISOR_OP_VCPU_CREATE,
+                              &vcpu_create_args, sizeof(vcpu_create_args),
+                              &test->vcpu, sizeof(test->vcpu));
 
     return true;
 }
 
 static bool teardown(test_t *test) {
     ASSERT_EQ(mx_handle_close(test->guest), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(test->guest_ctl_fifo), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(test->guest_phys_mem), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(test->hypervisor), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(test->guest_physmem), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(test->vcpu), MX_OK, "");
 
 #if __x86_64__
-    ASSERT_EQ(mx_handle_close(test->guest_apic_mem), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(test->vcpu_apicmem), MX_OK, "");
 #endif // __x86_64__
 
     return true;
 }
 
-static bool guest_enter(void) {
+static bool vcpu_resume(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup(&test, guest_start, guest_end), "");
+    ASSERT_TRUE(setup(&test, vcpu_resume_start, vcpu_resume_end), "");
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
 
-    // Enter the guest.
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_ENTER,
-                               NULL, 0, NULL, 0),
-              MX_ERR_STOP, "");
-
-    mx_guest_packet_t packet[2];
-    uint32_t num_packets;
-    ASSERT_EQ(mx_fifo_read(test.guest_ctl_fifo, packet, sizeof(packet), &num_packets),
+    mx_guest_packet_t packet;
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
+                               NULL, 0, &packet, sizeof(packet)),
               MX_OK, "");
-    EXPECT_EQ(num_packets, 2u, "");
-    EXPECT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
-    EXPECT_EQ(packet[0].port_out.access_size, 1u, "");
-    EXPECT_EQ(packet[0].port_out.data[0], 'm', "");
-    EXPECT_EQ(packet[1].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
-    EXPECT_EQ(packet[1].port_out.access_size, 1u, "");
-    EXPECT_EQ(packet[1].port_out.data[0], 'x', "");
+    EXPECT_EQ(packet.type, MX_GUEST_PKT_TYPE_IO, "");
+    EXPECT_EQ(packet.io.port, kUartPort, "");
+    EXPECT_EQ(packet.io.access_size, 1u, "");
+    EXPECT_EQ(packet.io.data[0], 'm', "");
+
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
+                               NULL, 0, &packet, sizeof(packet)),
+              MX_OK, "");
+    EXPECT_EQ(packet.io.port, kUartPort, "");
+    EXPECT_EQ(packet.type, MX_GUEST_PKT_TYPE_IO, "");
+    EXPECT_EQ(packet.io.access_size, 1u, "");
+    EXPECT_EQ(packet.io.data[0], 'x', "");
+
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
+                               NULL, 0, &packet, sizeof(packet)),
+              MX_OK, "");
+    EXPECT_EQ(packet.io.port, kExitTestPort, "");
 
     ASSERT_TRUE(teardown(&test), "");
 
     END_TEST;
 }
 
-static bool guest_get_set_gpr(void) {
+static bool vcpu_read_write_state(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup(&test, guest_set_gpr_start, guest_set_gpr_end), "");
+    ASSERT_TRUE(setup(&test, vcpu_read_write_state_start, vcpu_read_write_state_end), "");
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
 
-    mx_guest_gpr_t guest_gpr = {
+    mx_vcpu_state_t vcpu_state = {
 #if __x86_64__
         .rax = 1u,
         .rcx = 2u,
@@ -157,37 +168,38 @@ static bool guest_get_set_gpr(void) {
 #endif // __x86_64__
     };
 
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
-                               &guest_gpr, sizeof(guest_gpr), NULL, 0),
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
+                               &vcpu_state, sizeof(vcpu_state), NULL, 0),
               MX_OK, "");
 
-    // Enter the guest.
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_ENTER,
-                               NULL, 0, NULL, 0),
-              MX_ERR_STOP, "");
+    mx_guest_packet_t packet;
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
+                               NULL, 0, &packet, sizeof(packet)),
+              MX_OK, "");
+    EXPECT_EQ(packet.io.port, kExitTestPort, "");
 
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_GET_GPR,
-                               NULL, 0, &guest_gpr, sizeof(guest_gpr)),
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
+                               NULL, 0, &vcpu_state, sizeof(vcpu_state)),
               MX_OK, "");
 
 #if __x86_64__
-    EXPECT_EQ(guest_gpr.rax, 2u, "");
-    EXPECT_EQ(guest_gpr.rcx, 4u, "");
-    EXPECT_EQ(guest_gpr.rdx, 6u, "");
-    EXPECT_EQ(guest_gpr.rbx, 8u, "");
-    EXPECT_EQ(guest_gpr.rsp, 10u, "");
-    EXPECT_EQ(guest_gpr.rbp, 12u, "");
-    EXPECT_EQ(guest_gpr.rsi, 14u, "");
-    EXPECT_EQ(guest_gpr.rdi, 16u, "");
-    EXPECT_EQ(guest_gpr.r8, 18u, "");
-    EXPECT_EQ(guest_gpr.r9, 20u, "");
-    EXPECT_EQ(guest_gpr.r10, 22u, "");
-    EXPECT_EQ(guest_gpr.r11, 24u, "");
-    EXPECT_EQ(guest_gpr.r12, 26u, "");
-    EXPECT_EQ(guest_gpr.r13, 28u, "");
-    EXPECT_EQ(guest_gpr.r14, 30u, "");
-    EXPECT_EQ(guest_gpr.r15, 32u, "");
-    EXPECT_EQ(guest_gpr.flags, 1u, "");
+    EXPECT_EQ(vcpu_state.rax, 2u, "");
+    EXPECT_EQ(vcpu_state.rcx, 4u, "");
+    EXPECT_EQ(vcpu_state.rdx, 6u, "");
+    EXPECT_EQ(vcpu_state.rbx, 8u, "");
+    EXPECT_EQ(vcpu_state.rsp, 10u, "");
+    EXPECT_EQ(vcpu_state.rbp, 12u, "");
+    EXPECT_EQ(vcpu_state.rsi, 14u, "");
+    EXPECT_EQ(vcpu_state.rdi, 16u, "");
+    EXPECT_EQ(vcpu_state.r8, 18u, "");
+    EXPECT_EQ(vcpu_state.r9, 20u, "");
+    EXPECT_EQ(vcpu_state.r10, 22u, "");
+    EXPECT_EQ(vcpu_state.r11, 24u, "");
+    EXPECT_EQ(vcpu_state.r12, 26u, "");
+    EXPECT_EQ(vcpu_state.r13, 28u, "");
+    EXPECT_EQ(vcpu_state.r14, 30u, "");
+    EXPECT_EQ(vcpu_state.r15, 32u, "");
+    EXPECT_EQ(vcpu_state.flags, 1u, "");
 #endif // __x86_64__
 
     ASSERT_TRUE(teardown(&test), "");
@@ -195,107 +207,44 @@ static bool guest_get_set_gpr(void) {
     END_TEST;
 }
 
-// Returns whether the mem trap object contains the expected values.
-static bool verify_mem_trap_packet(test_t *test,
-                                   const mx_guest_mem_trap_t* mem_trap) {
-#if __x86_64__
-    mx_guest_gpr_t guest_gpr;
-
-    instruction_t inst;
-    mx_status_t status = inst_decode(mem_trap->instruction_buffer,
-                                     mem_trap->instruction_length,
-                                     &guest_gpr, &inst);
-    ASSERT_EQ(status, MX_OK, "");
-    ASSERT_EQ(mem_trap->guest_paddr, kVmoSize - PAGE_SIZE, "");
-    ASSERT_EQ(inst.type, INST_MOV_READ, "");
-    ASSERT_EQ(inst.mem, 8u, "");
-    ASSERT_EQ(inst.imm, 0u, "");
-    ASSERT_EQ(inst.reg, &guest_gpr.rax, "");
-    ASSERT_EQ(inst.flags, NULL, "");
-#endif
-
-    return true;
-}
-
-// Handles the expected mem trap guest packet.
-static int mem_trap_handler_thread(void *arg) {
-    test_t *test = (test_t *)arg;
-
-    mx_signals_t observed;
-    mx_status_t status = mx_object_wait_one(test->guest_ctl_fifo,
-                                            MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                            mx_deadline_after(MX_SEC(5)),
-                                            &observed);
-    if (status != MX_OK) {
-        UNITTEST_TRACEF("failed waiting on fifo : error %d\n", status);
-        exit(MX_ERR_INTERNAL);
-    } else if (observed & MX_FIFO_PEER_CLOSED) {
-        UNITTEST_TRACEF("fifo peer closed\n");
-        exit(MX_ERR_INTERNAL);
-    }
-    mx_guest_packet_t packet;
-    uint32_t num_entries;
-    status = mx_fifo_read(test->guest_ctl_fifo, &packet, sizeof(packet),
-                          &num_entries);
-    if (status != MX_OK) {
-        UNITTEST_TRACEF("failed reading from fifo : error %d\n", status);
-        exit(MX_ERR_INTERNAL);
-    } else if (num_entries != 1) {
-        UNITTEST_TRACEF("invalid number of entries read : %d\n", num_entries);
-        exit(MX_ERR_INTERNAL);
-    } else if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP) {
-        UNITTEST_TRACEF("invalid packet type : %d\n", packet.type);
-        exit(MX_ERR_INTERNAL);
-    }
-
-    bool is_valid_packet = verify_mem_trap_packet(test, &packet.mem_trap);
-
-    // Resume the VM.
-    mx_guest_packet_t resp_packet;
-    resp_packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
-    resp_packet.mem_trap_ret.fault = false;
-    uint32_t num_written;
-    status = mx_fifo_write(test->guest_ctl_fifo, &resp_packet,
-                           sizeof(resp_packet), &num_written);
-    // Could not resume VM.
-    if (status != MX_OK) {
-        UNITTEST_TRACEF("failed writing to fifo : error %d\n", status);
-        exit(MX_ERR_INTERNAL);
-    } else if (num_written != 1) {
-        UNITTEST_TRACEF("invalid number of entries written : %d\n", num_written);
-        exit(MX_ERR_INTERNAL);
-    }
-    return is_valid_packet ? MX_OK : MX_ERR_INTERNAL;
-}
-
-
-static bool guest_mem_trap(void) {
+static bool guest_set_trap(void) {
     BEGIN_TEST;
 
     test_t test;
-    ASSERT_TRUE(setup(&test, guest_mem_trap_start, guest_mem_trap_end), "");
+    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end), "");
     if (!test.supported) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
+
     // Unmap the last page from the EPT.
-    uint64_t mem_trap_args[2] = { kVmoSize - PAGE_SIZE, PAGE_SIZE };
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_MEM_TRAP,
-                               mem_trap_args, sizeof(mem_trap_args), NULL, 0),
+    struct {
+        mx_trap_address_space_t aspace;
+        mx_vaddr_t addr;
+        size_t len;
+        mx_handle_t fifo;
+    } trap_args = { MX_TRAP_MEMORY, kVmoSize - PAGE_SIZE, PAGE_SIZE, MX_HANDLE_INVALID };
+    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_SET_TRAP,
+                               &trap_args, sizeof(trap_args), NULL, 0),
               MX_OK, "");
 
-    thrd_t handler;
-    ASSERT_EQ(thrd_create(&handler, mem_trap_handler_thread, &test),
-              thrd_success, "");
+    mx_guest_packet_t packet;
+    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
+                               NULL, 0, &packet, sizeof(packet)),
+              MX_OK, "");
 
-    // Enter the guest.
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_ENTER,
-                               NULL, 0, NULL, 0),
-              MX_ERR_STOP, "");
-
-    int handler_ret;
-    ASSERT_EQ(thrd_join(handler, &handler_ret), thrd_success, "");
-    ASSERT_EQ(handler_ret, MX_OK, "");
+#if __x86_64__
+    mx_vcpu_state_t vcpu_state;
+    instruction_t inst;
+    ASSERT_EQ(inst_decode(packet.memory.inst_buf, packet.memory.inst_len, &vcpu_state, &inst),
+              MX_OK, "");
+    ASSERT_EQ(packet.memory.addr, kVmoSize - PAGE_SIZE, "");
+    ASSERT_EQ(inst.type, INST_MOV_READ, "");
+    ASSERT_EQ(inst.mem, 8u, "");
+    ASSERT_EQ(inst.imm, 0u, "");
+    ASSERT_EQ(inst.reg, &vcpu_state.rax, "");
+    ASSERT_EQ(inst.flags, NULL, "");
+#endif
 
     ASSERT_TRUE(teardown(&test), "");
 
@@ -303,9 +252,9 @@ static bool guest_mem_trap(void) {
 }
 
 BEGIN_TEST_CASE(guest)
-RUN_TEST(guest_enter)
-RUN_TEST(guest_get_set_gpr)
-RUN_TEST(guest_mem_trap)
+RUN_TEST(vcpu_resume)
+RUN_TEST(vcpu_read_write_state)
+RUN_TEST(guest_set_trap)
 END_TEST_CASE(guest)
 
 #ifndef BUILD_COMBINED_TESTS

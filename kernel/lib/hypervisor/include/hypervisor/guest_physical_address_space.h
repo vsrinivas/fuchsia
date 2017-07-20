@@ -20,7 +20,6 @@ public:
     size_t size() const { return paspace_->size(); }
     mxtl::RefPtr<VmAspace> aspace() const { return paspace_; }
 
-    status_t Init(mxtl::RefPtr<VmObject> root_vmo);
 #if ARCH_X86_64
     paddr_t Pml4Address() { return paspace_->arch_aspace().pt_phys(); }
     status_t MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr);
@@ -34,3 +33,8 @@ private:
 
     explicit GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> guest_phys_mem);
 };
+
+static inline status_t guest_lookup_page(void* context, size_t offset, size_t index, paddr_t pa) {
+    *static_cast<paddr_t*>(context) = pa;
+    return MX_OK;
+}

@@ -8,12 +8,13 @@
 
 #include <stdint.h>
 
-class AutoVmcsLoad;
+class AutoVmcs;
 class FifoDispatcher;
 class GuestPhysicalAddressSpace;
 struct GuestState;
 struct IoApicState;
 struct LocalApicState;
+class PacketMux;
 struct VmxState;
 
 /* VM exit reasons. */
@@ -41,7 +42,7 @@ struct ExitInfo {
     uint64_t guest_physical_address;
     uint64_t guest_rip;
 
-    ExitInfo();
+    ExitInfo(const AutoVmcs& vmcs);
 };
 
 /* Stores ept violation info from the VMCS exit qualification field. */
@@ -83,15 +84,8 @@ struct ApicAccessInfo {
     ApicAccessInfo(uint64_t qualification);
 };
 
-/* VM entry interruption type. */
-enum class InterruptionType : uint32_t {
-    EXTERNAL_INTERRUPT  = 0u,
-    HARDWARE_EXCEPTION  = 3u,
-};
-
-bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint8_t interrupt,
+bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vector,
                                  bool reschedule);
-void interrupt_window_exiting(bool enable);
-status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
-                        LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                        FifoDispatcher* ctl_fifo);
+status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state, LocalApicState* local_apic_state,
+                        GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
+                        mx_guest_packet_t* packet);

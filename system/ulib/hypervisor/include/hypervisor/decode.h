@@ -19,7 +19,7 @@
 
 __BEGIN_CDECLS
 
-typedef struct mx_guest_gpr mx_guest_gpr_t;
+typedef struct mx_vcpu_state mx_vcpu_state_t;
 
 /* Stores info from a decoded instruction. */
 typedef struct instruction {
@@ -30,7 +30,7 @@ typedef struct instruction {
     uint16_t* flags;
 } instruction_t;
 
-mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_guest_gpr_t* guest_gpr,
+mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_state_t* vcpu_state,
                         instruction_t* inst);
 
 #define DEFINE_INST_VAL(size) \

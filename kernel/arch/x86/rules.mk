@@ -64,7 +64,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/hwp.cpp \
-	$(LOCAL_DIR)/hypervisor.cpp \
 	$(LOCAL_DIR)/idt.cpp \
 	$(LOCAL_DIR)/ioapic.cpp \
 	$(LOCAL_DIR)/ioport.cpp \
@@ -78,7 +77,10 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/thread.cpp \
 	$(LOCAL_DIR)/tsc.cpp \
 	$(LOCAL_DIR)/user_copy.cpp \
-	$(LOCAL_DIR)/vmexit.cpp \
+	$(LOCAL_DIR)/hypervisor/guest.cpp \
+	$(LOCAL_DIR)/hypervisor/vcpu.cpp \
+	$(LOCAL_DIR)/hypervisor/vmexit.cpp \
+	$(LOCAL_DIR)/hypervisor/vmx_cpu_state.cpp \
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \

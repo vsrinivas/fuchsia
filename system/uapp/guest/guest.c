@@ -19,19 +19,21 @@
 #include "magenta.h"
 #include "linux.h"
 
-static const size_t kVmoSize = 1u << 30;
+static const uint64_t kVmoSize = 1u << 30;
 static const uint16_t kPioEnable = 1u << 0;
 static const uintptr_t kPioBase = 0x8000;
-static const uint32_t kMapFlags __UNUSED = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-
-static int vcpu_thread(void* arg) {
-    // TODO(abdulla): Correctly terminate the VCPU prior to return.
-    return vcpu_loop((vcpu_context_t*)arg) != MX_OK ? thrd_error : thrd_success;
-}
+static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
 static mx_status_t usage(const char* cmd) {
     fprintf(stderr, "usage: %s [-b block.bin] kernel.bin [ramdisk.bin]\n", cmd);
     return MX_ERR_INVALID_ARGS;
+}
+
+static mx_status_t create_vmo(uint64_t size, uintptr_t* addr, mx_handle_t* vmo) {
+    mx_status_t status = mx_vmo_create(size, 0, vmo);
+    if (status != MX_OK)
+        return status;
+    return mx_vmar_map(mx_vmar_root_self(), 0, *vmo, 0, size, kMapFlags, addr);
 }
 
 int main(int argc, char** argv) {
@@ -52,18 +54,23 @@ int main(int argc, char** argv) {
     argc -= optind;
     argv += optind;
 
-    mx_handle_t hypervisor;
-    mx_status_t status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
+    uintptr_t addr;
+    mx_handle_t physmem_vmo;
+    mx_status_t status = create_vmo(kVmoSize, &addr, &physmem_vmo);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to create hypervisor\n");
+        fprintf(stderr, "Failed to create guest physical memory\n");
         return status;
     }
 
-    uintptr_t addr;
-    mx_handle_t phys_mem;
-    status = guest_create_phys_mem(&addr, kVmoSize, &phys_mem);
+    struct {
+        uint32_t options;
+        mx_handle_t physmem_vmo;
+    } guest_create_args = { 0, physmem_vmo };
+    mx_handle_t guest;
+    status = mx_hypervisor_op(MX_HANDLE_INVALID, MX_HYPERVISOR_OP_GUEST_CREATE,
+                              &guest_create_args, sizeof(guest_create_args), &guest, sizeof(guest));
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to create guest physical memory\n");
+        fprintf(stderr, "Failed to create guest\n");
         return status;
     }
 
@@ -98,16 +105,6 @@ int main(int argc, char** argv) {
         pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];
         pci_device_state->command = kPioEnable;
         pci_device_state->bar[0] = kPioBase + (i << 8);
-    }
-
-    vcpu_context_t context;
-    memset(&context, 0, sizeof(context));
-    context.guest_state = &guest_state;
-
-    status = guest_create(hypervisor, phys_mem, &context.vcpu_fifo, &context.guest);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to create guest\n");
-        return status;
     }
 
     uintptr_t pt_end_off;
@@ -161,68 +158,57 @@ int main(int argc, char** argv) {
     }
     close(fd);
 
-    mx_guest_gpr_t guest_gpr;
-    memset(&guest_gpr, 0, sizeof(guest_gpr));
 #if __x86_64__
-    guest_gpr.rsi = bootdata_off;
-#endif // __x86_64__
-    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
-                              &guest_gpr, sizeof(guest_gpr), NULL, 0);
+    uintptr_t apic_addr;
+    mx_handle_t apic_vmo;
+    status = create_vmo(PAGE_SIZE, &apic_addr, &apic_vmo);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to set guest ESI\n");
-        return status;
-    }
-
-    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
-                              &guest_ip, sizeof(guest_ip), NULL, 0);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to set guest RIP\n");
-        return status;
-    }
-
-#if __x86_64__
-    uintptr_t guest_cr3 = 0;
-    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
-                              &guest_cr3, sizeof(guest_cr3), NULL, 0);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to set guest CR3\n");
-        return status;
-    }
-
-    status = mx_vmo_create(PAGE_SIZE, 0, &context.local_apic_state.apic_mem);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to create guest local APIC memory\n");
-        return status;
-    }
-
-    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
-                              &context.local_apic_state.apic_mem, sizeof(mx_handle_t), NULL, 0);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to set guest local APIC memory\n");
-        return status;
-    }
-
-    status = mx_vmar_map(mx_vmar_root_self(), 0, context.local_apic_state.apic_mem, 0, PAGE_SIZE,
-                         kMapFlags, (uintptr_t*)&context.local_apic_state.apic_addr);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to map local APIC memory\n");
+        fprintf(stderr, "Failed to create VCPU local APIC memory\n");
         return status;
     }
 #endif // __x86_64__
 
-    thrd_t thread;
-    ret = thrd_create(&thread, vcpu_thread, &context);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create control thread\n");
-        return MX_ERR_INTERNAL;
-    }
-    ret = thrd_detach(thread);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach control thread\n");
-        return MX_ERR_INTERNAL;
+    struct {
+        uint32_t options;
+        mx_vcpu_create_args_t args;
+    } vcpu_create_args = {
+        0,
+        {
+            guest_ip,
+#if __x86_64__
+            0 /* cr3 */, apic_vmo,
+#endif // __x86_64__
+        },
+    };
+    mx_handle_t vcpu;
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_VCPU_CREATE,
+                              &vcpu_create_args, sizeof(vcpu_create_args), &vcpu, sizeof(vcpu));
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to create VCPU\n");
+        return status;
     }
 
-    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
+    vcpu_context_t vcpu_context;
+    memset(&vcpu_context, 0, sizeof(vcpu_context));
+    vcpu_context.vcpu = vcpu;
+#if __x86_64__
+    vcpu_context.local_apic_state.apic_addr = (void*)apic_addr;
+#endif // __x86_64__
+    vcpu_context.guest_state = &guest_state;
+
+    mx_vcpu_state_t vcpu_state;
+    memset(&vcpu_state, 0, sizeof(vcpu_state));
+#if __x86_64__
+    vcpu_state.rsi = bootdata_off;
+#endif // __x86_64__
+    status = mx_hypervisor_op(vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
+                              &vcpu_state, sizeof(vcpu_state), NULL, 0);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to write VCPU state\n");
+        return status;
+    }
+
+    status = vcpu_loop(&vcpu_context);
     if (status != MX_OK)
         fprintf(stderr, "Failed to enter guest %d\n", status);
     return status;

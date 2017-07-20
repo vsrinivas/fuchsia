@@ -188,6 +188,7 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
     END_TEST;
 }
 
+#if ARCH_X86_64
 static bool guest_physical_address_space_map_apic_page(void* context) {
     BEGIN_TEST;
 
@@ -216,6 +217,7 @@ static bool guest_physical_address_space_map_apic_page(void* context) {
     pmm_free_page(vm_page);
     END_TEST;
 }
+#endif // ARCH_X86_64
 
 // Use the function name as the test name
 #define HYPERVISOR_UNITTEST(fname) UNITTEST(#fname, fname)
@@ -225,7 +227,9 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_complex)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_not_present)
+#if ARCH_X86_64
 HYPERVISOR_UNITTEST(guest_physical_address_space_map_apic_page)
+#endif // ARCH_X86_64
 UNITTEST_END_TESTCASE(
     hypervisor_tests,
     "hypervisor_tests",

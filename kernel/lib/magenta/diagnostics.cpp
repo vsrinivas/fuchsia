@@ -78,8 +78,8 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_JOB: return "job";
         case MX_OBJ_TYPE_VMAR: return "vmar";
         case MX_OBJ_TYPE_FIFO: return "fifo";
-        case MX_OBJ_TYPE_HYPERVISOR: return "hypervisor";
         case MX_OBJ_TYPE_GUEST: return "guest";
+        case MX_OBJ_TYPE_VCPU: return "vcpu";
         case MX_OBJ_TYPE_TIMER: return "timer";
         default: return "???";
     }

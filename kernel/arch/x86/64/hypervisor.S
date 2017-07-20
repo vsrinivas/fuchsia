@@ -6,7 +6,7 @@
 
 #include <asm.h>
 
-#include <arch/x86/hypervisor_state.h>
+#include <arch/x86/vmx_state.h>
 #include <magenta/errors.h>
 
 .text

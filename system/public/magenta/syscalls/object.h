@@ -51,8 +51,8 @@ typedef enum {
     MX_OBJ_TYPE_JOB                 = 17,
     MX_OBJ_TYPE_VMAR                = 18,
     MX_OBJ_TYPE_FIFO                = 19,
-    MX_OBJ_TYPE_HYPERVISOR          = 20,
-    MX_OBJ_TYPE_GUEST               = 21,
+    MX_OBJ_TYPE_GUEST               = 20,
+    MX_OBJ_TYPE_VCPU                = 21,
     MX_OBJ_TYPE_TIMER               = 22,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
