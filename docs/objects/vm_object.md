@@ -34,7 +34,7 @@ This use case typically applies to device drivers.
 + [vmo_get_size](../syscalls/vmo_get_size.md) - obtain the size of a vmo
 + [vmo_set_size](../syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](../syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
-+ [vmo_set_cache_policy](../syscalls/vmo_set_cache_policy.md)
++ [vmo_set_cache_policy](../syscalls/vmo_set_cache_policy.md) - set the caching policy for pages held by a vmo
 
 <br>
 
