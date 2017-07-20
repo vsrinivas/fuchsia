@@ -63,6 +63,9 @@ class Store : modular::LinkWatcher {
 
   void MarkDirty() { dirty_ = true; }
 
+  static modular_example::Counter ParseCounterJson(
+      const std::string& json, const std::string& module_name);
+
   modular_example::Counter counter;
 
  private:
@@ -86,7 +89,7 @@ class Store : modular::LinkWatcher {
   fidl::InterfacePtr<modular::Link> link_;
 
   // True if there is data pending to send to the link, otherwise false.
-  bool dirty_ = false;
+  bool dirty_{};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Store);
 };

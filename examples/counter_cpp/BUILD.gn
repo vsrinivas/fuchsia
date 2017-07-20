@@ -90,3 +90,21 @@ fidl("calculator") {
     "calculator.fidl",
   ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "store_unittest.cc",
+  ]
+
+  deps = [
+    ":store",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//apps/modular/services/story:story_cpp_sources",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}

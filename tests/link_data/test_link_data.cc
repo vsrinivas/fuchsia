@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "application/lib/app/connect.h"
+#include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"
@@ -67,7 +68,6 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
   // be watched.
   void Watch(modular::LinkPtr* const link) {
     (*link)->Watch(binding_.NewBinding());
-    data_count_ = 0;
   }
 
   // Deregisters itself from the watched link.
@@ -79,13 +79,20 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const fidl::String& /*json*/) override {
-    if (++data_count_ % 5 == 0) {
-      continue_();
+  void Notify(const fidl::String& json) override {
+    modular_example::Counter counter =
+        modular_example::Store::ParseCounterJson(json.get(),
+                                                      "test_link_data");
+
+    if (counter.is_valid() && counter.counter > last_continue_count_) {
+      if (counter.counter % 5 == 0) {
+        last_continue_count_ = counter.counter;
+        continue_();
+      }
     }
   }
 
-  int data_count_{};
+  int last_continue_count_{};
   std::function<void()> continue_;
   fidl::Binding<modular::LinkWatcher> binding_;
 
