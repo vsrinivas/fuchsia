@@ -97,6 +97,13 @@ declare_args() {
 #       name (string, required)
 #         Name of the library
 #
+#       source (path, optional)
+#         Location of the binary in the build directory if it is not at
+#         $root_build_dir/$name
+#
+#       dest (path, optional)
+#         Location the binary will be placed within "lib/"
+#
 #       used_by_early_boot_drivers (bool, optional)
 #         Set to true if this library is used by a boot driver. This will place
 #         the library in a location accessible to drivers during early boot as
@@ -223,10 +230,18 @@ template("package") {
       }
       foreach(library, libraries) {
         # Library paths are relative to the root of the build dir.
-        library_path = "$shared_toolchain_out_dir/${library.name}"
+        if (defined(library.source)) {
+          library_path = rebase_path(library.source)
+        } else {
+          library_path = "$shared_toolchain_out_dir/${library.name}"
+        }
         source = rebase_path(library_path)
         sources += [ library_path ]
-        dest = "lib/" + library.name
+        if (defined(library.dest)) {
+          dest = "lib/" + library.dest
+        } else {
+          dest = "lib/" + library.name
+        }
         if (defined(library.used_by_early_boot_drivers) &&
             library.used_by_early_boot_drivers) {
           boot_manifest_contents += [ "$dest=$source" ]

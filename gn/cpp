@@ -1,16 +1,5 @@
 {
-    "early_boot": [
-        {
-            "binary": "sysroot/lib/libc++.so.2",
-            "bootfs_path": "lib/libc++.so.2"
-        },
-        {
-            "binary": "sysroot/lib/libc++abi.so.1",
-            "bootfs_path": "lib/libc++abi.so.1"
-        },
-        {
-            "binary": "sysroot/lib/libunwind.so.1",
-            "bootfs_path": "lib/libunwind.so.1"
-        }
-    ]
+    "packages": {
+        "cpp": "//build/toolchain/fuchsia:runtimes"
+    }
 }
