@@ -8,15 +8,12 @@
 
 namespace scene_manager {
 namespace {
-// Resources that are created to be |Import| delegates are not
-// directly owned by the |ResourceMap|. Instead, they are owned by the import
-// resources themselves. So we give them an id of 0, which is reserved.
-constexpr mozart::ResourceId kDelegateResourceId = 0u;
-
-ResourcePtr CreateDelegate(Session* session, mozart2::ImportSpec spec) {
+ResourcePtr CreateDelegate(Session* session,
+                           mozart::ResourceId id,
+                           mozart2::ImportSpec spec) {
   switch (spec) {
     case mozart2::ImportSpec::NODE:
-      return ftl::MakeRefCounted<EntityNode>(session, kDelegateResourceId);
+      return ftl::MakeRefCounted<EntityNode>(session, id);
   }
   return nullptr;
 }
@@ -32,7 +29,7 @@ Import::Import(Session* session,
     : Resource(session, id, Import::kTypeInfo),
       import_token_(std::move(import_token)),
       import_spec_(spec),
-      delegate_(CreateDelegate(session, spec)) {
+      delegate_(CreateDelegate(session, id, spec)) {
   FTL_DCHECK(delegate_);
   FTL_DCHECK(!delegate_->type_info().IsKindOf(Import::kTypeInfo));
 }

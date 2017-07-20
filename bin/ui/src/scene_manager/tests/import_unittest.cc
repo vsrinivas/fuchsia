@@ -236,8 +236,8 @@ TEST_F(ImportTest,
 
     ASSERT_TRUE(import_node_backing);
 
-    // Since the entity node is not owned by the resource map, its ID is 0.
-    ASSERT_EQ(0u, import_node_backing->id());
+    // The imported node has the same id as the import resource.
+    ASSERT_EQ(1u, import_node_backing->id());
   }
 }
 

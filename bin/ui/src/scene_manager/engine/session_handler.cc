@@ -28,6 +28,29 @@ SessionHandler::SessionHandler(
 
 SessionHandler::~SessionHandler() {}
 
+void SessionHandler::EnqueueEvent(mozart2::EventPtr event) {
+  FTL_DCHECK(event);
+  buffered_events_.push_back(std::move(event));
+}
+
+void SessionHandler::FlushEvents(uint64_t presentation_time) {
+  if (buffered_events_.empty())
+    return;
+
+  // TODO(MZ-215): We should remove |Connect| from the API so there's only
+  // one listener to worry about.  Unfortunately InterfacePtrSet does
+  // not support random access so we have to iterate over all of the
+  // elements even though we passed the events to the first listener.
+  // In current usage, there's only ever one listener anyhow so it's not worth
+  // writing code to copy the event array.
+  FTL_DCHECK(listeners_.size() <= 1u);
+  listeners_.ForAllPtrs([
+    events = std::move(buffered_events_), &presentation_time
+  ](auto listener) mutable {
+    listener->OnEvent(presentation_time, std::move(events));
+  });
+}
+
 void SessionHandler::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
   // TODO: Add them all at once instead of iterating.  The problem
   // is that ::fidl::Array doesn't support this.  Or, at least reserve

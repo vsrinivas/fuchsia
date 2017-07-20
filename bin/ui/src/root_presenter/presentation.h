@@ -41,9 +41,9 @@ namespace root_presenter {
 //           + link: Content view's actual content
 //   + child: cursor 1
 //   + child: cursor N
-class Presentation : public mozart::ViewTreeListener,
-                     public mozart::ViewListener,
-                     public mozart::ViewContainerListener {
+class Presentation : private mozart::ViewTreeListener,
+                     private mozart::ViewListener,
+                     private mozart::ViewContainerListener {
  public:
   Presentation(mozart::ViewManager* view_manager,
                mozart2::SceneManager* scene_manager);
@@ -97,6 +97,9 @@ class Presentation : public mozart::ViewTreeListener,
   mozart::client::Material cursor_material_;
 
   mozart2::DisplayInfoPtr display_info_;
+  float logical_width_ = 0.f;
+  float logical_height_ = 0.f;
+
   mozart::ViewPtr root_view_;
 
   ftl::Closure shutdown_callback_;

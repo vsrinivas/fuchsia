@@ -88,6 +88,12 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
   FTL_DCHECK(!display_info_);
   FTL_DCHECK(display_info);
   display_info_ = std::move(display_info);
+  logical_width_ =
+      display_info_->physical_width / display_info_->device_pixel_ratio;
+  logical_height_ =
+      display_info_->physical_height / display_info_->device_pixel_ratio;
+  scene_.SetScale(display_info_->device_pixel_ratio,
+                  display_info_->device_pixel_ratio, 1.f);
 
   // Register the view tree.
   mozart::ViewTreeListenerPtr tree_listener;
@@ -141,10 +147,10 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
   root_properties->display_metrics->device_pixel_ratio =
       display_info_->device_pixel_ratio;
   root_properties->view_layout = mozart::ViewLayout::New();
-  root_properties->view_layout->size = mozart::Size::New();
-  root_properties->view_layout->size->width = display_info_->width;
-  root_properties->view_layout->size->height = display_info_->height;
-  root_properties->view_layout->inset = mozart::Inset::New();
+  root_properties->view_layout->size = mozart::SizeF::New();
+  root_properties->view_layout->size->width = logical_width_;
+  root_properties->view_layout->size->height = logical_height_;
+  root_properties->view_layout->inset = mozart::InsetF::New();
   tree_container_->SetChildProperties(kRootViewKey, std::move(root_properties));
 
   // Add content view to root view.
@@ -203,8 +209,8 @@ void Presentation::OnReport(uint32_t device_id,
 
   mozart::DeviceState* state = device_states_by_id_[device_id].second.get();
   mozart::Size size;
-  size.width = display_info_->width;
-  size.height = display_info_->height;
+  size.width = logical_width_;
+  size.height = logical_height_;
   state->Update(std::move(input_report), size);
 }
 
@@ -294,8 +300,6 @@ void Presentation::PresentScene() {
       state.node->SetTranslation(state.position.x + kCursorWidth * .5f,
                                  state.position.y + kCursorHeight * .5f,
                                  kCursorElevation);
-      state.node->SetScale(display_info_->device_pixel_ratio,
-                           display_info_->device_pixel_ratio, 1.f);
     } else if (state.created) {
       state.node->Detach();
       state.created = false;

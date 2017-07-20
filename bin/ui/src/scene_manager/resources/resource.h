@@ -44,6 +44,10 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   const std::string label() const { return label_; }
   bool SetLabel(const std::string& label);
 
+  // The event mask.
+  uint32_t event_mask() const { return event_mask_; }
+  virtual bool SetEventMask(uint32_t event_mask);
+
   // Used by ResourceVisitor to visit a tree of Resources.
   virtual void Accept(class ResourceVisitor* visitor) = 0;
 
@@ -94,6 +98,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   const mozart::ResourceId id_;
   const ResourceTypeInfo& type_info_;
   std::string label_;
+  uint32_t event_mask_ = 0u;
   std::vector<Import*> imports_;
 };
 

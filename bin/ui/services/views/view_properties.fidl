@@ -17,10 +17,9 @@ struct ViewProperties {
 
 // Provides information about the physical characteristics of the display.
 struct DisplayMetrics {
-  // The ratio between the size of one display device pixel to the size
-  // of one logical pixel, assuming pixels are square.  This value changes
-  // in relation to display density and zoom level.
-  // Must be > 0.
+  // The ratio of the size of a logical pixel to a physical pixel assuming
+  // pixels are square.  This value changes in relation to display
+  // resolution and density.  Must be > 0.
   float device_pixel_ratio = 1.0;
 };
 
@@ -30,11 +29,11 @@ struct DisplayMetrics {
 // bring back |BoxConstraints| or introduce some other protocol just for
 // measurement.
 struct ViewLayout {
-  // The size of the view in device pixels.
+  // The size of the view in logical pixels.
   // Must be non-negative.
-  Size size;
+  SizeF size;
 
-  // The inset of the view in device pixels.
+  // The inset of the view in logical pixels.
   // Must be non-negative.
-  Inset inset;
+  InsetF inset;
 };

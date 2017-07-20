@@ -5,6 +5,7 @@
 #pragma once
 
 #include <set>
+#include <vector>
 
 #include "escher/escher.h"
 #include "escher/examples/common/demo_harness.h"
@@ -135,6 +136,15 @@ class Engine : private FrameSchedulerDelegate {
       ResourceLinker::ResolutionResult resolution_result);
 
   void InitializeFrameScheduler();
+
+  // Update and deliver metrics for all nodes which subscribe to metrics events.
+  void UpdateAndDeliverMetrics(uint64_t presentation_time);
+
+  // Update reported metrics for nodes which subscribe to metrics events.
+  // If anything changed, append the node to |updated_nodes|.
+  void UpdateMetrics(Node* node,
+                     const mozart2::Metrics& parent_metrics,
+                     std::vector<Node*>* updated_nodes);
 
   DisplayManager* const display_manager_;
   escher::Escher* const escher_;

@@ -38,6 +38,11 @@ bool Resource::SetLabel(const std::string& label) {
   return true;
 }
 
+bool Resource::SetEventMask(uint32_t event_mask) {
+  event_mask_ = event_mask;
+  return true;
+}
+
 void Resource::AddImport(Import* import) {
   // Make sure the types of the resource and the import are compatible.
   if (type_info_.IsKindOf(import->type_info())) {

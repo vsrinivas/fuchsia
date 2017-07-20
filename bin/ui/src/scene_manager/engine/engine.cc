@@ -4,13 +4,16 @@
 
 #include "apps/mozart/src/scene_manager/engine/engine.h"
 
-#include "lib/ftl/functional/make_copyable.h"
+#include <set>
 
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
+#include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "escher/renderer/paper_renderer.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace scene_manager {
 
@@ -160,6 +163,8 @@ void Engine::RenderFrame(uint64_t presentation_time,
   if (!ApplyScheduledSessionUpdates(presentation_time, presentation_interval))
     return;
 
+  UpdateAndDeliverMetrics(presentation_time);
+
   for (auto renderer : renderers_) {
     renderer->DrawFrame(paper_renderer_.get());
   }
@@ -203,6 +208,67 @@ void Engine::RemoveRenderer(Renderer* renderer) {
 
   size_t count = renderers_.erase(renderer);
   FTL_DCHECK(count == 1);
+}
+
+void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
+  // Gather all of the scene which might need to be updated.
+  std::set<Scene*> scenes;
+  for (auto renderer : renderers_) {
+    if (renderer->camera() && renderer->camera()->scene())
+      scenes.insert(renderer->camera()->scene().get());
+  }
+  if (scenes.empty())
+    return;
+
+  // TODO(MZ-216): Traversing the whole graph just to compute this is pretty
+  // inefficient.  We should optimize this.
+  mozart2::Metrics metrics;
+  metrics.scale_x = 1.f;
+  metrics.scale_y = 1.f;
+  metrics.scale_z = 1.f;
+  std::vector<Node*> updated_nodes;
+  for (auto scene : scenes) {
+    UpdateMetrics(scene, metrics, &updated_nodes);
+  }
+
+  // TODO(MZ-216): Deliver events to sessions in batches.
+  // We probably want delivery to happen somewhere else which can also
+  // handle delivery of other kinds of events.  We should probably also
+  // have some kind of backpointer from a session to its handler.
+  for (auto node : updated_nodes) {
+    if (node->session()) {
+      auto event = mozart2::Event::New();
+      event->set_metrics(mozart2::MetricsEvent::New());
+      event->get_metrics()->node_id = node->id();
+      event->get_metrics()->metrics = node->reported_metrics().Clone();
+
+      // We shouldn't be flushing every time here.
+      SessionHandler* handler = FindSession(node->session()->id());
+      FTL_DCHECK(handler);
+      handler->EnqueueEvent(std::move(event));
+      handler->FlushEvents(presentation_time);
+    }
+  }
+}
+
+void Engine::UpdateMetrics(Node* node,
+                           const mozart2::Metrics& parent_metrics,
+                           std::vector<Node*>* updated_nodes) {
+  mozart2::Metrics local_metrics;
+  local_metrics.scale_x = parent_metrics.scale_x * node->scale().x;
+  local_metrics.scale_y = parent_metrics.scale_y * node->scale().y;
+  local_metrics.scale_z = parent_metrics.scale_z * node->scale().z;
+
+  if ((node->event_mask() & mozart2::kMetricsEventMask) &&
+      !node->reported_metrics().Equals(local_metrics)) {
+    node->set_reported_metrics(local_metrics);
+    updated_nodes->push_back(node);
+  }
+
+  ForEachDirectDescendantFrontToBack(
+      *node, [this, &local_metrics, updated_nodes](Node* node) {
+        UpdateMetrics(node, local_metrics, updated_nodes);
+      });
 }
 
 }  // namespace scene_manager

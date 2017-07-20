@@ -22,8 +22,8 @@ void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   FTL_CHECK(display) << "There must be a default display.";
 
   auto info = mozart2::DisplayInfo::New();
-  info->width = display->width();
-  info->height = display->height();
+  info->physical_width = display->width();
+  info->physical_height = display->height();
   info->device_pixel_ratio = display->device_pixel_ratio();
   callback(std::move(info));
 }

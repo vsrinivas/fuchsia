@@ -43,6 +43,18 @@ Node::~Node() {
   });
 }
 
+bool Node::SetEventMask(uint32_t event_mask) {
+  if (!Resource::SetEventMask(event_mask))
+    return false;
+
+  // If the client unsubscribed from the event, ensure that we will deliver
+  // fresh metrics next time they subscribe.
+  if (!(event_mask & mozart2::kMetricsEventMask)) {
+    reported_metrics_ = mozart2::Metrics();
+  }
+  return true;
+}
+
 bool Node::AddChild(NodePtr child_node) {
   // TODO(MZ-130): Some node types (e.g. Scenes) cannot be reparented. We must
   // add verification to reject such operations.

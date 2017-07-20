@@ -371,6 +371,9 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
 }
 
 bool Session::ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op) {
+  if (auto r = resources_.FindResource<Resource>(op->id)) {
+    return r->SetEventMask(op->event_mask);
+  }
   return false;
 }
 

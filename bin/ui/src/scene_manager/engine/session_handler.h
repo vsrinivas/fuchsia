@@ -29,6 +29,12 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
 
   scene_manager::Session* session() const { return session_.get(); }
 
+  // Enqueues a session event for delivery.
+  void EnqueueEvent(mozart2::EventPtr event);
+
+  // Flushes enqueued session events to the session listener as a batch.
+  void FlushEvents(uint64_t presentation_time);
+
  protected:
   // mozart2::Session interface methods.
   void Enqueue(::fidl::Array<mozart2::OpPtr> ops) override;
@@ -66,6 +72,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   ::fidl::InterfacePtrSet<mozart2::SessionListener> listeners_;
 
   ::fidl::Array<mozart2::OpPtr> buffered_ops_;
+  ::fidl::Array<mozart2::EventPtr> buffered_events_;
 };
 
 }  // namespace scene_manager

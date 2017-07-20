@@ -49,6 +49,12 @@ class Node : public Resource {
     return hit_test_behavior_;
   }
 
+  // The node's metrics as reported to the session listener.
+  mozart2::Metrics reported_metrics() const { return reported_metrics_; }
+  void set_reported_metrics(mozart2::Metrics metrics) {
+    reported_metrics_ = metrics;
+  }
+
   // This is a static method so that it can be passed a NodePtr&, to facilitate
   // look-up in the node's parent.  No-op if node has no parent.  Always returns
   // true.
@@ -59,6 +65,8 @@ class Node : public Resource {
   const std::vector<NodePtr>& children() const { return children_; }
 
   const std::vector<NodePtr>& parts() const { return parts_; }
+
+  bool SetEventMask(uint32_t event_mask) override;
 
   void AddImport(Import* import) override;
   void RemoveImport(Import* import) override;
@@ -99,6 +107,7 @@ class Node : public Resource {
   bool clip_to_self_ = false;
   mozart2::HitTestBehavior hit_test_behavior_ =
       mozart2::HitTestBehavior::kDefault;
+  mozart2::Metrics reported_metrics_;
 };
 
 // Inline functions.

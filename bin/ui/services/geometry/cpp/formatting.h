@@ -15,6 +15,9 @@ std::ostream& operator<<(std::ostream& os, const Rect& value);
 std::ostream& operator<<(std::ostream& os, const RectF& value);
 std::ostream& operator<<(std::ostream& os, const RRectF& value);
 std::ostream& operator<<(std::ostream& os, const Size& value);
+std::ostream& operator<<(std::ostream& os, const SizeF& value);
+std::ostream& operator<<(std::ostream& os, const Inset& value);
+std::ostream& operator<<(std::ostream& os, const InsetF& value);
 std::ostream& operator<<(std::ostream& os, const Transform& value);
 
 }  // namespace mozart

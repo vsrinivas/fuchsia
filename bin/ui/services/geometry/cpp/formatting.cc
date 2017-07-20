@@ -43,6 +43,20 @@ std::ostream& operator<<(std::ostream& os, const Size& value) {
   return os << "{width=" << value.width << ", height=" << value.height << "}";
 }
 
+std::ostream& operator<<(std::ostream& os, const SizeF& value) {
+  return os << "{width=" << value.width << ", height=" << value.height << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const Inset& value) {
+  return os << "{left=" << value.left << ", top=" << value.top
+            << ", right=" << value.right << ", bottom=" << value.bottom << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const InsetF& value) {
+  return os << "{left=" << value.left << ", top=" << value.top
+            << ", right=" << value.right << ", bottom=" << value.bottom << "}";
+}
+
 std::ostream& operator<<(std::ostream& os, const Transform& value) {
   if (value.matrix) {
     os << "[";

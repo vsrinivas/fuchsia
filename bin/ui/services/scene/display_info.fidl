@@ -7,12 +7,11 @@ module mozart2;
 // Provides information about a display.
 struct DisplayInfo {
   // The size of the display, in physical pixels.
-  uint32 width;
-  uint32 height;
+  uint32 physical_width;
+  uint32 physical_height;
 
-  // The ratio between the size of one display device pixel to the size
-  // of one logical pixel, assuming pixels are square.  This value changes
-  // in relation to display density and zoom level.
-  // Must be > 0.
+  // The ratio of the size of a logical pixel to a physical pixel assuming
+  // pixels are square.  This value changes in relation to display
+  // resolution and density.  Must be > 0.
   float device_pixel_ratio = 1.0;
 };

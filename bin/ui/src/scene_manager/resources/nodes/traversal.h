@@ -20,7 +20,7 @@ namespace scene_manager {
 // that the objects at the same elevation are evaluated from most to least
 // specifically hit.
 //
-// The functor's signature must be |void(const Node* node)|.
+// The functor's signature must be |void(Node* node)|.
 //
 
 template <typename Callable>

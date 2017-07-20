@@ -30,7 +30,7 @@ std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewLayout& value) {
-  return os << "{size=" << value.size << "}";
+  return os << "{size=" << value.size << ", inset=" << value.inset << "}";
 }
 
 }  // namespace mozart

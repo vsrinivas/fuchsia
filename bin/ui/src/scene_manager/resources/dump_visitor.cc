@@ -214,6 +214,9 @@ void DumpVisitor::Visit(Import* r) {
 }
 
 void DumpVisitor::VisitResource(Resource* r) {
+  if (r->event_mask()) {
+    WriteProperty("event_mask") << r->event_mask();
+  }
   if (!r->imports().empty()) {
     BeginSection("imports");
     for (auto& import : r->imports()) {

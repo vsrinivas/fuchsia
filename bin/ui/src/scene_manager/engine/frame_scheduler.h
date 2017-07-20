@@ -12,6 +12,10 @@ namespace ftl {
 class TaskRunner;
 }  // namespace ftl
 
+namespace mozart2 {
+class Metrics;
+}  // namespace mozart2
+
 namespace scene_manager {
 
 class Display;
