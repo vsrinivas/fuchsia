@@ -94,7 +94,10 @@ class _AskHandlerImpl extends AskHandler {
               id: 'open $name',
               appUrl: 'file://$path',
               headline: 'Launch $name',
-              subheadline: '(This is potentially unsafe)',
+              // TODO(design): Find a better way to add indicators to the
+              // suggestions about their provenance, lack of safety, etc. that
+              // would be useful for developers but not distracting in demos
+              // subheadline: '(This is potentially unsafe)',
               color: 0xFF000000 + (name.hashCode % 0xFFFFFF),
             ),
           );
