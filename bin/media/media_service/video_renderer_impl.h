@@ -47,7 +47,6 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
 
    private:
     // |BaseView|:
-    void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
     void OnSceneInvalidated(
         mozart2::PresentationInfoPtr presentation_info) override;
 

@@ -181,26 +181,23 @@ void MediaPlayerView::OnPropertiesChanged(
 }
 
 void MediaPlayerView::Layout() {
-  if (!has_size())
+  if (!has_logical_size())
     return;
 
-  const float margin = kMargin * device_pixel_ratio();
-  const float controls_height = kControlsHeight * device_pixel_ratio();
-  const float symbol_width = kSymbolWidth * device_pixel_ratio();
-  const float symbol_padding = kSymbolPadding * device_pixel_ratio();
-
   // Make the background fill the space.
-  mozart::client::Rectangle background_shape(session(), size().width,
-                                             size().height);
+  mozart::client::Rectangle background_shape(session(), logical_size().width,
+                                             logical_size().height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(size().width * .5f, size().height * .5f,
+  background_node_.SetTranslation(logical_size().width * .5f,
+                                  logical_size().height * .5f,
                                   kBackgroundElevation);
 
   // Compute maximum size of video content after reserving space
   // for decorations.
-  mozart::Size max_content_size;
-  max_content_size.width = size().width - margin * 2;
-  max_content_size.height = size().height - controls_height - margin * 3;
+  mozart::SizeF max_content_size;
+  max_content_size.width = logical_size().width - kMargin * 2;
+  max_content_size.height =
+      logical_size().height - kControlsHeight - kMargin * 3;
 
   // Shrink video to fit if needed.
   uint32_t video_width = video_size_.width * pixel_aspect_ratio_.width;
@@ -216,11 +213,11 @@ void MediaPlayerView::Layout() {
   }
 
   // Add back in the decorations and center within view.
-  mozart::Rect ui_rect;
+  mozart::RectF ui_rect;
   ui_rect.width = content_rect_.width;
-  ui_rect.height = content_rect_.height + controls_height + margin;
-  ui_rect.x = (size().width - ui_rect.width) / 2;
-  ui_rect.y = (size().height - ui_rect.height) / 2;
+  ui_rect.height = content_rect_.height + kControlsHeight + kMargin;
+  ui_rect.x = (logical_size().width - ui_rect.width) / 2;
+  ui_rect.y = (logical_size().height - ui_rect.height) / 2;
 
   // Position the video.
   content_rect_.x = ui_rect.x;
@@ -230,23 +227,23 @@ void MediaPlayerView::Layout() {
   controls_rect_.x = content_rect_.x;
   controls_rect_.y = content_rect_.y + content_rect_.height + kMargin;
   controls_rect_.width = content_rect_.width;
-  controls_rect_.height = controls_height;
+  controls_rect_.height = kControlsHeight;
 
   // Position the progress bar (for input).
-  progress_bar_rect_.x = controls_rect_.x + symbol_width + symbol_padding * 2;
+  progress_bar_rect_.x = controls_rect_.x + kSymbolWidth + kSymbolPadding * 2;
   progress_bar_rect_.y = controls_rect_.y;
   progress_bar_rect_.width =
-      controls_rect_.width - (symbol_width + symbol_padding * 2);
+      controls_rect_.width - (kSymbolWidth + kSymbolPadding * 2);
   progress_bar_rect_.height = controls_rect_.height;
 
   // Ask the view to fill the space.
   if (video_renderer_) {
     auto view_properties = mozart::ViewProperties::New();
     view_properties->view_layout = mozart::ViewLayout::New();
-    view_properties->view_layout->size = mozart::Size::New();
+    view_properties->view_layout->size = mozart::SizeF::New();
     view_properties->view_layout->size->width = content_rect_.width;
     view_properties->view_layout->size->height = content_rect_.height;
-    view_properties->view_layout->inset = mozart::Inset::New();
+    view_properties->view_layout->inset = mozart::InsetF::New();
 
     if (!video_view_properties_.Equals(view_properties)) {
       video_view_properties_ = view_properties.Clone();
@@ -260,7 +257,8 @@ void MediaPlayerView::Layout() {
 
 void MediaPlayerView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
-  FTL_DCHECK(properties());
+  if (!has_physical_size())
+    return;
 
   prev_frame_time_ = frame_time_;
   frame_time_ = media::Timeline::local_now();
@@ -282,7 +280,8 @@ void MediaPlayerView::OnSceneInvalidated(
   SkISize controls_size =
       SkISize::Make(controls_rect_.width, controls_rect_.height);
   SkCanvas* controls_canvas = controls_widget_.AcquireCanvas(
-      controls_rect_.width, controls_rect_.height);
+      controls_rect_.width, controls_rect_.height, metrics().scale_x,
+      metrics().scale_y);
   DrawControls(controls_canvas, controls_size);
   controls_widget_.ReleaseAndSwapCanvas();
   controls_widget_.SetTranslation(
@@ -317,12 +316,8 @@ void MediaPlayerView::OnChildUnavailable(uint32_t child_key) {
 void MediaPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
   canvas->clear(SK_ColorBLACK);
 
-  const float symbol_width = kSymbolWidth * device_pixel_ratio();
-  const float symbol_height = kSymbolHeight * device_pixel_ratio();
-  const float symbol_padding = kSymbolPadding * device_pixel_ratio();
-
   // Draw the progress bar itself (blue on gray).
-  float progress_bar_left = symbol_width + symbol_padding * 2;
+  float progress_bar_left = kSymbolWidth + kSymbolPadding * 2;
   float progress_bar_width = size.width() - progress_bar_left;
   SkPaint paint;
   paint.setColor(kProgressBarBackgroundColor);
@@ -337,24 +332,24 @@ void MediaPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
       paint);
 
   paint.setColor(kProgressBarSymbolColor);
-  float symbol_left = symbol_padding;
-  float symbol_top = (size.height() - symbol_height) / 2.0f;
+  float symbol_left = kSymbolPadding;
+  float symbol_top = (size.height() - kSymbolHeight) / 2.0f;
   if (state_ == State::kPlaying) {
     // Playing...draw a pause symbol.
     canvas->drawRect(SkRect::MakeXYWH(symbol_left, symbol_top,
-                                      symbol_width / 3.0f, symbol_height),
+                                      kSymbolWidth / 3.0f, kSymbolHeight),
                      paint);
 
     canvas->drawRect(
-        SkRect::MakeXYWH(symbol_left + 2 * symbol_width / 3.0f, symbol_top,
-                         symbol_width / 3.0f, symbol_height),
+        SkRect::MakeXYWH(symbol_left + 2 * kSymbolWidth / 3.0f, symbol_top,
+                         kSymbolWidth / 3.0f, kSymbolHeight),
         paint);
   } else {
     // Playing...draw a play symbol.
     SkPath path;
     path.moveTo(symbol_left, symbol_top);
-    path.lineTo(symbol_left, symbol_top + symbol_height);
-    path.lineTo(symbol_left + symbol_width, symbol_top + symbol_height / 2.0f);
+    path.lineTo(symbol_left, symbol_top + kSymbolHeight);
+    path.lineTo(symbol_left + kSymbolWidth, symbol_top + kSymbolHeight / 2.0f);
     path.lineTo(symbol_left, symbol_top);
     canvas->drawPath(path, paint);
   }

@@ -65,11 +65,6 @@ VideoRendererImpl::View::~View() {
   video_frame_source_->UnregisterView(this);
 }
 
-void VideoRendererImpl::View::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr old_properties) {
-  InvalidateScene();
-}
-
 void VideoRendererImpl::View::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
@@ -78,7 +73,7 @@ void VideoRendererImpl::View::OnSceneInvalidated(
       presentation_info->presentation_time);
 
   mozart::Size video_size = video_frame_source_->GetSize();
-  if (!has_size() || video_size.width == 0 || video_size.height == 0)
+  if (!has_logical_size() || video_size.width == 0 || video_size.height == 0)
     return;
 
   // Update the image.
@@ -92,12 +87,13 @@ void VideoRendererImpl::View::OnSceneInvalidated(
   image_cycler_.ReleaseAndSwapImage();
 
   // Scale the video so it fills the view.
-  float width_scale =
-      static_cast<float>(size().width) / static_cast<float>(video_size.width);
-  float height_scale =
-      static_cast<float>(size().height) / static_cast<float>(video_size.height);
+  float width_scale = static_cast<float>(logical_size().width) /
+                      static_cast<float>(video_size.width);
+  float height_scale = static_cast<float>(logical_size().height) /
+                       static_cast<float>(video_size.height);
   image_cycler_.SetScale(width_scale, height_scale, 1.f);
-  image_cycler_.SetTranslation(size().width * .5f, size().height * .5f, 0.f);
+  image_cycler_.SetTranslation(logical_size().width * .5f,
+                               logical_size().height * .5f, 0.f);
 
   if (video_frame_source_->views_should_animate()) {
     InvalidateScene();

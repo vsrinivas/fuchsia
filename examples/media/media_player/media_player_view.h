@@ -86,8 +86,8 @@ class MediaPlayerView : public mozart::BaseView {
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
   media::MediaMetadataPtr metadata_;
-  mozart::Rect content_rect_;
-  mozart::Rect controls_rect_;
+  mozart::RectF content_rect_;
+  mozart::RectF controls_rect_;
   mozart::RectF progress_bar_rect_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;

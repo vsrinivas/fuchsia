@@ -66,7 +66,6 @@ class VuMeterView : public mozart::SkiaView {
   };
 
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnSceneInvalidated(
       mozart2::PresentationInfoPtr presentation_info) override;
   bool OnInputEvent(mozart::InputEventPtr event) override;

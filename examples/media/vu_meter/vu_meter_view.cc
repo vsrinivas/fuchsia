@@ -93,12 +93,6 @@ bool VuMeterView::OnInputEvent(mozart::InputEventPtr event) {
   return handled;
 }
 
-void VuMeterView::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr old_properties) {
-  if (has_size())
-    InvalidateScene();
-}
-
 void VuMeterView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
   SkCanvas* canvas = AcquireCanvas();
@@ -115,22 +109,22 @@ void VuMeterView::DrawContent(SkCanvas* canvas) {
   paint.setFlags(SkPaint::kAntiAlias_Flag);
 
   paint.setColor(SK_ColorCYAN);
-  canvas->drawCircle(size().width / 3.0f, size().height / 2,
-                     (fast_left_.current() * size().width / 2) / kVuFullWidth,
-                     paint);
-  canvas->drawCircle(2.0f * size().width / 3.0f, size().height / 2,
-                     (fast_right_.current() * size().width / 2) / kVuFullWidth,
-                     paint);
+  canvas->drawCircle(
+      logical_size().width / 3.0f, logical_size().height / 2,
+      (fast_left_.current() * logical_size().width / 2) / kVuFullWidth, paint);
+  canvas->drawCircle(
+      2.0f * logical_size().width / 3.0f, logical_size().height / 2,
+      (fast_right_.current() * logical_size().width / 2) / kVuFullWidth, paint);
 
   paint.setColor(SK_ColorWHITE);
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(SkIntToScalar(3));
-  canvas->drawCircle(size().width / 3.0f, size().height / 2,
-                     (slow_left_.current() * size().width / 2) / kVuFullWidth,
-                     paint);
-  canvas->drawCircle(2.0f * size().width / 3.0f, size().height / 2,
-                     (slow_right_.current() * size().width / 2) / kVuFullWidth,
-                     paint);
+  canvas->drawCircle(
+      logical_size().width / 3.0f, logical_size().height / 2,
+      (slow_left_.current() * logical_size().width / 2) / kVuFullWidth, paint);
+  canvas->drawCircle(
+      2.0f * logical_size().width / 3.0f, logical_size().height / 2,
+      (slow_right_.current() * logical_size().width / 2) / kVuFullWidth, paint);
 }
 
 void VuMeterView::ToggleStartStop() {
