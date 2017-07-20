@@ -190,16 +190,15 @@ template("package") {
           source = rebase_path(root_build_dir + "/" + binary.name)
           sources += [ root_build_dir + "/" + binary.name ]
         }
-        if (defined(binary.dest)) {
-          dest = "bin/" + binary.dest
-        } else {
-          if (defined(invoker.app) && invoker.app) {
-            dest = "apps/" + binary.name
-          } else {
-            dest = "bin/" + binary.name
-          }
+        dirname = "bin"
+        if (defined(invoker.app) && invoker.app) {
+          dirname = "apps"
         }
-        package_manifest_contents += [ "$dest=$source" ]
+        basename = binary.name
+        if (defined(binary.dest)) {
+          basename = binary.dest
+        }
+        package_manifest_contents += [ "$dirname/$basename=$source" ]
       }
       foreach(test, tests) {
         source = rebase_path(root_build_dir + "/" + test.name)
