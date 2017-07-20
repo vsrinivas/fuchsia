@@ -125,6 +125,16 @@ void vm_init_preheap(uint level) {
         MarkPagesInUse(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
 
+    // Reserve up to 15 pages as a random padding in the kernel physical mapping
+    uchar entropy;
+    crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
+    struct list_node list;
+    list_initialize(&list);
+    size_t page_count = entropy % 16;
+    size_t allocated = pmm_alloc_pages(page_count, 0, &list);
+    DEBUG_ASSERT(page_count == allocated);
+    LTRACEF("physical mapping padding page count %#" PRIxPTR "\n", page_count);
+
     // grab a page and mark it as the zero page
     zero_page = pmm_alloc_page(0, &zero_page_paddr);
     DEBUG_ASSERT(zero_page);
