@@ -1446,6 +1446,63 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0]->key));
 }
 
+TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  Status status = Status::UNKNOWN_ERROR;
+  page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  page2->StartTransaction(callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+             callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  page1->Commit(callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  page2->Commit(callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  DeletePage(test_page_id, Status::OK);
+  EXPECT_FALSE(resolver_impl->requests[0].Merge(fidl::Array<MergedValuePtr>::New(0)));
+}
+
 }  // namespace
 }  // namespace integration_tests
 }  // namespace ledger
