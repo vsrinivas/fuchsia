@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/dart_content_handler/dart_app.gni")
 import("//packages/package.gni")
+import("//apps/dart_content_handler/dart_app.gni")
 
 dart_app("mi_dashboard_dart") {
-  output_name = "agents/mi_dashboard.dartx"
+  output_name = "mi_dashboard.dartx"
 
   main_dart = "main.dart"
 
@@ -26,6 +26,7 @@ dart_app("mi_dashboard_dart") {
 }
 
 package("mi_dashboard") {
+  app = true
   # this should be set to true once dart packages can be archives
   archive = false
 
@@ -34,8 +35,8 @@ package("mi_dashboard") {
   ]
 
   binaries = [ {
-        name = "agents/mi_dashboard.dartx"
-        dest = "app"
+        name = "mi_dashboard.dartx"
+        dest = "agents/mi_dashboard.dartx"
       } ]
 
   resources = [
