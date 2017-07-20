@@ -4,15 +4,20 @@
 
 #include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
 
-#include "apps/mozart/src/scene_manager/resources/camera.h"
-#include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
 #include "escher/escher.h"
 #include "escher/renderer/paper_renderer.h"
+#include "escher/impl/ssdo_sampler.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 #include "lib/ftl/logging.h"
 
+#include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
+
 namespace scene_manager {
+
+const uint32_t DisplayRenderer::kRequiredSwapchainPixelMultiple =
+    escher::impl::SsdoSampler::kSsdoAccelDownsampleFactor;
 
 DisplayRenderer::DisplayRenderer(Session* session,
                                  mozart::ResourceId id,

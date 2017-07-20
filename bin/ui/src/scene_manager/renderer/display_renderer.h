@@ -12,6 +12,10 @@ namespace scene_manager {
 
 class DisplayRenderer final : public Renderer {
  public:
+  // Any swapchain that uses PaperRenderer must be a multiple of this many
+  // pixels.
+  static const uint32_t kRequiredSwapchainPixelMultiple;
+
   DisplayRenderer(Session* session,
                   mozart::ResourceId id,
                   FrameScheduler* frame_scheduler,

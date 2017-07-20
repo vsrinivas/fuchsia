@@ -11,6 +11,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "apps/mozart/src/scene_manager/display_watcher.h"
+#include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
 #include "apps/mozart/src/scene_manager/scene_manager_app.h"
 
 using namespace scene_manager;
@@ -35,6 +36,25 @@ int main(int argc, const char** argv) {
         if (!success) {
           exit(1);
         }
+
+        uint32_t multiple = DisplayRenderer::kRequiredSwapchainPixelMultiple;
+        if (width % multiple != 0) {
+          // Round up to the nearest multiple.
+          uint32_t new_width = multiple * (width / multiple) + multiple;
+          FTL_LOG(WARNING) << "Mozart SceneManager: Screen width " << width
+                           << " is not a multiple of " << multiple
+                           << ", rounding up to " << new_width << ".";
+          width = new_width;
+        }
+        if (height % multiple != 0) {
+          // Round up to the nearest multiple.
+          uint32_t new_height = multiple * (height / multiple) + multiple;
+          FTL_LOG(WARNING) << "Mozart SceneManager: Screen width " << height
+                           << " is not a multiple of " << multiple
+                           << ", rounding up to " << new_height << ".";
+          height = new_height;
+        }
+
         // Initialize the SceneManager.
         auto harness =
             DemoHarness::New(DemoHarness::WindowParams{"Mozart SceneManager",
