@@ -154,6 +154,17 @@ void DumpProcessList() {
     GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
+void DumpJobList() {
+    printf("All jobs from least to most important:\n");
+    printf("%7s %s\n", "koid", "name");
+    JobDispatcher::ForEachJobByImportance([&](JobDispatcher* job) {
+        char name[MX_MAX_NAME_LEN];
+        job->get_name(name);
+        printf("%7" PRIu64 " '%s'\n", job->get_koid(), name);
+        return MX_OK;
+    });
+}
+
 void DumpProcessHandles(mx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
@@ -744,6 +755,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("not enough arguments:\n");
     usage:
         printf("%s ps                : list processes\n", argv[0].str);
+        printf("%s jobs              : list jobs\n", argv[0].str);
         printf("%s mwd  <mb>         : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid>        : dump process handles\n", argv[0].str);
         printf("%s hwd  <count>      : handle watchdog\n", argv[0].str);
@@ -775,6 +787,8 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         } else {
             DumpProcessList();
         }
+    } else if (strcmp(argv[1].str, "jobs") == 0) {
+        DumpJobList();
     } else if (strcmp(argv[1].str, "hwd") == 0) {
         if (argc == 3) {
             hwd_limit = argv[2].u;

@@ -640,6 +640,13 @@ syscall system_mexec
    (kernel: mx_handle_t, bootimage: mx_handle_t)
    returns (mx_status_t);
 
+# Internal-only task syscalls
+
+syscall job_set_relative_importance
+    (root_resource: mx_handle_t,
+        job: mx_handle_t, less_important_job: mx_handle_t)
+    returns (mx_status_t);
+
 # Test syscalls (keep at the end)
 
 syscall syscall_test_0() returns (mx_status_t);
