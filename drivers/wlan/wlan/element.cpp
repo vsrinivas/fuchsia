@@ -88,7 +88,8 @@ bool CfParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t
 }
 
 bool TimElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
-                        uint8_t dtim_period, uint8_t bmp_ctrl, const std::vector<uint8_t>& bmp) {
+                        uint8_t dtim_period, BitmapControl bmp_ctrl,
+                        const std::vector<uint8_t>& bmp) {
     if (bmp.size() > kMaxLen) return false;
     size_t elem_size = sizeof(TimElement) + bmp.size();
     if (elem_size > len) return false;
@@ -102,6 +103,28 @@ bool TimElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_c
     std::copy(bmp.begin(), bmp.end(), elem->bmp);
     *actual = elem_size;
     return true;
+}
+
+// TODO(hahnr): Support dot11MultiBSSIDActivated is true.
+bool TimElement::traffic_buffered(uint16_t aid) const {
+    // Illegal arguments or no partial virtual bitmap. No traffic buffered.
+    if (aid >= kMaxLen * 8 || hdr.len < 4) return false;
+    if (!bmp_ctrl.offset() && hdr.len == 4) return false;
+
+    // Safe to use uint8 since offset is 7 bits.
+    uint8_t n1 = bmp_ctrl.offset() << 1;
+    uint16_t n2 = (hdr.len - 4) + n1;
+    if (n2 > static_cast<uint16_t> (kMaxLen)) return false;
+
+    // No traffic buffered for aid.
+    uint8_t octet = aid / 8;
+    if (octet < n1 || octet > n2) return false;
+
+    // Traffic might be buffered for aid
+    // Bounds are not exceeded since (n2 - n1 + 4) = hdr.len, and
+    // n1 <= octet <= n2, and hdr.len >= 4. This simplifies to:
+    // 0 <=  octet - n1 <= (hdr.len - 4)
+    return bmp[octet - n1] & (1 << (aid % 8));
 }
 
 bool CountryElement::Create(uint8_t* buf, size_t len, size_t* actual, const char* country) {

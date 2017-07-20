@@ -247,6 +247,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     return status;
 }
 
+// TODO(hahnr): Support ProbeResponses.
 mx_status_t Station::HandleBeacon(const Packet* packet) {
     debugfn();
 
@@ -264,7 +265,6 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
-
     if (join_timeout_ > 0) {
         join_timeout_ = 0;
         timer_->CancelTimer();
@@ -273,6 +273,30 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
         return SendJoinResponse();
     }
 
+    auto bcn = packet->field<Beacon>(sizeof(MgmtFrameHeader));
+    size_t elt_len = packet->len() - sizeof(MgmtFrameHeader) - sizeof(Beacon);
+    ElementReader reader(bcn->elements, elt_len);
+
+    while (reader.is_valid()) {
+        const ElementHeader *hdr = reader.peek();
+        if (hdr == nullptr) break;
+
+        switch (hdr->id) {
+            case element_id::kTim: {
+                auto tim = reader.read<TimElement>();
+                if (tim == nullptr) goto done_iter;
+                if (tim->traffic_buffered(aid_)) {
+                    // TODO(hahnr): PS-POLL traffic from AP.
+                }
+                break;
+            }
+            default:
+                reader.skip(sizeof(ElementHeader) + hdr->len);
+                break;
+        }
+    }
+
+done_iter:
     return MX_OK;
 }
 
@@ -382,6 +406,7 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     timer_->CancelTimer();
     device_->SetStatus(ETH_STATUS_ONLINE);
     SendAssocResponse(AssociateResultCodes::SUCCESS);
+    std::printf("associated\n");
 
     return MX_OK;
 }

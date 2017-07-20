@@ -6,7 +6,10 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
+#include <magenta/types.h>
 #include <mxtl/type_support.h>
+
+#include <drivers/wifi/common/bitfield.h>
 
 #include <cstdint>
 #include <utility>
@@ -331,16 +334,27 @@ struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfPara
     uint16_t dur_remaining;
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.6
+class BitmapControl : public common::BitField<uint8_t> {
+  public:
+    WLAN_BIT_FIELD(group_traffic_ind, 0, 1);
+    WLAN_BIT_FIELD(offset, 1, 7);
+};
+
+// IEEE Std 802.11-2016, 9.4.2.6
 struct TimElement : public Element<TimElement, element_id::kTim> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
-                       uint8_t dtim_period, uint8_t bmp_ctrl, const std::vector<uint8_t>& bmp);
+                       uint8_t dtim_period, BitmapControl bmp_ctrl,
+                       const std::vector<uint8_t>& bmp);
     static const size_t kMaxLen = 251;
 
     ElementHeader hdr;
     uint8_t dtim_count;
     uint8_t dtim_period;
-    uint8_t bmp_ctrl;
+    BitmapControl bmp_ctrl;
     uint8_t bmp[];
+
+    bool traffic_buffered(uint16_t aid) const;
 } __PACKED;
 
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {
