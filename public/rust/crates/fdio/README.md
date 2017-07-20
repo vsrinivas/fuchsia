@@ -1,5 +1,4 @@
-Fuchsia Open Source Template Repository
+Rust bindings for mxio
 =======================================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains bindings for a portion of the Magenta mxio library.
