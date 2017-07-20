@@ -34,8 +34,6 @@
 
 ## Jobs
 + [job_create](syscalls/job_create.md) - create a new job within a job
-+ [job_set_policy](syscalls/job_set_policy.md) - modify policies for a job and its descendants
-+ [job_set_relative_importance](syscalls/job_set_relative_importance.md) - update a global ordering of jobs
 
 ## Tasks (Thread, Process, or Job)
 + [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running

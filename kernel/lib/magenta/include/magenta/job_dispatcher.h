@@ -89,7 +89,7 @@ public:
     // used by the killer thread to avoid jobs whose capped importance is
     // IMMORTAL.
 
-    uint32_t process_count() const TA_REQ(lock_) { return process_count_; }
+    uint32_t process_count() const TA_REQ(lock_) { return process_count_;}
     uint32_t job_count() const TA_REQ(lock_) { return job_count_; }
     bool AddChildProcess(ProcessDispatcher* process);
     void RemoveChildProcess(ProcessDispatcher* process);
@@ -99,26 +99,6 @@ public:
     // in_policy is an array of |count| elements.
     status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
     pol_cookie_t GetPolicy();
-
-    // Updates a partial ordering between jobs so that this job will be killed
-    // after |other| in low-resource situations. If |other| is null, then this
-    // job becomes the least-important job in the system.
-    status_t MakeMoreImportantThan(mxtl::RefPtr<JobDispatcher> other);
-
-    // Calls the provided |mx_status_t func(JobDispatcher*)| on every
-    // JobDispatcher in the system, from least important to most important,
-    // using the order determined by MakeMoreImportantThan(). Stops if |func|
-    // returns an error, returning the error value.
-    template <typename T>
-    static status_t ForEachJobByImportance(T func) {
-        AutoLock lock(&importance_lock_);
-        for (auto &job : importance_list_) {
-            mx_status_t s = func(&job);
-            if (s != MX_OK)
-                return s;
-        }
-        return MX_OK;
-    }
 
     // Walks the job/process tree and invokes |je| methods on each node. If
     // |recurse| is false, only visits direct children of this job. Returns
@@ -180,20 +160,4 @@ private:
     RawProcessList procs_ TA_GUARDED(lock_);
 
     pol_cookie_t policy_ TA_GUARDED(lock_);
-
-    // Global list of JobDispatchers, ordered by relative importance. Used to
-    // find victims in low-resource situations.
-    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_importance_;
-    struct ListTraitsImportance {
-        static mxtl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
-            JobDispatcher& obj) {
-            return obj.dll_importance_;
-        }
-    };
-    using JobImportanceList =
-        mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsImportance>;
-
-    static Mutex importance_lock_;
-    // Jobs, ordered by importance, with the least-important job at the front.
-    static JobImportanceList importance_list_ TA_GUARDED(importance_lock_);
 };

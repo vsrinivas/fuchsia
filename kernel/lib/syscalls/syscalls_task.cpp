@@ -23,7 +23,6 @@
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
-#include <magenta/resource_dispatcher.h>
 #include <magenta/syscalls/debug.h>
 #include <magenta/syscalls/policy.h>
 #include <magenta/thread_dispatcher.h>
@@ -610,40 +609,4 @@ mx_status_t sys_job_set_policy(mx_handle_t job_handle, uint32_t options,
         return status;
 
     return job->SetPolicy(options, policy.get(), policy.size());
-}
-
-mx_status_t sys_job_set_relative_importance(
-    mx_handle_t resource_handle,
-    mx_handle_t job_handle, mx_handle_t less_important_job_handle) {
-
-    ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
-
-    // If the caller has a valid handle to the root resource, let them perform
-    // this operation no matter the rights on the job handles.
-    {
-        mxtl::RefPtr<ResourceDispatcher> resource;
-        mx_status_t status = up->GetDispatcherWithRights(
-            resource_handle, MX_RIGHT_NONE, &resource);
-        if (status != MX_OK)
-            return status;
-        // TODO(dbort): Check that this is actually the appropriate resource
-    }
-
-    // Get the job to modify.
-    mxtl::RefPtr<JobDispatcher> job;
-    mx_status_t status = up->GetDispatcherWithRights(
-        job_handle, MX_RIGHT_NONE, &job);
-    if (status != MX_OK)
-        return status;
-
-    // Get its less-important neighbor, or null.
-    mxtl::RefPtr<JobDispatcher> li_job;
-    if (less_important_job_handle != MX_HANDLE_INVALID) {
-        status = up->GetDispatcherWithRights(
-            less_important_job_handle, MX_RIGHT_NONE, &li_job);
-        if (status != MX_OK)
-            return status;
-    }
-
-    return job->MakeMoreImportantThan(mxtl::move(li_job));
 }
