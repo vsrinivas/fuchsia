@@ -16,7 +16,8 @@ EFI_CC		:= $(TOOLCHAIN_PREFIX)gcc
 EFI_LD		:= $(TOOLCHAIN_PREFIX)ld
 endif
 
-EFI_CFLAGS	:= -fshort-wchar -fno-stack-protector -mno-red-zone
+EFI_CFLAGS	:= -O2
+EFI_CFLAGS	+= -fshort-wchar -fno-stack-protector -mno-red-zone
 EFI_CFLAGS	+= -Wall -std=c99
 EFI_CFLAGS	+= -ffreestanding -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
 EFI_CFLAGS	+= -Isystem/public -Isystem/private
