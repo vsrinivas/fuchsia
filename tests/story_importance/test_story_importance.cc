@@ -11,7 +11,6 @@
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
@@ -31,7 +30,7 @@
 
 namespace {
 
-constexpr char kModuleUrl[] = "file:///system/apps/example_flutter_hello_world";
+constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
 constexpr char kTopic[] = "/location/home_work";
 
 // A simple story provider watcher implementation. Just logs observed state
@@ -207,10 +206,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override {
     create_view_.Pass();
-    view_.reset(new modular::ViewHost(
-        application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
   }
 
   TestPoint initialize_{"Initialize()"};
@@ -283,7 +278,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story1_controller_->Start(story_view.NewRequest());
-    view_->ConnectView(std::move(story_view));
   }
 
   TestPoint set_context_work_{"SetContextWork()"};
@@ -332,7 +326,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story2_controller_->Start(story_view.NewRequest());
-    view_->ConnectView(std::move(story_view));
   }
 
   TestPoint get_importance1_{"GetImportance1()"};
@@ -414,8 +407,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   }
 
   StoryProviderWatcherImpl story_provider_watcher_;
-
-  std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;

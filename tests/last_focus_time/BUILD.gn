@@ -19,12 +19,10 @@ executable("test_last_focus_time") {
   deps = [
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
-    "//apps/modular/lib/fidl:view_host",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/user",
-    "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//apps/test_runner/services:test_runner",
     "//lib/fidl/cpp/bindings",
