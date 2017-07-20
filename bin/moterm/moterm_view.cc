@@ -64,7 +64,7 @@ void MotermView::ComputeMetrics() {
   // TODO(vtl): This duplicates some code.
   SkPaint fg_paint;
   fg_paint.setTypeface(regular_typeface_);
-  fg_paint.setTextSize(params_.font_size * device_pixel_ratio());
+  fg_paint.setTextSize(params_.font_size);
   // Figure out appropriate metrics.
   SkPaint::FontMetrics fm = {};
   fg_paint.getFontMetrics(&fm);
@@ -126,7 +126,7 @@ void MotermView::Blink(uint64_t blink_timer_id) {
 
 void MotermView::OnSceneInvalidated(
     mozart2::PresentationInfoPtr presentation_info) {
-  if (!has_size() || !regular_typeface_)
+  if (!regular_typeface_)
     return;
 
   SkCanvas* canvas = AcquireCanvas();
@@ -142,11 +142,11 @@ void MotermView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
 }
 
 void MotermView::Resize() {
-  if (!has_size() || !regular_typeface_)
+  if (!has_logical_size() || !regular_typeface_)
     return;
 
-  uint32_t columns = std::max(size().width / advance_width_, 1);
-  uint32_t rows = std::max(size().height / line_height_, 1);
+  uint32_t columns = std::max(logical_size().width / advance_width_, 1.f);
+  uint32_t rows = std::max(logical_size().height / line_height_, 1.f);
   MotermModel::Size current = model_.GetSize();
   if (current.columns != columns || current.rows != rows) {
     model_.SetSize(MotermModel::Size(rows, columns), false);
@@ -162,7 +162,7 @@ void MotermView::DrawContent(SkCanvas* canvas) {
 
   SkPaint fg_paint;
   fg_paint.setTypeface(regular_typeface_);
-  fg_paint.setTextSize(params_.font_size * device_pixel_ratio());
+  fg_paint.setTextSize(params_.font_size);
   fg_paint.setTextEncoding(SkPaint::kUTF32_TextEncoding);
 
   MotermModel::Size size = model_.GetSize();
