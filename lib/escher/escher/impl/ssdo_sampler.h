@@ -30,7 +30,7 @@ class SsdoSampler {
   // Amount by which the SsdoAccelerator table is scaled down in each dimension,
   // not including bit-packing.
   // Must match the fragment shader in ssdo_sampler.cc
-  const static uint32_t kSsdoAccelDownsampleFactor = 8;
+  constexpr static uint32_t kSsdoAccelDownsampleFactor = 8;
 
   // TODO: eR8G8Srgb would be preferable, but must check if it is supported.
   // TODO: validate this choice via performance profiling.
