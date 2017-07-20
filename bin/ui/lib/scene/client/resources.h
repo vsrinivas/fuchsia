@@ -39,10 +39,6 @@ class Resource {
   explicit Resource(Session* session);
   ~Resource();
 
-  void AddChild(uint32_t child_node_id);
-  void AddPart(uint32_t part_node_id);
-  void DetachChildren();
-
  private:
   Session* const session_;
   uint32_t const id_;
@@ -218,29 +214,26 @@ class ShapeNode : public Node {
   FTL_DISALLOW_COPY_AND_ASSIGN(ShapeNode);
 };
 
-// Traits for resources which can have child nodes.
+// Abstract base class for nodes which can have child nodes.
 // This type cannot be instantiated, please see subclasses.
-template <typename Base>
-class ContainerTraits : public Base {
+class ContainerNode : public Node {
  public:
   // Adds a child to the node.
   void AddChild(const Node& child) { AddChild(child.id()); }
-  void AddChild(uint32_t child_node_id) { Base::AddChild(child_node_id); }
+  void AddChild(uint32_t child_node_id);
 
-  void AddPart(const Node& child) { AddPart(child.id()); }
-  void AddPart(uint32_t child_node_id) { Base::AddPart(child_node_id); }
+  void AddPart(const Node& part) { AddPart(part.id()); }
+  void AddPart(uint32_t part_node_id);
 
   // Detaches all children from the node.
-  void DetachChildren() { Base::DetachChildren(); }
+  void DetachChildren();
 
  protected:
-  explicit ContainerTraits(Session* session) : Base(session) {}
-  ~ContainerTraits() = default;
-};
+  explicit ContainerNode(Session* session);
+  ~ContainerNode();
 
-// Abstract base class for nodes which can have child nodes.
-// This type cannot be instantiated, please see subclasses.
-using ContainerNode = mozart::client::ContainerTraits<mozart::client::Node>;
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContainerNode);
+};
 
 // Represents an entity node resource in a session.
 class EntityNode : public ContainerNode {
@@ -304,12 +297,14 @@ class OpacityNode : public ContainerNode {
 };
 
 // Represents a scene resource is a session.
-class Scene : public ContainerTraits<Resource> {
+class Scene : public ContainerNode {
  public:
   explicit Scene(Session* session);
   ~Scene();
 
  private:
+  void Detach() = delete;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 

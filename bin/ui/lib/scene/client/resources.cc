@@ -30,18 +30,6 @@ void Resource::SetLabel(const std::string& label) {
   session_->Enqueue(mozart::NewSetLabelOp(id(), label));
 }
 
-void Resource::AddChild(uint32_t child_node_id) {
-  session()->Enqueue(mozart::NewAddChildOp(id(), child_node_id));
-}
-
-void Resource::AddPart(uint32_t child_node_id) {
-  session()->Enqueue(mozart::NewAddPartOp(id(), child_node_id));
-}
-
-void Resource::DetachChildren() {
-  session()->Enqueue(mozart::NewDetachChildrenOp(id()));
-}
-
 Shape::Shape(Session* session) : Resource(session) {}
 
 Shape::~Shape() = default;
@@ -172,7 +160,23 @@ void ShapeNode::SetMaterial(uint32_t material_id) {
   session()->Enqueue(mozart::NewSetMaterialOp(id(), material_id));
 }
 
-EntityNode::EntityNode(Session* session) : ContainerTraits(session) {
+ContainerNode::ContainerNode(Session* session) : Node(session) {}
+
+ContainerNode::~ContainerNode() = default;
+
+void ContainerNode::AddChild(uint32_t child_node_id) {
+  session()->Enqueue(mozart::NewAddChildOp(id(), child_node_id));
+}
+
+void ContainerNode::AddPart(uint32_t part_node_id) {
+  session()->Enqueue(mozart::NewAddPartOp(id(), part_node_id));
+}
+
+void ContainerNode::DetachChildren() {
+  session()->Enqueue(mozart::NewDetachChildrenOp(id()));
+}
+
+EntityNode::EntityNode(Session* session) : ContainerNode(session) {
   session->Enqueue(mozart::NewCreateEntityNodeOp(id()));
 }
 
@@ -182,7 +186,7 @@ void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
   session()->Enqueue(mozart::NewSetClipOp(id(), clip_id, clip_to_self));
 }
 
-ImportNode::ImportNode(Session* session) : ContainerTraits(session) {}
+ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 
 ImportNode::~ImportNode() {
   FTL_DCHECK(is_bound_) << "Import was never bound.";
@@ -202,13 +206,13 @@ void ImportNode::BindAsRequest(mx::eventpair* out_export_token) {
   is_bound_ = true;
 }
 
-ClipNode::ClipNode(Session* session) : ContainerTraits(session) {
+ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(mozart::NewCreateClipNodeOp(id()));
 }
 
 ClipNode::~ClipNode() = default;
 
-OpacityNode::OpacityNode(Session* session) : ContainerTraits(session) {
+OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
   // TODO(MZ-139): Opacities are not currently implemented. Create an entity
   // node for now.
   session->Enqueue(mozart::NewCreateEntityNodeOp(id()));
@@ -225,7 +229,7 @@ void OpacityNode::SetOpacity(double opacity) {
   // TODO(MZ-139): Opacities are not currently implemented.
 }
 
-Scene::Scene(Session* session) : ContainerTraits(session) {
+Scene::Scene(Session* session) : ContainerNode(session) {
   session->Enqueue(mozart::NewCreateSceneOp(id()));
 }
 
