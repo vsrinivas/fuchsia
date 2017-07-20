@@ -23,8 +23,6 @@ typedef struct {
     // descriptors for currently active endpoints
     usb_endpoint_descriptor_t* active_endpoints[USB_MAX_EPS];
 
-    mx_device_prop_t props[6];
-
     // node for our USB device's "children" list
     list_node_t node;
 
