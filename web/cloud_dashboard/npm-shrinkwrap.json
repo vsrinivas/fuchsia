@@ -4,8 +4,13 @@
   "dependencies": {
     "@angular/animations": {
       "version": "4.3.0",
-      "from": "@angular/animations@>=4.0.0 <5.0.0",
+      "from": "https://registry.npmjs.org/@angular/animations/-/animations-4.3.0.tgz",
       "resolved": "https://registry.npmjs.org/@angular/animations/-/animations-4.3.0.tgz"
+    },
+    "@angular/cdk": {
+      "version": "2.0.0-beta.8",
+      "from": "@angular/cdk@latest",
+      "resolved": "https://registry.npmjs.org/@angular/cdk/-/cdk-2.0.0-beta.8.tgz"
     },
     "@angular/common": {
       "version": "4.3.0",
@@ -31,6 +36,11 @@
       "version": "4.3.0",
       "from": "@angular/http@>=4.0.0 <5.0.0",
       "resolved": "https://registry.npmjs.org/@angular/http/-/http-4.3.0.tgz"
+    },
+    "@angular/material": {
+      "version": "2.0.0-beta.8",
+      "from": "@angular/material@latest",
+      "resolved": "https://registry.npmjs.org/@angular/material/-/material-2.0.0-beta.8.tgz"
     },
     "@angular/platform-browser": {
       "version": "4.3.0",
