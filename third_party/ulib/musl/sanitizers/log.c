@@ -30,7 +30,7 @@ void __sanitizer_log_write(const char *buffer, size_t len) {
 
     while (len > 0) {
         size_t chunk = len < MAX_DATA ? len : MAX_DATA;
-        mx_status_t status = _mx_log_write(sanitizer_log, len, buffer, 0);
+        mx_status_t status = _mx_log_write(sanitizer_log, chunk, buffer, 0);
         if (status != MX_OK)
             __builtin_trap();
         buffer += chunk;
