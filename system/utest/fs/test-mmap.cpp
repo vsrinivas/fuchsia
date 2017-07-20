@@ -168,6 +168,117 @@ bool test_mmap_unlinked(void) {
     END_TEST;
 }
 
+// Test that MAP_SHARED propagates updates to the file
+bool test_mmap_shared(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    constexpr char kFilename[] = "::mmap_shared";
+    int fd = open(kFilename, O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    char tmp[] = "this is a temporary buffer";
+    ASSERT_EQ(write(fd, tmp, sizeof(tmp)), sizeof(tmp), "");
+
+    // Demonstrate that a simple buffer can be mapped
+    void* addr1 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    ASSERT_NEQ(addr1, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr1, tmp, sizeof(tmp)), 0, "");
+
+    int fd2 = open(kFilename, O_RDWR);
+    ASSERT_GT(fd2, 0);
+
+    // Demonstrate that the buffer can be mapped multiple times
+    void* addr2 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd2, 0);
+    ASSERT_NEQ(addr2, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr2, tmp, sizeof(tmp)), 0, "");
+
+    // Demonstrate that updates to the file are shared between mappings
+    char tmp2[] = "buffer which will update through fd";
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+    ASSERT_EQ(write(fd, tmp2, sizeof(tmp2)), sizeof(tmp2), "");
+    ASSERT_EQ(memcmp(addr1, tmp2, sizeof(tmp2)), 0, "");
+    ASSERT_EQ(memcmp(addr2, tmp2, sizeof(tmp2)), 0, "");
+
+    // Demonstrate that updates to the mappings are shared too
+    char tmp3[] = "final buffer, which updates via mapping";
+    memcpy(addr1, tmp3, sizeof(tmp3));
+    ASSERT_EQ(memcmp(addr1, tmp3, sizeof(tmp3)), 0, "");
+    ASSERT_EQ(memcmp(addr2, tmp3, sizeof(tmp3)), 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd2), 0, "");
+    ASSERT_EQ(munmap(addr2, PAGE_SIZE), 0, "munmap failed");
+
+    // Demonstrate that we can map a read-only file as shared + readable
+    fd = open(kFilename, O_RDONLY);
+    ASSERT_GT(fd, 0, "");
+    addr2 = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    ASSERT_NEQ(addr2, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr1, tmp3, sizeof(tmp3)), 0, "");
+    ASSERT_EQ(memcmp(addr2, tmp3, sizeof(tmp3)), 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(munmap(addr2, PAGE_SIZE), 0, "munmap failed");
+
+    ASSERT_EQ(munmap(addr1, PAGE_SIZE), 0, "munmap failed");
+    ASSERT_EQ(unlink(kFilename), 0);
+
+    END_TEST;
+}
+
+// Test that MAP_PRIVATE keeps all copies of the buffer
+// separate
+bool test_mmap_private(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    constexpr char kFilename[] = "::mmap_private";
+    int fd = open(kFilename, O_RDWR | O_CREAT | O_EXCL);
+    ASSERT_GT(fd, 0);
+
+    char buf[64];
+    memset(buf, 'a', sizeof(buf));
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
+
+    // Demonstrate that a simple buffer can be mapped
+    void* addr1 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+    ASSERT_NEQ(addr1, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr1, buf, sizeof(buf)), 0, "");
+    // ... multiple times
+    void* addr2 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+    ASSERT_NEQ(addr2, MAP_FAILED, "");
+    ASSERT_EQ(memcmp(addr2, buf, sizeof(buf)), 0, "");
+
+    // File: 'a'
+    // addr1 private copy: 'b'
+    // addr2 private copy: 'c'
+    memset(buf, 'b', sizeof(buf));
+    memcpy(addr1, buf, sizeof(buf));
+    memset(buf, 'c', sizeof(buf));
+    memcpy(addr2, buf, sizeof(buf));
+
+    // Verify the file and two buffers all have independent contents
+    memset(buf, 'a', sizeof(buf));
+    char tmp[sizeof(buf)];
+    ASSERT_EQ(lseek(fd, SEEK_SET, 0), 0, "");
+    ASSERT_EQ(read(fd, tmp, sizeof(tmp)), sizeof(tmp), "");
+    ASSERT_EQ(memcmp(tmp, buf, sizeof(tmp)), 0, "");
+    memset(buf, 'b', sizeof(buf));
+    ASSERT_EQ(memcmp(addr1, buf, sizeof(buf)), 0, "");
+    memset(buf, 'c', sizeof(buf));
+    ASSERT_EQ(memcmp(addr2, buf, sizeof(buf)), 0, "");
+
+    ASSERT_EQ(munmap(addr1, PAGE_SIZE), 0, "munmap failed");
+    ASSERT_EQ(munmap(addr2, PAGE_SIZE), 0, "munmap failed");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(kFilename), 0);
+
+    END_TEST;
+}
+
 // Test that mmap fails with appropriate error codes when
 // we expect.
 bool test_mmap_evil(void) {
@@ -193,6 +304,10 @@ bool test_mmap_evil(void) {
     ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd, 0), MAP_FAILED, "");
     ASSERT_EQ(errno, EINVAL, "");
     errno = 0;
+    // Mmap with both MAP_PRIVATE and MAP_SHARED
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED | MAP_PRIVATE, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EINVAL, "");
+    errno = 0;
     // Mmap with unaligned offset
     ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 1), MAP_FAILED, "");
     ASSERT_EQ(errno, EINVAL, "");
@@ -201,8 +316,50 @@ bool test_mmap_evil(void) {
     ASSERT_EQ(mmap(NULL, 0, PROT_READ, MAP_SHARED, fd, 0), MAP_FAILED, "");
     ASSERT_EQ(errno, EINVAL, "");
     errno = 0;
-
     ASSERT_EQ(close(fd), 0, "");
+    // Test all cases of MAP_PRIVATE and MAP_SHARED which require
+    // a readable file.
+    fd = open("::myfile", O_WRONLY);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_PRIVATE, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_PRIVATE, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(close(fd), 0, "");
+    // Test all cases of MAP_PRIVATE and MAP_SHARED which require a
+    // writable file (notably, MAP_PRIVATE never requires a writable
+    // file, since it makes a copy).
+    fd = open("::myfile", O_RDONLY);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(close(fd), 0, "");
+    // PROT_WRITE requires that the file is NOT append-only
+    fd = open("::myfile", O_RDONLY | O_APPEND);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd, 0), MAP_FAILED, "");
+    ASSERT_EQ(errno, EACCES, "");
+    errno = 0;
+    ASSERT_EQ(close(fd), 0, "");
+
     ASSERT_EQ(unlink("::myfile"), 0, "");
     END_TEST;
 }
@@ -212,5 +369,7 @@ RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(test_mmap_readable)
     RUN_TEST_MEDIUM(test_mmap_writable)
     RUN_TEST_MEDIUM(test_mmap_unlinked)
+    RUN_TEST_MEDIUM(test_mmap_shared)
+    RUN_TEST_MEDIUM(test_mmap_private)
     RUN_TEST_MEDIUM(test_mmap_evil)
 )

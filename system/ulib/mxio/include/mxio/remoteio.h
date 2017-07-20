@@ -143,7 +143,7 @@ struct mxrio_msg {
 #define MXIO_MMAP_FLAG_READ    (1u << 0)
 #define MXIO_MMAP_FLAG_WRITE   (1u << 1)
 #define MXIO_MMAP_FLAG_EXEC    (1u << 2)
-#define MXIO_MMAP_FLAG_PRIVATE (1u << 10)
+#define MXIO_MMAP_FLAG_PRIVATE (1u << 16)
 
 static_assert(MXIO_MMAP_FLAG_READ == MX_VM_FLAG_PERM_READ, "Vmar / Mmap flags should be aligned");
 static_assert(MXIO_MMAP_FLAG_WRITE == MX_VM_FLAG_PERM_WRITE, "Vmar / Mmap flags should be aligned");

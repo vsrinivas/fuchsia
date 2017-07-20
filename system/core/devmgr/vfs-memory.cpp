@@ -218,6 +218,9 @@ mx_status_t VnodeFile::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out
     rights |= (flags & MXIO_MMAP_FLAG_READ) ? MX_RIGHT_READ : 0;
     rights |= (flags & MXIO_MMAP_FLAG_WRITE) ? MX_RIGHT_WRITE : 0;
     rights |= (flags & MXIO_MMAP_FLAG_EXEC) ? MX_RIGHT_EXECUTE : 0;
+    if (flags & MXIO_MMAP_FLAG_PRIVATE) {
+        return mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, 0, length_, out);
+    }
 
     return mx_handle_duplicate(vmo_, rights, out);
 }

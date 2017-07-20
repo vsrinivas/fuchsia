@@ -796,12 +796,6 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
 
 mx_status_t _mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, int fd,
                        off_t fd_off, uintptr_t* out) {
-    // Mapping is backed by a file
-    if (flags & MAP_PRIVATE) {
-        // TODO(smklein): Implement by creating a private
-        // COW clone of the underlying vmo before mapping it.
-        return MX_ERR_INVALID_ARGS;
-    }
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
         return MX_ERR_BAD_HANDLE;
@@ -815,7 +809,7 @@ mx_status_t _mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, 
     mxrio_mmap_data_t data;
     data.offset = fd_off;
     data.length = len;
-    data.flags = mx_flags;
+    data.flags = mx_flags | (flags & MAP_PRIVATE ? MXIO_MMAP_FLAG_PRIVATE : 0);
 
     mx_status_t r = io->ops->misc(io, MXRIO_MMAP, 0, sizeof(data), &data, sizeof(data));
     mxio_release(io);

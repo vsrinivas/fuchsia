@@ -34,6 +34,14 @@ typedef struct vfs_iostate {
     uint32_t io_flags;
 } vfs_iostate_t;
 
+static bool writable(uint32_t flags) {
+    return ((03 & flags) == O_RDWR) || ((03 & flags) == O_WRONLY);
+}
+
+static bool readable(uint32_t flags) {
+    return ((03 & flags) == O_RDWR) || ((03 & flags) == O_RDONLY);
+}
+
 namespace fs {
 namespace {
 
@@ -523,6 +531,13 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
             return MX_ERR_INVALID_ARGS;
         }
         mxrio_mmap_data_t* data = reinterpret_cast<mxrio_mmap_data_t*>(msg->data);
+        if (ios->io_flags & O_APPEND && data->flags & MXIO_MMAP_FLAG_WRITE) {
+            return MX_ERR_ACCESS_DENIED;
+        } else if (!writable(ios->io_flags) && (data->flags & MXIO_MMAP_FLAG_WRITE)) {
+            return MX_ERR_ACCESS_DENIED;
+        } else if (!readable(ios->io_flags)) {
+            return MX_ERR_ACCESS_DENIED;
+        }
 
         mx_status_t status = vn->Mmap(data->flags, data->length, &data->offset,
                                       &msg->handle[0]);
