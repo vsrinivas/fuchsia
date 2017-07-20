@@ -7,7 +7,6 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
@@ -29,8 +28,6 @@ namespace {
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
-    // Good other value to use for dev:
-    // "file:///system/apps/example_flutter_counter_parent"
     first_module = command_line.GetOptionValueWithDefault(
         "first_module", "file:///system/apps/modular_tests/null_module");
     second_module = command_line.GetOptionValueWithDefault(
@@ -286,10 +283,6 @@ class TestUserShellApp
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override {
     create_view_.Pass();
-    view_.reset(new modular::ViewHost(
-        application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
   }
 
   TestPoint initialize_{"Initialize()"};
@@ -427,7 +420,6 @@ class TestUserShellApp
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-    view_->ConnectView(std::move(story_view));
 
     if (round == 0) {
       story_controller_->AddModule(fidl::Array<fidl::String>::New(0), "second",
@@ -514,7 +506,6 @@ class TestUserShellApp
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-    view_->ConnectView(std::move(story_view));
 
     story_controller_->GetInfo([this](modular::StoryInfoPtr info,
                                       modular::StoryState state) {
@@ -577,8 +568,6 @@ class TestUserShellApp
   StoryDoneWatcherImpl story_done_watcher_;
   StoryModulesWatcherImpl story_modules_watcher_;
   StoryLinksWatcherImpl story_links_watcher_;
-
-  std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
