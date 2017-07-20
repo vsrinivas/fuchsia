@@ -68,53 +68,15 @@ public:
         MessageWaiter() : txid_(0), status_(MX_ERR_BAD_STATE) {
         }
 
-        ~MessageWaiter() {
-            if (unlikely(channel_ != nullptr)) {
-                channel_->RemoveWaiter(this);
-            }
-            DEBUG_ASSERT(!InContainer());
-        }
+        ~MessageWaiter();
 
-        mx_status_t BeginWait(mxtl::RefPtr<ChannelDispatcher> channel, mx_txid_t txid) {
-            if (unlikely(channel_ != nullptr)) {
-                return MX_ERR_BAD_STATE;
-            }
-            DEBUG_ASSERT(!InContainer());
-
-            txid_ = txid;
-            status_ = MX_ERR_TIMED_OUT;
-            channel_ = mxtl::move(channel);
-            event_.Unsignal();
-            return MX_OK;
-        }
-
+        mx_status_t BeginWait(mxtl::RefPtr<ChannelDispatcher> channel, mx_txid_t txid);
         int Deliver(mxtl::unique_ptr<MessagePacket> msg);
-
-        int Cancel(status_t status) {
-            DEBUG_ASSERT(!InContainer());
-            DEBUG_ASSERT(armed());
-            status_ = status;
-            return event_.Signal(status);
-        }
-
+        int Cancel(status_t status);
         mx_txid_t get_txid() const { return txid_; }
-
-        mx_status_t Wait(lk_time_t deadline) {
-            if (unlikely(!armed())) {
-                return MX_ERR_BAD_STATE;
-            }
-            return event_.Wait(deadline);
-        }
-
+        mx_status_t Wait(lk_time_t deadline);
         // Returns any delivered message via out and the status.
-        mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out) {
-            if (unlikely(!armed())) {
-                return MX_ERR_BAD_STATE;
-            }
-            *out = mxtl::move(msg_);
-            channel_ = nullptr;
-            return status_;
-        }
+        mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out);
 
     private:
         bool armed() const { return channel_ != nullptr; }
