@@ -6,7 +6,6 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
@@ -172,10 +171,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override {
     create_view_.Pass();
-    view_.reset(new modular::ViewHost(
-        application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
   }
 
   TestPoint initialize_{"Initialize()"};
@@ -264,7 +259,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-    view_->ConnectView(std::move(story_view));
   }
 
   TestPoint story1_cycle1_{"Story1 Cycle 1"};
@@ -331,8 +325,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   StoryDoneWatcherImpl story_done_watcher_;
   LinkChangeCountWatcherImpl link_change_count_watcher_;
-
-  std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
