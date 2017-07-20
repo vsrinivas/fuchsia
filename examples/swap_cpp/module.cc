@@ -22,11 +22,11 @@ ModuleView::ModuleView(
 }
 
 void ModuleView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
-  mozart::client::Rectangle background_shape(session(), size().width,
-                                             size().height);
+  mozart::client::Rectangle background_shape(session(), logical_size().width,
+                                             logical_size().height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(
-      (float[]){size().width * .5f, size().height * .5f, 0.f});
+  background_node_.SetTranslation(logical_size().width * .5f,
+                                  logical_size().height * .5f, 0.f);
   InvalidateScene();
 }
 

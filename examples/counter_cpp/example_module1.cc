@@ -55,23 +55,20 @@ class Module1View : public mozart::BaseView {
   // Copied from
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override {
-    InvalidateScene();
-  }
-
   void OnSceneInvalidated(
       mozart2::PresentationInfoPtr presentation_info) override {
-    if (!has_size())
+    if (!has_logical_size())
       return;
 
-    const float center_x = size().width * .5f;
-    const float center_y = size().height * .5f;
-    const float square_size = std::min(size().width, size().height) * .6f;
+    const float center_x = logical_size().width * .5f;
+    const float center_y = logical_size().height * .5f;
+    const float square_size =
+        std::min(logical_size().width, logical_size().height) * .6f;
     const float angle =
         kTickRotationDegrees * store_->counter.counter * M_PI * 2;
 
-    mozart::client::Rectangle background_shape(session(), size().width,
-                                               size().height);
+    mozart::client::Rectangle background_shape(session(), logical_size().width,
+                                               logical_size().height);
     background_node_.SetShape(background_shape);
     background_node_.SetTranslation(
         (float[]){center_x, center_y, kBackgroundElevation});

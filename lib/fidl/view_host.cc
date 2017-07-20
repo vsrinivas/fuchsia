@@ -67,7 +67,7 @@ void ViewHost::UpdateScene() {
 
   // Layout all children in a row.
   uint32_t index = 0;
-  uint32_t space = size().width;
+  uint32_t space = logical_size().width;
   uint32_t base = space / views_.size();
   uint32_t excess = space % views_.size();
   uint32_t offset = 0;
@@ -85,19 +85,15 @@ void ViewHost::UpdateScene() {
     layout_bounds.x = offset;
     layout_bounds.y = 0;
     layout_bounds.width = extent;
-    layout_bounds.height = size().height;
+    layout_bounds.height = logical_size().height;
     offset += extent;
 
     auto view_properties = mozart::ViewProperties::New();
     view_properties->view_layout = mozart::ViewLayout::New();
-    view_properties->view_layout->size = mozart::Size::New();
+    view_properties->view_layout->size = mozart::SizeF::New();
     view_properties->view_layout->size->width = layout_bounds.width;
     view_properties->view_layout->size->height = layout_bounds.height;
-    view_properties->view_layout->inset = mozart::Inset::New();
-    view_properties->view_layout->inset->top = 0;
-    view_properties->view_layout->inset->right = 0;
-    view_properties->view_layout->inset->bottom = 0;
-    view_properties->view_layout->inset->left = 0;
+    view_properties->view_layout->inset = mozart::InsetF::New();
     GetViewContainer()->SetChildProperties(it->first,
                                            std::move(view_properties));
 
