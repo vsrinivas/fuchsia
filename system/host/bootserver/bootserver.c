@@ -194,16 +194,18 @@ typedef struct {
     FILE* fp;
     const char* data;
     size_t datalen;
+    const char* ptr;
+    size_t avail;
 } xferdata;
 
 static ssize_t xread(xferdata* xd, void* data, size_t len) {
     if (xd->fp == NULL) {
-        if (len > xd->datalen) {
-            len = xd->datalen;
+        if (len > xd->avail) {
+            len = xd->avail;
         }
-        memcpy(data, xd->data, len);
-        xd->datalen -= len;
-        xd->data += len;
+        memcpy(data, xd->ptr, len);
+        xd->avail -= len;
+        xd->ptr += len;
         return len;
     } else {
         ssize_t r = fread(data, 1, len, xd->fp);
@@ -211,6 +213,19 @@ static ssize_t xread(xferdata* xd, void* data, size_t len) {
             return ferror(xd->fp) ? -1 : 0;
         }
         return r;
+    }
+}
+
+static int xseek(xferdata* xd, off_t off) {
+    if (xd->fp == NULL) {
+        if (off > xd->datalen) {
+            return -1;
+        }
+        xd->ptr = xd->data + off;
+        xd->avail = xd->datalen - off;
+        return 0;
+    } else {
+        return fseek(xd->fp, off, SEEK_SET);
     }
 }
 
@@ -239,18 +254,20 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     // This only works on POSIX systems
     bool is_redirected = !isatty(fileno(stdout));
 
+    long sz = 0;
     if (!strcmp(fn, "(cmdline)")) {
         xd.fp = NULL;
         xd.data = name;
         xd.datalen = strlen(name) + 1;
+        xd.ptr = xd.data;
+        xd.avail = xd.datalen;
         name = "cmdline";
-    } else if ((xd.fp = fopen(fn, "rb")) == NULL) {
-        fprintf(stderr, "%s: error: Could not open file %s\n", appname, fn);
-        return -1;
-    }
-
-    long sz = 0;
-    if (xd.fp) {
+        sz = xd.datalen;
+    } else {
+        if ((xd.fp = fopen(fn, "rb")) == NULL) {
+            fprintf(stderr, "%s: error: Could not open file %s\n", appname, fn);
+            return -1;
+        }
         if (fseek(xd.fp, 0L, SEEK_END)) {
             fprintf(stderr, "%s: error: Could not determine size of %s\n", appname, fn);
         } else if ((sz = ftell(xd.fp)) < 0) {
@@ -365,7 +382,7 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         if (ack->cookie > 0 && ack->cmd == NB_ACK && ack->arg != current_pos) {
             fprintf(stderr, "\n%s: need to rewind to %d from %zu\n", appname, ack->arg, current_pos);
             current_pos = ack->arg;
-            if (fseek(xd.fp, current_pos, SEEK_SET)) {
+            if (xseek(&xd, current_pos)) {
                 fprintf(stderr, "\n%s: error: Failed to rewind '%s' to %zu\n", appname, fn, current_pos);
                 goto done;
             }
