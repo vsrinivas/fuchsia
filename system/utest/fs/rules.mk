@@ -17,6 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/misc.c \
     $(LOCAL_DIR)/wrap.c \
+    $(LOCAL_DIR)/test-access.cpp \
     $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-append.c \
     $(LOCAL_DIR)/test-basic.c \

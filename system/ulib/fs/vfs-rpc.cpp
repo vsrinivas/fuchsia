@@ -246,6 +246,9 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {
+        if (!readable(ios->io_flags)) {
+            return MX_ERR_BAD_HANDLE;
+        }
         ssize_t r = vn->Read(msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -255,6 +258,9 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         return static_cast<mx_status_t>(r);
     }
     case MXRIO_READ_AT: {
+        if (!readable(ios->io_flags)) {
+            return MX_ERR_BAD_HANDLE;
+        }
         ssize_t r = vn->Read(msg->data, arg, msg->arg2.off);
         if (r >= 0) {
             msg->datalen = static_cast<uint32_t>(r);
@@ -262,6 +268,9 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         return static_cast<mx_status_t>(r);
     }
     case MXRIO_WRITE: {
+        if (!writable(ios->io_flags)) {
+            return MX_ERR_BAD_HANDLE;
+        }
         if (ios->io_flags & O_APPEND) {
             vnattr_t attr;
             mx_status_t r;
@@ -278,6 +287,9 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         return static_cast<mx_status_t>(r);
     }
     case MXRIO_WRITE_AT: {
+        if (!writable(ios->io_flags)) {
+            return MX_ERR_BAD_HANDLE;
+        }
         ssize_t r = vn->Write(msg->data, len, msg->arg2.off);
         return static_cast<mx_status_t>(r);
     }
@@ -477,6 +489,9 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
         return static_cast<uint32_t>(r);
     }
     case MXRIO_TRUNCATE: {
+        if (!writable(ios->io_flags)) {
+            return MX_ERR_BAD_HANDLE;
+        }
         if (msg->arg2.off < 0) {
             return MX_ERR_INVALID_ARGS;
         }
