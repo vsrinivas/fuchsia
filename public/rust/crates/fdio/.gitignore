@@ -1,0 +1,6 @@
+Cargo.lock
+target
+.cargo
+tools/*-unknown-fuchsia-ar
+tools/*-unknown-fuchsia-cc
+tools/clang_wrapper
