@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -149,7 +149,8 @@ int main(int argc, char** argv) {
         const char* fmt_string = "earlyprintk=serial,ttyS,115200 pci=noearly acpi_rsdp=%#" PRIx64
                                  " io_delay=none console=ttyS0";
         snprintf(cmdline, UINT8_MAX, fmt_string, pt_end_off);
-        status = setup_linux(addr, kVmoSize, first_page, fd, cmdline, &guest_ip, &bootdata_off);
+        status = setup_linux(
+                addr, kVmoSize, first_page, fd, ramdisk_path, cmdline, &guest_ip, &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
         fprintf(stderr, "Unknown kernel\n");

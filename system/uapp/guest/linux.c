@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
@@ -35,6 +37,8 @@
 #define ZP_SH_16_XLOADFLAGS     0x0236     // 64-bit and EFI load flags
 #define ZP_SH_32_SYSSIZE        0x01f4     // Size of protected-mode code + payload in 16-bytes
 #define ZP_SH_32_HEADER         0x0202     // Header, should match HEADER_MAGIC
+#define ZP_SH_32_RAMDISK_IMAGE  0x0218     // Ramdisk image address
+#define ZP_SH_32_RAMDISK_SIZE   0x021c     // Ramdisk image size
 #define ZP_SH_32_COMMAND_LINE   0x0228     // Pointer to command line args string
 #define ZP_SH_32_KERNEL_ALIGN   0x0230     // Kernel alignment
 #define ZP_SH_64_PREF_ADDRESS   0x0258     // Preferred address for kernel to be loaded at
@@ -57,6 +61,7 @@
 
 // Default address to load bzImage at
 static const uintptr_t kDefaultKernelOffset = 0x100000;
+static const uintptr_t kInitrdOffset        = 0x800000;
 
 static bool is_linux(const uintptr_t zero_page) {
     return ZP16(zero_page, ZP_SH_16_BOOTFLAG) == BOOT_FLAG_MAGIC &&
@@ -64,8 +69,8 @@ static bool is_linux(const uintptr_t zero_page) {
 }
 
 mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t first_page,
-                        const int fd, const char* cmdline, uintptr_t* guest_ip,
-                        uintptr_t* zero_page_addr) {
+                        const int fd, const char* initrd_path, const char* cmdline,
+                        uintptr_t* guest_ip, uintptr_t* zero_page_addr) {
     if (!is_linux(first_page))
         return MX_ERR_NOT_SUPPORTED;
 
@@ -145,6 +150,27 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     if ((size_t)ret != remaining) {
         fprintf(stderr, "Failed to read Linux image\n");
         return MX_ERR_IO;
+    }
+
+    if (initrd_path) {
+        ZP32(zero_page, ZP_SH_32_RAMDISK_IMAGE) = kInitrdOffset;
+        int initrd_fd = open(initrd_path, O_RDONLY);
+        if (initrd_fd < 0) {
+            fprintf(stderr, "Failed to open initial RAM disk image\n");
+            return MX_ERR_IO;
+        }
+        struct stat initrd_stat;
+        off_t ret = fstat(initrd_fd, &initrd_stat);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to stat initial RAM disk image\n");
+            return MX_ERR_IO;
+        }
+        ret = read(initrd_fd, (void*)(addr + kInitrdOffset), initrd_stat.st_size);
+        if (ret != initrd_stat.st_size) {
+            fprintf(stderr, "Failed to read initial RAM disk image\n");
+            return MX_ERR_IO;
+        }
+        ZP32(zero_page, ZP_SH_32_RAMDISK_SIZE) = initrd_stat.st_size;
     }
 
     *guest_ip = runtime_start + LEGACY_64_ENTRY_OFFSET;
