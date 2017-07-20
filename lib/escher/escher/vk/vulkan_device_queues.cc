@@ -214,7 +214,7 @@ VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device,
       transfer_queue_family_(transfer_queue_family),
       instance_(std::move(instance)),
       params_(std::move(params)),
-      proc_addrs_(device_, params.extension_names) {}
+      proc_addrs_(device_, params_.extension_names) {}
 
 VulkanDeviceQueues::~VulkanDeviceQueues() {
   device_.destroy();

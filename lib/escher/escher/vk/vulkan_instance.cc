@@ -21,10 +21,13 @@ static FuncT GetInstanceProcAddr(vk::Instance inst, const char* func_name) {
 #define GET_INSTANCE_PROC_ADDR(XXX) \
   XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
 
-VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance) {
+VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance,
+                                     bool requires_surface) {
   GET_INSTANCE_PROC_ADDR(CreateDebugReportCallbackEXT);
   GET_INSTANCE_PROC_ADDR(DestroyDebugReportCallbackEXT);
-  GET_INSTANCE_PROC_ADDR(GetPhysicalDeviceSurfaceSupportKHR);
+  if (requires_surface) {
+    GET_INSTANCE_PROC_ADDR(GetPhysicalDeviceSurfaceSupportKHR);
+  }
 }
 
 ftl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
@@ -57,7 +60,9 @@ ftl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
 }
 
 VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
-    : instance_(instance), params_(std::move(params)), proc_addrs_(instance_) {}
+    : instance_(instance),
+      params_(std::move(params)),
+      proc_addrs_(instance_, params_.requires_surface) {}
 
 VulkanInstance::~VulkanInstance() {
   instance_.destroy();

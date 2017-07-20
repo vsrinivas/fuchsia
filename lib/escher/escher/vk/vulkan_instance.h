@@ -23,11 +23,12 @@ class VulkanInstance : public ftl::RefCountedThreadSafe<VulkanInstance> {
   struct Params {
     std::set<std::string> layer_names{"VK_LAYER_LUNARG_standard_validation"};
     std::set<std::string> extension_names;
+    bool requires_surface = true;
   };
 
   // Contains dynamically-obtained addresses of instance-specific functions.
   struct ProcAddrs {
-    ProcAddrs(vk::Instance instance);
+    ProcAddrs(vk::Instance instance, bool requires_surface);
 
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
