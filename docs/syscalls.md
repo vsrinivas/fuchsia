@@ -75,6 +75,7 @@
 + [vmo_create](syscalls/vmo_create.md) - create a new vmo
 + [vmo_read](syscalls/vmo_read.md) - read from a vmo
 + [vmo_write](syscalls/vmo_write.md) - write to a vmo
++ [vmo_clone](syscalls/vmo_clone.md) - clone a vmo
 + [vmo_get_size](syscalls/vmo_get_size.md) - obtain the size of a vmo
 + [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
