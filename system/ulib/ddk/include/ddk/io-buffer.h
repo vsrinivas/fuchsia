@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 __BEGIN_CDECLS;
 
@@ -48,7 +49,7 @@ static inline bool io_buffer_is_valid(io_buffer_t* buffer) {
 }
 
 static inline void* io_buffer_virt(io_buffer_t* buffer) {
-    return buffer->virt + buffer->offset;
+    return (void*)(((uintptr_t)buffer->virt) + buffer->offset);
 }
 
 static inline mx_paddr_t io_buffer_phys(io_buffer_t* buffer) {
