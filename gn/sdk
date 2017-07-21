@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "runtime",
+        "runtime_config",
+        "openssh",
+        "netstack"
+    ]
+}
