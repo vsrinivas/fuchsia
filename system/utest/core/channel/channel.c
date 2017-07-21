@@ -778,8 +778,7 @@ static bool channel_call2(void) {
 // but this is the simplest), and then add the offset of the internal
 // SYSCALL_mx_channel_call_finish function we want to call.
 #include "vdso-code.h"
-static mx_status_t mx_channel_call_finish(mx_handle_t handle,
-                                          mx_time_t deadline,
+static mx_status_t mx_channel_call_finish(mx_time_t deadline,
                                           const mx_channel_call_args_t* args,
                                           uint32_t* actual_bytes,
                                           uint32_t* actual_handles,
@@ -788,14 +787,11 @@ static mx_status_t mx_channel_call_finish(mx_handle_t handle,
         (uintptr_t)&mx_handle_close - VDSO_SYSCALL_mx_handle_close;
     uintptr_t fnptr = vdso_base + VDSO_SYSCALL_mx_channel_call_finish;
     return (*(__typeof(mx_channel_call_finish)*)fnptr)(
-        handle, deadline, args, actual_bytes, actual_handles, read_status);
+        deadline, args, actual_bytes, actual_handles, read_status);
 }
 
 static bool bad_channel_call_finish(void) {
     BEGIN_TEST;
-
-    mx_handle_t cli, srv;
-    ASSERT_EQ(mx_channel_create(0, &cli, &srv), MX_OK, "");
 
     char msg[8] = { 0, };
     mx_channel_call_args_t args = {
@@ -814,13 +810,11 @@ static bool bad_channel_call_finish(void) {
 
     // Call channel_call_finish without having had a channel call interrupted
     mx_status_t rs = MX_OK;
-    mx_status_t r = mx_channel_call_finish(cli, mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
+    mx_status_t r = mx_channel_call_finish(mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
                                            &act_handles, &rs);
 
-    mx_handle_close(cli);
-
-    EXPECT_EQ(r, MX_ERR_CALL_FAILED, "");
-    EXPECT_EQ(rs, MX_ERR_BAD_STATE, "");
+    EXPECT_EQ(r, MX_ERR_BAD_STATE, "");
+    EXPECT_EQ(rs, MX_OK, ""); // The syscall leaves this unchanged.
 
     END_TEST;
 }

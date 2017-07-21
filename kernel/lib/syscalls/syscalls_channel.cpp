@@ -305,7 +305,7 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
                                  actual_bytes, actual_handles, read_status);
 }
 
-mx_status_t sys_channel_call_finish(mx_handle_t handle_value, mx_time_t deadline,
+mx_status_t sys_channel_call_finish(mx_time_t deadline,
                                     user_ptr<const mx_channel_call_args_t> _args,
                                     user_ptr<uint32_t> actual_bytes,
                                     user_ptr<uint32_t> actual_handles,
@@ -317,13 +317,14 @@ mx_status_t sys_channel_call_finish(mx_handle_t handle_value, mx_time_t deadline
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ChannelDispatcher> channel;
-    mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
-    if (result != MX_OK)
-        return result;
+    auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
+    mxtl::RefPtr<ChannelDispatcher> channel = waiter->get_channel();
+    if (!channel)
+        return MX_ERR_BAD_STATE;
 
     mxtl::unique_ptr<MessagePacket> reply;
-    result = channel->ResumeInterruptedCall(deadline, &reply);
+    mx_status_t result = channel->ResumeInterruptedCall(
+        waiter, deadline, &reply);
     return channel_call_epilogue(up, mxtl::move(reply), &args, result,
                                  actual_bytes, actual_handles, read_status);
 

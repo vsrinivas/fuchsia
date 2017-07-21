@@ -21,6 +21,8 @@
 
 class ChannelDispatcher final : public Dispatcher {
 public:
+    class MessageWaiter;
+
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
                            mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
 
@@ -51,7 +53,8 @@ public:
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
     // after an interruption caused by suspending.
-    status_t ResumeInterruptedCall(mx_time_t deadline, mxtl::unique_ptr<MessagePacket>* reply);
+    status_t ResumeInterruptedCall(MessageWaiter* waiter, mx_time_t deadline,
+                                   mxtl::unique_ptr<MessagePacket>* reply);
 
     // MessageWaiter's state is guarded by the lock of the
     // owning ChannelDispatcher, and Deliver(), Signal(), Cancel(),
@@ -73,6 +76,7 @@ public:
         mx_status_t BeginWait(mxtl::RefPtr<ChannelDispatcher> channel, mx_txid_t txid);
         int Deliver(mxtl::unique_ptr<MessagePacket> msg);
         int Cancel(status_t status);
+        mxtl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         mx_txid_t get_txid() const { return txid_; }
         mx_status_t Wait(lk_time_t deadline);
         // Returns any delivered message via out and the status.

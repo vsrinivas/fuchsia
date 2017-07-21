@@ -218,14 +218,13 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
 
     // Reuse the code from the half-call used for retrying a Call after thread
     // suspend.
-    return ResumeInterruptedCall(deadline, reply);
+    return ResumeInterruptedCall(waiter, deadline, reply);
 }
 
-status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
+status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
+                                                  mx_time_t deadline,
                                                   mxtl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
-
-    auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
 
     // (2) Wait for notification via waiter's event or for the
     // deadline to hit.
