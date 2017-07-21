@@ -16,10 +16,10 @@ namespace maxwell {
 using RankingFunction =
     std::function<int64_t(const maxwell::SuggestionPrototype*)>;
 
-constexpr int64_t kNoMatchRank = std::numeric_limits<int64_t>::max();
+constexpr int64_t kMaxRank = std::numeric_limits<int64_t>::max();
 
 int64_t RankBySubstring(std::string text, const std::string& query);
-int64_t RankByTimestamp(ftl::TimePoint timestamp);
+int64_t GetDefaultRank(const SuggestionPrototype* prototype);
 
 namespace ranking {
 
