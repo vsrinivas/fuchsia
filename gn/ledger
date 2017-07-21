@@ -4,6 +4,7 @@
     ],
     "imports": [
         "boringssl_libssl",
+        "cobalt_client",
         "ftl",
         "mtl"
     ],
