@@ -1,0 +1,8 @@
+{
+  "tests": [
+    {
+      "name": "cobalt_apptests",
+      "exec": "/system/test/cobalt_apptests"
+    }
+  ]
+}

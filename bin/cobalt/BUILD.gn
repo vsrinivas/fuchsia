@@ -15,19 +15,7 @@ group("tests") {
 
   deps = [
     ":cobalt_testapp",
-  ]
-}
-
-executable("cobalt_testapp") {
-  sources = [
-    "cobalt_testapp.cc",
-  ]
-
-  deps = [
-    "//application/lib/app",
-    "//apps/cobalt_client/services:cobalt_sync",
-    "//lib/ftl",
-    "//lib/mtl",
+    ":cobalt_apptests",
   ]
 }
 
@@ -50,4 +38,30 @@ executable("cobalt") {
   ]
 }
 
+executable("cobalt_testapp") {
+  sources = [
+    "cobalt_testapp.cc",
+  ]
 
+  deps = [
+    "//application/lib/app",
+    "//apps/cobalt_client/services:cobalt_sync",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("cobalt_apptests") {
+  testonly = true
+
+  sources = [
+    "cobalt_apptest.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/cobalt_client/services:cobalt_sync",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
