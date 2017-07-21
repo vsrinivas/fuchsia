@@ -288,7 +288,7 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     uintptr_t ops_ptr = ((((uintptr_t)id_page_addr) + mexec_asm_length + 8) | 0x7) + 1;
     memmov_ops_t* ops = (memmov_ops_t*)(ops_ptr);
 
-    const size_t num_ops = 3;
+    const size_t num_ops = 2;
     // Make sure that we can also pack the arguments in the same page as the
     // final mexec assembly shutdown code.
     DEBUG_ASSERT(((sizeof(*ops) * num_ops + ops_ptr) - (uintptr_t)id_page_addr) < PAGE_SIZE);
@@ -298,32 +298,13 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     ops[0].dst = (void*)KERNEL_LOAD_OFFSET;
     ops[0].len = new_kernel_len;
 
-    // Op to move the new bootimage into place (put 16MiB after the Kernel)
-    void* dst_addr = (void*)(ROUNDUP(new_kernel_addr + new_kernel_len, PAGE_SIZE) +
-                             (16 * 1024u * 1024u));
-    ops[1].src = (void*)new_bootimage_addr;
-    ops[1].dst = dst_addr;
-    ops[1].len = new_bootimage_len;
-
     // Null terminated list.
-    ops[2] = { 0, 0, 0 };
+    ops[1] = { 0, 0, 0 };
 
-    // For now we want to make sure that none of the memcpy intervals overlap.
-    // In the future we'll pass vectorized lists to memcpy and copy physical
-    // page at a time.
-    for (size_t i = 0; i < num_ops; i++) {
-        for (size_t j = 0; j < num_ops; j++) {
-            if (i == j) continue;
-            DEBUG_ASSERT(!intervals_intersect(ops[i].src, ops[i].len,
-                                              ops[j].src, ops[j].len));
-            DEBUG_ASSERT(!intervals_intersect(ops[i].src, ops[i].len,
-                                              ops[j].dst, ops[j].len));
-            DEBUG_ASSERT(!intervals_intersect(ops[i].dst, ops[i].len,
-                                              ops[j].src, ops[j].len));
-            DEBUG_ASSERT(!intervals_intersect(ops[i].dst, ops[i].len,
-                                              ops[j].dst, ops[j].len));
-        }
-    }
+    // Make sure that the kernel, when copied, will not overwrite the bootdata.
+    DEBUG_ASSERT(!intervals_intersect(ops[0].dst, ops[0].len,
+                                      (const void*)new_bootimage_addr,
+                                      new_bootimage_len));
 
     // Sync because there is code in here that we intend to run.
     arch_sync_cache_range((addr_t)id_page_addr, PAGE_SIZE);
@@ -338,7 +319,8 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     mp_set_curr_cpu_online(false);
 
     mexec_asm_func mexec_assembly = (mexec_asm_func)id_page_addr;
-    mexec_assembly((uintptr_t)dst_addr, 0, 0, 0, ops, (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
+    mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, 0, ops,
+                   (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
 
     panic("Execution should never reach here\n");
     return MX_OK;
