@@ -13,8 +13,8 @@ namespace scene_manager {
 namespace test {
 
 void SessionTest::SetUp() {
-  session_context_ = std::unique_ptr<SessionContext>(CreateSessionContext());
-  session_ = ftl::MakeRefCounted<Session>(1, session_context_.get(), this);
+  engine_ = std::unique_ptr<Engine>(CreateEngine());
+  session_ = ftl::MakeRefCounted<Session>(1, engine_.get(), this);
 }
 
 // ::testing::Test virtual method.
@@ -22,11 +22,11 @@ void SessionTest::TearDown() {
   reported_errors_.clear();
   session_->TearDown();
   session_ = nullptr;
-  session_context_.reset();
+  engine_.reset();
 }
 
-std::unique_ptr<SessionContext> SessionTest::CreateSessionContext() {
-  return std::make_unique<SessionContextForTest>(nullptr);
+std::unique_ptr<Engine> SessionTest::CreateEngine() {
+  return std::make_unique<EngineForTest>(nullptr);
 }
 
 void SessionTest::ReportError(ftl::LogSeverity severity,

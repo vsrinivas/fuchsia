@@ -10,7 +10,7 @@
 #include "apps/mozart/src/scene_manager/acquire_fence_set.h"
 #include "apps/mozart/src/scene_manager/resources/memory.h"
 #include "apps/mozart/src/scene_manager/resources/resource_map.h"
-#include "apps/mozart/src/scene_manager/session/session_context.h"
+#include "apps/mozart/src/scene_manager/session/engine.h"
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "lib/ftl/tasks/task_runner.h"
 
@@ -30,14 +30,14 @@ using ImagePipePtr = ::ftl::RefPtr<ImagePipe>;
 class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
-class SessionContext;
+class Engine;
 
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
 class Session : public ftl::RefCountedThreadSafe<Session> {
  public:
   Session(SessionId id,
-          SessionContext* context,
+          Engine* engine,
           ErrorReporter* error_reporter = ErrorReporter::Default());
   ~Session();
 
@@ -47,8 +47,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyOp(const mozart2::OpPtr& op);
 
   SessionId id() const { return id_; }
-  SessionContext* context() const { return context_; }
-  escher::Escher* escher() const { return context_->escher(); }
+  Engine* engine() const { return engine_; }
+  escher::Escher* escher() const { return engine_->escher(); }
 
   // Return the total number of existing resources associated with this Session.
   size_t GetTotalResourceCount() const { return resource_count_; }
@@ -59,7 +59,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
-  // Called only by SessionContext. Use BeginTearDown() instead when you need to
+  // Called only by Engine. Use BeginTearDown() instead when you need to
   // teardown from within Session.
   void TearDown();
 
@@ -84,7 +84,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   void ScheduleImagePipeUpdate(uint64_t presentation_time,
                                ImagePipePtr image_pipe);
 
-  // Called by SessionContext() when it is notified by the FrameScheduler that
+  // Called by Engine() when it is notified by the FrameScheduler that
   // a frame should be rendered for the specified |presentation_time|.  Return
   // true if any updates were applied, and false otherwise.
   bool ApplyScheduledUpdates(uint64_t presentation_time,
@@ -229,7 +229,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   std::queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
 
   const SessionId id_;
-  SessionContext* const context_;
+  Engine* const engine_;
   ErrorReporter* error_reporter_ = nullptr;
 
   ResourceMap resources_;

@@ -43,14 +43,12 @@ constexpr std::array<mozart2::Value::Tag, 2> kVec3ValueTypes{
 
 }  // anonymous namespace
 
-Session::Session(SessionId id,
-                 SessionContext* context,
-                 ErrorReporter* error_reporter)
+Session::Session(SessionId id, Engine* engine, ErrorReporter* error_reporter)
     : id_(id),
-      context_(context),
+      engine_(engine),
       error_reporter_(error_reporter),
       resources_(error_reporter) {
-  FTL_DCHECK(context);
+  FTL_DCHECK(engine);
   FTL_DCHECK(error_reporter);
 }
 
@@ -176,7 +174,7 @@ bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
 
 bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
   if (auto resource = resources_.FindResource<Resource>(op->id)) {
-    return context_->ExportResource(std::move(resource), std::move(op->token));
+    return engine_->ExportResource(std::move(resource), std::move(op->token));
   }
   return false;
 }
@@ -184,7 +182,7 @@ bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
 bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
   ImportPtr import =
       ftl::MakeRefCounted<Import>(this, op->id, op->spec, std::move(op->token));
-  context_->ImportResource(import, op->spec, import->import_token());
+  engine_->ImportResource(import, op->spec, import->import_token());
   return resources_.AddResource(op->id, std::move(import));
 }
 
@@ -604,7 +602,7 @@ bool Session::ApplyCreateVariable(mozart::ResourceId id,
 
 ResourcePtr Session::CreateMemory(mozart::ResourceId id,
                                   const mozart2::MemoryPtr& args) {
-  vk::Device device = context()->vk_device();
+  vk::Device device = engine()->vk_device();
   switch (args->memory_type) {
     case mozart2::MemoryType::VK_DEVICE_MEMORY:
       return GpuMemory::New(this, id, device, args, error_reporter_);
@@ -637,8 +635,8 @@ ResourcePtr Session::CreateDisplayRenderer(
     mozart::ResourceId id,
     const mozart2::DisplayRendererPtr& args) {
   return ftl::MakeRefCounted<DisplayRenderer>(
-      this, id, context()->frame_scheduler(), context()->GetPaperRenderer(),
-      context()->GetVulkanSwapchain());
+      this, id, engine()->frame_scheduler(), engine()->GetPaperRenderer(),
+      engine()->GetVulkanSwapchain());
 }
 
 ResourcePtr Session::CreateImagePipeRenderer(
@@ -690,7 +688,7 @@ ResourcePtr Session::CreateRoundedRectangle(mozart::ResourceId id,
                                             float top_right_radius,
                                             float bottom_right_radius,
                                             float bottom_left_radius) {
-  auto factory = context()->escher_rounded_rect_factory();
+  auto factory = engine()->escher_rounded_rect_factory();
   if (!factory) {
     error_reporter_->ERROR()
         << "scene_manager::Session::CreateRoundedRectangle(): "
@@ -773,7 +771,7 @@ void Session::ScheduleUpdate(
     // acquire_fence_set is already ready (which is the case if there are zero
     // acquire fences).
     acquire_fence_set->WaitReadyAsync([this, presentation_time] {
-      context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+      engine_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
     });
 
     scheduled_updates_.push(Update{presentation_time, std::move(ops),
@@ -788,7 +786,7 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
     scheduled_image_pipe_updates_.push(
         {presentation_time, std::move(image_pipe)});
 
-    context_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+    engine_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
   }
 }
 
@@ -806,7 +804,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       scheduled_updates_.front().present_callback(std::move(info));
 
       for (auto& fence : fences_to_release_on_next_update_) {
-        context()->release_fence_signaller()->AddCPUReleaseFence(
+        engine()->release_fence_signaller()->AddCPUReleaseFence(
             std::move(fence));
       }
       fences_to_release_on_next_update_ =
@@ -887,7 +885,7 @@ void Session::HitTest(uint32_t node_id,
 }
 
 void Session::BeginTearDown() {
-  context()->TearDownSession(id());
+  engine()->TearDownSession(id());
   FTL_DCHECK(!is_valid());
 }
 

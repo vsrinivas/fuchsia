@@ -22,11 +22,11 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
   ImagePipeTest()
       : escher::ResourceManager(nullptr), command_buffer_sequencer_() {}
 
-  std::unique_ptr<SessionContext> CreateSessionContext() override {
+  std::unique_ptr<Engine> CreateEngine() override {
     auto r = std::make_unique<ReleaseFenceSignallerForTest>(
         &command_buffer_sequencer_);
     mock_release_fence_signaller_ = r.get();
-    return std::make_unique<SessionContextForTest>(std::move(r));
+    return std::make_unique<EngineForTest>(std::move(r));
   }
 
   void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override {}

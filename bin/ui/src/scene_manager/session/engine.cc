@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/session/session_context.h"
+#include "apps/mozart/src/scene_manager/session/engine.h"
 
 #include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -14,10 +14,9 @@
 
 namespace scene_manager {
 
-SessionContext::SessionContext(
-    escher::Escher* escher,
-    FrameScheduler* frame_scheduler,
-    std::unique_ptr<escher::VulkanSwapchain> swapchain)
+Engine::Engine(escher::Escher* escher,
+               FrameScheduler* frame_scheduler,
+               std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : escher_(escher),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher->resource_recycler(),
@@ -30,32 +29,31 @@ SessionContext::SessionContext(
       swapchain_(std::move(swapchain)),
       session_count_(0) {}
 
-SessionContext::SessionContext(std::unique_ptr<ReleaseFenceSignaller> r)
+Engine::Engine(std::unique_ptr<ReleaseFenceSignaller> r)
     : release_fence_signaller_(std::move(r)) {}
 
-SessionContext::~SessionContext() = default;
+Engine::~Engine() = default;
 
-ResourceLinker& SessionContext::GetResourceLinker() {
+ResourceLinker& Engine::GetResourceLinker() {
   return resource_linker_;
 }
 
-bool SessionContext::ExportResource(ResourcePtr resource,
-                                    mx::eventpair endpoint) {
+bool Engine::ExportResource(ResourcePtr resource, mx::eventpair endpoint) {
   return resource_linker_.ExportResource(std::move(resource),
                                          std::move(endpoint));
 }
 
-void SessionContext::ImportResource(ImportPtr import,
-                                    mozart2::ImportSpec spec,
-                                    const mx::eventpair& endpoint) {
+void Engine::ImportResource(ImportPtr import,
+                            mozart2::ImportSpec spec,
+                            const mx::eventpair& endpoint) {
   // The import is not captured in the OnImportResolvedCallback because we don't
   // want the reference in the bind to prevent the import from being collected.
   // However, when the import dies, its handle is collected which will cause the
   // resource to expire within the resource linker. In that case, we will never
   // receive the callback with |ResolutionResult::kSuccess|.
   ResourceLinker::OnImportResolvedCallback import_resolved_callback =
-      std::bind(&SessionContext::OnImportResolvedForResource,  // method
-                this,                                          // target
+      std::bind(&Engine::OnImportResolvedForResource,  // method
+                this,                                  // target
                 import.get(),  // the import that will be resolved by the linker
                 std::placeholders::_1,  // the acutal object to link to import
                 std::placeholders::_2   // result of the linking
@@ -63,7 +61,7 @@ void SessionContext::ImportResource(ImportPtr import,
   resource_linker_.ImportResource(spec, endpoint, import_resolved_callback);
 }
 
-void SessionContext::OnImportResolvedForResource(
+void Engine::OnImportResolvedForResource(
     Import* import,
     ResourcePtr actual,
     ResourceLinker::ResolutionResult resolution_result) {
@@ -72,15 +70,15 @@ void SessionContext::OnImportResolvedForResource(
   }
 }
 
-void SessionContext::ScheduleSessionUpdate(uint64_t presentation_time,
-                                           ftl::RefPtr<Session> session) {
+void Engine::ScheduleSessionUpdate(uint64_t presentation_time,
+                                   ftl::RefPtr<Session> session) {
   if (session->is_valid()) {
     updatable_sessions_.push({presentation_time, std::move(session)});
     ScheduleUpdate(presentation_time);
   }
 }
 
-void SessionContext::ScheduleUpdate(uint64_t presentation_time) {
+void Engine::ScheduleUpdate(uint64_t presentation_time) {
   if (frame_scheduler_) {
     frame_scheduler_->RequestFrame(presentation_time);
   } else {
@@ -91,7 +89,7 @@ void SessionContext::ScheduleUpdate(uint64_t presentation_time) {
   }
 }
 
-void SessionContext::CreateSession(
+void Engine::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
   SessionId session_id = next_session_id_++;
@@ -102,7 +100,7 @@ void SessionContext::CreateSession(
   ++session_count_;
 }
 
-std::unique_ptr<SessionHandler> SessionContext::CreateSessionHandler(
+std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
@@ -110,7 +108,7 @@ std::unique_ptr<SessionHandler> SessionContext::CreateSessionHandler(
                                           std::move(listener));
 }
 
-SessionHandler* SessionContext::FindSession(SessionId id) {
+SessionHandler* Engine::FindSession(SessionId id) {
   auto it = sessions_.find(id);
   if (it != sessions_.end()) {
     return it->second.get();
@@ -118,7 +116,7 @@ SessionHandler* SessionContext::FindSession(SessionId id) {
   return nullptr;
 }
 
-void SessionContext::TearDownSession(SessionId id) {
+void Engine::TearDownSession(SessionId id) {
   auto it = sessions_.find(id);
   FTL_DCHECK(it != sessions_.end());
   if (it != sessions_.end()) {
@@ -134,8 +132,8 @@ void SessionContext::TearDownSession(SessionId id) {
   }
 }
 
-bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
-                                    uint64_t presentation_interval) {
+bool Engine::OnPrepareFrame(uint64_t presentation_time,
+                            uint64_t presentation_interval) {
   bool needs_render = false;
   while (!updatable_sessions_.empty() &&
          updatable_sessions_.top().first <= presentation_time) {
@@ -153,12 +151,12 @@ bool SessionContext::OnPrepareFrame(uint64_t presentation_time,
   return needs_render;
 }
 
-escher::VulkanSwapchain SessionContext::GetVulkanSwapchain() const {
+escher::VulkanSwapchain Engine::GetVulkanSwapchain() const {
   FTL_DCHECK(swapchain_);
   return *(swapchain_.get());
 }
 
-const escher::PaperRendererPtr& SessionContext::GetPaperRenderer() {
+const escher::PaperRendererPtr& Engine::GetPaperRenderer() {
   if (!paper_renderer_ && escher_) {
     paper_renderer_ = escher_->NewPaperRenderer();
     paper_renderer_->set_sort_by_pipeline(false);

@@ -38,7 +38,7 @@ void ImagePipe::AddImage(uint32_t image_id,
     CloseConnectionAndCleanUp();
     return;
   }
-  vk::Device device = session()->context()->vk_device();
+  vk::Device device = session()->engine()->vk_device();
   MemoryPtr memory;
   switch (memory_type) {
     case mozart2::MemoryType::VK_DEVICE_MEMORY:
@@ -74,7 +74,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.Clear();
 
   // Schedule a new frame.
-  session()->context()->ScheduleUpdate(0);
+  session()->engine()->ScheduleUpdate(0);
 }
 
 void ImagePipe::OnConnectionError() {
@@ -165,7 +165,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
     // to the |ReleaseFenceSignaller|, which will signal it as soon as all work
     // previously submitted to the GPU is finished.
     if (current_release_fence_) {
-      session()->context()->release_fence_signaller()->AddCPUReleaseFence(
+      session()->engine()->release_fence_signaller()->AddCPUReleaseFence(
           std::move(current_release_fence_));
     }
     current_release_fence_ = std::move(next_release_fence);

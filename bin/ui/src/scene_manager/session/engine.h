@@ -25,15 +25,17 @@ class FrameScheduler;
 class Session;
 class SessionHandler;
 
-// Interface that describes the ways that a |Session| communicates with its
-// environment.
-class SessionContext : public FrameSchedulerListener {
+// Owns a group of sessions which can share resources with one another
+// using the same resource linker and which coexist within the same timing
+// domain using the same frame scheduler.  It is not possible for sessions
+// which belong to different engines to communicate with one another.
+class Engine : public FrameSchedulerListener {
  public:
-  SessionContext(escher::Escher* escher,
-                 FrameScheduler* frame_scheduler,
-                 std::unique_ptr<escher::VulkanSwapchain> swapchain);
+  Engine(escher::Escher* escher,
+         FrameScheduler* frame_scheduler,
+         std::unique_ptr<escher::VulkanSwapchain> swapchain);
 
-  ~SessionContext();
+  ~Engine();
 
   ResourceLinker& GetResourceLinker();
 
@@ -101,7 +103,7 @@ class SessionContext : public FrameSchedulerListener {
 
  protected:
   // Only used by subclasses used in testing.
-  SessionContext(std::unique_ptr<ReleaseFenceSignaller> r);
+  Engine(std::unique_ptr<ReleaseFenceSignaller> r);
 
  private:
   friend class SessionHandler;
@@ -146,7 +148,7 @@ class SessionContext : public FrameSchedulerListener {
       ResourcePtr actual,
       ResourceLinker::ResolutionResult resolution_result);
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SessionContext);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Engine);
 };
 
 }  // namespace scene_manager

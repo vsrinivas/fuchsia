@@ -39,7 +39,7 @@ void Material::UpdateEscherMaterial() {
     escher::TexturePtr texture;
     if (escher_image) {
       texture = ftl::MakeRefCounted<escher::Texture>(
-          session()->context()->escher_resource_recycler(), escher_image,
+          session()->engine()->escher_resource_recycler(), escher_image,
           vk::Filter::eLinear);
     }
     escher_material_->SetTexture(std::move(texture));

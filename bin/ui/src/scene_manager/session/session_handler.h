@@ -21,7 +21,7 @@ class SceneManagerImpl;
 // suggests to.
 class SessionHandler : public mozart2::Session, private ErrorReporter {
  public:
-  SessionHandler(SessionContext* session_context,
+  SessionHandler(Engine* engine,
                  SessionId session_id,
                  ::fidl::InterfaceRequest<mozart2::Session> request,
                  ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
@@ -45,7 +45,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
                const HitTestCallback& callback) override;
 
  private:
-  friend class SessionContext;
+  friend class Engine;
 
   // Customize behavior of ErrorReporter::ReportError().
   void ReportError(ftl::LogSeverity severity,
@@ -55,11 +55,11 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   // the SessionHandler MessageLoop.
   void BeginTearDown();
 
-  // Called only by SessionContext. Use BeginTearDown() instead when you need to
+  // Called only by Engine. Use BeginTearDown() instead when you need to
   // teardown from within SessionHandler.
   void TearDown();
 
-  SessionContext* const session_context_;
+  Engine* const engine_;
   scene_manager::SessionPtr session_;
 
   ::fidl::BindingSet<mozart2::Session> bindings_;

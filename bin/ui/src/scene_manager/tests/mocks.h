@@ -6,7 +6,7 @@
 
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
-#include "apps/mozart/src/scene_manager/session/session_context.h"
+#include "apps/mozart/src/scene_manager/session/engine.h"
 #include "apps/mozart/src/scene_manager/session/session_handler.h"
 
 namespace scene_manager {
@@ -16,7 +16,7 @@ namespace test {
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      SessionContext* session_context,
+      Engine* engine,
       SessionId session_id,
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
@@ -46,8 +46,7 @@ class SessionHandlerForTest : public SessionHandler {
 // Subclass SceneManagerImpl to make testing easier.
 class SceneManagerImplForTest : public SceneManagerImpl {
  public:
-  SceneManagerImplForTest(Display* display,
-                          std::unique_ptr<SessionContext> session_context);
+  SceneManagerImplForTest(Display* display, std::unique_ptr<Engine> engine);
 };
 
 class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
@@ -65,10 +64,10 @@ class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
   uint32_t num_calls_to_add_cpu_release_fence_ = 0;
 };
 
-class SessionContextForTest : public SessionContext {
+class EngineForTest : public Engine {
  public:
-  SessionContextForTest(std::unique_ptr<ReleaseFenceSignaller> r);
-  using SessionContext::FindSession;
+  EngineForTest(std::unique_ptr<ReleaseFenceSignaller> r);
+  using Engine::FindSession;
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(

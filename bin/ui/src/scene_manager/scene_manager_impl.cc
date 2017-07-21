@@ -15,36 +15,36 @@ SceneManagerImpl::SceneManagerImpl(
     std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : display_(display),
       frame_scheduler_(std::move(frame_scheduler)),
-      session_context_(std::make_unique<SessionContext>(escher,
-                                                        frame_scheduler_.get(),
-                                                        std::move(swapchain))) {
+      engine_(std::make_unique<Engine>(escher,
+                                       frame_scheduler_.get(),
+                                       std::move(swapchain))) {
   // Either both Escher and a FrameScheduler must be available, or neither.
   FTL_DCHECK(!escher == !frame_scheduler_);
 
-  // If a FrameScheduler was created, introduce it to the SessionContext.
+  // If a FrameScheduler was created, introduce it to the Engine.
   if (frame_scheduler_) {
-    frame_scheduler_->AddListener(session_context_.get());
+    frame_scheduler_->AddListener(engine_.get());
   }
 }
 
 SceneManagerImpl::~SceneManagerImpl() {
   if (frame_scheduler_) {
-    frame_scheduler_->RemoveListener(session_context_.get());
+    frame_scheduler_->RemoveListener(engine_.get());
   }
 }
 
 SceneManagerImpl::SceneManagerImpl(
     Display* display,
-    std::unique_ptr<SessionContext> session_context,
+    std::unique_ptr<Engine> engine,
     std::unique_ptr<FrameScheduler> frame_scheduler)
     : display_(display),
       frame_scheduler_(std::move(frame_scheduler)),
-      session_context_(std::move(session_context)) {}
+      engine_(std::move(engine)) {}
 
 void SceneManagerImpl::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  session_context_->CreateSession(std::move(request), std::move(listener));
+  engine_->CreateSession(std::move(request), std::move(listener));
 }
 
 void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {

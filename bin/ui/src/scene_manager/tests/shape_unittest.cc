@@ -151,7 +151,7 @@ TEST_F(ShapeTest, Rectangle) {
 }
 
 // TODO(MZ-159): This test needs a rounded rect factory to run but it is
-// not currently available in the session context for tests.
+// not currently available in the engine for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
   const mozart::ResourceId id = 1;
   EXPECT_TRUE(Apply(

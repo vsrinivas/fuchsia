@@ -29,7 +29,7 @@ class SceneManagerImpl : public mozart2::SceneManager {
       std::unique_ptr<escher::VulkanSwapchain> swapchain = nullptr);
   ~SceneManagerImpl() override;
 
-  SessionContext* session_context() { return session_context_.get(); }
+  Engine* engine() { return engine_.get(); }
 
   // mozart2::SceneManager interface methods.
   void CreateSession(
@@ -40,13 +40,13 @@ class SceneManagerImpl : public mozart2::SceneManager {
  protected:
   // Only used by subclasses used in testing.
   explicit SceneManagerImpl(Display* display,
-                            std::unique_ptr<SessionContext> session_context,
+                            std::unique_ptr<Engine> engine,
                             std::unique_ptr<FrameScheduler> frame_scheduler);
 
  private:
   Display* display_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
-  std::unique_ptr<SessionContext> session_context_;
+  std::unique_ptr<Engine> engine_;
   std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
 };
 

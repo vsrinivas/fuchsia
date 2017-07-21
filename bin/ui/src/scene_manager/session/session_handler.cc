@@ -10,16 +10,16 @@
 namespace scene_manager {
 
 SessionHandler::SessionHandler(
-    SessionContext* session_context,
+    Engine* engine,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : session_context_(session_context),
+    : engine_(engine),
       session_(::ftl::MakeRefCounted<scene_manager::Session>(
           session_id,
-          session_context_,
+          engine_,
           static_cast<ErrorReporter*>(this))) {
-  FTL_DCHECK(session_context);
+  FTL_DCHECK(engine);
 
   bindings_.set_on_empty_set_handler([this]() { BeginTearDown(); });
 
@@ -88,7 +88,7 @@ void SessionHandler::ReportError(ftl::LogSeverity severity,
 }
 
 void SessionHandler::BeginTearDown() {
-  session_context_->TearDownSession(session_->id());
+  engine_->TearDownSession(session_->id());
   FTL_DCHECK(!session_->is_valid());
 }
 

@@ -17,13 +17,11 @@ namespace test {
 
 TEST_F(SceneManagerTest, CreateAndDestroySession) {
   mozart2::SessionPtr session;
-  EXPECT_EQ(0U, manager_impl_->session_context()->GetSessionCount());
+  EXPECT_EQ(0U, manager_impl_->engine()->GetSessionCount());
   manager_->CreateSession(session.NewRequest(), nullptr);
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         1);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 1);
   session = nullptr;
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         0);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 0);
 }
 
 TEST_F(SceneManagerTest, MultipleSessionConnections1) {
@@ -32,19 +30,18 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
   // one.  We do this for two pairs of sessions in parallel, to test that it
   // works both when the original connection is closed first, and also when the
   // second connection is closed first.
-  EXPECT_EQ(0U, manager_impl_->session_context()->GetSessionCount());
+  EXPECT_EQ(0U, manager_impl_->engine()->GetSessionCount());
 
   mozart2::SessionPtr sess1a;
   mozart2::SessionPtr sess2a;
   manager_->CreateSession(sess1a.NewRequest(), nullptr);
   manager_->CreateSession(sess2a.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         2);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 2);
   auto handler1 = static_cast<SessionHandlerForTest*>(
-      manager_impl_->session_context()->FindSession(1));
+      manager_impl_->engine()->FindSession(1));
   auto handler2 = static_cast<SessionHandlerForTest*>(
-      manager_impl_->session_context()->FindSession(2));
+      manager_impl_->engine()->FindSession(2));
 
   mozart2::SessionPtr sess1b;
   sess1a->Connect(sess1b.NewRequest(), nullptr);
@@ -84,14 +81,13 @@ TEST_F(SceneManagerTest, MultipleSessionConnections1) {
 
   sess1b = nullptr;
   sess2a = nullptr;
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         0);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 0);
 }
 
 TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   // Creates multiple connections to a single session, then tests that all
   // are closed when one of them presents an illegal op.
-  EXPECT_EQ(0U, manager_impl_->session_context()->GetSessionCount());
+  EXPECT_EQ(0U, manager_impl_->engine()->GetSessionCount());
 
   mozart2::SessionPtr sess1a;
   manager_->CreateSession(sess1a.NewRequest(), nullptr);
@@ -102,10 +98,9 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   mozart2::SessionPtr sess1d;
   sess1c->Connect(sess1d.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         1);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 1);
   auto handler = static_cast<SessionHandlerForTest*>(
-      manager_impl_->session_context()->FindSession(1));
+      manager_impl_->engine()->FindSession(1));
 
   // Enqueue ops via sess1a.
   {
@@ -161,8 +156,7 @@ TEST_F(SceneManagerTest, MultipleSessionConnections2) {
                     [](mozart2::PresentationInfoPtr info) {});
   }
 
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         0);
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 0);
 
   // TODO: Test SessionListener.  One good way to do this would be to attach a
   // listener when creating connection 1c, and verifying that the error message
@@ -180,16 +174,15 @@ bool IsFenceSignalled(const mx::event& fence) {
 TEST_F(SceneManagerTest, ReleaseFences) {
   // Tests creating a session, and calling Present with two release fences.
   // The release fences should be signalled after a subsequent Present.
-  EXPECT_EQ(0u, manager_impl_->session_context()->GetSessionCount());
+  EXPECT_EQ(0u, manager_impl_->engine()->GetSessionCount());
 
   mozart2::SessionPtr session_host;
   manager_->CreateSession(session_host.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         1);
-  EXPECT_EQ(1u, manager_impl_->session_context()->GetSessionCount());
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 1);
+  EXPECT_EQ(1u, manager_impl_->engine()->GetSessionCount());
   auto handler = static_cast<SessionHandlerForTest*>(
-      manager_impl_->session_context()->FindSession(1));
+      manager_impl_->engine()->FindSession(1));
 
   mozart2::SessionPtr session;
   session_host->Connect(session.NewRequest(), nullptr);
@@ -242,16 +235,15 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   // Tests creating a session, and calling Present with an acquire and a release
   // fence. The release fences should be signalled only after a subsequent
   // Present, and not until the acquire fence has been signalled.
-  EXPECT_EQ(0u, manager_impl_->session_context()->GetSessionCount());
+  EXPECT_EQ(0u, manager_impl_->engine()->GetSessionCount());
 
   mozart2::SessionPtr session_host;
   manager_->CreateSession(session_host.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->session_context()->GetSessionCount() ==
-                         1);
-  EXPECT_EQ(1u, manager_impl_->session_context()->GetSessionCount());
+  RUN_MESSAGE_LOOP_UNTIL(manager_impl_->engine()->GetSessionCount() == 1);
+  EXPECT_EQ(1u, manager_impl_->engine()->GetSessionCount());
   auto handler = static_cast<SessionHandlerForTest*>(
-      manager_impl_->session_context()->FindSession(1));
+      manager_impl_->engine()->FindSession(1));
 
   mozart2::SessionPtr session;
   session_host->Connect(session.NewRequest(), nullptr);

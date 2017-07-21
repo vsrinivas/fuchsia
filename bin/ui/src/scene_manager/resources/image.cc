@@ -30,7 +30,7 @@ Image::Image(Session* session,
     : ImageBase(session, id, Image::kTypeInfo),
       memory_(std::move(memory)),
       image_(ftl::MakeRefCounted<escher::Image>(
-          session->context()->escher_resource_recycler(),
+          session->engine()->escher_resource_recycler(),
           image_info,
           vk_image,
           static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem())) {}
@@ -107,8 +107,8 @@ ImagePtr Image::New(Session* session,
     }
 
     auto escher_image = escher::image_utils::NewImageFromPixels(
-        session->context()->escher_image_factory(),
-        session->context()->escher_gpu_uploader(), pixel_format,
+        session->engine()->escher_image_factory(),
+        session->engine()->escher_gpu_uploader(), pixel_format,
         image_info->width, image_info->height,
         static_cast<uint8_t*>(host_memory->memory_base()) + memory_offset);
     return ftl::AdoptRef(new Image(session, id, std::move(host_memory),
@@ -127,7 +127,7 @@ ImagePtr Image::New(Session* session,
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
     escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-    vk::Device vk_device = session->context()->vk_device();
+    vk::Device vk_device = session->engine()->vk_device();
     vk::Image vk_image =
         escher::image_utils::CreateVkImage(vk_device, escher_image_info);
 

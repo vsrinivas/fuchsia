@@ -12,11 +12,11 @@ namespace test {
 void SceneManagerTest::SetUp() {
   auto r = std::make_unique<ReleaseFenceSignallerForTest>(
       &command_buffer_sequencer_);
-  auto session_context = std::make_unique<SessionContextForTest>(std::move(r));
+  auto engine = std::make_unique<EngineForTest>(std::move(r));
 
   display_ = std::make_unique<Display>(1280, 800, 1.f);
-  manager_impl_ = std::make_unique<SceneManagerImplForTest>(
-      display_.get(), std::move(session_context));
+  manager_impl_ = std::make_unique<SceneManagerImplForTest>(display_.get(),
+                                                            std::move(engine));
 
   manager_binding_ = std::make_unique<fidl::Binding<mozart2::SceneManager>>(
       manager_impl_.get());

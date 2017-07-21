@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "apps/mozart/src/scene_manager/session/engine.h"
 #include "apps/mozart/src/scene_manager/session/session.h"
-#include "apps/mozart/src/scene_manager/session/session_context.h"
 #include "gtest/gtest.h"
 #include "lib/mtl/threading/thread.h"
 
@@ -21,8 +21,8 @@ class SessionTest : public ::testing::Test,
   // ::testing::Test virtual method.
   void TearDown() override;
 
-  // Subclasses should override to provide their own SessionContext.
-  virtual std::unique_ptr<SessionContext> CreateSessionContext();
+  // Subclasses should override to provide their own Engine.
+  virtual std::unique_ptr<Engine> CreateEngine();
 
  protected:
   // Implement ErrorReporter.
@@ -47,7 +47,7 @@ class SessionTest : public ::testing::Test,
     }
   }
 
-  std::unique_ptr<SessionContext> session_context_;
+  std::unique_ptr<Engine> engine_;
   SessionPtr session_;
   std::vector<std::string> reported_errors_;
 };

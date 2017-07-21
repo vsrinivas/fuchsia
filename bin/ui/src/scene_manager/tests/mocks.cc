@@ -8,11 +8,11 @@ namespace scene_manager {
 namespace test {
 
 SessionHandlerForTest::SessionHandlerForTest(
-    SessionContext* session_context,
+    Engine* engine,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : SessionHandler(session_context,
+    : SessionHandler(engine,
                      session_id,
                      std::move(request),
                      std::move(listener)),
@@ -41,10 +41,9 @@ void SessionHandlerForTest::Connect(
   ++connect_count_;
 }
 
-SceneManagerImplForTest::SceneManagerImplForTest(
-    Display* display,
-    std::unique_ptr<SessionContext> session_context)
-    : SceneManagerImpl(display, std::move(session_context), nullptr) {}
+SceneManagerImplForTest::SceneManagerImplForTest(Display* display,
+                                                 std::unique_ptr<Engine> engine)
+    : SceneManagerImpl(display, std::move(engine), nullptr) {}
 
 ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
@@ -56,11 +55,10 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(mx::event fence) {
   fence.signal(0u, kFenceSignalled);
 }
 
-SessionContextForTest::SessionContextForTest(
-    std::unique_ptr<ReleaseFenceSignaller> r)
-    : SessionContext(std::move(r)) {}
+EngineForTest::EngineForTest(std::unique_ptr<ReleaseFenceSignaller> r)
+    : Engine(std::move(r)) {}
 
-std::unique_ptr<SessionHandler> SessionContextForTest::CreateSessionHandler(
+std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
