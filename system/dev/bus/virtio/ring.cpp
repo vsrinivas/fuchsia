@@ -22,10 +22,10 @@ namespace virtio {
 
 void virtio_dump_desc(const struct vring_desc* desc) {
     printf("vring descriptor %p: ", desc);
-    printf(" addr  %#" PRIx64, desc->addr);
-    printf(" len   %#8x", desc->len);
-    printf(" flags %#04hx", desc->flags);
-    printf(" next  %#04hx\n", desc->next);
+    printf("[addr=%#" PRIx64 ", ", desc->addr);
+    printf("len=%d, ", desc->len);
+    printf("flags=%#04hx, ", desc->flags);
+    printf("next=%#04hx]\n", desc->next);
 }
 
 Ring::Ring(Device* device)

@@ -22,6 +22,7 @@
 #define LTRACE_ENTRY_OBJ do { if (LOCAL_TRACE) { TRACE_ENTRY_OBJ; } } while (0)
 #define LTRACE_EXIT_OBJ do { if (LOCAL_TRACE) { TRACE_EXIT_OBJ; } } while (0)
 #define LTRACE do { if (LOCAL_TRACE) { TRACE; } } while (0)
+#define LTRACE_DO(expr) do { if (LOCAL_TRACE) { expr; } } while (0)
 #define LTRACEF(x...) do { if (LOCAL_TRACE) { TRACEF(x); } } while (0)
 #define LTRACEF_LEVEL(level, x...) do { if (LOCAL_TRACE >= (level)) { TRACEF(x); } } while (0)
 

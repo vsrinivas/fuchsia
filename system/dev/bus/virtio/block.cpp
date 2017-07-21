@@ -243,11 +243,7 @@ void BlockDevice::IrqRingUpdate() {
         auto head_desc = desc; // save the first element
         for (;;) {
             int next;
-
-#if LOCAL_TRACE > 0
-            virtio_dump_desc(desc);
-#endif
-
+            LTRACE_DO(virtio_dump_desc(desc));
             if (desc->flags & VRING_DESC_F_NEXT) {
                 next = desc->next;
             } else {
@@ -408,11 +404,7 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     desc->addr = blk_req_pa_ + index * sizeof(virtio_blk_req_t);
     desc->len = sizeof(virtio_blk_req_t);
     desc->flags |= VRING_DESC_F_NEXT;
-
-#if LOCAL_TRACE > 0
-    virtio_dump_desc(desc);
-#endif
-
+    LTRACE_DO(virtio_dump_desc(desc));
     {
         auto new_run_callback = [this, write, &desc](uint64_t start, uint64_t len) {
             /* set up the descriptor pointing to the buffer */
@@ -429,20 +421,14 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
 
         ScatterGatherHelper(txn, new_run_callback);
     }
-
-#if LOCAL_TRACE > 0
-    virtio_dump_desc(desc);
-#endif
+    LTRACE_DO(virtio_dump_desc(desc));
 
     /* set up the descriptor pointing to the response */
     desc = vring_.DescFromIndex(desc->next);
     desc->addr = blk_res_pa_ + index;
     desc->len = 1;
     desc->flags = VRING_DESC_F_WRITE;
-
-#if LOCAL_TRACE > 0
-    virtio_dump_desc(desc);
-#endif
+    LTRACE_DO(virtio_dump_desc(desc));
 
     // save the iotxn in a list
     list_add_tail(&iotxn_list, &txn->node);
