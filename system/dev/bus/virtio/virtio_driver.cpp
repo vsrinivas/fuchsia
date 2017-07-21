@@ -19,6 +19,7 @@
 
 #include "block.h"
 #include "device.h"
+#include "ethernet.h"
 #include "gpu.h"
 #include "trace.h"
 
@@ -50,8 +51,13 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
     LTRACEF("pci %p\n", &pci);
     LTRACEF("0x%x:0x%x\n", config->vendor_id, config->device_id);
 
+    // TODO: Make symbols for these constants and reuse in the BIND protocol.
     mxtl::unique_ptr<virtio::Device> vd = nullptr;
     switch (config->device_id) {
+    case 0x1000:
+        LTRACEF("found net device\n");
+        vd.reset(new virtio::EthernetDevice(device));
+        break;
     case 0x1001:
     case 0x1042:
         LTRACEF("found block device\n");
