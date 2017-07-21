@@ -8,6 +8,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -174,17 +175,32 @@ static void file_close(void* file_cookie) {
     close(((file_info_t*)file_cookie)->fd);
 }
 
+// Longest time we will wait for a send operation to succeed
+#define MAX_SEND_TIME_MS 1000
+
 static int transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
     ssize_t send_result;
-    if (!transport_info->connected) {
-        transport_info->target_addr.sin6_port = htons(NB_TFTP_INCOMING_PORT);
-        send_result = sendto(transport_info->socket, data, len, 0,
-                             (struct sockaddr*)&transport_info->target_addr,
-                             sizeof(transport_info->target_addr));
-    } else {
-        send_result = send(transport_info->socket, data, len, 0);
-    }
+    do {
+        struct pollfd poll_fds = {.fd = transport_info->socket,
+                                  .events = POLLOUT,
+                                  .revents = 0};
+        int poll_result = poll(&poll_fds, 1, MAX_SEND_TIME_MS);
+        if (poll_result <= 0) {
+            // We'll treat a timeout as an IO error and not a TFTP_ERR_TIMED_OUT,
+            // since the latter is a timeout waiting for a response from the server.
+            return TFTP_ERR_IO;
+        }
+        if (!transport_info->connected) {
+            transport_info->target_addr.sin6_port = htons(NB_TFTP_INCOMING_PORT);
+            send_result = sendto(transport_info->socket, data, len, 0,
+                                 (struct sockaddr*)&transport_info->target_addr,
+                                 sizeof(transport_info->target_addr));
+        } else {
+            send_result = send(transport_info->socket, data, len, 0);
+        }
+    } while ((send_result < 0) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
+
     if (send_result < 0) {
         return TFTP_ERR_IO;
     }
