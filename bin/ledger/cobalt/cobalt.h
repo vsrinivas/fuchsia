@@ -21,10 +21,13 @@ enum class CobaltEvent {
   MERGED_COMMITS_MERGED,
 };
 
+// Cobalt initialization. When cobalt is not need, the returned object must be
+// deleted. This method must not be called again until then.
 ftl::AutoCall<ftl::Closure> InitializeCobalt(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     app::ApplicationContext* app_context);
 
+// Report an event to Cobalt.
 void ReportEvent(CobaltEvent event);
 
 };  // namespace ledger

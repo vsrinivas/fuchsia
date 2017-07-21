@@ -65,6 +65,8 @@ class App : public LedgerController,
         config_persistence_(app_params_.config_persistence) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
+
+    ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
   ~App() {}
 
