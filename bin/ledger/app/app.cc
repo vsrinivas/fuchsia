@@ -14,6 +14,7 @@
 #include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
+#include "apps/ledger/src/cobalt/cobalt.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/network/no_network_service.h"
@@ -59,6 +60,8 @@ class App : public LedgerController,
   App(AppParams app_params)
       : app_params_(std::move(app_params)),
         application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        cobalt_cleaner_(
+            InitializeCobalt(loop_.task_runner(), application_context_.get())),
         config_persistence_(app_params_.config_persistence) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
@@ -146,6 +149,7 @@ class App : public LedgerController,
   mtl::MessageLoop loop_;
   const AppParams app_params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
+  ftl::AutoCall<ftl::Closure> cobalt_cleaner_;
   const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;
   std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
