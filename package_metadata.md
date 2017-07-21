@@ -19,6 +19,29 @@ See [https://fuchsia.googlesource.com/pm#contents]
 
 See [https://fuchsia.googlesource.com/pm#signature]
 
+## runtime
+
+The runtime file specifies if execution of the application in the package
+should be delegated to another process.
+
+The runtime file is a JSON object with the following schema:
+
+```
+{
+    "type": "object",
+    "properties": {
+        "runner": {
+            "type": "string"
+        },
+        "required": [ "runner" ]
+    }
+}
+```
+
+The `runner` property names another application (or a package that contains
+one) to which execution is to be delegated. The target application must expose
+the [`ApplicationRunner`](../../services/application_runner.fidl) service.
+
 ## sandbox
 
 The sandbox file controls the environment in which the contents of the package
@@ -47,7 +70,7 @@ The sandbox file is a JSON object with the following schema:
 }
 ```
 
-The `dev` array contains list of well-known device paths that are provided to
+The `dev` array contains a list of well-known device paths that are provided to
 the application. For example, if the string `class/input` appears in the `dev`
 array, then `/dev/class/input` will appear in the namespaces of applications
 loaded from the package.
@@ -62,4 +85,4 @@ The set of currently known features are as follows:
 - `vulkan`, which requests access to the resources required to use the Vulkan
   graphics interface.
 
-See [sandboxing.md] for more information about sandboxing.
+See [sandboxing.md](sandboxing.md) for more information about sandboxing.
