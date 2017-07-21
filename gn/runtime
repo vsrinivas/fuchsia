@@ -18,6 +18,10 @@
             "bootfs_path": "bin/appmgr"
         },
         {
+            "binary": "appmgr_unittests",
+            "bootfs_path": "test/appmgr_unittests"
+        },
+        {
             "binary": "bootstrap",
             "bootfs_path": "apps/bootstrap"
         },
