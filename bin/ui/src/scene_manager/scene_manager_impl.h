@@ -4,17 +4,14 @@
 
 #pragma once
 
-#include <unordered_map>
+#include <memory>
 
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/src/scene_manager/display.h"
 #include "apps/mozart/src/scene_manager/frame_scheduler.h"
-#include "apps/mozart/src/scene_manager/session/session.h"
-#include "apps/mozart/src/scene_manager/session/session_handler.h"
-#include "escher/examples/common/demo_harness.h"
+#include "apps/mozart/src/scene_manager/session/engine.h"
 #include "escher/forward_declarations.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/thread.h"
 
 namespace scene_manager {
 
@@ -39,15 +36,11 @@ class SceneManagerImpl : public mozart2::SceneManager {
 
  protected:
   // Only used by subclasses used in testing.
-  explicit SceneManagerImpl(Display* display,
-                            std::unique_ptr<Engine> engine,
-                            std::unique_ptr<FrameScheduler> frame_scheduler);
+  explicit SceneManagerImpl(Display* display, std::unique_ptr<Engine> engine);
 
  private:
   Display* display_;
-  std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<Engine> engine_;
-  std::vector<mozart2::Session::PresentCallback> pending_present_callbacks_;
 };
 
 }  // namespace scene_manager

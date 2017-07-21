@@ -4,8 +4,6 @@
 
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
 
-#include "apps/mozart/src/scene_manager/display.h"
-
 namespace scene_manager {
 
 SceneManagerImpl::SceneManagerImpl(
@@ -14,32 +12,15 @@ SceneManagerImpl::SceneManagerImpl(
     std::unique_ptr<FrameScheduler> frame_scheduler,
     std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : display_(display),
-      frame_scheduler_(std::move(frame_scheduler)),
       engine_(std::make_unique<Engine>(escher,
-                                       frame_scheduler_.get(),
-                                       std::move(swapchain))) {
-  // Either both Escher and a FrameScheduler must be available, or neither.
-  FTL_DCHECK(!escher == !frame_scheduler_);
+                                       std::move(frame_scheduler),
+                                       std::move(swapchain))) {}
 
-  // If a FrameScheduler was created, introduce it to the Engine.
-  if (frame_scheduler_) {
-    frame_scheduler_->AddListener(engine_.get());
-  }
-}
+SceneManagerImpl::SceneManagerImpl(Display* display,
+                                   std::unique_ptr<Engine> engine)
+    : display_(display), engine_(std::move(engine)) {}
 
-SceneManagerImpl::~SceneManagerImpl() {
-  if (frame_scheduler_) {
-    frame_scheduler_->RemoveListener(engine_.get());
-  }
-}
-
-SceneManagerImpl::SceneManagerImpl(
-    Display* display,
-    std::unique_ptr<Engine> engine,
-    std::unique_ptr<FrameScheduler> frame_scheduler)
-    : display_(display),
-      frame_scheduler_(std::move(frame_scheduler)),
-      engine_(std::move(engine)) {}
+SceneManagerImpl::~SceneManagerImpl() = default;
 
 void SceneManagerImpl::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,

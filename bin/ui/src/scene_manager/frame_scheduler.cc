@@ -40,18 +40,6 @@ void FrameScheduler::RemoveRenderer(Renderer* renderer) {
   FTL_DCHECK(count == 1) << "Renderer was not removed from FrameScheduler.";
 }
 
-void FrameScheduler::AddListener(FrameSchedulerListener* listener) {
-  FTL_DCHECK(listener);
-  bool success = listeners_.insert(listener).second;
-  FTL_DCHECK(success) << "Listener was already added to FrameScheduler.";
-}
-
-void FrameScheduler::RemoveListener(FrameSchedulerListener* listener) {
-  FTL_DCHECK(listener);
-  size_t count = listeners_.erase(listener);
-  FTL_DCHECK(count == 1) << "Listener was not removed from FrameScheduler.";
-}
-
 void FrameScheduler::RequestFrame(uint64_t presentation_time) {
   requested_presentation_times_.push(presentation_time);
   MaybeScheduleFrame();
@@ -144,7 +132,7 @@ void FrameScheduler::MaybeUpdateSceneAndDrawFrame() {
     return;
   }
 
-  // A frame should be drawn now.  Notify listeners to update the global scene.
+  // A frame should be drawn now.  Notify delegates to update the global scene.
   UpdateScene();
 
   if (!renderers_.empty()) {
@@ -176,14 +164,14 @@ void FrameScheduler::UpdateScene() {
     requested_presentation_times_.pop();
   }
 
-  // Notify listeners in order to update the global scene.
+  // Notify delegates to update the global scene.
   bool presentation_is_desired = false;
   const uint64_t presentation_interval = display_->GetVsyncInterval();
-  for (auto listener : listeners_) {
-    presentation_is_desired |= listener->OnPrepareFrame(next_presentation_time_,
+  if (delegate_)
+    presentation_is_desired = delegate_->OnPrepareFrame(next_presentation_time_,
                                                         presentation_interval);
-  }
-  // We shouldn't be rendering a frame if no listener needed to be updated.
+
+  // We shouldn't be rendering a frame if no delegate needed to be updated.
   if (!presentation_is_desired) {
     FTL_LOG(WARNING) << "FrameScheduler::UpdateScene(): Rendering a frame, but "
                         "no presentation was desired.";

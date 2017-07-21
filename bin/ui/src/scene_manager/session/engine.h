@@ -29,10 +29,10 @@ class SessionHandler;
 // using the same resource linker and which coexist within the same timing
 // domain using the same frame scheduler.  It is not possible for sessions
 // which belong to different engines to communicate with one another.
-class Engine : public FrameSchedulerListener {
+class Engine : private FrameSchedulerDelegate {
  public:
   Engine(escher::Escher* escher,
-         FrameScheduler* frame_scheduler,
+         std::unique_ptr<FrameScheduler> frame_scheduler,
          std::unique_ptr<escher::VulkanSwapchain> swapchain);
 
   ~Engine();
@@ -96,7 +96,7 @@ class Engine : public FrameSchedulerListener {
 
   size_t GetSessionCount() { return session_count_; }
 
-  FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
+  FrameScheduler* frame_scheduler() const { return frame_scheduler_.get(); }
 
   // Return a lazily-constructed PaperRenderer.
   const escher::PaperRendererPtr& GetPaperRenderer();
@@ -118,9 +118,9 @@ class Engine : public FrameSchedulerListener {
   // Destroys the session with the given id.
   void TearDownSession(SessionId id);
 
-  // Implement |FrameSchedulerListener|.  For each session, apply all updates
-  // that should be applied before rendering and presenting a frame at
-  // |presentation_time|.
+  // Implement |FrameSchedulerDelegate|.
+  // For each session, apply all updates that should be applied before rendering
+  // and presenting a frame at |presentation_time|.
   bool OnPrepareFrame(uint64_t presentation_time,
                       uint64_t presentation_interval) override;
 
@@ -129,7 +129,7 @@ class Engine : public FrameSchedulerListener {
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
-  FrameScheduler* const frame_scheduler_ = nullptr;
+  std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
   escher::PaperRendererPtr paper_renderer_;
 

@@ -10,6 +10,7 @@
 #include "apps/mozart/src/scene_manager/display.h"
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
 #include "apps/mozart/src/scene_manager/tests/mocks.h"
+#include "lib/mtl/threading/thread.h"
 
 #include "gtest/gtest.h"
 

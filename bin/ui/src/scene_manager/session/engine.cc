@@ -15,7 +15,7 @@
 namespace scene_manager {
 
 Engine::Engine(escher::Escher* escher,
-               FrameScheduler* frame_scheduler,
+               std::unique_ptr<FrameScheduler> frame_scheduler,
                std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : escher_(escher),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
@@ -25,9 +25,15 @@ Engine::Engine(escher::Escher* escher,
           std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
-      frame_scheduler_(frame_scheduler),
+      frame_scheduler_(std::move(frame_scheduler)),
       swapchain_(std::move(swapchain)),
-      session_count_(0) {}
+      session_count_(0) {
+  // Either both Escher and a FrameScheduler must be available, or neither.
+  FTL_DCHECK(!escher_ == !frame_scheduler_);
+
+  if (frame_scheduler_)
+    frame_scheduler_->set_delegate(this);
+}
 
 Engine::Engine(std::unique_ptr<ReleaseFenceSignaller> r)
     : release_fence_signaller_(std::move(r)) {}

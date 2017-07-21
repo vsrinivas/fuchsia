@@ -18,12 +18,12 @@ namespace scene_manager {
 class Display;
 class Renderer;
 
-// Interface implemented by anyone who needs to know when the FrameScheduler is
-// preparing to initiate the rendering of a frame.
-class FrameSchedulerListener {
+// Interface implemented by the engine to perform per-frame processing in
+// response to a frame being scheduled.
+class FrameSchedulerDelegate {
  public:
-  // Return true if the listener has knowledge that the scene is dirty, and
-  // must be redrawn.  If no listener returns true, the FrameScheduler has the
+  // Return true if the delegate has knowledge that the scene is dirty, and
+  // must be redrawn.  If no delegate returns true, the FrameScheduler has the
   // option of not drawing a frame.
   virtual bool OnPrepareFrame(uint64_t presentation_time,
                               uint64_t presentation_interval) = 0;
@@ -49,8 +49,7 @@ class FrameScheduler {
   void AddRenderer(Renderer* renderer);
   void RemoveRenderer(Renderer* renderer);
 
-  void AddListener(FrameSchedulerListener* listener);
-  void RemoveListener(FrameSchedulerListener* listener);
+  void set_delegate(FrameSchedulerDelegate* delegate) { delegate_ = delegate; }
 
   // Return a time > last_presentation_time_ if a frame should be scheduled.
   // Otherwise, return last_presentation_time_ to indicate that no frame needs
@@ -70,7 +69,7 @@ class FrameScheduler {
   void MaybeScheduleFrame();
 
   // Called before DrawFrame() to update the global scene-graph, by notifying
-  // all listeners that a frame is about to be rendered/presented.
+  // all delegates that a frame is about to be rendered/presented.
   void UpdateScene();
 
   // Called after UpdateScene() in order to render the global scene-graph.
@@ -83,9 +82,7 @@ class FrameScheduler {
 
   ftl::TaskRunner* const task_runner_;
   std::unordered_set<Renderer*> renderers_;
-  // TODO: apply listeners in order.  For example, this would allow clients of
-  // FrameScheduler to apply session updates before updating animations.
-  std::unordered_set<FrameSchedulerListener*> listeners_;
+  FrameSchedulerDelegate* delegate_;
 
   uint64_t last_presentation_time_ = 0;
   uint64_t next_presentation_time_ = 0;
