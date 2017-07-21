@@ -88,34 +88,6 @@ void Ring::FreeDesc(uint16_t desc_index) {
     ring_.free_count++;
 }
 
-void Ring::FreeDescChain(uint16_t chain_head) {
-    struct vring_desc* desc = &ring_.desc[chain_head];
-
-    while (desc->flags & VRING_DESC_F_NEXT) {
-        uint16_t next = desc->next;
-        FreeDesc(chain_head);
-        chain_head = next;
-        desc = &ring_.desc[chain_head];
-    }
-
-    FreeDesc(chain_head);
-}
-
-uint16_t Ring::AllocDesc() {
-    if (ring_.free_count == 0)
-        return 0xffff;
-
-    assert(ring_.free_list != 0xffff);
-
-    uint16_t i = ring_.free_list;
-    struct vring_desc* desc = &ring_.desc[i];
-    ring_.free_list = desc->next;
-
-    ring_.free_count--;
-
-    return i;
-}
-
 struct vring_desc* Ring::AllocDescChain(uint16_t count, uint16_t* start_index) {
     if (ring_.free_count < count)
         return NULL;
@@ -131,11 +103,11 @@ struct vring_desc* Ring::AllocDescChain(uint16_t count, uint16_t* start_index) {
         ring_.free_count--;
 
         if (last) {
-            desc->flags = VRING_DESC_F_NEXT;
+            desc->flags |= VRING_DESC_F_NEXT;
             desc->next = last_index;
         } else {
             // first one
-            desc->flags = 0;
+            desc->flags &= static_cast<uint16_t>(~VRING_DESC_F_NEXT);
             desc->next = 0;
         }
         last = desc;

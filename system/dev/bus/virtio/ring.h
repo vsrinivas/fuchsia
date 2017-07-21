@@ -20,8 +20,6 @@ public:
     mx_status_t Init(uint16_t index, uint16_t count);
 
     void FreeDesc(uint16_t desc_index);
-    void FreeDescChain(uint16_t chain_head);
-    uint16_t AllocDesc();
     struct vring_desc* AllocDescChain(uint16_t count, uint16_t* start_index);
     void SubmitChain(uint16_t desc_index);
     void Kick();
