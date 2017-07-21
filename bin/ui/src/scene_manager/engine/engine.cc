@@ -10,7 +10,7 @@
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
-#include "apps/mozart/src/scene_manager/renderer/renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
 namespace scene_manager {
 

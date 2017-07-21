@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/scene_manager/renderer/renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
 #include "escher/vk/vulkan_swapchain_helper.h"
 

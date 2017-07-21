@@ -6,7 +6,7 @@
 
 #include "apps/mozart/src/scene_manager/engine/hit_tester.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
-#include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"

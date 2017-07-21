@@ -11,7 +11,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "apps/mozart/src/scene_manager/display_watcher.h"
-#include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
 #include "apps/mozart/src/scene_manager/scene_manager_app.h"
 
 using namespace scene_manager;

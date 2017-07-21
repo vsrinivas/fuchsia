@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/renderer/renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"

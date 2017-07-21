@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
 
 #include "escher/escher.h"
 #include "escher/impl/ssdo_sampler.h"

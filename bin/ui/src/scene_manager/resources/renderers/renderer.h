@@ -4,9 +4,6 @@
 
 #pragma once
 
-// TODO(MZ-148): now that Renderers are Resources, they should be moved to
-// apps/mozart/src/scene_manager/resources/renderers.
-
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "apps/mozart/src/scene_manager/resources/resource_visitor.h"
 
