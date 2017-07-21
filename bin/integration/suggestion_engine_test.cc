@@ -5,6 +5,7 @@
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
+#include "apps/maxwell/services/suggestion/debug.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/src/agents/ideas.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
@@ -14,6 +15,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
+#include "gtest/gtest.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -39,7 +41,8 @@ class NPublisher {
 
 ProposalPtr CreateProposal(const std::string& id,
                            const std::string& headline,
-                           fidl::Array<ActionPtr> actions) {
+                           fidl::Array<ActionPtr> actions,
+                           maxwell::AnnoyanceType annoyance) {
   auto p = Proposal::New();
   p->id = id;
   p->on_selected = std::move(actions);
@@ -53,6 +56,7 @@ ProposalPtr CreateProposal(const std::string& id,
   d->icon_urls[0] = "";
   d->image_url = "";
   d->image_type = SuggestionImageType::PERSON;
+  d->annoyance = annoyance;
 
   p->display = std::move(d);
   return p;
@@ -70,14 +74,15 @@ class Proposinator {
   void Propose(
       const std::string& id,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    Propose(id, id, std::move(actions));
+    Propose(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
   void Propose(
       const std::string& id,
       const std::string& headline,
+      maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    out_->Propose(CreateProposal(id, headline, std::move(actions)));
+    out_->Propose(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
   void Remove(const std::string& id) { out_->Remove(id); }
@@ -129,6 +134,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         app::ConnectToService<SuggestionEngine>(suggestion_services.get());
     suggestion_provider_ =
         app::ConnectToService<SuggestionProvider>(suggestion_services.get());
+    suggestion_debug_ = app::ConnectToService<SuggestionDebug>(suggestion_services.get());
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
@@ -151,9 +157,9 @@ class SuggestionEngineTest : public ContextEngineTestBase {
  protected:
   SuggestionEngine* suggestion_engine() { return suggestion_engine_.get(); }
 
-  SuggestionProvider* suggestion_provider() {
-    return suggestion_provider_.get();
-  }
+  SuggestionProvider* suggestion_provider() { return suggestion_provider_.get(); }
+
+  SuggestionDebug* suggestion_debug() { return suggestion_debug_.get(); }
 
   StoryProviderMock* story_provider() { return &story_provider_; }
 
@@ -193,34 +199,139 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
   SuggestionEnginePtr suggestion_engine_;
+  SuggestionDebugPtr suggestion_debug_;
   SuggestionProviderPtr suggestion_provider_;
 
   StoryProviderMock story_provider_;
   fidl::Binding<modular::StoryProvider> story_provider_binding_;
 };
 
-class NextTest : public virtual SuggestionEngineTest {
+class AskTest : public virtual SuggestionEngineTest {
  public:
-  NextTest() : listener_binding_(&listener_) {
-    suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
-                                           ctl_.NewRequest());
+  AskTest() : listener_binding_(&listener_),
+              debug_listener_binding_(&debug_listener_) {
+   suggestion_debug()->WatchAskProposals(
+        debug_listener_binding_.NewBinding());
   }
 
+  void InitiateAsk() {
+    suggestion_provider()->InitiateAsk(listener_binding_.NewBinding(),
+                                       ctl_.NewRequest());
+  }
+
+  void KillListener() { listener_binding_.Close(); }
+
+  void SetQuery(const std::string& query) {
+    auto input = UserInput::New();
+    input->set_text(query);
+    ctl_->SetUserInput(std::move(input));
+  }
+
+  void SetResultCount(int32_t count) { ctl_->SetResultCount(count); }
+
+  int suggestion_count() const { return listener_.suggestion_count(); }
+
+  TestSuggestionListener* listener() { return &listener_; }
+
+ protected:
+  void EnsureDebugMatches() {
+    auto& subscriberAsks = listener_.GetSuggestions();
+    auto& debugAsks = debug_listener_.GetProposals();
+    EXPECT_GE(debugAsks.size(), subscriberAsks.size());
+    for (size_t i = 0; i < subscriberAsks.size(); i++) {
+      auto& suggestion = subscriberAsks[i];
+      auto& proposal = debugAsks[i];
+      EXPECT_EQ(suggestion->display->headline, proposal->display->headline);
+      EXPECT_EQ(suggestion->display->subheadline, proposal->display->subheadline);
+      EXPECT_EQ(suggestion->display->details, proposal->display->details);
+    }
+  }
+ private:
+  TestSuggestionListener listener_;
+  TestDebugAskListener debug_listener_;
+  fidl::Binding<SuggestionListener> listener_binding_;
+  fidl::Binding<AskProposalListener> debug_listener_binding_;
+  AskControllerPtr ctl_;
+};
+
+class InterruptionTest: public virtual SuggestionEngineTest {
+ public:
+  InterruptionTest():
+    listener_binding_(&listener_),
+    debug_listener_binding_(&debug_listener_) {
+      suggestion_provider()->SubscribeToInterruptions(
+          listener_binding_.NewBinding());
+      suggestion_debug()->WatchInterruptionProposals(
+          debug_listener_binding_.NewBinding());
+    }
+
+  TestDebugInterruptionListener* debugListener() { return &debug_listener_; }
+  TestSuggestionListener* listener() { return &listener_; }
+
+ protected:
+  int suggestion_count() const { return listener_.suggestion_count(); }
+
+  void EnsureDebugMatches() {
+    auto& subscriberNexts = listener_.GetSuggestions();
+    auto lastInterruption = debug_listener_.get_interrupt_proposal();
+    EXPECT_GE(subscriberNexts.size(), (size_t)1);
+    auto& suggestion = subscriberNexts[0];
+    EXPECT_EQ(suggestion->display->headline, lastInterruption->display->headline);
+    EXPECT_EQ(suggestion->display->subheadline, lastInterruption->display->subheadline);
+    EXPECT_EQ(suggestion->display->details, lastInterruption->display->details);
+  }
+
+ private:
+  TestSuggestionListener listener_;
+  TestDebugInterruptionListener debug_listener_;
+
+  fidl::Binding<SuggestionListener> listener_binding_;
+  fidl::Binding<InterruptionProposalListener> debug_listener_binding_;
+};
+
+class NextTest : public virtual SuggestionEngineTest {
+ public:
+  NextTest() :
+    listener_binding_(&listener_),
+    debug_listener_binding_(&debug_listener_) {
+      suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
+                                             ctl_.NewRequest());
+      suggestion_debug()->WatchNextProposals(debug_listener_binding_.NewBinding());
+  }
+
+  TestDebugNextListener* debugListener() { return &debug_listener_; }
   TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void SetResultCount(int count) { ctl_->SetResultCount(count); }
 
   int suggestion_count() const { return listener_.suggestion_count(); }
+
   const Suggestion* GetOnlySuggestion() const {
     return listener_.GetOnlySuggestion();
   }
 
   void KillController() { ctl_.reset(); }
 
+  void EnsureDebugMatches() {
+    auto& subscriberNexts = listener_.GetSuggestions();
+    auto& debugNexts = debug_listener_.GetProposals();
+    EXPECT_GE(debugNexts.size(), subscriberNexts.size());
+    for (size_t i = 0; i < subscriberNexts.size(); i++) {
+      auto& suggestion = subscriberNexts[i];
+      auto& proposal = debugNexts[i];
+      EXPECT_EQ(suggestion->display->headline, proposal->display->headline);
+      EXPECT_EQ(suggestion->display->subheadline, proposal->display->subheadline);
+      EXPECT_EQ(suggestion->display->details, proposal->display->details);
+    }
+  }
+
  private:
   TestSuggestionListener listener_;
+  TestDebugNextListener debug_listener_;
+
   fidl::Binding<SuggestionListener> listener_binding_;
+  fidl::Binding<NextProposalListener> debug_listener_binding_;
   NextControllerPtr ctl_;
 };
 
@@ -317,8 +428,9 @@ TEST_F(NextTest, Dedup) {
   gps.Publish(-90, 0);
   CHECK_RESULT_COUNT(1);
   suggestion = GetOnlySuggestion();
-  EXPECT_EQ(uuid1, suggestion->uuid);
   EXPECT_NE(headline1, suggestion->display->headline);
+  Sleep();
+  EnsureDebugMatches();
 }
 
 // Tests two different agents proposing with the same ID (expect distinct
@@ -336,6 +448,7 @@ TEST_F(NextTest, NamespacingPerAgent) {
   // are namespaced by component).
   conflictinator.Propose(agents::IdeasAgent::kIdeaId);
   CHECK_RESULT_COUNT(2);
+  EnsureDebugMatches();
 }
 
 // Tests the removal of earlier suggestions, ensuring that suggestion engine can
@@ -478,55 +591,31 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   ASYNC_EQ(module_id, story_provider()->story_controller().last_added_module());
 }
 
-class AskTest : public virtual SuggestionEngineTest {
- public:
-  AskTest() : binding_(&listener_) {}
-
-  void InitiateAsk() {
-    suggestion_provider()->InitiateAsk(binding_.NewBinding(),
-                                       ctl_.NewRequest());
-  }
-
-  void KillListener() { binding_.Close(); }
-
-  void SetQuery(const std::string& query) {
-    auto input = UserInput::New();
-    input->set_text(query);
-    ctl_->SetUserInput(std::move(input));
-  }
-
-  void SetResultCount(int32_t count) { ctl_->SetResultCount(count); }
-
-  int suggestion_count() const { return listener_.suggestion_count(); }
-
-  TestSuggestionListener* listener() { return &listener_; }
-
- private:
-  TestSuggestionListener listener_;
-  fidl::Binding<SuggestionListener> binding_;
-  AskControllerPtr ctl_;
-};
 
 TEST_F(AskTest, DefaultAsk) {
   Proposinator p(suggestion_engine());
 
   p.Propose("1");
-  Sleep();
 
   InitiateAsk();
+  SetQuery("test query");
+  Sleep();
 
   SetResultCount(10);
   CHECK_RESULT_COUNT(1);
 
   p.Propose("2");
+  SetQuery("test query 2");
+  Sleep();
+
   CHECK_RESULT_COUNT(2);
+  EnsureDebugMatches();
 }
 
-#define CHECK_ONLY_HEADLINE(h)                       \
-  ASYNC_CHECK(listener()->suggestion_count() == 1 && \
-              listener()->GetOnlySuggestion()->display->headline == h)
+#define CHECK_TOP_HEADLINE(h)                       \
+  ASYNC_CHECK(listener()->GetTopSuggestion()->display->headline == h)
 
-TEST_F(AskTest, AskIncludeExclude) {
+TEST_F(AskTest, AskDifferentQueries) {
   Proposinator p(suggestion_engine());
 
   p.Propose("Mozart's Ghost");
@@ -535,46 +624,36 @@ TEST_F(AskTest, AskIncludeExclude) {
   InitiateAsk();
   SetResultCount(10);
   SetQuery("The Hottest Band on the Internet");
-  CHECK_ONLY_HEADLINE("The Hottest Band on the Internet");
+  Sleep();
+
+  CHECK_TOP_HEADLINE("The Hottest Band on the Internet");
 
   SetQuery("Mozart's Ghost");
-  CHECK_ONLY_HEADLINE("Mozart's Ghost");
+  Sleep();
 
-  p.Propose("Mozart's Ghost", "Gatekeeper");
-  CHECK_RESULT_COUNT(0);
-
-  p.Propose("The Hottest Band on the Internet", "Mozart's Ghost");
-  CHECK_RESULT_COUNT(1);
-}
-
-TEST_F(AskTest, AskIncludeExcludeFlip) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("Mozart's Ghost");
-  InitiateAsk();
-  SetResultCount(10);
-
-  CHECK_RESULT_COUNT(1);
-  SetQuery("Mo");
-  CHECK_RESULT_COUNT(1);
-  SetQuery("Mox");
-  CHECK_RESULT_COUNT(0);
-  SetQuery("Mo");
-  CHECK_RESULT_COUNT(1);
-  SetQuery("Mox");
-  CHECK_RESULT_COUNT(0);
+  CHECK_TOP_HEADLINE("Mozart's Ghost");
+  EnsureDebugMatches();
 }
 
 TEST_F(AskTest, RemoveAskFallback) {
   Proposinator p(suggestion_engine());
 
   p.Propose("Esc");
+
   InitiateAsk();
   SetResultCount(10);
+
+  SetQuery("test query");
+  Sleep();
+
   CHECK_RESULT_COUNT(1);
+  EnsureDebugMatches();
 
   p.Remove("Esc");
+  Sleep();
+
   CHECK_RESULT_COUNT(0);
+  EnsureDebugMatches();
 }
 
 TEST_F(AskTest, ChangeFallback) {
@@ -583,14 +662,22 @@ TEST_F(AskTest, ChangeFallback) {
   p.Propose("E-mail");
   InitiateAsk();
   SetResultCount(10);
+  SetQuery("test query");
+  Sleep();
+
   CHECK_RESULT_COUNT(1);
 
   p.Propose("E-mail", "E-vite");
-  CHECK_ONLY_HEADLINE("E-vite");
+  SetQuery("test query");
+  Sleep();
+
+  CHECK_TOP_HEADLINE("E-vite");
+  EnsureDebugMatches();
 
   // Make sure we're still alive; historical crash above
   SetQuery("X");
-  CHECK_RESULT_COUNT(0);
+  Sleep();
+  CHECK_RESULT_COUNT(1);
 }
 
 TEST_F(AskTest, ChangeSameRank) {
@@ -598,40 +685,59 @@ TEST_F(AskTest, ChangeSameRank) {
 
   p.Propose("E-mail");
   p.Propose("Music");
+
   InitiateAsk();
+  SetQuery("test query");
+  Sleep();
+
   SetResultCount(10);
   CHECK_RESULT_COUNT(2);
+  EnsureDebugMatches();
 
-  SetQuery("E");
-  CHECK_RESULT_COUNT(1);
   p.Propose("E-mail", "E-vite");  // E-mail and E-vite are equidistant from E
-  CHECK_ONLY_HEADLINE("E-vite");
+  SetQuery("E");
+  Sleep();
+
+  CHECK_TOP_HEADLINE("E-vite");
+  EnsureDebugMatches();
 
   // Make sure we're still alive; historical crash above
   SetQuery("X");
-  CHECK_RESULT_COUNT(0);
+  Sleep();
+  CHECK_RESULT_COUNT(2);
 }
 
-TEST_F(AskTest, ChangeAmbiguousRank) {
+TEST_F(AskTest, ChangeHeadlineRank) {
   Proposinator p(suggestion_engine());
 
-  p.Propose("E-mail");
-  p.Propose("E-vite");
-  p.Propose("E-card");
-  p.Propose("Music");
+  p.Propose("E-mail", "E-mail");
+  p.Propose("E-vite", "E-vite");
+  p.Propose("E-card", "E-card");
+  p.Propose("Music", "Music");
+
   InitiateAsk();
+  SetQuery("test query");
   SetResultCount(10);
+  Sleep();
+
   CHECK_RESULT_COUNT(4);
 
-  SetQuery("E");
-  CHECK_RESULT_COUNT(3);
-  p.Propose("E-vite", "E-pass");
-  p.Propose("E-mail", "Comms");
-  p.Propose("E-vite", "RSVP");
-  CHECK_RESULT_COUNT(1);  // historical assertion failure by now
+  SetQuery("Ca");
+  Sleep();
+
+  // E-card has a 'ca' in the 3rd position, so should be ranked highest.
+  CHECK_TOP_HEADLINE("E-card");
+
+  p.Propose("E-mail", "Cam");
+  SetQuery("Ca");
+  Sleep();
+
+  CHECK_TOP_HEADLINE("Cam");
+  EnsureDebugMatches();
+  CHECK_RESULT_COUNT(4);  // historical assertion failure by now
   // Note that we can't just have removed one and checked that because on
   // assertion failure, one remove will have happened (at least as of the
-  // 11/29/17 codebase).
+  // 11/29/16 codebase).
 }
 
 TEST_F(AskTest, ChangeWorseSameOrder) {
@@ -639,39 +745,30 @@ TEST_F(AskTest, ChangeWorseSameOrder) {
 
   p.Propose("E-mail");
   p.Propose("Music");
+
   InitiateAsk();
+  SetQuery("test query");
+  Sleep();
+
   SetResultCount(10);
   CHECK_RESULT_COUNT(2);
 
   SetQuery("E");
-  CHECK_RESULT_COUNT(1);
+  Sleep();
+
+  CHECK_RESULT_COUNT(2);
+
   p.Propose("E-mail", "Messaging");  // Messaging is a worse match than E-mail
-  CHECK_ONLY_HEADLINE("Messaging");
-
-  // Make sure we're still alive; historical crash above
-  SetQuery("X");
-  CHECK_RESULT_COUNT(0);
-}
-
-TEST_F(AskTest, ChangeSuboptimal) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("E-mail");
-  p.Propose("Evisceration");
-  p.Propose("Magic");
-  InitiateAsk();
-  SetResultCount(10);
-  CHECK_RESULT_COUNT(3);
-
   SetQuery("E");
-  CHECK_RESULT_COUNT(2);
-  p.Propose("Evisceration", "Incarceration");  // both are worse than E-mail
-  ASYNC_CHECK(suggestion_count() == 2 &&
-              (*listener())[1]->display->headline == "Incarceration");
+  Sleep();
+
+  CHECK_TOP_HEADLINE("Messaging");
+  EnsureDebugMatches();
 
   // Make sure we're still alive; historical crash above
   SetQuery("X");
-  CHECK_RESULT_COUNT(0);
+  Sleep();
+  CHECK_RESULT_COUNT(2);
 }
 
 #define HEADLINE_EQ(expected, index) \
@@ -687,30 +784,41 @@ TEST_F(AskTest, AskRanking) {
   p.Propose("E-mail Guests");
 
   InitiateAsk();
-  SetResultCount(10);
+  SetQuery("X");
+  Sleep();
 
+  SetResultCount(10);
   CHECK_RESULT_COUNT(5);
-  HEADLINE_EQ("View E-mail", 0);
-  HEADLINE_EQ("Compose E-mail", 1);
+  // Results should be ranked by timestamp at this point.
+  HEADLINE_EQ("View E-mail", 4);
+  HEADLINE_EQ("Compose E-mail", 3);
   HEADLINE_EQ("Reply to E-mail", 2);
-  HEADLINE_EQ("Send E-vites", 3);
-  HEADLINE_EQ("E-mail Guests", 4);
+  HEADLINE_EQ("Send E-vites", 1);
+  HEADLINE_EQ("E-mail Guests", 0);
+  EnsureDebugMatches();
 
   SetQuery("e-mail");
-  CHECK_RESULT_COUNT(4);
+  Sleep();
+
+  CHECK_RESULT_COUNT(5);
   HEADLINE_EQ("View E-mail", 0);
   HEADLINE_EQ("E-mail Guests", 1);
   HEADLINE_EQ("Compose E-mail", 2);
   HEADLINE_EQ("Reply to E-mail", 3);
+  EnsureDebugMatches();
 
   SetResultCount(2);
   CHECK_RESULT_COUNT(2);
   HEADLINE_EQ("View E-mail", 0);
   HEADLINE_EQ("E-mail Guests", 1);
 
+  SetResultCount(1);
   SetQuery("Compose");
+  Sleep();
+
   CHECK_RESULT_COUNT(1);
   HEADLINE_EQ("Compose E-mail", 0);
+  EnsureDebugMatches();
 }
 
 class AskProposinator : public Proposinator, public AskHandler {
@@ -736,14 +844,15 @@ class AskProposinator : public Proposinator, public AskHandler {
   void ProposeForAsk(
       const std::string& id,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    ProposeForAsk(id, id, std::move(actions));
+    ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
   void ProposeForAsk(
       const std::string& id,
       const std::string& headline,
+      maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    ask_proposals_.push_back(CreateProposal(id, headline, std::move(actions)));
+    ask_proposals_.push_back(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
  private:
@@ -762,6 +871,7 @@ TEST_F(AskTest, ReactiveAsk) {
   InitiateAsk();
   SetResultCount(10);
   SetQuery("Hello");
+  Sleep();
 
   ASYNC_EQ("Hello", p.query());
   p.ProposeForAsk("Hi, how can I help?");
@@ -769,13 +879,17 @@ TEST_F(AskTest, ReactiveAsk) {
   p.Commit();
 
   CHECK_RESULT_COUNT(2);
+  EnsureDebugMatches();
 
   SetQuery("Stuff happens.");
+  Sleep();
+
   ASYNC_EQ("Stuff happens.", p.query());
   p.ProposeForAsk("What can you do?");
   p.Commit();
 
   CHECK_RESULT_COUNT(1);
+  EnsureDebugMatches();
 }
 
 // Ensure that Ask continues to work even if the Next publisher has
@@ -793,32 +907,6 @@ TEST_F(AskTest, AskWithoutPublisher) {
   p.Commit();
 
   CHECK_RESULT_COUNT(1);
-}
-
-class MultiChannelTest : public AskTest, public NextTest {};
-
-TEST_F(MultiChannelTest, PublishAfterAskEnd) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("E-mail");
-  InitiateAsk();
-  NextTest::SetResultCount(10);
-  AskTest::SetResultCount(10);
-  ASYNC_EQ(1, NextTest::suggestion_count());
-  ASYNC_EQ(1, AskTest::suggestion_count());
-
-  AskTest::KillListener();
-  Sleep();
-
-  p.Propose("E-mail", "E-vite");
-
-  // Historical failure mode: Prior to implementing ranked-suggestion cleanup on
-  // AskChannel destruction, this would seg fault due to trying to add the
-  // proposal to the destroyed channel.
-
-  ASYNC_CHECK(NextTest::listener()->suggestion_count() == 1 &&
-              NextTest::listener()->GetOnlySuggestion()->display->headline ==
-                  "E-vite");
 }
 
 class SuggestionFilteringTest : public NextTest {};

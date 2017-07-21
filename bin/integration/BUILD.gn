@@ -62,6 +62,7 @@ source_set("suggestion_engine_test") {
     ":test_suggestion_listener",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
     "//apps/maxwell/src/acquirers/mock:gps",
     "//apps/maxwell/src/agents:carmen_sandiego",
     "//apps/maxwell/src/agents:ideas",
