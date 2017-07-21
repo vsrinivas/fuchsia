@@ -30,6 +30,7 @@ class _AskHandlerImpl extends AskHandler {
       new RegExp(r"\.[a-z]{2}|(?:\d{1,3}\.){3}\d{1,3}|localhost");
   static final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
   static final _chatHeadline = "Open Chat";
+  static final _emailHeadline = "Open Email";
   static final _musicPatternKanye = new RegExp(r"kanye|yeezus");
   static final _musicPatternPortugal = new RegExp(r"portugal|the man");
 
@@ -75,6 +76,17 @@ class _AskHandlerImpl extends AskHandler {
           appUrl: 'chat_conversation_list',
           headline: _chatHeadline,
           color: 0xFF9C27B0, // Material Purple 500
+        ),
+      );
+    }
+    if ((query.text?.isNotEmpty ?? false) &&
+        _emailHeadline.toLowerCase().contains(query.text.toLowerCase())) {
+      proposals.add(
+        _createProposal(
+          id: 'open email',
+          appUrl: 'email/nav',
+          headline: _emailHeadline,
+          color: 0xFF4285F4,
         ),
       );
     }
