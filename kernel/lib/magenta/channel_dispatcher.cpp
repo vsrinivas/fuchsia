@@ -247,7 +247,7 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
 
         // (4) If any of (3A), (3B), or (3C) have occurred,
         // we were removed from the waiters list already
-        // and get_msg() returns a non-TIMED_OUT status.
+        // and EndWait() returns a non-MX_ERR_TIMED_OUT status.
         // Otherwise, the status is MX_ERR_TIMED_OUT and it
         // is our job to remove the waiter from the list.
         if ((status = waiter->EndWait(reply)) == MX_ERR_TIMED_OUT)
