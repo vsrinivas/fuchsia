@@ -12,7 +12,6 @@
 #include "application/lib/app/connect.h"
 #include "apps/cobalt_client/services/cobalt.fidl-sync.h"
 #include "apps/cobalt_client/services/cobalt.fidl.h"
-#include "apps/cobalt_client/services/customers.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/ftl/logging.h"

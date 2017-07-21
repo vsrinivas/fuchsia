@@ -7,6 +7,5 @@ import("//lib/fidl/fidl.gni")
 fidl("cobalt") {
   sources = [
     "cobalt.fidl",
-    "customers.fidl",
   ]
 }
