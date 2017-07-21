@@ -7,6 +7,7 @@ group("tests") {
 
   deps = [
     ":modular_tests.json",
+    "common",
     "component_context",
     "context_link",
     "last_focus_time",

@@ -2,31 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("user_shell") {
+group("common") {
   testonly = true
 
   deps = [
-    ":test_user_shell",
+    ":null_module",
   ]
 }
 
-executable("test_user_shell") {
+executable("null_module") {
   testonly = true
 
   sources = [
-    "test_user_shell.cc",
+    "null_module.cc",
   ]
   deps = [
-    "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/fidl:single_service_view_app",
-    "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/user",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
     "//apps/mozart/services/views",
-    "//apps/test_runner/services:test_runner",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
     "//lib/mtl",
   ]
 }
