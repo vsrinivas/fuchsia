@@ -91,7 +91,7 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
     // Apply update immediately.  This is done for tests.
     FTL_LOG(WARNING)
         << "No FrameScheduler available; applying update immediately";
-    OnPrepareFrame(presentation_time, 0);
+    RenderFrame(presentation_time, 0);
   }
 }
 
@@ -138,8 +138,18 @@ void Engine::TearDownSession(SessionId id) {
   }
 }
 
-bool Engine::OnPrepareFrame(uint64_t presentation_time,
-                            uint64_t presentation_interval) {
+void Engine::RenderFrame(uint64_t presentation_time,
+                         uint64_t presentation_interval) {
+  if (!ApplyScheduledSessionUpdates(presentation_time, presentation_interval))
+    return;
+
+  for (auto renderer : renderers_) {
+    renderer->DrawFrame();
+  }
+}
+
+bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,
+                                          uint64_t presentation_interval) {
   bool needs_render = false;
   while (!updatable_sessions_.empty() &&
          updatable_sessions_.top().first <= presentation_time) {
@@ -168,6 +178,24 @@ const escher::PaperRendererPtr& Engine::GetPaperRenderer() {
     paper_renderer_->set_sort_by_pipeline(false);
   }
   return paper_renderer_;
+}
+
+void Engine::AddRenderer(Renderer* renderer) {
+  FTL_DCHECK(renderer);
+  FTL_DCHECK(renderer->session()->engine() == this);
+
+  FTL_CHECK(renderers_.empty()) << "Only one Renderer is currently supported.";
+
+  bool success = renderers_.insert(renderer).second;
+  FTL_DCHECK(success);
+}
+
+void Engine::RemoveRenderer(Renderer* renderer) {
+  FTL_DCHECK(renderer);
+  FTL_DCHECK(renderer->session()->engine() == this);
+
+  size_t count = renderers_.erase(renderer);
+  FTL_DCHECK(count == 1);
 }
 
 }  // namespace scene_manager

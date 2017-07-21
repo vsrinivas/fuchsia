@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/renderer/renderer.h"
 
-#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
+#include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/resources/material.h"
@@ -21,21 +21,17 @@ namespace scene_manager {
 const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
                                               "Renderer"};
 
-Renderer::Renderer(Session* session,
-                   mozart::ResourceId id,
-                   FrameScheduler* frame_scheduler)
-    : Resource(session, id, Renderer::kTypeInfo),
-      frame_scheduler_(frame_scheduler) {
-  FTL_DCHECK(frame_scheduler);
+Renderer::Renderer(Session* session, mozart::ResourceId id)
+    : Resource(session, id, Renderer::kTypeInfo) {
   escher::MaterialPtr default_material_ =
       ftl::MakeRefCounted<escher::Material>();
   default_material_->set_color(escher::vec3(0.f, 0.f, 0.f));
+
+  session->engine()->AddRenderer(this);
 }
 
 Renderer::~Renderer() {
-  if (camera_) {
-    frame_scheduler_->RemoveRenderer(this);
-  }
+  session()->engine()->RemoveRenderer(this);
 }
 
 std::vector<escher::Object> Renderer::CreateDisplayList(
@@ -48,20 +44,7 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
 }
 
 void Renderer::SetCamera(CameraPtr camera) {
-  if (!camera_ && !camera) {
-    // Still no camera.
-    return;
-  } else if (camera_ && camera) {
-    // Switch camera to new one.  No need to notify FrameScheduler.
-    camera_ = std::move(camera);
-  } else if (camera) {
-    // Camera became non-null.  Register with FrameScheduler.
-    camera_ = std::move(camera);
-    frame_scheduler_->AddRenderer(this);
-  } else {
-    camera_ = nullptr;
-    frame_scheduler_->RemoveRenderer(this);
-  }
+  camera_ = std::move(camera);
 }
 
 Renderer::Visitor::Visitor(const escher::MaterialPtr& default_material)

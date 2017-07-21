@@ -635,8 +635,7 @@ ResourcePtr Session::CreateDisplayRenderer(
     mozart::ResourceId id,
     const mozart2::DisplayRendererPtr& args) {
   return ftl::MakeRefCounted<DisplayRenderer>(
-      this, id, engine()->frame_scheduler(), engine()->GetPaperRenderer(),
-      engine()->GetVulkanSwapchain());
+      this, id, engine()->GetPaperRenderer(), engine()->GetVulkanSwapchain());
 }
 
 ResourcePtr Session::CreateImagePipeRenderer(

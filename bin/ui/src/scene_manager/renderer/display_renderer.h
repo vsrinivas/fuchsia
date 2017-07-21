@@ -18,7 +18,6 @@ class DisplayRenderer final : public Renderer {
 
   DisplayRenderer(Session* session,
                   mozart::ResourceId id,
-                  FrameScheduler* frame_scheduler,
                   escher::PaperRendererPtr paper_renderer,
                   escher::VulkanSwapchain swapchain);
 

@@ -7,8 +7,6 @@
 // TODO(MZ-148): now that Renderers are Resources, they should be moved to
 // apps/mozart/src/scene_manager/resources/renderers.
 
-#include "lib/mtl/tasks/message_loop.h"
-
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "apps/mozart/src/scene_manager/resources/resource_visitor.h"
 
@@ -17,7 +15,6 @@
 namespace scene_manager {
 
 class Camera;
-class FrameScheduler;
 class Scene;
 using CameraPtr = ftl::RefPtr<Camera>;
 using ScenePtr = ftl::RefPtr<Scene>;
@@ -40,7 +37,6 @@ class Renderer : public Resource {
   void SetCamera(CameraPtr camera);
 
   Camera* camera() const { return camera_.get(); }
-  FrameScheduler* frame_scheduler() const { return frame_scheduler_; }
 
   virtual void DrawFrame() = 0;
 
@@ -48,9 +44,7 @@ class Renderer : public Resource {
   // Renderer is a "leaf interface" of the Session API.  Even though it has
   // subclasses, these present exactly the same interface to callers, therefore
   // we don't waste valuable ResourceTypeInfo bits to distinguish them.
-  Renderer(Session* session,
-           mozart::ResourceId id,
-           FrameScheduler* frame_scheduler);
+  Renderer(Session* session, mozart::ResourceId id);
 
  private:
   class Visitor : public ResourceVisitor {
@@ -84,7 +78,6 @@ class Renderer : public Resource {
     const escher::MaterialPtr& default_material_;
   };
 
-  FrameScheduler* const frame_scheduler_;
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
 

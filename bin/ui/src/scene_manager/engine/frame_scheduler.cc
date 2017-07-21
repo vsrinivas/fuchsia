@@ -7,9 +7,8 @@
 #include <magenta/syscalls.h>
 
 #include "apps/mozart/src/scene_manager/display.h"
-#include "apps/mozart/src/scene_manager/renderer/renderer.h"
-#include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace scene_manager {
 
@@ -22,23 +21,6 @@ FrameScheduler::FrameScheduler(Display* display)
       display_(display) {}
 
 FrameScheduler::~FrameScheduler() {}
-
-void FrameScheduler::AddRenderer(Renderer* renderer) {
-  FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->frame_scheduler() == this);
-
-  FTL_DCHECK(renderers_.empty()) << "Only one Renderer is currently supported.";
-
-  bool success = renderers_.insert(renderer).second;
-  FTL_DCHECK(success) << "Renderer was already added to FrameScheduler.";
-}
-
-void FrameScheduler::RemoveRenderer(Renderer* renderer) {
-  FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->frame_scheduler() == this);
-  size_t count = renderers_.erase(renderer);
-  FTL_DCHECK(count == 1) << "Renderer was not removed from FrameScheduler.";
-}
 
 void FrameScheduler::RequestFrame(uint64_t presentation_time) {
   requested_presentation_times_.push(presentation_time);
@@ -111,11 +93,11 @@ void FrameScheduler::MaybeScheduleFrame() {
   auto time_to_start_rendering =
       ftl::TimePoint::FromEpochDelta(ftl::TimeDelta::FromNanoseconds(
           next_presentation_time_ - kPredictedFrameRenderTime));
-  task_runner_->PostTaskForTime([this] { MaybeUpdateSceneAndDrawFrame(); },
+  task_runner_->PostTaskForTime([this] { MaybeRenderFrame(); },
                                 time_to_start_rendering);
 }
 
-void FrameScheduler::MaybeUpdateSceneAndDrawFrame() {
+void FrameScheduler::MaybeRenderFrame() {
   if (last_presentation_time_ >= next_presentation_time_) {
     FTL_DCHECK(last_presentation_time_ == next_presentation_time_);
 
@@ -132,17 +114,19 @@ void FrameScheduler::MaybeUpdateSceneAndDrawFrame() {
     return;
   }
 
-  // A frame should be drawn now.  Notify delegates to update the global scene.
-  UpdateScene();
-
-  if (!renderers_.empty()) {
-    DrawFrame();
-  } else {
-    // The only renderer could have been destroyed, if the session holding it
-    // threw an error.
-    FTL_LOG(ERROR) << "FrameScheduler::MaybeUpdateSceneAndDrawFrame: No "
-                      "renderers available.";
+  // We are about to render a frame for the next scheduled presentation time, so
+  // keep only the presentation requests for later times.
+  while (!requested_presentation_times_.empty() &&
+         next_presentation_time_ >= requested_presentation_times_.top()) {
+    requested_presentation_times_.pop();
   }
+
+  // Go render the frame.
+  if (delegate_) {
+    delegate_->RenderFrame(next_presentation_time_,
+                           display_->GetVsyncInterval());
+  }
+
   // The frame is in flight, and will be presented.  Check if another frame
   // needs to be scheduled.
   last_presentation_time_ = next_presentation_time_;
@@ -154,35 +138,6 @@ bool FrameScheduler::TooMuchBackPressure() {
   // If this returns true, then MaybeScheduleFrame() MUST be called once the
   // back-pressure is relieved.
   return false;
-}
-
-void FrameScheduler::UpdateScene() {
-  // We are about to render a frame for the next scheduled presentation time, so
-  // keep only the presentation requests for later times.
-  while (!requested_presentation_times_.empty() &&
-         next_presentation_time_ >= requested_presentation_times_.top()) {
-    requested_presentation_times_.pop();
-  }
-
-  // Notify delegates to update the global scene.
-  bool presentation_is_desired = false;
-  const uint64_t presentation_interval = display_->GetVsyncInterval();
-  if (delegate_)
-    presentation_is_desired = delegate_->OnPrepareFrame(next_presentation_time_,
-                                                        presentation_interval);
-
-  // We shouldn't be rendering a frame if no delegate needed to be updated.
-  if (!presentation_is_desired) {
-    FTL_LOG(WARNING) << "FrameScheduler::UpdateScene(): Rendering a frame, but "
-                        "no presentation was desired.";
-  }
-}
-
-void FrameScheduler::DrawFrame() {
-  // Only a single renderer is currently supported.
-  FTL_DCHECK(renderers_.size() == 1);
-  auto renderer = *renderers_.begin();
-  renderer->DrawFrame();
 }
 
 }  // namespace scene_manager

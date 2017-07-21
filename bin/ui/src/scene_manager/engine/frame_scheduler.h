@@ -5,7 +5,6 @@
 #pragma once
 
 #include <queue>
-#include <unordered_set>
 
 #include "ftl/macros.h"
 
@@ -16,17 +15,23 @@ class TaskRunner;
 namespace scene_manager {
 
 class Display;
-class Renderer;
 
 // Interface implemented by the engine to perform per-frame processing in
 // response to a frame being scheduled.
 class FrameSchedulerDelegate {
  public:
-  // Return true if the delegate has knowledge that the scene is dirty, and
-  // must be redrawn.  If no delegate returns true, the FrameScheduler has the
-  // option of not drawing a frame.
-  virtual bool OnPrepareFrame(uint64_t presentation_time,
-                              uint64_t presentation_interval) = 0;
+  // Called when it's time to apply changes to the scene graph and render
+  // a new frame.
+  //
+  // TODO(MZ-225): We need to track backpressure so that the frame scheduler
+  // doesn't get too far ahead. With that in mind, Renderer::DrawFrame should
+  // have a callback which is invoked when the frame is fully flushed through
+  // the graphics pipeline. Then Engine::RenderFrame itself should have a
+  // callback which is invoked when all renderers finish work for that frame.
+  // Then FrameScheduler should listen to the callback to count how many
+  // frames are in flight and back off.
+  virtual void RenderFrame(uint64_t presentation_time,
+                           uint64_t presentation_interval) = 0;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in
@@ -42,14 +47,11 @@ class FrameScheduler {
   explicit FrameScheduler(Display* display);
   ~FrameScheduler();
 
+  void set_delegate(FrameSchedulerDelegate* delegate) { delegate_ = delegate; }
+
   // Request a frame to be scheduled at or after |presentation_time|, which
   // may be in the past.
   void RequestFrame(uint64_t presentation_time);
-
-  void AddRenderer(Renderer* renderer);
-  void RemoveRenderer(Renderer* renderer);
-
-  void set_delegate(FrameSchedulerDelegate* delegate) { delegate_ = delegate; }
 
   // Return a time > last_presentation_time_ if a frame should be scheduled.
   // Otherwise, return last_presentation_time_ to indicate that no frame needs
@@ -62,18 +64,11 @@ class FrameScheduler {
   // back-pressure if we can't hit our target frame rate.  Or, after this frame
   // was scheduled, another frame was scheduled to be rendered at an earlier
   // time, and not enough time has elapsed to render this frame.  Etc.
-  void MaybeUpdateSceneAndDrawFrame();
+  void MaybeRenderFrame();
 
   // Helper function that posts a task if there are pending presentation
   // requests.
   void MaybeScheduleFrame();
-
-  // Called before DrawFrame() to update the global scene-graph, by notifying
-  // all delegates that a frame is about to be rendered/presented.
-  void UpdateScene();
-
-  // Called after UpdateScene() in order to render the global scene-graph.
-  void DrawFrame();
 
   // Returns true to apply back-pressure when we cannot hit our target frame
   // rate.  Otherwise, return false to indicate that it is OK to immediately
@@ -81,7 +76,6 @@ class FrameScheduler {
   bool TooMuchBackPressure();
 
   ftl::TaskRunner* const task_runner_;
-  std::unordered_set<Renderer*> renderers_;
   FrameSchedulerDelegate* delegate_;
 
   uint64_t last_presentation_time_ = 0;

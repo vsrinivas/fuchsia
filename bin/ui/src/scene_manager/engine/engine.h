@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <set>
+
 #include "escher/escher.h"
 #include "escher/examples/common/demo_harness.h"
 #include "escher/impl/gpu_uploader.h"
@@ -24,6 +26,7 @@ using SessionId = uint64_t;
 class FrameScheduler;
 class Session;
 class SessionHandler;
+class Renderer;
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
@@ -96,10 +99,11 @@ class Engine : private FrameSchedulerDelegate {
 
   size_t GetSessionCount() { return session_count_; }
 
-  FrameScheduler* frame_scheduler() const { return frame_scheduler_.get(); }
-
   // Return a lazily-constructed PaperRenderer.
   const escher::PaperRendererPtr& GetPaperRenderer();
+
+  void AddRenderer(Renderer* renderer);
+  void RemoveRenderer(Renderer* renderer);
 
  protected:
   // Only used by subclasses used in testing.
@@ -118,11 +122,18 @@ class Engine : private FrameSchedulerDelegate {
   // Destroys the session with the given id.
   void TearDownSession(SessionId id);
 
-  // Implement |FrameSchedulerDelegate|.
-  // For each session, apply all updates that should be applied before rendering
-  // and presenting a frame at |presentation_time|.
-  bool OnPrepareFrame(uint64_t presentation_time,
-                      uint64_t presentation_interval) override;
+  // |FrameSchedulerDelegate|:
+  void RenderFrame(uint64_t presentation_time,
+                   uint64_t presentation_interval) override;
+
+  // Returns true if rendering is needed.
+  bool ApplyScheduledSessionUpdates(uint64_t presentation_time,
+                                    uint64_t presentation_interval);
+
+  void OnImportResolvedForResource(
+      Import* import,
+      ResourcePtr actual,
+      ResourceLinker::ResolutionResult resolution_result);
 
   ResourceLinker resource_linker_;
   escher::Escher* const escher_ = nullptr;
@@ -132,6 +143,7 @@ class Engine : private FrameSchedulerDelegate {
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
   escher::PaperRendererPtr paper_renderer_;
+  std::set<Renderer*> renderers_;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
@@ -142,11 +154,6 @@ class Engine : private FrameSchedulerDelegate {
   // requested presentation time of each update.
   std::priority_queue<std::pair<uint64_t, ftl::RefPtr<Session>>>
       updatable_sessions_;
-
-  void OnImportResolvedForResource(
-      Import* import,
-      ResourcePtr actual,
-      ResourceLinker::ResolutionResult resolution_result);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Engine);
 };

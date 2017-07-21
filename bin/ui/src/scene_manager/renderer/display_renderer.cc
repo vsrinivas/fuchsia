@@ -5,8 +5,8 @@
 #include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
 
 #include "escher/escher.h"
-#include "escher/renderer/paper_renderer.h"
 #include "escher/impl/ssdo_sampler.h"
+#include "escher/renderer/paper_renderer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 #include "lib/ftl/logging.h"
@@ -21,10 +21,9 @@ const uint32_t DisplayRenderer::kRequiredSwapchainPixelMultiple =
 
 DisplayRenderer::DisplayRenderer(Session* session,
                                  mozart::ResourceId id,
-                                 FrameScheduler* frame_scheduler,
                                  escher::PaperRendererPtr paper_renderer,
                                  escher::VulkanSwapchain swapchain)
-    : Renderer(session, id, frame_scheduler),
+    : Renderer(session, id),
       paper_renderer_(std::move(paper_renderer)),
       swapchain_helper_(std::move(swapchain), paper_renderer_) {}
 
