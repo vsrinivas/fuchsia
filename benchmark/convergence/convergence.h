@@ -11,6 +11,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/test/data_generator.h"
+#include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 
@@ -45,7 +46,9 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
 
   test::DataGenerator generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  test::FakeTokenProvider token_provider_impl_;
+  ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
+                                          test::FakeTokenProvider>
+      token_provider_impl_;
   const int entry_count_;
   const int value_size_;
   std::string server_id_;

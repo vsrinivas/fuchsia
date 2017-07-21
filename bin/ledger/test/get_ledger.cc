@@ -20,16 +20,18 @@ namespace {
 constexpr ftl::TimeDelta kTimeout = ftl::TimeDelta::FromSeconds(10);
 }  // namespace
 
-ledger::Status GetLedger(mtl::MessageLoop* loop,
-                         app::ApplicationContext* context,
-                         app::ApplicationControllerPtr* controller,
-                         FakeTokenProvider* token_provider,
-                         std::string ledger_name,
-                         std::string ledger_repository_path,
-                         SyncState sync,
-                         std::string server_id,
-                         ledger::LedgerPtr* ledger_ptr,
-                         Erase erase) {
+ledger::Status GetLedger(
+    mtl::MessageLoop* loop,
+    app::ApplicationContext* context,
+    app::ApplicationControllerPtr* controller,
+    ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
+        token_provider_impl,
+    std::string ledger_name,
+    std::string ledger_repository_path,
+    SyncState sync,
+    std::string server_id,
+    ledger::LedgerPtr* ledger_ptr,
+    Erase erase) {
   ledger::LedgerRepositoryFactoryPtr repository_factory;
   app::ServiceProviderPtr child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -54,7 +56,7 @@ ledger::Status GetLedger(mtl::MessageLoop* loop,
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   if (erase == Erase::ERASE_CLOUD) {
     modular::auth::TokenProviderPtr token_provider_ptr;
-    token_provider->AddBinding(token_provider_ptr.NewRequest());
+    token_provider_impl->AddBinding(token_provider_ptr.NewRequest());
     repository_factory->EraseRepository(
         ledger_repository_path, firebase_config.Clone(),
         std::move(token_provider_ptr),
@@ -67,7 +69,7 @@ ledger::Status GetLedger(mtl::MessageLoop* loop,
   }
 
   modular::auth::TokenProviderPtr token_provider_ptr;
-  token_provider->AddBinding(token_provider_ptr.NewRequest());
+  token_provider_impl->AddBinding(token_provider_ptr.NewRequest());
   repository_factory->GetRepository(
       ledger_repository_path, std::move(firebase_config),
       std::move(token_provider_ptr), repository.NewRequest(),

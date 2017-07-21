@@ -10,7 +10,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/test/fake_token_provider.h"
+#include "apps/ledger/src/fidl_helpers/boundable.h"
+#include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -23,16 +24,18 @@ enum Erase { KEEP_DATA = 0, ERASE_CLOUD };
 // Creates a new Ledger application instance and returns a LedgerPtr connection
 // to it. If |erase_first| is true, an EraseRepository command is issued first
 // before connecting, ensuring a clean state before proceeding.
-ledger::Status GetLedger(mtl::MessageLoop* loop,
-                         app::ApplicationContext* context,
-                         app::ApplicationControllerPtr* controller,
-                         FakeTokenProvider* token_provider,
-                         std::string ledger_name,
-                         std::string ledger_repository_path,
-                         SyncState sync,
-                         std::string server_id,
-                         ledger::LedgerPtr* ledger_ptr,
-                         Erase erase = KEEP_DATA);
+ledger::Status GetLedger(
+    mtl::MessageLoop* loop,
+    app::ApplicationContext* context,
+    app::ApplicationControllerPtr* controller,
+    ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
+        token_provider_impl,
+    std::string ledger_name,
+    std::string ledger_repository_path,
+    SyncState sync,
+    std::string server_id,
+    ledger::LedgerPtr* ledger_ptr,
+    Erase erase = KEEP_DATA);
 
 // Retrieves the requested page of the given Ledger instance and calls the
 // callback only after executing a GetId() call on the page, ensuring that it is

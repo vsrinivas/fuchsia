@@ -12,10 +12,10 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/branch_tracker.h"
-#include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/app/sync_watcher_set.h"
 #include "apps/ledger/src/callback/operation_serializer.h"
+#include "apps/ledger/src/fidl_helpers/bound_interface.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -113,7 +113,7 @@ class PageDelegate {
   storage::PageStorage* storage_;
 
   fidl::InterfaceRequest<Page> request_;
-  BoundInterface<Page, PageImpl> interface_;
+  fidl_helpers::BoundInterface<Page, PageImpl> interface_;
   BranchTracker branch_tracker_;
 
   ftl::Closure on_empty_callback_;

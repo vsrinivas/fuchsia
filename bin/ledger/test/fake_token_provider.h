@@ -9,8 +9,6 @@
 
 #include "apps/modular/services/auth/token_provider.fidl.h"
 
-#include "lib/fidl/cpp/bindings/binding_set.h"
-
 namespace test {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be
 // used to connect to unauthenticated firebase instances.
@@ -22,8 +20,6 @@ class FakeTokenProvider : public modular::auth::TokenProvider {
                     std::string client_id);
   ~FakeTokenProvider() {}
 
-  void AddBinding(fidl::InterfaceRequest<modular::auth::TokenProvider> request);
-
  private:
   void GetAccessToken(const GetAccessTokenCallback& callback) override;
   void GetIdToken(const GetIdTokenCallback& callback) override;
@@ -32,7 +28,6 @@ class FakeTokenProvider : public modular::auth::TokenProvider {
       const GetFirebaseAuthTokenCallback& callback) override;
   void GetClientId(const GetClientIdCallback& callback) override;
 
-  fidl::BindingSet<modular::auth::TokenProvider> binding_;
   std::string firebase_id_token_;
   std::string firebase_local_id_;
   std::string email_;

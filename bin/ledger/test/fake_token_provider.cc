@@ -15,11 +15,6 @@ FakeTokenProvider::FakeTokenProvider(std::string firebase_id_token,
       email_(std::move(email)),
       client_id_(std::move(client_id)) {}
 
-void FakeTokenProvider::AddBinding(
-    fidl::InterfaceRequest<modular::auth::TokenProvider> request) {
-  binding_.AddBinding(this, std::move(request));
-}
-
 void FakeTokenProvider::GetAccessToken(const GetAccessTokenCallback& callback) {
   modular::auth::AuthErrPtr error = modular::auth::AuthErr::New();
   error->status = modular::auth::Status::OK;

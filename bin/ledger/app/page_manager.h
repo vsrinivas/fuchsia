@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/app/fidl/bound_interface.h"
+#include "apps/ledger/src/fidl_helpers/bound_interface.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_delegate.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
@@ -68,7 +68,7 @@ class PageManager {
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
   std::unique_ptr<MergeResolver> merge_resolver_;
   const ftl::TimeDelta sync_timeout_;
-  callback::AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>>
+  callback::AutoCleanableSet<fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;
   callback::AutoCleanableSet<PageDelegate> pages_;
   ftl::Closure on_empty_callback_;

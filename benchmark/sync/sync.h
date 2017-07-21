@@ -9,6 +9,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/data_generator.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -68,7 +69,9 @@ class SyncBenchmark : public ledger::PageWatcher {
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
   app::ApplicationControllerPtr gamma_controller_;
-  test::FakeTokenProvider token_provider_impl_;
+  ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
+                                          test::FakeTokenProvider>
+      token_provider_impl_;
   ledger::LedgerPtr gamma_;
   fidl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;

@@ -10,6 +10,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/get_ledger.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -64,7 +65,9 @@ class SyncTestBase : public ::testing::Test {
   mtl::MessageLoop* message_loop_;
 
  private:
-  test::FakeTokenProvider token_provider_impl_;
+  ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
+                                          test::FakeTokenProvider>
+      token_provider_impl_;
 };
 }  // namespace sync_test
 

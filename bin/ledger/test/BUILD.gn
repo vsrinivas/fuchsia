@@ -19,6 +19,7 @@ source_set("lib") {
   public_deps = [
     "//application/lib/app",
     "//apps/ledger/services/public",
+    "//apps/ledger/src/fidl_helpers",
     "//apps/modular/services/auth",
     "//lib/fidl/cpp/bindings:serialization",
     "//lib/ftl",
