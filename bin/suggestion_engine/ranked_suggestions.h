@@ -29,6 +29,9 @@ class RankedSuggestions {
 
   RankedSuggestion* GetSuggestion(const std::string& suggestion_id) const;
 
+  RankedSuggestion* GetSuggestion(const std::string& component_url,
+                                  const std::string& proposal_id) const;
+
   const std::vector<RankedSuggestion*>* GetSuggestions() const {
     return &suggestions_;
   }

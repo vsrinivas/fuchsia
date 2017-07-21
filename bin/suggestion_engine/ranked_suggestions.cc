@@ -9,8 +9,24 @@
 
 namespace maxwell {
 
+typedef std::function<bool(RankedSuggestion* suggestion)> MatchFunction;
+
+MatchFunction GetSuggestionMatcher(const std::string& component_url,
+                                   const std::string& proposal_id) {
+  return [component_url, proposal_id](RankedSuggestion* suggestion) {
+      return (suggestion->prototype->proposal->id == proposal_id) &&
+             (suggestion->prototype->source_url == component_url);
+  };
+}
+
+MatchFunction GetSuggestionMatcher(const std::string& suggestion_id) {
+  return [suggestion_id](RankedSuggestion* suggestion) {
+    return suggestion->prototype->suggestion_id == suggestion_id;
+  };
+}
+
 RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
-    std::function<bool(RankedSuggestion* suggestion)> matchFunction) const {
+    MatchFunction matchFunction) const {
   auto findIter =
       std::find_if(suggestions_.begin(), suggestions_.end(), matchFunction);
   if (findIter != suggestions_.end())
@@ -19,7 +35,7 @@ RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
 }
 
 void RankedSuggestions::RemoveMatchingSuggestion(
-    std::function<bool(RankedSuggestion* suggestion)> matchFunction) {
+     MatchFunction matchFunction) {
   auto removeIter =
       std::remove_if(suggestions_.begin(), suggestions_.end(), matchFunction);
   suggestions_.erase(removeIter, suggestions_.end());
@@ -42,7 +58,8 @@ void RankedSuggestions::AddSuggestion(
 
   RankedSuggestion* existing_suggestion =
       GetMatchingSuggestion([&prototype](RankedSuggestion* suggestion) {
-        return suggestion->prototype->proposal->id == prototype->proposal->id;
+        return (suggestion->prototype->proposal->id == prototype->proposal->id) &&
+               (suggestion->prototype->source_url == prototype->source_url);
       });
   if (existing_suggestion && (existing_suggestion->rank != rank))
     RemoveSuggestion(existing_suggestion->prototype->suggestion_id);
@@ -57,24 +74,22 @@ void RankedSuggestions::AddSuggestion(
 
 void RankedSuggestions::RemoveProposal(const std::string& component_url,
                                        const std::string& proposal_id) {
-  RemoveMatchingSuggestion(
-      [component_url, proposal_id](RankedSuggestion* suggestion) {
-        return (suggestion->prototype->proposal->id == proposal_id) &&
-               (suggestion->prototype->source_url == component_url);
-      });
+  RemoveMatchingSuggestion(GetSuggestionMatcher(component_url, proposal_id));
 }
 
 void RankedSuggestions::RemoveSuggestion(const std::string& suggestion_id) {
-  RemoveMatchingSuggestion([suggestion_id](RankedSuggestion* suggestion) {
-    return suggestion->prototype->suggestion_id == suggestion_id;
-  });
+  RemoveMatchingSuggestion(GetSuggestionMatcher(suggestion_id));
 }
 
 RankedSuggestion* RankedSuggestions::GetSuggestion(
     const std::string& suggestion_id) const {
-  return GetMatchingSuggestion([suggestion_id](RankedSuggestion* suggestion) {
-    return suggestion->prototype->suggestion_id == suggestion_id;
-  });
+  return GetMatchingSuggestion(GetSuggestionMatcher(suggestion_id));
+}
+
+RankedSuggestion* RankedSuggestions::GetSuggestion(
+    const std::string& component_url,
+    const std::string& proposal_id) const {
+  return GetMatchingSuggestion(GetSuggestionMatcher(component_url, proposal_id));
 }
 
 void RankedSuggestions::RemoveAllSuggestions() {

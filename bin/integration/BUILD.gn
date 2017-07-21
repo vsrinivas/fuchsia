@@ -122,6 +122,7 @@ source_set("test_suggestion_listener") {
   deps = [
     "//apps/maxwell/lib/suggestion:formatting",
     "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
   ]
 
   public_deps = [

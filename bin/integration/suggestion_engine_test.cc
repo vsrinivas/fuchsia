@@ -1014,4 +1014,33 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   CHECK_RESULT_COUNT(1);
 }
 
+TEST_F(InterruptionTest, SingleInterruption) {
+  Sleep();  // TEMPORARY; wait for init
+
+  Proposinator p(suggestion_engine());
+
+  p.Propose("1", "2", maxwell::AnnoyanceType::INTERRUPT);
+  Sleep();
+
+  CHECK_RESULT_COUNT(1);
+  EnsureDebugMatches();
+}
+
+TEST_F(InterruptionTest, RemovedInterruption) {
+  Sleep();
+
+  Proposinator p(suggestion_engine());
+
+  p.Propose("1", "2", maxwell::AnnoyanceType::INTERRUPT);
+  Sleep();
+
+  CHECK_RESULT_COUNT(1);
+  EnsureDebugMatches();
+
+  p.Remove("1");
+  Sleep();
+
+  CHECK_RESULT_COUNT(0);
+}
+
 }  // namespace maxwell

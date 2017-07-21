@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/ranked_suggestions.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_subscriber.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
@@ -15,7 +16,7 @@ class InterruptionsSubscriber : public SuggestionSubscriber {
   InterruptionsSubscriber(fidl::InterfaceHandle<SuggestionListener> listener)
       : SuggestionSubscriber(std::move(listener)) {}
 
-  virtual void OnAddSuggestion(
+  void OnAddSuggestion(
       const RankedSuggestion& ranked_suggestion) override {
     if (ranked_suggestion.prototype->proposal->display->annoyance !=
         AnnoyanceType::NONE) {
@@ -23,12 +24,14 @@ class InterruptionsSubscriber : public SuggestionSubscriber {
     }
   }
 
-  virtual void OnRemoveSuggestion(
+ void OnRemoveSuggestion(
       const RankedSuggestion& ranked_suggestion) override {
     if (ranked_suggestion.prototype->proposal->display->annoyance !=
         AnnoyanceType::NONE) {
       DispatchRemove(ranked_suggestion);
     }
   }
+
+ void Invalidate() override {}
 };
 }  // namespace maxwell

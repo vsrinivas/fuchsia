@@ -155,6 +155,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
   SuggestionChannel next_channel_;
   RankedSuggestions* next_suggestions_;
 
+  SuggestionChannel interruption_channel_;
+
   // The set of all ProposalPublishers that have registered to receive Asks.
   maxwell::BoundPtrSet<AskHandler,
                        std::unique_ptr<AskPublisher>,

@@ -8,6 +8,7 @@
 #include "apps/maxwell/services/suggestion/user_input.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -17,10 +18,24 @@
 
 namespace maxwell {
 
+bool IsInterruption(const SuggestionPrototype* suggestion) {
+  return ((suggestion->proposal->display) &&
+         ((suggestion->proposal->display->annoyance == maxwell::AnnoyanceType::INTERRUPT) ||
+          (suggestion->proposal->display->annoyance == maxwell::AnnoyanceType::PEEK)));
+}
+
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            ProposalPtr prototype) {
-  next_suggestions_->AddSuggestion(
-      CreateSuggestion(std::move(source), std::move(prototype)));
+  auto suggestion = CreateSuggestion(std::move(source), std::move(prototype));
+  if (IsInterruption(suggestion)) {
+    debug_.OnInterrupt(suggestion);
+    // TODO(andrewosh): Subscribers should probably take SuggestionPrototypes.
+    auto ranked_suggestion = new RankedSuggestion();
+    ranked_suggestion->prototype = suggestion;
+    ranked_suggestion->rank = 0;
+    interruption_channel_.DispatchOnAddSuggestion(ranked_suggestion);
+  }
+  next_suggestions_->AddSuggestion(std::move(suggestion));
   debug_.OnNextUpdate(next_suggestions_);
 }
 
@@ -32,6 +47,11 @@ void SuggestionEngineImpl::AddAskProposal(ProposalPublisherImpl* source,
 
 void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
                                           const std::string& proposal_id) {
+  RankedSuggestion* matchingSuggestion =
+      next_suggestions_->GetSuggestion(component_url, proposal_id);
+  if (matchingSuggestion && IsInterruption(matchingSuggestion->prototype)) {
+    interruption_channel_.DispatchOnRemoveSuggestion(matchingSuggestion);
+  }
   next_suggestions_->RemoveProposal(component_url, proposal_id);
   ask_suggestions_->RemoveProposal(component_url, proposal_id);
   debug_.OnNextUpdate(next_suggestions_);
@@ -68,22 +88,40 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
     ask_suggestions_->AddSuggestion(suggestion->prototype);
   }
 
-  for (const std::unique_ptr<AskPublisher>& ask : ask_handlers_) {
-    ask->handler->Ask(
-        input.Clone(), [this, &ask](fidl::Array<ProposalPtr> proposals) {
+  if (ask_handlers_.size() == 0) {
+    return debug_.OnAskStart(query, ask_suggestions_);
+  }
+
+  auto remainingHandlers = std::make_shared<size_t>(ask_handlers_.size());
+  for (auto ask = ask_handlers_.begin(); ask != ask_handlers_.end(); ask++) {
+    (*ask)->handler->Ask(
+        input.Clone(),
+        // TODO(andrewosh) Capturing the ask iterator is unsafe, as
+        // ask_handlers_ can be modified during this iteration.
+        // Replace ask_handlers_ with a map + validation when BoundPtrSet is
+        // removed.
+        [this, remainingHandlers, query, ask](fidl::Array<ProposalPtr> proposals) {
           for (auto& proposal : proposals) {
-            AddAskProposal(ask->publisher.get(), std::move(proposal));
+            AddAskProposal((*ask)->publisher.get(), std::move(proposal));
+          }
+          (*remainingHandlers)--;
+          if ((*remainingHandlers) == 0) {
+            debug_.OnAskStart(query, ask_suggestions_);
           }
         });
   }
-  debug_.OnAskStart(query, ask_suggestions_);
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<SuggestionListener> listener) {
-  // TODO(andrewosh): Make sure this is implemented.
-  return;
+  InterruptionsSubscriber* subscriber = new InterruptionsSubscriber(std::move(listener));
+  // New InterruptionsSubscribers are initially sent the existing set of Next
+  // suggestions. AnnoyanceType filtering happens in the subscriber.
+  for (const auto& suggestion : *(next_suggestions_->GetSuggestions())) {
+    subscriber->OnAddSuggestion(*suggestion);
+  }
+  interruption_channel_.AddSubscriber(std::move(subscriber));
 }
 
 // |SuggestionProvider|
