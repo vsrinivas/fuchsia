@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <hw/inout.h>
+#include <magenta/status.h>
 #include <mxtl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <virtio/virtio.h>
@@ -215,15 +216,23 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     return MX_OK;
 }
 
+void Device::Unbind() {
+    device_remove(device_);
+}
+
+void Device::Release() {
+    irq_handle_.reset();
+}
+
 void Device::IrqWorker() {
     LTRACEF("started\n");
-
+    mx_status_t rc;
     assert(irq_handle_);
 
-    for (;;) {
-        auto status = mx_interrupt_wait(irq_handle_.get());
-        if (status < 0) {
-            printf("virtio: error %d waiting for interrupt\n", status);
+    while (irq_handle_) {
+        if ((rc = mx_interrupt_wait(irq_handle_.get())) < 0) {
+            printf("virtio: error while waiting for interrupt: %s\n",
+                mx_status_get_string(rc));
             continue;
         }
 
@@ -236,7 +245,11 @@ void Device::IrqWorker() {
 
         LTRACEF_LEVEL(2, "irq_status %#x\n", irq_status);
 
-        mx_interrupt_complete(irq_handle_.get());
+        if ((rc = mx_interrupt_complete(irq_handle_.get())) < 0) {
+            printf("virtio: error while completing interrupt: %s\n",
+                mx_status_get_string(rc));
+            continue;
+        }
 
         if (irq_status == 0)
             continue;

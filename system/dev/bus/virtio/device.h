@@ -46,8 +46,9 @@ public:
     mx_device_t* device() { return device_; }
 
     virtual mx_status_t Bind(pci_protocol_t*, mx_handle_t pci_config_handle, const pci_config_t*);
-
     virtual mx_status_t Init() = 0;
+    virtual void Unbind();
+    virtual void Release();
 
     void StartIrqThread();
 
