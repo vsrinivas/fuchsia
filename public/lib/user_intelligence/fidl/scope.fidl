@@ -14,6 +14,8 @@ union ComponentScope {
   ModuleScope module_scope;  // Annoying: can't use "module" (it's reserved)
   // Scope for a specific Agent. Agents are not tied to a specific story.
   AgentScope agent_scope;
+  // Scope for a specific Story, potentially containing several Module instances.
+  StoryScope story_scope;
 };
 
 struct GlobalScope {};
@@ -26,4 +28,8 @@ struct ModuleScope {
 
 struct AgentScope {
   string url;
+};
+
+struct StoryScope {
+  string story_id;
 };
