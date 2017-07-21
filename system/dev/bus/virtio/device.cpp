@@ -44,6 +44,11 @@ struct virtio_pci_cap {
     uint32_t length;
 } __PACKED;
 
+struct virtio_pci_notify_cap {
+    struct virtio_pci_cap cap;
+    uint32_t notify_off_multiplier;
+} __PACKED;
+
 namespace virtio {
 
 Device::Device(mx_device_t* bus_device)
@@ -141,8 +146,9 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                     case VIRTIO_PCI_CAP_NOTIFY_CFG: {
                         MapBar(cap->bar);
                         mmio_regs_.notify_base = (volatile uint16_t*)((uintptr_t)bar_[cap->bar].mmio_base + cap->offset);
-                        mmio_regs_.notify_mul = 0x1000;
                         LTRACEF("notify_base %p\n", mmio_regs_.notify_base);
+                        mmio_regs_.notify_mul = ((virtio_pci_notify_cap *) cap)->notify_off_multiplier;
+                        LTRACEF("notify_mul %x\n", mmio_regs_.notify_mul);
                         break;
                     }
                     case VIRTIO_PCI_CAP_ISR_CFG: {
