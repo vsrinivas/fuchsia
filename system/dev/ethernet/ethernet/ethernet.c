@@ -32,6 +32,9 @@
     } while (0)
 #endif
 
+// This is used for signaling that eth_tx_thread() should exit.
+static const mx_signals_t kSignalFifoTerminate = MX_USER_SIGNAL_0;
+
 // ensure that we will not exceed fifo capacity
 static_assert((FIFO_DEPTH * FIFO_ESIZE) <= 4096, "");
 
@@ -235,14 +238,18 @@ static int eth_tx_thread(void* arg) {
     for (;;) {
         if ((status = mx_fifo_read(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
             if (status == MX_ERR_SHOULD_WAIT) {
+                mx_signals_t observed;
                 if ((status = mx_object_wait_one(edev->tx_fifo,
-                                                 MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                                 MX_TIME_INFINITE, NULL)) < 0) {
-                    if (status != MX_ERR_CANCELED) {
-                        printf("eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
-                    }
+                                                 MX_FIFO_READABLE |
+                                                 MX_FIFO_PEER_CLOSED |
+                                                 kSignalFifoTerminate,
+                                                 MX_TIME_INFINITE,
+                                                 &observed)) < 0) {
+                    printf("eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
                     break;
                 }
+                if (observed & kSignalFifoTerminate)
+                    break;
                 continue;
             } else {
                 printf("eth [%s]: tx_fifo: cannot read: %d\n", edev->name, status);
@@ -545,20 +552,24 @@ static void eth_kill_locked(ethdev_t* edev) {
         edev->rx_fifo = MX_HANDLE_INVALID;
     }
     if (edev->tx_fifo) {
-        mx_handle_close(edev->tx_fifo);
-        edev->tx_fifo = MX_HANDLE_INVALID;
+        // Ask the TX thread to exit.
+        mx_object_signal(edev->tx_fifo, 0, kSignalFifoTerminate);
     }
     if (edev->io_vmo) {
         mx_handle_close(edev->io_vmo);
         edev->io_vmo = MX_HANDLE_INVALID;
     }
 
-    // closing handles will 'encourage' the tx thread to exit
     if (edev->state & ETHDEV_TX_THREAD) {
         edev->state &= (~ETHDEV_TX_THREAD);
         int ret;
         thrd_join(edev->tx_thr, &ret);
         xprintf("eth [%s]: kill: tx thread exited\n", edev->name);
+    }
+
+    if (edev->tx_fifo) {
+        mx_handle_close(edev->tx_fifo);
+        edev->tx_fifo = MX_HANDLE_INVALID;
     }
 
     if (edev->io_buf) {
