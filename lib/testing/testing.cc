@@ -86,23 +86,33 @@ test_runner::TestRunnerStore* GetStore() {
 namespace internal {
 
 void RegisterTestPoint(const std::string& label) {
-  // Test points must have unique labels.
-  FTL_CHECK(g_test_points.find(label) == g_test_points.end());
-
   // Test points can only be registered before Init is called.
-  FTL_CHECK(!g_test_runner.is_bound());
+  FTL_CHECK(!g_test_runner.is_bound())
+      << "Test Runner connection not bound. You must call "
+      << "ComponentBase::TestInit() before registering "
+      << "\"" << label << "\".";
 
-  g_test_points.insert(label);
+  auto inserted = g_test_points.insert(label);
+
+  // Test points must have unique labels.
+  FTL_CHECK(inserted.second)
+      << "Test points must have unique labels. "
+      << "\"" << label << "\" is repeated.";
+
 }
 
 void PassTestPoint(const std::string& label) {
-  // Test points can only be passed once.
-  FTL_CHECK(g_test_points.find(label) != g_test_points.end());
-
   // Test points can only be passed after initialization.
-  FTL_CHECK(g_test_runner.is_bound());
+  FTL_CHECK(g_test_runner.is_bound())
+      << "Test Runner connection not bound. You must call "
+      << "ComponentBase::TestInit() before \"" << label << "\".Pass() can be "
+      << "called.";
 
-  g_test_points.erase(label);
+  // Test points can only be passed once.
+  FTL_CHECK( g_test_points.erase(label))
+      << "TEST FAILED: Test point can only be passed once. "
+      << "\"" << label << "\".Pass() has been called twice.";
+
   g_test_runner->PassTestPoint();
 }
 
