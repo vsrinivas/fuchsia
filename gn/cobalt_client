@@ -18,6 +18,10 @@
         {
             "binary": "cobalt_testapp",
             "bootfs_path": "test/cobalt_testapp"
+        },
+        {
+            "binary": "cobalt_apptests",
+            "bootfs_path": "test/cobalt_apptests"
         }
     ]
 }
