@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/session/engine.h"
+#include "apps/mozart/src/scene_manager/engine/engine.h"
 
 #include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
-#include "apps/mozart/src/scene_manager/frame_scheduler.h"
+#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
+#include "apps/mozart/src/scene_manager/engine/session.h"
+#include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/renderer/renderer.h"
-#include "apps/mozart/src/scene_manager/session/session.h"
-#include "apps/mozart/src/scene_manager/session/session_handler.h"
 
 namespace scene_manager {
 

@@ -9,8 +9,8 @@
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
 #include "apps/mozart/src/scene_manager/display.h"
-#include "apps/mozart/src/scene_manager/frame_scheduler.h"
-#include "apps/mozart/src/scene_manager/session/engine.h"
+#include "apps/mozart/src/scene_manager/engine/engine.h"
+#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "escher/forward_declarations.h"
 
 namespace scene_manager {

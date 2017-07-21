@@ -11,7 +11,7 @@
 #include "lib/escher/escher/renderer/simple_image_factory.h"
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
 
-#include "apps/mozart/src/scene_manager/frame_scheduler.h"
+#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"

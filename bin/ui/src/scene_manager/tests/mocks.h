@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "apps/mozart/src/scene_manager/engine/engine.h"
+#include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
-#include "apps/mozart/src/scene_manager/session/engine.h"
-#include "apps/mozart/src/scene_manager/session/session_handler.h"
 
 namespace scene_manager {
 namespace test {

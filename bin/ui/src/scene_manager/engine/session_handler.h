@@ -5,7 +5,7 @@
 #pragma once
 
 #include "apps/mozart/services/scene/session.fidl.h"
-#include "apps/mozart/src/scene_manager/session/session.h"
+#include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"

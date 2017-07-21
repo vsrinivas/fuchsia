@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/session/session.h"
+#include "apps/mozart/src/scene_manager/engine/session.h"
 
+#include "apps/mozart/src/scene_manager/engine/hit_tester.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
 #include "apps/mozart/src/scene_manager/renderer/display_renderer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
@@ -20,7 +21,6 @@
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
-#include "apps/mozart/src/scene_manager/session/hit_tester.h"
 #include "apps/mozart/src/scene_manager/util/unwrap.h"
 #include "apps/mozart/src/scene_manager/util/wrap.h"
 

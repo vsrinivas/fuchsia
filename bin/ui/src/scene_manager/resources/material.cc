@@ -4,10 +4,10 @@
 
 #include "apps/mozart/src/scene_manager/resources/material.h"
 
+#include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/image.h"
 #include "apps/mozart/src/scene_manager/resources/image_base.h"
 #include "apps/mozart/src/scene_manager/resources/image_pipe.h"
-#include "apps/mozart/src/scene_manager/session/session.h"
 
 namespace scene_manager {
 

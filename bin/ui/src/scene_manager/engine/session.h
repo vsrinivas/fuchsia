@@ -8,9 +8,9 @@
 
 #include "apps/mozart/services/scene/session.fidl.h"
 #include "apps/mozart/src/scene_manager/acquire_fence_set.h"
+#include "apps/mozart/src/scene_manager/engine/engine.h"
 #include "apps/mozart/src/scene_manager/resources/memory.h"
 #include "apps/mozart/src/scene_manager/resources/resource_map.h"
-#include "apps/mozart/src/scene_manager/session/engine.h"
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "lib/ftl/tasks/task_runner.h"
 

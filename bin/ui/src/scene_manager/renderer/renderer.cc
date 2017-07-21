@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/renderer/renderer.h"
 
-#include "apps/mozart/src/scene_manager/frame_scheduler.h"
+#include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/resources/material.h"
