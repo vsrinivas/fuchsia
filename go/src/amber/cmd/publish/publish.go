@@ -25,7 +25,7 @@ var fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
 const serverBase = "amber-files"
 
 var (
-	usage = "usage: publish (-v|-i) [-k=<keys_dir>] [-n=<name>] [-r=<repo_path>] -f=file "
+	usage = "usage: publish (-p|-b) [-k=<keys_dir>] [-n=<name>] [-r=<repo_path>] -f=file "
 	// TODO(jmatt) support publishing batches of files instead of just singles
 	tufFile  = flag.Bool("p", false, "Publish a package.")
 	regFile  = flag.Bool("b", false, "Publish a content blob.")
@@ -75,10 +75,9 @@ func main() {
 		return
 	}
 
-	if info, e := os.Stat(*repoPath); e != nil || !info.IsDir() {
-		log.Fatalf("Repository path '%s' must exist and be a directory.\n",
+	if e := os.MkdirAll(*repoPath, os.ModePerm); e != nil {
+		log.Fatalf("Repository path %q does not exist and could not be created.\n",
 			*repoPath)
-		return
 	}
 
 	repo, err := initRepo(*repoPath, *keySrc)
