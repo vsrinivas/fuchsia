@@ -11,7 +11,6 @@
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/module/module_context.fidl.h"
@@ -817,6 +816,19 @@ StoryControllerImpl::StoryControllerImpl(
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {
         story_marker_impl_->Connect(std::move(request));
+      });
+
+  auto story_scope = maxwell::StoryScope::New();
+  story_scope->story_id = story_id;
+  auto scope = maxwell::ComponentScope::New();
+  scope->set_story_scope(std::move(story_scope));
+  story_provider_impl_->user_intelligence_provider()
+      ->GetComponentIntelligenceServices(std::move(scope),
+                                         intelligence_services_.NewRequest());
+
+  story_scope_.AddService<maxwell::ContextPublisher>(
+      [this](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
+        intelligence_services_->GetContextPublisher(std::move(request));
       });
 }
 

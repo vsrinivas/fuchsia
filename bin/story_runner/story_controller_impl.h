@@ -16,6 +16,7 @@
 
 #include "application/services/application_controller.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/context.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
@@ -241,6 +242,10 @@ class StoryControllerImpl : StoryController, StoryContext {
   // story. See story_marker.fidl for more details.
   class StoryMarkerImpl;
   std::unique_ptr<StoryMarkerImpl> story_marker_impl_;
+
+  // A collection of services, scoped to this Story, for use by intelligent
+  // Modules.
+  maxwell::IntelligenceServicesPtr intelligence_services_;
 
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;
