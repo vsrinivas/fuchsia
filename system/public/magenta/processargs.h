@@ -121,6 +121,11 @@ struct mx_proc_args {
 // Used by kernel and userboot during startup
 #define PA_VMO_BOOTFS            0x1B
 
+// Used by the kernel to export debug information as a file in bootfs.  When
+// devmgr starts, it looks for handles of this type, and adds them as files in
+// /boot/kernel/<vmo-name>.
+#define PA_VMO_KERNEL_FILE        0x1C
+
 
 // --- Namespace Handles ---
 

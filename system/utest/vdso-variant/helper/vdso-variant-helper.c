@@ -16,7 +16,7 @@
 bool vdso_open_test(void) {
     BEGIN_TEST;
 
-    int vdso_dir_fd = open("/boot/vdso", O_RDONLY | O_DIRECTORY);
+    int vdso_dir_fd = open("/boot/kernel/vdso", O_RDONLY | O_DIRECTORY);
     ASSERT_GE(vdso_dir_fd, 0, "open of vdso directory failed");
 
     DIR* dir = fdopendir(dup(vdso_dir_fd));

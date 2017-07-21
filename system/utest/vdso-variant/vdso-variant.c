@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define VDSO_FILE "/boot/vdso/test1"
+#define VDSO_FILE "/boot/kernel/vdso/test1"
 
 int main(void) {
     int fd = open(VDSO_FILE, O_RDONLY);

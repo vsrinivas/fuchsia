@@ -23,6 +23,11 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
+// When adding VMOs to the boot filesystem, add them under the directory
+// /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
+#define VMO_SUBDIR "kernel/"
+#define VMO_SUBDIR_LEN (sizeof(VMO_SUBDIR) - 1)
+
 // The handle used to transmit messages to appmgr.
 static mx_handle_t svc_root_handle;
 // The handle used by appmgr to serve incoming requests.
@@ -205,39 +210,42 @@ static void start_console_shell(void) {
 static void start_console_shell(void) {}
 #endif
 
-static void fetch_vdsos(void) {
+// Look for VMOs passed as startup handles of PA_HND_TYPE type, and add them to
+// the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
+static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
     for (uint_fast16_t i = 0; true; ++i) {
-        mx_handle_t vdso_vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, i));
-        if (vdso_vmo == MX_HANDLE_INVALID)
+        mx_handle_t vmo = mx_get_startup_handle(PA_HND(type, i));
+        if (vmo == MX_HANDLE_INVALID)
             break;
-        if (i == 0) {
-            // The first one is the default vDSO.  Since we've stolen
+
+        if (type == PA_VMO_VDSO && i == 0) {
+            // The first vDSO is the default vDSO.  Since we've stolen
             // the startup handle, launchpad won't find it on its own.
             // So point launchpad at it.
-            launchpad_set_vdso_vmo(vdso_vmo);
+            launchpad_set_vdso_vmo(vmo);
         }
 
         // The vDSO VMOs have names like "vdso/default", so those
-        // become VMO files at "/boot/vdso/default".
-        char name[MX_MAX_NAME_LEN];
+        // become VMO files at "/boot/kernel/vdso/default".
+        char name[VMO_SUBDIR_LEN + MX_MAX_NAME_LEN] = VMO_SUBDIR;
         size_t size;
-        mx_status_t status = mx_object_get_property(vdso_vmo, MX_PROP_NAME,
-                                                    name, sizeof(name));
+        mx_status_t status = mx_object_get_property(vmo, MX_PROP_NAME,
+                name + VMO_SUBDIR_LEN, sizeof(name) - VMO_SUBDIR_LEN);
         if (status != MX_OK) {
-            printf("devmgr: mx_object_get_property on PA_VMO_VDSO %u: %s\n",
-                   i, mx_status_get_string(status));
+            printf("devmgr: mx_object_get_property on %s %u: %s\n",
+                   debug_type_name, i, mx_status_get_string(status));
             continue;
         }
-        status = mx_vmo_get_size(vdso_vmo, &size);
+        status = mx_vmo_get_size(vmo, &size);
         if (status != MX_OK) {
-            printf("devmgr: mx_vmo_get_size on PA_VMO_VDSO %u: %s\n",
-                   i, mx_status_get_string(status));
+            printf("devmgr: mx_vmo_get_size on %s %u: %s\n",
+                   debug_type_name, i, mx_status_get_string(status));
             continue;
         }
-        status = bootfs_add_file(name, vdso_vmo, 0, size);
+        status = bootfs_add_file(name, vmo, 0, size);
         if (status != MX_OK) {
-            printf("devmgr: failed to add PA_VMO_VDSO %u to filesystem: %s\n",
-                   i, mx_status_get_string(status));
+            printf("devmgr: failed to add %s %u to filesystem: %s\n",
+                   debug_type_name, i, mx_status_get_string(status));
         }
     }
 }
@@ -337,7 +345,9 @@ int main(int argc, char** argv) {
 
     mx_object_set_property(root_job_handle, MX_PROP_NAME, "root", 4);
 
-    fetch_vdsos();
+    fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
+    fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
+
 
     mx_status_t status = mx_job_create(root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
