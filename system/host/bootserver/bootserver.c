@@ -6,424 +6,102 @@
 #define _GNU_SOURCE
 #define _DARWIN_C_SOURCE
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-
-#include <fcntl.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
 
+#include <arpa/inet.h>
 #include <errno.h>
-#include <stdint.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <magenta/boot/netboot.h>
 
-#define DEFAULT_US_BETWEEN_PACKETS 20
+#include "bootserver.h"
 
-static uint32_t cookie = 1;
-static char* appname;
-static struct in6_addr allowed_addr;
+char* appname;
+int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
+
+static bool use_tftp = false;
+static size_t total_file_size;
+static int progress_reported;
+static int packets_sent;
+static struct timeval start_time, end_time;
+static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
-static const int MAX_READ_RETRIES = 10;
-static const int MAX_SEND_RETRIES = 10000;
-static int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 
-static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
-    for (int i = 0; i < MAX_READ_RETRIES; i++) {
-        bool retry_allowed = i + 1 < MAX_READ_RETRIES;
-
-        int r = read(s, ack, 2048);
-        if (r < 0) {
-            if (retry_allowed && errno == EAGAIN) {
-                continue;
-            }
-            fprintf(stderr, "\n%s: error: Socket read error %d\n", appname, errno);
-            return -1;
-        }
-        if (r < sizeof(nbmsg)) {
-            fprintf(stderr, "\n%s: error: Read too short\n", appname);
-            return -1;
-        }
-#ifdef DEBUG
-        fprintf(stdout, " < magic = %08x, cookie = %08x, cmd = %08x, arg = %08x\n",
-                ack->magic, ack->cookie, ack->cmd, ack->arg);
-#endif
-
-        if (ack->magic != NB_MAGIC) {
-            fprintf(stderr, "\n%s: error: Bad magic\n", appname);
-            return 0;
-        }
-        if (msg) {
-            if (ack->cookie > msg->cookie) {
-                fprintf(stderr, "\n%s: error: Bad cookie\n", appname);
-                return 0;
-            }
-        }
-
-        if (ack->cmd == NB_ACK || ack->cmd == NB_FILE_RECEIVED) {
-            if (msg && ack->arg > msg->arg) {
-                fprintf(stderr, "\n%s: error: Argument mismatch\n", appname);
-                return 0;
-            }
-            return 0;
-        }
-
-        switch (ack->cmd) {
-        case NB_ERROR:
-            fprintf(stderr, "\n%s: error: Generic error\n", appname);
-            break;
-        case NB_ERROR_BAD_CMD:
-            fprintf(stderr, "\n%s: error: Bad command\n", appname);
-            break;
-        case NB_ERROR_BAD_PARAM:
-            fprintf(stderr, "\n%s: error: Bad parameter\n", appname);
-            break;
-        case NB_ERROR_TOO_LARGE:
-            fprintf(stderr, "\n%s: error: File too large\n", appname);
-            break;
-        case NB_ERROR_BAD_FILE:
-            fprintf(stderr, "\n%s: error: Bad file\n", appname);
-            break;
-        default:
-            fprintf(stderr, "\n%s: error: Unknown command 0x%08X\n", appname, ack->cmd);
-        }
-        return -1;
-    }
-    fprintf(stderr, "\n%s: error: Unexpected code path\n", appname);
-    return -1;
+void initialize_status(const char* name, size_t size) {
+    total_file_size = size;
+    progress_reported = 0;
+    packets_sent = 0;
+    fprintf(stderr, "Sending %s [%lu bytes]:\n", name, (unsigned long)size);
 }
 
-static int io_send(int s, nbmsg* msg, size_t len) {
-    for (int i = 0; i < MAX_SEND_RETRIES; i++) {
-#if defined(__APPLE__)
-        bool retry_allowed = i + 1 < MAX_SEND_RETRIES;
-#endif
-
-        int r = write(s, msg, len);
-        if (r < 0) {
-#if defined(__APPLE__)
-            if (retry_allowed && errno == ENOBUFS) {
-                // On Darwin we manage to overflow the ethernet driver, so retry
-                struct timespec reqtime;
-                reqtime.tv_sec = 0;
-                reqtime.tv_nsec = 50 * 1000;
-                nanosleep(&reqtime, NULL);
-                continue;
-            }
-#endif
-            fprintf(stderr, "\n%s: error: Socket write error %d\n", appname, errno);
-            return -1;
+void update_status(size_t bytes_so_far) {
+    packets_sent++;
+    if (total_file_size == 0) {
+        return;
+    }
+    if (is_redirected) {
+        int percent_sent = (bytes_so_far / (total_file_size / 100));
+        if (percent_sent - progress_reported >= 5) {
+            fprintf(stderr, "%d%%...", percent_sent);
+            progress_reported = percent_sent;
         }
-        return 0;
-    }
-    fprintf(stderr, "\n%s: error: Unexpected code path\n", appname);
-    return -1;
-}
-
-static int io(int s, nbmsg* msg, size_t len, nbmsg* ack, bool wait_reply) {
-    int r, n;
-    struct timeval tv;
-    fd_set reads, writes;
-    fd_set* ws = NULL;
-    fd_set* rs = NULL;
-
-    ack->cookie = 0;
-    ack->cmd = 0;
-    ack->arg = 0;
-
-    FD_ZERO(&reads);
-    if (!wait_reply) {
-        FD_SET(s, &reads);
-        rs = &reads;
-    }
-
-    FD_ZERO(&writes);
-    if (msg && len > 0) {
-        msg->magic = NB_MAGIC;
-        msg->cookie = cookie++;
-
-        FD_SET(s, &writes);
-        ws = &writes;
-    }
-
-    if (rs || ws) {
-        n = s + 1;
-        tv.tv_sec = 10;
-        tv.tv_usec = 500000;
-        int rv = select(n, rs, ws, NULL, &tv);
-        if (rv == -1) {
-            fprintf(stderr, "\n%s: error: Select failed %d\n", appname, errno);
-            return -1;
-        } else if (rv == 0) {
-            // Timed-out
-            fprintf(stderr, "\n%s: error: Select timed out\n", appname);
-            return -1;
-        } else {
-            if (FD_ISSET(s, &reads)) {
-                r = io_rcv(s, msg, ack);
-            }
-
-            if (FD_ISSET(s, &writes)) {
-                r = io_send(s, msg, len);
-            }
-
-            if (!wait_reply) {
-                return r;
-            }
-        }
-    } else if (!wait_reply) { // no-op
-        return 0;
-    }
-
-    if (wait_reply) {
-        return io_rcv(s, msg, ack);
-    }
-    fprintf(stderr, "\n%s: error: Select triggered without events\n", appname);
-    return -1;
-}
-
-typedef struct {
-    FILE* fp;
-    const char* data;
-    size_t datalen;
-    const char* ptr;
-    size_t avail;
-} xferdata;
-
-static ssize_t xread(xferdata* xd, void* data, size_t len) {
-    if (xd->fp == NULL) {
-        if (len > xd->avail) {
-            len = xd->avail;
-        }
-        memcpy(data, xd->ptr, len);
-        xd->avail -= len;
-        xd->ptr += len;
-        return len;
     } else {
-        ssize_t r = fread(data, 1, len, xd->fp);
-        if (r == 0) {
-            return ferror(xd->fp) ? -1 : 0;
-        }
-        return r;
-    }
-}
+        if (packets_sent > 1024) {
+            packets_sent = 0;
+            float bw = 0;
+            static int spin = 0;
 
-static int xseek(xferdata* xd, off_t off) {
-    if (xd->fp == NULL) {
-        if (off > xd->datalen) {
-            return -1;
-        }
-        xd->ptr = xd->data + off;
-        xd->avail = xd->datalen - off;
-        return 0;
-    } else {
-        return fseek(xd->fp, off, SEEK_SET);
-    }
-}
-
-// UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
-//      1452           1514   -     14      -     40      -    8
-// nbfile is PAYLOAD_SIZE + 2 * sizeof(size_t)
-
-// Some EFI network stacks have problems with larger packets
-// 1280 is friendlier
-#define PAYLOAD_SIZE 1280
-
-static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool boot) {
-    xferdata xd;
-    char msgbuf[2048];
-    char ackbuf[2048];
-    char tmp[INET6_ADDRSTRLEN];
-    struct timeval tv;
-    struct timeval begin, end;
-    nbmsg* msg = (void*)msgbuf;
-    nbmsg* ack = (void*)ackbuf;
-    int s, r;
-    int count = 0, spin = 0;
-    int status = -1;
-    size_t current_pos = 0;
-
-    // This only works on POSIX systems
-    bool is_redirected = !isatty(fileno(stdout));
-
-    long sz = 0;
-    if (!strcmp(fn, "(cmdline)")) {
-        xd.fp = NULL;
-        xd.data = name;
-        xd.datalen = strlen(name) + 1;
-        xd.ptr = xd.data;
-        xd.avail = xd.datalen;
-        name = "cmdline";
-        sz = xd.datalen;
-    } else {
-        if ((xd.fp = fopen(fn, "rb")) == NULL) {
-            fprintf(stderr, "%s: error: Could not open file %s\n", appname, fn);
-            return -1;
-        }
-        if (fseek(xd.fp, 0L, SEEK_END)) {
-            fprintf(stderr, "%s: error: Could not determine size of %s\n", appname, fn);
-        } else if ((sz = ftell(xd.fp)) < 0) {
-            fprintf(stderr, "%s: error: Could not determine size of %s\n", appname, fn);
-            sz = 0;
-        } else if (fseek(xd.fp, 0L, SEEK_SET)) {
-            fprintf(stderr, "%s: error: Failed to rewind %s\n", appname, fn);
-            return -1;
-        }
-    }
-
-    if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-        fprintf(stderr, "%s: error: Cannot create socket %d\n", appname, errno);
-        goto done;
-    }
-    fprintf(stderr, "%s: sending '%s'...\n", appname, fn);
-    gettimeofday(&begin, NULL);
-    tv.tv_sec = 0;
-    tv.tv_usec = 250 * 1000;
-    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    if (connect(s, (void*)addr, sizeof(*addr)) < 0) {
-        fprintf(stderr, "%s: error: Cannot connect to [%s]%d\n", appname,
-                inet_ntop(AF_INET6, &addr->sin6_addr, tmp, sizeof(tmp)),
-                ntohs(addr->sin6_port));
-        goto done;
-    }
-
-    msg->cmd = NB_SEND_FILE;
-    msg->arg = sz;
-    strcpy((void*)msg->data, name);
-    if (io(s, msg, sizeof(nbmsg) + strlen(name) + 1, ack, true)) {
-        fprintf(stderr, "%s: error: Failed to start transfer\n", appname);
-        goto done;
-    }
-
-    msg->cmd = NB_DATA;
-    msg->arg = 0;
-
-    bool completed = false;
-    do {
-        struct timeval packet_start_time;
-        gettimeofday(&packet_start_time, NULL);
-
-        r = xread(&xd, msg->data, PAYLOAD_SIZE);
-        if (r < 0) {
-            fprintf(stderr, "\n%s: error: Reading '%s'\n", appname, fn);
-            goto done;
-        }
-
-        if (is_redirected) {
-            if (count++ > 8 * 1024) {
-                fprintf(stderr, "%.01f%%\n", 100.0 * (float)msg->arg / (float)sz);
-                count = 0;
+            struct timeval now;
+            gettimeofday(&now, NULL);
+            int64_t us_since_begin = ((int64_t)(now.tv_sec - start_time.tv_sec) * 1000000) +
+                                     ((int64_t)now.tv_usec - start_time.tv_usec);
+            if (us_since_begin >= 1000000) {
+                bw = (float)bytes_so_far / (1024.0 * 1024.0 * (float)(us_since_begin / 1000000));
             }
-        } else {
-            if (count++ > 1024 || r == 0) {
-                count = 0;
-                float bw = 0;
 
-                struct timeval now;
-                gettimeofday(&now, NULL);
-                int64_t us_since_begin = ((int64_t)(now.tv_sec - begin.tv_sec) * 1000000 + ((int64_t)now.tv_usec - (int64_t)begin.tv_usec));
-                if (us_since_begin >= 1000000) {
-                    bw = (float)current_pos / (1024.0 * 1024.0 * (float)(us_since_begin / 1000000));
-                }
-
-                fprintf(stderr, "\33[2K\r");
-                if (sz > 0) {
-                    fprintf(stderr, "%c %.01f%%", spinner[(spin++) % 4], 100.0 * (float)current_pos / (float)sz);
-                } else {
-                    fprintf(stderr, "%c", spinner[(spin++) % 4]);
-                }
-                if (bw > 0.1) {
-                    fprintf(stderr, " %.01fMB/s", bw);
-                }
-            }
-        }
-
-        if (r == 0) {
-            fprintf(stderr, "\n%s: Reached end of file, waiting for confirmation.\n", appname);
-            // Do not send anything, but keep waiting on incoming messages
-            if (io(s, NULL, 0, ack, true)) {
-                goto done;
-            }
-        } else {
-            if (current_pos + r >= sz) {
-                msg->cmd = NB_LAST_DATA;
+            fprintf(stderr, "\33[2K\r");
+            if (total_file_size > 0) {
+                fprintf(stderr, "%c %.01f%%", spinner[(spin++) % 4],
+                        100.0 * (float)bytes_so_far / (float)total_file_size);
             } else {
-                msg->cmd = NB_DATA;
+                fprintf(stderr, "%c", spinner[(spin++) % 4]);
             }
-
-            if (io(s, msg, sizeof(nbmsg) + r, ack, false)) {
-                goto done;
+            if (bw > 0.1) {
+                fprintf(stderr, " %.01fMB/s", bw);
             }
-
-            // Some UEFI netstacks can lose back-to-back packets at max speed
-            // so throttle output.
-            // At 1280 bytes per packet, we should at least have 10 microseconds
-            // between packets, to be safe using 20 microseconds here.
-            // 1280 bytes * (1,000,000/10) seconds = 128,000,000 bytes/seconds = 122MB/s = 976Mb/s
-            // We wait as a busy wait as the context switching a sleep can cause
-            // will often degrade performance significantly.
-            int64_t us_since_last_packet;
-            do {
-                struct timeval now;
-                gettimeofday(&now, NULL);
-                us_since_last_packet = (int64_t)(now.tv_sec - packet_start_time.tv_sec) * 1000000 + ((int64_t)now.tv_usec - (int64_t)packet_start_time.tv_usec);
-            } while (us_since_last_packet < us_between_packets);
         }
+    }
+}
 
-        // ACKs really are NACKs
-        if (ack->cookie > 0 && ack->cmd == NB_ACK && ack->arg != current_pos) {
-            fprintf(stderr, "\n%s: need to rewind to %d from %zu\n", appname, ack->arg, current_pos);
-            current_pos = ack->arg;
-            if (xseek(&xd, current_pos)) {
-                fprintf(stderr, "\n%s: error: Failed to rewind '%s' to %zu\n", appname, fn, current_pos);
-                goto done;
-            }
-        } else if (ack->cmd == NB_FILE_RECEIVED) {
-            completed = true;
-        } else {
-            current_pos += r;
-        }
-
-        msg->arg = current_pos;
-    } while (!completed);
-
-    status = 0;
-
-    if (boot) {
-        msg->cmd = NB_BOOT;
-        msg->arg = 0;
-        if (io(s, msg, sizeof(nbmsg), ack, true)) {
-            fprintf(stderr, "\n%s: error: Failed to send boot command\n", appname);
-        } else {
-            fprintf(stderr, "\n%s: sent boot command\n", appname);
-        }
+static int xfer(struct sockaddr_in6* addr, const char* local_name, const char* remote_name) {
+    int result;
+    is_redirected = !isatty(fileno(stdout));
+    gettimeofday(&start_time, NULL);
+    if (use_tftp) {
+        result = tftp_xfer(addr, local_name, remote_name);
     } else {
-        fprintf(stderr, "\n");
+        result = netboot_xfer(addr, local_name, remote_name);
     }
-done:
-    gettimeofday(&end, NULL);
-    if (end.tv_usec < begin.tv_usec) {
-        end.tv_sec -= 1;
-        end.tv_usec += 1000000;
+    gettimeofday(&end_time, NULL);
+    if (end_time.tv_usec < start_time.tv_usec) {
+        end_time.tv_sec -= 1;
+        end_time.tv_usec += 1000000;
     }
-    fprintf(stderr, "%s: %s %ldMB %d.%06d sec\n\n", appname,
-            fn, current_pos / (1024 * 1024), (int)(end.tv_sec - begin.tv_sec),
-            (int)(end.tv_usec - begin.tv_usec));
-    if (s >= 0) {
-        close(s);
+    if (result == 0) {
+        fprintf(stderr, "\nTransfer completed in %d.%06d sec\n",
+                (int)(end_time.tv_sec - start_time.tv_sec),
+                (int)(end_time.tv_usec - start_time.tv_usec));
     }
-    if (xd.fp != NULL) {
-        fclose(xd.fp);
-    }
-    return status;
+    return result;
 }
 
 void usage(void) {
@@ -431,12 +109,17 @@ void usage(void) {
             "usage:   %s [ <option> ]* <kernel> [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
             "\n"
             "options:\n"
-            "  -1      only boot once, then exit\n"
-            "  -a      only boot device with this IPv6 address\n"
-            "  -i <NN> number of microseconds between packets\n"
-            "          set between 50-500 to deal with poor bootloader network stacks (default=%d)\n"
-            "  -n      only boot device with this nodename\n",
-            appname, DEFAULT_US_BETWEEN_PACKETS);
+            "  -1         only boot once, then exit\n"
+            "  -a         only boot device with this IPv6 address\n"
+            "  -b <sz>    tftp block size (default=%d, ignored with --netboot)\n"
+            "  -i <NN>    number of microseconds between packets\n"
+            "             set between 50-500 to deal with poor bootloader network stacks (default=%d)\n"
+            "             (ignored with --tftp)\n"
+            "  -n         only boot device with this nodename\n"
+            "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
+            "  --netboot  use the netboot protocol (default)\n"
+            "  --tftp     use the tftp protocol\n",
+            appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
     exit(1);
 }
 
@@ -449,7 +132,36 @@ void drain(int fd) {
     }
 }
 
+int send_boot_command(struct sockaddr_in6* ra) {
+    // Construct message
+    nbmsg msg;
+    static int cookie = 0;
+    msg.magic = NB_MAGIC;
+    msg.cookie = cookie++;
+    msg.cmd = NB_BOOT;
+    msg.arg = 0;
+
+    // Send to NB_SERVER_PORT
+    struct sockaddr_in6 target_addr;
+    memcpy(&target_addr, ra, sizeof(struct sockaddr_in6));
+    target_addr.sin6_port = htons(NB_SERVER_PORT);
+    int s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+    if (s < 0) {
+        fprintf(stderr, "%s: cannot create socket %d\n", appname, s);
+        return -1;
+    }
+    ssize_t send_result = sendto(s, &msg, sizeof(msg), 0, (struct sockaddr*)&target_addr,
+                                 sizeof(target_addr));
+    if (send_result == sizeof(msg)) {
+        fprintf(stderr, "%s: sent boot command\n", appname);
+        return 0;
+    }
+    fprintf(stderr, "%s: failure sending boot command\n", appname);
+    return -1;
+}
+
 int main(int argc, char** argv) {
+    struct in6_addr allowed_addr;
     struct sockaddr_in6 addr;
     char tmp[INET6_ADDRSTRLEN];
     char cmdline[4096];
@@ -461,6 +173,7 @@ int main(int argc, char** argv) {
     int once = 0;
     int status;
 
+    memset(&allowed_addr, 0, sizeof(allowed_addr));
     cmdline[0] = 0;
     if ((appname = strrchr(argv[0], '/')) != NULL) {
         appname++;
@@ -479,6 +192,32 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
+        } else if (!strcmp(argv[1], "-b")) {
+            if (argc <= 1) {
+                fprintf(stderr, "'-b' option requires an argument (tftp block size)\n");
+                return -1;
+            }
+            errno = 0;
+            tftp_block_size = strtoll(argv[2], NULL, 10);
+            if (errno != 0 || tftp_block_size <= 0) {
+                fprintf(stderr, "invalid arg for -b: %s\n", argv[2]);
+                return -1;
+            }
+            argc--;
+            argv++;
+        } else if (!strcmp(argv[1], "-w")) {
+            if (argc <= 1) {
+                fprintf(stderr, "'-w' option requires an argument (tftp window size)\n");
+                return -1;
+            }
+            errno = 0;
+            tftp_window_size = strtoll(argv[2], NULL, 10);
+            if (errno != 0 || tftp_window_size <= 0) {
+                fprintf(stderr, "invalid arg for -w: %s\n", argv[2]);
+                return -1;
+            }
+            argc--;
+            argv++;
         } else if (!strcmp(argv[1], "-i")) {
             if (argc <= 1) {
                 fprintf(stderr, "'-i' option requires an argument (micros between packets)\n");
@@ -512,6 +251,10 @@ int main(int argc, char** argv) {
             nodename = argv[2];
             argc--;
             argv++;
+        } else if (!strcmp(argv[1], "--netboot")) {
+            use_tftp = false;
+        } else if (!strcmp(argv[1], "--tftp")) {
+            use_tftp = true;
         } else if (!strcmp(argv[1], "--")) {
             while (argc > 2) {
                 size_t len = strlen(argv[2]);
@@ -601,8 +344,10 @@ int main(int argc, char** argv) {
             fprintf(stderr, "%s: ignoring non-link-local message\n", appname);
             continue;
         }
-        if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) && !IN6_ARE_ADDR_EQUAL(&allowed_addr, &ra.sin6_addr)) {
-            fprintf(stderr, "%s: ignoring message not from allowed address '%s'\n", appname, inet_ntop(AF_INET6, &allowed_addr, tmp, sizeof(tmp)));
+        if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) &&
+            !IN6_ARE_ADDR_EQUAL(&allowed_addr, &ra.sin6_addr)) {
+            fprintf(stderr, "%s: ignoring message not from allowed address '%s'\n",
+                    appname, inet_ntop(AF_INET6, &allowed_addr, tmp, sizeof(tmp)));
             continue;
         }
         if (msg->magic != NB_MAGIC)
@@ -610,8 +355,9 @@ int main(int argc, char** argv) {
         if (msg->cmd != NB_ADVERTISE)
             continue;
         if (msg->arg != NB_VERSION_CURRENT) {
-            fprintf(stderr, "%s: Incompatible version 0x%08X of bootloader detected from [%s]%d, please upgrade your bootloader\n", appname, msg->arg,
-                    inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
+            fprintf(stderr, "%s: Incompatible version 0x%08X of bootloader detected from [%s]%d, "
+                            "please upgrade your bootloader\n",
+                    appname, msg->arg, inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
                     ntohs(ra.sin6_port));
             if (once) {
                 break;
@@ -629,7 +375,9 @@ int main(int argc, char** argv) {
         char* save = NULL;
         char* adv_nodename = NULL;
         char* adv_version = "unknown";
-        for (char* var = strtok_r((char*)msg->data, ";", &save); var; var = strtok_r(NULL, ";", &save)) {
+        for (char* var = strtok_r((char*)msg->data, ";", &save);
+             var;
+             var = strtok_r(NULL, ";", &save)) {
             if (!strncmp(var, "nodename=", 9)) {
                 adv_nodename = var + 9;
             } else if(!strncmp(var, "version=", 8)) {
@@ -657,20 +405,23 @@ int main(int argc, char** argv) {
         }
 
         if (cmdline[0]) {
-            status = xfer(&ra, "(cmdline)", cmdline, false);
+            status = xfer(&ra, "(cmdline)", cmdline);
         } else {
             status = 0;
         }
         if (status == 0) {
             struct stat s;
             if (ramdisk_fn) {
-                status = xfer(&ra, ramdisk_fn, "ramdisk.bin", false);
+                status = xfer(&ra, ramdisk_fn, "ramdisk.bin");
             } else if (auto_ramdisk_fn && (stat(auto_ramdisk_fn, &s) == 0)) {
-                status = xfer(&ra, auto_ramdisk_fn, "ramdisk.bin", false);
+                status = xfer(&ra, auto_ramdisk_fn, "ramdisk.bin");
             }
         }
         if (status == 0) {
-            xfer(&ra, kernel_fn, "kernel.bin", true);
+            status = xfer(&ra, kernel_fn, "kernel.bin");
+            if (status == 0) {
+                send_boot_command(&ra);
+            }
         }
         if (once) {
             break;
