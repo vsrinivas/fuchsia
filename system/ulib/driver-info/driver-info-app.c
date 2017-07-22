@@ -9,7 +9,9 @@
 
 #include <driver-info/driver-info.h>
 
-static void callback(magenta_driver_note_t* dn, mx_bind_inst_t* bi, void* cookie) {
+static void callback(magenta_driver_note_payload_t* dn,
+                     const mx_bind_inst_t* binding,
+                     void* cookie) {
     printf("name:    %s\n", dn->name);
     printf("vendor:  %s\n", dn->vendor);
     printf("version: %s\n", dn->version);
@@ -17,7 +19,7 @@ static void callback(magenta_driver_note_t* dn, mx_bind_inst_t* bi, void* cookie
 
     char line[256];
     for (size_t n = 0; n < dn->bindcount; n++) {
-        di_dump_bind_inst(bi + n, line, sizeof(line));
+        di_dump_bind_inst(&binding[n], line, sizeof(line));
         printf("  %s\n", line);
     }
 }

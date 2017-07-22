@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <assert.h>
 #include <magenta/compiler.h>
+#include <stdalign.h>
+#include <stddef.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS;
@@ -141,17 +144,28 @@ mx_bind_inst_t i915_binding[] = {
 };
 #endif
 
+#define MAGENTA_NOTE_NAME "Magenta"
 #define MAGENTA_NOTE_DRIVER 0x31565244 // DRV1
 
-#define MAGENTA_DRIVER_NOTE_HEADERSZ (sizeof(uint32_t) * 3u + 8u)
-
 typedef struct {
-    // ELF NOTE Header fields
+    // Elf64_Nhdr fields:
     uint32_t namesz;
     uint32_t descsz;
-    uint32_t notetype;
-    char notename[8];
+    uint32_t type;
+    // ELF note name.  namesz is the exact size of the name (including '\0'),
+    // but the storage size is always rounded up to a multiple of 4 bytes.
+    char name[(sizeof(MAGENTA_NOTE_NAME) + 3) & -4];
+} magenta_driver_note_header_t;
 
+#define MAGENTA_DRIVER_NOTE_HEADER_INIT(object) {        \
+        /* .namesz = */ sizeof(MAGENTA_NOTE_NAME),              \
+        /* .descsz = */ (sizeof(object) -                       \
+                         sizeof(magenta_driver_note_header_t)), \
+        /* .type = */ MAGENTA_NOTE_DRIVER,                      \
+        /* .name = */ MAGENTA_NOTE_NAME,                        \
+    }
+
+typedef struct {
     // Future Expansion
     uint32_t flags;
 
@@ -163,9 +177,34 @@ typedef struct {
     char version[16];
 
     // Driver Bind Program follows
+} magenta_driver_note_payload_t;
+
+#define MAGENTA_DRIVER_NOTE_PAYLOAD_INIT(Driver,VendorName,Version,BindCount) \
+    {                                                               \
+        /* .flags = */ 0,                                           \
+        /* .bindcount = */ (BindCount),                             \
+        /* .reserved0 = */ 0,                                       \
+        /* .name = */ #Driver,                                      \
+        /* .vendor = */ VendorName,                                 \
+        /* .version = */ Version,                                   \
+    }
+
+typedef struct {
+    alignas(4) magenta_driver_note_header_t header;
+    alignas(4) magenta_driver_note_payload_t payload;
 } magenta_driver_note_t;
 
-#define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
+static_assert(offsetof(magenta_driver_note_t, payload) ==
+              sizeof(magenta_driver_note_header_t),
+              "alignment snafu?");
+
+// Without this, ASan will add redzone padding after the object, which
+// would make it invalid ELF note format.
+#if __has_feature(address_sanitizer)
+# define MAGENTA_DRIVER_NOTE_ASAN __attribute__((no_sanitize("address")))
+#else
+# define MAGENTA_DRIVER_NOTE_ASAN
+#endif
 
 // GCC has a quirk about how '__attribute__((visibility("default")))'
 // (__EXPORT here) works for const variables in C++.  The attribute has no
@@ -178,23 +217,15 @@ mx_driver_rec_t __magenta_driver_rec__ __EXPORT = {\
     /* .ops = */ &(Ops),\
     /* .driver = */ NULL,\
 };\
-extern const struct magenta_driver_note_struct __magenta_driver_note__ __EXPORT;\
-MAGENTA_DRIVER_NOTE(Driver)\
-const struct magenta_driver_note_struct {\
+extern const struct magenta_driver_note __magenta_driver_note__ __EXPORT;\
+__SECTION(".note.magenta.driver." #Driver) MAGENTA_DRIVER_NOTE_ASAN \
+const struct magenta_driver_note {\
     magenta_driver_note_t note;\
     mx_bind_inst_t binding[BindCount];\
 } __magenta_driver_note__ = {\
     /* .note = */{\
-        /* .namesz = */ 7,\
-        /* .descsz = */ sizeof(magenta_driver_note_t) - MAGENTA_DRIVER_NOTE_HEADERSZ + sizeof(mx_bind_inst_t) * (BindCount),\
-        /* .notetype = */ MAGENTA_NOTE_DRIVER,\
-        /* .notename = */ "Magenta",\
-        /* .flags = */ 0,\
-        /* .bindcount = */ (BindCount),\
-        /* .reserved0 = */ 0,\
-        /* .name = */ #Driver,\
-        /* .vendor = */ VendorName,\
-        /* .version = */ Version,\
+        MAGENTA_DRIVER_NOTE_HEADER_INIT(__magenta_driver_note__),\
+        MAGENTA_DRIVER_NOTE_PAYLOAD_INIT(Driver,VendorName,Version,BindCount),\
     },\
     /* .binding = */ {
 

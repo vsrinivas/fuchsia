@@ -11,9 +11,10 @@
 __BEGIN_CDECLS;
 
 mx_status_t di_read_driver_info(int fd, void *cookie,
-                                void (*func)(magenta_driver_note_t* note,
-                                             mx_bind_inst_t* binding,
-                                             void *cookie));
+                                void (*func)(
+                                    magenta_driver_note_payload_t* note,
+                                    const mx_bind_inst_t* binding,
+                                    void *cookie));
 
 // Lookup the human readable name of a bind program parameter, or return NULL if
 // the name is not known.  Used by debug code to do things like dump the

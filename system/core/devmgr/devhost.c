@@ -125,7 +125,7 @@ static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_drive
         goto done;
     }
 
-    drv->name = dn->name;
+    drv->name = dn->payload.name;
     drv->ops = dr->ops;
     dr->driver = drv;
 
