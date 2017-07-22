@@ -16,7 +16,7 @@
 
 set -e
 
-readonly FUCHSIA_GS_BUCKET="https://fuchsia-build.storage.googleapis.com/fuchsia"
+readonly FUCHSIA_GS_BUCKET="https://storage.googleapis.com/fuchsia"
 readonly MAGENTA_GS_BUCKET="https://fuchsia-build.storage.googleapis.com/magenta"
 readonly OS="$(uname)"
 readonly HOSTOS=$(uname | tr '[:upper:]' '[:lower:]')
@@ -88,26 +88,26 @@ function downloadGCCToolchain() {
 
 function downloadClangToolchain() {
   case "${OS}" in
-    "Darwin") local host_platform="mac" ;;
-    "Linux") local host_platform="linux64" ;;
+    "Darwin") local host_platform="mac-amd64" ;;
+    "Linux") local host_platform="linux-amd64" ;;
     "*") echo "Unknown operating system." 1>&2 && exit 1 ;;
   esac
 
   # These are files and paths we expect to already exist.
   local common_path="toolchain/clang/${host_platform}"
-  local version_file="${PREBUILTS_DIR}/versions/${common_path}/toolchain.sha1"
+  local version_file="${PREBUILTS_DIR}/versions/${common_path}/clang.sha1"
   if [[ ! -f "${version_file}" ]]; then
     echo "File ${version_file} does not exist."
     echo "Your operating system is probably not supported, aborting."
     exit 1
   fi
   local required_version="$(cat "${version_file}" )"
-  local prebuilt_url="${FUCHSIA_GS_BUCKET}/toolchain/${host_platform}/${required_version}"
+  local prebuilt_url="${FUCHSIA_GS_BUCKET}/clang/${host_platform}/${required_version}"
 
   # These are files and paths we control in this script.
   local tool_name="clang+llvm-${HOSTARCH}-${HOSTOS}"
   local stamp_path="${INSTALL_DIR}/${tool_name}.stamp"
-  local tool_path="${INSTALL_DIR}/${tool_name}.tar.bz2"
+  local tool_path="${INSTALL_DIR}/${tool_name}.zip"
 
   # The stamp file contains the SHA of the last version we downloaded.  If it doesn't
   # match the SHA found in the version file, download and unpack the new one.
@@ -118,7 +118,7 @@ function downloadClangToolchain() {
     curl --progress-bar -continue-at=- --location --output "${tool_path}" "${prebuilt_url}"
     rm -rf -- "${tool_name}"
     echo "Unpacking ${tool_path}"
-    bzip2 -dc "${tool_path}" | tar -x
+    unzip -q -d "${INSTALL_DIR}/${tool_name}" "${tool_path}"
     echo "${required_version}" > "${stamp_path}"
   fi
 
