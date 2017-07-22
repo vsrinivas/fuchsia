@@ -33,7 +33,7 @@ TEST(NamespaceBuilder, Control) {
               paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/display") !=
               paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/lib/vulkan") !=
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/vulkan") !=
               paths.end());
 
   for (size_t i = 0; i < flat->count; ++i)
