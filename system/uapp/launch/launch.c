@@ -11,6 +11,7 @@
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/policy.h>
 #include <mxio/loader-service.h>
+#include <mxio/io.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -157,21 +158,21 @@ int main(int argc, char** argv) {
 
     mx_handle_t vmo;
     if (program_fd != -1) {
-        vmo = launchpad_vmo_from_fd(program_fd);
-        if (vmo == MX_ERR_IO) {
+        mx_status_t status = mxio_get_vmo(program_fd, &vmo);
+        if (status == MX_ERR_IO) {
             perror("launchpad_vmo_from_fd");
             return 2;
         }
-        check("launchpad_vmo_from_fd", vmo);
+        check("launchpad_vmo_from_fd", status);
     } else {
         if (program == NULL)
             program = argv[optind];
-        vmo = launchpad_vmo_from_file(program);
-        if (vmo == MX_ERR_IO) {
+        mx_status_t status = launchpad_vmo_from_file(program, &vmo);
+        if (status == MX_ERR_IO) {
             perror(program);
             return 2;
         }
-        check("launchpad_vmo_from_file", vmo);
+        check("launchpad_vmo_from_file", status);
     }
 
     mx_handle_t job = mx_job_default();
@@ -248,22 +249,24 @@ int main(int argc, char** argv) {
     // unlikely to be useful.  But this program is mainly to test the
     // library, so it makes all the library calls the user asks for.
     if (exec_vmo_file != NULL) {
-        mx_handle_t exec_vmo = launchpad_vmo_from_file(exec_vmo_file);
-        if (exec_vmo == MX_ERR_IO) {
+        mx_handle_t exec_vmo;
+        status = launchpad_vmo_from_file(exec_vmo_file, &exec_vmo);
+        if (status == MX_ERR_IO) {
             perror(exec_vmo_file);
             return 2;
         }
-        check("launchpad_vmo_from_file", exec_vmo);
+        check("launchpad_vmo_from_file", status);
         status = launchpad_add_handle(lp, exec_vmo, PA_VMO_EXECUTABLE);
     }
 
     if (exec_vmo_fd != -1) {
-        mx_handle_t exec_vmo = launchpad_vmo_from_fd(exec_vmo_fd);
-        if (exec_vmo == MX_ERR_IO) {
+        mx_handle_t exec_vmo;
+        status = mxio_get_vmo(exec_vmo_fd, &exec_vmo);
+        if (status == MX_ERR_IO) {
             perror("launchpad_vmo_from_fd");
             return 2;
         }
-        check("launchpad_vmo_from_fd", exec_vmo);
+        check("launchpad_vmo_from_fd", status);
         status = launchpad_add_handle(lp, exec_vmo, PA_VMO_EXECUTABLE);
     }
 
