@@ -20,7 +20,7 @@
         "paint_view": "//apps/mozart:paint_view",
         "root_presenter": "//apps/mozart:root_presenter",
         "spinning_square_view": "//apps/mozart:spinning_square_view",
-        "view_manager_service": "//apps/mozart:view_manager_service",
+        "view_manager": "//apps/mozart:view_manager",
         "ime_service": "//apps/mozart:ime_service",
         "tile_view": "//apps/mozart:tile_view",
         "mozart_tests": "//apps/mozart:mozart_tests"
