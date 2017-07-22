@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/display.h"
+#include "apps/mozart/src/scene_manager/displays/display.h"
 
 #include <magenta/syscalls.h>
+
+#include "lib/ftl/logging.h"
 
 namespace scene_manager {
 
@@ -24,6 +26,16 @@ uint64_t Display::GetLastVsyncTime() const {
 
 uint64_t Display::GetVsyncInterval() const {
   return kHardcodedPresentationIntervalNanos;
+}
+
+void Display::Claim() {
+  FTL_DCHECK(!claimed_);
+  claimed_ = true;
+}
+
+void Display::Unclaim() {
+  FTL_DCHECK(claimed_);
+  claimed_ = false;
 }
 
 }  // namespace scene_manager

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/mozart/src/scene_manager/displays/display_manager.h"
 #include "apps/mozart/src/scene_manager/engine/engine.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
@@ -43,12 +44,6 @@ class SessionHandlerForTest : public SessionHandler {
   std::atomic<uint32_t> connect_count_;
 };
 
-// Subclass SceneManagerImpl to make testing easier.
-class SceneManagerImplForTest : public SceneManagerImpl {
- public:
-  SceneManagerImplForTest(Display* display, std::unique_ptr<Engine> engine);
-};
-
 class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
  public:
   ReleaseFenceSignallerForTest(
@@ -66,7 +61,8 @@ class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {
 
 class EngineForTest : public Engine {
  public:
-  EngineForTest(std::unique_ptr<ReleaseFenceSignaller> r);
+  EngineForTest(DisplayManager* display_manager,
+                std::unique_ptr<ReleaseFenceSignaller> r);
   using Engine::FindSession;
 
  private:

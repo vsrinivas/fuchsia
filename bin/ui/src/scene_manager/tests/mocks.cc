@@ -41,10 +41,6 @@ void SessionHandlerForTest::Connect(
   ++connect_count_;
 }
 
-SceneManagerImplForTest::SceneManagerImplForTest(Display* display,
-                                                 std::unique_ptr<Engine> engine)
-    : SceneManagerImpl(display, std::move(engine)) {}
-
 ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
     : ReleaseFenceSignaller(command_buffer_sequencer) {}
@@ -55,8 +51,9 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(mx::event fence) {
   fence.signal(0u, kFenceSignalled);
 }
 
-EngineForTest::EngineForTest(std::unique_ptr<ReleaseFenceSignaller> r)
-    : Engine(std::move(r)) {}
+EngineForTest::EngineForTest(DisplayManager* display_manager,
+                             std::unique_ptr<ReleaseFenceSignaller> r)
+    : Engine(display_manager, std::move(r)) {}
 
 std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
     SessionId session_id,

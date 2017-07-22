@@ -6,19 +6,8 @@
 
 namespace scene_manager {
 
-SceneManagerImpl::SceneManagerImpl(
-    Display* display,
-    escher::Escher* escher,
-    std::unique_ptr<FrameScheduler> frame_scheduler,
-    std::unique_ptr<escher::VulkanSwapchain> swapchain)
-    : display_(display),
-      engine_(std::make_unique<Engine>(escher,
-                                       std::move(frame_scheduler),
-                                       std::move(swapchain))) {}
-
-SceneManagerImpl::SceneManagerImpl(Display* display,
-                                   std::unique_ptr<Engine> engine)
-    : display_(display), engine_(std::move(engine)) {}
+SceneManagerImpl::SceneManagerImpl(std::unique_ptr<Engine> engine)
+    : engine_(std::move(engine)) {}
 
 SceneManagerImpl::~SceneManagerImpl() = default;
 
@@ -29,12 +18,13 @@ void SceneManagerImpl::CreateSession(
 }
 
 void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
-  // TODO(MZ-16): need to specify different device pixel ratio for NUC vs.
-  // Acer Switch 12, and also not hardcode width/height.
+  Display* display = engine_->display_manager()->default_display();
+  FTL_CHECK(display) << "There must be a default display.";
+
   auto info = mozart2::DisplayInfo::New();
-  info->width = display_->width();
-  info->height = display_->height();
-  info->device_pixel_ratio = display_->device_pixel_ratio();
+  info->width = display->width();
+  info->height = display->height();
+  info->device_pixel_ratio = display->device_pixel_ratio();
   callback(std::move(info));
 }
 

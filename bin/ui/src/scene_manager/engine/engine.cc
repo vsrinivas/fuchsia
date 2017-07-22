@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/scene_manager/engine/engine.h"
 
-#include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
@@ -14,10 +13,11 @@
 
 namespace scene_manager {
 
-Engine::Engine(escher::Escher* escher,
-               std::unique_ptr<FrameScheduler> frame_scheduler,
+Engine::Engine(DisplayManager* display_manager,
+               escher::Escher* escher,
                std::unique_ptr<escher::VulkanSwapchain> swapchain)
-    : escher_(escher),
+    : display_manager_(display_manager),
+      escher_(escher),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher->resource_recycler(),
           escher->gpu_allocator())),
@@ -25,20 +25,34 @@ Engine::Engine(escher::Escher* escher,
           std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
-      frame_scheduler_(std::move(frame_scheduler)),
       swapchain_(std::move(swapchain)),
       session_count_(0) {
-  // Either both Escher and a FrameScheduler must be available, or neither.
-  FTL_DCHECK(!escher_ == !frame_scheduler_);
+  FTL_DCHECK(display_manager_);
+  FTL_DCHECK(escher_);
+  FTL_DCHECK(swapchain_);
 
-  if (frame_scheduler_)
-    frame_scheduler_->set_delegate(this);
+  InitializeFrameScheduler();
 }
 
-Engine::Engine(std::unique_ptr<ReleaseFenceSignaller> r)
-    : release_fence_signaller_(std::move(r)) {}
+Engine::Engine(DisplayManager* display_manager,
+               std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller)
+    : display_manager_(display_manager),
+      escher_(nullptr),
+      release_fence_signaller_(std::move(release_fence_signaller)) {
+  FTL_DCHECK(display_manager_);
+
+  InitializeFrameScheduler();
+}
 
 Engine::~Engine() = default;
+
+void Engine::InitializeFrameScheduler() {
+  if (display_manager_->default_display()) {
+    frame_scheduler_ =
+        std::make_unique<FrameScheduler>(display_manager_->default_display());
+    frame_scheduler_->set_delegate(this);
+  }
+}
 
 ResourceLinker& Engine::GetResourceLinker() {
   return resource_linker_;
@@ -172,19 +186,9 @@ escher::VulkanSwapchain Engine::GetVulkanSwapchain() const {
   return *(swapchain_.get());
 }
 
-const escher::PaperRendererPtr& Engine::GetPaperRenderer() {
-  if (!paper_renderer_ && escher_) {
-    paper_renderer_ = escher_->NewPaperRenderer();
-    paper_renderer_->set_sort_by_pipeline(false);
-  }
-  return paper_renderer_;
-}
-
 void Engine::AddRenderer(Renderer* renderer) {
   FTL_DCHECK(renderer);
   FTL_DCHECK(renderer->session()->engine() == this);
-
-  FTL_CHECK(renderers_.empty()) << "Only one Renderer is currently supported.";
 
   bool success = renderers_.insert(renderer).second;
   FTL_DCHECK(success);

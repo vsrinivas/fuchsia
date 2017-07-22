@@ -10,13 +10,15 @@ namespace scene_manager {
 namespace test {
 
 void SceneManagerTest::SetUp() {
+  display_manager_.SetDefaultDisplayForTests(
+      std::make_unique<Display>(1280, 800, 1.f));
+
   auto r = std::make_unique<ReleaseFenceSignallerForTest>(
       &command_buffer_sequencer_);
-  auto engine = std::make_unique<EngineForTest>(std::move(r));
+  auto engine =
+      std::make_unique<EngineForTest>(&display_manager_, std::move(r));
 
-  display_ = std::make_unique<Display>(1280, 800, 1.f);
-  manager_impl_ = std::make_unique<SceneManagerImplForTest>(display_.get(),
-                                                            std::move(engine));
+  manager_impl_ = std::make_unique<SceneManagerImpl>(std::move(engine));
 
   manager_binding_ = std::make_unique<fidl::Binding<mozart2::SceneManager>>(
       manager_impl_.get());

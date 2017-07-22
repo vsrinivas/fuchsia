@@ -7,7 +7,7 @@
 #include "escher/forward_declarations.h"
 
 #include "apps/mozart/services/scene/scene_manager.fidl.h"
-#include "apps/mozart/src/scene_manager/display.h"
+#include "apps/mozart/src/scene_manager/displays/display_manager.h"
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
 #include "apps/mozart/src/scene_manager/tests/mocks.h"
 #include "lib/mtl/threading/thread.h"
@@ -30,9 +30,10 @@ class SceneManagerTest : public ::testing::Test {
  protected:
   mozart2::SceneManagerPtr manager_;
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
+  DisplayManager display_manager_;
   std::unique_ptr<Display> display_;
   std::unique_ptr<fidl::Binding<mozart2::SceneManager>> manager_binding_;
-  std::unique_ptr<SceneManagerImplForTest> manager_impl_;
+  std::unique_ptr<SceneManagerImpl> manager_impl_;
   std::unique_ptr<mtl::Thread> thread_;
 };
 

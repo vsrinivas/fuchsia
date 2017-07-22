@@ -26,11 +26,12 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
     auto r = std::make_unique<ReleaseFenceSignallerForTest>(
         &command_buffer_sequencer_);
     mock_release_fence_signaller_ = r.get();
-    return std::make_unique<EngineForTest>(std::move(r));
+    return std::make_unique<EngineForTest>(&display_manager_, std::move(r));
   }
 
   void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override {}
 
+  DisplayManager display_manager_;
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
   ReleaseFenceSignallerForTest* mock_release_fence_signaller_;
 };

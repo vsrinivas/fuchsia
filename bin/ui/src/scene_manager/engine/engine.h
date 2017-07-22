@@ -13,6 +13,7 @@
 #include "lib/escher/escher/renderer/simple_image_factory.h"
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
 
+#include "apps/mozart/src/scene_manager/displays/display_manager.h"
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
@@ -23,7 +24,6 @@ namespace scene_manager {
 
 using SessionId = uint64_t;
 
-class FrameScheduler;
 class Session;
 class SessionHandler;
 class Renderer;
@@ -34,8 +34,8 @@ class Renderer;
 // which belong to different engines to communicate with one another.
 class Engine : private FrameSchedulerDelegate {
  public:
-  Engine(escher::Escher* escher,
-         std::unique_ptr<FrameScheduler> frame_scheduler,
+  Engine(DisplayManager* display_manager,
+         escher::Escher* escher,
          std::unique_ptr<escher::VulkanSwapchain> swapchain);
 
   ~Engine();
@@ -54,6 +54,7 @@ class Engine : private FrameSchedulerDelegate {
                       mozart2::ImportSpec spec,
                       const mx::eventpair& endpoint);
 
+  DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_; }
   escher::VulkanSwapchain GetVulkanSwapchain() const;
 
@@ -99,15 +100,13 @@ class Engine : private FrameSchedulerDelegate {
 
   size_t GetSessionCount() { return session_count_; }
 
-  // Return a lazily-constructed PaperRenderer.
-  const escher::PaperRendererPtr& GetPaperRenderer();
-
   void AddRenderer(Renderer* renderer);
   void RemoveRenderer(Renderer* renderer);
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(std::unique_ptr<ReleaseFenceSignaller> r);
+  Engine(DisplayManager* display_manager,
+         std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller);
 
  private:
   friend class SessionHandler;
@@ -135,14 +134,17 @@ class Engine : private FrameSchedulerDelegate {
       ResourcePtr actual,
       ResourceLinker::ResolutionResult resolution_result);
 
+  void InitializeFrameScheduler();
+
+  DisplayManager* const display_manager_;
+  escher::Escher* const escher_;
+
   ResourceLinker resource_linker_;
-  escher::Escher* const escher_ = nullptr;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
-  escher::PaperRendererPtr paper_renderer_;
   std::set<Renderer*> renderers_;
 
   // Map of all the sessions.

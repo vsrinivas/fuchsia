@@ -6,7 +6,7 @@
 
 #include <magenta/syscalls.h>
 
-#include "apps/mozart/src/scene_manager/display.h"
+#include "apps/mozart/src/scene_manager/displays/display.h"
 #include "ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

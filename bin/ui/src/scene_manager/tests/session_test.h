@@ -47,6 +47,7 @@ class SessionTest : public ::testing::Test,
     }
   }
 
+  DisplayManager display_manager_;
   std::unique_ptr<Engine> engine_;
   SessionPtr session_;
   std::vector<std::string> reported_errors_;

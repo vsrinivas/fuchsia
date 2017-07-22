@@ -6,6 +6,8 @@
 
 #include <cstdint>
 
+#include "lib/ftl/macros.h"
+
 namespace scene_manager {
 
 // Display is a placeholder that provides make-believe values for screen
@@ -25,15 +27,24 @@ class Display {
   // Obtain the interval between Vsyncs.
   uint64_t GetVsyncInterval() const;
 
+  // Claiming a display means that no other display renderer can use it.
+  bool is_claimed() const { return claimed_; }
+  void Claim();
+  void Unclaim();
+
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
   float device_pixel_ratio() const { return device_pixel_ratio_; }
 
  private:
-  uint64_t first_vsync_;
-  uint32_t width_;
-  uint32_t height_;
-  float device_pixel_ratio_;
+  uint64_t const first_vsync_;
+  uint32_t const width_;
+  uint32_t const height_;
+  float const device_pixel_ratio_;
+
+  bool claimed_ = false;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(Display);
 };
 
 }  // namespace scene_manager

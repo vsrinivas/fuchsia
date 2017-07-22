@@ -6,7 +6,6 @@
 
 #include "apps/mozart/src/scene_manager/engine/hit_tester.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
@@ -18,6 +17,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/node.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
@@ -634,8 +634,19 @@ ResourcePtr Session::CreateCamera(mozart::ResourceId id,
 ResourcePtr Session::CreateDisplayRenderer(
     mozart::ResourceId id,
     const mozart2::DisplayRendererPtr& args) {
-  return ftl::MakeRefCounted<DisplayRenderer>(
-      this, id, engine()->GetPaperRenderer(), engine()->GetVulkanSwapchain());
+  Display* display = engine()->display_manager()->default_display();
+  if (!display) {
+    error_reporter_->ERROR() << "There is no default display available.";
+    return nullptr;
+  }
+
+  if (display->is_claimed()) {
+    error_reporter_->ERROR()
+        << "The default display has already been claimed by another renderer.";
+    return nullptr;
+  }
+  return ftl::MakeRefCounted<DisplayRenderer>(this, id, display,
+                                              engine()->GetVulkanSwapchain());
 }
 
 ResourcePtr Session::CreateImagePipeRenderer(

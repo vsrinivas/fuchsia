@@ -6,6 +6,7 @@
 
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
+#include "apps/mozart/src/scene_manager/displays/display.h"
 #include "escher/vk/vulkan_swapchain_helper.h"
 
 namespace scene_manager {
@@ -18,7 +19,7 @@ class DisplayRenderer final : public Renderer {
 
   DisplayRenderer(Session* session,
                   mozart::ResourceId id,
-                  escher::PaperRendererPtr paper_renderer,
+                  Display* display,
                   escher::VulkanSwapchain swapchain);
 
   ~DisplayRenderer();
@@ -27,6 +28,7 @@ class DisplayRenderer final : public Renderer {
   // |Renderer|
   virtual void DrawFrame() override;
 
+  Display* const display_;
   escher::PaperRendererPtr paper_renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
 };

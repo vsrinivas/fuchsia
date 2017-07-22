@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <magenta/device/display.h>
-#include <magenta/pixelformat.h>
-#include <mx/vmo.h>
-
 #include <memory>
 
 #include "lib/ftl/macros.h"
@@ -23,22 +19,25 @@ class DisplayWatcher {
   // ratio.
   // |success| is true if the display was acquired and the display info was
   // read, or false otherwise.
-  using OnDisplayReady = std::function<void(bool, uint32_t, uint32_t, float)>;
+  using DisplayReadyCallback = std::function<void(bool success,
+                                                  uint32_t width,
+                                                  uint32_t height,
+                                                  float device_pixel_ratio)>;
 
-  // Creates a DisplayWatcher object. |callback| will be invoked once the
-  // display is ready. The object must remain alive until the callback is
-  // received.
-  static std::unique_ptr<DisplayWatcher> New(OnDisplayReady callback);
+  DisplayWatcher();
+  ~DisplayWatcher();
 
-  ~DisplayWatcher() = default;
+  // Waits for the display to become available then invokes the callback.
+  void WaitForDisplay(DisplayReadyCallback callback);
 
  private:
-  DisplayWatcher(OnDisplayReady callback);
+  void HandleDevice(DisplayReadyCallback callback,
+                    int dir_fd,
+                    std::string filename);
 
-  void WaitForDisplay();
-
-  OnDisplayReady callback_;
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayWatcher);
 };
 
 }  // namespace scene_manager

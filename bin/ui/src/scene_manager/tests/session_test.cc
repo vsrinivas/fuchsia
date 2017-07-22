@@ -26,7 +26,7 @@ void SessionTest::TearDown() {
 }
 
 std::unique_ptr<Engine> SessionTest::CreateEngine() {
-  return std::make_unique<EngineForTest>(nullptr);
+  return std::make_unique<EngineForTest>(&display_manager_, nullptr);
 }
 
 void SessionTest::ReportError(ftl::LogSeverity severity,

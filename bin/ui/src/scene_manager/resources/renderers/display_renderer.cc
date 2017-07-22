@@ -11,6 +11,7 @@
 #include "escher/scene/stage.h"
 #include "lib/ftl/logging.h"
 
+#include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
 
@@ -21,13 +22,21 @@ const uint32_t DisplayRenderer::kRequiredSwapchainPixelMultiple =
 
 DisplayRenderer::DisplayRenderer(Session* session,
                                  mozart::ResourceId id,
-                                 escher::PaperRendererPtr paper_renderer,
+                                 Display* display,
                                  escher::VulkanSwapchain swapchain)
     : Renderer(session, id),
-      paper_renderer_(std::move(paper_renderer)),
-      swapchain_helper_(std::move(swapchain), paper_renderer_) {}
+      display_(display),
+      paper_renderer_(session->engine()->escher()->NewPaperRenderer()),
+      swapchain_helper_(std::move(swapchain), paper_renderer_) {
+  FTL_DCHECK(display_);
 
-DisplayRenderer::~DisplayRenderer() {}
+  display_->Claim();
+  paper_renderer_->set_sort_by_pipeline(false);
+}
+
+DisplayRenderer::~DisplayRenderer() {
+  display_->Unclaim();
+}
 
 void DisplayRenderer::DrawFrame() {
   float width = static_cast<float>(swapchain_helper_.swapchain().width);
