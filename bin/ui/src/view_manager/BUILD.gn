@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 executable("view_manager") {
-  output_name = "view_manager_service"
+  output_name = "view_manager"
 
   sources = [
     "main.cc",

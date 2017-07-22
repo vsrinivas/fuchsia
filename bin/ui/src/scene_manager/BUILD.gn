@@ -5,7 +5,7 @@
 import("//apps/mozart/config.gni")
 
 executable("scene_manager") {
-  output_name = "scene_manager_service"
+  output_name = "scene_manager"
 
   sources = [
     "main.cc",

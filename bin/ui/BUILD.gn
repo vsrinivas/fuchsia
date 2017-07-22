@@ -88,7 +88,7 @@ package("ime_service") {
       } ]
 }
 
-package("view_manager_service") {
+package("view_manager") {
   archive = true
 
   deps = [
@@ -96,7 +96,7 @@ package("view_manager_service") {
   ]
 
   binaries = [ {
-        name = "view_manager_service"
+        name = "view_manager"
         dest = "app"
       } ]
 }
@@ -234,7 +234,7 @@ package("mozart") {
 
   binaries = [
     {
-      name = "scene_manager_service"
+      name = "scene_manager"
     },
     {
       name = "hello_scene_manager"
