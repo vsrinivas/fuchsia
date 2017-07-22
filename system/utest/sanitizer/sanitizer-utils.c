@@ -16,9 +16,9 @@
 static atomic_bool my_loader_service_ok;
 static atomic_int my_loader_service_calls;
 
-static mx_handle_t sink_test_loader_service(void* arg, uint32_t load_op,
+static mx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
                                             mx_handle_t request_handle,
-                                            const char* name) {
+                                            const char* name, mx_handle_t* out) {
     ++my_loader_service_calls;
 
     EXPECT_EQ(load_op, (uint32_t)LOADER_SVC_OP_PUBLISH_DATA_SINK,
@@ -40,7 +40,7 @@ static mx_handle_t sink_test_loader_service(void* arg, uint32_t load_op,
     EXPECT_EQ(mx_handle_close(request_handle), MX_OK, "");
 
     my_loader_service_ok = current_test_info->all_ok;
-    return MX_HANDLE_INVALID;
+    return MX_OK;
 }
 
 bool publish_data_test(void) {
@@ -82,9 +82,10 @@ bool publish_data_test(void) {
 
 static mx_handle_t test_config_vmo = MX_HANDLE_INVALID;
 
-static mx_handle_t config_test_loader_service(void* arg, uint32_t load_op,
+static mx_status_t config_test_loader_service(void* arg, uint32_t load_op,
                                               mx_handle_t request_handle,
-                                              const char* name) {
+                                              const char* name,
+                                              mx_handle_t* out) {
     ++my_loader_service_calls;
 
     EXPECT_EQ(load_op, (uint32_t)LOADER_SVC_OP_LOAD_DEBUG_CONFIG,
@@ -95,7 +96,8 @@ static mx_handle_t config_test_loader_service(void* arg, uint32_t load_op,
     mx_handle_t result = MX_HANDLE_INVALID;
     if (!strcmp(TEST_CONFIG_GOOD_NAME, name)) {
         EXPECT_NEQ(test_config_vmo, MX_HANDLE_INVALID, "");
-        result = test_config_vmo;
+        *out = test_config_vmo;
+        result = MX_OK;
     } else {
         EXPECT_STR_EQ(TEST_CONFIG_BAD_NAME,
                       name, sizeof(TEST_CONFIG_BAD_NAME) - 1,
