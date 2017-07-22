@@ -396,6 +396,12 @@ typedef struct drm_i915_irq_wait {
 #define I915_PARAM_HAS_RESOURCE_STREAMER 36
 #define I915_PARAM_HAS_EXEC_SOFTPIN 37
 
+/* Query whether DRM_I915_GEM_EXECBUFFER2 supports the ability to opt-out of
+ * synchronisation with implicit fencing on individual objects.
+ * See EXEC_OBJECT_ASYNC.
+ */
+#define I915_PARAM_HAS_EXEC_ASYNC    43
+
 typedef struct drm_i915_getparam {
     __s32 param;
     /*
@@ -735,7 +741,8 @@ struct drm_i915_gem_exec_object2 {
 #define EXEC_OBJECT_WRITE (1 << 2)
 #define EXEC_OBJECT_SUPPORTS_48B_ADDRESS (1 << 3)
 #define EXEC_OBJECT_PINNED (1 << 4)
-#define __EXEC_OBJECT_UNKNOWN_FLAGS -(EXEC_OBJECT_PINNED << 1)
+#define EXEC_OBJECT_ASYNC       (1<<6)
+#define __EXEC_OBJECT_UNKNOWN_FLAGS -(EXEC_OBJECT_ASYNC << 1)
     __u64 flags;
 
     __u64 rsvd1; // anvil: start offset of the used portion of the buffer
