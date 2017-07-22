@@ -19,6 +19,7 @@
 #include "application/lib/app/connect.h"
 #include "application/lib/far/format.h"
 #include "application/src/manager/namespace_builder.h"
+#include "application/src/manager/runtime_metadata.h"
 #include "application/src/manager/url_resolver.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -36,6 +37,7 @@ constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
+constexpr char kRuntimePath[] = "meta/runtime";
 constexpr char kSandboxPath[] = "meta/sandbox";
 
 enum class LaunchType {
@@ -329,31 +331,6 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
     ApplicationLaunchInfoPtr launch_info,
     std::string runner,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  // We create the entry in |runners_| before calling ourselves
-  // recursively to detect cycles.
-  auto result = runners_.emplace(runner, nullptr);
-  if (result.second) {
-    ServiceProviderPtr runner_services;
-    ApplicationControllerPtr runner_controller;
-    auto runner_launch_info = ApplicationLaunchInfo::New();
-    runner_launch_info->url = runner;
-    runner_launch_info->services = runner_services.NewRequest();
-    CreateApplication(std::move(runner_launch_info),
-                      runner_controller.NewRequest());
-
-    runner_controller.set_connection_error_handler(
-        [this, runner] { runners_.erase(runner); });
-
-    result.first->second = std::make_unique<ApplicationRunnerHolder>(
-        std::move(runner_services), std::move(runner_controller));
-
-  } else if (!result.first->second) {
-    // There was a cycle in the runner graph.
-    FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with " << runner
-                   << " because of a cycle in the runner graph.";
-    return;
-  }
-
   auto flat_namespace = FlatNamespace::New();
   flat_namespace->paths.resize(1);
   flat_namespace->paths[0] = "/svc";
@@ -364,8 +341,13 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
   startup_info->launch_info = std::move(launch_info);
   startup_info->flat_namespace = std::move(flat_namespace);
 
-  result.first->second->StartApplication(
-      std::move(package), std::move(startup_info), std::move(controller));
+  auto* runner_ptr = GetOrCreateRunner(runner);
+  if (runner_ptr == nullptr) {
+    FTL_LOG(ERROR) << "Could not create runner " << runner << " to run "
+                   << launch_info->url;
+  }
+  runner_ptr->StartApplication(std::move(package), std::move(startup_info),
+                               std::move(controller));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
@@ -411,6 +393,8 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
   if (!svc)
     return;
 
+  // Note that |builder| is only used in the else block below. It is left here
+  // because we would like to use it everywhere once US-313 is fixed.
   NamespaceBuilder builder;
   builder.AddPackage(std::move(pkg));
   builder.AddServices(std::move(svc));
@@ -432,18 +416,84 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
   // steps.
   builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
 
-  const std::string url = launch_info->url;  // Keep a copy before moving it.
-  mx::process process = CreateSandboxedProcess(
-      job_for_child_, file_system->GetFileAsVMO(kAppPath),
-      std::move(launch_info), builder.Build());
+  std::string runtime_data;
+  if (file_system->GetFileAsString(kRuntimePath, &runtime_data)) {
+    RuntimeMetadata runtime;
+    if (!runtime.Parse(runtime_data)) {
+      FTL_LOG(ERROR) << "Failed to parse runtime metadata for "
+                     << launch_info->url;
+      return;
+    }
 
-  if (process) {
-    auto application = std::make_unique<ApplicationControllerImpl>(
-        std::move(controller), this, std::move(file_system), std::move(process),
-        url);
-    ApplicationControllerImpl* key = application.get();
-    applications_.emplace(key, std::move(application));
+    auto inner_package = ApplicationPackage::New();
+    inner_package->data = file_system->GetFileAsVMO(kAppPath);
+    inner_package->resolved_url = package->resolved_url;
+
+    auto startup_info = ApplicationStartupInfo::New();
+    startup_info->launch_info = std::move(launch_info);
+    // NOTE: startup_info->flat_namespace is currently (7/2017) mostly ignored
+    // by all runners: https://fuchsia.atlassian.net/browse/US-313. They only
+    // extract /svc to expose to children through app::ApplicationContext.
+    // We would rather expose everything in |builder| as the effective global
+    // namespace for each child application.
+    auto flat_namespace = FlatNamespace::New();
+    flat_namespace->paths.resize(1);
+    flat_namespace->paths[0] = "/svc";
+    flat_namespace->directories.resize(1);
+    flat_namespace->directories[0] = services_.OpenAsDirectory();
+    startup_info->flat_namespace = std::move(flat_namespace);
+
+    auto* runner = GetOrCreateRunner(runtime.runner());
+    if (runner == nullptr) {
+      FTL_LOG(ERROR) << "Cannot create " << runner << " to run "
+                     << launch_info->url;
+      return;
+    }
+    runner->StartApplication(std::move(inner_package), std::move(startup_info),
+                             std::move(controller));
+  } else {
+    const std::string url = launch_info->url;  // Keep a copy before moving it.
+    mx::process process = CreateSandboxedProcess(
+        job_for_child_, file_system->GetFileAsVMO(kAppPath),
+        std::move(launch_info), builder.Build());
+
+    if (process) {
+      auto application = std::make_unique<ApplicationControllerImpl>(
+          std::move(controller), this, std::move(file_system),
+          std::move(process), url);
+      ApplicationControllerImpl* key = application.get();
+      applications_.emplace(key, std::move(application));
+    }
   }
+}
+
+ApplicationRunnerHolder* ApplicationEnvironmentImpl::GetOrCreateRunner(
+    const std::string& runner) {
+  // We create the entry in |runners_| before calling ourselves
+  // recursively to detect cycles.
+  auto result = runners_.emplace(runner, nullptr);
+  if (result.second) {
+    ServiceProviderPtr runner_services;
+    ApplicationControllerPtr runner_controller;
+    auto runner_launch_info = ApplicationLaunchInfo::New();
+    runner_launch_info->url = runner;
+    runner_launch_info->services = runner_services.NewRequest();
+    CreateApplication(std::move(runner_launch_info),
+                      runner_controller.NewRequest());
+
+    runner_controller.set_connection_error_handler(
+        [this, runner] { runners_.erase(runner); });
+
+    result.first->second = std::make_unique<ApplicationRunnerHolder>(
+        std::move(runner_services), std::move(runner_controller));
+  } else if (!result.first->second) {
+    // There was a cycle in the runner graph.
+    FTL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner
+                   << ".";
+    return nullptr;
+  }
+
+  return result.first->second.get();
 }
 
 }  // namespace app

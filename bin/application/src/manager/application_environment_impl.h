@@ -72,6 +72,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
  private:
   static uint32_t next_numbered_label_;
 
+  ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
+
   void CreateApplicationWithRunner(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,

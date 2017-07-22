@@ -23,8 +23,7 @@ bool RuntimeMetadata::Parse(const std::string& data) {
     return false;
 
   auto runner = document.FindMember(kRunner);
-  if (runner == document.MemberEnd() ||
-      !runner->value.IsString()) {
+  if (runner == document.MemberEnd() || !runner->value.IsString()) {
     return false;
   }
   runner_ = runner->value.GetString();
@@ -33,4 +32,3 @@ bool RuntimeMetadata::Parse(const std::string& data) {
 }
 
 }  // namespace app
-

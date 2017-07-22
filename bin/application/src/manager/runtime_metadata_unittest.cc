@@ -23,4 +23,3 @@ TEST(RuntimeMetadata, Parse) {
 
 }  // namespace
 }  // namespace app
-

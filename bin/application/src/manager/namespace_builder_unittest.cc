@@ -22,7 +22,7 @@ TEST(NamespaceBuilder, Control) {
   NamespaceBuilder builder;
   builder.AddSandbox(sandbox);
 
-  mxio_flat_namespace_t* flat = builder.Build();
+  mxio_flat_namespace_t* flat = builder.BuildMxio();
   EXPECT_EQ(3u, flat->count);
 
   std::vector<std::string> paths;
