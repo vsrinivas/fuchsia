@@ -57,7 +57,14 @@ int main(void) {
         return 1;
     }
 
-    status = launchpad_elf_load(lp, launchpad_vmo_from_file(HELPER));
+    mx_handle_t vmo;
+    status = launchpad_vmo_from_file(HELPER, &vmo);
+    if (status != MX_OK) {
+        fprintf(stderr, "launchpad_vmo_from_file: %d\n", status);
+        return 1;
+    }
+
+    status = launchpad_elf_load(lp, vmo);
     if (status != MX_OK) {
         fprintf(stderr, "launchpad_elf_load: %d\n", status);
         return 1;
