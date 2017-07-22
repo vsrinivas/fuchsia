@@ -39,6 +39,11 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     volatile int aps_still_booting = 0;
     status_t status = MX_ERR_INTERNAL;
 
+    // if being asked to bring up 0 cpus, move on
+    if (count == 0) {
+        return MX_OK;
+    }
+
     // Sanity check the given ids
     for (uint i = 0; i < count; ++i) {
         int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);
@@ -95,10 +100,13 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     // visible on the APs when they come up
     smp_mb();
 
+    dprintf(INFO, "booting apic ids: ");
     for (unsigned int i = 0; i < count; ++i) {
         uint32_t apic_id = apic_ids[i];
+        dprintf(INFO, "%#x ", apic_id);
         apic_send_ipi(0, apic_id, DELIVERY_MODE_INIT);
     }
+    dprintf(INFO, "\n");
 
     // Wait 10 ms and then send the startup signals
     thread_sleep_relative(LK_MSEC(10));

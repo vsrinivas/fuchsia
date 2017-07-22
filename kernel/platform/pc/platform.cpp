@@ -392,7 +392,7 @@ static void platform_init_smp(void)
 
     // allocate 2x the table for temporary work
     uint32_t *apic_ids = static_cast<uint32_t *>(malloc(sizeof(*apic_ids) * num_cpus * 2));
-    if (apic_ids == NULL) {
+    if (!apic_ids) {
         TRACEF("failed to allocate apic_ids table, disabling SMP\n");
         return;
     }
@@ -447,9 +447,9 @@ static void platform_init_smp(void)
         max_cpus = SMP_MAX_CPUS;
     }
 
-    dprintf(INFO, "Found %u cpus\n", num_cpus);
+    dprintf(INFO, "Found %u cpu%c\n", num_cpus, (num_cpus > 1) ? 's': ' ');
     if (num_cpus > max_cpus) {
-        TRACEF("Clamping number of CPUs to %u\n", max_cpus);
+        dprintf(INFO, "Clamping number of CPUs to %u\n", max_cpus);
         num_cpus = max_cpus;
     }
 
@@ -468,13 +468,14 @@ static void platform_init_smp(void)
 
     x86_init_smp(apic_ids, num_cpus);
 
+    // trim the boot cpu out of the apic id list before passing to the AP booting routine
     for (uint i = 0; i < num_cpus - 1; ++i) {
         if (apic_ids[i] == bsp_apic_id) {
-            apic_ids[i] = apic_ids[num_cpus - 1];
-            apic_ids[num_cpus - 1] = bsp_apic_id;
+            memmove(&apic_ids[i], &apic_ids[i+1], sizeof(*apic_ids) * (num_cpus - i - 1));
             break;
         }
     }
+
     x86_bringup_aps(apic_ids, num_cpus - 1);
 
     free(apic_ids);
