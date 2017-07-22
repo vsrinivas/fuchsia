@@ -131,6 +131,32 @@ This option requests that the executable at *path* be launched once the
 system partition is mounted and *init* is launched.  If there is no system
 bootfs or system partition, it will never be launched.
 
+## kernel.oom.enable=\<bool>
+
+This option (false by default) turns on the out-of-memory (OOM) kernel thread,
+which kills processes when the PMM has less than `kernel.oom.redline_mb` free
+memory, sleeping for `kernel.oom.sleep_sec` between checks.
+
+The OOM thread can be manually started/stopped at runtime with the `k oom start`
+and `k oom stop` commands, and `k oom info` will show the current state.
+
+## kernel.oom.sleep-sec=\<num>
+
+This option (1 second by default) specifies how long the out-of-memory (OOM)
+kernel thread should sleep between checks.
+
+The `k oom info` command will show the current value of this and other
+parameters.
+
+## kernel.oom.redline-mb=\<num>
+
+This option (10 MB by default) specifies the free-memory threshold at which the
+out-of-memory (OOM) thread will trigger a low-memory event and begin killing
+processes.
+
+The `k oom info` command will show the current value of this and other
+parameters.
+
 ## smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than

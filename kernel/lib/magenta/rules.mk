@@ -55,6 +55,7 @@ MODULE_DEPS := \
     kernel/lib/dpc \
     kernel/lib/hypervisor \
     kernel/lib/mxtl \
+    kernel/lib/oom \
     kernel/dev/interrupt \
     kernel/dev/udisplay \
 

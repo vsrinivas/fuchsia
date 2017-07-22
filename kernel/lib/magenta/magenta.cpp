@@ -16,11 +16,13 @@
 #include <lk/init.h>
 
 #include <lib/console.h>
+#include <lib/oom.h>
 
+#include <magenta/diagnostics.h>
 #include <magenta/dispatcher.h>
 #include <magenta/excp_port.h>
-#include <magenta/job_dispatcher.h>
 #include <magenta/handle.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/policy_manager.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
@@ -64,12 +66,6 @@ static mxtl::RefPtr<JobDispatcher> root_job;
 // The singleton policy manager, for jobs and processes. This is
 // a magenta internal class (not a dispatcher-derived).
 static PolicyManager* policy_manager;
-
-void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
-    handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
-    root_job = JobDispatcher::CreateRootJob();
-    policy_manager = PolicyManager::Create();
-}
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
 // uses to create mx_handle_t values.
@@ -123,7 +119,7 @@ static uint32_t GetNewHandleBaseValue(void* addr) TA_REQ(handle_mutex) {
 // Destroys, but does not free, the Handle, and fixes up its memory to protect
 // against stale pointers to it. Also stashes the Handle's base_value for reuse
 // the next time this slot is allocated.
-void internal::TearDownHandle(Handle *handle) TA_EXCL(handle_mutex) {
+void internal::TearDownHandle(Handle* handle) TA_EXCL(handle_mutex) {
     uint32_t base_value = handle->base_value();
 
     // Calling the handle dtor can cause many things to happen, so it is
@@ -230,17 +226,18 @@ void DeleteHandle(Handle* handle) {
         // have complicated Close() logic which cannot be untangled at
         // this time.
         switch (dispatcher->get_type()) {
-            case MX_OBJ_TYPE_IOMAP: {
-                // DownCastDispatcher moves the reference so we need a copy
-                // because we use |dispatcher| after the cast.
-                auto disp = dispatcher;
-                auto iodisp = DownCastDispatcher<IoMappingDispatcher>(&disp);
-                if (iodisp)
-                    iodisp->Close();
-                break;
-            }
-            default:  break;
-                // This is fine. See for example the LogDispatcher.
+        case MX_OBJ_TYPE_IOMAP: {
+            // DownCastDispatcher moves the reference so we need a copy
+            // because we use |dispatcher| after the cast.
+            auto disp = dispatcher;
+            auto iodisp = DownCastDispatcher<IoMappingDispatcher>(&disp);
+            if (iodisp)
+                iodisp->Close();
+            break;
+        }
+        default:
+            break;
+            // This is fine. See for example the LogDispatcher.
         }
     }
 
@@ -287,7 +284,7 @@ Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     auto va = &reinterpret_cast<Handle*>(handle_arena.start())[index];
     if (!HandleInRange(va))
         return nullptr;
-    Handle *handle = reinterpret_cast<Handle*>(va);
+    Handle* handle = reinterpret_cast<Handle*>(va);
     return handle->base_value() == value ? handle : nullptr;
 }
 
@@ -386,5 +383,137 @@ mx_status_t get_process(ProcessDispatcher* up,
     return up->GetDispatcherWithRights(proc_handle, MX_RIGHT_WRITE, proc);
 }
 
+// Counts and optionally prints all job/process descendants of a job.
+namespace {
+class OmmJobEnumerator final : public JobEnumerator {
+public:
+    // If |prefix| is non-null, also prints each job/process.
+    OmmJobEnumerator(const char* prefix)
+        : prefix_(prefix) { reset_counts(); }
+    void reset_counts() {
+        num_jobs_ = 0;
+        num_processes_ = 0;
+        num_running_processes_ = 0;
+    }
+    size_t num_jobs() const { return num_jobs_; }
+    size_t num_processes() const { return num_processes_; }
+    size_t num_running_processes() const { return num_running_processes_; }
+
+private:
+    bool OnJob(JobDispatcher* job) final {
+        if (prefix_ != nullptr) {
+            char name[MX_MAX_NAME_LEN];
+            job->get_name(name);
+            printf("%sjob %6" PRIu64 " '%s'\n", prefix_, job->get_koid(), name);
+        }
+        num_jobs_++;
+        return true;
+    }
+    bool OnProcess(ProcessDispatcher* process) final {
+        // Since we want to free memory by actually killing something, only
+        // count running processes that aren't attached to a debugger.
+        // It's a race, but will stop us from re-killing a job that only has
+        // blocked-by-debugger processes.
+        mx_info_process_t info = {};
+        process->GetInfo(&info);
+        if (info.started && !info.exited && !info.debugger_attached) {
+            num_running_processes_++;
+        }
+        if (prefix_ != nullptr) {
+            const char* tag = "new";
+            if (info.started) {
+                tag = "run";
+            }
+            if (info.exited) {
+                tag = "dead";
+            }
+            if (info.debugger_attached) {
+                tag = "dbg";
+            }
+            char name[MX_MAX_NAME_LEN];
+            process->get_name(name);
+            printf("%sproc %5" PRIu64 " %4s '%s'\n",
+                   prefix_, process->get_koid(), tag, name);
+        }
+        num_processes_++;
+        return true;
+    }
+
+    const char* prefix_;
+    size_t num_jobs_;
+    size_t num_processes_;
+    size_t num_running_processes_;
+};
+} // namespace
+
+// Called from a dedicated kernel thread when the system is low on memory.
+static void oom_lowmem(size_t shortfall_bytes) {
+    printf("OOM: oom_lowmem(shortfall_bytes=%zu) called\n", shortfall_bytes);
+    printf("OOM: Process mapped committed bytes:\n");
+    DumpProcessMemoryUsage("OOM:   ", /*min_pages=*/8 * MB / PAGE_SIZE);
+    printf("OOM: Finding a job to kill...\n");
+
+    OmmJobEnumerator job_counter(nullptr);
+    OmmJobEnumerator job_printer("OOM:        + ");
+
+    bool killed = false;
+    int next = 3; // Used to print a few "up next" jobs.
+    JobDispatcher::ForEachJobByImportance([&](JobDispatcher* job) {
+        // TODO(dbort): Consider adding an "immortal" bit on jobs and skip them
+        // here if they (and and all of their ancestors) have it set.
+        bool kill = false;
+        if (!killed) {
+            // We want to kill a job that will actually free memory by dying, so
+            // look for one with running process descendants (i.e., started,
+            // non-exited, not blocked in a debugger).
+            job_counter.reset_counts();
+            job->EnumerateChildren(&job_counter, /*recurse=*/true);
+            kill = job_counter.num_running_processes() > 0;
+        }
+
+        const char* tag;
+        if (kill) {
+            tag = "*KILL*";
+        } else if (!killed) {
+            tag = "(skip)";
+        } else {
+            tag = "(next)";
+        }
+        char name[MX_MAX_NAME_LEN];
+        job->get_name(name);
+        printf("OOM:   %s job %6" PRIu64 " '%s'\n", tag, job->get_koid(), name);
+        if (kill) {
+            // Print the descendants of the job we're about to kill.
+            job_printer.reset_counts();
+            job->EnumerateChildren(&job_printer, /*recurse=*/true);
+            printf("OOM:        = %zu running procs (%zu total), %zu jobs\n",
+                   job_printer.num_running_processes(),
+                   job_printer.num_processes(), job_printer.num_jobs());
+            // TODO(dbort): Join on dying processes/jobs to make sure we've
+            // freed memory before returning control to the OOM thread?
+            // TODO(MG-961): 'kill -9' these processes (which will require new
+            // ProcessDispatcher features) so we can reclaim the memory of
+            // processes that are stuck in a debugger or in the crashlogger.
+            job->Kill();
+            killed = true;
+        } else if (killed) {
+            if (--next == 0) {
+                return MX_ERR_STOP;
+            }
+        }
+        return MX_OK;
+    });
+}
+
+void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
+    handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
+    root_job = JobDispatcher::CreateRootJob();
+    policy_manager = PolicyManager::Create();
+    // Be sure to update kernel_cmdline.md if any of these defaults change.
+    oom_init(cmdline_get_bool("kernel.oom.enable", false),
+             LK_SEC(cmdline_get_uint64("kernel.oom.sleep-sec", 1)),
+             cmdline_get_uint64("kernel.oom.redline-mb", 10) * MB,
+             oom_lowmem);
+}
 
 LK_INIT_HOOK(magenta, magenta_init, LK_INIT_LEVEL_THREADING);
