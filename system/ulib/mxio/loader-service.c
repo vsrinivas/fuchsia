@@ -351,7 +351,7 @@ static mx_status_t multiloader_cb(mx_handle_t h, void* cb, void* cookie) {
 // TODO(dbort): Provide a name/id for the process that this handle will
 // be used for, to make error messages more useful? Would need to pass
 // the same through IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL.
-mx_handle_t mxio_multiloader_new_service(mxio_multiloader_t* ml) {
+mx_status_t mxio_multiloader_new_service(mxio_multiloader_t* ml, mx_handle_t* out) {
     if (ml == NULL) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -381,7 +381,7 @@ mx_handle_t mxio_multiloader_new_service(mxio_multiloader_t* ml) {
         mx_handle_close(h0);
         mx_handle_close(h1);
     } else {
-        r = h0;
+        *out = h0;
     }
 
 done:
@@ -416,18 +416,19 @@ static mxio_multiloader_t local_multiloader = {
     .name = "local-multiloader"
 };
 
-mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
-                                void* loader_arg) {
+mx_status_t mxio_loader_service(mxio_loader_service_function_t loader,
+                                void* loader_arg, mx_handle_t* out) {
     if (loader == NULL) {
         if (!force_local_loader_service) {
             // Try to use the system loader service.
             mx_handle_t h = get_system_loader_service();
             if (h > 0) {
-                return h;
+                *out = h;
+                return MX_OK;
             }
         }
         // Fall back to an in-process loader service.
-        return mxio_multiloader_new_service(&local_multiloader);
+        return mxio_multiloader_new_service(&local_multiloader, out);
     }
     // Create a loader service using the callback.
 
@@ -463,5 +464,6 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     }
 
     thrd_detach(t);
-    return h;
+    *out = h;
+    return MX_OK;
 }

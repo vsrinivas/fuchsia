@@ -49,9 +49,9 @@ bool publish_data_test(void) {
     my_loader_service_calls = 0;
 
     // Spin up our test service.
-    mx_handle_t my_service =
-        mxio_loader_service(&sink_test_loader_service, NULL);
-    ASSERT_GT(my_service, 0, "mxio_loader_service");
+    mx_handle_t my_service;
+    mx_status_t status = mxio_loader_service(&sink_test_loader_service, NULL, &my_service);
+    ASSERT_EQ(status, MX_OK, "mxio_loader_service");
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
@@ -113,9 +113,10 @@ bool debug_config_test(void) {
     my_loader_service_calls = 0;
 
     // Spin up our test service.
-    mx_handle_t my_service =
-        mxio_loader_service(&config_test_loader_service, NULL);
-    ASSERT_GT(my_service, 0, "mxio_loader_service");
+    mx_handle_t my_service;
+    mx_status_t status =
+        mxio_loader_service(&config_test_loader_service, NULL, &my_service);
+    ASSERT_EQ(status, MX_OK, "mxio_loader_service");
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
