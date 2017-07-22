@@ -492,7 +492,7 @@ int main(int argc, char** argv) {
     }
 
     mx_handle_t thread_self = thrd_get_mx_handle(thrd_current());
-    if (thread_self < 0) {
+    if (thread_self == MX_HANDLE_INVALID) {
         print_mx_error("unable to get thread self", thread_self);
         return 1;
     }
