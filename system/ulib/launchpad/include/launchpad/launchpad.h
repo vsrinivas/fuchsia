@@ -317,7 +317,7 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
 // just duplicates the handle passed in the last call.  Otherwise,
 // the first time the system vDSO is needed it's fetched with
 // mx_get_startup_handle.
-mx_handle_t launchpad_get_vdso_vmo(void);
+mx_status_t launchpad_get_vdso_vmo(mx_handle_t* out);
 
 // Replace the globally-held VM object handle for the system vDSO.
 // This takes ownership of the given handle, and returns the old

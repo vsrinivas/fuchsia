@@ -23,6 +23,9 @@
 #include <sys/param.h>
 #include <threads.h>
 
+// to assist in the transition to unsigned handles
+#define INVALID_HANDLE(h) ((h) <= 0)
+
 enum special_handles {
     HND_LOADER_SVC,
     HND_EXEC_VMO,
@@ -362,9 +365,7 @@ static void check_elf_stack_size(launchpad_t* lp, elf_load_info_t* elf) {
 }
 
 mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
-    if (vmo < 0)
-        return lp_error(lp, vmo, "elf_load: negative vmo");
-    if (vmo == MX_HANDLE_INVALID)
+    if (INVALID_HANDLE(vmo))
         return lp_error(lp, MX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
     if (lp->error)
         goto done;
@@ -395,9 +396,7 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
                                      mx_vaddr_t* base, mx_vaddr_t* entry) {
     if (lp->error)
         return lp->error;
-    if (vmo < 0)
-        return lp_error(lp, vmo, "elf_load_extra: negative vmo");
-    if (vmo == MX_HANDLE_INVALID)
+    if (INVALID_HANDLE(vmo))
         return lp_error(lp, MX_ERR_INVALID_ARGS, "elf_load_extra: invalid vmo");
 
     elf_load_info_t* elf;
@@ -658,9 +657,7 @@ static mx_status_t parse_interp_spec(char *line, char **interp_start,
 }
 
 mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
-    if (vmo < 0)
-        return lp_error(lp, vmo, "file_load: negative vmo");
-    if (vmo == MX_HANDLE_INVALID)
+    if (INVALID_HANDLE(vmo))
         return lp_error(lp, MX_ERR_INVALID_ARGS, "file_load: invalid vmo");
 
     if (lp->script_args != NULL) {
@@ -765,9 +762,7 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
 }
 
 mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
-    if (vmo < 0)
-        return lp_error(lp, vmo, "elf_load: negative vmo");
-    if (vmo == MX_HANDLE_INVALID)
+    if (INVALID_HANDLE(vmo))
         return lp_error(lp, MX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
 
     return launchpad_elf_load_body(lp, NULL, 0, vmo);
@@ -787,17 +782,12 @@ static mx_handle_t vdso_get_vmo(void) {
     return vdso_vmo;
 }
 
-mx_handle_t launchpad_get_vdso_vmo(void) {
+mx_status_t launchpad_get_vdso_vmo(mx_handle_t* out) {
     vdso_lock();
-    mx_handle_t result;
     mx_status_t status = mx_handle_duplicate(vdso_get_vmo(),
-                                             MX_RIGHT_SAME_RIGHTS, &result);
+                                             MX_RIGHT_SAME_RIGHTS, out);
     vdso_unlock();
-    if (status < 0) {
-        return status;
-    } else {
-        return result;
-    }
+    return status;
 }
 
 mx_handle_t launchpad_set_vdso_vmo(mx_handle_t new_vdso_vmo) {
@@ -811,11 +801,11 @@ mx_handle_t launchpad_set_vdso_vmo(mx_handle_t new_vdso_vmo) {
 mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
     if (lp->error)
         return lp->error;
-    mx_handle_t vdso = launchpad_get_vdso_vmo();
-    if (vdso < 0)
-        return lp_error(lp, vdso, "add_vdso_vmo: get_vdso_vmo failed");
-    mx_status_t status = launchpad_add_handle(
-        lp, vdso, PA_HND(PA_VMO_VDSO, 0));
+    mx_handle_t vdso;
+    mx_status_t status;
+    if ((status = launchpad_get_vdso_vmo(&vdso)) != MX_OK)
+        return lp_error(lp, status, "add_vdso_vmo: get_vdso_vmo failed");
+    status = launchpad_add_handle(lp, vdso, PA_HND(PA_VMO_VDSO, 0));
     if (status != MX_OK)
         mx_handle_close(vdso);
     return status;
