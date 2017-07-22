@@ -63,14 +63,12 @@ static const char* const libpaths[] = {
 };
 
 // Always consumes the fd.
-static mx_handle_t load_object_fd(int fd, const char* fn) {
-    mx_handle_t vmo;
-    mx_status_t status = mxio_get_vmo(fd, &vmo);
+static mx_handle_t load_object_fd(int fd, const char* fn, mx_handle_t* out) {
+    mx_status_t status = mxio_get_vmo(fd, out);
     close(fd);
-    if (status != MX_OK)
-        return status;
-    mx_object_set_property(vmo, MX_PROP_NAME, fn, strlen(fn));
-    return vmo;
+    if (status == MX_OK)
+        mx_object_set_property(*out, MX_PROP_NAME, fn, strlen(fn));
+    return status;
 }
 
 // For now, just publish data-sink VMOs as files under /tmp/<sink-name>/.
@@ -153,7 +151,8 @@ static int open_from_libpath(const char* prefix, const char* fn) {
 static mx_handle_t default_load_object(void* cookie,
                                        uint32_t load_op,
                                        mx_handle_t request_handle,
-                                       const char* fn) {
+                                       const char* fn,
+                                       mx_handle_t* out) {
     mxio_multiloader_t* ml = cookie;
 
     if (request_handle != MX_HANDLE_INVALID &&
@@ -187,7 +186,7 @@ static mx_handle_t default_load_object(void* cookie,
         if (fd < 0 && !ml->config_exclusive)
             fd = open_from_libpath("", fn);
         if (fd >= 0)
-            return load_object_fd(fd, fn);
+            return load_object_fd(fd, fn, out);
         break;
     }
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
@@ -203,7 +202,7 @@ static mx_handle_t default_load_object(void* cookie,
         }
         int fd = open(fn, O_RDONLY);
         if (fd >= 0)
-            return load_object_fd(fd, fn);
+            return load_object_fd(fd, fn, out);
         break;
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
         return publish_data_sink(request_handle, fn);
@@ -259,10 +258,10 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
     case LOADER_SVC_OP_PUBLISH_DATA_SINK:
         // TODO(MG-491): Use a threadpool for loading, and guard against
         // other starvation attacks.
-        handle = (*loader)(loader_arg, msg->opcode,
-                           request_handle, (const char*) msg->data);
+        r = (*loader)(loader_arg, msg->opcode,
+                      request_handle, (const char*) msg->data, &handle);
         request_handle = MX_HANDLE_INVALID;
-        msg->arg = handle < 0 ? handle : MX_OK;
+        msg->arg = r;
         break;
     case LOADER_SVC_OP_DEBUG_PRINT:
         log_printf(sys_log, "dlsvc: debug: %s\n", (const char*) msg->data);
@@ -286,7 +285,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
     msg->reserved0 = 0;
     msg->reserved1 = 0;
     if ((r = mx_channel_write(h, 0, msg, sizeof(mx_loader_svc_msg_t),
-                              &handle, handle > 0 ? 1 : 0)) < 0) {
+                              &handle, handle != MX_HANDLE_INVALID ? 1 : 0)) < 0) {
         fprintf(stderr, "dlsvc: msg write error: %d: %s\n", r, mx_status_get_string(r));
         return r;
     }
