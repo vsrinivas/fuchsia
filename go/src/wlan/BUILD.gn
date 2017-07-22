@@ -59,7 +59,7 @@ package("wlanstack") {
 
   resources = [ {
         path = rebase_path("default.json")
-        dest = "data/wlanstack/config.json"
+        dest = "wlanstack/config.json"
       } ]
 }
 
