@@ -123,21 +123,22 @@ else
     PROJECT=magenta-qemu-$ARCH
 fi
 
+BUILDDIR_SUFFIX=
+BUILD_ARGS=
+
 if (( $CLANG )); then
-    BUILDDIR_SUFFIX=-clang
-    BUILD_ARGS=USE_CLANG=true
-else
-    BUILDDIR_SUFFIX=
-    BUILD_ARGS=
+    BUILDDIR_SUFFIX+=-clang
+    BUILD_ARGS+=USE_CLANG=true
+fi
+
+if (( $RELEASE )); then
+    BUILDDIR_SUFFIX+=-release
+    BUILD_ARGS+=DEBUG=0
 fi
 
 # build the project if asked for
 if (( $BUILD )); then
-    if (( $RELEASE )); then
-        $DIR/make-release $PROJECT $BUILD_ARGS || exit 1
-    else
-        $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
-    fi
+    $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
 fi
 
 # by default use the qemu binary located in the fuchsia buildtools
@@ -145,11 +146,6 @@ fi
 # who want to use their own.
 if [[ -z $QEMUDIR && -d "$DIR/../../buildtools/qemu/bin" ]]; then
     QEMUDIR="$DIR/../../buildtools/qemu/bin/"
-fi
-
-# append the release path if requested
-if (( $RELEASE )); then
-    PROJECT=$PROJECT-release
 fi
 
 if [[ -z $BUILDDIR ]]; then
