@@ -99,8 +99,10 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
           " \"", filename, "\"\n", NULL);
 
     struct bootfs_file file = bootfs_search(log, fs, filename);
-    if (file.offset == 0 && file.size == 0)
-        fail(log, MX_ERR_INVALID_ARGS, "file not found\n");
+    if (file.offset == 0 && file.size == 0) {
+        print(log, "file not found\n", NULL);
+        return MX_HANDLE_INVALID;
+    }
     if (file.offset > fs->len)
         fail(log, MX_ERR_INVALID_ARGS, "bogus offset in bootfs header!\n");
     if (fs->len - file.offset < file.size)

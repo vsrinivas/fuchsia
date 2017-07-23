@@ -16,16 +16,52 @@
 #define LOADER_SVC_MSG_MAX 1024
 #define LOAD_OBJECT_FILE_PREFIX "lib/"
 
-static mx_handle_t load_object(mx_handle_t log, struct bootfs* bootfs,
-                               const char* name) {
-    char file[LOADER_SVC_MSG_MAX - offsetof(mx_loader_svc_msg_t, data) +
-              sizeof(LOAD_OBJECT_FILE_PREFIX)];
-    memcpy(file, LOAD_OBJECT_FILE_PREFIX, sizeof(LOAD_OBJECT_FILE_PREFIX) - 1);
-    memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1], name, strlen(name) + 1);
-    return bootfs_open(log, "shared library", bootfs, file);
+struct loader_state {
+    mx_handle_t log;
+    struct bootfs* bootfs;
+    char prefix[32];
+    size_t prefix_len;
+    bool exclusive;
+};
+
+static void loader_config(struct loader_state* state, const char* string) {
+    size_t len = strlen(string);
+    state->exclusive = false;
+    if (string[len - 1] == '!') {
+        --len;
+        state->exclusive = true;
+    }
+    if (len >= sizeof(state->prefix) - 1) {
+        fail(state->log, MX_ERR_INVALID_ARGS,
+             "loader-service config string too long\n");
+    }
+    memcpy(state->prefix, string, len);
+    state->prefix[len++] = '/';
+    state->prefix_len = len;
 }
 
-static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
+static mx_handle_t try_load_object(struct loader_state* state,
+                                   const char* name, size_t prefix_len) {
+    char file[LOADER_SVC_MSG_MAX - offsetof(mx_loader_svc_msg_t, data) +
+              sizeof(LOAD_OBJECT_FILE_PREFIX) + prefix_len];
+    memcpy(file, LOAD_OBJECT_FILE_PREFIX, sizeof(LOAD_OBJECT_FILE_PREFIX) - 1);
+    memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1],
+           state->prefix, prefix_len);
+    memcpy(&file[sizeof(LOAD_OBJECT_FILE_PREFIX) - 1 + prefix_len],
+           name, strlen(name) + 1);
+    return bootfs_open(state->log, "shared library", state->bootfs, file);
+}
+
+static mx_handle_t load_object(struct loader_state* state, const char* name) {
+    mx_handle_t vmo = try_load_object(state, name, state->prefix_len);
+    if (vmo == MX_HANDLE_INVALID && state->prefix_len > 0 && !state->exclusive)
+        vmo = try_load_object(state, name, 0);
+    if (vmo == MX_HANDLE_INVALID)
+        fail(state->log, MX_ERR_NOT_FOUND, "cannot find shared library\n");
+    return vmo;
+}
+
+static bool handle_loader_rpc(struct loader_state* state,
                               mx_handle_t channel) {
     union {
         uint8_t buffer[1024];
@@ -40,14 +76,16 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
     // This is the normal error for the other end going away,
     // which happens when the process dies.
     if (status == MX_ERR_PEER_CLOSED) {
-        print(log, "loader-service channel peer closed on read\n", NULL);
+        print(state->log,
+              "loader-service channel peer closed on read\n", NULL);
         return false;
     }
 
-    check(log, status, "mx_channel_read on loader-service channel failed\n");
+    check(state->log, status,
+          "mx_channel_read on loader-service channel failed\n");
 
     if (size < sizeof(msgbuf.msg))
-        fail(log, MX_ERR_OUT_OF_RANGE,
+        fail(state->log, MX_ERR_OUT_OF_RANGE,
              "loader-service request message too small\n");
 
     // Forcibly null-terminate the message data argument.
@@ -56,24 +94,28 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
     mx_handle_t handle = MX_HANDLE_INVALID;
     switch (msgbuf.msg.opcode) {
     case LOADER_SVC_OP_DONE:
-        print(log, "loader-service received DONE request\n", NULL);
+        print(state->log, "loader-service received DONE request\n", NULL);
         return false;
 
     case LOADER_SVC_OP_DEBUG_PRINT:
-        print(log, "loader-service: debug: ", string, "\n", NULL);
+        print(state->log, "loader-service: debug: ", string, "\n", NULL);
+        break;
+
+    case LOADER_SVC_OP_CONFIG:
+        loader_config(state, string);
         break;
 
     case LOADER_SVC_OP_LOAD_OBJECT:
-        handle = load_object(log, bootfs, string);
+        handle = load_object(state, string);
         break;
 
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
-        fail(log, MX_ERR_INVALID_ARGS,
+        fail(state->log, MX_ERR_INVALID_ARGS,
              "loader-service received LOAD_SCRIPT_INTERP request\n");
         break;
 
     default:
-        fail(log, MX_ERR_INVALID_ARGS,
+        fail(state->log, MX_ERR_INVALID_ARGS,
              "loader-service received invalid opcode\n");
         break;
     }
@@ -85,7 +127,8 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
     msgbuf.msg.reserved1 = 0;
     status = mx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
                               &handle, handle == MX_HANDLE_INVALID ? 0 : 1);
-    check(log, status, "mx_channel_write on loader-service channel failed\n");
+    check(state->log, status,
+          "mx_channel_write on loader-service channel failed\n");
 
     return true;
 }
@@ -93,6 +136,12 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
 void loader_service(mx_handle_t log, struct bootfs* bootfs,
                     mx_handle_t channel) {
     print(log, "waiting for loader-service requests...\n", NULL);
+
+    struct loader_state state = {
+        .log = log,
+        .bootfs = bootfs,
+    };
+
     do {
         mx_signals_t signals;
         mx_status_t status = mx_object_wait_one(
@@ -113,7 +162,7 @@ void loader_service(mx_handle_t log, struct bootfs* bootfs,
             fail(log, MX_ERR_BAD_STATE,
                  "unexpected signal state on loader-service channel\n");
         }
-    } while (handle_loader_rpc(log, bootfs, channel));
+    } while (handle_loader_rpc(&state, channel));
 
     check(log, mx_handle_close(channel),
           "mx_handle_close failed on loader-service channel\n");
