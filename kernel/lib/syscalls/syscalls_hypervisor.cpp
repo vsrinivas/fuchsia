@@ -23,6 +23,9 @@ mx_status_t sys_hypervisor_create(mx_handle_t opt_handle, uint32_t options,
 
 static mx_status_t guest_create(uint32_t options, mx_handle_t physmem_vmo, mx_handle_t* out) {
     auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_GUEST);
+    if (res != MX_OK)
+        return res;
 
     mxtl::RefPtr<VmObjectDispatcher> physmem;
     mx_rights_t rights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;

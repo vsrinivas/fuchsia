@@ -38,7 +38,8 @@ typedef struct mx_policy_basic {
 #define MX_POL_NEW_PORT                     8u
 #define MX_POL_NEW_SOCKET                   9u
 #define MX_POL_NEW_FIFO                     10u
-#define MX_POL_MAX                          11u
+#define MX_POL_NEW_GUEST                    11u
+#define MX_POL_MAX                          12u
 
 // Policy actions.
 // MX_POL_ACTION_ALLOW and MX_POL_ACTION_DENY can be ORed with MX_POL_ACTION_EXCEPTION.

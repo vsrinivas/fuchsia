@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "subprocess.h"
+#include <magenta/syscalls/hypervisor.h>
 #include <mini-process/mini-process.h>
 
 // This function is the entire program that the child process will execute.
@@ -83,6 +84,17 @@ void _start(mx_handle_t channel, uintptr_t fnptr) {
                 if (what & MINIP_CMD_CREATE_CHANNEL) {
                     what &= ~MINIP_CMD_CREATE_CHANNEL;
                     cmd.status = ctx.channel_create(0u, &handle[0], &handle[1]);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_CREATE_GUEST) {
+                    what &= ~MINIP_CMD_CREATE_GUEST;
+                    struct {
+                        uint32_t options;
+                        mx_handle_t physmem_vmo;
+                    } guest_create_args = { 0, MX_HANDLE_INVALID };
+                    cmd.status = ctx.hypervisor_op(MX_HANDLE_INVALID, MX_HYPERVISOR_OP_GUEST_CREATE,
+                                                   &guest_create_args, sizeof(guest_create_args),
+                                                   &handle[0], sizeof(handle[0]));
                     goto reply;
                 }
                 if (what & MINIP_CMD_USE_BAD_HANDLE_CLOSED) {

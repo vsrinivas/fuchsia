@@ -37,6 +37,7 @@ static mx_status_t write_ctx_message(
         .channel_create = get_syscall_addr(&mx_channel_create, vdso_base),
         .channel_read = get_syscall_addr(&mx_channel_read, vdso_base),
         .channel_write = get_syscall_addr(&mx_channel_write, vdso_base),
+        .hypervisor_op = get_syscall_addr(&mx_hypervisor_op, vdso_base),
         .process_exit = get_syscall_addr(&mx_process_exit, vdso_base)
     };
     return mx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);

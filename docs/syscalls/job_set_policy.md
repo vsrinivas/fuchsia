@@ -65,12 +65,14 @@ Where *condition* is one of
   a new socket.
 + **MX_POL_NEW_FIFO** a process under this job is attempting to create
   a new fifo.
++ **MX_POL_NEW_GUEST** a process under this job is attempting to create
+  a new guest.
 + **MX_POL_NEW_ANY** is a special *condition* that stands for all of
   the above **MX_NEW** condtions such as **MX_POL_NEW_VMO**,
   **MX_POL_NEW_CHANNEL**, **MX_POL_NEW_EVENT**, **MX_POL_NEW_EVPAIR**,
-  **MX_POL_NEW_PORT**, **MX_POL_NEW_SOCKET** and **MX_POL_NEW_FIFO**
-  and any future MX_NEW policy. This will include any new kernel objects
-  which do not require a parent object for creation.
+  **MX_POL_NEW_PORT**, **MX_POL_NEW_SOCKET**, **MX_POL_NEW_FIFO**,
+  **MX_POL_NEW_GUEST**, and any future MX_NEW policy. This will include any new
+  kernel objects which do not require a parent object for creation.
 
 Where *policy* is either
 + **MX_POL_ACTION_ALLOW**  allow *condition*.
