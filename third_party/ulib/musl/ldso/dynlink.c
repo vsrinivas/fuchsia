@@ -41,6 +41,7 @@ static void error(const char*, ...);
 static void debugmsg(const char*, ...);
 static void log_write(const void* buf, size_t len);
 static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
+static void loader_svc_config(const char* config);
 
 #define MAXP2(a, b) (-(-(a) & -(b)))
 #define ALIGN(x, y) ((x) + (y)-1 & -(y))
@@ -1864,6 +1865,8 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
 __NO_SAFESTACK NO_ASAN static void early_init(void) {
 #if __has_feature(address_sanitizer)
     __asan_early_init();
+    // Inform the loader service that we prefer ASan-supporting libraries.
+    loader_svc_config("asan");
 #endif
 }
 
@@ -2256,6 +2259,15 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
 out:
     loader_svc_rpc_in_progress = false;
     return status;
+}
+
+__NO_SAFESTACK static void loader_svc_config(const char* config) {
+    mx_status_t status = loader_svc_rpc(LOADER_SVC_OP_CONFIG,
+                                        config, strlen(config),
+                                        MX_HANDLE_INVALID, NULL);
+    if (status != MX_OK)
+        debugmsg("LOADER_SVC_OP_CONFIG(%s): %s\n",
+                 config, _mx_status_get_string(status));
 }
 
 __NO_SAFESTACK static mx_status_t get_library_vmo(const char* name,
