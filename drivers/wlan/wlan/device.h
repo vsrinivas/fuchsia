@@ -106,6 +106,7 @@ class Device : public WlanBaseDevice,
 
     Mlme mlme_ __TA_GUARDED(lock_);
 
+    bool dead_ __TA_GUARDED(lock_) = false;
     mx::channel channel_ __TA_GUARDED(lock_);
 
     std::mutex packet_queue_lock_;

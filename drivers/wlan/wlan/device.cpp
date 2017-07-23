@@ -122,6 +122,11 @@ mx_status_t Device::QueuePacket(mxtl::unique_ptr<Packet> packet) {
 
 void Device::DdkUnbind() {
     debugfn();
+    {
+        std::lock_guard<std::mutex> lock(lock_);
+        channel_.reset();
+        dead_ = true;
+    }
     device_remove(mxdev());
 }
 
@@ -440,6 +445,9 @@ mx_status_t Device::GetChannel(mx::channel* out) {
     MX_DEBUG_ASSERT(out != nullptr);
 
     std::lock_guard<std::mutex> lock(lock_);
+    if (dead_) {
+        return MX_ERR_PEER_CLOSED;
+    }
     if (!port_.is_valid()) {
         return MX_ERR_BAD_STATE;
     }
