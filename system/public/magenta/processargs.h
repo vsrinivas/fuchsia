@@ -197,6 +197,9 @@ struct mx_loader_svc_msg {
 // arg=0, data[] configuration (file) name (asciiz)
 // reply includes vmo handle on success
 
+#define LOADER_SVC_OP_CONFIG 7
+// arg=0, data[] configuration string to affect later loading (asciiz)
+// e.g. "asan"
 
 // --- Compatibility Defines ---
 // TODO: remove once Fuchsia deps are resolved

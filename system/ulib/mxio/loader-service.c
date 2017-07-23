@@ -47,7 +47,17 @@ static void __PRINTFLIKE(2, 3) log_printf(mx_handle_t log,
     mx_log_write(log, len, buf, 0u);
 }
 
-static const char* libpaths[] = {
+struct mxio_multiloader {
+    char name[MX_MAX_NAME_LEN];
+    mtx_t dispatcher_lock;
+    mxio_dispatcher_t* dispatcher;
+    mx_handle_t dispatcher_log;
+
+    char config_prefix[32];
+    bool config_exclusive;
+};
+
+static const char* const libpaths[] = {
     "/system/lib",
     "/boot/lib",
 };
@@ -129,21 +139,57 @@ static mx_status_t publish_data_sink(mx_handle_t vmo, const char* sink_name) {
     return MX_OK;
 }
 
-static mx_handle_t default_load_object(void* ignored,
+// When loading a library object, search in the hard-coded locations.
+static int open_from_libpath(const char* prefix, const char* fn) {
+    int fd = -1;
+    for (size_t n = 0; fd < 0 && n < countof(libpaths); ++n) {
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s%s", libpaths[n], prefix, fn);
+        fd = open(path, O_RDONLY);
+    }
+    return fd;
+}
+
+static mx_handle_t default_load_object(void* cookie,
                                        uint32_t load_op,
                                        mx_handle_t request_handle,
                                        const char* fn) {
+    mxio_multiloader_t* ml = cookie;
+
+    if (request_handle != MX_HANDLE_INVALID &&
+        load_op != LOADER_SVC_OP_PUBLISH_DATA_SINK) {
+        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
+                request_handle, load_op, fn);
+        mx_handle_close(request_handle);
+    }
+
     switch (load_op) {
-    case LOADER_SVC_OP_LOAD_OBJECT:
-        // When loading a library object, search in the hard-coded locations.
-        for (unsigned n = 0; n < countof(libpaths); n++) {
-            char path[PATH_MAX];
-            snprintf(path, sizeof(path), "%s/%s", libpaths[n], fn);
-            int fd = open(path, O_RDONLY);
-            if (fd >= 0)
-                return load_object_fd(fd, fn);
+    case LOADER_SVC_OP_CONFIG: {
+        size_t len = strlen(fn);
+        if (len < 2 || len >= sizeof(ml->config_prefix) - 1 ||
+            strchr(fn, '/') != NULL) {
+            return MX_ERR_INVALID_ARGS;
         }
+        strncpy(ml->config_prefix, fn, len + 1);
+        ml->config_exclusive = false;
+        if (ml->config_prefix[len - 1] == '!') {
+            --len;
+            ml->config_exclusive = true;
+        }
+        ml->config_prefix[len] = '/';
+        ml->config_prefix[len + 1] = '\0';
+        return MX_OK;
+    }
+    case LOADER_SVC_OP_LOAD_OBJECT: {
+        int fd = -1;
+        if (ml->config_prefix[0] != '\0')
+            fd = open_from_libpath(ml->config_prefix, fn);
+        if (fd < 0 && !ml->config_exclusive)
+            fd = open_from_libpath("", fn);
+        if (fd >= 0)
+            return load_object_fd(fd, fn);
         break;
+    }
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
     case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
         // When loading a script interpreter or debug configuration file,
@@ -206,6 +252,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
 
     mx_handle_t handle = MX_HANDLE_INVALID;
     switch (msg->opcode) {
+    case LOADER_SVC_OP_CONFIG:
     case LOADER_SVC_OP_LOAD_OBJECT:
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
     case LOADER_SVC_OP_LOAD_DEBUG_CONFIG:
@@ -274,24 +321,16 @@ done:
     return 0;
 }
 
-struct mxio_multiloader {
-    char name[MX_MAX_NAME_LEN];
-    mtx_t dispatcher_lock;
-    mxio_dispatcher_t* dispatcher;
-    mx_handle_t dispatcher_log;
-};
-
 mx_status_t mxio_multiloader_create(const char* name,
                                     mxio_multiloader_t** ml_out) {
     if (name == NULL || name[0] == '\0' || ml_out == NULL) {
         return MX_ERR_INVALID_ARGS;
     }
-    mxio_multiloader_t* ml = malloc(sizeof(mxio_multiloader_t));
+    mxio_multiloader_t* ml = calloc(1, sizeof(mxio_multiloader_t));
     if (ml == NULL) {
         return MX_ERR_NO_MEMORY;
     }
 
-    memset(ml, 0, sizeof(*ml));
     strncpy(ml->name, name, sizeof(ml->name) - 1);
     *ml_out = ml;
 
@@ -306,7 +345,7 @@ static mx_status_t multiloader_cb(mx_handle_t h, void* cb, void* cookie) {
     // This uses ml->dispatcher_log without grabbing the lock, but
     // it will never change once the dispatcher that called us is created.
     mxio_multiloader_t* ml = (mxio_multiloader_t*) cookie;
-    return handle_loader_rpc(h, default_load_object, NULL, ml->dispatcher_log);
+    return handle_loader_rpc(h, default_load_object, ml, ml->dispatcher_log);
 }
 
 // TODO(dbort): Provide a name/id for the process that this handle will
