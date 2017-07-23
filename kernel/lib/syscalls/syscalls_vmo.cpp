@@ -29,12 +29,12 @@
 mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t> _out) {
     LTRACEF("size %#" PRIx64 "\n", size);
 
-    if (options)
+    if (options != 0u)
         return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_VMO);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
 
     // create a vm object

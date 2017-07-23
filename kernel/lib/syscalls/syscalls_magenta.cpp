@@ -94,14 +94,13 @@ mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offse
 mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     LTRACEF("options 0x%x\n", options);
 
-    if (options)
+    if (options != 0u)
         return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_EVENT);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
-
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
@@ -130,7 +129,7 @@ mx_status_t sys_eventpair_create(uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_EVPAIR);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
 
     mxtl::RefPtr<Dispatcher> epd0, epd1;

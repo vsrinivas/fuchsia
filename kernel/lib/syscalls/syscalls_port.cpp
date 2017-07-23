@@ -33,7 +33,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_PORT);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
 
     mxtl::RefPtr<Dispatcher> dispatcher;

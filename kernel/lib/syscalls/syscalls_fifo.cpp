@@ -31,7 +31,7 @@ mx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
                             user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_FIFO);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
 
     mxtl::RefPtr<Dispatcher> dispatcher0;

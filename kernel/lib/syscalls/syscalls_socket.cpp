@@ -35,7 +35,7 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_SOCKET);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
 
     mxtl::RefPtr<Dispatcher> socket0, socket1;

@@ -45,7 +45,7 @@ mx_status_t sys_channel_create(
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_CHANNEL);
-    if (res < 0)
+    if (res != MX_OK)
         return res;
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
