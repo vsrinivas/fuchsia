@@ -86,12 +86,12 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 		} else if bss.RcpiMeasurement > 220 {
 			rcpiStr = "RCPI: invalid"
 		} else {
-			rcpiStr = fmt.Sprintf("RCPI: %.1f dBm", float32(bss.RcpiMeasurement) / 2 - 110)
+			rcpiStr = fmt.Sprintf("RCPI: %.1f dBm", float32(bss.RcpiMeasurement)/2-110)
 		}
 		log.Print("    ", rcpiStr)
 	}
 	if bss.RsniMeasurement != 0xff {
-		log.Printf("    RSNI: %.1f dBm", float32(int8(bss.RsniMeasurement)) / 2 - 10)
+		log.Printf("    RSNI: %.1f dBm", float32(int8(bss.RsniMeasurement))/2-10)
 	}
 }
 

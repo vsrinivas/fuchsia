@@ -5,17 +5,17 @@
 package wlan_test
 
 import (
-	. "apps/wlan/wlan"
 	mlme "apps/wlan/services/wlan_mlme"
+	. "apps/wlan/wlan"
 	"testing"
 )
 
 func addBss(index int, ssid string, channel uint8, rssi uint8, resp *mlme.ScanResponse) {
 	bssDesc := mlme.BssDescription{
-		Bssid: [6]uint8{uint8(index), 1, 2, 3, 4, 5},
-		Ssid: ssid,
-		BssType: mlme.BssTypes_Infrastructure,
-		Channel: channel,
+		Bssid:           [6]uint8{uint8(index), 1, 2, 3, 4, 5},
+		Ssid:            ssid,
+		BssType:         mlme.BssTypes_Infrastructure,
+		Channel:         channel,
 		RssiMeasurement: rssi,
 	}
 	resp.BssDescriptionSet = append(resp.BssDescriptionSet, bssDesc)
@@ -27,7 +27,7 @@ func TestCollectResults(t *testing.T) {
 	addBss(1, "def", 1, 0x80, resp)
 	addBss(2, "abc", 6, 0x85, resp)
 
-	aps := CollectResults(resp, "abc")
+	aps := CollectScanResults(resp, "abc")
 	if len(aps) != 2 {
 		t.Fatalf("Failed to collect 2 results for SSID \"abc\" (found %d)", len(aps))
 	}

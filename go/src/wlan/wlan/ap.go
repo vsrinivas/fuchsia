@@ -4,15 +4,16 @@
 
 package wlan
 
-import mlme "apps/wlan/services/wlan_mlme"
+import (
+	mlme "apps/wlan/services/wlan_mlme"
+	"sort"
+)
 
 type AP struct {
 	BSSID    [6]uint8
 	SSID     string
 	BSSDesc  *mlme.BssDescription
 	LastRSSI uint8
-
-	state    State
 }
 
 func NewAP(bssDesc *mlme.BssDescription) *AP {
@@ -21,6 +22,18 @@ func NewAP(bssDesc *mlme.BssDescription) *AP {
 		SSID:     bssDesc.Ssid,
 		BSSDesc:  bssDesc,
 		LastRSSI: 0xff,
-		state:    StateUnknown,
 	}
+}
+
+func CollectScanResults(resp *mlme.ScanResponse, ssid string) []AP {
+	aps := []AP{}
+	for _, s := range resp.BssDescriptionSet {
+		if s.Ssid == ssid {
+			ap := NewAP(&s)
+			ap.LastRSSI = s.RssiMeasurement
+			aps = append(aps, *ap)
+		}
+	}
+	sort.Slice(aps, func(i, j int) bool { return int8(aps[i].LastRSSI) > int8(aps[j].LastRSSI) })
+	return aps
 }
