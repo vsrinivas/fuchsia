@@ -286,8 +286,15 @@ pub fn ticks_per_second() -> u64 {
     unsafe { sys::mx_ticks_per_second() }
 }
 
+pub use magenta_sys::{
+    MX_CPRNG_DRAW_MAX_LEN,
+    MX_CPRNG_ADD_ENTROPY_MAX_LEN,
+};
+
 /// Draw random bytes from the kernel's CPRNG to fill the given buffer. Returns the actual number of
 /// bytes drawn, which may sometimes be less than the size of the buffer provided.
+///
+/// The buffer must have length less than `MX_CPRNG_DRAW_MAX_LEN`.
 ///
 /// Wraps the
 /// [mx_cprng_draw](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/cprng_draw.md)
@@ -299,6 +306,8 @@ pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
 }
 
 /// Mix the given entropy into the kernel CPRNG.
+///
+/// The buffer must have length less than `MX_CPRNG_ADD_ENTROPY_MAX_LEN`.
 ///
 /// Wraps the
 /// [mx_cprng_add_entropy](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/cprng_add_entropy.md)
@@ -729,6 +738,16 @@ mod tests {
         assert_eq!(cprng_draw(&mut buffer), Ok(20));
         assert_ne!(buffer[0], 0);
         assert_ne!(buffer[19], 0);
+    }
+
+    #[test]
+    fn cprng_too_large() {
+        let mut buffer = [0; MX_CPRNG_DRAW_MAX_LEN + 1];
+        assert_eq!(cprng_draw(&mut buffer), Err(Status::ErrInvalidArgs));
+
+        for mut s in buffer.chunks_mut(MX_CPRNG_DRAW_MAX_LEN) {
+            assert_eq!(cprng_draw(&mut s), Ok(s.len()));
+        }
     }
 
     #[test]

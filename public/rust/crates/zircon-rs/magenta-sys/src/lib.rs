@@ -181,6 +181,10 @@ bitflags! {
 // clock ids
 pub const MX_CLOCK_MONOTONIC: u32 = 0;
 
+// Buffer size limits on the cprng syscalls
+pub const MX_CPRNG_DRAW_MAX_LEN: usize = 256;
+pub const MX_CPRNG_ADD_ENTROPY_MAX_LEN: usize = 256;
+
 // Socket flags and limits.
 pub const MX_SOCKET_HALF_CLOSE: u32 = 1;
 
