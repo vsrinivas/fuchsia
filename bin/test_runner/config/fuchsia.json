@@ -5,6 +5,10 @@
       "exec": "/system/bin/report_result /system/test/go_os_test"
     },
     {
+      "name": "ledger_apptests",
+      "exec": "/system/test/ledger_apptests"
+    },
+    {
       "name": "ledger_unittests",
       "exec": "/system/test/ledger_unittests"
     },
