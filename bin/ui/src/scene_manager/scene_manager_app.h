@@ -34,7 +34,6 @@ class SceneManagerApp {
   app::ApplicationContext* const application_context_;
 
   std::unique_ptr<DemoHarness> demo_harness_;
-  escher::VulkanContext vulkan_context_;
   escher::Escher escher_;
   std::unique_ptr<SceneManagerImpl> scene_manager_;
 

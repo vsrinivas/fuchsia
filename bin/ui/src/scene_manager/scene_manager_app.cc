@@ -15,8 +15,7 @@ SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
                                  std::unique_ptr<DemoHarness> demo_harness)
     : application_context_(app_context),
       demo_harness_(std::move(demo_harness)),
-      vulkan_context_(demo_harness_->GetVulkanContext()),
-      escher_(vulkan_context_),
+      escher_(demo_harness_->device_queues()),
       scene_manager_(std::make_unique<SceneManagerImpl>(
           std::make_unique<Engine>(display_manager,
                                    &escher_,

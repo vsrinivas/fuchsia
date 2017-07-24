@@ -17,8 +17,8 @@ void EscherTestEnvironment::SetUp(std::string tests_name) {
       DemoHarness::New(DemoHarness::WindowParams{tests_name, kScreenWidth,
                                                  kScreenHeight, 2, false},
                        DemoHarness::InstanceParams());
-  escher_ = std::make_unique<escher::Escher>(
-      escher_demo_harness_->GetVulkanContext());
+  escher_ =
+      std::make_unique<escher::Escher>(escher_demo_harness_->device_queues());
 }
 
 void EscherTestEnvironment::TearDown() {

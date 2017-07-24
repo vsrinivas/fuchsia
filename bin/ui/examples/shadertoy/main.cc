@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
         {{"VK_LAYER_LUNARG_standard_validation"}, {"VK_EXT_debug_report"}});
     auto vulkan_device = escher::VulkanDeviceQueues::New(vulkan_instance, {});
 
-    escher::Escher escher(vulkan_device->GetVulkanContext());
+    escher::Escher escher(vulkan_device);
 
     std::unique_ptr<app::ApplicationContext> app_context(
         app::ApplicationContext::CreateFromStartupInfo());
