@@ -31,6 +31,16 @@ void LedgerRepositoryImpl::BindRepository(
   bindings_.AddBinding(this, std::move(repository_request));
 }
 
+std::vector<fidl::InterfaceRequest<LedgerRepository>>
+LedgerRepositoryImpl::Unbind() {
+  std::vector<fidl::InterfaceRequest<LedgerRepository>> handles;
+  for (auto& binding : bindings_) {
+    handles.push_back(binding->Unbind());
+  }
+  bindings_.CloseAllBindings();
+  return handles;
+}
+
 void LedgerRepositoryImpl::GetLedger(
     fidl::Array<uint8_t> ledger_name,
     fidl::InterfaceRequest<Ledger> ledger_request,

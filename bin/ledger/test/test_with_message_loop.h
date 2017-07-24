@@ -14,8 +14,9 @@
 
 namespace test {
 
-bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
-                             ftl::TimeDelta timeout);
+bool RunGivenLoopWithTimeout(
+    mtl::MessageLoop* message_loop,
+    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
 
 bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
                        std::function<bool()> condition,

@@ -11,11 +11,14 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/test/fake_token_provider.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "apps/test_runner/lib/reporting/results_queue.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -69,9 +72,8 @@ class LedgerAppTest : public ::testing::Test {
       }
     });
 
-    app::ConnectToService(
-        child_services.get(),
-        fidl::GetSynchronousProxy(&ledger_repository_factory_));
+    app::ConnectToService(child_services.get(),
+                          ledger_repository_factory_.NewRequest());
     app::ConnectToService(child_services.get(),
                           fidl::GetSynchronousProxy(&controller_));
   }
@@ -85,8 +87,7 @@ class LedgerAppTest : public ::testing::Test {
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
 
  protected:
-  fidl::SynchronousInterfacePtr<ledger::LedgerRepositoryFactory>
-      ledger_repository_factory_;
+  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
   fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
 };
@@ -98,7 +99,9 @@ TEST_F(LedgerAppTest, PutAndGet) {
   files::ScopedTempDir tmp_dir;
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), nullptr, nullptr,
-      fidl::GetSynchronousProxy(&ledger_repository), &status);
+      fidl::GetSynchronousProxy(&ledger_repository),
+      callback::Capture([] { loop_->PostQuitTask(); }, &status));
+  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
   ASSERT_EQ(Status::OK, status);
 
   ledger_repository->GetLedger(TestArray(), fidl::GetSynchronousProxy(&ledger_),
@@ -154,11 +157,18 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
 
   ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
   firebase_config->server_id = "network_is_disabled_anyway";
-  // Has to be empty so that we don't try to obtain auth tokens.
-  firebase_config->api_key = "";
+  firebase_config->api_key = "abc";
+  test::FakeTokenProvider token_provider("id_token", "local_id", "email",
+                                         "client_id");
+  modular::auth::TokenProviderPtr token_provider_ptr;
+  fidl::BindingSet<modular::auth::TokenProvider> token_provider_bindings;
+  token_provider_bindings.AddBinding(&token_provider,
+                                     token_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), std::move(firebase_config), nullptr,
-      ledger_repository.NewRequest(), &status);
+      tmp_dir.path(), std::move(firebase_config), std::move(token_provider_ptr),
+      ledger_repository.NewRequest(),
+      callback::Capture([] { loop_->PostQuitTask(); }, &status));
+  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
   ASSERT_EQ(Status::OK, status);
 
   bool repo_disconnected = false;
@@ -167,6 +177,68 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
+  bool cleared = test::RunGivenLoopUntil(
+      loop_, [deletion_sentinel_path, &repo_disconnected] {
+        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+      });
+  EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
+  EXPECT_TRUE(repo_disconnected);
+  EXPECT_TRUE(cleared);
+
+  // Verify that the Ledger app didn't crash.
+  EXPECT_FALSE(ledger_shut_down);
+}
+
+TEST_F(LedgerAppTest, EraseRepository) {
+  Init({"--no_network_for_testing"});
+  bool ledger_shut_down = false;
+  RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
+
+  Status status;
+  files::ScopedTempDir tmp_dir;
+  std::string content_path = tmp_dir.path() + "/content";
+  std::string deletion_sentinel_path = content_path + "/sentinel";
+  ASSERT_TRUE(files::CreateDirectory(content_path));
+  ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
+
+  ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
+  firebase_config->server_id = "network_is_disabled_anyway";
+  firebase_config->api_key = "abc";
+  test::FakeTokenProvider token_provider("id_token", "local_id", "email",
+                                         "client_id");
+  fidl::BindingSet<modular::auth::TokenProvider> token_provider_bindings;
+
+  // Connect to the repository, so that we can verify that we're disconnected
+  // when the erase method is called.
+  ledger::LedgerRepositoryPtr ledger_repository;
+  modular::auth::TokenProviderPtr token_provider_ptr_1;
+  token_provider_bindings.AddBinding(&token_provider,
+                                     token_provider_ptr_1.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), firebase_config.Clone(), std::move(token_provider_ptr_1),
+      ledger_repository.NewRequest(),
+      callback::Capture([] { loop_->PostQuitTask(); }, &status));
+  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
+  ASSERT_EQ(Status::OK, status);
+
+  bool repo_disconnected = false;
+  ledger_repository.set_connection_error_handler(
+      [&repo_disconnected] { repo_disconnected = true; });
+
+  // Erase the repository - this is expected to fail as network is disabled for
+  // this test, but it should still erase the local storage and disconnect the
+  // client.
+  modular::auth::TokenProviderPtr token_provider_ptr_2;
+  token_provider_bindings.AddBinding(&token_provider,
+                                     token_provider_ptr_2.NewRequest());
+  ledger_repository_factory_->EraseRepository(
+      tmp_dir.path(), firebase_config.Clone(), std::move(token_provider_ptr_2),
+      callback::Capture([] { loop_->PostQuitTask(); }, &status));
+  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
+  ASSERT_EQ(Status::INTERNAL_ERROR, status);
+
+  // Verify that the local storage was cleared and the client was disconnected.
   bool cleared = test::RunGivenLoopUntil(
       loop_, [deletion_sentinel_path, &repo_disconnected] {
         return !files::IsFile(deletion_sentinel_path) && repo_disconnected;

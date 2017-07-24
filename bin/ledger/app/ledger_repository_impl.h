@@ -35,6 +35,9 @@ class LedgerRepositoryImpl : public LedgerRepository {
   void BindRepository(
       fidl::InterfaceRequest<LedgerRepository> repository_request);
 
+  // Releases all handles bound to this repository impl.
+  std::vector<fidl::InterfaceRequest<LedgerRepository>> Unbind();
+
  private:
   // LedgerRepository:
   void GetLedger(fidl::Array<uint8_t> ledger_name,

@@ -148,6 +148,22 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
+  // Shuts down the repository impl (if already initialized) and detaches all
+  // handles bound to it, moving their owneship to the container.
+  void Detach() {
+    if (ledger_repository_) {
+      detached_handles_ = ledger_repository_->Unbind();
+      ledger_repository_.reset();
+    }
+    for (auto& request : requests_) {
+      detached_handles_.push_back(std::move(request.first));
+    }
+
+    // TODO(ppi): rather than failing all already pending and future requests,
+    // we should stash them and fullfill them once the deletion is finished.
+    status_ = Status::INTERNAL_ERROR;
+  }
+
  private:
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_;
@@ -156,6 +172,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
                         std::function<void(Status)>>>
       requests_;
   ftl::Closure on_empty_callback_;
+  std::vector<fidl::InterfaceRequest<LedgerRepository>> detached_handles_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
@@ -284,7 +301,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
   if (find_repository != repositories_.end()) {
     FTL_LOG(WARNING) << "The repository to be erased is running, "
                      << "shutting it down before erasing.";
-    repositories_.erase(find_repository);
+    find_repository->second.Detach();
   }
 
   Status status = DeleteRepositoryDirectory(repository_information);
@@ -307,13 +324,18 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
           environment_->main_runner(), environment_->network_service(),
           firebase_config->server_id, firebase_config->api_key,
           std::move(token_provider_ptr)),
-      [callback](bool succeeded) {
+      ftl::MakeCopyable([
+        this, callback, delete_repository = std::move(find_repository)
+      ](bool succeeded) {
+        if (delete_repository != repositories_.end()) {
+          repositories_.erase(delete_repository);
+        }
         if (succeeded) {
           callback(Status::OK);
         } else {
           callback(Status::INTERNAL_ERROR);
         }
-      });
+      }));
 }
 
 // Verifies that the current server id is not different from the server id used
@@ -400,21 +422,17 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(
     RepositoryInformation repository_information) {
-  FTL_LOG(ERROR)
-      << "Data in the cloud is incompatible with the local state, "
-      << "erasing the local state. Log out and back in to sync the state from "
-      << "the cloud.";
-  FTL_LOG(ERROR)
-      << "(This usually happens when Ledger state was reset on one device but "
-      << "not on others.)";
+  FTL_LOG(WARNING)
+      << "Data in the cloud was wiped out, erasing local state. "
+      << "This should log you out, log back in to start syncing again.";
 
   // First, shut down the repository so that we can delete the files while it's
   // not running.
   auto find_repository = repositories_.find(repository_information.name);
   FTL_DCHECK(find_repository != repositories_.end());
-  repositories_.erase(find_repository);
-
+  find_repository->second.Detach();
   DeleteRepositoryDirectory(repository_information);
+  repositories_.erase(find_repository);
 }
 
 Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
