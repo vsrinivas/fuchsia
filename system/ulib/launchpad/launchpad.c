@@ -413,8 +413,8 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
 
 #define LOADER_SVC_MSG_MAX 1024
 
-static mx_status_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
-                                  const void* data, size_t len, mx_handle_t* out) {
+static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
+                                  const void* data, size_t len) {
     static _Atomic mx_txid_t next_txid;
 
     struct {
@@ -464,11 +464,10 @@ static mx_status_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
             goto protocol_violation;
         if (msg.header.arg > 0)
             goto protocol_violation;
-        *out = MX_HANDLE_INVALID;
-    } else {
-        *out = handle_count ? handle : MX_HANDLE_INVALID;
+        handle = msg.header.arg;
     }
-    return msg.header.arg;
+
+    return handle;
 }
 
 static mx_status_t setup_loader_svc(launchpad_t* lp) {
@@ -529,12 +528,11 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
     if (status != MX_OK)
         return status;
 
-    mx_handle_t interp_vmo;
-    status = loader_svc_rpc(
+    mx_handle_t interp_vmo = loader_svc_rpc(
         lp->special_handles[HND_LOADER_SVC], LOADER_SVC_OP_LOAD_OBJECT,
-        interp, interp_len, &interp_vmo);
-    if (status != MX_OK)
-        return status;
+        interp, interp_len);
+    if (interp_vmo < 0)
+        return interp_vmo;
 
     if (lp->fresh_process) {
         // A fresh process using PT_INTERP might be loading a libc.so that
@@ -748,11 +746,11 @@ mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
         if (status != MX_OK)
             return lp_error(lp, status, "file_load: setup_loader_svc() failed");
 
-        status = loader_svc_rpc(lp->special_handles[HND_LOADER_SVC],
+        vmo = loader_svc_rpc(lp->special_handles[HND_LOADER_SVC],
                              LOADER_SVC_OP_LOAD_SCRIPT_INTERP,
-                             interp_start, interp_len, &vmo);
-        if (status != MX_OK)
-            return lp_error(lp, status, "file_load: loader_svc_rpc() failed");
+                             interp_start, interp_len);
+        if (vmo < 0)
+            return lp_error(lp, vmo, "file_load: loader_svc_rpc() failed");
     }
 
     // Finally, load the interpreter itself
