@@ -34,7 +34,7 @@ modules="magma-dev"
 
 rm -f $bootfs
 cd $fuchsia_root
-$fuchsia_root/packages/gn/gen.py --modules $modules --$build --args="$args" --ignore-skia
+$fuchsia_root/packages/gn/gen.py --modules $modules --$build --args="$args" --ignore-skia --goma
 $fuchsia_root/buildtools/ninja -C $build_dir
 cp $build_dir/user.bootfs $bootfs
 
