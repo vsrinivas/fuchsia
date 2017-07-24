@@ -65,7 +65,7 @@
         },
         {
             "binary": "ledger_apptests",
-            "bootfs_path": "apps/ledger_apptests"
+            "bootfs_path": "test/ledger_apptests"
         },
         {
             "binary": "launch_benchmark",
