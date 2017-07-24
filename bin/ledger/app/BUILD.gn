@@ -169,6 +169,7 @@ executable("application_tests") {
     "//apps/ledger/services/internal:internal_sync",
     "//apps/ledger/services/public:public_sync",
     "//apps/ledger/src/test:app_test",
+    "//apps/ledger/src/test:app_test_main",
     "//apps/ledger/src/test:lib",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",

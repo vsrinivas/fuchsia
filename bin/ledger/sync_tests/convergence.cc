@@ -8,7 +8,6 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/data_generator.h"
-#include "apps/ledger/src/test/get_ledger.h"
 
 namespace sync_test {
 class PageWatcherImpl : public ledger::PageWatcher {
@@ -60,14 +59,14 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
 
-class ConvergenceTest : public SyncTestBase,
+class ConvergenceTest : public SyncTest,
                         public ::testing::WithParamInterface<int> {
  public:
   ConvergenceTest(){};
   ~ConvergenceTest() override{};
 
   void SetUp() override {
-    SyncTestBase::SetUp();
+    SyncTest::SetUp();
     num_ledgers_ = GetParam();
     ASSERT_GT(num_ledgers_, 1);
 
@@ -77,7 +76,7 @@ class ConvergenceTest : public SyncTestBase,
           "sync", i == 0 ? test::Erase::ERASE_CLOUD : test::Erase::KEEP_DATA));
       pages_.emplace_back();
       ledger::Status status = test::GetPageEnsureInitialized(
-          message_loop_, &(ledgers_[i]->ledger),
+          &message_loop_, &(ledgers_[i]->ledger),
           // The first ledger gets a random page id, the others use the same id
           // for their pages.
           i == 0 ? nullptr : page_id.Clone(), &pages_[i], &page_id);
@@ -85,7 +84,7 @@ class ConvergenceTest : public SyncTestBase,
     }
   }
 
-  void TearDown() override { SyncTestBase::TearDown(); }
+  void TearDown() override { SyncTest::TearDown(); }
 
  protected:
   std::unique_ptr<PageWatcherImpl> WatchPageContents(ledger::PagePtr* page) {
@@ -112,7 +111,7 @@ class ConvergenceTest : public SyncTestBase,
   }
 
   int num_ledgers_;
-  std::vector<std::unique_ptr<SyncTestBase::LedgerPtrHolder>> ledgers_;
+  std::vector<std::unique_ptr<SyncTest::LedgerPtrHolder>> ledgers_;
   std::vector<ledger::PagePtr> pages_;
   test::DataGenerator data_generator_;
 };

@@ -7,10 +7,10 @@
 #include <mutex>
 
 #include "application/lib/app/application_context.h"
+#include "apps/ledger/src/test/get_ledger.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "apps/test_runner/lib/reporting/results_queue.h"
-#include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/threading/thread.h"
@@ -24,9 +24,7 @@ AppTest::AppTest()
 
 AppTest::~AppTest() {}
 
-}  // namespace test
-
-int main(int argc, char** argv) {
+int TestMain(int argc, char** argv) {
   mtl::Thread reporting_thread;
 
   test_runner::ResultsQueue queue;
@@ -60,3 +58,5 @@ int main(int argc, char** argv) {
   reporting_thread.Join();
   return status;
 }
+
+}  // namespace test

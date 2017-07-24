@@ -6,7 +6,6 @@
 #define APPS_LEDGER_SRC_TEST_APP_TEST_H_
 
 #include "application/lib/app/application_context.h"
-#include "application/services/application_environment.fidl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 
 namespace test {
@@ -23,6 +22,8 @@ class AppTest : public TestWithMessageLoop {
 
   std::unique_ptr<app::ApplicationContext> application_context_;
 };
+
+int TestMain(int argc, char** argv);
 
 }  // namespace test
 

@@ -62,6 +62,20 @@ source_set("app_test") {
   configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
+source_set("app_test_main") {
+  testonly = true
+
+  sources = [
+    "app_test_main.cc",
+  ]
+
+  deps = [
+    ":app_test",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
 source_set("unittests") {
   testonly = true
 
