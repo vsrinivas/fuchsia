@@ -28,7 +28,7 @@ class FakeCancellable : public Cancellable {
   }
 
   void SetOnDone(ftl::Closure callback) override {
-    ++nb_on_done;
+    ++nb_set_on_done;
     this->callback = callback;
   }
 
@@ -39,7 +39,7 @@ class FakeCancellable : public Cancellable {
   }
   int nb_cancel = 0;
   int nb_is_done = 0;
-  int nb_on_done = 0;
+  int nb_set_on_done = 0;
 
   ftl::Closure callback;
 
@@ -88,18 +88,18 @@ TEST(CancellableContainer, CancelOnDestruction) {
   auto cancellable2 = FakeCancellable::Create();
 
   EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(0, cancellable1->nb_on_done);
+  EXPECT_EQ(0, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(0, cancellable2->nb_on_done);
+  EXPECT_EQ(0, cancellable2->nb_set_on_done);
   {
     CancellableContainer container;
     container.emplace(cancellable1);
     container.emplace(cancellable2);
 
     EXPECT_EQ(0, cancellable1->nb_cancel);
-    EXPECT_EQ(1, cancellable1->nb_on_done);
+    EXPECT_EQ(1, cancellable1->nb_set_on_done);
     EXPECT_EQ(0, cancellable2->nb_cancel);
-    EXPECT_EQ(1, cancellable2->nb_on_done);
+    EXPECT_EQ(1, cancellable2->nb_set_on_done);
   }
 
   EXPECT_EQ(1, cancellable1->nb_cancel);
@@ -111,18 +111,18 @@ TEST(CancellableContainer, CancelOnReset) {
   auto cancellable2 = FakeCancellable::Create();
 
   EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(0, cancellable1->nb_on_done);
+  EXPECT_EQ(0, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(0, cancellable2->nb_on_done);
+  EXPECT_EQ(0, cancellable2->nb_set_on_done);
 
   CancellableContainer container;
   container.emplace(cancellable1);
   container.emplace(cancellable2);
 
   EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(1, cancellable1->nb_on_done);
+  EXPECT_EQ(1, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(1, cancellable2->nb_on_done);
+  EXPECT_EQ(1, cancellable2->nb_set_on_done);
 }
 
 TEST(CancellableContainer, ClearOnDone) {
@@ -131,18 +131,18 @@ TEST(CancellableContainer, ClearOnDone) {
   auto cancellable2 = FakeCancellable::Create();
 
   EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(0, cancellable1->nb_on_done);
+  EXPECT_EQ(0, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(0, cancellable2->nb_on_done);
+  EXPECT_EQ(0, cancellable2->nb_set_on_done);
   {
     CancellableContainer container;
     container.emplace(cancellable1);
     container.emplace(cancellable2);
 
     EXPECT_EQ(0, cancellable1->nb_cancel);
-    EXPECT_EQ(1, cancellable1->nb_on_done);
+    EXPECT_EQ(1, cancellable1->nb_set_on_done);
     EXPECT_EQ(0, cancellable2->nb_cancel);
-    EXPECT_EQ(1, cancellable2->nb_on_done);
+    EXPECT_EQ(1, cancellable2->nb_set_on_done);
 
     cancellable1->Do();
     EXPECT_EQ(0, cancellable1->nb_cancel);
@@ -160,24 +160,24 @@ TEST(CancellableContainer, Move) {
   auto cancellable2 = FakeCancellable::Create();
 
   EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(0, cancellable1->nb_on_done);
+  EXPECT_EQ(0, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(0, cancellable2->nb_on_done);
+  EXPECT_EQ(0, cancellable2->nb_set_on_done);
 
   CancellableContainer container;
   container.emplace(cancellable1);
   container.emplace(cancellable2);
   EXPECT_EQ(0, cancellable1->nb_cancel);
-  EXPECT_EQ(1, cancellable1->nb_on_done);
+  EXPECT_EQ(1, cancellable1->nb_set_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
-  EXPECT_EQ(1, cancellable2->nb_on_done);
+  EXPECT_EQ(1, cancellable2->nb_set_on_done);
 
   {
     CancellableContainer moved = std::move(container);
     EXPECT_EQ(0, cancellable1->nb_cancel);
-    EXPECT_EQ(1, cancellable1->nb_on_done);
+    EXPECT_EQ(1, cancellable1->nb_set_on_done);
     EXPECT_EQ(0, cancellable2->nb_cancel);
-    EXPECT_EQ(1, cancellable2->nb_on_done);
+    EXPECT_EQ(1, cancellable2->nb_set_on_done);
   }
 
   EXPECT_EQ(1, cancellable1->nb_cancel);
