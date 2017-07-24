@@ -17,6 +17,7 @@
 #define PCIE_MAX_LEGACY_IRQ_PINS 4
 #define PCIE_MAX_DEVICES_PER_BUS 32
 #define PCIE_MAX_FUNCTIONS_PER_DEVICE 8
+#define PCI_CONFIG_SIZE 256
 #define PCIE_EXTENDED_CONFIG_SIZE 4096
 
 #define PANIC_UNIMPLEMENTED __builtin_trap()
@@ -173,6 +174,67 @@ cleanup:
     return status;
 }
 
+/* @brief Find the PCI config (returns the first one found)
+ *
+ * @param arg The structure to populate
+ *
+ * @return MX_OK on success.
+ */
+static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
+    ACPI_TABLE_HEADER* raw_table = NULL;
+    ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
+    if (status != AE_OK) {
+        xprintf("could not find MCFG\n");
+        return MX_ERR_NOT_FOUND;
+    }
+    ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
+    ACPI_MCFG_ALLOCATION* table_start = ((void*)mcfg) + sizeof(*mcfg);
+    ACPI_MCFG_ALLOCATION* table_end = ((void*)mcfg) + mcfg->Header.Length;
+    uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
+    if (table_bytes % sizeof(*table_start) != 0) {
+        xprintf("MCFG has unexpected size\n");
+        return MX_ERR_INTERNAL;
+    }
+    int num_entries = table_end - table_start;
+    if (num_entries == 0) {
+        xprintf("MCFG has no entries\n");
+        return MX_ERR_NOT_FOUND;
+    }
+    if (num_entries > 1) {
+        xprintf("MCFG has more than one entry, just taking the first\n");
+    }
+
+    size_t size_per_bus = PCIE_EXTENDED_CONFIG_SIZE *
+                          PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
+    int num_buses = table_start->EndBusNumber - table_start->StartBusNumber + 1;
+
+    if (table_start->PciSegment != 0) {
+        xprintf("Non-zero segment found\n");
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
+    arg->addr_windows[0].is_mmio = true;
+    arg->addr_windows[0].has_ecam = true;
+    arg->addr_windows[0].bus_start = table_start->StartBusNumber;
+    arg->addr_windows[0].bus_end = table_start->EndBusNumber;
+
+    // We need to adjust the physical address we received to align to the proper
+    // bus number.
+    //
+    // Citation from PCI Firmware Spec 3.0:
+    // For PCI-X and PCI Express platforms utilizing the enhanced
+    // configuration access method, the base address of the memory mapped
+    // configuration space always corresponds to bus number 0 (regardless
+    // of the start bus number decoded by the host bridge).
+    arg->addr_windows[0].base = table_start->Address + size_per_bus * arg->addr_windows[0].bus_start;
+    // The size of this mapping is defined in the PCI Firmware v3 spec to be
+    // big enough for all of the buses in this config.
+    arg->addr_windows[0].size = size_per_bus * num_buses;
+    arg->addr_window_count = 1;
+    return MX_OK;
+}
+
+
 /* @brief Device enumerator for platform_configure_pcie_legacy_irqs */
 static ACPI_STATUS get_pcie_devices_irq(
     ACPI_HANDLE object,
@@ -250,62 +312,43 @@ static mx_status_t find_pcie_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
     return MX_OK;
 }
 
-/* @brief Find the PCIe config (returns the first one found)
+static ACPI_STATUS find_pci_configs_cb(
+        ACPI_HANDLE object, uint32_t nesting_level, void* _ctx, void** ret) {
+    ACPI_DEVICE_INFO* info;
+
+    size_t size_per_bus = PCI_CONFIG_SIZE *
+                          PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
+    mx_pci_init_arg_t* arg = (mx_pci_init_arg_t*)_ctx;
+
+    // TODO(cja): This is essentially a hacky solution to deal with
+    // legacy PCI on Virtualbox and GCE. When the ACPI bus driver
+    // is enabled we'll be using proper binding and not need this
+    // anymore.
+    if (AcpiGetObjectInfo(object, &info) == AE_OK) {
+        arg->addr_windows[0].is_mmio = false;
+        arg->addr_windows[0].has_ecam = false;
+        arg->addr_windows[0].base = 0;
+        arg->addr_windows[0].bus_start = 0;
+        arg->addr_windows[0].bus_end = 0;
+        arg->addr_windows[0].size = size_per_bus;
+        arg->addr_window_count = 1;
+
+        return AE_OK;
+    }
+
+    return AE_ERROR;
+}
+
+/* @brief Find the PCI config (returns the first one found)
  *
  * @param arg The structure to populate
  *
  * @return MX_OK on success.
  */
-static mx_status_t find_pcie_config(mx_pci_init_arg_t* arg) {
-    ACPI_TABLE_HEADER* raw_table = NULL;
-    ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
-    if (status != AE_OK) {
-        xprintf("could not find MCFG\n");
-        return MX_ERR_NOT_FOUND;
-    }
-    ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
-    ACPI_MCFG_ALLOCATION* table_start = ((void*)mcfg) + sizeof(*mcfg);
-    ACPI_MCFG_ALLOCATION* table_end = ((void*)mcfg) + mcfg->Header.Length;
-    uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
-    if (table_bytes % sizeof(*table_start) != 0) {
-        xprintf("MCFG has unexpected size\n");
-        return MX_ERR_INTERNAL;
-    }
-    int num_entries = table_end - table_start;
-    if (num_entries == 0) {
-        xprintf("MCFG has no entries\n");
-        return MX_ERR_NOT_FOUND;
-    }
-    if (num_entries > 1) {
-        xprintf("MCFG has more than one entry, just taking the first\n");
-    }
-
-    size_t size_per_bus = PCIE_EXTENDED_CONFIG_SIZE *
-                          PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
-    int num_buses = table_start->EndBusNumber - table_start->StartBusNumber + 1;
-
-    if (table_start->PciSegment != 0) {
-        xprintf("Non-zero segment found\n");
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
-    arg->ecam_windows[0].bus_start = table_start->StartBusNumber;
-    arg->ecam_windows[0].bus_end = table_start->EndBusNumber;
-
-    // We need to adjust the physical address we received to align to the proper
-    // bus number.
-    //
-    // Citation from PCI Firmware Spec 3.0:
-    // For PCI-X and PCI Express platforms utilizing the enhanced
-    // configuration access method, the base address of the memory mapped
-    // configuration space always corresponds to bus number 0 (regardless
-    // of the start bus number decoded by the host bridge).
-    arg->ecam_windows[0].base = table_start->Address + size_per_bus * arg->ecam_windows[0].bus_start;
-    // The size of this mapping is defined in the PCI Firmware v3 spec to be
-    // big enough for all of the buses in this config.
-    arg->ecam_windows[0].size = size_per_bus * num_buses;
-    arg->ecam_window_count = 1;
-    return MX_OK;
+static mx_status_t find_pci_config(mx_pci_init_arg_t* arg) {
+    // TODO: Although this will find every PCI legacy root, we're presently
+    // hardcoding to just use the first at bus 0 dev 0 func 0 segment 0.
+    return AcpiGetDevices((char*)"PNP0A03", find_pci_configs_cb, arg, NULL);
 }
 
 /* @brief Compute PCIe initialization information
@@ -320,15 +363,21 @@ mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
     mx_pci_init_arg_t* res = NULL;
 
     // TODO(teisenbe): We assume only one ECAM window right now...
-    size_t obj_size = sizeof(*res) + sizeof(res->ecam_windows[0]) * 1;
+    size_t obj_size = sizeof(*res) + sizeof(res->addr_windows[0]) * 1;
     res = calloc(1, obj_size);
     if (!res) {
         return MX_ERR_NO_MEMORY;
     }
 
+    // First look for a PCIe root complex. If none is found, try legacy PCI.
+    // This presently only cares about the first root found, multiple roots
+    // will be handled when the PCI bus driver binds to roots via ACPI.
     mx_status_t status = find_pcie_config(res);
     if (status != MX_OK) {
-        goto fail;
+        status = find_pci_config(res);
+        if (status != MX_OK) {
+            goto fail;
+        }
     }
 
     status = find_pcie_legacy_irq_mapping(res);
@@ -337,7 +386,7 @@ mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
     }
 
     *arg = res;
-    *size = sizeof(*res) + sizeof(res->ecam_windows[0]) * res->ecam_window_count;
+    *size = sizeof(*res) + sizeof(res->addr_windows[0]) * res->addr_window_count;
     return MX_OK;
 fail:
     free(res);

@@ -68,17 +68,19 @@ typedef struct mx_pci_init_arg {
         bool active_high;
     } irqs[64];
 
-    uint32_t ecam_window_count;
+    uint32_t addr_window_count;
     struct {
+        bool is_mmio;
+        bool has_ecam;
         uint64_t base;
         size_t size;
         uint8_t bus_start;
         uint8_t bus_end;
-    } ecam_windows[];
+    } addr_windows[];
 } mx_pci_init_arg_t;
 
 #define MX_PCI_INIT_ARG_MAX_ECAM_WINDOWS 1
-#define MX_PCI_INIT_ARG_MAX_SIZE (sizeof(((mx_pci_init_arg_t*)NULL)->ecam_windows[0]) * \
+#define MX_PCI_INIT_ARG_MAX_SIZE (sizeof(((mx_pci_init_arg_t*)NULL)->addr_windows[0]) * \
                                   MX_PCI_INIT_ARG_MAX_ECAM_WINDOWS + \
                                   sizeof(mx_pci_init_arg_t))
 

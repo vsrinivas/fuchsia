@@ -59,42 +59,12 @@ mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle) {
 // driver a handle to the PCIe root complex ACPI node and let it ask for
 // the initialization info.
 mx_status_t devhost_init_pcie(void) {
-    char name[4] = {0};
-    {
-        acpi_rsp_list_children_t* rsp;
-        size_t len;
-        mx_status_t status = acpi_list_children(&acpi_root, &rsp, &len);
-        if (status != MX_OK) {
-            return status;
-        }
-
-        for (uint32_t i = 0; i < rsp->num_children; ++i) {
-            if (!memcmp(rsp->children[i].hid, "PNP0A08", 7)) {
-                memcpy(name, rsp->children[i].name, 4);
-                break;
-            }
-        }
-        free(rsp);
-
-        if (name[0] == 0) {
-            return MX_ERR_NOT_FOUND;
-        }
-    }
-
-    acpi_handle_t pcie_handle;
-    mx_status_t status = acpi_get_child_handle(&acpi_root, name, &pcie_handle);
-    if (status != MX_OK) {
-        return status;
-    }
-
     acpi_rsp_get_pci_init_arg_t* rsp;
     size_t len;
-    status = acpi_get_pci_init_arg(&pcie_handle, &rsp, &len);
+    mx_status_t status = acpi_get_pci_init_arg(&acpi_root, &rsp, &len);
     if (status != MX_OK) {
-        acpi_handle_close(&pcie_handle);
         return status;
     }
-    acpi_handle_close(&pcie_handle);
 
     len -= offsetof(acpi_rsp_get_pci_init_arg_t, arg);
     status = mx_pci_init(get_root_resource(), &rsp->arg, len);

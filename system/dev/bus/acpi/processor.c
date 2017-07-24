@@ -447,21 +447,6 @@ static mx_status_t cmd_get_pci_init_arg(mx_handle_t h, acpi_handle_ctx_t* ctx, v
         return send_error(h, cmd->hdr.request_id, MX_ERR_INVALID_ARGS);
     }
 
-    ACPI_DEVICE_INFO* info = NULL;
-    ACPI_STATUS acpi_status = AcpiGetObjectInfo(ctx->ns_node, &info);
-    if (acpi_status == AE_NO_MEMORY) {
-        return send_error(h, cmd->hdr.request_id, MX_ERR_NO_MEMORY);
-    } else if (acpi_status != AE_OK) {
-        return MX_ERR_BAD_STATE;
-    }
-
-    // Make sure this is the right type of namespace node
-    if (!(info->Flags & ACPI_PCI_ROOT_BRIDGE)) {
-        ACPI_FREE(info);
-        return send_error(h, cmd->hdr.request_id, MX_ERR_WRONG_TYPE);
-    }
-    ACPI_FREE(info);
-
     acpi_rsp_get_pci_init_arg_t* rsp = NULL;
 
     mx_pci_init_arg_t* arg = NULL;

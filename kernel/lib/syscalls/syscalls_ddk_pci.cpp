@@ -150,8 +150,20 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
         }
     }
 
-    const uint32_t win_count = arg->ecam_window_count;
-    if (len != sizeof(*arg) + sizeof(arg->ecam_windows[0]) * win_count) {
+    if (LOCAL_TRACE) {
+        TRACEF("%u address window%s found in init arg\n", arg->addr_window_count,
+               (arg->addr_window_count == 1) ? "" : "s");
+        for (uint32_t i = 0; i < arg->addr_window_count; i++) {
+            printf("[%u]\n\tis_mmio: %d\n\thas_ecam: %d\n\tbase: %#" PRIxPTR "\n"
+                    "\tsize: %zu\n\tbus_start: %u\n\tbus_end: %u\n", i,
+                    arg->addr_windows[i].is_mmio, arg->addr_windows[i].has_ecam,
+                    arg->addr_windows[i].base, arg->addr_windows[i].size,
+                    arg->addr_windows[i].bus_start, arg->addr_windows[i].bus_end);
+        }
+    }
+
+    const uint32_t win_count = arg->addr_window_count;
+    if (len != sizeof(*arg) + sizeof(arg->addr_windows[0]) * win_count) {
         return MX_ERR_INVALID_ARGS;
     }
 
@@ -181,66 +193,67 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
         return MX_ERR_INVALID_ARGS;
     }
 
-    if (arg->ecam_windows[0].bus_start != 0) {
+    if (arg->addr_windows[0].bus_start != 0) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    if (arg->ecam_windows[0].bus_start > arg->ecam_windows[0].bus_end) {
+    if (arg->addr_windows[0].bus_start > arg->addr_windows[0].bus_end) {
         return MX_ERR_INVALID_ARGS;
     }
 
 #if ARCH_X86
     // Check for a quirk that we've seen.  Some systems will report overly large
     // PCIe config regions that collide with architectural registers.
-    unsigned int num_buses = arg->ecam_windows[0].bus_end -
-                             arg->ecam_windows[0].bus_start + 1;
-    paddr_t end = arg->ecam_windows[0].base +
+    unsigned int num_buses = arg->addr_windows[0].bus_end -
+                             arg->addr_windows[0].bus_start + 1;
+    paddr_t end = arg->addr_windows[0].base +
                   num_buses * PCIE_ECAM_BYTE_PER_BUS;
     const paddr_t high_limit = 0xfec00000ULL;
     if (end > high_limit) {
         TRACEF("PCIe config space collides with arch devices, truncating\n");
         end = high_limit;
-        if (end < arg->ecam_windows[0].base) {
+        if (end < arg->addr_windows[0].base) {
             return MX_ERR_INVALID_ARGS;
         }
-        arg->ecam_windows[0].size = ROUNDDOWN(end - arg->ecam_windows[0].base,
+        arg->addr_windows[0].size = ROUNDDOWN(end - arg->addr_windows[0].base,
                                               PCIE_ECAM_BYTE_PER_BUS);
-        uint64_t new_bus_end = (arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) +
-                               arg->ecam_windows[0].bus_start - 1;
+        uint64_t new_bus_end = (arg->addr_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) +
+                               arg->addr_windows[0].bus_start - 1;
         if (new_bus_end >= PCIE_MAX_BUSSES) {
             return MX_ERR_INVALID_ARGS;
         }
-        arg->ecam_windows[0].bus_end = static_cast<uint8_t>(new_bus_end);
+        arg->addr_windows[0].bus_end = static_cast<uint8_t>(new_bus_end);
     }
 #endif
 
-    if (arg->ecam_windows[0].size < PCIE_ECAM_BYTE_PER_BUS) {
-        return MX_ERR_INVALID_ARGS;
-    }
-    if (arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS >
-        PCIE_MAX_BUSSES - arg->ecam_windows[0].bus_start) {
+    if (arg->addr_windows[0].is_mmio) {
+        if (arg->addr_windows[0].size < PCIE_ECAM_BYTE_PER_BUS) {
+            return MX_ERR_INVALID_ARGS;
+        }
+        if (arg->addr_windows[0].size / PCIE_ECAM_BYTE_PER_BUS >
+                PCIE_MAX_BUSSES - arg->addr_windows[0].bus_start) {
 
-        return MX_ERR_INVALID_ARGS;
-    }
+            return MX_ERR_INVALID_ARGS;
+        }
 
-    // TODO(johngro): Update the syscall to pass a paddr_t for base instead of a uint64_t
-    ASSERT(arg->ecam_windows[0].base < mxtl::numeric_limits<paddr_t>::max());
+        // TODO(johngro): Update the syscall to pass a paddr_t for base instead of a uint64_t
+        ASSERT(arg->addr_windows[0].base < mxtl::numeric_limits<paddr_t>::max());
 
-    // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
-    // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
-    // ranges.
-    status_t ret;
-    const PcieBusDriver::EcamRegion ecam = {
-        .phys_base = static_cast<paddr_t>(arg->ecam_windows[0].base),
-        .size = arg->ecam_windows[0].size,
-        .bus_start = 0x00,
-        .bus_end = static_cast<uint8_t>((arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) - 1),
-    };
+        // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
+        // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
+        // ranges.
+        const PcieBusDriver::EcamRegion ecam = {
+            .phys_base = static_cast<paddr_t>(arg->addr_windows[0].base),
+            .size = arg->addr_windows[0].size,
+            .bus_start = 0x00,
+            .bus_end = static_cast<uint8_t>((arg->addr_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) - 1),
+        };
 
-    ret = pcie->AddEcamRegion(ecam);
-    if (ret != MX_OK) {
-        TRACEF("Failed to add ECAM region to PCIe bus driver! (ret %d)\n", ret);
-        return ret;
+        mx_status_t ret = pcie->AddEcamRegion(ecam);
+        if (ret != MX_OK) {
+            TRACEF("Failed to add ECAM region to PCIe bus driver! (ret %d)\n", ret);
+            return ret;
+        }
     }
 
     // TODO(johngro): Change the user-mode and devmgr behavior to add all of the
@@ -250,7 +263,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     if (root == nullptr)
         return MX_ERR_NO_MEMORY;
 
-    ret = pcie->AddRoot(mxtl::move(root));
+    mx_status_t ret = pcie->AddRoot(mxtl::move(root));
     if (ret != MX_OK) {
         TRACEF("Failed to add root complex to PCIe bus driver! (ret %d)\n", ret);
         return ret;
