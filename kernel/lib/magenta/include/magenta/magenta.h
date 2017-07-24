@@ -50,10 +50,13 @@ bool magenta_rights_check(const Handle* handle, mx_rights_t desired);
 
 mx_status_t magenta_sleep(mx_time_t deadline);
 
-// Determines if this handle is to the root resource object.
+// Resource constants (MX_RSRC_KIND_..., etc) are located
+// in system/public/magenta/syscalls/resource.h
+
+// Determines if this handle is to a resource of the specified
+// kind *or* to the root resource, which can stand in for any kind.
 // Used to provide access to privileged syscalls.
-// Later, Resource objects will be finer-grained.
-mx_status_t validate_resource_handle(mx_handle_t handle);
+mx_status_t validate_resource(mx_handle_t handle, uint32_t kind);
 
 // Validates a resource based on type and low/high range;
 mx_status_t validate_ranged_resource(mx_handle_t handle, uint32_t kind, uint64_t low,

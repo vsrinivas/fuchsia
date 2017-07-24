@@ -37,7 +37,7 @@ mx_status_t sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
 
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -81,7 +81,7 @@ mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t
 
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -102,7 +102,7 @@ mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> _data,
                             user_ptr<uint32_t> _actual) {
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -117,7 +117,7 @@ mx_status_t sys_ktrace_control(
         mx_handle_t handle, uint32_t action,uint32_t options, user_ptr<void> _ptr) {
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -137,7 +137,7 @@ mx_status_t sys_ktrace_control(
 mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -161,7 +161,7 @@ mx_status_t sys_mtrace_control(mx_handle_t handle,
                                void* _ptr, uint32_t size) {
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 

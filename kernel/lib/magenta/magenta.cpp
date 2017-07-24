@@ -343,14 +343,15 @@ mx_status_t magenta_sleep(mx_time_t deadline) {
     return thread_sleep_etc(deadline, true);
 }
 
-mx_status_t validate_resource_handle(mx_handle_t handle) {
+mx_status_t validate_resource(mx_handle_t handle, uint32_t kind) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<ResourceDispatcher> resource;
     auto status = up->GetDispatcher(handle, &resource);
     if (status != MX_OK) {
         return status;
     }
-    if (resource->get_kind() == MX_RSRC_KIND_ROOT) {
+    uint32_t rkind = resource->get_kind();
+    if ((rkind == MX_RSRC_KIND_ROOT) || (rkind == kind)) {
         return MX_OK;
     }
     return MX_ERR_ACCESS_DENIED;

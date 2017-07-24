@@ -100,7 +100,7 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
     // TODO: finer grained validation
     // TODO(security): Add additional access checks
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -122,7 +122,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     // TODO: finer grained validation
     // TODO(security): Add additional access checks
     mx_status_t status;
-    if ((status = validate_resource_handle(handle)) < 0) {
+    if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
@@ -276,7 +276,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc,
 
     // TODO: finer grained validation
     mx_status_t status;
-    if ((status = validate_resource_handle(hrsrc)) < 0) {
+    if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
