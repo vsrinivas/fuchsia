@@ -28,6 +28,14 @@ class VulkanDeviceQueues
     vk::SurfaceKHR surface;
   };
 
+  // Device capabilities.
+  struct Caps {
+    uint32_t max_image_width = 0;
+    uint32_t max_image_height = 0;
+
+    Caps(vk::PhysicalDeviceProperties props);
+  };
+
   // Contains dynamically-obtained addresses of device-specific functions.
   struct ProcAddrs {
     ProcAddrs(vk::Device device, const std::set<std::string>& extension_names);
@@ -61,8 +69,11 @@ class VulkanDeviceQueues
   uint32_t vk_transfer_queue_family() const { return transfer_queue_family_; }
   vk::SurfaceKHR vk_surface() const { return params_.surface; }
 
-  // Return the parameterss that were used to create this device and queues.
+  // Return the parameters that were used to create this device and queues.
   const Params& params() const { return params_; }
+
+  // Return the capabilities of this device (e.g. max image width/height, etc.).
+  const Caps& caps() const { return caps_; }
 
   // Return per-device functions that were dynamically looked up.
   const ProcAddrs& proc_addrs() const { return proc_addrs_; }
@@ -91,6 +102,7 @@ class VulkanDeviceQueues
   vk::SurfaceKHR surface_;
   VulkanInstancePtr instance_;
   Params params_;
+  Caps caps_;
   ProcAddrs proc_addrs_;
 };
 

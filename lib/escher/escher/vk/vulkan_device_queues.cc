@@ -21,6 +21,10 @@ static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
 #define GET_DEVICE_PROC_ADDR(XXX) \
   XXX = GetDeviceProcAddr<PFN_vk##XXX>(device, "vk" #XXX)
 
+VulkanDeviceQueues::Caps::Caps(vk::PhysicalDeviceProperties props)
+    : max_image_width(props.limits.maxImageDimension2D),
+      max_image_height(props.limits.maxImageDimension2D) {}
+
 VulkanDeviceQueues::ProcAddrs::ProcAddrs(
     vk::Device device,
     const std::set<std::string>& extension_names) {
@@ -214,6 +218,7 @@ VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device,
       transfer_queue_family_(transfer_queue_family),
       instance_(std::move(instance)),
       params_(std::move(params)),
+      caps_(physical_device.getProperties()),
       proc_addrs_(device_, params_.extension_names) {}
 
 VulkanDeviceQueues::~VulkanDeviceQueues() {
