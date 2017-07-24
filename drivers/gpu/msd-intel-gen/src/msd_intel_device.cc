@@ -530,7 +530,7 @@ int MsdIntelDevice::DeviceThreadLoop()
 
     DLOG("DeviceThreadLoop starting thread 0x%x", device_thread_id_->id());
 
-    constexpr uint32_t kTimeoutMs = 250;
+    constexpr uint32_t kTimeoutMs = 300;
 
     std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
 
