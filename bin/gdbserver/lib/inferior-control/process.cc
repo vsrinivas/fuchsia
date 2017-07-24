@@ -63,14 +63,8 @@ fail:
 bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
   FTL_DCHECK(lp);
 
-  mx_handle_t vmo;
-  mx_status_t status = launchpad_vmo_from_file(binary_path.c_str(), &vmo);
-  if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
-    return false;
-  }
-
-  status = launchpad_elf_load(lp, vmo);
+  mx_status_t status =
+      launchpad_elf_load(lp, launchpad_vmo_from_file(binary_path.c_str()));
   if (status != MX_OK) {
     FTL_LOG(ERROR) << "Could not load binary: " << util::MxErrorString(status);
     return false;
