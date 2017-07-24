@@ -8,6 +8,7 @@
 #include <string>
 
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/app/page_utils.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -19,14 +20,14 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
                     std::unique_ptr<const storage::Commit> left,
                     std::unique_ptr<const storage::Commit> right,
                     std::unique_ptr<const storage::Commit> ancestor,
-                    ftl::Closure on_done);
+                    std::function<void(Status)> callback);
   ~LastOneWinsMerger();
 
   void Start();
   void Cancel();
 
  private:
-  void Done();
+  void Done(Status status);
 
   storage::PageStorage* const storage_;
 
@@ -34,7 +35,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
   std::unique_ptr<const storage::Commit> const right_;
   std::unique_ptr<const storage::Commit> const ancestor_;
 
-  ftl::Closure on_done_;
+  std::function<void(Status)> callback_;
 
   std::unique_ptr<storage::Journal> journal_;
   bool cancelled_ = false;
@@ -48,14 +49,14 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
-    ftl::Closure on_done)
+    std::function<void(Status)> callback)
     : storage_(storage),
       left_(std::move(left)),
       right_(std::move(right)),
       ancestor_(std::move(ancestor)),
-      on_done_(std::move(on_done)),
+      callback_(std::move(callback)),
       weak_factory_(this) {
-  FTL_DCHECK(on_done_);
+  FTL_DCHECK(callback_);
 }
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
@@ -95,12 +96,12 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
       return;
     }
     if (weak_this->cancelled_) {
-      weak_this->Done();
+      weak_this->Done(Status::INTERNAL_ERROR);
       return;
     }
     if (s != storage::Status::OK) {
       FTL_LOG(ERROR) << "Unable to create diff for merging: " << s;
-      weak_this->Done();
+      weak_this->Done(PageUtils::ConvertStatus(s));
       return;
     }
     weak_this->storage_->CommitJournal(
@@ -110,7 +111,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
             FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
           }
           if (weak_this) {
-            weak_this->Done();
+            weak_this->Done(
+                PageUtils::ConvertStatus(s, Status::INTERNAL_ERROR));
           }
         });
   };
@@ -126,10 +128,10 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {
   }
 }
 
-void LastOneWinsMergeStrategy::LastOneWinsMerger::Done() {
-  auto on_done = std::move(on_done_);
-  on_done_ = nullptr;
-  on_done();
+void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
+  auto callback = std::move(callback_);
+  callback_ = nullptr;
+  callback(status);
 }
 
 LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() {}
@@ -144,16 +146,16 @@ void LastOneWinsMergeStrategy::Merge(
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor,
-    ftl::Closure on_done) {
+    std::function<void(Status)> callback) {
   FTL_DCHECK(!in_progress_merge_);
   FTL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
 
   in_progress_merge_ =
       std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(
           storage, std::move(head_1), std::move(head_2), std::move(ancestor),
-          [ this, on_done = std::move(on_done) ] {
+          [ this, callback = std::move(callback) ](Status status) {
             in_progress_merge_.reset();
-            on_done();
+            callback(status);
           });
 
   in_progress_merge_->Start();

@@ -30,7 +30,7 @@ class ConflictResolverClient : public MergeResultProvider {
       std::unique_ptr<const storage::Commit> left,
       std::unique_ptr<const storage::Commit> right,
       std::unique_ptr<const storage::Commit> ancestor,
-      ftl::Closure on_done);
+      std::function<void(Status)> callback);
   ~ConflictResolverClient();
 
   void Start();
@@ -41,7 +41,7 @@ class ConflictResolverClient : public MergeResultProvider {
       const MergedValuePtr& merged_value,
       const ftl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
           waiter);
-  void Finalize();
+  void Finalize(Status status);
 
   void GetDiff(
       const storage::Commit& commit,
@@ -66,7 +66,7 @@ class ConflictResolverClient : public MergeResultProvider {
   std::unique_ptr<const storage::Commit> const right_;
   std::unique_ptr<const storage::Commit> const ancestor_;
 
-  ftl::Closure on_done_;
+  std::function<void(Status)> callback_;
 
   std::unique_ptr<storage::Journal> journal_;
   // |in_client_request_| is true when waiting for the callback of the

@@ -37,15 +37,15 @@ class RecordingTestStrategy : public MergeStrategy {
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             ftl::Closure on_done) override {
-    this->on_done = std::move(on_done);
+             std::function<void(Status)> callback) override {
+    this->callback = std::move(callback);
     merge_calls++;
   }
 
   void Cancel() override { cancel_calls++; }
 
   ftl::Closure on_error;
-  ftl::Closure on_done;
+  std::function<void(Status)> callback;
   uint32_t merge_calls = 0;
   uint32_t cancel_calls = 0;
 };
@@ -176,7 +176,7 @@ class VerifyingMergeStrategy : public MergeStrategy {
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             ftl::Closure on_done) override {
+             std::function<void(Status)> callback) override {
     EXPECT_EQ(ancestor_, ancestor->GetId());
     storage::CommitId actual_head1_id = head_1->GetId();
     if (actual_head1_id != head1_ && actual_head1_id != head2_) {
@@ -188,7 +188,9 @@ class VerifyingMergeStrategy : public MergeStrategy {
       // Fail
       EXPECT_EQ(head2_, actual_head2_id);
     }
-    task_runner_->PostTask(std::move(on_done));
+    task_runner_->PostTask([callback = std::move(callback)]() {
+      callback(Status::OK);
+    });
   }
 
   void Cancel() override{};

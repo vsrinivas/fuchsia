@@ -163,6 +163,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
               storage::Status status, std::unique_ptr<const storage::Commit>) {
             if (status != storage::Status::OK) {
               FTL_LOG(ERROR) << "Unable to merge identical commits.";
+              return;
             }
           }));
       return;
@@ -197,9 +198,15 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
             FTL_LOG(ERROR) << "Failed to find common ancestor of head commits.";
             return;
           }
-          strategy_->Merge(storage_, page_manager_, std::move(head1),
-                           std::move(head2), std::move(common_ancestor),
-                           ftl::MakeCopyable([cleanup = std::move(cleanup)]{}));
+          strategy_->Merge(
+              storage_, page_manager_, std::move(head1), std::move(head2),
+              std::move(common_ancestor),
+              ftl::MakeCopyable([cleanup = std::move(cleanup)](Status status) {
+                if (status != Status::OK) {
+                  FTL_LOG(WARNING) << "Merging failed. Will try again later.";
+                  return;
+                }
+              }));
         }));
   }));
 }

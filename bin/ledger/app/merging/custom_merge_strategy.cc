@@ -38,16 +38,16 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
                                 std::unique_ptr<const storage::Commit> head_1,
                                 std::unique_ptr<const storage::Commit> head_2,
                                 std::unique_ptr<const storage::Commit> ancestor,
-                                ftl::Closure on_done) {
+                                std::function<void(Status)> callback) {
   FTL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
   FTL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<ConflictResolverClient>(
       storage, page_manager, conflict_resolver_.get(), std::move(head_2),
       std::move(head_1), std::move(ancestor),
-      [ this, on_done = std::move(on_done) ] {
+      [ this, callback = std::move(callback) ](Status status) {
         in_progress_merge_.reset();
-        on_done();
+        callback(status);
       });
 
   in_progress_merge_->Start();

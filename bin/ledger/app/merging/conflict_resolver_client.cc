@@ -28,18 +28,18 @@ ConflictResolverClient::ConflictResolverClient(
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
-    ftl::Closure on_done)
+    std::function<void(Status)> callback)
     : storage_(storage),
       manager_(page_manager),
       conflict_resolver_(conflict_resolver),
       left_(std::move(left)),
       right_(std::move(right)),
       ancestor_(std::move(ancestor)),
-      on_done_(std::move(on_done)),
+      callback_(std::move(callback)),
       merge_result_provider_binding_(this),
       weak_factory_(this) {
   FTL_DCHECK(left_->GetTimestamp() >= right_->GetTimestamp());
-  FTL_DCHECK(on_done_);
+  FTL_DCHECK(callback_);
 }
 
 ConflictResolverClient::~ConflictResolverClient() {
@@ -54,7 +54,7 @@ void ConflictResolverClient::Start() {
       storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal_);
   if (status != storage::Status::OK) {
     FTL_LOG(ERROR) << "Unable to start merge commit: " << status;
-    Finalize();
+    Finalize(PageUtils::ConvertStatus(status));
     return;
   }
 
@@ -80,7 +80,7 @@ void ConflictResolverClient::Start() {
 void ConflictResolverClient::Cancel() {
   cancelled_ = true;
   if (in_client_request_) {
-    Finalize();
+    Finalize(Status::INTERNAL_ERROR);
   }
 }
 
@@ -133,14 +133,14 @@ void ConflictResolverClient::OnNextMergeResult(
   }
 }
 
-void ConflictResolverClient::Finalize() {
+void ConflictResolverClient::Finalize(Status status) {
   if (journal_) {
     storage_->RollbackJournal(std::move(journal_));
     journal_.reset();
   }
-  auto on_done = std::move(on_done_);
-  on_done_ = nullptr;
-  on_done();
+  auto callback = std::move(callback_);
+  callback_ = nullptr;
+  callback(status);
 }
 
 // GetLeftDiff(array<uint8>? token)
@@ -176,14 +176,14 @@ void ConflictResolverClient::GetDiff(
         }
         if (weak_this->cancelled_) {
           callback(Status::INTERNAL_ERROR, nullptr, nullptr);
-          weak_this->Finalize();
+          weak_this->Finalize(Status::INTERNAL_ERROR);
           return;
         }
         if (status != Status::OK) {
           FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
                          << ", aborting.";
           callback(status, nullptr, nullptr);
-          weak_this->Finalize();
+          weak_this->Finalize(status);
           return;
         }
 
@@ -221,17 +221,18 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
             return;
           }
           if (weak_this->cancelled_ || status != storage::Status::OK) {
-            // An eventual error was logged before, no need to do it again here.
-            callback(
+            Status ledger_status =
                 weak_this->cancelled_
                     ? Status::INTERNAL_ERROR
                     // The only not found error that can occur is a key not
                     // found when processing a MergedValue with
                     // ValueSource::RIGHT.
-                    : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND));
+                    : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND);
+            // An eventual error was logged before, no need to do it again here.
+            callback(ledger_status);
             // Finalize destroys this object; we need to do it after executing
             // the callback.
-            weak_this->Finalize();
+            weak_this->Finalize(ledger_status);
             return;
           }
 
@@ -266,9 +267,10 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
     }
-    callback(PageUtils::ConvertStatus(status));
+    Status ledger_status = PageUtils::ConvertStatus(status);
+    callback(ledger_status);
     if (weak_this) {
-      weak_this->Finalize();
+      weak_this->Finalize(ledger_status);
     }
   });
 }

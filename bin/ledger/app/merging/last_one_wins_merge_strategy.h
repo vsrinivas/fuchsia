@@ -28,7 +28,7 @@ class LastOneWinsMergeStrategy : public MergeStrategy {
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             ftl::Closure on_done) override;
+             std::function<void(Status)> callback) override;
 
   void Cancel() override;
 

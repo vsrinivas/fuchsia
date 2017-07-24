@@ -35,7 +35,7 @@ class MergeStrategy {
                      std::unique_ptr<const storage::Commit> head_1,
                      std::unique_ptr<const storage::Commit> head_2,
                      std::unique_ptr<const storage::Commit> ancestor,
-                     ftl::Closure on_done) = 0;
+                     std::function<void(Status)> callback) = 0;
 
   // Cancel an in-progress merge. This must be called after |Merge| has been
   // called, and before the |on_done| callback.

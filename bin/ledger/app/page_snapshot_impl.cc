@@ -200,9 +200,7 @@ void FillEntries(
             }
             real_size += entry_size;
             if (read_status != storage::Status::OK) {
-              callback(
-                  PageUtils::ConvertStatus(read_status, Status::INTERNAL_ERROR),
-                  nullptr, nullptr);
+              callback(PageUtils::ConvertStatus(read_status), nullptr, nullptr);
               return;
             }
           }
