@@ -37,6 +37,9 @@ class DemoHarness {
 
   escher::VulkanContext GetVulkanContext();
   escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
+  const escher::VulkanDeviceQueuesPtr& device_queues() const {
+    return device_queues_;
+  }
 
   // Notify the demo that it should stop looping and quit.
   void SetShouldQuit() { should_quit_ = true; }

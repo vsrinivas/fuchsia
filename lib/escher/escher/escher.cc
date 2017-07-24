@@ -52,16 +52,17 @@ std::unique_ptr<impl::GpuUploader> NewGpuUploader(
 
 }  // anonymous namespace
 
-Escher::Escher(const VulkanContext& context, VulkanDeviceQueuesPtr device)
+Escher::Escher(VulkanDeviceQueuesPtr device)
     : device_(std::move(device)),
-      vulkan_context_(context),
-      gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
+      vulkan_context_(device_->GetVulkanContext()),
+      gpu_allocator_(std::make_unique<NaiveGpuAllocator>(vulkan_context_)),
       command_buffer_sequencer_(
           std::make_unique<impl::CommandBufferSequencer>()),
       command_buffer_pool_(
-          NewCommandBufferPool(context, command_buffer_sequencer_.get())),
+          NewCommandBufferPool(vulkan_context_,
+                               command_buffer_sequencer_.get())),
       transfer_command_buffer_pool_(
-          NewTransferCommandBufferPool(context,
+          NewTransferCommandBufferPool(vulkan_context_,
                                        command_buffer_sequencer_.get())),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       gpu_uploader_(NewGpuUploader(this,
