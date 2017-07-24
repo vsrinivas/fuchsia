@@ -4,7 +4,6 @@
 
 #include <string.h>
 
-#include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl-sync.h"
@@ -12,11 +11,8 @@
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/test/app_test.h"
 #include "apps/ledger/src/test/fake_token_provider.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
-#include "apps/test_runner/lib/reporting/gtest_listener.h"
-#include "apps/test_runner/lib/reporting/reporter.h"
-#include "apps/test_runner/lib/reporting/results_queue.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
@@ -28,9 +24,6 @@
 
 namespace ledger {
 namespace {
-
-app::ApplicationContext* context_;
-mtl::MessageLoop* loop_;
 
 template <class A>
 bool Equals(const fidl::Array<uint8_t>& a1, const A& a2) {
@@ -46,7 +39,7 @@ fidl::Array<uint8_t> TestArray() {
   return result;
 }
 
-class LedgerAppTest : public ::testing::Test {
+class LedgerAppTest : public ::test::AppTest {
  public:
   LedgerAppTest() {}
   ~LedgerAppTest() override {}
@@ -63,8 +56,8 @@ class LedgerAppTest : public ::testing::Test {
     for (auto& additional_arg : additional_args) {
       launch_info->arguments.push_back(std::move(additional_arg));
     }
-    context_->launcher()->CreateApplication(std::move(launch_info),
-                                            ledger_controller_.NewRequest());
+    application_context()->launcher()->CreateApplication(
+        std::move(launch_info), ledger_controller_.NewRequest());
 
     ledger_controller_.set_connection_error_handler([this] {
       for (const auto& callback : ledger_shutdown_callbacks_) {
@@ -100,8 +93,8 @@ TEST_F(LedgerAppTest, PutAndGet) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), nullptr, nullptr,
       fidl::GetSynchronousProxy(&ledger_repository),
-      callback::Capture([] { loop_->PostQuitTask(); }, &status));
-  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
   ledger_repository->GetLedger(TestArray(), fidl::GetSynchronousProxy(&ledger_),
@@ -127,14 +120,12 @@ TEST_F(LedgerAppTest, PutAndGet) {
 TEST_F(LedgerAppTest, Terminate) {
   Init({});
   bool called = false;
-  RegisterShutdownCallback([&called] {
+  RegisterShutdownCallback([this, &called] {
     called = true;
-    loop_->PostQuitTask();
+    message_loop_.PostQuitTask();
   });
   controller_->Terminate();
-  loop_->task_runner()->PostDelayedTask([] { loop_->PostQuitTask(); },
-                                        ftl::TimeDelta::FromSeconds(1));
-  loop_->Run();
+  RunLoopWithTimeout();
   EXPECT_TRUE(called);
 }
 
@@ -167,8 +158,8 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(firebase_config), std::move(token_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture([] { loop_->PostQuitTask(); }, &status));
-  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
   bool repo_disconnected = false;
@@ -177,10 +168,9 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  bool cleared = test::RunGivenLoopUntil(
-      loop_, [deletion_sentinel_path, &repo_disconnected] {
-        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
-      });
+  bool cleared = RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
+    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  });
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
   EXPECT_TRUE(cleared);
@@ -218,8 +208,8 @@ TEST_F(LedgerAppTest, EraseRepository) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), firebase_config.Clone(), std::move(token_provider_ptr_1),
       ledger_repository.NewRequest(),
-      callback::Capture([] { loop_->PostQuitTask(); }, &status));
-  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
   bool repo_disconnected = false;
@@ -234,15 +224,14 @@ TEST_F(LedgerAppTest, EraseRepository) {
                                      token_provider_ptr_2.NewRequest());
   ledger_repository_factory_->EraseRepository(
       tmp_dir.path(), firebase_config.Clone(), std::move(token_provider_ptr_2),
-      callback::Capture([] { loop_->PostQuitTask(); }, &status));
-  EXPECT_FALSE(test::RunGivenLoopWithTimeout(loop_));
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::INTERNAL_ERROR, status);
 
   // Verify that the local storage was cleared and the client was disconnected.
-  bool cleared = test::RunGivenLoopUntil(
-      loop_, [deletion_sentinel_path, &repo_disconnected] {
-        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
-      });
+  bool cleared = RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
+    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  });
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
   EXPECT_TRUE(cleared);
@@ -253,28 +242,3 @@ TEST_F(LedgerAppTest, EraseRepository) {
 
 }  // namespace
 }  // namespace ledger
-
-int main(int argc, char** argv) {
-  test_runner::ResultsQueue queue;
-  test_runner::Reporter reporter(argv[0], &queue);
-  test_runner::GTestListener listener(argv[0], &queue);
-
-  mtl::MessageLoop loop;
-  ledger::loop_ = &loop;
-  std::unique_ptr<app::ApplicationContext> context =
-      app::ApplicationContext::CreateFromStartupInfo();
-  ledger::context_ = context.get();
-  reporter.Start(context.get());
-
-  testing::InitGoogleTest(&argc, argv);
-  testing::UnitTest::GetInstance()->listeners().Append(&listener);
-  int status = RUN_ALL_TESTS();
-  testing::UnitTest::GetInstance()->listeners().Release(&listener);
-
-  // Will be closed by the Reporter.
-  if (test::RunGivenLoopWithTimeout(&loop, ftl::TimeDelta::FromSeconds(1))) {
-    FTL_LOG(ERROR) << "Expected quit loop from test reported never happened.";
-  }
-
-  return status;
-}

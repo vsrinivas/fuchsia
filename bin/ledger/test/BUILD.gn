@@ -20,12 +20,12 @@ source_set("lib") {
     "//application/lib/app",
     "//apps/ledger/services/public",
     "//apps/ledger/src/fidl_helpers",
+    "//apps/ledger/src/test/token_provider",
     "//apps/modular/services/auth",
     "//lib/fidl/cpp/bindings:serialization",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
-    "token_provider",
   ]
 
   deps = [
@@ -39,6 +39,28 @@ source_set("lib") {
   configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
+source_set("app_test") {
+  testonly = true
+
+  sources = [
+    "app_test.cc",
+    "app_test.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//application/lib/app",
+  ]
+
+  deps = [
+    "//apps/test_runner/lib/reporting",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
 
 source_set("unittests") {
   testonly = true
