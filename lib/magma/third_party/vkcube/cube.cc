@@ -905,7 +905,7 @@ static void demo_prepare_buffers(struct demo *demo) {
     // Determine the number of VkImage's to use in the swap chain.
     // Application desires to only acquire 1 image at a time (which is
     // "surfCapabilities.minImageCount").
-    uint32_t desiredNumOfSwapchainImages = surfCapabilities.minImageCount;
+    uint32_t desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
     // If maxImageCount is 0, we can ask for as many images as we want;
     // otherwise we're limited to maxImageCount
     if ((surfCapabilities.maxImageCount > 0) &&
