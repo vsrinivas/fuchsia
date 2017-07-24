@@ -52,9 +52,10 @@ var components = []component{
 		nil,
 	},
 	{
+		// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
 		toolchainLibs,
-		"buildtools/toolchain/clang+llvm-x86_64-linux/lib/clang/5.0.0/lib/fuchsia",
-		"toolchain_libs/clang/5.0.0/lib/fuchsia",
+		"buildtools/toolchain/clang+llvm-x86_64-linux/lib/clang/6.0.0/lib/fuchsia",
+		"toolchain_libs/clang/6.0.0/lib/fuchsia",
 		dir,
 		nil,
 	},
