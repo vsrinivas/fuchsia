@@ -41,7 +41,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/thread_dispatcher.cpp \
     $(LOCAL_DIR)/timer_dispatcher.cpp \
     $(LOCAL_DIR)/user_copy.cpp \
-    $(LOCAL_DIR)/user_thread.cpp \
     $(LOCAL_DIR)/vcpu_dispatcher.cpp \
     $(LOCAL_DIR)/vm_address_region_dispatcher.cpp \
     $(LOCAL_DIR)/vm_object_dispatcher.cpp \
