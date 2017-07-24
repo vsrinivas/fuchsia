@@ -21,8 +21,8 @@ source_set("token_provider") {
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/crypto",
     "//lib/mtl",
-    "//third_party/rapidjson",
     "//third_party/boringssl",
+    "//third_party/rapidjson",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

@@ -104,7 +104,8 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
 ::testing::AssertionResult ReadFile(
     const ObjectId& id,
     const std::map<ObjectId, std::unique_ptr<DataSource::DataChunk>>& data,
-    std::string* result, size_t expected_size) {
+    std::string* result,
+    size_t expected_size) {
   size_t start_size = result->size();
   switch (GetObjectIdType(id)) {
     case ObjectIdType::INLINE: {
@@ -127,7 +128,8 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
       auto content = data.at(id)->Get();
       const FileIndex* file_index = GetFileIndex(content.data());
       for (const auto* child : *file_index->children()) {
-        auto r = ReadFile(convert::ToString(child->object_id()), data, result, child->size());
+        auto r = ReadFile(convert::ToString(child->object_id()), data, result,
+                          child->size());
         if (!r) {
           return r;
         }

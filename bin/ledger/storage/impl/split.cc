@@ -162,7 +162,8 @@ class SplitContext {
   void AddIdentifierAtLevel(size_t level, ObjectIdAndSize data) {
     GetCurrentIdentifiersAtLevel(level).push_back(std::move(data));
 
-    if (current_identifiers_per_level_[level].size() < kMaxIdentifiersPerIndex) {
+    if (current_identifiers_per_level_[level].size() <
+        kMaxIdentifiersPerIndex) {
       // The level is not full, more identifiers can be added.
       return;
     }

@@ -4,8 +4,8 @@
 
 source_set("cobalt") {
   sources = [
-    "cobalt.h",
     "cobalt.cc",
+    "cobalt.h",
   ]
 
   public_deps = [

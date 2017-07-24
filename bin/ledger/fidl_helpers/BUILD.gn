@@ -4,8 +4,8 @@
 
 source_set("fidl_helpers") {
   sources = [
-    "bound_interface_set.h",
     "bound_interface.h",
+    "bound_interface_set.h",
     "boundable.h",
   ]
 
