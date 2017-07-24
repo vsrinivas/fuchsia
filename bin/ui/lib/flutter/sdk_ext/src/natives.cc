@@ -14,6 +14,7 @@
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/tonic/handle_table.h"
 
 namespace mozart {
 
@@ -71,13 +72,33 @@ const uint8_t* NativeSymbol(Dart_NativeFunction native_function) {
     }                                                            \
   }
 
+#define CHECK_HANDLE_ARGUMENT(args, num, result)                      \
+  {                                                                            \
+    Dart_Handle __arg = Dart_GetNativeArgument(args, num);                     \
+    if (Dart_IsError(__arg)) {                                                 \
+      FTL_LOG(WARNING) << "GetNativeArgumentFailed: " << Dart_GetError(__arg); \
+      return;                                                                  \
+    }                                                                          \
+    Dart_Handle __err = Dart_Null();                                           \
+    *result = tonic::HandleTable::Current().Unwrap(__arg, &__err);             \
+    if (Dart_IsError(__err)) {                                                 \
+      FTL_LOG(ERROR) << "Error unwrapping handle";  \
+      return;                                                                  \
+    }                                                                          \
+    if (*result == MX_HANDLE_INVALID) {                                        \
+      FTL_LOG(INFO) << "Invalid handle from unwrap"; \
+      return;                                                                  \
+    }                                                                          \
+  }
+
+
 NativesDelegate::~NativesDelegate() {}
 
 void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   intptr_t context = 0;
-  int64_t handle = 0;
+  mx_handle_t handle = 0;
   CHECK_INTEGER_ARGUMENT(args, 0, &context);
-  CHECK_INTEGER_ARGUMENT(args, 1, &handle);
+  CHECK_HANDLE_ARGUMENT(args, 1, &handle);
 
   if (!context || !handle)
     return;
@@ -112,7 +133,7 @@ void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   NativesDelegate* delegate = reinterpret_cast<NativesDelegate*>(context);
   fidl::InterfaceHandle<app::ServiceProvider> provider =
       fidl::InterfaceHandle<app::ServiceProvider>(
-          mx::channel(static_cast<mx_handle_t>(handle)), 0);
+          mx::channel(handle), 0);
 
   View* view = delegate->GetMozartView();
   view->OfferServiceProvider(std::move(provider), std::move(services));

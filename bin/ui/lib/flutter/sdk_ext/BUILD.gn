@@ -12,6 +12,7 @@ source_set("sdk_ext") {
     "//apps/mozart/services/views",
     "//dart/runtime:dart_api",
     "//lib/ftl",
+    "//lib/tonic",
     "//magenta/system/ulib/mx",
   ]
 }
