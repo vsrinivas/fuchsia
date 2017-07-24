@@ -247,43 +247,17 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
 
     DLOG("reloc_page_index 0x%x offset_in_page 0x%x", reloc_page_index, offset_in_page);
 
-    void* reloc_page_cpu_addr;
-    if (!exec_resource->buffer->platform_buffer()->MapPageCpu(reloc_page_index,
-                                                              &reloc_page_cpu_addr))
-        return DRETF(false, "failed to map relocation page into CPU address space");
+    void* buffer_cpu_addr;
+    if (!exec_resource->buffer->platform_buffer()->MapCpu(&buffer_cpu_addr))
+        return DRETF(false, "failed to map buffer into CPU address space");
+    DASSERT(buffer_cpu_addr);
 
-    DASSERT(reloc_page_cpu_addr);
+    uint8_t* reloc_page_cpu_addr = static_cast<uint8_t*>(buffer_cpu_addr) + reloc_page_index * PAGE_SIZE;
 
     gpu_addr_t address_to_patch = target_gpu_address + relocation->target_offset;
+    static_assert(sizeof(gpu_addr_t) == sizeof(uint64_t), "gpu addr size mismatch");
 
-    DASSERT(offset_in_page % sizeof(uint32_t) == 0); // just to be sure
-
-    // actually patch the relocation
-    DASSERT(offset_in_page < PAGE_SIZE);
-    static_cast<uint32_t*>(reloc_page_cpu_addr)[offset_in_page / sizeof(uint32_t)] =
-        magma::lower_32_bits(address_to_patch);
-
-    offset_in_page += sizeof(uint32_t);
-
-    if (offset_in_page >= PAGE_SIZE) {
-        if (!exec_resource->buffer->platform_buffer()->UnmapPageCpu(reloc_page_index))
-            return DRETF(false, "failed to unmap relocation page from CPU address space");
-
-        reloc_page_index++;
-        if (!exec_resource->buffer->platform_buffer()->MapPageCpu(reloc_page_index,
-                                                                  &reloc_page_cpu_addr))
-            return DRETF(false, "failed to map relocation page into CPU address space");
-
-        offset_in_page = 0;
-    }
-
-    DASSERT(offset_in_page < PAGE_SIZE);
-    static_cast<uint32_t*>(reloc_page_cpu_addr)[offset_in_page / sizeof(uint32_t)] =
-        magma::upper_32_bits(address_to_patch);
-
-    if (!exec_resource->buffer->platform_buffer()->UnmapPageCpu(reloc_page_index))
-        return DRETF(false, "failed to unmap relocation page from CPU address space");
-
+    memcpy(reloc_page_cpu_addr + offset_in_page, &address_to_patch, sizeof(uint64_t));
     return true;
 }
 
