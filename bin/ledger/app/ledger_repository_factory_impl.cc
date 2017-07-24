@@ -7,7 +7,7 @@
 #include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -40,8 +40,8 @@ cloud_sync::UserConfig GetUserConfig(Environment* environment,
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
       environment->network_service(), user_config.server_id,
       cloud_sync::GetFirebasePathForUser(user_config.user_id));
-  user_config.local_version_checker =
-      std::make_unique<cloud_sync::LocalVersionCheckerImpl>(
+  user_config.cloud_device_set =
+      std::make_unique<cloud_sync::CloudDeviceSetImpl>(
           std::move(user_firebase));
   return user_config;
 }

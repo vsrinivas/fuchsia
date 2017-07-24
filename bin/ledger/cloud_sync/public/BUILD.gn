@@ -5,8 +5,8 @@
 source_set("public") {
   sources = [
     "auth_provider.h",
+    "cloud_device_set.h",
     "ledger_sync.h",
-    "local_version_checker.h",
     "page_sync.h",
     "sync_state_watcher.cc",
     "sync_state_watcher.h",

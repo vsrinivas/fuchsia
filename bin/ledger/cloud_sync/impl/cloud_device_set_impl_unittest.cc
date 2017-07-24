@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 
 #include <unordered_map>
 
@@ -79,13 +79,13 @@ class FakeFirebase : public firebase::Firebase {
   int unwatch_calls = 0;
 };
 
-class LocalVersionCheckerImplTest : public ::test::TestWithMessageLoop {
+class CloudDeviceSetImplTest : public ::test::TestWithMessageLoop {
  public:
-  LocalVersionCheckerImplTest() : local_version_checker_(InitFirebase()) {}
+  CloudDeviceSetImplTest() : cloud_device_set_(InitFirebase()) {}
 
  protected:
   FakeFirebase* firebase_;
-  LocalVersionCheckerImpl local_version_checker_;
+  CloudDeviceSetImpl cloud_device_set_;
 
   std::unique_ptr<firebase::Firebase> InitFirebase() {
     auto firebase = std::make_unique<FakeFirebase>();
@@ -94,34 +94,34 @@ class LocalVersionCheckerImplTest : public ::test::TestWithMessageLoop {
   }
 };
 
-TEST_F(LocalVersionCheckerImplTest, CheckFingerprintOk) {
+TEST_F(CloudDeviceSetImplTest, CheckFingerprintOk) {
   firebase_->returned_value = "true";
-  LocalVersionChecker::Status status;
-  local_version_checker_.CheckFingerprint(
+  CloudDeviceSet::Status status;
+  cloud_device_set_.CheckFingerprint(
       "some-token", "some-fingerprint",
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(LocalVersionChecker::Status::OK, status);
+  EXPECT_EQ(CloudDeviceSet::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->get_query_params);
 }
 
-TEST_F(LocalVersionCheckerImplTest, CheckFingerprintErased) {
+TEST_F(CloudDeviceSetImplTest, CheckFingerprintErased) {
   firebase_->returned_value = "null";
-  LocalVersionChecker::Status status;
-  local_version_checker_.CheckFingerprint(
+  CloudDeviceSet::Status status;
+  cloud_device_set_.CheckFingerprint(
       "some-token", "some-fingerprint",
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(LocalVersionChecker::Status::ERASED, status);
+  EXPECT_EQ(CloudDeviceSet::Status::ERASED, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->get_query_params);
 }
 
-TEST_F(LocalVersionCheckerImplTest, CheckFingerprintDeleteInCallback) {
+TEST_F(CloudDeviceSetImplTest, CheckFingerprintDeleteInCallback) {
   firebase_->returned_value = "null";
-  LocalVersionChecker::Status status;
-  auto checker = std::make_unique<LocalVersionCheckerImpl>(InitFirebase());
+  CloudDeviceSet::Status status;
+  auto checker = std::make_unique<CloudDeviceSetImpl>(InitFirebase());
   checker->CheckFingerprint("some-token", "some-fingerprint",
                             [this, &checker, &status](auto s) {
                               checker.reset();
@@ -130,29 +130,28 @@ TEST_F(LocalVersionCheckerImplTest, CheckFingerprintDeleteInCallback) {
                             });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(checker);
-  EXPECT_EQ(LocalVersionChecker::Status::ERASED, status);
+  EXPECT_EQ(CloudDeviceSet::Status::ERASED, status);
 }
 
-TEST_F(LocalVersionCheckerImplTest, SetFingerprintOk) {
-  LocalVersionChecker::Status status;
-  local_version_checker_.SetFingerprint(
-      "some-token", "some-fingerprint",
-      callback::Capture(MakeQuitTask(), &status));
+TEST_F(CloudDeviceSetImplTest, SetFingerprintOk) {
+  CloudDeviceSet::Status status;
+  cloud_device_set_.SetFingerprint("some-token", "some-fingerprint",
+                                   callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(LocalVersionChecker::Status::OK, status);
+  EXPECT_EQ(CloudDeviceSet::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->put_query_params);
   EXPECT_EQ((std::vector<std::string>{"true"}), firebase_->put_data);
 }
 
-TEST_F(LocalVersionCheckerImplTest, WatchFingerprint) {
+TEST_F(CloudDeviceSetImplTest, WatchFingerprint) {
   bool called = false;
-  LocalVersionChecker::Status status;
-  local_version_checker_.WatchFingerprint("some-token", "some-fingerprint",
-                                          [&status, &called](auto s) {
-                                            status = s;
-                                            called = true;
-                                          });
+  CloudDeviceSet::Status status;
+  cloud_device_set_.WatchFingerprint("some-token", "some-fingerprint",
+                                     [&status, &called](auto s) {
+                                       status = s;
+                                       called = true;
+                                     });
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->watch_query_params);
   EXPECT_EQ((std::vector<std::string>{"__metadata/devices/some-fingerprint"}),
@@ -165,7 +164,7 @@ TEST_F(LocalVersionCheckerImplTest, WatchFingerprint) {
     firebase_->watch_client->OnPut("/", document);
   }
   EXPECT_TRUE(called);
-  EXPECT_EQ(LocalVersionChecker::Status::OK, status);
+  EXPECT_EQ(CloudDeviceSet::Status::OK, status);
 
   called = false;
   {
@@ -174,12 +173,12 @@ TEST_F(LocalVersionCheckerImplTest, WatchFingerprint) {
     firebase_->watch_client->OnPut("/", document);
   }
   EXPECT_TRUE(called);
-  EXPECT_EQ(LocalVersionChecker::Status::ERASED, status);
+  EXPECT_EQ(CloudDeviceSet::Status::ERASED, status);
 }
 
-TEST_F(LocalVersionCheckerImplTest, WatchUnwatchOnDelete) {
+TEST_F(CloudDeviceSetImplTest, WatchUnwatchOnDelete) {
   {
-    LocalVersionCheckerImpl short_lived_checker(InitFirebase());
+    CloudDeviceSetImpl short_lived_checker(InitFirebase());
 
     short_lived_checker.WatchFingerprint("some-token", "some-fingerprint",
                                          [](auto status) {});

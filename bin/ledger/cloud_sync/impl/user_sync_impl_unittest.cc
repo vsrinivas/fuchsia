@@ -6,7 +6,7 @@
 
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/backoff/test/test_backoff.h"
-#include "apps/ledger/src/cloud_sync/public/local_version_checker.h"
+#include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
 #include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -26,11 +26,11 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer sync_state) override {}
 };
 
-class TestLocalVersionChecker : public LocalVersionChecker {
+class TestCloudDeviceSet : public CloudDeviceSet {
  public:
-  TestLocalVersionChecker(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  TestCloudDeviceSet(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : task_runner_(task_runner) {}
-  ~TestLocalVersionChecker() override {}
+  ~TestCloudDeviceSet() override {}
 
   void CheckFingerprint(std::string auth_token,
                         std::string fingerprint,
@@ -57,8 +57,7 @@ class TestLocalVersionChecker : public LocalVersionChecker {
     watch_callback = callback;
   }
 
-  LocalVersionChecker::Status status_to_return =
-      LocalVersionChecker::Status::OK;
+  CloudDeviceSet::Status status_to_return = CloudDeviceSet::Status::OK;
 
   std::string checked_fingerprint;
   std::string set_fingerprint;
@@ -81,11 +80,11 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
     user_config.user_id = "user-id";
     user_config.user_directory = tmp_dir.path();
     user_config.auth_provider = &auth_provider_;
-    user_config.local_version_checker =
-        std::make_unique<TestLocalVersionChecker>(message_loop_.task_runner());
+    user_config.cloud_device_set =
+        std::make_unique<TestCloudDeviceSet>(message_loop_.task_runner());
 
-    local_version_checker_ = static_cast<TestLocalVersionChecker*>(
-        user_config.local_version_checker.get());
+    cloud_device_set_ =
+        static_cast<TestCloudDeviceSet*>(user_config.cloud_device_set.get());
 
     user_sync_ = std::make_unique<UserSyncImpl>(
         &environment_, std::move(user_config),
@@ -109,7 +108,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   test::TestAuthProvider auth_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;
   TestSyncStateWatcher sync_state_watcher_;
-  TestLocalVersionChecker* local_version_checker_;
+  TestCloudDeviceSet* cloud_device_set_;
 
   int on_version_mismatch_calls_ = 0;
 
@@ -121,8 +120,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
 // be erased from the cloud.
 TEST_F(UserSyncImplTest, CloudCheckErased) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  local_version_checker_->status_to_return =
-      LocalVersionChecker::Status::ERASED;
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::ERASED;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -133,7 +131,7 @@ TEST_F(UserSyncImplTest, CloudCheckErased) {
 // is enabled in LedgerSync.
 TEST_F(UserSyncImplTest, CloudCheckOk) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  local_version_checker_->status_to_return = LocalVersionChecker::Status::OK;
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
@@ -143,7 +141,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
   EXPECT_TRUE(
       RunLoopUntil([ledger_a_ptr] { return ledger_a_ptr->IsUploadEnabled(); }));
   EXPECT_EQ(0, on_version_mismatch_calls_);
-  EXPECT_EQ("some-value", local_version_checker_->checked_fingerprint);
+  EXPECT_EQ("some-value", cloud_device_set_->checked_fingerprint);
 
   // Verify that newly created LedgerSyncs also have the upload enabled.
   auto ledger_b = user_sync_->CreateLedgerSync("app-id");
@@ -155,7 +153,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
 // cloud.
 TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_FALSE(files::IsFile(user_sync_->GetFingerprintPath()));
-  local_version_checker_->status_to_return = LocalVersionChecker::Status::OK;
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
@@ -165,7 +163,7 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_TRUE(
       RunLoopUntil([ledger_ptr] { return ledger_ptr->IsUploadEnabled(); }));
   EXPECT_EQ(0, on_version_mismatch_calls_);
-  EXPECT_FALSE(local_version_checker_->set_fingerprint.empty());
+  EXPECT_FALSE(cloud_device_set_->set_fingerprint.empty());
 
   // Verify that the fingerprint file was created.
   EXPECT_TRUE(files::IsFile(user_sync_->GetFingerprintPath()));
@@ -175,33 +173,33 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
 // mismatch callback if cloud erase is detected.
 TEST_F(UserSyncImplTest, WatchErase) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  local_version_checker_->status_to_return = LocalVersionChecker::Status::OK;
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
   user_sync_->Start();
 
   EXPECT_TRUE(RunLoopUntil(
-      [this] { return local_version_checker_->watch_callback != nullptr; }));
-  EXPECT_EQ("some-value", local_version_checker_->watched_fingerprint);
+      [this] { return cloud_device_set_->watch_callback != nullptr; }));
+  EXPECT_EQ("some-value", cloud_device_set_->watched_fingerprint);
   EXPECT_EQ(0, on_version_mismatch_calls_);
 
-  local_version_checker_->watch_callback(LocalVersionChecker::Status::ERASED);
+  cloud_device_set_->watch_callback(CloudDeviceSet::Status::ERASED);
   EXPECT_EQ(1, on_version_mismatch_calls_);
 }
 
 // Verifies that setting the cloud watcher for is retried on network errors.
 TEST_F(UserSyncImplTest, WatchRetry) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  local_version_checker_->status_to_return = LocalVersionChecker::Status::OK;
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
   user_sync_->Start();
 
   EXPECT_TRUE(RunLoopUntil(
-      [this] { return local_version_checker_->watch_callback != nullptr; }));
+      [this] { return cloud_device_set_->watch_callback != nullptr; }));
 
-  auto copied_callback = local_version_checker_->watch_callback;
-  local_version_checker_->watch_callback = nullptr;
-  copied_callback(LocalVersionChecker::Status::NETWORK_ERROR);
+  auto copied_callback = cloud_device_set_->watch_callback;
+  cloud_device_set_->watch_callback = nullptr;
+  copied_callback(CloudDeviceSet::Status::NETWORK_ERROR);
 
   EXPECT_TRUE(RunLoopUntil(
-      [this] { return local_version_checker_->watch_callback != nullptr; }));
+      [this] { return cloud_device_set_->watch_callback != nullptr; }));
   EXPECT_EQ(0, on_version_mismatch_calls_);
 }
 

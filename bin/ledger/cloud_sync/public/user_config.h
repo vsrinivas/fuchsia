@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/cloud_sync/public/auth_provider.h"
-#include "apps/ledger/src/cloud_sync/public/local_version_checker.h"
+#include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
 
 namespace cloud_sync {
 
@@ -25,7 +25,7 @@ struct UserConfig {
   // The provider of the auth data for the user.
   AuthProvider* auth_provider;
   // Guard which checks that the cloud was not erased since the previous sync.
-  std::unique_ptr<LocalVersionChecker> local_version_checker;
+  std::unique_ptr<CloudDeviceSet> cloud_device_set;
 };
 
 }  // namespace cloud_sync

@@ -97,9 +97,9 @@ void UserSyncImpl::CheckCloudNotErased() {
               return;
             }
 
-            user_config_.local_version_checker->CheckFingerprint(
+            user_config_.cloud_device_set->CheckFingerprint(
                 std::move(auth_token), fingerprint_,
-                [this](LocalVersionChecker::Status status) {
+                [this](CloudDeviceSet::Status status) {
                   HandleCheckCloudResult(status);
                 });
           });
@@ -123,10 +123,10 @@ void UserSyncImpl::CreateFingerprint() {
               return;
             }
 
-            user_config_.local_version_checker->SetFingerprint(
+            user_config_.cloud_device_set->SetFingerprint(
                 std::move(auth_token), fingerprint_,
-                [this](LocalVersionChecker::Status status) {
-                  if (status == LocalVersionChecker::Status::OK) {
+                [this](CloudDeviceSet::Status status) {
+                  if (status == CloudDeviceSet::Status::OK) {
                     // Persist the new fingerprint.
                     FTL_DCHECK(!fingerprint_.empty());
                     if (!files::WriteFile(GetFingerprintPath(),
@@ -143,7 +143,7 @@ void UserSyncImpl::CreateFingerprint() {
   auth_token_requests_.emplace(request);
 }
 
-void UserSyncImpl::HandleCheckCloudResult(LocalVersionChecker::Status status) {
+void UserSyncImpl::HandleCheckCloudResult(CloudDeviceSet::Status status) {
   // HACK: in order to test this codepath in an apptest, we expose a hook
   // that forces the cloud erased recovery closure to run.
   if (environment_->TriggerCloudErasedForTesting()) {
@@ -152,12 +152,12 @@ void UserSyncImpl::HandleCheckCloudResult(LocalVersionChecker::Status status) {
   }
 
   switch (status) {
-    case LocalVersionChecker::Status::OK:
+    case CloudDeviceSet::Status::OK:
       backoff_->Reset();
       SetCloudErasedWatcher();
       EnableUpload();
       return;
-    case LocalVersionChecker::Status::NETWORK_ERROR:
+    case CloudDeviceSet::Status::NETWORK_ERROR:
       // Retry after some backoff time.
       environment_->main_runner()->PostDelayedTask(
           [weak_this = weak_ptr_factory_.GetWeakPtr()] {
@@ -167,7 +167,7 @@ void UserSyncImpl::HandleCheckCloudResult(LocalVersionChecker::Status status) {
           },
           backoff_->GetNext());
       return;
-    case LocalVersionChecker::Status::ERASED:
+    case CloudDeviceSet::Status::ERASED:
       // |this| can be deleted within on_version_mismatch_() - don't
       // access member variables afterwards.
       on_version_mismatch_();
@@ -184,21 +184,21 @@ void UserSyncImpl::SetCloudErasedWatcher() {
           return;
         }
 
-        user_config_.local_version_checker->WatchFingerprint(
+        user_config_.cloud_device_set->WatchFingerprint(
             std::move(auth_token), fingerprint_,
-            [this](LocalVersionChecker::Status status) {
+            [this](CloudDeviceSet::Status status) {
               HandleWatcherResult(status);
             });
       });
   auth_token_requests_.emplace(request);
 }
 
-void UserSyncImpl::HandleWatcherResult(LocalVersionChecker::Status status) {
+void UserSyncImpl::HandleWatcherResult(CloudDeviceSet::Status status) {
   switch (status) {
-    case LocalVersionChecker::Status::OK:
+    case CloudDeviceSet::Status::OK:
       backoff_->Reset();
       return;
-    case LocalVersionChecker::Status::NETWORK_ERROR:
+    case CloudDeviceSet::Status::NETWORK_ERROR:
       environment_->main_runner()->PostDelayedTask(
           [weak_this = weak_ptr_factory_.GetWeakPtr()] {
             if (weak_this) {
@@ -207,7 +207,7 @@ void UserSyncImpl::HandleWatcherResult(LocalVersionChecker::Status status) {
           },
           backoff_->GetNext());
       return;
-    case LocalVersionChecker::Status::ERASED:
+    case CloudDeviceSet::Status::ERASED:
       // |this| can be deleted within on_version_mismatch_() - don't
       // access member variables afterwards.
       on_version_mismatch_();

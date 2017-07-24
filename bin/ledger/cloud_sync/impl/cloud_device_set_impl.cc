@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/local_version_checker_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/concatenate.h"
@@ -15,17 +15,17 @@ std::string GetDeviceMapKey(ftl::StringView fingerprint) {
 }
 }  // namespace
 
-LocalVersionCheckerImpl::LocalVersionCheckerImpl(
+CloudDeviceSetImpl::CloudDeviceSetImpl(
     std::unique_ptr<firebase::Firebase> user_firebase)
     : user_firebase_(std::move(user_firebase)) {}
 
-LocalVersionCheckerImpl::~LocalVersionCheckerImpl() {
+CloudDeviceSetImpl::~CloudDeviceSetImpl() {
   if (firebase_watcher_set_) {
     ResetWatcher();
   }
 }
 
-void LocalVersionCheckerImpl::CheckFingerprint(
+void CloudDeviceSetImpl::CheckFingerprint(
     std::string auth_token,
     std::string fingerprint,
     std::function<void(Status)> callback) {
@@ -54,10 +54,9 @@ void LocalVersionCheckerImpl::CheckFingerprint(
       });
 }
 
-void LocalVersionCheckerImpl::SetFingerprint(
-    std::string auth_token,
-    std::string fingerprint,
-    std::function<void(Status)> callback) {
+void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
+                                        std::string fingerprint,
+                                        std::function<void(Status)> callback) {
   std::vector<std::string> query_params;
   if (!auth_token.empty()) {
     query_params.push_back("auth=" + auth_token);
@@ -76,7 +75,7 @@ void LocalVersionCheckerImpl::SetFingerprint(
       });
 }
 
-void LocalVersionCheckerImpl::WatchFingerprint(
+void CloudDeviceSetImpl::WatchFingerprint(
     std::string auth_token,
     std::string fingerprint,
     std::function<void(Status)> callback) {
@@ -94,8 +93,8 @@ void LocalVersionCheckerImpl::WatchFingerprint(
   watch_callback_ = callback;
 }
 
-void LocalVersionCheckerImpl::OnPut(const std::string& path,
-                                    const rapidjson::Value& value) {
+void CloudDeviceSetImpl::OnPut(const std::string& path,
+                               const rapidjson::Value& value) {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   if (value.IsNull()) {
     if (destruction_sentinel_.DestructedWhile(
@@ -109,18 +108,18 @@ void LocalVersionCheckerImpl::OnPut(const std::string& path,
   watch_callback_(Status::OK);
 }
 
-void LocalVersionCheckerImpl::OnPatch(const std::string& path,
-                                      const rapidjson::Value& value) {
+void CloudDeviceSetImpl::OnPatch(const std::string& path,
+                                 const rapidjson::Value& value) {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   FTL_NOTIMPLEMENTED();
 }
 
-void LocalVersionCheckerImpl::OnCancel() {
+void CloudDeviceSetImpl::OnCancel() {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   FTL_NOTIMPLEMENTED();
 }
 
-void LocalVersionCheckerImpl::OnAuthRevoked(const std::string& reason) {
+void CloudDeviceSetImpl::OnAuthRevoked(const std::string& reason) {
   if (destruction_sentinel_.DestructedWhile(
           [this] { watch_callback_(Status::NETWORK_ERROR); })) {
     return;
@@ -128,12 +127,12 @@ void LocalVersionCheckerImpl::OnAuthRevoked(const std::string& reason) {
   ResetWatcher();
 }
 
-void LocalVersionCheckerImpl::OnMalformedEvent() {
+void CloudDeviceSetImpl::OnMalformedEvent() {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   FTL_NOTIMPLEMENTED();
 }
 
-void LocalVersionCheckerImpl::OnConnectionError() {
+void CloudDeviceSetImpl::OnConnectionError() {
   if (destruction_sentinel_.DestructedWhile(
           [this] { watch_callback_(Status::NETWORK_ERROR); })) {
     return;
@@ -141,7 +140,7 @@ void LocalVersionCheckerImpl::OnConnectionError() {
   ResetWatcher();
 }
 
-void LocalVersionCheckerImpl::ResetWatcher() {
+void CloudDeviceSetImpl::ResetWatcher() {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   user_firebase_->UnWatch(this);
   firebase_watcher_set_ = false;
