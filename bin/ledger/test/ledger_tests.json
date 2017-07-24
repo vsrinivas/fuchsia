@@ -1,16 +1,16 @@
 {
   "tests": [
     {
-      "name": "ledger_unittests",
-      "exec": "/system/test/ledger_unittests"
+      "name": "ledger_apptests",
+      "exec": "/system/test/ledger_apptests"
     },
     {
       "name": "ledger_integration_tests",
       "exec": "/system/test/ledger_integration_tests"
     },
     {
-      "name": "ledger_apptests",
-      "exec": "/system/apps/ledger_apptests"
+      "name": "ledger_unittests",
+      "exec": "/system/test/ledger_unittests"
     }
   ]
 }
