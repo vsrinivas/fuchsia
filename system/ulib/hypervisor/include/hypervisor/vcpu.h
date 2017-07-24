@@ -84,6 +84,7 @@ typedef struct pci_device_state {
 } pci_device_state_t;
 
 typedef struct guest_state {
+    mx_handle_t guest;
     mtx_t mutex;
 
     // Guest memory.

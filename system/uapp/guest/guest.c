@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
 
     guest_state_t guest_state;
     memset(&guest_state, 0, sizeof(guest_state));
+    guest_state.guest = guest;
     int ret = mtx_init(&guest_state.mutex, mtx_plain);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to initialize guest state mutex\n");

@@ -511,15 +511,6 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
     case UART_INTERRUPT_ENABLE_PORT ... UART_LINE_CONTROL_IO_PORT - 1:
     case UART_LINE_CONTROL_IO_PORT + 1 ... UART_SCR_SCRATCH_IO_PORT:
         return MX_OK;
-    case UART_RECEIVE_IO_PORT:
-        for (int i = 0; i < io->access_size; i++) {
-            io_port_state->buffer[io_port_state->offset++] = io->data[i];
-            if (io_port_state->offset == IO_BUFFER_SIZE || io->data[i] == '\r') {
-                printf("%.*s", io_port_state->offset, io_port_state->buffer);
-                io_port_state->offset = 0;
-            }
-        }
-        return MX_OK;
     case UART_LINE_CONTROL_IO_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
@@ -563,7 +554,100 @@ static mx_status_t handle_io(vcpu_context_t* vcpu_context, mx_guest_io_t* io) {
     return status;
 }
 
+static mx_status_t fifo_create(mx_handle_t* out0, mx_handle_t* out1) {
+    const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
+    const uint32_t size = sizeof(mx_guest_packet_t);
+    return mx_fifo_create(count, size, 0, out0, out1);
+}
+
+static mx_status_t fifo_wait(mx_handle_t fifo, mx_signals_t signals) {
+    mx_signals_t observed = 0;
+    while (!(observed & signals)) {
+        mx_status_t status = mx_object_wait_one(fifo, signals | MX_FIFO_PEER_CLOSED,
+                                                MX_TIME_INFINITE, &observed);
+        if (status != MX_OK)
+            return status;
+        if (observed & MX_FIFO_PEER_CLOSED)
+            return MX_ERR_PEER_CLOSED;
+    }
+    return MX_OK;
+}
+
+static int serial_loop(void* arg) {
+    mx_handle_t* guest = arg;
+
+    mx_handle_t user_fifo;
+    mx_handle_t kernel_fifo;
+    mx_status_t status = fifo_create(&user_fifo, &kernel_fifo);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to create serial FIFO %d\n", status);
+        return status;
+    }
+
+    struct {
+        mx_trap_address_space_t aspace;
+        mx_vaddr_t addr;
+        size_t len;
+        mx_handle_t fifo;
+    } trap_args = { MX_TRAP_IO, UART_RECEIVE_IO_PORT, 1, kernel_fifo };
+    status = mx_hypervisor_op(*guest, MX_HYPERVISOR_OP_GUEST_SET_TRAP,
+                              &trap_args, sizeof(trap_args), NULL, 0);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to set trap for serial FIFO %d\n", status);
+        return status;
+    }
+
+    uint8_t buffer[IO_BUFFER_SIZE];
+    uint16_t offset = 0;
+    mx_guest_packet_t packets[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
+    while (true) {
+        status = fifo_wait(user_fifo, MX_FIFO_READABLE);
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to wait for serial FIFO %d\n", status);
+            return status;
+        }
+
+        uint32_t num_packets;
+        status = mx_fifo_read(user_fifo, packets, sizeof(packets), &num_packets);
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to read from serial FIFO %d\n", status);
+            return status;
+        }
+
+        for (uint32_t i = 0; i < num_packets; i++) {
+            if (packets[i].type != MX_GUEST_PKT_TYPE_IO) {
+                fprintf(stderr, "Invalid packet type for serial FIFO %d\n", packets[i].type);
+                return MX_ERR_INTERNAL;
+            }
+            mx_guest_io_t* io = &packets[i].io;
+            if (io->port != UART_RECEIVE_IO_PORT) {
+                fprintf(stderr, "Invalid IO port for serial FIFO %#x\n", io->port);
+                return MX_ERR_INTERNAL;
+            }
+            for (int i = 0; i < io->access_size; i++) {
+                buffer[offset++] = io->data[i];
+                if (offset == IO_BUFFER_SIZE || io->data[i] == '\r') {
+                    printf("%.*s", offset, buffer);
+                    offset = 0;
+                }
+            }
+        }
+    }
+}
+
 mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
+    thrd_t serial_thread;
+    int ret = thrd_create(&serial_thread, serial_loop, &vcpu_context->guest_state->guest);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to create serial thread %d\n", ret);
+        return MX_ERR_INTERNAL;
+    }
+    ret = thrd_detach(serial_thread);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to detach serial thread %d\n", ret);
+        return MX_ERR_INTERNAL;
+    }
+
     while (true) {
         mx_guest_packet_t packet;
         mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
