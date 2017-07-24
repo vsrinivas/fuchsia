@@ -7,7 +7,6 @@
 #pragma once
 
 #include <kernel/mutex.h>
-#include <lib/user_copy/user_array.h>
 #include <magenta/dispatcher.h>
 #include <magenta/handle_owner.h>
 #include <magenta/state_tracker.h>
