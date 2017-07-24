@@ -5,6 +5,7 @@
 #include "apps/ledger/src/app/erase_remote_repository_operation.h"
 
 #include "apps/ledger/src/app/auth_provider_impl.h"
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 
 namespace ledger {
@@ -25,7 +26,8 @@ EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
     on_done_(false);
   });
   auth_provider_ = std::make_unique<AuthProviderImpl>(
-      task_runner, api_key_, std::move(token_provider));
+      task_runner, api_key_, std::move(token_provider),
+      std::make_unique<backoff::ExponentialBackoff>());
 }
 
 EraseRemoteRepositoryOperation::~EraseRemoteRepositoryOperation() {}

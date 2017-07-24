@@ -5,10 +5,14 @@
 #ifndef APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
 #define APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
 
+#include <functional>
+#include <memory>
 #include <string>
 
+#include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace ledger {
@@ -26,7 +30,8 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
  public:
   AuthProviderImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                    std::string api_key,
-                   modular::auth::TokenProviderPtr token_provider);
+                   modular::auth::TokenProviderPtr token_provider,
+                   std::unique_ptr<backoff::Backoff> backoff);
 
   // AuthProvider:
   ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
@@ -38,9 +43,18 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
       override;
 
  private:
+  // Retrieves the Firebase token from the token provider, transparently
+  // retrying the request until success.
+  void GetToken(std::function<void(cloud_sync::AuthStatus,
+                                   modular::auth::FirebaseTokenPtr)> callback);
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   const std::string api_key_;
   modular::auth::TokenProviderPtr token_provider_;
+  const std::unique_ptr<backoff::Backoff> backoff_;
+
+  // Must be the last member field.
+  ftl::WeakPtrFactory<AuthProviderImpl> weak_factory_;
 };
 
 }  // namespace ledger

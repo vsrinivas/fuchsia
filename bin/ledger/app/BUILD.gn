@@ -134,6 +134,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    "//apps/ledger/src/backoff/test",
     "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/cloud_sync/test",
     "//apps/ledger/src/convert",

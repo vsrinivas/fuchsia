@@ -13,10 +13,20 @@ TestBackoff::TestBackoff() {}
 TestBackoff::~TestBackoff() {}
 
 ftl::TimeDelta TestBackoff::GetNext() {
+  get_next_count++;
+  if (on_get_next_) {
+    on_get_next_();
+  }
   return backoff_to_return;
 }
 
-void TestBackoff::Reset() {}
+void TestBackoff::Reset() {
+  reset_count++;
+}
+
+void TestBackoff::SetOnGetNext(ftl::Closure on_get_next) {
+  on_get_next_ = on_get_next;
+}
 
 }  // namespace test
 
