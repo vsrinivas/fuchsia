@@ -120,7 +120,7 @@ public:
     void pop_back() {
         MX_DEBUG_ASSERT(size_ > 0);
         ptr_[--size_].~T();
-        if (size_ * kCapacityGrowthFactor < capacity_ &&
+        if (size_ * kCapacityShrinkFactor < capacity_ &&
             capacity_ > kCapacityMinimum) {
             // Try to shrink the underlying storage
             static_assert((kCapacityMinimum + 1) >= kCapacityShrinkFactor,

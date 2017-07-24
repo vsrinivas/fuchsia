@@ -110,15 +110,13 @@ struct Generator {
 
 // Actual tests
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_access_release() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 10;
-
     // Create the vector, verify its contents
     {
         mxtl::Vector<ContainerType> vector;
@@ -161,14 +159,13 @@ struct CountedAllocatorTraits : public DefaultAllocatorTraits {
 
 size_t CountedAllocatorTraits::allocation_count = 0;
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_push_back_in_capacity() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 10;
 
     CountedAllocatorTraits::allocation_count = 0;
     ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
@@ -195,14 +192,13 @@ bool vector_test_push_back_in_capacity() {
     END_TEST;
 }
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_push_back_beyond_capacity() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 10;
 
     {
         // Create an empty vector, push back beyond its capacity
@@ -223,14 +219,13 @@ bool vector_test_push_back_beyond_capacity() {
     END_TEST;
 }
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_pop_back() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 10;
 
     {
         // Create a vector filled with objects
@@ -277,14 +272,13 @@ struct PartiallyFailingAllocatorTraits : public DefaultAllocatorTraits {
     }
 };
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_allocation_failure() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 32;
 
     // Test that a failing allocator cannot take on additional elements
     {
@@ -331,14 +325,13 @@ bool vector_test_allocation_failure() {
     END_TEST;
 }
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_move() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 10;
 
     // Test move constructor
     {
@@ -390,14 +383,13 @@ bool vector_test_move() {
     END_TEST;
 }
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_swap() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 32;
 
     {
         mxtl::Vector<ContainerType> vectorA;
@@ -438,14 +430,13 @@ bool vector_test_swap() {
     END_TEST;
 }
 
-template <typename ContainerTraits>
+template <typename ContainerTraits, size_t size>
 bool vector_test_iterator() {
     using ContainerType = typename ContainerTraits::ContainerType;
 
     BEGIN_TEST;
 
     Generator<ContainerTraits> gen;
-    constexpr size_t size = 32;
 
     {
         mxtl::Vector<ContainerType> vector;
@@ -478,40 +469,29 @@ bool vector_test_iterator() {
 
 }  // namespace anonymous
 
-BEGIN_TEST_CASE(vector_tests)
-RUN_TEST((vector_test_access_release<BaseTypeTraits>))
-RUN_TEST((vector_test_access_release<StructTypeTraits>))
-RUN_TEST((vector_test_access_release<UniquePtrTraits>))
-RUN_TEST((vector_test_access_release<RefPtrTraits>))
-RUN_TEST((vector_test_push_back_in_capacity<BaseTypeTraits>))
-RUN_TEST((vector_test_push_back_in_capacity<StructTypeTraits>))
-RUN_TEST((vector_test_push_back_in_capacity<UniquePtrTraits>))
-RUN_TEST((vector_test_push_back_in_capacity<RefPtrTraits>))
-RUN_TEST((vector_test_push_back_beyond_capacity<BaseTypeTraits>))
-RUN_TEST((vector_test_push_back_beyond_capacity<StructTypeTraits>))
-RUN_TEST((vector_test_push_back_beyond_capacity<UniquePtrTraits>))
-RUN_TEST((vector_test_push_back_beyond_capacity<RefPtrTraits>))
-RUN_TEST((vector_test_pop_back<BaseTypeTraits>))
-RUN_TEST((vector_test_pop_back<StructTypeTraits>))
-RUN_TEST((vector_test_pop_back<UniquePtrTraits>))
-RUN_TEST((vector_test_pop_back<RefPtrTraits>))
-RUN_TEST((vector_test_allocation_failure<BaseTypeTraits>))
-RUN_TEST((vector_test_allocation_failure<StructTypeTraits>))
-RUN_TEST((vector_test_allocation_failure<UniquePtrTraits>))
-RUN_TEST((vector_test_allocation_failure<RefPtrTraits>))
-RUN_TEST((vector_test_move<BaseTypeTraits>))
-RUN_TEST((vector_test_move<StructTypeTraits>))
-RUN_TEST((vector_test_move<UniquePtrTraits>))
-RUN_TEST((vector_test_move<RefPtrTraits>))
-RUN_TEST((vector_test_swap<BaseTypeTraits>))
-RUN_TEST((vector_test_swap<StructTypeTraits>))
-RUN_TEST((vector_test_swap<UniquePtrTraits>))
-RUN_TEST((vector_test_swap<RefPtrTraits>))
-RUN_TEST((vector_test_iterator<BaseTypeTraits>))
-RUN_TEST((vector_test_iterator<StructTypeTraits>))
-RUN_TEST((vector_test_iterator<UniquePtrTraits>))
-RUN_TEST((vector_test_iterator<RefPtrTraits>))
+#define RUN_FOR_ALL_TRAITS(test_base, test_size)              \
+        RUN_TEST((test_base<BaseTypeTraits, test_size>))      \
+        RUN_TEST((test_base<StructTypeTraits, test_size>))    \
+        RUN_TEST((test_base<UniquePtrTraits, test_size>)) \
+        RUN_TEST((test_base<RefPtrTraits, test_size>))
 
+#define RUN_FOR_ALL(test_base)            \
+        RUN_FOR_ALL_TRAITS(test_base, 1)  \
+        RUN_FOR_ALL_TRAITS(test_base, 2)  \
+        RUN_FOR_ALL_TRAITS(test_base, 10) \
+        RUN_FOR_ALL_TRAITS(test_base, 32) \
+        RUN_FOR_ALL_TRAITS(test_base, 64) \
+        RUN_FOR_ALL_TRAITS(test_base, 100)
+
+BEGIN_TEST_CASE(vector_tests)
+RUN_FOR_ALL(vector_test_access_release)
+RUN_FOR_ALL(vector_test_push_back_in_capacity)
+RUN_FOR_ALL(vector_test_push_back_beyond_capacity)
+RUN_FOR_ALL(vector_test_pop_back)
+RUN_FOR_ALL(vector_test_allocation_failure)
+RUN_FOR_ALL(vector_test_move)
+RUN_FOR_ALL(vector_test_swap)
+RUN_FOR_ALL(vector_test_iterator)
 END_TEST_CASE(vector_tests)
 
 }  // namespace tests
