@@ -32,12 +32,16 @@
 
 namespace ledger {
 
+namespace {
+
 constexpr ftl::StringView kPersistentFileSystem = "/data";
 constexpr ftl::StringView kMinFsName = "minfs";
 constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 constexpr ftl::StringView kNoMinFsFlag = "no_minfs_wait";
 constexpr ftl::StringView kNoPersistedConfig = "no_persisted_config";
 constexpr ftl::StringView kNoNetworkForTesting = "no_network_for_testing";
+constexpr ftl::StringView kNoStatisticsReporting =
+    "no_statistics_reporting_for_testing";
 constexpr ftl::StringView kTriggerCloudErasedForTesting =
     "trigger_cloud_erased_for_testing";
 
@@ -46,6 +50,18 @@ struct AppParams {
       LedgerRepositoryFactoryImpl::ConfigPersistence::PERSIST;
   bool no_network_for_testing = false;
   bool trigger_cloud_erased_for_testing = false;
+  bool disable_statistics = false;
+};
+
+ftl::AutoCall<ftl::Closure> SetupCobalt(
+    bool disable_statistics,
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    app::ApplicationContext* application_context) {
+  if (disable_statistics) {
+    return ftl::MakeAutoCall<ftl::Closure>([] {});
+  } else {
+    return InitializeCobalt(std::move(task_runner), application_context);
+  }
 };
 
 // App is the main entry point of the Ledger application.
@@ -60,8 +76,9 @@ class App : public LedgerController,
   App(AppParams app_params)
       : app_params_(std::move(app_params)),
         application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        cobalt_cleaner_(
-            InitializeCobalt(loop_.task_runner(), application_context_.get())),
+        cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
+                                    loop_.task_runner(),
+                                    application_context_.get())),
         config_persistence_(app_params_.config_persistence) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
@@ -187,6 +204,7 @@ void WaitForData() {
                    << " is not persistent. Did you forget to configure it?";
 }
 
+}  // namespace
 }  // namespace ledger
 
 int main(int argc, const char** argv) {
@@ -202,6 +220,8 @@ int main(int argc, const char** argv) {
       command_line.HasOption(ledger::kNoNetworkForTesting);
   app_params.trigger_cloud_erased_for_testing =
       command_line.HasOption(ledger::kTriggerCloudErasedForTesting);
+  app_params.disable_statistics =
+      command_line.HasOption(ledger::kNoStatisticsReporting);
 
   if (!command_line.HasOption(ledger::kNoMinFsFlag.ToString())) {
     // Poll until /data is persistent. This is need to retrieve the Ledger

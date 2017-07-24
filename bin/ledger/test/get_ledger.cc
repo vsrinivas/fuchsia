@@ -39,6 +39,7 @@ ledger::Status GetLedger(
   launch_info->services = child_services.NewRequest();
   launch_info->arguments.push_back("--no_minfs_wait");
   launch_info->arguments.push_back("--no_persisted_config");
+  launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
 
   context->launcher()->CreateApplication(std::move(launch_info),
                                          controller->NewRequest());
