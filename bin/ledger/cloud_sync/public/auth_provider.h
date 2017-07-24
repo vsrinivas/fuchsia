@@ -33,7 +33,7 @@ class AuthProvider {
       std::function<void(AuthStatus, std::string)> callback) = 0;
 
   // Retrieves the Firebase user ID of the user.
-  virtual void GetFirebaseUserId(
+  virtual ftl::RefPtr<callback::Cancellable> GetFirebaseUserId(
       std::function<void(AuthStatus, std::string)> callback) = 0;
 
  private:

@@ -33,8 +33,9 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
       std::function<void(cloud_sync::AuthStatus, std::string)> callback)
       override;
 
-  void GetFirebaseUserId(std::function<void(cloud_sync::AuthStatus,
-                                            std::string)> callback) override;
+  ftl::RefPtr<callback::Cancellable> GetFirebaseUserId(
+      std::function<void(cloud_sync::AuthStatus, std::string)> callback)
+      override;
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

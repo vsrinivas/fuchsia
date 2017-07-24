@@ -28,6 +28,8 @@ EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
       task_runner, api_key_, std::move(token_provider));
 }
 
+EraseRemoteRepositoryOperation::~EraseRemoteRepositoryOperation() {}
+
 EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
     EraseRemoteRepositoryOperation&& other) = default;
 
@@ -39,28 +41,32 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
   on_done_ = std::move(on_done);
   FTL_DCHECK(on_done_);
 
-  auth_provider_->GetFirebaseUserId([this](cloud_sync::AuthStatus auth_status,
-                                           std::string user_id) {
-    if (auth_status != cloud_sync::AuthStatus::OK) {
-      FTL_LOG(ERROR)
-          << "Failed to retrieve Firebase user id from token provider.";
-      on_done_(false);
-      return;
-    }
-    user_id_ = std::move(user_id);
-    auth_provider_->GetFirebaseToken([this](cloud_sync::AuthStatus auth_status,
-                                            std::string auth_token) {
-      if (auth_status != cloud_sync::AuthStatus::OK) {
-        FTL_LOG(ERROR)
-            << "Failed to retrieve the auth token to clean the remote state.";
-        on_done_(false);
-        return;
-      }
+  auto user_id_request =
+      auth_provider_->GetFirebaseUserId(
+          [this](cloud_sync::AuthStatus auth_status, std::string user_id) {
+            if (auth_status != cloud_sync::AuthStatus::OK) {
+              FTL_LOG(ERROR)
+                  << "Failed to retrieve Firebase user id from token provider.";
+              on_done_(false);
+              return;
+            }
+            user_id_ = std::move(user_id);
+            auto token_request = auth_provider_->GetFirebaseToken(
+                [this](cloud_sync::AuthStatus auth_status,
+                       std::string auth_token) {
+                  if (auth_status != cloud_sync::AuthStatus::OK) {
+                    FTL_LOG(ERROR) << "Failed to retrieve the auth token to "
+                                      "clean the remote state.";
+                    on_done_(false);
+                    return;
+                  }
 
-      auth_token_ = std::move(auth_token);
-      EraseRemote();
-    });
-  });
+                  auth_token_ = std::move(auth_token);
+                  EraseRemote();
+                });
+            auth_provider_requests_.emplace(std::move(token_request));
+          });
+  auth_provider_requests_.emplace(std::move(user_id_request));
 }
 
 void EraseRemoteRepositoryOperation::EraseRemote() {

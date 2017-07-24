@@ -155,5 +155,34 @@ TEST(CancellableContainer, ClearOnDone) {
   EXPECT_EQ(1, cancellable2->nb_cancel);
 }
 
+TEST(CancellableContainer, Move) {
+  auto cancellable1 = FakeCancellable::Create();
+  auto cancellable2 = FakeCancellable::Create();
+
+  EXPECT_EQ(0, cancellable1->nb_cancel);
+  EXPECT_EQ(0, cancellable1->nb_on_done);
+  EXPECT_EQ(0, cancellable2->nb_cancel);
+  EXPECT_EQ(0, cancellable2->nb_on_done);
+
+  CancellableContainer container;
+  container.emplace(cancellable1);
+  container.emplace(cancellable2);
+  EXPECT_EQ(0, cancellable1->nb_cancel);
+  EXPECT_EQ(1, cancellable1->nb_on_done);
+  EXPECT_EQ(0, cancellable2->nb_cancel);
+  EXPECT_EQ(1, cancellable2->nb_on_done);
+
+  {
+    CancellableContainer moved = std::move(container);
+    EXPECT_EQ(0, cancellable1->nb_cancel);
+    EXPECT_EQ(1, cancellable1->nb_on_done);
+    EXPECT_EQ(0, cancellable2->nb_cancel);
+    EXPECT_EQ(1, cancellable2->nb_on_done);
+  }
+
+  EXPECT_EQ(1, cancellable1->nb_cancel);
+  EXPECT_EQ(1, cancellable2->nb_cancel);
+}
+
 }  //  namespace
 }  //  namespace callback

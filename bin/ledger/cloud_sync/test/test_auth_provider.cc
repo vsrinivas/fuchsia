@@ -25,11 +25,14 @@ ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
   return cancellable;
 }
 
-void TestAuthProvider::GetFirebaseUserId(
+ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
     std::function<void(AuthStatus, std::string)> callback) {
-  task_runner_->PostTask([ this, callback = std::move(callback) ] {
-    callback(status_to_return, user_id_to_return);
-  });
+  auto cancellable = callback::CancellableImpl::Create([] {});
+
+  task_runner_->PostTask([
+    this, callback = cancellable->WrapCallback(callback)
+  ] { callback(status_to_return, user_id_to_return); });
+  return cancellable;
 }
 
 }  // namespace test

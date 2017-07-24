@@ -45,10 +45,11 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
   return cancellable;
 }
 
-void AuthProviderImpl::GetFirebaseUserId(
+ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
     std::function<void(cloud_sync::AuthStatus, std::string)> callback) {
+  auto cancellable = callback::CancellableImpl::Create([] {});
   token_provider_->GetFirebaseAuthToken(
-      api_key_, [callback = std::move(callback)](
+      api_key_, [callback = cancellable->WrapCallback(callback)](
                     modular::auth::FirebaseTokenPtr token,
                     modular::auth::AuthErrPtr error) {
         if (!token || error->status != modular::auth::Status::OK) {
@@ -63,6 +64,7 @@ void AuthProviderImpl::GetFirebaseUserId(
         }
         callback(cloud_sync::AuthStatus::OK, token->local_id);
       });
+  return cancellable;
 }
 
 }  // namespace ledger

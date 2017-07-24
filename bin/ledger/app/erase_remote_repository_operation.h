@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
@@ -27,6 +28,7 @@ class EraseRemoteRepositoryOperation {
       std::string server_id,
       std::string api_key,
       modular::auth::TokenProviderPtr token_provider);
+  ~EraseRemoteRepositoryOperation();
 
   EraseRemoteRepositoryOperation(EraseRemoteRepositoryOperation&& other);
   EraseRemoteRepositoryOperation& operator=(
@@ -47,6 +49,9 @@ class EraseRemoteRepositoryOperation {
   std::string user_id_;
   std::string auth_token_;
   std::unique_ptr<firebase::FirebaseImpl> firebase_;
+
+  // Pending auth provider requests to be cancelled when this class goes away.
+  callback::CancellableContainer auth_provider_requests_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EraseRemoteRepositoryOperation);
 };

@@ -268,7 +268,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 
-  auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
+  auto request = auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
     this, repository_information, firebase_config = std::move(firebase_config),
     auth_provider_ptr, container
   ](cloud_sync::AuthStatus auth_status, std::string user_id) {
@@ -285,6 +285,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     CreateRepository(container, repository_information, std::move(user_config));
 
   }));
+  auth_provider_requests_.emplace(std::move(request));
 }
 
 void LedgerRepositoryFactoryImpl::EraseRepository(

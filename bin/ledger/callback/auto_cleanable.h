@@ -64,6 +64,9 @@ class AutoCleanableSet {
   AutoCleanableSet() {}
   ~AutoCleanableSet() {}
 
+  AutoCleanableSet(AutoCleanableSet&& other) = default;
+  AutoCleanableSet& operator=(AutoCleanableSet&& other) = default;
+
   bool empty() { return set_.empty(); }
 
   void clear() { set_.clear(); }

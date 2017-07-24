@@ -12,6 +12,7 @@
 #include "apps/ledger/src/app/erase_remote_repository_operation.h"
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/callback/pending_operation.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -81,6 +82,9 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
       repositories_;
+
+  // Pending auth provider requests to be cancelled when this class goes away.
+  callback::CancellableContainer auth_provider_requests_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };
