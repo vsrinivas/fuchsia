@@ -173,7 +173,7 @@ void WaitForData() {
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
     ssize_t len = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
-    FTL_DCHECK(len > (ssize_t)sizeof(vfs_query_info_t));
+    FTL_DCHECK(len > static_cast<ssize_t>(sizeof(vfs_query_info_t)));
     ftl::StringView fs_name(info->name, len - sizeof(vfs_query_info_t));
 
     if (fs_name == kMinFsName) {
