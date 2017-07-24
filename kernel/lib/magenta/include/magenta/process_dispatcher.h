@@ -306,7 +306,8 @@ private:
     mx_handle_t handle_rand_ = 0;
 
     // list of threads in this process
-    mxtl::DoublyLinkedList<UserThread*> thread_list_ TA_GUARDED(state_lock_);
+    using ThreadList = mxtl::DoublyLinkedList<UserThread*, UserThread::ThreadListTraits>;
+    ThreadList thread_list_ TA_GUARDED(state_lock_);
 
     // our address space
     mxtl::RefPtr<VmAspace> aspace_;

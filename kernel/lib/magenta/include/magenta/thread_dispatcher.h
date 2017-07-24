@@ -32,9 +32,16 @@
 class ProcessDispatcher;
 class ThreadDispatcher;
 
-class UserThread : public mxtl::DoublyLinkedListable<UserThread*>
-                 , public mxtl::RefCounted<UserThread> {
+class UserThread : public mxtl::RefCounted<UserThread> {
 public:
+    // Traits to belong in the parent process's list.
+    struct ThreadListTraits {
+        static mxtl::DoublyLinkedListNodeState<UserThread*>& node_state(
+            UserThread& obj) {
+            return obj.dll_thread_;
+        }
+    };
+
     // state of the thread
     enum class State {
         INITIAL,     // newly created thread
@@ -183,6 +190,9 @@ private:
     void SetStateLocked(State) TA_REQ(state_lock_);
 
     mxtl::Canary<mxtl::magic("UTHR")> canary_;
+
+    // The containing process holds a list of all its threads.
+    mxtl::DoublyLinkedListNodeState<UserThread*> dll_thread_;
 
     // The kernel object id. Since ProcessDispatcher maintains a list of
     // UserThreads, and since use of dispatcher_ is racy (see
