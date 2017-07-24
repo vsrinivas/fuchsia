@@ -9,8 +9,10 @@
 
 #include <inet6/inet6.h>
 
+#include <magenta/types.h>
 #include <magenta/boot/netboot.h>
 
+// netfile interface
 typedef struct netfile_state_t {
     int      fd;
     off_t    offset;
@@ -21,8 +23,6 @@ typedef struct netfile_state_t {
 } netfile_state;
 
 extern netfile_state netfile;
-extern const char* nodename;
-extern bool netbootloader;
 
 typedef struct netfilemsg_t {
     nbmsg   hdr;
@@ -41,6 +41,10 @@ int netfile_write(const char* data, size_t len);
 
 int netfile_close(void);
 
+// netboot interface
+extern const char* nodename;
+extern bool netbootloader;
+
 void netboot_advertise(const char* nodename);
 
 void netboot_recv(void* data, size_t len, bool is_mcast,
@@ -49,6 +53,16 @@ void netboot_recv(void* data, size_t len, bool is_mcast,
 
 void netboot_run_cmd(const char* cmd);
 
+// TFTP interface
 void tftp_recv(void *data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport);
+
+// debuglog interface
+extern mx_time_t debuglog_next_timeout;
+
+int debuglog_init(void);
+
+void debuglog_recv(void* data, size_t len, bool is_mcast);
+
+void debuglog_timeout(void);

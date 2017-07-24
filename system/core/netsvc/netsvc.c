@@ -4,7 +4,6 @@
 
 #include "netsvc.h"
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,32 +26,7 @@
 
 #define FILTER_IPV6 1
 
-#define MAX_LOG_LINE (MX_LOG_RECORD_MAX + 32)
-
-static mx_handle_t loghandle;
-
 bool netbootloader = false;
-
-int get_log_line(char* out) {
-    char buf[MX_LOG_RECORD_MAX + 1];
-    mx_log_record_t* rec = (mx_log_record_t*)buf;
-    if (mx_log_read(loghandle, MX_LOG_RECORD_MAX, rec, 0) > 0) {
-        if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-            rec->datalen--;
-        }
-        rec->data[rec->datalen] = 0;
-        snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                 (int)(rec->timestamp / 1000000000ULL),
-                 (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                 rec->pid, rec->tid, rec->data);
-        return strlen(out);
-    } else {
-        return 0;
-    }
-}
-
-static volatile uint32_t seqno = 1;
-static volatile uint32_t pending = 0;
 
 static void run_program(const char *progname, int argc, const char** argv, mx_handle_t h) {
 
@@ -88,22 +62,6 @@ static void run_server(const char* progname, const char* bin, mx_handle_t h) {
 
 const char* nodename = "magenta";
 
-static void debuglog_recv(void* data, size_t len, bool is_mcast) {
-    if ((len != 8) || is_mcast) {
-        return;
-    }
-    logpacket_t* pkt = data;
-    if ((pkt->magic != 0xaeae1123) || (pkt->seqno != seqno)) {
-        return;
-    }
-    if (pending) {
-        seqno++;
-        pending = 0;
-        // ensure we stop polling
-        netifc_set_timer(0);
-    }
-}
-
 void udp6_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
@@ -129,13 +87,11 @@ void netifc_recv(void* data, size_t len) {
 }
 
 int main(int argc, char** argv) {
-    logpacket_t pkt;
-    int len = 0;
     unsigned char mac[6];
     uint16_t mtu;
     char device_id[DEVICE_ID_MAX];
 
-    if (mx_log_create(MX_LOG_FLAG_READABLE, &loghandle) < 0) {
+    if (debuglog_init() < 0) {
         return -1;
     }
 
@@ -167,40 +123,18 @@ int main(int argc, char** argv) {
         printf("netsvc: nodename='%s'\n", nodename);
         printf("netsvc: start\n");
         for (;;) {
-            if (pending == 0) {
-                pkt.magic = 0xaeae1123;
-                pkt.seqno = seqno;
-                strncpy(pkt.nodename, nodename, sizeof(pkt.nodename) - 1);
-                len = 0;
-                while (len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
-                    int r = get_log_line(pkt.data + len);
-                    if (r > 0) {
-                        len += r;
-                    } else {
-                        break;
-                    }
-                }
-                if (len) {
-                    // include header and nodename in length
-                    len += MAX_NODENAME_LENGTH + sizeof(uint32_t) * 2;
-                    pending = 1;
-                    goto transmit;
-                }
-            }
-            if (netifc_timer_expired()) {
-            transmit:
-                if (pending) {
-                    udp6_send(&pkt, len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
-                }
-            }
-
             if (netbootloader)
                 netboot_advertise(nodename);
 
-            //TODO: wakeup early for log traffic too
-            netifc_set_timer(100);
+            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+            netifc_set_timer((debuglog_next_timeout < now) ? 0 :
+                             ((debuglog_next_timeout - now)/MX_MSEC(1)));
             if (netifc_poll())
                 break;
+            now = mx_time_get(MX_CLOCK_MONOTONIC);
+            if (now > debuglog_next_timeout) {
+                debuglog_timeout();
+            }
         }
         netifc_close();
     }

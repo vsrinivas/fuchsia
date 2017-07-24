@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
             fprintf(stderr, "ignoring non-link-local message\n");
             continue;
         }
-        if (pkt->magic != 0xaeae1123)
+        if (pkt->magic != NB_DEBUGLOG_MAGIC)
             continue;
         if (strncmp(nodename, "*", 1) && strncmp(pkt->nodename, nodename, sizeof(pkt->nodename)))
             continue;

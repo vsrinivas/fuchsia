@@ -15,7 +15,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/netboot.c \
     $(LOCAL_DIR)/netfile.c \
     $(LOCAL_DIR)/device_id.c \
-    $(LOCAL_DIR)/tftp.c
+    $(LOCAL_DIR)/tftp.c \
+    $(LOCAL_DIR)/debuglog.c
 
 MODULE_STATIC_LIBS := system/ulib/inet6 system/ulib/tftp
 
