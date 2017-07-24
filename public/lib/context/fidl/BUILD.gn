@@ -7,7 +7,7 @@ import("//lib/fidl/fidl.gni")
 fidl("context") {
   sources = [
     "context_engine.fidl",
-    "context_provider.fidl",
+    "context_reader.fidl",
     "context_publisher.fidl",
   ]
 

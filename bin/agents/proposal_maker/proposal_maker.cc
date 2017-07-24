@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
@@ -49,13 +49,13 @@ class ProposalMaker : ContextListener {
  public:
   ProposalMaker()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         proposal_out_(
             app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         binding_(this) {
     auto query = ContextQuery::New();
     query->topics.push_back(kSelectedEntitiesTopic);
-    provider_->Subscribe(std::move(query), binding_.NewBinding());
+    reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
@@ -79,7 +79,7 @@ class ProposalMaker : ContextListener {
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
-  ContextProviderPtr provider_;
+  ContextReaderPtr reader_;
   ProposalPublisherPtr proposal_out_;
   fidl::Binding<ContextListener> binding_;
 };

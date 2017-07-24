@@ -182,13 +182,13 @@ void UserIntelligenceProviderImpl::AddStandardServices(
         scope->set_agent_scope(std::move(agent_scope));
         context_engine_->GetPublisher(std::move(scope), std::move(request));
       });
-  agent_host->AddService<maxwell::ContextProvider>(
-      [this, url](fidl::InterfaceRequest<maxwell::ContextProvider> request) {
+  agent_host->AddService<maxwell::ContextReader>(
+      [this, url](fidl::InterfaceRequest<maxwell::ContextReader> request) {
         auto scope = ComponentScope::New();
         auto agent_scope = AgentScope::New();
         agent_scope->url = url;
         scope->set_agent_scope(std::move(agent_scope));
-        context_engine_->GetProvider(std::move(scope), std::move(request));
+        context_engine_->GetReader(std::move(scope), std::move(request));
       });
   agent_host->AddService<maxwell::ProposalPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {

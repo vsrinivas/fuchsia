@@ -17,10 +17,10 @@ source_set("context_publisher_impl") {
   ]
 }
 
-source_set("context_provider_impl") {
+source_set("context_reader_impl") {
   sources = [
-    "context_provider_impl.cc",
-    "context_provider_impl.h",
+    "context_reader_impl.cc",
+    "context_reader_impl.h",
   ]
 
   deps = [
@@ -74,8 +74,8 @@ source_set("context_engine_impl") {
   ]
 
   deps = [
-    ":context_provider_impl",
     ":context_publisher_impl",
+    ":context_reader_impl",
     ":context_repository",
     ":debug",
     "//apps/maxwell/services/context",

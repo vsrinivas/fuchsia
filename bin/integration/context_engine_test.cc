@@ -70,8 +70,8 @@ class ContextEngineTest : public ContextEngineTestBase {
   }
 
   void InitProvider(ComponentScopePtr scope) {
-    provider_.reset();
-    context_engine()->GetProvider(std::move(scope), provider_.NewRequest());
+    reader_.reset();
+    context_engine()->GetReader(std::move(scope), reader_.NewRequest());
   }
 
   void InitPublisher(ComponentScopePtr scope) {
@@ -79,7 +79,7 @@ class ContextEngineTest : public ContextEngineTestBase {
     context_engine()->GetPublisher(std::move(scope), publisher_.NewRequest());
   }
 
-  ContextProviderPtr provider_;
+  ContextReaderPtr reader_;
   ContextPublisherPtr publisher_;
 };
 
@@ -99,7 +99,7 @@ TEST_F(ContextEngineTest, PublishAndSubscribe) {
   publisher_->Publish("a_different_topic", "2");
 
   TestListener listener;
-  provider_->Subscribe(CreateQuery("topic"), listener.GetHandle());
+  reader_->Subscribe(CreateQuery("topic"), listener.GetHandle());
   listener.WaitForUpdate();
 
   ContextUpdatePtr update;
@@ -117,8 +117,8 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   // should be notified of new values.
   TestListener listener1;
   TestListener listener2;
-  provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
-  provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+  reader_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+  reader_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
 
   publisher_->Publish("topic", "1");
   WAIT_UNTIL(listener1.PopLast());
@@ -130,8 +130,8 @@ TEST_F(ContextEngineTest, CloseListener) {
   TestListener listener2;
   {
     TestListener listener1;
-    provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
-    provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+    reader_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+    reader_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
   }
 
   publisher_->Publish("topic", "\"don't crash\"");
@@ -141,17 +141,17 @@ TEST_F(ContextEngineTest, CloseListener) {
 TEST_F(ContextEngineTest, CloseProvider) {
   // After a provider is closed, its listeners should no longer recieve updates.
   TestListener listener1;
-  provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+  reader_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
 
   // Close the provider and open a new one to ensure we're still running.
   InitProvider(MakeGlobalScope());
 
   publisher_->Publish("topic", "\"please don't crash\"");
   TestListener listener2;
-  provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+  reader_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
 
   WAIT_UNTIL(listener2.PopLast());
-  // Since the ContextProvider owns subscriptions, and we closed it
+  // Since the ContextReader owns subscriptions, and we closed it
   // (through InitProvider), we should not have seen our listener
   // notified of the published topic.
   //
@@ -180,7 +180,7 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
   const char kSha1OfUrl[] = "81736";
   const std::string kTopicString =
       MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic");
-  provider_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
+  reader_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
   listener.WaitForUpdate();
 
   ContextUpdatePtr update;

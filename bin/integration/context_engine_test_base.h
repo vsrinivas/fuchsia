@@ -26,13 +26,13 @@ class ContextEngineTestBase : public MaxwellTestBase {
           scope->set_agent_scope(std::move(agent_scope));
           context_engine_->GetPublisher(std::move(scope), std::move(request));
         });
-    agent_host->AddService<ContextProvider>(
-        [this, url](fidl::InterfaceRequest<ContextProvider> request) {
+    agent_host->AddService<ContextReader>(
+        [this, url](fidl::InterfaceRequest<ContextReader> request) {
           auto scope = ComponentScope::New();
           auto agent_scope = AgentScope::New();
           agent_scope->url = url;
           scope->set_agent_scope(std::move(agent_scope));
-          context_engine_->GetProvider(std::move(scope), std::move(request));
+          context_engine_->GetReader(std::move(scope), std::move(request));
         });
     StartAgent(url, std::move(agent_host));
   }

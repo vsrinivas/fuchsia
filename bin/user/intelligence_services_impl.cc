@@ -21,9 +21,9 @@ IntelligenceServicesImpl::IntelligenceServicesImpl(
       suggestion_engine_(suggestion_engine),
       user_action_log_(user_action_log) {}
 
-void IntelligenceServicesImpl::GetContextProvider(
-    fidl::InterfaceRequest<ContextProvider> request) {
-  context_engine_->GetProvider(scope_->Clone(), std::move(request));
+void IntelligenceServicesImpl::GetContextReader(
+    fidl::InterfaceRequest<ContextReader> request) {
+  context_engine_->GetReader(scope_->Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextPublisher(

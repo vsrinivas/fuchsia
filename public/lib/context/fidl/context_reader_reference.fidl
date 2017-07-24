@@ -19,8 +19,8 @@
 
 import "metadata.fidl";
 
-[ServiceName="maxwell.ContextProvider"]
-interface ContextProvider {
+[ServiceName="maxwell.ContextReader"]
+interface ContextReader {
   // When any conditions that would cause the resulting set of context values
   // selected by |query| to change, a ContextUpdate is sent to |listener|.
   //

@@ -4,7 +4,7 @@
 
 module maxwell;
 
-import "context_provider.fidl";
+import "context_reader.fidl";
 import "context_publisher.fidl";
 import "../user/scope.fidl";
 
@@ -16,5 +16,5 @@ interface ContextEngine {
   GetPublisher(ComponentScope scope, ContextPublisher& request);
 
   // Gets a service that allows clients to read context data.
-  GetProvider(ComponentScope scope, ContextProvider& request);
+  GetReader(ComponentScope scope, ContextReader& request);
 };

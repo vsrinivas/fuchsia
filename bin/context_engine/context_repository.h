@@ -8,7 +8,7 @@
 #include <list>
 #include <map>
 
-#include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 
 namespace maxwell {
 

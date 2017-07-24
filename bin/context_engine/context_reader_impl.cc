@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/context_engine/context_provider_impl.h"
-
+#include "apps/maxwell/src/context_engine/context_reader_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 
 namespace maxwell {
 
-ContextProviderImpl::ContextProviderImpl(ComponentScopePtr scope,
+ContextReaderImpl::ContextReaderImpl(ComponentScopePtr scope,
                                          ContextRepository* repository,
                                          ContextDebugImpl* debug)
     : scope_(std::move(scope)), repository_(repository), debug_(debug) {}
-ContextProviderImpl::~ContextProviderImpl() {
+ContextReaderImpl::~ContextReaderImpl() {
   // Connection error handlers are not executed when closing from our side, so
   // we need to clean up subscriptions ourselves.
   for (auto& listener : listeners_) {
@@ -21,7 +20,7 @@ ContextProviderImpl::~ContextProviderImpl() {
   }
 };
 
-void ContextProviderImpl::Subscribe(
+void ContextReaderImpl::Subscribe(
     ContextQueryPtr query,
     fidl::InterfaceHandle<ContextListener> listener) {
   ContextListenerPtr listener_ptr =

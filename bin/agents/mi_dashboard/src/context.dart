@@ -7,7 +7,7 @@ import 'dart:io';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
-import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
+import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 
 import 'data_handler.dart';
 
@@ -18,8 +18,8 @@ class ContextDataHandler extends DataHandler {
   // cache for current context state
   final _contextCache = new Map<String, String>();
 
-  // connection to context provider
-  ContextProviderProxy _contextProvider;
+  // connection to context reader
+  ContextReaderProxy _contextReader;
   ContextListenerImpl _contextListener;
 
   SendWebSocketMessage _sendMessage;
@@ -28,16 +28,16 @@ class ContextDataHandler extends DataHandler {
   void init(ApplicationContext appContext, SendWebSocketMessage sender) {
     this._sendMessage = sender;
 
-    // Connect to the ContextProvider
-    _contextProvider = new ContextProviderProxy();
+    // Connect to the ContextReader
+    _contextReader = new ContextReaderProxy();
     _contextListener = new ContextListenerImpl(this.onContextUpdate);
-    connectToService(appContext.environmentServices, _contextProvider.ctrl);
-    assert(_contextProvider.ctrl.isBound);
+    connectToService(appContext.environmentServices, _contextReader.ctrl);
+    assert(_contextReader.ctrl.isBound);
 
     // Subscribe to all topics
     ContextQuery query = new ContextQuery();
     query.topics = []; // empty list is the wildcard query
-    _contextProvider.subscribe(query, _contextListener.getHandle());
+    _contextReader.subscribe(query, _contextListener.getHandle());
   }
 
   @override

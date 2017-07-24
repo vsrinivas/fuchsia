@@ -9,8 +9,8 @@ module maxwell;
 //
 // This interface is meant to be used in the scope of a single Fuchsia
 // component.
-[ServiceName="maxwell.ContextProvider"]
-interface ContextProvider {
+[ServiceName="maxwell.ContextReader"]
+interface ContextReader {
   // When any of the conditions in |query| change, a ContextUpdate is sent to
   // |listener|.
   //

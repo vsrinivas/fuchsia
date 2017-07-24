@@ -6,19 +6,19 @@
 
 #include <list>
 
-#include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/debug.h"
 
 namespace maxwell {
 
-class ContextProviderImpl : public ContextProvider {
+class ContextReaderImpl : public ContextReader {
  public:
-  ContextProviderImpl(ComponentScopePtr scope,
+  ContextReaderImpl(ComponentScopePtr scope,
                       ContextRepository* repository,
                       ContextDebugImpl* debug);
-  ~ContextProviderImpl() override;
+  ~ContextReaderImpl() override;
 
  private:
   struct Subscription {
@@ -27,7 +27,7 @@ class ContextProviderImpl : public ContextProvider {
     ContextDebugImpl::SubscriptionId debug_subscription_id;
   };
 
-  // |ContextProvider|
+  // |ContextReader|
   void Subscribe(ContextQueryPtr query,
                  fidl::InterfaceHandle<ContextListener> listener) override;
 
@@ -40,7 +40,7 @@ class ContextProviderImpl : public ContextProvider {
   // error handler.
   std::list<Subscription> listeners_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextProviderImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContextReaderImpl);
 };
 
 }  // namespace maxwell

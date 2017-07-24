@@ -7,8 +7,8 @@ import 'dart:convert';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
 import 'package:apps.maxwell.services.context/context_publisher.fidl.dart';
+import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
@@ -90,7 +90,7 @@ class ModuleImpl extends Module {
   final IntelligenceServicesProxy _intelligenceServices =
       new IntelligenceServicesProxy();
 
-  final ContextProviderProxy _contextProvider = new ContextProviderProxy();
+  final ContextReaderProxy _contextReader = new ContextReaderProxy();
   ContextListenerImpl _contextListenerImpl;
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
@@ -119,11 +119,11 @@ class ModuleImpl extends Module {
     _intelligenceServices.getContextPublisher(_publisher.ctrl.request());
 
     // Listen to updates from the context service.
-    _intelligenceServices.getContextProvider(_contextProvider.ctrl.request());
+    _intelligenceServices.getContextReader(_contextReader.ctrl.request());
     _contextListenerImpl = new ContextListenerImpl();
     ContextQuery query = new ContextQuery.init(
         <String>[_kCurrentFocalEntitiesTopic], null /* filters */);
-    _contextProvider.subscribe(query, _contextListenerImpl.getHandle());
+    _contextReader.subscribe(query, _contextListenerImpl.getHandle());
 
     // Indicate readiness
     _moduleContext.ready();

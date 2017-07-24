@@ -5,8 +5,8 @@
 #pragma once
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/debug.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -26,16 +26,16 @@ class ContextEngineImpl : public ContextEngine {
                     fidl::InterfaceRequest<ContextPublisher> request) override;
 
   // |ContextEngine|
-  void GetProvider(ComponentScopePtr scope,
-                   fidl::InterfaceRequest<ContextProvider> request) override;
+  void GetReader(ComponentScopePtr scope,
+                   fidl::InterfaceRequest<ContextReader> request) override;
 
   ContextRepository repository_;
   ContextDebugImpl debug_;
 
   fidl::BindingSet<ContextPublisher, std::unique_ptr<ContextPublisher>>
       publisher_bindings_;
-  fidl::BindingSet<ContextProvider, std::unique_ptr<ContextProvider>>
-      provider_bindings_;
+  fidl::BindingSet<ContextReader, std::unique_ptr<ContextReader>>
+      reader_bindings_;
 
   fidl::BindingSet<ContextEngine> bindings_;
 

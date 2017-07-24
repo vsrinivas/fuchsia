@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
+import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 
 // TODO(rosswang): A note on the badness - Right now the generated package name
 // for the context:debug target is context..debug, and likewise user:scope is

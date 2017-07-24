@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -26,7 +26,7 @@ class BasicTextListener : ContextListener {
  public:
   BasicTextListener()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         publisher_(
             app_context_->ConnectToEnvironmentService<ContextPublisher>()),
         topics_({kRawTextTopic}),
@@ -35,7 +35,7 @@ class BasicTextListener : ContextListener {
     for (const std::string& s : topics_) {
       query->topics.push_back(s);
     }
-    provider_->Subscribe(std::move(query), binding_.NewBinding());
+    reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
@@ -84,7 +84,7 @@ class BasicTextListener : ContextListener {
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
-  ContextProviderPtr provider_;
+  ContextReaderPtr reader_;
   ContextPublisherPtr publisher_;
   const std::vector<std::string> topics_;
   fidl::Binding<ContextListener> binding_;

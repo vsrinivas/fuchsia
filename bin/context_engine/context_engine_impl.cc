@@ -5,8 +5,8 @@
 #include "apps/maxwell/src/context_engine/context_engine_impl.h"
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/src/context_engine/context_provider_impl.h"
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
+#include "apps/maxwell/src/context_engine/context_reader_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/coprocessors/aggregate.h"
 #include "apps/maxwell/src/context_engine/coprocessors/focused_story.h"
@@ -34,10 +34,10 @@ void ContextEngineImpl::GetPublisher(
       std::move(request));
 }
 
-void ContextEngineImpl::GetProvider(
+void ContextEngineImpl::GetReader(
     ComponentScopePtr scope,
-    fidl::InterfaceRequest<ContextProvider> request) {
-  provider_bindings_.AddBinding(std::make_unique<ContextProviderImpl>(
+    fidl::InterfaceRequest<ContextReader> request) {
+  reader_bindings_.AddBinding(std::make_unique<ContextReaderImpl>(
                                     std::move(scope), &repository_, &debug_),
                                 std::move(request));
 }

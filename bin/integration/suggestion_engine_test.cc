@@ -142,11 +142,11 @@ class NProposals : public Proposinator, public ContextListener {
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine->GetProvider(std::move(scope), provider_.NewRequest());
+    context_engine->GetReader(std::move(scope), reader_.NewRequest());
 
     auto query = ContextQuery::New();
     query->topics.push_back("n");
-    provider_->Subscribe(std::move(query), listener_binding_.NewBinding());
+    reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
@@ -161,7 +161,7 @@ class NProposals : public Proposinator, public ContextListener {
   }
 
  private:
-  ContextProviderPtr provider_;
+  ContextReaderPtr reader_;
   fidl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
@@ -212,13 +212,13 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
         std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
-    agent_host->AddService<ContextProvider>(
-        [this, url](fidl::InterfaceRequest<ContextProvider> request) {
+    agent_host->AddService<ContextReader>(
+        [this, url](fidl::InterfaceRequest<ContextReader> request) {
           auto scope = ComponentScope::New();
           auto agent_scope = AgentScope::New();
           agent_scope->url = url;
           scope->set_agent_scope(std::move(agent_scope));
-          context_engine()->GetProvider(std::move(scope), std::move(request));
+          context_engine()->GetReader(std::move(scope), std::move(request));
         });
     agent_host->AddService<ProposalPublisher>(
         [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {
