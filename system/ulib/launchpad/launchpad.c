@@ -1275,23 +1275,11 @@ static mx_status_t launchpad_file_load_with_vdso(launchpad_t* lp, mx_handle_t vm
 }
 
 mx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
-    mx_handle_t vmo;
-    mx_status_t status = launchpad_vmo_from_file(path, &vmo);
-    if (status == MX_OK) {
-        return launchpad_file_load_with_vdso(lp, vmo);
-    } else {
-        return status;
-    }
+    return launchpad_file_load_with_vdso(lp, launchpad_vmo_from_file(path));
 }
 
 mx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd) {
-    mx_handle_t vmo;
-    mx_status_t status = mxio_get_vmo(fd, &vmo);
-    if (status == MX_OK) {
-        return launchpad_file_load_with_vdso(lp, vmo);
-    } else {
-        return status;
-    }
+    return launchpad_file_load_with_vdso(lp, launchpad_vmo_from_fd(fd));
 }
 
 mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo) {

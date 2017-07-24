@@ -75,9 +75,7 @@ static bool stdio_launchpad_pipe_test(void)
     ASSERT_EQ(launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD),
               MX_OK, "launchpad_clone failed");
 
-    mx_handle_t vmo;
-    ASSERT_EQ(launchpad_vmo_from_file(file, &vmo), MX_OK, "");
-    ASSERT_EQ(launchpad_elf_load(lp, vmo),
+    ASSERT_EQ(launchpad_elf_load(lp, launchpad_vmo_from_file(file)),
               MX_OK, "launchpad_elf_load failed");
 
     ASSERT_EQ(launchpad_load_vdso(lp, MX_HANDLE_INVALID),

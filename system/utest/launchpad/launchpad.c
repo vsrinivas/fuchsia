@@ -43,9 +43,7 @@ static bool launchpad_test(void)
     mx_status_t status = launchpad_create(job_copy, test_inferior_child_name, &lp);
     ASSERT_EQ(status, MX_OK, "launchpad_create");
 
-    mx_handle_t vmo;
-    ASSERT_EQ(launchpad_vmo_from_file(program_path, &vmo), MX_OK, "");
-    status = launchpad_elf_load(lp, vmo);
+    status = launchpad_elf_load(lp, launchpad_vmo_from_file(program_path));
     ASSERT_EQ(status, MX_OK, "launchpad_elf_load");
 
     mx_vaddr_t base, entry;
@@ -55,8 +53,7 @@ static bool launchpad_test(void)
     ASSERT_EQ(status, MX_OK, "launchpad_get_entry_address");
     ASSERT_GT(base, 0u, "base > 0");
 
-    mx_handle_t dynld_vmo;
-    ASSERT_EQ(launchpad_vmo_from_file(dynld_path, &dynld_vmo), MX_OK, "");
+    mx_handle_t dynld_vmo = launchpad_vmo_from_file(dynld_path);
     ASSERT_GT(dynld_vmo, 0, "launchpad_vmo_from_file");
     elf_load_header_t header;
     uintptr_t phoff;
