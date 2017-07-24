@@ -21,12 +21,16 @@
 #include <acpica/actypes.h>
 #endif // __x86_64__
 
+/* Clear contiguous bits in a word. */
+#define CLEAR_BITS(x, nbits, shift) ((x) & (~(((1UL << (nbits)) - 1) << (shift))))
+
 /* Memory-mapped device physical addresses. */
 #define LOCAL_APIC_PHYS_BASE                    0xfee00000
 #define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
 #define IO_APIC_PHYS_BASE                       0xfec00000
 #define IO_APIC_PHYS_TOP                        (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
-#define PCI_PHYS_BASE(bus, device, function)    (0xd0000000 + (((bus) << 20) | ((device) << 15) | ((function) << 12)))
+#define PCI_PHYS_BASE(bus, device, function) \
+    (0xd0000000 + (((bus) << 20) | ((device) << 15) | ((function) << 12)))
 #define PCI_PHYS_TOP(bus, device, function)     (PCI_PHYS_BASE(bus, device, function) + 4095)
 
 /* Local APIC register addresses. */
@@ -112,6 +116,7 @@
 #define PCI_VENDOR_ID_INTEL                     0x8086
 #define PCI_DEVICE_ID_VIRTIO_BLOCK              0x1042
 #define PCI_DEVICE_ID_INTEL_Q35                 0x29c0
+#define PCI_CLASS_BRIDGE_HOST                   0x0600
 
 /* PCI device constants. */
 #define PCI_DEVICE_INVALID                      UINT16_MAX
@@ -119,6 +124,10 @@
 /* PCI macros. */
 // From a given address, get the PCI device index.
 #define PCI_DEVICE(addr)                        (((addr - PCI_PHYS_BASE(0, 0, 0)) >> 15) & 0x1f)
+
+// Get the PCI type 1 address for a register.
+#define PCI_TYPE1_ADDR(bus, device, function, reg) \
+    (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) | (reg))
 
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT                        0xd
@@ -461,6 +470,45 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
             return MX_ERR_IO_DATA_INTEGRITY;
         io_packet->u8 = I8042_STATUS_OUTPUT_FULL;
         break;
+    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
+        size_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
+        uint32_t addr = io_port_state->pci_config_address >> bit_offset;
+        switch (io->access_size) {
+        case 1:
+            io_packet->u8 = addr & UINT8_MAX;
+            break;
+        case 2:
+            io_packet->u16 = addr & UINT16_MAX;
+            break;
+        case 4:
+            io_packet->u32 = addr & UINT32_MAX;
+            break;
+        default:
+            fprintf(stderr, "Unhandled port in %#x\n", io->port);
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        break;
+    }
+    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
+        // TODO(tjdetwiler): Temporarily stub out these ports to appease linux
+        // with broken PCI until they're wired into accessing the virtual PCI
+        // bus. Linux wants to find a host bridge so we'll give it one.
+        switch (io_port_state->pci_config_address) {
+        case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_CLASS_CODE_SUB):
+            if (io->access_size != 2)
+                return MX_ERR_IO_DATA_INTEGRITY;
+            io_packet->u16 = PCI_CLASS_BRIDGE_HOST;
+            break;
+        case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_VENDOR_ID):
+            if (io->access_size != 2)
+                return MX_ERR_IO_DATA_INTEGRITY;
+            io_packet->u16 = PCI_VENDOR_ID_INTEL;
+            break;
+        default:
+            io_packet->u32 = 0;
+            break;
+        }
+        break;
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
         if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
@@ -524,6 +572,36 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
         io_port_state->i8042_command = io->u8;
+        return MX_OK;
+    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
+        // Software can (and Linux does) perform partial word accesses to the
+        // PCI address register. This means we need to take care to read/write
+        // portions of the 32bit register without trampling the other bits.
+        size_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
+        size_t bit_size = io->access_size * 8;
+
+        // Clear out the bits we'll be modifying.
+        io_port_state->pci_config_address = CLEAR_BITS(
+            io_port_state->pci_config_address, bit_size, bit_offset);
+
+        // Write config address.
+        switch (io->access_size) {
+        case 1:
+            io_port_state->pci_config_address |= (io->u8 << bit_offset);
+            break;
+        case 2:
+            io_port_state->pci_config_address |= (io->u16 << bit_offset);
+            break;
+        case 4:
+            io_port_state->pci_config_address |= io->u32;
+            break;
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        return MX_OK;
+    }
+    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
+        // TODO(tjdetwiler): Temporarily stub out these ports.
         return MX_OK;
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         if (io->access_size != 2)

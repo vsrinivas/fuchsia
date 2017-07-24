@@ -46,6 +46,8 @@ typedef struct io_port_state {
     uint16_t pm1_enable;
     // State of the UART line control register.
     uint8_t uart_line_control;
+    // Selected address in PCI config space.
+    uint32_t pci_config_address;
 } io_port_state_t;
 
 typedef union io_packet {
