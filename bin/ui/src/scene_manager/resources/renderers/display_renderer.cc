@@ -6,7 +6,6 @@
 
 #include "escher/escher.h"
 #include "escher/impl/ssdo_sampler.h"
-#include "escher/renderer/paper_renderer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 #include "lib/ftl/logging.h"
@@ -26,19 +25,19 @@ DisplayRenderer::DisplayRenderer(Session* session,
                                  escher::VulkanSwapchain swapchain)
     : Renderer(session, id),
       display_(display),
-      paper_renderer_(session->engine()->escher()->NewPaperRenderer()),
-      swapchain_helper_(std::move(swapchain), paper_renderer_) {
+      swapchain_helper_(std::move(swapchain),
+                        session->engine()->escher()->vulkan_context().device,
+                        session->engine()->escher()->vulkan_context().queue) {
   FTL_DCHECK(display_);
 
   display_->Claim();
-  paper_renderer_->set_sort_by_pipeline(false);
 }
 
 DisplayRenderer::~DisplayRenderer() {
   display_->Unclaim();
 }
 
-void DisplayRenderer::DrawFrame() {
+void DisplayRenderer::DrawFrame(escher::Renderer* renderer) {
   float width = static_cast<float>(swapchain_helper_.swapchain().width);
   float height = static_cast<float>(swapchain_helper_.swapchain().height);
 
@@ -69,7 +68,8 @@ void DisplayRenderer::DrawFrame() {
   stage.set_fill_light(escher::AmbientLight(0.3f));
 
   swapchain_helper_.DrawFrame(
-      stage, model, camera()->GetEscherCamera(stage.viewing_volume()));
+      renderer, stage, model,
+      camera()->GetEscherCamera(stage.viewing_volume()));
 }
 
 }  // namespace scene_manager

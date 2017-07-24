@@ -26,10 +26,9 @@ class DisplayRenderer final : public Renderer {
 
  private:
   // |Renderer|
-  virtual void DrawFrame() override;
+  virtual void DrawFrame(escher::Renderer* renderer) override;
 
   Display* const display_;
-  escher::PaperRendererPtr paper_renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
 };
 

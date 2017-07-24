@@ -10,6 +10,7 @@
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
+#include "escher/renderer/paper_renderer.h"
 
 namespace scene_manager {
 
@@ -18,6 +19,7 @@ Engine::Engine(DisplayManager* display_manager,
                std::unique_ptr<escher::VulkanSwapchain> swapchain)
     : display_manager_(display_manager),
       escher_(escher),
+      paper_renderer_(ftl::MakeRefCounted<escher::PaperRenderer>(escher)),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher->resource_recycler(),
           escher->gpu_allocator())),
@@ -32,6 +34,7 @@ Engine::Engine(DisplayManager* display_manager,
   FTL_DCHECK(swapchain_);
 
   InitializeFrameScheduler();
+  paper_renderer_->set_sort_by_pipeline(false);
 }
 
 Engine::Engine(DisplayManager* display_manager,
@@ -158,7 +161,7 @@ void Engine::RenderFrame(uint64_t presentation_time,
     return;
 
   for (auto renderer : renderers_) {
-    renderer->DrawFrame();
+    renderer->DrawFrame(paper_renderer_.get());
   }
 }
 

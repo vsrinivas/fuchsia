@@ -138,6 +138,7 @@ class Engine : private FrameSchedulerDelegate {
 
   DisplayManager* const display_manager_;
   escher::Escher* const escher_;
+  escher::PaperRendererPtr paper_renderer_;
 
   ResourceLinker resource_linker_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
