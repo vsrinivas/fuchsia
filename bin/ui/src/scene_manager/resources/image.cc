@@ -73,6 +73,20 @@ ImagePtr Image::New(Session* session,
     return nullptr;
   }
 
+  auto& caps = session->engine()->escher()->device()->caps();
+  if (image_info->width > caps.max_image_width) {
+    error_reporter->ERROR()
+        << "Image::CreateFromMemory(): image width exceeds maximum ("
+        << image_info->width << " vs. " << caps.max_image_width << ").";
+    return nullptr;
+  }
+  if (image_info->height > caps.max_image_height) {
+    error_reporter->ERROR()
+        << "Image::CreateFromMemory(): image height exceeds maximum ("
+        << image_info->height << " vs. " << caps.max_image_height << ").";
+    return nullptr;
+  }
+
   // Create from host memory.
   if (memory->IsKindOf<HostMemory>()) {
     auto host_memory = memory->As<HostMemory>();
