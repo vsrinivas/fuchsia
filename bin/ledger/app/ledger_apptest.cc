@@ -270,5 +270,11 @@ int main(int argc, char** argv) {
   testing::UnitTest::GetInstance()->listeners().Append(&listener);
   int status = RUN_ALL_TESTS();
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
+
+  // Will be closed by the Reporter.
+  if (test::RunGivenLoopWithTimeout(&loop, ftl::TimeDelta::FromSeconds(1))) {
+    FTL_LOG(ERROR) << "Expected quit loop from test reported never happened.";
+  }
+
   return status;
 }
