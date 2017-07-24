@@ -14,6 +14,7 @@ function HELP {
     echo "-m                  : Build magenta targets only"
     echo "-r                  : Also build release mode builds"
     echo "-c                  : Also build with clang"
+    echo "-A                  : Also build with ASan"
     echo "-q                  : Build quietly"
     echo "-h for help"
     exit 1
@@ -22,12 +23,14 @@ function HELP {
 FAIL_FAST=0
 DO_RELEASE=0
 DO_CLANG=0
+DO_ASAN=0
 MAGENTA_ONLY=0
 MAKE_ARGS=
 QUIET=0
 
-while getopts a:fhmrcq FLAG; do
+while getopts Aa:fhmrcq FLAG; do
     case $FLAG in
+        A) DO_ASAN=1;;
         a) MAKE_ARGS="${MAKE_ARGS} ${OPTARG}";;
         f) FAIL_FAST=1;;
         h) HELP;;
@@ -71,6 +74,18 @@ for p in $PROJECTS; do
     STATUS=$?
     if [ "$STATUS" -ne 0 ]; then
       FAILED="$FAILED $p-clang"
+      if [ "$FAIL_FAST" -eq 1 ]; then
+        break
+      fi
+    fi
+  fi
+
+  if [ "$DO_ASAN" -eq 1 ]; then
+    echo building $p with ASan
+    nice $DIR/make-parallel $p ${MAKE_ARGS} USE_ASAN=true
+    STATUS=$?
+    if [ "$STATUS" -ne 0 ]; then
+      FAILED="$FAILED $p-asan"
       if [ "$FAIL_FAST" -eq 1 ]; then
         break
       fi

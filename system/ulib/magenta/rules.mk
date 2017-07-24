@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 # This library should not depend on libc.
-MODULE_COMPILEFLAGS := -ffreestanding $(NO_SAFESTACK)
+MODULE_COMPILEFLAGS := -ffreestanding $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 MODULE_HEADER_DEPS := kernel/lib/vdso
 

@@ -37,6 +37,11 @@ MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(not
 # Include this in every link.
 MODULE_EXTRA_OBJS += scripts/dso_handle.ld
 
+# Link the ASan runtime into everything compiled with ASan.
+ifeq (,$(filter -fno-sanitize=all,$(MODULE_COMPILEFLAGS)))
+MODULE_EXTRA_OBJS += $(ASAN_SOLIB)
+endif
+
 $(MODULE_LIBNAME).so: _OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_LIBNAME).so: _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
 $(MODULE_LIBNAME).so: _SONAME := lib$(MODULE_SO_NAME).so
@@ -110,7 +115,12 @@ GENERATED += \
 endif
 
 ifeq ($(MODULE_SO_INSTALL_NAME),)
-MODULE_SO_INSTALL_NAME := lib/lib$(MODULE_SO_NAME).so
+MODULE_SO_INSTALL_NAME := lib$(MODULE_SO_NAME).so
+# At runtime, ASan-supporting libraries are found in lib/asan/ first.
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+MODULE_SO_INSTALL_NAME := asan/$(MODULE_SO_INSTALL_NAME)
+endif
+MODULE_SO_INSTALL_NAME := lib/$(MODULE_SO_INSTALL_NAME)
 endif
 ifneq ($(MODULE_SO_INSTALL_NAME),-)
 USER_MANIFEST_LINES += $(MODULE_SO_INSTALL_NAME)=$(MODULE_LIBNAME).so.strip

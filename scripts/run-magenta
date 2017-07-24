@@ -12,6 +12,7 @@ function HELP {
     echo "-b                   : build first"
     echo "-c <text>            : add item to kernel commandline"
     echo "-C                   : use Clang build"
+    echo "-A                   : use ASan build"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
@@ -40,6 +41,7 @@ function HELP {
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ARCH=
+ASAN=0
 AUDIO=
 AUDIO_WAVFILE="/tmp/qemu.wav"
 BUILD=0
@@ -68,8 +70,9 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:Vx:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gI:km:nNo:q:rs:u:Vx:h-:" FLAG; do
     case $FLAG in
+        A) ASAN=1;;
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
@@ -126,7 +129,10 @@ fi
 BUILDDIR_SUFFIX=
 BUILD_ARGS=
 
-if (( $CLANG )); then
+if (( $ASAN )); then
+    BUILDDIR_SUFFIX+=-asan
+    BUILD_ARGS=USE_ASAN=true
+elif (( $CLANG )); then
     BUILDDIR_SUFFIX+=-clang
     BUILD_ARGS+=USE_CLANG=true
 fi

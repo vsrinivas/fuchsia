@@ -34,6 +34,11 @@ MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(not
 # Include this in every link.
 MODULE_EXTRA_OBJS += scripts/dso_handle.ld
 
+# Link the ASan runtime into everything compiled with ASan.
+ifeq (,$(filter -fno-sanitize=all,$(MODULE_COMPILEFLAGS)))
+MODULE_EXTRA_OBJS += $(ASAN_SOLIB)
+endif
+
 $(MODULE_USERAPP_OBJECT): _OBJS := $(USER_CRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_USERAPP_OBJECT): _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
 $(MODULE_USERAPP_OBJECT): _LDFLAGS := $(MODULE_LDFLAGS) $(USERAPP_LDFLAGS)

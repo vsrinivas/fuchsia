@@ -22,6 +22,6 @@ MODULE_HEADER_DEPS += \
     system/ulib/c
 
 # This code is used in early startup, where safe-stack setup is not ready yet.
-MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 include make/module.mk

@@ -11,7 +11,7 @@ MODULE_TYPE := userlib
 # This whole module is a hack to deal with these functions needing to be compiled with
 # -fno-stack-protector
 MODULE_SRCS += $(LOCAL_DIR)/threads.c
-MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 MODULE_NAME := threads-test-threads
 

@@ -24,7 +24,8 @@ ENABLE_BUILD_LISTFILES := $(call TOBOOL,$(ENABLE_BUILD_LISTFILES))
 ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
 ENABLE_NEW_FB := true
 ENABLE_ACPI_BUS ?= false
-USE_CLANG ?= false
+USE_ASAN ?= false
+USE_CLANG ?= $(USE_ASAN)
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USE_GOLD := false
@@ -39,7 +40,6 @@ LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
 
-
 # If no build directory suffix has been explicitly supplied by the environment,
 # generate a default based on build options.  Start with no suffix, then add
 # "-clang" if we are building with clang, and "-release" if we are building with
@@ -47,7 +47,9 @@ USE_LINKER_GC ?= true
 ifeq ($(origin BUILDDIR_SUFFIX),undefined)
 BUILDDIR_SUFFIX :=
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-asan
+else ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
 endif
 
@@ -187,9 +189,11 @@ endif
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 SAFESTACK := -fsanitize=safe-stack -fstack-protector-strong
 NO_SAFESTACK := -fno-sanitize=safe-stack -fno-stack-protector
+NO_SANITIZERS := -fno-sanitize=all -fno-stack-protector
 else
 SAFESTACK :=
 NO_SAFESTACK :=
+NO_SANITIZERS :=
 endif
 
 USER_COMPILEFLAGS += $(SAFESTACK)
@@ -204,6 +208,11 @@ USERLIB_SO_LDFLAGS := $(USER_LDFLAGS) -z defs
 # "loader service", so it should be a simple name rather than an
 # absolute pathname as is used for this on other systems.
 USER_SHARED_INTERP := ld.so.1
+
+# Programs built with ASan use the ASan-supporting dynamic linker.
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+USER_SHARED_INTERP := asan/$(USER_SHARED_INTERP)
+endif
 
 # Additional flags for building dynamically-linked executables.
 USERAPP_LDFLAGS := \
@@ -379,6 +388,38 @@ include make/sysgen.mk
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += --target=$(CLANG_ARCH)-fuchsia
+endif
+
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+$(error USE_ASAN requires USE_CLANG)
+endif
+
+# Compile all of userland with ASan.  ASan makes safe-stack superfluous
+# and ASan reporting doesn't really grok safe-stack, so disable it.
+# Individual modules can append $(NO_SANITIZERS) to counteract this.
+USER_COMPILEFLAGS += -fsanitize=address -fno-sanitize=safe-stack
+
+# Ask the Clang driver where the library with SONAME $1 is found at link time.
+find-clang-solib = \
+    $(shell $(CLANG_TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) \
+					   -print-file-name=$1)
+
+# Every userland executable and shared library compiled with ASan
+# needs to link with $(ASAN_SOLIB).  module-user{app,lib}.mk adds it
+# to MODULE_EXTRA_OBJS so the linking target will depend on it.
+ASAN_SONAME := libclang_rt.asan-$(CLANG_ARCH).so
+# TODO(TO-376): It shouldn't need the lib/fuchsia/ prefix here, but it does.
+ASAN_SOLIB := $(call find-clang-solib,lib/fuchsia/$(ASAN_SONAME))
+USER_MANIFEST_LINES += lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
+
+# The ASan runtime DSO depends on more DSOs from the toolchain.  We don't
+# link against those, so we don't need any build-time dependencies on them.
+# But we need them alongside the ASan runtime DSO in the bootfs.
+ASAN_RUNTIME_SONAMES := libc++abi.so.1 libunwind.so.1
+USER_MANIFEST_LINES += \
+    $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
+	      lib/$(soname)=$(call find-clang-solib,$(soname)))
 endif
 
 # recursively include any modules in the MODULE variable, leaving a trail of included

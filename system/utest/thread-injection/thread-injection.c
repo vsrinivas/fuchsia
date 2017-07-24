@@ -102,7 +102,12 @@ bool thread_injection_test(void) {
 }
 
 BEGIN_TEST_CASE(thread_injection_tests)
+// This test is incompatible with ASan, because both the original
+// dynamic linker and the injected one would try to set up shadow
+// memory in the same place.
+#if !__has_feature(address_sanitizer)
 RUN_TEST(thread_injection_test)
+#endif
 END_TEST_CASE(thread_injection_tests)
 
 int main(int argc, char** argv) {

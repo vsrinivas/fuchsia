@@ -38,7 +38,7 @@ MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/src/internal
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 # We don't have normal setup, so safe-stack is a non-starter.
-MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 # system/ulib/runtime is compiled without safe-stack.  We can't use any other
 # static libs, because they might be built with safe-stack or other
