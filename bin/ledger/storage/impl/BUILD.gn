@@ -64,6 +64,7 @@ source_set("lib") {
     ":commit_storage",
     ":file_index",
     "//apps/ledger/src/callback",
+    "//apps/ledger/src/cobalt",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",

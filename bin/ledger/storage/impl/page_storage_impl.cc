@@ -19,6 +19,7 @@
 #include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "apps/ledger/src/cobalt/cobalt.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/diff.h"
 #include "apps/ledger/src/storage/impl/btree/iterator.h"
@@ -694,6 +695,10 @@ void PageStorageImpl::AddCommits(
       commits_to_send.push_back(std::move(commit));
     }
 
+    if (!remaining_commits.empty()) {
+      // If |remaining_commits| is not empty, some commits were our of order.
+      ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
+    }
     std::swap(commits, remaining_commits);
   }
 

@@ -15,6 +15,7 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "apps/ledger/src/cobalt/cobalt.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -145,6 +146,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
             backoff_->GetNext());
         return;
       }
+      // If delayed_status is not intial, report the merge.
+      ReportEvent(CobaltEvent::MERGED_COMMITS_MERGED);
     } else {
       // No longer merging 2 merge commits, reinitialize the exponential
       // backoff.
@@ -165,6 +168,9 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
               FTL_LOG(ERROR) << "Unable to merge identical commits.";
               return;
             }
+
+            // Report the merge.
+            ReportEvent(CobaltEvent::COMMITS_MERGED);
           }));
       return;
     }
@@ -206,6 +212,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                   FTL_LOG(WARNING) << "Merging failed. Will try again later.";
                   return;
                 }
+                ReportEvent(CobaltEvent::COMMITS_MERGED);
               }));
         }));
   }));
