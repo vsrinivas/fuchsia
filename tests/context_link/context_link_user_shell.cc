@@ -8,8 +8,8 @@
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -37,7 +37,7 @@ constexpr char kModuleUrl[] =
 constexpr char kTopic[] = "context_link_test";
 constexpr char kLink[] = "context_link";
 
-// A context provider watcher implementation.
+// A context reader watcher implementation.
 class ContextListenerImpl : maxwell::ContextListener {
  public:
   ContextListenerImpl() : binding_(this) {
@@ -48,12 +48,12 @@ class ContextListenerImpl : maxwell::ContextListener {
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
-  void Listen(maxwell::ContextProvider* const context_provider) {
+  void Listen(maxwell::ContextReader* const context_reader) {
     auto query = maxwell::ContextQuery::New();
     query->topics.resize(0);
-    context_provider->Subscribe(std::move(query), binding_.NewBinding());
+    context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(WARNING) << "Lost connection to ContextProvider."; });
+        [] { FTL_LOG(WARNING) << "Lost connection to ContextReader."; });
   }
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
@@ -115,9 +115,9 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    // HACK(mesch): If done here, context provider connection just closes.
-    // user_shell_context_->GetContextProvider(context_provider_.NewRequest());
-    // context_listener_.Listen(context_provider_.get());
+    // HACK(mesch): If done here, context reader connection just closes.
+    // user_shell_context_->GetContextReader(context_reader_.NewRequest());
+    // context_listener_.Listen(context_reader_.get());
 
     CreateStory();
   }
@@ -139,8 +139,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   void StartStory() {
     start_story_enter_.Pass();
 
-    user_shell_context_->GetContextProvider(context_provider_.NewRequest());
-    context_listener_.Listen(context_provider_.get());
+    user_shell_context_->GetContextReader(context_reader_.NewRequest());
+    context_listener_.Listen(context_reader_.get());
     context_listener_.Handle(
         [this](const fidl::String& key, const fidl::String& value) {
           GetContextTopic(key, value);
@@ -271,7 +271,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   fidl::String story_id_;
   modular::StoryControllerPtr story_controller_;
 
-  maxwell::ContextProviderPtr context_provider_;
+  maxwell::ContextReaderPtr context_reader_;
   ContextListenerImpl context_listener_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);

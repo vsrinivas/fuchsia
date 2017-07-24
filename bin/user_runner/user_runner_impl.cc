@@ -349,9 +349,9 @@ void UserRunnerImpl::GetAgentProvider(
   agent_runner_->Connect(std::move(request));
 }
 
-void UserRunnerImpl::GetContextProvider(
-    fidl::InterfaceRequest<maxwell::ContextProvider> request) {
-  intelligence_services_->GetContextProvider(std::move(request));
+void UserRunnerImpl::GetContextReader(
+    fidl::InterfaceRequest<maxwell::ContextReader> request) {
+  intelligence_services_->GetContextReader(std::move(request));
 }
 
 void UserRunnerImpl::GetContextPublisher(

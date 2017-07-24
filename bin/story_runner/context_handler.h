@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/modular/lib/fidl/context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -44,7 +44,7 @@ class ContextHandler : maxwell::ContextListener {
   // |ContextListener|
   void OnUpdate(maxwell::ContextUpdatePtr value) override;
 
-  fidl::InterfacePtr<maxwell::ContextProvider> context_provider_;
+  fidl::InterfacePtr<maxwell::ContextReader> context_reader_;
 
   // Current set of watched topics.
   maxwell::ContextQuery query_;

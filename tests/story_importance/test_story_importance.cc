@@ -7,8 +7,8 @@
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/testing/component_base.h"
@@ -136,7 +136,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
-// A context provider watcher implementation.
+// A context reader watcher implementation.
 class ContextListenerImpl : maxwell::ContextListener {
  public:
   ContextListenerImpl() : binding_(this) {
@@ -147,12 +147,12 @@ class ContextListenerImpl : maxwell::ContextListener {
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
-  void Listen(maxwell::ContextProvider* const context_provider) {
+  void Listen(maxwell::ContextReader* const context_reader) {
     auto query = maxwell::ContextQuery::New();
     query->topics.resize(0);
-    context_provider->Subscribe(std::move(query), binding_.NewBinding());
+    context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(ERROR) << "Lost connection to ContextProvider."; });
+        [] { FTL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
@@ -225,8 +225,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     focus_watcher_.Watch(focus_provider_.get());
 
     user_shell_context_->GetContextPublisher(context_publisher_.NewRequest());
-    user_shell_context_->GetContextProvider(context_provider_.NewRequest());
-    context_listener_.Listen(context_provider_.get());
+    user_shell_context_->GetContextReader(context_reader_.NewRequest());
+    context_listener_.Listen(context_reader_.get());
 
     SetContextHome();
   }
@@ -426,7 +426,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   StoryWatcherImpl story2_watcher_;
 
   maxwell::ContextPublisherPtr context_publisher_;
-  maxwell::ContextProviderPtr context_provider_;
+  maxwell::ContextReaderPtr context_reader_;
   ContextListenerImpl context_listener_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);

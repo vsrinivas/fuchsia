@@ -4,14 +4,14 @@
 
 #include "apps/modular/src/story_runner/context_handler.h"
 
-#include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 
 namespace modular {
 
 ContextHandler::ContextHandler(
     maxwell::IntelligenceServices* const intelligence_services)
     : value_(maxwell::ContextUpdate::New()), binding_(this) {
-  intelligence_services->GetContextProvider(context_provider_.NewRequest());
+  intelligence_services->GetContextReader(context_reader_.NewRequest());
   query_.topics.resize(0);
 }
 
@@ -23,7 +23,7 @@ void ContextHandler::Select(const fidl::String& topic) {
   }
 
   query_.topics.push_back(topic);
-  context_provider_->Subscribe(query_.Clone(), binding_.NewBinding());
+  context_reader_->Subscribe(query_.Clone(), binding_.NewBinding());
 }
 
 void ContextHandler::Watch(const std::function<void()>& watcher) {

@@ -4,8 +4,8 @@
 
 module modular;
 
-import "apps/maxwell/services/context/context_provider.fidl";
 import "apps/maxwell/services/context/context_publisher.fidl";
+import "apps/maxwell/services/context/context_reader.fidl";
 import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
 import "apps/modular/services/agent/agent_provider.fidl";
 import "apps/modular/services/auth/account/account.fidl";
@@ -29,7 +29,7 @@ interface UserShellContext {
   // logged into GUEST mode.
   GetAccount() => (auth.Account? account);
   GetAgentProvider(AgentProvider& request);
-  GetContextProvider(maxwell.ContextProvider& request);
+  GetContextReader(maxwell.ContextReader& request);
   GetContextPublisher(maxwell.ContextPublisher& request);
   GetDeviceName() => (string device_name);
   GetFocusController(FocusController& request);
