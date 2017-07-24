@@ -474,10 +474,9 @@ static mx_status_t setup_loader_svc(launchpad_t* lp) {
     if (lp->special_handles[HND_LOADER_SVC] != MX_HANDLE_INVALID)
         return MX_OK;
 
-    mx_handle_t loader_svc;
-    mx_status_t status = mxio_loader_service(NULL, NULL, &loader_svc);
-    if (status < 0)
-        return status;
+    mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
+    if (loader_svc < 0)
+        return loader_svc;
 
     lp->special_handles[HND_LOADER_SVC] = loader_svc;
     return MX_OK;

@@ -36,8 +36,8 @@ typedef mx_handle_t (*mxio_loader_service_function_t)
 // channel handle to talk to said service.  If the function passed
 // is NULL, a default implementation that reads from the filesystem is
 // used.  Will try to use the system loader service if available.
-mx_status_t mxio_loader_service(mxio_loader_service_function_t loader,
-                                void* loader_arg, mx_handle_t* out);
+mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
+                                void* loader_arg);
 
 // After this function returns, mxio_loader_service will no longer
 // attempt to use the system loader service for the current process.
@@ -54,6 +54,6 @@ mx_status_t mxio_multiloader_create(const char* name,
                                     mxio_multiloader_t** ml_out);
 
 // Returns a new dl_set_loader_service-compatible loader service channel.
-mx_status_t mxio_multiloader_new_service(mxio_multiloader_t* ml, mx_handle_t* out);
+mx_handle_t mxio_multiloader_new_service(mxio_multiloader_t* ml);
 
 __END_CDECLS

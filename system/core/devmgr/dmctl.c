@@ -55,10 +55,9 @@ static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
             return MX_ERR_NO_MEMORY;
         }
         // Create a new channel on the multiloader.
-        mx_handle_t out_channel;
-        mx_status_t status = mxio_multiloader_new_service(multiloader, &out_channel);
-        if (status < 0) {
-            return status;
+        mx_handle_t out_channel = mxio_multiloader_new_service(multiloader);
+        if (out_channel < 0) {
+            return out_channel;
         }
         memcpy(out_buf, &out_channel, sizeof(mx_handle_t));
         *out_actual = sizeof(mx_handle_t);

@@ -95,9 +95,9 @@ bool loader_service_test(void) {
         show_dlerror();
 
     // Spin up our test service.
-    mx_handle_t my_service;
-    mx_status_t status = mxio_loader_service(&my_loader_service, (void*)TEST_ACTUAL_NAME, &my_service);
-    EXPECT_EQ(status, MX_OK, "mxio_loader_service");
+    mx_handle_t my_service =
+        mxio_loader_service(&my_loader_service, (void*)TEST_ACTUAL_NAME);
+    EXPECT_GT(my_service, 0, "mxio_loader_service");
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
