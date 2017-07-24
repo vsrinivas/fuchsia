@@ -15,7 +15,9 @@ SketchyDemo::SketchyDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
       page_(escher()),
       renderer_(escher()->NewPaperRenderer()),
-      swapchain_helper_(harness->GetVulkanSwapchain(), renderer_) {
+      swapchain_helper_(harness->GetVulkanSwapchain(),
+                        escher()->vulkan_context().device,
+                        escher()->vulkan_context().queue) {
   InitializeEscherStage();
 }
 
@@ -35,7 +37,7 @@ void SketchyDemo::InitializeEscherStage() {
 void SketchyDemo::DrawFrame() {
   escher::Model* model = page_.GetModel(stopwatch_, &stage_);
   escher::Camera camera = escher::Camera::NewOrtho(stage_.viewing_volume());
-  swapchain_helper_.DrawFrame(stage_, *model, camera);
+  swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera);
 }
 
 bool SketchyDemo::HandleKeyPress(std::string key) {

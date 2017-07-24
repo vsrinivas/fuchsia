@@ -6,18 +6,15 @@
 
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
-#include "escher/renderer/renderer.h"
 #include "escher/scene/camera.h"
 #include "escher/scene/stage.h"
 
 namespace escher {
 
 VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
-                                             const RendererPtr& renderer)
-    : swapchain_(swapchain),
-      renderer_(renderer),
-      device_(renderer->vulkan_context().device),
-      queue_(renderer->vulkan_context().queue) {
+                                             vk::Device device,
+                                             vk::Queue queue)
+    : swapchain_(swapchain), device_(device), queue_(queue) {
   for (size_t i = 0; i < swapchain_.images.size(); ++i) {
     image_available_semaphores_.push_back(Semaphore::New(device_));
     render_finished_semaphores_.push_back(Semaphore::New(device_));
@@ -26,13 +23,12 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
 
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 
-void VulkanSwapchainHelper::DrawFrame(const Stage& stage, const Model& model) {
-  DrawFrame(stage, model, Camera::NewOrtho(stage.viewing_volume()));
-}
-
-void VulkanSwapchainHelper::DrawFrame(const Stage& stage,
+void VulkanSwapchainHelper::DrawFrame(Renderer* renderer,
+                                      const Stage& stage,
                                       const Model& model,
                                       const Camera& camera) {
+  FTL_DCHECK(renderer);
+
   auto& image_available_semaphore =
       image_available_semaphores_[next_semaphore_index_];
   auto& render_finished_semaphore =
@@ -57,8 +53,8 @@ void VulkanSwapchainHelper::DrawFrame(const Stage& stage,
   // signal the semaphore.
   auto& image = swapchain_.images[swapchain_index];
   image->SetWaitSemaphore(image_available_semaphore);
-  renderer_->DrawFrame(stage, model, camera, image, render_finished_semaphore,
-                       nullptr);
+  renderer->DrawFrame(stage, model, camera, image, render_finished_semaphore,
+                      nullptr);
 
   // When the image is completely rendered, present it.
   vk::PresentInfoKHR info;

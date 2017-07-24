@@ -23,7 +23,9 @@ static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
       renderer_(escher()->NewPaperRenderer()),
-      swapchain_helper_(harness->GetVulkanSwapchain(), renderer_) {
+      swapchain_helper_(harness->GetVulkanSwapchain(),
+                        escher()->vulkan_context().device,
+                        escher()->vulkan_context().queue) {
   ProcessCommandLineArgs(argc, argv);
   InitializeEscherStage();
   InitializeDemoScenes();
@@ -245,7 +247,7 @@ void WaterfallDemo::DrawFrame() {
     stopwatch_.Start();
   }
 
-  swapchain_helper_.DrawFrame(stage_, *model, camera);
+  swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera);
 
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
