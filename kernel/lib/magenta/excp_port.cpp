@@ -14,7 +14,6 @@
 #include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
-#include <magenta/user_thread.h>
 
 #include <mxalloc/new.h>
 

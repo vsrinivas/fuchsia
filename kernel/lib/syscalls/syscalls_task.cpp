@@ -28,7 +28,6 @@
 #include <magenta/syscalls/policy.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_thread.h>
 #include <magenta/vm_address_region_dispatcher.h>
 
 #include <mxtl/inline_array.h>

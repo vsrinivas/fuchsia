@@ -30,7 +30,7 @@
 #include <magenta/syscalls/log.h>
 #include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_thread.h>
+#include <magenta/thread_dispatcher.h>
 
 #include <mxalloc/new.h>
 #include <mxtl/atomic.h>

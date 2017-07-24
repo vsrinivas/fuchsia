@@ -10,7 +10,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/futex_context.h>
 #include <magenta/user_copy.h>
-#include <magenta/user_thread.h>
+#include <magenta/thread_dispatcher.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0

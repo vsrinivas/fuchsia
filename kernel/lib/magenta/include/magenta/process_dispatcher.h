@@ -19,7 +19,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
-#include <magenta/user_thread.h>
+#include <magenta/thread_dispatcher.h>
 
 #include <mxtl/array.h>
 #include <mxtl/canary.h>

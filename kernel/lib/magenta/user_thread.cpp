@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/user_thread.h>
+#include <magenta/thread_dispatcher.h>
 
 #include <assert.h>
 #include <err.h>
@@ -30,7 +30,6 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/debug.h>
-#include <magenta/thread_dispatcher.h>
 
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>

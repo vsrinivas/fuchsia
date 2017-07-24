@@ -14,7 +14,7 @@
 #include <trace.h>
 
 #include <magenta/process_dispatcher.h>
-#include <magenta/user_thread.h>
+#include <magenta/thread_dispatcher.h>
 
 #define LOCAL_TRACE 0
 #define TRACE_EXCEPTIONS 1

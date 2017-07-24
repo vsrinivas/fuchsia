@@ -19,7 +19,7 @@
 #include <magenta/message_packet.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/rights.h>
-#include <magenta/user_thread.h>
+#include <magenta/thread_dispatcher.h>
 
 #include <mxalloc/new.h>
 #include <mxtl/type_support.h>
