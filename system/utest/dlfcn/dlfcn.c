@@ -47,10 +47,9 @@ bool dlopen_vmo_test(void) {
 static atomic_bool my_loader_service_ok = false;
 static atomic_int my_loader_service_calls = 0;
 
-static mx_status_t my_loader_service(void* arg, uint32_t load_op,
+static mx_handle_t my_loader_service(void* arg, uint32_t load_op,
                                      mx_handle_t request_handle,
-                                     const char* name,
-                                     mx_handle_t* out) {
+                                     const char* name) {
     ++my_loader_service_calls;
 
     EXPECT_EQ(request_handle, MX_HANDLE_INVALID,
@@ -74,13 +73,12 @@ static mx_status_t my_loader_service(void* arg, uint32_t load_op,
     mx_status_t status = launchpad_vmo_from_file(arg, &vmo);
     EXPECT_EQ(status, MX_OK, "");
     EXPECT_GT(vmo, 0, "launchpad_vmo_from_file");
-    if (status < 0) {
-        return status;
+    if (vmo <= 0) {
+        return vmo;
     }
 
     my_loader_service_ok = true;
-    *out = vmo;
-    return MX_OK;
+    return vmo;
 }
 
 static void show_dlerror(void) {

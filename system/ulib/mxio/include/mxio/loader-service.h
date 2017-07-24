@@ -26,12 +26,11 @@ __BEGIN_CDECLS
 // the one passed to mxio_loader_service, and the second specifies
 // which load service was requested (the opcode from mx_loader_svc_msg_t).
 // The remaining arguments' meaning depends on the opcode.
-typedef mx_status_t (*mxio_loader_service_function_t)
+typedef mx_handle_t (*mxio_loader_service_function_t)
                         (void* loader_arg,
                          uint32_t load_cmd,
                          mx_handle_t request_handle,
-                         const char* file,
-                         mx_handle_t* out);
+                         const char* file);
 
 // Start a thread to resolve loader service requests and return a
 // channel handle to talk to said service.  If the function passed
