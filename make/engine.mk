@@ -25,6 +25,7 @@ ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
 ENABLE_NEW_FB := true
 ENABLE_ACPI_BUS ?= false
 USE_ASAN ?= false
+USE_SANCOV ?= false
 USE_CLANG ?= $(USE_ASAN)
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
@@ -390,6 +391,12 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += --target=$(CLANG_ARCH)-fuchsia
 endif
 
+ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
+ifeq ($(call TOBOOL,$(USE_ASAN)),false)
+$(error USE_SANCOV requires USE_ASAN)
+endif
+endif
+
 ifeq ($(call TOBOOL,$(USE_ASAN)),true)
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 $(error USE_ASAN requires USE_CLANG)
@@ -404,7 +411,6 @@ USER_COMPILEFLAGS += -fsanitize=address -fno-sanitize=safe-stack
 find-clang-solib = \
     $(shell $(CLANG_TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) \
 					   -print-file-name=$1)
-
 # Every userland executable and shared library compiled with ASan
 # needs to link with $(ASAN_SOLIB).  module-user{app,lib}.mk adds it
 # to MODULE_EXTRA_OBJS so the linking target will depend on it.
@@ -420,6 +426,15 @@ ASAN_RUNTIME_SONAMES := libc++abi.so.1 libunwind.so.1
 USER_MANIFEST_LINES += \
     $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
 	      lib/$(soname)=$(call find-clang-solib,$(soname)))
+endif
+
+ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
+# Compile all of userland with coverage.
+USER_COMPILEFLAGS += -fsanitize-coverage=trace-pc-guard
+NO_SANCOV := -fno-sanitize-coverage=trace-pc-guard
+NO_SANITIZERS += $(NO_SANCOV)
+else
+NO_SANCOV :=
 endif
 
 # recursively include any modules in the MODULE variable, leaving a trail of included

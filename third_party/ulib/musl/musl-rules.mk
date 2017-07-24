@@ -1117,13 +1117,20 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/stubs/socketstubs.c \
     $(LOCAL_DIR)/arch/$(MUSL_ARCH)/dl-entry.S \
     $(LOCAL_DIR)/ldso/dlstart.c \
-    $(LOCAL_DIR)/ldso/dynlink.c
+    $(LOCAL_DIR)/ldso/dynlink.c \
+    $(LOCAL_DIR)/ldso/dynlink-sancov.S \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/sanitizers/__asan_early_init.c \
     $(LOCAL_DIR)/sanitizers/asan-stubs.c \
     $(LOCAL_DIR)/sanitizers/hooks.c \
     $(LOCAL_DIR)/sanitizers/log.c \
+
+# There is no '#if __has_feature(coverage)', so this file has to be
+# excluded from the build entirely when not in use.
+ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
+MODULE_SRCS += $(LOCAL_DIR)/sanitizers/sancov-stubs.S
+endif
 
 include make/module.mk
 

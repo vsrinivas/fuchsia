@@ -17,4 +17,6 @@ MODULE_STATIC_LIBS := system/ulib/elfload
 
 MODULE_LIBS := system/ulib/magenta system/ulib/c
 
+MODULE_COMPILEFLAGS += $(NO_SANCOV)
+
 include make/module.mk
