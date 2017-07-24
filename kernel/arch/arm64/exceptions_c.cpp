@@ -457,7 +457,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     }
 }
 
-status_t magenta_report_syscall_exception(void)
+status_t magenta_report_policy_exception(void)
 {
     struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};

@@ -58,7 +58,7 @@ typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
 
 #define THREAD_SIGNAL_KILL                    (1<<0)
 #define THREAD_SIGNAL_SUSPEND                 (1<<1)
-#define THREAD_SIGNAL_EXCEPTION               (1<<2)
+#define THREAD_SIGNAL_POLICY_EXCEPTION        (1<<2)
 
 #define THREAD_MAGIC (0x74687264) // 'thrd'
 
@@ -181,7 +181,7 @@ thread_t *thread_create(const char *name, thread_start_routine entry, void *arg,
 thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, void *unsafe_stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
 status_t thread_resume(thread_t *);
 status_t thread_suspend(thread_t *);
-void thread_signal_exception(void);
+void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);
 

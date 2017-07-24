@@ -372,11 +372,11 @@ status_t thread_suspend(thread_t *t)
  * we can unwind the stack in order to get the state of userland's
  * callee-saved registers at the point where userland invoked the
  * syscall. */
-void thread_signal_exception(void)
+void thread_signal_policy_exception(void)
 {
     thread_t* t = get_current_thread();
     THREAD_LOCK(state);
-    t->signals |= THREAD_SIGNAL_EXCEPTION;
+    t->signals |= THREAD_SIGNAL_POLICY_EXCEPTION;
     THREAD_UNLOCK(state);
 }
 
@@ -695,13 +695,13 @@ void thread_process_pending_signals(void)
     check_kill_signal(current_thread, state);
 
     /* Report exceptions raised by syscalls */
-    if (current_thread->signals & THREAD_SIGNAL_EXCEPTION) {
-        current_thread->signals &= ~THREAD_SIGNAL_EXCEPTION;
+    if (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION) {
+        current_thread->signals &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
         THREAD_UNLOCK(state);
 #if WITH_LIB_MAGENTA
-        mx_status_t status = magenta_report_syscall_exception();
+        mx_status_t status = magenta_report_policy_exception();
         if (status != MX_OK) {
-            panic("magenta_report_syscall_exception() failed: status=%d\n",
+            panic("magenta_report_policy_exception() failed: status=%d\n",
                   status);
         }
 #endif

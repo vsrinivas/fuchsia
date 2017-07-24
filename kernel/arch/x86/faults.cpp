@@ -499,7 +499,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     mx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
-status_t magenta_report_syscall_exception(void)
+status_t magenta_report_policy_exception(void)
 {
     x86_iframe_t frame = {};
     arch_exception_context_t context = {};

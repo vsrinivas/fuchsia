@@ -758,7 +758,7 @@ mx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
 mx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
     auto action = GetSystemPolicyManager()->QueryBasicPolicy(policy_, condition);
     if (action & MX_POL_ACTION_EXCEPTION) {
-        thread_signal_exception();
+        thread_signal_policy_exception();
     }
     // TODO(cpu): check for the MX_POL_KILL bit and return an error code
     // that sysgen understands as termination.
