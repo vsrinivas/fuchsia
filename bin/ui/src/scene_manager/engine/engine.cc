@@ -12,6 +12,7 @@
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
@@ -83,7 +84,7 @@ void Engine::ImportResource(ImportPtr import,
                 import.get(),  // the import that will be resolved by the linker
                 std::placeholders::_1,  // the acutal object to link to import
                 std::placeholders::_2   // result of the linking
-                );
+      );
   resource_linker_.ImportResource(spec, endpoint, import_resolved_callback);
 }
 
@@ -160,6 +161,9 @@ void Engine::TearDownSession(SessionId id) {
 
 void Engine::RenderFrame(uint64_t presentation_time,
                          uint64_t presentation_interval) {
+  TRACE_DURATION("gfx", "RenderFrame", "time", presentation_time, "interval",
+                 presentation_interval);
+
   if (!ApplyScheduledSessionUpdates(presentation_time, presentation_interval))
     return;
 
@@ -172,6 +176,9 @@ void Engine::RenderFrame(uint64_t presentation_time,
 
 bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,
                                           uint64_t presentation_interval) {
+  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
+                 presentation_time, "interval", presentation_interval);
+
   bool needs_render = false;
   while (!updatable_sessions_.empty() &&
          updatable_sessions_.top().first <= presentation_time) {
@@ -211,6 +218,8 @@ void Engine::RemoveRenderer(Renderer* renderer) {
 }
 
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
+  TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
+
   // Gather all of the scene which might need to be updated.
   std::set<Scene*> scenes;
   for (auto renderer : renderers_) {

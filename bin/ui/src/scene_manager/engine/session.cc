@@ -23,6 +23,7 @@
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/util/unwrap.h"
 #include "apps/mozart/src/scene_manager/util/wrap.h"
+#include "apps/tracing/lib/trace/event.h"
 
 #include "escher/renderer/paper_renderer.h"
 #include "escher/shape/mesh.h"
@@ -811,6 +812,8 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
 
 bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
+  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "id", id_, "time",
+                 presentation_time, "interval", presentation_interval);
   bool needs_render = false;
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= presentation_time &&
@@ -860,6 +863,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 }
 
 bool Session::ApplyUpdate(Session::Update* update) {
+  TRACE_DURATION("gfx", "Session::ApplyUpdate");
   if (is_valid()) {
     for (auto& op : update->ops) {
       if (!ApplyOp(op)) {

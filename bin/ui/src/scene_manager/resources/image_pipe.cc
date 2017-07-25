@@ -8,6 +8,7 @@
 #include "apps/mozart/src/scene_manager/fence.h"
 #include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
+#include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
 
@@ -133,6 +134,10 @@ void ImagePipe::PresentImage(
 
 bool ImagePipe::Update(uint64_t presentation_time,
                        uint64_t presentation_interval) {
+  TRACE_DURATION("gfx", "ImagePipe::Update", "session_id", session()->id(),
+                 "id", id(), "time", presentation_time, "interval",
+                 presentation_interval);
+
   mozart::ResourceId next_image_id = current_image_id_;
   mx::event next_release_fence;
 

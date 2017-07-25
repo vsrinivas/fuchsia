@@ -13,6 +13,7 @@
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
+#include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
 
@@ -38,6 +39,8 @@ DisplayRenderer::~DisplayRenderer() {
 }
 
 void DisplayRenderer::DrawFrame(escher::Renderer* renderer) {
+  TRACE_DURATION("gfx", "DisplayRenderer::DrawFrame");
+
   float width = static_cast<float>(swapchain_helper_.swapchain().width);
   float height = static_cast<float>(swapchain_helper_.swapchain().height);
 

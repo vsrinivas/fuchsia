@@ -15,6 +15,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
+#include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
 
@@ -37,6 +38,8 @@ Renderer::~Renderer() {
 std::vector<escher::Object> Renderer::CreateDisplayList(
     const ScenePtr& scene,
     escher::vec2 screen_dimensions) {
+  TRACE_DURATION("gfx", "Renderer::CreateDisplayList");
+
   // Construct a display list from the tree.
   Visitor v(default_material_);
   scene->Accept(&v);
