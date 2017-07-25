@@ -13,16 +13,16 @@ import (
 	"syscall/mx/mxio/rio"
 	"syscall/mx/mxruntime"
 
-	ae "application/services/application_environment"
-	al "application/services/application_launcher"
-	sp "application/services/service_provider"
+	"application/services/application_environment"
+	"application/services/application_launcher"
+	"application/services/service_provider"
 )
 
 type Context struct {
-	Environment          *ae.ApplicationEnvironment_Proxy
+	Environment          *application_environment.Proxy
 	OutgoingService      *svcns.Namespace
 	serviceRoot          mx.Handle
-	Launcher             *al.ApplicationLauncher_Proxy
+	Launcher             *application_launcher.Proxy
 	appServices          mx.Handle
 }
 
@@ -47,58 +47,54 @@ func getServiceRoot() mx.Handle {
 }
 
 func New(serviceRoot, serviceRequest, appServices mx.Handle) *Context {
-	context := &Context{
+	c := &Context{
 		serviceRoot: serviceRoot,
 		appServices: appServices,
 	}
 
-	context.OutgoingService = svcns.New()
+	c.OutgoingService = svcns.New()
 
-	envRequest, envPointer := ae.CreateChannelForApplicationEnvironment()
-	context.ConnectToEnvironmentService(
-		envRequest.Name(), bindings.InterfaceRequest(envRequest))
-	context.Environment =
-		ae.NewApplicationEnvironmentProxy(envPointer, bindings.GetAsyncWaiter())
+	r, p := application_environment.NewChannel()
+	c.ConnectToEnvironmentService(r.Name(), bindings.InterfaceRequest(r))
+	c.Environment = application_environment.NewProxy(p, bindings.GetAsyncWaiter())
 
-	lnchRequest, lnchPointer := al.CreateChannelForApplicationLauncher()
-	context.ConnectToEnvironmentService(
-		lnchRequest.Name(), bindings.InterfaceRequest(lnchRequest))
-	context.Launcher =
-		al.NewApplicationLauncherProxy(lnchPointer, bindings.GetAsyncWaiter())
+	r2, p2 := application_launcher.NewChannel()
+	c.ConnectToEnvironmentService(r2.Name(), bindings.InterfaceRequest(r2))
+	c.Launcher = application_launcher.NewProxy(p2, bindings.GetAsyncWaiter())
 
 	if serviceRequest.IsValid() {
-		context.OutgoingService.ServeDirectory(serviceRequest)
+		c.OutgoingService.ServeDirectory(serviceRequest)
 	}
 
-	return context
+	return c
 }
 
-func (context *Context) Serve() {
-	if context.appServices.IsValid() {
-		request := sp.ServiceProvider_Request{
-			bindings.NewChannelHandleOwner(context.appServices)}
-		stub := sp.NewServiceProviderStub(
-			request, context.OutgoingService, bindings.GetAsyncWaiter())
+func (c *Context) Serve() {
+	if c.appServices.IsValid() {
+		r := service_provider.Request{
+			bindings.NewChannelHandleOwner(c.appServices)}
+		s := service_provider.NewStub(
+			r, c.OutgoingService, bindings.GetAsyncWaiter())
 		go func() {
 			for {
-				if err := stub.ServeRequest(); err != nil {
+				if err := s.ServeRequest(); err != nil {
 					break
 				}
 			}
 		}()
 	}
 
-	if context.OutgoingService.Dispatcher != nil {
-		go context.OutgoingService.Dispatcher.Serve()
+	if c.OutgoingService.Dispatcher != nil {
+		go c.OutgoingService.Dispatcher.Serve()
 	}
 }
 
-func (context *Context) Close() {
+func (c *Context) Close() {
 	// TODO: should do something here?
 }
 
-func (context *Context) ConnectToEnvironmentService(name string, r bindings.InterfaceRequest) {
-	err := rio.ServiceConnectAt(context.serviceRoot, name, r.PassChannel())
+func (c *Context) ConnectToEnvironmentService(name string, r bindings.InterfaceRequest) {
+	err := rio.ServiceConnectAt(c.serviceRoot, name, r.PassChannel())
 	if err != nil {
 		panic(fmt.Sprintf("ConnectToEnvironmentService: %v", err))
 	}

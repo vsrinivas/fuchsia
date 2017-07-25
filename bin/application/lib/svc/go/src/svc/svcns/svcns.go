@@ -18,21 +18,21 @@ type binder interface {
 	// Name returns the name of provided fidl service.
 	Name() string
 
-	// Create binds an implementation of fidl service to the provided
+	// Bind binds an implementation of fidl service to the provided
 	// channel and runs it.
-	Create(h mx.Handle)
+	Bind(h mx.Handle)
 }
 
 type Namespace struct {
-	factories  map[string]binder
+	binders  map[string]binder
 	Dispatcher *dispatcher.Dispatcher
 }
 
 func New() *Namespace {
-	return &Namespace{factories: make(map[string]binder)}
+	return &Namespace{binders: make(map[string]binder)}
 }
 
-func (sn *Namespace) ServeDirectory(handle mx.Handle) error {
+func (sn *Namespace) ServeDirectory(h mx.Handle) error {
 	d, err := dispatcher.New(rio.Handler)
 	if err != nil {
 		panic(fmt.Sprintf("context.New: %v", err))
@@ -45,8 +45,8 @@ func (sn *Namespace) ServeDirectory(handle mx.Handle) error {
 		Dispatcher: d,
 	}
 
-	if err := n.Serve(handle); err != nil {
-		handle.Close()
+	if err := n.Serve(h); err != nil {
+		h.Close()
 		return err
 	}
 
@@ -54,16 +54,16 @@ func (sn *Namespace) ServeDirectory(handle mx.Handle) error {
 	return nil
 }
 
-func (sn *Namespace) ConnectToService(name string, handle mx.Handle) error {
-	factory, ok := sn.factories[name]
+func (sn *Namespace) ConnectToService(name string, h mx.Handle) error {
+	b, ok := sn.binders[name]
 	if !ok {
-		handle.Close()
+		h.Close()
 		return nil
 	}
-	factory.Create(handle)
+	b.Bind(h)
 	return nil
 }
 
-func (sn *Namespace) AddService(factory binder) {
-	sn.factories[factory.Name()] = factory
+func (sn *Namespace) AddService(b binder) {
+	sn.binders[b.Name()] = b
 }
