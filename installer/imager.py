@@ -286,7 +286,9 @@ def is_non_empty_file(path):
 # manifests and write them into the minfs image at disk_path using the minfs
 # binary pointed to by minfs_bin.
 system_manifests, boot_manifests = build_manifest_lists(args.build_dir)
-system_manifests.append(primary_manifest)
+if is_non_empty_file(primary_manifest):
+  system_manifests.append(primary_manifest)
+
 if is_non_empty_file(boot_manifest):
     boot_manifests.append(boot_manifest)
 
