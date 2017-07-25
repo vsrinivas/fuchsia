@@ -49,7 +49,7 @@ function download_zip() {
   download_file_if_needed "${name}" "${base_url}" "${base_path}" ".zip"
   if [[ -f "${zip_path}" ]]; then
     mkdir -p -- "${unzip_dir}"
-    (cd -- "${unzip_dir}" && rm -rf -- "${name}" && unzip -q "${zip_path}")
+    (cd -- "${unzip_dir}" && rm -rf -- "${name}" && unzip -o -q "${zip_path}")
     rm -f -- "${zip_path}"
   fi
 }
