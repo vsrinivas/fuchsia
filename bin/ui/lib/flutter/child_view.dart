@@ -402,10 +402,15 @@ class _RenderChildView extends RenderBox {
   }
 
   @override
-  void debugFillDescription(List<String> description) {
-    super.debugFillDescription(description);
-    description.add('connection: $connection');
-    description.add('scale: $scale');
+  void debugFillProperties(List<DiagnosticsNode> description) {
+    super.debugFillProperties(description);
+    description.add(
+      new DiagnosticsProperty<ChildViewConnection>(
+        'connection',
+        connection,
+      ),
+    );
+    description.add(new DoubleProperty('scale', scale));
   }
 }
 
