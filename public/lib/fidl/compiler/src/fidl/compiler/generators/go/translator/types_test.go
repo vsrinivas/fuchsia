@@ -29,45 +29,45 @@ func TestTranslateType(t *testing.T) {
 		{"uint64", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint64}},
 		{"string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: false}}},
 		{"*string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: true}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: false}}},
-		{"system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Channel, Nullable: false}}},
-		{"system.VmoHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Process, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Thread, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Event, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Port, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Job, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Socket, Nullable: false}}},
-		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_EventPair, Nullable: false}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: true}}},
-		{"*system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Channel, Nullable: true}}},
-		{"*system.VmoHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Process, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Thread, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Event, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Port, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Job, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Socket, Nullable: true}}},
-		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+		{"*mx.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_EventPair, Nullable: true}}},
 		{"[]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: -1, Nullable: false,
@@ -158,7 +158,7 @@ func TestTranslateInterfaceType(t *testing.T) {
 	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &typeKey}}
 
 	translator := NewTranslator(&fileGraph)
-	checkEq(t, "FooBar_Pointer", translator.translateType(typeRef))
+	checkEq(t, "Pointer", translator.translateType(typeRef))
 }
 
 func TestTranslateInterfaceRequestType(t *testing.T) {
@@ -177,5 +177,5 @@ func TestTranslateInterfaceRequestType(t *testing.T) {
 	}}
 
 	translator := NewTranslator(&fileGraph)
-	checkEq(t, "FooBar_Request", translator.translateType(typeRef))
+	checkEq(t, "Request", translator.translateType(typeRef))
 }

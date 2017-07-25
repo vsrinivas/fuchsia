@@ -65,57 +65,57 @@ type {{$interface.Name}} interface {
 const interfaceOtherDeclTmplText = `
 {{- define "InterfaceOtherDecl" -}}
 {{- $interface := . -}}
-type {{$interface.Name}}_Request bindings.InterfaceRequest
+type Request bindings.InterfaceRequest
 
-type {{$interface.Name}}_Pointer bindings.InterfacePointer
+type Pointer bindings.InterfacePointer
 
-type {{$interface.Name}}_ServiceFactory struct{
-	Delegate {{$interface.Name}}_Factory
+type ServiceBinder struct{
+	Delegate Binder
 }
 
-type {{$interface.Name}}_Factory interface {
-	Create(request {{$interface.Name}}_Request)
+type Binder interface {
+	Bind(request Request)
 }
 
-func (f *{{$interface.Name}}_ServiceFactory) Create(handle mx.Handle) {
-	request := {{$interface.Name}}_Request{bindings.NewChannelHandleOwner(handle)}
-	f.Delegate.Create(request)
+func (f *ServiceBinder) Bind(handle mx.Handle) {
+	request := Request{bindings.NewChannelHandleOwner(handle)}
+	f.Delegate.Bind(request)
 }
 
-// CreateChannelFor{{$interface.Name}} creates a channel for use with the
-// {{$interface.Name}} interface with a {{$interface.Name}}_Request on one end and a {{$interface.Name}}_Pointer on the other.
-func CreateChannelFor{{$interface.Name}}() ({{$interface.Name}}_Request, {{$interface.Name}}_Pointer) {
+// NewChannel creates a channel for use with the {{$interface.Name}} interface with
+// a Request on one end and a Pointer on the other.
+func NewChannel() (Request, Pointer) {
         r, p := bindings.CreateChannelForFidlInterface()
-        return {{$interface.Name}}_Request(r), {{$interface.Name}}_Pointer(p)
+        return Request(r), Pointer(p)
 }
 
-type {{$interface.Name}}_Proxy struct {
+type Proxy struct {
 	router *bindings.Router
 	ids bindings.Counter
 }
 
-func New{{$interface.Name}}Proxy(p {{$interface.Name}}_Pointer, waiter bindings.AsyncWaiter) *{{$interface.Name}}_Proxy {
-	return &{{$interface.Name}}_Proxy{
+func NewProxy(p Pointer, waiter bindings.AsyncWaiter) *Proxy {
+	return &Proxy{
 		bindings.NewRouter(p.PassChannel(), waiter),
 		bindings.NewCounter(),
 	}
 }
 
-func (p *{{$interface.Name}}_Proxy) Close_Proxy() {
+func (p *Proxy) Close() {
 	p.router.Close()
 }
 
-type {{$interface.PrivateName}}_Stub struct {
+type Stub struct {
 	connector *bindings.Connector
 	impl {{$interface.Name}}
 }
 
-func New{{$interface.Name}}Stub(r {{$interface.Name}}_Request, impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
+func NewStub(r Request, impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
 	connector := bindings.NewConnector(r.PassChannel(), waiter)
-	return bindings.NewStub(connector, &{{$interface.PrivateName}}_Stub{connector, impl})
+	return bindings.NewStub(connector, &Stub{connector, impl})
 }
 
-func (s *{{$interface.PrivateName}}_Stub) Accept(message *bindings.Message) (err error) {
+func (s *Stub) Accept(message *bindings.Message) (err error) {
 	switch message.Header.Type {
 {{- range $method := $interface.Methods}}
 {{ template "AcceptMethod" $method }}
@@ -227,7 +227,7 @@ err error)
 const methodFuncTmplText = `
 {{- define "MethodFunction" -}}
 {{- $method := . -}}
-func (p *{{$method.Interface.Name}}_Proxy) {{ template "MethodSignature" $method }} {
+func (p *Proxy) {{ template "MethodSignature" $method }} {
 	payload := &{{$method.Params.Name}}{
 {{range $param := $method.Params.Fields -}}
 		in{{$param.Name}},
@@ -246,13 +246,13 @@ func (p *{{$method.Interface.Name}}_Proxy) {{ template "MethodSignature" $method
 	var message *bindings.Message
 	if message, err = bindings.EncodeMessage(header, payload); err != nil {
 		err = fmt.Errorf("can't encode request: %v", err.Error())
-		p.Close_Proxy()
+		p.Close()
 		return
 	}
 {{if $method.ResponseParams}}
 	readResult := <-p.router.AcceptWithResponse(message)
 	if err = readResult.Error; err != nil {
-		p.Close_Proxy()
+		p.Close()
 		return
 	}
 	if readResult.Message.Header.Flags != bindings.MessageIsResponseFlag {
@@ -269,7 +269,7 @@ func (p *{{$method.Interface.Name}}_Proxy) {{ template "MethodSignature" $method
 	}
 	var response {{$method.ResponseParams.Name}}
 	if err = readResult.Message.DecodePayload(&response); err != nil {
-		p.Close_Proxy()
+		p.Close()
 		return
 	}
 {{- range $param := $method.ResponseParams.Fields}}
@@ -277,7 +277,7 @@ func (p *{{$method.Interface.Name}}_Proxy) {{ template "MethodSignature" $method
 {{- end -}}
 {{- else -}}
 	if err = p.router.Accept(message); err != nil {
-		p.Close_Proxy()
+		p.Close()
 		return
 	}
 {{end}}
@@ -291,15 +291,15 @@ const serviceDeclTmplText = `
 {{- $interface := . -}}
 const {{$interface.PrivateName}}_Name string = "{{$interface.ServiceName}}"
 
-func (r *{{$interface.Name}}_Request) Name() string {
+func (r *Request) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 
-func (p *{{$interface.Name}}_Pointer) Name() string {
+func (p *Pointer) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 
-func (f *{{$interface.Name}}_ServiceFactory) Name() string {
+func (f *ServiceBinder) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 {{- end -}}

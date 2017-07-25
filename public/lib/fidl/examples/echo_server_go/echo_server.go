@@ -27,12 +27,12 @@ type EchoDelegate struct {
 	stubs []*bindings.Stub
 }
 
-func (delegate *EchoDelegate) Create(request echo.Echo_Request) {
-	stub := echo.NewEchoStub(request, &EchoImpl{}, bindings.GetAsyncWaiter())
-	delegate.stubs = append(delegate.stubs, stub)
+func (delegate *EchoDelegate) Bind(request echo.Request) {
+	s := echo.NewStub(request, &EchoImpl{}, bindings.GetAsyncWaiter())
+	delegate.stubs = append(delegate.stubs, s)
 	go func() {
 		for {
-			if err := stub.ServeRequest(); err != nil {
+			if err := s.ServeRequest(); err != nil {
 				if mxerror.Status(err) != mx.ErrPeerClosed {
 					log.Println(err)
 				}
@@ -43,16 +43,15 @@ func (delegate *EchoDelegate) Create(request echo.Echo_Request) {
 }
 
 func (delegate *EchoDelegate) Quit() {
-	for _, stub := range delegate.stubs {
-		stub.Close()
+	for _, s := range delegate.stubs {
+		s.Close()
 	}
 }
 
 func main() {
-	ctx := context.CreateFromStartupInfo()
-	ctx.OutgoingService.AddService(
-		&echo.Echo_ServiceFactory{&EchoDelegate{}})
-	ctx.Serve()
+	c := context.CreateFromStartupInfo()
+	c.OutgoingService.AddService(&echo.ServiceBinder{&EchoDelegate{}})
+	c.Serve()
 
 	select {}
 }

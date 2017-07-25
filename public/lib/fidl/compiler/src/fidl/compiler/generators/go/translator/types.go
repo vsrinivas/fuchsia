@@ -132,9 +132,9 @@ func (t *translator) translateTypeReference(typeRef fidl_types.TypeReference) (g
 
 	if _, ok := userDefinedType.(*fidl_types.UserDefinedTypeInterfaceType); ok {
 		if typeRef.IsInterfaceRequest {
-			typeName = fmt.Sprintf("%s_Request", typeName)
+			typeName = "Request"
 		} else {
-			typeName = fmt.Sprintf("%s_Pointer", typeName)
+			typeName = "Pointer"
 		}
 	}
 

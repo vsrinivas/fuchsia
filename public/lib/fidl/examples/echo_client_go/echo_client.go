@@ -13,28 +13,27 @@ import (
 	"lib/fidl/examples/services/echo"
 )
 
-type EchoClientApp struct{}
+type EchoClientApp struct {
+	ctx  *context.Context
+	echo *echo.Proxy
+}
 
-func (client *EchoClientApp) Start() {
-	context := context.CreateFromStartupInfo()
+func (a *EchoClientApp) Start() {
+	r, p := echo.NewChannel()
+	a.ctx.ConnectToEnvironmentService(r.Name(), bindings.InterfaceRequest(r))
+	a.echo = echo.NewProxy(p, bindings.GetAsyncWaiter())
 
-	echoRequest, echoPointer := echo.CreateChannelForEcho()
-	context.ConnectToEnvironmentService(
-		echoRequest.Name(), bindings.InterfaceRequest(echoRequest))
-	echoProxy := echo.NewEchoProxy(echoPointer, bindings.GetAsyncWaiter())
-
-	response, err :=
-		echoProxy.EchoString(bindings.StringPointer("Hello, Go world!"))
+	resp, err := a.echo.EchoString(bindings.StringPointer("Hello, Go world!"))
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Printf("client: %s\n", *response)
+		fmt.Printf("client: %s\n", *resp)
 	}
-	echoProxy.Close_Proxy()
-	context.Close()
+
+	a.echo.Close()
 }
 
 func main() {
-	client := &EchoClientApp{}
-	client.Start()
+	a := &EchoClientApp{ctx: context.CreateFromStartupInfo()}
+	a.Start()
 }
