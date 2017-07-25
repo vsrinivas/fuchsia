@@ -17,10 +17,16 @@
 
 #include <unittest/unittest.h>
 
+#if __has_feature(address_sanitizer)
+# define LIBPREFIX "/boot/lib/asan/"
+#else
+# define LIBPREFIX "/boot/lib/"
+#endif
+
 bool dlopen_vmo_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t vmo = launchpad_vmo_from_file("/boot/lib/liblaunchpad.so");
+    mx_handle_t vmo = launchpad_vmo_from_file(LIBPREFIX "liblaunchpad.so");
     EXPECT_GT(vmo, 0, "launchpad_vmo_from_file");
 
     void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
@@ -40,7 +46,7 @@ bool dlopen_vmo_test(void) {
 // This should be some library that this program links against.
 #define TEST_SONAME "libmxio.so"
 #define TEST_NAME "foobar"
-#define TEST_ACTUAL_NAME "/boot/lib/" TEST_SONAME
+#define TEST_ACTUAL_NAME LIBPREFIX TEST_SONAME
 
 static atomic_bool my_loader_service_ok = false;
 static atomic_int my_loader_service_calls = 0;

@@ -23,7 +23,13 @@
 // argv[0]
 static const char* program_path;
 
-static const char dynld_path[] = "/boot/lib/ld.so.1";
+#if __has_feature(address_sanitizer)
+# define LIBPREFIX "/boot/lib/asan/"
+#else
+# define LIBPREFIX "/boot/lib/"
+#endif
+
+static const char dynld_path[] = LIBPREFIX "ld.so.1";
 
 static const char test_inferior_child_name[] = "inferior";
 
