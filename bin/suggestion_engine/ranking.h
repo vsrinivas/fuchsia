@@ -13,8 +13,7 @@
 
 namespace maxwell {
 
-using RankingFunction =
-    std::function<int64_t(const maxwell::SuggestionPrototype*)>;
+using RankingFunction = std::function<int64_t(const SuggestionPrototype*)>;
 
 constexpr int64_t kMaxRank = std::numeric_limits<int64_t>::max();
 

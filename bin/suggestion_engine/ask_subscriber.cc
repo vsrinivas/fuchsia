@@ -6,7 +6,7 @@
 
 namespace maxwell {
 
-AskSubscriber::AskSubscriber(RankedSuggestions* ranked_suggestions,
+AskSubscriber::AskSubscriber(const RankedSuggestions* ranked_suggestions,
                              AskDispatcher* ask_dispatcher,
                              fidl::InterfaceHandle<SuggestionListener> listener,
                              fidl::InterfaceRequest<AskController> controller)

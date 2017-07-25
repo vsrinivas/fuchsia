@@ -11,7 +11,6 @@
 
 namespace maxwell {
 
-class SuggestionChannel;
 struct SuggestionPrototype {
   std::string suggestion_id;
   std::string source_url;
@@ -20,7 +19,7 @@ struct SuggestionPrototype {
 };
 
 struct RankedSuggestion {
-  const SuggestionPrototype* prototype;
+  SuggestionPrototype* prototype;
   float rank;
 };
 

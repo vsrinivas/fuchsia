@@ -12,21 +12,23 @@ void WindowedSuggestionSubscriber::SetResultCount(int32_t count) {
   if (count < 0)
     count = 0;
 
-  size_t target = std::min((size_t)count, ranked_suggestions_.size());
-  size_t prev = std::min((size_t)max_results_, ranked_suggestions_.size());
+  const auto& suggestion_vector = ranked_suggestions_->Get();
+
+  size_t target = std::min((size_t)count, suggestion_vector.size());
+  size_t prev = std::min((size_t)max_results_, suggestion_vector.size());
 
   if (target != prev) {
     if (target > prev) {
       fidl::Array<SuggestionPtr> delta;
       for (size_t i = prev; i < target; i++) {
-        delta.push_back(CreateSuggestion(*ranked_suggestions_[i]));
+        delta.push_back(CreateSuggestion(*suggestion_vector[i]));
       }
       listener()->OnAdd(std::move(delta));
     } else if (target == 0) {
       listener()->OnRemoveAll();
     } else if (target < prev) {
       for (size_t i = prev - 1; i >= target; i--) {
-        listener()->OnRemove(ranked_suggestions_[i]->prototype->suggestion_id);
+        listener()->OnRemove(suggestion_vector[i]->prototype->suggestion_id);
       }
     }
   }
@@ -37,11 +39,14 @@ void WindowedSuggestionSubscriber::SetResultCount(int32_t count) {
 void WindowedSuggestionSubscriber::Invalidate() {
   listener()->OnRemoveAll();
 
+  const auto& suggestion_vector = ranked_suggestions_->Get();
+
   fidl::Array<SuggestionPtr> window;
   for (int32_t i = 0;
-       i < max_results_ && (unsigned)i < ranked_suggestions_.size(); i++) {
-    window.push_back(CreateSuggestion(*ranked_suggestions_[i]));
+       i < max_results_ && (unsigned)i < suggestion_vector.size(); i++) {
+    window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }
+
 
   if (window)  // after OnRemoveAll, no point in adding if no window
     listener()->OnAdd(std::move(window));
@@ -61,10 +66,12 @@ bool WindowedSuggestionSubscriber::IncludeSuggestion(
   if (!IsFull())
     return true;
 
+  const auto& suggestion_vector = ranked_suggestions_->Get();
+
   float newRank = ranked_suggestion.rank;
 
   const int32_t i = max_results_ - 1;
-  auto it = ranked_suggestions_.begin() + i;
+  auto it = suggestion_vector.begin() + i;
 
   if (newRank < (*it)->rank)
     return true;
@@ -79,7 +86,7 @@ bool WindowedSuggestionSubscriber::IncludeSuggestion(
     }
 
     // backwards iteration is inelegant.
-    if (it == ranked_suggestions_.begin())
+    if (it == suggestion_vector.begin())
       return false;
 
     --it;

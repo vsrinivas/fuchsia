@@ -12,6 +12,8 @@
 #include <vector>
 
 namespace maxwell {
+using MatchPredicate =
+      std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
 
 class RankedSuggestions {
  public:
@@ -19,7 +21,7 @@ class RankedSuggestions {
 
   void UpdateRankingFunction(RankingFunction ranking_function);
 
-  void AddSuggestion(const SuggestionPrototype* const prototype);
+  void AddSuggestion(SuggestionPrototype* const prototype);
 
   void RemoveSuggestion(const std::string& id);
   void RemoveProposal(const std::string& component_url,
@@ -32,15 +34,13 @@ class RankedSuggestions {
   RankedSuggestion* GetSuggestion(const std::string& component_url,
                                   const std::string& proposal_id) const;
 
-  const std::vector<RankedSuggestion*>* GetSuggestions() const {
-    return &suggestions_;
+  const std::vector<std::unique_ptr<RankedSuggestion>>& Get() const {
+    return suggestions_;
   }
 
  private:
-  RankedSuggestion* GetMatchingSuggestion(
-      std::function<bool(RankedSuggestion* suggestion)> matchFunction) const;
-  void RemoveMatchingSuggestion(
-      std::function<bool(RankedSuggestion* suggestion)> matchFunction);
+  RankedSuggestion* GetMatchingSuggestion(MatchPredicate matchFunction) const;
+  void RemoveMatchingSuggestion(MatchPredicate matchFunction);
   void DoStableSort();
   // The function that will rank all SuggestionPrototypes.
   RankingFunction ranking_function_;
@@ -51,7 +51,7 @@ class RankedSuggestions {
   // The sorted vector of RankedSuggestions, sorted by
   // |ranking_function_|. The vector is re-sorted whenever its
   // contents are modified or when |ranking_function_| is updated.
-  std::vector<RankedSuggestion*> suggestions_;
+  std::vector<std::unique_ptr<RankedSuggestion>> suggestions_;
 };
 
 }  // namespace maxwell

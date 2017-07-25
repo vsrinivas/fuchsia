@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <map>
 #include <string>
 #include <unordered_map>
 
@@ -67,17 +68,17 @@ class SuggestionEngineImpl : public SuggestionEngine,
   };
 
   // Should only be called from ProposalPublisherImpl.
-  void AddNextProposal(ProposalPublisherImpl* source, ProposalPtr prototype);
+  void AddNextProposal(ProposalPublisherImpl* source, ProposalPtr proposal);
 
   // Should only be called from ProposalPublisherImpl.
-  void AddAskProposal(ProposalPublisherImpl* source, ProposalPtr prototype);
+  void AddAskProposal(ProposalPublisherImpl* source, ProposalPtr proposal);
 
   // Should only be called from ProposalPublisherImpl.
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 
   // Searches for a SuggestionPrototype in the Next and Ask lists.
-  const SuggestionPrototype* FindSuggestion(std::string suggestion_id);
+  SuggestionPrototype* FindSuggestion(std::string suggestion_id);
 
   // |SuggestionProvider|
   void SubscribeToInterruptions(
@@ -113,8 +114,10 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void AddAskPublisher(std::unique_ptr<AskPublisher> publisher);
 
  private:
-  SuggestionPrototype* CreateSuggestion(ProposalPublisherImpl* source,
-                                        ProposalPtr proposal);
+  void RemoveAllAskSuggestions();
+
+  SuggestionPrototype* CreateSuggestionPrototype(ProposalPublisherImpl* source,
+                                                 ProposalPtr proposal);
   std::string RandomUuid() {
     static uint64_t id = 0;
     // TODO(rosswang): real UUIDs
@@ -147,6 +150,11 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // TODO(thatguy): All Channels also get a ReevaluateFilters method, which
   // would remove Suggestions that are now filtered or add
   // new ones that are no longer filtered.
+
+  // The repository of raw suggestion prototypes.
+  std::map<std::pair<std::string, std::string>,
+           std::unique_ptr<SuggestionPrototype>>
+      suggestion_prototypes_;
 
   // Channels that dispatch outbound suggestions to SuggestionListeners.
   SuggestionChannel ask_channel_;

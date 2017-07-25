@@ -25,8 +25,15 @@ bool IsInterruption(const SuggestionPrototype* suggestion) {
 }
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
-                                           ProposalPtr prototype) {
-  auto suggestion = CreateSuggestion(std::move(source), std::move(prototype));
+                                           ProposalPtr proposal) {
+
+  // The component_url and proposal ID form a unique identifier for a proposal.
+  // If one already exists, remove it before adding the new one.
+  RemoveProposal(source->component_url(), proposal->id);
+
+  auto suggestion =
+      CreateSuggestionPrototype(std::move(source), std::move(proposal));
+
   if (IsInterruption(suggestion)) {
     debug_.OnInterrupt(suggestion);
     // TODO(andrewosh): Subscribers should probably take SuggestionPrototypes.
@@ -35,29 +42,37 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
     ranked_suggestion->rank = 0;
     interruption_channel_.DispatchOnAddSuggestion(ranked_suggestion);
   }
+
   next_suggestions_->AddSuggestion(std::move(suggestion));
   debug_.OnNextUpdate(next_suggestions_);
 }
 
 void SuggestionEngineImpl::AddAskProposal(ProposalPublisherImpl* source,
-                                          ProposalPtr prototype) {
-  ask_suggestions_->AddSuggestion(
-      CreateSuggestion(std::move(source), std::move(prototype)));
+                                          ProposalPtr proposal) {
+  RemoveProposal(source->component_url(), proposal->id);
+  auto suggestion =
+      CreateSuggestionPrototype(std::move(source), std::move(proposal));
+  ask_suggestions_->AddSuggestion(std::move(suggestion));
 }
 
 void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
                                           const std::string& proposal_id) {
-  RankedSuggestion* matchingSuggestion =
-      next_suggestions_->GetSuggestion(component_url, proposal_id);
-  if (matchingSuggestion && IsInterruption(matchingSuggestion->prototype)) {
-    interruption_channel_.DispatchOnRemoveSuggestion(matchingSuggestion);
+  const auto key = std::make_pair(component_url, proposal_id);
+  auto toRemove = suggestion_prototypes_.find(key);
+  if (toRemove != suggestion_prototypes_.end()) {
+    RankedSuggestion* matchingSuggestion =
+        next_suggestions_->GetSuggestion(component_url, proposal_id);
+    if (matchingSuggestion && IsInterruption(matchingSuggestion->prototype)) {
+      interruption_channel_.DispatchOnRemoveSuggestion(matchingSuggestion);
+    }
+    ask_suggestions_->RemoveProposal(component_url, proposal_id);
+    next_suggestions_->RemoveProposal(component_url, proposal_id);
+    debug_.OnNextUpdate(next_suggestions_);
+    suggestion_prototypes_.erase(toRemove);
   }
-  next_suggestions_->RemoveProposal(component_url, proposal_id);
-  ask_suggestions_->RemoveProposal(component_url, proposal_id);
-  debug_.OnNextUpdate(next_suggestions_);
 }
 
-const SuggestionPrototype* SuggestionEngineImpl::FindSuggestion(
+SuggestionPrototype* SuggestionEngineImpl::FindSuggestion(
     std::string suggestion_id) {
   RankedSuggestion* suggestion =
       next_suggestions_->GetSuggestion(suggestion_id);
@@ -77,7 +92,7 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
 
   // TODO(andrewosh): Include/exclude logic improves upon this, but with
   // increased complexity.
-  ask_suggestions_->RemoveAllSuggestions();
+  RemoveAllAskSuggestions();
 
   ask_suggestions_->UpdateRankingFunction(
       maxwell::ranking::GetAskRankingFunction(query));
@@ -118,7 +133,7 @@ void SuggestionEngineImpl::SubscribeToInterruptions(
   InterruptionsSubscriber* subscriber = new InterruptionsSubscriber(std::move(listener));
   // New InterruptionsSubscribers are initially sent the existing set of Next
   // suggestions. AnnoyanceType filtering happens in the subscriber.
-  for (const auto& suggestion : *(next_suggestions_->GetSuggestions())) {
+  for (const auto& suggestion : next_suggestions_->Get()) {
     subscriber->OnAddSuggestion(*suggestion);
   }
   interruption_channel_.AddSubscriber(std::move(subscriber));
@@ -132,7 +147,7 @@ void SuggestionEngineImpl::SubscribeToNext(
       next_suggestions_, std::move(listener), std::move(controller));
   // New NextSubscribers are initially sent the existing set of Next
   // suggestions.
-  for (const auto& suggestion : *(next_suggestions_->GetSuggestions())) {
+  for (const auto& suggestion : next_suggestions_->Get()) {
     subscriber->OnAddSuggestion(*suggestion);
   }
   next_channel_.AddSubscriber(std::move(subscriber));
@@ -151,8 +166,7 @@ void SuggestionEngineImpl::InitiateAsk(
 void SuggestionEngineImpl::NotifyInteraction(
     const fidl::String& suggestion_uuid,
     InteractionPtr interaction) {
-  const SuggestionPrototype* suggestion_prototype =
-      FindSuggestion(suggestion_uuid);
+  SuggestionPrototype* suggestion_prototype = FindSuggestion(suggestion_uuid);
 
   std::string log_detail = suggestion_prototype
                                ? short_proposal_str(*suggestion_prototype)
@@ -169,8 +183,8 @@ void SuggestionEngineImpl::NotifyInteraction(
   if (suggestion_prototype) {
     auto& proposal = suggestion_prototype->proposal;
     if (interaction->type == InteractionType::SELECTED) {
-      RemoveProposal(suggestion_prototype->source_url, proposal->id);
       PerformActions(proposal->on_selected, proposal->display->color);
+      RemoveProposal(suggestion_prototype->source_url, proposal->id);
     }
   }
 }
@@ -198,14 +212,27 @@ void SuggestionEngineImpl::Initialize(
 
 // end SuggestionEngine
 
-SuggestionPrototype* SuggestionEngineImpl::CreateSuggestion(
+void SuggestionEngineImpl::RemoveAllAskSuggestions() {
+  for (auto& suggestion : ask_suggestions_->Get()) {
+    suggestion_prototypes_.erase(
+        std::make_pair(suggestion->prototype->source_url,
+                       suggestion->prototype->proposal->id));
+  }
+  ask_suggestions_->RemoveAllSuggestions();
+}
+
+SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
     ProposalPublisherImpl* source,
     ProposalPtr proposal) {
-  SuggestionPrototype* suggestion_prototype = new SuggestionPrototype();
+  auto prototype_pair = suggestion_prototypes_.emplace(
+      std::make_pair(source->component_url(), proposal->id),
+      std::make_unique<SuggestionPrototype>());
+  auto suggestion_prototype = prototype_pair.first->second.get();
   suggestion_prototype->suggestion_id = RandomUuid();
   suggestion_prototype->source_url = source->component_url();
   suggestion_prototype->timestamp = ftl::TimePoint::Now();
   suggestion_prototype->proposal = std::move(proposal);
+
   return suggestion_prototype;
 }
 

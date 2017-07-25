@@ -12,7 +12,7 @@ namespace maxwell {
 // Manages a single Ask suggestion subscriber.
 class AskSubscriber : public BoundWindowedSuggestionSubscriber<AskController> {
  public:
-  AskSubscriber(RankedSuggestions* ranked_suggestions,
+  AskSubscriber(const RankedSuggestions* ranked_suggestions,
                 AskDispatcher* engine,
                 fidl::InterfaceHandle<SuggestionListener> listener,
                 fidl::InterfaceRequest<AskController> controller);

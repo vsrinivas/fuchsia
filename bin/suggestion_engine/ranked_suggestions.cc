@@ -9,33 +9,31 @@
 
 namespace maxwell {
 
-typedef std::function<bool(RankedSuggestion* suggestion)> MatchFunction;
-
-MatchFunction GetSuggestionMatcher(const std::string& component_url,
+MatchPredicate GetSuggestionMatcher(const std::string& component_url,
                                    const std::string& proposal_id) {
-  return [component_url, proposal_id](RankedSuggestion* suggestion) {
-      return (suggestion->prototype->proposal->id == proposal_id) &&
-             (suggestion->prototype->source_url == component_url);
+  return [component_url,
+          proposal_id](const std::unique_ptr<RankedSuggestion>& suggestion) {
+    return (suggestion->prototype->proposal->id == proposal_id) &&
+           (suggestion->prototype->source_url == component_url);
   };
 }
 
-MatchFunction GetSuggestionMatcher(const std::string& suggestion_id) {
-  return [suggestion_id](RankedSuggestion* suggestion) {
+MatchPredicate GetSuggestionMatcher(const std::string& suggestion_id) {
+  return [suggestion_id](const std::unique_ptr<RankedSuggestion>& suggestion) {
     return suggestion->prototype->suggestion_id == suggestion_id;
   };
 }
 
 RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
-    MatchFunction matchFunction) const {
+    MatchPredicate matchFunction) const {
   auto findIter =
       std::find_if(suggestions_.begin(), suggestions_.end(), matchFunction);
   if (findIter != suggestions_.end())
-    return *findIter;
+    return findIter->get();
   return nullptr;
 }
 
-void RankedSuggestions::RemoveMatchingSuggestion(
-     MatchFunction matchFunction) {
+void RankedSuggestions::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
   auto removeIter =
       std::remove_if(suggestions_.begin(), suggestions_.end(), matchFunction);
   suggestions_.erase(removeIter, suggestions_.end());
@@ -45,29 +43,19 @@ void RankedSuggestions::RemoveMatchingSuggestion(
 void RankedSuggestions::UpdateRankingFunction(
     RankingFunction ranking_function) {
   ranking_function_ = ranking_function;
-  std::vector<RankedSuggestion*>::const_iterator it;
-  for (it = suggestions_.begin(); it != suggestions_.end(); it++) {
-    (*it)->rank = ranking_function((*it)->prototype);
+  for (auto& suggestion : suggestions_) {
+    suggestion->rank = ranking_function(suggestion->prototype);
   }
   DoStableSort();
 }
 
-void RankedSuggestions::AddSuggestion(
-    const SuggestionPrototype* const prototype) {
+void RankedSuggestions::AddSuggestion(SuggestionPrototype* prototype) {
   const int64_t rank = ranking_function_(prototype);
-
-  RankedSuggestion* existing_suggestion =
-      GetMatchingSuggestion([&prototype](RankedSuggestion* suggestion) {
-        return (suggestion->prototype->proposal->id == prototype->proposal->id) &&
-               (suggestion->prototype->source_url == prototype->source_url);
-      });
-  if (existing_suggestion && (existing_suggestion->rank != rank))
-    RemoveSuggestion(existing_suggestion->prototype->suggestion_id);
-
-  RankedSuggestion* ranked_suggestion = new RankedSuggestion();
+  std::unique_ptr<RankedSuggestion> ranked_suggestion =
+      std::make_unique<RankedSuggestion>();
   ranked_suggestion->rank = rank;
   ranked_suggestion->prototype = prototype;
-  suggestions_.push_back(ranked_suggestion);
+  suggestions_.push_back(std::move(ranked_suggestion));
   DoStableSort();
   channel_->DispatchInvalidate();
 }
@@ -93,18 +81,16 @@ RankedSuggestion* RankedSuggestions::GetSuggestion(
 }
 
 void RankedSuggestions::RemoveAllSuggestions() {
-  std::vector<RankedSuggestion*>::const_iterator it;
-  for (it = suggestions_.begin(); it != suggestions_.end(); it++) {
-    channel_->DispatchOnRemoveSuggestion(*it);
-  }
   suggestions_.clear();
+  channel_->DispatchInvalidate();
 }
 
 // Start of private sorting methods.
 
 void RankedSuggestions::DoStableSort() {
   std::stable_sort(suggestions_.begin(), suggestions_.end(),
-                   [](RankedSuggestion* a, RankedSuggestion* b) {
+                   [](const std::unique_ptr<RankedSuggestion>& a,
+                      const std::unique_ptr<RankedSuggestion>& b) {
                      return a->rank < b->rank;
                    });
 }

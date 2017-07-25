@@ -20,10 +20,10 @@ namespace maxwell {
 class WindowedSuggestionSubscriber : public SuggestionSubscriber {
  public:
   WindowedSuggestionSubscriber(
-      RankedSuggestions* ranked_suggestions,
+      const RankedSuggestions* ranked_suggestions,
       fidl::InterfaceHandle<SuggestionListener> listener)
       : SuggestionSubscriber(std::move(listener)),
-        ranked_suggestions_(*(ranked_suggestions->GetSuggestions())) {}
+        ranked_suggestions_(ranked_suggestions) {}
 
   virtual ~WindowedSuggestionSubscriber() = default;
 
@@ -35,7 +35,7 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
 
       // Evict if we were already full
       if (IsFull())
-        DispatchRemove(*ranked_suggestions_[max_results_]);
+        DispatchRemove(*ranked_suggestions_->Get()[max_results_]);
     }
   }
 
@@ -43,7 +43,7 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
     if (IncludeSuggestion(ranked_suggestion)) {
       // Shift in if we were full
       if (IsFull())
-        DispatchAdd(*ranked_suggestions_[max_results_]);
+        DispatchAdd(*ranked_suggestions_->Get()[max_results_]);
 
       DispatchRemove(ranked_suggestion);
     }
@@ -54,7 +54,7 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
 
  private:
   bool IsFull() const {
-    return ranked_suggestions_.size() > (size_t)max_results_;
+    return (ranked_suggestions_->Get()).size() > (size_t)max_results_;
   }
 
   bool IncludeSuggestion(const RankedSuggestion& suggestion) const;
@@ -62,7 +62,7 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
   // An upper bound on the number of suggestions to offer this subscriber, as
   // given by SetResultCount.
   int32_t max_results_ = 0;
-  const std::vector<RankedSuggestion*>& ranked_suggestions_;
+  const RankedSuggestions* ranked_suggestions_;
 };
 
 // Convenience template baking a controller interface into
@@ -72,7 +72,7 @@ class BoundWindowedSuggestionSubscriber : public Controller,
                                           public WindowedSuggestionSubscriber {
  public:
   BoundWindowedSuggestionSubscriber(
-      RankedSuggestions* ranked_suggestions,
+      const RankedSuggestions* ranked_suggestions,
       fidl::InterfaceHandle<SuggestionListener> listener,
       fidl::InterfaceRequest<Controller> controller)
       : WindowedSuggestionSubscriber(std::move(ranked_suggestions),

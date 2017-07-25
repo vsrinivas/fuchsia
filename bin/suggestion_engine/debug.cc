@@ -19,12 +19,9 @@ void makeProposalSummary(const SuggestionPrototype* suggestion,
 
 void makeProposalSummaries(const RankedSuggestions* suggestions,
                            fidl::Array<ProposalSummaryPtr>* summaries) {
-  const std::vector<RankedSuggestion*>* suggestionsVector =
-      suggestions->GetSuggestions();
-  for (auto it = suggestionsVector->begin(); it < suggestionsVector->end();
-       it++) {
+  for (const auto& suggestion : suggestions->Get()) {
     ProposalSummaryPtr summary = ProposalSummary::New();
-    makeProposalSummary((*it)->prototype, &summary);
+    makeProposalSummary(suggestion->prototype, &summary);
     summaries->push_back(std::move(summary));
   }
 }
@@ -33,7 +30,7 @@ void SuggestionDebugImpl::OnAskStart(std::string query,
                                      const RankedSuggestions* suggestions) {
   ask_proposal_listeners_.ForAllPtrs(
       [query, suggestions](AskProposalListener* listener) {
-        fidl::Array<ProposalSummaryPtr> proposals;
+        auto proposals = fidl::Array<ProposalSummaryPtr>::New(0);
         makeProposalSummaries(suggestions, &proposals);
         listener->OnAskStart(query, std::move(proposals));
       });
@@ -62,7 +59,7 @@ void SuggestionDebugImpl::OnInterrupt(
 void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestions* suggestions) {
   next_proposal_listeners_.ForAllPtrs(
       [this, suggestions](NextProposalListener* listener) {
-        fidl::Array<ProposalSummaryPtr> proposals;
+        auto proposals = fidl::Array<ProposalSummaryPtr>::New(0);
         makeProposalSummaries(suggestions, &proposals);
         listener->OnNextUpdate(std::move(proposals));
         cached_next_proposals_ = std::move(proposals);
