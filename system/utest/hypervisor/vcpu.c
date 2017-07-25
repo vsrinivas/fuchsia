@@ -13,18 +13,21 @@
 typedef struct test {
     vcpu_context_t vcpu;
     guest_state_t guest_state;
-    mx_vcpu_state_t vcpu_state;
+    mx_vcpu_io_t vcpu_io;
 } test_t;
 
-static mx_status_t vcpu_write_test_state(vcpu_context_t* vcpu_context, mx_vcpu_state_t* state) {
-    test_t* test = (test_t*) vcpu_context;
-    memcpy(&test->vcpu_state, state, sizeof(*state));
-    return MX_OK;
+static mx_status_t vcpu_read_test_state(vcpu_context_t* context, uint32_t kind, void* buffer,
+                                        uint32_t len) {
+    return MX_ERR_INTERNAL;
 }
 
-static mx_status_t vcpu_read_test_state(vcpu_context_t* vcpu_context, mx_vcpu_state_t* state) {
-    test_t* test = (test_t*) vcpu_context;
-    memcpy(state, &test->vcpu_state, sizeof(*state));
+static mx_status_t vcpu_write_test_state(vcpu_context_t* context, uint32_t kind, const void* buffer,
+                                         uint32_t len) {
+    if (kind != MX_VCPU_IO || len != sizeof(mx_vcpu_io_t))
+        return MX_ERR_INVALID_ARGS;
+    test_t* test = (test_t*) context;
+    const mx_vcpu_io_t* io = buffer;
+    memcpy(&test->vcpu_io, io, sizeof(*io));
     return MX_OK;
 }
 
@@ -42,8 +45,8 @@ static mx_status_t setup(test_t* test) {
 
     // Redirect read/writes to the VCPU state to just access a field in the
     // test structure.
-    test->vcpu.read_state = &vcpu_read_test_state;
-    test->vcpu.write_state = &vcpu_write_test_state;
+    test->vcpu.read_state = vcpu_read_test_state;
+    test->vcpu.write_state = vcpu_write_test_state;
     return MX_OK;
 }
 
@@ -51,10 +54,10 @@ static void tear_down(test_t* test) {
     mtx_destroy(&test->guest_state.mutex);
 }
 
-/* Test handling of an io packet for an input instruction.
+/* Test handling of an IO packet for an input instruction.
  *
  * Expected behavior is to read the value at the provided port address and
- * write the result to rax.
+ * write the result to RAX.
  */
 static bool handle_input_packet(void) {
     BEGIN_TEST;
@@ -62,26 +65,26 @@ static bool handle_input_packet(void) {
     mx_guest_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
 
-    // Initialize the hosts register to an abitrary non-zero value.
+    // Initialize the hosts register to an arbitrary non-zero value.
     test.guest_state.io_port_state.uart_line_control = 0xfe;
 
     // Send a guest packet to to read the UART line control port.
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = true;
     packet.io.port = UART_LINE_CONTROL_IO_PORT;
     packet.io.access_size = 1;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
 
-    // Verify result value was written to rax.
+    // Verify result value was written to RAX.
     EXPECT_EQ(
         test.guest_state.io_port_state.uart_line_control,
-        test.vcpu_state.rax,
+        test.vcpu_io.u8,
         "RAX was not populated with expected value.\n");
 
     END_TEST;
 }
 
-/* Test handling of an io packet for an out instruction.
+/* Test handling of an IO packet for an out instruction.
  *
  * Expected behavior is for the value to be saved into a host data structure.
  */
@@ -93,7 +96,7 @@ static bool handle_output_packet(void) {
     test.guest_state.io_port_state.uart_line_control = 0;
 
     // Send a guest packet to to write the UART line control port.
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = false;
     packet.io.port = UART_LINE_CONTROL_IO_PORT;
     packet.io.access_size = 1;
@@ -134,35 +137,36 @@ static bool write_pci_config_addr_port(void) {
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
 
     // 32 bit write.
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = false;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE; packet.io.access_size = 4;
+    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
+    packet.io.access_size = 4;
     packet.io.u32 = 0x12345678;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle handle guest packet.\n");
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
     EXPECT_EQ(
         0x12345678u,
         test.guest_state.io_port_state.pci_config_address,
         "Incorrect address read from PCI address port.\n");
 
     // 16 bit write to bits 31..16. Other bits remain unchanged.
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = false;
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
     packet.io.access_size = 2;
     packet.io.u16 = 0xFACE;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle handle guest packet.\n");
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
     EXPECT_EQ(
         0xFACE5678u,
         test.guest_state.io_port_state.pci_config_address,
         "Incorrect address read from PCI address port.\n");
 
     // 8 bit write to bits (15..8). Other bits remain unchanged.
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = false;
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
     packet.io.access_size = 1;
     packet.io.u8 = 0x99;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle handle guest packet.\n");
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
     EXPECT_EQ(
         0xFACE9978u,
         test.guest_state.io_port_state.pci_config_address,
@@ -185,37 +189,38 @@ static bool read_pci_config_addr_port(void) {
     test.guest_state.io_port_state.pci_config_address = 0x12345678;
 
     // 32 bit read (bits 31..0).
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = true;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE; packet.io.access_size = 4;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle handle guest packet.\n");
+    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
+    packet.io.access_size = 4;
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
     EXPECT_EQ(
         0x12345678u,
-        test.vcpu_state.rax,
+        test.vcpu_io.u32,
         "Incorrect address read from PCI address port.\n");
 
     // 16 bit read (bits 31..16).
-    test.vcpu_state.rax = 0;
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    test.vcpu_io.u16 = 0;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = true;
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
     packet.io.access_size = 2;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle handle guest packet.\n");
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
     EXPECT_EQ(
         0x1234u,
-        test.vcpu_state.rax,
+        test.vcpu_io.u16,
         "Incorrect address read from PCI address port.\n");
 
     // 8 bit read (bits 15..8).
-    test.vcpu_state.rax = 0;
-    packet.type = MX_GUEST_PKT_TYPE_IO;
+    test.vcpu_io.u8 = 0;
+    packet.type = MX_GUEST_PKT_IO;
     packet.io.input = true;
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
     packet.io.access_size = 1;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle handle guest packet.\n");
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
     EXPECT_EQ(
         0x56u,
-        test.vcpu_state.rax,
+        test.vcpu_io.u8,
         "Incorrect address read from PCI address port.\n");
 
     tear_down(&test);

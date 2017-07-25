@@ -11,26 +11,15 @@
 
 __BEGIN_CDECLS
 
-// Opcodes for mx_hypervisor_op().
-#define MX_HYPERVISOR_OP_GUEST_CREATE       1u
-#define MX_HYPERVISOR_OP_GUEST_SET_TRAP     2u
-#define MX_HYPERVISOR_OP_VCPU_CREATE        3u
-#define MX_HYPERVISOR_OP_VCPU_RESUME        4u
-#define MX_HYPERVISOR_OP_VCPU_INTERRUPT     5u
-#define MX_HYPERVISOR_OP_VCPU_READ_STATE    6u
-#define MX_HYPERVISOR_OP_VCPU_WRITE_STATE   7u
-
-#define MX_GUEST_MAX_PKT_SIZE               32u
-
+#define MX_GUEST_MAX_PKT_SIZE   32u
 // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-#define X86_MAX_INST_LEN                    15u
+#define X86_MAX_INST_LEN        15u
 
-typedef enum mx_trap_address_space {
-    MX_TRAP_MEMORY = 1,
-    MX_TRAP_IO     = 2,
-} mx_trap_address_space_t;
+enum {
+    MX_GUEST_TRAP_MEMORY = 1,
+    MX_GUEST_TRAP_IO     = 2,
+};
 
-// Packets for processing guest state.
 typedef struct mx_guest_io {
     uint16_t port;
     uint8_t access_size;
@@ -53,17 +42,18 @@ typedef struct mx_guest_memory {
 #endif
 } mx_guest_memory_t;
 
-typedef enum mx_guest_packet_type {
-    MX_GUEST_PKT_TYPE_MEMORY    = 1,
-    MX_GUEST_PKT_TYPE_IO        = 2,
-} mx_guest_packet_type_t;
+enum {
+    MX_GUEST_PKT_MEMORY = 1,
+    MX_GUEST_PKT_IO     = 2,
+};
 
+// Structure for processing guest state.
 typedef struct mx_guest_packet {
     uint8_t type;
     union {
-        // MX_GUEST_PKT_TYPE_MEMORY
+        // MX_GUEST_PKT_MEMORY
         mx_guest_memory_t memory;
-        // MX_GUEST_PKT_TYPE_IO
+        // MX_GUEST_PKT_IO
         mx_guest_io_t io;
     };
 } mx_guest_packet_t;
@@ -80,6 +70,11 @@ typedef struct mx_vcpu_create_args {
     mx_handle_t apic_vmo;
 #endif // __x86_64__
 } mx_vcpu_create_args_t;
+
+enum {
+    MX_VCPU_STATE   = 1,
+    MX_VCPU_IO      = 2,
+};
 
 // Structure to read and write VCPU state.
 typedef struct mx_vcpu_state {
@@ -106,5 +101,16 @@ typedef struct mx_vcpu_state {
     uint16_t flags;
 #endif
 } mx_vcpu_state_t;
+
+// Structure to read and write VCPU state for IO ports.
+typedef struct mx_vcpu_io {
+    uint8_t access_size;
+    union {
+        uint8_t u8;
+        uint16_t u16;
+        uint32_t u32;
+        uint8_t data[4];
+    };
+} mx_vcpu_io_t;
 
 __END_CDECLS

@@ -21,9 +21,6 @@
 #include <acpica/actypes.h>
 #endif // __x86_64__
 
-/* Clear contiguous bits in a word. */
-#define CLEAR_BITS(x, nbits, shift) ((x) & (~(((1UL << (nbits)) - 1) << (shift))))
-
 /* Memory-mapped device physical addresses. */
 #define LOCAL_APIC_PHYS_BASE                    0xfee00000
 #define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
@@ -128,6 +125,10 @@
 // Get the PCI type 1 address for a register.
 #define PCI_TYPE1_ADDR(bus, device, function, reg) \
     (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) | (reg))
+
+/* Bit macros. */
+#define CLEAR_BITS(x, nbits, shift)             ((x) & (~(((1lu << (nbits)) - 1) << (shift))))
+#define BIT_MASK(nbits)                         ((1lu << (nbits)) - 1)
 
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT                        0xd
@@ -295,7 +296,8 @@ static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, instruction
 
 static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_memory_t* memory) {
     mx_vcpu_state_t vcpu_state;
-    mx_status_t status = vcpu_context->read_state(vcpu_context, &vcpu_state);
+    mx_status_t status = vcpu_context->read_state(vcpu_context, MX_VCPU_STATE, &vcpu_state,
+                                                  sizeof(vcpu_state));
     if (status != MX_OK)
         return status;
 
@@ -355,11 +357,11 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
 
     if (status != MX_OK) {
         uint32_t vector = X86_INT_GP_FAULT;
-        return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_INTERRUPT,
-                                &vector, sizeof(vector), NULL, 0);
+        return mx_vcpu_interrupt(vcpu_context->vcpu, vector);
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
-        return vcpu_context->write_state(vcpu_context, &vcpu_state);
+        return vcpu_context->write_state(vcpu_context, MX_VCPU_STATE, &vcpu_state,
+                                         sizeof(vcpu_state));
     }
     return status;
 }
@@ -428,65 +430,44 @@ static uint16_t pci_device(pci_device_state_t* pci_device_state, uint16_t port,
 
 static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
 #if __x86_64__
-    mx_vcpu_state_t state;
-    mx_status_t status = vcpu_context->read_state(vcpu_context, &state);
-    if (status != MX_OK)
-        return status;
-
-    io_packet_t* io_packet = (io_packet_t*)&state.rax;
+    mx_vcpu_io_t vcpu_io;
+    memset(&vcpu_io, 0, sizeof(vcpu_io));
     io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
     switch (io->port) {
     case UART_LINE_CONTROL_IO_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = io_port_state->uart_line_control;
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = io_port_state->uart_line_control;
         break;
     case UART_INTERRUPT_ENABLE_PORT:
     case UART_MODEM_CONTROL_IO_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = 0;
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = 0;
         break;
     case UART_LINE_STATUS_IO_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = UART_STATUS_IDLE | UART_STATUS_EMPTY;
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = UART_STATUS_IDLE | UART_STATUS_EMPTY;
         break;
     case RTC_DATA_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        status = handle_rtc(io_port_state->rtc_index, &io_packet->u8);
+        vcpu_io.access_size = 1;
+        mx_status_t status = handle_rtc(io_port_state->rtc_index, &vcpu_io.u8);
         if (status != MX_OK)
             return status;
         break;
     case I8042_DATA_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = io_port_state->i8042_command == I8042_COMMAND_TEST ?
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = io_port_state->i8042_command == I8042_COMMAND_TEST ?
                        I8042_DATA_TEST_RESPONSE : 0;
         break;
     case I8042_COMMAND_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = I8042_STATUS_OUTPUT_FULL;
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = I8042_STATUS_OUTPUT_FULL;
         break;
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
-        size_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
+        uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
         uint32_t addr = io_port_state->pci_config_address >> bit_offset;
-        switch (io->access_size) {
-        case 1:
-            io_packet->u8 = addr & UINT8_MAX;
-            break;
-        case 2:
-            io_packet->u16 = addr & UINT16_MAX;
-            break;
-        case 4:
-            io_packet->u32 = addr & UINT32_MAX;
-            break;
-        default:
-            fprintf(stderr, "Unhandled port in %#x\n", io->port);
-            return MX_ERR_NOT_SUPPORTED;
-        }
+        uint32_t bit_mask = BIT_MASK(io->access_size * 8);
+        vcpu_io.access_size = io->access_size;
+        vcpu_io.u32 = (vcpu_io.u32 & ~bit_mask) | (addr & bit_mask);
         break;
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
@@ -494,52 +475,51 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
         // with broken PCI until they're wired into accessing the virtual PCI
         // bus. Linux wants to find a host bridge so we'll give it one.
         switch (io_port_state->pci_config_address) {
-        case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_CLASS_CODE_SUB):
-            if (io->access_size != 2)
-                return MX_ERR_IO_DATA_INTEGRITY;
-            io_packet->u16 = PCI_CLASS_BRIDGE_HOST;
-            break;
         case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_VENDOR_ID):
-            if (io->access_size != 2)
-                return MX_ERR_IO_DATA_INTEGRITY;
-            io_packet->u16 = PCI_VENDOR_ID_INTEL;
+            vcpu_io.access_size = io->access_size;
+            vcpu_io.u16 = PCI_VENDOR_ID_INTEL;
+            break;
+        case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_CLASS_CODE_SUB):
+            vcpu_io.access_size = 2;
+            vcpu_io.u16 = PCI_CLASS_BRIDGE_HOST;
             break;
         default:
-            io_packet->u32 = 0;
+            vcpu_io.access_size = io->access_size;
+            vcpu_io.u32 = UINT32_MAX;
             break;
         }
         break;
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-        if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u16 = 0;
+        vcpu_io.access_size = 2;
+        vcpu_io.u16 = 0;
         break;
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-        if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u16 = io_port_state->pm1_enable;
+        vcpu_io.access_size = 2;
+        vcpu_io.u16 = io_port_state->pm1_enable;
         break;
     case PIC1_DATA_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = PIC_INVALID;
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = PIC_INVALID;
         break;
     default: {
         uint16_t port_off;
         switch (pci_device(vcpu_context->guest_state->pci_device_state, io->port, &port_off)) {
-        case PCI_DEVICE_VIRTIO_BLOCK:
-            status = handle_virtio_block_read(vcpu_context->guest_state, port_off, io->access_size,
-                                              io_packet);
+        case PCI_DEVICE_VIRTIO_BLOCK: {
+            mx_status_t status = handle_virtio_block_read(vcpu_context->guest_state, port_off,
+                                                          &vcpu_io);
             if (status != MX_OK)
                 return status;
             break;
+        }
         default:
             fprintf(stderr, "Unhandled port in %#x\n", io->port);
             return MX_ERR_NOT_SUPPORTED;
         }
     }}
 
-    return vcpu_context->write_state(vcpu_context, &state);
+    if (vcpu_io.access_size != io->access_size)
+        return MX_ERR_IO_DATA_INTEGRITY;
+    return vcpu_context->write_state(vcpu_context, MX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 #else // __x86_64__
     return MX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
@@ -577,27 +557,17 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         // Software can (and Linux does) perform partial word accesses to the
         // PCI address register. This means we need to take care to read/write
         // portions of the 32bit register without trampling the other bits.
-        size_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
-        size_t bit_size = io->access_size * 8;
+        uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
+        uint32_t bit_size = io->access_size * 8;
+        uint32_t bit_mask = BIT_MASK(bit_size);
 
         // Clear out the bits we'll be modifying.
         io_port_state->pci_config_address = CLEAR_BITS(
             io_port_state->pci_config_address, bit_size, bit_offset);
 
         // Write config address.
-        switch (io->access_size) {
-        case 1:
-            io_port_state->pci_config_address |= (io->u8 << bit_offset);
-            break;
-        case 2:
-            io_port_state->pci_config_address |= (io->u16 << bit_offset);
-            break;
-        case 4:
-            io_port_state->pci_config_address |= io->u32;
-            break;
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
+        io_port_state->pci_config_address |= ((io->u32 & bit_mask) << bit_offset);
+        fprintf(stderr, "WRITING PCI CONFIG ADDRESS\n");
         return MX_OK;
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
@@ -661,14 +631,7 @@ static int serial_loop(void* arg) {
         return MX_ERR_INTERNAL;
     }
 
-    struct {
-        mx_trap_address_space_t aspace;
-        mx_vaddr_t addr;
-        size_t len;
-        mx_handle_t fifo;
-    } trap_args = { MX_TRAP_IO, UART_RECEIVE_IO_PORT, 1, kernel_fifo };
-    status = mx_hypervisor_op(*guest, MX_HYPERVISOR_OP_GUEST_SET_TRAP,
-                              &trap_args, sizeof(trap_args), NULL, 0);
+    status = mx_guest_set_trap(*guest, MX_GUEST_TRAP_IO, UART_RECEIVE_IO_PORT, 1, kernel_fifo);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to set trap for serial FIFO %d\n", status);
         goto cleanup;
@@ -692,7 +655,7 @@ static int serial_loop(void* arg) {
         }
 
         for (uint32_t i = 0; i < num_packets; i++) {
-            if (packets[i].type != MX_GUEST_PKT_TYPE_IO) {
+            if (packets[i].type != MX_GUEST_PKT_IO) {
                 fprintf(stderr, "Invalid packet type for serial FIFO %d\n", packets[i].type);
                 goto cleanup;
             }
@@ -717,22 +680,20 @@ cleanup:
     return MX_ERR_INTERNAL;
 }
 
-static mx_status_t vcpu_state_read(vcpu_context_t* vcpu_context,
-                                   mx_vcpu_state_t* vcpu_state) {
-    return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
-                            NULL, 0, vcpu_state, sizeof(*vcpu_state));
+static mx_status_t vcpu_state_read(vcpu_context_t* vcpu_context, uint32_t kind, void* buffer,
+                                   uint32_t len) {
+    return mx_vcpu_read_state(vcpu_context->vcpu, kind, buffer, len);
 }
 
-static mx_status_t vcpu_state_write(vcpu_context_t* vcpu_context,
-                                    mx_vcpu_state_t* vcpu_state) {
-    return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
-                            vcpu_state, sizeof(*vcpu_state), NULL, 0);
+static mx_status_t vcpu_state_write(vcpu_context_t* vcpu_context, uint32_t kind, const void* buffer,
+                                    uint32_t len) {
+    return mx_vcpu_write_state(vcpu_context->vcpu, kind, buffer, len);
 }
 
 void vcpu_init(vcpu_context_t* vcpu_context) {
     memset(vcpu_context, 0, sizeof(*vcpu_context));
-    vcpu_context->read_state = &vcpu_state_read;
-    vcpu_context->write_state = &vcpu_state_write;
+    vcpu_context->read_state = vcpu_state_read;
+    vcpu_context->write_state = vcpu_state_write;
 }
 
 mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
@@ -750,8 +711,7 @@ mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
 
     while (true) {
         mx_guest_packet_t packet;
-        mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
-                                              NULL, 0, &packet, sizeof(packet));
+        mx_status_t status = mx_vcpu_resume(vcpu_context->vcpu, &packet);
         if (status != MX_OK)
             return status;
         status = vcpu_handle_packet(vcpu_context, &packet);
@@ -762,12 +722,11 @@ mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
     }
 }
 
-mx_status_t vcpu_handle_packet(vcpu_context_t* vcpu_context,
-                               mx_guest_packet_t* packet) {
+mx_status_t vcpu_handle_packet(vcpu_context_t* vcpu_context, mx_guest_packet_t* packet) {
     switch (packet->type) {
-    case MX_GUEST_PKT_TYPE_MEMORY:
+    case MX_GUEST_PKT_MEMORY:
         return handle_memory(vcpu_context, &packet->memory);
-    case MX_GUEST_PKT_TYPE_IO:
+    case MX_GUEST_PKT_IO:
         return handle_io(vcpu_context, &packet->io);
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);

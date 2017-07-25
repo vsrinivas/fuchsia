@@ -83,18 +83,18 @@ Guest::~Guest() {
     DEBUG_ASSERT(status == MX_OK);
 }
 
-status_t Guest::SetTrap(mx_trap_address_space_t aspace, mx_vaddr_t addr, size_t len,
+status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
                         mxtl::RefPtr<FifoDispatcher> fifo) {
     if (SIZE_MAX - len < addr)
         return MX_ERR_OUT_OF_RANGE;
-    switch (aspace) {
-    case MX_TRAP_MEMORY:
+    switch (kind) {
+    case MX_GUEST_TRAP_MEMORY:
         if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
             return MX_ERR_INVALID_ARGS;
         return gpas_->UnmapRange(addr, len);
-    case MX_TRAP_IO:
+    case MX_GUEST_TRAP_IO:
         if (addr + len > UINT16_MAX)
-            return MX_ERR_INVALID_ARGS;
+            return MX_ERR_OUT_OF_RANGE;
         return mux_.AddFifo(addr, len, fifo);
     default:
         return MX_ERR_INVALID_ARGS;
@@ -109,7 +109,7 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
     return Guest::Create(physmem, guest);
 }
 
-status_t arch_guest_set_trap(Guest* guest, mx_trap_address_space_t aspace, mx_vaddr_t addr,
-                             size_t len, mxtl::RefPtr<FifoDispatcher> fifo) {
-    return guest->SetTrap(aspace, addr, len, fifo);
+status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
+                             mxtl::RefPtr<FifoDispatcher> fifo) {
+    return guest->SetTrap(kind, addr, len, fifo);
 }

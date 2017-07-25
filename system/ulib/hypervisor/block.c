@@ -10,6 +10,7 @@
 #include <hypervisor/block.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/hypervisor.h>
 #include <virtio/block.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
@@ -22,35 +23,30 @@
 typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
 
 mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
-                                     uint8_t access_size, io_packet_t* io_packet) {
+                                     mx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case VIRTIO_PCI_QUEUE_SIZE:
-        if (access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u16 = VIRTIO_QUEUE_SIZE;
+        vcpu_io->access_size = 2;
+        vcpu_io->u16 = VIRTIO_QUEUE_SIZE;
         return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
-        if (access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = 0;
+        vcpu_io->access_size = 1;
+        vcpu_io->u8 = 0;
         return MX_OK;
     case VIRTIO_PCI_ISR_STATUS:
-        if (access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_packet->u8 = 1;
+        vcpu_io->access_size = 1;
+        vcpu_io->u8 = 1;
         return MX_OK;
     case VIRTIO_PCI_CONFIG_OFFSET_NOMSI ...
          VIRTIO_PCI_CONFIG_OFFSET_NOMSI + sizeof(virtio_blk_config_t) - 1: {
-        if (access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-
         virtio_blk_config_t config;
         memset(&config, 0, sizeof(virtio_blk_config_t));
         config.capacity = guest_state->block_size / SECTOR_SIZE;
         config.blk_size = PAGE_SIZE;
 
         uint8_t* buf = (uint8_t*)&config;
-        io_packet->u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
+        vcpu_io->access_size = 1;
+        vcpu_io->u8 = buf[port - VIRTIO_PCI_CONFIG_OFFSET_NOMSI];
         return MX_OK;
     }}
 
@@ -122,8 +118,7 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* vcpu_context, uint16_t por
         }
         uint32_t interrupt = irq_redirect(&vcpu_context->guest_state->io_apic_state,
                                           PCI_INTERRUPT_VIRTIO_BLOCK);
-        return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_INTERRUPT,
-                                &interrupt, sizeof(interrupt), NULL, 0);
+        return mx_vcpu_interrupt(vcpu_context->vcpu, interrupt);
     }}
 
     fprintf(stderr, "Unhandled block write %#x\n", port);

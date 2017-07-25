@@ -62,11 +62,11 @@ static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals,
 status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo) {
 #if WITH_LIB_MAGENTA
     AllocChecker ac;
-    mxtl::unique_ptr<FifoRegion> region(new (&ac) FifoRegion(addr, len, fifo));
+    mxtl::unique_ptr<FifoRange> range(new (&ac) FifoRange(addr, len, fifo));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
     AutoLock lock(&mutex);
-    fifos.insert(mxtl::move(region));
+    fifos.insert(mxtl::move(range));
     return MX_OK;
 #else
     return MX_ERR_NOT_SUPPORTED;

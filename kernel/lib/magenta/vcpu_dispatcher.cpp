@@ -60,14 +60,14 @@ mx_status_t VcpuDispatcher::Interrupt(uint32_t vector) {
     return arch_vcpu_interrupt(vcpu_.get(), vector);
 }
 
-mx_status_t VcpuDispatcher::ReadState(mx_vcpu_state_t* vcpu_state) const {
+mx_status_t VcpuDispatcher::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     canary_.Assert();
 
-    return arch_vcpu_read_state(vcpu_.get(), vcpu_state);
+    return arch_vcpu_read_state(vcpu_.get(), kind, buffer, len);
 }
 
-mx_status_t VcpuDispatcher::WriteState(const mx_vcpu_state_t& vcpu_state) {
+mx_status_t VcpuDispatcher::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     canary_.Assert();
 
-    return arch_vcpu_write_state(vcpu_.get(), vcpu_state);
+    return arch_vcpu_write_state(vcpu_.get(), kind, buffer, len);
 }

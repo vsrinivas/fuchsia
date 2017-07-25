@@ -718,26 +718,48 @@ static void register_copy(Out* out, const In& in) {
     out->r15 = in.r15;
 }
 
-status_t Vcpu::ReadState(mx_vcpu_state_t* state) const {
+status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     check_pinned_cpu_invariant(vpid_);
-    register_copy(state, vmx_state_.guest_state);
-    AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-    state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
-    state->flags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
-    return MX_OK;
+    switch (kind) {
+    case MX_VCPU_STATE: {
+        if (len != sizeof(mx_vcpu_state_t))
+            break;
+        auto state = static_cast<mx_vcpu_state_t*>(buffer);
+        register_copy(state, vmx_state_.guest_state);
+        AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
+        state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
+        state->flags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
+        return MX_OK;
+    }}
+    return MX_ERR_INVALID_ARGS;
 }
 
-status_t Vcpu::WriteState(const mx_vcpu_state_t& state) {
+status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     check_pinned_cpu_invariant(vpid_);
-    register_copy(&vmx_state_.guest_state, state);
-    AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-    vmcs.Write(VmcsFieldXX::GUEST_RSP, state.rsp);
-    if (state.flags & X86_FLAGS_RESERVED_ONES) {
-        const uint64_t rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS);
-        const uint64_t user_flags = (rflags & ~X86_FLAGS_USER) | (state.flags & X86_FLAGS_USER);
-        vmcs.Write(VmcsFieldXX::GUEST_RFLAGS, user_flags);
+    switch (kind) {
+    case MX_VCPU_STATE: {
+        if (len != sizeof(mx_vcpu_state_t))
+            break;
+        auto state = static_cast<const mx_vcpu_state_t*>(buffer);
+        register_copy(&vmx_state_.guest_state, *state);
+        AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
+        vmcs.Write(VmcsFieldXX::GUEST_RSP, state->rsp);
+        if (state->flags & X86_FLAGS_RESERVED_ONES) {
+            const uint64_t rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS);
+            const uint64_t user_flags = (rflags & ~X86_FLAGS_USER) |
+                                        (state->flags & X86_FLAGS_USER);
+            vmcs.Write(VmcsFieldXX::GUEST_RFLAGS, user_flags);
+        }
+        return MX_OK;
     }
-    return MX_OK;
+    case MX_VCPU_IO: {
+        if (len != sizeof(mx_vcpu_io_t))
+            break;
+        auto io = static_cast<const mx_vcpu_io_t*>(buffer);
+        memcpy(&vmx_state_.guest_state.rax, io->data, io->access_size);
+        return MX_OK;
+    }}
+    return MX_ERR_INVALID_ARGS;
 }
 
 status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
@@ -756,10 +778,10 @@ status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t vector) {
     return vcpu->Interrupt(vector);
 }
 
-status_t arch_vcpu_read_state(const Vcpu* vcpu, mx_vcpu_state_t* state) {
-    return vcpu->ReadState(state);
+status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
+    return vcpu->ReadState(kind, buffer, len);
 }
 
-status_t arch_vcpu_write_state(Vcpu* vcpu, const mx_vcpu_state_t& state) {
-    return vcpu->WriteState(state);
+status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
+    return vcpu->WriteState(kind, buffer, len);
 }

@@ -35,9 +35,9 @@ GuestDispatcher::GuestDispatcher(mxtl::unique_ptr<Guest> guest)
 
 GuestDispatcher::~GuestDispatcher() {}
 
-mx_status_t GuestDispatcher::SetTrap(mx_trap_address_space_t aspace, mx_vaddr_t addr, size_t len,
+mx_status_t GuestDispatcher::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
                                      mxtl::RefPtr<FifoDispatcher> fifo) {
     canary_.Assert();
 
-    return arch_guest_set_trap(guest_.get(), aspace, addr, len, fifo);
+    return arch_guest_set_trap(guest_.get(), kind, addr, len, fifo);
 }

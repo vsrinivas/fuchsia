@@ -266,7 +266,7 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
     next_rip(exit_info, vmcs);
 
     memset(packet, 0, sizeof(mx_guest_packet_t));
-    packet->type = MX_GUEST_PKT_TYPE_IO;
+    packet->type = MX_GUEST_PKT_IO;
     packet->io.port = io_info.port;
     packet->io.access_size = io_info.access_size;
     packet->io.input = io_info.input;
@@ -474,7 +474,7 @@ static status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vaddr_t
         return MX_ERR_INTERNAL;
 
     memset(packet, 0, sizeof(mx_guest_packet_t));
-    packet->type = MX_GUEST_PKT_TYPE_MEMORY;
+    packet->type = MX_GUEST_PKT_MEMORY;
     packet->memory.addr = guest_paddr;
     packet->memory.inst_len = exit_info.instruction_length & UINT8_MAX;
     status_t status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->memory.inst_buf,

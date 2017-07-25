@@ -62,13 +62,8 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    struct {
-        uint32_t options;
-        mx_handle_t physmem_vmo;
-    } guest_create_args = { 0, physmem_vmo };
     mx_handle_t guest;
-    status = mx_hypervisor_op(MX_HANDLE_INVALID, MX_HYPERVISOR_OP_GUEST_CREATE,
-                              &guest_create_args, sizeof(guest_create_args), &guest, sizeof(guest));
+    status = mx_guest_create(MX_HANDLE_INVALID, 0, physmem_vmo, &guest);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create guest\n");
         return status;
@@ -169,21 +164,14 @@ int main(int argc, char** argv) {
     }
 #endif // __x86_64__
 
-    struct {
-        uint32_t options;
-        mx_vcpu_create_args_t args;
-    } vcpu_create_args = {
-        0,
-        {
-            guest_ip,
+    mx_vcpu_create_args_t args = {
+        guest_ip,
 #if __x86_64__
-            0 /* cr3 */, apic_vmo,
+        0 /* cr3 */, apic_vmo,
 #endif // __x86_64__
-        },
     };
     mx_handle_t vcpu;
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_VCPU_CREATE,
-                              &vcpu_create_args, sizeof(vcpu_create_args), &vcpu, sizeof(vcpu));
+    status = mx_vcpu_create(guest, 0, &args, &vcpu);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create VCPU\n");
         return status;
@@ -202,8 +190,7 @@ int main(int argc, char** argv) {
 #if __x86_64__
     vcpu_state.rsi = bootdata_off;
 #endif // __x86_64__
-    status = mx_hypervisor_op(vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
-                              &vcpu_state, sizeof(vcpu_state), NULL, 0);
+    status = mx_vcpu_write_state(vcpu, MX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != MX_OK) {
         fprintf(stderr, "Failed to write VCPU state\n");
         return status;

@@ -90,13 +90,8 @@ void minipr_thread_loop(mx_handle_t channel, uintptr_t fnptr) {
                 }
                 if (what & MINIP_CMD_CREATE_GUEST) {
                     what &= ~MINIP_CMD_CREATE_GUEST;
-                    struct {
-                        uint32_t options;
-                        mx_handle_t physmem_vmo;
-                    } guest_create_args = { 0, MX_HANDLE_INVALID };
-                    cmd.status = ctx.hypervisor_op(MX_HANDLE_INVALID, MX_HYPERVISOR_OP_GUEST_CREATE,
-                                                   &guest_create_args, sizeof(guest_create_args),
-                                                   &handle[0], sizeof(handle[0]));
+                    cmd.status = ctx.guest_create(MX_HANDLE_INVALID, 0, MX_HANDLE_INVALID,
+                                                  &handle[0]);
                     goto reply;
                 }
                 if (what & MINIP_CMD_USE_BAD_HANDLE_CLOSED) {

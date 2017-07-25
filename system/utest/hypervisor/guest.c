@@ -46,13 +46,7 @@ static bool setup(test_t *test, const char *start, const char *end) {
                           &addr),
               MX_OK, "");
 
-    struct {
-        uint32_t options;
-        mx_handle_t physmem_vmo;
-    } guest_create_args = { 0, test->guest_physmem };
-    mx_status_t status = mx_hypervisor_op(MX_HANDLE_INVALID, MX_HYPERVISOR_OP_GUEST_CREATE,
-                                          &guest_create_args, sizeof(guest_create_args),
-                                          &test->guest, sizeof(test->guest));
+    mx_status_t status = mx_guest_create(MX_HANDLE_INVALID, 0, test->guest_physmem, &test->guest);
     test->supported = status != MX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         return true;
@@ -68,21 +62,13 @@ static bool setup(test_t *test, const char *start, const char *end) {
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), MX_OK, "");
 #endif // __x86_64__
 
-    struct {
-        uint32_t options;
-        mx_vcpu_create_args_t args;
-    } vcpu_create_args = {
-        0,
-        {
-            guest_ip,
+    mx_vcpu_create_args_t args = {
+        guest_ip,
 #if __x86_64__
-            0 /* cr3 */, test->vcpu_apicmem,
+        0 /* cr3 */, test->vcpu_apicmem,
 #endif // __x86_64__
-        },
     };
-    status = mx_hypervisor_op(test->guest, MX_HYPERVISOR_OP_VCPU_CREATE,
-                              &vcpu_create_args, sizeof(vcpu_create_args),
-                              &test->vcpu, sizeof(test->vcpu));
+    status = mx_vcpu_create(test->guest, 0, &args, &test->vcpu);
     test->supported = status != MX_ERR_NOT_SUPPORTED;
     return true;
 }
@@ -110,25 +96,19 @@ static bool vcpu_resume(void) {
     }
 
     mx_guest_packet_t packet;
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
-                               NULL, 0, &packet, sizeof(packet)),
-              MX_OK, "");
-    EXPECT_EQ(packet.type, MX_GUEST_PKT_TYPE_IO, "");
+    ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
+    EXPECT_EQ(packet.type, MX_GUEST_PKT_IO, "");
     EXPECT_EQ(packet.io.port, kUartPort, "");
     EXPECT_EQ(packet.io.access_size, 1u, "");
     EXPECT_EQ(packet.io.data[0], 'm', "");
 
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
-                               NULL, 0, &packet, sizeof(packet)),
-              MX_OK, "");
+    ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
     EXPECT_EQ(packet.io.port, kUartPort, "");
-    EXPECT_EQ(packet.type, MX_GUEST_PKT_TYPE_IO, "");
+    EXPECT_EQ(packet.type, MX_GUEST_PKT_IO, "");
     EXPECT_EQ(packet.io.access_size, 1u, "");
     EXPECT_EQ(packet.io.data[0], 'x', "");
 
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
-                               NULL, 0, &packet, sizeof(packet)),
-              MX_OK, "");
+    ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
     EXPECT_EQ(packet.io.port, kExitTestPort, "");
 
     ASSERT_TRUE(teardown(&test), "");
@@ -168,18 +148,14 @@ static bool vcpu_read_write_state(void) {
 #endif // __x86_64__
     };
 
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
-                               &vcpu_state, sizeof(vcpu_state), NULL, 0),
+    ASSERT_EQ(mx_vcpu_write_state(test.vcpu, MX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               MX_OK, "");
 
     mx_guest_packet_t packet;
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
-                               NULL, 0, &packet, sizeof(packet)),
-              MX_OK, "");
+    ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
     EXPECT_EQ(packet.io.port, kExitTestPort, "");
 
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
-                               NULL, 0, &vcpu_state, sizeof(vcpu_state)),
+    ASSERT_EQ(mx_vcpu_read_state(test.vcpu, MX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               MX_OK, "");
 
 #if __x86_64__
@@ -218,20 +194,12 @@ static bool guest_set_trap(void) {
     }
 
     // Unmap the last page from the EPT.
-    struct {
-        mx_trap_address_space_t aspace;
-        mx_vaddr_t addr;
-        size_t len;
-        mx_handle_t fifo;
-    } trap_args = { MX_TRAP_MEMORY, kVmoSize - PAGE_SIZE, PAGE_SIZE, MX_HANDLE_INVALID };
-    ASSERT_EQ(mx_hypervisor_op(test.guest, MX_HYPERVISOR_OP_GUEST_SET_TRAP,
-                               &trap_args, sizeof(trap_args), NULL, 0),
+    ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_MEMORY, kVmoSize - PAGE_SIZE, PAGE_SIZE,
+                                MX_HANDLE_INVALID),
               MX_OK, "");
 
     mx_guest_packet_t packet;
-    ASSERT_EQ(mx_hypervisor_op(test.vcpu, MX_HYPERVISOR_OP_VCPU_RESUME,
-                               NULL, 0, &packet, sizeof(packet)),
-              MX_OK, "");
+    ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
 
 #if __x86_64__
     mx_vcpu_state_t vcpu_state;

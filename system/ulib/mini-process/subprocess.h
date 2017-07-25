@@ -15,7 +15,7 @@ typedef struct {
     __typeof(mx_channel_create)*    channel_create;
     __typeof(mx_channel_read)*      channel_read;
     __typeof(mx_channel_write)*     channel_write;
-    __typeof(mx_hypervisor_op)*     hypervisor_op;
+    __typeof(mx_guest_create)*      guest_create;
     __typeof(mx_process_exit)*      process_exit;
 } minip_ctx_t;
 

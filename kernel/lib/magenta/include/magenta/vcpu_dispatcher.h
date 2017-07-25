@@ -23,8 +23,8 @@ public:
 
     mx_status_t Resume(mx_guest_packet* packet);
     mx_status_t Interrupt(uint32_t vector);
-    mx_status_t ReadState(mx_vcpu_state_t* vcpu_state) const;
-    mx_status_t WriteState(const mx_vcpu_state_t& vcpu_state);
+    mx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
+    mx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
 private:
     mxtl::Canary<mxtl::magic("VCPD")> canary_;

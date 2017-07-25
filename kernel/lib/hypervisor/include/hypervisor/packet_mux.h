@@ -33,9 +33,9 @@ public:
     status_t Write(mx_vaddr_t addr, const mx_guest_packet_t& packet, StateReloader* reloader) const;
 
 private:
-    class FifoRegion : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<FifoRegion>> {
+    class FifoRange : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<FifoRange>> {
     public:
-        FifoRegion(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo)
+        FifoRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo)
             : addr_(addr), len_(len), fifo_(fifo) {}
 
         mx_vaddr_t GetKey() const { return addr_; }
@@ -47,7 +47,7 @@ private:
         size_t len_;
         mxtl::RefPtr<FifoDispatcher> fifo_;
     };
-    using FifoTree = mxtl::WAVLTree<mx_vaddr_t, mxtl::unique_ptr<FifoRegion>>;
+    using FifoTree = mxtl::WAVLTree<mx_vaddr_t, mxtl::unique_ptr<FifoRange>>;
 
     mutable mxtl::Mutex mutex;
     FifoTree fifos TA_GUARDED(mutex);

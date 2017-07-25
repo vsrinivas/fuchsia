@@ -16,20 +16,24 @@
 
 #include "syscalls_priv.h"
 
-mx_status_t sys_hypervisor_create(mx_handle_t opt_handle, uint32_t options,
-                                  user_ptr<mx_handle_t> out) {
-    return MX_ERR_NOT_SUPPORTED;
-}
+mx_status_t sys_guest_create(mx_handle_t resource, uint32_t options, mx_handle_t physmem_vmo,
+                             user_ptr<mx_handle_t> out) {
+    if (options != 0u)
+        return MX_ERR_INVALID_ARGS;
 
-static mx_status_t guest_create(uint32_t options, mx_handle_t physmem_vmo, mx_handle_t* out) {
+    // TODO(abdulla): Enable resource validation, and remove job policy.
+    /*mx_status_t status = validate_resource(resource, MX_RSRC_KIND_HYPERVISOR);
+    if (status != MX_OK)
+        return status;*/
+
     auto up = ProcessDispatcher::GetCurrent();
-    mx_status_t res = up->QueryPolicy(MX_POL_NEW_GUEST);
-    if (res != MX_OK)
-        return res;
+    mx_status_t status = up->QueryPolicy(MX_POL_NEW_GUEST);
+    if (status != MX_OK)
+        return status;
 
     mxtl::RefPtr<VmObjectDispatcher> physmem;
     mx_rights_t rights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
-    mx_status_t status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
+    status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
     if (status != MX_OK)
         return status;
 
@@ -41,14 +45,16 @@ static mx_status_t guest_create(uint32_t options, mx_handle_t physmem_vmo, mx_ha
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
+    status = out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
-    *out = up->MapHandleToValue(handle);
     up->AddHandle(mxtl::move(handle));
     return MX_OK;
 }
 
-static mx_status_t guest_set_trap(mx_handle_t guest_handle, mx_trap_address_space_t aspace,
-                                  mx_vaddr_t addr, size_t len, mx_handle_t fifo_handle) {
+mx_status_t sys_guest_set_trap(mx_handle_t guest_handle, uint32_t kind, mx_vaddr_t addr, size_t len,
+                               mx_handle_t fifo_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
@@ -63,35 +69,45 @@ static mx_status_t guest_set_trap(mx_handle_t guest_handle, mx_trap_address_spac
             return status;
     }
 
-    return guest->SetTrap(aspace, addr, len, fifo);
+    return guest->SetTrap(kind, addr, len, fifo);
 }
 
-static mx_status_t vcpu_create(uint32_t options, mx_handle_t guest_handle,
-                               const mx_vcpu_create_args_t* args, mx_handle_t* out) {
-    auto up = ProcessDispatcher::GetCurrent();
+mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
+                            user_ptr<const mx_vcpu_create_args_t> _args,
+                            user_ptr<mx_handle_t> out) {
+    if (options != 0u)
+        return MX_ERR_INVALID_ARGS;
 
+    auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<GuestDispatcher> guest;
     mx_status_t status = up->GetDispatcherWithRights(guest_handle, MX_RIGHT_WRITE, &guest);
     if (status != MX_OK)
         return status;
 
+    mx_vcpu_create_args_t args;
+    status = _args.copy_from_user(&args);
+    if (status != MX_OK)
+        return status;
+
 #if ARCH_X86_64
     mxtl::RefPtr<VmObjectDispatcher> apic;
-    status = up->GetDispatcherWithRights(args->apic_vmo, MX_RIGHT_READ | MX_RIGHT_WRITE, &apic);
+    status = up->GetDispatcherWithRights(args.apic_vmo, MX_RIGHT_READ | MX_RIGHT_WRITE, &apic);
     if (status != MX_OK)
         return status;
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status = VcpuDispatcher::Create(guest, args->ip, args->cr3, apic->vmo(), &dispatcher, &rights);
+    status = VcpuDispatcher::Create(guest, args.ip, args.cr3, apic->vmo(), &dispatcher, &rights);
     if (status != MX_OK)
         return status;
 
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
+    status = out.copy_to_user(up->MapHandleToValue(handle));
+    if (status != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
-    *out = up->MapHandleToValue(handle);
     up->AddHandle(mxtl::move(handle));
     return MX_OK;
 #else // ARCH_X86_64
@@ -99,7 +115,7 @@ static mx_status_t vcpu_create(uint32_t options, mx_handle_t guest_handle,
 #endif
 }
 
-static mx_status_t vcpu_resume(mx_handle_t vcpu_handle, mx_guest_packet_t* packet) {
+mx_status_t sys_vcpu_resume(mx_handle_t vcpu_handle, user_ptr<mx_guest_packet_t> _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<VcpuDispatcher> vcpu;
@@ -107,10 +123,19 @@ static mx_status_t vcpu_resume(mx_handle_t vcpu_handle, mx_guest_packet_t* packe
     if (status != MX_OK)
         return status;
 
-    return vcpu->Resume(packet);
+    mx_guest_packet_t packet;
+    status = vcpu->Resume(&packet);
+    if (status != MX_OK)
+        return status;
+
+    status = _packet.copy_to_user(packet);
+    if (status != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+
+    return MX_OK;
 }
 
-static mx_status_t vcpu_interrupt(mx_handle_t vcpu_handle, uint32_t vector) {
+mx_status_t sys_vcpu_interrupt(mx_handle_t vcpu_handle, uint32_t vector) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<VcpuDispatcher> vcpu;
@@ -121,7 +146,8 @@ static mx_status_t vcpu_interrupt(mx_handle_t vcpu_handle, uint32_t vector) {
     return vcpu->Interrupt(vector);
 }
 
-static mx_status_t vcpu_read_state(mx_handle_t vcpu_handle, mx_vcpu_state_t* vcpu_state) {
+mx_status_t sys_vcpu_read_state(mx_handle_t vcpu_handle, uint32_t kind,
+                                user_ptr<void> _buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<VcpuDispatcher> vcpu;
@@ -129,10 +155,20 @@ static mx_status_t vcpu_read_state(mx_handle_t vcpu_handle, mx_vcpu_state_t* vcp
     if (status != MX_OK)
         return status;
 
-    return vcpu->ReadState(vcpu_state);
+    alignas(alignof(mx_vcpu_state_t)) uint8_t buffer[sizeof(mx_vcpu_state_t)];
+    if (len > sizeof(buffer))
+        return MX_ERR_INVALID_ARGS;
+    status = vcpu->ReadState(kind, buffer, len);
+    if (status != MX_OK)
+        return status;
+    status = _buffer.copy_array_to_user(buffer, len);
+    if (status != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+    return MX_OK;
 }
 
-static mx_status_t vcpu_write_state(mx_handle_t vcpu_handle, const mx_vcpu_state_t& vcpu_state) {
+mx_status_t sys_vcpu_write_state(mx_handle_t vcpu_handle, uint32_t kind,
+                                 user_ptr<const void> _buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<VcpuDispatcher> vcpu;
@@ -140,103 +176,11 @@ static mx_status_t vcpu_write_state(mx_handle_t vcpu_handle, const mx_vcpu_state
     if (status != MX_OK)
         return status;
 
-    return vcpu->WriteState(vcpu_state);
-}
-
- mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, user_ptr<const void> args,
-                               uint32_t args_len, user_ptr<void> result, uint32_t result_len) {
-    switch (opcode) {
-    case MX_HYPERVISOR_OP_GUEST_CREATE: {
-        struct {
-            uint32_t options;
-            mx_handle_t physmem_vmo;
-        } create_args;
-        if (args_len != sizeof(create_args))
-            return MX_ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&create_args, sizeof(create_args)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        mx_handle_t out;
-        if (result_len != sizeof(out))
-            return MX_ERR_INVALID_ARGS;
-        mx_status_t status = guest_create(create_args.options, create_args.physmem_vmo, &out);
-        if (status != MX_OK)
-            return status;
-        if (result.copy_array_to_user(&out, sizeof(out)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return MX_OK;
-    }
-    case MX_HYPERVISOR_OP_GUEST_SET_TRAP: {
-        struct {
-            mx_trap_address_space_t aspace;
-            mx_vaddr_t addr;
-            size_t len;
-            mx_handle_t fifo;
-        } trap_args;
-        if (args_len != sizeof(trap_args))
-            return MX_ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&trap_args, sizeof(trap_args)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return guest_set_trap(handle, trap_args.aspace, trap_args.addr, trap_args.len,
-                              trap_args.fifo);
-    }
-    case MX_HYPERVISOR_OP_VCPU_CREATE: {
-        struct {
-            uint32_t options;
-            mx_vcpu_create_args_t args;
-        } create_args;
-        if (args_len != sizeof(create_args))
-            return MX_ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&create_args, sizeof(create_args)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        mx_handle_t out;
-        if (result_len != sizeof(out))
-            return MX_ERR_INVALID_ARGS;
-        mx_status_t status = vcpu_create(create_args.options, handle, &create_args.args, &out);
-        if (status != MX_OK)
-            return status;
-        if (result.copy_array_to_user(&out, sizeof(out)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return MX_OK;
-    }
-    case MX_HYPERVISOR_OP_VCPU_RESUME: {
-        mx_guest_packet_t packet;
-        if (result_len != sizeof(packet))
-            return MX_ERR_INVALID_ARGS;
-        mx_status_t status = vcpu_resume(handle, &packet);
-        if (status != MX_OK)
-            return status;
-        if (result.copy_array_to_user(&packet, sizeof(packet)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return MX_OK;
-    }
-    case MX_HYPERVISOR_OP_VCPU_INTERRUPT: {
-        uint32_t vector;
-        if (args_len != sizeof(vector))
-            return MX_ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&vector, sizeof(vector)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return vcpu_interrupt(handle, vector);
-    }
-    case MX_HYPERVISOR_OP_VCPU_READ_STATE: {
-        mx_vcpu_state_t vcpu_state;
-        if (result_len != sizeof(vcpu_state))
-            return MX_ERR_INVALID_ARGS;
-        mx_status_t status = vcpu_read_state(handle, &vcpu_state);
-        if (status != MX_OK)
-            return status;
-        if (result.copy_array_to_user(&vcpu_state, sizeof(vcpu_state)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return MX_OK;
-    }
-    case MX_HYPERVISOR_OP_VCPU_WRITE_STATE: {
-        mx_vcpu_state_t vcpu_state;
-        if (args_len != sizeof(vcpu_state))
-            return MX_ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&vcpu_state, sizeof(vcpu_state)) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        return vcpu_write_state(handle, vcpu_state);
-    }
-    default:
+    uint8_t buffer[sizeof(mx_vcpu_state_t)];
+    if (len > sizeof(buffer))
         return MX_ERR_INVALID_ARGS;
-    }
+    status = _buffer.copy_array_from_user(buffer, len);
+    if (status != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+    return vcpu->WriteState(kind, buffer, len);
 }

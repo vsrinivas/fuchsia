@@ -22,7 +22,7 @@ public:
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_GUEST; }
     Guest* guest() const { return guest_.get(); }
 
-    mx_status_t SetTrap(mx_trap_address_space_t aspace, mx_vaddr_t addr, size_t len,
+    mx_status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
                         mxtl::RefPtr<FifoDispatcher> fifo);
 
 private:
