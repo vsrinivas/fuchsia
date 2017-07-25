@@ -104,7 +104,11 @@ def main():
 
   assigner = ColorAssigner(BASE_COLORS);
 
-  for line in f:
+  while True:
+    line = f.readline()
+    if not line:
+      break
+
     line = line.strip()
     matched = False
     for line_re in patterns:
@@ -117,10 +121,12 @@ def main():
         # Use join to avoid python putting a space between each value being
         # printed.
         print ''.join([color, line, RESET_BG])
+        sys.stdout.flush()
         break
 
     if not matched:
       print line
+      sys.stdout.flush()
 
 if __name__ == '__main__':
   main()
