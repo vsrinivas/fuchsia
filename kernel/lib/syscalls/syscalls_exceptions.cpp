@@ -174,13 +174,13 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
         return MX_ERR_WRONG_TYPE;
 
     if (options & MX_RESUME_EXCEPTION) {
-        UserThread::ExceptionStatus estatus;
+        ThreadDispatcher::ExceptionStatus estatus;
         if (options & MX_RESUME_TRY_NEXT) {
-            estatus = UserThread::ExceptionStatus::TRY_NEXT;
+            estatus = ThreadDispatcher::ExceptionStatus::TRY_NEXT;
         } else {
-            estatus = UserThread::ExceptionStatus::RESUME;
+            estatus = ThreadDispatcher::ExceptionStatus::RESUME;
         }
-        return thread->thread()->MarkExceptionHandled(estatus);
+        return thread->MarkExceptionHandled(estatus);
     } else {
         if (options != 0) {
             return MX_ERR_INVALID_ARGS;

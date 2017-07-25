@@ -53,10 +53,10 @@ static void build_exception_report(mx_exception_report_t* report,
 
 static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
                                       ExceptionPort::Type expected_type,
-                                      UserThread* thread,
+                                      ThreadDispatcher* thread,
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context,
-                                      UserThread::ExceptionStatus* estatus) {
+                                      ThreadDispatcher::ExceptionStatus* estatus) {
     if (!eport)
         return MX_ERR_NOT_FOUND;
 
@@ -66,40 +66,40 @@ static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
     return status;
 }
 
-static status_t try_debugger_exception_handler(UserThread* thread,
+static status_t try_debugger_exception_handler(ThreadDispatcher* thread,
                                                const mx_exception_report_t* report,
                                                const arch_exception_context_t* arch_context,
-                                               UserThread::ExceptionStatus* estatus) {
+                                               ThreadDispatcher::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = thread->process()->debugger_exception_port();
     return try_exception_handler(eport, ExceptionPort::Type::DEBUGGER,
                                  thread, report, arch_context, estatus);
 }
 
-static status_t try_thread_exception_handler(UserThread* thread,
+static status_t try_thread_exception_handler(ThreadDispatcher* thread,
                                              const mx_exception_report_t* report,
                                              const arch_exception_context_t* arch_context,
-                                             UserThread::ExceptionStatus* estatus) {
+                                             ThreadDispatcher::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = thread->exception_port();
     return try_exception_handler(eport, ExceptionPort::Type::THREAD,
                                  thread, report, arch_context, estatus);
 }
 
-static status_t try_process_exception_handler(UserThread* thread,
+static status_t try_process_exception_handler(ThreadDispatcher* thread,
                                               const mx_exception_report_t* report,
                                               const arch_exception_context_t* arch_context,
-                                              UserThread::ExceptionStatus* estatus) {
+                                              ThreadDispatcher::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = thread->process()->exception_port();
     return try_exception_handler(eport, ExceptionPort::Type::PROCESS,
                                  thread, report, arch_context, estatus);
 }
 
-static status_t try_system_exception_handler(UserThread* thread,
+static status_t try_system_exception_handler(ThreadDispatcher* thread,
                                              const mx_exception_report_t* report,
                                              const arch_exception_context_t* arch_context,
-                                             UserThread::ExceptionStatus* estatus) {
+                                             ThreadDispatcher::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = GetSystemExceptionPort();
     return try_exception_handler(eport, ExceptionPort::Type::SYSTEM,
@@ -121,16 +121,16 @@ status_t magenta_exception_handler(uint exception_type,
                                    arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
-    UserThread* thread = UserThread::GetCurrent();
+    ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
     if (unlikely(!thread)) {
         // we're not in magenta thread context, bail
         return MX_ERR_BAD_STATE;
     }
 
-    typedef status_t (Handler)(UserThread* thread,
+    typedef status_t (Handler)(ThreadDispatcher* thread,
                                const mx_exception_report_t* report,
                                const arch_exception_context_t* arch_context,
-                               UserThread::ExceptionStatus* estatus);
+                               ThreadDispatcher::ExceptionStatus* estatus);
 
     static Handler* const handlers[] = {
         try_debugger_exception_handler,
@@ -145,7 +145,7 @@ status_t magenta_exception_handler(uint exception_type,
 
     for (size_t i = 0; i < countof(handlers); ++i) {
         // Initialize for paranoia's sake.
-        UserThread::ExceptionStatus estatus = UserThread::ExceptionStatus::UNPROCESSED;
+        ThreadDispatcher::ExceptionStatus estatus = ThreadDispatcher::ExceptionStatus::UNPROCESSED;
         auto status = handlers[i](thread, &report, context, &estatus);
         LTRACEF("handler returned %d/%d\n",
                 static_cast<int>(status), static_cast<int>(estatus));
@@ -158,10 +158,10 @@ status_t magenta_exception_handler(uint exception_type,
             continue;
         case MX_OK:
             switch (estatus) {
-            case UserThread::ExceptionStatus::TRY_NEXT:
+            case ThreadDispatcher::ExceptionStatus::TRY_NEXT:
                 processed = true;
                 break;
-            case UserThread::ExceptionStatus::RESUME:
+            case ThreadDispatcher::ExceptionStatus::RESUME:
                 return MX_OK;
             default:
                 ASSERT_MSG(0, "invalid exception status %d",
@@ -183,8 +183,10 @@ status_t magenta_exception_handler(uint exception_type,
         // in handling the exception
         char pname[MX_MAX_NAME_LEN];
         process->get_name(pname);
+        char tname[MX_MAX_NAME_LEN];
+        thread->get_name(tname);
         printf("KERN: %s in magenta thread '%s' in process '%s'\n",
-               excp_type_to_string(exception_type), thread->name(), pname);
+               excp_type_to_string(exception_type), tname, pname);
 
         arch_dump_exception_context(context);
     }

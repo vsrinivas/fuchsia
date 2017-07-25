@@ -30,14 +30,13 @@
 #include <mxtl/string_piece.h>
 
 class ProcessDispatcher;
-class ThreadDispatcher;
 
-class UserThread : public mxtl::RefCounted<UserThread> {
+class ThreadDispatcher : public Dispatcher {
 public:
     // Traits to belong in the parent process's list.
     struct ThreadListTraits {
-        static mxtl::DoublyLinkedListNodeState<UserThread*>& node_state(
-            UserThread& obj) {
+        static mxtl::DoublyLinkedListNodeState<ThreadDispatcher*>& node_state(
+            ThreadDispatcher& obj) {
             return obj.dll_thread_;
         }
     };
@@ -81,15 +80,23 @@ public:
         RESUME,
     };
 
-    UserThread(mxtl::RefPtr<ProcessDispatcher> process,
-               uint32_t flags);
-    ~UserThread();
+    static status_t Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+                           mxtl::StringPiece name,
+                           mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                           mx_rights_t* out_rights);
+    ~ThreadDispatcher();
 
-    static UserThread* GetCurrent() {
-        return reinterpret_cast<UserThread*>(get_current_thread()->user_thread);
+    static ThreadDispatcher* GetCurrent() {
+        return reinterpret_cast<ThreadDispatcher*>(get_current_thread()->user_thread);
     }
 
-    // Performs initialization on a newly constructed UserThread
+    // Dispatcher implementation.
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_THREAD; }
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    void on_zero_handles() final;
+    mx_koid_t get_related_koid() const final;
+
+    // Performs initialization on a newly constructed ThreadDispatcher
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize(const char* name, size_t len);
     status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
@@ -103,18 +110,13 @@ public:
 
     // accessors
     ProcessDispatcher* process() { return process_.get(); }
-    // N.B. The dispatcher() accessor is potentially racy.
-    // See UserThread::DispatcherClosed.
-    ThreadDispatcher* dispatcher() { return dispatcher_; }
 
     FutexNode* futex_node() { return &futex_node_; }
-    StateTracker* state_tracker() { return &state_tracker_; }
-    const char* name() const { return thread_.name; }
-    status_t set_name(const char* name, size_t len);
-    void get_name(char out_name[MX_MAX_NAME_LEN]);
+    status_t set_name(const char* name, size_t len) final;
+    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
 
-    status_t SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport);
+    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();
@@ -147,10 +149,10 @@ public:
     status_t GetExceptionReport(mx_exception_report_t* report);
 
     // Fetch the state of the thread for userspace tools.
-    void GetInfoForUserspace(mx_info_thread_t* info);
+    mx_status_t GetInfoForUserspace(mx_info_thread_t* info);
 
     // Fetch per thread stats for userspace.
-    void GetStatsForUserspace(mx_info_thread_stats_t* info);
+    mx_status_t GetStatsForUserspace(mx_info_thread_stats_t* info);
 
     // For debugger usage.
     // TODO(dje): The term "state" here conflicts with "state tracker".
@@ -162,15 +164,13 @@ public:
     // privileged and unprivileged fields.
     status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv);
 
-    mx_koid_t get_koid() const { return koid_; }
-    void set_dispatcher(ThreadDispatcher* dispatcher);
-
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
 
 private:
-    UserThread(const UserThread&) = delete;
-    UserThread& operator=(const UserThread&) = delete;
+    ThreadDispatcher(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags);
+    ThreadDispatcher(const ThreadDispatcher&) = delete;
+    ThreadDispatcher& operator=(const ThreadDispatcher&) = delete;
 
     // kernel level entry point
     static int StartRoutine(void* arg);
@@ -189,24 +189,13 @@ private:
     // change states of the object, do what is appropriate for the state transition
     void SetStateLocked(State) TA_REQ(state_lock_);
 
-    mxtl::Canary<mxtl::magic("UTHR")> canary_;
+    mxtl::Canary<mxtl::magic("THRD")> canary_;
 
     // The containing process holds a list of all its threads.
-    mxtl::DoublyLinkedListNodeState<UserThread*> dll_thread_;
-
-    // The kernel object id. Since ProcessDispatcher maintains a list of
-    // UserThreads, and since use of dispatcher_ is racy (see
-    // UserThread::DispatcherClosed), we keep a copy of the ThreadDispatcher
-    // koid here. This allows ProcessDispatcher::LookupThreadById to return
-    // the koid of the Dispatcher.
-    // At construction time this is MX_KOID_INVALID. Later when set_dispatcher
-    // is called this is updated to be the koid of the dispatcher.
-    mx_koid_t koid_;
+    mxtl::DoublyLinkedListNodeState<ThreadDispatcher*> dll_thread_;
 
     // a ref pointer back to the parent process
     mxtl::RefPtr<ProcessDispatcher> process_;
-    // a naked pointer back to the containing thread dispatcher.
-    ThreadDispatcher* dispatcher_ = nullptr;
 
     // User thread starting register values.
     uintptr_t user_entry_ = 0;
@@ -241,7 +230,7 @@ private:
     dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};
 
     // Used to protect thread name read/writes
-    SpinLock name_lock_;
+    mutable SpinLock name_lock_;
 
     // hold a reference to the mapping and vmar used to wrap the mapping of this
     // thread's kernel stack
@@ -265,48 +254,4 @@ private:
     thread_t thread_ = {};
 };
 
-const char* StateToString(UserThread::State state);
-
-class ThreadDispatcher : public Dispatcher {
-public:
-    static status_t Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
-
-    ~ThreadDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_THREAD; }
-    mx_koid_t get_related_koid() const final;
-
-    mx_status_t Start(uintptr_t pc, uintptr_t sp,
-                      uintptr_t arg1, uintptr_t arg2, bool initial_thread) {
-        return thread_->Start(pc, sp, arg1, arg2, initial_thread);
-    }
-    void Kill() { thread_->Kill(); }
-
-    status_t GetInfo(mx_info_thread_t* info);
-    status_t GetStats(mx_info_thread_stats_t* info);
-
-    status_t GetExceptionReport(mx_exception_report_t* report);
-
-    mx_status_t Resume() { return thread_->Resume(); }
-    mx_status_t Suspend() { return thread_->Suspend(); }
-
-    StateTracker* get_state_tracker() final;
-
-    // TODO(dje): Was private. Needed for exception handling.
-    // Could provide delegating accessors, but does this need to stay private?
-    UserThread* thread() { return thread_.get(); }
-
-    // exception handling support
-    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
-    // Returns true if a port had been set.
-    bool ResetExceptionPort(bool quietly);
-
-    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
-    status_t set_name(const char* name, size_t len) final;
-
-private:
-    explicit ThreadDispatcher(mxtl::RefPtr<UserThread> thread);
-
-    mxtl::Canary<mxtl::magic("THRD")> canary_;
-    mxtl::RefPtr<UserThread> thread_;
-};
+const char* StateToString(ThreadDispatcher::State state);

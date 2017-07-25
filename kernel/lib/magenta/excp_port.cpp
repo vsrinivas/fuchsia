@@ -226,7 +226,7 @@ mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koi
     return port_->Queue(iopk, 0, 0);
 }
 
-mx_status_t ExceptionPort::SendPacket(UserThread* thread, uint32_t type) {
+mx_status_t ExceptionPort::SendPacket(ThreadDispatcher* thread, uint32_t type) {
     canary_.Assert();
 
     mx_koid_t pid = thread->process()->get_koid();
@@ -240,7 +240,7 @@ void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type) {
     report->header.type = type;
 }
 
-void ExceptionPort::OnThreadStart(UserThread* thread) {
+void ExceptionPort::OnThreadStart(ThreadDispatcher* thread) {
     canary_.Assert();
 
     mx_koid_t pid = thread->process()->get_koid();
@@ -253,7 +253,7 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    UserThread::ExceptionStatus estatus;
+    ThreadDispatcher::ExceptionStatus estatus;
     auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != MX_OK) {
         // Ignore any errors. There's nothing we can do here, and
@@ -263,7 +263,7 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     }
 }
 
-void ExceptionPort::OnThreadSuspending(UserThread* thread) {
+void ExceptionPort::OnThreadSuspending(ThreadDispatcher* thread) {
     canary_.Assert();
 
     mx_koid_t pid = thread->process()->get_koid();
@@ -280,7 +280,7 @@ void ExceptionPort::OnThreadSuspending(UserThread* thread) {
     SendPacket(thread, MX_EXCP_THREAD_SUSPENDED);
 }
 
-void ExceptionPort::OnThreadResuming(UserThread* thread) {
+void ExceptionPort::OnThreadResuming(ThreadDispatcher* thread) {
     canary_.Assert();
 
     mx_koid_t pid = thread->process()->get_koid();
@@ -310,7 +310,7 @@ void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
 // This isn't called for every thread's destruction, only for threads that
 // have a thread-specific exception handler.
 
-void ExceptionPort::OnThreadExit(UserThread* thread) {
+void ExceptionPort::OnThreadExit(ThreadDispatcher* thread) {
     canary_.Assert();
 
     mx_koid_t pid = thread->process()->get_koid();
@@ -324,7 +324,7 @@ void ExceptionPort::OnThreadExit(UserThread* thread) {
 // This isn't called for every thread's destruction, only when a debugger
 // is attached.
 
-void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
+void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     canary_.Assert();
 
     mx_koid_t pid = thread->process()->get_koid();
@@ -337,7 +337,7 @@ void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    UserThread::ExceptionStatus estatus;
+    ThreadDispatcher::ExceptionStatus estatus;
     // N.B. If the process is exiting it will have killed all threads. That
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
     // exchange will return immediately with MX_ERR_INTERNAL_INTR_KILLED.

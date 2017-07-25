@@ -232,7 +232,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // build the info structure
             mx_info_thread_t info = { };
 
-            auto err = thread->GetInfo(&info);
+            auto err = thread->GetInfoForUserspace(&info);
             if (err != MX_OK)
                 return err;
 
@@ -272,7 +272,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // build the info structure
             mx_info_thread_stats_t info = { };
 
-            auto err = thread->GetStats(&info);
+            auto err = thread->GetStatsForUserspace(&info);
             if (err != MX_OK)
                 return err;
 
@@ -520,7 +520,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
             if (!thread)
                 return MX_ERR_WRONG_TYPE;
-            uint32_t value = thread->thread()->get_num_state_kinds();
+            uint32_t value = thread->get_num_state_kinds();
             if (_value.reinterpret<uint32_t>().copy_to_user(value) != MX_OK)
                 return MX_ERR_INVALID_ARGS;
             return MX_OK;
@@ -584,7 +584,7 @@ static mx_status_t is_current_thread(mxtl::RefPtr<Dispatcher>* dispatcher) {
     auto thread_dispatcher = DownCastDispatcher<ThreadDispatcher>(dispatcher);
     if (!thread_dispatcher)
         return MX_ERR_WRONG_TYPE;
-    if (thread_dispatcher->thread() != UserThread::GetCurrent())
+    if (thread_dispatcher.get() != ThreadDispatcher::GetCurrent())
         return MX_ERR_ACCESS_DENIED;
     return MX_OK;
 }
@@ -738,10 +738,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         auto thread = process->LookupThreadById(koid);
         if (!thread)
             return MX_ERR_NOT_FOUND;
-        auto td = mxtl::RefPtr<Dispatcher>(thread->dispatcher());
-        if (!td)
-            return MX_ERR_NOT_FOUND;
-        HandleOwner thread_h(MakeHandle(td, rights));
+        HandleOwner thread_h(MakeHandle(thread, rights));
         if (!thread_h)
             return MX_ERR_NO_MEMORY;
 

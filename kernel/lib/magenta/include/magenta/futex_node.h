@@ -14,7 +14,7 @@
 #include <mxtl/intrusive_hash_table.h>
 
 // Node for linked list of threads blocked on a futex
-// Intended to be embedded within a UserThread Instance
+// Intended to be embedded within a ThreadDispatcher Instance
 class FutexNode : public mxtl::SinglyLinkedListable<FutexNode*> {
 public:
     using HashTable = mxtl::HashTable<uintptr_t, FutexNode*>;

@@ -19,7 +19,7 @@
 // The value in the futex hash table is the FutexNode object associated with the head
 // of the list of threads blocked on the futex.
 // To avoid memory allocation at futex operation time, a FutexNode is embedded in each
-// UserThread object.
+// ThreadDispatcher object.
 // When the thread at the head of the futex's blocked thread list is resumed,
 // The FutexNode for the new head of the blocked thread list is set as the hash table value
 // for the futex.

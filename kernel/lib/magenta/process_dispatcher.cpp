@@ -174,7 +174,7 @@ void ProcessDispatcher::Exit(int retcode) {
         SetStateLocked(State::DYING);
     }
 
-    UserThread::GetCurrent()->Exit();
+    ThreadDispatcher::GetCurrent()->Exit();
 
     __UNREACHABLE;
 }
@@ -223,7 +223,7 @@ void ProcessDispatcher::KillAllThreadsLocked() {
     }
 }
 
-status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
+status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_thread) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock state_lock(&state_lock_);
@@ -252,7 +252,7 @@ status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
 
 // This is called within thread T's context when it is exiting.
 
-void ProcessDispatcher::RemoveThread(UserThread* t) {
+void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
     LTRACE_ENTRY_OBJ;
 
     // MG-880: Call RemoveChildProcess outside of |state_lock_|.
@@ -563,34 +563,6 @@ status_t ProcessDispatcher::GetVmos(
     return MX_OK;
 }
 
-status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags,
-                                             mxtl::RefPtr<Dispatcher>* out_thread,
-                                             mx_rights_t* out_rights) {
-    AllocChecker ac;
-    auto ut = mxtl::AdoptRef(new (&ac) UserThread(mxtl::WrapRefPtr(this),
-                                                  flags));
-    if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-
-    status_t result = ut->Initialize(name.data(), name.length());
-    if (result != MX_OK)
-        return result;
-
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    result = ThreadDispatcher::Create(mxtl::move(ut), &dispatcher, &rights);
-    if (result != MX_OK)
-        return result;
-
-    *out_thread = mxtl::move(dispatcher);
-    *out_rights = rights;
-    return MX_OK;
-}
-
-// Fill in |info| with the current set of threads.
-// |num_info_threads| is the number of threads |info| can hold.
-// Return the actual number of threads, which may be more than |num_info_threads|.
-
 status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
     AutoLock lock(&state_lock_);
     size_t n = thread_list_.size_slow();
@@ -731,11 +703,11 @@ mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t k
     return finder.get_pd();
 }
 
-mxtl::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
+mxtl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&state_lock_);
 
-    auto iter = thread_list_.find_if([koid](const UserThread& t) { return t.get_koid() == koid; });
+    auto iter = thread_list_.find_if([koid](const ThreadDispatcher& t) { return t.get_koid() == koid; });
     return mxtl::WrapRefPtr(iter.CopyPointer());
 }
 

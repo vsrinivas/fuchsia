@@ -55,7 +55,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
         return MX_ERR_BAD_STATE;
     }
 
-    UserThread* thread = UserThread::GetCurrent();
+    ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
     node = thread->futex_node();
     node->set_hash_key(futex_key);
     node->SetAsSingletonList();

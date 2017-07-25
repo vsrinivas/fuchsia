@@ -363,7 +363,9 @@ static int attempt_userboot() {
     mxtl::RefPtr<ThreadDispatcher> thread;
     {
         mxtl::RefPtr<Dispatcher> ut_disp;
-        status = proc->CreateUserThread("userboot", 0, &ut_disp, &rights);
+        // Make a copy of proc, as we need to a keep a copy for the
+        // bootstrap message.
+        status = ThreadDispatcher::Create(proc, 0, "userboot", &ut_disp, &rights);
         if (status < 0)
             return status;
         handles[BOOTSTRAP_THREAD] = MakeHandle(ut_disp, rights);

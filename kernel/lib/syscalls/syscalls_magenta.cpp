@@ -66,7 +66,7 @@ uint64_t sys_time_get(uint32_t clock_id) {
     case MX_CLOCK_UTC:
         return current_time() + utc_offset.load();
     case MX_CLOCK_THREAD:
-        return UserThread::GetCurrent()->runtime_ns();
+        return ThreadDispatcher::GetCurrent()->runtime_ns();
     default:
         //TODO: figure out the best option here
         return 0u;

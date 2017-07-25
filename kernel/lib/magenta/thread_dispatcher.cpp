@@ -40,25 +40,33 @@
 
 #define LOCAL_TRACE 0
 
-UserThread::UserThread(mxtl::RefPtr<ProcessDispatcher> process,
-                       uint32_t flags)
-    : koid_(MX_KOID_INVALID),
-      process_(mxtl::move(process)),
+// static
+status_t ThreadDispatcher::Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+                                  mxtl::StringPiece name,
+                                  mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                                  mx_rights_t* out_rights) {
+    AllocChecker ac;
+    auto disp = mxtl::AdoptRef(new (&ac) ThreadDispatcher(mxtl::move(process), flags));
+    if (!ac.check())
+        return MX_ERR_NO_MEMORY;
+
+    auto result = disp->Initialize(name.data(), name.length());
+    if (result != MX_OK)
+        return result;
+
+    *out_rights = MX_DEFAULT_THREAD_RIGHTS;
+    *out_dispatcher = mxtl::move(disp);
+    return MX_OK;
+}
+
+ThreadDispatcher::ThreadDispatcher(mxtl::RefPtr<ProcessDispatcher> process,
+                                   uint32_t flags)
+    : process_(mxtl::move(process)),
       state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 }
 
-// This is called during initialization after both us and our dispatcher
-// have been created.
-// N.B. Use of dispatcher_ is potentially racy.
-// See UserThread::DispatcherClosed.
-
-void UserThread::set_dispatcher(ThreadDispatcher* dispatcher) {
-    dispatcher_ = dispatcher;
-    koid_ = dispatcher->get_koid();
- }
-
-UserThread::~UserThread() {
+ThreadDispatcher::~ThreadDispatcher() {
     LTRACE_ENTRY_OBJ;
 
     DEBUG_ASSERT(&thread_ != get_current_thread());
@@ -95,6 +103,12 @@ UserThread::~UserThread() {
 #endif
 
     event_destroy(&exception_event_);
+}
+
+void ThreadDispatcher::on_zero_handles() {
+    LTRACE_ENTRY_OBJ;
+
+    Kill();
 }
 
 namespace {
@@ -167,7 +181,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
 };
 
 // complete initialization of the thread object outside of the constructor
-status_t UserThread::Initialize(const char* name, size_t len) {
+status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -176,13 +190,12 @@ status_t UserThread::Initialize(const char* name, size_t len) {
 
     // Make sure LK's max name length agrees with ours.
     static_assert(THREAD_NAME_LENGTH == MX_MAX_NAME_LEN, "name length issue");
-
     if (len >= MX_MAX_NAME_LEN)
         len = MX_MAX_NAME_LEN - 1;
 
     char thread_name[THREAD_NAME_LENGTH];
-    memset(thread_name + len, 0, MX_MAX_NAME_LEN - len);
     memcpy(thread_name, name, len);
+    memset(thread_name + len, 0, MX_MAX_NAME_LEN - len);
 
     // Map the kernel stack somewhere
     auto vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
@@ -233,7 +246,7 @@ status_t UserThread::Initialize(const char* name, size_t len) {
     return MX_OK;
 }
 
-status_t UserThread::set_name(const char* name, size_t len) {
+status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
 
     if (len >= MX_MAX_NAME_LEN)
@@ -245,7 +258,7 @@ status_t UserThread::set_name(const char* name, size_t len) {
     return MX_OK;
 }
 
-void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
+void ThreadDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
     canary_.Assert();
 
     AutoSpinLock lock(&name_lock_);
@@ -253,7 +266,7 @@ void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
 }
 
 // start a thread
-status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
+status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
                            uintptr_t arg1, uintptr_t arg2,
                            bool initial_thread) {
     canary_.Assert();
@@ -279,7 +292,7 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
     // mark ourselves as running and resume the kernel thread
     SetStateLocked(State::RUNNING);
 
-    thread_.user_tid = dispatcher_->get_koid();
+    thread_.user_tid = get_koid();
     thread_.user_pid = process_->get_koid();
     thread_resume(&thread_);
 
@@ -287,7 +300,7 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
 }
 
 // called in the context of our thread
-void UserThread::Exit() {
+void ThreadDispatcher::Exit() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -310,7 +323,7 @@ void UserThread::Exit() {
     __UNREACHABLE;
 }
 
-void UserThread::Kill() {
+void ThreadDispatcher::Kill() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -347,7 +360,7 @@ void UserThread::Kill() {
     }
 }
 
-status_t UserThread::Suspend() {
+status_t ThreadDispatcher::Suspend() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -362,7 +375,7 @@ status_t UserThread::Suspend() {
     return thread_suspend(&thread_);
 }
 
-status_t UserThread::Resume() {
+status_t ThreadDispatcher::Resume() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -377,24 +390,16 @@ status_t UserThread::Resume() {
     return thread_resume(&thread_);
 }
 
-void UserThread::DispatcherClosed() {
-    canary_.Assert();
-
-    LTRACE_ENTRY_OBJ;
-    dispatcher_ = nullptr;
-    Kill();
-}
-
 static void ThreadCleanupDpc(dpc_t *d) {
     LTRACEF("dpc %p\n", d);
 
-    UserThread *t = reinterpret_cast<UserThread *>(d->arg);
+    ThreadDispatcher *t = reinterpret_cast<ThreadDispatcher *>(d->arg);
     DEBUG_ASSERT(t);
 
     delete t;
 }
 
-void UserThread::Exiting() {
+void ThreadDispatcher::Exiting() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -408,7 +413,7 @@ void UserThread::Exiting() {
             exception_port_->OnThreadExit(this);
         // Note: If an eport is bound, it will have a reference to the
         // ThreadDispatcher and thus keep the object, and the underlying
-        // UserThread object, around until someone unbinds the port or closes
+        // ThreadDispatcher object, around until someone unbinds the port or closes
         // all handles to its underling PortDispatcher.
     }
 
@@ -465,7 +470,7 @@ void UserThread::Exiting() {
     LTRACE_EXIT_OBJ;
 }
 
-void UserThread::Suspending() {
+void ThreadDispatcher::Suspending() {
     LTRACE_ENTRY_OBJ;
 
     // Update the state before sending any notifications out. We want the
@@ -493,7 +498,7 @@ void UserThread::Suspending() {
     LTRACE_EXIT_OBJ;
 }
 
-void UserThread::Resuming() {
+void ThreadDispatcher::Resuming() {
     LTRACE_ENTRY_OBJ;
 
     // Update the state before sending any notifications out. We want the
@@ -522,8 +527,8 @@ void UserThread::Resuming() {
 }
 
 // low level LK callback in thread's context just before exiting
-void UserThread::ThreadUserCallback(enum thread_user_state_change new_state, void* arg) {
-    UserThread* t = reinterpret_cast<UserThread*>(arg);
+void ThreadDispatcher::ThreadUserCallback(enum thread_user_state_change new_state, void* arg) {
+    ThreadDispatcher* t = reinterpret_cast<ThreadDispatcher*>(arg);
 
     switch (new_state) {
         case THREAD_USER_STATE_EXIT: t->Exiting(); return;
@@ -533,10 +538,10 @@ void UserThread::ThreadUserCallback(enum thread_user_state_change new_state, voi
 }
 
 // low level LK entry point for the thread
-int UserThread::StartRoutine(void* arg) {
+int ThreadDispatcher::StartRoutine(void* arg) {
     LTRACE_ENTRY;
 
-    UserThread* t = (UserThread*)arg;
+    ThreadDispatcher* t = (ThreadDispatcher*)arg;
 
     // Notify debugger if attached.
     // This is done by first obtaining our own reference to the port so the
@@ -562,7 +567,7 @@ int UserThread::StartRoutine(void* arg) {
     __UNREACHABLE;
 }
 
-void UserThread::SetStateLocked(State state) {
+void ThreadDispatcher::SetStateLocked(State state) {
     canary_.Assert();
 
     LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
@@ -572,7 +577,7 @@ void UserThread::SetStateLocked(State state) {
     state_ = state;
 }
 
-status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport) {
+status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
@@ -590,7 +595,7 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<Excepti
     return MX_OK;
 }
 
-bool UserThread::ResetExceptionPort(bool quietly) {
+bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     canary_.Assert();
 
     mxtl::RefPtr<ExceptionPort> eport;
@@ -631,14 +636,14 @@ bool UserThread::ResetExceptionPort(bool quietly) {
     return true;
 }
 
-mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
+mxtl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     canary_.Assert();
 
     AutoLock lock(&exception_lock_);
     return exception_port_;
 }
 
-status_t UserThread::ExceptionHandlerExchange(
+status_t ThreadDispatcher::ExceptionHandlerExchange(
         mxtl::RefPtr<ExceptionPort> eport,
         const mx_exception_report_t* report,
         const arch_exception_context_t* arch_context,
@@ -723,7 +728,7 @@ status_t UserThread::ExceptionHandlerExchange(
     return status;
 }
 
-status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
+status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     canary_.Assert();
 
     LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
@@ -751,7 +756,7 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
     return MX_OK;
 }
 
-void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
+void ThreadDispatcher::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -768,7 +773,7 @@ void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport
     }
 }
 
-bool UserThread::InExceptionLocked() {
+bool ThreadDispatcher::InExceptionLocked() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -776,14 +781,14 @@ bool UserThread::InExceptionLocked() {
     return thread_stopped_in_exception(&thread_);
 }
 
-void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
+mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
 
     *info = {};
 
-    UserThread::State state;
+    ThreadDispatcher::State state;
     enum thread_state lk_state;
     ExceptionPort::Type excp_port_type;
     // We need to fetch all these values under lock, but once we have them
@@ -813,11 +818,11 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
     }
 
     switch (state) {
-    case UserThread::State::INITIAL:
-    case UserThread::State::INITIALIZED:
+    case ThreadDispatcher::State::INITIAL:
+    case ThreadDispatcher::State::INITIALIZED:
         info->state = MX_THREAD_STATE_NEW;
         break;
-    case UserThread::State::RUNNING:
+    case ThreadDispatcher::State::RUNNING:
         // The thread may be "running" but be blocked in a syscall or
         // exception handler.
         switch (lk_state) {
@@ -829,13 +834,13 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
             break;
         }
         break;
-    case UserThread::State::SUSPENDED:
+    case ThreadDispatcher::State::SUSPENDED:
         info->state = MX_THREAD_STATE_SUSPENDED;
         break;
-    case UserThread::State::DYING:
+    case ThreadDispatcher::State::DYING:
         info->state = MX_THREAD_STATE_DYING;
         break;
-    case UserThread::State::DEAD:
+    case ThreadDispatcher::State::DEAD:
         info->state = MX_THREAD_STATE_DEAD;
         break;
     default:
@@ -865,9 +870,11 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
                          static_cast<int>(excp_port_type));
         break;
     }
+
+    return MX_OK;
 }
 
-void UserThread::GetStatsForUserspace(mx_info_thread_stats_t* info) {
+mx_status_t ThreadDispatcher::GetStatsForUserspace(mx_info_thread_stats_t* info) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -875,9 +882,10 @@ void UserThread::GetStatsForUserspace(mx_info_thread_stats_t* info) {
     *info = {};
 
     info->total_runtime = runtime_ns();
+    return MX_OK;
 }
 
-status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
+status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -889,13 +897,13 @@ status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
     return MX_OK;
 }
 
-uint32_t UserThread::get_num_state_kinds() const {
+uint32_t ThreadDispatcher::get_num_state_kinds() const {
     return arch_num_regsets();
 }
 
 // Note: buffer must be sufficiently aligned
 
-status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
+status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -923,7 +931,7 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
 
 // Note: buffer must be sufficiently aligned
 
-status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv) {
+status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -950,108 +958,30 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
 }
 
 void magenta_thread_process_name(void* user_thread, char out_name[MX_MAX_NAME_LEN]) {
-    UserThread* ut = reinterpret_cast<UserThread*>(user_thread);
+    ThreadDispatcher* ut = reinterpret_cast<ThreadDispatcher*>(user_thread);
     ut->process()->get_name(out_name);
 }
 
-const char* StateToString(UserThread::State state) {
+const char* StateToString(ThreadDispatcher::State state) {
     switch (state) {
-    case UserThread::State::INITIAL:
+    case ThreadDispatcher::State::INITIAL:
         return "initial";
-    case UserThread::State::INITIALIZED:
+    case ThreadDispatcher::State::INITIALIZED:
         return "initialized";
-    case UserThread::State::RUNNING:
+    case ThreadDispatcher::State::RUNNING:
         return "running";
-    case UserThread::State::SUSPENDED:
+    case ThreadDispatcher::State::SUSPENDED:
         return "suspended";
-    case UserThread::State::DYING:
+    case ThreadDispatcher::State::DYING:
         return "dying";
-    case UserThread::State::DEAD:
+    case ThreadDispatcher::State::DEAD:
         return "dead";
     }
     return "unknown";
 }
 
-// static
-status_t ThreadDispatcher::Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
-                                  mx_rights_t* rights) {
-    AllocChecker ac;
-    auto disp = mxtl::AdoptRef(new (&ac) ThreadDispatcher(thread));
-    if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-
-    thread->set_dispatcher(disp.get());
-
-    *rights = MX_DEFAULT_THREAD_RIGHTS;
-    *dispatcher = mxtl::move(disp);
-    return MX_OK;
-}
-
-ThreadDispatcher::ThreadDispatcher(mxtl::RefPtr<UserThread> thread)
-    : thread_(mxtl::move(thread)) {
-    LTRACE_ENTRY_OBJ;
-
-    LTRACEF("thread %p\n", get_current_thread());
-}
-
-ThreadDispatcher::~ThreadDispatcher() {
-    LTRACE_ENTRY_OBJ;
-
-    thread_->DispatcherClosed();
-}
-
-status_t ThreadDispatcher::GetInfo(mx_info_thread_t* info) {
-    canary_.Assert();
-
-    thread_->GetInfoForUserspace(info);
-    return MX_OK;
-}
-
-status_t ThreadDispatcher::GetStats(mx_info_thread_stats_t* info) {
-    canary_.Assert();
-
-    thread_->GetStatsForUserspace(info);
-    return MX_OK;
-}
-
-status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
-    canary_.Assert();
-
-    return thread_->GetExceptionReport(report);
-}
-
-StateTracker* ThreadDispatcher::get_state_tracker() {
-    canary_.Assert();
-
-    return thread_->state_tracker();
-}
-
 mx_koid_t ThreadDispatcher::get_related_koid() const {
     canary_.Assert();
 
-    return thread_->process()->get_koid();
-}
-
-status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
-    canary_.Assert();
-
-    return thread_->SetExceptionPort(this, eport);
-}
-
-bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
-    canary_.Assert();
-
-    return thread_->ResetExceptionPort(quietly);
-}
-
-void ThreadDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
-    canary_.Assert();
-
-    thread_->get_name(out_name);
-}
-
-status_t ThreadDispatcher::set_name(const char* name, size_t len) {
-    canary_.Assert();
-
-    return thread_->set_name(name, len);
+    return process_->get_koid();
 }

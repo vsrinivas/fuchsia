@@ -13,7 +13,7 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
-class UserThread;
+class ThreadDispatcher;
 class ProcessDispatcher;
 class PortDispatcher;
 
@@ -32,16 +32,16 @@ public:
 
     Type type() const { return type_; }
 
-    mx_status_t SendPacket(UserThread* thread, uint32_t type);
+    mx_status_t SendPacket(ThreadDispatcher* thread, uint32_t type);
 
-    void OnThreadStart(UserThread* thread);
+    void OnThreadStart(ThreadDispatcher* thread);
 
-    void OnThreadSuspending(UserThread* thread);
-    void OnThreadResuming(UserThread* thread);
+    void OnThreadSuspending(ThreadDispatcher* thread);
+    void OnThreadResuming(ThreadDispatcher* thread);
 
     void OnProcessExit(ProcessDispatcher* process);
-    void OnThreadExit(UserThread* thread);
-    void OnThreadExitForDebugger(UserThread* thread);
+    void OnThreadExit(ThreadDispatcher* thread);
+    void OnThreadExitForDebugger(ThreadDispatcher* thread);
 
     // Records the target that the ExceptionPort is bound to, so it can
     // unbind when the underlying PortDispatcher dies.

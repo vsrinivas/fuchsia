@@ -61,7 +61,7 @@ public:
     // and EndWait() methods must only be called under
     // that lock.
     //
-    // MessageWaiters are embedded in UserThreads, and the channel_ pointer
+    // MessageWaiters are embedded in ThreadDispatchers, and the channel_ pointer
     // can only be manipulated by their thread (via BeginWait() or EndWait()), and
     // only transitions to nullptr while holding the ChannelDispatcher's lock.
     //

@@ -317,7 +317,7 @@ mx_status_t sys_channel_call_finish(mx_time_t deadline,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
+    auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
     mxtl::RefPtr<ChannelDispatcher> channel = waiter->get_channel();
     if (!channel)
         return MX_ERR_BAD_STATE;

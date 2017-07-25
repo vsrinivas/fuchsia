@@ -100,15 +100,17 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     if (result != MX_OK)
         return result;
 
+    uint32_t pid = (uint32_t)process->get_koid();
+
     // create the thread dispatcher
     mxtl::RefPtr<Dispatcher> thread_dispatcher;
     mx_rights_t thread_rights;
-    result = process->CreateUserThread(sp.data(), options, &thread_dispatcher, &thread_rights);
+    result = ThreadDispatcher::Create(mxtl::move(process), options, sp,
+                                      &thread_dispatcher, &thread_rights);
     if (result != MX_OK)
         return result;
 
     uint32_t tid = (uint32_t)thread_dispatcher->get_koid();
-    uint32_t pid = (uint32_t)process->get_koid();
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
@@ -143,7 +145,7 @@ mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
 
 void sys_thread_exit() {
     LTRACE_ENTRY;
-    UserThread::GetCurrent()->Exit();
+    ThreadDispatcher::GetCurrent()->Exit();
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
@@ -168,7 +170,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    status = thread->thread()->ReadState(state_kind, bytes.get(), &buffer_len);
+    status = thread->ReadState(state_kind, bytes.get(), &buffer_len);
 
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is MX_OK or MX_ERR_BUFFER_TOO_SMALL.
@@ -212,7 +214,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
         return MX_ERR_INVALID_ARGS;
 
     // TODO(dje): Setting privileged values in registers.
-    status = thread->thread()->WriteState(state_kind, bytes.get(), buffer_len, false);
+    status = thread->WriteState(state_kind, bytes.get(), buffer_len, false);
     return status;
 }
 
@@ -352,7 +354,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
         return status;
 
     // test that the thread belongs to the starting process
-    if (thread->thread()->process() != process.get())
+    if (thread->process() != process.get())
         return MX_ERR_ACCESS_DENIED;
 
     HandleOwner arg_handle;

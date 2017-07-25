@@ -56,7 +56,7 @@ public:
     };
 
     static ProcessDispatcher* GetCurrent() {
-        UserThread* current = UserThread::GetCurrent();
+        ThreadDispatcher* current = ThreadDispatcher::GetCurrent();
         DEBUG_ASSERT(current);
         return current->process();
     }
@@ -203,10 +203,6 @@ public:
     status_t GetVmos(user_ptr<mx_info_vmo_t> vmos, size_t max,
                      size_t* actual, size_t* available);
 
-    status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags,
-                              mxtl::RefPtr<Dispatcher>* out_dispatcher,
-                              mx_rights_t* out_rights);
-
     status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
 
     // exception handling support
@@ -227,7 +223,7 @@ public:
 
     // Look up a thread in this process given its koid.
     // Returns nullptr if not found.
-    mxtl::RefPtr<UserThread> LookupThreadById(mx_koid_t koid);
+    mxtl::RefPtr<ThreadDispatcher> LookupThreadById(mx_koid_t koid);
 
     uintptr_t get_debug_addr() const;
     mx_status_t set_debug_addr(uintptr_t addr);
@@ -282,9 +278,9 @@ private:
                                                 mx_rights_t* out_rights);
 
     // Thread lifecycle support
-    friend class UserThread;
-    status_t AddThread(UserThread* t, bool initial_thread);
-    void RemoveThread(UserThread* t);
+    friend class ThreadDispatcher;
+    status_t AddThread(ThreadDispatcher* t, bool initial_thread);
+    void RemoveThread(ThreadDispatcher* t);
 
     void SetStateLocked(State) TA_REQ(state_lock_);
 
@@ -306,7 +302,7 @@ private:
     mx_handle_t handle_rand_ = 0;
 
     // list of threads in this process
-    using ThreadList = mxtl::DoublyLinkedList<UserThread*, UserThread::ThreadListTraits>;
+    using ThreadList = mxtl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;
     ThreadList thread_list_ TA_GUARDED(state_lock_);
 
     // our address space

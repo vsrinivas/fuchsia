@@ -187,7 +187,7 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
 
     canary_.Assert();
 
-    auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
+    auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
     if (unlikely(waiter->BeginWait(mxtl::WrapRefPtr(this), msg->get_txid()) != MX_OK)) {
         // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
         // channel calls has been violated.  Shoot the misbehaving process.
