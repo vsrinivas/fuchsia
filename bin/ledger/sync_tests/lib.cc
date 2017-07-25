@@ -60,6 +60,10 @@ std::unique_ptr<SyncTest::LedgerPtrHolder> SyncTest::GetLedger(
       ledger_name, dir.path(), test::SyncState::CLOUD_SYNC_ENABLED, *server_id,
       &ledger_ptr, erase);
   EXPECT_EQ(ledger::Status::OK, status);
+  if (status != ledger::Status::OK) {
+    FTL_LOG(ERROR) << "Unable to get a ledger.";
+    return nullptr;
+  }
   return std::make_unique<SyncTest::LedgerPtrHolder>(
       std::move(dir), std::move(controller), std::move(ledger_ptr));
 }

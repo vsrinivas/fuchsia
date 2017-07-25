@@ -12,6 +12,7 @@ executable("ledger_sync_tests") {
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/fidl_helpers",
+    "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:app_test",
     "//apps/ledger/src/test:lib",
     "//lib/fidl/cpp/bindings",

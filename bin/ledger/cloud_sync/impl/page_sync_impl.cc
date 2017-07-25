@@ -332,6 +332,7 @@ void PageSyncImpl::SetRemoteWatcher(bool is_retry) {
 
 void PageSyncImpl::UploadUnsyncedCommits() {
   if (!commits_to_upload_) {
+    SetUploadState(UPLOAD_IDLE);
     CheckIdle();
     return;
   }
