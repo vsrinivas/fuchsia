@@ -144,6 +144,7 @@ static size_t tls_cnt, tls_offset, tls_align = MIN_TLS_ALIGN;
 static size_t static_tls_cnt;
 static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
 
+static bool log_libs = false;
 static atomic_uintptr_t unlogged_tail;
 
 static mx_handle_t loader_svc = MX_HANDLE_INVALID;
@@ -1595,7 +1596,6 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
 
     libc.page_size = PAGE_SIZE;
 
-    bool log_libs = false;
     char* ld_preload = getenv("LD_PRELOAD");
     const char* ld_debug = getenv("LD_DEBUG");
     if (ld_debug != NULL && ld_debug[0] != '\0')
@@ -1977,6 +1977,9 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
                           memory_order_release);
 
     pthread_rwlock_unlock(&lock);
+
+    if (log_libs)
+        _dl_log_unlogged();
 
     do_init_fini(new_tail);
 
