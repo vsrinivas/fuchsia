@@ -39,7 +39,11 @@ const fsck_options_t test_fsck_options = {
 
 #define TEST_BLOCK_SIZE 512
 #define TEST_BLOCK_COUNT (1 << 23)
-#define TEST_FVM_SLICE_SIZE (64 * (1 << 20))
+// This slice size is intentionally somewhat small, so
+// we can test increasing the size of a "single-slice"
+// inode table. We may want support for tests with configurable
+// slice sizes in the future.
+#define TEST_FVM_SLICE_SIZE (8 * (1 << 20))
 
 constexpr uint8_t kTestUniqueGUID[] = {
     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,

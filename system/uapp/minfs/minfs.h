@@ -84,7 +84,7 @@ typedef struct {
     uint32_t dat_block;     // first blockno available for file data
     // The following flags are only valid with (flags & kMinfsFlagFVM):
     uint64_t slice_size;    // Underlying slice size
-    uint64_t vslice_count;  // Number of underlying slices
+    uint64_t vslice_count;  // Number of allocated underlying slices
     uint32_t ibm_slices;    // Slices allocated to inode bitmap
     uint32_t abm_slices;    // Slices allocated to block bitmap
     uint32_t ino_slices;    // Slices allocated to inode table

@@ -121,6 +121,7 @@ mx_status_t Minfs::InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* i
     const uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
     const uint32_t inoblock_rel = ino / kMinfsInodesPerBlock;
     const uint32_t inoblock_abs = inoblock_rel + info_.ino_block;
+    assert(inoblock_abs < kFVMBlockDataStart);
 #ifdef __Fuchsia__
     void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
                             (uintptr_t)(inoblock_rel * kMinfsBlockSize));
@@ -211,11 +212,139 @@ mx_status_t Minfs::InoFree(VnodeMinfs* vn) {
     return MX_OK;
 }
 
+mx_status_t Minfs::AddInodes() {
+#ifdef __Fuchsia__
+    if ((info_.flags & kMinfsFlagFVM) == 0) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    const size_t kBlocksPerSlice = info_.slice_size / kMinfsBlockSize;
+    extend_request_t request;
+    request.length = 1;
+    request.offset = (kFVMBlockInodeStart / kBlocksPerSlice) + info_.ino_slices;
+
+    const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size /
+                                                           kMinfsInodeSize);
+    uint32_t inodes = (info_.ino_slices + static_cast<uint32_t>(request.length))
+            * kInodesPerSlice;
+    uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    uint32_t ibmblks_old = (info_.inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    MX_DEBUG_ASSERT(ibmblks_old <= ibmblks);
+    if (ibmblks > kBlocksPerSlice) {
+        // TODO(smklein): Increase the size of the inode bitmap,
+        // in addition to the size of the inode table.
+        fprintf(stderr, "Minfs::AddInodes needs to increase inode bitmap size");
+        return MX_ERR_NO_SPACE;
+    }
+
+    if (bc_->FVMExtend(&request) != MX_OK) {
+        // TODO(smklein): Query FVM on reboot to verify our
+        // superblock matches our allocated extents.
+        fprintf(stderr, "Minfs::AddInodes FVM Extend failure");
+        return MX_ERR_NO_SPACE;
+    }
+
+    WriteTxn txn(bc_.get());
+
+    // Update the inode bitmap, write the new blocks back to disk
+    // as "zero".
+    if (inode_map_.Grow(mxtl::roundup(inodes, kMinfsBlockBits)) != MX_OK) {
+        return MX_ERR_NO_SPACE;
+    }
+    // Grow before shrinking to ensure the underlying storage is a multiple
+    // of kMinfsBlockSize.
+    inode_map_.Shrink(inodes);
+    if (ibmblks > ibmblks_old) {
+        txn.Enqueue(inode_map_vmoid_, ibmblks_old, info_.ibm_block + ibmblks_old,
+                    ibmblks - ibmblks_old);
+    }
+
+    // Update the inode table
+    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+    if (inode_table_->Grow(inoblks * kMinfsBlockSize) != MX_OK) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    info_.vslice_count += request.length;
+    info_.ino_slices += static_cast<uint32_t>(request.length);
+    info_.inode_count = inodes;
+    ibmblks_ = ibmblks;
+    txn.Enqueue(info_vmoid_, 0, 0, 1);
+
+    return txn.Flush();
+#else
+    return MX_ERR_NO_SPACE;
+#endif
+}
+
+mx_status_t Minfs::AddBlocks() {
+#ifdef __Fuchsia__
+    if ((info_.flags & kMinfsFlagFVM) == 0) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    const size_t kBlocksPerSlice = info_.slice_size / kMinfsBlockSize;
+    extend_request_t request;
+    request.length = 1;
+    request.offset = (kFVMBlockDataStart / kBlocksPerSlice) + info_.dat_slices;
+    uint64_t blocks64 = (info_.dat_slices + request.length) * kBlocksPerSlice;
+    MX_DEBUG_ASSERT(blocks64 <= mxtl::numeric_limits<uint32_t>::max());
+    uint32_t blocks = static_cast<uint32_t>(blocks64);
+    uint32_t abmblks = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    uint32_t abmblks_old = (info_.block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    MX_DEBUG_ASSERT(abmblks_old <= abmblks);
+
+    if (abmblks > kBlocksPerSlice) {
+        // TODO(smklein): Increase the size of the block bitmap.
+        fprintf(stderr, "Minfs::AddBlocks needs to increase block bitmap size");
+        return MX_ERR_NO_SPACE;
+    }
+
+    if (bc_->FVMExtend(&request) != MX_OK) {
+        // TODO(smklein): Query FVM on reboot to verify our
+        // superblock matches our allocated extents.
+        fprintf(stderr, "Minfs::AddBlocks FVM Extend failure");
+        return MX_ERR_NO_SPACE;
+    }
+
+    WriteTxn txn(bc_.get());
+
+    // Update the block bitmap, write the new blocks back to disk
+    // as "zero".
+    if (block_map_.Grow(mxtl::roundup(blocks, kMinfsBlockBits)) != MX_OK) {
+        return MX_ERR_NO_SPACE;
+    }
+    // Grow before shrinking to ensure the underlying storage is a multiple
+    // of kMinfsBlockSize.
+    block_map_.Shrink(blocks);
+    if (abmblks > abmblks_old) {
+        txn.Enqueue(block_map_vmoid_, abmblks_old, info_.abm_block + abmblks_old,
+                    abmblks - abmblks_old);
+    }
+
+    info_.vslice_count += request.length;
+    info_.dat_slices += static_cast<uint32_t>(request.length);
+    info_.block_count = blocks;
+
+    abmblks_ = abmblks;
+    txn.Enqueue(info_vmoid_, 0, 0, 1);
+    return txn.Flush();
+#else
+    return MX_ERR_NO_SPACE;
+#endif
+}
+
 mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* ino_out) {
     size_t bitoff_start;
     mx_status_t status = inode_map_.Find(false, 0, inode_map_.size(), 1, &bitoff_start);
     if (status != MX_OK) {
-        return status;
+        size_t old_size = inode_map_.size();
+        if ((status = AddInodes()) != MX_OK) {
+            return status;
+        } else if ((status = inode_map_.Find(false, old_size, inode_map_.size(),
+                                             1, &bitoff_start)) != MX_OK) {
+            return status;
+        }
     }
 
     status = inode_map_.Set(bitoff_start, bitoff_start + 1);
@@ -337,7 +466,13 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
     mx_status_t status;
     if ((status = block_map_.Find(false, hint, block_map_.size(), 1, &bitoff_start)) != MX_OK) {
         if ((status = block_map_.Find(false, 0, hint, 1, &bitoff_start)) != MX_OK) {
-            return MX_ERR_NO_SPACE;
+            size_t old_size = block_map_.size();
+            if ((status = AddBlocks()) != MX_OK) {
+                return status;
+            } else if ((status = block_map_.Find(false, old_size, block_map_.size(),
+                                                 1, &bitoff_start)) != MX_OK) {
+                return status;
+            }
         }
     }
 
@@ -584,7 +719,6 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     fvm_info_t fvm_info;
     if (bc->FVMQuery(&fvm_info) == MX_OK) {
         info.slice_size = fvm_info.slice_size;
-        info.vslice_count = fvm_info.vslice_count;
         info.flags |= kMinfsFlagFVM;
 
 
@@ -623,6 +757,9 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
             return -1;
         }
         info.dat_slices = 1;
+
+        info.vslice_count = 1 + info.ibm_slices + info.abm_slices +
+                            info.ino_slices + info.dat_slices;
 
         inodes = static_cast<uint32_t>(info.ino_slices * info.slice_size / kMinfsInodeSize);
         blocks = static_cast<uint32_t>(info.dat_slices * info.slice_size / kMinfsBlockSize);

@@ -30,6 +30,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-overflow.c \
     $(LOCAL_DIR)/test-persist.cpp \
     $(LOCAL_DIR)/test-realpath.cpp \
+    $(LOCAL_DIR)/test-resize.cpp \
     $(LOCAL_DIR)/test-rw-workers.c \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-random-op.c \

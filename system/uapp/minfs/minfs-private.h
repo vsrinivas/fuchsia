@@ -107,6 +107,11 @@ private:
 
     // Enqueues an update for allocated inode/block counts
     mx_status_t CountUpdate(WriteTxn* txn);
+
+    // If possible, attempt to resize the MinFS partition.
+    mx_status_t AddInodes();
+    mx_status_t AddBlocks();
+
 #ifdef __Fuchsia__
     mxtl::unique_ptr<fs::Dispatcher> dispatcher_{nullptr};
 #endif
