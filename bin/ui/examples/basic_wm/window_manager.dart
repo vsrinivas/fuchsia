@@ -6,8 +6,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-const Color _kCloseColor = const Color(0xAFEF9A9A);
-const Color _kTitleBarColor = const Color(0xAF90CAF9);
+const Color _kCloseColor = const Color(0xFFEF9A9A);
+const Color _kTitleBarColor = const Color(0xFF90CAF9);
+const Color _kResizerColor = const Color(0xFF00E676);
+const Color _kZoomerColor = const Color(0xFFE6EE9C);
 const Radius _kWindowDecorationCorner = const Radius.circular(8.0);
 const double _kWindowDecorationExtent = 24.0;
 const double _kBaseWindowElevation = 2.0;
@@ -92,12 +94,38 @@ class WindowResizer extends StatelessWidget {
   Widget build(BuildContext context) {
     return new PhysicalModel(
       elevation: elevation,
-      color: _kTitleBarColor,
+      color: _kResizerColor,
       borderRadius: const BorderRadius.only(
         bottomRight: _kWindowDecorationCorner,
       ),
       child: new GestureDetector(
         onPanUpdate: onResized,
+        child: new Container(
+          width: _kWindowDecorationExtent,
+          height: _kWindowDecorationExtent,
+          decoration: const BoxDecoration(),
+        ),
+      ),
+    );
+  }
+}
+
+class WindowZoomer extends StatelessWidget {
+  WindowZoomer({Key key, this.onZoomed, this.elevation}) : super(key: key);
+
+  final GestureDragUpdateCallback onZoomed;
+  final double elevation;
+
+  @override
+  Widget build(BuildContext context) {
+    return new PhysicalModel(
+      elevation: elevation,
+      color: _kZoomerColor,
+      borderRadius: const BorderRadius.only(
+        bottomLeft: _kWindowDecorationCorner,
+      ),
+      child: new GestureDetector(
+        onPanUpdate: onZoomed,
         child: new Container(
           width: _kWindowDecorationExtent,
           height: _kWindowDecorationExtent,
@@ -134,11 +162,25 @@ class _WindowFrameState extends State<WindowFrame> {
 
   Offset _offset = Offset.zero;
   Size _size = _kInitialWindowSize;
+  double _zoomX = 1.0;
+  double _zoomY = 1.0;
 
   void _handleResizerDrag(DragUpdateDetails details) {
     setState(() {
-      _size = new Size(math.max(0.0, _size.width + details.delta.dx),
-          math.max(0.0, _size.height + details.delta.dy));
+      _size = new Size(math.max(0.0, _size.width + details.delta.dx / _zoomX),
+          math.max(0.0, _size.height + details.delta.dy / _zoomY));
+    });
+  }
+
+  void _handleZoomerDrag(DragUpdateDetails details) {
+    setState(() {
+      if (_size.width > 0.0) {
+        _zoomX = (_size.width * _zoomX - details.delta.dx) / _size.width;
+        _offset += new Offset(details.delta.dx, 0.0);
+      }
+      if (_size.height > 0.0) {
+        _zoomY = (_size.height * _zoomY + details.delta.dy) / _size.height;
+      }
     });
   }
 
@@ -161,8 +203,8 @@ class _WindowFrameState extends State<WindowFrame> {
     return new Positioned(
       left: _offset.dx,
       top: _offset.dy,
-      width: _size.width + _kWindowDecorationExtent * 0.5,
-      height: _size.height + _kWindowDecorationExtent * 1.5,
+      width: _size.width * _zoomX + _kWindowDecorationExtent,
+      height: _size.height * _zoomY + _kWindowDecorationExtent * 1.5,
       child: new Stack(
         children: <Widget>[
           new Positioned(
@@ -173,7 +215,16 @@ class _WindowFrameState extends State<WindowFrame> {
               elevation: widget.elevation,
             ),
           ),
+          new Positioned(
+            left: 0.0,
+            bottom: 0.0,
+            child: new WindowZoomer(
+              onZoomed: _handleZoomerDrag,
+              elevation: widget.elevation,
+            ),
+          ),
           new Positioned.fill(
+            left: _kWindowDecorationExtent * 0.5,
             right: _kWindowDecorationExtent * 0.5,
             bottom: _kWindowDecorationExtent * 0.5,
             child: new PhysicalModel(
@@ -191,7 +242,16 @@ class _WindowFrameState extends State<WindowFrame> {
                     onClosed: _handleClose,
                     onMoved: _handleMove,
                   ),
-                  new Expanded(child: widget.window.child),
+                  new Expanded(
+                    child: new FittedBox(
+                      fit: BoxFit.contain,
+                      child: new SizedBox(
+                        width: _size.width,
+                        height: _size.height,
+                        child: widget.window.child,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
