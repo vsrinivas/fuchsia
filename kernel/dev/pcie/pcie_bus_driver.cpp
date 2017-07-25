@@ -493,6 +493,10 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
 
+    if (!is_mmio_) {
+        TRACEF("PIO space unimplemented!\n");
+        return nullptr;
+    }
     // Find the region which would contain this bus_id, if any.
     // add does not overlap with any already defined regions.
     AutoLock ecam_region_lock(&ecam_region_lock_);
