@@ -107,6 +107,13 @@ library and over time it is expected that few pieces of code will make direct
 use of it.
 - [Launchpad API (launchpad.h)](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/launchpad/include/launchpad/launchpad.h)
 
+#### **Ledger**
+
+[Ledger](https://fuchsia.googlesource.com/ledger) is a distributed storage
+system for Fuchsia. Applications use Ledger either directly or through state
+synchronization primitives exposed by the Modular framework that are based on
+Ledger under-the-hood.
+
 #### **LK**
 
 Little Kernel (LK) is the embedded kernel that formed the core of the Magenta Kernel.
