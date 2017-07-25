@@ -41,7 +41,7 @@ void x86_register_msi_handler(const pcie_msi_block_t* block,
 
 status_t platform_configure_watchdog(uint32_t frequency);
 
-typedef void (*enumerate_e820_callback)(uint64_t base, uint64_t size, void* ctx);
+typedef void (*enumerate_e820_callback)(uint64_t base, uint64_t size, bool is_mem, void* ctx);
 status_t enumerate_e820(enumerate_e820_callback callback, void* ctx);
 
 __END_CDECLS

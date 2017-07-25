@@ -28,6 +28,7 @@ extern multiboot_info_t *_multiboot_info;
 struct addr_range {
     uint64_t base;
     uint64_t size;
+    bool is_mem;
 };
 
 /* Values that will store the largest low-memory contiguous address space
@@ -456,7 +457,8 @@ status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
 
     DEBUG_ASSERT(cached_e820_entry_count <= countof(cached_e820_entries));
     for (size_t i = 0; i < cached_e820_entry_count; ++i)
-        callback(cached_e820_entries[i].base, cached_e820_entries[i].size, ctx);
+        callback(cached_e820_entries[i].base, cached_e820_entries[i].size,
+                 cached_e820_entries[i].is_mem, ctx);
 
     return MX_OK;
 }
@@ -495,6 +497,7 @@ void platform_mem_init(void)
             struct addr_range* entry = &cached_e820_entries[cached_e820_entry_count++];
             entry->base = range.base;
             entry->size = range.size;
+            entry->is_mem = range.is_mem ? true : false;
 
         }
     } else {

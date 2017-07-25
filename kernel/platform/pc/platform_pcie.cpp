@@ -105,7 +105,7 @@ static void x86_pcie_init_hook(uint level) {
         return;
     }
 
-    res = enumerate_e820([](uint64_t base, uint64_t size, void* ctx) -> void
+    res = enumerate_e820([](uint64_t base, uint64_t size, bool is_mem, void* ctx) -> void
     {
         DEBUG_ASSERT(ctx != nullptr);
         auto pcie = reinterpret_cast<PcieBusDriver*>(ctx);
