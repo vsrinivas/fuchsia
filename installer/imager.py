@@ -51,7 +51,7 @@ def cp_fat(mcopy_path, mdir_path, target_disk, local_path, remote_path, working_
 
   with open('/dev/null', 'w') as f:
     try:
-      subprocess.call(mdir_cmd, cwd=working_dir, stdout=f, stderr=f)
+      subprocess.check_call(mdir_cmd, cwd=working_dir, stdout=f, stderr=f)
       print "File '%s' already exists." % remote_path
       return False
     except (subprocess.CalledProcessError):
@@ -63,7 +63,7 @@ def cp_fat(mcopy_path, mdir_path, target_disk, local_path, remote_path, working_
   mcpy_cmd = [mcopy_path, "-i", target_disk, local_path, "::%s" % remote_path]
 
   try:
-    subprocess.call(mcpy_cmd, cwd=working_dir)
+    subprocess.check_call(mcpy_cmd, cwd=working_dir)
   except (subprocess.CalledProcessError):
     print "Error copying %s" % local_path
     return False
@@ -77,7 +77,7 @@ def mkdir_fat(mmd_path, target_disk, remote_path, working_dir):
   mmd_cmd = [mmd_path, "-i", target_disk, "::%s" % remote_path]
 
   try:
-    subprocess.call(mmd_cmd, cwd=working_dir)
+    subprocess.check_call(mmd_cmd, cwd=working_dir)
   except (subprocess.CalledProcessError):
     print "Error making directory %s" % remote_path
     return False
