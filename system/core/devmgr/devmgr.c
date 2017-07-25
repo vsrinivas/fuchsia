@@ -364,6 +364,7 @@ int main(int argc, char** argv) {
         // It has its own check.
     }
 
+    // Start crashlogger.
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = {
             "/boot/bin/crashlogger",
@@ -377,9 +378,23 @@ int main(int argc, char** argv) {
             // trace buffers if they're available.
             argv_crashlogger[argc_crashlogger++] = "-pton";
         }
-        devmgr_launch(svcs_job_handle, "crashlogger",
-                      argc_crashlogger, argv_crashlogger,
-                      NULL, -1, NULL, NULL, 0);
+
+        // Bind the exception port now, to avoid missing any crashes that
+        // might occur early on before the crashlogger process has finished
+        // initializing.
+        mx_handle_t exception_port;
+        // This should match the value used by crashlogger.
+        const uint64_t kSysExceptionKey = 1166444u;
+        if (mx_port_create(0, &exception_port) == MX_OK &&
+            mx_task_bind_exception_port(MX_HANDLE_INVALID, exception_port,
+                                        kSysExceptionKey, 0) == MX_OK) {
+            mx_handle_t handles[] = { exception_port };
+            uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
+
+            devmgr_launch(svcs_job_handle, "crashlogger",
+                          argc_crashlogger, argv_crashlogger,
+                          NULL, -1, handles, handle_types, countof(handles));
+        }
     }
 
     mx_channel_create(0, &svc_root_handle, &svc_request_handle);

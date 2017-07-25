@@ -420,6 +420,10 @@ void usage() {
     fprintf(stderr, "  -n = do not use libunwind\n");
     fprintf(stderr, "  -s[on|off] = enable s/w breakpoints to trigger\n");
     fprintf(stderr, "      a backtrace without terminating the process\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "The exception port may be passed in as an argument, "
+            "as PA_HND(PA_USER0, 0).  (Note that the port key value must "
+            "match the one used by crashlogger.)\n");
 }
 
 int main(int argc, char** argv) {
@@ -526,16 +530,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mx_handle_t ex_port;
-    if ((status = mx_port_create(0, &ex_port)) < 0) {
-        print_mx_error("mx_port_create failed", status);
-        return 1;
-    }
+    // The exception port may be passed in from the parent process.  If it
+    // wasn't, we bind the system exception port.
+    mx_handle_t ex_port = mx_get_startup_handle(PA_HND(PA_USER0, 0));
+    if (ex_port == MX_HANDLE_INVALID) {
+        if ((status = mx_port_create(0, &ex_port)) < 0) {
+            print_mx_error("mx_port_create failed", status);
+            return 1;
+        }
 
-    status = bind_system_exception_port(ex_port);
-    if (status < 0) {
-        print_mx_error("unable to bind system exception port", status);
-        return 1;
+        status = bind_system_exception_port(ex_port);
+        if (status < 0) {
+            print_mx_error("unable to bind system exception port", status);
+            return 1;
+        }
     }
 
     printf("crashlogger service ready\n");
