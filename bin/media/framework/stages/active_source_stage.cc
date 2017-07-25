@@ -6,8 +6,9 @@
 
 namespace media {
 
-ActiveSourceStage::ActiveSourceStage(std::shared_ptr<ActiveSource> source)
-    : output_(this, 0), source_(source), prepared_(false) {
+ActiveSourceStage::ActiveSourceStage(Engine* engine,
+                                     std::shared_ptr<ActiveSource> source)
+    : Stage(engine), output_(this, 0), source_(source), prepared_(false) {
   FTL_DCHECK(source_);
 
   supply_function_ = [this](PacketPtr packet) {
@@ -75,13 +76,11 @@ void ActiveSourceStage::UnprepareOutput(size_t index,
   output_.SetCopyAllocator(nullptr);
 }
 
-void ActiveSourceStage::Update(Engine* engine) {
-  FTL_DCHECK(engine);
-
+void ActiveSourceStage::Update() {
   Demand demand = output_.demand();
 
   if (demand != Demand::kNegative && !packets_.empty()) {
-    output_.SupplyPacket(std::move(packets_.front()), engine);
+    output_.SupplyPacket(std::move(packets_.front()));
     packets_.pop_front();
     source_->SetDownstreamDemand(Demand::kNegative);
   } else {

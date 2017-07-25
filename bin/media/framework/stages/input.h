@@ -51,7 +51,7 @@ class Input {
   PacketPtr& packet_from_upstream() { return packet_from_upstream_; }
 
   // Updates mate's demand. Called only by Stage::Update implementations.
-  void SetDemand(Demand demand, Engine* engine) const;
+  void SetDemand(Demand demand) const;
 
   // Updates packet_from_upstream. Return value indicates whether the stage for
   // this input should be added to the supply backlog. Called only by

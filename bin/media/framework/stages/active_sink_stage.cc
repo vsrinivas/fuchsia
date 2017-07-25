@@ -6,8 +6,9 @@
 
 namespace media {
 
-ActiveSinkStage::ActiveSinkStage(std::shared_ptr<ActiveSink> sink)
-    : input_(this, 0), sink_(sink) {
+ActiveSinkStage::ActiveSinkStage(Engine* engine,
+                                 std::shared_ptr<ActiveSink> sink)
+    : Stage(engine), input_(this, 0), sink_(sink) {
   FTL_DCHECK(sink_);
 
   demand_function_ = [this](Demand demand) {
@@ -51,8 +52,7 @@ void ActiveSinkStage::PrepareOutput(size_t index,
   FTL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-void ActiveSinkStage::Update(Engine* engine) {
-  FTL_DCHECK(engine);
+void ActiveSinkStage::Update() {
   FTL_DCHECK(sink_);
 
   if (input_.packet_from_upstream()) {
@@ -60,7 +60,7 @@ void ActiveSinkStage::Update(Engine* engine) {
         sink_->SupplyPacket(std::move(input_.packet_from_upstream()));
   }
 
-  input_.SetDemand(sink_demand_, engine);
+  input_.SetDemand(sink_demand_);
 }
 
 void ActiveSinkStage::FlushInput(size_t index,

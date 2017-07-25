@@ -9,8 +9,11 @@
 namespace media {
 
 ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
+    Engine* engine,
     std::shared_ptr<ActiveMultistreamSource> source)
-    : packets_per_output_(source->stream_count()), source_(source) {
+    : Stage(engine),
+      packets_per_output_(source->stream_count()),
+      source_(source) {
   FTL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
@@ -103,9 +106,8 @@ void ActiveMultistreamSourceStage::UnprepareOutput(
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
-void ActiveMultistreamSourceStage::Update(Engine* engine) {
+void ActiveMultistreamSourceStage::Update() {
   ftl::MutexLocker locker(&mutex_);
-  FTL_DCHECK(engine);
 
   FTL_DCHECK(outputs_.size() == packets_per_output_.size());
 
@@ -124,7 +126,7 @@ void ActiveMultistreamSourceStage::Update(Engine* engine) {
     } else if (output.demand() != Demand::kNegative) {
       // The output has non-negative demand and packets queued. Send a packet
       // downstream now.
-      output.SupplyPacket(std::move(packets.front()), engine);
+      output.SupplyPacket(std::move(packets.front()));
       packets.pop_front();
     }
   }

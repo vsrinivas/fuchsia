@@ -19,7 +19,8 @@ namespace media {
 class ActiveMultistreamSinkStage : public Stage,
                                    public ActiveMultistreamSinkHost {
  public:
-  ActiveMultistreamSinkStage(std::shared_ptr<ActiveMultistreamSink> sink);
+  ActiveMultistreamSinkStage(Engine* engine,
+                             std::shared_ptr<ActiveMultistreamSink> sink);
 
   ~ActiveMultistreamSinkStage() override;
 
@@ -38,11 +39,12 @@ class ActiveMultistreamSinkStage : public Stage,
                      PayloadAllocator* allocator,
                      const UpstreamCallback& callback) override;
 
-  void Update(Engine* engine) override;
-
   void FlushInput(size_t index, const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
+
+ protected:
+  void Update() override;
 
  private:
   // ActiveMultistreamSinkHost implementation.

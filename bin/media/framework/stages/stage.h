@@ -22,7 +22,7 @@ class Stage {
   using DownstreamCallback = std::function<void(size_t output_index)>;
   using UpdateCallback = std::function<void(Stage* stage)>;
 
-  Stage();
+  Stage(Engine* engine);
 
   virtual ~Stage();
 
@@ -63,9 +63,6 @@ class Stage {
   // a consequence of unpreparing the output.
   virtual void UnprepareOutput(size_t index, const UpstreamCallback& callback);
 
-  // Performs processing.
-  virtual void Update(Engine* engine) = 0;
-
   // Flushes an input. The callback is used to indicate what outputs are ready
   // to be flushed as a consequence of flushing the input.
   virtual void FlushInput(size_t index, const DownstreamCallback& callback) = 0;
@@ -73,13 +70,19 @@ class Stage {
   // Flushes an output.
   virtual void FlushOutput(size_t index) = 0;
 
+  Engine* engine() { return engine_; }
+
  protected:
+  // Updates packet supply and demand.
+  virtual void Update() = 0;
+
   void RequestUpdate() {
     FTL_DCHECK(update_callback_);
     update_callback_(this);
   }
 
  private:
+  Engine* const engine_;
   UpdateCallback update_callback_;
   bool in_supply_backlog_;
   bool in_demand_backlog_;

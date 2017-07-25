@@ -30,8 +30,8 @@ class StageCreator;
   class StageCreator<                                                        \
       T, typename std::enable_if<std::is_base_of<TModel, T>::value>::type> { \
    public:                                                                   \
-    static inline Stage* Create(std::shared_ptr<T> t_ptr) {                  \
-      return new TStage(std::shared_ptr<TModel>(t_ptr));                     \
+    static inline Stage* Create(Engine* engine, std::shared_ptr<T> t_ptr) {  \
+      return new TStage(engine, std::shared_ptr<TModel>(t_ptr));             \
     }                                                                        \
   };
 
@@ -113,7 +113,7 @@ class Graph {
   template <typename T>
   NodeRef Add(std::shared_ptr<T> t_ptr) {
     FTL_DCHECK(t_ptr);
-    return Add(internal::StageCreator<T>::Create(t_ptr));
+    return Add(internal::StageCreator<T>::Create(&engine_, t_ptr));
   }
 
   // Removes a node from the graph after disconnecting it from other nodes.

@@ -6,8 +6,10 @@
 
 namespace media {
 
-TransformStage::TransformStage(std::shared_ptr<Transform> transform)
-    : input_(this, 0),
+TransformStage::TransformStage(Engine* engine,
+                               std::shared_ptr<Transform> transform)
+    : Stage(engine),
+      input_(this, 0),
       output_(this, 0),
       transform_(transform),
       allocator_(nullptr),
@@ -57,8 +59,7 @@ void TransformStage::UnprepareOutput(size_t index,
   callback(0);
 }
 
-void TransformStage::Update(Engine* engine) {
-  FTL_DCHECK(engine);
+void TransformStage::Update() {
   FTL_DCHECK(allocator_);
 
   while (input_.packet_from_upstream() &&
@@ -74,11 +75,11 @@ void TransformStage::Update(Engine* engine) {
     }
 
     if (output_packet) {
-      output_.SupplyPacket(std::move(output_packet), engine);
+      output_.SupplyPacket(std::move(output_packet));
     }
   }
 
-  input_.SetDemand(output_.demand(), engine);
+  input_.SetDemand(output_.demand());
 }
 
 void TransformStage::FlushInput(size_t index,

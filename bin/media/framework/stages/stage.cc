@@ -4,11 +4,15 @@
 
 #include "apps/media/src/framework/stages/stage.h"
 
+#include "apps/media/src/framework/engine.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
 
-Stage::Stage() : in_supply_backlog_(false), in_demand_backlog_(false) {}
+Stage::Stage(Engine* engine)
+    : engine_(engine), in_supply_backlog_(false), in_demand_backlog_(false) {
+  FTL_DCHECK(engine_);
+}
 
 Stage::~Stage() {}
 

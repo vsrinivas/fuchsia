@@ -14,7 +14,7 @@ namespace media {
 // A stage that hosts an ActiveSink.
 class ActiveSinkStage : public Stage {
  public:
-  ActiveSinkStage(std::shared_ptr<ActiveSink> sink);
+  ActiveSinkStage(Engine* engine, std::shared_ptr<ActiveSink> sink);
 
   ~ActiveSinkStage() override;
 
@@ -33,11 +33,12 @@ class ActiveSinkStage : public Stage {
                      PayloadAllocator* allocator,
                      const UpstreamCallback& callback) override;
 
-  void Update(Engine* engine) override;
-
   void FlushInput(size_t index, const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
+
+ protected:
+  void Update() override;
 
  private:
   Input input_;

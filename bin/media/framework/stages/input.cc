@@ -21,12 +21,11 @@ void Input::Connect(Output* output) {
   mate_ = output;
 }
 
-void Input::SetDemand(Demand demand, Engine* engine) const {
-  FTL_DCHECK(engine);
+void Input::SetDemand(Demand demand) const {
   FTL_DCHECK(mate_);
 
   if (mate_->UpdateDemandFromInput(demand)) {
-    engine->PushToDemandBacklog(mate_->stage());
+    stage_->engine()->PushToDemandBacklog(mate_->stage());
   }
 }
 

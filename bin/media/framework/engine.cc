@@ -150,7 +150,7 @@ void Engine::Update(Stage* stage) {
 
   packets_produced_ = false;
 
-  stage->Update(this);
+  stage->Update();
 
   // If the stage produced packets, it may need to reevaluate demand later.
   if (packets_produced_) {

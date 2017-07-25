@@ -14,7 +14,7 @@ namespace media {
 // A stage that hosts an ActiveSource.
 class ActiveSourceStage : public Stage {
  public:
-  ActiveSourceStage(std::shared_ptr<ActiveSource> source);
+  ActiveSourceStage(Engine* engine, std::shared_ptr<ActiveSource> source);
 
   ~ActiveSourceStage() override;
 
@@ -35,11 +35,12 @@ class ActiveSourceStage : public Stage {
 
   void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
 
-  void Update(Engine* engine) override;
-
   void FlushInput(size_t index, const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
+
+ protected:
+  void Update() override;
 
  private:
   Output output_;

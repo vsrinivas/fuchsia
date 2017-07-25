@@ -36,9 +36,8 @@ Demand Output::demand() const {
   return demand_;
 }
 
-void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
+void Output::SupplyPacket(PacketPtr packet) const {
   FTL_DCHECK(packet);
-  FTL_DCHECK(engine);
   FTL_DCHECK(mate_);
 
   if (copy_allocator_ != nullptr) {
@@ -63,7 +62,7 @@ void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
   }
 
   if (mate_->SupplyPacketFromOutput(std::move(packet))) {
-    engine->PushToSupplyBacklog(mate_->stage());
+    stage_->engine()->PushToSupplyBacklog(mate_->stage());
   }
 }
 

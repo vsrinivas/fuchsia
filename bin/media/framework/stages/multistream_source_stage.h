@@ -15,7 +15,8 @@ namespace media {
 // TODO(dalesat): May need to grow the list of outputs dynamically.
 class MultistreamSourceStage : public Stage {
  public:
-  MultistreamSourceStage(std::shared_ptr<MultistreamSource> source);
+  MultistreamSourceStage(Engine* engine,
+                         std::shared_ptr<MultistreamSource> source);
 
   ~MultistreamSourceStage() override;
 
@@ -36,11 +37,12 @@ class MultistreamSourceStage : public Stage {
 
   void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
 
-  void Update(Engine* engine) override;
-
   void FlushInput(size_t index, const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
+
+ protected:
+  void Update() override;
 
  private:
   std::vector<Output> outputs_;

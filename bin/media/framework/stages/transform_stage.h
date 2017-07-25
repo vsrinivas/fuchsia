@@ -12,7 +12,7 @@ namespace media {
 // A stage that hosts a Transform.
 class TransformStage : public Stage {
  public:
-  TransformStage(std::shared_ptr<Transform> transform);
+  TransformStage(Engine* engine, std::shared_ptr<Transform> transform);
 
   ~TransformStage() override;
 
@@ -33,11 +33,12 @@ class TransformStage : public Stage {
 
   void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
 
-  void Update(Engine* engine) override;
-
   void FlushInput(size_t index, const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
+
+ protected:
+  void Update() override;
 
  private:
   Input input_;

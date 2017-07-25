@@ -17,7 +17,8 @@ namespace media {
 // A stage that hosts an ActiveMultistreamSource.
 class ActiveMultistreamSourceStage : public Stage {
  public:
-  ActiveMultistreamSourceStage(std::shared_ptr<ActiveMultistreamSource> source);
+  ActiveMultistreamSourceStage(Engine* engine,
+                               std::shared_ptr<ActiveMultistreamSource> source);
 
   ~ActiveMultistreamSourceStage() override;
 
@@ -38,11 +39,12 @@ class ActiveMultistreamSourceStage : public Stage {
 
   void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
 
-  void Update(Engine* engine) override;
-
   void FlushInput(size_t index, const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
+
+ protected:
+  void Update() override;
 
  private:
   std::vector<Output> outputs_;

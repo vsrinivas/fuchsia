@@ -49,7 +49,7 @@ class Output {
   Demand demand() const;
 
   // Supplies a packet to mate. Called only by Stage::Update implementations.
-  void SupplyPacket(PacketPtr packet, Engine* engine) const;
+  void SupplyPacket(PacketPtr packet) const;
 
   // Updates packet demand. Called only by Input instances.
   bool UpdateDemandFromInput(Demand demand);

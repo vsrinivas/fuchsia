@@ -7,8 +7,9 @@
 namespace media {
 
 ActiveMultistreamSinkStage::ActiveMultistreamSinkStage(
+    Engine* engine,
     std::shared_ptr<ActiveMultistreamSink> sink)
-    : sink_(sink) {
+    : Stage(engine), sink_(sink) {
   FTL_DCHECK(sink_);
   sink_->SetHost(this);
   // Add one unallocated input so this stage isn't misidentified as a source.
@@ -50,8 +51,7 @@ void ActiveMultistreamSinkStage::PrepareOutput(
   FTL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-void ActiveMultistreamSinkStage::Update(Engine* engine) {
-  FTL_DCHECK(engine);
+void ActiveMultistreamSinkStage::Update() {
   FTL_DCHECK(sink_);
 
   ftl::MutexLocker locker(&mutex_);
@@ -73,7 +73,7 @@ void ActiveMultistreamSinkStage::Update(Engine* engine) {
       ++iter;
     }
 
-    input->input_.SetDemand(input->demand_, engine);
+    input->input_.SetDemand(input->demand_);
   }
 }
 

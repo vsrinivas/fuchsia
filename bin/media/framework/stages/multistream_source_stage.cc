@@ -9,8 +9,9 @@
 namespace media {
 
 MultistreamSourceStage::MultistreamSourceStage(
+    Engine* engine,
     std::shared_ptr<MultistreamSource> source)
-    : source_(source), ended_streams_(0) {
+    : Stage(engine), source_(source), ended_streams_(0) {
   FTL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
@@ -62,9 +63,7 @@ void MultistreamSourceStage::UnprepareOutput(size_t index,
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
-void MultistreamSourceStage::Update(Engine* engine) {
-  FTL_DCHECK(engine);
-
+void MultistreamSourceStage::Update() {
   while (true) {
     if (cached_packet_ && HasPositiveDemand(outputs_)) {
       FTL_DCHECK(cached_packet_output_index_ < outputs_.size());
@@ -72,7 +71,7 @@ void MultistreamSourceStage::Update(Engine* engine) {
 
       if (output.demand() != Demand::kNegative) {
         // cached_packet_ is intended for an output which will accept packets.
-        output.SupplyPacket(std::move(cached_packet_), engine);
+        output.SupplyPacket(std::move(cached_packet_));
       }
     }
 
