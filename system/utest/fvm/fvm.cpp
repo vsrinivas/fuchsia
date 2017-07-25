@@ -1524,7 +1524,7 @@ static bool TestMounting(void) {
 
     // Allocate one VPart
     alloc_req_t request;
-    request.slice_count = 6;
+    request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);

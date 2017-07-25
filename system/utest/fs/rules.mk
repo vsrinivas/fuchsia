@@ -13,7 +13,7 @@ MODULE_USERTEST_GROUP := fs
 MODULE_NAME := fs-test
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/filesystems.c \
+    $(LOCAL_DIR)/filesystems.cpp \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/misc.c \
     $(LOCAL_DIR)/wrap.c \
@@ -47,9 +47,13 @@ MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
 MODULE_LDFLAGS += --wrap chdir --wrap renameat --wrap realpath --wrap remove
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fvm \
     system/ulib/fs \
+    system/ulib/gpt \
+    system/ulib/digest \
     system/ulib/mxcpp \
     system/ulib/mxtl \
+    third_party/ulib/cryptolib \
 
 MODULE_LIBS := \
     system/ulib/mxio \

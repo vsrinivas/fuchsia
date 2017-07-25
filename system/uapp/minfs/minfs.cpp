@@ -14,6 +14,7 @@
 #include <fs/trace.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/limits.h>
 #include <mxtl/unique_ptr.h>
 #ifdef __Fuchsia__
 #include <fs/vfs-dispatcher.h>
@@ -34,6 +35,7 @@ void minfs_dump_info(const minfs_info_t* info) {
     FS_TRACE(MINFS, "minfs: alloc bitmap @ %10u\n", info->abm_block);
     FS_TRACE(MINFS, "minfs: inode table  @ %10u\n", info->ino_block);
     FS_TRACE(MINFS, "minfs: data blocks  @ %10u\n", info->dat_block);
+    FS_TRACE(MINFS, "minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
 }
 
 void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino) {
@@ -61,9 +63,54 @@ mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
         FS_TRACE_ERROR("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
         return MX_ERR_INVALID_ARGS;
     }
-    if (info->dat_block + info->block_count > max) {
-        FS_TRACE_ERROR("minfs: too large for device\n");
-        return MX_ERR_INVALID_ARGS;
+    if ((info->flags & kMinfsFlagFVM) == 0) {
+        if (info->dat_block + info->block_count > max) {
+            FS_TRACE_ERROR("minfs: too large for device\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+    } else {
+        // TODO(smklein): Verify slice size, vslice count.
+
+        // Verify that the allocated slices are sufficient to hold
+        // the allocated data structures of the filesystem.
+        size_t ibm_blocks_needed = (info->inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+        const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+        size_t ibm_blocks_allocated = info->ibm_slices * kBlocksPerSlice;
+        if (ibm_blocks_needed > ibm_blocks_allocated) {
+            FS_TRACE_ERROR("minfs: Not enough slices for inode bitmap\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (ibm_blocks_allocated + info->ibm_block >= info->abm_block) {
+            FS_TRACE_ERROR("minfs: Inode bitmap collides into block bitmap\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+        size_t abm_blocks_needed = (info->block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+        size_t abm_blocks_allocated = info->abm_slices * kBlocksPerSlice;
+        if (abm_blocks_needed > abm_blocks_allocated) {
+            FS_TRACE_ERROR("minfs: Not enough slices for block bitmap\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (abm_blocks_allocated + info->abm_block >= info->ino_block) {
+            FS_TRACE_ERROR("minfs: Block bitmap collides with inode table\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+        size_t ino_blocks_needed = (info->inode_count + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+        size_t ino_blocks_allocated = info->ino_slices * kBlocksPerSlice;
+        if (ino_blocks_needed > ino_blocks_allocated) {
+            FS_TRACE_ERROR("minfs: Not enough slices for inode table\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (ino_blocks_allocated + info->ino_block >= info->dat_block) {
+            FS_TRACE_ERROR("minfs: Inode table collides with data blocks\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+        size_t dat_blocks_needed = info->block_count;
+        size_t dat_blocks_allocated = info->dat_slices * kBlocksPerSlice;
+        if (dat_blocks_needed > dat_blocks_allocated) {
+            FS_TRACE_ERROR("minfs: Not enough slices for data blocks\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (dat_blocks_allocated + info->dat_block >
+                   mxtl::numeric_limits<uint32_t>::max()) {
+            FS_TRACE_ERROR("minfs: Data blocks overflow uint32\n");
+            return MX_ERR_INVALID_ARGS;
+        }
     }
     //TODO: validate layout
     return 0;
@@ -358,10 +405,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
 }
 
 mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
-    uint32_t blocks = bc->Maxblk();
-    uint32_t inodes = info->inode_count;
-
-    mx_status_t status = minfs_check_info(info, blocks);
+    mx_status_t status = minfs_check_info(info, bc->Maxblk());
     if (status < 0) {
         return status;
     }
@@ -373,6 +417,8 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
     }
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
+    uint32_t blocks = info->block_count;
+    uint32_t inodes = info->inode_count;
     fs->abmblks_ = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
     fs->ibmblks_ = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
@@ -461,7 +507,6 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
         return status;
     }
     const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
-    minfs_dump_info(info);
 
     Minfs* fs;
     if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) != MX_OK) {
@@ -492,15 +537,37 @@ mx_status_t Minfs::Unmount() {
     return MX_OK;
 }
 
+void minfs_free_slices(Bcache* bc, const minfs_info_t* info) {
+    if ((info->flags & kMinfsFlagFVM) == 0) {
+        return;
+    }
+#ifdef __Fuchsia__
+    extend_request_t request;
+    const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
+    if (info->ibm_slices) {
+        request.length = info->ibm_slices;
+        request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+    if (info->abm_slices) {
+        request.length = info->abm_slices;
+        request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+    if (info->ino_slices) {
+        request.length = info->ino_slices;
+        request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+    if (info->dat_slices) {
+        request.length = info->dat_slices;
+        request.offset = kFVMBlockDataStart / kBlocksPerSlice;
+        bc->FVMShrink(&request);
+    }
+#endif
+}
+
 int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
-    uint32_t blocks = bc->Maxblk();
-    uint32_t inodes = 32768;
-
-    // determine how many blocks of inodes, allocation bitmaps,
-    // and inode bitmaps there are
-    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-    uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
-
     minfs_info_t info;
     memset(&info, 0x00, sizeof(info));
     info.magic0 = kMinfsMagic0;
@@ -509,26 +576,97 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     info.flags = kMinfsFlagClean;
     info.block_size = kMinfsBlockSize;
     info.inode_size = kMinfsInodeSize;
+
+    uint32_t blocks = 0;
+    uint32_t inodes = 0;
+
+#ifdef __Fuchsia__
+    fvm_info_t fvm_info;
+    if (bc->FVMQuery(&fvm_info) == MX_OK) {
+        info.slice_size = fvm_info.slice_size;
+        info.vslice_count = fvm_info.vslice_count;
+        info.flags |= kMinfsFlagFVM;
+
+
+        if (info.slice_size % kMinfsBlockSize) {
+            fprintf(stderr, "minfs mkfs: Slice size not multiple of minfs block\n");
+            return -1;
+        }
+
+        const size_t kBlocksPerSlice = info.slice_size / kMinfsBlockSize;
+        extend_request_t request;
+        request.length = 1;
+        request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
+        if (bc->FVMExtend(&request) != MX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate inode bitmap\n");
+            return -1;
+        }
+        info.ibm_slices = 1;
+        request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
+        if (bc->FVMExtend(&request) != MX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate data bitmap\n");
+            minfs_free_slices(bc.get(), &info);
+            return -1;
+        }
+        info.abm_slices = 1;
+        request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
+        if (bc->FVMExtend(&request) != MX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate inode table\n");
+            minfs_free_slices(bc.get(), &info);
+            return -1;
+        }
+        info.ino_slices = 1;
+        request.offset = kFVMBlockDataStart / kBlocksPerSlice;
+        if (bc->FVMExtend(&request) != MX_OK) {
+            fprintf(stderr, "minfs mkfs: Failed to allocate data blocks\n");
+            minfs_free_slices(bc.get(), &info);
+            return -1;
+        }
+        info.dat_slices = 1;
+
+        inodes = static_cast<uint32_t>(info.ino_slices * info.slice_size / kMinfsInodeSize);
+        blocks = static_cast<uint32_t>(info.dat_slices * info.slice_size / kMinfsBlockSize);
+    }
+#endif
+    if ((info.flags & kMinfsFlagFVM) == 0) {
+        inodes = 32768;
+        blocks = bc->Maxblk();
+    }
+
+    // determine how many blocks of inodes, allocation bitmaps,
+    // and inode bitmaps there are
+    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+    uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    uint32_t abmblks;
+
+    info.inode_count = inodes;
     info.alloc_block_count = 0;
     info.alloc_inode_count = 0;
-    // For now, we are aligning the
-    //  - Inode bitmap
-    //  - Block bitmap
-    //  - Inode table
-    // To an 8-block boundary on disk, allowing for future expansion.
-    uint32_t dat_block_count = blocks - (8 + mxtl::roundup(ibmblks, 8u) + inoblks);
-    uint32_t abmblks = (dat_block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-    info.block_count = dat_block_count - mxtl::roundup(abmblks, 8u);
-    info.inode_count = inodes;
-    info.ibm_block = 8;
-    info.abm_block = info.ibm_block + mxtl::roundup(ibmblks, 8u);
-    info.ino_block = info.abm_block + mxtl::roundup(abmblks, 8u);
-    info.dat_block = info.ino_block + inoblks;
-    if (info.dat_block >= info.block_count) {
-        fprintf(stderr, "mkfs: Partition size (%lu bytes) is too small\n",
-                static_cast<uint64_t>(blocks) * kMinfsBlockSize);
-        return MX_ERR_INVALID_ARGS;
+    if ((info.flags & kMinfsFlagFVM) == 0) {
+        // Aligning distinct data areas to 8 block groups.
+        uint32_t non_dat_blocks = (8 + mxtl::roundup(ibmblks, 8u) + inoblks);
+        if (non_dat_blocks >= blocks) {
+            fprintf(stderr, "mkfs: Partition size (%lu bytes) is too small\n",
+                    static_cast<uint64_t>(blocks) * kMinfsBlockSize);
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        uint32_t dat_block_count = blocks - non_dat_blocks;
+        abmblks = (dat_block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+        info.block_count = dat_block_count - mxtl::roundup(abmblks, 8u);
+        info.ibm_block = 8;
+        info.abm_block = info.ibm_block + mxtl::roundup(ibmblks, 8u);
+        info.ino_block = info.abm_block + mxtl::roundup(abmblks, 8u);
+        info.dat_block = info.ino_block + inoblks;
+    } else {
+        info.block_count = blocks;
+        abmblks = (info.block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+        info.ibm_block = kFVMBlockInodeBmStart;
+        info.abm_block = kFVMBlockDataBmStart;
+        info.ino_block = kFVMBlockInodeStart;
+        info.dat_block = kFVMBlockDataStart;
     }
+
     minfs_dump_info(&info);
 
     RawBitmap abm;
@@ -540,18 +678,22 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     mx_status_t status;
     if ((status = abm.Reset(mxtl::roundup(info.block_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap\n");
+        minfs_free_slices(bc.get(), &info);
         return status;
     }
     if ((status = ibm.Reset(mxtl::roundup(info.inode_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate inode bitmap\n");
+        minfs_free_slices(bc.get(), &info);
         return status;
     }
     if ((status = abm.Shrink(info.block_count)) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to shrink block bitmap\n");
+        minfs_free_slices(bc.get(), &info);
         return status;
     }
     if ((status = ibm.Shrink(info.inode_count)) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to shrink inode bitmap\n");
+        minfs_free_slices(bc.get(), &info);
         return status;
     }
 

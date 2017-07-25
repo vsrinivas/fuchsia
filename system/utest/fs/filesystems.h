@@ -28,6 +28,7 @@ typedef struct fs_info {
     bool supports_watchers;
     bool supports_create_by_vmo;
     bool supports_mmap;
+    bool supports_resize;
     int64_t nsec_granularity;
 } fs_info_t;
 
@@ -48,37 +49,60 @@ extern const fsck_options_t test_fsck_options;
 #define NUM_FILESYSTEMS 3
 extern fs_info_t FILESYSTEMS[NUM_FILESYSTEMS];
 
-void setup_fs_test(void);
-void teardown_fs_test(void);
+typedef enum fs_test_type {
+    // The partition may appear as any generic block device
+    FS_TEST_NORMAL,
+    // The partition should appear on top of a resizable
+    // FVM device
+    FS_TEST_FVM,
+} fs_test_type_t;
+
+void setup_fs_test(fs_test_type_t test_class);
+void teardown_fs_test(fs_test_type_t test_class);
+
+inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
+    switch (t) {
+    case FS_TEST_NORMAL:
+        return info->exists();
+    case FS_TEST_FVM:
+        return info->exists() && info->supports_resize;
+    }
+    return false;
+}
 
 // As a small optimization, avoid even creating a ramdisk
 // for filesystem tests when "utest_test_type" is not at
 // LEAST size "medium". This avoids the overhead of creating
 // a ramdisk when running small tests.
-#define BEGIN_FS_TEST_CASE(case_name, fs_name, info)          \
-        BEGIN_TEST_CASE(case_name##_##fs_name)                \
-        if (utest_test_type & ~TEST_SMALL) {                  \
-            test_info = info;                                 \
-            if (test_info->exists()) {                        \
-                setup_fs_test();
+#define BEGIN_FS_TEST_CASE(case_name, fs_type, fs_name, info) \
+    BEGIN_TEST_CASE(case_name##_##fs_name)                    \
+    if (utest_test_type & ~TEST_SMALL) {                      \
+        test_info = info;                                     \
+        if (can_execute_test(test_info, fs_type)) {           \
+            setup_fs_test(fs_type);
 
-#define END_FS_TEST_CASE(case_name, fs_name)                  \
-                teardown_fs_test();                           \
-            } else {                                          \
-                printf("Filesystem not found; not tested\n"); \
-            }                                                 \
-        }                                                     \
-        END_TEST_CASE(case_name##_##fs_name)
+#define END_FS_TEST_CASE(case_name, fs_type, fs_name) \
+            teardown_fs_test(fs_type);                \
+        } else {                                      \
+            printf("Filesystem not tested\n");        \
+        }                                             \
+    }                                                 \
+    END_TEST_CASE(case_name##_##fs_name)
 
-#define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)           \
-        BEGIN_FS_TEST_CASE(case_name, memfs, &FILESYSTEMS[0])    \
-        CASE_TESTS                                               \
-        END_FS_TEST_CASE(case_name, memfs)                       \
-        BEGIN_FS_TEST_CASE(case_name, minfs, &FILESYSTEMS[1])    \
-        CASE_TESTS                                               \
-        END_FS_TEST_CASE(case_name, minfs)                       \
-        BEGIN_FS_TEST_CASE(case_name, thinfs, &FILESYSTEMS[2])   \
-        CASE_TESTS                                               \
-        END_FS_TEST_CASE(case_name, thinfs)
+#define FS_TEST_CASE(case_name, CASE_TESTS, test_type, fs_type, index)     \
+    BEGIN_FS_TEST_CASE(case_name, test_type, fs_type, &FILESYSTEMS[index]) \
+    CASE_TESTS                                                             \
+    END_FS_TEST_CASE(case_name, test_type, fs_type)
+
+#define RUN_FOR_ALL_FILESYSTEMS_TYPE(case_name, test_type, CASE_TESTS) \
+    FS_TEST_CASE(case_name, CASE_TESTS, test_type, memfs, 0)           \
+    FS_TEST_CASE(case_name, CASE_TESTS, test_type, minfs, 1)           \
+    FS_TEST_CASE(case_name, CASE_TESTS, test_type, thinfs, 2)
+
+#define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)               \
+    FS_TEST_CASE(case_name, CASE_TESTS, FS_TEST_NORMAL, memfs, 0)    \
+    FS_TEST_CASE(case_name, CASE_TESTS, FS_TEST_NORMAL, minfs, 1)    \
+    FS_TEST_CASE(case_name##_fvm, CASE_TESTS, FS_TEST_FVM, minfs, 1) \
+    FS_TEST_CASE(case_name, CASE_TESTS, FS_TEST_NORMAL, thinfs, 2)
 
 __END_CDECLS;

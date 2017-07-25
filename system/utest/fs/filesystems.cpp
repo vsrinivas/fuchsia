@@ -12,9 +12,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fvm/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <magenta/device/block.h>
+#include <magenta/device/device.h>
 #include <magenta/device/ramdisk.h>
 
 #include "filesystems.h"
@@ -22,6 +24,7 @@
 const char* test_root_path;
 bool use_real_disk = false;
 char test_disk_path[PATH_MAX];
+char fvm_disk_path[PATH_MAX];
 fs_info_t* test_info;
 
 const fsck_options_t test_fsck_options = {
@@ -31,7 +34,20 @@ const fsck_options_t test_fsck_options = {
     .force = true,
 };
 
-void setup_fs_test(void) {
+#define FVM_DRIVER_LIB "/boot/driver/fvm.so"
+#define STRLEN(s) sizeof(s) / sizeof((s)[0])
+
+#define TEST_BLOCK_SIZE 512
+#define TEST_BLOCK_COUNT (1 << 23)
+#define TEST_FVM_SLICE_SIZE (64 * (1 << 20))
+
+constexpr uint8_t kTestUniqueGUID[] = {
+    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+constexpr uint8_t kTestPartGUID[] = GUID_DATA_VALUE;
+
+void setup_fs_test(fs_test_type_t test_class) {
     test_root_path = MOUNT_PATH;
     int r = mkdir(test_root_path, 0755);
     if ((r < 0) && errno != EEXIST) {
@@ -40,11 +56,61 @@ void setup_fs_test(void) {
     }
 
     if (!use_real_disk) {
-        if (create_ramdisk(512, (1 << 23), test_disk_path)) {
+        if (create_ramdisk(TEST_BLOCK_SIZE, TEST_BLOCK_COUNT, test_disk_path)) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }
     }
+
+    if (test_class == FS_TEST_FVM) {
+        int fd = open(test_disk_path, O_RDWR);
+        if (fd < 0) {
+            fprintf(stderr, "[FAILED]: Could not open test disk\n");
+            exit(-1);
+        } else if (fvm_init(fd, TEST_FVM_SLICE_SIZE) != MX_OK) {
+            fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
+            exit(-1);
+        } else if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not bind disk to FVM driver\n");
+            exit(-1);
+        } else if (wait_for_driver_bind(test_disk_path, "fvm")) {
+            fprintf(stderr, "[FAILED]: FVM driver never appeared\n");
+            exit(-1);
+        }
+
+        // Open "fvm" driver
+        strcpy(fvm_disk_path, test_disk_path);
+        strcat(fvm_disk_path, "/fvm");
+        close(fd);
+        int fvm_fd;
+        if ((fvm_fd = open(fvm_disk_path, O_RDWR)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not open FVM driver\n");
+            exit(-1);
+        }
+        // Restore the "fvm_disk_path" to the ramdisk, so it can
+        // be destroyed when the test completes
+        fvm_disk_path[strlen(fvm_disk_path) - strlen("/fvm")] = 0;
+
+        alloc_req_t request;
+        request.slice_count = 1;
+        strcpy(request.name, "fs-test-partition");
+        memcpy(request.type, kTestPartGUID, sizeof(request.type));
+        memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
+
+        if ((fd = fvm_allocate_partition(fvm_fd, &request)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not allocate FVM partition\n");
+            exit(-1);
+        }
+        close(fvm_fd);
+        close(fd);
+
+        if ((fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUID, test_disk_path)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not locate FVM partition\n");
+            exit(-1);
+        }
+        close(fd);
+    }
+
     if (test_info->mkfs(test_disk_path)) {
         fprintf(stderr, "[FAILED]: Could not format ramdisk for test\n");
         exit(-1);
@@ -56,7 +122,7 @@ void setup_fs_test(void) {
     }
 }
 
-void teardown_fs_test(void) {
+void teardown_fs_test(fs_test_type_t test_class) {
     if (test_info->unmount(test_root_path)) {
         fprintf(stderr, "[FAILED]: Error unmounting filesystem\n");
         exit(-1);
@@ -68,6 +134,12 @@ void teardown_fs_test(void) {
     }
 
     if (!use_real_disk) {
+        if (test_class == FS_TEST_FVM) {
+            // Destryoing the ramdisk will clean up most
+            // of the FVM, but first we need to adjust the "test_disk_path"
+            // from the "fvm partition" --> the disk
+            strcpy(test_disk_path, fvm_disk_path);
+        }
         if (destroy_ramdisk(test_disk_path)) {
             fprintf(stderr, "[FAILED]: Error destroying ramdisk\n");
             exit(-1);
@@ -103,7 +175,7 @@ static int unlink_recursive(const char* path) {
 
         char tmp[PATH_MAX];
         tmp[0] = 0;
-        int bytes_left = PATH_MAX - 1;
+        size_t bytes_left = PATH_MAX - 1;
         strncat(tmp, path, bytes_left);
         bytes_left -= strlen(path);
         strncat(tmp, "/", bytes_left);
@@ -253,6 +325,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_watchers = true,
         .supports_create_by_vmo = true,
         .supports_mmap = true,
+        .supports_resize = false,
         .nsec_granularity = 1,
     },
     {"minfs",
@@ -263,6 +336,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_watchers = true,
         .supports_create_by_vmo = false,
         .supports_mmap = false,
+        .supports_resize = true,
         .nsec_granularity = 1,
     },
     {"thinfs",
@@ -273,6 +347,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_watchers = false,
         .supports_create_by_vmo = false,
         .supports_mmap = false,
+        .supports_resize = false,
         .nsec_granularity = MX_SEC(2),
     },
 };

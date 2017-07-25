@@ -39,7 +39,8 @@ constexpr uint64_t kMinfsMagic1 = (0x385000d3d3d3d304ULL);
 constexpr uint32_t kMinfsVersion = 0x00000004;
 
 constexpr uint32_t kMinfsRootIno        = 1;
-constexpr uint32_t kMinfsFlagClean      = 1;
+constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
+constexpr uint32_t kMinfsFlagFVM        = 0x00000002; // Mounted on FVM
 constexpr uint32_t kMinfsBlockSize      = 8192;
 constexpr uint32_t kMinfsBlockBits      = (kMinfsBlockSize * 8);
 constexpr uint32_t kMinfsInodeSize      = 256;
@@ -61,6 +62,11 @@ constexpr uint32_t kMinfsMagicDir  = MinfsMagic(kMinfsTypeDir);
 constexpr uint32_t kMinfsMagicFile = MinfsMagic(kMinfsTypeFile);
 constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
 
+constexpr size_t kFVMBlockInodeBmStart = 0x10000;
+constexpr size_t kFVMBlockDataBmStart  = 0x20000;
+constexpr size_t kFVMBlockInodeStart   = 0x30000;
+constexpr size_t kFVMBlockDataStart    = 0x40000;
+
 typedef struct {
     uint64_t magic0;
     uint64_t magic1;
@@ -76,6 +82,13 @@ typedef struct {
     uint32_t abm_block;     // first blockno of block allocation bitmap
     uint32_t ino_block;     // first blockno of inode table
     uint32_t dat_block;     // first blockno available for file data
+    // The following flags are only valid with (flags & kMinfsFlagFVM):
+    uint64_t slice_size;    // Underlying slice size
+    uint64_t vslice_count;  // Number of underlying slices
+    uint32_t ibm_slices;    // Slices allocated to inode bitmap
+    uint32_t abm_slices;    // Slices allocated to block bitmap
+    uint32_t ino_slices;    // Slices allocated to inode table
+    uint32_t dat_slices;    // Slices allocated to file data section
 } minfs_info_t;
 
 // Notes:
@@ -176,6 +189,8 @@ public:
     mx_status_t Readblk(uint32_t bno, void* data);
     mx_status_t Writeblk(uint32_t bno, const void* data);
 
+    // Returns the maximum number of available blocks,
+    // assuming the filesystem is non-resizable.
     uint32_t Maxblk() const { return blockmax_; };
 
 #ifdef __Fuchsia__
@@ -185,6 +200,30 @@ public:
         return block_fifo_txn(fifo_client_, requests, count);
     }
     txnid_t TxnId() const { return txnid_; }
+
+    mx_status_t FVMQuery(fvm_info_t* info) {
+        ssize_t r = ioctl_block_fvm_query(fd_, info);
+        if (r < 0) {
+            return static_cast<mx_status_t>(r);
+        }
+        return MX_OK;
+    }
+
+    mx_status_t FVMExtend(const extend_request_t* request) {
+        ssize_t r = ioctl_block_fvm_extend(fd_, request);
+        if (r < 0) {
+            return static_cast<mx_status_t>(r);
+        }
+        return MX_OK;
+    }
+
+    mx_status_t FVMShrink(const extend_request_t* request) {
+        ssize_t r = ioctl_block_fvm_shrink(fd_, request);
+        if (r < 0) {
+            return static_cast<mx_status_t>(r);
+        }
+        return MX_OK;
+    }
 #endif
 
     int Sync();

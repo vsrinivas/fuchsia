@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,7 @@ namespace minfs {
 
 mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
     off_t off = bno * kMinfsBlockSize;
+    assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
@@ -35,6 +37,7 @@ mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
 
 mx_status_t Bcache::Writeblk(uint32_t bno, const void* data) {
     off_t off = bno * kMinfsBlockSize;
+    assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
