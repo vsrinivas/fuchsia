@@ -167,9 +167,10 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
        << packets_.max_outstanding_total() << "\n";
   }
 
-  os << begl << "packet count: " << packets_.count() << "\n";
+  os << begl << "packet count: " << packets_.count();
   if (packets_.count() != 0) {
-    os << begl << "packet size: "
+    os << "\n"
+       << begl << "packet size: "
        << "min " << packets_.min() << ", avg " << packets_.average() << ", max "
        << packets_.max() << ", total " << packets_.total();
   }
