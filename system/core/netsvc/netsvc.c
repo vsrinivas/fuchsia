@@ -95,29 +95,29 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    bool nodename_provided = false;
+    while (argc > 1) {
+        if (!strncmp(argv[1], "--netboot", 9)) {
+            netbootloader = true;
+        } else {
+            nodename = argv[1];
+            nodename_provided = true;
+        }
+        argv++;
+        argc--;
+    }
+
+    // Use mac address to generate unique nodename unless one was provided.
+    if (!nodename_provided) {
+        netifc_get_info(mac, &mtu);
+        device_id_get(mac, device_id);
+        nodename = device_id;
+    }
+
     for (;;) {
         if (netifc_open() != 0) {
             printf("netsvc: fatal error initializing network\n");
             return -1;
-        }
-
-        bool nodename_provided = false;
-        while (argc > 1) {
-            if (!strncmp(argv[1], "--netboot", 9)) {
-                netbootloader = true;
-            } else {
-                nodename = argv[1];
-                nodename_provided = true;
-            }
-            argv++;
-            argc--;
-        }
-
-        // Use mac address to generate unique nodename unless one was provided.
-        if (!nodename_provided) {
-            netifc_get_info(mac, &mtu);
-            device_id_get(mac, device_id);
-            nodename = device_id;
         }
 
         printf("netsvc: nodename='%s'\n", nodename);
