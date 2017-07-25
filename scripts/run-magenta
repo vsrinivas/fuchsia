@@ -131,15 +131,15 @@ BUILD_ARGS=
 
 if (( $ASAN )); then
     BUILDDIR_SUFFIX+=-asan
-    BUILD_ARGS=USE_ASAN=true
+    BUILD_ARGS+=' USE_ASAN=true'
 elif (( $CLANG )); then
     BUILDDIR_SUFFIX+=-clang
-    BUILD_ARGS+=USE_CLANG=true
+    BUILD_ARGS+=' USE_CLANG=true'
 fi
 
 if (( $RELEASE )); then
     BUILDDIR_SUFFIX+=-release
-    BUILD_ARGS+=DEBUG=0
+    BUILD_ARGS+=' DEBUG=0'
 fi
 
 # build the project if asked for
