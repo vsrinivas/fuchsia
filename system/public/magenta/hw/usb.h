@@ -73,6 +73,8 @@ __BEGIN_CDECLS;
 #define USB_DT_HID                         0x21
 #define USB_DT_HIDREPORT                   0x22
 #define USB_DT_HIDPHYSICAL                 0x23
+#define USB_DT_CS_INTERFACE                0x24
+#define USB_DT_CS_ENDPOINT                 0x25
 #define USB_DT_SS_EP_COMPANION             0x30
 #define USB_DT_SS_ISOCH_EP_COMPANION       0x31
 
@@ -212,5 +214,11 @@ typedef struct {
     uint8_t bFunctionProtocol;
     uint8_t iFunction;
 } __attribute__ ((packed)) usb_interface_assoc_descriptor_t;
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_CS_INTERFACE
+    uint8_t bDescriptorSubType;
+} __attribute__ ((packed)) usb_cs_interface_descriptor_t;
 
 __END_CDECLS;
