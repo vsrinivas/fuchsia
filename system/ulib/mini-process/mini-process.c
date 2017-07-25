@@ -5,7 +5,9 @@
 #include <mini-process/mini-process.h>
 
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include <elfload/elfload.h>
 
@@ -14,6 +16,7 @@
 #include <magenta/stack.h>
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
+#include <mxio/io.h>
 
 #include "subprocess.h"
 
@@ -39,13 +42,49 @@ static mx_status_t write_ctx_message(
     return mx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);
 }
 
+static mx_status_t load_executable(mx_handle_t process, mx_handle_t vmar,
+                                   uintptr_t* entry_point) {
+    int fd = open("/boot/lib/libmini-process-subprocess.so", O_RDONLY);
+    if (fd < 0)
+        return MX_ERR_IO;
+    mx_handle_t vmo;
+    mx_status_t status = mxio_get_vmo(fd, &vmo);
+    if (status != MX_OK)
+        return status;
+    int result = close(fd);
+    if (result != 0)
+        return MX_ERR_IO;
+
+    elf_load_header_t header;
+    uintptr_t ph_offset;
+    status = elf_load_prepare(vmo, NULL, 0, &header, &ph_offset);
+    if (status != MX_OK)
+        return status;
+    elf_phdr_t phdrs[header.e_phnum];
+    status = elf_load_read_phdrs(vmo, phdrs, ph_offset,
+                                 header.e_phnum);
+    if (status != MX_OK)
+        return status;
+    uintptr_t base_address = 0;
+    status = elf_load_map_segments(vmar, &header, phdrs, vmo,
+                                   NULL, &base_address, NULL);
+    if (status != MX_OK)
+        return status;
+
+    status = mx_handle_close(vmo);
+    if (status != MX_OK)
+        return status;
+
+    *entry_point = base_address + header.e_entry;
+    return MX_OK;
+}
+
 mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
                                    mx_handle_t vmar,
                                    mx_handle_t transferred_handle,
                                    mx_handle_t* control_channel) {
-    // Allocate a single VMO for the child. It doubles as the stack on the top and
-    // as the executable code (minipr_thread_loop()) at the bottom. In theory, actual
-    // stack usage is minimal, like 160 bytes or less.
+    // Allocate a VMO for the child's stack.  We expect stack usage to be
+    // minimal, like 160 bytes or less.
     uint64_t stack_size = 16 * 1024u;
     mx_handle_t stack_vmo = MX_HANDLE_INVALID;
     mx_status_t status = mx_vmo_create(stack_size, 0, &stack_vmo);
@@ -56,11 +95,8 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     static const char vmo_name[] = "mini-process:stack";
     mx_object_set_property(stack_vmo, MX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
-    // We assume that the code to execute is less than kSizeLimit bytes.
-    const uint32_t kSizeLimit = 1000;
-    size_t actual;
-    status = mx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit,
-                          &actual);
+    uintptr_t entry_point;
+    status = load_executable(process, vmar, &entry_point);
     if (status != MX_OK)
         goto exit;
 
@@ -79,7 +115,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
         // Simple mode /////////////////////////////////////////////////////////////
         // Don't map the VDSO, so the only thing the mini-process can do is busy-loop.
         // The handle sent to the process is just the caller's handle.
-        status = mx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
+        status = mx_process_start(process, thread, entry_point, sp, transferred_handle, 0);
 
     } else {
         // Complex mode ////////////////////////////////////////////////////////////
@@ -128,7 +164,7 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
 
         uintptr_t channel_read = (uintptr_t)get_syscall_addr(&mx_channel_read, vdso_base);
 
-        status = mx_process_start(process, thread, stack_base, sp, chn[1], channel_read);
+        status = mx_process_start(process, thread, entry_point, sp, chn[1], channel_read);
         if (status != MX_OK)
             goto exit;
 

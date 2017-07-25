@@ -5,14 +5,12 @@
 #include "subprocess.h"
 #include <mini-process/mini-process.h>
 
-// This function is the entire program that the child process will execute. It
-// gets directly mapped into the child process via mx_vmo_write() so it must not
-// reference any addressable entity outside it.
+// This function is the entire program that the child process will execute.
 __NO_SAFESTACK
 #ifdef __clang__
 __attribute__((no_sanitize("all")))
 #endif
-void minipr_thread_loop(mx_handle_t channel, uintptr_t fnptr) {
+void _start(mx_handle_t channel, uintptr_t fnptr) {
     if (fnptr == 0) {
         // In this mode we don't have a VDSO so we don't care what the handle is
         // and therefore we busy-loop. Unless external steps are taken this will
