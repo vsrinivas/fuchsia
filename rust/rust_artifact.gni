@@ -75,6 +75,8 @@ template("rust_artifact") {
     build_type = "release"
   }
 
+  group_deps = []
+
   if (type == "bin") {
     output_file = "$target_out_dir/$target_name.rust/$target_triple/$build_type/$name"
     output_depfile = "$output_file.d"
@@ -83,13 +85,14 @@ template("rust_artifact") {
     output_base = "$target_out_dir/$target_name.rust/$target_triple/$build_type/lib$name"
     output_file = "$output_base.rmeta"
     output_depfile = "$output_base.d"
-    build_target_name = target_name
+    build_target_name = "${target_name}_lib"
+    group_deps += [ ":$build_target_name" ]
   }
 
   main_target_name = target_name
 
   if (type == "bin") {
-    copy(target_name) {
+    copy("${target_name}_bin") {
       sources = [
         output_file
       ]
@@ -102,6 +105,27 @@ template("rust_artifact") {
         ":$build_target_name",
       ]
     }
+
+    group_deps += [ ":${target_name}_bin" ]
+  }
+
+  if (defined(invoker.with_tests) && invoker.with_tests) {
+    copy("${target_name}_test") {
+      base_out_dir = "$target_out_dir/$main_target_name.rust"
+      sources = [
+        "$base_out_dir/$name-$type-test",
+      ]
+
+      outputs = [
+        "$root_out_dir/$name-$type-test",
+      ]
+
+      deps = [
+        ":$build_target_name",
+      ]
+    }
+
+    group_deps += [ ":${target_name}_test" ]
   }
 
   action(build_target_name) {
@@ -196,5 +220,9 @@ template("rust_artifact") {
         rebase_path("$wrapper_dir/$target_triple-cc"),
       ]
     }
+  }
+
+  group(target_name) {
+    deps = group_deps
   }
 }
