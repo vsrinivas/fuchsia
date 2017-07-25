@@ -80,7 +80,7 @@ uint64_t x86_lookup_tsc_freq() {
         // If this leaf is present, then 18.18.3 (Determining the Processor Base
         // Frequency) documents this as the nominal TSC frequency.
         const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
-        if (tsc_leaf) {
+        if (tsc_leaf && tsc_leaf->a) {
             return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
         }
     } else if (x86_vendor == X86_VENDOR_AMD) {
