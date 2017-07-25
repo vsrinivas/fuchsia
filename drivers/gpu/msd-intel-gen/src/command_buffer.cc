@@ -75,14 +75,14 @@ CommandBuffer::~CommandBuffer()
     for (auto& semaphore : signal_semaphores_) {
         semaphore->Signal();
     }
-    TRACE_ASYNC_END("magma", "CommandBuffer Exec", nonce_);
+    TRACE_ASYNC_END("magma-exec", "CommandBuffer Exec", nonce_);
 }
 
 void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
 {
     uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
 
-    TRACE_ASYNC_BEGIN("magma", "CommandBuffer Exec", nonce_, "id", buffer_id);
+    TRACE_ASYNC_BEGIN("magma-exec", "CommandBuffer Exec", nonce_, "id", buffer_id);
     sequence_number_ = sequence_number;
 }
 
