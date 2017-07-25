@@ -58,8 +58,8 @@ static inline uint32_t arch_icache_line_size(void) {
 
     // Bits 0:3 of the CTR tell us the log_2 of the number of _words_
     // in the smallest _instruction_ cache line on this system.
-    uint32_t dcache_log2 = (ctr >> 0) & 0xf;
-    return 4u << dcache_log2;
+    uint32_t icache_log2 = (ctr >> 0) & 0xf;
+    return 4u << icache_log2;
 }
 
 // Log architecture-specific data for process creation.
