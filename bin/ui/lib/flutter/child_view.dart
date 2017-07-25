@@ -456,13 +456,13 @@ class ChildSceneLayer extends Layer {
   }
 
   @override
-  void debugFillDescription(List<String> description) {
-    super.debugFillDescription(description);
-    description.add('offset: $offset');
-    description.add('width: $width');
-    description.add('height: $height');
-    description.add('sceneHost: $sceneHost');
-    description.add('hitTestable: $hitTestable');
+  void debugFillProperties(List<DiagnosticsNode> description) {
+    super.debugFillProperties(description);
+    description.add(new DiagnosticsProperty<Offset>('offset', offset));
+    description.add(new DoubleProperty('width', width));
+    description.add(new DoubleProperty('height', height));
+    description.add(new DiagnosticsProperty<ui.SceneHost>('sceneHost', sceneHost));
+    description.add(new DiagnosticsProperty<bool>('hitTestable', hitTestable));
   }
 }
 
