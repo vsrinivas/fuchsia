@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,7 +13,9 @@
 
 #include <fs/mapped-vmo.h>
 #include <magenta/device/block.h>
+#include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <mxio/watcher.h>
 #include <mxtl/unique_ptr.h>
 
 #include "fvm/fvm.h"
@@ -48,6 +52,24 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
     digest.Final();
     return digest == header->hash;
 }
+
+static bool is_partition(int fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
+    uint8_t buf[GUID_LEN];
+    if (fd < 0) {
+        return false;
+    } else if (ioctl_block_get_type_guid(fd, buf, sizeof(buf)) < 0) {
+        return false;
+    } else if (memcmp(buf, typeGUID, GUID_LEN) != 0) {
+        return false;
+    } else if (ioctl_block_get_partition_guid(fd, buf, sizeof(buf)) < 0) {
+        return false;
+    } else if (memcmp(buf, uniqueGUID, GUID_LEN) != 0) {
+        return false;
+    }
+    return true;
+}
+
+constexpr char kBlockDevPath[] = "/dev/class/block/";
 
 } // namespace anonymous
 
@@ -178,4 +200,79 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
            fvm::UsableSlicesCount(disk_size, slice_size));
 
     return MX_OK;
+}
+
+// Helper function to allocate, find, and open VPartition.
+int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
+    ssize_t r;
+    if ((r = ioctl_block_fvm_alloc(fvm_fd, request)) != MX_OK) {
+        return -1;
+    }
+
+    typedef struct {
+        const alloc_req_t* request;
+        int out_partition;
+    } alloc_helper_info_t;
+
+    alloc_helper_info_t info;
+    info.request = request;
+
+    auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
+        if (event != WATCH_EVENT_ADD_FILE) {
+            return MX_OK;
+        }
+        auto info = static_cast<alloc_helper_info_t*>(cookie);
+        int devfd = openat(dirfd, fn, O_RDWR);
+        if (devfd < 0) {
+            return MX_OK;
+        }
+        if (is_partition(devfd, info->request->guid, info->request->type)) {
+            info->out_partition = devfd;
+            return MX_ERR_STOP;
+        }
+        close(devfd);
+        return MX_OK;
+    };
+
+    DIR* dir = opendir(kBlockDevPath);
+    if (dir == nullptr) {
+        return -1;
+    }
+
+    mx_time_t deadline = mx_deadline_after(MX_SEC(2));
+    if (mxio_watch_directory(dirfd(dir), cb, deadline, &info) != MX_ERR_STOP) {
+        return -1;
+    }
+    closedir(dir);
+    return info.out_partition;
+}
+
+int fvm_open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, char* out) {
+    DIR* dir = opendir(kBlockDevPath);
+    if (dir == nullptr) {
+        return -1;
+    }
+    struct dirent* de;
+    int result_fd = -1;
+    while ((de = readdir(dir)) != NULL) {
+        if ((strcmp(de->d_name, ".") == 0) || strcmp(de->d_name, "..") == 0) {
+            continue;
+        }
+        int devfd = openat(dirfd(dir), de->d_name, O_RDWR);
+        if (devfd < 0) {
+            continue;
+        } else if (!is_partition(devfd, uniqueGUID, typeGUID)) {
+            close(devfd);
+            continue;
+        }
+        result_fd = devfd;
+        if (out != nullptr) {
+            strcpy(out, kBlockDevPath);
+            strcat(out, de->d_name);
+        }
+        break;
+    }
+
+    closedir(dir);
+    return result_fd;
 }

@@ -6,6 +6,7 @@
 
 #include <digest/digest.h>
 #include <gpt/gpt.h>
+#include <magenta/device/block.h>
 #include <stdlib.h>
 
 #define FVM_MAGIC (0x54524150204d5646ull) // 'FVM PART'
@@ -126,5 +127,19 @@ mx_status_t fvm_validate_header(const void* metadata, const void* backup,
 
 // Format a block device to be an empty FVM.
 mx_status_t fvm_init(int fd, size_t slice_size);
+
+// Allocates a new vpartition in the fvm, and waits for it to become
+// accessible (by watching for a corresponding block device).
+//
+// Returns an open fd to the new partition on success, -1 on error.
+int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request);
+
+// Finds and opens a vpartition by GUID.
+// Returns an open fd to the partition on success, -1 on error.
+//
+// "out" is an optional output parameter, which, if non-null,
+// should contain a buffer of size "PATH_MAX", and will contain
+// the path to the vpartition on success.
+int fvm_open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, char* out);
 
 #endif //  __cplusplus

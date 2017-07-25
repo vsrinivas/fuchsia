@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -27,8 +26,6 @@
 #include <magenta/device/device.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/vfs.h>
-#include <magenta/syscalls.h>
-#include <mxio/watcher.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
@@ -174,90 +171,6 @@ constexpr char kTestPartName2[] = "blob";
 constexpr uint8_t kTestPartGUIDBlob[] = GUID_BLOBFS_VALUE;
 constexpr char kTestPartName3[] = "system";
 constexpr uint8_t kTestPartGUIDSys[] = GUID_SYSTEM_VALUE;
-constexpr char kBlockDevPath[] = "/dev/class/block";
-
-// Helper function to identify if fd points to partition
-static bool isPartition(int fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
-    uint8_t buf[GUID_LEN];
-    if (fd < 0) {
-        return false;
-    } else if (ioctl_block_get_type_guid(fd, buf, sizeof(buf)) < 0) {
-        return false;
-    } else if (memcmp(buf, typeGUID, GUID_LEN) != 0) {
-        return false;
-    } else if (ioctl_block_get_partition_guid(fd, buf, sizeof(buf)) < 0) {
-        return false;
-    } else if (memcmp(buf, uniqueGUID, GUID_LEN) != 0) {
-        return false;
-    }
-    return true;
-}
-
-// Helper function to allocate, find, and open VPartition.
-static bool fvmAllocHelper(int fvm_fd, const alloc_req_t* request, int* out_partition) {
-    ASSERT_EQ(ioctl_block_fvm_alloc(fvm_fd, request), 0, "Couldn't allocate VPart");
-
-    typedef struct {
-        const alloc_req_t* request;
-        int* out_partition;
-    } alloc_helper_info_t;
-
-    alloc_helper_info_t info;
-    info.request = request;
-    info.out_partition = out_partition;
-
-    auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
-        if (event != WATCH_EVENT_ADD_FILE) {
-            return MX_OK;
-        }
-        auto info = static_cast<alloc_helper_info_t*>(cookie);
-        int devfd = openat(dirfd, fn, O_RDWR);
-        if (devfd < 0) {
-            return MX_OK;
-        }
-        if (isPartition(devfd, info->request->guid, info->request->type)) {
-            *(info->out_partition) = devfd;
-            return MX_ERR_STOP;
-        }
-        close(devfd);
-        return MX_OK;
-    };
-
-    DIR* dir = opendir(kBlockDevPath);
-    ASSERT_NONNULL(dir, "");
-
-    mx_time_t deadline = mx_deadline_after(MX_SEC(2));
-    ASSERT_EQ(mxio_watch_directory(dirfd(dir), cb, deadline, &info), MX_ERR_STOP, "");
-    closedir(dir);
-    return true;
-}
-
-// Helper function to find a VPartition which already exists.
-static int openVPartition(const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
-    DIR* dir = opendir(kBlockDevPath);
-    if (dir == nullptr) {
-        return -1;
-    }
-    struct dirent* de;
-    int result_fd = -1;
-    while ((de = readdir(dir)) != NULL) {
-        if ((strcmp(de->d_name, ".") == 0) || strcmp(de->d_name, "..") == 0) {
-            continue;
-        }
-        int devfd = openat(dirfd(dir), de->d_name, O_RDWR);
-        if (devfd < 0) {
-            continue;
-        } else if (!isPartition(devfd, uniqueGUID, typeGUID)) {
-            close(devfd);
-            continue;
-        }
-        result_fd = devfd;
-        break;
-    }
-
-    closedir(dir);
-    return result_fd;
-}
 
 static bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
     for (size_t i = 0; i < len; i++)
@@ -385,8 +298,8 @@ static bool TestAllocateOne(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
@@ -398,7 +311,7 @@ static bool TestAllocateOne(void) {
 
     // Try accessing the block again after closing / re-opening it.
     ASSERT_EQ(close(vp_fd), 0, "");
-    vp_fd = openVPartition(kTestUniqueGUID, kTestPartGUIDData);
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
 
@@ -424,16 +337,18 @@ static bool TestAllocateMany(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int data_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &data_fd), "");
+    int data_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(data_fd, 0, "");
+
     strcpy(request.name, kTestPartName2);
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
-    int blob_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &blob_fd), "");
+    int blob_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(blob_fd, 0, "");
+
     strcpy(request.name, kTestPartName3);
     memcpy(request.type, kTestPartGUIDSys, GUID_LEN);
-    int sys_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &sys_fd), "");
+    int sys_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(sys_fd, 0, "");
 
     ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1), "");
     ASSERT_TRUE(CheckWriteReadBlock(blob_fd, 0, 1), "");
@@ -464,8 +379,8 @@ static bool TestCloseDuringAccess(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     auto bg_thread = [](void* arg) {
         int vp_fd = *reinterpret_cast<int*>(arg);
@@ -525,8 +440,8 @@ static bool TestReleaseDuringAccess(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     auto bg_thread = [](void* arg) {
         int vp_fd = *reinterpret_cast<int*>(arg);
@@ -588,8 +503,8 @@ static bool TestVPartitionExtend(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
     slices_left--;
 
     // Confirm that the disk reports the correct number of slices
@@ -675,8 +590,8 @@ static bool TestVPartitionExtendSparse(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
 
     // Double check that we can access a block at this vslice address
@@ -739,8 +654,8 @@ static bool TestVPartitionShrink(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
     slices_left--;
 
     // Confirm that the disk reports the correct number of slices
@@ -830,8 +745,8 @@ static bool TestVPartitionSplit(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
     slices_left--;
 
     // Confirm that the disk reports the correct number of slices
@@ -956,16 +871,16 @@ static bool TestVPartitionDestroy(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int data_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &data_fd), "");
+    int data_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(data_fd, 0, "");
     strcpy(request.name, kTestPartName2);
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
-    int blob_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &blob_fd), "");
+    int blob_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(blob_fd, 0, "");
     strcpy(request.name, kTestPartName3);
     memcpy(request.type, kTestPartGUIDSys, GUID_LEN);
-    int sys_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &sys_fd), "");
+    int sys_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(sys_fd, 0, "");
 
     // We can access all three...
     ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1), "");
@@ -1026,8 +941,8 @@ static bool TestSliceAccessContiguous(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
     block_info_t info;
     ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
 
@@ -1096,8 +1011,8 @@ static bool TestSliceAccessMany(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
     block_info_t info;
     ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
     ASSERT_EQ(info.block_size, kBlockSize);
@@ -1180,7 +1095,8 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
     for (size_t i = 0; i < countof(vparts); i++) {
         strcpy(request.name, vparts[i].name);
         memcpy(request.type, vparts[i].guid, GUID_LEN);
-        ASSERT_TRUE(fvmAllocHelper(fd, &request, &vparts[i].fd), "");
+        vparts[i].fd = fvm_allocate_partition(fd, &request);
+        ASSERT_GT(vparts[i].fd, 0, "");
     }
 
     block_info_t info;
@@ -1273,7 +1189,8 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
     for (size_t i = 0; i < countof(vparts); i++) {
         strcpy(request.name, vparts[i].name);
         memcpy(request.type, vparts[i].guid, GUID_LEN);
-        ASSERT_TRUE(fvmAllocHelper(fd, &request, &vparts[i].fd), "");
+        vparts[i].fd = fvm_allocate_partition(fd, &request);
+        ASSERT_GT(vparts[i].fd, 0, "");
     }
 
     block_info_t info;
@@ -1338,8 +1255,8 @@ static bool TestPersistenceSimple(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
@@ -1363,7 +1280,7 @@ static bool TestPersistenceSimple(void) {
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
 
-    vp_fd = openVPartition(kTestUniqueGUID, kTestPartGUIDData);
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
     ASSERT_TRUE(CheckRead(vp_fd, 0, info.block_size, buf.get()), "");
 
@@ -1426,8 +1343,8 @@ static bool TestMounting(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     // Format the VPart as minfs
     char partition_path[PATH_MAX];
@@ -1490,8 +1407,8 @@ static bool TestCorruptionOk(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     // Extend the vpart (writes to primary)
     extend_request_t erequest;
@@ -1525,7 +1442,7 @@ static bool TestCorruptionOk(void) {
     };
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
-    vp_fd = openVPartition(kTestUniqueGUID, kTestPartGUIDData);
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
 
     // The slice extension is still accessible.
@@ -1560,8 +1477,8 @@ static bool TestCorruptionRegression(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     // Extend the vpart (writes to primary)
     extend_request_t erequest;
@@ -1594,7 +1511,7 @@ static bool TestCorruptionRegression(void) {
     };
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
-    vp_fd = openVPartition(kTestUniqueGUID, kTestPartGUIDData);
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "");
 
     // The slice extension is no longer accessible
@@ -1630,8 +1547,8 @@ static bool TestCorruptionUnrecoverable(void) {
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
-    int vp_fd;
-    ASSERT_TRUE(fvmAllocHelper(fd, &request, &vp_fd), "");
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0, "");
 
     // Extend the vpart (writes to primary)
     extend_request_t erequest;
@@ -1920,7 +1837,8 @@ static bool TestRandomOpMultithreaded(void) {
     for (size_t i = 0; i < ThreadCount; i++) {
         // Change the GUID enough to be distinct for each thread
         request.guid[0] = static_cast<uint8_t>(i);
-        ASSERT_TRUE(fvmAllocHelper(fd, &request, &s.thread_states[i].vp_fd), "");
+        s.thread_states[i].vp_fd = fvm_allocate_partition(fd, &request);
+        ASSERT_GT(s.thread_states[i].vp_fd, 0, "");
     }
 
     s.slices_left -= ThreadCount;
@@ -1959,8 +1877,8 @@ static bool TestRandomOpMultithreaded(void) {
         // Re-open all partitions, re-launch the worker threads
         for (size_t i = 0; i < ThreadCount; i++) {
             request.guid[0] = static_cast<uint8_t>(i);
-            int vp_fd = openVPartition(request.guid, request.type);
-            EXPECT_GT(vp_fd, 0, "");
+            int vp_fd = fvm_open_partition(request.guid, request.type, nullptr);
+            ASSERT_GT(vp_fd, 0, "");
             s.thread_states[i].vp_fd = vp_fd;
             EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
                                   random_access_thread<ThreadCount>, &s),
