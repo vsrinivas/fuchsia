@@ -29,6 +29,13 @@ namespace blobstore {
 
 VnodeBlob::~VnodeBlob() {
     blobstore_->ReleaseBlob(this);
+    if (blob_ != nullptr) {
+        block_fifo_request_t request;
+        request.txnid = blobstore_->TxnId();
+        request.vmoid = vmoid_;
+        request.opcode = BLOCKIO_CLOSE_VMO;
+        blobstore_->Txn(&request, 1);
+    }
 }
 
 mx_status_t VnodeBlob::Open(uint32_t flags) {
