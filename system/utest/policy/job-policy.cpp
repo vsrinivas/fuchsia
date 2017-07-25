@@ -304,7 +304,7 @@ static bool test_invoking_policy_with_exception(
 
     // Check the exception message contents.
     ASSERT_EQ(packet.key, kExceptionPortKey);
-    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_GENERAL);
+    ASSERT_EQ(packet.type, (uint32_t)MX_EXCP_POLICY_ERROR);
 
     mx_koid_t pid;
     mx_koid_t tid;

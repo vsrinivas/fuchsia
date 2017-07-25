@@ -462,7 +462,7 @@ status_t magenta_report_policy_exception(void)
     struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
-    return magenta_exception_handler(MX_EXCP_GENERAL, &context);
+    return magenta_exception_handler(MX_EXCP_POLICY_ERROR, &context);
 }
 
 #endif

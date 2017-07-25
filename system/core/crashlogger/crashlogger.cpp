@@ -76,7 +76,6 @@ int have_swbreak_magic(const gregs_type* regs) {
 #endif
 
 const char* excp_type_to_str(uint32_t type) {
-    MX_DEBUG_ASSERT(MX_EXCP_IS_ARCH(type));
     switch (type) {
     case MX_EXCP_GENERAL:
         return "general fault";
@@ -90,6 +89,8 @@ const char* excp_type_to_str(uint32_t type) {
         return "hw breakpoint";
     case MX_EXCP_UNALIGNED_ACCESS:
         return "alignment fault";
+    case MX_EXCP_POLICY_ERROR:
+        return "policy error";
     default:
         // Note: To get a compilation failure when a new exception type has
         // been added without having also updated this function, compile with
@@ -233,7 +234,7 @@ void resume_thread_from_exception(mx_handle_t thread,
 }
 
 void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwind) {
-    if (!MX_EXCP_IS_ARCH(type))
+    if (!MX_EXCP_IS_ARCH(type) && type != MX_EXCP_POLICY_ERROR)
         return;
 
     mx_handle_t process;

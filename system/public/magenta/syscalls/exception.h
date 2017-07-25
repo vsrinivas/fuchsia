@@ -75,6 +75,13 @@ typedef enum {
     // (if one is registered).
     // N.B. This notification is not replied to.
     MX_EXCP_GONE = MX_PKT_TYPE_EXCEPTION(MX_EXCP_SYNTH | 4),
+
+    // This exception is generated when a syscall fails with a job policy
+    // error (for example, an invalid handle argument is passed to the
+    // syscall when the MX_POL_BAD_HANDLE policy is enabled) and
+    // MX_POL_ACTION_EXCEPTION is set for the policy.  The thread that
+    // invoked the syscall may be resumed with mx_task_resume().
+    MX_EXCP_POLICY_ERROR = MX_PKT_TYPE_EXCEPTION(MX_EXCP_SYNTH | 5),
 } mx_excp_type_t;
 
 // Assuming |excp| is an exception type, return non-zero if it is an
