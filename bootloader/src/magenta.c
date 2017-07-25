@@ -197,7 +197,7 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
         printf("boot: cannot ExitBootServices(): %s\n", xefi_strerror(r));
         goto fail;
     }
-    *((uint64_t*) scratch) = dsize;
+    memcpy(scratch, &dsize, sizeof(uint64_t));
 
     // install memory map
     hdr.type = BOOTDATA_EFI_MEMORY_MAP;
