@@ -9,7 +9,8 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/mini-process.c
+    $(LOCAL_DIR)/mini-process.c \
+    $(LOCAL_DIR)/subprocess.c \
 
 MODULE_SO_NAME := mini-process
 
