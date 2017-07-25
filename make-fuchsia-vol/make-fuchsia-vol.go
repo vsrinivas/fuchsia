@@ -75,7 +75,7 @@ func main() {
 
 	disk := flag.Args()[0]
 
-	for _, path := range []string{*kernel, *bootfsmanifest, *bootmanifest, *sysmanifest, disk} {
+	for _, path := range []string{*kernel, *bootfsmanifest, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
@@ -87,8 +87,15 @@ func main() {
 		}
 	}
 
-	bootManifests := []string{*bootmanifest}
-	systemManifests := []string{*sysmanifest}
+	bootManifests := []string{}
+	systemManifests := []string{}
+
+	if _, err := os.Stat(*bootmanifest); err == nil {
+		bootManifests = append(bootManifests, *bootmanifest)
+	}
+	if _, err := os.Stat(*sysmanifest); err == nil {
+		systemManifests = append(systemManifests, *sysmanifest)
+	}
 
 	b, err := ioutil.ReadFile(*packages)
 	if err != nil {
