@@ -63,6 +63,10 @@
 #define USB_CDC_SET_ETHERNET_PACKET_FILTER      0x43
 #define USB_CDC_GET_ETHERNET_STATISTIC          0x44
 
+/* CDC Class-Specific Requests */
+#define USB_CDC_SEND_ENCAPSULATED_COMMAND   0x00
+#define USB_CDC_GET_ENCAPSULATED_RESPONSE   0x01
+
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;    // USB_DT_CS_INTERFACE
