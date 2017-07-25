@@ -45,7 +45,8 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
     } TOLUD_CHIPSET_LUT[] = {
         // QEMU's emulation of Intel Q35.   No TOLUD register that I know of.
         { .match = 0x808629c0, .mask = 0xFFFFFFFF, .offset = 0x0 },
-
+        // PIIX4
+        { .match = 0x80861237, .mask = 0xFFFFFFFF, .offset = 0x0 },
         // Intel 6th Generation Core Family (Skylake)
         { .match = 0x80861900, .mask = 0xFFFFFF00, .offset = 0xBC },
 
