@@ -111,7 +111,7 @@ static mx_status_t vcpu_interrupt(mx_handle_t vcpu_handle, uint32_t vector) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<VcpuDispatcher> vcpu;
-    mx_status_t status = up->GetDispatcherWithRights(vcpu_handle, MX_RIGHT_WRITE /* MX_RIGHT_SIGNAL */, &vcpu);
+    mx_status_t status = up->GetDispatcherWithRights(vcpu_handle, MX_RIGHT_SIGNAL, &vcpu);
     if (status != MX_OK)
         return status;
 
