@@ -66,6 +66,12 @@ static inline uint32_t arch_dcache_line_size(void) {
     return 0;
 }
 
+static inline uint32_t arch_icache_line_size(void) {
+    // TODO(mcgrathr): not needed for anything yet
+    // cpuid can separately report line sizes for L[123]
+    return 0;
+}
+
 // Log architecture-specific data for process creation.
 // This can only be called after the process has been created and before
 // it is running. Alas we can't use mx_koid_t here as the arch layer is at a

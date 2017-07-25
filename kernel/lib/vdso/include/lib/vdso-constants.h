@@ -11,7 +11,7 @@
 // environments.  It must use only the basic types so that struct
 // layouts match exactly in both contexts.
 
-#define VDSO_CONSTANTS_SIZE (2 * 4 + 2 * 8)
+#define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8)
 #define VDSO_CONSTANTS_ALIGN 8
 
 #ifndef ASSEMBLY
@@ -30,6 +30,9 @@ struct vdso_constants {
 
     // Number of bytes in a data cache line.
     uint32_t dcache_line_size;
+
+    // Number of bytes in an instruction cache line.
+    uint32_t icache_line_size;
 
     // Conversion factor for mx_ticks_get return values to seconds.
     uint64_t ticks_per_second;

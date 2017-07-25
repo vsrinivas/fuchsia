@@ -50,6 +50,18 @@ static inline uint32_t arch_dcache_line_size(void) {
     return 4u << dcache_log2;
 }
 
+static inline uint32_t arch_icache_line_size(void) {
+    // According to ARMv8 manual D7.2.21, the Cache Type Register (CTR)
+    // is a 32 bit control register that contains the smallest icache
+    // line size and smallest dcache line size.
+    uint32_t ctr = (uint32_t)ARM64_READ_SYSREG(ctr_el0);
+
+    // Bits 0:3 of the CTR tell us the log_2 of the number of _words_
+    // in the smallest _instruction_ cache line on this system.
+    uint32_t dcache_log2 = (ctr >> 0) & 0xf;
+    return 4u << dcache_log2;
+}
+
 // Log architecture-specific data for process creation.
 // This can only be called after the process has been created and before
 // it is running. Alas we can't use mx_koid_t here as the arch layer is at a

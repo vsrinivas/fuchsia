@@ -18,12 +18,19 @@ mx_status_t _mx_cache_flush(const void* addr, size_t len, uint32_t flags) {
 #elif defined(__aarch64__)
 
     if (flags & MX_CACHE_FLUSH_INSN) {
-        // TODO(mcgrathr): not supported yet
-        __builtin_trap();
+        for (uintptr_t p = ((uintptr_t)addr &
+                            -((uintptr_t)DATA_CONSTANTS.icache_line_size));
+             p < (uintptr_t)addr + len;
+             p += DATA_CONSTANTS.icache_line_size) {
+            // Clean instruction cache (ic) to point of unification (ivau).
+            __asm__ volatile("ic ivau, %0" :: "r"(p));
+        }
+        __asm__ volatile("isb sy");
     }
 
     if (flags & MX_CACHE_FLUSH_DATA) {
-        for (uintptr_t p = (uintptr_t)addr & -((uintptr_t)DATA_CONSTANTS.dcache_line_size);
+        for (uintptr_t p = ((uintptr_t)addr &
+                            -((uintptr_t)DATA_CONSTANTS.dcache_line_size));
              p < (uintptr_t)addr + len;
              p += DATA_CONSTANTS.dcache_line_size) {
             // Clean data cache (dc) to point of coherency (cvac).

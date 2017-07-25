@@ -227,6 +227,7 @@ const VDso* VDso::Create() {
     *constants_window.data() = (vdso_constants) {
         arch_max_num_cpus(),
         arch_dcache_line_size(),
+        arch_icache_line_size(),
         per_second,
         pmm_count_total_bytes(),
     };
