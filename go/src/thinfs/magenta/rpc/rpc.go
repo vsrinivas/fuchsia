@@ -145,7 +145,10 @@ func errorToRIO(err error) mx.Status {
 	case fs.ErrAlreadyExists:
 		return mx.ErrAlreadyExists
 	case fs.ErrPermission, fs.ErrReadOnly:
-		return mx.ErrAccessDenied
+		// We're returning "BadHandle" instead of "AccessDenied"
+		// to match the POSIX convention where bad fd permissions
+		// typically return "EBADF".
+		return mx.ErrBadHandle
 	case fs.ErrNoSpace:
 		return mx.ErrNoSpace
 	case fs.ErrNotEmpty:
