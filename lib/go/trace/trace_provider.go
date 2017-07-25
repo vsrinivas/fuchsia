@@ -22,10 +22,10 @@ type Provider struct {
 	stub *bindings.Stub
 }
 
-func InitTraceProvider(traceRegistryProxy *trace_registry.TraceRegistry_Proxy, setting Setting) *Provider {
-	r, p := trace_provider.CreateChannelForTraceProvider()
+func InitTraceProvider(traceRegistryProxy *trace_registry.Proxy, setting Setting) *Provider {
+	r, p := trace_provider.NewChannel()
 	tp := &Provider{}
-	stub := trace_provider.NewTraceProviderStub(r, tp, bindings.GetAsyncWaiter())
+	stub := trace_provider.NewStub(r, tp, bindings.GetAsyncWaiter())
 	tp.stub = stub
 
 	label := setting.ProviderLabel

@@ -17,12 +17,12 @@ import (
 )
 
 type TraceRegistryMock struct {
-	provider *trace_provider.TraceProvider_Pointer
+	provider *trace_provider.Pointer
 	label    string
 	stub     *bindings.Stub
 }
 
-func (tr *TraceRegistryMock) RegisterTraceProvider(inProvider trace_provider.TraceProvider_Pointer, inLabel *string) error {
+func (tr *TraceRegistryMock) RegisterTraceProvider(inProvider trace_provider.Pointer, inLabel *string) error {
 	tr.provider = &inProvider
 	tr.label = *inLabel
 	return nil
@@ -33,19 +33,19 @@ type TraceRegistryMockDelegate struct {
 	tr   *TraceRegistryMock
 }
 
-func (trd *TraceRegistryMockDelegate) Create(r trace_registry.TraceRegistry_Request) {
+func (trd *TraceRegistryMockDelegate) Bind(r trace_registry.Request) {
 	if trd.tr == nil {
 		trd.tr = &TraceRegistryMock{}
 	}
-	stub := trace_registry.NewTraceRegistryStub(r, trd.tr, bindings.GetAsyncWaiter())
+	stub := trace_registry.NewStub(r, trd.tr, bindings.GetAsyncWaiter())
 	trd.stub = append(trd.stub, stub)
 }
 
 func TestInitializeTracer(t *testing.T) {
 	delegate := &TraceRegistryMockDelegate{}
-	traceRegistryRequest, traceRegistryPointer := trace_registry.CreateChannelForTraceRegistry()
-	delegate.Create(traceRegistryRequest)
-	traceRegistryProxy := trace_registry.NewTraceRegistryProxy(traceRegistryPointer, bindings.GetAsyncWaiter())
+	traceRegistryRequest, traceRegistryPointer := trace_registry.NewChannel()
+	delegate.Bind(traceRegistryRequest)
+	traceRegistryProxy := trace_registry.NewProxy(traceRegistryPointer, bindings.GetAsyncWaiter())
 
 	trace.InitializeTracerUsingRegistry(traceRegistryProxy, trace.Setting{})
 
