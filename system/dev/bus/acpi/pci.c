@@ -19,6 +19,8 @@
 #define PCIE_MAX_FUNCTIONS_PER_DEVICE 8
 #define PCI_CONFIG_SIZE 256
 #define PCIE_EXTENDED_CONFIG_SIZE 4096
+#define PCI_HID  ((char*)"PNP0A03")
+#define PCIE_HID ((char*)"PNP0A08")
 
 #define PANIC_UNIMPLEMENTED __builtin_trap()
 
@@ -293,7 +295,7 @@ static ACPI_STATUS get_pcie_devices_irq(
  *
  * @return MX_OK on success
  */
-static mx_status_t find_pcie_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
+static mx_status_t find_pci_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
     unsigned int map_len = sizeof(arg->dev_pin_to_global_irq) / sizeof(uint32_t);
     for (unsigned int i = 0; i < map_len; ++i) {
         uint32_t* flat_map = (uint32_t*)&arg->dev_pin_to_global_irq;
@@ -302,7 +304,7 @@ static mx_status_t find_pcie_legacy_irq_mapping(mx_pci_init_arg_t* arg) {
     arg->num_irqs = 0;
 
     ACPI_STATUS status = AcpiGetDevices(
-        (char*)"PNP0A08", // PCIe root hub
+        (arg->addr_windows[0].has_ecam) ? PCIE_HID : PCI_HID,
         get_pcie_devices_irq,
         arg,
         NULL);
@@ -348,7 +350,7 @@ static ACPI_STATUS find_pci_configs_cb(
 static mx_status_t find_pci_config(mx_pci_init_arg_t* arg) {
     // TODO: Although this will find every PCI legacy root, we're presently
     // hardcoding to just use the first at bus 0 dev 0 func 0 segment 0.
-    return AcpiGetDevices((char*)"PNP0A03", find_pci_configs_cb, arg, NULL);
+    return AcpiGetDevices(PCI_HID, find_pci_configs_cb, arg, NULL);
 }
 
 /* @brief Compute PCIe initialization information
@@ -380,7 +382,7 @@ mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
         }
     }
 
-    status = find_pcie_legacy_irq_mapping(res);
+    status = find_pci_legacy_irq_mapping(res);
     if (status != MX_OK) {
         goto fail;
     }

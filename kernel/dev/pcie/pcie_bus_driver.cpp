@@ -11,6 +11,7 @@
 #include <dev/pcie_root.h>
 #include <inttypes.h>
 #include <kernel/vm/vm_aspace.h>
+#include <lib/pci/pio.h>
 #include <lk/init.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
@@ -493,35 +494,44 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
 
-    // Find the region which would contain this bus_id, if any.
-    // add does not overlap with any already defined regions.
-    AutoLock ecam_region_lock(&ecam_region_lock_);
-    auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
-    --iter;
+    uintptr_t addr;
+    if (is_mmio_) {
+        // Find the region which would contain this bus_id, if any.
+        // add does not overlap with any already defined regions.
+        AutoLock ecam_region_lock(&ecam_region_lock_);
+        auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
+        --iter;
 
-    if (out_cfg_phys)
-        *out_cfg_phys = 0;
+        if (out_cfg_phys) {
+            *out_cfg_phys = 0;
+        }
 
-    if (!iter.IsValid())
-        return nullptr;
+        if (!iter.IsValid()) {
+            return nullptr;
+        }
 
-    if ((bus_id < iter->ecam().bus_start) ||
-        (bus_id > iter->ecam().bus_end))
-        return nullptr;
+        if ((bus_id < iter->ecam().bus_start) ||
+                (bus_id > iter->ecam().bus_end)) {
+            return nullptr;
+        }
 
-    bus_id -= iter->ecam().bus_start;
-    size_t offset = (static_cast<size_t>(bus_id)  << 20) |
-                    (static_cast<size_t>(dev_id)  << 15) |
-                    (static_cast<size_t>(func_id) << 12);
+        bus_id -= iter->ecam().bus_start;
+        size_t offset = (static_cast<size_t>(bus_id)  << 20) |
+            (static_cast<size_t>(dev_id)  << 15) |
+            (static_cast<size_t>(func_id) << 12);
 
-    // TODO(cja) The remainder of this method will need to be refactored
-    // with PIO space in mind in a later commit.
-    if (out_cfg_phys)
-        *out_cfg_phys = iter->ecam().phys_base + offset;
+        if (out_cfg_phys) {
+            *out_cfg_phys = iter->ecam().phys_base + offset;
+        }
 
-    // TODO(cja): Move to a BDF based associative container for better lookup time
-    // and insert or find behavior.
-    uintptr_t addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(iter->vaddr()) + offset);
+        // TODO(cja): Move to a BDF based associative container for better lookup time
+        // and insert or find behavior.
+        addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(iter->vaddr()) + offset);
+    } else {
+        addr = Pci::PciBdfAddr(static_cast<uint8_t>(bus_id), static_cast<uint8_t>(dev_id),
+                               static_cast<uint8_t>(func_id), 0);
+    }
+
     auto cfg_iter = configs_.find_if([addr](const PciConfig& cfg) {
                                         return (cfg.base() == addr);
                                         });
@@ -530,9 +540,8 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
         return &(*cfg_iter);
     }
 
-    // TODO(cja): PIO support here
     // Nothing found, create a new PciConfig for this address
-    auto cfg = PciConfig::Create(addr, PciAddrSpace::MMIO);
+    auto cfg = PciConfig::Create(addr, (is_mmio_) ? PciAddrSpace::MMIO : PciAddrSpace::PIO);
     configs_.push_front(cfg);
     return cfg.get();
 }

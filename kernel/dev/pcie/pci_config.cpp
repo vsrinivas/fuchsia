@@ -158,18 +158,18 @@ void PciMmioConfig::Write(PciReg32 addr, uint32_t val) const {
 
 mxtl::RefPtr<PciConfig> PciConfig::Create(uintptr_t base, PciAddrSpace addr_type) {
     mxtl::AllocChecker ac;
-    mxtl::RefPtr<PciConfig> cfg;
+    mxtl::RefPtr<PciConfig> cfg = nullptr;
 
     LTRACEF("base %#" PRIxPTR ", type %s\n", base, (addr_type == PciAddrSpace::PIO) ? "PIO" : "MIO");
 
-    if (addr_type == PciAddrSpace::PIO)
-        PANIC_UNIMPLEMENTED;
-    else
+    if (addr_type == PciAddrSpace::PIO) {
+        cfg = mxtl::AdoptRef(new (&ac) PciPioConfig(base));
+    } else {
         cfg = mxtl::AdoptRef(new (&ac) PciMmioConfig(base));
+    }
 
     if (!ac.check()) {
         TRACEF("failed to allocate memory for PciConfig!\n");
-        return nullptr;
     }
 
     return cfg;
