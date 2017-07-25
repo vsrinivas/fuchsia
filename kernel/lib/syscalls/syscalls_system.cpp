@@ -295,7 +295,7 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
 
     // Op to move the new kernel into place.
     ops[0].src = (void*)new_kernel_addr;
-    ops[0].dst = (void*)KERNEL_LOAD_OFFSET;
+    ops[0].dst = (void*)(MEMBASE + KERNEL_LOAD_OFFSET);
     ops[0].len = new_kernel_len;
 
     // Null terminated list.
