@@ -31,7 +31,7 @@ if (current_cpu == "arm64") {
   assert(false, "Unsupported architecture")
 }
 
-package("runtimes") {
+package("cpp") {
   files = exec_script("//build/clang_print_file_name.py",
                       [
                         "--target=${clang_target}",
