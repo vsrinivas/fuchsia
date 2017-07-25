@@ -30,6 +30,8 @@ class _AskHandlerImpl extends AskHandler {
   static final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
   static final _chatHeadline = "Open Chat";
   static final _emailHeadline = "Open Email";
+  static final _youtubeHeadline = "Open YouTube";
+  static final _terminalHeadline = "Open Terminal";
   static final _musicPatternKanye = new RegExp(r"kanye|yeezus");
   static final _musicPatternPortugal = new RegExp(r"portugal|the man");
 
@@ -86,6 +88,28 @@ class _AskHandlerImpl extends AskHandler {
           appUrl: 'email/nav',
           headline: _emailHeadline,
           color: 0xFF4285F4,
+        ),
+      );
+    }
+    if ((query.text?.isNotEmpty ?? false) &&
+        _youtubeHeadline.toLowerCase().contains(query.text.toLowerCase())) {
+      proposals.add(
+        _createProposal(
+          id: 'open youtube',
+          appUrl: 'youtube_story',
+          headline: _youtubeHeadline,
+          color: 0xFFE52D27 /* YouTube red from color spec */,
+        ),
+      );
+    }
+    if ((query.text?.isNotEmpty ?? false) &&
+        _terminalHeadline.toLowerCase().contains(query.text.toLowerCase())) {
+      proposals.add(
+        _createProposal(
+          id: 'open terminal',
+          appUrl: 'moterm',
+          headline: _terminalHeadline,
+          color: 0xFFE52D27 /* YouTube red from color spec */,
         ),
       );
     }

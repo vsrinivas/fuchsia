@@ -7,7 +7,6 @@ group("agents") {
     # If we don't include these explicitly here, for some reason it still
     # produces the expected build products but is not sensitive to source file
     # changes.
-    ":module_suggester",
     "//apps/maxwell/src/agents/basic_text_listener",
     "//apps/maxwell/src/agents/entity_selector",
     "//apps/maxwell/src/agents/mi_dashboard",
@@ -40,22 +39,6 @@ executable("ideas") {
   sources = [
     "ideas.cc",
     "ideas.h",
-  ]
-
-  deps = [
-    "//application/lib/app",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/rapidjson",
-    "//lib/mtl",
-  ]
-}
-
-executable("module_suggester") {
-  output_name = "agents/module_suggester"
-
-  sources = [
-    "module_suggester.cc",
   ]
 
   deps = [
