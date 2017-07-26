@@ -327,6 +327,6 @@ inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
     return fs::GetBlock<kBlobstoreBlockSize>(bm.StorageUnsafe()->GetData(), n);
 }
 mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max);
-mx_status_t blobstore_get_blockcount(int fd, size_t* out);
+mx_status_t blobstore_get_blockcount(int fd, uint64_t* out);
 
 } // namespace blobstore

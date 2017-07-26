@@ -60,7 +60,7 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
     return MX_OK;
 }
 
-mx_status_t blobstore_get_blockcount(int fd, size_t* out) {
+mx_status_t blobstore_get_blockcount(int fd, uint64_t* out) {
 #ifdef __Fuchsia__
     block_info_t info;
     ssize_t r;
@@ -81,11 +81,11 @@ mx_status_t blobstore_get_blockcount(int fd, size_t* out) {
 mx_status_t readblk(int fd, uint64_t bno, void* data) {
     off_t off = bno * kBlobstoreBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobstore: cannot seek to block %lu\n", bno);
+        fprintf(stderr, "blobstore: cannot seek to block %" PRIu64 "\n", bno);
         return MX_ERR_IO;
     }
     if (read(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: cannot read block %lu\n", bno);
+        fprintf(stderr, "blobstore: cannot read block %" PRIu64 "\n", bno);
         return MX_ERR_IO;
     }
     return MX_OK;
@@ -94,11 +94,11 @@ mx_status_t readblk(int fd, uint64_t bno, void* data) {
 mx_status_t writeblk(int fd, uint64_t bno, const void* data) {
     off_t off = bno * kBlobstoreBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobstore: cannot seek to block %lu\n", bno);
+        fprintf(stderr, "blobstore: cannot seek to block %" PRIu64 "\n", bno);
         return MX_ERR_IO;
     }
     if (write(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: cannot write block %lu\n", bno);
+        fprintf(stderr, "blobstore: cannot write block %" PRIu64 "\n", bno);
         return MX_ERR_IO;
     }
     return MX_OK;
@@ -121,10 +121,10 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
     info.blob_header_next = 0; // TODO(smklein): Allow chaining
 
     xprintf("Blobstore Mkfs\n");
-    xprintf("Disk size  : %lu\n", block_count * kBlobstoreBlockSize);
+    xprintf("Disk size  : %" PRIu64 "\n", block_count * kBlobstoreBlockSize);
     xprintf("Block Size : %u\n", kBlobstoreBlockSize);
-    xprintf("Block Count: %lu\n", block_count);
-    xprintf("Inode Count: %lu\n", inodes);
+    xprintf("Block Count: %" PRIu64 "\n", block_count);
+    xprintf("Inode Count: %" PRIu64 "\n", inodes);
 
     // Determine the number of blocks necessary for the block map and node map.
     uint64_t bbm_blocks = BlockMapBlocks(info);
@@ -163,7 +163,7 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
     for (uint64_t n = 0; n < bbm_blocks; n++) {
         void* bmdata = get_raw_bitmap_data(abm, n);
         if ((status = writeblk(fd, BlockMapStartBlock() + n, bmdata)) < 0) {
-            fprintf(stderr, "Failed to write blockmap block %lu\n", n);
+            fprintf(stderr, "Failed to write blockmap block %" PRIu64 "\n", n);
             return status;
         }
     }
