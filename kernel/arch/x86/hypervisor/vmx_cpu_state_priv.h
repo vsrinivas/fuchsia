@@ -77,7 +77,6 @@ public:
     status_t ReleaseVpid(uint16_t vpid);
 
 private:
-    SpinLock vpid_lock_;
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumVpids>> vpid_bitmap_;
     mxtl::Array<VmxPage> vmxon_pages_;
 

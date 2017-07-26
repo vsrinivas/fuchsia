@@ -16,7 +16,7 @@
 
 static mxtl::Mutex vmx_mutex;
 static size_t vcpus TA_GUARDED(vmx_mutex) = 0;
-static mxtl::unique_ptr<VmxCpuState> vmx_op TA_GUARDED(vmx_mutex);
+static mxtl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -253,7 +253,6 @@ VmxCpuState::~VmxCpuState() {
 }
 
 status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
-    AutoSpinLock lock(&vpid_lock_);
     size_t first_unset;
     bool all_set = vpid_bitmap_.Get(0, kNumVpids, &first_unset);
     if (all_set)
@@ -265,7 +264,6 @@ status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
 }
 
 status_t VmxCpuState::ReleaseVpid(uint16_t vpid) {
-    AutoSpinLock lock(&vpid_lock_);
     if (vpid == 0 || !vpid_bitmap_.GetOne(vpid - 1))
         return MX_ERR_INVALID_ARGS;
     return vpid_bitmap_.ClearOne(vpid - 1);
@@ -274,22 +272,22 @@ status_t VmxCpuState::ReleaseVpid(uint16_t vpid) {
 status_t alloc_vpid(uint16_t* vpid) {
     AutoLock lock(&vmx_mutex);
     if (vcpus == 0) {
-        status_t status = VmxCpuState::Create(&vmx_op);
+        status_t status = VmxCpuState::Create(&vmx_cpu_state);
         if (status != MX_OK)
             return status;
     }
     vcpus++;
-    return vmx_op->AllocVpid(vpid);
+    return vmx_cpu_state->AllocVpid(vpid);
 }
 
 status_t release_vpid(uint16_t vpid) {
     AutoLock lock(&vmx_mutex);
-    status_t status = vmx_op->ReleaseVpid(vpid);
+    status_t status = vmx_cpu_state->ReleaseVpid(vpid);
     if (status != MX_OK)
         return status;
     vcpus--;
     if (vcpus == 0)
-        vmx_op.reset();
+        vmx_cpu_state.reset();
     return MX_OK;
 }
 
