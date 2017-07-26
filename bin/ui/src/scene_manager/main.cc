@@ -39,10 +39,16 @@ int main(int argc, const char** argv) {
       return;
     }
 
+    // Only enable Vulkan validation layers when in debug mode.
+    escher::VulkanInstance::Params instance_params({{}, {}, true});
+#if !defined(NDEBUG)
+    instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
+#endif
+
     auto harness = DemoHarness::New(
         DemoHarness::WindowParams{"Mozart SceneManager", display->width(),
                                   display->height(), 2, false},
-        DemoHarness::InstanceParams());
+        std::move(instance_params));
 
     app::ApplicationContext* application_context =
         static_cast<DemoHarnessFuchsia*>(harness.get())->application_context();
