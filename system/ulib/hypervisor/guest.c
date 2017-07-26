@@ -5,9 +5,6 @@
 #include <limits.h>
 
 #include <hypervisor/guest.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
 
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
@@ -124,18 +121,4 @@ mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
     }
 
     return MX_OK;
-}
-
-mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
-                         mx_handle_t* guest) {
-    const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
-    const uint32_t size = sizeof(mx_guest_packet_t);
-    mx_handle_t kernel_ctl_fifo;
-    mx_status_t status = mx_fifo_create(count, size, 0, &kernel_ctl_fifo, ctl_fifo);
-    if (status != MX_OK)
-        return status;
-
-    mx_handle_t create_args[2] = { phys_mem, kernel_ctl_fifo };
-    return mx_hypervisor_op(hypervisor, MX_HYPERVISOR_OP_GUEST_CREATE,
-                            create_args, sizeof(create_args), guest, sizeof(*guest));
 }
