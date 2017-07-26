@@ -1425,10 +1425,12 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
                             {"oauth_token_manager"});
 
   // Reserialize existing users.
-  creds_ = ParseCredsFile();
-  if (creds_ == nullptr) {
-    FTL_LOG(WARNING) << "user credentials file either missing or corrupted: "
-                     << kCredentialsFile;
+  if (files::IsFile(kCredentialsFile)) {
+    creds_ = ParseCredsFile();
+    if (creds_ == nullptr) {
+      FTL_LOG(WARNING) << "Error in parsing existing credentials from: "
+                       << kCredentialsFile;
+    }
   }
 }
 
