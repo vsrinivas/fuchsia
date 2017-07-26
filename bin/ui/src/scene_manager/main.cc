@@ -33,7 +33,11 @@ int main(int argc, const char** argv) {
   display_manager.WaitForDefaultDisplay([&scene_manager_app, &params,
                                          &display_manager]() {
     Display* display = display_manager.default_display();
-    FTL_CHECK(display) << "No default display available.";
+    if (!display) {
+      FTL_LOG(ERROR) << "No default display, SceneManager exiting";
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      return;
+    }
 
     auto harness = DemoHarness::New(
         DemoHarness::WindowParams{"Mozart SceneManager", display->width(),
