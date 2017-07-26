@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 
 #include <ddk/device.h>
+#include <fs/mxio-dispatcher.h>
 #include <fs/vfs.h>
 #include <magenta/device/vfs.h>
 #include <magenta/thread_annotations.h>
@@ -28,8 +29,12 @@
 #define MXDEBUG 0
 
 namespace memfs {
+namespace {
 
-mxtl::unique_ptr<fs::Dispatcher> memfs_global_dispatcher;
+fs::Vfs vfs;
+mxtl::unique_ptr<fs::MxioDispatcher> global_dispatcher;
+
+}
 
 constexpr size_t kMemfsMaxFileSize = (8192 * 8192);
 
@@ -104,7 +109,7 @@ mx_status_t VnodeVmo::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeVmo::Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) {
+mx_status_t VnodeVmo::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
     return MX_OK;
 }
 
@@ -568,7 +573,6 @@ ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
             return status;
         }
 
-        mxtl::AutoLock lock(&vfs_lock);
         bool vmofile = false;
         return CreateFromVmo(vmofile, name, namelen, config->vmo, 0, size);
     }
@@ -604,12 +608,13 @@ static mx_status_t memfs_create_fs(const char* name, mxtl::RefPtr<VnodeDir>* out
     return MX_OK;
 }
 
-static void memfs_mount_locked(mxtl::RefPtr<VnodeDir> parent, mxtl::RefPtr<VnodeDir> subtree) TA_REQ(vfs_lock) {
+static void memfs_mount_locked(mxtl::RefPtr<VnodeDir> parent, mxtl::RefPtr<VnodeDir> subtree) {
     Dnode::AddChild(parent->dnode_, subtree->dnode_);
 }
 
 mx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
                                     mx_handle_t vmo, mx_off_t off, mx_off_t len) {
+    mxtl::AutoLock lock(&memfs::vfs.vfs_lock_);
     mx_status_t status;
     if ((status = CanCreate(name, namelen)) != MX_OK) {
         return status;
@@ -675,7 +680,7 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
     mx_status_t r;
     const char* pathout;
     mxtl::RefPtr<fs::Vnode> parent_vn;
-    if ((r = fs::Vfs::Walk(memfs::vfs_root, &parent_vn, path, &pathout)) < 0) {
+    if ((r = memfs::vfs.Walk(memfs::vfs_root, &parent_vn, path, &pathout)) < 0) {
         return r;
     }
     mxtl::RefPtr<memfs::VnodeDir> parent =
@@ -765,7 +770,28 @@ VnodeDir* vfs_create_global_root() {
     return memfs::vfs_root.get();
 }
 
+void devmgr_vfs_exit() {
+    memfs::vfs.UninstallAll(mx_deadline_after(MX_SEC(5)));
+}
+
 void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
-    mxtl::AutoLock lock(&vfs_lock);
+    mxtl::AutoLock lock(&memfs::vfs.vfs_lock_);
     memfs_mount_locked(mxtl::RefPtr<VnodeDir>(parent), mxtl::RefPtr<VnodeDir>(subtree));
+}
+
+// Acquire the root vnode and return a handle to it through the VFS dispatcher
+mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
+    mx_status_t r;
+    mx::channel h1, h2;
+    if ((r = mx::channel::create(0, &h1, &h2)) != MX_OK) {
+        return r;
+    }
+    fs::MxioDispatcher::Create(&memfs::global_dispatcher);
+    memfs::global_dispatcher->StartThread();
+    memfs::vfs.SetDispatcher(memfs::global_dispatcher.get());
+    if ((r = memfs::vfs.ServeDirectory(mxtl::RefPtr<fs::Vnode>(vn),
+                                       mxtl::move(h1))) != MX_OK) {
+        return r;
+    }
+    return h2.release();
 }

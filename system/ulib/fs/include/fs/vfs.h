@@ -35,10 +35,6 @@
 // clang-format on
 
 __BEGIN_CDECLS
-// A lock which should be used to protect lookup and walk operations
-#ifdef __Fuchsia__
-extern mtx_t vfs_lock;
-#endif
 
 typedef struct vfs_iostate vfs_iostate_t;
 
@@ -61,6 +57,7 @@ __END_CDECLS
 namespace fs {
 
 class Vnode;
+class Vfs;
 
 // RemoteContainer adds support for mounting remote handles on nodes.
 class RemoteContainer {
@@ -106,7 +103,7 @@ private:
 class WatcherContainer {
 public:
     mx_status_t WatchDir(mx_handle_t* out);
-    mx_status_t WatchDirV2(Vnode* vn, const vfs_watch_dir_t* cmd);
+    mx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
     void Notify(const char* name, size_t len, unsigned event);
 private:
     mxtl::Mutex lock_;
@@ -159,7 +156,7 @@ public:
 #ifdef __Fuchsia__
     // Allocate iostate and register the transferred handle with a dispatcher.
     // Allows Vnode to act as server.
-    virtual mx_status_t Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags);
+    virtual mx_status_t Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.
     // Returns the number of handles which should be returned on the requesting handle.
@@ -171,7 +168,7 @@ public:
 #endif
 
     virtual mx_status_t WatchDir(mx_handle_t* out) { return MX_ERR_NOT_SUPPORTED; }
-    virtual mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) {
+    virtual mx_status_t WatchDirV2(Vfs* vfs, const vfs_watch_dir_t* cmd) {
         return MX_ERR_NOT_SUPPORTED;
     }
     virtual void Notify(const char* name, size_t len, unsigned event) {}
@@ -305,34 +302,91 @@ protected:
     uint32_t flags_;
 };
 
-struct Vfs {
+// Non-intrusive node in linked list of vnodes acting as mount points
+class MountNode final : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MountNode>> {
+public:
+    using ListType = mxtl::DoublyLinkedList<mxtl::unique_ptr<MountNode>>;
+    constexpr MountNode() : vn_(nullptr) {}
+    ~MountNode() { MX_DEBUG_ASSERT(vn_ == nullptr); }
+
+    void SetNode(mxtl::RefPtr<Vnode> vn) {
+        MX_DEBUG_ASSERT(vn_ == nullptr);
+        vn_ = vn;
+    }
+
+    mx_handle_t ReleaseRemote() {
+        MX_DEBUG_ASSERT(vn_ != nullptr);
+        mx_handle_t h = vn_->DetachRemote();
+        vn_ = nullptr;
+        return h;
+    }
+
+    bool VnodeMatch(mxtl::RefPtr<Vnode> vn) const {
+        MX_DEBUG_ASSERT(vn_ != nullptr);
+        return vn == vn_;
+    }
+
+private:
+    mxtl::RefPtr<Vnode> vn_;
+};
+
+// The Vfs object contains global per-filesystem state, which
+// may be valid across a collection of Vnodes.
+//
+// The Vfs object must outlive the Vnodes which it serves.
+class Vfs {
+public:
+    Vfs();
     // Walk from vn --> out until either only one path segment remains or we
     // encounter a remote filesystem.
-    static mx_status_t Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
-                            const char* path, const char** pathout);
+    mx_status_t Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+                     const char* path, const char** pathout);
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
-    static mx_status_t Open(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
-                            const char* path, const char** pathout,
-                            uint32_t flags, uint32_t mode);
-    static mx_status_t Unlink(mxtl::RefPtr<Vnode> vn, const char* path, size_t len);
-    static mx_status_t Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
-                            const char* oldname, const char* newname);
-    static mx_status_t Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
-                              const char* oldname, const char* newname);
-    static ssize_t Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len);
+    mx_status_t Open(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+                     const char* path, const char** pathout,
+                     uint32_t flags, uint32_t mode);
+    mx_status_t Unlink(mxtl::RefPtr<Vnode> vn, const char* path, size_t len);
+    mx_status_t Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
+                     const char* oldname, const char* newname);
+    mx_status_t Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
+                       const char* oldname, const char* newname);
+    ssize_t Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
+                  void* out_buf, size_t out_len);
 
 #ifdef __Fuchsia__
-    // Pins a handle to a remote filesystem onto a vnode, if possible.
-    static mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h);
-    static mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock);
-    // Unpin a handle to a remote filesystem from a vnode, if one exists.
-    static mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h);
+    Vfs(Dispatcher* dispatcher);
 
-    // Serves a Vnode over the specified handle.
-    static mx_status_t ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
-                                      mx::channel channel);
+    void SetDispatcher(Dispatcher* dispatcher) { dispatcher_ = dispatcher; }
+
+    // Dispatches to a Vnode over the specified handle (normal case)
+    mx_status_t Serve(mx::channel channel, void* ios);
+
+    // Serves a Vnode over the specified handle (used for creating new filesystems)
+    mx_status_t ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, mx::channel channel);
+
+    // Pins a handle to a remote filesystem onto a vnode, if possible.
+    mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h);
+    mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock_);
+    // Unpin a handle to a remote filesystem from a vnode, if one exists.
+    mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h);
+
+    // Unpins all remote filesystems in the current filesystem, and waits for the
+    // response of each one with the provided deadline.
+    mx_status_t UninstallAll(mx_time_t deadline);
+
+    // A lock which should be used to protect lookup and walk operations
+    // TODO(smklein): Encapsulate the lock; make it private.
+    mtx_t vfs_lock_{};
+
+private:
+    // The mount list is a global static variable, but it only uses
+    // constexpr constructors during initialization. As a consequence,
+    // the .init_array section of the compiled vfs-mount object file is
+    // empty; "remote_list" is a member of the bss section.
+    MountNode::ListType remote_list_ __TA_GUARDED(vfs_lock_){};
+
+    Dispatcher* dispatcher_{};
 #endif  // ifdef __Fuchsia__
 };
 
@@ -355,9 +409,5 @@ mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie);
 
 // Send an unmount signal on a handle to a filesystem and await a response.
 mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t deadline);
-
-// Unpins all remote filesystems in the current filesystem, and waits for the
-// response of each one with the provided deadline.
-mx_status_t vfs_uninstall_all(mx_time_t deadline);
 
 __END_CDECLS

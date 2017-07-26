@@ -60,7 +60,7 @@ mx_status_t VnodeFile::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeFile::Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) {
+mx_status_t VnodeFile::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
     return MX_OK;
 }
 

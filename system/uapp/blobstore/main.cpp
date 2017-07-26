@@ -42,7 +42,8 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
         return status;
     }
-    if ((status = fs::Vfs::ServeDirectory(vn, dispatcher.get(), mx::channel(h))) != MX_OK) {
+    fs::Vfs vfs(dispatcher.get());
+    if ((status = vfs.ServeDirectory(mxtl::move(vn), mx::channel(h))) != MX_OK) {
         return status;
     }
     dispatcher->RunOnCurrentThread(); // blocks

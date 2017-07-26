@@ -8,7 +8,6 @@
 #include <string.h>
 #include <threads.h>
 
-#include <fs/mxio-dispatcher.h>
 #include <fs/vfs.h>
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
@@ -17,7 +16,6 @@
 #include <magenta/thread_annotations.h>
 #include <mxalloc/new.h>
 #include <mxio/debug.h>
-#include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxtl/auto_lock.h>
@@ -35,8 +33,8 @@ static VnodeMemfs* global_vfs_root;
 
 void VnodeDir::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
 mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
-mx_status_t VnodeDir::WatchDirV2(const vfs_watch_dir_t* cmd) {
-    return watcher_.WatchDirV2(this, cmd);
+mx_status_t VnodeDir::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
+    return watcher_.WatchDirV2(vfs, this, cmd);
 }
 
 } // namespace memfs
@@ -44,28 +42,9 @@ mx_status_t VnodeDir::WatchDirV2(const vfs_watch_dir_t* cmd) {
 // The following functions exist outside the memfs namespace so they
 // can be exposed to C:
 
-// Acquire the root vnode and return a handle to it through the VFS dispatcher
-mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
-    mx_status_t r;
-    mx::channel h1, h2;
-    if ((r = mx::channel::create(0, &h1, &h2)) != MX_OK) {
-        return r;
-    }
-    if ((r = fs::Vfs::ServeDirectory(mxtl::RefPtr<fs::Vnode>(vn),
-                                      memfs::memfs_global_dispatcher.get(),
-                                      mxtl::move(h1))) != MX_OK) {
-        return r;
-    }
-    return h2.release();
-}
-
-// Initialize the global root VFS node and dispatcher
+// Initialize the global root VFS node
 void vfs_global_init(VnodeDir* root) {
     memfs::global_vfs_root = root;
-    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
-    fs::MxioDispatcher::Create(&dispatcher);
-    dispatcher->StartThread();
-    memfs::memfs_global_dispatcher = mxtl::move(dispatcher);
 }
 
 // Return a RIO handle to the global root

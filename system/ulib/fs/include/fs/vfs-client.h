@@ -20,8 +20,4 @@ __BEGIN_CDECLS
 // Send an unmount signal on a handle to a filesystem and await a response.
 mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t deadline);
 
-// Unpins all remote filesystems in the current filesystem, and waits for the
-// response of each one with the provided deadline.
-mx_status_t vfs_uninstall_all(mx_time_t deadline);
-
 __END_CDECLS

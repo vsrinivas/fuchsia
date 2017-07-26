@@ -41,7 +41,7 @@ public:
     ~VnodeSvc() override;
 
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) final;
+    mx_status_t Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
     const mxtl::Array<char>& name() const { return name_; }
@@ -72,7 +72,7 @@ public:
 
     void Notify(const char* name, size_t len, unsigned event) final;
     mx_status_t WatchDir(mx_handle_t* out) final;
-    mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) final;
+    mx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 

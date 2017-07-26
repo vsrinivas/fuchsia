@@ -15,7 +15,6 @@ void devmgr_handle_messages(void);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
-void devmgr_vfs_exit(void);
 mx_status_t devmgr_launch(mx_handle_t job, const char* name,
                           int argc, const char* const* argv,
                           const char** envp, int stdiofd,

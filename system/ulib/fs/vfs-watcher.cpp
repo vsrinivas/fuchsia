@@ -76,7 +76,7 @@ constexpr uint32_t kSupportedMasks = VFS_WATCH_MASK_ADDED |
                                      VFS_WATCH_MASK_EXISTING |
                                      VFS_WATCH_MASK_IDLE;
 
-mx_status_t WatcherContainer::WatchDirV2(Vnode* vn, const vfs_watch_dir_t* cmd) {
+mx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd) {
     mx::channel c = mx::channel(cmd->channel);
     if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
         // No events to watch
@@ -100,7 +100,7 @@ mx_status_t WatcherContainer::WatchDirV2(Vnode* vn, const vfs_watch_dir_t* cmd) 
         WatchBuffer wb;
         {
             // Send "VFS_WATCH_EVT_EXISTING" for all entries in readdir
-            mxtl::AutoLock lock(&vfs_lock);
+            mxtl::AutoLock lock(&vfs->vfs_lock_);
             while (true) {
                 mx_status_t status = vn->Readdir(&dircookie, &readdir_buf, sizeof(readdir_buf));
                 if (status <= 0) {

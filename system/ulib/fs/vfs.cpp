@@ -22,10 +22,6 @@
 
 uint32_t __trace_bits;
 
-#ifdef __Fuchsia__
-mtx_t vfs_lock = MTX_INIT;
-#endif
-
 namespace fs {
 namespace {
 
@@ -117,6 +113,12 @@ mx_handle_t RemoteContainer::GetRemote() const {
 void RemoteContainer::SetRemote(mx_handle_t remote) {
     remote_ = remote;
 }
+
+Vfs::Vfs() = default;
+
+#ifdef __Fuchsia__
+Vfs::Vfs(Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
+#endif
 
 mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const char* path,
                       const char** pathout, uint32_t flags, uint32_t mode) {
@@ -289,7 +291,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             return MX_ERR_INVALID_ARGS;
         }
         const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
-        return vn->WatchDirV2(request);
+        return vn->WatchDirV2(this, request);
     }
     case IOCTL_VFS_MOUNT_FS: {
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
@@ -317,7 +319,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             (out_len != 0)) {
             return MX_ERR_INVALID_ARGS;
         }
-        mxtl::AutoLock lock(&vfs_lock);
+        mxtl::AutoLock lock(&vfs_lock_);
         mx_status_t r = Open(vn, &vn, name, &name,
                              O_CREAT | O_RDONLY | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
         MX_DEBUG_ASSERT(r <= MX_OK); // Should not be accessing remote nodes
@@ -358,7 +360,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         return Vfs::UninstallRemote(vn, h);
     }
     case IOCTL_VFS_UNMOUNT_FS: {
-        vfs_uninstall_all(MX_TIME_INFINITE);
+        Vfs::UninstallAll(MX_TIME_INFINITE);
         vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
         exit(0);
     }

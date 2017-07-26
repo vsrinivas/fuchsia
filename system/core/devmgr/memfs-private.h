@@ -24,8 +24,6 @@
 
 namespace memfs {
 
-extern mxtl::unique_ptr<fs::Dispatcher> memfs_global_dispatcher;
-
 class Dnode;
 
 class VnodeMemfs : public fs::Vnode {
@@ -92,7 +90,7 @@ public:
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
     mx_status_t WatchDir(mx_handle_t* out) final;
-    mx_status_t WatchDirV2(const vfs_watch_dir_t* cmd) final;
+    mx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
@@ -136,7 +134,7 @@ public:
     virtual mx_status_t Open(uint32_t flags) override;
 
 private:
-    mx_status_t Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) final;
+    mx_status_t Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
@@ -191,6 +189,8 @@ VnodeDir* vfs_create_root(void);
 
 // shared among all memory filesystems
 mx_status_t memfs_create_directory(const char* path, uint32_t flags);
-void memfs_mount(VnodeDir* parent, VnodeDir* subtree) TA_EXCL(vfs_lock);
+void memfs_mount(VnodeDir* parent, VnodeDir* subtree);
+
+void devmgr_vfs_exit(void);
 
 __END_CDECLS

@@ -1083,8 +1083,8 @@ VnodeMinfs::VnodeMinfs(Minfs* fs) :
 
 void VnodeMinfs::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
 mx_status_t VnodeMinfs::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
-mx_status_t VnodeMinfs::WatchDirV2(const vfs_watch_dir_t* cmd) {
-    return watcher_.WatchDirV2(this, cmd);
+mx_status_t VnodeMinfs::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
+    return watcher_.WatchDirV2(vfs, this, cmd);
 }
 
 bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }

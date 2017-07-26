@@ -339,7 +339,3 @@ void devmgr_vfs_init(void) {
         mxio_install_root(mxio_remote_create(h, 0));
     }
 }
-
-void devmgr_vfs_exit(void) {
-    vfs_uninstall_all(mx_deadline_after(MX_SEC(5)));
-}

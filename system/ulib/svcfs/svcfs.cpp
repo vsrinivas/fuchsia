@@ -60,7 +60,7 @@ mx_status_t VnodeSvc::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeSvc::Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) {
+mx_status_t VnodeSvc::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
     if (!provider_) {
         return MX_ERR_UNAVAILABLE;
     }
@@ -116,8 +116,8 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
 
 void VnodeDir::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
 mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
-mx_status_t VnodeDir::WatchDirV2(const vfs_watch_dir_t* cmd) {
-    return watcher_.WatchDirV2(this, cmd);
+mx_status_t VnodeDir::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
+    return watcher_.WatchDirV2(vfs, this, cmd);
 }
 
 mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
