@@ -372,13 +372,6 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
         // TODO: support MSG_OOB
         return MX_ERR_NOT_SUPPORTED;
     }
-    // TODO: support flags and control messages
-    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
-        // if connected, can't specify address
-        if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-            return MX_ERR_ALREADY_EXISTS;
-        }
-    }
     size_t mlen = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec *iov = &msg->msg_iov[i];
@@ -402,7 +395,8 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
     }
     n -= MXIO_SOCKET_MSG_HEADER_SIZE;
     if (msg->msg_name != NULL) {
-        memcpy(msg->msg_name, &m->addr, m->addrlen);
+        int bytes_to_copy = (msg->msg_namelen < m->addrlen) ? msg->msg_namelen : m->addrlen;
+        memcpy(msg->msg_name, &m->addr, bytes_to_copy);
     }
     msg->msg_namelen = m->addrlen;
     msg->msg_flags = m->flags;
